@@ -315,7 +315,7 @@ class _ProjectsHeaderDelegate extends SliverPersistentHeaderDelegate {
                     AppSpacing.lg,
                     0,
                     AppSpacing.lg,
-                    AppSpacing.sm,
+                    6,
                   ),
                   child: _SearchField(
                     controller: searchController,
@@ -507,7 +507,7 @@ class _StatusFilter extends StatelessWidget {
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
-            vertical: 10,
+            vertical: 6,
           ),
           child: Row(
             children: [

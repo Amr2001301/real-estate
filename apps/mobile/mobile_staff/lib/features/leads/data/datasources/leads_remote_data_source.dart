@@ -11,6 +11,7 @@ abstract interface class LeadsRemoteDataSource {
   Future<void> addNote(String id, String body);
   Future<LeadRowDto> create(NewLead input);
   Future<List<LeadSourceDto>> listSources();
+  Future<List<ClientSearchDto>> searchClients(String q);
 }
 
 class LeadsRemoteDataSourceImpl implements LeadsRemoteDataSource {
@@ -73,9 +74,13 @@ class LeadsRemoteDataSourceImpl implements LeadsRemoteDataSource {
     final res = await _dio.post<Map<String, dynamic>>(
       '/leads',
       data: {
-        'fullName': input.fullName,
+        'clientId': ?input.clientId,
+        'fullName': ?input.fullName,
         'phone': ?input.phone,
         'email': ?input.email,
+        'sourceId': ?input.sourceId,
+        'projectInterestId': ?input.projectInterestId,
+        'unitInterestId': ?input.unitInterestId,
         'notes': ?input.notes,
       },
     );
@@ -88,6 +93,22 @@ class LeadsRemoteDataSourceImpl implements LeadsRemoteDataSource {
     return (res.data ?? const [])
         .whereType<Map<String, dynamic>>()
         .map(LeadSourceDto.fromJson)
+        .toList();
+  }
+
+  @override
+  Future<List<ClientSearchDto>> searchClients(String q) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/users',
+      queryParameters: {
+        'role': 'CLIENT,CUSTOMER',
+        'pageSize': 10,
+        'q': q,
+      },
+    );
+    return ((res.data?['data'] as List?) ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(ClientSearchDto.fromJson)
         .toList();
   }
 }

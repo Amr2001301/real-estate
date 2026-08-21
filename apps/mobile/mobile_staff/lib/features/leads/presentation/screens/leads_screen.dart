@@ -1,6 +1,5 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -94,24 +93,35 @@ class _LeadsScreenState extends State<LeadsScreen> {
       ),
       body: Column(
         children: [
-          // ── Compact inline header ────────────────────────────────────────────
+          // ── Header + embedded search ────────────────────────────────────────
           BlocBuilder<LeadsCubit, LeadsListState>(
             buildWhen: (a, b) => a.mine != b.mine || a.hasAdvancedFilters != b.hasAdvancedFilters,
-            builder: (context, state) => _LeadsHeader(
+            builder: (context, state) => AppNavHeader(
               title: l10n.navLeads,
-              isMine: state.mine,
-              hasAdvancedFilters: state.hasAdvancedFilters,
-              onToggleMine: cubit.toggleMine,
-              onFilter: () => _showFilterSheet(context, cubit),
-              mineTooltip: l10n.leadsMine,
-              filterTooltip: l10n.leadsFilterSheet,
+              actions: [
+                NavHeaderAction(
+                  icon: state.mine
+                      ? Icons.person_rounded
+                      : Icons.person_outline_rounded,
+                  tooltip: l10n.leadsMine,
+                  onTap: cubit.toggleMine,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                NavHeaderAction(
+                  icon: state.hasAdvancedFilters
+                      ? Icons.filter_alt_rounded
+                      : Icons.filter_alt_outlined,
+                  tooltip: l10n.leadsFilterSheet,
+                  onTap: () => _showFilterSheet(context, cubit),
+                ),
+              ],
+              bottom: _NavSearchBar(
+                controller: _search,
+                hint: l10n.leadsSearchHint,
+                onSubmitted: cubit.setSearch,
+                onClear: () { _search.clear(); cubit.setSearch(''); },
+              ),
             ),
-          ),
-          // ── Search ──────────────────────────────────────────────────────────
-          _SearchBar(
-            controller: _search,
-            hint: l10n.leadsSearchHint,
-            onSubmitted: cubit.setSearch,
           ),
           // ── Stage filter chips ───────────────────────────────────────────────
           BlocBuilder<LeadsCubit, LeadsListState>(
@@ -215,268 +225,78 @@ class _LeadsScreenState extends State<LeadsScreen> {
   }
 }
 
-// ── Compact leads header ──────────────────────────────────────────────────────
+// ── Nav search bar (white pill embedded in AppNavHeader bottom:) ──────────────
 
-class _LeadsHeader extends StatelessWidget {
-  const _LeadsHeader({
-    required this.title,
-    required this.isMine,
-    required this.hasAdvancedFilters,
-    required this.onToggleMine,
-    required this.onFilter,
-    required this.mineTooltip,
-    required this.filterTooltip,
-  });
-
-  final String title;
-  final bool isMine;
-  final bool hasAdvancedFilters;
-  final VoidCallback onToggleMine;
-  final VoidCallback onFilter;
-  final String mineTooltip;
-  final String filterTooltip;
-
-  static const _navyDeep = Color(0xFF0B1726);
-  static const _navyMid = Color(0xFF14273F);
-  static const _navyLight = Color(0xFF243F62);
-
-  @override
-  Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
-      child: Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [_navyLight, _navyMid, _navyDeep],
-          stops: [0.0, 0.45, 1.0],
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(AppRadii.xl + 4),
-          bottomRight: Radius.circular(AppRadii.xl + 4),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 22,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // Dot texture
-          Positioned.fill(
-            child: ClipRRect(
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(AppRadii.xl + 4),
-                bottomRight: Radius.circular(AppRadii.xl + 4),
-              ),
-              child: IgnorePointer(
-                child: CustomPaint(painter: _HeaderDotsPainter()),
-              ),
-            ),
-          ),
-          // Gold radial bloom
-          PositionedDirectional(
-            top: 0,
-            end: -30,
-            child: Container(
-              width: 180,
-              height: 180,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [Color(0x1EC8A24B), Color(0x00C8A24B)],
-                  stops: [0.0, 0.75],
-                ),
-              ),
-            ),
-          ),
-          // Gold shimmer hairline at bottom
-          const Positioned(
-            bottom: 0,
-            left: 40,
-            right: 40,
-            child: SizedBox(
-              height: 1,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.transparent,
-                      Color(0x80C8A24B),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // Content — title + action buttons on ONE row
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg, AppSpacing.md,
-                AppSpacing.lg, AppSpacing.lg,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.4,
-                        height: 1.15,
-                      ),
-                    ),
-                  ),
-                  NavHeaderAction(
-                    icon: isMine
-                        ? Icons.person_rounded
-                        : Icons.person_outline_rounded,
-                    tooltip: mineTooltip,
-                    onTap: onToggleMine,
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  NavHeaderAction(
-                    icon: hasAdvancedFilters
-                        ? Icons.filter_alt_rounded
-                        : Icons.filter_alt_outlined,
-                    tooltip: filterTooltip,
-                    onTap: onFilter,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-      ),
-    );
-  }
-}
-
-class _HeaderDotsPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.04);
-    const step = 20.0;
-    for (var y = 8.0; y < size.height; y += step) {
-      for (var x = 8.0; x < size.width; x += step) {
-        canvas.drawCircle(Offset(x, y), 1.1, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_HeaderDotsPainter _) => false;
-}
-
-// ── Search bar ────────────────────────────────────────────────────────────────
-
-class _SearchBar extends StatefulWidget {
-  const _SearchBar({
+class _NavSearchBar extends StatefulWidget {
+  const _NavSearchBar({
     required this.controller,
     required this.hint,
     required this.onSubmitted,
+    required this.onClear,
   });
   final TextEditingController controller;
   final String hint;
   final ValueChanged<String> onSubmitted;
+  final VoidCallback onClear;
 
   @override
-  State<_SearchBar> createState() => _SearchBarState();
+  State<_NavSearchBar> createState() => _NavSearchBarState();
 }
 
-class _SearchBarState extends State<_SearchBar> {
-  final _focus = FocusNode();
-  bool _focused = false;
+class _NavSearchBarState extends State<_NavSearchBar> {
+  bool _hasText = false;
 
   @override
   void initState() {
     super.initState();
-    _focus.addListener(() => setState(() => _focused = _focus.hasFocus));
-  }
-
-  @override
-  void dispose() {
-    _focus.dispose();
-    super.dispose();
+    widget.controller.addListener(
+        () => setState(() => _hasText = widget.controller.text.isNotEmpty));
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.xs,
+    final theme  = Theme.of(context);
+    return Container(
+      height: 46,
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: AppRadii.pillAll,
+        border: Border.all(color: colors.hairline),
+        boxShadow: colors.shadowSoft,
       ),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          border: Border.all(
-            color: _focused
-                ? AppPalette.gold400
-                : colors.hairline.withValues(alpha: 0.6),
-            width: _focused ? 1.5 : 1.0,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: _focused
-                  ? AppPalette.gold400.withValues(alpha: 0.18)
-                  : Colors.black.withValues(alpha: 0.06),
-              blurRadius: _focused ? 14 : 8,
-              offset: const Offset(0, 3),
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 3,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        child: TextField(
-          controller: widget.controller,
-          focusNode: _focus,
-          textInputAction: TextInputAction.search,
-          onSubmitted: widget.onSubmitted,
-          style: TextStyle(fontSize: 15, color: colors.inkStrong),
-          decoration: InputDecoration(
-            hintText: widget.hint,
-            hintStyle: TextStyle(fontSize: 15, color: colors.inkMuted),
-            prefixIcon: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: Icon(
-                Icons.search_rounded,
-                size: 21,
-                color: _focused ? AppPalette.gold400 : colors.inkMuted,
+      child: Row(
+        children: [
+          const SizedBox(width: AppSpacing.md),
+          Icon(Icons.search_rounded, size: 20, color: colors.inkMuted),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: TextField(
+              controller: widget.controller,
+              onSubmitted: widget.onSubmitted,
+              textInputAction: TextInputAction.search,
+              style: theme.textTheme.bodyMedium,
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                hintText: widget.hint,
+                hintStyle: theme.textTheme.bodyMedium
+                    ?.copyWith(color: colors.inkMuted),
               ),
             ),
-            prefixIconConstraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: 13,
-            ),
-            isDense: true,
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            filled: false,
           ),
-        ),
+          if (_hasText)
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              icon: Icon(Icons.close_rounded,
+                  size: 18, color: colors.inkMuted),
+              onPressed: widget.onClear,
+            ),
+          const SizedBox(width: AppSpacing.xs),
+        ],
       ),
     );
   }
@@ -513,7 +333,7 @@ class _StageFilterRow extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
-          vertical: 10,
+          vertical: 6,
         ),
         child: Row(
           children: [

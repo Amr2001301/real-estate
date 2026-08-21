@@ -26,14 +26,22 @@ class LeadsQuery {
 
 class NewLead {
   const NewLead({
-    required this.fullName,
+    this.clientId,
+    this.fullName,
     this.phone,
     this.email,
+    this.sourceId,
+    this.projectInterestId,
+    this.unitInterestId,
     this.notes,
   });
-  final String fullName;
+  final String? clientId;
+  final String? fullName;
   final String? phone;
   final String? email;
+  final String? sourceId;
+  final String? projectInterestId;
+  final String? unitInterestId;
   final String? notes;
 }
 
@@ -43,6 +51,39 @@ class LeadSource {
   final String name;
 }
 
+class ClientSearchResult {
+  const ClientSearchResult({
+    required this.id,
+    required this.fullName,
+    this.phone,
+    this.email,
+    required this.role,
+  });
+  final String id;
+  final String fullName;
+  final String? phone;
+  final String? email;
+  final String role;
+}
+
+/// Passed as route `extra` when navigating to /leads/new from a project or
+/// unit detail screen so the interest context is pre-filled.
+class LeadInterestContext {
+  const LeadInterestContext({
+    this.projectId,
+    this.projectName,
+    this.unitId,
+    this.unitCode,
+  });
+  final String? projectId;
+  final String? projectName;
+  final String? unitId;
+  final String? unitCode;
+
+  bool get hasProject => projectId != null;
+  bool get hasUnit => unitId != null;
+}
+
 abstract interface class LeadsRepository {
   Future<Result<Paginated<Lead>>> getLeads(LeadsQuery query);
   Future<Result<LeadDetail>> getLead(String id);
@@ -50,4 +91,5 @@ abstract interface class LeadsRepository {
   Future<Result<void>> addNote(String id, String body);
   Future<Result<Lead>> createLead(NewLead input);
   Future<Result<List<LeadSource>>> getSources();
+  Future<Result<List<ClientSearchResult>>> searchClients(String q);
 }

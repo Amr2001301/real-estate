@@ -343,10 +343,15 @@ GoRouter createStaffRouter(
       // ── Lead create ─────────────────────────────────────────────────────
       GoRoute(
         path: '/leads/new',
-        builder: (context, state) => BlocProvider(
-          create: (ctx) => CreateLeadCubit(CreateLead(ctx.read<LeadsRepository>())),
-          child: const CreateLeadScreen(),
-        ),
+        builder: (context, state) {
+          final ctx = state.extra as LeadInterestContext?;
+          return BlocProvider(
+            create: (c) => CreateLeadCubit(
+                CreateLead(c.read<LeadsRepository>()),
+                c.read<LeadsRepository>()),
+            child: CreateLeadScreen(interestContext: ctx),
+          );
+        },
       ),
 
       // ── Lead detail ──────────────────────────────────────────────────────

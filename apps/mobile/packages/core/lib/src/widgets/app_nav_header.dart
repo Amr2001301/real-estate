@@ -30,6 +30,7 @@ class AppNavHeader extends StatelessWidget {
     this.actions = const [],
     this.bottom,
     this.avatarWidget,
+    this.compact = false,
   });
 
   final String title;
@@ -40,6 +41,10 @@ class AppNavHeader extends StatelessWidget {
 
   /// Optional avatar / icon widget shown at the start of the content row.
   final Widget? avatarWidget;
+
+  /// When true, the title and [leadingAction] appear in the same row instead
+  /// of [leadingAction] above and title below. Use for simple back-nav screens.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -128,52 +133,75 @@ class AppNavHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Top row: leading (optional back) + spacer + actions
-                  if (leadingAction != null || actions.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: Row(
+                  if (compact) ...[
+                    // ── Compact: leading + title in the same row ─────────
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (leadingAction != null) ...[
+                          leadingAction!,
+                          const SizedBox(width: AppSpacing.md),
+                        ],
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                        ),
+                        ...actions,
+                      ],
+                    ),
+                  ] else ...[
+                    // ── Standard: leading row above, title row below ──────
+                    if (leadingAction != null || actions.isNotEmpty) ...[
+                      Row(
                         children: [
                           ?leadingAction,
                           const Spacer(),
                           ...actions,
                         ],
                       ),
-                    ),
-                  // Avatar + title row
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      if (avatarWidget != null) ...[
-                        avatarWidget!,
-                        const SizedBox(width: AppSpacing.md),
-                      ],
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              title,
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.3,
-                              ),
-                            ),
-                            if (subtitle != null) ...[
-                              const SizedBox(height: 2),
+                      const SizedBox(height: 28),
+                    ],
+                    // Avatar + title row
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (avatarWidget != null) ...[
+                          avatarWidget!,
+                          const SizedBox(width: AppSpacing.md),
+                        ],
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                               Text(
-                                subtitle!,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: Colors.white.withValues(alpha: 0.65),
+                                title,
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.3,
                                 ),
                               ),
+                              if (subtitle != null) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  subtitle!,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.65),
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                   // Optional bottom widget (filter row, stats, etc.)
                   if (hasBottom) ...[
                     const SizedBox(height: AppSpacing.md),

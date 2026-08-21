@@ -1,5 +1,28 @@
 // Wire shapes for the leads endpoints. Data layer only.
 
+class ClientSearchDto {
+  const ClientSearchDto({
+    required this.id,
+    required this.fullName,
+    this.phone,
+    this.email,
+    required this.role,
+  });
+  final String id;
+  final String fullName;
+  final String? phone;
+  final String? email;
+  final String role;
+
+  factory ClientSearchDto.fromJson(Map<String, dynamic> json) => ClientSearchDto(
+        id: json['id'] as String,
+        fullName: json['fullName'] as String? ?? '',
+        phone: json['phone'] as String?,
+        email: json['email'] as String?,
+        role: json['role'] as String? ?? 'CLIENT',
+      );
+}
+
 class LeadSourceDto {
   const LeadSourceDto({required this.id, required this.name});
   final String id;

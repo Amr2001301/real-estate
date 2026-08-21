@@ -44,4 +44,20 @@ class LeadsRepositoryImpl implements LeadsRepository {
       return dtos.map((d) => LeadSource(id: d.id, name: d.name)).toList();
     });
   }
+
+  @override
+  Future<Result<List<ClientSearchResult>>> searchClients(String q) {
+    return guardApiCall(() async {
+      final dtos = await _remote.searchClients(q);
+      return dtos
+          .map((d) => ClientSearchResult(
+                id: d.id,
+                fullName: d.fullName,
+                phone: d.phone,
+                email: d.email,
+                role: d.role,
+              ))
+          .toList();
+    });
+  }
 }

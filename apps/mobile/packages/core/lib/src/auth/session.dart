@@ -8,7 +8,7 @@ part 'session.g.dart';
 /// The authenticated user's identity + role. Persisted (as JSON) in secure
 /// storage alongside the tokens, so the session survives app restarts.
 @freezed
-class Session with _$Session {
+abstract class Session with _$Session {
   const factory Session({
     required String userId,
     @AppRoleConverter() required AppRole role,

@@ -1551,6 +1551,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get leadActivityReservation => 'حجز';
 
   @override
+  String get leadActivityCreated => 'تم إنشاء العميل المحتمل';
+
+  @override
   String get leadNew => 'عميل محتمل جديد';
 
   @override
@@ -2461,4 +2464,59 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get staffEditProject => 'تعديل المشروع';
+
+  @override
+  String get leadClientSection => 'العميل';
+
+  @override
+  String get leadClientSectionSubtitle =>
+      'اختر عميلاً موجوداً أو أنشئ عميلاً جديداً';
+
+  @override
+  String get leadInterestSection => 'الاهتمام والمصدر';
+
+  @override
+  String get leadInterestSectionSubtitle => 'كيف سمع العميل عنّا؟';
+
+  @override
+  String get leadNotesSectionSubtitle => 'ملاحظات اختيارية أو تفاصيل المتابعة';
+
+  @override
+  String get leadNotesHint => 'اكتب ملاحظة…';
+
+  @override
+  String get leadSource => 'مصدر العميل';
+
+  @override
+  String get leadSourceHint => 'اختر المصدر';
+
+  @override
+  String get leadSourceEmpty => 'لا توجد مصادر متاحة';
+
+  @override
+  String get leadTabExisting => 'موجود';
+
+  @override
+  String get leadTabNew => 'جديد';
+
+  @override
+  String get leadSearchHint => 'ابحث بالاسم أو الهاتف…';
+
+  @override
+  String get leadSearchEmpty => 'لا يوجد عملاء';
+
+  @override
+  String get leadClientSelected => 'العميل المختار';
+
+  @override
+  String get leadChangeClient => 'تغيير';
+
+  @override
+  String get leadContextProject => 'المشروع';
+
+  @override
+  String get leadContextUnit => 'الوحدة';
+
+  @override
+  String get leadInterestPreFilled => 'تم تحديد الاهتمام من';
 }

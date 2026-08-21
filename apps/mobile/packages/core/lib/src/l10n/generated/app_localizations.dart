@@ -3008,6 +3008,12 @@ abstract class AppLocalizations {
   /// **'Reservation'**
   String get leadActivityReservation;
 
+  /// No description provided for @leadActivityCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead created'**
+  String get leadActivityCreated;
+
   /// No description provided for @leadNew.
   ///
   /// In en, this message translates to:
@@ -4735,6 +4741,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit project'**
   String get staffEditProject;
+
+  /// No description provided for @leadClientSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get leadClientSection;
+
+  /// No description provided for @leadClientSectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick an existing client or create a new one'**
+  String get leadClientSectionSubtitle;
+
+  /// No description provided for @leadInterestSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Interest & Source'**
+  String get leadInterestSection;
+
+  /// No description provided for @leadInterestSectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How did the client hear about us?'**
+  String get leadInterestSectionSubtitle;
+
+  /// No description provided for @leadNotesSectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional remarks or follow-up details'**
+  String get leadNotesSectionSubtitle;
+
+  /// No description provided for @leadNotesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a note…'**
+  String get leadNotesHint;
+
+  /// No description provided for @leadSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead source'**
+  String get leadSource;
+
+  /// No description provided for @leadSourceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a source'**
+  String get leadSourceHint;
+
+  /// No description provided for @leadSourceEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No sources available'**
+  String get leadSourceEmpty;
+
+  /// No description provided for @leadTabExisting.
+  ///
+  /// In en, this message translates to:
+  /// **'Existing'**
+  String get leadTabExisting;
+
+  /// No description provided for @leadTabNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get leadTabNew;
+
+  /// No description provided for @leadSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name or phone…'**
+  String get leadSearchHint;
+
+  /// No description provided for @leadSearchEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No clients found'**
+  String get leadSearchEmpty;
+
+  /// No description provided for @leadClientSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected client'**
+  String get leadClientSelected;
+
+  /// No description provided for @leadChangeClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get leadChangeClient;
+
+  /// No description provided for @leadContextProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Project'**
+  String get leadContextProject;
+
+  /// No description provided for @leadContextUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get leadContextUnit;
+
+  /// No description provided for @leadInterestPreFilled.
+  ///
+  /// In en, this message translates to:
+  /// **'Interest pre-filled from'**
+  String get leadInterestPreFilled;
 }
 
 class _AppLocalizationsDelegate

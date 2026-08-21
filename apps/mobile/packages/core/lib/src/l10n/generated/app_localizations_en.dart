@@ -1567,6 +1567,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leadActivityReservation => 'Reservation';
 
   @override
+  String get leadActivityCreated => 'Lead created';
+
+  @override
   String get leadNew => 'New lead';
 
   @override
@@ -2489,4 +2492,60 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get staffEditProject => 'Edit project';
+
+  @override
+  String get leadClientSection => 'Client';
+
+  @override
+  String get leadClientSectionSubtitle =>
+      'Pick an existing client or create a new one';
+
+  @override
+  String get leadInterestSection => 'Interest & Source';
+
+  @override
+  String get leadInterestSectionSubtitle => 'How did the client hear about us?';
+
+  @override
+  String get leadNotesSectionSubtitle =>
+      'Optional remarks or follow-up details';
+
+  @override
+  String get leadNotesHint => 'Write a note…';
+
+  @override
+  String get leadSource => 'Lead source';
+
+  @override
+  String get leadSourceHint => 'Select a source';
+
+  @override
+  String get leadSourceEmpty => 'No sources available';
+
+  @override
+  String get leadTabExisting => 'Existing';
+
+  @override
+  String get leadTabNew => 'New';
+
+  @override
+  String get leadSearchHint => 'Search by name or phone…';
+
+  @override
+  String get leadSearchEmpty => 'No clients found';
+
+  @override
+  String get leadClientSelected => 'Selected client';
+
+  @override
+  String get leadChangeClient => 'Change';
+
+  @override
+  String get leadContextProject => 'Project';
+
+  @override
+  String get leadContextUnit => 'Unit';
+
+  @override
+  String get leadInterestPreFilled => 'Interest pre-filled from';
 }

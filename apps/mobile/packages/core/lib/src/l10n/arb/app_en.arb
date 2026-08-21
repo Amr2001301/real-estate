@@ -553,6 +553,7 @@
   "leadActivityVisit": "Visit",
   "leadActivityNote": "Note added",
   "leadActivityReservation": "Reservation",
+  "leadActivityCreated": "Lead created",
 
   "leadNew": "New lead",
   "leadCreate": "Create lead",
@@ -876,5 +877,24 @@
   "staffShareWithClient": "Share with client",
   "staffAddInterestedClient": "Add interested client",
   "staffSendToClient": "Send to client",
-  "staffEditProject": "Edit project"
+  "staffEditProject": "Edit project",
+
+  "leadClientSection": "Client",
+  "leadClientSectionSubtitle": "Pick an existing client or create a new one",
+  "leadInterestSection": "Interest & Source",
+  "leadInterestSectionSubtitle": "How did the client hear about us?",
+  "leadNotesSectionSubtitle": "Optional remarks or follow-up details",
+  "leadNotesHint": "Write a note…",
+  "leadSource": "Lead source",
+  "leadSourceHint": "Select a source",
+  "leadSourceEmpty": "No sources available",
+  "leadTabExisting": "Existing",
+  "leadTabNew": "New",
+  "leadSearchHint": "Search by name or phone…",
+  "leadSearchEmpty": "No clients found",
+  "leadClientSelected": "Selected client",
+  "leadChangeClient": "Change",
+  "leadContextProject": "Project",
+  "leadContextUnit": "Unit",
+  "leadInterestPreFilled": "Interest pre-filled from"
 }

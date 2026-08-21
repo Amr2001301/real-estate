@@ -7,8 +7,6 @@ import '../../../../common/lead_stage_label.dart';
 import '../../../../common/staff_contact_actions.dart';
 import '../cubit/lead_detail_cubit.dart';
 
-/// Lead detail: premium info card, interactive stage pipeline, note input,
-/// and a merged activity timeline.
 class LeadDetailScreen extends StatefulWidget {
   const LeadDetailScreen({super.key, required this.leadId, this.fallbackName});
   final String leadId;
@@ -43,32 +41,49 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n  = context.l10n;
+    final l10n = context.l10n;
+
     return Scaffold(
+      backgroundColor: context.appColors.canvas,
       body: Column(
         children: [
-          AppNavHeader(
-            title: widget.fallbackName ?? l10n.navLeads,
-            leadingAction: NavHeaderAction(
-              icon: Icons.arrow_back_ios_new_rounded,
-              onTap: () => context.pop(),
+          // ── Header — compact: back + name on same row ──────────────────
+          BlocBuilder<LeadDetailCubit, LeadDetailState>(
+            buildWhen: (a, b) =>
+                a.detail?.lead.fullName != b.detail?.lead.fullName,
+            builder: (context, state) => AppNavHeader(
+              title: state.detail?.lead.fullName ??
+                  widget.fallbackName ??
+                  l10n.navLeads,
+              compact: true,
+              leadingAction: NavHeaderAction(
+                icon: Icons.arrow_back_ios_new_rounded,
+                onTap: () => context.pop(),
+              ),
             ),
           ),
+
+          // ── Content ────────────────────────────────────────────────────
           Expanded(
             child: BlocConsumer<LeadDetailCubit, LeadDetailState>(
               listenWhen: (a, b) =>
-                  a.actionFailure != b.actionFailure && b.actionFailure != null,
+                  a.actionFailure != b.actionFailure &&
+                  b.actionFailure != null,
               listener: (context, state) =>
                   showFailureSnackBar(context, state.actionFailure!),
               builder: (context, state) {
                 switch (state.status) {
                   case DataStatus.initial:
                   case DataStatus.loading:
-                    return const Center(child: CircularProgressIndicator());
+                    return const Center(
+                      child: CircularProgressIndicator(
+                          color: AppPalette.gold400),
+                    );
                   case DataStatus.failure:
                     return ErrorState(
                       failure: state.failure,
-                      onRetry: () => context.read<LeadDetailCubit>().load(),
+                      onRetry: () =>
+                          context.read<LeadDetailCubit>().load(),
                     );
                   case DataStatus.empty:
                   case DataStatus.success:
@@ -87,7 +102,9 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
   }
 }
 
-// ── Body ──────────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// Body
+// ══════════════════════════════════════════════════════════════════════════════
 
 class _Body extends StatelessWidget {
   const _Body({
@@ -109,15 +126,15 @@ class _Body extends StatelessWidget {
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.xl),
+          AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.xxl),
       children: [
 
-        // ── Info card ─────────────────────────────────────────────────
+        // ── Premium info card ──────────────────────────────────────────
         _InfoCard(lead: lead, detail: detail),
 
         const SizedBox(height: AppSpacing.md),
 
-        // ── Stage pipeline ────────────────────────────────────────────
+        // ── Stage pipeline ─────────────────────────────────────────────
         _StagePipeline(
           currentStage: lead.stage,
           isWorking: state.working,
@@ -128,22 +145,20 @@ class _Body extends StatelessWidget {
           },
         ),
 
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.md),
 
-        // ── Schedule visit ────────────────────────────────────────────
-        AppButton(
+        // ── Quick action: schedule visit ───────────────────────────────
+        _ActionCard(
+          icon: Icons.event_rounded,
           label: l10n.visitNew,
-          icon: Icons.event_outlined,
-          variant: AppButtonVariant.outline,
-          expand: true,
-          onPressed: () =>
+          onTap: () =>
               context.push('/visits/new', extra: {'leadId': lead.id}),
         ),
 
         const SizedBox(height: AppSpacing.lg),
 
-        // ── Add note ──────────────────────────────────────────────────
-        _NoteSection(
+        // ── Add note ───────────────────────────────────────────────────
+        _NoteCard(
           controller: noteController,
           onSubmit: onSubmitNote,
           working: state.working,
@@ -151,41 +166,44 @@ class _Body extends StatelessWidget {
 
         const SizedBox(height: AppSpacing.lg),
 
-        // ── Timeline ──────────────────────────────────────────────────
+        // ── Timeline ───────────────────────────────────────────────────
         _TimelineSection(detail: detail, lang: lang),
       ],
     );
   }
 }
 
-// ── Info card ─────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// Premium info card
+// ══════════════════════════════════════════════════════════════════════════════
 
 class _InfoCard extends StatelessWidget {
   const _InfoCard({required this.lead, required this.detail});
-  final dynamic lead;   // Lead
-  final dynamic detail; // LeadDetail
+  final dynamic lead;
+  final dynamic detail;
 
   @override
   Widget build(BuildContext context) {
     final l10n   = context.l10n;
     final colors = context.appColors;
     final theme  = Theme.of(context);
-    final tone   = leadStageTone(lead.stage);
-    final stageColor = _toneColor(colors, tone);
-    final initials = (lead.fullName as String).isNotEmpty
-        ? (lead.fullName as String).characters.first
-        : '?';
+    final tone        = leadStageTone(lead.stage as String);
+    final stageColor  = _toneColor(colors, tone);
+    final name        = lead.fullName as String;
+    final initials    = _initials(name);
+    final hasInterest = (lead.projectInterest as String?) != null;
+    final hasSales    = (lead.assignedSalesName as String?) != null;
 
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppRadii.xl),
         border: Border.all(color: colors.hairline),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -193,124 +211,107 @@ class _InfoCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Top: avatar + info
+          // Gold shimmer accent strip
+          Container(
+            height: 2,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0x00B8941F),
+                  AppPalette.gold400,
+                  AppPalette.gold300,
+                  Color(0x00B8941F),
+                ],
+              ),
+            ),
+          ),
+
+          // Identity block
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg, AppSpacing.lg,
+                AppSpacing.lg, AppSpacing.md),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Avatar
                 Container(
-                  width: 54, height: 54,
+                  width: 60,
+                  height: 60,
                   decoration: BoxDecoration(
-                    color: colors.brandGoldSoft,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: colors.brandGold.withValues(alpha: 0.30),
-                      width: 2,
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppPalette.gold300, AppPalette.gold600],
                     ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppPalette.gold400.withValues(alpha: 0.30),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   alignment: Alignment.center,
                   child: Text(
                     initials,
-                    style: TextStyle(
-                      color: colors.brandGold,
+                    style: const TextStyle(
+                      color: Colors.white,
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.md),
 
-                // Name + meta
+                // Name + stage + meta
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Expanded(
                             child: Text(
-                              lead.fullName as String,
+                              name,
                               style: theme.textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.w800,
-                                height: 1.2,
+                                height: 1.15,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          // Stage badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: stageColor.withValues(alpha: 0.10),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: stageColor.withValues(alpha: 0.25),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 5, height: 5,
-                                  decoration: BoxDecoration(
-                                    color: stageColor, shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 5),
-                                Text(
-                                  leadStageLabel(l10n, lead.stage as String),
-                                  style: TextStyle(
-                                    color: stageColor,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          const SizedBox(width: AppSpacing.sm),
+                          // Stage pill
+                          _StagePill(
+                            label: leadStageLabel(l10n, lead.stage as String),
+                            color: stageColor,
                           ),
                         ],
                       ),
-                      if ((lead.projectInterest as String?) != null) ...[
-                        const SizedBox(height: 5),
-                        Row(
-                          children: [
-                            Icon(Icons.apartment_outlined,
-                                size: 13, color: colors.inkMuted),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                '${l10n.leadInterest}: ${lead.projectInterest}'
-                                '${(detail.unitInterest as String?) != null ? ' · ${detail.unitInterest}' : ''}',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: colors.inkMuted,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
+                      if (hasInterest) ...[
+                        const SizedBox(height: 6),
+                        _MetaRow(
+                          icon: Icons.apartment_rounded,
+                          text:
+                              '${lead.projectInterest as String}'
+                              '${(detail.unitInterest as String?) != null ? ' · ${detail.unitInterest}' : ''}',
                         ),
                       ],
-                      if ((lead.assignedSalesName as String?) != null) ...[
+                      if (hasSales) ...[
                         const SizedBox(height: 3),
-                        Row(
-                          children: [
-                            Icon(Icons.person_outline_rounded,
-                                size: 13, color: colors.inkMuted),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                '${l10n.leadAssignedTo}: ${lead.assignedSalesName}',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: colors.inkMuted,
-                                ),
-                              ),
-                            ),
-                          ],
+                        _MetaRow(
+                          icon: Icons.person_rounded,
+                          text:
+                              '${l10n.leadAssignedTo}: ${lead.assignedSalesName as String}',
+                        ),
+                      ],
+                      if ((lead.email as String?) != null) ...[
+                        const SizedBox(height: 3),
+                        _MetaRow(
+                          icon: Icons.mail_outline_rounded,
+                          text: lead.email as String,
                         ),
                       ],
                     ],
@@ -320,12 +321,11 @@ class _InfoCard extends StatelessWidget {
             ),
           ),
 
-          // Divider
           Divider(height: 1, color: colors.hairline),
 
-          // Contact buttons
+          // Contact actions
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: StaffContactButtons(phone: lead.phone as String?),
           ),
         ],
@@ -333,7 +333,17 @@ class _InfoCard extends StatelessWidget {
     );
   }
 
-  Color _toneColor(AppColorsExt c, BadgeTone tone) => switch (tone) {
+  static String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    final a = parts.first.characters.firstOrNull ?? '?';
+    if (parts.length >= 2) {
+      final b = parts.last.characters.firstOrNull ?? '';
+      return '$a$b'.toUpperCase();
+    }
+    return a.toUpperCase();
+  }
+
+  static Color _toneColor(AppColorsExt c, BadgeTone tone) => switch (tone) {
         BadgeTone.success => c.success,
         BadgeTone.warning => c.warning,
         BadgeTone.error   => c.error,
@@ -343,7 +353,71 @@ class _InfoCard extends StatelessWidget {
       };
 }
 
-// ── Stage pipeline ────────────────────────────────────────────────────────────
+class _StagePill extends StatelessWidget {
+  const _StagePill({required this.label, required this.color});
+  final String label;
+  final Color  color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+          border: Border.all(color: color.withValues(alpha: 0.30)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 5,
+              height: 5,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+class _MetaRow extends StatelessWidget {
+  const _MetaRow({required this.icon, required this.text});
+  final IconData icon;
+  final String   text;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Row(
+      children: [
+        Icon(icon, size: 13, color: colors.inkMuted),
+        const SizedBox(width: 5),
+        Expanded(
+          child: Text(
+            text,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colors.inkMuted,
+                ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Stage pipeline
+// ══════════════════════════════════════════════════════════════════════════════
 
 class _StagePipeline extends StatelessWidget {
   const _StagePipeline({
@@ -352,57 +426,66 @@ class _StagePipeline extends StatelessWidget {
     required this.onStageSelected,
   });
   final String currentStage;
-  final bool   isWorking;
+  final bool isWorking;
   final ValueChanged<String> onStageSelected;
 
   @override
   Widget build(BuildContext context) {
-    final l10n   = context.l10n;
-    final colors = context.appColors;
-    final theme  = Theme.of(context);
+    final l10n    = context.l10n;
+    final colors  = context.appColors;
+    final theme   = Theme.of(context);
     final currentIndex = kLeadStages.indexOf(currentStage);
 
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadii.xl),
         border: Border.all(color: colors.hairline),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Row(
             children: [
               Container(
-                width: 3, height: 16,
+                width: 3,
+                height: 16,
                 decoration: BoxDecoration(
-                  color: AppPalette.gold400,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [AppPalette.gold300, AppPalette.gold500],
+                  ),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               const SizedBox(width: 8),
               Text(
                 l10n.leadChangeStage,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w700),
               ),
               const Spacer(),
               if (isWorking)
-                SizedBox(
-                  width: 14, height: 14,
+                const SizedBox(
+                  width: 14,
+                  height: 14,
                   child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: AppPalette.gold400,
-                  ),
+                      strokeWidth: 2, color: AppPalette.gold400),
                 ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.md),
 
-          // Stage steps — horizontal scrollable pipeline
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Directionality(
@@ -421,10 +504,8 @@ class _StagePipeline extends StatelessWidget {
                       onTap: () => onStageSelected(kLeadStages[i]),
                     ),
                     if (i < kLeadStages.length - 1)
-                      _PipelineConnector(
-                        active: i < currentIndex,
-                        colors: colors,
-                      ),
+                      _Connector(
+                          active: i < currentIndex, colors: colors),
                   ],
                 ],
               ),
@@ -456,7 +537,7 @@ class _StageNode extends StatelessWidget {
   final AppColorsExt colors;
   final VoidCallback onTap;
 
-  Color get _stageColor => switch (tone) {
+  Color get _color => switch (tone) {
         BadgeTone.success => colors.success,
         BadgeTone.warning => colors.warning,
         BadgeTone.error   => colors.error,
@@ -467,21 +548,20 @@ class _StageNode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _stageColor;
+    final color    = _color;
     final isActive = isCurrent || isPast;
 
     return GestureDetector(
       onTap: isWorking ? null : onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 64,
+        width: 68,
         child: Column(
           children: [
-            // Circle indicator
             AnimatedContainer(
-              duration: const Duration(milliseconds: 220),
-              width: isCurrent ? 34 : 26,
-              height: isCurrent ? 34 : 26,
+              duration: const Duration(milliseconds: 250),
+              width: isCurrent ? 38 : 28,
+              height: isCurrent ? 38 : 28,
               decoration: BoxDecoration(
                 color: isActive ? color : Colors.transparent,
                 shape: BoxShape.circle,
@@ -492,8 +572,8 @@ class _StageNode extends StatelessWidget {
                 boxShadow: isCurrent
                     ? [
                         BoxShadow(
-                          color: color.withValues(alpha: 0.30),
-                          blurRadius: 8,
+                          color: color.withValues(alpha: 0.35),
+                          blurRadius: 10,
                           spreadRadius: 1,
                         ),
                       ]
@@ -502,21 +582,23 @@ class _StageNode extends StatelessWidget {
               child: isActive
                   ? Icon(
                       isPast ? Icons.check_rounded : Icons.circle,
-                      size: isCurrent ? 16 : 10,
+                      size: isCurrent ? 17 : 11,
                       color: Colors.white,
                     )
                   : null,
             ),
-            const SizedBox(height: 6),
-            // Stage label
+            const SizedBox(height: 7),
             Text(
               label,
               textAlign: TextAlign.center,
               maxLines: 2,
               style: TextStyle(
                 fontSize: isCurrent ? 11 : 10,
-                fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w400,
-                color: isCurrent ? color : (isPast ? colors.inkStrong : colors.inkMuted),
+                fontWeight:
+                    isCurrent ? FontWeight.w700 : FontWeight.w500,
+                color: isCurrent
+                    ? color
+                    : (isPast ? colors.inkStrong : colors.inkMuted),
                 height: 1.3,
               ),
             ),
@@ -527,27 +609,101 @@ class _StageNode extends StatelessWidget {
   }
 }
 
-class _PipelineConnector extends StatelessWidget {
-  const _PipelineConnector({required this.active, required this.colors});
+class _Connector extends StatelessWidget {
+  const _Connector({required this.active, required this.colors});
   final bool active;
   final AppColorsExt colors;
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 22),
+        padding: const EdgeInsets.only(bottom: 26),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          width: 20,
-          height: 1.5,
-          color: active ? AppPalette.gold400.withValues(alpha: 0.60) : colors.hairline,
+          duration: const Duration(milliseconds: 250),
+          width: 18,
+          height: 2,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(1),
+            color: active
+                ? AppPalette.gold400.withValues(alpha: 0.65)
+                : colors.hairline,
+          ),
         ),
       );
 }
 
-// ── Note section ──────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// Action card row (schedule visit etc.)
+// ══════════════════════════════════════════════════════════════════════════════
 
-class _NoteSection extends StatelessWidget {
-  const _NoteSection({
+class _ActionCard extends StatelessWidget {
+  const _ActionCard({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme  = Theme.of(context);
+
+    return Material(
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(AppRadii.lg),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            border: Border.all(color: colors.hairline),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppPalette.gold300, AppPalette.gold500],
+                  ),
+                  borderRadius: BorderRadius.circular(AppRadii.sm),
+                ),
+                child: Icon(icon, size: 18, color: Colors.white),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Text(
+                  label,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colors.inkStrong,
+                  ),
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios_rounded,
+                  size: 14, color: colors.inkMuted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Note card
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _NoteCard extends StatelessWidget {
+  const _NoteCard({
     required this.controller,
     required this.onSubmit,
     required this.working,
@@ -558,258 +714,314 @@ class _NoteSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n   = context.l10n;
-    final colors = context.appColors;
-    final theme  = Theme.of(context);
+    final l10n = context.l10n;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 3, height: 16,
-              decoration: BoxDecoration(
-                color: AppPalette.gold400,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(l10n.leadAddNote, style: theme.textTheme.titleSmall),
-          ],
+        _SectionHeader(label: l10n.leadAddNote),
+        const SizedBox(height: AppSpacing.sm),
+        AppTextField(
+          controller: controller,
+          hint: l10n.leadNoteHint,
+          maxLines: 5,
         ),
-        const SizedBox(height: 10),
-        Container(
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: colors.hairline),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextField(
-                controller: controller,
-                minLines: 2,
-                maxLines: 5,
-                decoration: InputDecoration(
-                  hintText: l10n.leadNoteHint,
-                  contentPadding: const EdgeInsets.all(14),
-                  border: InputBorder.none,
-                  hintStyle: TextStyle(color: colors.inkMuted, fontSize: 14),
-                ),
-                style: TextStyle(fontSize: 14, color: colors.inkStrong),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-                child: Align(
-                  alignment: AlignmentDirectional.centerEnd,
-                  child: GestureDetector(
-                    onTap: working ? null : onSubmit,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 18, vertical: 9),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [AppPalette.gold300, AppPalette.gold500],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppPalette.gold400.withValues(alpha: 0.25),
-                            blurRadius: 8, offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.send_rounded, size: 14,
-                              color: const Color(0xFF0B1726)),
-                          const SizedBox(width: 7),
-                          Text(
-                            'إرسال',
-                            style: const TextStyle(
-                              color: Color(0xFF0B1726),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+        const SizedBox(height: AppSpacing.sm),
+        AppButton(
+          label: l10n.leadAddNote,
+          onPressed: working ? null : onSubmit,
+          variant: AppButtonVariant.gold,
+          size: AppButtonSize.large,
+          icon: Icons.arrow_upward_rounded,
+          isLoading: working,
+          expand: true,
         ),
       ],
     );
   }
 }
 
-// ── Timeline section ──────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// Timeline section
+// ══════════════════════════════════════════════════════════════════════════════
 
 class _TimelineSection extends StatelessWidget {
   const _TimelineSection({required this.detail, required this.lang});
-  final dynamic detail; // LeadDetail
-  final String  lang;
+  final dynamic detail;
+  final String lang;
 
   @override
   Widget build(BuildContext context) {
-    final l10n   = context.l10n;
+    final l10n  = context.l10n;
+    final theme = Theme.of(context);
     final colors = context.appColors;
-    final theme  = Theme.of(context);
+    final items = detail.timeline as List;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 3, height: 16,
-              decoration: BoxDecoration(
-                color: AppPalette.gold400,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(l10n.leadTimeline, style: theme.textTheme.titleSmall),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if ((detail.timeline as List).isEmpty)
+        _SectionHeader(label: l10n.leadTimeline),
+        const SizedBox(height: AppSpacing.sm),
+        if (items.isEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 4),
+            padding: const EdgeInsets.only(top: AppSpacing.sm),
             child: Text(
               l10n.leadTimelineEmpty,
-              style: theme.textTheme.bodyMedium?.copyWith(color: colors.inkMuted),
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: colors.inkMuted),
             ),
           )
         else
-          for (int i = 0; i < (detail.timeline as List).length; i++) ...[
-            _TimelineTile(
-              entry: detail.timeline[i],
-              lang: lang,
-              isLast: i == (detail.timeline as List).length - 1,
-            ),
-          ],
+          _TimelineList(items: items, lang: lang),
       ],
     );
   }
 }
 
-class _TimelineTile extends StatelessWidget {
-  const _TimelineTile({
-    required this.entry,
-    required this.lang,
-    required this.isLast,
-  });
-  final dynamic entry; // LeadTimelineEntry
-  final String  lang;
-  final bool    isLast;
+class _TimelineList extends StatelessWidget {
+  const _TimelineList({required this.items, required this.lang});
+  final List items;
+  final String lang;
 
-  String _activityLabel(AppLocalizations l10n, String type) => switch (type) {
+  static const _kCfg = <String, ({IconData icon, Color color})>{
+    'note':          (icon: Icons.sticky_note_2_rounded, color: Color(0xFFC8A24B)),
+    'call':          (icon: Icons.phone_rounded,         color: Color(0xFF2E7D32)),
+    'email':         (icon: Icons.mail_rounded,          color: Color(0xFF1565C0)),
+    'visit':         (icon: Icons.event_rounded,         color: Color(0xFF6A1B9A)),
+    'reservation':   (icon: Icons.assignment_rounded,    color: Color(0xFF00838F)),
+    'status_change': (icon: Icons.swap_horiz_rounded,    color: Color(0xFF546E7A)),
+    'created':       (icon: Icons.person_add_rounded,    color: Color(0xFF2E7D32)),
+  };
+
+  static String _label(AppLocalizations l10n, String type) => switch (type) {
         'call'          => l10n.leadActivityCall,
         'email'         => l10n.leadActivityEmail,
         'status_change' => l10n.leadActivityStatusChange,
         'visit'         => l10n.leadActivityVisit,
         'note'          => l10n.leadActivityNote,
         'reservation'   => l10n.leadActivityReservation,
+        'created'       => l10n.leadActivityCreated,
         _               => type,
       };
 
+  static String _time(DateTime dt) {
+    final h = dt.hour.toString().padLeft(2, '0');
+    final m = dt.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final l10n   = context.l10n;
+    // Group by date string
+    final Map<String, List<dynamic>> byDay = {};
+    for (final e in items) {
+      final dt  = e.createdAt as DateTime?;
+      final key = dt != null
+          ? DateFormatter.shortDate(dt, languageCode: lang)
+          : '—';
+      (byDay[key] ??= []).add(e);
+    }
+
     final colors = context.appColors;
     final theme  = Theme.of(context);
-    final isNote = entry.isNote as bool;
-    final body   = isNote
-        ? (entry.body as String)
-        : _activityLabel(l10n, entry.body as String);
-    final List<String> meta = [
-      if ((entry.authorName as String?) != null) entry.authorName as String,
-      if ((entry.createdAt as DateTime?) != null)
-        DateFormatter.shortDate(entry.createdAt as DateTime, languageCode: lang),
-    ];
+    final l10n   = context.l10n;
 
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Vertical line + dot
-          SizedBox(
-            width: 28,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final group in byDay.entries) ...[
+          const SizedBox(height: AppSpacing.sm),
+
+          // ── Day card ─────────────────────────────────────────────────
+          Container(
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(AppRadii.xl),
+              border: Border.all(color: colors.hairline),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            clipBehavior: Clip.antiAlias,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Day header
                 Container(
-                  width: 28, height: 28,
-                  decoration: BoxDecoration(
-                    color: isNote
-                        ? AppPalette.gold400.withValues(alpha: 0.10)
-                        : colors.hairline,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isNote
-                          ? AppPalette.gold400.withValues(alpha: 0.35)
-                          : colors.hairline,
-                    ),
-                  ),
-                  child: Icon(
-                    isNote
-                        ? Icons.sticky_note_2_outlined
-                        : Icons.history_rounded,
-                    size: 14,
-                    color: isNote ? AppPalette.gold400 : colors.inkMuted,
+                  color: colors.canvas,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg, vertical: 10),
+                  child: Row(
+                    children: [
+                      // Date label (right in RTL)
+                      Text(
+                        group.key,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: colors.inkStrong,
+                        ),
+                      ),
+                      const Spacer(),
+                      // Entry count (left in RTL)
+                      Text(
+                        '${group.value.length}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colors.inkMuted,
+                        ),
+                      ),
+                      const SizedBox(width: 3),
+                      Icon(Icons.history_rounded,
+                          size: 12, color: colors.inkMuted),
+                    ],
                   ),
                 ),
-                if (!isLast)
-                  Expanded(
-                    child: Center(
-                      child: Container(
-                        width: 1.5,
-                        color: colors.hairline,
-                      ),
-                    ),
+                Divider(height: 1, color: colors.hairline),
+
+                // Entries
+                for (int i = 0; i < group.value.length; i++) ...[
+                  _buildEntry(
+                    context,
+                    l10n,
+                    colors,
+                    theme,
+                    group.value[i],
                   ),
+                  if (i < group.value.length - 1)
+                    Divider(
+                      height: 1,
+                      color: colors.hairline,
+                      indent: AppSpacing.lg,
+                      endIndent: AppSpacing.lg,
+                    ),
+                ],
               ],
             ),
           ),
-          const SizedBox(width: 10),
+        ],
+        const SizedBox(height: AppSpacing.lg),
+      ],
+    );
+  }
 
-          // Content
+  Widget _buildEntry(
+    BuildContext context,
+    AppLocalizations l10n,
+    AppColorsExt colors,
+    ThemeData theme,
+    dynamic e,
+  ) {
+    final isNote   = e.isNote as bool;
+    final rawType  = isNote ? 'note' : (e.body as String);
+    final cfg      = _kCfg[rawType] ??
+        (icon: Icons.history_rounded, color: colors.inkMuted);
+    final bodyText = isNote
+        ? (e.body as String)
+        : _label(l10n, e.body as String);
+    final author   = e.authorName as String?;
+    final dt       = e.createdAt as DateTime?;
+
+    return Container(
+      color: isNote
+          ? AppPalette.gold400.withValues(alpha: 0.04)
+          : Colors.transparent,
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg, vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Type icon — rightmost in RTL (first child) ────────────
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: cfg.color.withValues(alpha: 0.10),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(cfg.icon, size: 16, color: cfg.color),
+          ),
+          const SizedBox(width: 12),
+
+          // ── Body text — expands to fill center ────────────────────
           Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  bodyText,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.inkStrong,
+                    fontWeight:
+                        isNote ? FontWeight.w700 : FontWeight.w500,
+                    height: 1.5,
+                  ),
+                ),
+                if (author != null) ...[
+                  const SizedBox(height: 2),
                   Text(
-                    body,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: isNote ? FontWeight.w500 : FontWeight.w400,
+                    author,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colors.inkMuted,
                     ),
                   ),
-                  if (meta.isNotEmpty) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      meta.join(' · '),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: colors.inkMuted,
-                      ),
-                    ),
-                  ],
                 ],
-              ),
+              ],
             ),
           ),
+
+          // ── Time — leftmost in RTL (last child) ───────────────────
+          if (dt != null) ...[
+            const SizedBox(width: 8),
+            Text(
+              _time(dt),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: colors.inkMuted,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
         ],
       ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Shared: section header with gold left bar
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Container(
+          width: 3,
+          height: 18,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [AppPalette.gold300, AppPalette.gold500],
+            ),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
     );
   }
 }

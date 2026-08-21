@@ -550,6 +550,7 @@
   "leadActivityVisit": "زيارة",
   "leadActivityNote": "أُضيفت ملاحظة",
   "leadActivityReservation": "حجز",
+  "leadActivityCreated": "تم إنشاء العميل المحتمل",
 
   "leadNew": "عميل محتمل جديد",
   "leadCreate": "إنشاء عميل محتمل",
@@ -873,5 +874,24 @@
   "staffShareWithClient": "مشاركة مع عميل",
   "staffAddInterestedClient": "إضافة عميل مهتم",
   "staffSendToClient": "إرسال للعميل",
-  "staffEditProject": "تعديل المشروع"
+  "staffEditProject": "تعديل المشروع",
+
+  "leadClientSection": "العميل",
+  "leadClientSectionSubtitle": "اختر عميلاً موجوداً أو أنشئ عميلاً جديداً",
+  "leadInterestSection": "الاهتمام والمصدر",
+  "leadInterestSectionSubtitle": "كيف سمع العميل عنّا؟",
+  "leadNotesSectionSubtitle": "ملاحظات اختيارية أو تفاصيل المتابعة",
+  "leadNotesHint": "اكتب ملاحظة…",
+  "leadSource": "مصدر العميل",
+  "leadSourceHint": "اختر المصدر",
+  "leadSourceEmpty": "لا توجد مصادر متاحة",
+  "leadTabExisting": "موجود",
+  "leadTabNew": "جديد",
+  "leadSearchHint": "ابحث بالاسم أو الهاتف…",
+  "leadSearchEmpty": "لا يوجد عملاء",
+  "leadClientSelected": "العميل المختار",
+  "leadChangeClient": "تغيير",
+  "leadContextProject": "المشروع",
+  "leadContextUnit": "الوحدة",
+  "leadInterestPreFilled": "تم تحديد الاهتمام من"
 }
