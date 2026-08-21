@@ -1,5 +1,6 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -13,13 +14,13 @@ export '../cubit/leads_cubit.dart' show LeadSource;
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 Color _stageColor(String stage, AppColorsExt colors) => switch (stage) {
-  'NEW'         => colors.inkMuted,
-  'INTERESTED'  => colors.info,
-  'VISIT'       => colors.brandGold,
+  'NEW' => colors.inkMuted,
+  'INTERESTED' => colors.info,
+  'VISIT' => colors.brandGold,
   'NEGOTIATION' => colors.warning,
-  'WON'         => colors.success,
-  'LOST'        => colors.error,
-  _             => colors.inkMuted,
+  'WON' => colors.success,
+  'LOST' => colors.error,
+  _ => colors.inkMuted,
 };
 
 String _initials(String name) {
@@ -77,10 +78,10 @@ class _LeadsScreenState extends State<LeadsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n      = context.l10n;
-    final cubit     = context.read<LeadsCubit>();
+    final l10n = context.l10n;
+    final cubit = context.read<LeadsCubit>();
     final bottomPad = MediaQuery.of(context).padding.bottom;
-    final lang      = Localizations.localeOf(context).languageCode;
+    final lang = Localizations.localeOf(context).languageCode;
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -95,32 +96,22 @@ class _LeadsScreenState extends State<LeadsScreen> {
         children: [
           // ── Header + embedded search ────────────────────────────────────────
           BlocBuilder<LeadsCubit, LeadsListState>(
-            buildWhen: (a, b) => a.mine != b.mine || a.hasAdvancedFilters != b.hasAdvancedFilters,
-            builder: (context, state) => AppNavHeader(
+            buildWhen: (a, b) =>
+                a.mine != b.mine ||
+                a.hasAdvancedFilters != b.hasAdvancedFilters,
+            builder: (context, state) => _LeadsHeader(
               title: l10n.navLeads,
-              actions: [
-                NavHeaderAction(
-                  icon: state.mine
-                      ? Icons.person_rounded
-                      : Icons.person_outline_rounded,
-                  tooltip: l10n.leadsMine,
-                  onTap: cubit.toggleMine,
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                NavHeaderAction(
-                  icon: state.hasAdvancedFilters
-                      ? Icons.filter_alt_rounded
-                      : Icons.filter_alt_outlined,
-                  tooltip: l10n.leadsFilterSheet,
-                  onTap: () => _showFilterSheet(context, cubit),
-                ),
-              ],
-              bottom: _NavSearchBar(
-                controller: _search,
-                hint: l10n.leadsSearchHint,
-                onSubmitted: cubit.setSearch,
-                onClear: () { _search.clear(); cubit.setSearch(''); },
-              ),
+              isMine: state.mine,
+              hasFilters: state.hasAdvancedFilters,
+              searchController: _search,
+              searchHint: l10n.leadsSearchHint,
+              onToggleMine: cubit.toggleMine,
+              onFilterTap: () => _showFilterSheet(context, cubit),
+              onSearch: cubit.setSearch,
+              onClearSearch: () {
+                _search.clear();
+                cubit.setSearch('');
+              },
             ),
           ),
           // ── Stage filter chips ───────────────────────────────────────────────
@@ -191,22 +182,26 @@ class _LeadsScreenState extends State<LeadsScreen> {
                               AppSpacing.md,
                             ),
                             sliver: SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (context, i) {
-                                  if (i.isOdd) {
-                                    return const SizedBox(height: AppSpacing.sm);
-                                  }
-                                  return _LeadCard(lead: state.leads[i ~/ 2]);
-                                },
-                                childCount: state.leads.length * 2 - 1,
-                              ),
+                              delegate: SliverChildBuilderDelegate((
+                                context,
+                                i,
+                              ) {
+                                if (i.isOdd) {
+                                  return const SizedBox(height: AppSpacing.sm);
+                                }
+                                return _LeadCard(lead: state.leads[i ~/ 2]);
+                              }, childCount: state.leads.length * 2 - 1),
                             ),
                           ),
                           if (state.isLoadingMore)
                             const SliverToBoxAdapter(
                               child: Padding(
-                                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-                                child: Center(child: CircularProgressIndicator()),
+                                padding: EdgeInsets.symmetric(
+                                  vertical: AppSpacing.md,
+                                ),
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
                               ),
                             ),
                           SliverPadding(
@@ -223,6 +218,224 @@ class _LeadsScreenState extends State<LeadsScreen> {
       ),
     );
   }
+}
+
+// ── Leads-specific header (avoids core-package hot-reload issues) ─────────────
+
+class _LeadsHeader extends StatelessWidget {
+  const _LeadsHeader({
+    required this.title,
+    required this.isMine,
+    required this.hasFilters,
+    required this.searchController,
+    required this.searchHint,
+    required this.onToggleMine,
+    required this.onFilterTap,
+    required this.onSearch,
+    required this.onClearSearch,
+  });
+
+  final String title;
+  final bool isMine;
+  final bool hasFilters;
+  final TextEditingController searchController;
+  final String searchHint;
+  final VoidCallback onToggleMine;
+  final VoidCallback onFilterTap;
+  final ValueChanged<String> onSearch;
+  final VoidCallback onClearSearch;
+
+  static const _navyDeep = Color(0xFF0B1726);
+  static const _navyMid = Color(0xFF14273F);
+  static const _navyLight = Color(0xFF243F62);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [_navyLight, _navyMid, _navyDeep],
+            stops: [0.0, 0.45, 1.0],
+          ),
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(AppRadii.xl + 4),
+            bottomRight: Radius.circular(AppRadii.xl + 4),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 22,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            // Dot texture
+            const Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(AppRadii.xl + 4),
+                  bottomRight: Radius.circular(AppRadii.xl + 4),
+                ),
+                child: IgnorePointer(child: _HeaderDotsBg()),
+              ),
+            ),
+            // Gold radial bloom
+            PositionedDirectional(
+              top: 0,
+              end: -30,
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [Color(0x1EC8A24B), Color(0x00C8A24B)],
+                    stops: [0.0, 0.75],
+                  ),
+                ),
+              ),
+            ),
+            // Gold hairline at bottom
+            Positioned(
+              bottom: 0,
+              left: 40,
+              right: 40,
+              child: Container(
+                height: 1,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      AppPalette.gold400.withValues(alpha: 0.50),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Content
+            SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Action buttons row
+                    Row(
+                      children: [
+                        Text(
+                          title,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const Spacer(),
+                        _GlassBtn(
+                          icon: isMine
+                              ? Icons.person_rounded
+                              : Icons.person_outline_rounded,
+                          onTap: onToggleMine,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        _GlassBtn(
+                          icon: hasFilters
+                              ? Icons.filter_alt_rounded
+                              : Icons.filter_alt_outlined,
+                          onTap: onFilterTap,
+                        ),
+                      ],
+                    ),
+
+                    // ── gap between buttons and title ──
+
+                    // Title
+                    const SizedBox(height: AppSpacing.md),
+
+                    // Search bar
+                    _NavSearchBar(
+                      controller: searchController,
+                      hint: searchHint,
+                      onSubmitted: onSearch,
+                      onClear: onClearSearch,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GlassBtn extends StatelessWidget {
+  const _GlassBtn({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.white.withValues(alpha: 0.10),
+    shape: const CircleBorder(),
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.20),
+            width: 0.8,
+          ),
+        ),
+        child: Icon(icon, color: Colors.white, size: 20),
+      ),
+    ),
+  );
+}
+
+class _HeaderDotsBg extends StatelessWidget {
+  const _HeaderDotsBg();
+  @override
+  Widget build(BuildContext context) =>
+      const CustomPaint(painter: _DotsBgPainter(), child: SizedBox.expand());
+}
+
+class _DotsBgPainter extends CustomPainter {
+  const _DotsBgPainter();
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.white.withValues(alpha: 0.04);
+    const step = 20.0;
+    for (var y = 8.0; y < size.height; y += step) {
+      for (var x = 8.0; x < size.width; x += step) {
+        canvas.drawCircle(Offset(x, y), 1.1, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DotsBgPainter _) => false;
 }
 
 // ── Nav search bar (white pill embedded in AppNavHeader bottom:) ──────────────
@@ -250,13 +463,14 @@ class _NavSearchBarState extends State<_NavSearchBar> {
   void initState() {
     super.initState();
     widget.controller.addListener(
-        () => setState(() => _hasText = widget.controller.text.isNotEmpty));
+      () => setState(() => _hasText = widget.controller.text.isNotEmpty),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final theme  = Theme.of(context);
+    final theme = Theme.of(context);
     return Container(
       height: 46,
       decoration: BoxDecoration(
@@ -283,16 +497,16 @@ class _NavSearchBarState extends State<_NavSearchBar> {
                 focusedBorder: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
                 hintText: widget.hint,
-                hintStyle: theme.textTheme.bodyMedium
-                    ?.copyWith(color: colors.inkMuted),
+                hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                  color: colors.inkMuted,
+                ),
               ),
             ),
           ),
           if (_hasText)
             IconButton(
               visualDensity: VisualDensity.compact,
-              icon: Icon(Icons.close_rounded,
-                  size: 18, color: colors.inkMuted),
+              icon: Icon(Icons.close_rounded, size: 18, color: colors.inkMuted),
               onPressed: widget.onClear,
             ),
           const SizedBox(width: AppSpacing.xs),
@@ -320,14 +534,12 @@ class _StageFilterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n   = context.l10n;
+    final l10n = context.l10n;
     final colors = context.appColors;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface,
-        border: Border(
-          bottom: BorderSide(color: colors.hairline, width: 0.5),
-        ),
+        border: Border(bottom: BorderSide(color: colors.hairline, width: 0.5)),
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -352,7 +564,8 @@ class _StageFilterRow extends StatelessWidget {
                 active: selected == stage,
                 onTap: () => onSelected(stage),
               ),
-              if (stage != kLeadStages.last) const SizedBox(width: AppSpacing.xs),
+              if (stage != kLeadStages.last)
+                const SizedBox(width: AppSpacing.xs),
             ],
           ],
         ),
@@ -461,8 +674,8 @@ class _KpiRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors   = context.appColors;
-    final total    = leads.length;
+    final colors = context.appColors;
+    final total = leads.length;
     final pipeline = leads
         .where(
           (l) =>
@@ -503,11 +716,7 @@ class _KpiRow extends StatelessWidget {
                   color: colors.brandNavy,
                 ),
               ),
-              VerticalDivider(
-                width: 1,
-                thickness: 0.8,
-                color: colors.hairline,
-              ),
+              VerticalDivider(width: 1, thickness: 0.8, color: colors.hairline),
               Expanded(
                 child: _KpiStat(
                   value: '$pipeline',
@@ -515,11 +724,7 @@ class _KpiRow extends StatelessWidget {
                   color: colors.brandGold,
                 ),
               ),
-              VerticalDivider(
-                width: 1,
-                thickness: 0.8,
-                color: colors.hairline,
-              ),
+              VerticalDivider(width: 1, thickness: 0.8, color: colors.hairline),
               Expanded(
                 child: _KpiStat(
                   value: '$won',
@@ -595,43 +800,46 @@ class _LeadCardState extends State<_LeadCard> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n       = context.l10n;
-    final colors     = context.appColors;
-    final lang       = Localizations.localeOf(context).languageCode;
-    final isRtl      = context.read<LocaleCubit>().isRtl;
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    final lang = Localizations.localeOf(context).languageCode;
+    final isRtl = context.read<LocaleCubit>().isRtl;
     final stageColor = _stageColor(lead.stage, colors);
-    final initials   = _initials(lead.fullName);
+    final initials = _initials(lead.fullName);
 
     return GestureDetector(
-      onTapDown:   (_) => setState(() => _pressed = true),
-      onTapUp:     (_) => setState(() => _pressed = false),
-      onTapCancel: ()  => setState(() => _pressed = false),
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
       onTap: () => context.push('/leads/${lead.id}', extra: lead),
       child: AnimatedScale(
-        scale:    _pressed ? 0.975 : 1.0,
+        scale: _pressed ? 0.975 : 1.0,
         duration: const Duration(milliseconds: 110),
-        curve:    Curves.easeOutCubic,
+        curve: Curves.easeOutCubic,
         child: Container(
           decoration: BoxDecoration(
-            color:        colors.surface,
+            color: colors.surface,
             borderRadius: AppRadii.card,
-            border:       Border.all(color: stageColor.withValues(alpha: 0.14), width: 0.8),
+            border: Border.all(
+              color: stageColor.withValues(alpha: 0.14),
+              width: 0.8,
+            ),
             boxShadow: [
               BoxShadow(
-                color:      stageColor.withValues(alpha: 0.08),
+                color: stageColor.withValues(alpha: 0.08),
                 blurRadius: 18,
-                offset:     const Offset(0, 5),
+                offset: const Offset(0, 5),
               ),
               BoxShadow(
-                color:      Colors.black.withValues(alpha: 0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 6,
-                offset:     const Offset(0, 2),
+                offset: const Offset(0, 2),
               ),
             ],
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(
-            mainAxisSize:       MainAxisSize.min,
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // ── Top gradient accent strip ─────────────────────────────
@@ -639,8 +847,8 @@ class _LeadCardState extends State<_LeadCard> {
                 height: 3,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    begin:  isRtl ? Alignment.centerRight : Alignment.centerLeft,
-                    end:    isRtl ? Alignment.centerLeft  : Alignment.centerRight,
+                    begin: isRtl ? Alignment.centerRight : Alignment.centerLeft,
+                    end: isRtl ? Alignment.centerLeft : Alignment.centerRight,
                     colors: [stageColor, stageColor.withValues(alpha: 0.0)],
                   ),
                 ),
@@ -648,8 +856,10 @@ class _LeadCardState extends State<_LeadCard> {
               // ── Card body ─────────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md, AppSpacing.sm,
-                  AppSpacing.md, AppSpacing.sm,
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                  AppSpacing.md,
+                  AppSpacing.sm,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -659,21 +869,23 @@ class _LeadCardState extends State<_LeadCard> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Container(
-                          width:  44,
+                          width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color:  stageColor.withValues(alpha: 0.12),
-                            shape:  BoxShape.circle,
-                            border: Border.all(color: stageColor.withValues(alpha: 0.30)),
+                            color: stageColor.withValues(alpha: 0.12),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: stageColor.withValues(alpha: 0.30),
+                            ),
                           ),
                           alignment: Alignment.center,
                           child: Text(
                             initials,
                             style: TextStyle(
-                              color:      stageColor,
-                              fontSize:   15,
+                              color: stageColor,
+                              fontSize: 15,
                               fontWeight: FontWeight.w700,
-                              height:     1,
+                              height: 1,
                             ),
                           ),
                         ),
@@ -684,27 +896,35 @@ class _LeadCardState extends State<_LeadCard> {
                             children: [
                               Text(
                                 lead.fullName,
-                                maxLines:  1,
-                                overflow:  TextOverflow.ellipsis,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize:   15,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.w700,
-                                  color:      colors.inkStrong,
-                                  height:     1.2,
+                                  color: colors.inkStrong,
+                                  height: 1.2,
                                 ),
                               ),
                               const SizedBox(height: 2),
                               if (lead.projectInterest != null)
                                 Row(
                                   children: [
-                                    Icon(Icons.apartment_outlined, size: 12, color: colors.inkMuted),
+                                    Icon(
+                                      Icons.apartment_outlined,
+                                      size: 12,
+                                      color: colors.inkMuted,
+                                    ),
                                     const SizedBox(width: 3),
                                     Expanded(
                                       child: Text(
                                         lead.projectInterest!,
-                                        maxLines:  1,
-                                        overflow:  TextOverflow.ellipsis,
-                                        style: TextStyle(fontSize: 12, color: colors.inkMuted, height: 1.3),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: colors.inkMuted,
+                                          height: 1.3,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -712,7 +932,11 @@ class _LeadCardState extends State<_LeadCard> {
                               else if (lead.phone != null)
                                 Text(
                                   lead.phone!,
-                                  style: TextStyle(fontSize: 12, color: colors.inkMuted, height: 1.3),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: colors.inkMuted,
+                                    height: 1.3,
+                                  ),
                                 ),
                             ],
                           ),
@@ -720,10 +944,14 @@ class _LeadCardState extends State<_LeadCard> {
                         const SizedBox(width: AppSpacing.xs),
                         StatusBadge(
                           label: leadStageLabel(l10n, lead.stage),
-                          tone:  leadStageTone(lead.stage),
+                          tone: leadStageTone(lead.stage),
                         ),
                         const SizedBox(width: AppSpacing.xxs),
-                        Icon(Icons.chevron_right_rounded, size: 20, color: colors.inkMuted),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: 20,
+                          color: colors.inkMuted,
+                        ),
                       ],
                     ),
                     // ── Date chip + call button ──────────────────────────
@@ -734,8 +962,11 @@ class _LeadCardState extends State<_LeadCard> {
                       children: [
                         if (lead.createdAt != null)
                           _LeadInfoChip(
-                            icon:  Icons.calendar_today_outlined,
-                            label: DateFormatter.shortDate(lead.createdAt!, languageCode: lang),
+                            icon: Icons.calendar_today_outlined,
+                            label: DateFormatter.shortDate(
+                              lead.createdAt!,
+                              languageCode: lang,
+                            ),
                             color: colors.brandNavy,
                           )
                         else
@@ -743,17 +974,23 @@ class _LeadCardState extends State<_LeadCard> {
                         const Spacer(),
                         if (lead.phone != null)
                           GestureDetector(
-                            onTap:    () => ContactActions.call(lead.phone!),
+                            onTap: () => ContactActions.call(lead.phone!),
                             behavior: HitTestBehavior.opaque,
                             child: Container(
-                              width:  34,
+                              width: 34,
                               height: 34,
                               decoration: BoxDecoration(
-                                color:  colors.success.withValues(alpha: 0.10),
-                                border: Border.all(color: colors.success.withValues(alpha: 0.25)),
-                                shape:  BoxShape.circle,
+                                color: colors.success.withValues(alpha: 0.10),
+                                border: Border.all(
+                                  color: colors.success.withValues(alpha: 0.25),
+                                ),
+                                shape: BoxShape.circle,
                               ),
-                              child: Icon(Icons.call_rounded, size: 15, color: colors.success),
+                              child: Icon(
+                                Icons.call_rounded,
+                                size: 15,
+                                color: colors.success,
+                              ),
                             ),
                           ),
                       ],
@@ -778,16 +1015,16 @@ class _LeadInfoChip extends StatelessWidget {
     required this.color,
   });
   final IconData icon;
-  final String   label;
-  final Color    color;
+  final String label;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color:        color.withValues(alpha: 0.07),
-        border:       Border.all(color: color.withValues(alpha: 0.20)),
+        color: color.withValues(alpha: 0.07),
+        border: Border.all(color: color.withValues(alpha: 0.20)),
         borderRadius: AppRadii.pillAll,
       ),
       child: Row(
@@ -798,10 +1035,10 @@ class _LeadInfoChip extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize:   11,
+              fontSize: 11,
               fontWeight: FontWeight.w600,
-              color:      color,
-              height:     1.2,
+              color: color,
+              height: 1.2,
             ),
           ),
         ],
@@ -828,7 +1065,12 @@ class _ActiveFilterChips extends StatelessWidget {
     final colors = context.appColors;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.xs),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        0,
+        AppSpacing.md,
+        AppSpacing.xs,
+      ),
       child: Row(
         children: [
           // Clear-all chip
@@ -888,7 +1130,10 @@ class _DismissChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: 4,
+        ),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.10),
           border: Border.all(color: color.withValues(alpha: 0.30)),
@@ -945,12 +1190,17 @@ class _LeadFilterSheetState extends State<_LeadFilterSheet> {
 
   Future<void> _loadSources() async {
     final sources = await widget.cubit.fetchSources();
-    if (mounted) setState(() { _sources = sources; _loadingSources = false; });
+    if (mounted)
+      setState(() {
+        _sources = sources;
+        _loadingSources = false;
+      });
   }
 
   Future<void> _pickDate(bool isFrom) async {
-    final initial = DateTime.tryParse(isFrom ? (_dateFrom ?? '') : (_dateTo ?? ''))
-        ?? DateTime.now();
+    final initial =
+        DateTime.tryParse(isFrom ? (_dateFrom ?? '') : (_dateTo ?? '')) ??
+        DateTime.now();
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
@@ -958,10 +1208,17 @@ class _LeadFilterSheetState extends State<_LeadFilterSheet> {
       lastDate: DateTime(2030),
     );
     if (picked != null && mounted) {
-      final iso = '${picked.year.toString().padLeft(4, '0')}-'
+      final iso =
+          '${picked.year.toString().padLeft(4, '0')}-'
           '${picked.month.toString().padLeft(2, '0')}-'
           '${picked.day.toString().padLeft(2, '0')}';
-      setState(() { if (isFrom) { _dateFrom = iso; } else { _dateTo = iso; } });
+      setState(() {
+        if (isFrom) {
+          _dateFrom = iso;
+        } else {
+          _dateTo = iso;
+        }
+      });
     }
   }
 
@@ -978,7 +1235,11 @@ class _LeadFilterSheetState extends State<_LeadFilterSheet> {
   }
 
   void _clear() {
-    setState(() { _sourceId = null; _dateFrom = null; _dateTo = null; });
+    setState(() {
+      _sourceId = null;
+      _dateFrom = null;
+      _dateTo = null;
+    });
   }
 
   @override
@@ -993,7 +1254,12 @@ class _LeadFilterSheetState extends State<_LeadFilterSheet> {
         color: colors.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      padding: EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, bottomPad + AppSpacing.md),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        bottomPad + AppSpacing.md,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1001,8 +1267,12 @@ class _LeadFilterSheetState extends State<_LeadFilterSheet> {
           // Handle
           Center(
             child: Container(
-              width: 36, height: 4,
-              decoration: BoxDecoration(color: colors.hairline, borderRadius: AppRadii.pillAll),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: colors.hairline,
+                borderRadius: AppRadii.pillAll,
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -1012,23 +1282,42 @@ class _LeadFilterSheetState extends State<_LeadFilterSheet> {
               Expanded(
                 child: Text(
                   l10n.leadsFilterSheet,
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: colors.inkStrong),
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: colors.inkStrong,
+                  ),
                 ),
               ),
               TextButton(
                 onPressed: _clear,
-                child: Text(l10n.leadsFilterClear, style: TextStyle(color: colors.error, fontSize: 13)),
+                child: Text(
+                  l10n.leadsFilterClear,
+                  style: TextStyle(color: colors.error, fontSize: 13),
+                ),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
 
           // Source picker
-          Text(l10n.leadsFilterSource,
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colors.inkMuted)),
+          Text(
+            l10n.leadsFilterSource,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: colors.inkMuted,
+            ),
+          ),
           const SizedBox(height: AppSpacing.xs),
           if (_loadingSources)
-            const Center(child: SizedBox(height: 32, width: 32, child: CircularProgressIndicator(strokeWidth: 2)))
+            const Center(
+              child: SizedBox(
+                height: 32,
+                width: 32,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
           else
             SizedBox(
               height: 36,
@@ -1045,7 +1334,9 @@ class _LeadFilterSheetState extends State<_LeadFilterSheet> {
                     _FilterChip(
                       label: src.name,
                       active: _sourceId == src.id,
-                      onTap: () => setState(() => _sourceId = _sourceId == src.id ? null : src.id),
+                      onTap: () => setState(
+                        () => _sourceId = _sourceId == src.id ? null : src.id,
+                      ),
                     ),
                   ],
                 ],
@@ -1056,35 +1347,44 @@ class _LeadFilterSheetState extends State<_LeadFilterSheet> {
           // Date range
           Text(
             lang == 'ar' ? 'نطاق التاريخ' : 'Date range',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colors.inkMuted),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: colors.inkMuted,
+            ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Row(
             children: [
-              Expanded(child: _DateButton(
-                label: _dateFrom ?? l10n.leadsFilterDateFrom,
-                hasValue: _dateFrom != null,
-                onTap: () => _pickDate(true),
-                onClear: _dateFrom != null ? () => setState(() => _dateFrom = null) : null,
-                colors: colors,
-              )),
+              Expanded(
+                child: _DateButton(
+                  label: _dateFrom ?? l10n.leadsFilterDateFrom,
+                  hasValue: _dateFrom != null,
+                  onTap: () => _pickDate(true),
+                  onClear: _dateFrom != null
+                      ? () => setState(() => _dateFrom = null)
+                      : null,
+                  colors: colors,
+                ),
+              ),
               const SizedBox(width: AppSpacing.sm),
-              Expanded(child: _DateButton(
-                label: _dateTo ?? l10n.leadsFilterDateTo,
-                hasValue: _dateTo != null,
-                onTap: () => _pickDate(false),
-                onClear: _dateTo != null ? () => setState(() => _dateTo = null) : null,
-                colors: colors,
-              )),
+              Expanded(
+                child: _DateButton(
+                  label: _dateTo ?? l10n.leadsFilterDateTo,
+                  hasValue: _dateTo != null,
+                  onTap: () => _pickDate(false),
+                  onClear: _dateTo != null
+                      ? () => setState(() => _dateTo = null)
+                      : null,
+                  colors: colors,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
 
           // Apply button
-          FilledButton(
-            onPressed: _apply,
-            child: Text(l10n.leadsFilterApply),
-          ),
+          FilledButton(onPressed: _apply, child: Text(l10n.leadsFilterApply)),
         ],
       ),
     );
@@ -1110,18 +1410,28 @@ class _DateButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 10),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: 10,
+        ),
         decoration: BoxDecoration(
-          color: hasValue ? colors.brandNavy.withValues(alpha: 0.06) : colors.surface,
+          color: hasValue
+              ? colors.brandNavy.withValues(alpha: 0.06)
+              : colors.surface,
           border: Border.all(
-            color: hasValue ? colors.brandNavy.withValues(alpha: 0.25) : colors.hairline,
+            color: hasValue
+                ? colors.brandNavy.withValues(alpha: 0.25)
+                : colors.hairline,
           ),
           borderRadius: AppRadii.card,
         ),
         child: Row(
           children: [
-            Icon(Icons.calendar_today_outlined, size: 14,
-                color: hasValue ? colors.brandNavy : colors.inkMuted),
+            Icon(
+              Icons.calendar_today_outlined,
+              size: 14,
+              color: hasValue ? colors.brandNavy : colors.inkMuted,
+            ),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
@@ -1137,7 +1447,11 @@ class _DateButton extends StatelessWidget {
             if (onClear != null)
               GestureDetector(
                 onTap: onClear,
-                child: Icon(Icons.close_rounded, size: 14, color: colors.inkMuted),
+                child: Icon(
+                  Icons.close_rounded,
+                  size: 14,
+                  color: colors.inkMuted,
+                ),
               ),
           ],
         ),
