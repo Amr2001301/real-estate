@@ -844,7 +844,7 @@ class _SecondaryActionsGrid extends StatelessWidget {
           label: l10n.reservationNew,
           onTap: () => context.push('/reservations/new'),
         ),
-        const SizedBox(height: AppSpacing.xs),
+        const SizedBox(height: AppSpacing.sm),
         Row(
           children: [
             Expanded(
@@ -854,7 +854,7 @@ class _SecondaryActionsGrid extends StatelessWidget {
                 onTap: () => context.push('/visits/new'),
               ),
             ),
-            const SizedBox(width: AppSpacing.xs),
+            const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: _SecondaryActionCell(
                 icon: Icons.calculate_outlined,
@@ -864,7 +864,7 @@ class _SecondaryActionsGrid extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.xs),
+        const SizedBox(height: AppSpacing.sm),
         Row(
           children: [
             Expanded(
@@ -874,7 +874,7 @@ class _SecondaryActionsGrid extends StatelessWidget {
                 onTap: () => context.push('/targets'),
               ),
             ),
-            const SizedBox(width: AppSpacing.xs),
+            const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: _SecondaryActionCell(
                 icon: Icons.payments_outlined,
@@ -885,7 +885,7 @@ class _SecondaryActionsGrid extends StatelessWidget {
           ],
         ),
         if (canReviewPayments) ...[
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: AppSpacing.sm),
           _SecondaryActionCell(
             icon: Icons.receipt_long_outlined,
             label: l10n.paymentReviewTitle,
@@ -914,6 +914,9 @@ class _SecondaryActionCell extends StatefulWidget {
 class _SecondaryActionCellState extends State<_SecondaryActionCell> {
   bool _pressed = false;
 
+  static const _gold1 = Color(0xFFAA8528);
+  static const _gold2 = Color(0xFFC8A24B);
+
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
@@ -925,37 +928,66 @@ class _SecondaryActionCellState extends State<_SecondaryActionCell> {
       onTap: widget.onTap,
       child: AnimatedScale(
         scale: _pressed ? 0.95 : 1.0,
-        duration: const Duration(milliseconds: 100),
+        duration: const Duration(milliseconds: 110),
+        curve: Curves.easeOutCubic,
         child: Container(
-          height: 48,
+          height: 80,
           decoration: BoxDecoration(
             color: colors.surface,
-            border: Border.all(color: colors.hairline),
-            borderRadius: BorderRadius.circular(AppRadii.md),
-            boxShadow: colors.shadowCard,
+            border: Border.all(
+              color: AppPalette.gold400.withValues(alpha: 0.18),
+              width: 1.0,
+            ),
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            boxShadow: [
+              BoxShadow(
+                color: AppPalette.gold400.withValues(alpha: 0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 3),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
           ),
-          child: Row(
+          child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 30,
-                height: 30,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
-                  color: colors.brandNavy.withValues(alpha: 0.07),
-                  borderRadius: BorderRadius.circular(9),
+                  gradient: const LinearGradient(
+                    colors: [_gold1, _gold2],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppPalette.gold400.withValues(alpha: 0.35),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-                child: Icon(widget.icon, size: 16, color: colors.brandNavy),
+                child: Icon(widget.icon, size: 19, color: Colors.white),
               ),
-              const SizedBox(width: 8),
-              Flexible(
+              const SizedBox(height: 7),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                 child: Text(
                   widget.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
                     color: colors.inkStrong,
+                    letterSpacing: -0.1,
                   ),
                 ),
               ),
@@ -1034,7 +1066,8 @@ class _PropertyCard extends StatefulWidget {
 class _PropertyCardState extends State<_PropertyCard> {
   bool _pressed = false;
 
-  static const _navyDeep = Color(0xFF0A1520);
+  static const _gold1 = Color(0xFFAA8528);
+  static const _gold2 = Color(0xFFC8A24B);
 
   @override
   Widget build(BuildContext context) {
@@ -1052,16 +1085,22 @@ class _PropertyCardState extends State<_PropertyCard> {
       child: AnimatedScale(
         scale: _pressed ? 0.97 : 1.0,
         duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutCubic,
         child: Container(
           width: widget.width,
           decoration: BoxDecoration(
             color: const Color(0xFF1C3352),
             borderRadius: AppRadii.card,
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
-                color: Color(0x44000000),
-                blurRadius: 14,
-                offset: Offset(0, 5),
+                color: AppPalette.gold400.withValues(alpha: 0.12),
+                blurRadius: 20,
+                offset: const Offset(0, 6),
+              ),
+              const BoxShadow(
+                color: Color(0x55000000),
+                blurRadius: 8,
+                offset: Offset(0, 3),
               ),
             ],
           ),
@@ -1074,126 +1113,175 @@ class _PropertyCardState extends State<_PropertyCard> {
                 Image.network(
                   p.coverImageUrl!,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const _ProjectCardPlaceholder(),
+                  errorBuilder: (_, _, _) => const _ProjectCardPlaceholder(),
                 )
               else
                 const _ProjectCardPlaceholder(),
-              // Multi-stop gradient overlay for natural image-to-text transition
-              DecoratedBox(
+
+              // Deep multi-stop gradient — clear image at top, opaque at bottom
+              const DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.transparent,
-                      _navyDeep.withValues(alpha: 0.35),
-                      _navyDeep.withValues(alpha: 0.78),
-                      _navyDeep.withValues(alpha: 0.97),
+                      Color(0x00000000),
+                      Color(0x1A000000),
+                      Color(0x99000000),
+                      Color(0xEE050E18),
                     ],
-                    stops: const [0.20, 0.50, 0.72, 1.0],
+                    stops: [0.0, 0.38, 0.65, 1.0],
                   ),
                 ),
               ),
-              // Availability badge — top trailing corner
+
+              // Gold shimmer hairline at bottom edge
+              const Positioned(
+                bottom: 0, left: 0, right: 0,
+                child: SizedBox(
+                  height: 1,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          Color(0x55C8A24B),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Availability badge — top start corner
               PositionedDirectional(
-                top: AppSpacing.xs,
-                end: AppSpacing.xs,
+                top: AppSpacing.sm,
+                start: AppSpacing.sm,
                 child: _AvailabilityBadge(available: available, lang: lang),
               ),
-              // Project info — anchored to bottom
+
+              // Info panel — bottom
               PositionedDirectional(
-                start: AppSpacing.md,
-                end: AppSpacing.md,
-                bottom: AppSpacing.sm,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        height: 1.25,
-                        letterSpacing: -0.2,
+                start: 0,
+                end: 0,
+                bottom: 0,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Project name
+                      Text(
+                        name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          height: 1.25,
+                          letterSpacing: -0.3,
+                          shadows: [
+                            Shadow(color: Color(0x88000000), blurRadius: 6),
+                          ],
+                        ),
                       ),
-                    ),
-                    if (p.city != null) ...[
-                      const SizedBox(height: 4),
+
+                      const SizedBox(height: 5),
+
+                      // City + price row
                       Row(
                         children: [
-                          Icon(
-                            Icons.location_on_outlined,
-                            size: 12,
-                            color: Colors.white.withValues(alpha: 0.60),
-                          ),
-                          const SizedBox(width: 3),
-                          Expanded(
-                            child: Text(
+                          if (p.city != null) ...[
+                            Icon(
+                              Icons.location_on_rounded,
+                              size: 11,
+                              color: Colors.white.withValues(alpha: 0.55),
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
                               p.city!,
-                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.60),
-                                fontSize: 12,
-                                height: 1.2,
+                                color: Colors.white.withValues(alpha: 0.55),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    if (p.startingPrice != null) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        (lang == 'ar' ? 'يبدأ من ' : 'From ') +
-                            PriceFormatter.format(
-                              p.startingPrice!,
-                              languageCode: lang,
+                            const SizedBox(width: 8),
+                            Container(
+                              width: 3,
+                              height: 3,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.30),
+                                shape: BoxShape.circle,
+                              ),
                             ),
-                        style: const TextStyle(
-                          color: AppPalette.gold300,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          height: 1.2,
+                            const SizedBox(width: 8),
+                          ],
+                          if (p.startingPrice != null)
+                            Expanded(
+                              child: Text(
+                                (lang == 'ar' ? 'من ' : 'From ') +
+                                    PriceFormatter.format(
+                                      p.startingPrice!,
+                                      languageCode: lang,
+                                    ),
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: _gold2,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // Compact gold CTA pill
+                      Container(
+                        height: 36,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [_gold1, _gold2],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                          borderRadius: BorderRadius.circular(AppRadii.md),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _gold1.withValues(alpha: 0.40),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              lang == 'ar' ? 'استعراض المشروع' : 'View Project',
+                              style: const TextStyle(
+                                color: Color(0xFF0B1726),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.1,
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 11,
+                              color: Color(0xFF0B1726),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                    const SizedBox(height: 10),
-                    // Gold CTA button
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 9),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFAA8528), Color(0xFFC8A24B)],
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                        ),
-                        borderRadius: BorderRadius.circular(AppRadii.sm + 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppPalette.gold400.withValues(alpha: 0.30),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        lang == 'ar' ? 'عرض المشروع' : 'View Project',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppPalette.navy,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ],
@@ -1212,25 +1300,52 @@ class _AvailabilityBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasAvailable = (available ?? 0) > 0;
-    final labelColor = hasAvailable ? AppPalette.successLight : Colors.white;
     final label = hasAvailable
         ? (lang == 'ar' ? '$available متاح' : '$available avail.')
-        : (lang == 'ar' ? 'مباع' : 'Sold out');
+        : (lang == 'ar' ? 'مباع بالكامل' : 'Sold out');
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.45),
-        border: Border.all(color: labelColor.withValues(alpha: 0.50)),
+        color: Colors.black.withValues(alpha: 0.50),
+        border: Border.all(
+          color: hasAvailable
+              ? AppPalette.successLight.withValues(alpha: 0.55)
+              : Colors.white.withValues(alpha: 0.25),
+          width: 0.8,
+        ),
         borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: labelColor,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: hasAvailable ? AppPalette.successLight : Colors.white54,
+              shape: BoxShape.circle,
+              boxShadow: hasAvailable
+                  ? [
+                      BoxShadow(
+                        color: AppPalette.successLight.withValues(alpha: 0.60),
+                        blurRadius: 4,
+                      ),
+                    ]
+                  : null,
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: hasAvailable ? AppPalette.successLight : Colors.white70,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.1,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1523,11 +1638,20 @@ class _PerformanceDarkModule extends StatelessWidget {
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: AppRadii.card,
-                boxShadow: const [
-                  BoxShadow(
+                border: Border.all(
+                  color: AppPalette.gold400.withValues(alpha: 0.14),
+                  width: 0.8,
+                ),
+                boxShadow: [
+                  const BoxShadow(
                     color: Color(0x500F1E33),
                     blurRadius: 22,
                     offset: Offset(0, 8),
+                  ),
+                  BoxShadow(
+                    color: AppPalette.gold400.withValues(alpha: 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -1539,8 +1663,32 @@ class _PerformanceDarkModule extends StatelessWidget {
                       child: CustomPaint(painter: _DotPatternPainter()),
                     ),
                   ),
+                  // Gold shimmer top strip
+                  Positioned(
+                    top: 0, left: 0, right: 0,
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(14),
+                      ),
+                      child: Container(
+                        height: 2,
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.transparent,
+                              Color(0xAAC8A24B),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                   Padding(
-                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md, AppSpacing.md,
+                      AppSpacing.md, AppSpacing.md,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       mainAxisSize: MainAxisSize.min,
@@ -1549,19 +1697,19 @@ class _PerformanceDarkModule extends StatelessWidget {
                         Row(
                           children: [
                             Container(
-                              width: 30,
-                              height: 30,
+                              width: 36,
+                              height: 36,
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
-                                  colors: [AppPalette.gold300, AppPalette.gold500],
+                                  colors: [Color(0xFFAA8528), Color(0xFFC8A24B)],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
-                                borderRadius: const BorderRadius.all(Radius.circular(9)),
+                                borderRadius: BorderRadius.circular(11),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppPalette.gold400.withValues(alpha: 0.40),
-                                    blurRadius: 8,
+                                    color: AppPalette.gold400.withValues(alpha: 0.45),
+                                    blurRadius: 10,
                                     offset: const Offset(0, 3),
                                   ),
                                 ],
@@ -1569,116 +1717,145 @@ class _PerformanceDarkModule extends StatelessWidget {
                               child: const Icon(
                                 Icons.insights_rounded,
                                 color: AppPalette.navy,
-                                size: 15,
+                                size: 18,
                               ),
                             ),
-                            const SizedBox(width: AppSpacing.xs),
-                            Text(
-                              l10n.dashboardMonthlyPerformance,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                l10n.dashboardMonthlyPerformance,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.2,
+                                ),
                               ),
                             ),
-                            const Spacer(),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.06),
                                 border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.20),
+                                  color: Colors.white.withValues(alpha: 0.18),
                                 ),
                                 borderRadius: BorderRadius.circular(AppRadii.pill),
                               ),
                               child: Text(
                                 _period(),
                                 style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.60),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white.withValues(alpha: 0.70),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        Container(height: 0.5, color: Colors.white.withValues(alpha: 0.12)),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 14),
+                        Container(height: 0.5, color: Colors.white.withValues(alpha: 0.10)),
+                        const SizedBox(height: 14),
 
                         // ── Metrics ──────────────────────────────────
                         if (hasTarget) ...[
-                          IntrinsicHeight(
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                // Sales amount column
-                                Expanded(
-                                  flex: 5,
-                                  child: _PerfMetricCell(
-                                    label: l10n.targetAmount,
-                                    value: PriceFormatter.format(
-                                      perf!.achievedAmount,
-                                      languageCode: lang,
-                                    ),
-                                    target: perf.targetAmount == null
-                                        ? null
-                                        : PriceFormatter.format(
-                                            perf.targetAmount!,
-                                            languageCode: lang,
-                                          ),
-                                    color: AppPalette.gold400,
-                                  ),
-                                ),
-                                _PerfVertDivider(),
-                                // Units column
-                                Expanded(
-                                  flex: 3,
-                                  child: _PerfMetricCell(
-                                    label: l10n.targetUnits,
-                                    value: '${perf.achievedUnits}',
-                                    target: perf.targetUnits == null
-                                        ? null
-                                        : '${perf.targetUnits}',
-                                    color: AppPalette.successLight,
-                                    alignEnd: true,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          // Thin progress bar + percentage
                           Row(
                             children: [
+                              // Sales value tile
                               Expanded(
-                                child: ClipRRect(
-                                  borderRadius: AppRadii.pillAll,
-                                  child: LinearProgressIndicator(
-                                    value: (perf.targetAmountPercent ?? 0)
-                                            .clamp(0.0, 100.0) /
-                                        100,
-                                    minHeight: 5,
-                                    backgroundColor:
-                                        Colors.white.withValues(alpha: 0.12),
-                                    valueColor:
-                                        const AlwaysStoppedAnimation<Color>(
-                                      AppPalette.gold400,
-                                    ),
+                                flex: 5,
+                                child: _PerfMetricTile(
+                                  icon: Icons.payments_rounded,
+                                  label: l10n.targetAmount,
+                                  value: PriceFormatter.format(
+                                    perf!.achievedAmount,
+                                    languageCode: lang,
                                   ),
+                                  target: perf.targetAmount == null
+                                      ? null
+                                      : PriceFormatter.format(
+                                          perf.targetAmount!,
+                                          languageCode: lang,
+                                        ),
+                                  color: AppPalette.gold400,
                                 ),
                               ),
-                              const SizedBox(width: AppSpacing.xs),
-                              SizedBox(
-                                width: 34,
-                                child: Text(
-                                  '${(perf.targetAmountPercent ?? 0).toStringAsFixed(0)}%',
-                                  textAlign: TextAlign.end,
-                                  style: TextStyle(
-                                    color: AppPalette.gold400.withValues(alpha: 0.90),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                              const SizedBox(width: AppSpacing.sm),
+                              // Units sold tile
+                              Expanded(
+                                flex: 3,
+                                child: _PerfMetricTile(
+                                  icon: Icons.home_work_rounded,
+                                  label: l10n.targetUnits,
+                                  value: '${perf.achievedUnits}',
+                                  target: perf.targetUnits == null
+                                      ? null
+                                      : '${perf.targetUnits}',
+                                  color: AppPalette.successLight,
                                 ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          // Progress bar with label
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    lang == 'ar' ? 'نسبة الإنجاز' : 'Achievement',
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(alpha: 0.50),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    '${(perf.targetAmountPercent ?? 0).toStringAsFixed(0)}%',
+                                    style: const TextStyle(
+                                      color: AppPalette.gold400,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Stack(
+                                children: [
+                                  // Track
+                                  Container(
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.10),
+                                      borderRadius: AppRadii.pillAll,
+                                    ),
+                                  ),
+                                  // Filled portion
+                                  FractionallySizedBox(
+                                    widthFactor: ((perf.targetAmountPercent ?? 0)
+                                            .clamp(0.0, 100.0) /
+                                        100),
+                                    child: Container(
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [Color(0xFFAA8528), Color(0xFFC8A24B)],
+                                        ),
+                                        borderRadius: AppRadii.pillAll,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppPalette.gold400.withValues(alpha: 0.55),
+                                            blurRadius: 6,
+                                            offset: const Offset(0, 1),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -1692,62 +1869,34 @@ class _PerformanceDarkModule extends StatelessWidget {
                           ),
                         ],
 
-                        // ── Commission ───────────────────────────────
+                        // ── Commission chips ─────────────────────────
                         if (hasBonus) ...[
-                          const SizedBox(height: 8),
-                          Container(height: 0.5, color: Colors.white.withValues(alpha: 0.12)),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 14),
+                          Container(height: 0.5, color: Colors.white.withValues(alpha: 0.10)),
+                          const SizedBox(height: 12),
                           Row(
                             children: [
-                              Icon(
-                                Icons.check_circle_rounded,
-                                size: 12,
-                                color: AppPalette.successLight,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                l10n.bonusPaid,
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.55),
-                                  fontSize: 11,
-                                ),
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                PriceFormatter.format(
-                                  bonus!.paidTotal,
-                                  languageCode: lang,
-                                ),
-                                style: const TextStyle(
+                              Expanded(
+                                child: _CommissionChip(
+                                  icon: Icons.check_circle_rounded,
+                                  label: l10n.bonusPaid,
+                                  amount: PriceFormatter.format(
+                                    bonus!.paidTotal,
+                                    languageCode: lang,
+                                  ),
                                   color: AppPalette.successLight,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
-                              const Spacer(),
-                              Icon(
-                                Icons.schedule_rounded,
-                                size: 12,
-                                color: AppPalette.warningLight,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                l10n.bonusPending,
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.55),
-                                  fontSize: 11,
-                                ),
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                PriceFormatter.format(
-                                  bonus.pendingTotal,
-                                  languageCode: lang,
-                                ),
-                                style: const TextStyle(
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: _CommissionChip(
+                                  icon: Icons.schedule_rounded,
+                                  label: l10n.bonusPending,
+                                  amount: PriceFormatter.format(
+                                    bonus.pendingTotal,
+                                    languageCode: lang,
+                                  ),
                                   color: AppPalette.warningLight,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ],
@@ -1766,86 +1915,151 @@ class _PerformanceDarkModule extends StatelessWidget {
   }
 }
 
-class _PerfMetricCell extends StatelessWidget {
-  const _PerfMetricCell({
+class _PerfMetricTile extends StatelessWidget {
+  const _PerfMetricTile({
+    required this.icon,
     required this.label,
     required this.value,
     this.target,
     required this.color,
-    this.alignEnd = false,
   });
+  final IconData icon;
   final String label;
   final String value;
   final String? target;
   final Color color;
-  final bool alignEnd;
 
   @override
   Widget build(BuildContext context) {
-    final cross = alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start;
-    return Padding(
-      padding: alignEnd
-          ? const EdgeInsetsDirectional.only(start: AppSpacing.xs)
-          : EdgeInsetsDirectional.zero,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.18), width: 0.8),
+      ),
       child: Column(
-        crossAxisAlignment: cross,
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.55),
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 3),
           Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
             children: [
-              Text(
-                value,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  height: 1.1,
-                ),
-              ),
-              if (target != null) ...[
-                Text(
-                  '  /  ',
+              Icon(icon, size: 12, color: color.withValues(alpha: 0.75)),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.25),
-                    fontSize: 11,
+                    color: Colors.white.withValues(alpha: 0.50),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.1,
                   ),
                 ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: color,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              height: 1.1,
+            ),
+          ),
+          if (target != null) ...[
+            const SizedBox(height: 2),
+            Row(
+              children: [
                 Text(
-                  target!,
+                  'من ',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.45),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withValues(alpha: 0.30),
+                    fontSize: 10,
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    target!,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.40),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
-            ],
-          ),
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-class _PerfVertDivider extends StatelessWidget {
+class _CommissionChip extends StatelessWidget {
+  const _CommissionChip({
+    required this.icon,
+    required this.label,
+    required this.amount,
+    required this.color,
+  });
+  final IconData icon;
+  final String label;
+  final String amount;
+  final Color color;
+
   @override
-  Widget build(BuildContext context) => Container(
-        width: 0.5,
-        margin: const EdgeInsets.symmetric(horizontal: 10),
-        color: Colors.white.withValues(alpha: 0.14),
-      );
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: color.withValues(alpha: 0.22), width: 0.8),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.50),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  amount,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    height: 1.1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _PerformanceSkeleton extends StatelessWidget {
@@ -2148,8 +2362,6 @@ class _DashboardHeaderDelegate extends SliverPersistentHeaderDelegate {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const NotificationsBell(),
-                    const Spacer(),
                     Text(
                       l10n.navDashboard,
                       style: const TextStyle(
@@ -2160,6 +2372,8 @@ class _DashboardHeaderDelegate extends SliverPersistentHeaderDelegate {
                         height: 1.2,
                       ),
                     ),
+                    const Spacer(),
+                    const NotificationsBell(),
                   ],
                 ),
               ),
