@@ -130,22 +130,43 @@ class _HeroCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF0D1B2A), Color(0xFF1A2D44), Color(0xFF0D1B2A)],
+          colors: [Color(0xFF0A1628), Color(0xFF152238), Color(0xFF0D1E30)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: AppRadii.card,
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppPalette.navy.withValues(alpha: 0.35),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
+            color: const Color(0xFF0A1628).withValues(alpha: 0.45),
+            blurRadius: 28,
+            offset: const Offset(0, 10),
+          ),
+          BoxShadow(
+            color: AppPalette.gold400.withValues(alpha: 0.06),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
+          // Subtle radial glow top-center
+          Positioned(
+            top: -40, left: 0, right: 0,
+            child: Container(
+              height: 120,
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  colors: [
+                    AppPalette.gold400.withValues(alpha: 0.10),
+                    AppPalette.gold400.withValues(alpha: 0.0),
+                  ],
+                  radius: 0.8,
+                ),
+              ),
+            ),
+          ),
           // Gold shimmer top strip
           Positioned(
             top: 0, left: 0, right: 0,
@@ -154,9 +175,11 @@ class _HeroCard extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppPalette.gold300.withValues(alpha: 0.0),
+                    AppPalette.gold400.withValues(alpha: 0.0),
                     AppPalette.gold400,
-                    AppPalette.gold300.withValues(alpha: 0.0),
+                    AppPalette.gold300,
+                    AppPalette.gold400,
+                    AppPalette.gold400.withValues(alpha: 0.0),
                   ],
                   begin: isRtl ? Alignment.centerRight : Alignment.centerLeft,
                   end:   isRtl ? Alignment.centerLeft  : Alignment.centerRight,
@@ -165,86 +188,82 @@ class _HeroCard extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.lg),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Title row
+                // Label row
                 Row(
                   children: [
-                    Container(
-                      width: 38, height: 38,
-                      decoration: BoxDecoration(
-                        color: AppPalette.gold400.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(11),
-                        border: Border.all(
-                          color: AppPalette.gold400.withValues(alpha: 0.30),
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.account_balance_wallet_rounded,
-                        size: 18,
-                        color: AppPalette.gold400,
-                      ),
+                    const Icon(
+                      Icons.account_balance_wallet_rounded,
+                      size: 14,
+                      color: AppPalette.gold400,
                     ),
-                    const SizedBox(width: AppSpacing.sm),
+                    const SizedBox(width: 6),
                     Text(
-                      lang == 'ar' ? 'إجمالي المكافآت والعمولات' : 'Total Bonuses & Commissions',
+                      lang == 'ar'
+                          ? 'إجمالي المكافآت والعمولات'
+                          : 'Total Bonuses & Commissions',
                       style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white60,
-                        height: 1.3,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white54,
+                        letterSpacing: 0.2,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.md),
-                // Total amount
+                const SizedBox(height: 12),
+                // Total amount — large + gold
                 Text(
                   money(total),
                   style: const TextStyle(
-                    fontSize: 32,
+                    fontSize: 34,
                     fontWeight: FontWeight.w800,
                     color: AppPalette.gold400,
-                    letterSpacing: -0.8,
-                    height: 1.1,
+                    letterSpacing: -1.0,
+                    height: 1.05,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  lang == 'ar'
-                      ? '${ov.count} إدخال'
-                      : '${ov.count} entries',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.white38,
-                    fontWeight: FontWeight.w500,
+                const SizedBox(height: 5),
+                // Entry count pill
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white12),
+                  ),
+                  child: Text(
+                    lang == 'ar' ? '${ov.count} إدخال' : '${ov.count} entries',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Colors.white54,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.md),
-                Container(height: 0.5, color: Colors.white12),
-                const SizedBox(height: AppSpacing.md),
-                // Sub-stats row
+                const SizedBox(height: 18),
+                // Sub-stat boxes
                 Row(
                   children: [
-                    _HeroStat(
-                      icon: Icons.check_circle_rounded,
-                      label: lang == 'ar' ? 'مدفوع' : 'Paid',
-                      value: money(ov.paidTotal),
-                      color: const Color(0xFF22C55E),
+                    Expanded(
+                      child: _StatBox(
+                        icon: Icons.check_circle_rounded,
+                        label: lang == 'ar' ? 'مدفوع' : 'Paid',
+                        value: money(ov.paidTotal),
+                        color: const Color(0xFF22C55E),
+                      ),
                     ),
-                    Container(
-                      width: 0.5,
-                      height: 36,
-                      color: Colors.white12,
-                      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                    ),
-                    _HeroStat(
-                      icon: Icons.hourglass_top_rounded,
-                      label: lang == 'ar' ? 'معلّق' : 'Pending',
-                      value: money(ov.pendingTotal),
-                      color: const Color(0xFFF59E0B),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _StatBox(
+                        icon: Icons.hourglass_top_rounded,
+                        label: lang == 'ar' ? 'معلّق' : 'Pending',
+                        value: money(ov.pendingTotal),
+                        color: const Color(0xFFF59E0B),
+                      ),
                     ),
                   ],
                 ),
@@ -257,8 +276,8 @@ class _HeroCard extends StatelessWidget {
   }
 }
 
-class _HeroStat extends StatelessWidget {
-  const _HeroStat({
+class _StatBox extends StatelessWidget {
+  const _StatBox({
     required this.icon,
     required this.label,
     required this.value,
@@ -271,43 +290,47 @@ class _HeroStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 28, height: 28,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.15),
-            shape: BoxShape.circle,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 12, color: color),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: color.withValues(alpha: 0.80),
+                  height: 1.2,
+                ),
+              ),
+            ],
           ),
-          child: Icon(icon, size: 13, color: color),
-        ),
-        const SizedBox(width: AppSpacing.xs),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 10,
-                color: Colors.white38,
-                fontWeight: FontWeight.w500,
-                height: 1.2,
-              ),
+          const SizedBox(height: 5),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: color,
+              letterSpacing: -0.4,
+              height: 1.2,
             ),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: color,
-                height: 1.2,
-                letterSpacing: -0.3,
-              ),
-            ),
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 }
