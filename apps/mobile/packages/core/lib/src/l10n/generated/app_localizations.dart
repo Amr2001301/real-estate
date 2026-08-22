@@ -2114,6 +2114,12 @@ abstract class AppLocalizations {
   /// **'Hello, I have a question about my unit {unit} in {project}.'**
   String myPropertyContactMessage(String project, String unit);
 
+  /// No description provided for @contractsSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name, phone or number'**
+  String get contractsSearchHint;
+
   /// No description provided for @contractsEmptyTitle.
   ///
   /// In en, this message translates to:

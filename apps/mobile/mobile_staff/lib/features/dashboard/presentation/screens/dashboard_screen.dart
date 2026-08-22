@@ -530,7 +530,7 @@ class _FocusSection extends StatelessWidget {
               : (neg == 1 ? '1 client in negotiation' : '$neg clients in negotiation'),
           chipLabel: lang == 'ar' ? 'تفاوض' : 'Negotiation',
           tone: AppTone.warning,
-          onTap: () => onSwitchTab?.call(2),
+          onTap: () => onSwitchTab?.call(1),
         ),
       );
     }

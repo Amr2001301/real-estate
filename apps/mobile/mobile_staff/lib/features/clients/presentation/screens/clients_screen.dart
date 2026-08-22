@@ -91,6 +91,11 @@ class _ClientsScreenState extends State<ClientsScreen> {
           // ── Header + embedded search ───────────────────────────────────────
           AppNavHeader(
             title: l10n.navClients,
+            compact: true,
+            leadingAction: NavHeaderAction(
+              icon: Icons.arrow_back_ios_new_rounded,
+              onTap: () => context.pop(),
+            ),
             bottom: _NavSearchBar(
               controller: _search,
               hint: l10n.clientsSearchHint,

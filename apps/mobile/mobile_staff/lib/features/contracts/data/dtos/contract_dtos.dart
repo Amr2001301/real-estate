@@ -42,11 +42,15 @@ class StaffContractRowDto {
       unitType: unit?['type'] as String?,
       projectNameAr: projectName.ar,
       projectNameEn: projectName.en,
-      totalAmount: (json['totalAmount'] as num?)?.toDouble(),
+      totalAmount: _parseDecimal(json['totalAmount']),
       signedAt: json['signedAt'] as String?,
       createdAt: json['createdAt'] as String?,
     );
   }
+
+  // Prisma serialises Decimal columns as strings in JSON.
+  static double? _parseDecimal(dynamic v) =>
+      v == null ? null : double.tryParse(v.toString());
 }
 
 class ContractInstallmentDto {
@@ -69,7 +73,7 @@ class ContractInstallmentDto {
         id: json['id'] as String,
         type: json['type'] as String? ?? '',
         status: json['status'] as String? ?? '',
-        amount: (json['amount'] as num?)?.toDouble(),
+        amount: StaffContractRowDto._parseDecimal(json['amount']),
         dueDate: json['dueDate'] as String?,
       );
 }
@@ -119,7 +123,7 @@ class StaffContractDetailDto extends StaffContractRowDto {
       signedAt: base.signedAt,
       createdAt: base.createdAt,
       salesName: sales?['fullName'] as String?,
-      downPaymentAmount: (json['downPaymentAmount'] as num?)?.toDouble(),
+      downPaymentAmount: StaffContractRowDto._parseDecimal(json['downPaymentAmount']),
       installmentPlanMonths: plan?['totalMonths'] as int?,
       installmentPlanMonthlyAmount: (plan?['monthlyAmount'] as num?)?.toDouble(),
       installments: rawInstallments

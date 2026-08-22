@@ -271,8 +271,35 @@ class _ProjectsHeaderDelegate extends SliverPersistentHeaderDelegate {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Leading: empty slot (tab screen — no back button)
-                  const SizedBox(width: 44),
+                  // Leading: back button (pushed from profile)
+                  SizedBox(
+                    width: 44,
+                    child: context.canPop()
+                        ? GestureDetector(
+                            onTap: () => context.pop(),
+                            child: Builder(builder: (ctx) {
+                              final isRtl = Directionality.of(ctx) == TextDirection.rtl;
+                              return Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.12),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 0.8),
+                                ),
+                                child: Directionality(
+                                  textDirection: TextDirection.ltr,
+                                  child: Icon(
+                                    isRtl ? Icons.arrow_forward_ios_rounded : Icons.arrow_back_ios_new_rounded,
+                                    size: 15,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              );
+                            }),
+                          )
+                        : null,
+                  ),
                   // Center: screen title
                   Expanded(
                     child: Center(

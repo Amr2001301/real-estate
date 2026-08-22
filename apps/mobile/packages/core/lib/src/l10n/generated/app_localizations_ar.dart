@@ -1073,6 +1073,9 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get contractsSearchHint => 'ابحث بالاسم أو الهاتف أو الرقم';
+
+  @override
   String get contractsEmptyTitle => 'لا توجد عقود';
 
   @override

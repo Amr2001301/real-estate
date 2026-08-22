@@ -384,6 +384,7 @@
   "myPropertyContactMessage": "Hello, I have a question about my unit {unit} in {project}.",
   "@myPropertyContactMessage": { "placeholders": { "project": { "type": "String" }, "unit": { "type": "String" } } },
 
+  "contractsSearchHint": "Search by name, phone or number",
   "contractsEmptyTitle": "No contracts",
   "contractsEmptyMessage": "Your contracts will appear here once available.",
   "contractStatusSigned": "Signed",

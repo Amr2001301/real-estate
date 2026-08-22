@@ -195,49 +195,11 @@ class _PlansHeader extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                // Search bar
-                Container(
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.09),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.14),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 14),
-                      Icon(
-                        Icons.search_rounded,
-                        size: 18,
-                        color: Colors.white.withValues(alpha: 0.50),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: TextField(
-                          controller: searchController,
-                          onChanged: onSearch,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          decoration: InputDecoration(
-                            isDense: true,
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.zero,
-                            hintText: l10n.planTemplatesSearch,
-                            hintStyle: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.35),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                // Search bar — white pill matching clients/contracts screens
+                _PlansSearchBar(
+                  controller: searchController,
+                  hint: l10n.planTemplatesSearch,
+                  onChanged: onSearch,
                 ),
               ],
             ),
@@ -564,6 +526,91 @@ class _ErrorView extends StatelessWidget {
             variant: AppButtonVariant.outline,
             onPressed: onRetry,
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── White-pill search bar ─────────────────────────────────────────────────────
+
+class _PlansSearchBar extends StatefulWidget {
+  const _PlansSearchBar({
+    required this.controller,
+    required this.hint,
+    required this.onChanged,
+  });
+  final TextEditingController controller;
+  final String hint;
+  final ValueChanged<String> onChanged;
+
+  @override
+  State<_PlansSearchBar> createState() => _PlansSearchBarState();
+}
+
+class _PlansSearchBarState extends State<_PlansSearchBar> {
+  bool _hasText = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onControllerChange);
+  }
+
+  void _onControllerChange() {
+    final has = widget.controller.text.isNotEmpty;
+    if (has != _hasText) setState(() => _hasText = has);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onControllerChange);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    return Container(
+      height: 46,
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: AppRadii.pillAll,
+        boxShadow: colors.shadowSoft,
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 14),
+          Icon(Icons.search_rounded, size: 20, color: colors.inkMuted),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: widget.controller,
+              onChanged: widget.onChanged,
+              style: theme.textTheme.bodyMedium?.copyWith(color: colors.inkStrong),
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                hintText: widget.hint,
+                hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                  color: colors.inkMuted,
+                ),
+              ),
+            ),
+          ),
+          if (_hasText)
+            IconButton(
+              icon: Icon(Icons.close_rounded, size: 18, color: colors.inkMuted),
+              visualDensity: VisualDensity.compact,
+              onPressed: () {
+                widget.controller.clear();
+                widget.onChanged('');
+              },
+            ),
         ],
       ),
     );

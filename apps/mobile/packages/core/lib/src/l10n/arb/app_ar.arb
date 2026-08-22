@@ -381,6 +381,7 @@
   "myPropertyContactMessage": "مرحبًا، لديّ استفسار بخصوص وحدتي {unit} في {project}.",
   "@myPropertyContactMessage": { "placeholders": { "project": { "type": "String" }, "unit": { "type": "String" } } },
 
+  "contractsSearchHint": "ابحث بالاسم أو الهاتف أو الرقم",
   "contractsEmptyTitle": "لا توجد عقود",
   "contractsEmptyMessage": "ستظهر عقودك هنا عند توفّرها.",
   "contractStatusSigned": "موقّع",

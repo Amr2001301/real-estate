@@ -13,13 +13,19 @@ class StaffContractsRemoteDataSourceImpl implements StaffContractsRemoteDataSour
 
   @override
   Future<List<StaffContractRowDto>> listContracts({String? q, String? status}) async {
+    // Backend uses ?signed=yes|no (derived from signedAt), not ?status=.
+    final signed = switch (status) {
+      'SIGNED' => 'yes',
+      'DRAFT' => 'no',
+      _ => null,
+    };
     final res = await _dio.get<Map<String, dynamic>>(
       '/contracts',
       queryParameters: {
         'page': 1,
         'pageSize': 50,
         'q': ?(q?.isNotEmpty == true ? q : null),
-        'status': ?status,
+        'signed': ?signed,
       },
     );
     final data = (res.data?['data'] as List?) ?? const [];

@@ -1083,6 +1083,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get contractsSearchHint => 'Search by name, phone or number';
+
+  @override
   String get contractsEmptyTitle => 'No contracts';
 
   @override
