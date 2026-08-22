@@ -44,10 +44,9 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n   = context.l10n;
-    final cubit  = context.read<CalculatorCubit>();
-    final lang   = Localizations.localeOf(context).languageCode;
-    final isRtl  = context.read<LocaleCubit>().isRtl;
+    final l10n      = context.l10n;
+    final cubit     = context.read<CalculatorCubit>();
+    final lang      = Localizations.localeOf(context).languageCode;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
@@ -55,6 +54,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         children: [
           AppNavHeader(
             title: l10n.calculatorTitle,
+            compact: true,
             leadingAction: NavHeaderAction(
               icon: Icons.arrow_back_ios_new_rounded,
               onTap: () => context.pop(),
@@ -64,8 +64,11 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
             child: BlocBuilder<CalculatorCubit, CalculatorState>(
               builder: (context, state) => ListView(
                 padding: EdgeInsets.fromLTRB(
-                    AppSpacing.lg, AppSpacing.md,
-                    AppSpacing.lg, bottomPad + AppSpacing.xl),
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                  AppSpacing.lg,
+                  bottomPad + AppSpacing.xl,
+                ),
                 children: [
                   // ── Plan templates ──────────────────────────────────────
                   if (state.templatesStatus == DataStatus.success &&
@@ -78,65 +81,72 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                     const SizedBox(height: AppSpacing.lg),
                   ],
 
-                  // ── Input form ──────────────────────────────────────────
-                  _SectionHeader('بيانات الحساب'),
-                  const SizedBox(height: AppSpacing.md),
-
-                  // Price
-                  _InputCard(
-                    icon: Icons.home_work_rounded,
-                    label: l10n.calculatorPrice,
-                    controller: _price,
-                    onChanged: (v) => cubit.setPrice(_d(v)),
-                    hint: '15,000,000',
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-
-                  // Down payment + Reservation in a row
-                  Row(
+                  // ── Grouped input form card ─────────────────────────────
+                  _FormCard(
+                    label: 'بيانات الحساب',
                     children: [
-                      Expanded(
-                        child: _InputCard(
-                          icon: Icons.payments_rounded,
-                          label: l10n.calculatorDownPayment,
-                          controller: _down,
-                          onChanged: (v) => cubit.setDownPayment(_d(v)),
+                      // Price — full width (larger text)
+                      _FormField(
+                        icon: Icons.home_work_rounded,
+                        label: l10n.calculatorPrice,
+                        controller: _price,
+                        onChanged: (v) => cubit.setPrice(_d(v)),
+                        hint: '15,000,000',
+                        large: true,
+                      ),
+                      _HairlineDivider(),
+                      // Down + Reservation
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: _FormField(
+                                icon: Icons.payments_rounded,
+                                label: l10n.calculatorDownPayment,
+                                controller: _down,
+                                onChanged: (v) => cubit.setDownPayment(_d(v)),
+                              ),
+                            ),
+                            _VerticalHairline(),
+                            Expanded(
+                              child: _FormField(
+                                icon: Icons.bookmark_rounded,
+                                label: l10n.calculatorReservation,
+                                controller: _reservation,
+                                onChanged: (v) => cubit.setReservation(_d(v)),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: _InputCard(
-                          icon: Icons.bookmark_rounded,
-                          label: l10n.calculatorReservation,
-                          controller: _reservation,
-                          onChanged: (v) => cubit.setReservation(_d(v)),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-
-                  // Months + Increase in a row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _InputCard(
-                          icon: Icons.calendar_month_rounded,
-                          label: l10n.calculatorMonths,
-                          controller: _months,
-                          onChanged: (v) =>
-                              cubit.setMonths(int.tryParse(v.trim()) ?? 0),
-                          hint: '12',
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: _InputCard(
-                          icon: Icons.trending_up_rounded,
-                          label: l10n.calculatorIncrease,
-                          controller: _increase,
-                          onChanged: (v) => cubit.setIncrease(_d(v)),
-                          hint: '0',
+                      _HairlineDivider(),
+                      // Months + Increase
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: _FormField(
+                                icon: Icons.calendar_month_rounded,
+                                label: l10n.calculatorMonths,
+                                controller: _months,
+                                onChanged: (v) =>
+                                    cubit.setMonths(int.tryParse(v.trim()) ?? 0),
+                                hint: '12',
+                              ),
+                            ),
+                            _VerticalHairline(),
+                            Expanded(
+                              child: _FormField(
+                                icon: Icons.trending_up_rounded,
+                                label: l10n.calculatorIncrease,
+                                controller: _increase,
+                                onChanged: (v) => cubit.setIncrease(_d(v)),
+                                hint: '0',
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -174,32 +184,183 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   }
 }
 
-// ── Section header ────────────────────────────────────────────────────────────
+// ── Grouped form card ─────────────────────────────────────────────────────────
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.title);
-  final String title;
+class _FormCard extends StatelessWidget {
+  const _FormCard({required this.label, required this.children});
+  final String label;
+  final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) => Row(
-        children: [
-          Container(
-            width: 3,
-            height: 18,
-            decoration: BoxDecoration(
-              color: AppPalette.gold400,
-              borderRadius: BorderRadius.circular(2),
-            ),
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFDF9), // warm cream — signals luxury
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppPalette.gold400.withValues(alpha: 0.18)),
+        boxShadow: [
+          BoxShadow(
+            color: AppPalette.gold400.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 6),
           ),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
-      );
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Card header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 3,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [AppPalette.gold300, AppPalette.gold500],
+                    ),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.2,
+                        ),
+                  ),
+                ),
+                Icon(
+                  Icons.calculate_outlined,
+                  size: 16,
+                  color: AppPalette.gold400.withValues(alpha: 0.45),
+                ),
+              ],
+            ),
+          ),
+          Container(height: 1, color: AppPalette.gold400.withValues(alpha: 0.10)),
+          ...children,
+        ],
+      ),
+    );
+  }
+}
+
+// ── Individual form field (inside the card) ───────────────────────────────────
+
+class _FormField extends StatelessWidget {
+  const _FormField({
+    required this.icon,
+    required this.label,
+    required this.controller,
+    required this.onChanged,
+    this.hint,
+    this.large = false,
+  });
+  final IconData icon;
+  final String label;
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final String? hint;
+  final bool large;
+
+  @override
+  Widget build(BuildContext context) {
+    final fontSize = large ? 22.0 : 19.0;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Warm gold label
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 12, color: const Color(0xFFB8973A)),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                  color: Color(0xFFB8973A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Gold underline via Container — avoids fighting with the theme
+          Container(
+            padding: const EdgeInsets.only(bottom: 7),
+            decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: Color(0x30C9A84C), // gold ~19% alpha
+                  width: 1.2,
+                ),
+              ),
+            ),
+            child: TextField(
+              controller: controller,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              onChanged: onChanged,
+              style: TextStyle(
+                fontSize: fontSize,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.6,
+                color: AppPalette.navy,
+                height: 1.1,
+              ),
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
+                hintText: hint ?? '0',
+                hintStyle: TextStyle(
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.w300,
+                  letterSpacing: -0.5,
+                  color: const Color(0xFFD4C49A),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HairlineDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) =>
+      Container(height: 1, color: AppPalette.gold400.withValues(alpha: 0.09));
+}
+
+class _VerticalHairline extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) =>
+      Container(width: 1, color: AppPalette.gold400.withValues(alpha: 0.09));
 }
 
 // ── Plan templates section ────────────────────────────────────────────────────
@@ -210,7 +371,7 @@ class _PlanTemplatesSection extends StatelessWidget {
     required this.monthsController,
     required this.increaseController,
   });
-  final CalculatorState       state;
+  final CalculatorState state;
   final TextEditingController monthsController;
   final TextEditingController increaseController;
 
@@ -223,56 +384,103 @@ class _PlanTemplatesSection extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.card.topLeft.x),
-        border: Border.all(color: colors.hairline),
-        boxShadow: colors.shadowCard,
+        color: const Color(0xFFFFFDF9),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppPalette.gold400.withValues(alpha: 0.18)),
+        boxShadow: [
+          BoxShadow(
+            color: AppPalette.gold400.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 6),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.fromLTRB(
-          AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.sm),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionHeader(l10n.calculatorPlans),
-          const SizedBox(height: AppSpacing.sm),
-          ...state.templates.map((t) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  t.name,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: colors.inkMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.3,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Row(children: [
+              Container(
+                width: 3,
+                height: 18,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [AppPalette.gold300, AppPalette.gold500],
+                  ),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  l10n.calculatorPlans,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.2,
                   ),
                 ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: t.durations.map((d) {
-                    final isSelected =
-                        state.months == d.durationMonths &&
-                        state.increase == d.increasePercentage;
-                    return _DurationChip(
-                      months: d.durationMonths,
-                      increase: d.increasePercentage,
-                      isSelected: isSelected,
-                      onTap: () {
-                        cubit.applyDuration(d);
-                        monthsController.text = '${d.durationMonths}';
-                        increaseController.text =
-                            d.increasePercentage.toString();
-                      },
-                    );
-                  }).toList(),
-                ),
+              ),
+              Icon(
+                Icons.view_list_rounded,
+                size: 16,
+                color: AppPalette.gold400.withValues(alpha: 0.45),
+              ),
+            ]),
+          ),
+          Container(height: 1, color: AppPalette.gold400.withValues(alpha: 0.10)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ...state.templates.map((t) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          t.name,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: colors.inkMuted,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: t.durations.map((d) {
+                            final isSelected =
+                                state.months == d.durationMonths &&
+                                state.increase == d.increasePercentage;
+                            return _DurationChip(
+                              months: d.durationMonths,
+                              increase: d.increasePercentage,
+                              isSelected: isSelected,
+                              onTap: () {
+                                cubit.applyDuration(d);
+                                monthsController.text = '${d.durationMonths}';
+                                increaseController.text =
+                                    d.increasePercentage.toString();
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    )),
               ],
-            );
-          }),
+            ),
+          ),
         ],
       ),
     );
@@ -286,24 +494,27 @@ class _DurationChip extends StatelessWidget {
     required this.isSelected,
     required this.onTap,
   });
-  final int    months;
+  final int months;
   final double increase;
-  final bool   isSelected;
+  final bool isSelected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? colors.brandNavy : colors.surface,
+          color: isSelected
+              ? AppPalette.navy
+              : const Color(0xFFFFF8EC),
           borderRadius: AppRadii.pillAll,
           border: Border.all(
-            color: isSelected ? colors.brandNavy : colors.hairline,
+            color: isSelected
+                ? AppPalette.navy
+                : AppPalette.gold400.withValues(alpha: 0.30),
           ),
         ),
         child: Row(
@@ -312,13 +523,13 @@ class _DurationChip extends StatelessWidget {
             Icon(
               Icons.calendar_month_rounded,
               size: 13,
-              color: isSelected ? Colors.white : colors.inkMuted,
+              color: isSelected ? Colors.white : const Color(0xFFB8973A),
             ),
             const SizedBox(width: 5),
             Text(
               '$months شهر',
               style: TextStyle(
-                color: isSelected ? Colors.white : colors.inkStrong,
+                color: isSelected ? Colors.white : AppPalette.navy,
                 fontSize: 13,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               ),
@@ -326,17 +537,18 @@ class _DurationChip extends StatelessWidget {
             if (increase > 0) ...[
               const SizedBox(width: 6),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? Colors.white.withValues(alpha: 0.18)
-                      : colors.hairline,
+                      : AppPalette.gold400.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   '+${increase.toStringAsFixed(increase.truncateToDouble() == increase ? 0 : 1)}%',
                   style: TextStyle(
-                    color: isSelected ? Colors.white : colors.inkMuted,
+                    color: isSelected ? Colors.white : const Color(0xFFB8973A),
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
                   ),
@@ -345,78 +557,6 @@ class _DurationChip extends StatelessWidget {
             ],
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ── Input card ────────────────────────────────────────────────────────────────
-
-class _InputCard extends StatelessWidget {
-  const _InputCard({
-    required this.icon,
-    required this.label,
-    required this.controller,
-    required this.onChanged,
-    this.hint,
-  });
-  final IconData              icon;
-  final String                label;
-  final TextEditingController controller;
-  final ValueChanged<String>  onChanged;
-  final String?               hint;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme  = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.hairline),
-        boxShadow: colors.shadowCard,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 13, color: AppPalette.gold400),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: colors.inkMuted,
-                  fontSize: 11,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          TextField(
-            controller: controller,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
-            onChanged: onChanged,
-            textAlign: TextAlign.start,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-            ),
-            decoration: InputDecoration(
-              isDense: true,
-              contentPadding: EdgeInsets.zero,
-              border: InputBorder.none,
-              hintText: hint ?? '0',
-              hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                color: colors.inkMuted.withValues(alpha: 0.40),
-                fontSize: 15,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -462,7 +602,7 @@ class _ErrorBanner extends StatelessWidget {
 class _ResultCard extends StatelessWidget {
   const _ResultCard({required this.result, required this.lang});
   final InstallmentResult result;
-  final String            lang;
+  final String lang;
 
   @override
   Widget build(BuildContext context) {
@@ -526,7 +666,8 @@ class _ResultCard extends StatelessWidget {
           // Monthly highlight
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 18),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               color: AppPalette.gold400.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(14),
@@ -563,7 +704,9 @@ class _ResultCard extends StatelessWidget {
           ),
 
           const SizedBox(height: 16),
-          Container(height: 0.5, color: Colors.white.withValues(alpha: 0.07)),
+          Container(
+              height: 0.5,
+              color: Colors.white.withValues(alpha: 0.07)),
 
           // Detail rows
           Padding(
@@ -588,7 +731,9 @@ class _ResultCard extends StatelessWidget {
                   icon: Icons.account_balance_rounded,
                 ),
                 const SizedBox(height: 14),
-                Container(height: 0.5, color: Colors.white.withValues(alpha: 0.10)),
+                Container(
+                    height: 0.5,
+                    color: Colors.white.withValues(alpha: 0.10)),
                 const SizedBox(height: 14),
                 _DRow(
                   label: l10n.calculatorTotal,
@@ -612,10 +757,10 @@ class _DRow extends StatelessWidget {
     required this.icon,
     this.emphasize = false,
   });
-  final String   label;
-  final String   value;
+  final String label;
+  final String value;
   final IconData icon;
-  final bool     emphasize;
+  final bool emphasize;
 
   @override
   Widget build(BuildContext context) {

@@ -41,6 +41,8 @@ class StaffShell extends StatefulWidget {
 class _StaffShellState extends State<StaffShell> {
   int _index = 0;
 
+  void _switchTab(int index) => setState(() => _index = index);
+
   late final List<Widget> _tabs = [
     MultiBlocProvider(
       providers: [
@@ -95,7 +97,7 @@ class _StaffShellState extends State<StaffShell> {
               BonusSummaryCubit(GetBonusEntries(ctx.read<BonusRepository>())),
         ),
       ],
-      child: const StaffProfileScreen(),
+      child: StaffProfileScreen(onSwitchTab: _switchTab),
     ),
   ];
 

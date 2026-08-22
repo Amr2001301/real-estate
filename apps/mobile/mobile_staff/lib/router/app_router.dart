@@ -63,7 +63,9 @@ import '../features/clients/domain/entities/staff_client.dart';
 import '../features/clients/domain/repositories/clients_repository.dart';
 import '../features/clients/domain/usecases/client_use_cases.dart';
 import '../features/clients/presentation/cubit/client_detail_cubit.dart';
+import '../features/clients/presentation/cubit/clients_cubit.dart';
 import '../features/clients/presentation/screens/client_detail_screen.dart';
+import '../features/clients/presentation/screens/clients_screen.dart';
 import '../features/leads/domain/entities/lead.dart';
 import '../features/leads/domain/repositories/leads_repository.dart';
 import '../features/leads/domain/usecases/lead_use_cases.dart';
@@ -373,6 +375,16 @@ GoRouter createStaffRouter(
             child: LeadDetailScreen(leadId: id, fallbackName: lead?.fullName),
           );
         },
+      ),
+
+      // ── Clients list ─────────────────────────────────────────────────────
+      GoRoute(
+        path: '/clients',
+        builder: (context, state) => BlocProvider(
+          create: (ctx) =>
+              ClientsCubit(GetMyClients(ctx.read<ClientsRepository>())),
+          child: const ClientsScreen(),
+        ),
       ),
 
       // ── Client detail ────────────────────────────────────────────────────

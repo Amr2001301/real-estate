@@ -15,12 +15,23 @@ const _navyDeep = Color(0xFF0B1726);
 const _navyCard = Color(0xFF1A3352);
 const _navyLight = Color(0xFF243F62);
 
+void _showComingSoon(BuildContext context) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(context.l10n.placeholderScreen),
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 2),
+    ),
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Staff Profile Screen — mirrors the Customer Account screen rhythm
 // ─────────────────────────────────────────────────────────────────────────────
 
 class StaffProfileScreen extends StatefulWidget {
-  const StaffProfileScreen({super.key});
+  const StaffProfileScreen({super.key, this.onSwitchTab});
+  final void Function(int)? onSwitchTab;
 
   @override
   State<StaffProfileScreen> createState() => _StaffProfileScreenState();
@@ -76,13 +87,13 @@ class _StaffProfileScreenState extends State<StaffProfileScreen> {
               ),
               children: [
                 // ── Quick access shortcuts ────────────────────────────────
-                _StaffQuickBar(l10n: l10n),
+                _StaffQuickBar(l10n: l10n, onSwitchTab: widget.onSwitchTab),
                 const SizedBox(height: AppSpacing.xl),
 
                 // ── أدوات المستشار (service rows) ─────────────────────────
                 _SectionLabel(title: l10n.staffSectionTools),
                 const SizedBox(height: AppSpacing.sm),
-                _StaffServicesCard(l10n: l10n),
+                _StaffServicesCard(l10n: l10n, onSwitchTab: widget.onSwitchTab),
                 const SizedBox(height: AppSpacing.xl),
 
                 // ── Compact performance card ──────────────────────────────
@@ -330,8 +341,9 @@ class _StaffAccountHeader extends StatelessWidget {
 // ── Quick access shortcuts (4 tiles) ─────────────────────────────────────────
 
 class _StaffQuickBar extends StatelessWidget {
-  const _StaffQuickBar({required this.l10n});
+  const _StaffQuickBar({required this.l10n, this.onSwitchTab});
   final AppLocalizations l10n;
+  final void Function(int)? onSwitchTab;
 
   @override
   Widget build(BuildContext context) {
@@ -352,7 +364,7 @@ class _StaffQuickBar extends StatelessWidget {
         icon: AppIcons.profile,
         label: l10n.staffShortcutClients,
         navyStyle: true,
-        onTap: () {},
+        onTap: () => onSwitchTab?.call(2),
       ),
       _QItem(
         icon: Icons.payments_rounded,
@@ -511,8 +523,9 @@ class _SectionLabel extends StatelessWidget {
 // ── Staff services list card ──────────────────────────────────────────────────
 
 class _StaffServicesCard extends StatelessWidget {
-  const _StaffServicesCard({required this.l10n});
+  const _StaffServicesCard({required this.l10n, this.onSwitchTab});
   final AppLocalizations l10n;
+  final void Function(int)? onSwitchTab;
 
   @override
   Widget build(BuildContext context) {
@@ -524,14 +537,14 @@ class _StaffServicesCard extends StatelessWidget {
         label: l10n.navClients,
         subtitle: l10n.staffMyClientsDesc,
         navyStyle: true,
-        onTap: () {},
+        onTap: () => onSwitchTab?.call(2),
       ),
       _SItem(
         icon: Icons.people_alt_rounded,
         label: l10n.navLeads,
         subtitle: l10n.staffMyLeadsDesc,
         navyStyle: false,
-        onTap: () {},
+        onTap: () => onSwitchTab?.call(1),
       ),
       _SItem(
         icon: Icons.track_changes_rounded,
@@ -924,14 +937,14 @@ class _SettingsServicesCard extends StatelessWidget {
         label: l10n.settingsSecurity,
         subtitle: '',
         navyStyle: true,
-        onTap: () {},
+        onTap: () => _showComingSoon(context),
       ),
       _SItem(
         icon: Icons.help_outline_rounded,
         label: l10n.settingsSupport,
         subtitle: '',
         navyStyle: false,
-        onTap: () {},
+        onTap: () => _showComingSoon(context),
       ),
       if (canReviewPayments)
         _SItem(

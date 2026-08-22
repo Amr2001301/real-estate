@@ -26,9 +26,8 @@ class _BonusScreenState extends State<BonusScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n      = context.l10n;
-    final cubit     = context.read<BonusCubit>();
-    final isRtl     = context.read<LocaleCubit>().isRtl;
+    final l10n = context.l10n;
+    final cubit = context.read<BonusCubit>();
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
@@ -50,27 +49,29 @@ class _BonusScreenState extends State<BonusScreen> {
                   case DataStatus.loading:
                     return const StaffListSkeleton();
                   case DataStatus.failure:
-                    return ErrorState(failure: state.failure, onRetry: cubit.load);
+                    return ErrorState(
+                        failure: state.failure, onRetry: cubit.load);
                   case DataStatus.empty:
                   case DataStatus.success:
                     return RefreshIndicator(
+                      color: AppPalette.gold400,
                       onRefresh: cubit.load,
                       child: ListView(
                         padding: EdgeInsets.fromLTRB(
-                            AppSpacing.lg, AppSpacing.md,
-                            AppSpacing.lg, bottomPad + AppSpacing.xl),
+                          AppSpacing.lg,
+                          AppSpacing.md,
+                          AppSpacing.lg,
+                          bottomPad + AppSpacing.xl,
+                        ),
                         children: [
                           _OverviewCard(state: state),
                           const SizedBox(height: AppSpacing.md),
                           _StatusFilter(selected: state.statusFilter),
                           const SizedBox(height: AppSpacing.md),
-                          if (state.entries.isNotEmpty) ...[
-                            _SectionHeader(label: l10n.bonusTitle),
-                            const SizedBox(height: AppSpacing.sm),
-                          ],
                           if (state.entries.isEmpty)
                             Padding(
-                              padding: const EdgeInsets.only(top: AppSpacing.xxl),
+                              padding:
+                                  const EdgeInsets.only(top: AppSpacing.xxl),
                               child: EmptyState(
                                 icon: Icons.payments_outlined,
                                 title: l10n.bonusEmptyTitle,
@@ -103,75 +104,113 @@ class _OverviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n   = context.l10n;
+    final l10n = context.l10n;
     final colors = context.appColors;
-    final lang   = Localizations.localeOf(context).languageCode;
+    final lang = Localizations.localeOf(context).languageCode;
     String money(double v) => PriceFormatter.format(v, languageCode: lang);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colors.hairline),
-        boxShadow: colors.shadowCard,
-      ),
-      child: IntrinsicHeight(
-        child: Row(
-          children: [
-            Expanded(
-              child: _Metric(
+    return PremiumCard(
+      elevation: AppCardElevation.soft,
+      accentRail: AppTone.gold,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row
+          Row(
+            children: [
+              const IconChip(
+                icon: Icons.account_balance_wallet_rounded,
+                tone: AppTone.gold,
+                size: IconChipSize.sm,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  l10n.bonusTitle,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // Metric cells
+          Row(
+            children: [
+              _MetricCell(
                 label: l10n.bonusPaid,
                 value: money(state.overview.paidTotal),
-                tone: BadgeTone.success,
+                icon: Icons.check_circle_rounded,
+                color: colors.success,
               ),
-            ),
-            VerticalDivider(width: 1, thickness: 1, color: colors.hairline),
-            Expanded(
-              child: _Metric(
+              const SizedBox(width: AppSpacing.sm),
+              _MetricCell(
                 label: l10n.bonusPending,
                 value: money(state.overview.pendingTotal),
-                tone: BadgeTone.warning,
+                icon: Icons.hourglass_top_rounded,
+                color: colors.warning,
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-class _Metric extends StatelessWidget {
-  const _Metric({required this.label, required this.value, required this.tone});
+class _MetricCell extends StatelessWidget {
+  const _MetricCell({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
   final String label;
   final String value;
-  final BadgeTone tone;
+  final IconData icon;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final accent = tone == BadgeTone.success ? colors.success : colors.warning;
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md, vertical: AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: accent,
-              letterSpacing: -0.3,
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: AppSpacing.sm + 2),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: color,
+                      letterSpacing: -0.3,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    label,
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelSmall
+                        ?.copyWith(color: colors.inkMuted),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall
-                ?.copyWith(color: colors.inkMuted),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -185,7 +224,7 @@ class _StatusFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n  = context.l10n;
+    final l10n = context.l10n;
     final cubit = context.read<BonusCubit>();
 
     return SingleChildScrollView(
@@ -210,8 +249,6 @@ class _StatusFilter extends StatelessWidget {
     );
   }
 }
-
-// ── Filter chip ───────────────────────────────────────────────────────────────
 
 class _FilterChip extends StatelessWidget {
   const _FilterChip({
@@ -253,32 +290,6 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-// ── Section header ────────────────────────────────────────────────────────────
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Row(
-        children: [
-          Container(
-            width: 3, height: 16,
-            decoration: BoxDecoration(
-              color: AppPalette.gold400,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.titleSmall
-                ?.copyWith(fontWeight: FontWeight.w700),
-          ),
-        ],
-      );
-}
-
 // ── Bonus tile ────────────────────────────────────────────────────────────────
 
 class _BonusTile extends StatelessWidget {
@@ -288,17 +299,25 @@ class _BonusTile extends StatelessWidget {
   Color _toneColor(BadgeTone tone, AppColorsExt c) => switch (tone) {
         BadgeTone.success => c.success,
         BadgeTone.warning => c.warning,
-        BadgeTone.info    => c.info,
-        _                 => c.inkMuted,
+        BadgeTone.info => c.info,
+        _ => c.inkMuted,
       };
 
   @override
   Widget build(BuildContext context) {
-    final l10n   = context.l10n;
+    final l10n = context.l10n;
     final colors = context.appColors;
-    final lang   = Localizations.localeOf(context).languageCode;
-    final tone   = bonusStatusTone(entry.status);
+    final lang = Localizations.localeOf(context).languageCode;
+    final tone = bonusStatusTone(entry.status);
     final barColor = _toneColor(tone, colors);
+    final date = entry.paidAt ?? entry.createdAt;
+
+    // Build subtitle parts
+    final subtitleParts = [
+      entry.period,
+      if (entry.ruleName != null) entry.ruleName!,
+      if (entry.commissionPct != null) '${entry.commissionPct}%',
+    ];
 
     return Container(
       decoration: BoxDecoration(
@@ -317,42 +336,56 @@ class _BonusTile extends StatelessWidget {
             child: Stack(
               children: [
                 PositionedDirectional(
-                  top: 0, bottom: 0, start: 0,
+                  top: 0,
+                  bottom: 0,
+                  start: 0,
                   child: Container(width: 4, color: barColor),
                 ),
                 Padding(
                   padding: const EdgeInsetsDirectional.fromSTEB(
-                    AppSpacing.md, AppSpacing.md,
-                    AppSpacing.md, AppSpacing.md,
+                    AppSpacing.md + 4,
+                    AppSpacing.md,
+                    AppSpacing.md,
+                    AppSpacing.md,
                   ),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              PriceFormatter.formatString(
-                                  entry.amount, languageCode: lang),
+                              PriceFormatter.formatString(entry.amount,
+                                  languageCode: lang),
                               style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
                                 color: colors.inkStrong,
+                                letterSpacing: -0.3,
                                 height: 1.2,
                               ),
                             ),
-                            const SizedBox(height: 3),
+                            const SizedBox(height: 4),
                             Text(
-                              [
-                                entry.period,
-                                if (entry.ruleName != null) entry.ruleName!,
-                              ].join(' · '),
+                              subtitleParts.join(' · '),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: colors.inkMuted,
                                 height: 1.3,
                               ),
                             ),
+                            if (date != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                DateFormatter.shortDate(date,
+                                    languageCode: lang),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(color: colors.inkMuted),
+                              ),
+                            ],
                           ],
                         ),
                       ),
