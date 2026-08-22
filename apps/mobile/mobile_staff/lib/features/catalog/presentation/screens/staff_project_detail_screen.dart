@@ -465,7 +465,7 @@ class _CircleBackButton extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════════════════════
 // Hero background (used inside FlexibleSpaceBar)
 // ══════════════════════════════════════════════════════════════════════════════
-class _HeroBackground extends StatelessWidget {
+class _HeroBackground extends StatefulWidget {
   const _HeroBackground({
     required this.project,
     required this.statusLabel,
@@ -476,22 +476,51 @@ class _HeroBackground extends StatelessWidget {
   final String statusLabel;
   final BadgeTone statusTone;
 
-  String? get _heroUrl =>
-      project.coverImageUrl ??
-      (project.mediaUrls.isNotEmpty ? project.mediaUrls.first : null);
+  @override
+  State<_HeroBackground> createState() => _HeroBackgroundState();
+}
+
+class _HeroBackgroundState extends State<_HeroBackground> {
+  final _ctrl = PageController();
+  int _page = 0;
+
+  List<String> get _urls {
+    final seen = <String>{};
+    final result = <String>[];
+    final cover = widget.project.coverImageUrl;
+    if (cover != null && seen.add(cover)) result.add(cover);
+    for (final u in widget.project.mediaUrls) {
+      if (seen.add(u)) result.add(u);
+    }
+    return result;
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final heroUrl = _heroUrl;
+    final urls = _urls;
+    final multi = urls.length > 1;
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Image or placeholder
-        if (heroUrl != null)
-          AppNetworkImage(url: heroUrl)
+        // Image carousel or placeholder
+        if (urls.isEmpty)
+          _NoImagePlaceholder()
+        else if (!multi)
+          AppNetworkImage(url: urls.first)
         else
-          _NoImagePlaceholder(),
+          PageView.builder(
+            controller: _ctrl,
+            onPageChanged: (i) => setState(() => _page = i),
+            itemCount: urls.length,
+            itemBuilder: (_, i) => AppNetworkImage(url: urls[i]),
+          ),
 
         // Top gradient — protects back button
         const Positioned(
@@ -531,22 +560,63 @@ class _HeroBackground extends StatelessWidget {
           ),
         ),
 
-        // Status badge + media count at top-end (below toolbar row)
+        // Page dot indicators (above the title area)
+        if (multi)
+          Positioned(
+            bottom: 86,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: _PageDots(count: urls.length, current: _page),
+            ),
+          ),
+
+        // Status badge + media count at top-end
         PositionedDirectional(
           top: kToolbarHeight + 6,
           end: AppSpacing.lg,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (project.mediaUrls.length > 1) ...[
-                _MediaCountPill(count: project.mediaUrls.length),
+              if (multi) ...[
+                _MediaCountPill(current: _page + 1, total: urls.length),
                 const SizedBox(width: AppSpacing.xs),
               ],
-              _StatusPill(label: statusLabel, tone: statusTone),
+              _StatusPill(
+                  label: widget.statusLabel, tone: widget.statusTone),
             ],
           ),
         ),
+      ],
+    );
+  }
+}
 
+class _PageDots extends StatelessWidget {
+  const _PageDots({required this.count, required this.current});
+  final int count;
+  final int current;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (int i = 0; i < count; i++) ...[
+          if (i > 0) const SizedBox(width: 5),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            width:  current == i ? 20 : 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: current == i
+                  ? Colors.white
+                  : Colors.white.withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -568,8 +638,7 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: _bgColor(),
         borderRadius: AppRadii.pillAll,
@@ -591,16 +660,16 @@ class _StatusPill extends StatelessWidget {
 }
 
 class _MediaCountPill extends StatelessWidget {
-  const _MediaCountPill({required this.count});
-  final int count;
+  const _MediaCountPill({required this.current, required this.total});
+  final int current;
+  final int total;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.40),
+        color: Colors.black.withValues(alpha: 0.45),
         borderRadius: AppRadii.pillAll,
         border: Border.all(
           color: Colors.white.withValues(alpha: 0.28),
@@ -614,9 +683,8 @@ class _MediaCountPill extends StatelessWidget {
               size: 12, color: Colors.white70),
           const SizedBox(width: 4),
           Text(
-            '$count',
-            style: const TextStyle(
-                fontSize: 11, color: Colors.white70),
+            '$current / $total',
+            style: const TextStyle(fontSize: 11, color: Colors.white70),
           ),
         ],
       ),

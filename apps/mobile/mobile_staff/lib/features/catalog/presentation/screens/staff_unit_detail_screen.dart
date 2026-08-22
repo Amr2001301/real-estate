@@ -242,19 +242,56 @@ class _DetailPage extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════════════════════
 // Hero background
 // ══════════════════════════════════════════════════════════════════════════════
-class _HeroBackground extends StatelessWidget {
+class _HeroBackground extends StatefulWidget {
   const _HeroBackground({required this.unit, required this.lang});
   final StaffUnit unit;
   final String lang;
 
   @override
+  State<_HeroBackground> createState() => _HeroBackgroundState();
+}
+
+class _HeroBackgroundState extends State<_HeroBackground> {
+  final _ctrl = PageController();
+  int _page = 0;
+
+  List<String> get _urls {
+    final seen = <String>{};
+    final result = <String>[];
+    final cover = widget.unit.coverImage;
+    if (cover != null && seen.add(cover)) result.add(cover);
+    for (final u in widget.unit.mediaUrls) {
+      if (seen.add(u)) result.add(u);
+    }
+    return result;
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final heroUrl = unit.heroImageUrl;
+    final urls  = _urls;
+    final multi = urls.length > 1;
+
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Image
-        if (heroUrl != null) AppNetworkImage(url: heroUrl) else _Placeholder(),
+        // Image carousel or placeholder
+        if (urls.isEmpty)
+          _Placeholder()
+        else if (!multi)
+          AppNetworkImage(url: urls.first)
+        else
+          PageView.builder(
+            controller: _ctrl,
+            onPageChanged: (i) => setState(() => _page = i),
+            itemCount: urls.length,
+            itemBuilder: (_, i) => AppNetworkImage(url: urls[i]),
+          ),
 
         // Top gradient — protects back button
         const Positioned(
@@ -294,16 +331,99 @@ class _HeroBackground extends StatelessWidget {
           ),
         ),
 
-        // Status badge — top-end (opposite corner from the leading back button)
+        // Page dot indicators (above title area)
+        if (multi)
+          Positioned(
+            bottom: 90,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: _PageDots(count: urls.length, current: _page),
+            ),
+          ),
+
+        // Status badge + count pill — top-end
         PositionedDirectional(
           top: kToolbarHeight + 8,
           end: AppSpacing.lg,
-          child: _StatusPill(
-            label: unitStatusLabel(context.l10n, unit.status),
-            tone: unitStatusTone(unit.status),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (multi) ...[
+                _MediaCountPill(current: _page + 1, total: urls.length),
+                const SizedBox(width: AppSpacing.xs),
+              ],
+              _StatusPill(
+                label: unitStatusLabel(context.l10n, widget.unit.status),
+                tone: unitStatusTone(widget.unit.status),
+              ),
+            ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _PageDots extends StatelessWidget {
+  const _PageDots({required this.count, required this.current});
+  final int count;
+  final int current;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (int i = 0; i < count; i++) ...[
+          if (i > 0) const SizedBox(width: 5),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            width:  current == i ? 20 : 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: current == i
+                  ? Colors.white
+                  : Colors.white.withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _MediaCountPill extends StatelessWidget {
+  const _MediaCountPill({required this.current, required this.total});
+  final int current;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.45),
+        borderRadius: AppRadii.pillAll,
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.28),
+          width: 0.8,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.photo_library_outlined,
+              size: 12, color: Colors.white70),
+          const SizedBox(width: 4),
+          Text(
+            '$current / $total',
+            style: const TextStyle(fontSize: 11, color: Colors.white70),
+          ),
+        ],
+      ),
     );
   }
 }
