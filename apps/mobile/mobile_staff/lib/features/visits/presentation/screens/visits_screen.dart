@@ -128,6 +128,15 @@ class _VisitsScreenState extends State<VisitsScreen> {
 
 // ── Status filter ─────────────────────────────────────────────────────────────
 
+const _kVisitDotColors = <String, Color>{
+  'SCHEDULED':         Color(0xFF60A5FA), // blue
+  'CONFIRMED':         Color(0xFFC9A84C), // gold
+  'PENDING_RESCHEDULE':Color(0xFFF59E0B), // amber
+  'COMPLETED':         Color(0xFF22C55E), // green
+  'CANCELLED':         Color(0xFFEF4444), // red
+  'NO_SHOW':           Color(0xFF9CA3AF), // muted gray
+};
+
 class _StatusFilter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -147,19 +156,20 @@ class _StatusFilter extends StatelessWidget {
         builder: (context, state) => SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg, vertical: 10),
+              horizontal: AppSpacing.lg, vertical: 6),
           child: Row(
             children: [
-              _FilterChip(
+              _StatusChip(
                 label: l10n.leadsFilterAll,
                 active: state.statusFilter == null,
                 onTap: () => cubit.setStatus(null),
               ),
               for (final s in kVisitStatuses) ...[
                 const SizedBox(width: AppSpacing.xs),
-                _FilterChip(
+                _StatusChip(
                   label: visitStatusLabel(l10n, s),
                   active: state.statusFilter == s,
+                  dotColor: _kVisitDotColors[s],
                   onTap: () => cubit.setStatus(s),
                 ),
               ],
@@ -173,15 +183,17 @@ class _StatusFilter extends StatelessWidget {
 
 // ── Filter chip ───────────────────────────────────────────────────────────────
 
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({
     required this.label,
     required this.active,
     required this.onTap,
+    this.dotColor,
   });
   final String label;
   final bool active;
   final VoidCallback onTap;
+  final Color? dotColor;
 
   @override
   Widget build(BuildContext context) {
@@ -190,39 +202,36 @@ class _FilterChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm + 4, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm + 4, vertical: 11),
         decoration: BoxDecoration(
-          gradient: active
-              ? const LinearGradient(
-                  colors: [Color(0xFFAA8528), AppPalette.gold400],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          color: active ? null : colors.surface,
+          color: active ? colors.brandNavy : colors.surface,
           borderRadius: AppRadii.pillAll,
           border: Border.all(
-            color: active ? AppPalette.gold500 : colors.hairline,
-            width: active ? 0.8 : 1.0,
+            color: active ? colors.brandNavy : colors.hairline,
+            width: active ? 0 : 1,
           ),
-          boxShadow: active
-              ? [
-                  BoxShadow(
-                    color: AppPalette.gold400.withValues(alpha: 0.28),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ]
-              : null,
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-            color: active ? AppPalette.navy : colors.inkStrong,
-            height: 1.2,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!active && dotColor != null) ...[
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: AppSpacing.xxs + 2),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                color: active ? Colors.white : colors.inkStrong,
+                height: 1.2,
+              ),
+            ),
+          ],
         ),
       ),
     );
