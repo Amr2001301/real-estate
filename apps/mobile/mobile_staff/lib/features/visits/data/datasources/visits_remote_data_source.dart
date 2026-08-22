@@ -61,6 +61,8 @@ class VisitsRemoteDataSourceImpl implements VisitsRemoteDataSource {
         'unitId': ?input.unitId,
         'leadId': ?input.leadId,
         'clientId': ?input.clientId,
+        'customerName': ?input.customerName,
+        'customerPhone': ?input.customerPhone,
         'location': ?input.location,
         'salesNotes': ?input.salesNotes,
       },

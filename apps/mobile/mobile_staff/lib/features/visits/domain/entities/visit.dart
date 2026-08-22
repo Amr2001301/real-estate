@@ -89,6 +89,8 @@ class NewVisit {
     this.unitId,
     this.leadId,
     this.clientId,
+    this.customerName,
+    this.customerPhone,
     this.location,
     this.salesNotes,
   });
@@ -98,6 +100,8 @@ class NewVisit {
   final String? unitId;
   final String? leadId;
   final String? clientId;
+  final String? customerName;
+  final String? customerPhone;
   final String? location;
   final String? salesNotes;
 }

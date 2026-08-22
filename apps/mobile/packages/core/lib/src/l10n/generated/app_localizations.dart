@@ -3374,6 +3374,150 @@ abstract class AppLocalizations {
   /// **'Notes'**
   String get visitNotes;
 
+  /// No description provided for @visitSectionClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get visitSectionClient;
+
+  /// No description provided for @visitSectionClientSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the client type linked to this visit.'**
+  String get visitSectionClientSubtitle;
+
+  /// No description provided for @visitClientTypeLead.
+  ///
+  /// In en, this message translates to:
+  /// **'CRM Lead'**
+  String get visitClientTypeLead;
+
+  /// No description provided for @visitClientTypeRegistered.
+  ///
+  /// In en, this message translates to:
+  /// **'Registered Client'**
+  String get visitClientTypeRegistered;
+
+  /// No description provided for @visitClientTypeWalkin.
+  ///
+  /// In en, this message translates to:
+  /// **'Walk-in (No Account)'**
+  String get visitClientTypeWalkin;
+
+  /// No description provided for @visitLeadRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a lead.'**
+  String get visitLeadRequired;
+
+  /// No description provided for @visitClientRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a registered client.'**
+  String get visitClientRequired;
+
+  /// No description provided for @visitWalkInNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Client Name'**
+  String get visitWalkInNameLabel;
+
+  /// No description provided for @visitWalkInNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Ahmed Khaled'**
+  String get visitWalkInNameHint;
+
+  /// No description provided for @visitWalkInPhoneLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone Number'**
+  String get visitWalkInPhoneLabel;
+
+  /// No description provided for @visitWalkInPhoneHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. 01012345678'**
+  String get visitWalkInPhoneHint;
+
+  /// No description provided for @visitWalkInNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter the client name.'**
+  String get visitWalkInNameRequired;
+
+  /// No description provided for @visitWalkInPhoneRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter the phone number.'**
+  String get visitWalkInPhoneRequired;
+
+  /// No description provided for @visitClientSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name or phone...'**
+  String get visitClientSearch;
+
+  /// No description provided for @visitClientSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'— Select a registered client —'**
+  String get visitClientSelect;
+
+  /// No description provided for @visitLeadSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by client name...'**
+  String get visitLeadSearch;
+
+  /// No description provided for @visitLeadSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'— Select a lead —'**
+  String get visitLeadSelect;
+
+  /// No description provided for @visitSectionProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Project & Unit'**
+  String get visitSectionProject;
+
+  /// No description provided for @visitSectionProjectSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select the project to visit. Optionally pick a specific unit.'**
+  String get visitSectionProjectSubtitle;
+
+  /// No description provided for @visitSelectUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'— No specific unit —'**
+  String get visitSelectUnit;
+
+  /// No description provided for @visitNoUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'No specific unit'**
+  String get visitNoUnit;
+
+  /// No description provided for @visitNoUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'No units available for this project.'**
+  String get visitNoUnits;
+
+  /// No description provided for @visitSectionSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit Schedule'**
+  String get visitSectionSchedule;
+
+  /// No description provided for @visitSectionScheduleSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set the visit date and add any notes.'**
+  String get visitSectionScheduleSubtitle;
+
   /// No description provided for @visitUpdateStatus.
   ///
   /// In en, this message translates to:

@@ -1768,6 +1768,81 @@ class AppLocalizationsEn extends AppLocalizations {
   String get visitNotes => 'Notes';
 
   @override
+  String get visitSectionClient => 'Client';
+
+  @override
+  String get visitSectionClientSubtitle =>
+      'Choose the client type linked to this visit.';
+
+  @override
+  String get visitClientTypeLead => 'CRM Lead';
+
+  @override
+  String get visitClientTypeRegistered => 'Registered Client';
+
+  @override
+  String get visitClientTypeWalkin => 'Walk-in (No Account)';
+
+  @override
+  String get visitLeadRequired => 'Please select a lead.';
+
+  @override
+  String get visitClientRequired => 'Please select a registered client.';
+
+  @override
+  String get visitWalkInNameLabel => 'Client Name';
+
+  @override
+  String get visitWalkInNameHint => 'e.g. Ahmed Khaled';
+
+  @override
+  String get visitWalkInPhoneLabel => 'Phone Number';
+
+  @override
+  String get visitWalkInPhoneHint => 'e.g. 01012345678';
+
+  @override
+  String get visitWalkInNameRequired => 'Please enter the client name.';
+
+  @override
+  String get visitWalkInPhoneRequired => 'Please enter the phone number.';
+
+  @override
+  String get visitClientSearch => 'Search by name or phone...';
+
+  @override
+  String get visitClientSelect => '— Select a registered client —';
+
+  @override
+  String get visitLeadSearch => 'Search by client name...';
+
+  @override
+  String get visitLeadSelect => '— Select a lead —';
+
+  @override
+  String get visitSectionProject => 'Project & Unit';
+
+  @override
+  String get visitSectionProjectSubtitle =>
+      'Select the project to visit. Optionally pick a specific unit.';
+
+  @override
+  String get visitSelectUnit => '— No specific unit —';
+
+  @override
+  String get visitNoUnit => 'No specific unit';
+
+  @override
+  String get visitNoUnits => 'No units available for this project.';
+
+  @override
+  String get visitSectionSchedule => 'Visit Schedule';
+
+  @override
+  String get visitSectionScheduleSubtitle =>
+      'Set the visit date and add any notes.';
+
+  @override
   String get visitUpdateStatus => 'Update status';
 
   @override

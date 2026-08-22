@@ -449,7 +449,10 @@ GoRouter createStaffRouter(
           return BlocProvider(
             create: (ctx) => CreateVisitCubit(
               GetStaffProjects(ctx.read<StaffCatalogRepository>()),
+              GetStaffProjectDetail(ctx.read<StaffCatalogRepository>()),
               CreateVisit(ctx.read<VisitsRepository>()),
+              GetLeads(ctx.read<LeadsRepository>()),
+              GetMyClients(ctx.read<ClientsRepository>()),
               projectId: args['projectId'] as String?,
               unitId: args['unitId'] as String?,
               leadId: args['leadId'] as String?,

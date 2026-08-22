@@ -1750,6 +1750,81 @@ class AppLocalizationsAr extends AppLocalizations {
   String get visitNotes => 'ملاحظات';
 
   @override
+  String get visitSectionClient => 'العميل';
+
+  @override
+  String get visitSectionClientSubtitle =>
+      'اختر نوع العميل والعميل المحتمل المرتبط بالزيارة.';
+
+  @override
+  String get visitClientTypeLead => 'عميل محتمل (CRM)';
+
+  @override
+  String get visitClientTypeRegistered => 'عميل مسجل';
+
+  @override
+  String get visitClientTypeWalkin => 'بدون حساب (Walk-in)';
+
+  @override
+  String get visitLeadRequired => 'يرجى اختيار عميل محتمل.';
+
+  @override
+  String get visitClientRequired => 'يرجى اختيار عميل مسجل.';
+
+  @override
+  String get visitWalkInNameLabel => 'اسم العميل';
+
+  @override
+  String get visitWalkInNameHint => 'مثال: عمرو خالد';
+
+  @override
+  String get visitWalkInPhoneLabel => 'رقم الهاتف';
+
+  @override
+  String get visitWalkInPhoneHint => 'مثال: 01012345678';
+
+  @override
+  String get visitWalkInNameRequired => 'يرجى إدخال اسم العميل.';
+
+  @override
+  String get visitWalkInPhoneRequired => 'يرجى إدخال رقم الهاتف.';
+
+  @override
+  String get visitClientSearch => 'ابحث باسم العميل أو رقمه...';
+
+  @override
+  String get visitClientSelect => '— اختر عميلاً مسجلاً —';
+
+  @override
+  String get visitLeadSearch => 'ابحث باسم العميل...';
+
+  @override
+  String get visitLeadSelect => '— اختر عميلاً محتملاً —';
+
+  @override
+  String get visitSectionProject => 'المشروع والوحدة';
+
+  @override
+  String get visitSectionProjectSubtitle =>
+      'حدد المشروع الذي سيُزار. يمكنك اختياريًا تحديد وحدة معينة.';
+
+  @override
+  String get visitSelectUnit => '— بدون تحديد وحدة —';
+
+  @override
+  String get visitNoUnit => 'بدون تحديد وحدة';
+
+  @override
+  String get visitNoUnits => 'لا توجد وحدات لهذا المشروع.';
+
+  @override
+  String get visitSectionSchedule => 'موعد الزيارة';
+
+  @override
+  String get visitSectionScheduleSubtitle =>
+      'حدد موعد الزيارة وأضف أي ملاحظات.';
+
+  @override
   String get visitUpdateStatus => 'تحديث الحالة';
 
   @override
