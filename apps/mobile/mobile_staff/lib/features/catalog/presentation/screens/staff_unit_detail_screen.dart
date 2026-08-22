@@ -2,7 +2,9 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../../common/catalog_status_label.dart';
 import '../../domain/entities/staff_project.dart';
@@ -207,6 +209,29 @@ class _DetailPage extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               sliver: _SpecsGrid(unit: unit, l10n: l10n),
             ),
+
+            // ── Location section ───────────────────────────────────────────
+            if (unit.hasLocation || unit.address != null) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.xl,
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                  ),
+                  child: _SectionTitle(l10n.projectLocation),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                  ),
+                  child: _UnitLocationCard(unit: unit, l10n: l10n),
+                ),
+              ),
+            ],
 
             // ── Project section ────────────────────────────────────────────
             if (hasProject) ...[
@@ -1148,6 +1173,197 @@ class _GlassAction extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Unit location — inline map (when coordinates exist) with address row above,
+// or address-only card when coordinates are absent
+// ══════════════════════════════════════════════════════════════════════════════
+class _UnitLocationCard extends StatelessWidget {
+  const _UnitLocationCard({required this.unit, required this.l10n});
+  final StaffUnit unit;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final hasMap = unit.hasLocation;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Address row (shown when address is present)
+        if (unit.address != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: hasMap
+                  ? const BorderRadius.only(
+                      topLeft: Radius.circular(AppRadii.lg),
+                      topRight: Radius.circular(AppRadii.lg),
+                    )
+                  : BorderRadius.circular(AppRadii.lg),
+              border: Border.all(color: colors.hairline),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.location_on_rounded,
+                  size: 18,
+                  color: colors.brandGold,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    unit.address!,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: colors.inkStrong,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (hasMap) const SizedBox(height: 2),
+        ],
+        // In-app map
+        if (hasMap)
+          ClipRRect(
+            borderRadius: unit.address != null
+                ? const BorderRadius.only(
+                    bottomLeft: Radius.circular(AppRadii.lg),
+                    bottomRight: Radius.circular(AppRadii.lg),
+                  )
+                : BorderRadius.circular(AppRadii.lg),
+            child: SizedBox(
+              height: 220,
+              child: Stack(
+                children: [
+                  FlutterMap(
+                    options: MapOptions(
+                      initialCenter: LatLng(unit.latitude!, unit.longitude!),
+                      initialZoom: 15,
+                      interactionOptions: const InteractionOptions(
+                        flags: InteractiveFlag.pinchZoom |
+                            InteractiveFlag.doubleTapZoom,
+                      ),
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.devora.staff',
+                        maxZoom: 19,
+                      ),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: LatLng(unit.latitude!, unit.longitude!),
+                            width: 48,
+                            height: 48,
+                            child: const _UnitMapPin(),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  PositionedDirectional(
+                    bottom: AppSpacing.sm,
+                    end: AppSpacing.sm,
+                    child: GestureDetector(
+                      onTap: () => ContactActions.openMap(
+                        lat: unit.latitude!,
+                        lng: unit.longitude!,
+                        label: unit.address ?? unit.code,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _navyDeep.withValues(alpha: 0.88),
+                          borderRadius: AppRadii.pillAll,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.20),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.open_in_new_rounded,
+                              size: 13,
+                              color: Colors.white70,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              l10n.openInMaps,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _UnitMapPin extends StatelessWidget {
+  const _UnitMapPin();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: AppPalette.gold400,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2.5),
+            boxShadow: [
+              BoxShadow(
+                color: AppPalette.gold400.withValues(alpha: 0.5),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.home_rounded,
+            size: 16,
+            color: Colors.white,
+          ),
+        ),
+        Container(
+          width: 2,
+          height: 10,
+          color: AppPalette.gold500,
+        ),
+      ],
     );
   }
 }

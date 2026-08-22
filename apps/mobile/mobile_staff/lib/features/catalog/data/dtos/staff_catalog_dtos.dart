@@ -16,6 +16,9 @@ class StaffProjectDto {
     this.soldUnitsCount,
     this.startingPrice,
     this.unitTypes = const [],
+    this.lat,
+    this.lng,
+    this.services = const [],
   });
 
   final String id;
@@ -33,6 +36,10 @@ class StaffProjectDto {
   final int? soldUnitsCount;
   final double? startingPrice;
   final List<String> unitTypes;
+  final double? lat;
+  final double? lng;
+  /// Amenities/services list — each entry is a resolved display string.
+  final List<String> services;
 
   factory StaffProjectDto.fromJson(Map<String, dynamic> json) {
     final (nameAr, nameEn) = _parseTranslatable(json['name']);
@@ -42,6 +49,16 @@ class StaffProjectDto {
     final urls = media
             ?.map((m) => m['url'] as String? ?? '')
             .where((u) => u.isNotEmpty)
+            .toList() ??
+        const <String>[];
+    final services = (json['services'] as List?)
+            ?.whereType<Map<String, dynamic>>()
+            .map((s) {
+              final ar = s['ar'] as String?;
+              final en = s['en'] as String?;
+              return ar ?? en ?? '';
+            })
+            .where((s) => s.isNotEmpty)
             .toList() ??
         const <String>[];
     return StaffProjectDto(
@@ -61,6 +78,9 @@ class StaffProjectDto {
       startingPrice: (json['startingPrice'] as num?)?.toDouble(),
       unitTypes: (json['unitTypes'] as List?)?.whereType<String>().toList() ??
           const [],
+      lat: (json['lat'] as num?)?.toDouble(),
+      lng: (json['lng'] as num?)?.toDouble(),
+      services: services,
     );
   }
 
@@ -91,6 +111,9 @@ class StaffUnitDto {
     this.projectNameEn,
     this.projectCity,
     this.projectCoverImageUrl,
+    this.latitude,
+    this.longitude,
+    this.address,
   });
 
   final String id;
@@ -109,6 +132,9 @@ class StaffUnitDto {
   final String? projectNameEn;
   final String? projectCity;
   final String? projectCoverImageUrl;
+  final double? latitude;
+  final double? longitude;
+  final String? address;
 
   factory StaffUnitDto.fromJson(Map<String, dynamic> json) {
     final media = (json['media'] as List?)
@@ -155,6 +181,9 @@ class StaffUnitDto {
       projectNameEn: projNameEn,
       projectCity: project?['city'] as String?,
       projectCoverImageUrl: projectCoverImageUrl,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      address: json['address'] as String?,
     );
   }
 

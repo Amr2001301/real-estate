@@ -25,6 +25,9 @@ class StaffProject extends Equatable {
     this.soldUnitsCount,
     this.startingPrice,
     this.unitTypes = const [],
+    this.lat,
+    this.lng,
+    this.services = const [],
   });
 
   final String id;
@@ -39,6 +42,12 @@ class StaffProject extends Equatable {
   final int? soldUnitsCount;
   final double? startingPrice;
   final List<String> unitTypes;
+  final double? lat;
+  final double? lng;
+  /// Resolved amenities/services display strings.
+  final List<String> services;
+
+  bool get hasLocation => lat != null && lng != null;
 
   @override
   List<Object?> get props => [
@@ -54,6 +63,9 @@ class StaffProject extends Equatable {
         soldUnitsCount,
         startingPrice,
         unitTypes,
+        lat,
+        lng,
+        services,
       ];
 }
 
@@ -80,6 +92,9 @@ class StaffUnit extends Equatable {
     this.projectName,
     this.projectCity,
     this.projectCoverImageUrl,
+    this.latitude,
+    this.longitude,
+    this.address,
   });
 
   final String id;
@@ -97,8 +112,12 @@ class StaffUnit extends Equatable {
   final Translatable? projectName;
   final String? projectCity;
   final String? projectCoverImageUrl;
+  final double? latitude;
+  final double? longitude;
+  final String? address;
 
   String? get heroImageUrl => coverImage ?? projectCoverImageUrl;
+  bool get hasLocation => latitude != null && longitude != null;
 
   @override
   List<Object?> get props => [
@@ -117,6 +136,9 @@ class StaffUnit extends Equatable {
         projectName,
         projectCity,
         projectCoverImageUrl,
+        latitude,
+        longitude,
+        address,
       ];
 }
 

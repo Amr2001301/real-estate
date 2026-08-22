@@ -2,7 +2,9 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../../common/catalog_status_label.dart';
 import '../../../../common/staff_list_skeleton.dart';
@@ -192,6 +194,37 @@ class _StaffProjectDetailScreenState
                           child: _Section(
                             title: l10n.projectAbout,
                             child: _AboutBlock(text: description),
+                          ),
+                        ),
+                      ],
+
+                      // Amenities / services
+                      if (p.services.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.xxl),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.lg),
+                          child: _Section(
+                            title: l10n.projectAmenities,
+                            child: _AmenitiesBlock(services: p.services),
+                          ),
+                        ),
+                      ],
+
+                      // Location — in-app map
+                      if (p.hasLocation) ...[
+                        const SizedBox(height: AppSpacing.xxl),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.lg),
+                          child: _Section(
+                            title: l10n.projectLocation,
+                            child: _InAppMap(
+                              lat: p.lat!,
+                              lng: p.lng!,
+                              label: p.name.resolve(lang),
+                              openLabel: l10n.openInMaps,
+                            ),
                           ),
                         ),
                       ],
@@ -1088,64 +1121,77 @@ class _AboutBlockState extends State<_AboutBlock> {
     final colors = context.appColors;
     final theme = Theme.of(context);
     final l10n = context.l10n;
+    final textStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: colors.inkStrong.withValues(alpha: 0.85),
+      height: 1.75,
+    );
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: colors.surfaceSoft,
         borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(
-            color: colors.hairline.withValues(alpha: 0.5)),
+        border: Border.all(color: colors.hairline.withValues(alpha: 0.5)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  width: 3,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [AppPalette.gold300, AppPalette.gold500],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Subtract gold bar (3px) + gap (AppSpacing.md) from text width
+          final tp = TextPainter(
+            text: TextSpan(text: widget.text, style: textStyle),
+            maxLines: 3,
+            textDirection: Directionality.of(context),
+          )..layout(maxWidth: constraints.maxWidth - 3 - AppSpacing.md);
+          final overflows = tp.didExceedMaxLines;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      width: 3,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [AppPalette.gold300, AppPalette.gold500],
+                        ),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
                     ),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
+                    const SizedBox(width: AppSpacing.md),
+                    Flexible(
+                      child: Text(
+                        widget.text,
+                        maxLines: _expanded ? null : 3,
+                        overflow: _expanded
+                            ? TextOverflow.visible
+                            : TextOverflow.ellipsis,
+                        style: textStyle,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: AppSpacing.md),
-                Flexible(
+              ),
+              if (overflows) ...[
+                const SizedBox(height: AppSpacing.sm),
+                GestureDetector(
+                  onTap: () => setState(() => _expanded = !_expanded),
                   child: Text(
-                    widget.text,
-                    maxLines: _expanded ? null : 3,
-                    overflow: _expanded
-                        ? TextOverflow.visible
-                        : TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colors.inkStrong
-                          .withValues(alpha: 0.85),
-                      height: 1.75,
+                    _expanded ? l10n.showLess : l10n.showMore,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: colors.brandGold,
                     ),
                   ),
                 ),
               ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          GestureDetector(
-            onTap: () => setState(() => _expanded = !_expanded),
-            child: Text(
-              _expanded ? l10n.showLess : l10n.showMore,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: colors.brandGold,
-              ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -1604,6 +1650,198 @@ class _SpecPill extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Amenities block — wrapped chip grid
+// ══════════════════════════════════════════════════════════════════════════════
+class _AmenitiesBlock extends StatelessWidget {
+  const _AmenitiesBlock({required this.services});
+  final List<String> services;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Wrap(
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xs,
+      children: [
+        for (final s in services)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppPalette.gold400.withValues(alpha: 0.08),
+              borderRadius: AppRadii.pillAll,
+              border: Border.all(
+                color: AppPalette.gold400.withValues(alpha: 0.22),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.check_circle_rounded,
+                  size: 13,
+                  color: AppPalette.gold500,
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  s,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: colors.inkStrong,
+                    height: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// In-app map — embedded OpenStreetMap tile view with a gold pin and an
+// "Open in Maps" overlay button (bottom-right)
+// ══════════════════════════════════════════════════════════════════════════════
+class _InAppMap extends StatelessWidget {
+  const _InAppMap({
+    required this.lat,
+    required this.lng,
+    required this.label,
+    required this.openLabel,
+  });
+  final double lat;
+  final double lng;
+  final String label;
+  final String openLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final point = LatLng(lat, lng);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadii.lg),
+      child: SizedBox(
+        height: 220,
+        child: Stack(
+          children: [
+            FlutterMap(
+              options: MapOptions(
+                initialCenter: point,
+                initialZoom: 15,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.pinchZoom | InteractiveFlag.doubleTapZoom,
+                ),
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.devora.staff',
+                  maxZoom: 19,
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: point,
+                      width: 48,
+                      height: 48,
+                      child: const _MapPin(),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            // Open in Maps overlay button
+            PositionedDirectional(
+              bottom: AppSpacing.sm,
+              end: AppSpacing.sm,
+              child: GestureDetector(
+                onTap: () => ContactActions.openMap(
+                  lat: lat,
+                  lng: lng,
+                  label: label,
+                ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _navyDeep.withValues(alpha: 0.88),
+                    borderRadius: AppRadii.pillAll,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.20),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.open_in_new_rounded,
+                        size: 13,
+                        color: Colors.white70,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        openLabel,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MapPin extends StatelessWidget {
+  const _MapPin();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: AppPalette.gold400,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2.5),
+            boxShadow: [
+              BoxShadow(
+                color: AppPalette.gold400.withValues(alpha: 0.5),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.apartment_rounded,
+            size: 16,
+            color: Colors.white,
+          ),
+        ),
+        Container(
+          width: 2,
+          height: 10,
+          color: AppPalette.gold500,
+        ),
+      ],
     );
   }
 }

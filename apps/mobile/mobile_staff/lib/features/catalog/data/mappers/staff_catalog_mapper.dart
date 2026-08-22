@@ -19,6 +19,9 @@ extension StaffProjectDtoMapper on StaffProjectDto {
         soldUnitsCount: soldUnitsCount,
         startingPrice: startingPrice,
         unitTypes: unitTypes,
+        lat: lat,
+        lng: lng,
+        services: services,
       );
 }
 
@@ -41,5 +44,8 @@ extension StaffUnitDtoMapper on StaffUnitDto {
             : null,
         projectCity: projectCity,
         projectCoverImageUrl: projectCoverImageUrl,
+        latitude: latitude,
+        longitude: longitude,
+        address: address,
       );
 }
