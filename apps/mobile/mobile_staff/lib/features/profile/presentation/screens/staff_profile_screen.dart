@@ -96,6 +96,12 @@ class _StaffProfileScreenState extends State<StaffProfileScreen> {
                 _StaffServicesCard(l10n: l10n, onSwitchTab: widget.onSwitchTab),
                 const SizedBox(height: AppSpacing.xl),
 
+                // ── إدارة المبيعات (operations hub) ──────────────────────
+                _SectionLabel(title: l10n.staffSectionOperations),
+                const SizedBox(height: AppSpacing.sm),
+                _StaffOperationsCard(l10n: l10n),
+                const SizedBox(height: AppSpacing.xl),
+
                 // ── Compact performance card ──────────────────────────────
                 BlocBuilder<TargetSummaryCubit, TargetSummaryState>(
                   builder: (context, target) {
@@ -364,7 +370,7 @@ class _StaffQuickBar extends StatelessWidget {
         icon: AppIcons.profile,
         label: l10n.staffShortcutClients,
         navyStyle: true,
-        onTap: () => onSwitchTab?.call(2),
+        onTap: () => context.push('/clients'),
       ),
       _QItem(
         icon: Icons.payments_rounded,
@@ -537,7 +543,7 @@ class _StaffServicesCard extends StatelessWidget {
         label: l10n.navClients,
         subtitle: l10n.staffMyClientsDesc,
         navyStyle: true,
-        onTap: () => onSwitchTab?.call(2),
+        onTap: () => context.push('/clients'),
       ),
       _SItem(
         icon: Icons.people_alt_rounded,
@@ -696,6 +702,82 @@ class _ServiceRow extends StatelessWidget {
               size: 18,
               color: AppPalette.gold400.withValues(alpha: 0.7),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Operations hub card (Reservations, Contracts, Inventory, Calculator) ─────
+
+class _StaffOperationsCard extends StatelessWidget {
+  const _StaffOperationsCard({required this.l10n});
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    final services = [
+      _SItem(
+        icon: Icons.bookmark_added_rounded,
+        label: l10n.navReservations,
+        subtitle: l10n.staffMyReservationsDesc,
+        navyStyle: false,
+        onTap: () => context.push('/reservations'),
+      ),
+      _SItem(
+        icon: Icons.description_rounded,
+        label: l10n.navContracts,
+        subtitle: l10n.staffMyContractsDesc,
+        navyStyle: true,
+        onTap: () => context.push('/contracts'),
+      ),
+      _SItem(
+        icon: Icons.apartment_rounded,
+        label: l10n.navProjects,
+        subtitle: l10n.staffMyInventoryDesc,
+        navyStyle: false,
+        onTap: () => context.push('/projects'),
+      ),
+      _SItem(
+        icon: Icons.calculate_rounded,
+        label: l10n.planTemplatesTitle,
+        subtitle: l10n.staffMyCalculatorDesc,
+        navyStyle: true,
+        onTap: () => context.push('/installment-plans'),
+      ),
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors.hairline.withValues(alpha: 0.45)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: Column(
+          children: [
+            for (var i = 0; i < services.length; i++) ...[
+              if (i > 0)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                  ),
+                  child: Divider(height: 1, color: colors.hairline),
+                ),
+              _ServiceRow(item: services[i]),
+            ],
           ],
         ),
       ),

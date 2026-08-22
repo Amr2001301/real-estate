@@ -45,9 +45,8 @@ class _VisitsScreenState extends State<VisitsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n     = context.l10n;
-    final cubit    = context.read<VisitsCubit>();
-    final isRtl    = context.read<LocaleCubit>().isRtl;
+    final l10n = context.l10n;
+    final cubit = context.read<VisitsCubit>();
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
@@ -82,7 +81,10 @@ class _VisitsScreenState extends State<VisitsScreen> {
                   case DataStatus.loading:
                     return const StaffListSkeleton();
                   case DataStatus.failure:
-                    return ErrorState(failure: state.failure, onRetry: cubit.load);
+                    return ErrorState(
+                      failure: state.failure,
+                      onRetry: cubit.load,
+                    );
                   case DataStatus.empty:
                     return EmptyState(
                       icon: Icons.event_busy_outlined,
@@ -95,15 +97,21 @@ class _VisitsScreenState extends State<VisitsScreen> {
                       child: ListView.separated(
                         controller: _scrollCtrl,
                         padding: EdgeInsets.fromLTRB(
-                            AppSpacing.md, AppSpacing.sm,
-                            AppSpacing.md, bottomPad + 100),
-                        itemCount: state.visits.length + (state.isLoadingMore ? 1 : 0),
+                          AppSpacing.md,
+                          AppSpacing.sm,
+                          AppSpacing.md,
+                          bottomPad + 100,
+                        ),
+                        itemCount:
+                            state.visits.length + (state.isLoadingMore ? 1 : 0),
                         separatorBuilder: (_, _) =>
                             const SizedBox(height: AppSpacing.sm),
                         itemBuilder: (context, i) {
                           if (i == state.visits.length) {
                             return const Padding(
-                              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                              padding: EdgeInsets.symmetric(
+                                vertical: AppSpacing.md,
+                              ),
                               child: Center(child: CircularProgressIndicator()),
                             );
                           }
@@ -117,15 +125,11 @@ class _VisitsScreenState extends State<VisitsScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: _create,
-        icon: const Icon(Icons.add_rounded),
-        label: Text(l10n.visitNew),
-        backgroundColor: AppPalette.gold400,
-        foregroundColor: AppPalette.navy,
-        elevation: 4,
+        tooltip: l10n.visitNew,
+        child: const Icon(Icons.add_rounded),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }
@@ -133,34 +137,34 @@ class _VisitsScreenState extends State<VisitsScreen> {
 // ── Status filter ─────────────────────────────────────────────────────────────
 
 const _kVisitDotColors = <String, Color>{
-  'SCHEDULED':         Color(0xFF60A5FA), // blue
-  'CONFIRMED':         Color(0xFFC9A84C), // gold
-  'PENDING_RESCHEDULE':Color(0xFFF59E0B), // amber
-  'COMPLETED':         Color(0xFF22C55E), // green
-  'CANCELLED':         Color(0xFFEF4444), // red
-  'NO_SHOW':           Color(0xFF9CA3AF), // muted gray
+  'SCHEDULED': Color(0xFF60A5FA), // blue
+  'CONFIRMED': Color(0xFFC9A84C), // gold
+  'PENDING_RESCHEDULE': Color(0xFFF59E0B), // amber
+  'COMPLETED': Color(0xFF22C55E), // green
+  'CANCELLED': Color(0xFFEF4444), // red
+  'NO_SHOW': Color(0xFF9CA3AF), // muted gray
 };
 
 class _StatusFilter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final l10n   = context.l10n;
-    final cubit  = context.read<VisitsCubit>();
+    final l10n = context.l10n;
+    final cubit = context.read<VisitsCubit>();
     final colors = context.appColors;
 
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface,
-        border: Border(
-          bottom: BorderSide(color: colors.hairline, width: 0.5),
-        ),
+        border: Border(bottom: BorderSide(color: colors.hairline, width: 0.5)),
       ),
       child: BlocBuilder<VisitsCubit, VisitsListState>(
         buildWhen: (a, b) => a.statusFilter != b.statusFilter,
         builder: (context, state) => SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg, vertical: 6),
+            horizontal: AppSpacing.lg,
+            vertical: 6,
+          ),
           child: Row(
             children: [
               _StatusChip(
@@ -206,7 +210,10 @@ class _StatusChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm + 4, vertical: 11),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm + 4,
+          vertical: 11,
+        ),
         decoration: BoxDecoration(
           color: active ? colors.brandNavy : colors.surface,
           borderRadius: AppRadii.pillAll,
@@ -222,7 +229,10 @@ class _StatusChip extends StatelessWidget {
               Container(
                 width: 6,
                 height: 6,
-                decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: dotColor,
+                  shape: BoxShape.circle,
+                ),
               ),
               const SizedBox(width: AppSpacing.xxs + 2),
             ],
@@ -259,66 +269,69 @@ class _VisitTileState extends State<_VisitTile> {
   static Color _toneColor(BadgeTone tone, AppColorsExt c) => switch (tone) {
     BadgeTone.success => c.success,
     BadgeTone.warning => c.warning,
-    BadgeTone.error   => c.error,
-    BadgeTone.info    => c.info,
-    BadgeTone.gold    => c.brandGold,
-    _                 => c.inkMuted,
+    BadgeTone.error => c.error,
+    BadgeTone.info => c.info,
+    BadgeTone.gold => c.brandGold,
+    _ => c.inkMuted,
   };
 
   static IconData _statusIcon(String status) => switch (status) {
-    'SCHEDULED'          => Icons.event_available_rounded,
-    'CONFIRMED'          => Icons.verified_rounded,
+    'SCHEDULED' => Icons.event_available_rounded,
+    'CONFIRMED' => Icons.verified_rounded,
     'PENDING_RESCHEDULE' => Icons.pending_actions_rounded,
-    'COMPLETED'          => Icons.check_circle_rounded,
-    'CANCELLED'          => Icons.cancel_rounded,
-    'NO_SHOW'            => Icons.person_off_rounded,
-    _                    => Icons.event_rounded,
+    'COMPLETED' => Icons.check_circle_rounded,
+    'CANCELLED' => Icons.cancel_rounded,
+    'NO_SHOW' => Icons.person_off_rounded,
+    _ => Icons.event_rounded,
   };
 
   @override
   Widget build(BuildContext context) {
-    final l10n    = context.l10n;
-    final colors  = context.appColors;
-    final lang    = Localizations.localeOf(context).languageCode;
-    final isRtl   = context.read<LocaleCubit>().isRtl;
-    final tone    = visitStatusTone(visit.status);
-    final accent  = _toneColor(tone, colors);
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    final lang = Localizations.localeOf(context).languageCode;
+    final isRtl = context.read<LocaleCubit>().isRtl;
+    final tone = visitStatusTone(visit.status);
+    final accent = _toneColor(tone, colors);
     final hasDate = visit.scheduledAt != null;
     final hasUnit = visit.unitCode != null;
     final hasProject = visit.projectName != null;
     final primaryName = visit.clientName ?? visit.projectName ?? l10n.navVisits;
-    final showProject  = visit.clientName != null && hasProject;
+    final showProject = visit.clientName != null && hasProject;
 
     return GestureDetector(
-      onTapDown:   (_) => setState(() => _pressed = true),
-      onTapUp:     (_) => setState(() => _pressed = false),
-      onTapCancel: ()  => setState(() => _pressed = false),
-      onTap: ()        => context.push('/visits/${visit.id}', extra: visit),
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: () => context.push('/visits/${visit.id}', extra: visit),
       child: AnimatedScale(
-        scale:    _pressed ? 0.975 : 1.0,
+        scale: _pressed ? 0.975 : 1.0,
         duration: const Duration(milliseconds: 110),
-        curve:    Curves.easeOutCubic,
+        curve: Curves.easeOutCubic,
         child: Container(
           decoration: BoxDecoration(
-            color:        colors.surface,
+            color: colors.surface,
             borderRadius: AppRadii.card,
-            border:       Border.all(color: accent.withValues(alpha: 0.16), width: 0.9),
+            border: Border.all(
+              color: accent.withValues(alpha: 0.16),
+              width: 0.9,
+            ),
             boxShadow: [
               BoxShadow(
-                color:      accent.withValues(alpha: 0.10),
+                color: accent.withValues(alpha: 0.10),
                 blurRadius: 20,
-                offset:     const Offset(0, 6),
+                offset: const Offset(0, 6),
               ),
               BoxShadow(
-                color:      Colors.black.withValues(alpha: 0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 6,
-                offset:     const Offset(0, 2),
+                offset: const Offset(0, 2),
               ),
             ],
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(
-            mainAxisSize:       MainAxisSize.min,
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // ── Top gradient accent strip ──────────────────────────────
@@ -326,8 +339,8 @@ class _VisitTileState extends State<_VisitTile> {
                 height: 3,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    begin:  isRtl ? Alignment.centerRight : Alignment.centerLeft,
-                    end:    isRtl ? Alignment.centerLeft  : Alignment.centerRight,
+                    begin: isRtl ? Alignment.centerRight : Alignment.centerLeft,
+                    end: isRtl ? Alignment.centerLeft : Alignment.centerRight,
                     colors: [accent, accent.withValues(alpha: 0.0)],
                   ),
                 ),
@@ -335,8 +348,10 @@ class _VisitTileState extends State<_VisitTile> {
               // ── Card body ─────────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md, 13,
-                  AppSpacing.md, 13,
+                  AppSpacing.md,
+                  13,
+                  AppSpacing.md,
+                  13,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -347,18 +362,21 @@ class _VisitTileState extends State<_VisitTile> {
                       children: [
                         // Status icon circle
                         Container(
-                          width:  46,
+                          width: 46,
                           height: 46,
                           decoration: BoxDecoration(
-                            color:  accent.withValues(alpha: 0.10),
-                            shape:  BoxShape.circle,
+                            color: accent.withValues(alpha: 0.10),
+                            shape: BoxShape.circle,
                             border: Border.all(
                               color: accent.withValues(alpha: 0.28),
                               width: 1.2,
                             ),
                           ),
-                          child: Icon(_statusIcon(visit.status),
-                              color: accent, size: 22),
+                          child: Icon(
+                            _statusIcon(visit.status),
+                            color: accent,
+                            size: 22,
+                          ),
                         ),
                         const SizedBox(width: AppSpacing.sm),
                         // Name + project
@@ -371,10 +389,10 @@ class _VisitTileState extends State<_VisitTile> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize:   15.5,
+                                  fontSize: 15.5,
                                   fontWeight: FontWeight.w700,
-                                  color:      colors.inkStrong,
-                                  height:     1.2,
+                                  color: colors.inkStrong,
+                                  height: 1.2,
                                   letterSpacing: -0.2,
                                 ),
                               ),
@@ -382,8 +400,11 @@ class _VisitTileState extends State<_VisitTile> {
                                 const SizedBox(height: 3),
                                 Row(
                                   children: [
-                                    Icon(Icons.apartment_rounded,
-                                        size: 11, color: colors.inkMuted),
+                                    Icon(
+                                      Icons.apartment_rounded,
+                                      size: 11,
+                                      color: colors.inkMuted,
+                                    ),
                                     const SizedBox(width: 3),
                                     Expanded(
                                       child: Text(
@@ -392,8 +413,8 @@ class _VisitTileState extends State<_VisitTile> {
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color:    colors.inkMuted,
-                                          height:   1.3,
+                                          color: colors.inkMuted,
+                                          height: 1.3,
                                         ),
                                       ),
                                     ),
@@ -410,12 +431,12 @@ class _VisitTileState extends State<_VisitTile> {
                           children: [
                             StatusBadge(
                               label: visitStatusLabel(l10n, visit.status),
-                              tone:  tone,
+                              tone: tone,
                             ),
                             const SizedBox(height: 4),
                             Icon(
                               Icons.chevron_right_rounded,
-                              size:  16,
+                              size: 16,
                               color: colors.inkMuted.withValues(alpha: 0.5),
                             ),
                           ],
@@ -431,17 +452,17 @@ class _VisitTileState extends State<_VisitTile> {
                         children: [
                           if (hasDate)
                             _InfoChip(
-                              icon:  Icons.schedule_rounded,
+                              icon: Icons.schedule_rounded,
                               label: DateFormatter.shortDate(
-                                  visit.scheduledAt!,
-                                  languageCode: lang),
+                                visit.scheduledAt!,
+                                languageCode: lang,
+                              ),
                               color: colors.brandNavy,
                             ),
-                          if (hasDate && hasUnit)
-                            const SizedBox(width: 6),
+                          if (hasDate && hasUnit) const SizedBox(width: 6),
                           if (hasUnit)
                             _InfoChip(
-                              icon:  Icons.apartment_rounded,
+                              icon: Icons.apartment_rounded,
                               label: visit.unitCode!,
                               color: colors.brandGold,
                             ),
@@ -468,16 +489,16 @@ class _InfoChip extends StatelessWidget {
     required this.color,
   });
   final IconData icon;
-  final String   label;
-  final Color    color;
+  final String label;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color:        color.withValues(alpha: 0.07),
-        border:       Border.all(color: color.withValues(alpha: 0.20)),
+        color: color.withValues(alpha: 0.07),
+        border: Border.all(color: color.withValues(alpha: 0.20)),
         borderRadius: AppRadii.pillAll,
       ),
       child: Row(
@@ -488,10 +509,10 @@ class _InfoChip extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize:   12,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
-              color:      color,
-              height:     1.2,
+              color: color,
+              height: 1.2,
             ),
           ),
         ],

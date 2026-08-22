@@ -1616,6 +1616,42 @@ abstract class AppLocalizations {
   /// **'Visits schedule and follow-ups'**
   String get staffMyVisitsDesc;
 
+  /// No description provided for @staffSectionOperations.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales Management'**
+  String get staffSectionOperations;
+
+  /// No description provided for @staffMyReservationsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Track unit bookings'**
+  String get staffMyReservationsDesc;
+
+  /// No description provided for @staffMyContractsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage contracts and documents'**
+  String get staffMyContractsDesc;
+
+  /// No description provided for @staffMyInventoryDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse available units and projects'**
+  String get staffMyInventoryDesc;
+
+  /// No description provided for @staffMyCalculatorDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Installment plan calculations'**
+  String get staffMyCalculatorDesc;
+
+  /// No description provided for @staffMyInquiriesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer requests and inquiries'**
+  String get staffMyInquiriesDesc;
+
   /// No description provided for @staffShortcutPerformance.
   ///
   /// In en, this message translates to:
@@ -4063,6 +4099,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Converted'**
   String get reservationStatusConverted;
+
+  /// No description provided for @planTemplatesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Installment Plans'**
+  String get planTemplatesTitle;
+
+  /// No description provided for @planTemplatesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Track payment plans and installments'**
+  String get planTemplatesSubtitle;
+
+  /// No description provided for @planTemplatesSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search plans...'**
+  String get planTemplatesSearch;
+
+  /// No description provided for @planTemplatesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No installment plans'**
+  String get planTemplatesEmpty;
+
+  /// No description provided for @planTemplatesEmptyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'No plan templates have been created yet'**
+  String get planTemplatesEmptyDesc;
+
+  /// No description provided for @planTemplatesOpenCalculator.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Calculator'**
+  String get planTemplatesOpenCalculator;
+
+  /// No description provided for @planTemplatesMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} months'**
+  String planTemplatesMonths(int n);
 
   /// No description provided for @calculatorTitle.
   ///

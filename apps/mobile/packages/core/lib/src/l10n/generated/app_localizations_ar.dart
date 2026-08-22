@@ -815,6 +815,24 @@ class AppLocalizationsAr extends AppLocalizations {
   String get staffMyVisitsDesc => 'جدول الزيارات والمتابعات';
 
   @override
+  String get staffSectionOperations => 'إدارة المبيعات';
+
+  @override
+  String get staffMyReservationsDesc => 'متابعة حجوزات الوحدات';
+
+  @override
+  String get staffMyContractsDesc => 'إدارة العقود والمستندات';
+
+  @override
+  String get staffMyInventoryDesc => 'تصفح الوحدات والمشاريع المتاحة';
+
+  @override
+  String get staffMyCalculatorDesc => 'حسابات خطط التقسيط';
+
+  @override
+  String get staffMyInquiriesDesc => 'استفسارات وطلبات العملاء';
+
+  @override
   String get staffShortcutPerformance => 'أدائي';
 
   @override
@@ -2107,6 +2125,30 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get reservationStatusConverted => 'محوّل';
+
+  @override
+  String get planTemplatesTitle => 'خطط التقسيط';
+
+  @override
+  String get planTemplatesSubtitle =>
+      'متابعة خطط السداد والأقساط المرتبطة بالعقود والعملاء';
+
+  @override
+  String get planTemplatesSearch => 'ابحث عن خطة...';
+
+  @override
+  String get planTemplatesEmpty => 'لا توجد خطط تقسيط';
+
+  @override
+  String get planTemplatesEmptyDesc => 'لم يتم إنشاء أي خطة تقسيط بعد';
+
+  @override
+  String get planTemplatesOpenCalculator => 'فتح الآلة الحاسبة';
+
+  @override
+  String planTemplatesMonths(int n) {
+    return '$n شهر';
+  }
 
   @override
   String get calculatorTitle => 'حاسبة الأقساط';

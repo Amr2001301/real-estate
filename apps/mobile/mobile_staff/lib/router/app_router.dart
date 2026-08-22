@@ -56,8 +56,10 @@ import '../features/catalog/domain/entities/staff_project.dart';
 import '../features/catalog/domain/repositories/staff_catalog_repository.dart';
 import '../features/catalog/domain/usecases/staff_catalog_use_cases.dart';
 import '../features/catalog/presentation/cubit/staff_project_detail_cubit.dart';
+import '../features/catalog/presentation/cubit/staff_projects_cubit.dart';
 import '../features/catalog/presentation/cubit/staff_unit_detail_cubit.dart';
 import '../features/catalog/presentation/screens/staff_project_detail_screen.dart';
+import '../features/catalog/presentation/screens/staff_projects_screen.dart';
 import '../features/catalog/presentation/screens/staff_unit_detail_screen.dart';
 import '../features/clients/domain/entities/staff_client.dart';
 import '../features/clients/domain/repositories/clients_repository.dart';
@@ -82,7 +84,9 @@ import '../features/notifications/presentation/screens/notifications_screen.dart
 import '../features/installments/domain/repositories/installments_repository.dart';
 import '../features/installments/domain/usecases/installment_use_cases.dart';
 import '../features/installments/presentation/cubit/calculator_cubit.dart';
+import '../features/installments/presentation/cubit/installment_plans_cubit.dart';
 import '../features/installments/presentation/screens/calculator_screen.dart';
+import '../features/installments/presentation/screens/installment_plans_screen.dart';
 import '../features/reservations/domain/entities/reservation.dart';
 import '../features/reservations/domain/repositories/reservations_repository.dart';
 import '../features/reservations/domain/usecases/reservation_use_cases.dart';
@@ -401,6 +405,16 @@ GoRouter createStaffRouter(
         },
       ),
 
+      // ── Projects list ────────────────────────────────────────────────────
+      GoRoute(
+        path: '/projects',
+        builder: (context, state) => BlocProvider(
+          create: (ctx) => StaffProjectsCubit(
+              GetStaffProjects(ctx.read<StaffCatalogRepository>())),
+          child: const StaffProjectsScreen(),
+        ),
+      ),
+
       // ── Project detail (+ units) ─────────────────────────────────────────
       GoRoute(
         path: '/projects/:id',
@@ -646,6 +660,17 @@ GoRouter createStaffRouter(
             return TargetsCubit(GetSalesPerformance(repo), GetSalesTargets(repo));
           },
           child: const TargetsScreen(),
+        ),
+      ),
+
+      // ── Installment plan templates list ─────────────────────────────────
+      GoRoute(
+        path: '/installment-plans',
+        builder: (context, state) => BlocProvider(
+          create: (ctx) => InstallmentPlansCubit(
+            GetPlanTemplates(ctx.read<InstallmentsRepository>()),
+          ),
+          child: const InstallmentPlansScreen(),
         ),
       ),
 

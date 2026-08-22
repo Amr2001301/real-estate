@@ -823,6 +823,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get staffMyVisitsDesc => 'Visits schedule and follow-ups';
 
   @override
+  String get staffSectionOperations => 'Sales Management';
+
+  @override
+  String get staffMyReservationsDesc => 'Track unit bookings';
+
+  @override
+  String get staffMyContractsDesc => 'Manage contracts and documents';
+
+  @override
+  String get staffMyInventoryDesc => 'Browse available units and projects';
+
+  @override
+  String get staffMyCalculatorDesc => 'Installment plan calculations';
+
+  @override
+  String get staffMyInquiriesDesc => 'Customer requests and inquiries';
+
+  @override
   String get staffShortcutPerformance => 'My Performance';
 
   @override
@@ -2131,6 +2149,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reservationStatusConverted => 'Converted';
+
+  @override
+  String get planTemplatesTitle => 'Installment Plans';
+
+  @override
+  String get planTemplatesSubtitle => 'Track payment plans and installments';
+
+  @override
+  String get planTemplatesSearch => 'Search plans...';
+
+  @override
+  String get planTemplatesEmpty => 'No installment plans';
+
+  @override
+  String get planTemplatesEmptyDesc =>
+      'No plan templates have been created yet';
+
+  @override
+  String get planTemplatesOpenCalculator => 'Open Calculator';
+
+  @override
+  String planTemplatesMonths(int n) {
+    return '$n months';
+  }
 
   @override
   String get calculatorTitle => 'Installment calculator';

@@ -5,11 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../catalog/domain/repositories/staff_catalog_repository.dart';
 import '../../catalog/domain/usecases/staff_catalog_use_cases.dart';
 import '../../catalog/presentation/cubit/staff_projects_cubit.dart';
-import '../../catalog/presentation/screens/staff_projects_screen.dart';
-import '../../clients/domain/repositories/clients_repository.dart';
-import '../../clients/domain/usecases/client_use_cases.dart';
-import '../../clients/presentation/cubit/clients_cubit.dart';
-import '../../clients/presentation/screens/clients_screen.dart';
 import '../../bonus/domain/repositories/bonus_repository.dart';
 import '../../bonus/domain/usecases/get_bonus_entries.dart';
 import '../../bonus/presentation/cubit/bonus_summary_cubit.dart';
@@ -29,8 +24,8 @@ import '../../profile/domain/usecases/get_staff_profile.dart';
 import '../../profile/presentation/cubit/staff_profile_cubit.dart';
 import '../../profile/presentation/screens/staff_profile_screen.dart';
 
-/// The authenticated Sales workspace: a 5-tab bottom-nav shell using the
-/// shared premium [AppBottomNav] from core.
+/// The authenticated Sales workspace: 3-tab bottom-nav shell.
+/// Clients and Projects are accessible via the Profile screen.
 class StaffShell extends StatefulWidget {
   const StaffShell({super.key});
 
@@ -44,6 +39,7 @@ class _StaffShellState extends State<StaffShell> {
   void _switchTab(int index) => setState(() => _index = index);
 
   late final List<Widget> _tabs = [
+    // 0 — Dashboard
     MultiBlocProvider(
       providers: [
         BlocProvider(
@@ -65,6 +61,8 @@ class _StaffShellState extends State<StaffShell> {
       ],
       child: DashboardScreen(onSwitchTab: _switchTab),
     ),
+
+    // 1 — Leads
     BlocProvider(
       create: (ctx) {
         final repo = ctx.read<LeadsRepository>();
@@ -72,16 +70,8 @@ class _StaffShellState extends State<StaffShell> {
       },
       child: const LeadsScreen(),
     ),
-    BlocProvider(
-      create: (ctx) =>
-          ClientsCubit(GetMyClients(ctx.read<ClientsRepository>())),
-      child: const ClientsScreen(),
-    ),
-    BlocProvider(
-      create: (ctx) =>
-          StaffProjectsCubit(GetStaffProjects(ctx.read<StaffCatalogRepository>())),
-      child: const StaffProjectsScreen(),
-    ),
+
+    // 2 — Profile  (Clients, Projects, Reservations, Contracts… accessed here)
     MultiBlocProvider(
       providers: [
         BlocProvider(
@@ -119,16 +109,6 @@ class _StaffShellState extends State<StaffShell> {
             icon: Icons.people_alt_outlined,
             activeIcon: Icons.people_alt_rounded,
             label: l10n.navLeads,
-          ),
-          AppBottomNavItem(
-            icon: Icons.contacts_outlined,
-            activeIcon: Icons.contacts_rounded,
-            label: l10n.navClients,
-          ),
-          AppBottomNavItem(
-            icon: Icons.apartment_outlined,
-            activeIcon: Icons.apartment_rounded,
-            label: l10n.navProjects,
           ),
           AppBottomNavItem(
             icon: Icons.person_outline_rounded,
