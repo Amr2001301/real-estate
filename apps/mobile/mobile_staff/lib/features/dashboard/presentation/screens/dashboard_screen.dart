@@ -14,7 +14,8 @@ import '../../domain/entities/sales_dashboard.dart';
 import '../cubit/dashboard_cubit.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  const DashboardScreen({super.key, this.onSwitchTab});
+  final void Function(int)? onSwitchTab;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -86,6 +87,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: _DashboardBody(
                         data: state.data!,
                         bottomPad: bottomPad,
+                        onSwitchTab: widget.onSwitchTab,
                       ),
                     ),
                 ],
@@ -213,9 +215,10 @@ class _DotPatternPainter extends CustomPainter {
 // ── Dashboard body ─────────────────────────────────────────────────────────────
 
 class _DashboardBody extends StatelessWidget {
-  const _DashboardBody({required this.data, required this.bottomPad});
+  const _DashboardBody({required this.data, required this.bottomPad, this.onSwitchTab});
   final SalesDashboard data;
   final double bottomPad;
+  final void Function(int)? onSwitchTab;
 
   @override
   Widget build(BuildContext context) {
@@ -246,7 +249,7 @@ class _DashboardBody extends StatelessWidget {
           // ── 2. Today's priorities ─────────────────────────────────────
           AppSectionHeader(title: l10n.dashboardTodayFocus),
           const SizedBox(height: AppSpacing.xs),
-          _FocusSection(data: data, l10n: l10n, lang: lang),
+          _FocusSection(data: data, l10n: l10n, lang: lang, onSwitchTab: onSwitchTab),
           const SizedBox(height: AppSpacing.lg),
 
           // ── 3. Quick actions ──────────────────────────────────────────
@@ -492,12 +495,14 @@ class _FocusSection extends StatelessWidget {
     required this.data,
     required this.l10n,
     required this.lang,
+    this.onSwitchTab,
   });
   final SalesDashboard data;
   final AppLocalizations l10n;
   final String lang;
+  final void Function(int)? onSwitchTab;
 
-  List<_FocusData> _items() {
+  List<_FocusData> _items(BuildContext context) {
     final items = <_FocusData>[];
 
     if (data.todayVisits > 0) {
@@ -510,7 +515,7 @@ class _FocusSection extends StatelessWidget {
               : (n == 1 ? '1 visit scheduled today' : '$n visits today'),
           chipLabel: lang == 'ar' ? 'اليوم' : 'Today',
           tone: AppTone.gold,
-          route: '/visits?today=1',
+          onTap: () => context.push('/visits'),
         ),
       );
     }
@@ -521,15 +526,11 @@ class _FocusSection extends StatelessWidget {
         _FocusData(
           icon: Icons.handshake_outlined,
           label: lang == 'ar'
-              ? (neg == 1
-                    ? 'عميل واحد في مرحلة التفاوض'
-                    : '$neg عملاء في التفاوض')
-              : (neg == 1
-                    ? '1 client in negotiation'
-                    : '$neg clients in negotiation'),
+              ? (neg == 1 ? 'عميل واحد في مرحلة التفاوض' : '$neg عملاء في التفاوض')
+              : (neg == 1 ? '1 client in negotiation' : '$neg clients in negotiation'),
           chipLabel: lang == 'ar' ? 'تفاوض' : 'Negotiation',
           tone: AppTone.warning,
-          route: '/leads',
+          onTap: () => onSwitchTab?.call(2),
         ),
       );
     }
@@ -540,15 +541,11 @@ class _FocusSection extends StatelessWidget {
         _FocusData(
           icon: Icons.person_search_outlined,
           label: lang == 'ar'
-              ? (interested == 1
-                    ? 'عميل مهتم يحتاج متابعة'
-                    : '$interested عملاء مهتمون يحتاجون متابعة')
-              : (interested == 1
-                    ? '1 interested lead needs follow-up'
-                    : '$interested leads need follow-up'),
+              ? (interested == 1 ? 'عميل مهتم يحتاج متابعة' : '$interested عملاء مهتمون يحتاجون متابعة')
+              : (interested == 1 ? '1 interested lead needs follow-up' : '$interested leads need follow-up'),
           chipLabel: lang == 'ar' ? 'مهتم' : 'Interested',
           tone: AppTone.navy,
-          route: '/leads',
+          onTap: () => context.push('/leads'),
         ),
       );
     }
@@ -560,7 +557,6 @@ class _FocusSection extends StatelessWidget {
           label: l10n.dashboardFocusAllClear,
           chipLabel: lang == 'ar' ? 'جيد' : 'Good',
           tone: AppTone.success,
-          route: null,
         ),
       );
     }
@@ -570,7 +566,7 @@ class _FocusSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = _items();
+    final items = _items(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -589,13 +585,13 @@ class _FocusData {
     required this.label,
     required this.chipLabel,
     required this.tone,
-    this.route,
+    this.onTap,
   });
   final IconData icon;
   final String label;
   final String chipLabel;
   final AppTone tone;
-  final String? route;
+  final VoidCallback? onTap;
 }
 
 class _FocusItemCard extends StatefulWidget {
@@ -613,14 +609,14 @@ class _FocusItemCardState extends State<_FocusItemCard> {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final toneColor = widget.item.tone.baseColor(colors);
-    final hasRoute = widget.item.route != null;
+    final hasAction = widget.item.onTap != null;
     final isRtl = context.read<LocaleCubit>().isRtl;
 
     return GestureDetector(
-      onTapDown: hasRoute ? (_) => setState(() => _pressed = true) : null,
-      onTapUp: hasRoute ? (_) => setState(() => _pressed = false) : null,
-      onTapCancel: hasRoute ? () => setState(() => _pressed = false) : null,
-      onTap: hasRoute ? () => context.push(widget.item.route!) : null,
+      onTapDown: hasAction ? (_) => setState(() => _pressed = true) : null,
+      onTapUp: hasAction ? (_) => setState(() => _pressed = false) : null,
+      onTapCancel: hasAction ? () => setState(() => _pressed = false) : null,
+      onTap: hasAction ? () => widget.item.onTap!() : null,
       child: AnimatedScale(
         scale: _pressed ? 0.98 : 1.0,
         duration: const Duration(milliseconds: 100),
@@ -696,7 +692,7 @@ class _FocusItemCardState extends State<_FocusItemCard> {
                   ],
                 ),
               ),
-              if (hasRoute) ...[
+              if (hasAction) ...[
                 const SizedBox(width: AppSpacing.xs),
                 Container(
                   width: 34,

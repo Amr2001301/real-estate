@@ -26,8 +26,8 @@ class _BonusScreenState extends State<BonusScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final cubit = context.read<BonusCubit>();
+    final l10n      = context.l10n;
+    final cubit     = context.read<BonusCubit>();
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
@@ -40,6 +40,11 @@ class _BonusScreenState extends State<BonusScreen> {
               icon: Icons.arrow_back_ios_new_rounded,
               onTap: () => context.pop(),
             ),
+          ),
+          BlocBuilder<BonusCubit, BonusState>(
+            buildWhen: (a, b) => a.statusFilter != b.statusFilter,
+            builder: (context, state) =>
+                _StatusFilter(selected: state.statusFilter),
           ),
           Expanded(
             child: BlocBuilder<BonusCubit, BonusState>(
@@ -58,31 +63,42 @@ class _BonusScreenState extends State<BonusScreen> {
                       onRefresh: cubit.load,
                       child: ListView(
                         padding: EdgeInsets.fromLTRB(
-                          AppSpacing.lg,
                           AppSpacing.md,
-                          AppSpacing.lg,
+                          AppSpacing.md,
+                          AppSpacing.md,
                           bottomPad + AppSpacing.xl,
                         ),
                         children: [
-                          _OverviewCard(state: state),
-                          const SizedBox(height: AppSpacing.md),
-                          _StatusFilter(selected: state.statusFilter),
-                          const SizedBox(height: AppSpacing.md),
+                          _HeroCard(state: state),
+                          const SizedBox(height: AppSpacing.lg),
                           if (state.entries.isEmpty)
                             Padding(
-                              padding:
-                                  const EdgeInsets.only(top: AppSpacing.xxl),
+                              padding: const EdgeInsets.only(top: AppSpacing.xl),
                               child: EmptyState(
                                 icon: Icons.payments_outlined,
                                 title: l10n.bonusEmptyTitle,
                                 message: l10n.bonusEmptyMessage,
                               ),
                             )
-                          else
+                          else ...[
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                  right: AppSpacing.xs, bottom: AppSpacing.sm),
+                              child: Text(
+                                l10n.bonusTitle,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: context.appColors.inkMuted,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ),
                             for (final e in state.entries) ...[
                               _BonusTile(entry: e),
                               const SizedBox(height: AppSpacing.sm),
                             ],
+                          ],
                         ],
                       ),
                     );
@@ -96,60 +112,144 @@ class _BonusScreenState extends State<BonusScreen> {
   }
 }
 
-// ── Overview card ─────────────────────────────────────────────────────────────
+// ── Hero overview card ────────────────────────────────────────────────────────
 
-class _OverviewCard extends StatelessWidget {
-  const _OverviewCard({required this.state});
+class _HeroCard extends StatelessWidget {
+  const _HeroCard({required this.state});
   final BonusState state;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
-    final lang = Localizations.localeOf(context).languageCode;
+    final lang  = Localizations.localeOf(context).languageCode;
+    final isRtl = context.read<LocaleCubit>().isRtl;
+    final ov    = state.overview;
+    final total = ov.paidTotal + ov.pendingTotal;
+
     String money(double v) => PriceFormatter.format(v, languageCode: lang);
 
-    return PremiumCard(
-      elevation: AppCardElevation.soft,
-      accentRail: AppTone.gold,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0D1B2A), Color(0xFF1A2D44), Color(0xFF0D1B2A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: AppRadii.card,
+        boxShadow: [
+          BoxShadow(
+            color: AppPalette.navy.withValues(alpha: 0.35),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
         children: [
-          // Header row
-          Row(
-            children: [
-              const IconChip(
-                icon: Icons.account_balance_wallet_rounded,
-                tone: AppTone.gold,
-                size: IconChipSize.sm,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  l10n.bonusTitle,
-                  style: Theme.of(context).textTheme.titleSmall,
+          // Gold shimmer top strip
+          Positioned(
+            top: 0, left: 0, right: 0,
+            child: Container(
+              height: 2,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppPalette.gold300.withValues(alpha: 0.0),
+                    AppPalette.gold400,
+                    AppPalette.gold300.withValues(alpha: 0.0),
+                  ],
+                  begin: isRtl ? Alignment.centerRight : Alignment.centerLeft,
+                  end:   isRtl ? Alignment.centerLeft  : Alignment.centerRight,
                 ),
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          // Metric cells
-          Row(
-            children: [
-              _MetricCell(
-                label: l10n.bonusPaid,
-                value: money(state.overview.paidTotal),
-                icon: Icons.check_circle_rounded,
-                color: colors.success,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              _MetricCell(
-                label: l10n.bonusPending,
-                value: money(state.overview.pendingTotal),
-                icon: Icons.hourglass_top_rounded,
-                color: colors.warning,
-              ),
-            ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title row
+                Row(
+                  children: [
+                    Container(
+                      width: 38, height: 38,
+                      decoration: BoxDecoration(
+                        color: AppPalette.gold400.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(11),
+                        border: Border.all(
+                          color: AppPalette.gold400.withValues(alpha: 0.30),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.account_balance_wallet_rounded,
+                        size: 18,
+                        color: AppPalette.gold400,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      lang == 'ar' ? 'إجمالي المكافآت والعمولات' : 'Total Bonuses & Commissions',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white60,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                // Total amount
+                Text(
+                  money(total),
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
+                    color: AppPalette.gold400,
+                    letterSpacing: -0.8,
+                    height: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  lang == 'ar'
+                      ? '${ov.count} إدخال'
+                      : '${ov.count} entries',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.white38,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Container(height: 0.5, color: Colors.white12),
+                const SizedBox(height: AppSpacing.md),
+                // Sub-stats row
+                Row(
+                  children: [
+                    _HeroStat(
+                      icon: Icons.check_circle_rounded,
+                      label: lang == 'ar' ? 'مدفوع' : 'Paid',
+                      value: money(ov.paidTotal),
+                      color: const Color(0xFF22C55E),
+                    ),
+                    Container(
+                      width: 0.5,
+                      height: 36,
+                      color: Colors.white12,
+                      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                    ),
+                    _HeroStat(
+                      icon: Icons.hourglass_top_rounded,
+                      label: lang == 'ar' ? 'معلّق' : 'Pending',
+                      value: money(ov.pendingTotal),
+                      color: const Color(0xFFF59E0B),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -157,66 +257,68 @@ class _OverviewCard extends StatelessWidget {
   }
 }
 
-class _MetricCell extends StatelessWidget {
-  const _MetricCell({
+class _HeroStat extends StatelessWidget {
+  const _HeroStat({
+    required this.icon,
     required this.label,
     required this.value,
-    required this.icon,
     required this.color,
   });
+  final IconData icon;
   final String label;
   final String value;
-  final IconData icon;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: AppSpacing.sm + 2),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 28, height: 28,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 13, color: color),
         ),
-        child: Row(
+        const SizedBox(width: AppSpacing.xs),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    value,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: color,
-                      letterSpacing: -0.3,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    label,
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelSmall
-                        ?.copyWith(color: colors.inkMuted),
-                  ),
-                ],
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 10,
+                color: Colors.white38,
+                fontWeight: FontWeight.w500,
+                height: 1.2,
+              ),
+            ),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: color,
+                height: 1.2,
+                letterSpacing: -0.3,
               ),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 }
 
 // ── Status filter ─────────────────────────────────────────────────────────────
+
+const _kBonusDotColors = <String, Color>{
+  'PENDING':  Color(0xFFF59E0B),
+  'APPROVED': Color(0xFF60A5FA),
+  'PAID':     Color(0xFF22C55E),
+};
 
 class _StatusFilter extends StatelessWidget {
   const _StatusFilter({this.selected});
@@ -224,41 +326,57 @@ class _StatusFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final cubit = context.read<BonusCubit>();
+    final l10n   = context.l10n;
+    final cubit  = context.read<BonusCubit>();
+    final colors = context.appColors;
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _FilterChip(
-            label: l10n.leadsFilterAll,
-            active: selected == null,
-            onTap: () => cubit.setStatus(null),
-          ),
-          for (final s in _bonusStatuses) ...[
-            const SizedBox(width: AppSpacing.xs),
-            _FilterChip(
-              label: bonusStatusLabel(l10n, s),
-              active: selected == s,
-              onTap: () => cubit.setStatus(s),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(
+          bottom: BorderSide(color: colors.hairline, width: 0.5),
+        ),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: 6,
+        ),
+        child: Row(
+          children: [
+            _StatusChip(
+              label: l10n.leadsFilterAll,
+              active: selected == null,
+              onTap: () => cubit.setStatus(null),
             ),
+            for (final s in _bonusStatuses) ...[
+              const SizedBox(width: AppSpacing.xs),
+              _StatusChip(
+                label: bonusStatusLabel(l10n, s),
+                active: selected == s,
+                dotColor: _kBonusDotColors[s],
+                onTap: () => cubit.setStatus(s),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
 }
 
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({
     required this.label,
     required this.active,
     required this.onTap,
+    this.dotColor,
   });
   final String label;
   final bool active;
   final VoidCallback onTap;
+  final Color? dotColor;
 
   @override
   Widget build(BuildContext context) {
@@ -267,23 +385,35 @@ class _FilterChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm + 4, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm + 4, vertical: 11),
         decoration: BoxDecoration(
           color: active ? colors.brandNavy : colors.surface,
           borderRadius: AppRadii.pillAll,
           border: Border.all(
             color: active ? colors.brandNavy : colors.hairline,
+            width: active ? 0 : 1,
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-            color: active ? Colors.white : colors.inkStrong,
-            height: 1.2,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!active && dotColor != null) ...[
+              Container(
+                width: 6, height: 6,
+                decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: AppSpacing.xxs + 2),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                color: active ? Colors.white : colors.inkStrong,
+                height: 1.2,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -292,113 +422,166 @@ class _FilterChip extends StatelessWidget {
 
 // ── Bonus tile ────────────────────────────────────────────────────────────────
 
-class _BonusTile extends StatelessWidget {
+class _BonusTile extends StatefulWidget {
   const _BonusTile({required this.entry});
   final BonusEntry entry;
 
-  Color _toneColor(BadgeTone tone, AppColorsExt c) => switch (tone) {
-        BadgeTone.success => c.success,
-        BadgeTone.warning => c.warning,
-        BadgeTone.info => c.info,
-        _ => c.inkMuted,
-      };
+  @override
+  State<_BonusTile> createState() => _BonusTileState();
+}
+
+class _BonusTileState extends State<_BonusTile> {
+  bool _pressed = false;
+  BonusEntry get entry => widget.entry;
+
+  static Color _statusColor(String status, AppColorsExt c) => switch (status) {
+    'PAID'     => c.success,
+    'APPROVED' => c.info,
+    'PENDING'  => c.warning,
+    _          => c.inkMuted,
+  };
+
+  static IconData _statusIcon(String status) => switch (status) {
+    'PAID'     => Icons.check_circle_rounded,
+    'APPROVED' => Icons.verified_rounded,
+    'PENDING'  => Icons.hourglass_top_rounded,
+    _          => Icons.payments_outlined,
+  };
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
+    final l10n   = context.l10n;
     final colors = context.appColors;
-    final lang = Localizations.localeOf(context).languageCode;
-    final tone = bonusStatusTone(entry.status);
-    final barColor = _toneColor(tone, colors);
-    final date = entry.paidAt ?? entry.createdAt;
+    final lang   = Localizations.localeOf(context).languageCode;
+    final isRtl  = context.read<LocaleCubit>().isRtl;
+    final tone   = bonusStatusTone(entry.status);
+    final accent = _statusColor(entry.status, colors);
+    final date   = entry.paidAt ?? entry.createdAt;
 
-    // Build subtitle parts
-    final subtitleParts = [
-      entry.period,
+    final meta = [
       if (entry.ruleName != null) entry.ruleName!,
+      entry.period,
       if (entry.commissionPct != null) '${entry.commissionPct}%',
-    ];
+    ].join(' · ');
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: AppRadii.card,
-        boxShadow: colors.shadowCard,
-      ),
-      child: ClipRRect(
-        borderRadius: AppRadii.card,
-        child: Material(
-          color: colors.surface,
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: colors.hairline, width: 0.5),
-              borderRadius: AppRadii.card,
-            ),
-            child: Stack(
-              children: [
-                PositionedDirectional(
-                  top: 0,
-                  bottom: 0,
-                  start: 0,
-                  child: Container(width: 4, color: barColor),
-                ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(
-                    AppSpacing.md + 4,
-                    AppSpacing.md,
-                    AppSpacing.md,
-                    AppSpacing.md,
+    return GestureDetector(
+      onTapDown:   (_) => setState(() => _pressed = true),
+      onTapUp:     (_) => setState(() => _pressed = false),
+      onTapCancel: ()  => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale:    _pressed ? 0.975 : 1.0,
+        duration: const Duration(milliseconds: 110),
+        curve:    Curves.easeOutCubic,
+        child: Container(
+          decoration: BoxDecoration(
+            color:        colors.surface,
+            borderRadius: AppRadii.card,
+            border:       Border.all(color: accent.withValues(alpha: 0.15), width: 0.8),
+            boxShadow: [
+              BoxShadow(
+                color:      accent.withValues(alpha: 0.08),
+                blurRadius: 16,
+                offset:     const Offset(0, 4),
+              ),
+              BoxShadow(
+                color:      Colors.black.withValues(alpha: 0.04),
+                blurRadius: 6,
+                offset:     const Offset(0, 2),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Top gradient strip
+              Container(
+                height: 3,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin:  isRtl ? Alignment.centerRight : Alignment.centerLeft,
+                    end:    isRtl ? Alignment.centerLeft  : Alignment.centerRight,
+                    colors: [accent, accent.withValues(alpha: 0.0)],
                   ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              PriceFormatter.formatString(entry.amount,
-                                  languageCode: lang),
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                color: colors.inkStrong,
-                                letterSpacing: -0.3,
-                                height: 1.2,
-                              ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md, AppSpacing.sm,
+                  AppSpacing.md, AppSpacing.sm,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Status icon circle
+                    Container(
+                      width: 44, height: 44,
+                      decoration: BoxDecoration(
+                        color:  accent.withValues(alpha: 0.10),
+                        shape:  BoxShape.circle,
+                        border: Border.all(color: accent.withValues(alpha: 0.25)),
+                      ),
+                      child: Icon(_statusIcon(entry.status), color: accent, size: 20),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    // Content
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            PriceFormatter.formatString(entry.amount, languageCode: lang),
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: colors.inkStrong,
+                              letterSpacing: -0.4,
+                              height: 1.2,
                             ),
-                            const SizedBox(height: 4),
+                          ),
+                          if (meta.isNotEmpty) ...[
+                            const SizedBox(height: 2),
                             Text(
-                              subtitleParts.join(' · '),
+                              meta,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: colors.inkMuted,
                                 height: 1.3,
                               ),
                             ),
-                            if (date != null) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                DateFormatter.shortDate(date,
-                                    languageCode: lang),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelSmall
-                                    ?.copyWith(color: colors.inkMuted),
-                              ),
-                            ],
                           ],
-                        ),
+                          if (date != null) ...[
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                Icon(Icons.schedule_rounded, size: 11, color: colors.inkMuted),
+                                const SizedBox(width: 3),
+                                Text(
+                                  DateFormatter.shortDate(date, languageCode: lang),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: colors.inkMuted,
+                                    height: 1.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
                       ),
-                      const SizedBox(width: AppSpacing.xs),
-                      StatusBadge(
-                        label: bonusStatusLabel(l10n, entry.status),
-                        tone: tone,
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    StatusBadge(
+                      label: bonusStatusLabel(l10n, entry.status),
+                      tone:  tone,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

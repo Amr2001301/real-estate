@@ -63,7 +63,7 @@ class _StaffShellState extends State<StaffShell> {
               GetStaffProjects(ctx.read<StaffCatalogRepository>())),
         ),
       ],
-      child: const DashboardScreen(),
+      child: DashboardScreen(onSwitchTab: _switchTab),
     ),
     BlocProvider(
       create: (ctx) {
