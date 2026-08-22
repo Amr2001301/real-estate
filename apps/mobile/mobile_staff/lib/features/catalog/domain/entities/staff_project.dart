@@ -1,16 +1,6 @@
 import 'package:core/core_domain.dart';
 
 /// A project as seen by staff. `status` is the wire value (DRAFT/PUBLISHED/ARCHIVED).
-///
-/// Unit aggregate fields are enriched by the backend staff serializer on the
-/// list endpoint, and null/empty when no units exist yet.
-///
-/// `mediaUrls` contains all project media images ordered by `order`.
-///
-/// Fields absent from schema (gracefully omitted everywhere):
-///   • currency     — no column
-///   • deliveryDate — no column on Project or Phase
-///   • address      — only on Unit, not at Project level
 class StaffProject extends Equatable {
   const StaffProject({
     required this.id,
@@ -20,6 +10,7 @@ class StaffProject extends Equatable {
     this.city,
     this.coverImageUrl,
     this.mediaUrls = const [],
+    this.floorPlanUrls = const [],
     this.availableUnitsCount,
     this.totalUnitsCount,
     this.soldUnitsCount,
@@ -37,6 +28,7 @@ class StaffProject extends Equatable {
   final String? city;
   final String? coverImageUrl;
   final List<String> mediaUrls;
+  final List<String> floorPlanUrls;
   final int? availableUnitsCount;
   final int? totalUnitsCount;
   final int? soldUnitsCount;
@@ -44,7 +36,6 @@ class StaffProject extends Equatable {
   final List<String> unitTypes;
   final double? lat;
   final double? lng;
-  /// Resolved amenities/services display strings.
   final List<String> services;
 
   bool get hasLocation => lat != null && lng != null;
@@ -58,6 +49,7 @@ class StaffProject extends Equatable {
         city,
         coverImageUrl,
         mediaUrls,
+        floorPlanUrls,
         availableUnitsCount,
         totalUnitsCount,
         soldUnitsCount,
@@ -69,12 +61,7 @@ class StaffProject extends Equatable {
       ];
 }
 
-/// A unit as seen by staff. `price` and `area` are raw strings (Decimal/Float
-/// from Prisma). `status` is the wire value (AVAILABLE/RESERVED/SOLD).
-///
-/// `coverImage` / `mediaUrls` come from the unit's own media array.
-/// `projectCoverImageUrl` is the first project media image (only populated
-/// on the unit-detail endpoint, which includes project.media; null on list).
+/// A unit as seen by staff.
 class StaffUnit extends Equatable {
   const StaffUnit({
     required this.id,
@@ -88,6 +75,8 @@ class StaffUnit extends Equatable {
     this.floor,
     this.coverImage,
     this.mediaUrls = const [],
+    this.floorPlanUrls = const [],
+    this.maintenanceItems = const [],
     this.projectId,
     this.projectName,
     this.projectCity,
@@ -108,6 +97,8 @@ class StaffUnit extends Equatable {
   final int? floor;
   final String? coverImage;
   final List<String> mediaUrls;
+  final List<String> floorPlanUrls;
+  final List<StaffMaintenanceItem> maintenanceItems;
   final String? projectId;
   final Translatable? projectName;
   final String? projectCity;
@@ -132,6 +123,8 @@ class StaffUnit extends Equatable {
         floor,
         coverImage,
         mediaUrls,
+        floorPlanUrls,
+        maintenanceItems,
         projectId,
         projectName,
         projectCity,
@@ -139,6 +132,48 @@ class StaffUnit extends Equatable {
         latitude,
         longitude,
         address,
+      ];
+}
+
+/// A warranty/maintenance component of a unit (AC, plumbing, doors, …).
+class StaffMaintenanceItem extends Equatable {
+  const StaffMaintenanceItem({
+    required this.id,
+    required this.name,
+    this.categoryName,
+    this.warrantyStart,
+    this.warrantyEnd,
+    this.warrantyDurationMonths,
+    this.supplierName,
+    this.contractorName,
+    this.notes,
+  });
+
+  final String id;
+  final Translatable name;
+  final Translatable? categoryName;
+  final DateTime? warrantyStart;
+  final DateTime? warrantyEnd;
+  final int? warrantyDurationMonths;
+  final String? supplierName;
+  final String? contractorName;
+  final String? notes;
+
+  bool get hasWarrantyDates => warrantyStart != null && warrantyEnd != null;
+  bool get isUnderWarranty =>
+      warrantyEnd != null && warrantyEnd!.isAfter(DateTime.now());
+
+  @override
+  List<Object?> get props => [
+        id,
+        name,
+        categoryName,
+        warrantyStart,
+        warrantyEnd,
+        warrantyDurationMonths,
+        supplierName,
+        contractorName,
+        notes,
       ];
 }
 

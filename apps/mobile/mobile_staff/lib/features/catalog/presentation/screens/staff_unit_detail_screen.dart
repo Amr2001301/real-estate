@@ -210,6 +210,28 @@ class _DetailPage extends StatelessWidget {
               sliver: _SpecsGrid(unit: unit, l10n: l10n),
             ),
 
+            // ── Floor plans section ────────────────────────────────────────
+            if (unit.floorPlanUrls.isNotEmpty) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.xl,
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                  ),
+                  child: _SectionTitle(l10n.sectionFloorPlans),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg),
+                  child: _UnitFloorPlansGallery(urls: unit.floorPlanUrls),
+                ),
+              ),
+            ],
+
             // ── Location section ───────────────────────────────────────────
             if (unit.hasLocation || unit.address != null) ...[
               SliverToBoxAdapter(
@@ -229,6 +251,35 @@ class _DetailPage extends StatelessWidget {
                     horizontal: AppSpacing.lg,
                   ),
                   child: _UnitLocationCard(unit: unit, l10n: l10n),
+                ),
+              ),
+            ],
+
+            // ── Maintenance & warranty section ─────────────────────────────
+            if (unit.maintenanceItems.isNotEmpty) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.xl,
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                  ),
+                  child: _SectionTitle(l10n.sectionWarrantyItems),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg),
+                sliver: SliverList.separated(
+                  itemCount: unit.maintenanceItems.length,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: AppSpacing.sm),
+                  itemBuilder: (_, i) => _MaintenanceItemCard(
+                    item: unit.maintenanceItems[i],
+                    l10n: l10n,
+                    lang: lang,
+                  ),
                 ),
               ),
             ],
@@ -1364,6 +1415,334 @@ class _UnitMapPin extends StatelessWidget {
           color: AppPalette.gold500,
         ),
       ],
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Floor plans gallery (unit)
+// ══════════════════════════════════════════════════════════════════════════════
+class _UnitFloorPlansGallery extends StatefulWidget {
+  const _UnitFloorPlansGallery({required this.urls});
+  final List<String> urls;
+
+  @override
+  State<_UnitFloorPlansGallery> createState() => _UnitFloorPlansGalleryState();
+}
+
+class _UnitFloorPlansGalleryState extends State<_UnitFloorPlansGallery> {
+  final _ctrl = PageController();
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final multi = widget.urls.length > 1;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadii.lg),
+      child: Container(
+        height: 240,
+        decoration: BoxDecoration(
+          color: colors.surfaceSoft,
+          border: Border.all(color: colors.hairline.withValues(alpha: 0.5)),
+        ),
+        child: Stack(
+          children: [
+            PageView.builder(
+              controller: _ctrl,
+              itemCount: widget.urls.length,
+              onPageChanged: (i) => setState(() => _page = i),
+              itemBuilder: (_, i) => AppNetworkImage(url: widget.urls[i]),
+            ),
+            if (multi)
+              PositionedDirectional(
+                top: AppSpacing.sm,
+                end: AppSpacing.sm,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.50),
+                    borderRadius: AppRadii.pillAll,
+                  ),
+                  child: Text(
+                    '${_page + 1} / ${widget.urls.length}',
+                    style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white),
+                  ),
+                ),
+              ),
+            if (multi) ...[
+              Positioned(
+                left: 6,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: _FpArrowBtn(
+                    icon: Icons.chevron_left_rounded,
+                    onTap: _page > 0
+                        ? () => _ctrl.previousPage(
+                              duration: const Duration(milliseconds: 220),
+                              curve: Curves.easeOutCubic,
+                            )
+                        : null,
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 6,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: _FpArrowBtn(
+                    icon: Icons.chevron_right_rounded,
+                    onTap: _page < widget.urls.length - 1
+                        ? () => _ctrl.nextPage(
+                              duration: const Duration(milliseconds: 220),
+                              curve: Curves.easeOutCubic,
+                            )
+                        : null,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FpArrowBtn extends StatelessWidget {
+  const _FpArrowBtn({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: enabled ? 0.45 : 0.20),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          icon,
+          size: 20,
+          color: Colors.white.withValues(alpha: enabled ? 1.0 : 0.35),
+        ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Maintenance / warranty item card
+// ══════════════════════════════════════════════════════════════════════════════
+class _MaintenanceItemCard extends StatelessWidget {
+  const _MaintenanceItemCard({
+    required this.item,
+    required this.l10n,
+    required this.lang,
+  });
+
+  final StaffMaintenanceItem item;
+  final AppLocalizations l10n;
+  final String lang;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final name = item.name.resolve(lang);
+    final category = item.categoryName?.resolve(lang);
+    final active = item.isUnderWarranty;
+    final hasWarranty = item.hasWarrantyDates;
+
+    final warrantyColor = hasWarranty
+        ? (active ? colors.success : colors.inkMuted)
+        : colors.inkMuted;
+    final warrantyLabel = hasWarranty
+        ? (active ? l10n.warrantyActive : l10n.warrantyExpired)
+        : null;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(color: colors.hairline.withValues(alpha: 0.6)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row: icon + name + warranty badge
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppPalette.gold400.withValues(alpha: 0.10),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                      color: AppPalette.gold400.withValues(alpha: 0.20)),
+                ),
+                child: const Icon(Icons.build_outlined,
+                    size: 18, color: AppPalette.gold500),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (category != null)
+                      Text(
+                        category,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: colors.inkMuted,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    Text(
+                      name,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: colors.inkStrong,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (warrantyLabel != null) ...[
+                const SizedBox(width: AppSpacing.xs),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: warrantyColor.withValues(alpha: 0.10),
+                    borderRadius: AppRadii.pillAll,
+                    border: Border.all(
+                        color: warrantyColor.withValues(alpha: 0.35)),
+                  ),
+                  child: Text(
+                    warrantyLabel,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: warrantyColor,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+
+          // Warranty date range
+          if (hasWarranty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Divider(height: 1, thickness: 0.5, color: colors.hairline),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                Icon(Icons.calendar_today_outlined,
+                    size: 13, color: colors.inkMuted),
+                const SizedBox(width: 5),
+                Text(
+                  '${_fmtDate(item.warrantyStart!)} — ${_fmtDate(item.warrantyEnd!)}',
+                  style: TextStyle(fontSize: 12, color: colors.inkMuted),
+                ),
+              ],
+            ),
+          ],
+
+          // Supplier / contractor
+          if (item.supplierName != null || item.contractorName != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            if (item.supplierName != null)
+              _MetaRow(
+                icon: Icons.storefront_outlined,
+                label: l10n.labelSupplier,
+                value: item.supplierName!,
+              ),
+            if (item.contractorName != null)
+              _MetaRow(
+                icon: Icons.engineering_outlined,
+                label: l10n.labelContractor,
+                value: item.contractorName!,
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  static String _fmtDate(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+}
+
+class _MetaRow extends StatelessWidget {
+  const _MetaRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 13, color: colors.inkMuted),
+          const SizedBox(width: 5),
+          Text(
+            '$label: ',
+            style: TextStyle(
+                fontSize: 12,
+                color: colors.inkMuted,
+                fontWeight: FontWeight.w500),
+          ),
+          Flexible(
+            child: Text(
+              value,
+              style: TextStyle(
+                  fontSize: 12,
+                  color: colors.inkStrong,
+                  fontWeight: FontWeight.w600),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -211,6 +211,20 @@ class _StaffProjectDetailScreenState
                         ),
                       ],
 
+                      // Floor plans
+                      if (p.floorPlanUrls.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.xxl),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.lg),
+                          child: _Section(
+                            title: l10n.sectionFloorPlans,
+                            child: _FloorPlansGallery(
+                                urls: p.floorPlanUrls),
+                          ),
+                        ),
+                      ],
+
                       // Location — in-app map
                       if (p.hasLocation) ...[
                         const SizedBox(height: AppSpacing.xxl),
@@ -1842,6 +1856,136 @@ class _MapPin extends StatelessWidget {
           color: AppPalette.gold500,
         ),
       ],
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Floor plans gallery — horizontally swipeable full-width image viewer
+// ══════════════════════════════════════════════════════════════════════════════
+class _FloorPlansGallery extends StatefulWidget {
+  const _FloorPlansGallery({required this.urls});
+  final List<String> urls;
+
+  @override
+  State<_FloorPlansGallery> createState() => _FloorPlansGalleryState();
+}
+
+class _FloorPlansGalleryState extends State<_FloorPlansGallery> {
+  final _ctrl = PageController();
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final multi = widget.urls.length > 1;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadii.lg),
+      child: Container(
+        height: 240,
+        decoration: BoxDecoration(
+          color: colors.surfaceSoft,
+          border: Border.all(color: colors.hairline.withValues(alpha: 0.5)),
+        ),
+        child: Stack(
+          children: [
+            PageView.builder(
+              controller: _ctrl,
+              itemCount: widget.urls.length,
+              onPageChanged: (i) => setState(() => _page = i),
+              itemBuilder: (_, i) => AppNetworkImage(url: widget.urls[i]),
+            ),
+            // Page counter pill — top end
+            if (multi)
+              PositionedDirectional(
+                top: AppSpacing.sm,
+                end: AppSpacing.sm,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.50),
+                    borderRadius: AppRadii.pillAll,
+                  ),
+                  child: Text(
+                    '${_page + 1} / ${widget.urls.length}',
+                    style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white),
+                  ),
+                ),
+              ),
+            // Prev / next arrows
+            if (multi) ...[
+              Positioned(
+                left: 6,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: _ArrowBtn(
+                    icon: Icons.chevron_left_rounded,
+                    onTap: _page > 0
+                        ? () => _ctrl.previousPage(
+                              duration: const Duration(milliseconds: 220),
+                              curve: Curves.easeOutCubic,
+                            )
+                        : null,
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 6,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: _ArrowBtn(
+                    icon: Icons.chevron_right_rounded,
+                    onTap: _page < widget.urls.length - 1
+                        ? () => _ctrl.nextPage(
+                              duration: const Duration(milliseconds: 220),
+                              curve: Curves.easeOutCubic,
+                            )
+                        : null,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ArrowBtn extends StatelessWidget {
+  const _ArrowBtn({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: enabled ? 0.45 : 0.20),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon,
+            size: 20,
+            color: Colors.white.withValues(alpha: enabled ? 1.0 : 0.35)),
+      ),
     );
   }
 }

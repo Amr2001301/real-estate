@@ -14,6 +14,7 @@ extension StaffProjectDtoMapper on StaffProjectDto {
         city: city,
         coverImageUrl: coverImageUrl,
         mediaUrls: mediaUrls,
+        floorPlanUrls: floorPlanUrls,
         availableUnitsCount: availableUnitsCount,
         totalUnitsCount: totalUnitsCount,
         soldUnitsCount: soldUnitsCount,
@@ -38,6 +39,9 @@ extension StaffUnitDtoMapper on StaffUnitDto {
         floor: floor,
         coverImage: coverImage,
         mediaUrls: mediaUrls,
+        floorPlanUrls: floorPlanUrls,
+        maintenanceItems:
+            maintenanceItems.map((d) => d.toEntity()).toList(),
         projectId: projectId,
         projectName: (projectNameAr != null || projectNameEn != null)
             ? Translatable(ar: projectNameAr ?? '', en: projectNameEn ?? '')
@@ -47,5 +51,25 @@ extension StaffUnitDtoMapper on StaffUnitDto {
         latitude: latitude,
         longitude: longitude,
         address: address,
+      );
+}
+
+extension StaffMaintenanceItemDtoMapper on StaffMaintenanceItemDto {
+  StaffMaintenanceItem toEntity() => StaffMaintenanceItem(
+        id: id,
+        name: Translatable(ar: nameAr ?? '', en: nameEn ?? ''),
+        categoryName: (categoryNameAr != null || categoryNameEn != null)
+            ? Translatable(ar: categoryNameAr ?? '', en: categoryNameEn ?? '')
+            : null,
+        warrantyStart: warrantyStart != null
+            ? DateTime.tryParse(warrantyStart!)
+            : null,
+        warrantyEnd: warrantyEnd != null
+            ? DateTime.tryParse(warrantyEnd!)
+            : null,
+        warrantyDurationMonths: warrantyDurationMonthsSnapshot,
+        supplierName: supplierName,
+        contractorName: contractorName,
+        notes: notes,
       );
 }

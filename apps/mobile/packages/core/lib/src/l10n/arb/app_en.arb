@@ -954,5 +954,13 @@
   "leadChangeClient": "Change",
   "leadContextProject": "Project",
   "leadContextUnit": "Unit",
-  "leadInterestPreFilled": "Interest pre-filled from"
+  "leadInterestPreFilled": "Interest pre-filled from",
+
+  "sectionFloorPlans": "Floor Plans",
+  "sectionWarrantyItems": "Components & Warranties",
+  "warrantyActive": "Active",
+  "warrantyExpired": "Expired",
+  "warrantyUntil": "Until",
+  "labelSupplier": "Supplier",
+  "labelContractor": "Contractor"
 }

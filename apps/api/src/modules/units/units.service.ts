@@ -163,7 +163,14 @@ export class UnitsService {
           },
         },
         // History carries actor + reason and is admin-only; skip for public.
-        ...(publicOnly ? {} : { history: { orderBy: { changedAt: 'desc' }, take: 10 } }),
+        ...(publicOnly ? {} : {
+          history: { orderBy: { changedAt: 'desc' }, take: 10 },
+          maintenanceItems: {
+            where: { active: true },
+            include: { category: { select: { name: true } } },
+            orderBy: { createdAt: 'asc' as const },
+          },
+        }),
       },
     });
     if (!unit) throw new NotFoundException('Unit not found');

@@ -2703,4 +2703,25 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get leadInterestPreFilled => 'تم تحديد الاهتمام من';
+
+  @override
+  String get sectionFloorPlans => 'مخططات الطوابق';
+
+  @override
+  String get sectionWarrantyItems => 'مكونات وضمانات';
+
+  @override
+  String get warrantyActive => 'ضمان ساري';
+
+  @override
+  String get warrantyExpired => 'انتهى الضمان';
+
+  @override
+  String get warrantyUntil => 'ينتهي';
+
+  @override
+  String get labelSupplier => 'المورّد';
+
+  @override
+  String get labelContractor => 'المقاول';
 }

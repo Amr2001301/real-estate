@@ -2734,4 +2734,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get leadInterestPreFilled => 'Interest pre-filled from';
+
+  @override
+  String get sectionFloorPlans => 'Floor Plans';
+
+  @override
+  String get sectionWarrantyItems => 'Components & Warranties';
+
+  @override
+  String get warrantyActive => 'Active';
+
+  @override
+  String get warrantyExpired => 'Expired';
+
+  @override
+  String get warrantyUntil => 'Until';
+
+  @override
+  String get labelSupplier => 'Supplier';
+
+  @override
+  String get labelContractor => 'Contractor';
 }

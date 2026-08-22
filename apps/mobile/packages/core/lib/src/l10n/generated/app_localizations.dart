@@ -5197,6 +5197,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Interest pre-filled from'**
   String get leadInterestPreFilled;
+
+  /// No description provided for @sectionFloorPlans.
+  ///
+  /// In en, this message translates to:
+  /// **'Floor Plans'**
+  String get sectionFloorPlans;
+
+  /// No description provided for @sectionWarrantyItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Components & Warranties'**
+  String get sectionWarrantyItems;
+
+  /// No description provided for @warrantyActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get warrantyActive;
+
+  /// No description provided for @warrantyExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get warrantyExpired;
+
+  /// No description provided for @warrantyUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Until'**
+  String get warrantyUntil;
+
+  /// No description provided for @labelSupplier.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier'**
+  String get labelSupplier;
+
+  /// No description provided for @labelContractor.
+  ///
+  /// In en, this message translates to:
+  /// **'Contractor'**
+  String get labelContractor;
 }
 
 class _AppLocalizationsDelegate

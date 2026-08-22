@@ -951,5 +951,13 @@
   "leadChangeClient": "تغيير",
   "leadContextProject": "المشروع",
   "leadContextUnit": "الوحدة",
-  "leadInterestPreFilled": "تم تحديد الاهتمام من"
+  "leadInterestPreFilled": "تم تحديد الاهتمام من",
+
+  "sectionFloorPlans": "مخططات الطوابق",
+  "sectionWarrantyItems": "مكونات وضمانات",
+  "warrantyActive": "ضمان ساري",
+  "warrantyExpired": "انتهى الضمان",
+  "warrantyUntil": "ينتهي",
+  "labelSupplier": "المورّد",
+  "labelContractor": "المقاول"
 }
