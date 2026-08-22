@@ -69,6 +69,11 @@ class NewReservation {
     this.clientId,
     this.notes,
     this.expiresInHours,
+    this.installmentPlanTemplateId,
+    this.bookingNotes,
+    this.bookingAmountMode,
+    this.bookingAmount,
+    this.bookingAmountPercent,
   });
 
   final String unitId;
@@ -76,4 +81,9 @@ class NewReservation {
   final String? clientId;
   final String? notes;
   final int? expiresInHours;
+  final String? installmentPlanTemplateId;
+  final String? bookingNotes;
+  final String? bookingAmountMode;
+  final double? bookingAmount;
+  final double? bookingAmountPercent;
 }

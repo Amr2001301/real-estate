@@ -73,7 +73,9 @@
       "Bash(flutter gen-l10n *)",
       "Bash(dart format *)",
       "Bash(grep -n \"Unused\\\\|Error\\\\|undefined\\\\|isn't\" \"/dev/null\" 2>/dev/null; grep -n \"PushRegistrationService\\\\|registerIfPossible\\\\|isAuthenticated\" \"/Users/amr/Real Estate/apps/mobile/mobile_staff/lib/app.dart\" | head -20)",
-      "Read(//dev/**)"
+      "Read(//dev/**)",
+      "Bash(dart analyze *)",
+      "Bash(grep -v \"^$\")"
     ],
     "additionalDirectories": [
       "/Users/amr/Real Estate/apps/web-admin/src/app/dashboard/units/[id]",

@@ -3656,6 +3656,210 @@ abstract class AppLocalizations {
   /// **'Select a project to see its units.'**
   String get reservationPickProjectFirst;
 
+  /// No description provided for @reservationSectionUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Property unit'**
+  String get reservationSectionUnit;
+
+  /// No description provided for @reservationSectionUnitSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select the unit to reserve. It must be in an available status.'**
+  String get reservationSectionUnitSubtitle;
+
+  /// No description provided for @reservationSectionClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get reservationSectionClient;
+
+  /// No description provided for @reservationSectionClientSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a CRM lead to link to this reservation.'**
+  String get reservationSectionClientSubtitle;
+
+  /// No description provided for @reservationLeadLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'CRM lead'**
+  String get reservationLeadLabel;
+
+  /// No description provided for @reservationLeadSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'— Select a lead —'**
+  String get reservationLeadSelect;
+
+  /// No description provided for @reservationLeadRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'A CRM lead is required to create a reservation'**
+  String get reservationLeadRequired;
+
+  /// No description provided for @reservationLeadSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by client name...'**
+  String get reservationLeadSearch;
+
+  /// No description provided for @reservationSectionDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation details'**
+  String get reservationSectionDetails;
+
+  /// No description provided for @reservationSectionDetailsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set the reservation validity period and optional notes.'**
+  String get reservationSectionDetailsSubtitle;
+
+  /// No description provided for @reservationSectionPlanSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an installment plan for the unit, or set the booking amount manually.'**
+  String get reservationSectionPlanSubtitle;
+
+  /// No description provided for @reservationExpiryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation validity (hours)'**
+  String get reservationExpiryLabel;
+
+  /// No description provided for @reservationExpiryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Time the reservation stays pending before auto-expiring'**
+  String get reservationExpiryHint;
+
+  /// No description provided for @reservationExpiry24.
+  ///
+  /// In en, this message translates to:
+  /// **'24 hours — 1 day'**
+  String get reservationExpiry24;
+
+  /// No description provided for @reservationExpiry48.
+  ///
+  /// In en, this message translates to:
+  /// **'48 hours — 2 days'**
+  String get reservationExpiry48;
+
+  /// No description provided for @reservationExpiry72.
+  ///
+  /// In en, this message translates to:
+  /// **'72 hours — 3 days (default)'**
+  String get reservationExpiry72;
+
+  /// No description provided for @reservationExpiry120.
+  ///
+  /// In en, this message translates to:
+  /// **'120 hours — 5 days'**
+  String get reservationExpiry120;
+
+  /// No description provided for @reservationExpiry168.
+  ///
+  /// In en, this message translates to:
+  /// **'168 hours — 1 week'**
+  String get reservationExpiry168;
+
+  /// No description provided for @reservationExpiry336.
+  ///
+  /// In en, this message translates to:
+  /// **'336 hours — 2 weeks'**
+  String get reservationExpiry336;
+
+  /// No description provided for @reservationNotesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes (optional)'**
+  String get reservationNotesLabel;
+
+  /// No description provided for @reservationSectionPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Installment plan'**
+  String get reservationSectionPlan;
+
+  /// No description provided for @reservationPlanOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'— No plan (optional) —'**
+  String get reservationPlanOptional;
+
+  /// No description provided for @reservationPlanNoUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a unit first to see available plans'**
+  String get reservationPlanNoUnit;
+
+  /// No description provided for @reservationBookingAmountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking amount method'**
+  String get reservationBookingAmountTitle;
+
+  /// No description provided for @reservationBookingAmountDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave it calculated from the plan, or enter a fixed value or a percentage of the unit price.'**
+  String get reservationBookingAmountDesc;
+
+  /// No description provided for @reservationBookingModePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'From installment plan'**
+  String get reservationBookingModePlan;
+
+  /// No description provided for @reservationBookingModeFixed.
+  ///
+  /// In en, this message translates to:
+  /// **'Fixed amount'**
+  String get reservationBookingModeFixed;
+
+  /// No description provided for @reservationBookingModePercent.
+  ///
+  /// In en, this message translates to:
+  /// **'Percentage of unit price'**
+  String get reservationBookingModePercent;
+
+  /// No description provided for @reservationBookingFixedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking amount'**
+  String get reservationBookingFixedLabel;
+
+  /// No description provided for @reservationBookingFixedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter fixed amount'**
+  String get reservationBookingFixedHint;
+
+  /// No description provided for @reservationBookingPercentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Percentage %'**
+  String get reservationBookingPercentLabel;
+
+  /// No description provided for @reservationBookingPercentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter percentage (0.01 – 100)'**
+  String get reservationBookingPercentHint;
+
+  /// No description provided for @reservationBookingNotesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking amount notes'**
+  String get reservationBookingNotesLabel;
+
+  /// No description provided for @reservationBookingNotesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional internal notes about the booking amount...'**
+  String get reservationBookingNotesHint;
+
   /// No description provided for @reservationBooking.
   ///
   /// In en, this message translates to:

@@ -661,8 +661,9 @@ class _SpecsGrid extends StatelessWidget {
         (Icons.layers_outlined, '${unit.floor}', l10n.unitFloor),
     ];
 
-    if (specs.isEmpty)
+    if (specs.isEmpty) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
 
     // Build rows of 2
     final rows = <Widget>[];
@@ -946,7 +947,10 @@ class _StickyActionBar extends StatelessWidget {
                           expand: true,
                           onPressed: () => context.push(
                             '/reservations/new',
-                            extra: {'unitId': unit.id},
+                            extra: {
+                              'unitId': unit.id,
+                              if (unit.projectId != null) 'projectId': unit.projectId,
+                            },
                           ),
                         ),
                         const SizedBox(height: AppSpacing.xs),

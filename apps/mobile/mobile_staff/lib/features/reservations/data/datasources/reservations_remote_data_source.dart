@@ -47,6 +47,11 @@ class ReservationsRemoteDataSourceImpl implements ReservationsRemoteDataSource {
         'clientId': ?input.clientId,
         'notes': ?input.notes,
         'expiresInHours': ?input.expiresInHours,
+        'installmentPlanTemplateId': ?input.installmentPlanTemplateId,
+        'bookingNotes': ?input.bookingNotes,
+        'bookingAmountMode': ?input.bookingAmountMode,
+        'bookingAmount': ?input.bookingAmount,
+        'bookingAmountPercent': ?input.bookingAmountPercent,
       },
     );
     return ReservationDto.fromJson(res.data ?? const {});

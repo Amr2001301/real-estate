@@ -1895,6 +1895,115 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reservationPickProjectFirst => 'اختر مشروعًا لعرض وحداته.';
 
   @override
+  String get reservationSectionUnit => 'الوحدة العقارية';
+
+  @override
+  String get reservationSectionUnitSubtitle =>
+      'اختر الوحدة المراد حجزها. يجب أن تكون الوحدة في حالة متاحة.';
+
+  @override
+  String get reservationSectionClient => 'العميل';
+
+  @override
+  String get reservationSectionClientSubtitle =>
+      'اختر عميلاً محتملاً من CRM لربطه بالحجز.';
+
+  @override
+  String get reservationLeadLabel => 'العميل المحتمل (CRM)';
+
+  @override
+  String get reservationLeadSelect => '— اختر عميلاً محتملاً —';
+
+  @override
+  String get reservationLeadRequired => 'يجب اختيار عميل محتمل لإنشاء الحجز';
+
+  @override
+  String get reservationLeadSearch => 'ابحث باسم العميل...';
+
+  @override
+  String get reservationSectionDetails => 'تفاصيل الحجز';
+
+  @override
+  String get reservationSectionDetailsSubtitle =>
+      'حدد مدة صلاحية الحجز وأي ملاحظات داخلية.';
+
+  @override
+  String get reservationSectionPlanSubtitle =>
+      'اختر خطة التقسيط للوحدة، أو حدّد مبلغ الحجز يدويًا.';
+
+  @override
+  String get reservationExpiryLabel => 'صلاحية الحجز (بالساعات)';
+
+  @override
+  String get reservationExpiryHint =>
+      'المدة التي يبقى فيها الحجز قيد المراجعة قبل انتهائه تلقائيًا';
+
+  @override
+  String get reservationExpiry24 => '24 ساعة — يوم';
+
+  @override
+  String get reservationExpiry48 => '48 ساعة — يومان';
+
+  @override
+  String get reservationExpiry72 => '72 ساعة — 3 أيام (افتراضي)';
+
+  @override
+  String get reservationExpiry120 => '120 ساعة — 5 أيام';
+
+  @override
+  String get reservationExpiry168 => '168 ساعة — أسبوع';
+
+  @override
+  String get reservationExpiry336 => '336 ساعة — أسبوعان';
+
+  @override
+  String get reservationNotesLabel => 'ملاحظات (اختياري)';
+
+  @override
+  String get reservationSectionPlan => 'خطة التقسيط';
+
+  @override
+  String get reservationPlanOptional => '— بدون خطة (اختياري) —';
+
+  @override
+  String get reservationPlanNoUnit => 'اختر الوحدة أولاً لعرض الخطط المتاحة';
+
+  @override
+  String get reservationBookingAmountTitle => 'طريقة تحديد مبلغ الحجز';
+
+  @override
+  String get reservationBookingAmountDesc =>
+      'يمكنك ترك مبلغ الحجز ليُحسب من خطة التقسيط، أو إدخاله يدويًا كقيمة ثابتة أو كنسبة من سعر الوحدة.';
+
+  @override
+  String get reservationBookingModePlan => 'من خطة التقسيط';
+
+  @override
+  String get reservationBookingModeFixed => 'مبلغ ثابت';
+
+  @override
+  String get reservationBookingModePercent => 'نسبة من سعر الوحدة';
+
+  @override
+  String get reservationBookingFixedLabel => 'مبلغ الحجز';
+
+  @override
+  String get reservationBookingFixedHint => 'أدخل المبلغ الثابت';
+
+  @override
+  String get reservationBookingPercentLabel => 'النسبة %';
+
+  @override
+  String get reservationBookingPercentHint => 'أدخل النسبة (0.01 – 100)';
+
+  @override
+  String get reservationBookingNotesLabel => 'ملاحظات مبلغ الحجز';
+
+  @override
+  String get reservationBookingNotesHint =>
+      'ملاحظات داخلية اختيارية حول مبلغ الحجز...';
+
+  @override
   String get reservationBooking => 'مبلغ الحجز';
 
   @override

@@ -488,7 +488,10 @@ GoRouter createStaffRouter(
                 GetStaffProjects(catalog),
                 GetStaffProjectDetail(catalog),
                 CreateReservation(ctx.read<ReservationsRepository>()),
+                GetLeads(ctx.read<LeadsRepository>()),
+                GetPlanTemplates(ctx.read<InstallmentsRepository>()),
                 unitId: args['unitId'] as String?,
+                projectId: args['projectId'] as String?,
                 leadId: args['leadId'] as String?,
                 clientId: args['clientId'] as String?,
               );

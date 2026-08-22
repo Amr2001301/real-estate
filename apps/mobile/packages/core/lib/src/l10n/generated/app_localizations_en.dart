@@ -1917,6 +1917,117 @@ class AppLocalizationsEn extends AppLocalizations {
       'Select a project to see its units.';
 
   @override
+  String get reservationSectionUnit => 'Property unit';
+
+  @override
+  String get reservationSectionUnitSubtitle =>
+      'Select the unit to reserve. It must be in an available status.';
+
+  @override
+  String get reservationSectionClient => 'Client';
+
+  @override
+  String get reservationSectionClientSubtitle =>
+      'Select a CRM lead to link to this reservation.';
+
+  @override
+  String get reservationLeadLabel => 'CRM lead';
+
+  @override
+  String get reservationLeadSelect => '— Select a lead —';
+
+  @override
+  String get reservationLeadRequired =>
+      'A CRM lead is required to create a reservation';
+
+  @override
+  String get reservationLeadSearch => 'Search by client name...';
+
+  @override
+  String get reservationSectionDetails => 'Reservation details';
+
+  @override
+  String get reservationSectionDetailsSubtitle =>
+      'Set the reservation validity period and optional notes.';
+
+  @override
+  String get reservationSectionPlanSubtitle =>
+      'Choose an installment plan for the unit, or set the booking amount manually.';
+
+  @override
+  String get reservationExpiryLabel => 'Reservation validity (hours)';
+
+  @override
+  String get reservationExpiryHint =>
+      'Time the reservation stays pending before auto-expiring';
+
+  @override
+  String get reservationExpiry24 => '24 hours — 1 day';
+
+  @override
+  String get reservationExpiry48 => '48 hours — 2 days';
+
+  @override
+  String get reservationExpiry72 => '72 hours — 3 days (default)';
+
+  @override
+  String get reservationExpiry120 => '120 hours — 5 days';
+
+  @override
+  String get reservationExpiry168 => '168 hours — 1 week';
+
+  @override
+  String get reservationExpiry336 => '336 hours — 2 weeks';
+
+  @override
+  String get reservationNotesLabel => 'Notes (optional)';
+
+  @override
+  String get reservationSectionPlan => 'Installment plan';
+
+  @override
+  String get reservationPlanOptional => '— No plan (optional) —';
+
+  @override
+  String get reservationPlanNoUnit =>
+      'Select a unit first to see available plans';
+
+  @override
+  String get reservationBookingAmountTitle => 'Booking amount method';
+
+  @override
+  String get reservationBookingAmountDesc =>
+      'Leave it calculated from the plan, or enter a fixed value or a percentage of the unit price.';
+
+  @override
+  String get reservationBookingModePlan => 'From installment plan';
+
+  @override
+  String get reservationBookingModeFixed => 'Fixed amount';
+
+  @override
+  String get reservationBookingModePercent => 'Percentage of unit price';
+
+  @override
+  String get reservationBookingFixedLabel => 'Booking amount';
+
+  @override
+  String get reservationBookingFixedHint => 'Enter fixed amount';
+
+  @override
+  String get reservationBookingPercentLabel => 'Percentage %';
+
+  @override
+  String get reservationBookingPercentHint => 'Enter percentage (0.01 – 100)';
+
+  @override
+  String get reservationBookingNotesLabel => 'Booking amount notes';
+
+  @override
+  String get reservationBookingNotesHint =>
+      'Optional internal notes about the booking amount...';
+
+  @override
   String get reservationBooking => 'Booking amount';
 
   @override
