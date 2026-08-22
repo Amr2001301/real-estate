@@ -36,6 +36,7 @@ class _BonusScreenState extends State<BonusScreen> {
         children: [
           AppNavHeader(
             title: l10n.bonusTitle,
+            compact: true,
             leadingAction: NavHeaderAction(
               icon: Icons.arrow_back_ios_new_rounded,
               onTap: () => context.pop(),

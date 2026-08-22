@@ -27,9 +27,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return Scaffold(
       body: Column(
         children: [
-          // Premium navy header matching the Customer app's notifications screen
           AppNavHeader(
             title: l10n.accountNotifications,
+            compact: true,
             leadingAction: NavHeaderAction(
               icon: Icons.arrow_back_rounded,
               tooltip: l10n.actionCancel,
@@ -48,7 +48,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ),
             ],
           ),
-          // Body
           Expanded(
             child: BlocConsumer<NotificationsCubit, NotificationsState>(
               listenWhen: (a, b) =>
@@ -88,10 +87,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   case DataStatus.success:
                     final items = state.data!;
                     return RefreshIndicator(
+                      color: AppPalette.gold400,
                       onRefresh: () =>
                           context.read<NotificationsCubit>().load(),
                       child: ListView.separated(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.md,
+                        ),
                         itemCount: items.length,
                         separatorBuilder: (_, _) =>
                             const SizedBox(height: AppSpacing.sm),
@@ -192,96 +195,136 @@ class _NotificationTile extends StatelessWidget {
     final style = _categoryStyle(notification.templateCode);
     final isUnread = !notification.read;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      decoration: BoxDecoration(
-        color: isUnread
-            ? colors.brandGold.withValues(alpha: 0.06)
-            : Colors.transparent,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(AppRadii.lg),
+      elevation: isUnread ? 3 : 1,
+      shadowColor: Colors.black.withValues(alpha: 0.07),
+      child: InkWell(
         borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(
-          color: isUnread
-              ? colors.brandGold.withValues(alpha: 0.22)
-              : colors.hairline,
-          width: isUnread ? 1 : 0.5,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () {
-            if (isUnread) {
-              context.read<NotificationsCubit>().markRead(notification.id);
-            }
-            final route = _resolveStaffRoute(notification);
-            if (route != null) context.push(route);
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
+        onTap: () {
+          if (isUnread) {
+            context.read<NotificationsCubit>().markRead(notification.id);
+          }
+          final route = _resolveStaffRoute(notification);
+          if (route != null) context.push(route);
+        },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadii.lg),
+          child: IntrinsicHeight(
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Category icon tile
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: style.color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(style.icon, size: 18, color: style.color),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                // Text content
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: isUnread
-                                  ? FontWeight.w800
-                                  : FontWeight.w600,
-                            ),
-                      ),
-                      if (subtitle != null) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          subtitle,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                      if (notification.createdAt != null) ...[
-                        const SizedBox(height: AppSpacing.xxs),
-                        Text(
-                          DateFormatter.shortDate(notification.createdAt!,
-                              languageCode: lang),
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelSmall
-                              ?.copyWith(color: colors.inkMuted),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                // Unread dot
+                // Gold unread indicator strip on start edge
                 if (isUnread)
                   Container(
-                    width: 8,
-                    height: 8,
-                    margin: const EdgeInsetsDirectional.only(
-                        top: 4, start: AppSpacing.xs),
-                    decoration: BoxDecoration(
-                      color: colors.brandGold,
-                      shape: BoxShape.circle,
+                    width: 3,
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppPalette.gold300,
+                          AppPalette.gold400,
+                          AppPalette.gold300,
+                        ],
+                      ),
                     ),
                   ),
+                // Content
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Category icon
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: style.color.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(style.icon, size: 20, color: style.color),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        // Text
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      title,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall
+                                          ?.copyWith(
+                                            fontWeight: isUnread
+                                                ? FontWeight.w700
+                                                : FontWeight.w600,
+                                          ),
+                                    ),
+                                  ),
+                                  if (isUnread)
+                                    Container(
+                                      width: 7,
+                                      height: 7,
+                                      margin: const EdgeInsetsDirectional.only(
+                                          start: AppSpacing.xs),
+                                      decoration: const BoxDecoration(
+                                        color: AppPalette.gold400,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              if (subtitle != null) ...[
+                                const SizedBox(height: 3),
+                                Text(
+                                  subtitle,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: colors.inkMuted,
+                                        height: 1.4,
+                                      ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                              if (notification.createdAt != null) ...[
+                                const SizedBox(height: AppSpacing.xs),
+                                Text(
+                                  DateFormatter.shortDate(
+                                    notification.createdAt!,
+                                    languageCode: lang,
+                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .labelSmall
+                                      ?.copyWith(
+                                        color: isUnread
+                                            ? AppPalette.gold500
+                                            : colors.inkMuted,
+                                        fontWeight: isUnread
+                                            ? FontWeight.w600
+                                            : FontWeight.w400,
+                                      ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -299,34 +342,48 @@ class _NotificationsSkeleton extends StatelessWidget {
     return AppSkeletonizer(
       enabled: true,
       child: ListView.separated(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
         itemCount: 6,
         separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-        itemBuilder: (context, _) => AppCard(
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: context.appColors.surfaceSoft,
-                  borderRadius: BorderRadius.circular(10),
+        itemBuilder: (context, _) => Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppRadii.lg),
+          elevation: 1,
+          shadowColor: Colors.black.withValues(alpha: 0.07),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: context.appColors.surfaceSoft,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Notification title',
-                        style: Theme.of(context).textTheme.titleSmall),
-                    const SizedBox(height: 4),
-                    Text('Notification body text',
-                        style: Theme.of(context).textTheme.bodyMedium),
-                  ],
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Notification title',
+                          style: Theme.of(context).textTheme.titleSmall),
+                      const SizedBox(height: 4),
+                      Text('Notification body text here',
+                          style: Theme.of(context).textTheme.bodySmall),
+                      const SizedBox(height: 6),
+                      Text('18 أغسطس 2026',
+                          style: Theme.of(context).textTheme.labelSmall),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

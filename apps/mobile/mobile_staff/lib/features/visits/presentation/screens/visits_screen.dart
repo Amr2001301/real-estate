@@ -57,6 +57,7 @@ class _VisitsScreenState extends State<VisitsScreen> {
             buildWhen: (a, b) => a.today != b.today,
             builder: (context, state) => AppNavHeader(
               title: l10n.navVisits,
+              compact: true,
               leadingAction: NavHeaderAction(
                 icon: Icons.arrow_back_ios_new_rounded,
                 onTap: () => context.pop(),

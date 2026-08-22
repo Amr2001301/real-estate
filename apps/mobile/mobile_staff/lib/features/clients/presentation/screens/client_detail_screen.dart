@@ -32,6 +32,7 @@ class _ClientDetailScreenState extends State<ClientDetailScreen> {
         children: [
           AppNavHeader(
             title: widget.fallback?.fullName ?? l10n.navClients,
+            compact: true,
             leadingAction: NavHeaderAction(
               icon: Icons.arrow_back_ios_new_rounded,
               onTap: () => context.pop(),
