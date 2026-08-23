@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:core/core.dart';
@@ -5,6 +6,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../../common/staff_list_skeleton.dart';
 import '../../domain/entities/maintenance_request.dart';
@@ -174,6 +177,14 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
         d == null ? '—' : DateFormatter.mediumDate(d, languageCode: lang);
 
     return [
+      // 0. SLA countdown / overdue timer — hidden once the request is resolved/closed
+      if (r.dueAt != null &&
+          r.status != MaintenanceStatus.resolved &&
+          r.status != MaintenanceStatus.closed) ...[
+        _SlaTimerCard(r: r),
+        const SizedBox(height: 12),
+      ],
+
       // 1. Issue overview card
       _IssueCard(
         r: r,
@@ -373,6 +384,265 @@ class _DetailHeaderDelegate extends SliverPersistentHeaderDelegate {
       old.accent != accent ||
       old.statusBarH != statusBarH ||
       old.gradient != gradient;
+}
+
+// ── SLA countdown / overdue timer ────────────────────────────────────────────
+class _SlaTimerCard extends StatefulWidget {
+  const _SlaTimerCard({required this.r});
+  final MaintenanceRequest r;
+
+  @override
+  State<_SlaTimerCard> createState() => _SlaTimerCardState();
+}
+
+class _SlaTimerCardState extends State<_SlaTimerCard> {
+  Timer? _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = widget.r;
+    final dueAt = r.dueAt!;
+    final now = DateTime.now();
+    final isOverdue = now.isAfter(dueAt);
+    final duration = isOverdue ? now.difference(dueAt) : dueAt.difference(now);
+
+    final days = duration.inDays;
+    final hours = duration.inHours % 24;
+    final minutes = duration.inMinutes % 60;
+    final seconds = duration.inSeconds % 60;
+
+    // SLA progress: 0.0 = just started, 1.0 = deadline reached
+    final startAt = r.assignedAt ?? r.createdAt;
+    double progress = isOverdue ? 1.0 : 0.0;
+    if (startAt != null) {
+      final totalSecs = dueAt.difference(startAt).inSeconds;
+      if (totalSecs > 0) {
+        progress = (now.difference(startAt).inSeconds / totalSecs).clamp(0.0, 1.0);
+      }
+    }
+
+    final lang = Localizations.localeOf(context).languageCode;
+    final dueFmt = DateFormatter.mediumDate(dueAt, languageCode: lang);
+
+    // Overdue: warm orange (matches HIGH priority used elsewhere in the app)
+    const overdueAccent = Color(0xFFFF7043);
+    final accent = isOverdue ? overdueAccent : AppPalette.gold300;
+    const bgStart = Color(0xFF0E2140);
+    const bgEnd   = Color(0xFF091628);
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        // Overdue: accent glow shadow + accent border
+        boxShadow: isOverdue
+            ? [
+                BoxShadow(
+                  color: overdueAccent.withValues(alpha: 0.18),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
+        border: isOverdue
+            ? Border.all(
+                color: overdueAccent.withValues(alpha: 0.42),
+                width: 1.5,
+              )
+            : null,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(isOverdue ? 14.5 : 16),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [bgStart, bgEnd],
+            ),
+          ),
+        child: Column(
+          children: [
+            // ── Header row ──────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+              child: Row(
+                children: [
+                  Icon(
+                    isOverdue
+                        ? Icons.warning_amber_rounded
+                        : Icons.timer_outlined,
+                    color: accent,
+                    size: 15,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    isOverdue ? 'تجاوز الموعد النهائي' : 'الوقت المتبقي',
+                    style: TextStyle(
+                      color: accent,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    dueFmt,
+                    style: TextStyle(
+                      color: accent.withValues(alpha: 0.55),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Thin accent hairline ─────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: Divider(height: 1, color: accent.withValues(alpha: 0.14)),
+            ),
+
+            // ── Timer boxes ──────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              child: Row(
+                children: [
+                  _TimerBox(value: days, unit: 'يوم', accent: accent),
+                  _TimerColon(accent: accent),
+                  _TimerBox(value: hours, unit: 'ساعة', accent: accent),
+                  _TimerColon(accent: accent),
+                  _TimerBox(value: minutes, unit: 'دقيقة', accent: accent),
+                  _TimerColon(accent: accent),
+                  _TimerBox(value: seconds, unit: 'ثانية', accent: accent),
+                ],
+              ),
+            ),
+
+            // ── SLA progress bar ─────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      backgroundColor: accent.withValues(alpha: 0.12),
+                      valueColor: AlwaysStoppedAnimation<Color>(accent),
+                      minHeight: 5,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    isOverdue
+                        ? 'انتهت المهلة المحددة'
+                        : '${(progress * 100).toStringAsFixed(0)}% من المهلة مستخدم',
+                    style: TextStyle(
+                      color: accent.withValues(alpha: 0.50),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        ),   // inner gradient Container
+      ),     // ClipRRect
+    );       // outer border Container
+  }
+}
+
+class _TimerBox extends StatelessWidget {
+  const _TimerBox({
+    required this.value,
+    required this.unit,
+    required this.accent,
+  });
+  final int value;
+  final String unit;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Top accent stripe
+                Container(height: 3, color: accent),
+                Container(
+                  color: const Color(0xFF081426),
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  width: double.infinity,
+                  child: Text(
+                    value.toString().padLeft(2, '0'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: accent,
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      height: 1.0,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            unit,
+            style: TextStyle(
+              color: accent.withValues(alpha: 0.65),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TimerColon extends StatelessWidget {
+  const _TimerColon({required this.accent});
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 22, left: 4, right: 4),
+      child: Text(
+        ':',
+        style: TextStyle(
+          color: accent.withValues(alpha: 0.70),
+          fontSize: 22,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
 }
 
 // ── Issue overview card ───────────────────────────────────────────────────────
@@ -577,8 +847,20 @@ class _CustomerInfoCard extends StatelessWidget {
     }
   }
 
+  Future<void> _openWhatsApp(BuildContext context) async {
+    final phone = r.customerPhone;
+    if (phone == null) return;
+    final ok = await ContactActions.whatsApp(number: phone);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذّر فتح WhatsApp')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final hasPhone = r.customerPhone != null;
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -600,15 +882,12 @@ class _CustomerInfoCard extends StatelessWidget {
                       label: l10n.supervisorDetailCustomerLabel,
                       value: r.customerName!,
                     ),
-                  if (r.customerPhone != null)
+                  if (hasPhone)
                     _InfoRow(
                       icon: Icons.phone_outlined,
                       label: l10n.supervisorDetailPhoneLabel,
                       value: r.customerPhone!,
                       valueDirection: TextDirection.ltr,
-                      actionIcon: Icons.call_rounded,
-                      actionColor: const Color(0xFF4ADE80),
-                      onTap: () => _callPhone(context),
                     ),
                   if (r.unitCode != null)
                     _InfoRow(
@@ -619,6 +898,34 @@ class _CustomerInfoCard extends StatelessWidget {
                 ],
               ),
             ),
+            if (hasPhone) ...[
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _ContactActionButton(
+                        icon: Icons.call_rounded,
+                        label: 'اتصال',
+                        color: const Color(0xFF4ADE80),
+                        onTap: () => _callPhone(context),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _ContactActionButton(
+                        icon: Icons.chat_rounded,
+                        label: 'WhatsApp',
+                        color: const Color(0xFF25D366),
+                        onTap: () => _openWhatsApp(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else
+              const SizedBox(height: 8),
           ],
         ),
       ),
@@ -727,7 +1034,7 @@ class _LocationCard extends StatelessWidget {
                     16,
                     address != null ? 2 : 10,
                     16,
-                    0,
+                    8,
                   ),
                   child: Text(
                     '${r.unitLat!.toStringAsFixed(5)}, '
@@ -740,7 +1047,88 @@ class _LocationCard extends StatelessWidget {
                   ),
                 ),
 
-              const SizedBox(height: 10),
+              // Inline OpenStreetMap — shown whenever coordinates are available
+              if (hasCoords)
+                SizedBox(
+                  height: 200,
+                  child: Stack(
+                    children: [
+                      FlutterMap(
+                        options: MapOptions(
+                          initialCenter: LatLng(r.unitLat!, r.unitLng!),
+                          initialZoom: 15,
+                          interactionOptions: const InteractionOptions(
+                            flags: InteractiveFlag.pinchZoom |
+                                InteractiveFlag.doubleTapZoom,
+                          ),
+                        ),
+                        children: [
+                          TileLayer(
+                            urlTemplate:
+                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            userAgentPackageName: 'com.devora.staff',
+                            maxZoom: 19,
+                          ),
+                          MarkerLayer(
+                            markers: [
+                              Marker(
+                                point: LatLng(r.unitLat!, r.unitLng!),
+                                width: 48,
+                                height: 48,
+                                child: const Icon(
+                                  Icons.location_pin,
+                                  color: Color(0xFF1A73E8),
+                                  size: 40,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      // External-directions overlay button (bottom-end corner)
+                      PositionedDirectional(
+                        end: 10,
+                        bottom: 10,
+                        child: Material(
+                          color: const Color(0xFF1A73E8),
+                          borderRadius: BorderRadius.circular(8),
+                          elevation: 3,
+                          child: InkWell(
+                            onTap: () => _openDirections(context),
+                            borderRadius: BorderRadius.circular(8),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 7,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.directions_rounded,
+                                    color: Colors.white,
+                                    size: 15,
+                                  ),
+                                  SizedBox(width: 5),
+                                  Text(
+                                    'الاتجاهات',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                const SizedBox(height: 4),
             ] else ...[
               // No location data yet
               Padding(
@@ -755,11 +1143,50 @@ class _LocationCard extends StatelessWidget {
               ),
             ],
 
-            // Directions CTA
-            const Divider(height: 1, indent: 16, endIndent: 16),
-            InkWell(
-              onTap: _hasLocation ? () => _openDirections(context) : null,
-              child: Padding(
+            // Directions CTA footer — shown only when no inline map (address-only case)
+            if (_hasLocation && !hasCoords) ...[
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              InkWell(
+                onTap: () => _openDirections(context),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 11, 16, 13),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A73E8).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: const Icon(
+                          Icons.directions_rounded,
+                          color: Color(0xFF1A73E8),
+                          size: 17,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        l10n.maintenanceOpenDirections,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1A73E8),
+                        ),
+                      ),
+                      const Spacer(),
+                      const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 13,
+                        color: Color(0xFF1A73E8),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ] else if (!_hasLocation) ...[
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              Padding(
                 padding: const EdgeInsets.fromLTRB(16, 11, 16, 13),
                 child: Row(
                   children: [
@@ -767,44 +1194,28 @@ class _LocationCard extends StatelessWidget {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: _hasLocation
-                            ? const Color(0xFF1A73E8).withValues(alpha: 0.12)
-                            : const Color(0xFF9CA3AF).withValues(alpha: 0.10),
+                        color: const Color(0xFF9CA3AF).withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(9),
                       ),
-                      child: Icon(
+                      child: const Icon(
                         Icons.directions_rounded,
-                        color: _hasLocation
-                            ? const Color(0xFF1A73E8)
-                            : const Color(0xFF9CA3AF),
+                        color: Color(0xFF9CA3AF),
                         size: 17,
                       ),
                     ),
                     const SizedBox(width: 10),
                     Text(
-                      _hasLocation
-                          ? l10n.maintenanceOpenDirections
-                          : l10n.maintenanceLocationUnavailable,
-                      style: TextStyle(
+                      l10n.maintenanceLocationUnavailable,
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: _hasLocation
-                            ? const Color(0xFF1A73E8)
-                            : const Color(0xFF9CA3AF),
+                        color: Color(0xFF9CA3AF),
                       ),
                     ),
-                    if (_hasLocation) ...[
-                      const Spacer(),
-                      Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        size: 13,
-                        color: const Color(0xFF1A73E8),
-                      ),
-                    ],
                   ],
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -1651,6 +2062,50 @@ class _FileTile extends StatelessWidget {
 }
 
 // ── Shared card header ────────────────────────────────────────────────────────
+// ── Tappable contact button (Call / WhatsApp) ─────────────────────────────────
+class _ContactActionButton extends StatelessWidget {
+  const _ContactActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: color.withValues(alpha: 0.10),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: color, size: 18),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _CardHeader extends StatelessWidget {
   const _CardHeader({required this.icon, required this.title});
   final IconData icon;
@@ -1696,26 +2151,19 @@ class _InfoRow extends StatelessWidget {
     required this.label,
     required this.value,
     this.valueDirection,
-    this.onTap,
-    this.actionIcon,
-    this.actionColor,
   });
   final IconData icon;
   final String label;
   final String value;
   final TextDirection? valueDirection;
-  final VoidCallback? onTap;
-  final IconData? actionIcon;
-  final Color? actionColor;
 
   @override
   Widget build(BuildContext context) {
-    Widget content = Padding(
+    return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Light icon container — less visually heavy than full navy
           Container(
             width: 32,
             height: 32,
@@ -1754,22 +2202,9 @@ class _InfoRow extends StatelessWidget {
               ],
             ),
           ),
-          if (actionIcon != null) ...[
-            const SizedBox(width: 8),
-            Icon(
-              actionIcon,
-              size: 18,
-              color: actionColor ?? const Color(0xFF4ADE80),
-            ),
-          ],
         ],
       ),
     );
-
-    if (onTap != null) {
-      return GestureDetector(onTap: onTap, child: content);
-    }
-    return content;
   }
 }
 

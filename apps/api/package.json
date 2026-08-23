@@ -23,6 +23,7 @@
     "prisma:seed:cms:cleanup": "tsx prisma/seed-cms-demo.ts --cleanup",
     "prisma:seed:settings": "tsx prisma/seed-settings-demo.ts",
     "prisma:seed:settings:cleanup": "tsx prisma/seed-settings-demo.ts --cleanup",
+    "prisma:seed:role-demo": "tsx prisma/seed-role-demo.ts",
     "prisma:studio": "prisma studio",
     "openapi:export": "tsx scripts/export-openapi.ts",
     "smoke:broker": "tsx scripts/smoke-broker-module.ts",
