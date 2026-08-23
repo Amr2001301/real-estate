@@ -4349,7 +4349,7 @@ abstract class AppLocalizations {
   /// No description provided for @teamTargetEdit.
   ///
   /// In en, this message translates to:
-  /// **'Set target'**
+  /// **'Edit target'**
   String get teamTargetEdit;
 
   /// No description provided for @teamTargetFor.

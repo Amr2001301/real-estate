@@ -143,7 +143,9 @@ import '../features/splash/splash_screen.dart';
 /// - Broker → confined to the `/broker/*` workspace (kept out of Sales screens).
 /// - Sales/Manager/Admin → Sales shell (kept out of `/broker/*`).
 String? staffRedirect(SessionState session, String loc) {
-  if (!session.isResolved) return loc == '/splash' ? null : '/splash';
+  if (!session.isResolved || !SplashScreen.splashDone.value) {
+    return loc == '/splash' ? null : '/splash';
+  }
 
   final role = session.role;
   final isStaff = session.isAuthenticated && role.isStaffSide;
@@ -189,7 +191,10 @@ GoRouter createStaffRouter(
   return GoRouter(
     navigatorKey: navigatorKey,
     initialLocation: '/splash',
-    refreshListenable: _CubitRefresh(sessionCubit.stream),
+    refreshListenable: Listenable.merge([
+      _CubitRefresh(sessionCubit.stream),
+      SplashScreen.splashDone,
+    ]),
     debugLogDiagnostics: kDebugMode,
     redirect: (context, state) => staffRedirect(sessionCubit.state, state.matchedLocation),
     routes: [

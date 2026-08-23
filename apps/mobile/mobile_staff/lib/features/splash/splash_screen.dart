@@ -1,16 +1,23 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:video_player/video_player.dart';
 
-// Navy depth scale matching the Devora design language.
-const _navyDeep = Color(0xFF0B1726);
-const _navyMid = Color(0xFF0F1E32);
+// ─────────────────────────────────────────────────────────────────────────────
+// Splash screen — plays brand video then signals the router to proceed.
+//
+// Architecture: the router's redirect stays on /splash while
+// SplashScreen.splashDone.value == false. Once the video ends (or the timeout
+// fires) splashDone is set to true, triggering a router re-evaluation.
+// ─────────────────────────────────────────────────────────────────────────────
 
-/// Branded splash shown while the persisted session resolves.
-/// Mirrors the customer app's cinematic navy style with the brand mark,
-/// gold wordmark, dot texture, and a subtle spinner.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
+
+  /// Signals the go_router redirect that the intro video has finished.
+  static final ValueNotifier<bool> splashDone = ValueNotifier(false);
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -18,203 +25,243 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _fade;
+  VideoPlayerController? _video;
+
+  late AnimationController _fadeCtrl;
+  late Animation<double> _fadeIn;
+
+  Timer? _timeout;
+  bool _videoReady = false;
+  bool _done = false;
+
+  // Guards against "used after disposed" races with video_player's async init.
+  bool _stateDisposed = false;
+  bool _initCompleted = false;
+
+  static const _kMaxDuration = Duration(seconds: 6);
 
   @override
   void initState() {
     super.initState();
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
-    _ctrl = AnimationController(
+
+    // Reset so the router always waits for this instance (survives hot-restart).
+    SplashScreen.splashDone.value = false;
+
+    _fadeCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 700),
     );
-    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
-    _ctrl.forward();
+    _fadeIn = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeIn);
+
+    _timeout = Timer(_kMaxDuration, _markDone);
+    _initVideo();
+  }
+
+  Future<void> _initVideo() async {
+    final controller = VideoPlayerController.asset(
+      'assets/brand/real_estate_video_splash.mp4',
+    );
+    _video = controller;
+
+    try {
+      await controller.initialize();
+      _initCompleted = true;
+
+      if (_stateDisposed || !mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
+        return;
+      }
+
+      await controller.setVolume(0);
+      if (_stateDisposed || !mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
+        return;
+      }
+
+      await controller.setLooping(false);
+      if (_stateDisposed || !mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
+        return;
+      }
+
+      controller.addListener(_onVideoTick);
+      setState(() => _videoReady = true);
+      _fadeCtrl.forward();
+      controller.play().ignore();
+    } catch (_) {
+      _initCompleted = true;
+      if (!_stateDisposed && mounted) {
+        Future.delayed(const Duration(milliseconds: 1800), _markDone);
+      }
+    }
+  }
+
+  void _onVideoTick() {
+    if (_stateDisposed || _done || !_videoReady) return;
+    final ctrl = _video;
+    if (ctrl == null) return;
+    final pos = ctrl.value.position;
+    final dur = ctrl.value.duration;
+    if (dur > Duration.zero && pos >= dur - const Duration(milliseconds: 150)) {
+      _markDone();
+    }
+  }
+
+  void _markDone() {
+    if (_done) return;
+    _done = true;
+    _timeout?.cancel();
+    SplashScreen.splashDone.value = true;
   }
 
   @override
   void dispose() {
-    _ctrl.dispose();
+    _stateDisposed = true;
+    _timeout?.cancel();
+    if (_initCompleted) {
+      _video?.removeListener(_onVideoTick);
+      _video?.dispose();
+    }
+    _fadeCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _navyDeep,
-      body: Stack(
-        children: [
-          // Dot texture overlay
-          const Positioned.fill(
-            child: IgnorePointer(child: _SplashDots()),
-          ),
-          // Gold radial bloom — top-end corner
-          PositionedDirectional(
-            top: -60,
-            end: -60,
-            child: Container(
-              width: 320,
-              height: 320,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [Color(0x22C8A24B), Color(0x00C8A24B)],
-                  stops: [0.0, 0.70],
-                ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0B1726),
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (_videoReady)
+              FadeTransition(
+                opacity: _fadeIn,
+                child: _VideoFill(controller: _video!),
               ),
-            ),
-          ),
-          // Secondary bloom — bottom-start
-          PositionedDirectional(
-            bottom: -40,
-            start: -60,
-            child: Container(
-              width: 240,
-              height: 240,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [Color(0x14C8A24B), Color(0x00C8A24B)],
-                  stops: [0.0, 0.7],
-                ),
-              ),
-            ),
-          ),
-          // Bottom gradient vignette
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 200,
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0x000B1726), _navyMid],
-                ),
-              ),
-            ),
-          ),
-          // Centred content: brand mark + wordmark + spinner
-          Center(
-            child: FadeTransition(
-              opacity: _fade,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Brand mark with gold ring
-                  Container(
-                    width: 88,
-                    height: 88,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(88 * 0.28),
-                      border: Border.all(
-                        color: AppPalette.gold400.withValues(alpha: 0.50),
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppPalette.gold400.withValues(alpha: 0.18),
-                          blurRadius: 28,
-                          spreadRadius: 4,
-                        ),
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.30),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: Image.asset(
-                      'assets/brand/devora-logo.png',
-                      fit: BoxFit.cover,
-                      excludeFromSemantics: true,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  // Gold accent line
-                  Container(
-                    width: 40,
-                    height: 2,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color(0x00B8941F),
-                          AppPalette.gold400,
-                          Color(0x00B8941F),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  // "DEVORA" wordmark
-                  Text(
-                    'DEVORA',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 6,
-                      height: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  // "STAFF" sub-wordmark in gold
-                  Text(
-                    'STAFF',
-                    style: TextStyle(
-                      color: AppPalette.gold300,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 4,
-                      height: 1,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xxl),
-                  // Gold spinner
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppPalette.gold400.withValues(alpha: 0.70),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+            if (!_videoReady) const _LoadingState(),
+            const _BottomOverlay(),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _SplashDots extends StatelessWidget {
-  const _SplashDots();
+// ─────────────────────────────────────────────────────────────────────────────
+// Video fill — covers the full screen proportionally
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _VideoFill extends StatelessWidget {
+  const _VideoFill({required this.controller});
+  final VideoPlayerController controller;
+
   @override
-  Widget build(BuildContext context) =>
-      const CustomPaint(painter: _DotsPainter(), child: SizedBox.expand());
+  Widget build(BuildContext context) {
+    return FittedBox(
+      fit: BoxFit.cover,
+      child: SizedBox(
+        width: controller.value.size.width,
+        height: controller.value.size.height,
+        child: VideoPlayer(controller),
+      ),
+    );
+  }
 }
 
-class _DotsPainter extends CustomPainter {
-  const _DotsPainter();
+// ─────────────────────────────────────────────────────────────────────────────
+// Loading state — shows the native splash image while video initialises,
+// making the OS splash → Flutter handoff invisible.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _LoadingState extends StatelessWidget {
+  const _LoadingState();
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.04);
-    const step = 24.0;
-    for (var y = 8.0; y < size.height; y += step) {
-      for (var x = 8.0; x < size.width; x += step) {
-        canvas.drawCircle(Offset(x, y), 1.1, paint);
-      }
-    }
+  Widget build(BuildContext context) {
+    return Image.asset(
+      'assets/brand/flutter_native_splash.png',
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      filterQuality: FilterQuality.high,
+    );
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bottom overlay — gradient + brand wordmark
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _BottomOverlay extends StatelessWidget {
+  const _BottomOverlay();
 
   @override
-  bool shouldRepaint(_DotsPainter _) => false;
+  Widget build(BuildContext context) {
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.only(top: 130, bottom: bottomPad + 36),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0x00000000),
+              Color(0xCC0B1726),
+              Color(0xFF0B1726),
+            ],
+            stops: [0.0, 0.5, 1.0],
+          ),
+        ),
+        child: const _Wordmark(),
+      ),
+    );
+  }
+}
+
+class _Wordmark extends StatelessWidget {
+  const _Wordmark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 40,
+          height: 2,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppPalette.gold300, AppPalette.gold500],
+            ),
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'DEVORA',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 6,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'STAFF',
+          style: TextStyle(
+            color: AppPalette.gold300,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 4,
+          ),
+        ),
+      ],
+    );
+  }
 }

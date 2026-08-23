@@ -2258,16 +2258,18 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get teamPerfTitle => 'أداء الفريق';
+  String get teamPerfTitle => 'أداء فريق المبيعات';
 
   @override
-  String get teamTargetsManageTitle => 'إدارة أهداف الفريق';
+  String get teamTargetsManageTitle => 'إدارة أهداف المبيعات';
 
   @override
-  String get teamTargetEdit => 'تحديد هدف';
+  String get teamTargetEdit => 'تعديل الهدف';
 
   @override
-  String teamTargetFor(String name) => 'هدف $name';
+  String teamTargetFor(String name) {
+    return 'هدف $name';
+  }
 
   @override
   String get teamTargetSaved => 'تم حفظ الهدف.';
@@ -2313,7 +2315,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get teamTargetAddNew => 'إضافة هدف شهري للمندوبين';
-
 
   @override
   String get profilePerformance => 'الأداء';

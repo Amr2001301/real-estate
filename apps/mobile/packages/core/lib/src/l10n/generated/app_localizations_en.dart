@@ -2289,10 +2289,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get teamTargetsManageTitle => 'Manage Team Targets';
 
   @override
-  String get teamTargetEdit => 'Set target';
+  String get teamTargetEdit => 'Edit target';
 
   @override
-  String teamTargetFor(String name) => 'Target for $name';
+  String teamTargetFor(String name) {
+    return 'Target for $name';
+  }
 
   @override
   String get teamTargetSaved => 'Target saved.';
@@ -2338,7 +2340,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get teamTargetAddNew => 'Add monthly target';
-
 
   @override
   String get profilePerformance => 'Performance';
