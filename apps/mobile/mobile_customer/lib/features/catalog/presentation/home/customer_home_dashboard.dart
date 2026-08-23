@@ -31,8 +31,9 @@ String _compact(String raw, String lang) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class CustomerHomeDashboard extends StatelessWidget {
-  const CustomerHomeDashboard({super.key, required this.name});
+  const CustomerHomeDashboard({super.key, required this.name, this.showHeader = true});
   final String? name;
+  final bool showHeader;
 
   @override
   Widget build(BuildContext context) {
@@ -55,11 +56,13 @@ class CustomerHomeDashboard extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            CustomerHomeHeader(
-              name: displayName,
-              hasProperty: summary?.profile.isOwner ?? false,
-            ),
-            const SizedBox(height: AppSpacing.md),
+            if (showHeader) ...[
+              CustomerHomeHeader(
+                name: displayName,
+                hasProperty: summary?.profile.isOwner ?? false,
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
             if (loading)
               const _Skeleton()
             else if (state.status == DataStatus.failure)

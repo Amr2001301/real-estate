@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../favorites/presentation/widgets/favorite_toggle_button.dart';
 import '../../../home_summary/presentation/home_summary_cubit.dart';
+import '../../../notifications/presentation/widgets/customer_notification_button.dart';
 import '../../domain/entities/catalog_enums.dart';
 import '../../domain/entities/project.dart';
 import '../../domain/entities/unit.dart';
@@ -39,45 +40,86 @@ class HomeScreen extends StatelessWidget {
     final session = context.watch<SessionCubit>().state;
     final isCustomer = session.isAuthenticated && session.role.isCustomerSide;
     final comparing = context.watch<CompareCubit>().state.isNotEmpty;
+    final bottomPad = comparing
+        ? (context.isApplePlatform ? 112.0 : 84.0)
+        : AppSpacing.xl;
 
+    final sessionListener = BlocListener<SessionCubit, SessionState>(
+      listenWhen: (prev, curr) {
+        final wasCustomer = prev.isAuthenticated && prev.role.isCustomerSide;
+        final nowCustomer = curr.isAuthenticated && curr.role.isCustomerSide;
+        return !wasCustomer && nowCustomer;
+      },
+      listener: (ctx, _) => ctx.read<HomeSummaryCubit>().load(),
+      child: const SizedBox.shrink(),
+    );
+
+    if (isCustomer) {
+      // ── Authenticated customer: collapsing sliver header ─────────────────
+      return AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.light.copyWith(
+          statusBarColor: Colors.transparent,
+        ),
+        child: Stack(
+          children: [
+            sessionListener,
+            BlocBuilder<HomeSummaryCubit, HomeSummaryState>(
+              builder: (context, state) {
+                final displayName =
+                    (state.data?.profile.displayName.isNotEmpty == true)
+                        ? state.data!.profile.displayName
+                        : (session.sessionOrNull?.displayName ??
+                            session.sessionOrNull?.email);
+                final hasProperty = state.data?.profile.isOwner ?? false;
+                final topPad = MediaQuery.paddingOf(context).top;
+
+                return RefreshIndicator(
+                  onRefresh: () => context.read<HomeSummaryCubit>().load(),
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverPersistentHeader(
+                        pinned: true,
+                        delegate: _CustomerHeaderDelegate(
+                          topPad: topPad,
+                          name: displayName,
+                          hasProperty: hasProperty,
+                          l10n: l10n,
+                        ),
+                      ),
+                      SliverPadding(
+                        padding: EdgeInsets.only(bottom: bottomPad),
+                        sliver: SliverToBoxAdapter(
+                          child: CustomerHomeDashboard(
+                            name: displayName,
+                            showHeader: false,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ── Guest view: unchanged ─────────────────────────────────────────────
     return BlocListener<SessionCubit, SessionState>(
       listenWhen: (prev, curr) {
-        final wasCustomer =
-            prev.isAuthenticated && prev.role.isCustomerSide;
-        final nowCustomer =
-            curr.isAuthenticated && curr.role.isCustomerSide;
+        final wasCustomer = prev.isAuthenticated && prev.role.isCustomerSide;
+        final nowCustomer = curr.isAuthenticated && curr.role.isCustomerSide;
         return !wasCustomer && nowCustomer;
       },
       listener: (ctx, _) => ctx.read<HomeSummaryCubit>().load(),
       child: RefreshIndicator(
-      onRefresh: () async {
-        if (isCustomer) {
-          await context.read<HomeSummaryCubit>().load();
-        } else {
-          await context.read<HomeCubit>().load();
-        }
-      },
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(
-          // Nav bar reserves its own space (extendBody: false), so no safe-area
-          // math needed here. Just clear the compare-bar overlay when active,
-          // or leave comfortable breathing room at rest.
-          bottom: comparing
-              ? (context.isApplePlatform ? 112 : 84)
-              : AppSpacing.xl,
-        ),
-        children: [
-          if (isCustomer)
-            CustomerHomeDashboard(
-              name:
-                  session.sessionOrNull?.displayName ??
-                  session.sessionOrNull?.email,
-            )
-          else ...[
-            // Full-bleed immersive hero — contains the brand header + bell
-            // overlay AND the headline + search content. Sets light status-bar
-            // icons; the section header below restores dark icons on scroll.
+        onRefresh: () => context.read<HomeCubit>().load(),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.only(bottom: bottomPad),
+          children: [
             BlocBuilder<HomeCubit, HomeState>(
               builder: (context, state) {
                 final heroUrl = state.data?.firstOrNull?.coverImage;
@@ -85,7 +127,6 @@ class HomeScreen extends StatelessWidget {
               },
             ),
             const SizedBox(height: AppSpacing.lg),
-            // Restores dark status-bar glyphs as the canvas enters the viewport.
             AnnotatedRegion<SystemUiOverlayStyle>(
               value: SystemUiOverlayStyle.dark.copyWith(
                 statusBarColor: Colors.transparent,
@@ -100,16 +141,280 @@ class HomeScreen extends StatelessWidget {
             ),
             const _FeaturedProjects(),
             const SizedBox(height: AppSpacing.xl),
-            // Featured units 2-column grid.
             const _HomeUnitsGrid(),
             const SizedBox(height: AppSpacing.lg),
             const _HomeCtaBand(),
           ],
-        ],
-      ),
+        ),
       ),
     );
   }
+}
+
+// ─── Collapsing customer header ───────────────────────────────────────────────
+
+class _CustomerRoleChip extends StatelessWidget {
+  const _CustomerRoleChip({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppPalette.gold400, AppPalette.gold500],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        boxShadow: [
+          BoxShadow(
+            color: AppPalette.gold400.withValues(alpha: 0.35),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: AppPalette.navy,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _CustomerDateChip extends StatelessWidget {
+  const _CustomerDateChip();
+
+  static String _fmt(DateTime d, String lang) {
+    const ar = ['', 'يناير', 'فبراير', 'مارس', 'إبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    const en = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return lang == 'ar' ? '${d.day} ${ar[d.month]}' : '${en[d.month]} ${d.day}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final lang = Localizations.localeOf(context).languageCode;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+      ),
+      child: Text(
+        _fmt(DateTime.now(), lang),
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.80),
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+}
+
+class _CustomerHeaderDelegate extends SliverPersistentHeaderDelegate {
+  const _CustomerHeaderDelegate({
+    required this.topPad,
+    required this.name,
+    required this.hasProperty,
+    required this.l10n,
+  });
+
+  final double topPad;
+  final String? name;
+  final bool hasProperty;
+  final AppLocalizations l10n;
+
+  static const double _expandedContent = 120.0;
+  static const double _collapsedContent = 64.0;
+
+  static const _navyDeep  = Color(0xFF0B1726);
+  static const _navyMid   = Color(0xFF14273F);
+  static const _navyLight = Color(0xFF243F62);
+
+  @override double get maxExtent => topPad + _expandedContent;
+  @override double get minExtent => topPad + _collapsedContent;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final progress       = (shrinkOffset / (maxExtent - minExtent)).clamp(0.0, 1.0);
+    final expandedAlpha  = (1.0 - progress * 2.0).clamp(0.0, 1.0);
+    final collapsedAlpha = ((progress - 0.5) * 2.0).clamp(0.0, 1.0);
+    final radius         = Radius.circular((1.0 - progress) * (AppRadii.xl + 4));
+
+    return SizedBox.expand(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [_navyLight, _navyMid, _navyDeep],
+            stops: [0.0, 0.45, 1.0],
+          ),
+          borderRadius: BorderRadius.only(bottomLeft: radius, bottomRight: radius),
+          boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 24, offset: Offset(0, 8))],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.only(bottomLeft: radius, bottomRight: radius),
+          child: Stack(
+            children: [
+              // Dot texture
+              Positioned.fill(child: CustomPaint(painter: _HeaderDotPainter())),
+
+              // Gold radial glow — top-end corner (expanded only)
+              PositionedDirectional(
+                top: 0, end: -30,
+                child: Opacity(
+                  opacity: expandedAlpha,
+                  child: Container(
+                    width: 200, height: 200,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [Color(0x22C8A24B), Color(0x00C8A24B)],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Gold hairline — bottom edge (expanded only)
+              Positioned(
+                bottom: 0, left: 40, right: 40,
+                child: Opacity(
+                  opacity: expandedAlpha,
+                  child: Container(
+                    height: 1,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [
+                        Colors.transparent,
+                        AppPalette.gold400.withValues(alpha: 0.50),
+                        Colors.transparent,
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── EXPANDED content ────────────────────────────────────────
+              Opacity(
+                opacity: expandedAlpha,
+                child: OverflowBox(
+                  maxHeight: double.infinity,
+                  alignment: Alignment.topCenter,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(AppSpacing.md, topPad + AppSpacing.xs, AppSpacing.md, AppSpacing.md),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Title / subtitle / chips
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                l10n.navHome,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.5,
+                                  height: 1.15,
+                                ),
+                              ),
+                              if (name != null) ...[
+                                const SizedBox(height: 3),
+                                Text(
+                                  l10n.dashboardWelcomeUser(name!),
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.65),
+                                    fontSize: 14,
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _CustomerRoleChip(
+                                    label: hasProperty ? l10n.homeOwnerRole : l10n.accountRoleCustomer,
+                                  ),
+                                  const SizedBox(width: AppSpacing.xs),
+                                  const _CustomerDateChip(),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        // Bell
+                        const CustomerNotificationButton(size: 44),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── COLLAPSED mini-bar ──────────────────────────────────────
+              Opacity(
+                opacity: collapsedAlpha,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(AppSpacing.md, topPad + AppSpacing.sm, AppSpacing.md, AppSpacing.sm),
+                  child: SizedBox(
+                    height: 40,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          l10n.navHome,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.3,
+                            height: 1.2,
+                          ),
+                        ),
+                        const Spacer(),
+                        const CustomerNotificationButton(size: 36),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _CustomerHeaderDelegate old) =>
+      old.topPad != topPad || old.name != name || old.hasProperty != hasProperty;
+}
+
+class _HeaderDotPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.white.withValues(alpha: 0.04);
+    const step = 20.0;
+    for (var y = 0.0; y < size.height + step; y += step) {
+      for (var x = 0.0; x < size.width + step; x += step) {
+        canvas.drawCircle(Offset(x, y), 1.3, paint);
+      }
+    }
+  }
+  @override bool shouldRepaint(_HeaderDotPainter _) => false;
 }
 
 // ─── Hero Section (full-bleed, embedded header) ──────────────────────────────
