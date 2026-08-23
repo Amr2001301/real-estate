@@ -4,7 +4,7 @@ String? _projectName(Map<String, dynamic>? unit) {
   final project = ((unit?['building'] as Map<String, dynamic>?)?['phase']
       as Map<String, dynamic>?)?['project'] as Map<String, dynamic>?;
   final name = project?['name'];
-  return name is Map ? name['en'] as String? : name as String?;
+  return name is Map ? ((name['ar'] as String?) ?? (name['en'] as String?)) : name as String?;
 }
 
 class BrokerReservationDto {

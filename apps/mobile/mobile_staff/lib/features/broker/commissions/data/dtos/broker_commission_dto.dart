@@ -24,7 +24,7 @@ class BrokerCommissionDto {
       status: json['status'] as String? ?? 'PENDING',
       grossAmount: json['grossAmount']?.toString(),
       netAmount: json['netAmount']?.toString(),
-      projectName: name is Map ? name['en'] as String? : name as String?,
+      projectName: name is Map ? ((name['ar'] as String?) ?? (name['en'] as String?)) : name as String?,
       createdAt: json['createdAt'] as String?,
     );
   }

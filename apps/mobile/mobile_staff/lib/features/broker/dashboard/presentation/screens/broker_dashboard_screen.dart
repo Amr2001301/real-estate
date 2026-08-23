@@ -12,7 +12,7 @@ import '../../domain/entities/broker_dashboard.dart';
 import '../cubit/broker_dashboard_cubit.dart';
 
 const _navyDeep = Color(0xFF0B1726);
-const _navyCard = Color(0xFF1A3352);
+const _navyMid = Color(0xFF14273F);
 const _navyLight = Color(0xFF243F62);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -20,7 +20,8 @@ const _navyLight = Color(0xFF243F62);
 // ─────────────────────────────────────────────────────────────────────────────
 
 class BrokerDashboardScreen extends StatefulWidget {
-  const BrokerDashboardScreen({super.key});
+  const BrokerDashboardScreen({super.key, this.onSwitchTab});
+  final void Function(int)? onSwitchTab;
 
   @override
   State<BrokerDashboardScreen> createState() => _BrokerDashboardScreenState();
@@ -35,169 +36,563 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final brokerName = context.select<BrokerProfileCubit, String?>(
+      (c) => c.state.data?.fullName,
+    );
+    final mq = MediaQuery.of(context);
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent,
-      ),
+      value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: context.appColors.canvas,
-        body: Column(
-          children: [
-            const _DashHeader(),
-            Expanded(
-              child: BlocBuilder<BrokerDashboardCubit, BrokerDashboardState>(
-                builder: (context, state) {
-                  switch (state.status) {
-                    case DataStatus.initial:
-                    case DataStatus.loading:
-                      return const _Skeleton();
-                    case DataStatus.failure:
-                      return ErrorState(
+        body: BlocBuilder<BrokerDashboardCubit, BrokerDashboardState>(
+          builder: (context, state) {
+            return RefreshIndicator(
+              onRefresh: () => context.read<BrokerDashboardCubit>().load(),
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _BrokerHeaderDelegate(
+                      topPad: mq.padding.top,
+                      name: brokerName,
+                      l10n: l10n,
+                    ),
+                  ),
+                  if (state.status == DataStatus.initial ||
+                      state.status == DataStatus.loading)
+                    SliverToBoxAdapter(
+                      child: _Skeleton(bottomPad: mq.padding.bottom),
+                    )
+                  else if (state.status == DataStatus.failure)
+                    SliverFillRemaining(
+                      child: ErrorState(
                         failure: state.failure,
                         onRetry: () =>
                             context.read<BrokerDashboardCubit>().load(),
-                      );
-                    case DataStatus.empty:
-                    case DataStatus.success:
-                      return RefreshIndicator(
-                        onRefresh: () =>
-                            context.read<BrokerDashboardCubit>().load(),
-                        child: _Body(data: state.data!),
-                      );
-                  }
-                },
+                      ),
+                    )
+                  else
+                    SliverToBoxAdapter(
+                      child: _Body(
+                        data: state.data!,
+                        bottomPad: mq.padding.bottom,
+                        onSwitchTab: widget.onSwitchTab,
+                      ),
+                    ),
+                ],
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
   }
 }
 
-// ── Dashboard header ──────────────────────────────────────────────────────────
+// ── Collapsing header ─────────────────────────────────────────────────────────
 
-class _DashHeader extends StatelessWidget {
-  const _DashHeader();
+class _BrokerHeaderDelegate extends SliverPersistentHeaderDelegate {
+  const _BrokerHeaderDelegate({
+    required this.topPad,
+    this.name,
+    required this.l10n,
+  });
+
+  final double topPad;
+  final String? name;
+  final AppLocalizations l10n;
+
+  static const double _expandedContent = 120.0;
+  static const double _collapsedContent = 64.0;
+
+  @override
+  double get maxExtent => topPad + _expandedContent;
+
+  @override
+  double get minExtent => topPad + _collapsedContent;
+
+  @override
+  bool shouldRebuild(covariant _BrokerHeaderDelegate old) =>
+      old.topPad != topPad || old.name != name;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final progress =
+        (shrinkOffset / (maxExtent - minExtent)).clamp(0.0, 1.0);
+    final expandedAlpha = (1.0 - progress * 2.0).clamp(0.0, 1.0);
+    final collapsedAlpha = ((progress - 0.5) * 2.0).clamp(0.0, 1.0);
+    final radius = Radius.circular((1.0 - progress) * (AppRadii.xl + 4));
+
+    return SizedBox.expand(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [_navyLight, _navyMid, _navyDeep],
+            stops: [0.0, 0.45, 1.0],
+          ),
+          borderRadius:
+              BorderRadius.only(bottomLeft: radius, bottomRight: radius),
+          boxShadow: const [
+            BoxShadow(
+                color: Color(0x40000000),
+                blurRadius: 24,
+                offset: Offset(0, 8)),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius:
+              BorderRadius.only(bottomLeft: radius, bottomRight: radius),
+          child: Stack(
+            children: [
+              // Dot texture
+              Positioned.fill(child: CustomPaint(painter: _DotPainter())),
+
+              // Radial gold glow (expanded only)
+              PositionedDirectional(
+                top: 0,
+                end: -30,
+                child: Opacity(
+                  opacity: expandedAlpha,
+                  child: Container(
+                    width: 200,
+                    height: 200,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [Color(0x22C8A24B), Color(0x00C8A24B)],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Gold hairline at bottom (expanded only)
+              Positioned(
+                bottom: 0,
+                left: 40,
+                right: 40,
+                child: Opacity(
+                  opacity: expandedAlpha,
+                  child: Container(
+                    height: 1,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          AppPalette.gold400.withValues(alpha: 0.50),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Expanded content
+              Opacity(
+                opacity: expandedAlpha,
+                child: OverflowBox(
+                  maxHeight: double.infinity,
+                  alignment: Alignment.topCenter,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      topPad + AppSpacing.xs,
+                      AppSpacing.md,
+                      AppSpacing.md,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                l10n.navDashboard,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.5,
+                                  height: 1.15,
+                                ),
+                              ),
+                              if (name != null) ...[
+                                const SizedBox(height: 3),
+                                Text(
+                                  l10n.dashboardWelcomeUser(name!),
+                                  style: TextStyle(
+                                    color:
+                                        Colors.white.withValues(alpha: 0.65),
+                                    fontSize: 14,
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const _RoleChip(),
+                                  const SizedBox(width: AppSpacing.xs),
+                                  const _DateChip(),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        const NotificationsBell(),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // Collapsed mini-header
+              Opacity(
+                opacity: collapsedAlpha,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    topPad + AppSpacing.sm,
+                    AppSpacing.md,
+                    AppSpacing.sm,
+                  ),
+                  child: SizedBox(
+                    height: 40,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          l10n.navDashboard,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.3,
+                            height: 1.2,
+                          ),
+                        ),
+                        const Spacer(),
+                        const NotificationsBell(),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RoleChip extends StatelessWidget {
+  const _RoleChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppPalette.gold400, AppPalette.gold500],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        boxShadow: [
+          BoxShadow(
+            color: AppPalette.gold400.withValues(alpha: 0.35),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: const Text(
+        'وسيط عقاري',
+        style: TextStyle(
+          color: _navyDeep,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _DateChip extends StatelessWidget {
+  const _DateChip();
+
+  static const _ar = [
+    '',
+    'يناير',
+    'فبراير',
+    'مارس',
+    'إبريل',
+    'مايو',
+    'يونيو',
+    'يوليو',
+    'أغسطس',
+    'سبتمبر',
+    'أكتوبر',
+    'نوفمبر',
+    'ديسمبر',
+  ];
+  static const _en = [
+    '',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final lang = Localizations.localeOf(context).languageCode;
+    final label = lang == 'ar'
+        ? '${now.day} ${_ar[now.month]}'
+        : '${_en[now.month]} ${now.day}';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.80),
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Dashboard body ─────────────────────────────────────────────────────────────
+
+class _Body extends StatelessWidget {
+  const _Body({required this.data, required this.bottomPad, this.onSwitchTab});
+  final BrokerDashboard data;
+  final double bottomPad;
+  final void Function(int)? onSwitchTab;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final theme = Theme.of(context);
-    final topInset = MediaQuery.paddingOf(context).top;
+    final lang = Localizations.localeOf(context).languageCode;
+    final canViewCommissions = context.select<BrokerProfileCubit, bool>(
+      (c) => c.state.data?.canViewCommissions ?? false,
+    );
 
-    return Container(
-      width: double.infinity,
-      clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: [_navyLight, _navyCard, _navyDeep],
-          stops: [0.0, 0.45, 1.0],
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(28),
-          bottomRight: Radius.circular(28),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x35000000),
-            blurRadius: 22,
-            offset: Offset(0, 8),
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        bottomPad + 48,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── 1. Snapshot card ──────────────────────────────────────────────
+          _SnapshotCard(data: data, l10n: l10n, onSwitchTab: onSwitchTab),
+          const SizedBox(height: AppSpacing.lg),
+
+          // ── 2. Today's priorities ─────────────────────────────────────────
+          AppSectionHeader(title: 'أولويات اليوم'),
+          const SizedBox(height: AppSpacing.xs),
+          _PrioritySection(data: data, onSwitchTab: onSwitchTab),
+          const SizedBox(height: AppSpacing.lg),
+
+          // ── 3. Quick actions ──────────────────────────────────────────────
+          AppSectionHeader(title: l10n.dashboardQuickActions),
+          const SizedBox(height: AppSpacing.xs),
+          _QuickActionsSection(
+            l10n: l10n,
+            canViewCommissions: canViewCommissions,
+            onSwitchTab: onSwitchTab,
           ),
+          const SizedBox(height: AppSpacing.lg),
+
+          // ── 4. Commission card ────────────────────────────────────────────
+          if (canViewCommissions) ...[
+            _CommissionCard(
+                amount: data.commissionsGross, l10n: l10n, lang: lang),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+
+          // ── 5. Recent leads ───────────────────────────────────────────────
+          if (data.recentLeads.isNotEmpty) ...[
+            AppSectionHeader(title: l10n.brokerRecentLeads),
+            const SizedBox(height: AppSpacing.xs),
+            for (final lead in data.recentLeads.take(5))
+              _RecentLeadTile(lead: lead),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+
+          // ── 6. Recent reservations ────────────────────────────────────────
+          if (data.recentReservations.isNotEmpty) ...[
+            AppSectionHeader(title: l10n.brokerRecentReservations),
+            const SizedBox(height: AppSpacing.xs),
+            for (final r in data.recentReservations.take(5))
+              _RecentReservationTile(reservation: r),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── 1. Snapshot card ──────────────────────────────────────────────────────────
+
+class _SnapshotCard extends StatelessWidget {
+  const _SnapshotCard({required this.data, required this.l10n, this.onSwitchTab});
+  final BrokerDashboard data;
+  final AppLocalizations l10n;
+  final void Function(int)? onSwitchTab;
+
+  static const _bg1 = Color(0xFF1C3352);
+  static const _bg2 = Color(0xFF0F1E33);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [_bg1, _bg2],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: AppRadii.card,
+        boxShadow: const [
+          BoxShadow(
+              color: Color(0x500F1E33), blurRadius: 22, offset: Offset(0, 8)),
         ],
       ),
       child: Stack(
         children: [
-          const Positioned.fill(
-            child: IgnorePointer(child: _DotTexture()),
-          ),
-          PositionedDirectional(
-            end: 0,
-            top: 0,
-            child: Container(
-              width: 180,
-              height: 140,
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment.topRight,
-                  radius: 1.0,
-                  colors: [
-                    AppPalette.gold400.withValues(alpha: 0.10),
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                  ],
-                ),
-              ),
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: AppRadii.card,
+              child: CustomPaint(painter: _DotPainter()),
             ),
           ),
-          Positioned(
-            bottom: 0,
-            left: 48,
-            right: 48,
+          PositionedDirectional(
+            top: -20,
+            end: -20,
             child: Container(
-              height: 1,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                    AppPalette.gold400.withValues(alpha: 0.5),
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                  ],
+              width: 120,
+              height: 120,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [Color(0x1EC8A24B), Color(0x00C8A24B)],
                 ),
               ),
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              topInset + AppSpacing.md,
-              AppSpacing.lg,
-              AppSpacing.xl,
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        l10n.navDashboard,
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          height: 1.1,
-                          letterSpacing: -0.5,
-                        ),
+                Row(
+                  children: [
+                    Text(
+                      'لقطة الإنجاز',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.65),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.4,
                       ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'مرحباً بك في لوحة التحكم',
-                        style: TextStyle(
-                          color: AppPalette.gold300,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.2,
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 3),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: AppPalette.gold400.withValues(alpha: 0.45),
                         ),
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.circle,
+                              size: 6, color: AppPalette.gold300),
+                          const SizedBox(width: 4),
+                          const Text(
+                            'نشاط',
+                            style: TextStyle(
+                              color: AppPalette.gold300,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Container(height: 1, color: Colors.white.withValues(alpha: 0.10)),
+                const SizedBox(height: AppSpacing.sm),
+                IntrinsicHeight(
+                  child: Row(
+                    children: [
+                      _DarkMetric(
+                        value: '${data.leadsTotal}',
+                        label: l10n.brokerDashLeads,
+                        onTap: onSwitchTab != null
+                            ? () => onSwitchTab!(2)
+                            : null,
+                      ),
+                      _DarkDivider(),
+                      _DarkMetric(
+                        value: '${data.leadsApproved}',
+                        label: l10n.brokerDashApprovedLeads,
+                        isGold: true,
+                      ),
+                      _DarkDivider(),
+                      _DarkMetric(
+                        value: '${data.reservationsTotal}',
+                        label: l10n.navReservations,
+                        onTap: onSwitchTab != null
+                            ? () => onSwitchTab!(3)
+                            : null,
+                      ),
+                      _DarkDivider(),
+                      _DarkMetric(
+                        value: '${data.reservationsApproved}',
+                        label: l10n.brokerDashApprovedReservations,
+                        isGold: true,
                       ),
                     ],
-                  ),
-                ),
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(13),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: IconTheme(
-                    data: const IconThemeData(color: Colors.white),
-                    child: const NotificationsBell(),
                   ),
                 ),
               ],
@@ -209,236 +604,461 @@ class _DashHeader extends StatelessWidget {
   }
 }
 
-// ── Body ──────────────────────────────────────────────────────────────────────
-
-class _Body extends StatelessWidget {
-  const _Body({required this.data});
-  final BrokerDashboard data;
+class _DarkMetric extends StatelessWidget {
+  const _DarkMetric({
+    required this.value,
+    required this.label,
+    this.isGold = false,
+    this.onTap,
+  });
+  final String value;
+  final String label;
+  final bool isGold;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final lang = Localizations.localeOf(context).languageCode;
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-    final canViewCommissions = context.select<BrokerProfileCubit, bool>(
-      (c) => c.state.data?.canViewCommissions ?? false,
-    );
-
-    return ListView(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.xl + MediaQuery.of(context).padding.bottom,
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.w800,
+                height: 1.0,
+                color: isGold ? AppPalette.gold300 : Colors.white,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: Colors.white.withValues(alpha: 0.55),
+                height: 1.3,
+              ),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _DarkDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      color: Colors.white.withValues(alpha: 0.12),
+    );
+  }
+}
+
+// ── 2. Priority section ───────────────────────────────────────────────────────
+
+class _PrioritySection extends StatelessWidget {
+  const _PrioritySection({required this.data, this.onSwitchTab});
+  final BrokerDashboard data;
+  final void Function(int)? onSwitchTab;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <_PriorityItem>[];
+
+    final pendingLeads = data.leadsTotal - data.leadsApproved;
+    if (pendingLeads > 0) {
+      items.add(_PriorityItem(
+        icon: Icons.person_search_outlined,
+        label: pendingLeads == 1
+            ? 'عميل محتمل واحد ينتظر الموافقة'
+            : '$pendingLeads عملاء ينتظرون الموافقة',
+        chipLabel: 'في الانتظار',
+        color: AppPalette.gold400,
+        onTap: onSwitchTab != null ? () => onSwitchTab!(2) : null,
+      ));
+    }
+
+    final pendingReservations =
+        data.reservationsTotal - data.reservationsApproved;
+    if (pendingReservations > 0) {
+      items.add(_PriorityItem(
+        icon: Icons.bookmark_border_rounded,
+        label: pendingReservations == 1
+            ? 'حجز واحد ينتظر المراجعة'
+            : '$pendingReservations حجوزات تنتظر المراجعة',
+        chipLabel: 'مراجعة',
+        color: const Color(0xFF60A5FA),
+        onTap: onSwitchTab != null ? () => onSwitchTab!(3) : null,
+      ));
+    }
+
+    if (items.isEmpty) {
+      items.add(const _PriorityItem(
+        icon: Icons.check_circle_outline,
+        label: 'لا توجد أولويات عاجلة — أداء ممتاز!',
+        chipLabel: 'جيد',
+        color: Color(0xFF4ADE80),
+      ));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ── KPI grid ─────────────────────────────────────────────────────────
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: AppSpacing.md,
-          crossAxisSpacing: AppSpacing.md,
-          childAspectRatio: 1.3,
-          children: [
-            _KpiTile(
-              icon: Icons.people_alt_rounded,
-              label: l10n.brokerDashLeads,
-              value: '${data.leadsTotal}',
-              gradient: const [Color(0xFF243F62), Color(0xFF0B1726)],
-              iconColor: AppPalette.gold300,
-              onTap: () => context.push('/broker/leads'),
-            ),
-            _KpiTile(
-              icon: Icons.verified_rounded,
-              label: l10n.brokerDashApprovedLeads,
-              value: '${data.leadsApproved}',
-              gradient: const [Color(0xFF0D5C3A), Color(0xFF052B1E)],
-              iconColor: Color(0xFF4ADE80),
-            ),
-            _KpiTile(
-              icon: Icons.bookmark_added_rounded,
-              label: l10n.navReservations,
-              value: '${data.reservationsTotal}',
-              gradient: const [Color(0xFF7C5200), Color(0xFF3D2800)],
-              iconColor: AppPalette.gold300,
-              onTap: () => context.push('/broker/reservations'),
-            ),
-            _KpiTile(
-              icon: Icons.check_circle_rounded,
-              label: l10n.brokerDashApprovedReservations,
-              value: '${data.reservationsApproved}',
-              gradient: const [Color(0xFF0E3A6E), Color(0xFF071B35)],
-              iconColor: Color(0xFF60A5FA),
-            ),
-          ],
-        ),
-
-        // ── Commission card ───────────────────────────────────────────────────
-        if (canViewCommissions) ...[
-          const SizedBox(height: AppSpacing.md),
-          _CommissionCard(
-            amount: data.commissionsGross,
-            l10n: l10n,
-            lang: lang,
-          ),
-        ],
-
-        const SizedBox(height: AppSpacing.lg),
-
-        // ── Quick actions ─────────────────────────────────────────────────────
-        _SectionLabel(label: l10n.dashboardQuickActions, colors: colors, theme: theme),
-        const SizedBox(height: AppSpacing.sm),
-        Row(
-          children: [
-            Expanded(
-              child: _QuickAction(
-                icon: Icons.person_add_alt_1_rounded,
-                label: l10n.brokerLeadNew,
-                onTap: () => context.push('/broker/leads/new'),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _QuickAction(
-                icon: Icons.bookmark_add_rounded,
-                label: l10n.reservationNew,
-                onTap: () => context.push('/broker/reservations/new'),
-                accent: true,
-              ),
-            ),
-          ],
-        ),
-
-        // ── Recent leads ──────────────────────────────────────────────────────
-        if (data.recentLeads.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.lg),
-          _SectionLabel(
-            label: l10n.brokerRecentLeads,
-            colors: colors,
-            theme: theme,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          for (final lead in data.recentLeads.take(5))
-            _RecentLeadTile(lead: lead),
-        ],
-
-        // ── Recent reservations ───────────────────────────────────────────────
-        if (data.recentReservations.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.md),
-          _SectionLabel(
-            label: l10n.brokerRecentReservations,
-            colors: colors,
-            theme: theme,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          for (final r in data.recentReservations.take(5))
-            _RecentReservationTile(reservation: r),
+        for (int i = 0; i < items.length; i++) ...[
+          if (i > 0) const SizedBox(height: AppSpacing.xs),
+          _PriorityCard(item: items[i]),
         ],
       ],
     );
   }
 }
 
-// ── KPI tile ──────────────────────────────────────────────────────────────────
-
-class _KpiTile extends StatelessWidget {
-  const _KpiTile({
+class _PriorityItem {
+  const _PriorityItem({
     required this.icon,
     required this.label,
-    required this.value,
-    required this.gradient,
-    required this.iconColor,
+    required this.chipLabel,
+    required this.color,
     this.onTap,
   });
-
   final IconData icon;
   final String label;
-  final String value;
-  final List<Color> gradient;
-  final Color iconColor;
+  final String chipLabel;
+  final Color color;
   final VoidCallback? onTap;
+}
+
+class _PriorityCard extends StatefulWidget {
+  const _PriorityCard({required this.item});
+  final _PriorityItem item;
+
+  @override
+  State<_PriorityCard> createState() => _PriorityCardState();
+}
+
+class _PriorityCardState extends State<_PriorityCard> {
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
+    final c = widget.item.color;
+    final hasAction = widget.item.onTap != null;
+
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: gradient,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      onTapDown: hasAction ? (_) => setState(() => _pressed = true) : null,
+      onTapUp: hasAction ? (_) => setState(() => _pressed = false) : null,
+      onTapCancel: hasAction ? () => setState(() => _pressed = false) : null,
+      onTap: hasAction ? widget.item.onTap : null,
+      child: AnimatedScale(
+        scale: _pressed ? 0.98 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 14),
+          decoration: BoxDecoration(
+            color: c.withValues(alpha: 0.055),
+            border: Border.all(color: c.withValues(alpha: 0.22), width: 1.0),
+            borderRadius: AppRadii.card,
+            boxShadow: [
+              BoxShadow(
+                  color: c.withValues(alpha: 0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2)),
+            ],
           ),
-          borderRadius: BorderRadius.circular(18),
-          border: onTap != null
-              ? Border.all(color: AppPalette.gold300.withValues(alpha: 0.25))
-              : null,
-          boxShadow: [
-            BoxShadow(
-              color: gradient.last.withValues(alpha: 0.4),
-              blurRadius: 16,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, size: 19, color: iconColor),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: c.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                if (onTap != null) ...[
-                  const Spacer(),
-                  Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    size: 11,
-                    color: Colors.white.withValues(alpha: 0.4),
+                child: Icon(widget.item.icon, color: c, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  widget.item.label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: c.withValues(alpha: 0.9),
+                    height: 1.3,
                   ),
-                ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: c.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppRadii.pill),
+                ),
+                child: Text(
+                  widget.item.chipLabel,
+                  style: TextStyle(
+                    color: c,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (hasAction) ...[
+                const SizedBox(width: 4),
+                Icon(Icons.arrow_back_ios_new_rounded,
+                    color: c.withValues(alpha: 0.5), size: 11),
               ],
-            ),
-            const Spacer(),
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                height: 1.0,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.65),
-                fontSize: 10.5,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.1,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-// ── Commission card ───────────────────────────────────────────────────────────
+// ── 3. Quick actions ──────────────────────────────────────────────────────────
+
+class _QuickActionsSection extends StatelessWidget {
+  const _QuickActionsSection({
+    required this.l10n,
+    required this.canViewCommissions,
+    this.onSwitchTab,
+  });
+  final AppLocalizations l10n;
+  final bool canViewCommissions;
+  final void Function(int)? onSwitchTab;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Primary — full width gold button
+        _PrimaryActionCell(
+          icon: Icons.person_add_alt_1_outlined,
+          label: l10n.brokerLeadNew,
+          onTap: () => context.push('/broker/leads/new'),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        // Secondary row 1
+        Row(
+          children: [
+            Expanded(
+              child: _SecondaryActionCell(
+                icon: Icons.bookmark_add_outlined,
+                label: l10n.reservationNew,
+                onTap: () => context.push('/broker/reservations/new'),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _SecondaryActionCell(
+                icon: Icons.apartment_outlined,
+                label: l10n.navProjects,
+                onTap: () => onSwitchTab?.call(1),
+              ),
+            ),
+          ],
+        ),
+        if (canViewCommissions) ...[
+          const SizedBox(height: AppSpacing.sm),
+          _SecondaryActionCell(
+            icon: Icons.payments_outlined,
+            label: l10n.navCommissions,
+            onTap: () => context.push('/broker/commissions'),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _PrimaryActionCell extends StatefulWidget {
+  const _PrimaryActionCell({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  State<_PrimaryActionCell> createState() => _PrimaryActionCellState();
+}
+
+class _PrimaryActionCellState extends State<_PrimaryActionCell> {
+  bool _pressed = false;
+
+  static const _gold1 = Color(0xFFAA8528);
+  static const _gold2 = Color(0xFFC8A24B);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 110),
+        curve: Curves.easeOutCubic,
+        child: Container(
+          height: 52,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [_gold1, _gold2],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.circular(AppRadii.md),
+            boxShadow: [
+              BoxShadow(
+                color: AppPalette.gold400.withValues(alpha: 0.32),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(widget.icon, color: Colors.white, size: 17),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                widget.label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  height: 1.2,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.white.withValues(alpha: 0.75),
+                size: 18,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SecondaryActionCell extends StatefulWidget {
+  const _SecondaryActionCell({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  State<_SecondaryActionCell> createState() => _SecondaryActionCellState();
+}
+
+class _SecondaryActionCellState extends State<_SecondaryActionCell> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _pressed ? 0.95 : 1.0,
+        duration: const Duration(milliseconds: 110),
+        curve: Curves.easeOutCubic,
+        child: Container(
+          height: 96,
+          decoration: BoxDecoration(
+            color: colors.surface,
+            border: Border.all(
+              color: AppPalette.gold400.withValues(alpha: 0.18),
+              width: 1.0,
+            ),
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            boxShadow: [
+              BoxShadow(
+                color: AppPalette.gold400.withValues(alpha: 0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 3),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 6,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFAA8528), Color(0xFFC8A24B)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(widget.icon, color: Colors.white, size: 19),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                widget.label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: colors.inkStrong,
+                  height: 1.25,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── 4. Commission card ────────────────────────────────────────────────────────
 
 class _CommissionCard extends StatelessWidget {
   const _CommissionCard({
@@ -446,7 +1066,6 @@ class _CommissionCard extends StatelessWidget {
     required this.l10n,
     required this.lang,
   });
-
   final double amount;
   final AppLocalizations l10n;
   final String lang;
@@ -456,14 +1075,15 @@ class _CommissionCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => context.push('/broker/commissions'),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [Color(0xFF7C5200), Color(0xFF3D2800)],
             begin: Alignment.topRight,
             end: Alignment.bottomLeft,
           ),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppRadii.lg),
           boxShadow: [
             BoxShadow(
               color: const Color(0xFF7C5200).withValues(alpha: 0.4),
@@ -505,7 +1125,7 @@ class _CommissionCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'إجمالي العمولات',
+                    'إجمالي العمولات المستحقة',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.55),
                       fontSize: 11,
@@ -537,121 +1157,7 @@ class _CommissionCard extends StatelessWidget {
   }
 }
 
-// ── Quick action ──────────────────────────────────────────────────────────────
-
-class _QuickAction extends StatelessWidget {
-  const _QuickAction({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.accent = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool accent;
-
-  @override
-  Widget build(BuildContext context) {
-    final gradient = accent
-        ? const [Color(0xFF7C5200), Color(0xFF3D2800)]
-        : const [_navyLight, _navyDeep];
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 72,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: gradient,
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppPalette.gold300.withValues(alpha: 0.2)),
-          boxShadow: [
-            BoxShadow(
-              color: gradient.last.withValues(alpha: 0.35),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: AppPalette.gold300, size: 18),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  height: 1.25,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Section label ─────────────────────────────────────────────────────────────
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({
-    required this.label,
-    required this.colors,
-    required this.theme,
-  });
-
-  final String label;
-  final AppColorsExt colors;
-  final ThemeData theme;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 3,
-          height: 16,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppPalette.gold400, AppPalette.gold300],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-            color: colors.inkStrong,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Recent lead tile ──────────────────────────────────────────────────────────
+// ── 5. Recent lead tile ───────────────────────────────────────────────────────
 
 class _RecentLeadTile extends StatelessWidget {
   const _RecentLeadTile({required this.lead});
@@ -667,10 +1173,11 @@ class _RecentLeadTile extends StatelessWidget {
       onTap: () => context.push('/broker/leads/${lead.id}'),
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: colors.surface,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppRadii.card,
           border: Border.all(color: colors.hairline.withValues(alpha: 0.4)),
           boxShadow: [
             BoxShadow(
@@ -727,7 +1234,7 @@ class _RecentLeadTile extends StatelessWidget {
   }
 }
 
-// ── Recent reservation tile ───────────────────────────────────────────────────
+// ── 6. Recent reservation tile ────────────────────────────────────────────────
 
 class _RecentReservationTile extends StatelessWidget {
   const _RecentReservationTile({required this.reservation});
@@ -740,13 +1247,15 @@ class _RecentReservationTile extends StatelessWidget {
     final theme = Theme.of(context);
 
     return GestureDetector(
-      onTap: () => context.push('/broker/reservations/${reservation.id}'),
+      onTap: () =>
+          context.push('/broker/reservations/${reservation.id}'),
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: colors.surface,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppRadii.card,
           border: Border.all(color: colors.hairline.withValues(alpha: 0.4)),
           boxShadow: [
             BoxShadow(
@@ -801,68 +1310,90 @@ class _RecentReservationTile extends StatelessWidget {
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 
 class _Skeleton extends StatelessWidget {
-  const _Skeleton();
+  const _Skeleton({required this.bottomPad});
+  final double bottomPad;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return AppSkeletonizer(
       enabled: true,
-      child: ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        children: [
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: AppSpacing.md,
-            crossAxisSpacing: AppSpacing.md,
-            childAspectRatio: 1.3,
-            children: const [
-              _KpiTile(
-                icon: Icons.people_alt_rounded,
-                label: 'العملاء المحتملون',
-                value: '00',
-                gradient: [_navyLight, _navyDeep],
-                iconColor: AppPalette.gold300,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+            AppSpacing.md, AppSpacing.sm, AppSpacing.md, bottomPad + 48),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Snapshot card placeholder
+            Container(
+              height: 120,
+              decoration: BoxDecoration(
+                color: _navyMid,
+                borderRadius: AppRadii.card,
               ),
-              _KpiTile(
-                icon: Icons.verified_rounded,
-                label: 'معتمدون',
-                value: '00',
-                gradient: [Color(0xFF0D5C3A), Color(0xFF052B1E)],
-                iconColor: Color(0xFF4ADE80),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            // Section label placeholder
+            Container(
+                height: 20,
+                width: 100,
+                color: colors.surface),
+            const SizedBox(height: AppSpacing.xs),
+            // Priority card placeholder
+            Container(
+              height: 68,
+              decoration: BoxDecoration(
+                color: colors.surface,
+                borderRadius: AppRadii.card,
               ),
-              _KpiTile(
-                icon: Icons.bookmark_added_rounded,
-                label: 'الحجوزات',
-                value: '00',
-                gradient: [Color(0xFF7C5200), Color(0xFF3D2800)],
-                iconColor: AppPalette.gold300,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            // Section label placeholder
+            Container(
+                height: 20,
+                width: 120,
+                color: colors.surface),
+            const SizedBox(height: AppSpacing.xs),
+            // Quick actions placeholders
+            Container(
+              height: 52,
+              decoration: BoxDecoration(
+                color: colors.surface,
+                borderRadius: BorderRadius.circular(AppRadii.md),
               ),
-              _KpiTile(
-                icon: Icons.check_circle_rounded,
-                label: 'معتمدة',
-                value: '00',
-                gradient: [Color(0xFF0E3A6E), Color(0xFF071B35)],
-                iconColor: Color(0xFF60A5FA),
-              ),
-            ],
-          ),
-        ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 96,
+                    decoration: BoxDecoration(
+                      color: colors.surface,
+                      borderRadius: BorderRadius.circular(AppRadii.lg),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Container(
+                    height: 96,
+                    decoration: BoxDecoration(
+                      color: colors.surface,
+                      borderRadius: BorderRadius.circular(AppRadii.lg),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 // ── Shared ────────────────────────────────────────────────────────────────────
-
-class _DotTexture extends StatelessWidget {
-  const _DotTexture();
-
-  @override
-  Widget build(BuildContext context) =>
-      const CustomPaint(painter: _DotPainter(), child: SizedBox.expand());
-}
 
 class _DotPainter extends CustomPainter {
   const _DotPainter();

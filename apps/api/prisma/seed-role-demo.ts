@@ -28,12 +28,15 @@
  */
 
 import {
+  BrokerLeadStatus,
   BrokerStatus,
   BrokerUserStatus,
+  LeadStage,
   MaintenancePriority,
   MaintenanceReviewStatus,
   MaintenanceStatus,
   PrismaClient,
+  ReservationStatus,
   UserRole,
 } from '@prisma/client';
 import * as argon2 from 'argon2';
@@ -322,6 +325,176 @@ async function seedBrokerDemo(companyId: string) {
   console.log('   ✓ Broker firm and agent ready');
 }
 
+// ── 4. Broker leads + reservations ───────────────────────────────────────────
+
+async function seedBrokerLeadsAndReservations(companyId: string) {
+  console.log('🤝  Seeding broker leads & reservations…');
+
+  // Resolve the demo broker firm
+  const broker = await prisma.broker.findUnique({
+    where: { code: BROKER_FIRM_CODE },
+    select: { id: true },
+  });
+  if (!broker) {
+    console.warn('   ⚠️  Broker firm not found — run seedBrokerDemo first.');
+    return;
+  }
+
+  // Resolve the broker agent user
+  const agentUser = await prisma.user.findUnique({
+    where: { email: BROKER_AGENT_EMAIL },
+    select: { id: true },
+  });
+
+  // Use the demo customer as the lead client
+  const customer = await prisma.user.findUnique({
+    where: { email: DEMO_CUSTOMER_EMAIL },
+    select: { id: true },
+  });
+  if (!customer) {
+    console.warn('   ⚠️  Demo customer not found — run ensureDemoCustomer first.');
+    return;
+  }
+
+  // Find the first project the broker has access to
+  const access = await prisma.brokerProjectAccess.findFirst({
+    where: { brokerId: broker.id },
+    select: { projectId: true },
+  });
+  const project = access
+    ? await prisma.project.findUnique({
+        where: { id: access.projectId },
+        select: { id: true },
+      })
+    : await prisma.project.findFirst({
+        where: { status: 'PUBLISHED' },
+        select: { id: true },
+      });
+
+  // Find any sales/admin user to act as assignedSales on reservations
+  const salesUser = await prisma.user.findFirst({
+    where: { role: { in: ['SALES', 'SALES_MANAGER', 'ADMIN'] } },
+    select: { id: true },
+  });
+
+  // Find a unit for the reservation
+  const unit = await prisma.unit.findFirst({ select: { id: true } });
+
+  // ── Leads ──────────────────────────────────────────────────────────────────
+
+  type LeadSeed = {
+    fullName: string;
+    phone: string;
+    stage: LeadStage;
+    approvalStatus: BrokerLeadStatus;
+    daysAgo: number;
+  };
+
+  const leads: LeadSeed[] = [
+    { fullName: 'عبدالرحمن السيد', phone: '+966501111001', stage: LeadStage.NEW, approvalStatus: BrokerLeadStatus.PENDING, daysAgo: 1 },
+    { fullName: 'نورة العتيبي', phone: '+966501111002', stage: LeadStage.INTERESTED, approvalStatus: BrokerLeadStatus.APPROVED, daysAgo: 5 },
+    { fullName: 'فهد الدوسري', phone: '+966501111003', stage: LeadStage.NEGOTIATION, approvalStatus: BrokerLeadStatus.APPROVED, daysAgo: 10 },
+    { fullName: 'ريم القحطاني', phone: '+966501111004', stage: LeadStage.NEW, approvalStatus: BrokerLeadStatus.REJECTED, daysAgo: 15 },
+  ];
+
+  let leadsCreated = 0;
+  const createdLeadIds: string[] = [];
+
+  for (const l of leads) {
+    const existing = await prisma.lead.findFirst({
+      where: { phone: l.phone, brokerId: broker.id },
+      select: { id: true },
+    });
+    if (existing) {
+      createdLeadIds.push(existing.id);
+      continue;
+    }
+
+    // Ensure a client user for this phone
+    let clientUser = await prisma.user.findUnique({ where: { phone: l.phone }, select: { id: true } });
+    if (!clientUser) {
+      clientUser = await prisma.user.create({
+        data: {
+          fullName: l.fullName,
+          phone: l.phone,
+          role: UserRole.CUSTOMER,
+          locale: 'ar',
+          companyId,
+        },
+        select: { id: true },
+      });
+    }
+
+    const submittedAt = ago(l.daysAgo);
+    const lead = await prisma.lead.create({
+      data: {
+        clientId: clientUser.id,
+        fullName: l.fullName,
+        phone: l.phone,
+        stage: l.stage,
+        brokerId: broker.id,
+        brokerAgentId: agentUser?.id,
+        brokerSubmittedAt: submittedAt,
+        brokerApprovalStatus: l.approvalStatus,
+        brokerApprovedAt: l.approvalStatus === BrokerLeadStatus.APPROVED ? submittedAt : undefined,
+        brokerRejectedAt: l.approvalStatus === BrokerLeadStatus.REJECTED ? submittedAt : undefined,
+        projectInterestId: project?.id,
+        companyId,
+      },
+      select: { id: true },
+    });
+    createdLeadIds.push(lead.id);
+    leadsCreated++;
+  }
+  console.log(`   ✓ ${leadsCreated} lead(s) created (${leads.length - leadsCreated} already existed)`);
+
+  // ── Reservations ───────────────────────────────────────────────────────────
+
+  if (!unit || !salesUser) {
+    console.warn('   ⚠️  No unit or sales user found — skipping reservations.');
+    return;
+  }
+
+  const reservationSeeds = [
+    {
+      status: ReservationStatus.PENDING,
+      expiresAt: ago(-7),
+      leadId: createdLeadIds[1] ?? null,
+      clientId: customer.id,
+    },
+    {
+      status: ReservationStatus.APPROVED,
+      expiresAt: ago(-30),
+      leadId: createdLeadIds[2] ?? null,
+      clientId: customer.id,
+    },
+  ];
+
+  let resCreated = 0;
+  for (const r of reservationSeeds) {
+    const existing = await prisma.reservation.findFirst({
+      where: { unitId: unit.id, brokerId: broker.id, status: r.status },
+      select: { id: true },
+    });
+    if (existing) continue;
+
+    await prisma.reservation.create({
+      data: {
+        unitId: unit.id,
+        salesId: salesUser.id,
+        leadId: r.leadId ?? undefined,
+        clientId: r.clientId,
+        brokerId: broker.id,
+        status: r.status,
+        expiresAt: r.expiresAt,
+        companyId,
+      },
+    });
+    resCreated++;
+  }
+  console.log(`   ✓ ${resCreated} reservation(s) created (${reservationSeeds.length - resCreated} already existed)`);
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -346,6 +519,7 @@ async function main() {
 
   await seedMaintenanceRequests(company.id);
   await seedBrokerDemo(company.id);
+  await seedBrokerLeadsAndReservations(company.id);
 
   // Backfill companyId on any rows that were created without it
   await prisma.$executeRawUnsafe(
@@ -362,6 +536,18 @@ async function main() {
   );
   await prisma.$executeRawUnsafe(
     `UPDATE "User" SET "companyId" = $1::uuid WHERE "companyId" IS NULL`,
+    company.id,
+  );
+  await prisma.$executeRawUnsafe(
+    `UPDATE "BrokerProjectAccess" SET "companyId" = $1::uuid WHERE "companyId" IS NULL`,
+    company.id,
+  );
+  await prisma.$executeRawUnsafe(
+    `UPDATE "Lead" SET "companyId" = $1::uuid WHERE "companyId" IS NULL AND "brokerId" IS NOT NULL`,
+    company.id,
+  );
+  await prisma.$executeRawUnsafe(
+    `UPDATE "Reservation" SET "companyId" = $1::uuid WHERE "companyId" IS NULL AND "brokerId" IS NOT NULL`,
     company.id,
   );
 

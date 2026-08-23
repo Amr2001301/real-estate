@@ -32,6 +32,6 @@ extension BrokerDashboardDtoMapper on BrokerDashboardDto {
 
   static String? _projectName(Object? project) {
     final name = (project as Map<String, dynamic>?)?['name'];
-    return name is Map ? name['en'] as String? : name as String?;
+    return name is Map ? ((name['ar'] as String?) ?? (name['en'] as String?)) : name as String?;
   }
 }

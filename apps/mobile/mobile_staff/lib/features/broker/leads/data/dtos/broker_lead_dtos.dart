@@ -32,7 +32,7 @@ class BrokerLeadDto {
       email: (client?['email'] as String?) ?? json['email'] as String?,
       stage: json['stage'] as String? ?? 'NEW',
       approvalStatus: json['brokerApprovalStatus'] as String? ?? 'PENDING',
-      projectName: name is Map ? name['en'] as String? : name as String?,
+      projectName: name is Map ? ((name['ar'] as String?) ?? (name['en'] as String?)) : name as String?,
       createdAt: json['createdAt'] as String?,
     );
   }

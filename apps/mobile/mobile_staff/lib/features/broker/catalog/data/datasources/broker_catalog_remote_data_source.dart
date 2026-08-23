@@ -13,8 +13,11 @@ class BrokerCatalogRemoteDataSourceImpl implements BrokerCatalogRemoteDataSource
 
   @override
   Future<List<BrokerProjectDto>> listProjects() async {
-    final res = await _dio.get<List<dynamic>>('/portal/projects');
-    final data = res.data ?? const [];
+    final res = await _dio.get<dynamic>('/portal/projects');
+    final body = res.data;
+    final data = body is Map<String, dynamic>
+        ? (body['data'] as List? ?? const [])
+        : (body as List? ?? const []);
     return data.whereType<Map<String, dynamic>>().map(BrokerProjectDto.fromJson).toList();
   }
 

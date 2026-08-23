@@ -35,11 +35,13 @@ class BrokerShell extends StatefulWidget {
 class _BrokerShellState extends State<BrokerShell> {
   int _index = 0;
 
+  void _switchTab(int index) => setState(() => _index = index);
+
   late final List<Widget> _tabs = [
     BlocProvider(
       create: (ctx) => BrokerDashboardCubit(
           GetBrokerDashboard(ctx.read<BrokerDashboardRepository>())),
-      child: const BrokerDashboardScreen(),
+      child: BrokerDashboardScreen(onSwitchTab: _switchTab),
     ),
     BlocProvider(
       create: (ctx) => BrokerProjectsCubit(
