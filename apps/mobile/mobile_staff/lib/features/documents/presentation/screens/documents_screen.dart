@@ -40,6 +40,7 @@ class _StaffDocumentsScreenState extends State<StaffDocumentsScreen> {
         children: [
           AppNavHeader(
             title: widget.title ?? l10n.contractsDocumentsTitle,
+            compact: true,
             leadingAction: NavHeaderAction(
               icon: Icons.arrow_back_ios_new_rounded,
               onTap: () => context.pop(),

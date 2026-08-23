@@ -113,8 +113,33 @@ class _LoadingBody extends StatelessWidget {
           SliverToBoxAdapter(
             child: _HeroShell(
               topInset: topInset,
-              child: const Center(
-                  child: CircularProgressIndicator(color: AppPalette.gold400)),
+              child: const SizedBox.shrink(),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            sliver: SliverList.list(
+              children: [
+                AppSkeletonizer(
+                  enabled: true,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SkeletonCard(lines: 2),
+                      const SizedBox(height: AppSpacing.xl),
+                      _SkeletonSectionLabel(),
+                      const SizedBox(height: AppSpacing.sm),
+                      _SkeletonCard(lines: 1),
+                      const SizedBox(height: AppSpacing.xl),
+                      _SkeletonSectionLabel(),
+                      const SizedBox(height: AppSpacing.md),
+                      for (int i = 0; i < 3; i++) ...[
+                        _SkeletonTimelineItem(isLast: i == 2),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -925,6 +950,133 @@ class _CircleBack extends StatelessWidget {
             color: Colors.white,
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Skeleton helpers (shared by loading state) ────────────────────────────────
+
+class _SkeletonCard extends StatelessWidget {
+  const _SkeletonCard({required this.lines});
+  final int lines;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (int i = 0; i < lines; i++) ...[
+            if (i > 0) const SizedBox(height: AppSpacing.sm),
+            Container(
+              height: i == 0 ? 16 : 13,
+              width: i == 0 ? double.infinity : 160,
+              decoration: BoxDecoration(
+                color: colors.surfaceSoft,
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SkeletonSectionLabel extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Row(
+      children: [
+        Container(
+          width: 4, height: 20,
+          decoration: BoxDecoration(
+            color: AppPalette.gold400.withValues(alpha: 0.30),
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Container(
+          height: 16,
+          width: 110,
+          decoration: BoxDecoration(
+            color: colors.surfaceSoft,
+            borderRadius: BorderRadius.circular(6),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SkeletonTimelineItem extends StatelessWidget {
+  const _SkeletonTimelineItem({required this.isLast});
+  final bool isLast;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 44,
+            child: Column(
+              children: [
+                Container(
+                  width: 36, height: 36,
+                  decoration: BoxDecoration(
+                    color: colors.surfaceSoft,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      width: 1.5,
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      color: colors.hairline,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 14, width: 140,
+                    decoration: BoxDecoration(
+                      color: colors.surfaceSoft,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    height: 11, width: 90,
+                    decoration: BoxDecoration(
+                      color: colors.surfaceSoft,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

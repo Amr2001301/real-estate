@@ -307,19 +307,98 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
     );
   }
 
-  Widget _buildLoadingBody(double topInset) => CustomScrollView(
-        physics: const NeverScrollableScrollPhysics(),
-        slivers: [
-          SliverToBoxAdapter(
-            child: _HeroShell(
-              topInset: topInset,
-              child: const Center(
-                child: CircularProgressIndicator(color: AppPalette.gold400),
+  Widget _buildLoadingBody(double topInset) {
+    final colors = context.appColors;
+    return CustomScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      slivers: [
+        SliverToBoxAdapter(
+          child: _HeroShell(
+            topInset: topInset,
+            child: const SizedBox.shrink(),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, 80),
+          sliver: SliverList.list(children: [
+            AppSkeletonizer(
+              enabled: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Info card skeleton
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: colors.surface,
+                      borderRadius: BorderRadius.circular(AppRadii.lg),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(height: 14, width: 200,
+                            decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(6))),
+                        const SizedBox(height: AppSpacing.sm),
+                        Container(height: 12, width: 140,
+                            decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(6))),
+                        const SizedBox(height: AppSpacing.sm),
+                        Container(height: 12, width: 100,
+                            decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(6))),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  // Action buttons skeleton
+                  Row(children: [
+                    Expanded(child: Container(height: 44,
+                        decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(AppRadii.pill)))),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(child: Container(height: 44,
+                        decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(AppRadii.pill)))),
+                  ]),
+                  const SizedBox(height: AppSpacing.xl),
+                  // Timeline label skeleton
+                  Row(children: [
+                    Container(width: 4, height: 20,
+                        decoration: BoxDecoration(color: AppPalette.gold400.withValues(alpha: 0.30), borderRadius: BorderRadius.circular(999))),
+                    const SizedBox(width: AppSpacing.sm),
+                    Container(height: 16, width: 100,
+                        decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(6))),
+                  ]),
+                  const SizedBox(height: AppSpacing.md),
+                  // Timeline items skeleton
+                  for (int i = 0; i < 3; i++) ...[
+                    IntrinsicHeight(
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                        SizedBox(width: 44, child: Column(children: [
+                          Container(width: 36, height: 36,
+                              decoration: BoxDecoration(color: colors.surfaceSoft, shape: BoxShape.circle)),
+                          if (i < 2) Expanded(child: Container(width: 1.5,
+                              margin: const EdgeInsets.symmetric(vertical: 4), color: colors.hairline)),
+                        ])),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(child: Padding(
+                          padding: EdgeInsets.only(bottom: i < 2 ? AppSpacing.lg : 0),
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Container(height: 14, width: 140,
+                                decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(6))),
+                            const SizedBox(height: 6),
+                            Container(height: 11, width: 90,
+                                decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(6))),
+                          ]),
+                        )),
+                      ]),
+                    ),
+                  ],
+                ],
               ),
             ),
-          ),
-        ],
-      );
+          ]),
+        ),
+      ],
+    );
+  }
 
   Widget _buildErrorBody(double topInset, VisitDetailState state) =>
       CustomScrollView(

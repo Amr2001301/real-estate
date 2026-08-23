@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../../common/catalog_status_label.dart';
+import '../../../../common/staff_list_skeleton.dart';
 import '../../domain/entities/staff_project.dart';
 import '../cubit/staff_unit_detail_cubit.dart';
 
@@ -72,11 +73,7 @@ class _LoadingScaffold extends StatelessWidget {
                   child: _CircleBackButton(onTap: () => context.pop()),
                 ),
               ),
-              const Expanded(
-                child: Center(
-                  child: CircularProgressIndicator(color: AppPalette.gold400),
-                ),
-              ),
+              const Expanded(child: StaffListSkeleton()),
             ],
           ),
         ),

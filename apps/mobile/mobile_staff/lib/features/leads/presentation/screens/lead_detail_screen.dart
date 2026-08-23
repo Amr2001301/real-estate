@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../common/lead_stage_label.dart';
 import '../../../../common/staff_contact_actions.dart';
+import '../../../../common/staff_list_skeleton.dart';
 import '../cubit/lead_detail_cubit.dart';
 
 class LeadDetailScreen extends StatefulWidget {
@@ -75,10 +76,7 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
                 switch (state.status) {
                   case DataStatus.initial:
                   case DataStatus.loading:
-                    return const Center(
-                      child: CircularProgressIndicator(
-                          color: AppPalette.gold400),
-                    );
+                    return const StaffListSkeleton(rows: 5, lines: 3);
                   case DataStatus.failure:
                     return ErrorState(
                       failure: state.failure,

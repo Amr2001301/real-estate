@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../common/lead_stage_label.dart';
 import '../../../../common/staff_contact_actions.dart';
+import '../../../../common/staff_list_skeleton.dart';
 import '../../domain/entities/staff_client.dart';
 import '../cubit/client_detail_cubit.dart';
 
@@ -25,8 +26,7 @@ class _ClientDetailScreenState extends State<ClientDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n  = context.l10n;
-    final isRtl = context.read<LocaleCubit>().isRtl;
+    final l10n = context.l10n;
     return Scaffold(
       body: Column(
         children: [
@@ -44,7 +44,7 @@ class _ClientDetailScreenState extends State<ClientDetailScreen> {
                 switch (state.status) {
                   case DataStatus.initial:
                   case DataStatus.loading:
-                    return const Center(child: CircularProgressIndicator());
+                    return const StaffListSkeleton(rows: 4, lines: 3);
                   case DataStatus.failure:
                     return ErrorState(
                       failure: state.failure,

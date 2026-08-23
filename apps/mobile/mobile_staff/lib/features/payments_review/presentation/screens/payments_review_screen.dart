@@ -129,6 +129,7 @@ class _PaymentsReviewScreenState extends State<PaymentsReviewScreen> {
         children: [
           AppNavHeader(
             title: l10n.paymentReviewTitle,
+            compact: true,
             leadingAction: NavHeaderAction(
               icon: Icons.arrow_back_ios_new_rounded,
               onTap: () => context.pop(),

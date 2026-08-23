@@ -50,7 +50,7 @@ class _InstallmentPlansScreenState extends State<InstallmentPlansScreen> {
               builder: (context, state) {
                 if (state.status == DataStatus.loading ||
                     state.status == DataStatus.initial) {
-                  return const Center(child: CircularProgressIndicator());
+                  return _PlansSkeleton();
                 }
                 if (state.status == DataStatus.failure) {
                   return _ErrorView(
@@ -437,6 +437,86 @@ class _DurationPill extends StatelessWidget {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Shimmer skeleton ──────────────────────────────────────────────────────────
+
+class _PlansSkeleton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return AppSkeletonizer(
+      enabled: true,
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.xl),
+        itemCount: 4,
+        separatorBuilder: (_, i) => const SizedBox(height: AppSpacing.md),
+        itemBuilder: (_, i) => Container(
+          decoration: BoxDecoration(
+            color: context.appColors.surface,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 42, height: 42,
+                      decoration: BoxDecoration(
+                        color: context.appColors.surfaceSoft,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('اسم خطة التقسيط',
+                              style: Theme.of(context).textTheme.titleSmall),
+                          const SizedBox(height: 4),
+                          Text('حتى 24 شهراً',
+                              style: Theme.of(context).textTheme.bodySmall),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 80, height: 30,
+                      decoration: BoxDecoration(
+                        color: context.appColors.surfaceSoft,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(height: 1, color: context.appColors.hairline),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: List.generate(
+                    3,
+                    (_) => Container(
+                      width: 72, height: 28,
+                      decoration: BoxDecoration(
+                        color: context.appColors.surfaceSoft,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

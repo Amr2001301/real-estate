@@ -49,22 +49,24 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
             Widget body;
             if (state.status == DataStatus.initial ||
                 state.status == DataStatus.loading) {
-              body = _HeroShell(
-                topInset: topInset,
-                child: const Center(
-                    child:
-                        CircularProgressIndicator(color: AppPalette.gold400)),
-              );
+              body = _ContractLoadingBody(topInset: topInset);
             } else if (state.status == DataStatus.failure) {
-              body = _HeroShell(
-                topInset: topInset,
-                child: Center(
-                  child: ErrorState(
-                    failure: state.failure,
-                    onRetry: () =>
-                        context.read<ContractDetailCubit>().load(),
+              body = CustomScrollView(
+                physics: const NeverScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: _HeroShell(
+                      topInset: topInset,
+                      child: Center(
+                        child: ErrorState(
+                          failure: state.failure,
+                          onRetry: () =>
+                              context.read<ContractDetailCubit>().load(),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               );
             } else {
               body = _SuccessBody(
@@ -77,12 +79,7 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
             }
             return Stack(
               children: [
-                body is _HeroShell
-                    ? CustomScrollView(
-                        physics: const NeverScrollableScrollPhysics(),
-                        slivers: [SliverToBoxAdapter(child: body)],
-                      )
-                    : body,
+                body,
                 PositionedDirectional(
                   top: topInset + 10,
                   start: 14,
@@ -846,6 +843,115 @@ class _DocumentsButton extends StatelessWidget {
 }
 
 // ── Shared sub-widgets ────────────────────────────────────────────────────────
+
+// ── Loading body with shimmer ─────────────────────────────────────────────────
+
+class _ContractLoadingBody extends StatelessWidget {
+  const _ContractLoadingBody({required this.topInset});
+  final double topInset;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return CustomScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      slivers: [
+        SliverToBoxAdapter(
+          child: _HeroShell(topInset: topInset, child: const SizedBox.shrink()),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          sliver: SliverList.list(
+            children: [
+              AppSkeletonizer(
+                enabled: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Financial card skeleton
+                    _SkeletonCard(colors: colors, lines: 3),
+                    const SizedBox(height: AppSpacing.lg),
+                    // Sales rep card
+                    _SkeletonCard(colors: colors, lines: 2),
+                    const SizedBox(height: AppSpacing.md),
+                    // Documents button
+                    _SkeletonCard(colors: colors, lines: 1),
+                    const SizedBox(height: AppSpacing.xl),
+                    // Section label
+                    _SkeletonLabel(colors: colors),
+                    const SizedBox(height: AppSpacing.md),
+                    // Installment tiles
+                    for (int i = 0; i < 3; i++) ...[
+                      _SkeletonCard(colors: colors, lines: 2),
+                      const SizedBox(height: AppSpacing.xs),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SkeletonCard extends StatelessWidget {
+  const _SkeletonCard({required this.colors, required this.lines});
+  final AppColorsExt colors;
+  final int lines;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(AppRadii.lg),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (int i = 0; i < lines; i++) ...[
+              if (i > 0) const SizedBox(height: AppSpacing.sm),
+              Container(
+                height: i == 0 ? 16 : 13,
+                width: i == 0 ? double.infinity : 160,
+                decoration: BoxDecoration(
+                  color: colors.surfaceSoft,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+}
+
+class _SkeletonLabel extends StatelessWidget {
+  const _SkeletonLabel({required this.colors});
+  final AppColorsExt colors;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          Container(
+            width: 4, height: 20,
+            decoration: BoxDecoration(
+              color: AppPalette.gold400.withValues(alpha: 0.30),
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Container(
+            height: 16, width: 110,
+            decoration: BoxDecoration(
+              color: colors.surfaceSoft,
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+        ],
+      );
+}
 
 class _HeroShell extends StatelessWidget {
   const _HeroShell({required this.topInset, required this.child});

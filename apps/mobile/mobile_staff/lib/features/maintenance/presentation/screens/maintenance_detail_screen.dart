@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../common/staff_list_skeleton.dart';
 import '../../domain/entities/maintenance_request.dart';
 import '../cubit/maintenance_detail_cubit.dart';
 import '../maintenance_format.dart';
@@ -123,8 +124,8 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
                   sliver: switch (state.status) {
                     DataStatus.initial ||
                     DataStatus.loading => const SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Center(child: CircularProgressIndicator()),
+                      hasScrollBody: true,
+                      child: StaffListSkeleton(rows: 5),
                     ),
                     DataStatus.failure => SliverFillRemaining(
                       hasScrollBody: false,
