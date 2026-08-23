@@ -26,6 +26,37 @@ class PerformanceRepositoryImpl implements PerformanceRepository {
     });
   }
 
+  @override
+  Future<Result<List<SalesActor>>> listActors() {
+    return guardApiCall(() async {
+      final rows = await _remote.listActors();
+      return rows.map((r) => r.toEntity()).toList();
+    });
+  }
+
+  @override
+  Future<Result<List<TeamMemberPerformance>>> getTeamPerformance({String? period}) {
+    return guardApiCall(() async {
+      final rows = await _remote.getTeamPerformance(period: period);
+      return rows.map((r) => r.toEntity()).toList();
+    });
+  }
+
+  @override
+  Future<Result<void>> upsertTarget({
+    required String salesId,
+    required String period,
+    required String amountTarget,
+    required int unitsTarget,
+  }) {
+    return guardApiCall(() => _remote.upsertTarget(
+          salesId: salesId,
+          period: period,
+          amountTarget: amountTarget,
+          unitsTarget: unitsTarget,
+        ));
+  }
+
   static String _currentPeriod() {
     final now = DateTime.now();
     return '${now.year}-${now.month.toString().padLeft(2, '0')}';

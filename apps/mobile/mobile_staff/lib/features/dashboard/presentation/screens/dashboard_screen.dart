@@ -226,6 +226,8 @@ class _DashboardBody extends StatelessWidget {
     final role = context.read<SessionCubit>().state.role;
     final canReviewPayments =
         role == AppRole.admin || role == AppRole.salesManager;
+    final canManageSales =
+        role == AppRole.admin || role == AppRole.salesManager;
     final lang = Localizations.localeOf(context).languageCode;
 
     final maxCount = kLeadStages
@@ -258,6 +260,7 @@ class _DashboardBody extends StatelessWidget {
           _CompactQuickActions(
             l10n: l10n,
             canReviewPayments: canReviewPayments,
+            canManageSales: canManageSales,
           ),
           const SizedBox(height: AppSpacing.lg),
 
@@ -725,13 +728,19 @@ class _CompactQuickActions extends StatelessWidget {
   const _CompactQuickActions({
     required this.l10n,
     required this.canReviewPayments,
+    required this.canManageSales,
   });
   final AppLocalizations l10n;
   final bool canReviewPayments;
+  final bool canManageSales;
 
   @override
   Widget build(BuildContext context) {
-    return _SecondaryActionsGrid(l10n: l10n, canReviewPayments: canReviewPayments);
+    return _SecondaryActionsGrid(
+      l10n: l10n,
+      canReviewPayments: canReviewPayments,
+      canManageSales: canManageSales,
+    );
   }
 }
 
@@ -825,9 +834,11 @@ class _SecondaryActionsGrid extends StatelessWidget {
   const _SecondaryActionsGrid({
     required this.l10n,
     required this.canReviewPayments,
+    required this.canManageSales,
   });
   final AppLocalizations l10n;
   final bool canReviewPayments;
+  final bool canManageSales;
 
   @override
   Widget build(BuildContext context) {
@@ -886,6 +897,28 @@ class _SecondaryActionsGrid extends StatelessWidget {
             icon: Icons.receipt_long_outlined,
             label: l10n.paymentReviewTitle,
             onTap: () => context.push('/payments-review'),
+          ),
+        ],
+        if (canManageSales) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: _SecondaryActionCell(
+                  icon: Icons.groups_rounded,
+                  label: 'أداء فريق المبيعات',
+                  onTap: () => context.push('/team-performance'),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _SecondaryActionCell(
+                  icon: Icons.flag_rounded,
+                  label: 'إدارة أهداف المبيعات',
+                  onTap: () => context.push('/team-targets'),
+                ),
+              ),
+            ],
           ),
         ],
       ],

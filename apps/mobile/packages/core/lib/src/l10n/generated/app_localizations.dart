@@ -4334,6 +4334,120 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 unit} other{{count} units}}'**
   String targetsUnitsN(int count);
 
+  /// No description provided for @teamPerfTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Team Performance'**
+  String get teamPerfTitle;
+
+  /// No description provided for @teamTargetsManageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Team Targets'**
+  String get teamTargetsManageTitle;
+
+  /// No description provided for @teamTargetEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Set target'**
+  String get teamTargetEdit;
+
+  /// No description provided for @teamTargetFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Target for {name}'**
+  String teamTargetFor(String name);
+
+  /// No description provided for @teamTargetSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Target saved.'**
+  String get teamTargetSaved;
+
+  /// No description provided for @teamPerfRealizedValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Realized value'**
+  String get teamPerfRealizedValue;
+
+  /// No description provided for @teamPerfEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No performance data for this period.'**
+  String get teamPerfEmpty;
+
+  /// No description provided for @teamPerfTotalSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Sales'**
+  String get teamPerfTotalSales;
+
+  /// No description provided for @teamPerfAvgAchievement.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg Achievement'**
+  String get teamPerfAvgAchievement;
+
+  /// No description provided for @teamPerfDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Team Details'**
+  String get teamPerfDetails;
+
+  /// No description provided for @teamTargetAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Target'**
+  String get teamTargetAdd;
+
+  /// No description provided for @teamTargetCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Targets'**
+  String get teamTargetCount;
+
+  /// No description provided for @teamTargetTotalUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Units Target'**
+  String get teamTargetTotalUnits;
+
+  /// No description provided for @teamTargetTotalAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Amount Target'**
+  String get teamTargetTotalAmount;
+
+  /// No description provided for @teamTargetRegistered.
+  ///
+  /// In en, this message translates to:
+  /// **'Registered Targets'**
+  String get teamTargetRegistered;
+
+  /// No description provided for @teamTargetNoTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'No target'**
+  String get teamTargetNoTarget;
+
+  /// No description provided for @teamTargetAchievedValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Achieved Value'**
+  String get teamTargetAchievedValue;
+
+  /// No description provided for @teamTargetMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Member'**
+  String get teamTargetMember;
+
+  /// No description provided for @teamTargetAddNew.
+  ///
+  /// In en, this message translates to:
+  /// **'Add monthly target'**
+  String get teamTargetAddNew;
+
   /// No description provided for @profilePerformance.
   ///
   /// In en, this message translates to:

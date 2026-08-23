@@ -51,7 +51,11 @@ import '../features/payments_review/presentation/screens/payments_review_screen.
 import '../features/performance/domain/repositories/performance_repository.dart';
 import '../features/performance/domain/usecases/performance_use_cases.dart';
 import '../features/performance/presentation/cubit/targets_cubit.dart';
+import '../features/performance/presentation/cubit/team_performance_cubit.dart';
+import '../features/performance/presentation/cubit/team_targets_cubit.dart';
 import '../features/performance/presentation/screens/targets_screen.dart';
+import '../features/performance/presentation/screens/team_performance_screen.dart';
+import '../features/performance/presentation/screens/team_targets_screen.dart';
 import '../features/catalog/domain/entities/staff_project.dart';
 import '../features/catalog/domain/repositories/staff_catalog_repository.dart';
 import '../features/catalog/domain/usecases/staff_catalog_use_cases.dart';
@@ -660,6 +664,28 @@ GoRouter createStaffRouter(
             return TargetsCubit(GetSalesPerformance(repo), GetSalesTargets(repo));
           },
           child: const TargetsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/team-performance',
+        builder: (context, _) => BlocProvider(
+          create: (ctx) =>
+              TeamPerformanceCubit(GetTeamPerformance(ctx.read<PerformanceRepository>())),
+          child: const TeamPerformanceScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/team-targets',
+        builder: (context, _) => BlocProvider(
+          create: (ctx) {
+            final repo = ctx.read<PerformanceRepository>();
+            return TeamTargetsCubit(
+              ListSalesActors(repo),
+              GetSalesTargets(repo),
+              UpsertSalesTarget(repo),
+            );
+          },
+          child: const TeamTargetsScreen(),
         ),
       ),
 

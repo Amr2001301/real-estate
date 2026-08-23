@@ -56,20 +56,60 @@ class SalesPerformance extends Equatable {
       ];
 }
 
-/// A target definition for one period (from /sales-targets) — used for history.
+/// One team member's performance row (from /sales-targets/performance for manager).
+class TeamMemberPerformance extends Equatable {
+  const TeamMemberPerformance({
+    required this.salesId,
+    required this.salesName,
+    required this.performance,
+  });
+
+  final String salesId;
+  final String salesName;
+  final SalesPerformance performance;
+
+  @override
+  List<Object?> get props => [salesId, salesName, performance];
+}
+
+/// A target definition for one period (from /sales-targets).
 class SalesTarget extends Equatable {
   const SalesTarget({
     required this.id,
+    required this.salesId,
+    required this.salesName,
     required this.period,
     required this.amountTarget,
     required this.unitsTarget,
   });
 
   final String id;
+  final String salesId;
+  final String salesName;
   final String period;
   final String amountTarget;
   final int unitsTarget;
 
   @override
-  List<Object?> get props => [id, period, amountTarget, unitsTarget];
+  List<Object?> get props => [id, salesId, period, amountTarget, unitsTarget];
+}
+
+/// A user who can have sales targets set (from /sales-targets/actors).
+class SalesActor extends Equatable {
+  const SalesActor({
+    required this.id,
+    required this.fullName,
+    required this.role,
+  });
+
+  final String id;
+  final String fullName;
+  final String role;
+
+  String get initials => fullName.trim().isNotEmpty
+      ? fullName.trim().split(' ').map((w) => w[0]).take(2).join()
+      : '?';
+
+  @override
+  List<Object?> get props => [id, fullName, role];
 }

@@ -2258,6 +2258,64 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get teamPerfTitle => 'أداء الفريق';
+
+  @override
+  String get teamTargetsManageTitle => 'إدارة أهداف الفريق';
+
+  @override
+  String get teamTargetEdit => 'تحديد هدف';
+
+  @override
+  String teamTargetFor(String name) => 'هدف $name';
+
+  @override
+  String get teamTargetSaved => 'تم حفظ الهدف.';
+
+  @override
+  String get teamPerfRealizedValue => 'القيمة المحققة';
+
+  @override
+  String get teamPerfEmpty => 'لا توجد بيانات لهذه الفترة.';
+
+  @override
+  String get teamPerfTotalSales => 'إجمالي المبيعات';
+
+  @override
+  String get teamPerfAvgAchievement => 'متوسط الإنجاز';
+
+  @override
+  String get teamPerfDetails => 'تفاصيل الفريق';
+
+  @override
+  String get teamTargetAdd => 'إضافة هدف';
+
+  @override
+  String get teamTargetCount => 'عدد الأهداف';
+
+  @override
+  String get teamTargetTotalUnits => 'هدف الوحدات الإجمالي';
+
+  @override
+  String get teamTargetTotalAmount => 'هدف القيمة الإجمالي';
+
+  @override
+  String get teamTargetRegistered => 'الأهداف المسجّلة';
+
+  @override
+  String get teamTargetNoTarget => 'لا هدف';
+
+  @override
+  String get teamTargetAchievedValue => 'القيمة المحققة';
+
+  @override
+  String get teamTargetMember => 'المندوب';
+
+  @override
+  String get teamTargetAddNew => 'إضافة هدف شهري للمندوبين';
+
+
+  @override
   String get profilePerformance => 'الأداء';
 
   @override

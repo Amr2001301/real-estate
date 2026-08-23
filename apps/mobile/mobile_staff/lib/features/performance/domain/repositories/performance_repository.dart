@@ -8,4 +8,18 @@ abstract interface class PerformanceRepository {
 
   /// Target definitions across periods (history).
   Future<Result<List<SalesTarget>>> getTargets();
+
+  /// Users whose targets can be managed by this actor.
+  Future<Result<List<SalesActor>>> listActors();
+
+  /// All team members' performance (ADMIN / SALES_MANAGER).
+  Future<Result<List<TeamMemberPerformance>>> getTeamPerformance({String? period});
+
+  /// Creates or updates a target for [salesId] in [period].
+  Future<Result<void>> upsertTarget({
+    required String salesId,
+    required String period,
+    required String amountTarget,
+    required int unitsTarget,
+  });
 }

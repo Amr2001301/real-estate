@@ -2283,6 +2283,64 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get teamPerfTitle => 'Team Performance';
+
+  @override
+  String get teamTargetsManageTitle => 'Manage Team Targets';
+
+  @override
+  String get teamTargetEdit => 'Set target';
+
+  @override
+  String teamTargetFor(String name) => 'Target for $name';
+
+  @override
+  String get teamTargetSaved => 'Target saved.';
+
+  @override
+  String get teamPerfRealizedValue => 'Realized value';
+
+  @override
+  String get teamPerfEmpty => 'No performance data for this period.';
+
+  @override
+  String get teamPerfTotalSales => 'Total Sales';
+
+  @override
+  String get teamPerfAvgAchievement => 'Avg Achievement';
+
+  @override
+  String get teamPerfDetails => 'Team Details';
+
+  @override
+  String get teamTargetAdd => 'Add Target';
+
+  @override
+  String get teamTargetCount => 'Targets';
+
+  @override
+  String get teamTargetTotalUnits => 'Total Units Target';
+
+  @override
+  String get teamTargetTotalAmount => 'Total Amount Target';
+
+  @override
+  String get teamTargetRegistered => 'Registered Targets';
+
+  @override
+  String get teamTargetNoTarget => 'No target';
+
+  @override
+  String get teamTargetAchievedValue => 'Achieved Value';
+
+  @override
+  String get teamTargetMember => 'Member';
+
+  @override
+  String get teamTargetAddNew => 'Add monthly target';
+
+
+  @override
   String get profilePerformance => 'Performance';
 
   @override

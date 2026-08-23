@@ -9,10 +9,12 @@ class ForgotStaffPasswordScreen extends StatefulWidget {
   const ForgotStaffPasswordScreen({super.key});
 
   @override
-  State<ForgotStaffPasswordScreen> createState() => _ForgotStaffPasswordScreenState();
+  State<ForgotStaffPasswordScreen> createState() =>
+      _ForgotStaffPasswordScreenState();
 }
 
-class _ForgotStaffPasswordScreenState extends State<ForgotStaffPasswordScreen> {
+class _ForgotStaffPasswordScreenState
+    extends State<ForgotStaffPasswordScreen> {
   final _emailCtrl = TextEditingController();
   final _tokenCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
@@ -79,6 +81,8 @@ class _ForgotStaffPasswordScreenState extends State<ForgotStaffPasswordScreen> {
   }
 }
 
+// ── Step 1: email entry ───────────────────────────────────────────────────────
+
 class _RequestForm extends StatelessWidget {
   const _RequestForm({
     required this.l10n,
@@ -95,55 +99,72 @@ class _RequestForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomPad = MediaQuery.of(context).padding.bottom;
     return Scaffold(
       backgroundColor: context.appColors.canvas,
-      body: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          AuthHeader(
-            title: l10n.authForgotPasswordTitle,
-            subtitle: l10n.authForgotPasswordSubtitle,
-            onBack: () => context.canPop() ? context.pop() : context.go('/login'),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.xl,
-              AppSpacing.lg,
-              AppSpacing.lg + MediaQuery.of(context).padding.bottom,
+      resizeToAvoidBottomInset: true,
+      body: Form(
+        key: formKey,
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: AuthHeader(
+                title: l10n.authForgotPasswordTitle,
+                subtitle: l10n.authForgotPasswordSubtitle,
+                onBack: () =>
+                    context.canPop() ? context.pop() : context.go('/login'),
+              ),
             ),
-            child: Column(
-              children: [
-                Form(
-                  key: formKey,
-                  child: AuthCard(
-                    child: AuthField(
-                      controller: emailCtrl,
-                      label: l10n.fieldEmail,
-                      icon: Icons.alternate_email_rounded,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.done,
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? l10n.validationRequired : null,
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.xl,
+                  AppSpacing.lg,
+                  AppSpacing.lg + bottomPad,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    AuthCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          AuthField(
+                            controller: emailCtrl,
+                            label: l10n.fieldEmail,
+                            icon: Icons.alternate_email_rounded,
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) => onSubmit(),
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? l10n.validationRequired
+                                : null,
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+                          AppButton(
+                            label: l10n.authForgotPasswordSend,
+                            variant: AppButtonVariant.gold,
+                            expand: true,
+                            isLoading: submitting,
+                            onPressed: submitting ? null : onSubmit,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: AppSpacing.xl),
-                AppButton(
-                  label: l10n.authForgotPasswordSend,
-                  variant: AppButtonVariant.gold,
-                  expand: true,
-                  isLoading: submitting,
-                  onPressed: submitting ? null : onSubmit,
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
+
+// ── Step 2: token + new password ──────────────────────────────────────────────
 
 class _ResetForm extends StatelessWidget {
   const _ResetForm({
@@ -163,62 +184,73 @@ class _ResetForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomPad = MediaQuery.of(context).padding.bottom;
     return Scaffold(
       backgroundColor: context.appColors.canvas,
-      body: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          AuthHeader(
-            title: l10n.authResetPasswordTitle,
-            subtitle: l10n.authResetPasswordSubtitle,
-            onBack: null,
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.xl,
-              AppSpacing.lg,
-              AppSpacing.lg + MediaQuery.of(context).padding.bottom,
+      resizeToAvoidBottomInset: true,
+      body: Form(
+        key: formKey,
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: AuthHeader(
+                title: l10n.authResetPasswordTitle,
+                subtitle: l10n.authResetPasswordSubtitle,
+                onBack: null,
+              ),
             ),
-            child: Column(
-              children: [
-                Form(
-                  key: formKey,
-                  child: AuthCard(
-                    child: Column(
-                      children: [
-                        AuthField(
-                          controller: tokenCtrl,
-                          label: l10n.authResetToken,
-                          icon: Icons.key_rounded,
-                          textInputAction: TextInputAction.next,
-                          validator: (v) =>
-                              (v == null || v.trim().isEmpty) ? l10n.validationRequired : null,
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        AuthPasswordField(
-                          controller: passwordCtrl,
-                          label: l10n.authNewPassword,
-                          textInputAction: TextInputAction.done,
-                          validator: (v) =>
-                              (v == null || v.length < 8) ? l10n.validationPasswordShort : null,
-                        ),
-                      ],
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.xl,
+                  AppSpacing.lg,
+                  AppSpacing.lg + bottomPad,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    AuthCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          AuthField(
+                            controller: tokenCtrl,
+                            label: l10n.authResetToken,
+                            icon: Icons.key_rounded,
+                            textInputAction: TextInputAction.next,
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? l10n.validationRequired
+                                : null,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          AuthPasswordField(
+                            controller: passwordCtrl,
+                            label: l10n.authNewPassword,
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) => onSubmit(),
+                            validator: (v) => (v == null || v.length < 8)
+                                ? l10n.validationPasswordShort
+                                : null,
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+                          AppButton(
+                            label: l10n.authResetSubmit,
+                            variant: AppButtonVariant.gold,
+                            expand: true,
+                            isLoading: submitting,
+                            onPressed: submitting ? null : onSubmit,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: AppSpacing.xl),
-                AppButton(
-                  label: l10n.authResetSubmit,
-                  variant: AppButtonVariant.gold,
-                  expand: true,
-                  isLoading: submitting,
-                  onPressed: submitting ? null : onSubmit,
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

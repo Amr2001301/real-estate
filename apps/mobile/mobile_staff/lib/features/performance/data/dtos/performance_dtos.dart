@@ -62,23 +62,70 @@ class SalesPerformanceDto {
       );
 }
 
+/// One row from /sales-targets/performance when called by ADMIN or SALES_MANAGER.
+/// The backend adds salesId + salesName to the standard performance fields.
+class TeamPerformanceRowDto {
+  const TeamPerformanceRowDto({
+    required this.salesId,
+    required this.salesName,
+    required this.perf,
+  });
+
+  final String salesId;
+  final String salesName;
+  final SalesPerformanceDto perf;
+
+  factory TeamPerformanceRowDto.fromJson(Map<String, dynamic> json) =>
+      TeamPerformanceRowDto(
+        salesId: json['salesId'] as String? ?? '',
+        salesName: json['salesName'] as String? ?? '',
+        perf: SalesPerformanceDto.fromJson(json),
+      );
+}
+
 class SalesTargetDto {
   const SalesTargetDto({
     required this.id,
+    required this.salesId,
+    required this.salesName,
     required this.period,
     required this.amountTarget,
     required this.unitsTarget,
   });
 
   final String id;
+  final String salesId;
+  final String salesName;
   final String period;
   final String amountTarget;
   final int unitsTarget;
 
   factory SalesTargetDto.fromJson(Map<String, dynamic> json) => SalesTargetDto(
         id: json['id'] as String,
+        salesId: json['salesId'] as String? ?? '',
+        salesName:
+            (json['sales'] as Map<String, dynamic>?)?['fullName'] as String? ??
+                '',
         period: json['period'] as String? ?? '',
         amountTarget: json['amountTarget']?.toString() ?? '0',
         unitsTarget: (json['unitsTarget'] as num?)?.toInt() ?? 0,
+      );
+}
+
+class SalesActorDto {
+  const SalesActorDto({
+    required this.id,
+    required this.fullName,
+    required this.role,
+  });
+
+  final String id;
+  final String fullName;
+  final String role;
+
+  factory SalesActorDto.fromJson(Map<String, dynamic> json) => SalesActorDto(
+        id: json['id'] as String,
+        fullName: json['fullName'] as String? ?? '',
+        role: json['role'] as String? ?? '',
       );
 }

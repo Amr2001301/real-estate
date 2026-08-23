@@ -5,9 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../cubit/staff_auth_cubit.dart';
 
-/// Staff email/password login using the shared premium auth UI from core.
-/// On success the app-wide SessionCubit becomes authenticated and the router
-/// redirects to the appropriate workspace shell.
 class StaffLoginScreen extends StatefulWidget {
   const StaffLoginScreen({super.key});
 
@@ -36,78 +33,84 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final bottomPad = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: BlocListener<StaffAuthCubit, StaffAuthState>(
         listenWhen: (a, b) => a.failure != b.failure && b.failure != null,
-        listener: (context, state) => showFailureSnackBar(context, state.failure!),
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Premium navy hero header shared with customer app
-                AuthHeader(
+        listener: (context, state) =>
+            showFailureSnackBar(context, state.failure!),
+        child: Form(
+          key: _formKey,
+          child: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: AuthHeader(
                   title: l10n.staffAppTitle,
                   subtitle: l10n.staffLoginSubtitle,
                 ),
-                // Form card
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
+              ),
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
                     AppSpacing.lg,
                     AppSpacing.xl,
                     AppSpacing.lg,
-                    AppSpacing.lg,
+                    AppSpacing.lg + bottomPad,
                   ),
-                  child: AuthCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        AuthField(
-                          controller: _email,
-                          label: l10n.fieldEmail,
-                          icon: Icons.email_outlined,
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.next,
-                          autofillHints: const [AutofillHints.email],
-                          validator: (v) =>
-                              (v == null || !v.contains('@'))
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      AuthCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            AuthField(
+                              controller: _email,
+                              label: l10n.fieldEmail,
+                              icon: Icons.email_outlined,
+                              keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
+                              autofillHints: const [AutofillHints.email],
+                              validator: (v) => (v == null || !v.contains('@'))
                                   ? l10n.validationEmail
                                   : null,
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        AuthPasswordField(
-                          controller: _password,
-                          label: l10n.fieldPassword,
-                          textInputAction: TextInputAction.done,
-                          onFieldSubmitted: (_) => _submit(),
-                          validator: (v) =>
-                              (v == null || v.isEmpty)
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            AuthPasswordField(
+                              controller: _password,
+                              label: l10n.fieldPassword,
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) => _submit(),
+                              validator: (v) => (v == null || v.isEmpty)
                                   ? l10n.validationRequired
                                   : null,
+                            ),
+                            const SizedBox(height: AppSpacing.xl),
+                            BlocBuilder<StaffAuthCubit, StaffAuthState>(
+                              builder: (context, state) => AppButton(
+                                label: l10n.actionLogin,
+                                icon: Icons.login_rounded,
+                                expand: true,
+                                isLoading: state.isSubmitting,
+                                onPressed: state.isSubmitting ? null : _submit,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            AuthFooterLink(
+                              text: l10n.authForgotPassword,
+                              onTap: () => context.push('/forgot-password'),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: AppSpacing.xl),
-                        BlocBuilder<StaffAuthCubit, StaffAuthState>(
-                          builder: (context, state) => AppButton(
-                            label: l10n.actionLogin,
-                            icon: Icons.login_rounded,
-                            expand: true,
-                            isLoading: state.isSubmitting,
-                            onPressed: state.isSubmitting ? null : _submit,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        AuthFooterLink(
-                          text: l10n.authForgotPassword,
-                          onTap: () => context.push('/forgot-password'),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

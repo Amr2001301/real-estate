@@ -97,22 +97,25 @@ class AuthHeader extends StatelessWidget {
                 ),
               ),
             ),
-            // Content
-            SafeArea(
+            // Content — SizedBox.expand forces full-width so Column.center works
+            // in RTL (otherwise the Stack places the wrap-content column at topStart)
+            SizedBox(
+              width: double.infinity,
+              child: SafeArea(
               bottom: false,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Back button row — pinned to top-end (only shown if onBack provided)
+                  // Back button row — pinned to top-start (only shown if onBack provided)
                   if (onBack != null)
                     Padding(
                       padding: const EdgeInsetsDirectional.only(
                         top: AppSpacing.xs,
-                        end: AppSpacing.lg,
+                        start: AppSpacing.lg,
                       ),
                       child: Align(
-                        alignment: AlignmentDirectional.centerEnd,
+                        alignment: AlignmentDirectional.centerStart,
                         child: _GlassBack(onTap: onBack!),
                       ),
                     )
@@ -179,6 +182,7 @@ class AuthHeader extends StatelessWidget {
                 ],
               ),
             ),
+          ),
           ],
         ),
       ),
@@ -456,10 +460,13 @@ class _GlassBack extends StatelessWidget {
               width: 0.8,
             ),
           ),
-          child: Icon(
-            rtl ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
-            color: Colors.white,
-            size: 22,
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Icon(
+              rtl ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
           ),
         ),
       ),
