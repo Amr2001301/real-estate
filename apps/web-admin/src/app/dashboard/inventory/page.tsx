@@ -220,7 +220,7 @@ export default async function InventoryPage({
           >
             <option value="">{uiT(locale).common.allProjects}</option>
             {projects.map((p) => (
-              <option key={p.id} value={p.id}>{p.name as unknown as string}</option>
+              <option key={p.id} value={p.id}>{p.name[locale]}</option>
             ))}
           </Select>
         </PremiumFilterField>

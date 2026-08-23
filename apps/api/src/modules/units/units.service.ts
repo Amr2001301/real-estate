@@ -264,11 +264,19 @@ export class UnitsService {
   }
 
   async inventoryMatrix(query: InventoryMatrixQueryDto) {
+    const pickName = (val: unknown): string => {
+      if (typeof val === 'string') return val;
+      if (val && typeof val === 'object') {
+        const o = val as Record<string, string>;
+        return o.ar ?? o.en ?? '';
+      }
+      return '';
+    };
     const companyId = getRequiredCompanyId();
 
-    const conditions: Prisma.Sql[] = [Prisma.sql`p."companyId" = ${companyId}`];
+    const conditions: Prisma.Sql[] = [Prisma.sql`p."companyId" = ${companyId}::uuid`];
     if (query.projectId) {
-      conditions.push(Prisma.sql`ph."projectId" = ${query.projectId}`);
+      conditions.push(Prisma.sql`ph."projectId" = ${query.projectId}::uuid`);
     }
     if (query.q?.trim()) {
       const needle = `%${query.q.trim()}%`;
@@ -368,7 +376,7 @@ export class UnitsService {
       let proj = projectMap.get(row.projectId);
       if (!proj) {
         proj = {
-          id: row.projectId, name: row.projectName, city: row.projectCity,
+          id: row.projectId, name: pickName(row.projectName), city: row.projectCity,
           available: 0, reserved: 0, sold: 0, total: 0, totalValue: 0, phases: new Map(),
         };
         projectMap.set(row.projectId, proj);
@@ -379,7 +387,7 @@ export class UnitsService {
       let phase = proj.phases.get(row.phaseId);
       if (!phase) {
         phase = {
-          id: row.phaseId, name: row.phaseName,
+          id: row.phaseId, name: pickName(row.phaseName),
           available: 0, reserved: 0, sold: 0, total: 0, totalValue: 0, buildings: [],
         };
         proj.phases.set(row.phaseId, phase);
