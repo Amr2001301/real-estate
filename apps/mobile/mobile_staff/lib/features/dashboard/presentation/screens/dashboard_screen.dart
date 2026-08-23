@@ -900,25 +900,21 @@ class _SecondaryActionsGrid extends StatelessWidget {
           ),
         ],
         if (canManageSales) ...[
+          const SizedBox(height: AppSpacing.md),
+          _ManagerSectionDivider(),
           const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: _SecondaryActionCell(
-                  icon: Icons.groups_rounded,
-                  label: 'أداء فريق المبيعات',
-                  onTap: () => context.push('/team-performance'),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _SecondaryActionCell(
-                  icon: Icons.flag_rounded,
-                  label: 'إدارة أهداف المبيعات',
-                  onTap: () => context.push('/team-targets'),
-                ),
-              ),
-            ],
+          _ManagerActionCell(
+            icon: Icons.groups_rounded,
+            label: 'أداء فريق المبيعات',
+            subtitle: 'متابعة أداء المندوبين وإنجازاتهم',
+            onTap: () => context.push('/team-performance'),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _ManagerActionCell(
+            icon: Icons.flag_rounded,
+            label: 'إدارة أهداف المبيعات',
+            subtitle: 'تحديد الأهداف الشهرية للفريق',
+            onTap: () => context.push('/team-targets'),
           ),
         ],
       ],
@@ -960,7 +956,7 @@ class _SecondaryActionCellState extends State<_SecondaryActionCell> {
         duration: const Duration(milliseconds: 110),
         curve: Curves.easeOutCubic,
         child: Container(
-          height: 80,
+          height: 96,
           decoration: BoxDecoration(
             color: colors.surface,
             border: Border.all(
@@ -985,15 +981,15 @@ class _SecondaryActionCellState extends State<_SecondaryActionCell> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 38,
-                height: 38,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [_gold1, _gold2],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(13),
                   boxShadow: [
                     BoxShadow(
                       color: AppPalette.gold400.withValues(alpha: 0.35),
@@ -1002,14 +998,14 @@ class _SecondaryActionCellState extends State<_SecondaryActionCell> {
                     ),
                   ],
                 ),
-                child: Icon(widget.icon, size: 19, color: Colors.white),
+                child: Icon(widget.icon, size: 20, color: Colors.white),
               ),
-              const SizedBox(height: 7),
+              const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                 child: Text(
                   widget.label,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -1017,12 +1013,125 @@ class _SecondaryActionCellState extends State<_SecondaryActionCell> {
                     fontWeight: FontWeight.w700,
                     color: colors.inkStrong,
                     letterSpacing: -0.1,
+                    height: 1.3,
                   ),
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Manager section divider ────────────────────────────────────────────────────
+
+class _ManagerSectionDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Row(
+      children: [
+        Expanded(child: Divider(height: 1, color: colors.hairline)),
+        const SizedBox(width: AppSpacing.sm),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppPalette.gold400.withValues(alpha: 0.09),
+            borderRadius: BorderRadius.circular(99),
+            border: Border.all(
+              color: AppPalette.gold400.withValues(alpha: 0.25),
+              width: 0.8,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.manage_accounts_rounded,
+                  size: 12, color: AppPalette.gold400),
+              const SizedBox(width: 4),
+              Text(
+                'إدارة الفريق',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: AppPalette.gold400,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(child: Divider(height: 1, color: colors.hairline)),
+      ],
+    );
+  }
+}
+
+// ── Manager action cell (full-width horizontal premium card) ───────────────────
+
+class _ManagerActionCell extends StatelessWidget {
+  const _ManagerActionCell({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return PremiumCard(
+      elevation: AppCardElevation.soft,
+      accentRail: AppTone.gold,
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: AppSpacing.sm + 4),
+      child: Row(
+        children: [
+          IconChip(
+            icon: icon,
+            tone: AppTone.gold,
+            size: IconChipSize.sm,
+            filled: true,
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: colors.inkStrong,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: colors.inkMuted,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Icon(Icons.chevron_right_rounded,
+              size: 18, color: colors.inkMuted.withValues(alpha: 0.6)),
+        ],
       ),
     );
   }
