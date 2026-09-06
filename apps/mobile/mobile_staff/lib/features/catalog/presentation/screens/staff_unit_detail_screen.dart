@@ -11,7 +11,9 @@ import '../../../../common/staff_list_skeleton.dart';
 import '../../domain/entities/staff_project.dart';
 import '../cubit/staff_unit_detail_cubit.dart';
 
-const _navyDeep = Color(0xFF0B1726);
+const _navyDeep  = Color(0xFF0B1726);
+const _navyMid   = Color(0xFF14273F);
+const _navyLight = Color(0xFF243F62);
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Root
@@ -178,9 +180,9 @@ class _DetailPage extends StatelessWidget {
               ),
             ),
 
-            // ── Summary card (identity + price unified) ────────────────────
+            // ── Meta strip (edge-to-edge: type + price + status) ──────────
             SliverToBoxAdapter(
-              child: _SummaryCard(
+              child: _MetaStrip(
                 unit: unit,
                 l10n: l10n,
                 lang: lang,
@@ -415,6 +417,25 @@ class _HeroBackgroundState extends State<_HeroBackground> {
             ),
           ),
 
+        // Gold hairline at the very bottom of the hero
+        const Positioned(
+          bottom: 0, left: 0, right: 0,
+          child: SizedBox(
+            height: 1.5,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    Color(0x66C8A24B),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+
         // Status badge + count pill — top-end
         PositionedDirectional(
           top: kToolbarHeight + 8,
@@ -539,17 +560,71 @@ class _StatusPill extends StatelessWidget {
 class _Placeholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const ColoredBox(
-      color: _navyDeep,
-      child: Center(
-        child: Icon(
-          Icons.home_work_outlined,
-          size: 64,
-          color: Color(0x33FFFFFF),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [_navyLight, _navyMid, _navyDeep],
+              stops: [0.0, 0.45, 1.0],
+            ),
+          ),
         ),
-      ),
+        const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
+        PositionedDirectional(
+          end: 0,
+          top: 0,
+          child: Container(
+            width: 220,
+            height: 220,
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment.topRight,
+                radius: 1.0,
+                colors: [
+                  AppPalette.gold400.withValues(alpha: 0.14),
+                  AppPalette.gold400.withValues(alpha: 0.0),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Center(
+          child: Icon(
+            Icons.apartment_rounded,
+            size: 88,
+            color: Colors.white.withValues(alpha: 0.12),
+          ),
+        ),
+      ],
     );
   }
+}
+
+class _DotTexture extends StatelessWidget {
+  const _DotTexture();
+  @override
+  Widget build(BuildContext context) =>
+      const CustomPaint(painter: _DotPainter(), child: SizedBox.expand());
+}
+
+class _DotPainter extends CustomPainter {
+  const _DotPainter();
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.white.withValues(alpha: 0.04);
+    const step = 20.0;
+    for (var y = 6.0; y < size.height; y += step) {
+      for (var x = 6.0; x < size.width; x += step) {
+        canvas.drawCircle(Offset(x, y), 1.1, paint);
+      }
+    }
+  }
+  @override
+  bool shouldRepaint(_DotPainter _) => false;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -585,10 +660,10 @@ class _CircleBackButton extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Summary card — identity + price unified
+// Meta strip — edge-to-edge: type chip + price + status badge
 // ══════════════════════════════════════════════════════════════════════════════
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({
+class _MetaStrip extends StatelessWidget {
+  const _MetaStrip({
     required this.unit,
     required this.l10n,
     required this.lang,
@@ -601,183 +676,89 @@ class _SummaryCard extends StatelessWidget {
   final AppColorsExt colors;
   final bool available;
 
-  Color get _accent => switch (unit.status) {
-    'AVAILABLE' => colors.success,
-    'RESERVED' => colors.warning,
-    'SOLD' => const Color(0xFFEF4444),
-    _ => colors.inkMuted,
-  };
-
   @override
   Widget build(BuildContext context) {
-    final accent = _accent;
     final hasPrice = unit.price != null && unit.price!.isNotEmpty;
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.lg,
-        0,
-      ),
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.xl),
-        border: Border.all(color: colors.hairline),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
-            blurRadius: 18,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // ── Identity row ─────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.lg,
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Unit code + type (start = right in RTL)
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        unit.code,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: colors.inkMuted,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      if (unit.type != null)
-                        Text(
-                          unit.type!,
-                          style: TextStyle(
-                            fontSize: 30,
-                            fontWeight: FontWeight.w900,
-                            color: colors.inkStrong,
-                            letterSpacing: -0.5,
-                            height: 1.1,
-                          ),
-                        ),
-                      const SizedBox(height: 10),
-                      Container(
-                        width: 36,
-                        height: 2.5,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [AppPalette.gold400, Color(0x00B8941F)],
-                          ),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      ),
-                    ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+        child: Row(
+          children: [
+            // Type chip
+            if (unit.type != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: _navyLight.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppRadii.md),
+                  border: Border.all(color: _navyLight.withValues(alpha: 0.18)),
+                ),
+                child: Text(
+                  unit.type!,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: _navyMid,
                   ),
                 ),
-                const SizedBox(width: AppSpacing.md),
-                // Status badge (end = left in RTL)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.10),
-                    borderRadius: AppRadii.pillAll,
-                    border: Border.all(
-                      color: accent.withValues(alpha: 0.35),
-                      width: 1.2,
+              ),
+              Container(
+                width: 1,
+                height: 28,
+                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                color: colors.hairline,
+              ),
+            ],
+            // Price
+            if (hasPrice)
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      PriceFormatter.formatString(unit.price,
+                          languageCode: lang),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: available ? AppPalette.gold500 : colors.inkMuted,
+                        letterSpacing: -0.5,
+                        height: 1.0,
+                      ),
                     ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: accent,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: accent.withValues(alpha: 0.6),
-                              blurRadius: 6,
-                            ),
-                          ],
-                        ),
+                    Text(
+                      l10n.unitPrice,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: colors.inkMuted,
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        unitStatusLabel(l10n, unit.status),
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: accent,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-
-          // ── Price row ────────────────────────────────────────────────────
-          if (hasPrice) ...[
-            Divider(
-              height: 1,
-              thickness: 0.5,
-              color: colors.hairline,
-              indent: AppSpacing.lg,
-              endIndent: AppSpacing.lg,
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.lg,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    l10n.unitPrice,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: colors.inkMuted,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  Text(
-                    PriceFormatter.formatString(unit.price, languageCode: lang),
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                      color: available ? colors.brandGold : colors.inkMuted,
-                      letterSpacing: -0.5,
-                      height: 1.0,
-                    ),
-                  ),
-                ],
-              ),
+              )
+            else
+              const Spacer(),
+            // Status badge
+            StatusBadge(
+              label: unitStatusLabel(l10n, unit.status),
+              tone: unitStatusTone(unit.status),
             ),
           ],
-        ],
+        ),
       ),
     );
   }
