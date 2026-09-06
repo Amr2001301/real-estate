@@ -128,7 +128,11 @@ class _BrokerLeadsScreenState extends State<BrokerLeadsScreen> {
                   switch (state.status) {
                     case DataStatus.initial:
                     case DataStatus.loading:
-                      return const Center(child: CircularProgressIndicator());
+                      return _LeadsSkeleton(
+                        bottomPad: bottomPad,
+                        lang: lang,
+                        l10n: l10n,
+                      );
                     case DataStatus.failure:
                       return ErrorState(
                         failure: state.failure,
@@ -1052,4 +1056,115 @@ class _DotPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DotPainter _) => false;
+}
+
+// ── Leads loading skeleton ────────────────────────────────────────────────────
+
+class _LeadsSkeleton extends StatelessWidget {
+  const _LeadsSkeleton({
+    required this.bottomPad,
+    required this.lang,
+    required this.l10n,
+  });
+  final double bottomPad;
+  final String lang;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return AppSkeletonizer(
+      enabled: true,
+      child: CustomScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        slivers: [
+          // ── Fake KPI bar ────────────────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xs),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  borderRadius: AppRadii.card,
+                  border: Border.all(color: colors.hairline, width: 0.8),
+                ),
+                child: IntrinsicHeight(
+                  child: Row(children: [
+                    Expanded(child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Text('٨', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.brandNavy)),
+                        const SizedBox(height: 3),
+                        Text(lang == 'ar' ? 'الإجمالي' : 'Total', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                      ]),
+                    )),
+                    VerticalDivider(width: 1, thickness: 0.8, color: colors.hairline),
+                    Expanded(child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Text('٥', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.success)),
+                        const SizedBox(height: 3),
+                        Text(lang == 'ar' ? 'معتمد' : 'Approved', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                      ]),
+                    )),
+                    VerticalDivider(width: 1, thickness: 0.8, color: colors.hairline),
+                    Expanded(child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Text('٣', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.warning)),
+                        const SizedBox(height: 3),
+                        Text(lang == 'ar' ? 'قيد المراجعة' : 'Pending', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                      ]),
+                    )),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+          // ── Fake lead cards ──────────────────────────────────────────────
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.md, AppSpacing.sm, AppSpacing.md,
+              AppSpacing.xl + bottomPad,
+            ),
+            sliver: SliverList.separated(
+              itemCount: 6,
+              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+              itemBuilder: (context, index) => Container(
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  borderRadius: AppRadii.card,
+                  border: Border.all(color: colors.hairline.withValues(alpha: 0.4)),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  Container(height: 3, color: colors.warning.withValues(alpha: 0.5)),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm),
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                      Container(
+                        width: 48, height: 48,
+                        decoration: const BoxDecoration(color: _navyLight, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('محمد أحمد العمري', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                        const SizedBox(height: 4),
+                        Text('+٩٦٦ ٥٠ ١٢٣ ٤٥٦٧', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                      ])),
+                      StatusBadge(label: 'قيد المراجعة', tone: BadgeTone.warning),
+                      const SizedBox(width: AppSpacing.xs),
+                      Icon(Icons.arrow_back_ios_new_rounded, size: 13, color: colors.inkMuted),
+                    ]),
+                  ),
+                ]),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

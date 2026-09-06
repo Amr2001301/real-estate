@@ -50,9 +50,7 @@ class _State extends State<BrokerReservationDetailScreen> {
                     _ReservationHeader(
                       number: widget.fallback?.reservationNumber,
                     ),
-                    const Expanded(
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
+                    Expanded(child: _DetailSkeleton()),
                   ],
                 );
               case DataStatus.failure:
@@ -511,4 +509,96 @@ class _DotPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DotPainter _) => false;
+}
+
+// ── Reservation detail loading skeleton ───────────────────────────────────────
+
+class _DetailSkeleton extends StatelessWidget {
+  const _DetailSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+
+    return AppSkeletonizer(
+      enabled: true,
+      child: ListView(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.lg, AppSpacing.lg, AppSpacing.lg,
+          AppSpacing.xl + bottomPad,
+        ),
+        children: [
+          // ── Fake summary card (unit / lead / amount / expiry) ─────────────
+          Container(
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: colors.hairline.withValues(alpha: 0.4)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                for (int i = 0; i < 4; i++) ...[
+                  if (i > 0) Divider(height: AppSpacing.lg, color: colors.hairline),
+                  Row(children: [
+                    Icon(
+                      [
+                        Icons.home_work_rounded,
+                        Icons.person_rounded,
+                        Icons.payments_rounded,
+                        Icons.schedule_rounded,
+                      ][i],
+                      size: 18, color: colors.inkMuted,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      ['الوحدة', 'العميل', 'مبلغ الحجز', 'تاريخ الانتهاء'][i],
+                      style: TextStyle(fontSize: 13, color: colors.inkMuted),
+                    ),
+                    const Spacer(),
+                    Text(
+                      ['A-١٠٢ · كمبوند الرياض', 'محمد أحمد العمري', '١٠٠٬٠٠٠ ج.م', '١٥/٠٦/٢٠٢٦'][i],
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colors.inkStrong),
+                    ),
+                  ]),
+                ],
+              ]),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // ── Fake deposit / payment card ───────────────────────────────────
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: colors.hairline.withValues(alpha: 0.4)),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('الدفعة', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+              const SizedBox(height: AppSpacing.md),
+              Row(children: [
+                Icon(Icons.receipt_long_rounded, size: 18, color: colors.inkMuted),
+                const SizedBox(width: AppSpacing.sm),
+                Text('حالة الدفعة', style: TextStyle(fontSize: 13, color: colors.inkMuted)),
+                const Spacer(),
+                StatusBadge(label: 'قيد المراجعة', tone: BadgeTone.warning),
+              ]),
+              Divider(height: AppSpacing.lg, color: colors.hairline),
+              Row(children: [
+                Icon(Icons.attach_money_rounded, size: 18, color: colors.inkMuted),
+                const SizedBox(width: AppSpacing.sm),
+                Text('المبلغ', style: TextStyle(fontSize: 13, color: colors.inkMuted)),
+                const Spacer(),
+                Text('١٠٠٬٠٠٠ ج.م',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.brandGold)),
+              ]),
+            ]),
+          ),
+        ],
+      ),
+    );
+  }
 }

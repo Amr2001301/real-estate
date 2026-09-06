@@ -135,7 +135,11 @@ class _BrokerReservationsScreenState extends State<BrokerReservationsScreen> {
                   switch (state.status) {
                     case DataStatus.initial:
                     case DataStatus.loading:
-                      return const Center(child: CircularProgressIndicator());
+                      return _ReservationsSkeleton(
+                        bottomPad: bottomPad,
+                        lang: lang,
+                        l10n: l10n,
+                      );
                     case DataStatus.failure:
                       return ErrorState(
                         failure: state.failure,
@@ -1030,4 +1034,117 @@ class _DotPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DotPainter _) => false;
+}
+
+// ── Reservations loading skeleton ─────────────────────────────────────────────
+
+class _ReservationsSkeleton extends StatelessWidget {
+  const _ReservationsSkeleton({
+    required this.bottomPad,
+    required this.lang,
+    required this.l10n,
+  });
+  final double bottomPad;
+  final String lang;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return AppSkeletonizer(
+      enabled: true,
+      child: CustomScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        slivers: [
+          // ── Fake KPI bar ────────────────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xs),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  borderRadius: AppRadii.card,
+                  border: Border.all(color: colors.hairline, width: 0.8),
+                ),
+                child: IntrinsicHeight(
+                  child: Row(children: [
+                    Expanded(child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Text('٦', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.brandNavy)),
+                        const SizedBox(height: 3),
+                        Text(lang == 'ar' ? 'الإجمالي' : 'Total', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                      ]),
+                    )),
+                    VerticalDivider(width: 1, thickness: 0.8, color: colors.hairline),
+                    Expanded(child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Text('٣', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.info)),
+                        const SizedBox(height: 3),
+                        Text(lang == 'ar' ? 'موافق عليه' : 'Approved', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                      ]),
+                    )),
+                    VerticalDivider(width: 1, thickness: 0.8, color: colors.hairline),
+                    Expanded(child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Text('٢', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.success)),
+                        const SizedBox(height: 3),
+                        Text(lang == 'ar' ? 'محوّل' : 'Converted', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                      ]),
+                    )),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+          // ── Fake reservation cards ───────────────────────────────────────
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.md, AppSpacing.sm, AppSpacing.md,
+              AppSpacing.xl + bottomPad,
+            ),
+            sliver: SliverList.builder(
+              itemCount: 6,
+              itemBuilder: (context, index) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: colors.surface,
+                    borderRadius: AppRadii.card,
+                    border: Border.all(color: colors.hairline.withValues(alpha: 0.4)),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    Container(height: 3, color: colors.warning.withValues(alpha: 0.5)),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm),
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                        Container(
+                          width: 48, height: 48,
+                          decoration: const BoxDecoration(color: _navyLight, shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text('محمد أحمد العمري', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                          const SizedBox(height: 4),
+                          Text('RES-٢٠٢٦-٠٠١٢ · A-١٠٢', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                        ])),
+                        StatusBadge(label: 'قيد المراجعة', tone: BadgeTone.warning),
+                        const SizedBox(width: AppSpacing.xs),
+                        Icon(Icons.arrow_back_ios_new_rounded, size: 13, color: colors.inkMuted),
+                      ]),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

@@ -69,7 +69,9 @@ class _State extends State<BrokerCommissionsScreen> {
                 builder: (context, state) {
                   if (state.status == DataStatus.initial ||
                       state.status == DataStatus.loading) {
-                    return const Center(child: CircularProgressIndicator());
+                    return _CommissionsSkeleton(
+                      bottomPad: MediaQuery.of(context).padding.bottom,
+                    );
                   }
                   if (state.status == DataStatus.failure) {
                     return ErrorState(
@@ -821,4 +823,121 @@ class _DotPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DotPainter _) => false;
+}
+
+// ── Commissions loading skeleton ──────────────────────────────────────────────
+
+class _CommissionsSkeleton extends StatelessWidget {
+  const _CommissionsSkeleton({required this.bottomPad});
+  final double bottomPad;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return AppSkeletonizer(
+      enabled: true,
+      child: ListView(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.lg, AppSpacing.lg, AppSpacing.lg,
+          AppSpacing.xl + bottomPad,
+        ),
+        children: [
+          // ── Fake overview KPI card ────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1C3352),
+              borderRadius: AppRadii.card,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Text('العمولات',
+                      style: const TextStyle(color: Colors.white, fontSize: 13)),
+                  const Spacer(),
+                  Container(
+                    width: 80, height: 22,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(AppRadii.pill),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: AppSpacing.sm),
+                Container(height: 1, color: Colors.white24),
+                const SizedBox(height: AppSpacing.sm),
+                IntrinsicHeight(
+                  child: Row(
+                    children: [
+                      Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        const Icon(Icons.check_circle_rounded, size: 16, color: Colors.white54),
+                        const SizedBox(height: 5),
+                        Text('١٢٣٬٤٥٦ ج.م', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 5),
+                        Text('معتمد', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                      ])),
+                      Container(width: 1, color: Colors.white24),
+                      Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        const Icon(Icons.schedule_rounded, size: 16, color: Colors.white54),
+                        const SizedBox(height: 5),
+                        Text('٦٧٬٨٩٠ ج.م', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 5),
+                        Text('قيد المراجعة', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                      ])),
+                      Container(width: 1, color: Colors.white24),
+                      Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        const Icon(Icons.payments_rounded, size: 16, color: Colors.white54),
+                        const SizedBox(height: 5),
+                        Text('٥', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 5),
+                        Text('الإجمالي', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                      ])),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          // ── Fake commission tiles ─────────────────────────────────────────
+          for (int i = 0; i < 5; i++) ...[
+            Container(
+              decoration: BoxDecoration(
+                color: colors.surface,
+                borderRadius: AppRadii.card,
+                border: Border.all(color: colors.hairline.withValues(alpha: 0.4)),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Container(height: 3, color: colors.hairline),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                  child: Row(children: [
+                    Container(
+                      width: 44, height: 44,
+                      decoration: const BoxDecoration(
+                        color: _navyLight, shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 13),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('١٢٣٬٤٥٦ ج.م', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                      const SizedBox(height: 4),
+                      Text('كمبوند الرياض الجديدة', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                      const SizedBox(height: 3),
+                      Text('١٥/٠٦/٢٠٢٦', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                    ])),
+                    const SizedBox(width: 8),
+                    StatusBadge(label: 'قيد المراجعة', tone: BadgeTone.warning),
+                  ]),
+                ),
+              ]),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+        ],
+      ),
+    );
+  }
 }

@@ -50,9 +50,7 @@ class _BrokerLeadDetailScreenState extends State<BrokerLeadDetailScreen> {
                 return Column(
                   children: [
                     _LeadHeader(name: widget.fallback?.fullName),
-                    const Expanded(
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
+                    Expanded(child: _DetailSkeleton()),
                   ],
                 );
               case DataStatus.failure:
@@ -616,4 +614,115 @@ class _DotPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DotPainter _) => false;
+}
+
+// ── Lead detail loading skeleton ──────────────────────────────────────────────
+
+class _DetailSkeleton extends StatelessWidget {
+  const _DetailSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+
+    return AppSkeletonizer(
+      enabled: true,
+      child: ListView(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.lg, AppSpacing.lg, AppSpacing.lg,
+          AppSpacing.xl + bottomPad,
+        ),
+        children: [
+          // ── Fake contact card ─────────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: colors.hairline.withValues(alpha: 0.4)),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Container(
+                  width: 46, height: 46,
+                  decoration: BoxDecoration(
+                    color: _navyLight,
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('محمد أحمد العمري',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                  const SizedBox(height: 4),
+                  StatusBadge(label: 'قيد المراجعة', tone: BadgeTone.warning),
+                ])),
+              ]),
+              const SizedBox(height: AppSpacing.md),
+              Divider(height: 1, color: colors.hairline),
+              const SizedBox(height: AppSpacing.md),
+              Row(children: [
+                Container(width: 36, height: 36,
+                    decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(10))),
+                const SizedBox(width: 10),
+                Container(width: 36, height: 36,
+                    decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(10))),
+              ]),
+            ]),
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // ── Fake info rows card ───────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: colors.hairline.withValues(alpha: 0.4)),
+            ),
+            child: Column(children: [
+              for (int i = 0; i < 4; i++) ...[
+                if (i > 0) Divider(height: AppSpacing.lg, color: colors.hairline),
+                Row(children: [
+                  Icon(Icons.info_outline_rounded, size: 18, color: colors.inkMuted),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text('التسمية', style: TextStyle(fontSize: 13, color: colors.inkMuted)),
+                  const Spacer(),
+                  Text('القيمة هنا', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colors.inkStrong)),
+                ]),
+              ],
+            ]),
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // ── Fake timeline card ────────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: colors.hairline.withValues(alpha: 0.4)),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('سجل النشاط', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+              const SizedBox(height: AppSpacing.md),
+              for (int i = 0; i < 3; i++) ...[
+                if (i > 0) const SizedBox(height: AppSpacing.sm),
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Container(width: 8, height: 8, margin: const EdgeInsets.only(top: 4),
+                      decoration: BoxDecoration(color: colors.brandGold, shape: BoxShape.circle)),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('تم تسجيل العميل المحتمل', style: TextStyle(fontSize: 13, color: colors.inkStrong)),
+                    Text('١٥/٠٦/٢٠٢٦', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                  ])),
+                ]),
+              ],
+            ]),
+          ),
+        ],
+      ),
+    );
+  }
 }
