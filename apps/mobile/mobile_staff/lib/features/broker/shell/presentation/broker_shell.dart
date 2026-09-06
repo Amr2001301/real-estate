@@ -14,17 +14,16 @@ import '../../leads/domain/repositories/broker_leads_repository.dart';
 import '../../leads/domain/usecases/broker_lead_use_cases.dart';
 import '../../leads/presentation/cubit/broker_leads_cubit.dart';
 import '../../leads/presentation/screens/broker_leads_screen.dart';
-import '../../profile/presentation/cubit/broker_profile_cubit.dart';
 import '../../profile/presentation/screens/broker_profile_screen.dart';
 import '../../reservations/domain/repositories/broker_reservations_repository.dart';
 import '../../reservations/domain/usecases/broker_reservation_use_cases.dart';
 import '../../reservations/presentation/cubit/broker_reservations_cubit.dart';
 import '../../reservations/presentation/screens/broker_reservations_screen.dart';
 
-/// The authenticated Broker workspace: a 5-tab bottom-nav shell using the
-/// shared premium [AppBottomNav] from core. The [BrokerProfileCubit] is hosted
-/// here so both Dashboard and Profile can read the broker's `canViewCommissions`
-/// flag. Commissions are reached from the Dashboard card / Profile entry.
+/// The authenticated Broker workspace: a 5-tab bottom-nav shell.
+///
+/// [BrokerProjectsCubit] is hoisted here (not scoped to the projects tab)
+/// so both Dashboard and Projects screens can read the same live data.
 class BrokerShell extends StatefulWidget {
   const BrokerShell({super.key});
 
@@ -35,6 +34,23 @@ class BrokerShell extends StatefulWidget {
 class _BrokerShellState extends State<BrokerShell> {
   int _index = 0;
 
+  // Hoisted at shell level so the Dashboard tab can read project list data.
+  late final BrokerProjectsCubit _projectsCubit;
+
+  @override
+  void initState() {
+    super.initState();
+    _projectsCubit = BrokerProjectsCubit(
+      GetBrokerProjects(context.read<BrokerCatalogRepository>()),
+    )..load();
+  }
+
+  @override
+  void dispose() {
+    _projectsCubit.close();
+    super.dispose();
+  }
+
   void _switchTab(int index) => setState(() => _index = index);
 
   late final List<Widget> _tabs = [
@@ -43,11 +59,7 @@ class _BrokerShellState extends State<BrokerShell> {
           GetBrokerDashboard(ctx.read<BrokerDashboardRepository>())),
       child: BrokerDashboardScreen(onSwitchTab: _switchTab),
     ),
-    BlocProvider(
-      create: (ctx) => BrokerProjectsCubit(
-          GetBrokerProjects(ctx.read<BrokerCatalogRepository>())),
-      child: const BrokerProjectsScreen(),
-    ),
+    const BrokerProjectsScreen(),
     BlocProvider(
       create: (ctx) =>
           BrokerLeadsCubit(GetBrokerLeads(ctx.read<BrokerLeadsRepository>())),
@@ -64,38 +76,41 @@ class _BrokerShellState extends State<BrokerShell> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Scaffold(
-      body: IndexedStack(index: _index, children: _tabs),
-      bottomNavigationBar: AppBottomNav(
-        currentIndex: _index,
-        onSelect: (i) => setState(() => _index = i),
-        items: [
-          AppBottomNavItem(
-            icon: Icons.dashboard_outlined,
-            activeIcon: Icons.dashboard_rounded,
-            label: l10n.navDashboard,
-          ),
-          AppBottomNavItem(
-            icon: Icons.apartment_outlined,
-            activeIcon: Icons.apartment_rounded,
-            label: l10n.navProjects,
-          ),
-          AppBottomNavItem(
-            icon: Icons.people_alt_outlined,
-            activeIcon: Icons.people_alt_rounded,
-            label: l10n.navLeads,
-          ),
-          AppBottomNavItem(
-            icon: Icons.bookmark_border_rounded,
-            activeIcon: Icons.bookmark_rounded,
-            label: l10n.navReservations,
-          ),
-          AppBottomNavItem(
-            icon: Icons.person_outline_rounded,
-            activeIcon: Icons.person_rounded,
-            label: l10n.navProfile,
-          ),
-        ],
+    return BlocProvider.value(
+      value: _projectsCubit,
+      child: Scaffold(
+        body: IndexedStack(index: _index, children: _tabs),
+        bottomNavigationBar: AppBottomNav(
+          currentIndex: _index,
+          onSelect: (i) => setState(() => _index = i),
+          items: [
+            AppBottomNavItem(
+              icon: Icons.dashboard_outlined,
+              activeIcon: Icons.dashboard_rounded,
+              label: l10n.navDashboard,
+            ),
+            AppBottomNavItem(
+              icon: Icons.apartment_outlined,
+              activeIcon: Icons.apartment_rounded,
+              label: l10n.navProjects,
+            ),
+            AppBottomNavItem(
+              icon: Icons.people_alt_outlined,
+              activeIcon: Icons.people_alt_rounded,
+              label: l10n.navLeads,
+            ),
+            AppBottomNavItem(
+              icon: Icons.bookmark_border_rounded,
+              activeIcon: Icons.bookmark_rounded,
+              label: l10n.navReservations,
+            ),
+            AppBottomNavItem(
+              icon: Icons.person_outline_rounded,
+              activeIcon: Icons.person_rounded,
+              label: l10n.navProfile,
+            ),
+          ],
+        ),
       ),
     );
   }

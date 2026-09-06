@@ -11,6 +11,20 @@ extension BrokerProjectDtoMapper on BrokerProjectDto {
         city: city,
         coverImageUrl: coverImageUrl,
         commissionPct: commissionPct,
+        description: (descriptionAr != null || descriptionEn != null)
+            ? Translatable(ar: descriptionAr ?? '', en: descriptionEn ?? '')
+            : null,
+        lat: lat,
+        lng: lng,
+        services: services
+            ?.map((s) {
+              final ar = s['ar'] as String?;
+              final en = s['en'] as String?;
+              if (ar == null && en == null) return null;
+              return Translatable(ar: ar ?? '', en: en ?? '');
+            })
+            .whereType<Translatable>()
+            .toList(),
       );
 }
 

@@ -8,12 +8,16 @@ class BrokerRecentLead extends Equatable {
     required this.stage,
     required this.approvalStatus,
     this.projectName,
+    this.phone,
+    this.createdAt,
   });
   final String id;
   final String fullName;
   final String stage;
   final String approvalStatus;
   final String? projectName;
+  final String? phone;
+  final String? createdAt;
 
   @override
   List<Object?> get props => [id, fullName, stage, approvalStatus];
@@ -26,11 +30,13 @@ class BrokerRecentReservation extends Equatable {
     required this.status,
     this.reservationNumber,
     this.unitCode,
+    this.createdAt,
   });
   final String id;
   final String status;
   final String? reservationNumber;
   final String? unitCode;
+  final String? createdAt;
 
   @override
   List<Object?> get props => [id, status, reservationNumber, unitCode];
@@ -44,6 +50,8 @@ class BrokerDashboard extends Equatable {
     required this.leadsApproved,
     required this.reservationsTotal,
     required this.reservationsApproved,
+    required this.contractsSigned,
+    required this.salesGross,
     required this.commissionsPending,
     required this.commissionsGross,
     required this.recentLeads,
@@ -54,6 +62,8 @@ class BrokerDashboard extends Equatable {
   final int leadsApproved;
   final int reservationsTotal;
   final int reservationsApproved;
+  final int contractsSigned;
+  final double salesGross;
   final int commissionsPending;
   final double commissionsGross;
   final List<BrokerRecentLead> recentLeads;
@@ -65,6 +75,8 @@ class BrokerDashboard extends Equatable {
         leadsApproved,
         reservationsTotal,
         reservationsApproved,
+        contractsSigned,
+        salesGross,
         commissionsPending,
         commissionsGross,
         recentLeads,

@@ -10,6 +10,10 @@ class BrokerProject extends Equatable {
     this.city,
     this.coverImageUrl,
     this.commissionPct,
+    this.description,
+    this.lat,
+    this.lng,
+    this.services,
   });
 
   final String id;
@@ -18,6 +22,10 @@ class BrokerProject extends Equatable {
   final String? city;
   final String? coverImageUrl;
   final String? commissionPct;
+  final Translatable? description;
+  final double? lat;
+  final double? lng;
+  final List<Translatable>? services;
 
   @override
   List<Object?> get props => [id, name, status, city, commissionPct];

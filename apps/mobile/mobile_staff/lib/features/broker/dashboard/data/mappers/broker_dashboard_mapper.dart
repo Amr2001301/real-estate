@@ -7,6 +7,8 @@ extension BrokerDashboardDtoMapper on BrokerDashboardDto {
         leadsApproved: leadsApproved,
         reservationsTotal: reservationsTotal,
         reservationsApproved: reservationsApproved,
+        contractsSigned: contractsSigned,
+        salesGross: salesGross,
         commissionsPending: commissionsPending,
         commissionsGross: commissionsGross,
         recentLeads: [
@@ -15,8 +17,11 @@ extension BrokerDashboardDtoMapper on BrokerDashboardDto {
               id: l['id'] as String? ?? '',
               fullName: l['fullName'] as String? ?? '',
               stage: l['stage'] as String? ?? 'NEW',
-              approvalStatus: l['brokerApprovalStatus'] as String? ?? 'PENDING',
+              approvalStatus:
+                  l['brokerApprovalStatus'] as String? ?? 'PENDING',
               projectName: _projectName(l['projectInterest']),
+              phone: l['phone'] as String?,
+              createdAt: l['createdAt'] as String?,
             ),
         ],
         recentReservations: [
@@ -25,13 +30,17 @@ extension BrokerDashboardDtoMapper on BrokerDashboardDto {
               id: r['id'] as String? ?? '',
               status: r['status'] as String? ?? 'PENDING',
               reservationNumber: r['reservationNumber'] as String?,
-              unitCode: (r['unit'] as Map<String, dynamic>?)?['code'] as String?,
+              unitCode:
+                  (r['unit'] as Map<String, dynamic>?)?['code'] as String?,
+              createdAt: r['createdAt'] as String?,
             ),
         ],
       );
 
   static String? _projectName(Object? project) {
     final name = (project as Map<String, dynamic>?)?['name'];
-    return name is Map ? ((name['ar'] as String?) ?? (name['en'] as String?)) : name as String?;
+    return name is Map
+        ? ((name['ar'] as String?) ?? (name['en'] as String?))
+        : name as String?;
   }
 }

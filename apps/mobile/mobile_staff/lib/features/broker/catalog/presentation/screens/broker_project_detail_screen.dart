@@ -2,14 +2,16 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../../../common/catalog_status_label.dart';
 import '../../domain/entities/broker_project.dart';
 import '../cubit/broker_units_cubit.dart';
 
 const _navyDeep = Color(0xFF0B1726);
-const _navyCard = Color(0xFF1A3352);
+const _navyMid = Color(0xFF14273F);
 const _navyLight = Color(0xFF243F62);
 
 class BrokerProjectDetailScreen extends StatefulWidget {
@@ -34,28 +36,95 @@ class _BrokerProjectDetailScreenState
     final l10n = context.l10n;
     final lang = Localizations.localeOf(context).languageCode;
     final p = widget.project;
+    final name = p.name.resolve(lang);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light
           .copyWith(statusBarColor: Colors.transparent),
       child: Scaffold(
         backgroundColor: context.appColors.canvas,
-        body: Column(
-          children: [
-            _ProjectDetailHeader(project: p, lang: lang, l10n: l10n),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () => context.read<BrokerUnitsCubit>().load(),
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-                  children: [
-                    _AddLeadCard(projectId: p.id, l10n: l10n),
-                    const SizedBox(height: 16),
-                    _SectionTitle(label: l10n.navUnits),
-                    const SizedBox(height: 12),
-                    _Units(projectId: p.id),
-                  ],
+        body: CustomScrollView(
+          slivers: [
+            // ── Collapsing hero ─────────────────────────────────────────────
+            SliverAppBar(
+              expandedHeight: 300,
+              pinned: true,
+              stretch: true,
+              backgroundColor: _navyDeep,
+              surfaceTintColor: Colors.transparent,
+              systemOverlayStyle: SystemUiOverlayStyle.light,
+              automaticallyImplyLeading: false,
+              leading: Padding(
+                padding: const EdgeInsets.all(8),
+                child: _CircleBackButton(onTap: () => context.pop()),
+              ),
+              flexibleSpace: FlexibleSpaceBar(
+                collapseMode: CollapseMode.parallax,
+                stretchModes: const [StretchMode.zoomBackground],
+                titlePadding: const EdgeInsetsDirectional.fromSTEB(
+                    AppSpacing.xl, 0, AppSpacing.lg, AppSpacing.lg),
+                title: Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: -0.3,
+                    shadows: [
+                      Shadow(color: Colors.black54, blurRadius: 10),
+                    ],
+                  ),
                 ),
+                background:
+                    _HeroBackground(project: p, l10n: l10n, lang: lang),
+              ),
+            ),
+
+            // ── Body ────────────────────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _MetaStrip(project: p, l10n: l10n),
+
+                  // Add lead CTA
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
+                    child: _AddLeadCard(projectId: p.id, l10n: l10n),
+                  ),
+
+                  // About
+                  if (p.description != null) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    _AboutSection(project: p, lang: lang, l10n: l10n),
+                  ],
+
+                  // Services / advantages
+                  if (p.services != null && p.services!.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    _ServicesSection(project: p, lang: lang, l10n: l10n),
+                  ],
+
+                  // Map
+                  if (p.lat != null && p.lng != null) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    _MapSection(project: p, lang: lang),
+                  ],
+
+                  // Units
+                  const SizedBox(height: AppSpacing.lg),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md),
+                    child: AppSectionHeader(title: l10n.navUnits),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _Units(projectId: p.id),
+                  const SizedBox(height: 48),
+                ],
               ),
             ),
           ],
@@ -65,178 +134,474 @@ class _BrokerProjectDetailScreenState
   }
 }
 
-// ── Project detail header ─────────────────────────────────────────────────────
+// ── Hero background ───────────────────────────────────────────────────────────
 
-class _ProjectDetailHeader extends StatelessWidget {
-  const _ProjectDetailHeader(
+class _HeroBackground extends StatelessWidget {
+  const _HeroBackground({
+    required this.project,
+    required this.l10n,
+    required this.lang,
+  });
+  final BrokerProject project;
+  final AppLocalizations l10n;
+  final String lang;
+
+  @override
+  Widget build(BuildContext context) {
+    final topPad = MediaQuery.paddingOf(context).top;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        AppNetworkImage(url: project.coverImageUrl),
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0x88000000),
+                Color(0x22000000),
+                Color(0xCC000000),
+                Color(0xF2050E18),
+              ],
+              stops: [0.0, 0.30, 0.70, 1.0],
+            ),
+          ),
+        ),
+        const Positioned(
+          bottom: 0, left: 0, right: 0,
+          child: SizedBox(
+            height: 1.5,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    Color(0x66C8A24B),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        PositionedDirectional(
+          top: topPad + 10,
+          end: AppSpacing.md,
+          child: StatusBadge(
+            label: projectStatusLabel(l10n, project.status),
+            tone: projectStatusTone(project.status),
+            variant: BadgeVariant.solid,
+          ),
+        ),
+        if (project.commissionPct != null)
+          PositionedDirectional(
+            top: topPad + 10,
+            start: 56,
+            child: _CommissionPill(pct: project.commissionPct!, lang: lang),
+          ),
+        if (project.city != null)
+          PositionedDirectional(
+            bottom: AppSpacing.xl + 36,
+            start: AppSpacing.lg,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: AppPalette.gold400,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppPalette.gold400.withValues(alpha: 0.6),
+                        blurRadius: 6,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  project.city!.toUpperCase(),
+                  style: const TextStyle(
+                    color: AppPalette.gold300,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.6,
+                    shadows: [
+                      Shadow(color: Color(0x88000000), blurRadius: 6),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _CommissionPill extends StatelessWidget {
+  const _CommissionPill({required this.pct, required this.lang});
+  final String pct;
+  final String lang;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFAA8528), Color(0xFFC8A24B)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        boxShadow: [
+          BoxShadow(
+            color: AppPalette.gold400.withValues(alpha: 0.40),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        lang == 'ar' ? 'عمولة $pct%' : '$pct% comm.',
+        style: const TextStyle(
+          color: Color(0xFF0B1726),
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Circle back button ────────────────────────────────────────────────────────
+
+class _CircleBackButton extends StatelessWidget {
+  const _CircleBackButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.35),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+        ),
+        child: const Icon(Icons.arrow_back_ios_new_rounded,
+            color: Colors.white, size: 15),
+      ),
+    );
+  }
+}
+
+// ── Meta strip ────────────────────────────────────────────────────────────────
+
+class _MetaStrip extends StatelessWidget {
+  const _MetaStrip({required this.project, required this.l10n});
+  final BrokerProject project;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+        child: Row(
+          children: [
+            if (project.commissionPct != null) ...[
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${project.commissionPct}%',
+                    style: const TextStyle(
+                      color: AppPalette.gold500,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      height: 1.0,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    l10n.brokerCommissionPct,
+                    style: TextStyle(
+                        color: colors.inkMuted,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+              Container(
+                width: 1,
+                height: 32,
+                margin:
+                    const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                color: colors.hairline,
+              ),
+            ],
+            if (project.city != null) ...[
+              Icon(Icons.location_on_rounded,
+                  size: 14, color: colors.inkMuted),
+              const SizedBox(width: 4),
+              Text(
+                project.city!,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: colors.inkStrong,
+                ),
+              ),
+            ],
+            const Spacer(),
+            StatusBadge(
+              label: projectStatusLabel(l10n, project.status),
+              tone: projectStatusTone(project.status),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Add lead CTA ──────────────────────────────────────────────────────────────
+
+class _AddLeadCard extends StatefulWidget {
+  const _AddLeadCard({required this.projectId, required this.l10n});
+  final String projectId;
+  final AppLocalizations l10n;
+
+  @override
+  State<_AddLeadCard> createState() => _AddLeadCardState();
+}
+
+class _AddLeadCardState extends State<_AddLeadCard> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: () => context.push('/broker/leads/new',
+          extra: {'projectId': widget.projectId}),
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFAA8528), Color(0xFFC8A24B)],
+              begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
+            ),
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            boxShadow: [
+              BoxShadow(
+                color: AppPalette.gold400.withValues(alpha: 0.35),
+                blurRadius: 16,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.25)),
+                ),
+                child: const Icon(Icons.person_add_alt_1_rounded,
+                    color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.l10n.brokerLeadNew,
+                      style: const TextStyle(
+                        color: Color(0xFF0B1726),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'إضافة عميل محتمل لهذا المشروع',
+                      style: TextStyle(
+                        color: const Color(0xFF0B1726)
+                            .withValues(alpha: 0.55),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.add_circle_rounded,
+                color: const Color(0xFF0B1726).withValues(alpha: 0.45),
+                size: 26,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── About section ─────────────────────────────────────────────────────────────
+
+class _AboutSection extends StatefulWidget {
+  const _AboutSection(
       {required this.project, required this.lang, required this.l10n});
   final BrokerProject project;
   final String lang;
   final AppLocalizations l10n;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final topInset = MediaQuery.paddingOf(context).top;
-    final name = project.name.resolve(lang);
+  State<_AboutSection> createState() => _AboutSectionState();
+}
 
-    return Container(
-      width: double.infinity,
-      clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: [_navyLight, _navyCard, _navyDeep],
-          stops: [0.0, 0.45, 1.0],
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(28),
-          bottomRight: Radius.circular(28),
-        ),
-        boxShadow: [
-          BoxShadow(
-              color: Color(0x35000000), blurRadius: 22, offset: Offset(0, 8)),
-        ],
-      ),
-      child: Stack(
+class _AboutSectionState extends State<_AboutSection> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    final text =
+        widget.project.description!.resolve(widget.lang).trim();
+    if (text.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
-          PositionedDirectional(
-            end: 0,
-            top: 0,
-            child: Container(
-              width: 160,
-              height: 120,
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment.topRight,
-                  radius: 1.0,
-                  colors: [
-                    AppPalette.gold400.withValues(alpha: 0.10),
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                  ],
+          AppSectionHeader(title: 'عن المشروع'),
+          const SizedBox(height: AppSpacing.sm),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: AppRadii.card,
+              border: Border.all(
+                  color: colors.hairline.withValues(alpha: 0.5)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
-              ),
+              ],
             ),
-          ),
-          Positioned(
-            bottom: 0,
-            left: 48,
-            right: 48,
-            child: Container(
-              height: 1,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                    AppPalette.gold400.withValues(alpha: 0.5),
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(AppSpacing.lg,
-                topInset + AppSpacing.md, AppSpacing.lg, AppSpacing.xl),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                GestureDetector(
-                  onTap: () => context.pop(),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.2)),
-                    ),
-                    child: const Icon(Icons.arrow_back_ios_new_rounded,
-                        color: Colors.white, size: 16),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        name.isNotEmpty ? name : l10n.navProjects,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          height: 1.1,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 4,
-                        children: [
-                          StatusBadge(
-                            label: projectStatusLabel(l10n, project.status),
-                            tone: projectStatusTone(project.status),
+                // Gold accent dot + "عن المشروع" label
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: AppPalette.gold400,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                AppPalette.gold400.withValues(alpha: 0.5),
+                            blurRadius: 6,
                           ),
-                          if (project.city != null)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.location_on_rounded,
-                                      size: 11,
-                                      color:
-                                          Colors.white.withValues(alpha: 0.7)),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    project.city!,
-                                    style: TextStyle(
-                                      color:
-                                          Colors.white.withValues(alpha: 0.7),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          if (project.commissionPct != null)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppPalette.gold400
-                                    .withValues(alpha: 0.18),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                    color: AppPalette.gold400
-                                        .withValues(alpha: 0.4)),
-                              ),
-                              child: Text(
-                                '${project.commissionPct}%',
-                                style: const TextStyle(
-                                  color: AppPalette.gold300,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'التفاصيل',
+                      style: TextStyle(
+                        color: AppPalette.gold500,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 10),
+                AnimatedCrossFade(
+                  firstChild: Text(
+                    text,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.ink,
+                      height: 1.7,
+                    ),
+                  ),
+                  secondChild: Text(
+                    text,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.ink,
+                      height: 1.7,
+                    ),
+                  ),
+                  crossFadeState: _expanded
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
+                  duration: const Duration(milliseconds: 250),
+                ),
+                if (text.length > 120) ...[
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () =>
+                        setState(() => _expanded = !_expanded),
+                    child: Text(
+                      _expanded ? 'عرض أقل' : 'عرض المزيد',
+                      style: const TextStyle(
+                        color: AppPalette.gold500,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -246,120 +611,272 @@ class _ProjectDetailHeader extends StatelessWidget {
   }
 }
 
-// ── Add lead card ─────────────────────────────────────────────────────────────
+// ── Services / advantages ─────────────────────────────────────────────────────
 
-class _AddLeadCard extends StatelessWidget {
-  const _AddLeadCard({required this.projectId, required this.l10n});
-  final String projectId;
+class _ServicesSection extends StatelessWidget {
+  const _ServicesSection(
+      {required this.project, required this.lang, required this.l10n});
+  final BrokerProject project;
+  final String lang;
   final AppLocalizations l10n;
+
+  static const _icons = [
+    Icons.pool_rounded,
+    Icons.fitness_center_rounded,
+    Icons.security_rounded,
+    Icons.local_parking_rounded,
+    Icons.park_rounded,
+    Icons.mosque_rounded,
+    Icons.school_rounded,
+    Icons.shopping_cart_rounded,
+    Icons.restaurant_rounded,
+    Icons.elevator_rounded,
+    Icons.camera_indoor_rounded,
+    Icons.wb_sunny_rounded,
+  ];
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context
-          .push('/broker/leads/new', extra: {'projectId': projectId}),
-      child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF7C5200), Color(0xFF3D2800)],
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
+    final colors = context.appColors;
+    final services = project.services!;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppSectionHeader(title: 'مميزات المشروع'),
+          const SizedBox(height: AppSpacing.sm),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: AppRadii.card,
+              border: Border.all(
+                  color: colors.hairline.withValues(alpha: 0.5)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                for (int i = 0; i < services.length; i++)
+                  _ServiceChip(
+                    label: services[i].resolve(lang),
+                    icon: _icons[i % _icons.length],
+                  ),
+              ],
+            ),
           ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF7C5200).withValues(alpha: 0.35),
-              blurRadius: 14,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: AppPalette.gold300.withValues(alpha: 0.3)),
-              ),
-              child: const Icon(Icons.person_add_alt_1_rounded,
-                  color: AppPalette.gold300, size: 20),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.brokerLeadNew,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'إضافة عميل محتمل لهذا المشروع',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.55),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.arrow_back_ios_new_rounded,
-                color: Colors.white.withValues(alpha: 0.5), size: 13),
-          ],
-        ),
+        ],
       ),
     );
   }
 }
 
-// ── Section title ─────────────────────────────────────────────────────────────
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.label});
+class _ServiceChip extends StatelessWidget {
+  const _ServiceChip({required this.label, required this.icon});
   final String label;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final colors = context.appColors;
+    return Container(
+      padding:
+          const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: _navyLight.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        border: Border.all(
+            color: AppPalette.gold400.withValues(alpha: 0.20)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppPalette.gold500),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: colors.inkStrong,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Map section ───────────────────────────────────────────────────────────────
+
+class _MapSection extends StatelessWidget {
+  const _MapSection({required this.project, required this.lang});
+  final BrokerProject project;
+  final String lang;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final lat = project.lat!;
+    final lng = project.lng!;
+    final center = LatLng(lat, lng);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppSectionHeader(title: 'موقع المشروع'),
+          const SizedBox(height: AppSpacing.sm),
+          ClipRRect(
+            borderRadius: AppRadii.card,
+            child: Container(
+              height: 220,
+              decoration: BoxDecoration(
+                borderRadius: AppRadii.card,
+                border: Border.all(
+                    color: colors.hairline.withValues(alpha: 0.4)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  FlutterMap(
+                    options: MapOptions(
+                      initialCenter: center,
+                      initialZoom: 14,
+                      interactionOptions: const InteractionOptions(
+                        flags: InteractiveFlag.pinchZoom |
+                            InteractiveFlag.doubleTapZoom,
+                      ),
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.devora.staff',
+                        maxZoom: 19,
+                      ),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: center,
+                            width: 52,
+                            height: 52,
+                            child: const _ProjectMapPin(),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  // Open in maps button
+                  PositionedDirectional(
+                    bottom: AppSpacing.sm,
+                    end: AppSpacing.sm,
+                    child: GestureDetector(
+                      onTap: () => ContactActions.openMap(
+                        lat: lat,
+                        lng: lng,
+                        label: project.name.resolve(lang),
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _navyDeep.withValues(alpha: 0.88),
+                          borderRadius:
+                              BorderRadius.circular(AppRadii.md),
+                          border: Border.all(
+                              color: AppPalette.gold400
+                                  .withValues(alpha: 0.35)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.open_in_new_rounded,
+                                color: AppPalette.gold300, size: 13),
+                            const SizedBox(width: 6),
+                            Text(
+                              lang == 'ar'
+                                  ? 'فتح في الخرائط'
+                                  : 'Open in Maps',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProjectMapPin extends StatelessWidget {
+  const _ProjectMapPin();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 3,
-          height: 16,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [AppPalette.gold400, AppPalette.gold300],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+              colors: [Color(0xFFAA8528), Color(0xFFC8A24B)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(2),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: AppPalette.gold400.withValues(alpha: 0.5),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+            border: Border.all(color: Colors.white, width: 2.5),
           ),
+          child: const Icon(Icons.apartment_rounded,
+              color: Color(0xFF0B1726), size: 16),
         ),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: Theme.of(context)
-              .textTheme
-              .titleSmall
-              ?.copyWith(fontWeight: FontWeight.w800),
+        Container(
+          width: 2,
+          height: 10,
+          color: AppPalette.gold400,
         ),
       ],
     );
   }
 }
 
-// ── Units list ────────────────────────────────────────────────────────────────
+// ── Units ─────────────────────────────────────────────────────────────────────
 
 class _Units extends StatelessWidget {
   const _Units({required this.projectId});
@@ -373,27 +890,64 @@ class _Units extends StatelessWidget {
         switch (state.status) {
           case DataStatus.initial:
           case DataStatus.loading:
-            return const Padding(
-              padding: EdgeInsets.all(AppSpacing.md),
-              child: Center(child: CircularProgressIndicator()),
-            );
+            return _UnitsSkeleton();
           case DataStatus.failure:
-            return ErrorState(
+            return Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: ErrorState(
                 failure: state.failure,
-                onRetry: () => context.read<BrokerUnitsCubit>().load());
+                onRetry: () => context.read<BrokerUnitsCubit>().load(),
+              ),
+            );
           case DataStatus.empty:
-            return EmptyState(
-              icon: Icons.door_front_door_outlined,
-              title: l10n.unitsEmptyMessage,
+            return Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: EmptyState(
+                icon: Icons.door_front_door_outlined,
+                title: l10n.unitsEmptyMessage,
+              ),
             );
           case DataStatus.success:
-            return Column(
-              children: [
-                for (final unit in state.data!) ...[
-                  _UnitCard(unit: unit, projectId: projectId),
-                  const SizedBox(height: 10),
+            final units = state.data!;
+            final available =
+                units.where((u) => u.status.toUpperCase() == 'AVAILABLE').length;
+            return Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Summary chips
+                  Row(
+                    children: [
+                      _UnitCountChip(
+                        count: units.length,
+                        label: 'إجمالي',
+                        color: const Color(0xFF6B7280),
+                      ),
+                      const SizedBox(width: 8),
+                      _UnitCountChip(
+                        count: available,
+                        label: 'متاح',
+                        color: const Color(0xFF22C55E),
+                      ),
+                      const SizedBox(width: 8),
+                      _UnitCountChip(
+                        count: units.length - available,
+                        label: 'غير متاح',
+                        color: const Color(0xFFF59E0B),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  for (int i = 0; i < units.length; i++) ...[
+                    _UnitCard(
+                        unit: units[i], projectId: projectId),
+                    if (i < units.length - 1)
+                      const SizedBox(height: AppSpacing.sm),
+                  ],
                 ],
-              ],
+              ),
             );
         }
       },
@@ -401,131 +955,268 @@ class _Units extends StatelessWidget {
   }
 }
 
-class _UnitCard extends StatelessWidget {
+class _UnitCountChip extends StatelessWidget {
+  const _UnitCountChip(
+      {required this.count,
+      required this.label,
+      required this.color});
+  final int count;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding:
+          const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration:
+                BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            '$count $label',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UnitCard extends StatefulWidget {
   const _UnitCard({required this.unit, required this.projectId});
   final BrokerUnit unit;
   final String projectId;
 
   @override
+  State<_UnitCard> createState() => _UnitCardState();
+}
+
+class _UnitCardState extends State<_UnitCard> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final lang = Localizations.localeOf(context).languageCode;
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    final unit = widget.unit;
+    final statusColor = _statusColor(unit.status);
 
     return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
       onTap: () => context.push('/broker/units/${unit.id}',
-          extra: {'unit': unit, 'projectId': projectId}),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
+          extra: {'unit': unit, 'projectId': widget.projectId}),
+      child: AnimatedScale(
+        scale: _pressed ? 0.98 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: statusColor.withValues(alpha: 0.18),
+              width: 1.2,
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 4,
-              height: 64,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0xFF7C5200), Color(0xFF3D2800)],
-                ),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(14),
-                  bottomLeft: Radius.circular(14),
-                ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
               ),
-            ),
-            const SizedBox(width: 12),
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF7C5200), Color(0xFF3D2800)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.door_front_door_rounded,
-                  color: AppPalette.gold300, size: 18),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    unit.code,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A2E),
-                    ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Status color rail
+              Container(
+                width: 4,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    bottomLeft: Radius.circular(16),
                   ),
-                  if (unit.type != null) ...[
-                    const SizedBox(height: 2),
+                ),
+              ),
+              const SizedBox(width: 14),
+              // Icon
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: statusColor.withValues(alpha: 0.25)),
+                ),
+                child: Icon(_statusIcon(unit.status),
+                    color: statusColor, size: 20),
+              ),
+              const SizedBox(width: 12),
+              // Code + meta
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      [
-                        unit.type!,
+                      unit.code,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        if (unit.type != null) ...[
+                          _TypeChip(type: unit.type!),
+                          const SizedBox(width: 6),
+                        ],
                         if (unit.price != null)
-                          PriceFormatter.formatString(unit.price,
-                              languageCode: lang),
-                      ].join(' · '),
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: Color(0xFF6B7280),
+                          Flexible(
+                            child: Text(
+                              PriceFormatter.formatString(unit.price,
+                                  languageCode: lang),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppPalette.gold500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  StatusBadge(
+                    label: unitStatusLabel(l10n, unit.status),
+                    tone: unitStatusTone(unit.status),
+                  ),
+                  if (unit.area != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '${unit.area} م²',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: colors.inkMuted,
                         fontWeight: FontWeight.w500,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ],
               ),
-            ),
-            const SizedBox(width: 8),
-            StatusBadge(
-              label: unitStatusLabel(l10n, unit.status),
-              tone: unitStatusTone(unit.status),
-            ),
-            const SizedBox(width: 14),
-          ],
+              const SizedBox(width: 14),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Color _statusColor(String status) {
+    switch (status.toUpperCase()) {
+      case 'AVAILABLE':
+        return const Color(0xFF22C55E);
+      case 'RESERVED':
+        return const Color(0xFFF59E0B);
+      case 'SOLD':
+        return const Color(0xFFEF4444);
+      default:
+        return const Color(0xFF6B7280);
+    }
+  }
+
+  static IconData _statusIcon(String status) {
+    switch (status.toUpperCase()) {
+      case 'AVAILABLE':
+        return Icons.door_front_door_rounded;
+      case 'RESERVED':
+        return Icons.bookmark_rounded;
+      case 'SOLD':
+        return Icons.check_circle_rounded;
+      default:
+        return Icons.door_front_door_outlined;
+    }
+  }
+}
+
+class _TypeChip extends StatelessWidget {
+  const _TypeChip({required this.type});
+  final String type;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding:
+          const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: _navyLight.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        type,
+        style: const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: _navyMid,
         ),
       ),
     );
   }
 }
 
-// ── Dot texture ───────────────────────────────────────────────────────────────
-
-class _DotTexture extends StatelessWidget {
-  const _DotTexture();
+class _UnitsSkeleton extends StatelessWidget {
   @override
-  Widget build(BuildContext context) =>
-      const CustomPaint(painter: _DotPainter(), child: SizedBox.expand());
-}
-
-class _DotPainter extends CustomPainter {
-  const _DotPainter();
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.04);
-    const step = 20.0;
-    for (var y = 6.0; y < size.height; y += step) {
-      for (var x = 6.0; x < size.width; x += step) {
-        canvas.drawCircle(Offset(x, y), 1.1, paint);
-      }
-    }
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return AppSkeletonizer(
+      enabled: true,
+      child: Padding(
+        padding:
+            const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        child: Column(
+          children: [
+            for (int i = 0; i < 4; i++) ...[
+              if (i > 0) const SizedBox(height: AppSpacing.sm),
+              Container(
+                height: 72,
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
-  @override
-  bool shouldRepaint(_DotPainter _) => false;
 }

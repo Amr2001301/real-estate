@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../../common/broker_status_label.dart';
 import '../../../../../common/reservation_status_label.dart';
 import '../../../../notifications/presentation/widgets/notifications_bell.dart';
+import '../../../catalog/domain/entities/broker_project.dart';
+import '../../../catalog/presentation/cubit/broker_projects_cubit.dart';
 import '../../../profile/presentation/cubit/broker_profile_cubit.dart';
 import '../../domain/entities/broker_dashboard.dart';
 import '../cubit/broker_dashboard_cubit.dart';
@@ -149,10 +151,7 @@ class _BrokerHeaderDelegate extends SliverPersistentHeaderDelegate {
               BorderRadius.only(bottomLeft: radius, bottomRight: radius),
           child: Stack(
             children: [
-              // Dot texture
               Positioned.fill(child: CustomPaint(painter: _DotPainter())),
-
-              // Radial gold glow (expanded only)
               PositionedDirectional(
                 top: 0,
                 end: -30,
@@ -170,8 +169,6 @@ class _BrokerHeaderDelegate extends SliverPersistentHeaderDelegate {
                   ),
                 ),
               ),
-
-              // Gold hairline at bottom (expanded only)
               Positioned(
                 bottom: 0,
                 left: 40,
@@ -417,7 +414,7 @@ class _Body extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── 1. Snapshot card ──────────────────────────────────────────────
+          // ── 1. KPI snapshot ───────────────────────────────────────────────
           _SnapshotCard(data: data, l10n: l10n, onSwitchTab: onSwitchTab),
           const SizedBox(height: AppSpacing.lg),
 
@@ -437,25 +434,74 @@ class _Body extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
 
-          // ── 4. Commission card ────────────────────────────────────────────
+          // ── 4. Available projects ─────────────────────────────────────────
+          AppSectionHeader(
+            title: 'المشاريع المتاحة',
+            action: TextButton(
+              onPressed: () => onSwitchTab?.call(1),
+              child: Text(
+                'عرض الكل',
+                style: TextStyle(
+                  color: AppPalette.gold500,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          const _ProjectsSection(),
+          const SizedBox(height: AppSpacing.lg),
+
+          // ── 5. Commission card ────────────────────────────────────────────
           if (canViewCommissions) ...[
             _CommissionCard(
                 amount: data.commissionsGross, l10n: l10n, lang: lang),
+            if (data.salesGross > 0) ...[
+              const SizedBox(height: AppSpacing.sm),
+              _SalesVolumeCard(amount: data.salesGross, l10n: l10n, lang: lang),
+            ],
             const SizedBox(height: AppSpacing.lg),
           ],
 
-          // ── 5. Recent leads ───────────────────────────────────────────────
+          // ── 6. Recent leads ───────────────────────────────────────────────
           if (data.recentLeads.isNotEmpty) ...[
-            AppSectionHeader(title: l10n.brokerRecentLeads),
+            AppSectionHeader(
+              title: l10n.brokerRecentLeads,
+              action: TextButton(
+                onPressed: () => onSwitchTab?.call(2),
+                child: Text(
+                  'عرض الكل',
+                  style: TextStyle(
+                    color: AppPalette.gold500,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(height: AppSpacing.xs),
             for (final lead in data.recentLeads.take(5))
               _RecentLeadTile(lead: lead),
             const SizedBox(height: AppSpacing.lg),
           ],
 
-          // ── 6. Recent reservations ────────────────────────────────────────
+          // ── 7. Recent reservations ────────────────────────────────────────
           if (data.recentReservations.isNotEmpty) ...[
-            AppSectionHeader(title: l10n.brokerRecentReservations),
+            AppSectionHeader(
+              title: l10n.brokerRecentReservations,
+              action: TextButton(
+                onPressed: () => onSwitchTab?.call(3),
+                child: Text(
+                  'عرض الكل',
+                  style: TextStyle(
+                    color: AppPalette.gold500,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(height: AppSpacing.xs),
             for (final r in data.recentReservations.take(5))
               _RecentReservationTile(reservation: r),
@@ -469,7 +515,8 @@ class _Body extends StatelessWidget {
 // ── 1. Snapshot card ──────────────────────────────────────────────────────────
 
 class _SnapshotCard extends StatelessWidget {
-  const _SnapshotCard({required this.data, required this.l10n, this.onSwitchTab});
+  const _SnapshotCard(
+      {required this.data, required this.l10n, this.onSwitchTab});
   final BrokerDashboard data;
   final AppLocalizations l10n;
   final void Function(int)? onSwitchTab;
@@ -479,6 +526,10 @@ class _SnapshotCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final approvalRate = data.leadsTotal > 0
+        ? ((data.leadsApproved / data.leadsTotal) * 100).round()
+        : 0;
+
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -519,6 +570,7 @@ class _SnapshotCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Header row
                 Row(
                   children: [
                     Text(
@@ -560,22 +612,25 @@ class _SnapshotCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                Container(height: 1, color: Colors.white.withValues(alpha: 0.10)),
+                Container(
+                    height: 1,
+                    color: Colors.white.withValues(alpha: 0.10)),
                 const SizedBox(height: AppSpacing.sm),
+                // Row 1: leads + approval rate
                 IntrinsicHeight(
                   child: Row(
                     children: [
                       _DarkMetric(
                         value: '${data.leadsTotal}',
-                        label: l10n.brokerDashLeads,
+                        label: 'الفرص المُرسلة',
                         onTap: onSwitchTab != null
                             ? () => onSwitchTab!(2)
                             : null,
                       ),
                       _DarkDivider(),
                       _DarkMetric(
-                        value: '${data.leadsApproved}',
-                        label: l10n.brokerDashApprovedLeads,
+                        value: '$approvalRate%',
+                        label: 'نسبة القبول',
                         isGold: true,
                       ),
                       _DarkDivider(),
@@ -588,9 +643,9 @@ class _SnapshotCard extends StatelessWidget {
                       ),
                       _DarkDivider(),
                       _DarkMetric(
-                        value: '${data.reservationsApproved}',
-                        label: l10n.brokerDashApprovedReservations,
-                        isGold: true,
+                        value: '${data.contractsSigned}',
+                        label: 'عقود موقعة',
+                        isGold: data.contractsSigned > 0,
                       ),
                     ],
                   ),
@@ -627,7 +682,7 @@ class _DarkMetric extends StatelessWidget {
             Text(
               value,
               style: TextStyle(
-                fontSize: 30,
+                fontSize: 26,
                 fontWeight: FontWeight.w800,
                 height: 1.0,
                 color: isGold ? AppPalette.gold300 : Colors.white,
@@ -640,7 +695,7 @@ class _DarkMetric extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: FontWeight.w500,
                 color: Colors.white.withValues(alpha: 0.55),
                 height: 1.3,
@@ -763,10 +818,11 @@ class _PriorityCardState extends State<_PriorityCard> {
         scale: _pressed ? 0.98 : 1.0,
         duration: const Duration(milliseconds: 100),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 14),
+          padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md, 14, AppSpacing.md, 14),
           decoration: BoxDecoration(
             color: c.withValues(alpha: 0.055),
-            border: Border.all(color: c.withValues(alpha: 0.22), width: 1.0),
+            border: Border.all(color: c.withValues(alpha: 0.22)),
             borderRadius: AppRadii.card,
             boxShadow: [
               BoxShadow(
@@ -809,10 +865,7 @@ class _PriorityCardState extends State<_PriorityCard> {
                 child: Text(
                   widget.item.chipLabel,
                   style: TextStyle(
-                    color: c,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                  ),
+                      color: c, fontSize: 10, fontWeight: FontWeight.w700),
                 ),
               ),
               if (hasAction) ...[
@@ -845,14 +898,12 @@ class _QuickActionsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Primary — full width gold button
         _PrimaryActionCell(
           icon: Icons.person_add_alt_1_outlined,
           label: l10n.brokerLeadNew,
           onTap: () => context.push('/broker/leads/new'),
         ),
         const SizedBox(height: AppSpacing.sm),
-        // Secondary row 1
         Row(
           children: [
             Expanded(
@@ -1058,7 +1109,383 @@ class _SecondaryActionCellState extends State<_SecondaryActionCell> {
   }
 }
 
-// ── 4. Commission card ────────────────────────────────────────────────────────
+// ── 4. Available projects ─────────────────────────────────────────────────────
+
+class _ProjectsSection extends StatelessWidget {
+  const _ProjectsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<BrokerProjectsCubit, BrokerProjectsState>(
+      builder: (context, state) {
+        if (state.status == DataStatus.initial ||
+            state.status == DataStatus.loading) {
+          return SizedBox(
+            height: 245,
+            child: AppSkeletonizer(
+              enabled: true,
+              child: Row(
+                children: [
+                  for (int i = 0; i < 2; i++) ...[
+                    if (i > 0) const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1C3352),
+                          borderRadius: AppRadii.card,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        }
+
+        if (state.status == DataStatus.empty ||
+            state.data == null ||
+            state.data!.isEmpty) {
+          return Container(
+            height: 100,
+            decoration: BoxDecoration(
+              color: context.appColors.surface,
+              borderRadius: AppRadii.card,
+              border: Border.all(
+                  color: context.appColors.hairline.withValues(alpha: 0.4)),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.apartment_outlined,
+                      color: context.appColors.inkMuted, size: 28),
+                  const SizedBox(height: 8),
+                  Text(
+                    'لا توجد مشاريع متاحة',
+                    style: TextStyle(
+                      color: context.appColors.inkMuted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Dynamic card width: one card fully visible + ~40px peek of the next.
+        final availableWidth =
+            MediaQuery.of(context).size.width - AppSpacing.md * 2;
+        final cardWidth = (availableWidth - 52.0).clamp(220.0, double.infinity);
+        final lang = Localizations.localeOf(context).languageCode;
+
+        return SizedBox(
+          height: 245,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsetsDirectional.only(end: AppSpacing.xs),
+            itemCount: state.data!.length,
+            separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+            itemBuilder: (_, i) => _ProjectCard(
+              project: state.data![i],
+              lang: lang,
+              width: cardWidth,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ProjectCard extends StatefulWidget {
+  const _ProjectCard({
+    required this.project,
+    required this.lang,
+    required this.width,
+  });
+  final BrokerProject project;
+  final String lang;
+  final double width;
+
+  @override
+  State<_ProjectCard> createState() => _ProjectCardState();
+}
+
+class _ProjectCardState extends State<_ProjectCard> {
+  bool _pressed = false;
+
+  static const _gold1 = Color(0xFFAA8528);
+  static const _gold2 = Color(0xFFC8A24B);
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.project;
+    final lang = widget.lang;
+    final name = p.name.resolve(lang);
+    final hasImage = p.coverImageUrl != null && p.coverImageUrl!.isNotEmpty;
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: () => context.push('/broker/projects/${p.id}', extra: p),
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutCubic,
+        child: Container(
+          width: widget.width,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1C3352),
+            borderRadius: AppRadii.card,
+            boxShadow: [
+              BoxShadow(
+                color: AppPalette.gold400.withValues(alpha: 0.12),
+                blurRadius: 20,
+                offset: const Offset(0, 6),
+              ),
+              const BoxShadow(
+                color: Color(0x55000000),
+                blurRadius: 8,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Background image / placeholder
+              if (hasImage)
+                Image.network(
+                  p.coverImageUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const _ProjectCardPlaceholder(),
+                )
+              else
+                const _ProjectCardPlaceholder(),
+
+              // Deep gradient overlay — clear top, opaque bottom
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0x00000000),
+                      Color(0x1A000000),
+                      Color(0x99000000),
+                      Color(0xEE050E18),
+                    ],
+                    stops: [0.0, 0.38, 0.65, 1.0],
+                  ),
+                ),
+              ),
+
+              // Gold shimmer hairline at bottom edge
+              const Positioned(
+                bottom: 0, left: 0, right: 0,
+                child: SizedBox(
+                  height: 1,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          Color(0x55C8A24B),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Commission badge — top start
+              if (p.commissionPct != null)
+                PositionedDirectional(
+                  top: AppSpacing.sm,
+                  start: AppSpacing.sm,
+                  child: _CommissionBadge(pct: p.commissionPct!, lang: lang),
+                ),
+
+              // Info panel — bottom
+              PositionedDirectional(
+                start: 0,
+                end: 0,
+                bottom: 0,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          height: 1.25,
+                          letterSpacing: -0.3,
+                          shadows: [
+                            Shadow(
+                                color: Color(0x88000000), blurRadius: 6),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      if (p.city != null)
+                        Row(
+                          children: [
+                            Icon(Icons.location_on_rounded,
+                                size: 11,
+                                color:
+                                    Colors.white.withValues(alpha: 0.55)),
+                            const SizedBox(width: 2),
+                            Text(
+                              p.city!,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.55),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      const SizedBox(height: 10),
+                      // Gold CTA pill
+                      Container(
+                        height: 36,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [_gold1, _gold2],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                          borderRadius:
+                              BorderRadius.circular(AppRadii.md),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _gold1.withValues(alpha: 0.40),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              lang == 'ar'
+                                  ? 'استعراض المشروع'
+                                  : 'View Project',
+                              style: const TextStyle(
+                                color: Color(0xFF0B1726),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.1,
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 11,
+                              color: Color(0xFF0B1726),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CommissionBadge extends StatelessWidget {
+  const _CommissionBadge({required this.pct, required this.lang});
+  final String pct;
+  final String lang;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = lang == 'ar' ? 'عمولة $pct%' : '$pct% comm.';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.50),
+        border: Border.all(
+          color: AppPalette.gold400.withValues(alpha: 0.55),
+          width: 0.8,
+        ),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: AppPalette.gold300,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppPalette.gold300.withValues(alpha: 0.60),
+                  blurRadius: 4,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppPalette.gold300,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProjectCardPlaceholder extends StatelessWidget {
+  const _ProjectCardPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF243F62), Color(0xFF0F1E33)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Center(
+        child: Icon(Icons.apartment_rounded,
+            color: Color(0x44FFFFFF), size: 48),
+      ),
+    );
+  }
+}
+
+// ── 5. Commission card ────────────────────────────────────────────────────────
 
 class _CommissionCard extends StatelessWidget {
   const _CommissionCard({
@@ -1101,55 +1528,45 @@ class _CommissionCard extends StatelessWidget {
                 color: Colors.white.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(13),
                 border: Border.all(
-                  color: AppPalette.gold300.withValues(alpha: 0.3),
-                ),
+                    color: AppPalette.gold300.withValues(alpha: 0.3)),
               ),
-              child: const Icon(
-                Icons.payments_rounded,
-                color: AppPalette.gold300,
-                size: 22,
-              ),
+              child: const Icon(Icons.payments_rounded,
+                  color: AppPalette.gold300, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    l10n.navCommissions,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
+                  Text(l10n.navCommissions,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800)),
                   const SizedBox(height: 2),
                   Text(
-                    'إجمالي العمولات المستحقة',
+                    amount > 0 ? 'إجمالي العمولات المستحقة' : 'لا توجد عمولات بعد',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.55),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
+                        color: Colors.white.withValues(alpha: 0.55),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
             ),
-            Text(
-              PriceFormatter.format(amount, languageCode: lang),
-              style: const TextStyle(
-                color: AppPalette.gold300,
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.2,
+            if (amount > 0) ...[
+              Text(
+                PriceFormatter.format(amount, languageCode: lang),
+                style: const TextStyle(
+                    color: AppPalette.gold300,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.2),
               ),
-            ),
-            const SizedBox(width: 8),
-            Icon(
-              Icons.arrow_back_ios_new_rounded,
-              color: Colors.white.withValues(alpha: 0.5),
-              size: 13,
-            ),
+              const SizedBox(width: 8),
+            ],
+            Icon(Icons.arrow_back_ios_new_rounded,
+                color: Colors.white.withValues(alpha: 0.5), size: 13),
           ],
         ),
       ),
@@ -1157,7 +1574,86 @@ class _CommissionCard extends StatelessWidget {
   }
 }
 
-// ── 5. Recent lead tile ───────────────────────────────────────────────────────
+// Sales volume card (حجم المبيعات)
+class _SalesVolumeCard extends StatelessWidget {
+  const _SalesVolumeCard({
+    required this.amount,
+    required this.l10n,
+    required this.lang,
+  });
+  final double amount;
+  final AppLocalizations l10n;
+  final String lang;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1C3352), Color(0xFF0F1E33)],
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+        ),
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(
+            color: AppPalette.gold400.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F1E33).withValues(alpha: 0.4),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(
+                  color: AppPalette.gold400.withValues(alpha: 0.25)),
+            ),
+            child: const Icon(Icons.trending_up_rounded,
+                color: AppPalette.gold300, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('حجم المبيعات',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800)),
+                const SizedBox(height: 2),
+                Text('إجمالي قيمة العقود الموقعة',
+                    style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.55),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500)),
+              ],
+            ),
+          ),
+          Text(
+            PriceFormatter.format(amount, languageCode: lang),
+            style: const TextStyle(
+                color: AppPalette.gold300,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.2),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── 6. Recent lead tile ───────────────────────────────────────────────────────
 
 class _RecentLeadTile extends StatelessWidget {
   const _RecentLeadTile({required this.lead});
@@ -1168,6 +1664,7 @@ class _RecentLeadTile extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     final theme = Theme.of(context);
+    final dateLabel = _relativeDate(lead.createdAt);
 
     return GestureDetector(
       onTap: () => context.push('/broker/leads/${lead.id}'),
@@ -1178,7 +1675,8 @@ class _RecentLeadTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: AppRadii.card,
-          border: Border.all(color: colors.hairline.withValues(alpha: 0.4)),
+          border:
+              Border.all(color: colors.hairline.withValues(alpha: 0.4)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
@@ -1189,22 +1687,23 @@ class _RecentLeadTile extends StatelessWidget {
         ),
         child: Row(
           children: [
+            // Avatar
             Container(
-              width: 38,
-              height: 38,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [_navyLight, _navyDeep],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
                 child: Text(
                   lead.fullName.isNotEmpty
                       ? lead.fullName[0].toUpperCase()
-                      : '?',
+                      : '؟',
                   style: const TextStyle(
                     color: AppPalette.gold300,
                     fontSize: 15,
@@ -1214,27 +1713,64 @@ class _RecentLeadTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
+            // Name + project
             Expanded(
-              child: Text(
-                lead.fullName,
-                style: theme.textTheme.titleSmall,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    lead.fullName,
+                    style: theme.textTheme.titleSmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (lead.projectName != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      lead.projectName!,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: colors.inkMuted,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
               ),
             ),
             const SizedBox(width: 8),
-            StatusBadge(
-              label: brokerLeadStatusLabel(l10n, lead.approvalStatus),
-              tone: brokerLeadStatusTone(lead.approvalStatus),
+            // Status + date
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                StatusBadge(
+                  label: brokerLeadStatusLabel(l10n, lead.approvalStatus),
+                  tone: brokerLeadStatusTone(lead.approvalStatus),
+                ),
+                if (dateLabel != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    dateLabel,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: colors.inkMuted,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ],
         ),
       ),
     );
   }
+
 }
 
-// ── 6. Recent reservation tile ────────────────────────────────────────────────
+// ── 7. Recent reservation tile ────────────────────────────────────────────────
 
 class _RecentReservationTile extends StatelessWidget {
   const _RecentReservationTile({required this.reservation});
@@ -1245,14 +1781,17 @@ class _RecentReservationTile extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     final theme = Theme.of(context);
+    final primary = reservation.reservationNumber ?? reservation.unitCode ?? l10n.navReservations;
+    final subtitle = (reservation.reservationNumber != null && reservation.unitCode != null)
+        ? reservation.unitCode
+        : null;
+    final dateLabel = _relativeDate(reservation.createdAt);
 
     return GestureDetector(
-      onTap: () =>
-          context.push('/broker/reservations/${reservation.id}'),
+      onTap: () => context.push('/broker/reservations/${reservation.id}'),
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: AppRadii.card,
@@ -1267,38 +1806,70 @@ class _RecentReservationTile extends StatelessWidget {
         ),
         child: Row(
           children: [
+            // Icon
             Container(
-              width: 38,
-              height: 38,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [Color(0xFF7C5200), Color(0xFF3D2800)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
-                Icons.bookmark_rounded,
-                color: AppPalette.gold300,
-                size: 18,
-              ),
+              child: const Icon(Icons.bookmark_rounded,
+                  color: AppPalette.gold300, size: 18),
             ),
             const SizedBox(width: 12),
+            // Primary + subtitle
             Expanded(
-              child: Text(
-                reservation.reservationNumber ??
-                    reservation.unitCode ??
-                    l10n.navReservations,
-                style: theme.textTheme.titleSmall,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    primary,
+                    style: theme.textTheme.titleSmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: colors.inkMuted,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
               ),
             ),
             const SizedBox(width: 8),
-            StatusBadge(
-              label: reservationStatusLabel(l10n, reservation.status),
-              tone: reservationStatusTone(reservation.status),
+            // Status + date
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                StatusBadge(
+                  label: reservationStatusLabel(l10n, reservation.status),
+                  tone: reservationStatusTone(reservation.status),
+                ),
+                if (dateLabel != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    dateLabel,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: colors.inkMuted,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ],
         ),
@@ -1324,37 +1895,22 @@ class _Skeleton extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Snapshot card placeholder
             Container(
               height: 120,
               decoration: BoxDecoration(
-                color: _navyMid,
-                borderRadius: AppRadii.card,
-              ),
+                  color: _navyMid, borderRadius: AppRadii.card),
             ),
             const SizedBox(height: AppSpacing.lg),
-            // Section label placeholder
-            Container(
-                height: 20,
-                width: 100,
-                color: colors.surface),
+            Container(height: 20, width: 100, color: colors.surface),
             const SizedBox(height: AppSpacing.xs),
-            // Priority card placeholder
             Container(
               height: 68,
               decoration: BoxDecoration(
-                color: colors.surface,
-                borderRadius: AppRadii.card,
-              ),
+                  color: colors.surface, borderRadius: AppRadii.card),
             ),
             const SizedBox(height: AppSpacing.lg),
-            // Section label placeholder
-            Container(
-                height: 20,
-                width: 120,
-                color: colors.surface),
+            Container(height: 20, width: 120, color: colors.surface),
             const SizedBox(height: AppSpacing.xs),
-            // Quick actions placeholders
             Container(
               height: 52,
               decoration: BoxDecoration(
@@ -1363,28 +1919,50 @@ class _Skeleton extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    height: 96,
-                    decoration: BoxDecoration(
-                      color: colors.surface,
-                      borderRadius: BorderRadius.circular(AppRadii.lg),
-                    ),
+            Row(children: [
+              Expanded(
+                child: Container(
+                  height: 96,
+                  decoration: BoxDecoration(
+                    color: colors.surface,
+                    borderRadius: BorderRadius.circular(AppRadii.lg),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Container(
-                    height: 96,
-                    decoration: BoxDecoration(
-                      color: colors.surface,
-                      borderRadius: BorderRadius.circular(AppRadii.lg),
-                    ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Container(
+                  height: 96,
+                  decoration: BoxDecoration(
+                    color: colors.surface,
+                    borderRadius: BorderRadius.circular(AppRadii.lg),
                   ),
                 ),
-              ],
+              ),
+            ]),
+            const SizedBox(height: AppSpacing.lg),
+            Container(height: 20, width: 130, color: colors.surface),
+            const SizedBox(height: AppSpacing.xs),
+            SizedBox(
+              height: 245,
+              child: AppSkeletonizer(
+                enabled: true,
+                child: Row(
+                  children: [
+                    for (int i = 0; i < 2; i++) ...[
+                      if (i > 0) const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1C3352),
+                            borderRadius: AppRadii.card,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -1393,7 +1971,22 @@ class _Skeleton extends StatelessWidget {
   }
 }
 
-// ── Shared ────────────────────────────────────────────────────────────────────
+// ── Shared helpers ────────────────────────────────────────────────────────────
+
+String? _relativeDate(String? iso) {
+  if (iso == null) return null;
+  try {
+    final d = DateTime.parse(iso).toLocal();
+    final now = DateTime.now();
+    final diff = now.difference(d);
+    if (diff.inDays == 0) return 'اليوم';
+    if (diff.inDays == 1) return 'أمس';
+    if (diff.inDays < 7) return 'منذ ${diff.inDays} أيام';
+    return '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
+  } catch (_) {
+    return null;
+  }
+}
 
 class _DotPainter extends CustomPainter {
   const _DotPainter();

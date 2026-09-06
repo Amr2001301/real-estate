@@ -68,7 +68,7 @@ class _BrokerProjectsScreenState extends State<BrokerProjectsScreen> {
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
                           itemCount: state.data!.length,
                           separatorBuilder: (_, _) =>
-                              const SizedBox(height: 10),
+                              const SizedBox(height: AppSpacing.lg),
                           itemBuilder: (context, i) =>
                               _ProjectCard(project: state.data![i]),
                         ),
@@ -220,103 +220,256 @@ class _ProjectCard extends StatelessWidget {
   const _ProjectCard({required this.project});
   final BrokerProject project;
 
+  static const double _imageHeight = 236;
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final lang = Localizations.localeOf(context).languageCode;
+    final colors = context.appColors;
+    final theme = Theme.of(context);
     final name = project.name.resolve(lang);
+    final city = project.city?.trim() ?? '';
 
-    return GestureDetector(
-      onTap: () =>
-          context.push('/broker/projects/${project.id}', extra: project),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.07),
-              blurRadius: 14,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Left accent rail
-            Container(
-              width: 4,
-              height: 76,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [_navyLight, _navyDeep],
-                ),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  bottomLeft: Radius.circular(16),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: colors.shadowCard,
+      ),
+      child: Material(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(20),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () =>
+              context.push('/broker/projects/${project.id}', extra: project),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Cinematic hero image ──────────────────────────────────────
+              SizedBox(
+                height: _imageHeight,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    AppNetworkImage(url: project.coverImageUrl),
+                    const Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Color(0x33000000),
+                              Color(0x00000000),
+                              Color(0xBB000000),
+                              Color(0xF0000000),
+                            ],
+                            stops: [0.0, 0.28, 0.66, 1.0],
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Status badge — top end
+                    PositionedDirectional(
+                      top: AppSpacing.sm,
+                      end: AppSpacing.sm,
+                      child: StatusBadge(
+                        label: projectStatusLabel(l10n, project.status),
+                        tone: projectStatusTone(project.status),
+                        variant: BadgeVariant.solid,
+                      ),
+                    ),
+                    // City + name overlay — bottom
+                    PositionedDirectional(
+                      bottom: AppSpacing.lg,
+                      start: AppSpacing.lg,
+                      end: AppSpacing.lg,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (city.isNotEmpty) ...[
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: BoxDecoration(
+                                    color: AppPalette.gold400,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppPalette.gold400
+                                            .withValues(alpha: 0.6),
+                                        blurRadius: 6,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.xs),
+                                Text(
+                                  city.toUpperCase(),
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: AppPalette.gold300,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 1.6,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.xxs),
+                          ],
+                          Text(
+                            name,
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              height: 1.1,
+                              letterSpacing: -0.3,
+                              shadows: const [
+                                Shadow(
+                                    color: Color(0x55000000), blurRadius: 10),
+                              ],
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            // Building avatar
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [_navyLight, _navyDeep],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.apartment_rounded,
-                  color: AppPalette.gold300, size: 22),
-            ),
-            const SizedBox(width: 12),
-            // Text
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
+
+              // ── Gold-start divider ────────────────────────────────────────
+              Row(
                 children: [
-                  Text(
-                    name.isNotEmpty ? name : '—',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A2E),
+                  Container(
+                    width: 72,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppPalette.gold400, Color(0x00B8941F)],
+                      ),
+                      borderRadius: BorderRadius.circular(999),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppPalette.gold400.withValues(alpha: 0.35),
+                          blurRadius: 6,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    [
-                      if (project.city != null) project.city!,
-                      if (project.commissionPct != null)
-                        '${l10n.brokerCommissionPct}: ${project.commissionPct}%',
-                    ].join(' · '),
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: Color(0xFF6B7280),
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  Expanded(
+                    child: Container(height: 0.5, color: colors.hairline),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(width: 8),
-            StatusBadge(
-              label: projectStatusLabel(l10n, project.status),
-              tone: projectStatusTone(project.status),
-            ),
-            const SizedBox(width: 14),
-          ],
+
+              // ── Card body ─────────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                ),
+                child: Row(
+                  children: [
+                    // Commission badge
+                    if (project.commissionPct != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFAA8528), Color(0xFFC8A24B)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(AppRadii.md),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppPalette.gold400.withValues(alpha: 0.30),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${project.commissionPct}%',
+                              style: const TextStyle(
+                                color: Color(0xFF0B1726),
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                height: 1.0,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              l10n.brokerCommissionPct,
+                              style: TextStyle(
+                                color:
+                                    const Color(0xFF0B1726).withValues(alpha: 0.65),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                    ],
+                    // Explore button
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => context.push(
+                            '/broker/projects/${project.id}',
+                            extra: project),
+                        child: Container(
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.transparent,
+                            border: Border.all(
+                                color: AppPalette.gold400
+                                    .withValues(alpha: 0.45)),
+                            borderRadius:
+                                BorderRadius.circular(AppRadii.md),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.apartment_rounded,
+                                  size: 16, color: _navyDeep),
+                              const SizedBox(width: 6),
+                              Text(
+                                lang == 'ar'
+                                    ? 'استعراض الوحدات'
+                                    : 'View Units',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: _navyDeep,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
