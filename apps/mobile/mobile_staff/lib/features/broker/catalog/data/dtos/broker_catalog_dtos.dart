@@ -86,6 +86,10 @@ class BrokerUnitDto {
     this.price,
     this.area,
     this.bedrooms,
+    this.bathrooms,
+    this.floor,
+    this.coverImageUrl,
+    this.floorPlanUrls = const [],
   });
 
   final String id;
@@ -95,15 +99,30 @@ class BrokerUnitDto {
   final String? price;
   final String? area;
   final int? bedrooms;
+  final int? bathrooms;
+  final int? floor;
+  final String? coverImageUrl;
+  final List<String> floorPlanUrls;
 
-  /// /portal/units rows may be the unit directly or `{...unit, accessSource}`.
-  factory BrokerUnitDto.fromJson(Map<String, dynamic> json) => BrokerUnitDto(
-        id: json['id'] as String,
-        code: json['code'] as String? ?? '',
-        status: json['status'] as String? ?? 'AVAILABLE',
-        type: json['type'] as String?,
-        price: json['price']?.toString(),
-        area: json['area']?.toString(),
-        bedrooms: (json['bedrooms'] as num?)?.toInt(),
-      );
+  factory BrokerUnitDto.fromJson(Map<String, dynamic> json) {
+    final media = (json['media'] as List?)?.whereType<Map<String, dynamic>>().toList() ?? [];
+    final String? cover = media.isNotEmpty ? media.first['url'] as String? : null;
+    final fps = (json['floorPlanUrls'] as List?)
+            ?.whereType<String>()
+            .toList() ??
+        [];
+    return BrokerUnitDto(
+      id: json['id'] as String,
+      code: json['code'] as String? ?? '',
+      status: json['status'] as String? ?? 'AVAILABLE',
+      type: json['type'] as String?,
+      price: json['price']?.toString(),
+      area: json['area']?.toString(),
+      bedrooms: (json['bedrooms'] as num?)?.toInt(),
+      bathrooms: (json['bathrooms'] as num?)?.toInt(),
+      floor: (json['floor'] as num?)?.toInt(),
+      coverImageUrl: cover,
+      floorPlanUrls: fps,
+    );
+  }
 }

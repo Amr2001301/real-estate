@@ -37,5 +37,9 @@ extension BrokerUnitDtoMapper on BrokerUnitDto {
         price: price,
         area: area,
         bedrooms: bedrooms,
+        bathrooms: bathrooms,
+        floor: floor,
+        coverImageUrl: coverImageUrl,
+        floorPlanUrls: floorPlanUrls,
       );
 }

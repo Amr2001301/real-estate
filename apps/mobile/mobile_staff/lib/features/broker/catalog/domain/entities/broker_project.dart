@@ -41,6 +41,10 @@ class BrokerUnit extends Equatable {
     this.price,
     this.area,
     this.bedrooms,
+    this.bathrooms,
+    this.floor,
+    this.coverImageUrl,
+    this.floorPlanUrls = const [],
   });
 
   final String id;
@@ -50,7 +54,12 @@ class BrokerUnit extends Equatable {
   final String? price;
   final String? area;
   final int? bedrooms;
+  final int? bathrooms;
+  final int? floor;
+  final String? coverImageUrl;
+  final List<String> floorPlanUrls;
 
   @override
-  List<Object?> get props => [id, code, status, type, price, area, bedrooms];
+  List<Object?> get props =>
+      [id, code, status, type, price, area, bedrooms, bathrooms, floor, coverImageUrl];
 }
