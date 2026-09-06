@@ -44,7 +44,15 @@ class BrokerUnit extends Equatable {
     this.bathrooms,
     this.floor,
     this.coverImageUrl,
+    this.allImageUrls = const [],
     this.floorPlanUrls = const [],
+    this.address,
+    this.latitude,
+    this.longitude,
+    this.projectId,
+    this.projectNameAr,
+    this.projectNameEn,
+    this.projectCity,
   });
 
   final String id;
@@ -57,7 +65,20 @@ class BrokerUnit extends Equatable {
   final int? bathrooms;
   final int? floor;
   final String? coverImageUrl;
+  final List<String> allImageUrls;
   final List<String> floorPlanUrls;
+  final String? address;
+  final double? latitude;
+  final double? longitude;
+  final String? projectId;
+  final String? projectNameAr;
+  final String? projectNameEn;
+  final String? projectCity;
+
+  bool get hasLocation => latitude != null && longitude != null;
+
+  String? projectName(String lang) =>
+      lang == 'ar' ? (projectNameAr ?? projectNameEn) : (projectNameEn ?? projectNameAr);
 
   @override
   List<Object?> get props =>

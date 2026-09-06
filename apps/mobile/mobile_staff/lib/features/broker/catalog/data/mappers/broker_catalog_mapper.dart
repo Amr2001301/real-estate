@@ -40,6 +40,14 @@ extension BrokerUnitDtoMapper on BrokerUnitDto {
         bathrooms: bathrooms,
         floor: floor,
         coverImageUrl: coverImageUrl,
+        allImageUrls: allImageUrls,
         floorPlanUrls: floorPlanUrls,
+        address: address,
+        latitude: latitude,
+        longitude: longitude,
+        projectId: projectId,
+        projectNameAr: projectNameAr,
+        projectNameEn: projectNameEn,
+        projectCity: projectCity,
       );
 }

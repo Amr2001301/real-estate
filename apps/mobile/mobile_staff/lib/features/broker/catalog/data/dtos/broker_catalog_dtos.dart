@@ -89,7 +89,15 @@ class BrokerUnitDto {
     this.bathrooms,
     this.floor,
     this.coverImageUrl,
+    this.allImageUrls = const [],
     this.floorPlanUrls = const [],
+    this.address,
+    this.latitude,
+    this.longitude,
+    this.projectId,
+    this.projectNameAr,
+    this.projectNameEn,
+    this.projectCity,
   });
 
   final String id;
@@ -102,15 +110,49 @@ class BrokerUnitDto {
   final int? bathrooms;
   final int? floor;
   final String? coverImageUrl;
+  final List<String> allImageUrls;
   final List<String> floorPlanUrls;
+  final String? address;
+  final double? latitude;
+  final double? longitude;
+  final String? projectId;
+  final String? projectNameAr;
+  final String? projectNameEn;
+  final String? projectCity;
 
   factory BrokerUnitDto.fromJson(Map<String, dynamic> json) {
-    final media = (json['media'] as List?)?.whereType<Map<String, dynamic>>().toList() ?? [];
-    final String? cover = media.isNotEmpty ? media.first['url'] as String? : null;
-    final fps = (json['floorPlanUrls'] as List?)
-            ?.whereType<String>()
+    final media = (json['media'] as List?)
+            ?.whereType<Map<String, dynamic>>()
             .toList() ??
         [];
+    // Split media by type
+    final images = media
+        .where((m) => (m['type'] as String?) != 'FLOORPLAN')
+        .map((m) => m['url'] as String?)
+        .whereType<String>()
+        .toList();
+    final floorPlans = media
+        .where((m) => (m['type'] as String?) == 'FLOORPLAN')
+        .map((m) => m['url'] as String?)
+        .whereType<String>()
+        .toList();
+
+    // Project info from building → phase → project
+    final building = json['building'] as Map<String, dynamic>?;
+    final phase = building?['phase'] as Map<String, dynamic>?;
+    final project = phase?['project'] as Map<String, dynamic>?;
+    final pId = phase?['projectId'] as String? ?? project?['id'] as String?;
+
+    String? nameAr, nameEn;
+    final nameRaw = project?['name'];
+    if (nameRaw is Map<String, dynamic>) {
+      nameAr = nameRaw['ar'] as String?;
+      nameEn = nameRaw['en'] as String?;
+    } else if (nameRaw is String) {
+      nameAr = nameRaw;
+      nameEn = nameRaw;
+    }
+
     return BrokerUnitDto(
       id: json['id'] as String,
       code: json['code'] as String? ?? '',
@@ -121,8 +163,16 @@ class BrokerUnitDto {
       bedrooms: (json['bedrooms'] as num?)?.toInt(),
       bathrooms: (json['bathrooms'] as num?)?.toInt(),
       floor: (json['floor'] as num?)?.toInt(),
-      coverImageUrl: cover,
-      floorPlanUrls: fps,
+      coverImageUrl: images.isNotEmpty ? images.first : null,
+      allImageUrls: images,
+      floorPlanUrls: floorPlans,
+      address: json['address'] as String?,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      projectId: pId,
+      projectNameAr: nameAr,
+      projectNameEn: nameEn,
+      projectCity: project?['city'] as String?,
     );
   }
 }

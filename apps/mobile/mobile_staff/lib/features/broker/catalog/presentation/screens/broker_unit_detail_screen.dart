@@ -1,7 +1,9 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
+import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../../../common/catalog_status_label.dart';
 import '../../domain/entities/broker_project.dart';
@@ -23,22 +25,23 @@ class BrokerUnitDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final lang = Localizations.localeOf(context).languageCode;
+    final available = unit.status.toUpperCase() == 'AVAILABLE';
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light
           .copyWith(statusBarColor: Colors.transparent),
       child: Scaffold(
         backgroundColor: context.appColors.canvas,
-        bottomNavigationBar: unit.status.toUpperCase() == 'AVAILABLE'
+        bottomNavigationBar: available
             ? _StickyAddLead(unit: unit, projectId: projectId, l10n: l10n)
             : null,
         body: CustomScrollView(
           physics: const BouncingScrollPhysics(
               parent: AlwaysScrollableScrollPhysics()),
           slivers: [
-            // ── Collapsing hero ──────────────────────────────────────────
+            // ── Hero ─────────────────────────────────────────────────────
             SliverAppBar(
-              expandedHeight: 300,
+              expandedHeight: 320,
               pinned: true,
               stretch: true,
               backgroundColor: _navyDeep,
@@ -75,39 +78,78 @@ class BrokerUnitDetailScreen extends StatelessWidget {
               child: _SummaryCard(unit: unit, l10n: l10n, lang: lang),
             ),
 
-            // ── Specs section ────────────────────────────────────────────
+            // ── Unit details section ──────────────────────────────────────
             if (_hasSpecs(unit)) ...[
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, AppSpacing.md),
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg,
+                      AppSpacing.xl, AppSpacing.lg, AppSpacing.md),
                   child: _SectionTitle(l10n.unitDetails),
                 ),
               ),
               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                 sliver: _SpecsGrid(unit: unit, l10n: l10n),
               ),
             ],
 
-            // ── Floor plans section ──────────────────────────────────────
+            // ── Floor plans ──────────────────────────────────────────────
             if (unit.floorPlanUrls.isNotEmpty) ...[
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, AppSpacing.md),
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg,
+                      AppSpacing.xl, AppSpacing.lg, AppSpacing.md),
                   child: _SectionTitle(l10n.sectionFloorPlans),
                 ),
               ),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                  child: _FloorPlansGallery(urls: unit.floorPlanUrls),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg),
+                  child: _MediaGallery(urls: unit.floorPlanUrls),
                 ),
               ),
             ],
 
-            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
+            // ── Location ─────────────────────────────────────────────────
+            if (unit.hasLocation || unit.address != null) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg,
+                      AppSpacing.xl, AppSpacing.lg, AppSpacing.md),
+                  child: _SectionTitle(l10n.projectLocation),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg),
+                  child: _LocationCard(unit: unit, l10n: l10n),
+                ),
+              ),
+            ],
+
+            // ── Project ──────────────────────────────────────────────────
+            if (unit.projectId != null) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg,
+                      AppSpacing.xl, AppSpacing.lg, AppSpacing.md),
+                  child: _SectionTitle(l10n.navProjects),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg),
+                  child: _ProjectCard(unit: unit, lang: lang),
+                ),
+              ),
+            ],
+
+            const SliverToBoxAdapter(
+                child: SizedBox(height: AppSpacing.xxl)),
           ],
         ),
       ),
@@ -123,70 +165,68 @@ class BrokerUnitDetailScreen extends StatelessWidget {
 
 // ── Hero background ───────────────────────────────────────────────────────────
 
-class _HeroBackground extends StatelessWidget {
+class _HeroBackground extends StatefulWidget {
   const _HeroBackground({required this.unit, required this.l10n});
   final BrokerUnit unit;
   final AppLocalizations l10n;
 
   @override
+  State<_HeroBackground> createState() => _HeroBackgroundState();
+}
+
+class _HeroBackgroundState extends State<_HeroBackground> {
+  final _ctrl = PageController();
+  int _page = 0;
+
+  List<String> get _urls => widget.unit.allImageUrls;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final hasImage = unit.coverImageUrl != null;
+    final urls = _urls;
+    final multi = urls.length > 1;
+    final l10n = widget.l10n;
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (hasImage)
-          AppNetworkImage(url: unit.coverImageUrl!)
+        // Image or navy-gradient fallback
+        if (urls.isEmpty)
+          _NavyFallback()
+        else if (!multi)
+          AppNetworkImage(url: urls.first)
         else
-          // Navy gradient fallback matching broker design language
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [_navyLight, _navyMid, _navyDeep],
-                stops: [0.0, 0.45, 1.0],
-              ),
-            ),
-            child: Stack(
-              children: [
-                const Positioned.fill(
-                    child: IgnorePointer(child: _DotTexture())),
-                PositionedDirectional(
-                  end: 0,
-                  top: 0,
-                  child: Container(
-                    width: 200,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      gradient: RadialGradient(
-                        center: Alignment.topRight,
-                        radius: 1.0,
-                        colors: [
-                          AppPalette.gold400.withValues(alpha: 0.12),
-                          AppPalette.gold400.withValues(alpha: 0.0),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Center(
-                  child: Icon(
-                    Icons.apartment_rounded,
-                    size: 72,
-                    color: Colors.white.withValues(alpha: 0.08),
-                  ),
-                ),
-              ],
-            ),
+          PageView.builder(
+            controller: _ctrl,
+            onPageChanged: (i) => setState(() => _page = i),
+            itemCount: urls.length,
+            itemBuilder: (_, i) => AppNetworkImage(url: urls[i]),
           ),
 
-        // Bottom gradient — behind title
+        // Top gradient
         const Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: 180,
+          top: 0, left: 0, right: 0, height: 130,
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xCC000000), Color(0x00000000)],
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // Bottom gradient
+        const Positioned(
+          left: 0, right: 0, bottom: 0, height: 180,
           child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -200,36 +240,142 @@ class _HeroBackground extends StatelessWidget {
           ),
         ),
 
-        // Top gradient — protects back button
-        if (hasImage)
-          const Positioned(
-            top: 0,
+        // Page dots
+        if (multi)
+          Positioned(
+            bottom: 88,
             left: 0,
             right: 0,
-            height: 120,
             child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0xBB000000), Color(0x00000000)],
-                  ),
-                ),
-              ),
+              child: _PageDots(count: urls.length, current: _page),
             ),
           ),
 
-        // Status badge — top end
+        // Badges — top end
         PositionedDirectional(
           top: kToolbarHeight + 8,
           end: AppSpacing.lg,
-          child: _StatusPill(
-            label: unitStatusLabel(l10n, unit.status),
-            tone: unitStatusTone(unit.status),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (multi) ...[
+                _CountPill(current: _page + 1, total: urls.length),
+                const SizedBox(width: AppSpacing.xs),
+              ],
+              _StatusPill(
+                label: unitStatusLabel(l10n, widget.unit.status),
+                tone: unitStatusTone(widget.unit.status),
+              ),
+            ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _NavyFallback extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [_navyLight, _navyMid, _navyDeep],
+              stops: [0.0, 0.45, 1.0],
+            ),
+          ),
+        ),
+        const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
+        PositionedDirectional(
+          end: 0,
+          top: 0,
+          child: Container(
+            width: 200,
+            height: 200,
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment.topRight,
+                radius: 1.0,
+                colors: [
+                  AppPalette.gold400.withValues(alpha: 0.12),
+                  AppPalette.gold400.withValues(alpha: 0.0),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Center(
+          child: Icon(
+            Icons.apartment_rounded,
+            size: 72,
+            color: Colors.white.withValues(alpha: 0.08),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PageDots extends StatelessWidget {
+  const _PageDots({required this.count, required this.current});
+  final int count;
+  final int current;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (int i = 0; i < count; i++) ...[
+          if (i > 0) const SizedBox(width: 5),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            width: current == i ? 20 : 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: current == i
+                  ? Colors.white
+                  : Colors.white.withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _CountPill extends StatelessWidget {
+  const _CountPill({required this.current, required this.total});
+  final int current;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.45),
+        borderRadius: AppRadii.pillAll,
+        border: Border.all(
+            color: Colors.white.withValues(alpha: 0.28), width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.photo_library_outlined,
+              size: 12, color: Colors.white70),
+          const SizedBox(width: 4),
+          Text('$current / $total',
+              style: const TextStyle(fontSize: 11, color: Colors.white70)),
+        ],
+      ),
     );
   }
 }
@@ -243,19 +389,18 @@ class _SummaryCard extends StatelessWidget {
   final AppLocalizations l10n;
   final String lang;
 
-  Color _accent(AppColorsExt colors) => switch (unit.status) {
-        'AVAILABLE' => colors.success,
-        'RESERVED' => colors.warning,
+  Color _accent(AppColorsExt c) => switch (unit.status.toUpperCase()) {
+        'AVAILABLE' => c.success,
+        'RESERVED' => c.warning,
         'SOLD' => const Color(0xFFEF4444),
-        _ => colors.inkMuted,
+        _ => c.inkMuted,
       };
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final accent = _accent(colors);
-    final hasPrice =
-        unit.price != null && unit.price!.isNotEmpty;
+    final hasPrice = unit.price != null && unit.price!.isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(
@@ -286,8 +431,8 @@ class _SummaryCard extends StatelessWidget {
           ),
           // Identity row
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.lg),
+            padding: const EdgeInsets.fromLTRB(AppSpacing.lg,
+                AppSpacing.lg, AppSpacing.lg, AppSpacing.lg),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -321,12 +466,10 @@ class _SummaryCard extends StatelessWidget {
                         width: 36,
                         height: 2.5,
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              AppPalette.gold400,
-                              Color(0x00B8941F)
-                            ],
-                          ),
+                          gradient: const LinearGradient(colors: [
+                            AppPalette.gold400,
+                            Color(0x00B8941F)
+                          ]),
                           borderRadius: BorderRadius.circular(999),
                         ),
                       ),
@@ -334,7 +477,6 @@ class _SummaryCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),
-                // Status badge
                 Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 14, vertical: 8),
@@ -375,16 +517,14 @@ class _SummaryCard extends StatelessWidget {
               ],
             ),
           ),
-
           // Price row
           if (hasPrice) ...[
             Divider(
-              height: 1,
-              thickness: 0.5,
-              color: colors.hairline,
-              indent: AppSpacing.lg,
-              endIndent: AppSpacing.lg,
-            ),
+                height: 1,
+                thickness: 0.5,
+                color: colors.hairline,
+                indent: AppSpacing.lg,
+                endIndent: AppSpacing.lg),
             Padding(
               padding: const EdgeInsets.fromLTRB(AppSpacing.lg,
                   AppSpacing.md, AppSpacing.lg, AppSpacing.lg),
@@ -407,7 +547,7 @@ class _SummaryCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w900,
-                      color: unit.status == 'AVAILABLE'
+                      color: unit.status.toUpperCase() == 'AVAILABLE'
                           ? colors.brandGold
                           : colors.inkMuted,
                       letterSpacing: -0.5,
@@ -484,12 +624,15 @@ class _SpecsGrid extends StatelessWidget {
       if (unit.bathrooms != null)
         (Icons.bathtub_outlined, '${unit.bathrooms}', l10n.unitBathrooms),
       if (unit.area != null)
-        (Icons.square_foot_outlined, '${_fmtArea(unit.area)} م²', l10n.unitArea),
+        (Icons.square_foot_outlined, '${_fmtArea(unit.area)} م²',
+            l10n.unitArea),
       if (unit.floor != null)
         (Icons.layers_outlined, '${unit.floor}', l10n.unitFloor),
     ];
 
-    if (specs.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+    if (specs.isEmpty) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
 
     final rows = <Widget>[];
     for (int i = 0; i < specs.length; i += 2) {
@@ -497,7 +640,9 @@ class _SpecsGrid extends StatelessWidget {
         children: [
           Expanded(
             child: _SpecCard(
-                icon: specs[i].$1, value: specs[i].$2, label: specs[i].$3),
+                icon: specs[i].$1,
+                value: specs[i].$2,
+                label: specs[i].$3),
           ),
           if (i + 1 < specs.length) ...[
             const SizedBox(width: AppSpacing.sm),
@@ -511,7 +656,9 @@ class _SpecsGrid extends StatelessWidget {
             const Expanded(child: SizedBox.shrink()),
         ],
       ));
-      if (i + 2 < specs.length) rows.add(const SizedBox(height: AppSpacing.sm));
+      if (i + 2 < specs.length) {
+        rows.add(const SizedBox(height: AppSpacing.sm));
+      }
     }
 
     return SliverToBoxAdapter(
@@ -581,7 +728,6 @@ class _SpecCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.labelMedium?.copyWith(
               color: colors.inkMuted,
-              letterSpacing: 0.1,
             ),
           ),
         ],
@@ -590,17 +736,17 @@ class _SpecCard extends StatelessWidget {
   }
 }
 
-// ── Floor plans gallery ───────────────────────────────────────────────────────
+// ── Media gallery (floor plans / photos) ─────────────────────────────────────
 
-class _FloorPlansGallery extends StatefulWidget {
-  const _FloorPlansGallery({required this.urls});
+class _MediaGallery extends StatefulWidget {
+  const _MediaGallery({required this.urls});
   final List<String> urls;
 
   @override
-  State<_FloorPlansGallery> createState() => _FloorPlansGalleryState();
+  State<_MediaGallery> createState() => _MediaGalleryState();
 }
 
-class _FloorPlansGalleryState extends State<_FloorPlansGallery> {
+class _MediaGalleryState extends State<_MediaGallery> {
   final _ctrl = PageController();
   int _page = 0;
 
@@ -621,8 +767,7 @@ class _FloorPlansGalleryState extends State<_FloorPlansGallery> {
         height: 240,
         decoration: BoxDecoration(
           color: colors.surfaceSoft,
-          border:
-              Border.all(color: colors.hairline.withValues(alpha: 0.5)),
+          border: Border.all(color: colors.hairline.withValues(alpha: 0.5)),
         ),
         child: Stack(
           children: [
@@ -654,6 +799,266 @@ class _FloorPlansGalleryState extends State<_FloorPlansGallery> {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Location card ─────────────────────────────────────────────────────────────
+
+class _LocationCard extends StatelessWidget {
+  const _LocationCard({required this.unit, required this.l10n});
+  final BrokerUnit unit;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final hasMap = unit.hasLocation;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Address row
+        if (unit.address != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: hasMap
+                  ? const BorderRadius.only(
+                      topLeft: Radius.circular(AppRadii.lg),
+                      topRight: Radius.circular(AppRadii.lg),
+                    )
+                  : BorderRadius.circular(AppRadii.lg),
+              border: Border.all(color: colors.hairline),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.location_on_rounded,
+                    size: 18, color: colors.brandGold),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    unit.address!,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: colors.inkStrong,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (hasMap) const SizedBox(height: 2),
+        ],
+        // Map
+        if (hasMap)
+          ClipRRect(
+            borderRadius: unit.address != null
+                ? const BorderRadius.only(
+                    bottomLeft: Radius.circular(AppRadii.lg),
+                    bottomRight: Radius.circular(AppRadii.lg),
+                  )
+                : BorderRadius.circular(AppRadii.lg),
+            child: SizedBox(
+              height: 220,
+              child: Stack(
+                children: [
+                  FlutterMap(
+                    options: MapOptions(
+                      initialCenter:
+                          LatLng(unit.latitude!, unit.longitude!),
+                      initialZoom: 15,
+                      interactionOptions: const InteractionOptions(
+                        flags: InteractiveFlag.pinchZoom |
+                            InteractiveFlag.doubleTapZoom,
+                      ),
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.devora.staff',
+                        maxZoom: 19,
+                      ),
+                      MarkerLayer(markers: [
+                        Marker(
+                          point: LatLng(unit.latitude!, unit.longitude!),
+                          width: 48,
+                          height: 48,
+                          child: const _UnitMapPin(),
+                        ),
+                      ]),
+                    ],
+                  ),
+                  PositionedDirectional(
+                    bottom: AppSpacing.sm,
+                    end: AppSpacing.sm,
+                    child: GestureDetector(
+                      onTap: () => ContactActions.openMap(
+                        lat: unit.latitude!,
+                        lng: unit.longitude!,
+                        label: unit.address ?? unit.code,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _navyDeep.withValues(alpha: 0.88),
+                          borderRadius: AppRadii.pillAll,
+                          border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.20),
+                              width: 0.8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.open_in_new_rounded,
+                                size: 13, color: Colors.white70),
+                            const SizedBox(width: 5),
+                            Text(
+                              l10n.openInMaps,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _UnitMapPin extends StatelessWidget {
+  const _UnitMapPin();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: AppPalette.gold400,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2.5),
+            boxShadow: [
+              BoxShadow(
+                color: AppPalette.gold400.withValues(alpha: 0.5),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: const Icon(Icons.home_rounded,
+              size: 16, color: Colors.white),
+        ),
+        Container(width: 2, height: 10, color: AppPalette.gold500),
+      ],
+    );
+  }
+}
+
+// ── Project card ──────────────────────────────────────────────────────────────
+
+class _ProjectCard extends StatelessWidget {
+  const _ProjectCard({required this.unit, required this.lang});
+  final BrokerUnit unit;
+  final String lang;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    final name = unit.projectName(lang);
+    final city = unit.projectCity;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(
+            color: AppPalette.gold400.withValues(alpha: 0.20)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppPalette.gold300, AppPalette.gold500],
+              ),
+              borderRadius: BorderRadius.circular(AppRadii.md + 2),
+            ),
+            child: const Icon(Icons.apartment_rounded,
+                color: Colors.white, size: 26),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (name != null) ...[
+                  Text(
+                    name,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: colors.inkStrong,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                ],
+                if (city != null)
+                  Row(
+                    children: [
+                      Icon(Icons.location_on_rounded,
+                          size: 13, color: colors.brandGold),
+                      const SizedBox(width: 3),
+                      Flexible(
+                        child: Text(
+                          city,
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: colors.inkMuted),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+          Icon(Icons.arrow_back_ios_new_rounded,
+              size: 14, color: colors.inkMuted),
+        ],
       ),
     );
   }
@@ -715,8 +1120,11 @@ class _StickyAddLead extends StatelessWidget {
                   child: _GoldCTA(
                     label: l10n.brokerLeadNew,
                     icon: Icons.person_add_alt_1_rounded,
-                    onTap: () => context.push('/broker/leads/new', extra: {
+                    onTap: () =>
+                        context.push('/broker/leads/new', extra: {
                       if (projectId != null) 'projectId': projectId,
+                      if (unit.projectId != null)
+                        'projectId': unit.projectId,
                       'unitId': unit.id,
                     }),
                   ),
@@ -811,8 +1219,7 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: _bg(),
         borderRadius: AppRadii.pillAll,

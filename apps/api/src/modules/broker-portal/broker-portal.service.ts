@@ -194,7 +194,6 @@ export class BrokerPortalService {
         include: {
           media: {
             orderBy: { order: 'asc' },
-            take: 1,
             select: { id: true, url: true, type: true, order: true },
           },
           building: {
