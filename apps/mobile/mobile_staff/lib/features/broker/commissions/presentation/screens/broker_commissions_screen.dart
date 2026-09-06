@@ -9,7 +9,7 @@ import '../../domain/entities/broker_commission.dart';
 import '../cubit/broker_commissions_cubit.dart';
 
 const _navyDeep = Color(0xFF0B1726);
-const _navyCard = Color(0xFF1A3352);
+const _navyMid = Color(0xFF14273F);
 const _navyLight = Color(0xFF243F62);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -33,6 +33,7 @@ class _State extends State<BrokerCommissionsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final lang = Localizations.localeOf(context).languageCode;
     final cubit = context.read<BrokerCommissionsCubit>();
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -43,65 +44,73 @@ class _State extends State<BrokerCommissionsScreen> {
         backgroundColor: context.appColors.canvas,
         body: Column(
           children: [
+            // ── Gradient header ───────────────────────────────────────────
             const _CommissionsHeader(),
+
+            // ── Pinned filter row ─────────────────────────────────────────
+            BlocBuilder<BrokerCommissionsCubit, BrokerCommissionsState>(
+              buildWhen: (a, b) =>
+                  a.statusFilter != b.statusFilter ||
+                  a.totalCount != b.totalCount ||
+                  a.statusCounts.toString() != b.statusCounts.toString(),
+              builder: (context, state) => _FilterRow(
+                l10n: l10n,
+                lang: lang,
+                selected: state.statusFilter,
+                total: state.totalCount,
+                counts: state.statusCounts,
+                onSelected: cubit.setStatus,
+              ),
+            ),
+
+            // ── Scrollable body ───────────────────────────────────────────
             Expanded(
-              child: BlocBuilder<BrokerCommissionsCubit,
-                  BrokerCommissionsState>(
+              child: BlocBuilder<BrokerCommissionsCubit, BrokerCommissionsState>(
                 builder: (context, state) {
-                  switch (state.status) {
-                    case DataStatus.initial:
-                    case DataStatus.loading:
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
-                    case DataStatus.failure:
-                      return ErrorState(
-                        failure: state.failure,
-                        onRetry: cubit.load,
-                      );
-                    case DataStatus.empty:
-                    case DataStatus.success:
-                      return RefreshIndicator(
-                        onRefresh: cubit.load,
-                        child: ListView(
-                          padding: EdgeInsets.fromLTRB(
-                            AppSpacing.lg,
-                            AppSpacing.lg,
-                            AppSpacing.lg,
-                            AppSpacing.xl +
-                                MediaQuery.of(context).padding.bottom,
-                          ),
-                          children: [
-                            // ── Overview ────────────────────────────────────
-                            _Overview(state: state, l10n: l10n),
-                            const SizedBox(height: AppSpacing.lg),
-
-                            // ── Filter chips ────────────────────────────────
-                            _StatusChips(selected: state.statusFilter),
-                            const SizedBox(height: AppSpacing.md),
-
-                            // ── List ────────────────────────────────────────
-                            if (state.commissions.isEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  top: AppSpacing.xxl,
-                                ),
-                                child: EmptyState(
-                                  icon: Icons.payments_outlined,
-                                  title: l10n.brokerCommissionsEmptyTitle,
-                                  message:
-                                      l10n.brokerCommissionsEmptyMessage,
-                                ),
-                              )
-                            else
-                              for (final c in state.commissions) ...[
-                                _CommissionTile(commission: c),
-                                const SizedBox(height: AppSpacing.sm),
-                              ],
-                          ],
-                        ),
-                      );
+                  if (state.status == DataStatus.initial ||
+                      state.status == DataStatus.loading) {
+                    return const Center(child: CircularProgressIndicator());
                   }
+                  if (state.status == DataStatus.failure) {
+                    return ErrorState(
+                      failure: state.failure,
+                      onRetry: cubit.load,
+                    );
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: cubit.load,
+                    child: ListView(
+                      padding: EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        AppSpacing.lg,
+                        AppSpacing.lg,
+                        AppSpacing.xl +
+                            MediaQuery.of(context).padding.bottom,
+                      ),
+                      children: [
+                        // ── Overview KPI cards ─────────────────────────────
+                        _Overview(state: state, l10n: l10n),
+                        const SizedBox(height: AppSpacing.lg),
+
+                        // ── Commission list / empty ────────────────────────
+                        if (state.commissions.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: AppSpacing.xxl),
+                            child: EmptyState(
+                              icon: Icons.payments_outlined,
+                              title: l10n.brokerCommissionsEmptyTitle,
+                              message: l10n.brokerCommissionsEmptyMessage,
+                            ),
+                          )
+                        else
+                          for (final c in state.commissions) ...[
+                            _CommissionTile(commission: c, lang: lang),
+                            const SizedBox(height: AppSpacing.sm),
+                          ],
+                      ],
+                    ),
+                  );
                 },
               ),
             ),
@@ -112,7 +121,7 @@ class _State extends State<BrokerCommissionsScreen> {
   }
 }
 
-// ── Header ────────────────────────────────────────────────────────────────────
+// ── Gradient header ───────────────────────────────────────────────────────────
 
 class _CommissionsHeader extends StatelessWidget {
   const _CommissionsHeader();
@@ -128,9 +137,9 @@ class _CommissionsHeader extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: [_navyLight, _navyCard, _navyDeep],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_navyLight, _navyMid, _navyDeep],
           stops: [0.0, 0.45, 1.0],
         ),
         borderRadius: BorderRadius.only(
@@ -147,21 +156,19 @@ class _CommissionsHeader extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          const Positioned.fill(
-            child: IgnorePointer(child: _DotTexture()),
-          ),
+          const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
           PositionedDirectional(
             end: 0,
             top: 0,
             child: Container(
-              width: 160,
-              height: 120,
+              width: 200,
+              height: 200,
               decoration: BoxDecoration(
                 gradient: RadialGradient(
                   center: Alignment.topRight,
                   radius: 1.0,
                   colors: [
-                    AppPalette.gold400.withValues(alpha: 0.10),
+                    AppPalette.gold400.withValues(alpha: 0.12),
                     AppPalette.gold400.withValues(alpha: 0.0),
                   ],
                 ),
@@ -223,22 +230,14 @@ class _CommissionsHeader extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  width: 42,
-                  height: 42,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF7C5200), Color(0xFF3D2800)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                    color: Colors.white.withValues(alpha: 0.10),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppPalette.gold300.withValues(alpha: 0.35),
                     ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF7C5200).withValues(alpha: 0.4),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
                   ),
                   child: const Icon(
                     Icons.payments_rounded,
@@ -255,200 +254,84 @@ class _CommissionsHeader extends StatelessWidget {
   }
 }
 
-// ── Overview ──────────────────────────────────────────────────────────────────
+// ── Pinned filter row ─────────────────────────────────────────────────────────
 
-class _Overview extends StatelessWidget {
-  const _Overview({required this.state, required this.l10n});
-  final BrokerCommissionsState state;
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    final lang = Localizations.localeOf(context).languageCode;
-    String money(double v) => PriceFormatter.format(v, languageCode: lang);
-
-    return Row(
-      children: [
-        // Approved
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF0D5C3A), Color(0xFF052B1E)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF052B1E).withValues(alpha: 0.4),
-                  blurRadius: 14,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.check_circle_rounded,
-                    color: Color(0xFF4ADE80),
-                    size: 18,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  money(state.approvedTotal),
-                  style: const TextStyle(
-                    color: Color(0xFF4ADE80),
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    height: 1.1,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  l10n.bonusStatusApproved,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.6),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        // Pending
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF7C5200), Color(0xFF3D2800)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF3D2800).withValues(alpha: 0.4),
-                  blurRadius: 14,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.schedule_rounded,
-                    color: AppPalette.gold300,
-                    size: 18,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  money(state.pendingTotal),
-                  style: const TextStyle(
-                    color: AppPalette.gold300,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    height: 1.1,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  l10n.bonusStatusPending,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.6),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Status chips ──────────────────────────────────────────────────────────────
-
-class _StatusChips extends StatelessWidget {
-  const _StatusChips({this.selected});
-  final String? selected;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final cubit = context.read<BrokerCommissionsCubit>();
-
-    return Wrap(
-      spacing: AppSpacing.xs,
-      runSpacing: AppSpacing.xs,
-      children: [
-        _Chip(
-          label: l10n.leadsFilterAll,
-          selected: selected == null,
-          onTap: () => cubit.setStatus(null),
-          dotColor: _navyCard,
-        ),
-        for (final s in kBrokerCommissionStatuses)
-          _Chip(
-            label: brokerCommissionStatusLabel(l10n, s),
-            selected: selected == s,
-            onTap: () => cubit.setStatus(s),
-            dotColor: _chipColor(s),
-          ),
-      ],
-    );
-  }
-
-  Color _chipColor(String s) {
-    switch (s) {
-      case 'APPROVED':
-        return const Color(0xFF22C55E);
-      case 'REJECTED':
-        return const Color(0xFFEF4444);
-      case 'CANCELLED':
-        return const Color(0xFF94A3B8);
-      default:
-        return AppPalette.gold300;
-    }
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({
-    required this.label,
+class _FilterRow extends StatelessWidget {
+  const _FilterRow({
+    required this.l10n,
+    required this.lang,
     required this.selected,
+    required this.total,
+    required this.counts,
+    required this.onSelected,
+  });
+
+  final AppLocalizations l10n;
+  final String lang;
+  final String? selected;
+  final int total;
+  final Map<String, int> counts;
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(
+            bottom: BorderSide(color: colors.hairline, width: 0.5)),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg, vertical: 6),
+        child: Row(
+          children: [
+            _FilterChip(
+              label: lang == 'ar' ? 'الكل' : 'All',
+              count: total,
+              active: selected == null,
+              onTap: () => onSelected(null),
+            ),
+            for (final s in kBrokerCommissionStatuses) ...[
+              const SizedBox(width: AppSpacing.xs),
+              _FilterChip(
+                label: brokerCommissionStatusLabel(l10n, s),
+                count: counts[s] ?? 0,
+                dotColor: _dotColor(s),
+                active: selected == s,
+                onTap: () => onSelected(selected == s ? null : s),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _dotColor(String s) => switch (s) {
+        'APPROVED' => const Color(0xFF22C55E),
+        'REJECTED' => const Color(0xFFEF4444),
+        'CANCELLED' => const Color(0xFF94A3B8),
+        _ => AppPalette.gold300,
+      };
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.count,
+    required this.active,
     required this.onTap,
-    required this.dotColor,
+    this.dotColor,
   });
 
   final String label;
-  final bool selected;
+  final int count;
+  final bool active;
   final VoidCallback onTap;
-  final Color dotColor;
+  final Color? dotColor;
 
   @override
   Widget build(BuildContext context) {
@@ -457,51 +340,60 @@ class _Chip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm + 4, vertical: 11),
         decoration: BoxDecoration(
-          gradient: selected
-              ? const LinearGradient(
-                  colors: [_navyLight, _navyDeep],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          color: selected ? null : colors.surface,
-          borderRadius: BorderRadius.circular(10),
+          color: active ? colors.brandNavy : colors.surface,
+          borderRadius: AppRadii.pillAll,
           border: Border.all(
-            color: selected
-                ? Colors.transparent
-                : colors.hairline.withValues(alpha: 0.6),
+            color: active ? colors.brandNavy : colors.hairline,
+            width: active ? 0 : 1,
           ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: _navyDeep.withValues(alpha: 0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ]
-              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 7,
-              height: 7,
+            // Count badge
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xs, vertical: 2),
               decoration: BoxDecoration(
-                color: selected ? AppPalette.gold300 : dotColor,
-                shape: BoxShape.circle,
+                color: active
+                    ? Colors.white.withValues(alpha: 0.18)
+                    : colors.surfaceSoft,
+                borderRadius: BorderRadius.circular(100),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: active ? Colors.white : colors.inkStrong,
+                  height: 1.2,
+                ),
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: AppSpacing.xs),
+            // Status dot — inactive only
+            if (!active && dotColor != null) ...[
+              Container(
+                width: 6,
+                height: 6,
+                decoration:
+                    BoxDecoration(color: dotColor, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: AppSpacing.xxs + 2),
+            ],
+            // Label
             Text(
               label,
               style: TextStyle(
-                color: selected ? Colors.white : colors.inkStrong,
-                fontWeight: FontWeight.w700,
-                fontSize: 12.5,
+                fontSize: 13,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                color: active ? Colors.white : colors.inkStrong,
+                height: 1.2,
               ),
             ),
           ],
@@ -511,23 +403,244 @@ class _Chip extends StatelessWidget {
   }
 }
 
+// ── Overview KPI card ─────────────────────────────────────────────────────────
+
+class _Overview extends StatelessWidget {
+  const _Overview({required this.state, required this.l10n});
+  final BrokerCommissionsState state;
+  final AppLocalizations l10n;
+
+  static const _bg1 = Color(0xFF1C3352);
+  static const _bg2 = Color(0xFF0F1E33);
+
+  @override
+  Widget build(BuildContext context) {
+    final lang = Localizations.localeOf(context).languageCode;
+    String money(double v) => PriceFormatter.format(v, languageCode: lang);
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [_bg1, _bg2],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: AppRadii.card,
+        boxShadow: const [
+          BoxShadow(
+              color: Color(0x500F1E33), blurRadius: 22, offset: Offset(0, 8)),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: AppRadii.card,
+              child: const _DotTexture(),
+            ),
+          ),
+          PositionedDirectional(
+            top: -20,
+            end: -20,
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [Color(0x1EC8A24B), Color(0x00C8A24B)],
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Label row
+                Row(
+                  children: [
+                    Text(
+                      l10n.navCommissions,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.65),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 3),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: AppPalette.gold400.withValues(alpha: 0.40),
+                        ),
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.circle,
+                              size: 6, color: AppPalette.gold300),
+                          const SizedBox(width: 4),
+                          Text(
+                            l10n.bonusStatusPending,
+                            style: const TextStyle(
+                              color: AppPalette.gold300,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Container(
+                    height: 1,
+                    color: Colors.white.withValues(alpha: 0.08)),
+                const SizedBox(height: AppSpacing.sm),
+                // Metrics row
+                IntrinsicHeight(
+                  child: Row(
+                    children: [
+                      _Metric(
+                        value: money(state.approvedTotal),
+                        label: l10n.bonusStatusApproved,
+                        isGold: false,
+                        valueColor: const Color(0xFF4ADE80),
+                        icon: Icons.check_circle_rounded,
+                        iconColor: const Color(0xFF4ADE80),
+                      ),
+                      _VDivider(),
+                      _Metric(
+                        value: money(state.pendingTotal),
+                        label: l10n.bonusStatusPending,
+                        isGold: true,
+                        valueColor: AppPalette.gold300,
+                        icon: Icons.schedule_rounded,
+                        iconColor: AppPalette.gold300,
+                      ),
+                      _VDivider(),
+                      _Metric(
+                        value: '${state.totalCount}',
+                        label: state.totalCount == 1
+                            ? (Localizations.localeOf(context).languageCode ==
+                                    'ar'
+                                ? 'عمولة'
+                                : 'commission')
+                            : (Localizations.localeOf(context).languageCode ==
+                                    'ar'
+                                ? 'عمولة'
+                                : 'total'),
+                        isGold: false,
+                        valueColor: Colors.white,
+                        icon: Icons.payments_rounded,
+                        iconColor: Colors.white,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Metric extends StatelessWidget {
+  const _Metric({
+    required this.value,
+    required this.label,
+    required this.isGold,
+    required this.valueColor,
+    required this.icon,
+    required this.iconColor,
+  });
+
+  final String value;
+  final String label;
+  final bool isGold;
+  final Color valueColor;
+  final IconData icon;
+  final Color iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: iconColor, size: 16),
+          const SizedBox(height: 5),
+          Text(
+            value,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              height: 1.0,
+              color: valueColor,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: Colors.white.withValues(alpha: 0.50),
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 1,
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        color: Colors.white.withValues(alpha: 0.10),
+      );
+}
+
 // ── Commission tile ───────────────────────────────────────────────────────────
 
 class _CommissionTile extends StatelessWidget {
-  const _CommissionTile({required this.commission});
+  const _CommissionTile({
+    required this.commission,
+    required this.lang,
+  });
   final BrokerCommission commission;
+  final String lang;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
-    final lang = Localizations.localeOf(context).languageCode;
     final theme = Theme.of(context);
+    final accent = _accentColor(commission.status);
+    final amountStr = commission.netAmount ?? commission.grossAmount;
 
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadii.card,
         border: Border.all(color: colors.hairline.withValues(alpha: 0.4)),
         boxShadow: [
           BoxShadow(
@@ -537,117 +650,126 @@ class _CommissionTile extends StatelessWidget {
           ),
         ],
       ),
-      child: IntrinsicHeight(
-        child: Row(
-          children: [
-            // Accent rail
-            Container(
-              width: 4,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    _tileColor(commission.status),
-                    _tileColor(commission.status).withValues(alpha: 0.3),
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  bottomLeft: Radius.circular(16),
-                ),
-              ),
-            ),
-            const SizedBox(width: 14),
-            // Icon
-            Container(
-              width: 40,
-              height: 40,
-              margin: const EdgeInsets.symmetric(vertical: 14),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF7C5200), Color(0xFF3D2800)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: const Icon(
-                Icons.payments_rounded,
-                color: AppPalette.gold300,
-                size: 18,
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Content
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      PriceFormatter.formatString(
-                        commission.netAmount ?? commission.grossAmount,
-                        languageCode: lang,
-                      ),
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: _tileColor(commission.status),
-                      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Top accent strip
+          Container(height: 3, color: accent),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            child: Row(
+              children: [
+                // Circle icon badge
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [_navyLight, _navyDeep],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    if (commission.projectName != null) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        commission.projectName!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colors.inkMuted,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                    if (commission.createdAt != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        DateFormatter.shortDate(
-                          commission.createdAt!,
-                          languageCode: lang,
-                        ),
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: colors.inkMuted,
-                        ),
-                      ),
-                    ],
-                  ],
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.payments_rounded,
+                    color: AppPalette.gold300,
+                    size: 20,
+                  ),
                 ),
-              ),
+                const SizedBox(width: 13),
+
+                // Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Amount
+                      Text(
+                        amountStr != null
+                            ? PriceFormatter.formatString(
+                                amountStr,
+                                languageCode: lang,
+                              )
+                            : '—',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: accent,
+                          height: 1.1,
+                        ),
+                      ),
+                      // Project
+                      if (commission.projectName != null) ...[
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.apartment_rounded,
+                              size: 11,
+                              color: colors.inkMuted,
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                commission.projectName!,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colors.inkMuted,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      // Date
+                      if (commission.createdAt != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today_rounded,
+                              size: 11,
+                              color: colors.inkMuted,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              DateFormatter.shortDate(
+                                commission.createdAt!,
+                                languageCode: lang,
+                              ),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: colors.inkMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+                // Status badge
+                StatusBadge(
+                  label: brokerCommissionStatusLabel(l10n, commission.status),
+                  tone: brokerCommissionStatusTone(commission.status),
+                ),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.only(right: 14),
-              child: StatusBadge(
-                label: brokerCommissionStatusLabel(l10n, commission.status),
-                tone: brokerCommissionStatusTone(commission.status),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Color _tileColor(String s) {
-    switch (s) {
-      case 'APPROVED':
-        return const Color(0xFF22C55E);
-      case 'REJECTED':
-      case 'CANCELLED':
-        return const Color(0xFFEF4444);
-      default:
-        return AppPalette.gold300;
-    }
-  }
+  Color _accentColor(String s) => switch (s) {
+        'APPROVED' => const Color(0xFF22C55E),
+        'REJECTED' || 'CANCELLED' => const Color(0xFFEF4444),
+        _ => AppPalette.gold300,
+      };
 }
 
 // ── Shared ────────────────────────────────────────────────────────────────────
@@ -665,8 +787,8 @@ class _BackBtn extends StatelessWidget {
           borderRadius: BorderRadius.circular(11),
           border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
         ),
-        child: Icon(
-          Icons.arrow_back_ios_new_rounded,
+        child: const Icon(
+          Icons.arrow_forward_ios_rounded,
           color: Colors.white,
           size: 16,
         ),

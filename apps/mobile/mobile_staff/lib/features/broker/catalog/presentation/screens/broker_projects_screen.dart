@@ -10,7 +10,7 @@ import '../../domain/entities/broker_project.dart';
 import '../cubit/broker_projects_cubit.dart';
 
 const _navyDeep = Color(0xFF0B1726);
-const _navyCard = Color(0xFF1A3352);
+const _navyMid = Color(0xFF14273F);
 const _navyLight = Color(0xFF243F62);
 
 class BrokerProjectsScreen extends StatefulWidget {
@@ -101,9 +101,9 @@ class _ProjectsHeader extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: [_navyLight, _navyCard, _navyDeep],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_navyLight, _navyMid, _navyDeep],
           stops: [0.0, 0.45, 1.0],
         ),
         borderRadius: BorderRadius.only(
@@ -118,24 +118,26 @@ class _ProjectsHeader extends StatelessWidget {
       child: Stack(
         children: [
           const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
+          // Gold radial bloom
           PositionedDirectional(
             end: 0,
             top: 0,
             child: Container(
-              width: 160,
-              height: 120,
+              width: 200,
+              height: 200,
               decoration: BoxDecoration(
                 gradient: RadialGradient(
                   center: Alignment.topRight,
                   radius: 1.0,
                   colors: [
-                    AppPalette.gold400.withValues(alpha: 0.10),
+                    AppPalette.gold400.withValues(alpha: 0.12),
                     AppPalette.gold400.withValues(alpha: 0.0),
                   ],
                 ),
               ),
             ),
           ),
+          // Gold hairline
           Positioned(
             bottom: 0,
             left: 48,
@@ -189,19 +191,28 @@ class _ProjectsHeader extends StatelessWidget {
                 if (count != null)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
+                        horizontal: 14, vertical: 7),
                     decoration: BoxDecoration(
-                      color: AppPalette.gold400.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                          color: AppPalette.gold400.withValues(alpha: 0.4)),
+                      gradient: const LinearGradient(
+                        colors: [AppPalette.gold400, AppPalette.gold500],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(AppRadii.pill),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppPalette.gold400.withValues(alpha: 0.35),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: Text(
                       '$count',
                       style: const TextStyle(
-                        color: AppPalette.gold300,
+                        color: _navyDeep,
                         fontSize: 14,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
@@ -216,11 +227,20 @@ class _ProjectsHeader extends StatelessWidget {
 
 // ── Project card ──────────────────────────────────────────────────────────────
 
-class _ProjectCard extends StatelessWidget {
+class _ProjectCard extends StatefulWidget {
   const _ProjectCard({required this.project});
   final BrokerProject project;
 
+  @override
+  State<_ProjectCard> createState() => _ProjectCardState();
+}
+
+class _ProjectCardState extends State<_ProjectCard> {
+  bool _pressed = false;
+
   static const double _imageHeight = 236;
+  static const _gold1 = Color(0xFFAA8528);
+  static const _gold2 = Color(0xFFC8A24B);
 
   @override
   Widget build(BuildContext context) {
@@ -228,21 +248,38 @@ class _ProjectCard extends StatelessWidget {
     final lang = Localizations.localeOf(context).languageCode;
     final colors = context.appColors;
     final theme = Theme.of(context);
-    final name = project.name.resolve(lang);
-    final city = project.city?.trim() ?? '';
+    final name = widget.project.name.resolve(lang);
+    final city = widget.project.city?.trim() ?? '';
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: colors.shadowCard,
-      ),
-      child: Material(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(20),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () =>
-              context.push('/broker/projects/${project.id}', extra: project),
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: () => context.push(
+          '/broker/projects/${widget.project.id}',
+          extra: widget.project),
+      child: AnimatedScale(
+        scale: _pressed ? 0.98 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutCubic,
+        child: Container(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 18,
+                offset: const Offset(0, 5),
+              ),
+              BoxShadow(
+                color: AppPalette.gold400.withValues(alpha: 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -253,7 +290,7 @@ class _ProjectCard extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    AppNetworkImage(url: project.coverImageUrl),
+                    AppNetworkImage(url: widget.project.coverImageUrl),
                     const Positioned.fill(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
@@ -264,7 +301,7 @@ class _ProjectCard extends StatelessWidget {
                               Color(0x33000000),
                               Color(0x00000000),
                               Color(0xBB000000),
-                              Color(0xF0000000),
+                              Color(0xF2000000),
                             ],
                             stops: [0.0, 0.28, 0.66, 1.0],
                           ),
@@ -276,12 +313,63 @@ class _ProjectCard extends StatelessWidget {
                       top: AppSpacing.sm,
                       end: AppSpacing.sm,
                       child: StatusBadge(
-                        label: projectStatusLabel(l10n, project.status),
-                        tone: projectStatusTone(project.status),
+                        label: projectStatusLabel(l10n, widget.project.status),
+                        tone: projectStatusTone(widget.project.status),
                         variant: BadgeVariant.solid,
                       ),
                     ),
-                    // City + name overlay — bottom
+                    // Commission badge — top start
+                    if (widget.project.commissionPct != null)
+                      PositionedDirectional(
+                        top: AppSpacing.sm,
+                        start: AppSpacing.sm,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.50),
+                            border: Border.all(
+                              color: AppPalette.gold400.withValues(alpha: 0.55),
+                              width: 0.8,
+                            ),
+                            borderRadius:
+                                BorderRadius.circular(AppRadii.pill),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: AppPalette.gold300,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppPalette.gold300
+                                          .withValues(alpha: 0.7),
+                                      blurRadius: 4,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                lang == 'ar'
+                                    ? 'عمولة ${widget.project.commissionPct}%'
+                                    : '${widget.project.commissionPct}% comm.',
+                                style: const TextStyle(
+                                  color: AppPalette.gold300,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.1,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    // City + project name — bottom
                     PositionedDirectional(
                       bottom: AppSpacing.lg,
                       start: AppSpacing.lg,
@@ -331,7 +419,8 @@ class _ProjectCard extends StatelessWidget {
                               letterSpacing: -0.3,
                               shadows: const [
                                 Shadow(
-                                    color: Color(0x55000000), blurRadius: 10),
+                                    color: Color(0x55000000),
+                                    blurRadius: 10),
                               ],
                             ),
                             maxLines: 2,
@@ -370,7 +459,7 @@ class _ProjectCard extends StatelessWidget {
                 ],
               ),
 
-              // ── Card body ─────────────────────────────────────────────────
+              // ── Card footer: gold CTA button ──────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.md,
@@ -378,94 +467,57 @@ class _ProjectCard extends StatelessWidget {
                   AppSpacing.md,
                   AppSpacing.md,
                 ),
-                child: Row(
-                  children: [
-                    // Commission badge
-                    if (project.commissionPct != null) ...[
+                child: Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [_gold1, _gold2],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    borderRadius: BorderRadius.circular(AppRadii.md),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _gold1.withValues(alpha: 0.35),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 7),
+                        width: 28,
+                        height: 28,
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFAA8528), Color(0xFFC8A24B)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(AppRadii.md),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppPalette.gold400.withValues(alpha: 0.30),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
+                          color: Colors.black.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${project.commissionPct}%',
-                              style: const TextStyle(
-                                color: Color(0xFF0B1726),
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                height: 1.0,
-                                letterSpacing: -0.3,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              l10n.brokerCommissionPct,
-                              style: TextStyle(
-                                color:
-                                    const Color(0xFF0B1726).withValues(alpha: 0.65),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                        child: const Icon(
+                          Icons.apartment_rounded,
+                          size: 15,
+                          color: Colors.white,
                         ),
                       ),
                       const SizedBox(width: AppSpacing.sm),
-                    ],
-                    // Explore button
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => context.push(
-                            '/broker/projects/${project.id}',
-                            extra: project),
-                        child: Container(
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: Colors.transparent,
-                            border: Border.all(
-                                color: AppPalette.gold400
-                                    .withValues(alpha: 0.45)),
-                            borderRadius:
-                                BorderRadius.circular(AppRadii.md),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.apartment_rounded,
-                                  size: 16, color: _navyDeep),
-                              const SizedBox(width: 6),
-                              Text(
-                                lang == 'ar'
-                                    ? 'استعراض الوحدات'
-                                    : 'View Units',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: _navyDeep,
-                                ),
-                              ),
-                            ],
-                          ),
+                      Text(
+                        lang == 'ar' ? 'استعراض الوحدات' : 'View Units',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          height: 1.2,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: AppSpacing.xs),
+                      const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 12,
+                        color: Colors.white,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
