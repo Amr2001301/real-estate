@@ -284,7 +284,7 @@ GoRouter createStaffRouter(
                 GetBrokerProjectUnits(catalog),
                 CreateBrokerReservation(ctx.read<BrokerReservationsRepository>()),
                 leadId: args['leadId'] as String?,
-              );
+              )..init();
             },
             child: const CreateBrokerReservationScreen(),
           );

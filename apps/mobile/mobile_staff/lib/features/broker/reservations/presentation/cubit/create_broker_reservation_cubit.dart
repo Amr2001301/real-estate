@@ -147,10 +147,15 @@ class CreateBrokerReservationCubit extends Cubit<CreateBrokerReservationState> {
     emit(state.copyWith(selectedProjectId: id, clearSelectedUnit: true, unitsStatus: DataStatus.loading));
     final result = await _getUnits(id);
     result.when(
-      ok: (units) => emit(state.copyWith(
-        unitsStatus: units.isEmpty ? DataStatus.empty : DataStatus.success,
-        units: units,
-      )),
+      ok: (units) {
+        final available = units
+            .where((u) => u.status.toUpperCase() == 'AVAILABLE')
+            .toList();
+        emit(state.copyWith(
+          unitsStatus: available.isEmpty ? DataStatus.empty : DataStatus.success,
+          units: available,
+        ));
+      },
       err: (_) => emit(state.copyWith(unitsStatus: DataStatus.failure, units: const [])),
     );
   }
