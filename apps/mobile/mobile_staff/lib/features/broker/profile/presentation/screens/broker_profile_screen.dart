@@ -9,12 +9,22 @@ import '../../../../auth/presentation/cubit/staff_auth_cubit.dart';
 import '../cubit/broker_profile_cubit.dart';
 
 const _navyDeep = Color(0xFF0B1726);
-const _navyCard = Color(0xFF1A3352);
+const _navyMid = Color(0xFF14273F);
 const _navyLight = Color(0xFF243F62);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Broker Profile Screen
 // ─────────────────────────────────────────────────────────────────────────────
+
+String _initials(String name) {
+  final parts = name.trim().split(RegExp(r'\s+'));
+  final a = parts.first.characters.firstOrNull ?? '?';
+  if (parts.length >= 2) {
+    final b = parts.last.characters.firstOrNull ?? '';
+    return '$a$b'.toUpperCase();
+  }
+  return a.toUpperCase();
+}
 
 class BrokerProfileScreen extends StatelessWidget {
   const BrokerProfileScreen({super.key});
@@ -33,14 +43,13 @@ class BrokerProfileScreen extends StatelessWidget {
         backgroundColor: colors.canvas,
         body: Column(
           children: [
-            // ── Identity header ───────────────────────────────────────────────
+            // ── Identity header ───────────────────────────────────────────
             BlocBuilder<BrokerProfileCubit, BrokerProfileState>(
               builder: (context, state) {
                 final session =
                     context.read<SessionCubit>().state.sessionOrNull;
                 final p = state.data;
-                final name =
-                    p?.fullName ?? session?.displayName ?? '—';
+                final name = p?.fullName ?? session?.displayName ?? '—';
                 final company = p?.companyName;
                 final isLoading = state.status == DataStatus.loading ||
                     state.status == DataStatus.initial;
@@ -54,7 +63,7 @@ class BrokerProfileScreen extends StatelessWidget {
               },
             ),
 
-            // ── Settings body ─────────────────────────────────────────────────
+            // ── Settings body ─────────────────────────────────────────────
             Expanded(
               child: ListView(
                 padding: EdgeInsets.fromLTRB(
@@ -64,90 +73,68 @@ class BrokerProfileScreen extends StatelessWidget {
                   AppSpacing.xl + MediaQuery.of(context).padding.bottom,
                 ),
                 children: [
-                  // ── Commission tile (conditional) ─────────────────────────
-                  BlocBuilder<BrokerProfileCubit, BrokerProfileState>(
-                    buildWhen: (a, b) =>
-                        a.data?.canViewCommissions !=
-                        b.data?.canViewCommissions,
-                    builder: (context, state) {
-                      if (state.data?.canViewCommissions != true) {
-                        return const SizedBox.shrink();
-                      }
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: _SettingRow(
-                          icon: Icons.payments_rounded,
-                          iconColor: AppPalette.gold300,
-                          iconBg: AppPalette.gold300.withValues(alpha: 0.12),
-                          label: l10n.navCommissions,
-                          onTap: () =>
-                              context.push('/broker/commissions'),
-                        ),
-                      );
-                    },
-                  ),
-
-                  // ── Language ──────────────────────────────────────────────
-                  _SettingRow(
-                    icon: Icons.translate_rounded,
-                    iconColor: const Color(0xFF60A5FA),
-                    iconBg: const Color(0xFF60A5FA).withValues(alpha: 0.1),
-                    label: l10n.settingsLanguage,
-                    trailing: Text(
-                      l10n.languageName,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colors.inkMuted,
-                        fontWeight: FontWeight.w600,
+                  // ── Settings group card ───────────────────────────────────
+                  _GroupCard(
+                    children: [
+                      // Commission tile (conditional)
+                      BlocBuilder<BrokerProfileCubit, BrokerProfileState>(
+                        buildWhen: (a, b) =>
+                            a.data?.canViewCommissions !=
+                            b.data?.canViewCommissions,
+                        builder: (context, state) {
+                          if (state.data?.canViewCommissions != true) {
+                            return const SizedBox.shrink();
+                          }
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _SettingRow(
+                                icon: Icons.payments_rounded,
+                                iconColor: AppPalette.gold400,
+                                iconBg: AppPalette.gold400
+                                    .withValues(alpha: 0.12),
+                                label: l10n.navCommissions,
+                                onTap: () =>
+                                    context.push('/broker/commissions'),
+                              ),
+                              _Divider(),
+                            ],
+                          );
+                        },
                       ),
-                    ),
-                    onTap: () => context.read<LocaleCubit>().toggle(),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
 
-                  // ── Theme ─────────────────────────────────────────────────
-                  _SettingRow(
-                    icon: Icons.brightness_6_rounded,
-                    iconColor: const Color(0xFFA78BFA),
-                    iconBg: const Color(0xFFA78BFA).withValues(alpha: 0.1),
-                    label: l10n.settingsTheme,
-                    onTap: () => context.read<ThemeCubit>().cycle(),
+                      // Language
+                      _SettingRow(
+                        icon: Icons.translate_rounded,
+                        iconColor: const Color(0xFF60A5FA),
+                        iconBg: const Color(0xFF60A5FA).withValues(alpha: 0.12),
+                        label: l10n.settingsLanguage,
+                        trailing: Text(
+                          l10n.languageName,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colors.inkMuted,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        onTap: () => context.read<LocaleCubit>().toggle(),
+                      ),
+                      _Divider(),
+
+                      // Theme
+                      _SettingRow(
+                        icon: Icons.brightness_6_rounded,
+                        iconColor: const Color(0xFFA78BFA),
+                        iconBg: const Color(0xFFA78BFA).withValues(alpha: 0.12),
+                        label: l10n.settingsTheme,
+                        onTap: () => context.read<ThemeCubit>().cycle(),
+                      ),
+                    ],
                   ),
+
                   const SizedBox(height: AppSpacing.xl),
 
                   // ── Logout ────────────────────────────────────────────────
-                  GestureDetector(
-                    onTap: () =>
-                        context.read<StaffAuthCubit>().logout(),
-                    child: Container(
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: const Color(0xFFFECACA),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.logout_rounded,
-                            size: 18,
-                            color: Color(0xFFEF4444),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            l10n.actionLogout,
-                            style: const TextStyle(
-                              color: Color(0xFFEF4444),
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  _LogoutButton(l10n: l10n),
                 ],
               ),
             ),
@@ -183,9 +170,9 @@ class _ProfileHeader extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: [_navyLight, _navyCard, _navyDeep],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_navyLight, _navyMid, _navyDeep],
           stops: [0.0, 0.45, 1.0],
         ),
         borderRadius: BorderRadius.only(
@@ -202,27 +189,30 @@ class _ProfileHeader extends StatelessWidget {
       ),
       child: Stack(
         children: [
+          // Dot texture
           const Positioned.fill(
             child: IgnorePointer(child: _DotTexture()),
           ),
+          // Gold radial bloom
           PositionedDirectional(
             end: 0,
             top: 0,
             child: Container(
-              width: 160,
-              height: 160,
+              width: 200,
+              height: 200,
               decoration: BoxDecoration(
                 gradient: RadialGradient(
                   center: Alignment.topRight,
                   radius: 1.0,
                   colors: [
-                    AppPalette.gold400.withValues(alpha: 0.10),
+                    AppPalette.gold400.withValues(alpha: 0.12),
                     AppPalette.gold400.withValues(alpha: 0.0),
                   ],
                 ),
               ),
             ),
           ),
+          // Gold hairline
           Positioned(
             bottom: 0,
             left: 48,
@@ -240,6 +230,7 @@ class _ProfileHeader extends StatelessWidget {
               ),
             ),
           ),
+          // Content
           Padding(
             padding: EdgeInsets.fromLTRB(
               AppSpacing.lg,
@@ -250,7 +241,7 @@ class _ProfileHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Nav title
+                // Nav label
                 Text(
                   l10n.navProfile,
                   style: const TextStyle(
@@ -265,19 +256,24 @@ class _ProfileHeader extends StatelessWidget {
                 // Identity row
                 Row(
                   children: [
+                    // Avatar
                     if (isLoading)
                       Container(
-                        width: 62,
-                        height: 62,
+                        width: 68,
+                        height: 68,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
+                          color: Colors.white.withValues(alpha: 0.10),
                           shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            width: 2,
+                          ),
                         ),
                       )
                     else
                       Container(
-                        width: 62,
-                        height: 62,
+                        width: 68,
+                        height: 68,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [AppPalette.gold400, AppPalette.gold300],
@@ -285,38 +281,42 @@ class _ProfileHeader extends StatelessWidget {
                             end: Alignment.bottomRight,
                           ),
                           shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppPalette.gold300.withValues(alpha: 0.40),
+                            width: 2,
+                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: AppPalette.gold400.withValues(alpha: 0.4),
-                              blurRadius: 12,
-                              offset: const Offset(0, 3),
+                              color: AppPalette.gold400.withValues(alpha: 0.35),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
                             ),
                           ],
                         ),
-                        child: Center(
-                          child: Text(
-                            name.isNotEmpty
-                                ? name[0].toUpperCase()
-                                : '?',
-                            style: const TextStyle(
-                              color: _navyDeep,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w800,
-                            ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          _initials(name),
+                          style: const TextStyle(
+                            color: _navyDeep,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            height: 1,
                           ),
                         ),
                       ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: AppSpacing.md),
+                    // Name + company + role badge
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            isLoading ? '   ' : name,
+                            isLoading ? '' : name,
                             style: theme.textTheme.titleLarge?.copyWith(
                               color: Colors.white,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w900,
                               height: 1.1,
+                              letterSpacing: -0.3,
                             ),
                           ),
                           if (company != null && !isLoading) ...[
@@ -325,22 +325,22 @@ class _ProfileHeader extends StatelessWidget {
                               company!,
                               style: const TextStyle(
                                 color: AppPalette.gold300,
-                                fontSize: 12,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
-                          const SizedBox(height: 8),
+                          const SizedBox(height: AppSpacing.sm),
+                          // Role badge
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
+                                horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: AppRadii.pillAll,
                               border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.2),
+                                color: Colors.white.withValues(alpha: 0.20),
+                                width: 0.8,
                               ),
                             ),
                             child: Text(
@@ -366,9 +366,48 @@ class _ProfileHeader extends StatelessWidget {
   }
 }
 
+// ── Group card ────────────────────────────────────────────────────────────────
+
+class _GroupCard extends StatelessWidget {
+  const _GroupCard({required this.children});
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: AppRadii.card,
+        border: Border.all(color: colors.hairline, width: 0.8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: children),
+    );
+  }
+}
+
+class _Divider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      height: 0.5,
+      margin: const EdgeInsetsDirectional.only(start: 60),
+      color: colors.hairline,
+    );
+  }
+}
+
 // ── Setting row ───────────────────────────────────────────────────────────────
 
-class _SettingRow extends StatelessWidget {
+class _SettingRow extends StatefulWidget {
   const _SettingRow({
     required this.icon,
     required this.iconColor,
@@ -386,51 +425,116 @@ class _SettingRow extends StatelessWidget {
   final Widget? trailing;
 
   @override
+  State<_SettingRow> createState() => _SettingRowState();
+}
+
+class _SettingRowState extends State<_SettingRow> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final theme = Theme.of(context);
 
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: colors.hairline.withValues(alpha: 0.4)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        color: _pressed
+            ? colors.hairline.withValues(alpha: 0.5)
+            : Colors.transparent,
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: 14),
         child: Row(
           children: [
+            // Icon badge
             Container(
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: iconBg,
+                color: widget.iconBg,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: iconColor, size: 19),
+              child: Icon(widget.icon, color: widget.iconColor, size: 19),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: AppSpacing.sm),
+            // Label
             Expanded(
               child: Text(
-                label,
+                widget.label,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ),
-            if (trailing != null) ...[trailing!, const SizedBox(width: 6)],
+            // Optional trailing widget (e.g. current value text)
+            if (widget.trailing != null) ...[
+              widget.trailing!,
+              const SizedBox(width: AppSpacing.xs),
+            ],
+            // RTL-aware chevron
             Icon(
-              Icons.arrow_back_ios_new_rounded,
+              Icons.arrow_forward_ios_rounded,
               size: 13,
               color: colors.inkMuted,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Logout button ─────────────────────────────────────────────────────────────
+
+class _LogoutButton extends StatefulWidget {
+  const _LogoutButton({required this.l10n});
+  final AppLocalizations l10n;
+
+  @override
+  State<_LogoutButton> createState() => _LogoutButtonState();
+}
+
+class _LogoutButtonState extends State<_LogoutButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: () => context.read<StaffAuthCubit>().logout(),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        height: 52,
+        decoration: BoxDecoration(
+          color: _pressed
+              ? colors.error.withValues(alpha: 0.08)
+              : colors.error.withValues(alpha: 0.05),
+          borderRadius: AppRadii.pillAll,
+          border: Border.all(
+            color: colors.error.withValues(alpha: _pressed ? 0.35 : 0.20),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.logout_rounded, size: 18, color: colors.error),
+            const SizedBox(width: AppSpacing.xs),
+            Text(
+              widget.l10n.actionLogout,
+              style: TextStyle(
+                color: colors.error,
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+              ),
             ),
           ],
         ),

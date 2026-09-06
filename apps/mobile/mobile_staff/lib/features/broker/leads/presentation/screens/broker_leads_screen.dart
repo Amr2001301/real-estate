@@ -10,12 +10,30 @@ import '../../domain/entities/broker_lead.dart';
 import '../cubit/broker_leads_cubit.dart';
 
 const _navyDeep = Color(0xFF0B1726);
-const _navyCard = Color(0xFF1A3352);
+const _navyMid = Color(0xFF14273F);
 const _navyLight = Color(0xFF243F62);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Broker Leads Screen
 // ─────────────────────────────────────────────────────────────────────────────
+
+String _initials(String name) {
+  final parts = name.trim().split(RegExp(r'\s+'));
+  final a = parts.first.characters.firstOrNull ?? '?';
+  if (parts.length >= 2) {
+    final b = parts.last.characters.firstOrNull ?? '';
+    return '$a$b'.toUpperCase();
+  }
+  return a.toUpperCase();
+}
+
+Color _statusColor(String s, AppColorsExt colors) => switch (s) {
+      'APPROVED' => colors.success,
+      'REJECTED' => colors.error,
+      'DUPLICATE' => colors.inkMuted,
+      'EXPIRED' => colors.inkMuted,
+      _ => colors.warning, // PENDING
+    };
 
 class BrokerLeadsScreen extends StatefulWidget {
   const BrokerLeadsScreen({super.key});
@@ -48,6 +66,8 @@ class _BrokerLeadsScreenState extends State<BrokerLeadsScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final cubit = context.read<BrokerLeadsCubit>();
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+    final lang = Localizations.localeOf(context).languageCode;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
@@ -57,36 +77,51 @@ class _BrokerLeadsScreenState extends State<BrokerLeadsScreen> {
         backgroundColor: context.appColors.canvas,
         body: Column(
           children: [
-            // ── Header ────────────────────────────────────────────────────────
+            // ── Header with embedded search ───────────────────────────────
             BlocBuilder<BrokerLeadsCubit, BrokerLeadsListState>(
-              buildWhen: (a, b) => a.status != b.status || a.leads.length != b.leads.length,
+              buildWhen: (a, b) =>
+                  a.status != b.status ||
+                  a.leads.length != b.leads.length,
               builder: (context, state) => _LeadsHeader(
                 l10n: l10n,
-                count: state.status == DataStatus.success ? state.leads.length : null,
+                lang: lang,
+                count: state.status == DataStatus.success
+                    ? state.leads.length
+                    : null,
                 onAdd: _create,
+                searchController: _search,
+                onSearch: cubit.setSearch,
+                onClearSearch: () {
+                  _search.clear();
+                  cubit.setSearch('');
+                },
               ),
             ),
 
-            // ── Search ────────────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.lg,
-                0,
-              ),
-              child: _SearchField(
-                controller: _search,
-                hint: l10n.leadsSearchHint,
-                onSubmitted: cubit.setSearch,
-              ),
+            // ── Filter chips ──────────────────────────────────────────────
+            BlocBuilder<BrokerLeadsCubit, BrokerLeadsListState>(
+              buildWhen: (a, b) =>
+                  a.approvalStatus != b.approvalStatus ||
+                  a.leads != b.leads,
+              builder: (context, state) {
+                final counts = <String, int>{};
+                for (final lead in state.leads) {
+                  counts[lead.approvalStatus] =
+                      (counts[lead.approvalStatus] ?? 0) + 1;
+                }
+                return _FilterRow(
+                  l10n: l10n,
+                  lang: lang,
+                  selected: state.approvalStatus,
+                  total: state.leads.length,
+                  counts: counts,
+                  onSelected: (s) =>
+                      cubit.setApprovalStatus(s == state.approvalStatus ? null : s),
+                );
+              },
             ),
 
-            // ── Filter chips ──────────────────────────────────────────────────
-            const SizedBox(height: AppSpacing.sm),
-            _StatusFilter(),
-
-            // ── List ──────────────────────────────────────────────────────────
+            // ── List ──────────────────────────────────────────────────────
             Expanded(
               child: BlocBuilder<BrokerLeadsCubit, BrokerLeadsListState>(
                 builder: (context, state) {
@@ -106,21 +141,49 @@ class _BrokerLeadsScreenState extends State<BrokerLeadsScreen> {
                         message: l10n.brokerLeadsEmptyMessage,
                       );
                     case DataStatus.success:
+                      if (state.leads.isEmpty) {
+                        return EmptyState(
+                          icon: Icons.filter_list_off_rounded,
+                          title: lang == 'ar' ? 'لا توجد نتائج' : 'No results',
+                          message: lang == 'ar'
+                              ? 'جرّب تصفية أخرى'
+                              : 'Try a different filter',
+                        );
+                      }
                       return RefreshIndicator(
                         onRefresh: cubit.load,
-                        child: ListView.separated(
-                          padding: EdgeInsets.fromLTRB(
-                            AppSpacing.lg,
-                            AppSpacing.sm,
-                            AppSpacing.lg,
-                            AppSpacing.xl +
-                                MediaQuery.of(context).padding.bottom,
-                          ),
-                          itemCount: state.leads.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: AppSpacing.sm),
-                          itemBuilder: (context, i) =>
-                              _LeadCard(lead: state.leads[i]),
+                        child: CustomScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          slivers: [
+                            SliverToBoxAdapter(
+                              child: _KpiBar(
+                                leads: state.leads,
+                                lang: lang,
+                                l10n: l10n,
+                              ),
+                            ),
+                            SliverPadding(
+                              padding: EdgeInsets.fromLTRB(
+                                AppSpacing.md,
+                                AppSpacing.xs,
+                                AppSpacing.md,
+                                bottomPad + 100,
+                              ),
+                              sliver: SliverList(
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, i) {
+                                    if (i.isOdd) {
+                                      return const SizedBox(
+                                          height: AppSpacing.sm);
+                                    }
+                                    return _LeadCard(
+                                        lead: state.leads[i ~/ 2]);
+                                  },
+                                  childCount: state.leads.length * 2 - 1,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       );
                   }
@@ -134,18 +197,26 @@ class _BrokerLeadsScreenState extends State<BrokerLeadsScreen> {
   }
 }
 
-// ── Header ────────────────────────────────────────────────────────────────────
+// ── Header with embedded search ───────────────────────────────────────────────
 
 class _LeadsHeader extends StatelessWidget {
   const _LeadsHeader({
     required this.l10n,
+    required this.lang,
     required this.onAdd,
+    required this.searchController,
+    required this.onSearch,
+    required this.onClearSearch,
     this.count,
   });
 
   final AppLocalizations l10n;
+  final String lang;
   final int? count;
   final VoidCallback onAdd;
+  final TextEditingController searchController;
+  final ValueChanged<String> onSearch;
+  final VoidCallback onClearSearch;
 
   @override
   Widget build(BuildContext context) {
@@ -157,9 +228,9 @@ class _LeadsHeader extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: [_navyLight, _navyCard, _navyDeep],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_navyLight, _navyMid, _navyDeep],
           stops: [0.0, 0.45, 1.0],
         ),
         borderRadius: BorderRadius.only(
@@ -176,27 +247,30 @@ class _LeadsHeader extends StatelessWidget {
       ),
       child: Stack(
         children: [
+          // Dot texture
           const Positioned.fill(
             child: IgnorePointer(child: _DotTexture()),
           ),
+          // Gold radial bloom
           PositionedDirectional(
             end: 0,
             top: 0,
             child: Container(
-              width: 160,
-              height: 120,
+              width: 200,
+              height: 200,
               decoration: BoxDecoration(
                 gradient: RadialGradient(
                   center: Alignment.topRight,
                   radius: 1.0,
                   colors: [
-                    AppPalette.gold400.withValues(alpha: 0.09),
+                    AppPalette.gold400.withValues(alpha: 0.12),
                     AppPalette.gold400.withValues(alpha: 0.0),
                   ],
                 ),
               ),
             ),
           ),
+          // Gold hairline at bottom
           Positioned(
             bottom: 0,
             left: 48,
@@ -214,6 +288,7 @@ class _LeadsHeader extends StatelessWidget {
               ),
             ),
           ),
+          // Content
           Padding(
             padding: EdgeInsets.fromLTRB(
               AppSpacing.lg,
@@ -221,84 +296,104 @@ class _LeadsHeader extends StatelessWidget {
               AppSpacing.lg,
               AppSpacing.lg,
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        l10n.navLeads,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          height: 1.1,
+                // Title row
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            l10n.navLeads,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              height: 1.1,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            lang == 'ar'
+                                ? 'قائمة العملاء المحتملين'
+                                : 'Your prospect list',
+                            style: const TextStyle(
+                              color: AppPalette.gold300,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Count badge
+                    if (count != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.12),
+                          borderRadius: AppRadii.pillAll,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.20),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Text(
+                          '$count',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'قائمة العملاء المحتملين',
-                        style: TextStyle(
-                          color: AppPalette.gold300,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      const SizedBox(width: AppSpacing.sm),
                     ],
-                  ),
-                ),
-                if (count != null) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: Text(
-                      '$count',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                ],
-                GestureDetector(
-                  onTap: onAdd,
-                  child: Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppPalette.gold400, AppPalette.gold300],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppPalette.gold400.withValues(alpha: 0.4),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
+                    // Add button
+                    GestureDetector(
+                      onTap: onAdd,
+                      child: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [AppPalette.gold400, AppPalette.gold300],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color:
+                                  AppPalette.gold400.withValues(alpha: 0.40),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
                         ),
-                      ],
+                        child: const Icon(
+                          Icons.add_rounded,
+                          color: _navyDeep,
+                          size: 22,
+                        ),
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.add_rounded,
-                      color: _navyDeep,
-                      size: 22,
-                    ),
-                  ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                // Search bar embedded in header
+                _SearchBar(
+                  controller: searchController,
+                  hint: l10n.leadsSearchHint,
+                  onSubmitted: onSearch,
+                  onClear: onClearSearch,
                 ),
               ],
             ),
@@ -309,178 +404,224 @@ class _LeadsHeader extends StatelessWidget {
   }
 }
 
-// ── Search field ──────────────────────────────────────────────────────────────
+// ── Search bar ────────────────────────────────────────────────────────────────
 
-class _SearchField extends StatelessWidget {
-  const _SearchField({
+class _SearchBar extends StatefulWidget {
+  const _SearchBar({
     required this.controller,
     required this.hint,
     required this.onSubmitted,
+    required this.onClear,
   });
-
   final TextEditingController controller;
   final String hint;
   final ValueChanged<String> onSubmitted;
+  final VoidCallback onClear;
+
+  @override
+  State<_SearchBar> createState() => _SearchBarState();
+}
+
+class _SearchBarState extends State<_SearchBar> {
+  bool _hasText = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(
+        () => setState(() => _hasText = widget.controller.text.isNotEmpty));
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-
+    final theme = Theme.of(context);
     return Container(
+      height: 46,
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.5)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: AppRadii.pillAll,
+        border: Border.all(color: colors.hairline),
+        boxShadow: colors.shadowSoft,
       ),
-      child: TextField(
-        controller: controller,
-        textInputAction: TextInputAction.search,
-        onSubmitted: onSubmitted,
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(
-            color: colors.inkMuted.withValues(alpha: 0.6),
-            fontSize: 14,
+      child: Row(
+        children: [
+          const SizedBox(width: AppSpacing.md),
+          Icon(Icons.search_rounded, size: 20, color: colors.inkMuted),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: TextField(
+              controller: widget.controller,
+              onSubmitted: widget.onSubmitted,
+              textInputAction: TextInputAction.search,
+              style: theme.textTheme.bodyMedium,
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                hintText: widget.hint,
+                hintStyle: theme.textTheme.bodyMedium
+                    ?.copyWith(color: colors.inkMuted),
+              ),
+            ),
           ),
-          prefixIcon: Icon(
-            Icons.search_rounded,
-            color: colors.inkMuted,
-            size: 20,
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: 13,
-          ),
-          border: InputBorder.none,
-        ),
+          if (_hasText)
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              icon:
+                  Icon(Icons.close_rounded, size: 18, color: colors.inkMuted),
+              onPressed: widget.onClear,
+            ),
+          const SizedBox(width: AppSpacing.xs),
+        ],
       ),
     );
   }
 }
 
-// ── Status filter ─────────────────────────────────────────────────────────────
+// ── Filter chips row ──────────────────────────────────────────────────────────
 
-class _StatusFilter extends StatelessWidget {
+class _FilterRow extends StatelessWidget {
+  const _FilterRow({
+    required this.l10n,
+    required this.lang,
+    required this.selected,
+    required this.total,
+    required this.counts,
+    required this.onSelected,
+  });
+
+  final AppLocalizations l10n;
+  final String lang;
+  final String? selected;
+  final int total;
+  final Map<String, int> counts;
+  final ValueChanged<String?> onSelected;
+
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final cubit = context.read<BrokerLeadsCubit>();
-    return SizedBox(
-      height: 44,
-      child: BlocBuilder<BrokerLeadsCubit, BrokerLeadsListState>(
-        buildWhen: (a, b) => a.approvalStatus != b.approvalStatus,
-        builder: (context, state) => ListView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+    final colors = context.appColors;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border:
+            Border(bottom: BorderSide(color: colors.hairline, width: 0.5)),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg, vertical: 6),
+        child: Row(
           children: [
             _FilterChip(
-              label: l10n.leadsFilterAll,
-              selected: state.approvalStatus == null,
-              onTap: () => cubit.setApprovalStatus(null),
-              dotColor: _navyCard,
+              label: lang == 'ar' ? 'الكل' : 'All',
+              count: total,
+              active: selected == null,
+              onTap: () => onSelected(null),
             ),
-            for (final s in kBrokerLeadStatuses)
+            const SizedBox(width: AppSpacing.xs),
+            for (final s in kBrokerLeadStatuses) ...[
               _FilterChip(
                 label: brokerLeadStatusLabel(l10n, s),
-                selected: state.approvalStatus == s,
-                onTap: () => cubit.setApprovalStatus(s),
-                dotColor: _statusColor(s),
+                count: counts[s] ?? 0,
+                dotColor: _dotColor(s, colors),
+                active: selected == s,
+                onTap: () => onSelected(s),
               ),
+              if (s != kBrokerLeadStatuses.last)
+                const SizedBox(width: AppSpacing.xs),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Color _statusColor(String s) {
-    switch (s) {
-      case 'approved':
-        return const Color(0xFF22C55E);
-      case 'rejected':
-        return const Color(0xFFEF4444);
-      case 'duplicate':
-        return const Color(0xFF94A3B8);
-      default:
-        return AppPalette.gold300;
-    }
-  }
+  Color _dotColor(String s, AppColorsExt colors) => switch (s) {
+        'APPROVED' => colors.success,
+        'REJECTED' => colors.error,
+        'DUPLICATE' => colors.inkMuted,
+        'EXPIRED' => colors.inkMuted,
+        _ => colors.warning,
+      };
 }
-
-// ── Filter chip ───────────────────────────────────────────────────────────────
 
 class _FilterChip extends StatelessWidget {
   const _FilterChip({
     required this.label,
-    required this.selected,
+    required this.count,
+    required this.active,
     required this.onTap,
-    required this.dotColor,
+    this.dotColor,
   });
-
   final String label;
-  final bool selected;
+  final int count;
+  final bool active;
   final VoidCallback onTap;
-  final Color dotColor;
+  final Color? dotColor;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsetsDirectional.only(end: AppSpacing.xs),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm + 4, vertical: 11),
         decoration: BoxDecoration(
-          gradient: selected
-              ? const LinearGradient(
-                  colors: [_navyLight, _navyDeep],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          color: selected ? null : colors.surface,
-          borderRadius: BorderRadius.circular(10),
+          color: active ? colors.brandNavy : colors.surface,
+          borderRadius: AppRadii.pillAll,
           border: Border.all(
-            color: selected
-                ? Colors.transparent
-                : colors.hairline.withValues(alpha: 0.6),
+            color: active ? colors.brandNavy : colors.hairline,
+            width: active ? 0 : 1,
           ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: _navyDeep.withValues(alpha: 0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ]
-              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 7,
-              height: 7,
+            // Count badge
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xs, vertical: 2),
               decoration: BoxDecoration(
-                color: selected ? AppPalette.gold300 : dotColor,
-                shape: BoxShape.circle,
+                color: active
+                    ? Colors.white.withValues(alpha: 0.18)
+                    : colors.surfaceSoft,
+                borderRadius: BorderRadius.circular(100),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: active ? Colors.white : colors.inkStrong,
+                  height: 1.2,
+                ),
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: AppSpacing.xs),
+            // Status dot — inactive only
+            if (!active && dotColor != null) ...[
+              Container(
+                width: 6,
+                height: 6,
+                decoration:
+                    BoxDecoration(color: dotColor, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: AppSpacing.xxs + 2),
+            ],
+            // Label
             Text(
               label,
               style: TextStyle(
-                color: selected ? Colors.white : colors.inkStrong,
-                fontWeight: FontWeight.w700,
-                fontSize: 12.5,
+                fontSize: 13,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                color: active ? Colors.white : colors.inkStrong,
+                height: 1.2,
               ),
             ),
           ],
@@ -490,119 +631,65 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-// ── Lead card ─────────────────────────────────────────────────────────────────
+// ── KPI bar ───────────────────────────────────────────────────────────────────
 
-class _LeadCard extends StatelessWidget {
-  const _LeadCard({required this.lead});
-  final BrokerLead lead;
+class _KpiBar extends StatelessWidget {
+  const _KpiBar(
+      {required this.leads, required this.lang, required this.l10n});
+  final List<BrokerLead> leads;
+  final String lang;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
     final colors = context.appColors;
-    final theme = Theme.of(context);
+    final total = leads.length;
+    final approved =
+        leads.where((l) => l.approvalStatus == 'APPROVED').length;
+    final pending = leads.where((l) => l.approvalStatus == 'PENDING').length;
 
-    return GestureDetector(
-      onTap: () => context.push('/broker/leads/${lead.id}', extra: lead),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xs),
       child: Container(
         decoration: BoxDecoration(
           color: colors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: colors.hairline.withValues(alpha: 0.4)),
+          borderRadius: AppRadii.card,
+          border: Border.all(color: colors.hairline, width: 0.8),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
         child: IntrinsicHeight(
           child: Row(
             children: [
-              // Left accent rail
-              Container(
-                width: 4,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      _leadColor(lead.approvalStatus),
-                      _leadColor(lead.approvalStatus).withValues(alpha: 0.3),
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    bottomLeft: Radius.circular(16),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Avatar
-              Container(
-                width: 40,
-                height: 40,
-                margin: const EdgeInsets.symmetric(vertical: 14),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [_navyLight, _navyDeep],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(11),
-                ),
-                child: Center(
-                  child: Text(
-                    lead.fullName.isNotEmpty
-                        ? lead.fullName[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(
-                      color: AppPalette.gold300,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Content
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        lead.fullName,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        [
-                          leadStageLabel(l10n, lead.stage),
-                          if (lead.projectName != null) lead.projectName!,
-                        ].join(' · '),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colors.inkMuted,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
+                child: _KpiStat(
+                  value: '$total',
+                  label: lang == 'ar' ? 'الإجمالي' : 'Total',
+                  color: colors.brandNavy,
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(right: 14),
-                child: StatusBadge(
-                  label: brokerLeadStatusLabel(l10n, lead.approvalStatus),
-                  tone: brokerLeadStatusTone(lead.approvalStatus),
+              VerticalDivider(
+                  width: 1, thickness: 0.8, color: colors.hairline),
+              Expanded(
+                child: _KpiStat(
+                  value: '$approved',
+                  label: lang == 'ar' ? 'معتمد' : 'Approved',
+                  color: colors.success,
+                ),
+              ),
+              VerticalDivider(
+                  width: 1, thickness: 0.8, color: colors.hairline),
+              Expanded(
+                child: _KpiStat(
+                  value: '$pending',
+                  label: lang == 'ar' ? 'قيد المراجعة' : 'Pending',
+                  color: colors.warning,
                 ),
               ),
             ],
@@ -611,18 +698,331 @@ class _LeadCard extends StatelessWidget {
       ),
     );
   }
+}
 
-  Color _leadColor(String status) {
-    switch (status) {
-      case 'approved':
-        return const Color(0xFF22C55E);
-      case 'rejected':
-        return const Color(0xFFEF4444);
-      case 'duplicate':
-        return const Color(0xFF94A3B8);
-      default:
-        return AppPalette.gold300;
-    }
+class _KpiStat extends StatelessWidget {
+  const _KpiStat(
+      {required this.value, required this.label, required this.color});
+  final String value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: color,
+              height: 1.1,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: colors.inkMuted,
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Lead card ─────────────────────────────────────────────────────────────────
+
+class _LeadCard extends StatefulWidget {
+  const _LeadCard({required this.lead});
+  final BrokerLead lead;
+
+  @override
+  State<_LeadCard> createState() => _LeadCardState();
+}
+
+class _LeadCardState extends State<_LeadCard> {
+  bool _pressed = false;
+  BrokerLead get lead => widget.lead;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    final lang = Localizations.localeOf(context).languageCode;
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final statusColor = _statusColor(lead.approvalStatus, colors);
+    final initials = _initials(lead.fullName);
+    final subtitle = lead.phone ?? lead.email;
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: () => context.push('/broker/leads/${lead.id}', extra: lead),
+      child: AnimatedScale(
+        scale: _pressed ? 0.975 : 1.0,
+        duration: const Duration(milliseconds: 110),
+        curve: Curves.easeOutCubic,
+        child: Container(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: AppRadii.card,
+            border: Border.all(
+                color: statusColor.withValues(alpha: 0.14), width: 0.8),
+            boxShadow: [
+              BoxShadow(
+                color: statusColor.withValues(alpha: 0.08),
+                blurRadius: 18,
+                offset: const Offset(0, 5),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ── Top accent strip ──────────────────────────────────────
+              Container(
+                height: 3,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: isRtl
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
+                    end: isRtl
+                        ? Alignment.centerLeft
+                        : Alignment.centerRight,
+                    colors: [
+                      statusColor,
+                      statusColor.withValues(alpha: 0.0)
+                    ],
+                  ),
+                ),
+              ),
+              // ── Card body ─────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Avatar + name/subtitle + badge + chevron ──────────
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Circle avatar with navy gradient
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [_navyLight, _navyDeep],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: statusColor.withValues(alpha: 0.35),
+                              width: 1.5,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            initials,
+                            style: const TextStyle(
+                              color: AppPalette.gold300,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              height: 1,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        // Name + subtitle
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                lead.fullName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: colors.inkStrong,
+                                  height: 1.2,
+                                ),
+                              ),
+                              if (subtitle != null) ...[
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      lead.phone != null
+                                          ? Icons.phone_outlined
+                                          : Icons.email_outlined,
+                                      size: 11,
+                                      color: colors.inkMuted,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Expanded(
+                                      child: Text(
+                                        subtitle,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: colors.inkMuted,
+                                          height: 1.3,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        StatusBadge(
+                          label: brokerLeadStatusLabel(
+                              l10n, lead.approvalStatus),
+                          tone: brokerLeadStatusTone(lead.approvalStatus),
+                        ),
+                        const SizedBox(width: AppSpacing.xxs),
+                        Icon(Icons.chevron_right_rounded,
+                            size: 20, color: colors.inkMuted),
+                      ],
+                    ),
+                    // ── Divider ───────────────────────────────────────────
+                    const SizedBox(height: 8),
+                    Container(height: 0.5, color: colors.hairline),
+                    const SizedBox(height: 8),
+                    // ── Bottom row: stage + project + date + call ─────────
+                    Row(
+                      children: [
+                        // Sales stage chip
+                        _InfoChip(
+                          icon: Icons.radio_button_checked_rounded,
+                          label: leadStageLabel(l10n, lead.stage),
+                          color: colors.brandNavy,
+                        ),
+                        if (lead.projectName != null) ...[
+                          const SizedBox(width: AppSpacing.xs),
+                          Flexible(
+                            child: _InfoChip(
+                              icon: Icons.apartment_outlined,
+                              label: lead.projectName!,
+                              color: colors.brandGold,
+                            ),
+                          ),
+                        ],
+                        const Spacer(),
+                        // Date chip
+                        if (lead.createdAt != null)
+                          _InfoChip(
+                            icon: Icons.calendar_today_outlined,
+                            label: DateFormatter.shortDate(
+                              lead.createdAt!,
+                              languageCode: lang,
+                            ),
+                            color: colors.inkMuted,
+                          ),
+                        const SizedBox(width: AppSpacing.xs),
+                        // Call button
+                        if (lead.phone != null)
+                          GestureDetector(
+                            onTap: () =>
+                                ContactActions.call(lead.phone!),
+                            behavior: HitTestBehavior.opaque,
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color:
+                                    colors.success.withValues(alpha: 0.10),
+                                border: Border.all(
+                                    color: colors.success
+                                        .withValues(alpha: 0.25)),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.call_rounded,
+                                  size: 16, color: colors.success),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Info chip ─────────────────────────────────────────────────────────────────
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        border: Border.all(color: color.withValues(alpha: 0.20)),
+        borderRadius: AppRadii.pillAll,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: color.withValues(alpha: 0.80)),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: color,
+                height: 1.2,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

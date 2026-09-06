@@ -9,12 +9,33 @@ import '../../domain/entities/broker_reservation.dart';
 import '../cubit/broker_reservations_cubit.dart';
 
 const _navyDeep = Color(0xFF0B1726);
-const _navyCard = Color(0xFF1A3352);
+const _navyMid = Color(0xFF14273F);
 const _navyLight = Color(0xFF243F62);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Broker Reservations Screen
 // ─────────────────────────────────────────────────────────────────────────────
+
+Color _statusColor(String s, AppColorsExt colors) => switch (s) {
+      'APPROVED' => colors.info,
+      'CONVERTED' => colors.success,
+      'REJECTED' => colors.error,
+      'CANCELLED' => colors.error,
+      'EXPIRED' => colors.inkMuted,
+      _ => colors.warning, // PENDING
+    };
+
+List<BrokerReservation> _applySearch(
+    List<BrokerReservation> items, String q) {
+  if (q.isEmpty) return items;
+  final lower = q.toLowerCase();
+  return items.where((r) {
+    return (r.clientName?.toLowerCase().contains(lower) ?? false) ||
+        (r.reservationNumber?.toLowerCase().contains(lower) ?? false) ||
+        (r.projectName?.toLowerCase().contains(lower) ?? false) ||
+        (r.unitCode?.toLowerCase().contains(lower) ?? false);
+  }).toList();
+}
 
 class BrokerReservationsScreen extends StatefulWidget {
   const BrokerReservationsScreen({super.key});
@@ -24,12 +45,22 @@ class BrokerReservationsScreen extends StatefulWidget {
       _BrokerReservationsScreenState();
 }
 
-class _BrokerReservationsScreenState
-    extends State<BrokerReservationsScreen> {
+class _BrokerReservationsScreenState extends State<BrokerReservationsScreen> {
+  final _search = TextEditingController();
+  String _searchQuery = '';
+
   @override
   void initState() {
     super.initState();
     context.read<BrokerReservationsCubit>().load();
+    _search.addListener(
+        () => setState(() => _searchQuery = _search.text.trim()));
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
   }
 
   Future<void> _create() async {
@@ -43,6 +74,8 @@ class _BrokerReservationsScreenState
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final cubit = context.read<BrokerReservationsCubit>();
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+    final lang = Localizations.localeOf(context).languageCode;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
@@ -52,25 +85,49 @@ class _BrokerReservationsScreenState
         backgroundColor: context.appColors.canvas,
         body: Column(
           children: [
-            // ── Header ────────────────────────────────────────────────────────
+            // ── Header with embedded search ───────────────────────────────
             BlocBuilder<BrokerReservationsCubit, BrokerReservationsListState>(
               buildWhen: (a, b) =>
                   a.status != b.status ||
                   a.reservations.length != b.reservations.length,
               builder: (context, state) => _ReservationsHeader(
                 l10n: l10n,
+                lang: lang,
                 count: state.status == DataStatus.success
                     ? state.reservations.length
                     : null,
                 onAdd: _create,
+                searchController: _search,
+                onClearSearch: () => setState(() {
+                  _search.clear();
+                  _searchQuery = '';
+                }),
               ),
             ),
 
-            // ── Filter chips ──────────────────────────────────────────────────
-            const SizedBox(height: AppSpacing.md),
-            _StatusFilter(),
+            // ── Filter chips ──────────────────────────────────────────────
+            BlocBuilder<BrokerReservationsCubit, BrokerReservationsListState>(
+              buildWhen: (a, b) =>
+                  a.statusFilter != b.statusFilter ||
+                  a.reservations != b.reservations,
+              builder: (context, state) {
+                final counts = <String, int>{};
+                for (final r in state.reservations) {
+                  counts[r.status] = (counts[r.status] ?? 0) + 1;
+                }
+                return _FilterRow(
+                  l10n: l10n,
+                  lang: lang,
+                  selected: state.statusFilter,
+                  total: state.reservations.length,
+                  counts: counts,
+                  onSelected: (s) => cubit
+                      .setStatus(s == state.statusFilter ? null : s),
+                );
+              },
+            ),
 
-            // ── List ──────────────────────────────────────────────────────────
+            // ── List ──────────────────────────────────────────────────────
             Expanded(
               child: BlocBuilder<BrokerReservationsCubit,
                   BrokerReservationsListState>(
@@ -91,21 +148,53 @@ class _BrokerReservationsScreenState
                         message: l10n.reservationsEmptyMessage,
                       );
                     case DataStatus.success:
+                      final visible =
+                          _applySearch(state.reservations, _searchQuery);
+                      if (visible.isEmpty) {
+                        return EmptyState(
+                          icon: Icons.filter_list_off_rounded,
+                          title: lang == 'ar'
+                              ? 'لا توجد نتائج'
+                              : 'No results',
+                          message: lang == 'ar'
+                              ? 'جرّب بحثاً آخر'
+                              : 'Try a different search',
+                        );
+                      }
                       return RefreshIndicator(
                         onRefresh: cubit.load,
-                        child: ListView.separated(
-                          padding: EdgeInsets.fromLTRB(
-                            AppSpacing.lg,
-                            AppSpacing.sm,
-                            AppSpacing.lg,
-                            AppSpacing.xl +
-                                MediaQuery.of(context).padding.bottom,
-                          ),
-                          itemCount: state.reservations.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: AppSpacing.sm),
-                          itemBuilder: (context, i) =>
-                              _ReservationCard(reservation: state.reservations[i]),
+                        child: CustomScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          slivers: [
+                            SliverToBoxAdapter(
+                              child: _KpiBar(
+                                reservations: state.reservations,
+                                lang: lang,
+                                l10n: l10n,
+                              ),
+                            ),
+                            SliverPadding(
+                              padding: EdgeInsets.fromLTRB(
+                                AppSpacing.md,
+                                AppSpacing.xs,
+                                AppSpacing.md,
+                                bottomPad + 100,
+                              ),
+                              sliver: SliverList(
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, i) {
+                                    if (i.isOdd) {
+                                      return const SizedBox(
+                                          height: AppSpacing.sm);
+                                    }
+                                    return _ReservationCard(
+                                        reservation: visible[i ~/ 2]);
+                                  },
+                                  childCount: visible.length * 2 - 1,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       );
                   }
@@ -119,18 +208,24 @@ class _BrokerReservationsScreenState
   }
 }
 
-// ── Header ────────────────────────────────────────────────────────────────────
+// ── Header with embedded search ───────────────────────────────────────────────
 
 class _ReservationsHeader extends StatelessWidget {
   const _ReservationsHeader({
     required this.l10n,
+    required this.lang,
     required this.onAdd,
+    required this.searchController,
+    required this.onClearSearch,
     this.count,
   });
 
   final AppLocalizations l10n;
+  final String lang;
   final int? count;
   final VoidCallback onAdd;
+  final TextEditingController searchController;
+  final VoidCallback onClearSearch;
 
   @override
   Widget build(BuildContext context) {
@@ -142,9 +237,9 @@ class _ReservationsHeader extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: [_navyLight, _navyCard, _navyDeep],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_navyLight, _navyMid, _navyDeep],
           stops: [0.0, 0.45, 1.0],
         ),
         borderRadius: BorderRadius.only(
@@ -161,27 +256,30 @@ class _ReservationsHeader extends StatelessWidget {
       ),
       child: Stack(
         children: [
+          // Dot texture
           const Positioned.fill(
             child: IgnorePointer(child: _DotTexture()),
           ),
+          // Gold radial bloom
           PositionedDirectional(
             end: 0,
             top: 0,
             child: Container(
-              width: 160,
-              height: 120,
+              width: 200,
+              height: 200,
               decoration: BoxDecoration(
                 gradient: RadialGradient(
                   center: Alignment.topRight,
                   radius: 1.0,
                   colors: [
-                    AppPalette.gold400.withValues(alpha: 0.09),
+                    AppPalette.gold400.withValues(alpha: 0.12),
                     AppPalette.gold400.withValues(alpha: 0.0),
                   ],
                 ),
               ),
             ),
           ),
+          // Gold hairline
           Positioned(
             bottom: 0,
             left: 48,
@@ -199,6 +297,7 @@ class _ReservationsHeader extends StatelessWidget {
               ),
             ),
           ),
+          // Content
           Padding(
             padding: EdgeInsets.fromLTRB(
               AppSpacing.lg,
@@ -206,84 +305,105 @@ class _ReservationsHeader extends StatelessWidget {
               AppSpacing.lg,
               AppSpacing.lg,
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        l10n.navReservations,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          height: 1.1,
+                // Title row
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            l10n.navReservations,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              height: 1.1,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            lang == 'ar'
+                                ? 'طلبات الحجز المقدمة'
+                                : 'Your reservation requests',
+                            style: const TextStyle(
+                              color: AppPalette.gold300,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Count badge
+                    if (count != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.12),
+                          borderRadius: AppRadii.pillAll,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.20),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Text(
+                          '$count',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'طلبات الحجز المقدمة',
-                        style: TextStyle(
-                          color: AppPalette.gold300,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      const SizedBox(width: AppSpacing.sm),
                     ],
-                  ),
-                ),
-                if (count != null) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: Text(
-                      '$count',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                ],
-                GestureDetector(
-                  onTap: onAdd,
-                  child: Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppPalette.gold400, AppPalette.gold300],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppPalette.gold400.withValues(alpha: 0.4),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
+                    // Add button
+                    GestureDetector(
+                      onTap: onAdd,
+                      child: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [AppPalette.gold400, AppPalette.gold300],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color:
+                                  AppPalette.gold400.withValues(alpha: 0.40),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
                         ),
-                      ],
+                        child: const Icon(
+                          Icons.add_rounded,
+                          color: _navyDeep,
+                          size: 22,
+                        ),
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.add_rounded,
-                      color: _navyDeep,
-                      size: 22,
-                    ),
-                  ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                // Search bar
+                _SearchBar(
+                  controller: searchController,
+                  hint: lang == 'ar'
+                      ? 'ابحث بالعميل أو رقم الحجز'
+                      : 'Search by client or number',
+                  onClear: onClearSearch,
                 ),
               ],
             ),
@@ -294,123 +414,219 @@ class _ReservationsHeader extends StatelessWidget {
   }
 }
 
-// ── Status filter ─────────────────────────────────────────────────────────────
+// ── Search bar ────────────────────────────────────────────────────────────────
 
-class _StatusFilter extends StatelessWidget {
+class _SearchBar extends StatefulWidget {
+  const _SearchBar({
+    required this.controller,
+    required this.hint,
+    required this.onClear,
+  });
+  final TextEditingController controller;
+  final String hint;
+  final VoidCallback onClear;
+
+  @override
+  State<_SearchBar> createState() => _SearchBarState();
+}
+
+class _SearchBarState extends State<_SearchBar> {
+  bool _hasText = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(
+        () => setState(() => _hasText = widget.controller.text.isNotEmpty));
+  }
+
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final cubit = context.read<BrokerReservationsCubit>();
-    return SizedBox(
-      height: 44,
-      child: BlocBuilder<BrokerReservationsCubit, BrokerReservationsListState>(
-        buildWhen: (a, b) => a.statusFilter != b.statusFilter,
-        builder: (context, state) => ListView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    return Container(
+      height: 46,
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: AppRadii.pillAll,
+        border: Border.all(color: colors.hairline),
+        boxShadow: colors.shadowSoft,
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: AppSpacing.md),
+          Icon(Icons.search_rounded, size: 20, color: colors.inkMuted),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: TextField(
+              controller: widget.controller,
+              textInputAction: TextInputAction.search,
+              style: theme.textTheme.bodyMedium,
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                hintText: widget.hint,
+                hintStyle: theme.textTheme.bodyMedium
+                    ?.copyWith(color: colors.inkMuted),
+              ),
+            ),
+          ),
+          if (_hasText)
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              icon:
+                  Icon(Icons.close_rounded, size: 18, color: colors.inkMuted),
+              onPressed: widget.onClear,
+            ),
+          const SizedBox(width: AppSpacing.xs),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Filter chips row ──────────────────────────────────────────────────────────
+
+class _FilterRow extends StatelessWidget {
+  const _FilterRow({
+    required this.l10n,
+    required this.lang,
+    required this.selected,
+    required this.total,
+    required this.counts,
+    required this.onSelected,
+  });
+
+  final AppLocalizations l10n;
+  final String lang;
+  final String? selected;
+  final int total;
+  final Map<String, int> counts;
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border:
+            Border(bottom: BorderSide(color: colors.hairline, width: 0.5)),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg, vertical: 6),
+        child: Row(
           children: [
             _FilterChip(
-              label: l10n.leadsFilterAll,
-              selected: state.statusFilter == null,
-              onTap: () => cubit.setStatus(null),
-              dotColor: _navyCard,
+              label: lang == 'ar' ? 'الكل' : 'All',
+              count: total,
+              active: selected == null,
+              onTap: () => onSelected(null),
             ),
-            for (final s in kReservationStatuses)
+            const SizedBox(width: AppSpacing.xs),
+            for (final s in kReservationStatuses) ...[
               _FilterChip(
                 label: reservationStatusLabel(l10n, s),
-                selected: state.statusFilter == s,
-                onTap: () => cubit.setStatus(s),
-                dotColor: _reservationColor(s),
+                count: counts[s] ?? 0,
+                dotColor: _dotColor(s, colors),
+                active: selected == s,
+                onTap: () => onSelected(s),
               ),
+              if (s != kReservationStatuses.last)
+                const SizedBox(width: AppSpacing.xs),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Color _reservationColor(String s) {
-    switch (s) {
-      case 'approved':
-        return const Color(0xFF22C55E);
-      case 'converted':
-        return const Color(0xFF60A5FA);
-      case 'expired':
-      case 'cancelled':
-        return const Color(0xFFEF4444);
-      default:
-        return AppPalette.gold300;
-    }
-  }
+  Color _dotColor(String s, AppColorsExt colors) => switch (s) {
+        'APPROVED' => colors.info,
+        'CONVERTED' => colors.success,
+        'REJECTED' => colors.error,
+        'CANCELLED' => colors.error,
+        'EXPIRED' => colors.inkMuted,
+        _ => colors.warning,
+      };
 }
-
-// ── Filter chip ───────────────────────────────────────────────────────────────
 
 class _FilterChip extends StatelessWidget {
   const _FilterChip({
     required this.label,
-    required this.selected,
+    required this.count,
+    required this.active,
     required this.onTap,
-    required this.dotColor,
+    this.dotColor,
   });
-
   final String label;
-  final bool selected;
+  final int count;
+  final bool active;
   final VoidCallback onTap;
-  final Color dotColor;
+  final Color? dotColor;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsetsDirectional.only(end: AppSpacing.xs),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm + 4, vertical: 11),
         decoration: BoxDecoration(
-          gradient: selected
-              ? const LinearGradient(
-                  colors: [_navyLight, _navyDeep],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          color: selected ? null : colors.surface,
-          borderRadius: BorderRadius.circular(10),
+          color: active ? colors.brandNavy : colors.surface,
+          borderRadius: AppRadii.pillAll,
           border: Border.all(
-            color: selected
-                ? Colors.transparent
-                : colors.hairline.withValues(alpha: 0.6),
+            color: active ? colors.brandNavy : colors.hairline,
+            width: active ? 0 : 1,
           ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: _navyDeep.withValues(alpha: 0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ]
-              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 7,
-              height: 7,
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xs, vertical: 2),
               decoration: BoxDecoration(
-                color: selected ? AppPalette.gold300 : dotColor,
-                shape: BoxShape.circle,
+                color: active
+                    ? Colors.white.withValues(alpha: 0.18)
+                    : colors.surfaceSoft,
+                borderRadius: BorderRadius.circular(100),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: active ? Colors.white : colors.inkStrong,
+                  height: 1.2,
+                ),
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: AppSpacing.xs),
+            if (!active && dotColor != null) ...[
+              Container(
+                width: 6,
+                height: 6,
+                decoration:
+                    BoxDecoration(color: dotColor, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: AppSpacing.xxs + 2),
+            ],
             Text(
               label,
               style: TextStyle(
-                color: selected ? Colors.white : colors.inkStrong,
-                fontWeight: FontWeight.w700,
-                fontSize: 12.5,
+                fontSize: 13,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                color: active ? Colors.white : colors.inkStrong,
+                height: 1.2,
               ),
             ),
           ],
@@ -420,122 +636,66 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-// ── Reservation card ──────────────────────────────────────────────────────────
+// ── KPI bar ───────────────────────────────────────────────────────────────────
 
-class _ReservationCard extends StatelessWidget {
-  const _ReservationCard({required this.reservation});
-  final BrokerReservation reservation;
+class _KpiBar extends StatelessWidget {
+  const _KpiBar(
+      {required this.reservations, required this.lang, required this.l10n});
+  final List<BrokerReservation> reservations;
+  final String lang;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
     final colors = context.appColors;
-    final theme = Theme.of(context);
+    final total = reservations.length;
+    final approved =
+        reservations.where((r) => r.status == 'APPROVED').length;
+    final converted =
+        reservations.where((r) => r.status == 'CONVERTED').length;
 
-    return GestureDetector(
-      onTap: () => context.push(
-        '/broker/reservations/${reservation.id}',
-        extra: reservation,
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xs),
       child: Container(
         decoration: BoxDecoration(
           color: colors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: colors.hairline.withValues(alpha: 0.4)),
+          borderRadius: AppRadii.card,
+          border: Border.all(color: colors.hairline, width: 0.8),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
         child: IntrinsicHeight(
           child: Row(
             children: [
-              // Left accent rail
-              Container(
-                width: 4,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      _statusColor(reservation.status),
-                      _statusColor(reservation.status).withValues(alpha: 0.3),
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    bottomLeft: Radius.circular(16),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Icon
-              Container(
-                width: 40,
-                height: 40,
-                margin: const EdgeInsets.symmetric(vertical: 14),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF7C5200), Color(0xFF3D2800)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(11),
-                ),
-                child: const Icon(
-                  Icons.bookmark_rounded,
-                  color: AppPalette.gold300,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Content
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        reservation.reservationNumber ??
-                            reservation.clientName ??
-                            l10n.navReservations,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (reservation.unitCode != null ||
-                          reservation.projectName != null) ...[
-                        const SizedBox(height: 3),
-                        Text(
-                          [
-                            if (reservation.unitCode != null)
-                              reservation.unitCode!,
-                            if (reservation.projectName != null)
-                              reservation.projectName!,
-                          ].join(' · '),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colors.inkMuted,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ],
-                  ),
+                child: _KpiStat(
+                  value: '$total',
+                  label: lang == 'ar' ? 'الإجمالي' : 'Total',
+                  color: colors.brandNavy,
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(right: 14),
-                child: StatusBadge(
-                  label: reservationStatusLabel(l10n, reservation.status),
-                  tone: reservationStatusTone(reservation.status),
+              VerticalDivider(
+                  width: 1, thickness: 0.8, color: colors.hairline),
+              Expanded(
+                child: _KpiStat(
+                  value: '$approved',
+                  label: lang == 'ar' ? 'موافق عليه' : 'Approved',
+                  color: colors.info,
+                ),
+              ),
+              VerticalDivider(
+                  width: 1, thickness: 0.8, color: colors.hairline),
+              Expanded(
+                child: _KpiStat(
+                  value: '$converted',
+                  label: lang == 'ar' ? 'محوّل' : 'Converted',
+                  color: colors.success,
                 ),
               ),
             ],
@@ -544,19 +704,303 @@ class _ReservationCard extends StatelessWidget {
       ),
     );
   }
+}
 
-  Color _statusColor(String s) {
-    switch (s) {
-      case 'approved':
-        return const Color(0xFF22C55E);
-      case 'converted':
-        return const Color(0xFF60A5FA);
-      case 'expired':
-      case 'cancelled':
-        return const Color(0xFFEF4444);
-      default:
-        return AppPalette.gold300;
-    }
+class _KpiStat extends StatelessWidget {
+  const _KpiStat(
+      {required this.value, required this.label, required this.color});
+  final String value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: color,
+              height: 1.1,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: colors.inkMuted,
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Reservation card ──────────────────────────────────────────────────────────
+
+class _ReservationCard extends StatefulWidget {
+  const _ReservationCard({required this.reservation});
+  final BrokerReservation reservation;
+
+  @override
+  State<_ReservationCard> createState() => _ReservationCardState();
+}
+
+class _ReservationCardState extends State<_ReservationCard> {
+  bool _pressed = false;
+  BrokerReservation get r => widget.reservation;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    final lang = Localizations.localeOf(context).languageCode;
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final statusColor = _statusColor(r.status, colors);
+
+    final title = r.clientName ?? r.reservationNumber ?? l10n.navReservations;
+    final subParts = [
+      if (r.reservationNumber != null && r.clientName != null)
+        r.reservationNumber!,
+      if (r.unitCode != null) r.unitCode!,
+      if (r.projectName != null) r.projectName!,
+    ];
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: () => context.push(
+        '/broker/reservations/${r.id}',
+        extra: r,
+      ),
+      child: AnimatedScale(
+        scale: _pressed ? 0.975 : 1.0,
+        duration: const Duration(milliseconds: 110),
+        curve: Curves.easeOutCubic,
+        child: Container(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: AppRadii.card,
+            border: Border.all(
+                color: statusColor.withValues(alpha: 0.14), width: 0.8),
+            boxShadow: [
+              BoxShadow(
+                color: statusColor.withValues(alpha: 0.08),
+                blurRadius: 18,
+                offset: const Offset(0, 5),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ── Top accent strip ──────────────────────────────────────
+              Container(
+                height: 3,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: isRtl
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
+                    end: isRtl
+                        ? Alignment.centerLeft
+                        : Alignment.centerRight,
+                    colors: [
+                      statusColor,
+                      statusColor.withValues(alpha: 0.0)
+                    ],
+                  ),
+                ),
+              ),
+              // ── Card body ─────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Icon + title/subtitle + badge + chevron ───────────
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Bookmark icon in navy circle
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [_navyLight, _navyDeep],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: statusColor.withValues(alpha: 0.35),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.bookmark_rounded,
+                            color: AppPalette.gold300,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        // Title + subtitle
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: colors.inkStrong,
+                                  height: 1.2,
+                                ),
+                              ),
+                              if (subParts.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  subParts.join(' · '),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: colors.inkMuted,
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        StatusBadge(
+                          label: reservationStatusLabel(l10n, r.status),
+                          tone: reservationStatusTone(r.status),
+                        ),
+                        const SizedBox(width: AppSpacing.xxs),
+                        Icon(Icons.chevron_right_rounded,
+                            size: 20, color: colors.inkMuted),
+                      ],
+                    ),
+                    // ── Divider ───────────────────────────────────────────
+                    const SizedBox(height: 8),
+                    Container(height: 0.5, color: colors.hairline),
+                    const SizedBox(height: 8),
+                    // ── Bottom row: status chip + date chips ──────────────
+                    Row(
+                      children: [
+                        // Status chip
+                        _InfoChip(
+                          icon: Icons.radio_button_checked_rounded,
+                          label: reservationStatusLabel(l10n, r.status),
+                          color: statusColor,
+                        ),
+                        const Spacer(),
+                        // Created date
+                        if (r.createdAt != null) ...[
+                          _InfoChip(
+                            icon: Icons.calendar_today_outlined,
+                            label: DateFormatter.shortDate(
+                              r.createdAt!,
+                              languageCode: lang,
+                            ),
+                            color: colors.inkMuted,
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                        ],
+                        // Expires date (only for pending/approved)
+                        if (r.expiresAt != null &&
+                            (r.status == 'PENDING' ||
+                                r.status == 'APPROVED')) ...[
+                          _InfoChip(
+                            icon: Icons.timer_outlined,
+                            label: DateFormatter.shortDate(
+                              r.expiresAt!,
+                              languageCode: lang,
+                            ),
+                            color: colors.warning,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Info chip ─────────────────────────────────────────────────────────────────
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        border: Border.all(color: color.withValues(alpha: 0.20)),
+        borderRadius: AppRadii.pillAll,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: color.withValues(alpha: 0.80)),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: color,
+                height: 1.2,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

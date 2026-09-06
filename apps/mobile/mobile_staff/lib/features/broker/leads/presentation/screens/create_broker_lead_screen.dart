@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../cubit/create_broker_lead_cubit.dart';
 
 const _navyDeep = Color(0xFF0B1726);
-const _navyCard = Color(0xFF1A3352);
+const _navyMid = Color(0xFF14273F);
 const _navyLight = Color(0xFF243F62);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -28,15 +28,12 @@ class CreateBrokerLeadScreen extends StatelessWidget {
         backgroundColor: context.appColors.canvas,
         body: BlocConsumer<CreateBrokerLeadCubit, CreateBrokerLeadState>(
           listenWhen: (a, b) =>
-              a.submitted != b.submitted ||
-              a.submitFailure != b.submitFailure,
+              a.submitted != b.submitted || a.submitFailure != b.submitFailure,
           listener: (context, state) {
             if (state.submitted) {
               ScaffoldMessenger.of(context)
                 ..hideCurrentSnackBar()
-                ..showSnackBar(
-                  SnackBar(content: Text(l10n.brokerLeadCreated)),
-                );
+                ..showSnackBar(SnackBar(content: Text(l10n.brokerLeadCreated)));
               context.pop(true);
             } else if (state.submitFailure != null) {
               showFailureSnackBar(context, state.submitFailure!);
@@ -53,61 +50,56 @@ class CreateBrokerLeadScreen extends StatelessWidget {
                       AppSpacing.lg,
                       AppSpacing.lg,
                       AppSpacing.lg,
-                      AppSpacing.xl +
-                          MediaQuery.of(context).padding.bottom,
+                      AppSpacing.xl + MediaQuery.of(context).padding.bottom,
                     ),
                     children: [
-                      // ── Name ────────────────────────────────────────────
-                      _SectionLabel(label: l10n.brokerLeadName),
-                      const SizedBox(height: AppSpacing.sm),
-                      _StyledTextField(
-                        hint: l10n.brokerLeadName,
-                        icon: Icons.person_rounded,
-                        keyboardType: TextInputType.name,
-                        onChanged: cubit.setFullName,
-                        errorText: state.showValidation && !state.hasName
-                            ? l10n.validationRequired
-                            : null,
+                      // ── Contact info card ────────────────────────────────
+                      _GroupCard(
+                        children: [
+                          _FieldRow(
+                            icon: Icons.person_rounded,
+                            label: l10n.brokerLeadName,
+                            hint: l10n.brokerLeadName,
+                            keyboardType: TextInputType.name,
+                            required: true,
+                            errorText: state.showValidation && !state.hasName
+                                ? l10n.validationRequired
+                                : null,
+                            onChanged: cubit.setFullName,
+                          ),
+                          _Divider(),
+                          _FieldRow(
+                            icon: Icons.call_rounded,
+                            label: l10n.brokerLeadPhone,
+                            hint: l10n.brokerLeadPhone,
+                            keyboardType: TextInputType.phone,
+                            required: true,
+                            errorText: state.showValidation && !state.hasPhone
+                                ? l10n.validationPhone
+                                : null,
+                            onChanged: cubit.setPhone,
+                          ),
+                          _Divider(),
+                          _FieldRow(
+                            icon: Icons.email_rounded,
+                            label: l10n.brokerLeadEmail,
+                            hint: l10n.brokerLeadEmail,
+                            keyboardType: TextInputType.emailAddress,
+                            onChanged: cubit.setEmail,
+                          ),
+                        ],
                       ),
                       const SizedBox(height: AppSpacing.md),
 
-                      // ── Phone ───────────────────────────────────────────
-                      _SectionLabel(label: l10n.brokerLeadPhone),
-                      const SizedBox(height: AppSpacing.sm),
-                      _StyledTextField(
-                        hint: l10n.brokerLeadPhone,
-                        icon: Icons.call_rounded,
-                        keyboardType: TextInputType.phone,
-                        onChanged: cubit.setPhone,
-                        errorText: state.showValidation && !state.hasPhone
-                            ? l10n.validationPhone
-                            : null,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-
-                      // ── Email ───────────────────────────────────────────
-                      _SectionLabel(label: l10n.brokerLeadEmail),
-                      const SizedBox(height: AppSpacing.sm),
-                      _StyledTextField(
-                        hint: l10n.brokerLeadEmail,
-                        icon: Icons.email_rounded,
-                        keyboardType: TextInputType.emailAddress,
-                        onChanged: cubit.setEmail,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-
-                      // ── Note ────────────────────────────────────────────
-                      _SectionLabel(label: l10n.brokerLeadNote),
-                      const SizedBox(height: AppSpacing.sm),
-                      _StyledTextField(
+                      // ── Note card ────────────────────────────────────────
+                      _NoteCard(
+                        label: l10n.brokerLeadNote,
                         hint: l10n.brokerLeadNote,
-                        icon: Icons.sticky_note_2_rounded,
-                        maxLines: 4,
                         onChanged: cubit.setNote,
                       ),
                       const SizedBox(height: AppSpacing.xl),
 
-                      // ── Submit ──────────────────────────────────────────
+                      // ── Submit ───────────────────────────────────────────
                       AppButton(
                         label: l10n.brokerLeadSubmit,
                         icon: Icons.person_add_alt_1_rounded,
@@ -144,9 +136,9 @@ class _FormHeader extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: [_navyLight, _navyCard, _navyDeep],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_navyLight, _navyMid, _navyDeep],
           stops: [0.0, 0.45, 1.0],
         ),
         borderRadius: BorderRadius.only(
@@ -163,27 +155,28 @@ class _FormHeader extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          const Positioned.fill(
-            child: IgnorePointer(child: _DotTexture()),
-          ),
+          // Dot texture
+          const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
+          // Gold radial bloom
           PositionedDirectional(
             end: 0,
             top: 0,
             child: Container(
-              width: 160,
-              height: 120,
+              width: 200,
+              height: 200,
               decoration: BoxDecoration(
                 gradient: RadialGradient(
                   center: Alignment.topRight,
                   radius: 1.0,
                   colors: [
-                    AppPalette.gold400.withValues(alpha: 0.09),
+                    AppPalette.gold400.withValues(alpha: 0.12),
                     AppPalette.gold400.withValues(alpha: 0.0),
                   ],
                 ),
               ),
             ),
           ),
+          // Gold hairline
           Positioned(
             bottom: 0,
             left: 48,
@@ -201,17 +194,24 @@ class _FormHeader extends StatelessWidget {
               ),
             ),
           ),
+          // Content
           Padding(
             padding: EdgeInsets.fromLTRB(
               AppSpacing.lg,
               topInset + AppSpacing.md,
               AppSpacing.lg,
-              AppSpacing.xl,
+              AppSpacing.lg,
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                _BackBtn(),
+                // Back — circle glass button
+                _GlassBtn(
+                  icon: Directionality.of(context) == TextDirection.ltr
+                      ? Icons.arrow_forward_ios_rounded
+                      : Icons.arrow_back_ios_rounded,
+                  onTap: () => context.pop(),
+                ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
@@ -222,35 +222,45 @@ class _FormHeader extends StatelessWidget {
                         l10n.brokerLeadNew,
                         style: theme.textTheme.titleLarge?.copyWith(
                           color: Colors.white,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w900,
                           height: 1.1,
+                          letterSpacing: -0.3,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
                       const Text(
                         'أضف بيانات العميل المحتمل',
                         style: TextStyle(
                           color: AppPalette.gold300,
                           fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
                 ),
+                // Person-add icon badge
                 Container(
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppPalette.gold300.withValues(alpha: 0.35),
+                    gradient: const LinearGradient(
+                      colors: [AppPalette.gold400, AppPalette.gold300],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppPalette.gold400.withValues(alpha: 0.40),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
                   child: const Icon(
                     Icons.person_add_alt_1_rounded,
-                    color: AppPalette.gold300,
+                    color: _navyDeep,
                     size: 20,
                   ),
                 ),
@@ -263,170 +273,348 @@ class _FormHeader extends StatelessWidget {
   }
 }
 
-// ── Section label ─────────────────────────────────────────────────────────────
+class _GlassBtn extends StatelessWidget {
+  const _GlassBtn({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
 
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.label});
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.white.withValues(alpha: 0.10),
+    shape: const CircleBorder(),
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.20),
+            width: 0.8,
+          ),
+        ),
+        child: Icon(icon, color: Colors.white, size: 18),
+      ),
+    ),
+  );
+}
+
+// ── Grouped field card ────────────────────────────────────────────────────────
+
+class _GroupCard extends StatelessWidget {
+  const _GroupCard({required this.children});
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: AppRadii.card,
+        border: Border.all(color: colors.hairline, width: 0.8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: children),
+    );
+  }
+}
+
+class _Divider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      height: 0.5,
+      margin: const EdgeInsetsDirectional.only(start: 52),
+      color: colors.hairline,
+    );
+  }
+}
+
+// ── Field row (inside grouped card) ──────────────────────────────────────────
+
+class _FieldRow extends StatefulWidget {
+  const _FieldRow({
+    required this.icon,
+    required this.label,
+    required this.hint,
+    required this.onChanged,
+    this.keyboardType,
+    this.required = false,
+    this.errorText,
+  });
+
+  final IconData icon;
   final String label;
+  final String hint;
+  final ValueChanged<String> onChanged;
+  final TextInputType? keyboardType;
+  final bool required;
+  final String? errorText;
+
+  @override
+  State<_FieldRow> createState() => _FieldRowState();
+}
+
+class _FieldRowState extends State<_FieldRow> {
+  bool _focused = false;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final theme = Theme.of(context);
-    return Row(
-      children: [
-        Container(
-          width: 3,
-          height: 15,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppPalette.gold400, AppPalette.gold300],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+    final hasError = widget.errorText != null;
+
+    final iconColor = hasError
+        ? colors.error
+        : _focused
+        ? AppPalette.gold400
+        : colors.inkMuted;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      decoration: BoxDecoration(
+        color: _focused
+            ? AppPalette.gold400.withValues(alpha: 0.03)
+            : Colors.transparent,
+        borderRadius: AppRadii.card,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              0,
             ),
-            borderRadius: BorderRadius.circular(2),
+            child: Row(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.10),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(widget.icon, size: 15, color: iconColor),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  widget.label,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: hasError ? colors.error : colors.inkMuted,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11.5,
+                  ),
+                ),
+                if (widget.required) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    '*',
+                    style: TextStyle(
+                      color: colors.error,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: theme.textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: colors.inkStrong,
+          Focus(
+            onFocusChange: (v) => setState(() => _focused = v),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                52,
+                4,
+                AppSpacing.md,
+                AppSpacing.sm,
+              ),
+              child: TextField(
+                onChanged: widget.onChanged,
+                keyboardType: widget.keyboardType,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colors.inkStrong,
+                  fontWeight: FontWeight.w500,
+                ),
+                decoration: InputDecoration(
+                  isDense: true,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                  hintText: widget.hint,
+                  hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                    color: colors.inkMuted.withValues(alpha: 0.5),
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
-      ],
+          if (hasError)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                52,
+                0,
+                AppSpacing.md,
+                AppSpacing.xs,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.error_outline_rounded,
+                    size: 11,
+                    color: colors.error,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    widget.errorText!,
+                    style: TextStyle(
+                      color: colors.error,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
 
-// ── Styled text field ─────────────────────────────────────────────────────────
+// ── Note card ─────────────────────────────────────────────────────────────────
 
-class _StyledTextField extends StatelessWidget {
-  const _StyledTextField({
+class _NoteCard extends StatefulWidget {
+  const _NoteCard({
+    required this.label,
     required this.hint,
-    required this.icon,
     required this.onChanged,
-    this.keyboardType,
-    this.maxLines = 1,
-    this.errorText,
   });
-
+  final String label;
   final String hint;
-  final IconData icon;
   final ValueChanged<String> onChanged;
-  final TextInputType? keyboardType;
-  final int maxLines;
-  final String? errorText;
+
+  @override
+  State<_NoteCard> createState() => _NoteCardState();
+}
+
+class _NoteCardState extends State<_NoteCard> {
+  bool _focused = false;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final theme = Theme.of(context);
+    final iconColor = _focused ? AppPalette.gold400 : colors.inkMuted;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: errorText != null
-                  ? colors.error.withValues(alpha: 0.5)
-                  : colors.hairline.withValues(alpha: 0.6),
-              width: errorText != null ? 1.5 : 1.0,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: AppRadii.card,
+        border: Border.all(
+          color: _focused
+              ? AppPalette.gold400.withValues(alpha: 0.40)
+              : colors.hairline,
+          width: _focused ? 1.2 : 0.8,
+        ),
+        boxShadow: [
+          if (_focused)
+            BoxShadow(
+              color: AppPalette.gold400.withValues(alpha: 0.08),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: EdgeInsets.only(
-                  top: maxLines > 1 ? 14 : 0,
-                  right: 0,
-                  left: AppSpacing.md,
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.md,
+          AppSpacing.sm,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.10),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.sticky_note_2_rounded,
+                    size: 15,
+                    color: iconColor,
+                  ),
                 ),
-                child: Icon(
-                  icon,
-                  size: 18,
-                  color: colors.inkMuted.withValues(alpha: 0.6),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  widget.label,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: colors.inkMuted,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11.5,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: TextField(
-                  onChanged: onChanged,
-                  keyboardType: keyboardType,
-                  maxLines: maxLines,
-                  decoration: InputDecoration(
-                    hintText: hint,
-                    hintStyle: TextStyle(
-                      color: colors.inkMuted.withValues(alpha: 0.55),
-                      fontSize: 14,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: 14,
-                    ),
-                    border: InputBorder.none,
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Focus(
+              onFocusChange: (v) => setState(() => _focused = v),
+              child: TextField(
+                onChanged: widget.onChanged,
+                maxLines: 4,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colors.inkStrong,
+                  fontWeight: FontWeight.w500,
+                ),
+                decoration: InputDecoration(
+                  isDense: true,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: const EdgeInsetsDirectional.only(start: 4),
+                  hintText: widget.hint,
+                  hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                    color: colors.inkMuted.withValues(alpha: 0.5),
                   ),
                 ),
               ),
-            ],
-          ),
-        ),
-        if (errorText != null) ...[
-          const SizedBox(height: AppSpacing.xs),
-          Row(
-            children: [
-              Icon(
-                Icons.error_outline_rounded,
-                size: 12,
-                color: colors.error,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                errorText!,
-                style: TextStyle(color: colors.error, fontSize: 11.5),
-              ),
-            ],
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-// ── Shared ────────────────────────────────────────────────────────────────────
-
-class _BackBtn extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.pop(),
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-        ),
-        child: Icon(
-          Icons.arrow_back_ios_new_rounded,
-          color: Colors.white,
-          size: 16,
+            ),
+          ],
         ),
       ),
     );
   }
 }
+
+// ── Shared ────────────────────────────────────────────────────────────────────
 
 class _DotTexture extends StatelessWidget {
   const _DotTexture();
