@@ -276,6 +276,27 @@ jobs:
         working-directory: apps/api
         run: pnpm exec prisma --version
 
+      # ── DATABASE_URL secret presence check ───────────────────────────────────
+      # Fails immediately with a clear step name if the secret is missing or
+      # was not configured. Avoids a confusing Prisma connection error later.
+      # Does NOT print the value. Only answers: present or missing/empty.
+
+      - name: Validate — DATABASE_URL secret present
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${DATABASE_URL:-}" ]]; then
+            echo "ERROR: DATABASE_URL secret is missing or empty." >&2
+            echo "Configure it under:" >&2
+            echo "  GitHub → Settings → Environments → production → Secrets" >&2
+            echo "  (preferred: environment-level secret for this audit job)" >&2
+            echo "  OR: Settings → Secrets and variables → Actions → Repository secrets" >&2
+            echo "Do NOT rerun this workflow until the secret is verified." >&2
+            exit 1
+          fi
+          echo "DATABASE_URL secret presence: OK"
+
       # ── Run audit ─────────────────────────────────────────────────────────────
       # DATABASE_URL is scoped to this step env only — never a job-level env,
       # never echoed, never in artifacts.
