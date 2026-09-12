@@ -27,24 +27,24 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Result<Session>> loginWithEmail(String email, String password) {
-    return guardApiCall(() async => _persist(await _remote.loginCustomer(email, password)));
+  Future<Result<Session>> loginWithEmail(String slug, String email, String password) {
+    return guardApiCall(() async => _persist(await _remote.loginCustomer(slug, email, password)));
   }
 
   @override
-  Future<Result<Session>> registerCustomer(RegisterParams params) {
-    return guardApiCall(() async => _persist(await _remote.registerCustomer(params)));
+  Future<Result<Session>> registerCustomer(String slug, RegisterParams params) {
+    return guardApiCall(() async => _persist(await _remote.registerCustomer(slug, params)));
   }
 
   @override
-  Future<Result<void>> requestOtp(String phone) {
-    return guardApiCall(() => _remote.requestOtp(phone));
+  Future<Result<void>> requestOtp(String slug, String phone) {
+    return guardApiCall(() => _remote.requestOtp(slug, phone));
   }
 
   @override
-  Future<Result<Session>> verifyOtp(String phone, String code, {String? fullName}) {
+  Future<Result<Session>> verifyOtp(String slug, String phone, String code, {String? fullName}) {
     return guardApiCall(
-      () async => _persist(await _remote.verifyOtp(phone, code, fullName)),
+      () async => _persist(await _remote.verifyOtp(slug, phone, code, fullName)),
     );
   }
 
@@ -71,8 +71,8 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Result<void>> forgotPassword(String email) =>
-      guardApiCall(() => _remote.forgotPassword(email));
+  Future<Result<void>> forgotPassword(String slug, String email) =>
+      guardApiCall(() => _remote.forgotPassword(slug, email));
 
   @override
   Future<Result<void>> resetPassword(String token, String newPassword) =>

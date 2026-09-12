@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import DOMPurify from 'isomorphic-dompurify';
 import { buildMetadata } from '@/lib/seo';
 import { safeFetch } from '@/lib/api';
+import { getResolvedTenant } from '@/lib/tenant';
 import { getLocale } from '@/lib/locale';
 import { Container } from '@/components/ui/Container';
 import { Section } from '@/components/ui/Section';
@@ -26,7 +27,10 @@ interface Props {
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
-  const res = await safeFetch<ArticleDetail>(`/public/articles/${slug}`, { revalidate: 60 });
+  const tenant = await getResolvedTenant();
+  const res = tenant
+    ? await safeFetch<ArticleDetail>(`/public/articles/${slug}`, { revalidate: 60, tenantSlug: tenant.slug })
+    : { ok: false as const, error: { message: '', status: 404 } };
   if (!res.ok) return buildMetadata({ title: 'مقال' });
   return buildMetadata({
     title: res.data.title,
@@ -36,8 +40,11 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function ArticleDetailPage({ params }: Props) {
   const { slug } = await params;
+  const tenant = await getResolvedTenant();
+  if (!tenant) notFound();
+
   const [res, locale] = await Promise.all([
-    safeFetch<ArticleDetail>(`/public/articles/${slug}`, { revalidate: 60 }),
+    safeFetch<ArticleDetail>(`/public/articles/${slug}`, { revalidate: 60, tenantSlug: tenant.slug }),
     getLocale(),
   ]);
 

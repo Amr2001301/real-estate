@@ -1,5 +1,7 @@
+import { notFound } from 'next/navigation';
 import { buildMetadata } from '@/lib/seo';
 import { safeFetch } from '@/lib/api';
+import { getResolvedTenant } from '@/lib/tenant';
 import { pickAr, unitTypeLabel } from '@/lib/format';
 import type { PublicUnit, PublicProjectDetail } from '@/lib/api-types';
 import { resolveContactPrefill } from '@/lib/contact-prefill';
@@ -30,9 +32,9 @@ function firstStr(v: string | string[] | undefined): string {
  * Resolve display context. A unit also yields its parent project so a visit
  * request (which requires projectId) works even when only unitId is in the URL.
  */
-async function resolveContext(projectId: string, unitId: string): Promise<ContactContext> {
+async function resolveContext(projectId: string, unitId: string, tenantSlug: string): Promise<ContactContext> {
   if (unitId) {
-    const res = await safeFetch<PublicUnit>(`/public/units/${unitId}`, { revalidate: REVALIDATE });
+    const res = await safeFetch<PublicUnit>(`/public/units/${unitId}`, { revalidate: REVALIDATE, tenantSlug });
     if (res.ok) {
       const u = res.data;
       const project = u.project ? pickAr(u.project.name) : '';
@@ -47,19 +49,22 @@ async function resolveContext(projectId: string, unitId: string): Promise<Contac
     return { unitId, projectId: projectId || undefined };
   }
   if (projectId) {
-    const res = await safeFetch<PublicProjectDetail>(`/public/projects/${projectId}`, { revalidate: REVALIDATE });
+    const res = await safeFetch<PublicProjectDetail>(`/public/projects/${projectId}`, { revalidate: REVALIDATE, tenantSlug });
     return { projectId, projectName: res.ok ? pickAr(res.data.name) : undefined };
   }
   return {};
 }
 
 export default async function ContactPage({ searchParams }: { searchParams: SearchParams }) {
+  const tenant = await getResolvedTenant();
+  if (!tenant) notFound();
+
   const sp = await searchParams;
   // Context resolution, the profile prefill, and the session lookup have no
   // dependency on each other — run them in parallel so logged-in users don't
   // pay extra RTTs.
   const [context, initialValues, session, locale] = await Promise.all([
-    resolveContext(firstStr(sp.projectId), firstStr(sp.unitId)),
+    resolveContext(firstStr(sp.projectId), firstStr(sp.unitId), tenant.slug),
     resolveContactPrefill(),
     getSession(),
     getLocale(),

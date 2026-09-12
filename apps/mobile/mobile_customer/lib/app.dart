@@ -68,8 +68,16 @@ import 'features/info_request/data/repositories/info_request_repository_impl.dar
 import 'features/info_request/domain/repositories/info_request_repository.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import 'bootstrap.dart' show customerNavigatorKey, flutterLocalNotifications, pendingPushRoute;
+import 'features/company_discovery/data/datasources/company_discovery_remote_data_source.dart';
+import 'features/company_discovery/data/repositories/company_discovery_repository_impl.dart';
+import 'features/company_discovery/domain/repositories/company_discovery_repository.dart';
+import 'storage/customer_tenant_storage.dart';
+import 'startup/customer_startup_service.dart';
+
+import 'bootstrap.dart' show customerNavigatorKey, customerStartupOutcome, flutterLocalNotifications, pendingPushRoute;
+import 'feature_flags.dart';
 import 'features/notifications/presentation/fcm_route_resolver.dart';
 import 'router/app_router.dart';
 
@@ -90,13 +98,27 @@ class CustomerApp extends StatelessWidget {
           ),
         ),
         RepositoryProvider<CatalogRepository>(
-          create: (ctx) =>
-              CatalogRepositoryImpl(CatalogRemoteDataSourceImpl(ctx.read<Dio>())),
+          create: (ctx) {
+            final storage = ctx.read<CustomerTenantStorage>();
+            return CatalogRepositoryImpl(
+              CatalogRemoteDataSourceImpl(
+                ctx.read<Dio>(),
+                readTenantSlug: () async => storage.selectedCompanySlug,
+              ),
+            );
+          },
         ),
         RepositoryProvider<ChatRepository>(
-          create: (ctx) => ChatRepositoryImpl(
-            ChatRemoteDataSourceImpl(ctx.read<Dio>(), ctx.read<TokenStorage>()),
-          ),
+          create: (ctx) {
+            final storage = ctx.read<CustomerTenantStorage>();
+            return ChatRepositoryImpl(
+              ChatRemoteDataSourceImpl(
+                ctx.read<Dio>(),
+                ctx.read<TokenStorage>(),
+                readTenantSlug: () async => storage.selectedCompanySlug,
+              ),
+            );
+          },
         ),
         RepositoryProvider<ProfileRepository>(
           create: (ctx) =>
@@ -156,6 +178,20 @@ class CustomerApp extends StatelessWidget {
             InfoRequestRemoteDataSourceImpl(ctx.read<Dio>()),
           ),
         ),
+        RepositoryProvider<CompanyDiscoveryRepository>(
+          create: (ctx) => CompanyDiscoveryRepositoryImpl(
+            CompanyDiscoveryRemoteDataSourceImpl(ctx.read<Dio>()),
+          ),
+        ),
+        RepositoryProvider<CustomerTenantStorage>(
+          create: (ctx) => CustomerTenantStorage(ctx.read<SharedPreferences>()),
+        ),
+        RepositoryProvider<CustomerStartupService>(
+          create: (ctx) => CustomerStartupService(
+            ctx.read<CustomerTenantStorage>(),
+            ctx.read<CompanyDiscoveryRepository>(),
+          ),
+        ),
         RepositoryProvider<PushRegistrationService>(
           create: (ctx) => PushRegistrationService(
             const FirebasePushTokenProvider(),
@@ -186,6 +222,7 @@ class CustomerApp extends StatelessWidget {
               final repo = ctx.read<AuthRepository>();
               return AuthCubit(
                 sessionCubit: ctx.read<SessionCubit>(),
+                tenantStorage: ctx.read<CustomerTenantStorage>(),
                 loginWithEmail: LoginWithEmail(repo),
                 registerCustomer: RegisterCustomer(repo),
                 requestOtp: RequestOtp(repo),
@@ -212,6 +249,8 @@ class _CustomerRoot extends StatefulWidget {
 class _CustomerRootState extends State<_CustomerRoot> {
   late final router = createCustomerRouter(
     context.read<SessionCubit>(),
+    context.read<CustomerTenantStorage>(),
+    startupOutcome: kEnableCustomerTenantSelection ? customerStartupOutcome : null,
     navigatorKey: customerNavigatorKey,
   );
 
@@ -228,10 +267,17 @@ class _CustomerRootState extends State<_CustomerRoot> {
   void initState() {
     super.initState();
     _wireRefresher();
+    _wireMismatchHandler();
     _wireFcm();
     // BlocListener only fires on *transitions*. If the app relaunches with a
     // persisted session the state is already authenticated — no transition fires
     // and registration would be skipped. Run best-effort after the first frame.
+    // K2: Startup tenant validation is now performed in bootstrap.dart BEFORE
+    // SessionCubit.restore(), so there is no post-frame validation call here.
+    // The router redirects are driven by customerStartupOutcome (in refreshListenable).
+    // Push registration still uses the post-frame edge case: BlocListener only
+    // fires on *transitions*, so if the session is already authenticated on
+    // relaunch (flag off, no slug check) the listener never fires.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (context.read<SessionCubit>().state.isAuthenticated) {
@@ -315,6 +361,29 @@ class _CustomerRootState extends State<_CustomerRoot> {
       await tokenStorage.clear();
       sessionCubit.adoptSignedOut();
       return null;
+    };
+  }
+
+  /// Wires the TENANT_CONTEXT_MISMATCH 403 handler.
+  ///
+  /// When the backend rejects a request because the X-Tenant-Slug header does
+  /// not match the DB-loaded user company (MT-031), we must:
+  ///   1. Clear tokens (authenticated session is invalid)
+  ///   2. Clear the stored company (selection is inconsistent)
+  ///   3. Sign out (router redirect picks up the unsigned state)
+  ///
+  /// The router guard then sends the user to /select-company because no
+  /// company is selected. Ordinary 403s (CAPABILITY_NOT_ENABLED, etc.) do
+  /// NOT reach this handler — TenantSlugInterceptor only calls it for the
+  /// exact TENANT_CONTEXT_MISMATCH error code.
+  void _wireMismatchHandler() {
+    final tokenStorage = context.read<TokenStorage>();
+    final tenantStorage = context.read<CustomerTenantStorage>();
+    final sessionCubit = context.read<SessionCubit>();
+    context.read<TenantMismatchRegistry>().handler = () async {
+      await tokenStorage.clear();
+      await tenantStorage.clearSelectedCompany();
+      sessionCubit.adoptSignedOut();
     };
   }
 

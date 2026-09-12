@@ -1,5 +1,7 @@
+import { notFound } from 'next/navigation';
 import { buildMetadata } from '@/lib/seo';
 import { safeFetch } from '@/lib/api';
+import { getResolvedTenant } from '@/lib/tenant';
 import { getLocale } from '@/lib/locale';
 import type { Paginated, PublicProjectListItem, PublicUnit } from '@/lib/api-types';
 import { Container } from '@/components/ui/Container';
@@ -28,6 +30,9 @@ export const metadata = buildMetadata({
 const REVALIDATE = 60;
 
 export default async function HomePage() {
+  const tenant = await getResolvedTenant();
+  if (!tenant) notFound();
+
   const [locale, projects, units] = await Promise.all([
     getLocale(),
     // No `featured` filter: the API already orders featured-first, so this one
@@ -35,9 +40,13 @@ export default async function HomePage() {
     // ones (single source ⇒ inherently deduped) — up to 8 for the carousel.
     safeFetch<Paginated<PublicProjectListItem>>('/public/projects?pageSize=8', {
       revalidate: REVALIDATE,
+      tenantSlug: tenant.slug,
     }),
     // Homepage shows 6 featured units (two rows); the full catalogue lives on /units.
-    safeFetch<Paginated<PublicUnit>>('/public/units?pageSize=6', { revalidate: REVALIDATE }),
+    safeFetch<Paginated<PublicUnit>>('/public/units?pageSize=6', {
+      revalidate: REVALIDATE,
+      tenantSlug: tenant.slug,
+    }),
   ]);
 
   // Use the first featured project's cover as the hero backdrop when available.

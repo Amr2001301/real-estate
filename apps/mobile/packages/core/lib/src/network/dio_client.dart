@@ -6,6 +6,7 @@ import '../env/env_config.dart';
 import 'interceptors/auth_interceptor.dart';
 import 'interceptors/locale_interceptor.dart';
 import 'interceptors/request_id_interceptor.dart';
+import 'interceptors/tenant_slug_interceptor.dart';
 
 /// Builds the app-wide configured [Dio]. Constructed once in the app
 /// composition root (`bootstrap.dart`) and provided to the widget tree via a
@@ -21,6 +22,12 @@ abstract final class DioClientFactory {
     required TokenStorage tokenStorage,
     required String Function() readLocale,
     SessionRefresher? refreshSession,
+    // Optional: when non-null a TenantSlugInterceptor is added that sends
+    // X-Tenant-Slug on authenticated requests. Staff app passes
+    // tokenStorage.readSelectedCompanySlug; customer app omits this so no
+    // slug header is ever sent.
+    TenantSlugReader? readTenantSlug,
+    TenantMismatchHandler? onTenantMismatch,
   }) {
     BaseOptions baseOptions() => BaseOptions(
       baseUrl: env.apiBaseUrl,
@@ -42,6 +49,13 @@ abstract final class DioClientFactory {
     client.interceptors.addAll([
       RequestIdInterceptor(),
       LocaleInterceptor(readLocale),
+      // TenantSlugInterceptor must run before AuthInterceptor so it can read
+      // the skipAuthExtra flag set by auth-exempt data sources.
+      if (readTenantSlug != null)
+        TenantSlugInterceptor(
+          readSlug: readTenantSlug,
+          onMismatch: onTenantMismatch,
+        ),
       AuthInterceptor(
         retryClient: retryClient,
         readAccessToken: tokenStorage.readAccessToken,

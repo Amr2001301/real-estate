@@ -42,7 +42,18 @@ Future<void> bootstrap(EnvConfig env) async {
     const Duration(seconds: 5),
     onTimeout: () => debugPrint('[Firebase] init timed out — FCM disabled'),
   );
-  runApp(await buildAppRoot(env: EnvConfig.current, child: const StaffApp()));
+  runApp(await buildAppRoot(
+    env: EnvConfig.current,
+    child: const StaffApp(),
+    // Send X-Tenant-Slug on authenticated requests (Phase I staff migration).
+    enableTenantSlugHeader: true,
+    // Require a selected company slug to restore a session. Old installs (pre
+    // Phase I) that have tokens but no slug are safely cleared → re-login.
+    sessionRestoreCheck: (storage) async {
+      final slug = await storage.readSelectedCompanySlug();
+      return slug != null && slug.isNotEmpty;
+    },
+  ));
 }
 
 Future<void> _initLocalNotifications() async {

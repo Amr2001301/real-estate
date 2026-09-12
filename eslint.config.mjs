@@ -152,9 +152,34 @@ export default [
     },
   },
 
-  // Backend API — ban $queryRawUnsafe (bypasses tenant middleware + injection risk).
+  // Backend API — security-sensitive static restrictions.
+  //
+  // 1. $queryRawUnsafe: bypasses tenant middleware and is SQL-injection-prone.
+  // 2. prisma.user.*: User is TENANT_CONTROLLED (MT-012). Direct access outside
+  //    authorized files risks cross-tenant IDOR. Authorized files are listed in
+  //    the override block below.
+  //
+  // Limitations of the prisma.user selectors:
+  //   - Catches `this.prisma.user.*` and `prisma.user.*` call patterns.
+  //   - Does NOT catch destructuring (`const { user } = this.prisma`) or
+  //     index notation (`this.prisma['user']`). These are rare; treat as
+  //     known gap documented here.
+  //   - Test files (*.spec.ts, __tests__/**) are excluded via the ignores list
+  //     below because mock setup objects may reference .user properties.
   {
     files: ['apps/api/src/**/*.ts'],
+    ignores: [
+      // Authorized prisma.user access locations (TENANT_CONTROLLED policy enforced internally):
+      'apps/api/src/modules/users/users.service.ts',
+      'apps/api/src/modules/auth/auth.service.ts',
+      'apps/api/src/modules/auth/jwt.strategy.ts',
+      'apps/api/src/modules/super-admin/super-admin.service.ts',
+      'apps/api/src/common/utils/identity-claim.ts',
+      // Tests: mock objects may reference prisma.user shape; exempt from this check.
+      'apps/api/src/**/*.spec.ts',
+      'apps/api/src/**/*.e2e-spec.ts',
+      'apps/api/src/**/__tests__/**/*.ts',
+    ],
     rules: {
       'no-restricted-syntax': [
         'error',
@@ -162,6 +187,42 @@ export default [
           selector: "CallExpression[callee.property.name='$queryRawUnsafe']",
           message: 'Use $queryRaw(Prisma.sql`...`) — $queryRawUnsafe bypasses the tenant middleware and is SQL-injection-prone.',
         },
+        {
+          // Catches: this.prisma.user.findMany(...) — the most common pattern.
+          selector: "MemberExpression[property.name='user'][object.property.name='prisma']",
+          message:
+            "Direct prisma.user access is restricted. User is TENANT_CONTROLLED (MT-012) — " +
+            "route through UsersService or an explicitly authorized file.",
+        },
+        {
+          // Catches: prisma.user.findMany(...) — when prisma is a local identifier.
+          selector: "MemberExpression[property.name='user'][object.name='prisma']",
+          message:
+            "Direct prisma.user access is restricted. User is TENANT_CONTROLLED (MT-012) — " +
+            "route through UsersService or an explicitly authorized file.",
+        },
+      ],
+    },
+  },
+
+  // Authorized files that need direct prisma.user access — keep $queryRawUnsafe
+  // restriction but remove the prisma.user restriction.
+  {
+    files: [
+      'apps/api/src/modules/users/users.service.ts',
+      'apps/api/src/modules/auth/auth.service.ts',
+      'apps/api/src/modules/auth/jwt.strategy.ts',
+      'apps/api/src/modules/super-admin/super-admin.service.ts',
+      'apps/api/src/common/utils/identity-claim.ts',
+    ],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.property.name='$queryRawUnsafe']",
+          message: 'Use $queryRaw(Prisma.sql`...`) — $queryRawUnsafe bypasses the tenant middleware and is SQL-injection-prone.',
+        },
+        // prisma.user access is intentionally allowed in these files.
       ],
     },
   },

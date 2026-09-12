@@ -19,7 +19,13 @@ class SessionCubit extends Cubit<SessionState> {
   final TokenStorage _tokenStorage;
 
   /// Restores a persisted session from secure storage. Call once at startup.
-  Future<void> restore() async {
+  ///
+  /// [additionalCheck] is an optional async predicate evaluated after the
+  /// tokens + session JSON are confirmed present. Apps that require extra
+  /// session context (e.g. the staff app requiring a persisted tenant slug)
+  /// pass a check here; on failure the session is cleared and the user must
+  /// re-authenticate. Customer app callers omit this parameter.
+  Future<void> restore({Future<bool?> Function()? additionalCheck}) async {
     if (!await _tokenStorage.hasSession) {
       emit(const SessionState.unauthenticated());
       return;
@@ -28,6 +34,16 @@ class SessionCubit extends Cubit<SessionState> {
     if (json == null) {
       emit(const SessionState.unauthenticated());
       return;
+    }
+    if (additionalCheck != null) {
+      final pass = await additionalCheck();
+      if (pass != true) {
+        // false  → clear tokens (invalid company / no slug)
+        // null   → preserve tokens (network failure; retry can restore the session)
+        if (pass == false) await _tokenStorage.clear();
+        emit(const SessionState.unauthenticated());
+        return;
+      }
     }
     try {
       final session = Session.fromJson(jsonDecode(json) as Map<String, dynamic>);

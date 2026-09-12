@@ -2,18 +2,38 @@
 
 import Link from 'next/link';
 import { useActionState, useState } from 'react';
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Building2 } from 'lucide-react';
 import { loginAction, type LoginState } from './actions';
 
-export default function LoginForm({ from }: { from?: string }) {
-  // ── Auth state (untouched) ─────────────────────────────────────────────
+export default function LoginForm({ from, lastCompanySlug }: { from?: string; lastCompanySlug?: string }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(loginAction, {});
   const [showPassword, setShowPassword] = useState(false);
 
   return (
     <form action={action} className="space-y-5">
-      {/* Forward the middleware-supplied ?from=... so the action can honor it. */}
       {from ? <input type="hidden" name="from" value={from} /> : null}
+
+      {/* ── Company Code ──────────────────────────────────────────────── */}
+      <div className="space-y-2">
+        <label className="block text-[13px] font-semibold text-navy/70">
+          كود الشركة
+        </label>
+        <div className="relative">
+          <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted">
+            <Building2 className="h-[17px] w-[17px]" aria-hidden />
+          </span>
+          <input
+            name="slug"
+            type="text"
+            required
+            autoComplete="organization"
+            defaultValue={lastCompanySlug}
+            placeholder="your-company"
+            dir="ltr"
+            className="h-[52px] w-full rounded-xl border border-hairline bg-surface pr-[2.625rem] pl-4 text-sm text-navy placeholder:text-text-muted transition-all focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/15"
+          />
+        </div>
+      </div>
 
       {/* ── Email ────────────────────────────────────────────────────── */}
       <div className="space-y-2">

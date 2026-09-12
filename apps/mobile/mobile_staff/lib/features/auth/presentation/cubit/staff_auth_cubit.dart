@@ -44,10 +44,16 @@ class StaffAuthCubit extends Cubit<StaffAuthState> {
   final LoginStaff _loginStaff;
   final LogoutStaff _logoutStaff;
 
-  Future<void> login(String email, String password) async {
+  /// Tenant-aware login. [slug] is the company code entered by the user.
+  /// On success, the repository persists tokens + selectedCompanySlug.
+  Future<void> login(String slug, String email, String password) async {
     emit(state.copyWith(status: StaffAuthStatus.submitting, clearFailure: true));
     final result = await _loginStaff(
-      LoginParams(email: email.trim(), password: password),
+      LoginParams(
+        slug: slug.trim().toLowerCase(),
+        email: email.trim(),
+        password: password,
+      ),
     );
     result.when(
       ok: (session) {

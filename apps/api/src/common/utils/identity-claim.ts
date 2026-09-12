@@ -78,9 +78,13 @@ export async function claimSyntheticPeers(
   const prisma = prismaArg as PrismaClient;
   const target = await prisma.user.findUnique({
     where: { id: targetUserId },
-    select: { phone: true, email: true },
+    select: { phone: true, email: true, companyId: true },
   });
   if (!target) return { claimedCount: 0, claimedIds: [] };
+  // MT-011: synthetic peer merging is only meaningful within a single tenant.
+  // A null companyId means the target is a SUPER_ADMIN or a pre-migration row;
+  // cross-tenant merging for these accounts is undefined and would be a bug.
+  if (target.companyId === null) return { claimedCount: 0, claimedIds: [] };
   const targetPhone = normalizePhone(
     override?.phone !== undefined ? override.phone : target.phone,
   );
@@ -96,8 +100,10 @@ export async function claimSyntheticPeers(
   const seen = new Set<string>([targetUserId]);
 
   if (targetEmail) {
-    const byEmail = await prisma.user.findUnique({
-      where: { email: targetEmail },
+    // MT-011: scope to the same company. findFirst instead of findUnique
+    // because the compound (email, companyId) has no unique constraint yet.
+    const byEmail = await prisma.user.findFirst({
+      where: { email: targetEmail, companyId: target.companyId },
       select: { id: true, email: true, phone: true, role: true, passwordHash: true },
     });
     if (byEmail && !seen.has(byEmail.id)) {
@@ -107,9 +113,10 @@ export async function claimSyntheticPeers(
   }
   if (targetPhone) {
     // Suffix-narrow scan to leverage the `phone` index, then verify in JS.
+    // MT-011: companyId scope ensures we only merge within the same tenant.
     const suffix = targetPhone.slice(-8);
     const rows = await prisma.user.findMany({
-      where: { phone: { contains: suffix } },
+      where: { phone: { contains: suffix }, companyId: target.companyId },
       select: { id: true, email: true, phone: true, role: true, passwordHash: true },
     });
     for (const r of rows) {

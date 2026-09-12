@@ -12,6 +12,8 @@ import 'package:mobile_customer/features/auth/domain/usecases/verify_otp.dart';
 import 'package:mobile_customer/features/auth/presentation/auth_cubit.dart';
 import 'package:mobile_customer/features/auth/presentation/login_screen.dart';
 import 'package:mobile_customer/router/auth_navigation.dart';
+import 'package:mobile_customer/storage/customer_tenant_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Regression coverage for the post-auth redirect flow.
 ///
@@ -24,22 +26,22 @@ class _FakeAuthRepository implements AuthRepository {
   final Session _session;
 
   @override
-  Future<Result<Session>> loginWithEmail(String e, String p) async =>
+  Future<Result<Session>> loginWithEmail(String slug, String e, String p) async =>
       Result.ok(_session);
   @override
-  Future<Result<Session>> registerCustomer(RegisterParams params) async =>
+  Future<Result<Session>> registerCustomer(String slug, RegisterParams params) async =>
       Result.ok(_session);
   @override
-  Future<Result<void>> requestOtp(String phone) async => const Ok(null);
+  Future<Result<void>> requestOtp(String slug, String phone) async => const Ok(null);
   @override
-  Future<Result<Session>> verifyOtp(String p, String c, {String? fullName}) async =>
+  Future<Result<Session>> verifyOtp(String slug, String p, String c, {String? fullName}) async =>
       Result.ok(_session);
   @override
   Future<Result<Session>> refreshSession() async => Result.ok(_session);
   @override
   Future<Result<void>> logout() async => const Ok(null);
   @override
-  Future<Result<void>> forgotPassword(String email) async => const Ok(null);
+  Future<Result<void>> forgotPassword(String slug, String email) async => const Ok(null);
   @override
   Future<Result<void>> resetPassword(String token, String newPassword) async => const Ok(null);
 }
@@ -80,6 +82,12 @@ void main() {
       WidgetTester tester, {
       required String loginUrl,
     }) async {
+      SharedPreferences.setMockInitialValues(
+        {CustomerTenantStorage.kSlugKey: 'test-company'},
+      );
+      final prefs = await SharedPreferences.getInstance();
+      final tenantStorage = CustomerTenantStorage(prefs);
+
       final session = SessionCubit(TokenStorage())..adoptSignedOut();
       addTearDown(session.close);
 
@@ -89,6 +97,7 @@ void main() {
           );
       final authCubit = AuthCubit(
         sessionCubit: session,
+        tenantStorage: tenantStorage,
         loginWithEmail: LoginWithEmail(repo()),
         registerCustomer: RegisterCustomer(repo()),
         requestOtp: RequestOtp(repo()),

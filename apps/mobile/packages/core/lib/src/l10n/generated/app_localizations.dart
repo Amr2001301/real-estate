@@ -1496,6 +1496,12 @@ abstract class AppLocalizations {
   /// **'Verification code'**
   String get fieldOtpCode;
 
+  /// No description provided for @fieldCompanyCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Company Code'**
+  String get fieldCompanyCode;
+
   /// No description provided for @validationRequired.
   ///
   /// In en, this message translates to:
@@ -1507,6 +1513,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter a valid email'**
   String get validationEmail;
+
+  /// No description provided for @validationCompanyCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the company code'**
+  String get validationCompanyCode;
 
   /// No description provided for @validationPhone.
   ///
@@ -2785,6 +2797,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign in to your staff account'**
   String get staffLoginSubtitle;
+
+  /// No description provided for @errorTenantMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session does not match this company. Please sign in again.'**
+  String get errorTenantMismatch;
 
   /// No description provided for @roleSales.
   ///
@@ -5395,6 +5413,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Interest pre-filled from'**
   String get leadInterestPreFilled;
+
+  /// No description provided for @companySelectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Developer'**
+  String get companySelectTitle;
+
+  /// No description provided for @companySelectSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search for the developer whose app you\'d like to use'**
+  String get companySelectSubtitle;
+
+  /// No description provided for @companySearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by company name or code'**
+  String get companySearchHint;
+
+  /// No description provided for @companySearchEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No companies found'**
+  String get companySearchEmpty;
+
+  /// No description provided for @companySearchMinLength.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter at least 2 characters to search'**
+  String get companySearchMinLength;
+
+  /// No description provided for @companySelectButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Select'**
+  String get companySelectButton;
+
+  /// No description provided for @companyNotAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This company is not available. Please try a different company.'**
+  String get companyNotAvailable;
+
+  /// No description provided for @companyChangeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Developer'**
+  String get companyChangeTitle;
 
   /// No description provided for @sectionFloorPlans.
   ///

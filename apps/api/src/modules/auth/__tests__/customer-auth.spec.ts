@@ -22,10 +22,17 @@ function makeService() {
     email: 'sara@example.com',
     phone: '+966500000000',
     locale: 'ar',
+    // MT-011: companyId=null causes claimSyntheticPeers to return early —
+    // a CLIENT user created via public auth has no company context yet.
+    companyId: null,
   };
   const prisma = {
     user: {
       findUnique: jest.fn(),
+      // MT-011: email-peer lookup inside claimSyntheticPeers now uses findFirst.
+      // With companyId=null the claim exits before the lookup, so this is a
+      // safety net only.
+      findFirst: jest.fn().mockResolvedValue(null),
       // P9 — claimSyntheticPeers scans a small set of candidates by phone
       // suffix. The unit-test mock returns an empty array so the claim is
       // a no-op; integration coverage lives in the e2e suite.
@@ -33,6 +40,8 @@ function makeService() {
       create: jest.fn().mockResolvedValue(created),
       update: jest.fn().mockResolvedValue(created),
     },
+    // MT-034: lifecycle check calls prisma.company.findUnique for DEFAULT_COMPANY_ID.
+    company: { findUnique: jest.fn().mockResolvedValue({ lifecycleStatus: 'ACTIVE' }) },
     refreshToken: { create: jest.fn().mockResolvedValue({}) },
   };
   const jwt = { signAsync: jest.fn().mockResolvedValue('access-token') };
@@ -53,13 +62,14 @@ describe('AuthService · public customer auth', () => {
   it('registers a customer as CLIENT and returns tokens', async () => {
     const { service, prisma, created } = makeService();
     // Sequence: byEmail (null) → byPhone (null) → identity-claim target
-    // lookup (created) → identity-claim email peer (null) → issueTokens
-    // final user lookup (created).
+    // lookup (created, companyId=null → early return) → issueTokens final
+    // user lookup (created).
+    // MT-011: email-peer lookup moved from findUnique to findFirst, so the
+    // findUnique sequence is now 4 calls instead of 5.
     prisma.user.findUnique
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(created)
-      .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(created);
 
     const res = await service.registerCustomer({
@@ -97,12 +107,13 @@ describe('AuthService · public customer auth', () => {
   // ── Login ─────────────────────────────────────────────────────────────
   it('logs in a CLIENT customer', async () => {
     const { service, prisma, created } = makeService();
-    // Sequence: loginCustomer email lookup → identity-claim target lookup →
-    // identity-claim email peer lookup → issueTokens final user lookup.
+    // Sequence: loginCustomer email lookup → identity-claim target lookup
+    // (companyId=null → early return) → issueTokens final user lookup.
+    // MT-011: email-peer lookup now uses findFirst; with companyId=null the
+    // claim exits before that call, so findUnique sequence is 3 calls.
     prisma.user.findUnique
       .mockResolvedValueOnce(created)
       .mockResolvedValueOnce(created)
-      .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(created);
     const res = await service.loginCustomer('Sara@Example.com', 'StrongPass1');
     expect(res.tokens.accessToken).toBe('access-token');

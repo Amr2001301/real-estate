@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSession, isPortalRole, type SessionRole } from '@/lib/session';
-import { authFetch } from '@/lib/api-auth';
+import { authFetch, AuthError } from '@/lib/api-auth';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
 import { Container } from '@/components/ui/Container';
@@ -22,19 +22,21 @@ export default async function AccountLayout({ children }: { children: React.Reac
   try {
     const me = await authFetch<{ avatarUrl: string | null }>('/users/me');
     avatarUrl = me.avatarUrl ?? null;
-  } catch {
-    /* ignore — initials fallback */
+  } catch (e) {
+    // AuthError here means expired session or tenant mismatch (403 + cookie cleared).
+    // Redirect to /login so the cycle breaks — on the next load getSession() will
+    // return null (cookies cleared) and the middleware will allow /login to render.
+    if (e instanceof AuthError) redirect('/login');
   }
 
-  // Unread notification count for the sidebar badge so customers see pending
-  // notifications without opening the notifications page. Non-fatal: any
-  // failure simply hides the badge (count 0).
+  // Unread notification count for the sidebar badge. AuthError → redirect; other
+  // failures simply hide the badge (count 0).
   let unreadNotifications = 0;
   try {
     const res = await authFetch<{ count: number }>('/me/notifications/unread-count');
     unreadNotifications = Number(res.count) || 0;
-  } catch {
-    /* ignore — badge hidden */
+  } catch (e) {
+    if (e instanceof AuthError) redirect('/login');
   }
 
   return (

@@ -1,7 +1,9 @@
+import { notFound } from 'next/navigation';
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
+import { getResolvedTenant } from '@/lib/tenant';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { LoginCard } from '@/components/auth/LoginCard';
 import { InlineNotice } from '@/components/states/InlineNotice';
@@ -38,6 +40,9 @@ function isAccountFrom(from: string): boolean {
 }
 
 export default async function LoginPage({ searchParams }: { searchParams: SearchParams }) {
+  const tenant = await getResolvedTenant();
+  if (!tenant) notFound();
+
   const sp = await searchParams;
   const showSessionNotice = isAccountFrom(firstStr(sp.from));
   const showResetNotice = isPasswordReset(sp.reset);

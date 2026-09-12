@@ -15,26 +15,62 @@ datasource db {
 // =============================================================================
 
 model Company {
-  id            String   @id @default(uuid()) @db.Uuid
-  name          String
-  slug          String   @unique            // URL-safe identifier, used for subdomain routing
-  logoUrl       String?
-  country       String?                     // ISO 3166-1 alpha-2 (SA, AE, EG …)
-  currency      String   @default("SAR")    // ISO 4217
-  defaultLocale Locale   @default(ar)
-  timezone      String   @default("Asia/Riyadh") // IANA tz database name
-  isActive             Boolean            @default(true)
-  subscriptionPlan     SubscriptionPlan   @default(TRIAL)
-  subscriptionStatus   SubscriptionStatus @default(TRIAL)
-  subscriptionStartAt  DateTime?
-  subscriptionEndAt    DateTime?
-  maxUsers             Int?
-  cancelledAt          DateTime?
-  cancelReason         String?
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
+  id                  String                 @id @default(uuid()) @db.Uuid
+  name                String
+  slug                String                 @unique // URL-safe identifier, used for subdomain routing
+  logoUrl             String?
+  country             String? // ISO 3166-1 alpha-2 (SA, AE, EG …)
+  currency            String                 @default("SAR") // ISO 4217
+  defaultLocale       Locale                 @default(ar)
+  timezone            String                 @default("Asia/Riyadh") // IANA tz database name
+  // ── Legacy operational flag — still used by TenantResolverService and auth.
+  // Future: lifecycleStatus will become the canonical control; isActive will be
+  // derived or removed once MT-034 lifecycle guard is enforced.
+  isActive            Boolean                @default(true)
+  subscriptionPlan    SubscriptionPlan       @default(TRIAL)
+  subscriptionStatus  SubscriptionStatus     @default(TRIAL)
+  subscriptionStartAt DateTime?
+  subscriptionEndAt   DateTime?
+  maxUsers            Int?
+  cancelledAt         DateTime?
+  cancelReason        String?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  // ── MT-040: Company classification ────────────────────────────────────────
+  // DEVELOPER: real-estate developer (existing platform tenants, default)
+  // BROKERAGE: independent broker company (not a Developer sub-entity)
+  // Existing Broker/BrokerUser rows are tenant-local partner features and are
+  // NOT the same as Company.type = BROKERAGE.
+  type                CompanyType            @default(DEVELOPER)
+
+  // ── MT-036: Lifecycle status (schema only — enforcement comes in MT-034) ──
+  // ACTIVE: fully operational (all existing rows backfilled to ACTIVE)
+  // SUSPENDED: administratively disabled
+  // ARCHIVED: soft-decommissioned, read-only
+  // Distinct from subscriptionStatus: lifecycle is an administrative state;
+  // subscription is a billing concern. Both temporarily coexist in D1.
+  lifecycleStatus     CompanyLifecycleStatus @default(ACTIVE)
+
+  // ── MT-037: Runtime capabilities (schema only — enforcement in D2) ─────────
+  // JSONB blob provisioned at company creation time. Shape is defined by the
+  // CapabilityService (future). Null = no explicit entitlements stored yet.
+  capabilities        Json?
+
+  // ── MT-040A: Exposure / channel flags (schema only — enforcement deferred) ─
+  // These are channel controls, independent of CompanyType and capabilities.
+  // websiteEnabled:       may this company have a public web presence?
+  // customerAppEnabled:   may this company appear in the shared customer app?
+  // staffAppEnabled:      may staff access this company via the shared staff app?
+  // All existing rows default to true to preserve current product behavior.
+  websiteEnabled      Boolean                @default(true)
+  customerAppEnabled  Boolean                @default(true)
+  staffAppEnabled     Boolean                @default(true)
 
   // ── Relations ──────────────────────────────────────────────────────────────
+  // MT-044: Platform subdomains are provisioned here at company creation time.
+  // Custom domains are added by tenant admins post-creation.
+  companyDomains           CompanyDomain[]
   users                    User[]
   projects                 Project[]
   phases                   Phase[]
@@ -85,7 +121,7 @@ model Company {
   pricingPackages          PricingPackage[]
 
   // Module flags — controls which dashboard sections are visible for this company
-  modules                  Json?           // { broker, website, maintenance, reports, leads, visits, contracts, installments, deposits }
+  modules Json? // { broker, website, maintenance, reports, leads, visits, contracts, installments, deposits }
 
   @@index([slug])
   @@index([isActive])
@@ -96,11 +132,11 @@ model Company {
 // =============================================================================
 
 model PricingPackage {
-  id           String   @id @default(uuid()) @db.Uuid
-  companyId    String?  @db.Uuid                        // null = global template
-  company      Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String?  @db.Uuid // null = global template
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  planTier     String                                   // TRIAL | STARTER | PROFESSIONAL | ENTERPRISE | CUSTOM
+  planTier     String // TRIAL | STARTER | PROFESSIONAL | ENTERPRISE | CUSTOM
   nameAr       String
   nameEn       String
   descAr       String?
@@ -110,8 +146,8 @@ model PricingPackage {
   annualPrice  Decimal? @db.Decimal(12, 2)
   setupFee     Decimal? @db.Decimal(12, 2)
   maxUsers     Int?
-  highlights   Json     @default("[]")                 // string[]  — key bullet points
-  specialOffer Json?                                   // { titleAr, titleEn, discountPct, validUntil } | null
+  highlights   Json     @default("[]") // string[]  — key bullet points
+  specialOffer Json? // { titleAr, titleEn, discountPct, validUntil } | null
   sortOrder    Int      @default(0)
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
@@ -157,20 +193,70 @@ enum Locale {
   en
 }
 
+// MT-040 — Company classification.
+enum CompanyType {
+  DEVELOPER
+  BROKERAGE
+}
+
+// MT-036 — Company lifecycle status (administrative, distinct from subscription billing).
+enum CompanyLifecycleStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+// MT-044 — Domain type: platform-provisioned subdomain or custom domain.
+enum DomainType {
+  PLATFORM_SUBDOMAIN
+  CUSTOM
+}
+
+// MT-044 — CompanyDomain: maps a normalized hostname to a tenant.
+// TENANT_CONTROLLED: companyId is explicit in every query; middleware does not inject.
+// Queried before tenant context exists (DomainResolverService), but writes always
+// enforce explicit ownership check: req.user.companyId must equal companyId.
+model CompanyDomain {
+  id                String      @id @default(uuid()) @db.Uuid
+  companyId         String      @db.Uuid
+  company           Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // Stored in canonical normalized form (trim, lowercase, no port, no trailing dot).
+  // normalizeHostname() must be applied before every read/write.
+  hostname          String      @unique
+
+  type              DomainType
+  isPrimary         Boolean     @default(false)
+
+  // Null until DNS verification succeeds. PLATFORM_SUBDOMAIN is auto-verified at creation.
+  verifiedAt        DateTime?
+
+  // Random token placed in DNS TXT record _host-verification.{hostname}.
+  // PLATFORM_SUBDOMAIN has a non-null token for schema consistency, but DNS
+  // verification is never required (verifiedAt is set at creation).
+  verificationToken String
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([companyId])
+  @@index([isPrimary])
+}
+
 model User {
-  id                String    @id @default(uuid()) @db.Uuid
-  role              UserRole
-  email             String?   @unique
-  phone             String?   @unique
-  passwordHash      String?
-  fullName          String
-  locale            Locale    @default(ar)
-  active            Boolean   @default(true)
-  avatarUrl         String?
-  emailVerifiedAt   DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  lastLoginAt       DateTime?
+  id              String    @id @default(uuid()) @db.Uuid
+  role            UserRole
+  email           String?   @unique
+  phone           String?   @unique
+  passwordHash    String?
+  fullName        String
+  locale          Locale    @default(ar)
+  active          Boolean   @default(true)
+  avatarUrl       String?
+  emailVerifiedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastLoginAt     DateTime?
 
   refreshTokens           RefreshToken[]
   passwordResetTokens     PasswordResetToken[]
@@ -207,42 +293,42 @@ model User {
   planTemplatesCreated    InstallmentPlanTemplate[] @relation("PlanTemplateCreator")
 
   // ── Broker relations (additive) ──────────────────────────────────────────
-  brokerProfile           BrokerUser?
-  brokersOnboarded        Broker[]                  @relation("BrokerCreatedBy")
-  brokerLeads             Lead[]                    @relation("LeadBrokerAgent")
-  brokerReservations      Reservation[]             @relation("ReservationBrokerAgent")
-  brokerContracts         Contract[]                @relation("ContractBrokerAgent")
-  brokerVisitRequests     VisitRequest[]            @relation("VisitRequestBrokerAgent")
-  brokerAppointments      VisitAppointment[]        @relation("AppointmentBrokerAgent")
-  brokerCommissionsAsAgent    BrokerCommission[]    @relation("BrokerCommissionAgent")
-  brokerCommissionsApproved   BrokerCommission[]    @relation("BrokerCommissionApprovedBy")
-  brokerCommissionsRejected   BrokerCommission[]    @relation("BrokerCommissionRejectedBy")
-  brokerPayoutsApproved       BrokerPayout[]        @relation("BrokerPayoutApprovedBy")
-  brokerPayoutsProcessed      BrokerPayout[]        @relation("BrokerPayoutProcessedBy")
-  brokerPayoutsCancelled      BrokerPayout[]        @relation("BrokerPayoutCancelledBy")
-  brokerActivityLogs          BrokerActivityLog[]   @relation("BrokerActivityLogAgent")
-  uploadedDocuments           Document[]            @relation("DocumentUploader")
+  brokerProfile             BrokerUser?
+  brokersOnboarded          Broker[]            @relation("BrokerCreatedBy")
+  brokerLeads               Lead[]              @relation("LeadBrokerAgent")
+  brokerReservations        Reservation[]       @relation("ReservationBrokerAgent")
+  brokerContracts           Contract[]          @relation("ContractBrokerAgent")
+  brokerVisitRequests       VisitRequest[]      @relation("VisitRequestBrokerAgent")
+  brokerAppointments        VisitAppointment[]  @relation("AppointmentBrokerAgent")
+  brokerCommissionsAsAgent  BrokerCommission[]  @relation("BrokerCommissionAgent")
+  brokerCommissionsApproved BrokerCommission[]  @relation("BrokerCommissionApprovedBy")
+  brokerCommissionsRejected BrokerCommission[]  @relation("BrokerCommissionRejectedBy")
+  brokerPayoutsApproved     BrokerPayout[]      @relation("BrokerPayoutApprovedBy")
+  brokerPayoutsProcessed    BrokerPayout[]      @relation("BrokerPayoutProcessedBy")
+  brokerPayoutsCancelled    BrokerPayout[]      @relation("BrokerPayoutCancelledBy")
+  brokerActivityLogs        BrokerActivityLog[] @relation("BrokerActivityLogAgent")
+  uploadedDocuments         Document[]          @relation("DocumentUploader")
 
   // ── Tenant scoping ───────────────────────────────────────────────────────
   // Nullable so existing users and platform-level ADMIN users without a
   // company assignment are unaffected. Assigned by MT-Seed-01 for all
   // current users; required for new users via the registration flow.
-  companyId    String?  @db.Uuid
-  company      Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
   // ── Sales team scoping (additive) ────────────────────────────────────────
   // A SALES user may be assigned to a SALES_MANAGER via managerId. Nullable so
   // existing users are unaffected; self-relation, no cascade.
-  managerId    String? @db.Uuid
-  manager      User?   @relation("SalesTeam", fields: [managerId], references: [id], onDelete: SetNull)
-  teamMembers  User[]  @relation("SalesTeam")
+  managerId   String? @db.Uuid
+  manager     User?   @relation("SalesTeam", fields: [managerId], references: [id], onDelete: SetNull)
+  teamMembers User[]  @relation("SalesTeam")
 
   // ── Soft-delete ───────────────────────────────────────────────────────────
   // `active` (above) means "account enabled"; it is NOT the delete flag.
   // `deletedAt` is the canonical soft-delete timestamp for P3-005 standardisation.
   // A non-null deletedAt means the user is permanently removed from all list
   // endpoints and cannot log in. Restore via POST /v1/users/:id/restore (ADMIN).
-  deletedAt    DateTime?
+  deletedAt DateTime?
 
   @@index([role])
   @@index([phone])
@@ -300,6 +386,9 @@ model OtpCode {
   attempts  Int      @default(0)
   consumed  Boolean  @default(false)
   createdAt DateTime @default(now())
+  // MT-021: additive nullable column; OtpCode remains PLATFORM_GLOBAL —
+  // no FK relation, no auto-injection. Future: scope OTP lookups per company.
+  companyId String?  @db.Uuid
 
   @@index([phone, consumed])
 }
@@ -368,15 +457,15 @@ model Project {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  media         ProjectMedia[]
-  phases        Phase[]
-  leads         Lead[]
-  visitRequests VisitRequest[]
-  infoRequests  InfoRequest[]
-  favorites     Favorite[]
-  appointments  VisitAppointment[]
-  planTemplates InstallmentPlanTemplate[] @relation("ProjectPlanTemplates")
-  brokerAccess  BrokerProjectAccess[]
+  media             ProjectMedia[]
+  phases            Phase[]
+  leads             Lead[]
+  visitRequests     VisitRequest[]
+  infoRequests      InfoRequest[]
+  favorites         Favorite[]
+  appointments      VisitAppointment[]
+  planTemplates     InstallmentPlanTemplate[] @relation("ProjectPlanTemplates")
+  brokerAccess      BrokerProjectAccess[]
   brokerCommissions BrokerCommission[]
 
   companyId String?  @db.Uuid
@@ -554,17 +643,17 @@ model Lead {
   updatedAt         DateTime    @updatedAt
 
   // ── Ad / UTM attribution (first-touch, all nullable) ───────────────────
-  utmSource    String?
-  utmMedium    String?
-  utmCampaign  String?
-  utmContent   String?
-  fbclid       String?
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  utmContent  String?
+  fbclid      String?
 
   // ── Broker attribution (additive, all nullable) ─────────────────────────
-  brokerId              String?            @db.Uuid
-  broker                Broker?            @relation(fields: [brokerId], references: [id])
-  brokerAgentId         String?            @db.Uuid
-  brokerAgent           User?              @relation("LeadBrokerAgent", fields: [brokerAgentId], references: [id])
+  brokerId              String?           @db.Uuid
+  broker                Broker?           @relation(fields: [brokerId], references: [id])
+  brokerAgentId         String?           @db.Uuid
+  brokerAgent           User?             @relation("LeadBrokerAgent", fields: [brokerAgentId], references: [id])
   brokerSubmittedAt     DateTime?
   brokerApprovalStatus  BrokerLeadStatus?
   brokerApprovedAt      DateTime?
@@ -610,12 +699,12 @@ model LeadNote {
 }
 
 model LeadActivity {
-  id        String   @id @default(uuid()) @db.Uuid
-  leadId    String   @db.Uuid
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  id        String           @id @default(uuid()) @db.Uuid
+  leadId    String           @db.Uuid
+  lead      Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
   type      LeadActivityType
-  payload   Json     @default("{}")
-  createdAt DateTime @default(now())
+  payload   Json             @default("{}")
+  createdAt DateTime         @default(now())
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -716,18 +805,18 @@ enum VisitActivityType {
 }
 
 model InfoRequest {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String?  @db.Uuid
-  user      User?    @relation("InfoRequestUser", fields: [userId], references: [id])
-  leadId    String?  @db.Uuid
-  lead      Lead?    @relation(fields: [leadId], references: [id])
-  projectId String?  @db.Uuid
-  project   Project? @relation(fields: [projectId], references: [id])
-  unitId    String?  @db.Uuid
-  unit      Unit?    @relation(fields: [unitId], references: [id])
+  id        String            @id @default(uuid()) @db.Uuid
+  userId    String?           @db.Uuid
+  user      User?             @relation("InfoRequestUser", fields: [userId], references: [id])
+  leadId    String?           @db.Uuid
+  lead      Lead?             @relation(fields: [leadId], references: [id])
+  projectId String?           @db.Uuid
+  project   Project?          @relation(fields: [projectId], references: [id])
+  unitId    String?           @db.Uuid
+  unit      Unit?             @relation(fields: [unitId], references: [id])
   message   String
   status    InfoRequestStatus @default(OPEN)
-  createdAt DateTime @default(now())
+  createdAt DateTime          @default(now())
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -829,16 +918,16 @@ model VisitAppointment {
   salesRatingText           String?
   salesRatingSubmittedAt    DateTime?
 
-  createdById        String?           @db.Uuid
-  createdBy          User?             @relation("AppointmentCreator", fields: [createdById], references: [id])
-  updatedById        String?           @db.Uuid
-  updatedBy          User?             @relation("AppointmentUpdater", fields: [updatedById], references: [id])
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  confirmedAt        DateTime?
-  completedAt        DateTime?
-  cancelledAt        DateTime?
-  noShowAt           DateTime?
+  createdById String?   @db.Uuid
+  createdBy   User?     @relation("AppointmentCreator", fields: [createdById], references: [id])
+  updatedById String?   @db.Uuid
+  updatedBy   User?     @relation("AppointmentUpdater", fields: [updatedById], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  confirmedAt DateTime?
+  completedAt DateTime?
+  cancelledAt DateTime?
+  noShowAt    DateTime?
 
   // ── Reminder sentinel timestamps (null = not yet sent) ─────────────────
   dayBeforeReminderSentAt  DateTime?
@@ -975,31 +1064,31 @@ model Reservation {
   updatedAt         DateTime          @updatedAt
 
   // ── Booking amount tracking (manual, recorded by Admin) ──────────────────
-  bookingAmount             Decimal                         @default(0) @db.Decimal(14, 2)
-  bookingPaymentStatus      ReservationBookingPaymentStatus @default(UNPAID)
-  bookingPaidAt             DateTime?
-  bookingNotes              String?
+  bookingAmount                  Decimal                         @default(0) @db.Decimal(14, 2)
+  bookingPaymentStatus           ReservationBookingPaymentStatus @default(UNPAID)
+  bookingPaidAt                  DateTime?
+  bookingNotes                   String?
   // P8 — booking amount mode + percentage audit trail. FIXED is the historical
   // default (also covers plan-driven creates). PERCENTAGE records the percent
   // the admin entered AND the unit price snapshot at create time so the math
   // can be re-derived later if the unit's price changes.
-  bookingAmountMode           ReservationBookingAmountMode @default(FIXED)
-  bookingAmountPercent        Decimal?                     @db.Decimal(5, 2)
-  bookingAmountUnitPriceSnapshot Decimal?                  @db.Decimal(14, 2)
-  installmentPlanTemplateId String?                         @db.Uuid
-  installmentPlanTemplate   InstallmentPlanTemplate?        @relation("ReservationPlanTemplate", fields: [installmentPlanTemplateId], references: [id])
+  bookingAmountMode              ReservationBookingAmountMode    @default(FIXED)
+  bookingAmountPercent           Decimal?                        @db.Decimal(5, 2)
+  bookingAmountUnitPriceSnapshot Decimal?                        @db.Decimal(14, 2)
+  installmentPlanTemplateId      String?                         @db.Uuid
+  installmentPlanTemplate        InstallmentPlanTemplate?        @relation("ReservationPlanTemplate", fields: [installmentPlanTemplateId], references: [id])
 
   // ── Selected duration + financial snapshot (set at create time, immutable) ──
-  selectedDurationOptionId   String?                       @db.Uuid
+  selectedDurationOptionId   String?                        @db.Uuid
   selectedDurationOption     InstallmentPlanDurationOption? @relation(fields: [selectedDurationOptionId], references: [id], onDelete: SetNull)
   selectedDurationMonths     Int?
-  selectedIncreasePercentage Decimal?                      @db.Decimal(6, 2)
-  snapshotDownPaymentAmount   Decimal?                      @db.Decimal(14, 2)
-  snapshotRemainingAmount     Decimal?                      @db.Decimal(14, 2)
-  snapshotFinancedAmount      Decimal?                      @db.Decimal(14, 2)
-  snapshotMonthlyInstallment  Decimal?                      @db.Decimal(14, 2)
-  snapshotTotalPayable        Decimal?                      @db.Decimal(14, 2)
-  snapshotFinalPaymentAmount  Decimal?                      @db.Decimal(14, 2)
+  selectedIncreasePercentage Decimal?                       @db.Decimal(6, 2)
+  snapshotDownPaymentAmount  Decimal?                       @db.Decimal(14, 2)
+  snapshotRemainingAmount    Decimal?                       @db.Decimal(14, 2)
+  snapshotFinancedAmount     Decimal?                       @db.Decimal(14, 2)
+  snapshotMonthlyInstallment Decimal?                       @db.Decimal(14, 2)
+  snapshotTotalPayable       Decimal?                       @db.Decimal(14, 2)
+  snapshotFinalPaymentAmount Decimal?                       @db.Decimal(14, 2)
 
   // ── Broker attribution (additive, all nullable; salesId stays required) ──
   brokerId               String?  @db.Uuid
@@ -1009,10 +1098,10 @@ model Reservation {
   commissionLockedPct    Decimal? @db.Decimal(5, 2)
   commissionLockedAmount Decimal? @db.Decimal(14, 2)
 
-  reservationNotes ReservationNote[]
-  activities       ReservationActivity[]
-  contract         Contract?
-  deposits         Deposit[]
+  reservationNotes  ReservationNote[]
+  activities        ReservationActivity[]
+  contract          Contract?
+  deposits          Deposit[]
   brokerCommissions BrokerCommission[]
 
   companyId String?  @db.Uuid
@@ -1099,11 +1188,11 @@ model Contract {
   brokerAgentId String? @db.Uuid
   brokerAgent   User?   @relation("ContractBrokerAgent", fields: [brokerAgentId], references: [id])
 
-  installmentPlan InstallmentPlan?
-  deposits        Deposit[]
+  installmentPlan  InstallmentPlan?
+  deposits         Deposit[]
   brokerCommission BrokerCommission?
   // At most one auto-generated sales commission entry (Batch B wires creation).
-  bonusEntry      BonusEntry?
+  bonusEntry       BonusEntry?
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1180,33 +1269,33 @@ enum PaymentMethod {
 }
 
 model Deposit {
-  id             String       @id @default(uuid()) @db.Uuid
-  type           DepositType  @default(INSTALLMENT)
-  contractId     String?      @db.Uuid
-  contract       Contract?    @relation(fields: [contractId], references: [id])
-  reservationId  String?      @db.Uuid
-  reservation    Reservation? @relation(fields: [reservationId], references: [id])
-  installmentId  String?      @db.Uuid
-  installment    Installment? @relation(fields: [installmentId], references: [id])
-  amount         Decimal      @db.Decimal(14, 2)
-  paidAt         DateTime
-  receiptUrl     String?
-  recordedById   String       @db.Uuid
-  recordedBy     User         @relation("DepositRecordedBy", fields: [recordedById], references: [id])
+  id            String       @id @default(uuid()) @db.Uuid
+  type          DepositType  @default(INSTALLMENT)
+  contractId    String?      @db.Uuid
+  contract      Contract?    @relation(fields: [contractId], references: [id])
+  reservationId String?      @db.Uuid
+  reservation   Reservation? @relation(fields: [reservationId], references: [id])
+  installmentId String?      @db.Uuid
+  installment   Installment? @relation(fields: [installmentId], references: [id])
+  amount        Decimal      @db.Decimal(14, 2)
+  paidAt        DateTime
+  receiptUrl    String?
+  recordedById  String       @db.Uuid
+  recordedBy    User         @relation("DepositRecordedBy", fields: [recordedById], references: [id])
   /// LEGACY (P11) — kept for back-compat. New code reads/writes via
   /// reviewStatus; this stays in lockstep (true iff reviewStatus = APPROVED).
-  verified       Boolean      @default(false)
-  createdAt      DateTime     @default(now())
+  verified      Boolean      @default(false)
+  createdAt     DateTime     @default(now())
 
   // ── P11 — payment-proof review ────────────────────────────────────────
-  reviewStatus     DepositReviewStatus @default(NO_PROOF)
-  rejectionReason  String?             @db.VarChar(2000)
-  reviewedAt       DateTime?
-  reviewedById     String?             @db.Uuid
-  reviewedBy       User?               @relation("DepositReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
-  proofDocumentId  String?             @db.Uuid
-  proofDocument    Document?           @relation("DepositProofDocument", fields: [proofDocumentId], references: [id], onDelete: SetNull)
-  paymentMethod    PaymentMethod?
+  reviewStatus    DepositReviewStatus @default(NO_PROOF)
+  rejectionReason String?             @db.VarChar(2000)
+  reviewedAt      DateTime?
+  reviewedById    String?             @db.Uuid
+  reviewedBy      User?               @relation("DepositReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  proofDocumentId String?             @db.Uuid
+  proofDocument   Document?           @relation("DepositProofDocument", fields: [proofDocumentId], references: [id], onDelete: SetNull)
+  paymentMethod   PaymentMethod?
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1258,48 +1347,48 @@ enum PlanPaymentType {
 }
 
 model InstallmentPlanTemplate {
-  id                 String               @id @default(uuid()) @db.Uuid
-  name               String
-  description        String?
-  projectId          String               @db.Uuid
-  project            Project              @relation("ProjectPlanTemplates", fields: [projectId], references: [id])
-  unitId             String?              @db.Uuid
-  unit               Unit?                @relation("UnitPlanTemplates", fields: [unitId], references: [id])
-  totalPrice         Decimal              @db.Decimal(14, 2)
+  id                     String               @id @default(uuid()) @db.Uuid
+  name                   String
+  description            String?
+  projectId              String               @db.Uuid
+  project                Project              @relation("ProjectPlanTemplates", fields: [projectId], references: [id])
+  unitId                 String?              @db.Uuid
+  unit                   Unit?                @relation("UnitPlanTemplates", fields: [unitId], references: [id])
+  totalPrice             Decimal              @db.Decimal(14, 2)
   // Discount off the total price. `discountAmount` is the COMPUTED amount
   // (netPrice = totalPrice − discountAmount). The type/value pair mirrors the
   // down-payment pattern: FIXED → value is the amount; PERCENTAGE → value is a
   // percent of totalPrice (the template's pricing base).
-  discountAmount     Decimal              @default(0) @db.Decimal(14, 2)
-  discountType       DownPaymentType      @default(FIXED)
-  discountValue      Decimal              @default(0) @db.Decimal(14, 2)
-  netPrice           Decimal              @db.Decimal(14, 2)
+  discountAmount         Decimal              @default(0) @db.Decimal(14, 2)
+  discountType           DownPaymentType      @default(FIXED)
+  discountValue          Decimal              @default(0) @db.Decimal(14, 2)
+  netPrice               Decimal              @db.Decimal(14, 2)
   // Booking/reservation amount. `reservationAmount` is the COMPUTED amount used
   // by the schedule (mirrors downPaymentAmount). The type/value pair mirrors the
   // down-payment pattern: FIXED → value is the amount; PERCENTAGE → value is the
   // percent (applied to the unit price at reservation time, to netPrice for the
   // template's own schedule preview).
-  reservationAmount  Decimal              @default(0) @db.Decimal(14, 2)
-  reservationAmountType  DownPaymentType  @default(FIXED)
-  reservationAmountValue Decimal          @default(0) @db.Decimal(14, 2)
-  downPaymentType    DownPaymentType      @default(FIXED)
-  downPaymentValue   Decimal              @db.Decimal(14, 2)
-  downPaymentAmount  Decimal              @db.Decimal(14, 2)
-  installmentsCount  Int?
-  frequency          InstallmentFrequency @default(MONTHLY)
-  startDateRule      StartDateRule        @default(AFTER_CONTRACT)
-  manualStartDate    DateTime?
-  finalPaymentAmount Decimal?             @db.Decimal(14, 2)
-  visibility         String               @default("SALES_ONLY")
-  status             PlanTemplateStatus   @default(DRAFT)
-  createdById        String               @db.Uuid
-  createdBy          User                 @relation("PlanTemplateCreator", fields: [createdById], references: [id])
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  reservationAmount      Decimal              @default(0) @db.Decimal(14, 2)
+  reservationAmountType  DownPaymentType      @default(FIXED)
+  reservationAmountValue Decimal              @default(0) @db.Decimal(14, 2)
+  downPaymentType        DownPaymentType      @default(FIXED)
+  downPaymentValue       Decimal              @db.Decimal(14, 2)
+  downPaymentAmount      Decimal              @db.Decimal(14, 2)
+  installmentsCount      Int?
+  frequency              InstallmentFrequency @default(MONTHLY)
+  startDateRule          StartDateRule        @default(AFTER_CONTRACT)
+  manualStartDate        DateTime?
+  finalPaymentAmount     Decimal?             @db.Decimal(14, 2)
+  visibility             String               @default("SALES_ONLY")
+  status                 PlanTemplateStatus   @default(DRAFT)
+  createdById            String               @db.Uuid
+  createdBy              User                 @relation("PlanTemplateCreator", fields: [createdById], references: [id])
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
 
   scheduleItems   PlanTemplateScheduleItem[]
   durationOptions InstallmentPlanDurationOption[]
-  reservations    Reservation[]                  @relation("ReservationPlanTemplate")
+  reservations    Reservation[]                   @relation("ReservationPlanTemplate")
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1361,17 +1450,17 @@ enum BonusEntrySource {
 }
 
 model BonusRule {
-  id         String       @id @default(uuid()) @db.Uuid
-  name       String
-  percentage Decimal      @default(0) @db.Decimal(5, 2)
-  conditions Json         @default("{}") // e.g. { minUnits: 3 }
-  active     Boolean      @default(true)
+  id                        String       @id @default(uuid()) @db.Uuid
+  name                      String
+  percentage                Decimal      @default(0) @db.Decimal(5, 2)
+  conditions                Json         @default("{}") // e.g. { minUnits: 3 }
+  active                    Boolean      @default(true)
   // Eligible for automatic sales-commission generation on contract signing.
   // Generation (Batch B) requires exactly one ACTIVE rule with this flag; zero
   // or multiple ⇒ skip. No generation happens from this flag alone in Batch A.
-  autoApplyOnSignedContract Boolean @default(false)
-  createdAt  DateTime     @default(now())
-  entries    BonusEntry[]
+  autoApplyOnSignedContract Boolean      @default(false)
+  createdAt                 DateTime     @default(now())
+  entries                   BonusEntry[]
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1395,11 +1484,11 @@ model BonusEntry {
   // contractId is unique so at most one auto entry can exist per contract
   // (Postgres allows multiple NULLs, so manual entries are unaffected). The FK
   // is SET NULL on contract deletion to preserve the compensation record.
-  source       BonusEntrySource @default(MANUAL)
-  contractId   String?          @unique @db.Uuid
-  contract     Contract?        @relation(fields: [contractId], references: [id], onDelete: SetNull)
-  basisAmount  Decimal?         @db.Decimal(14, 2)
-  commissionPct Decimal?        @db.Decimal(5, 2)
+  source        BonusEntrySource @default(MANUAL)
+  contractId    String?          @unique @db.Uuid
+  contract      Contract?        @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  basisAmount   Decimal?         @db.Decimal(14, 2)
+  commissionPct Decimal?         @db.Decimal(5, 2)
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1470,25 +1559,25 @@ enum MaintenanceResolutionConfirmedBy {
 }
 
 model MaintenanceCategory {
-  id        String              @id @default(uuid()) @db.Uuid
+  id                     String              @id @default(uuid()) @db.Uuid
   // Normalized slug for duplicate prevention (e.g. "plumbing"). Nullable so
   // existing rows are unaffected; new rows always get a code (unique).
-  code      String?             @unique
-  name      Json // Translatable
-  active    Boolean             @default(true)
-  priority  MaintenancePriority @default(MEDIUM)
+  code                   String?             @unique
+  name                   Json // Translatable
+  active                 Boolean             @default(true)
+  priority               MaintenancePriority @default(MEDIUM)
   // Handling SLA: target resolution window in minutes (admin enters hours/days;
   // stored as minutes). Nullable — a category may have no SLA.
-  slaDurationMinutes Int?
+  slaDurationMinutes     Int?
   // Warranty duration in months (admin enters months/years; stored as months).
   // Used to compute a unit item's warrantyEnd when a contract is signed.
   warrantyDurationMonths Int?
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt @default(now())
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @default(now()) @updatedAt
 
-  requests MaintenanceRequest[]
+  requests         MaintenanceRequest[]
   maintenanceItems UnitMaintenanceItem[]
-  requestItems MaintenanceRequestItem[]
+  requestItems     MaintenanceRequestItem[]
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1500,23 +1589,23 @@ model MaintenanceCategory {
 // optional warranty window and supplier/contractor attribution. Items hang off
 // the unit (not Unit.type). Soft-deactivated via `active`; never hard-deleted.
 model UnitMaintenanceItem {
-  id             String               @id @default(uuid()) @db.Uuid
-  unitId         String               @db.Uuid
-  unit           Unit                 @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  categoryId     String?              @db.Uuid
-  category       MaintenanceCategory? @relation(fields: [categoryId], references: [id])
-  name           Json // Translatable
-  warrantyStart  DateTime?
-  warrantyEnd    DateTime?
+  id                             String               @id @default(uuid()) @db.Uuid
+  unitId                         String               @db.Uuid
+  unit                           Unit                 @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  categoryId                     String?              @db.Uuid
+  category                       MaintenanceCategory? @relation(fields: [categoryId], references: [id])
+  name                           Json // Translatable
+  warrantyStart                  DateTime?
+  warrantyEnd                    DateTime?
   // The category warranty duration (months) frozen at contract-signing time, so
   // later category edits never change an already-started warranty.
   warrantyDurationMonthsSnapshot Int?
-  supplierName   String?
-  contractorName String?
-  notes          String?
-  active         Boolean              @default(true)
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
+  supplierName                   String?
+  contractorName                 String?
+  notes                          String?
+  active                         Boolean              @default(true)
+  createdAt                      DateTime             @default(now())
+  updatedAt                      DateTime             @updatedAt
 
   requests     MaintenanceRequest[]
   requestItems MaintenanceRequestItem[]
@@ -1531,42 +1620,42 @@ model UnitMaintenanceItem {
 }
 
 model MaintenanceRequest {
-  id              String              @id @default(uuid()) @db.Uuid
-  customerId      String              @db.Uuid
-  customer        User                @relation("MaintenanceCustomer", fields: [customerId], references: [id])
-  unitId          String              @db.Uuid
-  unit            Unit                @relation(fields: [unitId], references: [id])
-  categoryId      String              @db.Uuid
-  category        MaintenanceCategory @relation(fields: [categoryId], references: [id])
-  description     String
-  status          MaintenanceStatus   @default(OPEN)
+  id                            String                  @id @default(uuid()) @db.Uuid
+  customerId                    String                  @db.Uuid
+  customer                      User                    @relation("MaintenanceCustomer", fields: [customerId], references: [id])
+  unitId                        String                  @db.Uuid
+  unit                          Unit                    @relation(fields: [unitId], references: [id])
+  categoryId                    String                  @db.Uuid
+  category                      MaintenanceCategory     @relation(fields: [categoryId], references: [id])
+  description                   String
+  status                        MaintenanceStatus       @default(OPEN)
   // Snapshot of the category's priority + computed due date at creation time,
   // so later category edits don't retroactively change existing requests.
-  priority        MaintenancePriority?
-  dueAt           DateTime?
-  assignedAdminId String?             @db.Uuid
-  assignedAdmin   User?               @relation("MaintenanceAdmin", fields: [assignedAdminId], references: [id])
+  priority                      MaintenancePriority?
+  dueAt                         DateTime?
+  assignedAdminId               String?                 @db.Uuid
+  assignedAdmin                 User?                   @relation("MaintenanceAdmin", fields: [assignedAdminId], references: [id])
   // Optional link to a maintainable item + warranty snapshot. All nullable;
   // populated when request↔item integration lands in a later batch.
-  itemId              String?              @db.Uuid
-  item                UnitMaintenanceItem? @relation(fields: [itemId], references: [id])
-  warrantyStatus      WarrantyStatus?
-  warrantyEndSnapshot DateTime?
+  itemId                        String?                 @db.Uuid
+  item                          UnitMaintenanceItem?    @relation(fields: [itemId], references: [id])
+  warrantyStatus                WarrantyStatus?
+  warrantyEndSnapshot           DateTime?
   // Approval gate: the SLA timer (dueAt) only starts after APPROVED. Existing
   // rows default to APPROVED; customer-created requests start PENDING.
-  reviewStatus                MaintenanceReviewStatus @default(APPROVED)
-  approvedAt                  DateTime?
-  rejectedAt                  DateTime?
+  reviewStatus                  MaintenanceReviewStatus @default(APPROVED)
+  approvedAt                    DateTime?
+  rejectedAt                    DateTime?
   // Max handling SLA (minutes) across the request's selected categories,
   // snapshotted at approval; dueAt = approvedAt + this.
   maxHandlingSlaMinutesSnapshot Int?
   // Lifecycle timestamps (set as side effects of status transitions). These
   // represent the CURRENT lifecycle, not a historical audit — resolvedAt is
   // cleared on a RESOLVED→IN_PROGRESS reopen and re-set on the next RESOLVED.
-  assignedAt        DateTime?
-  firstInProgressAt DateTime?
-  resolvedAt        DateTime?
-  closedAt          DateTime?
+  assignedAt                    DateTime?
+  firstInProgressAt             DateTime?
+  resolvedAt                    DateTime?
+  closedAt                      DateTime?
 
   // ── Resolution loop (Phase A) — all additive/nullable ───────────────────
   // complaintAt: customer raised a complaint (only allowed once the request is
@@ -1584,8 +1673,8 @@ model MaintenanceRequest {
   customerRatingText              String?
   customerRatingSubmittedAt       DateTime?
 
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   items MaintenanceRequestItem[]
 
@@ -1607,18 +1696,18 @@ model MaintenanceRequest {
 // category priority + handling SLA + the linked unit item's warranty at
 // creation, so later category/item edits never change an existing request.
 model MaintenanceRequestItem {
-  id                       String              @id @default(uuid()) @db.Uuid
-  requestId                String              @db.Uuid
-  request                  MaintenanceRequest  @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  itemId                   String?             @db.Uuid
-  item                     UnitMaintenanceItem? @relation(fields: [itemId], references: [id])
-  categoryId               String              @db.Uuid
-  category                 MaintenanceCategory @relation(fields: [categoryId], references: [id])
-  categoryPrioritySnapshot MaintenancePriority
+  id                         String               @id @default(uuid()) @db.Uuid
+  requestId                  String               @db.Uuid
+  request                    MaintenanceRequest   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  itemId                     String?              @db.Uuid
+  item                       UnitMaintenanceItem? @relation(fields: [itemId], references: [id])
+  categoryId                 String               @db.Uuid
+  category                   MaintenanceCategory  @relation(fields: [categoryId], references: [id])
+  categoryPrioritySnapshot   MaintenancePriority
   handlingSlaMinutesSnapshot Int?
-  warrantyStatusSnapshot   WarrantyStatus      @default(UNKNOWN)
-  warrantyEndSnapshot      DateTime?
-  createdAt                DateTime            @default(now())
+  warrantyStatusSnapshot     WarrantyStatus       @default(UNKNOWN)
+  warrantyEndSnapshot        DateTime?
+  createdAt                  DateTime             @default(now())
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1851,20 +1940,20 @@ model Broker {
 }
 
 model BrokerUser {
-  id                    String           @id @default(uuid()) @db.Uuid
-  userId                String           @unique @db.Uuid
-  user                  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  brokerId              String           @db.Uuid
-  broker                Broker           @relation(fields: [brokerId], references: [id], onDelete: Cascade)
-  jobTitle              String?
-  isPrimaryContact      Boolean          @default(false)
-  canManageBrokerUsers  Boolean          @default(false)
-  canViewCommissions    Boolean          @default(true)
-  invitedAt             DateTime?
-  joinedAt              DateTime?
-  status                BrokerUserStatus @default(INVITED)
-  createdAt             DateTime         @default(now())
-  updatedAt             DateTime         @updatedAt
+  id                   String           @id @default(uuid()) @db.Uuid
+  userId               String           @unique @db.Uuid
+  user                 User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brokerId             String           @db.Uuid
+  broker               Broker           @relation(fields: [brokerId], references: [id], onDelete: Cascade)
+  jobTitle             String?
+  isPrimaryContact     Boolean          @default(false)
+  canManageBrokerUsers Boolean          @default(false)
+  canViewCommissions   Boolean          @default(true)
+  invitedAt            DateTime?
+  joinedAt             DateTime?
+  status               BrokerUserStatus @default(INVITED)
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1874,17 +1963,17 @@ model BrokerUser {
 }
 
 model BrokerProjectAccess {
-  id                 String   @id @default(uuid()) @db.Uuid
-  brokerId           String   @db.Uuid
-  broker             Broker   @relation(fields: [brokerId], references: [id], onDelete: Cascade)
-  projectId          String   @db.Uuid
-  project            Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  commissionPct      Decimal? @db.Decimal(5, 2)
-  fixedAmountPerUnit Decimal? @db.Decimal(14, 2)
+  id                 String    @id @default(uuid()) @db.Uuid
+  brokerId           String    @db.Uuid
+  broker             Broker    @relation(fields: [brokerId], references: [id], onDelete: Cascade)
+  projectId          String    @db.Uuid
+  project            Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  commissionPct      Decimal?  @db.Decimal(5, 2)
+  fixedAmountPerUnit Decimal?  @db.Decimal(14, 2)
   startsAt           DateTime?
   endsAt             DateTime?
-  active             Boolean  @default(true)
-  createdAt          DateTime @default(now())
+  active             Boolean   @default(true)
+  createdAt          DateTime  @default(now())
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1912,49 +2001,49 @@ model BrokerUnitAccess {
 }
 
 model BrokerCommission {
-  id                String                 @id @default(uuid()) @db.Uuid
-  commissionNumber  String                 @unique
-  brokerId          String                 @db.Uuid
-  broker            Broker                 @relation(fields: [brokerId], references: [id])
-  brokerAgentId     String?                @db.Uuid
-  brokerAgent       User?                  @relation("BrokerCommissionAgent", fields: [brokerAgentId], references: [id])
-  contractId        String                 @unique @db.Uuid
-  contract          Contract               @relation(fields: [contractId], references: [id])
-  reservationId     String?                @db.Uuid
-  reservation       Reservation?           @relation(fields: [reservationId], references: [id])
-  unitId            String                 @db.Uuid
-  unit              Unit                   @relation(fields: [unitId], references: [id])
-  projectId         String                 @db.Uuid
-  project           Project                @relation(fields: [projectId], references: [id])
+  id               String       @id @default(uuid()) @db.Uuid
+  commissionNumber String       @unique
+  brokerId         String       @db.Uuid
+  broker           Broker       @relation(fields: [brokerId], references: [id])
+  brokerAgentId    String?      @db.Uuid
+  brokerAgent      User?        @relation("BrokerCommissionAgent", fields: [brokerAgentId], references: [id])
+  contractId       String       @unique @db.Uuid
+  contract         Contract     @relation(fields: [contractId], references: [id])
+  reservationId    String?      @db.Uuid
+  reservation      Reservation? @relation(fields: [reservationId], references: [id])
+  unitId           String       @db.Uuid
+  unit             Unit         @relation(fields: [unitId], references: [id])
+  projectId        String       @db.Uuid
+  project          Project      @relation(fields: [projectId], references: [id])
 
-  basisAmount       Decimal                @db.Decimal(14, 2)
-  commissionPct     Decimal?               @db.Decimal(5, 2)
-  grossAmount       Decimal                @db.Decimal(14, 2)
-  taxPct            Decimal                @default(0) @db.Decimal(5, 2)
-  taxAmount         Decimal                @default(0) @db.Decimal(14, 2)
-  withholdingPct    Decimal                @default(0) @db.Decimal(5, 2)
-  withholdingAmount Decimal                @default(0) @db.Decimal(14, 2)
-  netAmount         Decimal                @db.Decimal(14, 2)
+  basisAmount       Decimal  @db.Decimal(14, 2)
+  commissionPct     Decimal? @db.Decimal(5, 2)
+  grossAmount       Decimal  @db.Decimal(14, 2)
+  taxPct            Decimal  @default(0) @db.Decimal(5, 2)
+  taxAmount         Decimal  @default(0) @db.Decimal(14, 2)
+  withholdingPct    Decimal  @default(0) @db.Decimal(5, 2)
+  withholdingAmount Decimal  @default(0) @db.Decimal(14, 2)
+  netAmount         Decimal  @db.Decimal(14, 2)
 
-  status            BrokerCommissionStatus @default(PENDING)
-  earnedAt          DateTime
+  status   BrokerCommissionStatus @default(PENDING)
+  earnedAt DateTime
 
-  approvedById      String?                @db.Uuid
-  approvedBy        User?                  @relation("BrokerCommissionApprovedBy", fields: [approvedById], references: [id])
-  approvedAt        DateTime?
-  rejectedById      String?                @db.Uuid
-  rejectedBy        User?                  @relation("BrokerCommissionRejectedBy", fields: [rejectedById], references: [id])
-  rejectedAt        DateTime?
-  rejectionReason   String?
+  approvedById    String?   @db.Uuid
+  approvedBy      User?     @relation("BrokerCommissionApprovedBy", fields: [approvedById], references: [id])
+  approvedAt      DateTime?
+  rejectedById    String?   @db.Uuid
+  rejectedBy      User?     @relation("BrokerCommissionRejectedBy", fields: [rejectedById], references: [id])
+  rejectedAt      DateTime?
+  rejectionReason String?
 
-  notes             String?
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // ── Payout link (nullable; set when admin attaches the commission to a
   //    DRAFT BrokerPayout) ──────────────────────────────────────────────────
-  payoutId          String?                @db.Uuid
-  payout            BrokerPayout?          @relation(fields: [payoutId], references: [id])
+  payoutId String?       @db.Uuid
+  payout   BrokerPayout? @relation(fields: [payoutId], references: [id])
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1968,41 +2057,41 @@ model BrokerCommission {
 }
 
 model BrokerPayout {
-  id                String              @id @default(uuid()) @db.Uuid
-  payoutNumber      String              @unique
-  brokerId          String              @db.Uuid
-  broker            Broker              @relation(fields: [brokerId], references: [id])
-  period            String?             // "2026-05" style, optional
+  id           String  @id @default(uuid()) @db.Uuid
+  payoutNumber String  @unique
+  brokerId     String  @db.Uuid
+  broker       Broker  @relation(fields: [brokerId], references: [id])
+  period       String? // "2026-05" style, optional
 
-  totalGross        Decimal             @default(0) @db.Decimal(14, 2)
-  totalTax          Decimal             @default(0) @db.Decimal(14, 2)
-  totalWithholding  Decimal             @default(0) @db.Decimal(14, 2)
-  totalNet          Decimal             @default(0) @db.Decimal(14, 2)
+  totalGross       Decimal @default(0) @db.Decimal(14, 2)
+  totalTax         Decimal @default(0) @db.Decimal(14, 2)
+  totalWithholding Decimal @default(0) @db.Decimal(14, 2)
+  totalNet         Decimal @default(0) @db.Decimal(14, 2)
 
-  status            BrokerPayoutStatus  @default(DRAFT)
-  paymentMethod     BrokerPayoutMethod?
-  paymentReference  String?
-  receiptUrl        String?
-  invoiceUrl        String?
-  scheduledAt       DateTime?
+  status           BrokerPayoutStatus  @default(DRAFT)
+  paymentMethod    BrokerPayoutMethod?
+  paymentReference String?
+  receiptUrl       String?
+  invoiceUrl       String?
+  scheduledAt      DateTime?
 
-  approvedById      String?             @db.Uuid
-  approvedBy        User?               @relation("BrokerPayoutApprovedBy", fields: [approvedById], references: [id])
-  approvedAt        DateTime?
-  processedById     String?             @db.Uuid
-  processedBy       User?               @relation("BrokerPayoutProcessedBy", fields: [processedById], references: [id])
-  processedAt       DateTime?
-  paidAt            DateTime?
-  cancelledById     String?             @db.Uuid
-  cancelledBy       User?               @relation("BrokerPayoutCancelledBy", fields: [cancelledById], references: [id])
-  cancelledAt       DateTime?
-  cancelReason      String?
+  approvedById  String?   @db.Uuid
+  approvedBy    User?     @relation("BrokerPayoutApprovedBy", fields: [approvedById], references: [id])
+  approvedAt    DateTime?
+  processedById String?   @db.Uuid
+  processedBy   User?     @relation("BrokerPayoutProcessedBy", fields: [processedById], references: [id])
+  processedAt   DateTime?
+  paidAt        DateTime?
+  cancelledById String?   @db.Uuid
+  cancelledBy   User?     @relation("BrokerPayoutCancelledBy", fields: [cancelledById], references: [id])
+  cancelledAt   DateTime?
+  cancelReason  String?
 
-  notes             String?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  commissions       BrokerCommission[]
+  commissions BrokerCommission[]
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -2098,25 +2187,25 @@ enum DocumentVisibility {
 }
 
 model Document {
-  id           String             @id @default(uuid()) @db.Uuid
-  ownerType    DocumentOwnerType
-  ownerId      String             @db.Uuid
-  category     DocumentCategory   @default(OTHER)
-  title        String
-  description  String?
-  fileUrl      String
-  fileName     String?
-  mimeType     String?
-  sizeBytes    Int?
-  visibility   DocumentVisibility @default(ADMIN_ONLY)
-  uploadedById String?            @db.Uuid
-  uploadedBy   User?              @relation("DocumentUploader", fields: [uploadedById], references: [id])
+  id            String             @id @default(uuid()) @db.Uuid
+  ownerType     DocumentOwnerType
+  ownerId       String             @db.Uuid
+  category      DocumentCategory   @default(OTHER)
+  title         String
+  description   String?
+  fileUrl       String
+  fileName      String?
+  mimeType      String?
+  sizeBytes     Int?
+  visibility    DocumentVisibility @default(ADMIN_ONLY)
+  uploadedById  String?            @db.Uuid
+  uploadedBy    User?              @relation("DocumentUploader", fields: [uploadedById], references: [id])
   /// P11 — back-relation for Deposit.proofDocumentId. A single Document can
   /// be the canonical proof for at most one Deposit; the FK lives on Deposit.
-  depositProofs Deposit[]         @relation("DepositProofDocument")
-  deletedAt    DateTime?
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  depositProofs Deposit[]          @relation("DepositProofDocument")
+  deletedAt     DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -2128,7 +2217,6 @@ model Document {
   @@index([deletedAt])
   @@index([companyId])
 }
-
 
 // ─────────────────────────────────────────────────────────────────────────
 // AI Chat (public assistant). v1 is public-only; userId/leadId are reserved

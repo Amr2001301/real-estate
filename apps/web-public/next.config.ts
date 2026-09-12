@@ -5,6 +5,10 @@ const config: NextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
   output: 'standalone',
+  // jsdom (pulled in by isomorphic-dompurify) uses fs.readFileSync for its
+  // default-stylesheet.css at runtime. Bundling it breaks the relative path;
+  // declare it external so Next.js requires it from node_modules instead.
+  serverExternalPackages: ['jsdom', 'isomorphic-dompurify'],
   experimental: {
     // Default is 1mb — avatar uploads flow through a server action, so the
     // multipart body must fit. Mirrors the 5MB cap enforced by the backend.

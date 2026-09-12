@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../startup/customer_startup_service.dart';
+import '../startup/startup_retry_screen.dart';
 
 import '../features/account/presentation/account_screen.dart';
 import '../features/auth/domain/repositories/auth_repository.dart';
@@ -111,6 +113,13 @@ import '../features/info_request/domain/repositories/info_request_repository.dar
 import '../features/info_request/domain/usecases/submit_info_request.dart';
 import '../features/info_request/presentation/cubit/info_request_cubit.dart';
 import '../features/info_request/presentation/screens/info_request_screen.dart';
+import '../features/company_discovery/domain/repositories/company_discovery_repository.dart';
+import '../features/company_discovery/domain/usecases/search_companies.dart';
+import '../features/company_discovery/domain/usecases/resolve_company.dart';
+import '../features/company_discovery/presentation/cubit/company_discovery_cubit.dart';
+import '../features/company_discovery/presentation/screens/company_selector_screen.dart';
+import '../feature_flags.dart';
+import '../storage/customer_tenant_storage.dart';
 
 const _authRoutes = {'/login', '/register', '/login/otp', '/forgot-password'};
 
@@ -119,15 +128,27 @@ const _authRoutes = {'/login', '/register', '/login/otp', '/forgot-password'};
 /// cubit/bloc from route-scoped providers built from use cases; the app-wide
 /// AuthCubit/FavoritesCubit come from CustomerApp.
 GoRouter createCustomerRouter(
-  SessionCubit sessionCubit, {
+  SessionCubit sessionCubit,
+  CustomerTenantStorage tenantStorage, {
+  /// K2: outcome notifier from [bootstrap.dart]. When non-null it is added to
+  /// [refreshListenable] so the router re-evaluates whenever eligibility changes
+  /// (e.g. after a successful retry on [StartupRetryScreen]).
+  ValueNotifier<TenantStartupOutcome>? startupOutcome,
   GlobalKey<NavigatorState>? navigatorKey,
 }) {
+  // Tracks whether the one-time "unavailable" banner has been shown on the
+  // initial /select-company navigation caused by a startup-unavailable result.
+  // Later navigations (changeCompany, etc.) see the plain selector.
+  var unavailableShown = false;
+
   return GoRouter(
     navigatorKey: navigatorKey,
     initialLocation: '/splash',
     refreshListenable: Listenable.merge([
       _CubitRefresh(sessionCubit.stream),
       SplashScreen.splashDone,
+      tenantStorage, // ChangeNotifier — re-evaluate guard on selection change
+      ?startupOutcome, // K2: unblocks after retry
     ]),
     debugLogDiagnostics: kDebugMode,
     redirect: (context, state) {
@@ -141,7 +162,34 @@ GoRouter createCustomerRouter(
       final authed = session.isAuthenticated;
       final isCustomer = authed && session.role.isCustomerSide;
 
+      // K2: startup blocked by network failure — hold until retry succeeds.
+      // This guard runs after splash so the brand animation still plays.
+      if (kEnableCustomerTenantSelection &&
+          startupOutcome?.value == TenantStartupOutcome.networkError) {
+        return loc == '/startup-retry' ? null : '/startup-retry';
+      }
+      // If retry succeeded (outcome no longer networkError) leave the retry screen.
+      if (loc == '/startup-retry') return '/home';
+
       if (loc == '/splash') return '/home';
+
+      // K2: when tenant selection is active, unauthenticated users must have a
+      // company selected before reaching any other screen (including /login).
+      // CustomerTenantStorage is in refreshListenable, so this guard re-fires
+      // whenever the selection is saved or cleared.
+      if (kEnableCustomerTenantSelection &&
+          !authed &&
+          !tenantStorage.hasSelectedCompany &&
+          loc != '/select-company') {
+        // Show the unavailable banner only on the first navigation caused by a
+        // startup-unavailable result. changeCompany and later navigations use
+        // the plain selector.
+        final showUnavailable = !unavailableShown &&
+            startupOutcome?.value == TenantStartupOutcome.unavailable;
+        if (showUnavailable) unavailableShown = true;
+        return showUnavailable ? '/select-company?unavailable=true' : '/select-company';
+      }
+
       if (_authRoutes.contains(loc)) return authed ? '/account' : null;
       if (loc.startsWith('/account')) {
         if (!authed) return '/login';
@@ -150,12 +198,20 @@ GoRouter createCustomerRouter(
         }
         return null;
       }
+      if (loc == '/select-company') {
+        return kEnableCustomerTenantSelection ? null : '/home';
+      }
       if (loc == '/visit-request') return authed ? null : '/login';
       if (loc == '/info-request') return authed ? null : '/login';
       return null;
     },
     routes: [
       GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
+
+      // K2: shown when startup tenant resolve fails due to network/timeout.
+      // The router redirects here while TenantStartupOutcome.networkError;
+      // StartupRetryScreen updates customerStartupOutcome on successful retry.
+      GoRoute(path: '/startup-retry', builder: (_, _) => const StartupRetryScreen()),
 
       // ── Auth (app-wide AuthCubit) ──────────────────────────────────────
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
@@ -166,7 +222,11 @@ GoRouter createCustomerRouter(
         builder: (context, _) => BlocProvider(
           create: (ctx) {
             final repo = ctx.read<AuthRepository>();
-            return ForgotPasswordCubit(ForgotPassword(repo), ResetPassword(repo));
+            return ForgotPasswordCubit(
+              ForgotPassword(repo),
+              ResetPassword(repo),
+              ctx.read<CustomerTenantStorage>(),
+            );
           },
           child: const ForgotPasswordScreen(),
         ),
@@ -594,6 +654,31 @@ GoRouter createCustomerRouter(
       GoRoute(
         path: '/gallery',
         builder: (_, _) => const ComponentGalleryScreen(),
+      ),
+
+      // ── K1 Company selector (guarded by kEnableCustomerTenantSelection) ───
+      // Redirect in redirect() above ensures this is unreachable while the
+      // flag is false. K2 flips the flag and wires auth tenant context.
+      GoRoute(
+        path: '/select-company',
+        builder: (context, state) {
+          final mode = state.uri.queryParameters['mode'];
+          final isChanging = mode == 'change';
+          final isUnavailable = state.uri.queryParameters['unavailable'] == 'true';
+          return BlocProvider(
+            create: (ctx) {
+              final repo = ctx.read<CompanyDiscoveryRepository>();
+              return CompanyDiscoveryCubit(
+                searchCompanies: SearchCompanies(repo),
+                resolveCompany: ResolveCompany(repo),
+              );
+            },
+            child: CompanySelectorScreen(
+              isChanging: isChanging,
+              isUnavailable: isUnavailable,
+            ),
+          );
+        },
       ),
     ],
   );

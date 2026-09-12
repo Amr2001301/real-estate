@@ -39,6 +39,7 @@ function validProd(overrides: Record<string, string | undefined> = {}): Record<s
     PUBLIC_WEB_URL: 'https://app.example.com',
     SEED_ADMIN_PASSWORD: 'Pr0ductionSecurePass!',
     DEFAULT_COMPANY_ID: 'a0000000-0000-4000-8000-000000000001',
+    PLATFORM_BASE_DOMAIN: 'platform.example.com',
     ...overrides,
   };
 }

@@ -8,7 +8,7 @@ import {
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { claimSyntheticPeers } from '../../common/utils/identity-claim';
-import { getTenantContext } from '../../common/tenant/tenant-context';
+import { getTenantContext, getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { Prisma, UserRole } from '@prisma/client';
 import { paginate, takeSkip } from '../../common/utils/pagination';
@@ -55,8 +55,13 @@ export class UsersService {
       throw new BadRequestException('Either email or phone is required');
     }
 
+    // MT-003: resolve companyId from the tenant context.
+    // SUPER_ADMIN bypass callers must use SuperAdminService.createCompanyUser()
+    // which passes the target companyId explicitly — they never reach this path.
+    const companyId = getRequiredCompanyId();
+
     // Enforce plan user limit — only applies inside a tenant context (company admin).
-    // Super-admin bypass context skips this check intentionally.
+    // Super-admin bypass context is already excluded above via getRequiredCompanyId().
     const tenantCtx = getTenantContext();
     if (tenantCtx && !tenantCtx.bypass && tenantCtx.companyId) {
       const company = await this.prisma.company.findUnique({
@@ -70,7 +75,7 @@ export class UsersService {
       }
     }
 
-    if (dto.managerId) await this.assertIsManager(dto.managerId);
+    if (dto.managerId) await this.assertIsManager(dto.managerId, companyId);
     const passwordHash = dto.password ? await argon2.hash(dto.password) : null;
     return this.prisma.user.create({
       data: {
@@ -81,16 +86,18 @@ export class UsersService {
         passwordHash,
         locale: dto.locale ?? 'ar',
         managerId: dto.managerId ?? null,
+        companyId,
       },
       select: this.publicSelect(),
     });
   }
 
   // ADMIN-only manager assignment. null clears it. A non-null managerId must
-  // reference an existing SALES_MANAGER user.
+  // reference an existing SALES_MANAGER user within the same company.
   async assignManager(id: string, managerId: string | null) {
-    await this.assertExists(id);
-    if (managerId) await this.assertIsManager(managerId);
+    const companyId = getRequiredCompanyId();
+    await this.assertExists(id, companyId);
+    if (managerId) await this.assertIsManager(managerId, companyId);
     return this.prisma.user.update({
       where: { id },
       data: { managerId: managerId ?? null },
@@ -98,9 +105,10 @@ export class UsersService {
     });
   }
 
-  private async assertIsManager(managerId: string) {
-    const mgr = await this.prisma.user.findUnique({
-      where: { id: managerId },
+  // MT-010: companyId scopes the manager lookup to the same tenant.
+  private async assertIsManager(managerId: string, companyId: string) {
+    const mgr = await this.prisma.user.findFirst({
+      where: { id: managerId, companyId },
       select: { role: true },
     });
     if (!mgr || mgr.role !== UserRole.SALES_MANAGER) {
@@ -109,6 +117,7 @@ export class UsersService {
   }
 
   async findAll(role?: string, page = 1, pageSize = 20, q?: string) {
+    const companyId = getRequiredCompanyId(); // MT-004
     const trimmed = q?.trim();
     // `role` may be a single role or a comma-separated list (e.g.
     // "SALES,SALES_MANAGER") for sales-actor dropdowns. Backward compatible.
@@ -118,6 +127,7 @@ export class UsersService {
     const roleFilter: Prisma.UserWhereInput =
       roles.length > 1 ? { role: { in: roles } } : roles.length === 1 ? { role: roles[0] } : {};
     const where: Prisma.UserWhereInput = {
+      companyId,
       deletedAt: null,
       ...roleFilter,
       ...(trimmed
@@ -143,16 +153,18 @@ export class UsersService {
   }
 
   async findOne(id: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
+    const companyId = getRequiredCompanyId(); // MT-005
+    const user = await this.prisma.user.findFirst({
+      where: { id, companyId, deletedAt: null },
       select: this.publicSelect(),
     });
-    if (!user || !!user.deletedAt) throw new NotFoundException('User not found');
+    if (!user) throw new NotFoundException('User not found');
     return user;
   }
 
   async update(id: string, dto: UpdateUserDto) {
-    await this.assertExists(id);
+    const companyId = getRequiredCompanyId(); // MT-006
+    await this.assertExists(id, companyId);
     // P9 — when a user (typically self via PATCH /v1/users/me) adds a phone
     // that overlaps with a synthetic peer (a CRM-only CLIENT row carrying
     // their pre-registration Leads / Reservations), sweep the peer into the
@@ -190,7 +202,8 @@ export class UsersService {
   }
 
   async deactivate(id: string) {
-    await this.assertExists(id);
+    const companyId = getRequiredCompanyId(); // MT-007
+    await this.assertExists(id, companyId);
     const updated = await this.prisma.user.update({
       where: { id },
       data: { active: false },
@@ -208,7 +221,8 @@ export class UsersService {
   }
 
   async activate(id: string) {
-    await this.assertExists(id);
+    const companyId = getRequiredCompanyId(); // MT-008
+    await this.assertExists(id, companyId);
     const updated = await this.prisma.user.update({
       where: { id },
       data: { active: true },
@@ -272,7 +286,8 @@ export class UsersService {
   }
 
   async softDelete(id: string) {
-    await this.assertExists(id);
+    const companyId = getRequiredCompanyId(); // MT-009
+    await this.assertExists(id, companyId);
     return this.prisma.user.update({
       where: { id },
       data: { deletedAt: new Date(), active: false },
@@ -281,7 +296,11 @@ export class UsersService {
   }
 
   async restore(id: string) {
-    const user = await this.prisma.user.findUnique({ where: { id }, select: { id: true, deletedAt: true } });
+    const companyId = getRequiredCompanyId(); // MT-009
+    const user = await this.prisma.user.findFirst({
+      where: { id, companyId },
+      select: { id: true, deletedAt: true },
+    });
     if (!user) throw new NotFoundException('User not found');
     if (user.deletedAt === null) throw new BadRequestException('User is not deleted');
     return this.prisma.user.update({
@@ -310,9 +329,12 @@ export class UsersService {
     } as const;
   }
 
-  private async assertExists(id: string) {
-    const exists = await this.prisma.user.findUnique({
-      where: { id, deletedAt: null },
+  // MT-003: companyId is now required — all callers pass getRequiredCompanyId().
+  // findFirst is used instead of findUnique because User has no compound unique
+  // constraint on (id, companyId); findUnique would fail at compile time.
+  private async assertExists(id: string, companyId: string) {
+    const exists = await this.prisma.user.findFirst({
+      where: { id, companyId, deletedAt: null },
       select: { id: true },
     });
     if (!exists) throw new NotFoundException('User not found');

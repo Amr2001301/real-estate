@@ -5,6 +5,7 @@ import { MapPin, ArrowLeft, Home, Star } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { buildMetadata } from '@/lib/seo';
 import { safeFetch } from '@/lib/api';
+import { getResolvedTenant } from '@/lib/tenant';
 import { pickAr, formatNumber } from '@/lib/format';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
@@ -94,19 +95,24 @@ function projectFaq(name: string): AccordionItem[] {
   ];
 }
 
-function fetchProject(id: string) {
-  return safeFetch<PublicProjectDetail>(`/public/projects/${id}`, { revalidate: REVALIDATE });
+function fetchProject(id: string, tenantSlug: string) {
+  return safeFetch<PublicProjectDetail>(`/public/projects/${id}`, { revalidate: REVALIDATE, tenantSlug });
 }
 
-function fetchProjectUnits(id: string) {
+function fetchProjectUnits(id: string, tenantSlug: string) {
   return safeFetch<Paginated<PublicUnit>>(`/public/units?projectId=${id}&pageSize=3`, {
     revalidate: REVALIDATE,
+    tenantSlug,
   });
 }
 
 export async function generateMetadata({ params }: { params: Params }) {
   const { id } = await params;
-  const [result, locale] = await Promise.all([fetchProject(id), getLocale()]);
+  const tenant = await getResolvedTenant();
+  const [result, locale] = await Promise.all([
+    tenant ? fetchProject(id, tenant.slug) : Promise.resolve({ ok: false as const, error: { message: '', status: 404 } }),
+    getLocale(),
+  ]);
   const m = siteT(locale);
   if (!result.ok) {
     return buildMetadata({ title: m.projectDetail.errorTitle });
@@ -124,7 +130,9 @@ export async function generateMetadata({ params }: { params: Params }) {
 
 export default async function ProjectDetailPage({ params }: { params: Params }) {
   const { id } = await params;
-  const [result, locale] = await Promise.all([fetchProject(id), getLocale()]);
+  const tenant = await getResolvedTenant();
+  if (!tenant) notFound();
+  const [result, locale] = await Promise.all([fetchProject(id, tenant.slug), getLocale()]);
   const m = siteT(locale);
 
   // 404 → dedicated not-found page; other failures → friendly inline error.
@@ -152,7 +160,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
   const hasCoords = project.lat !== 0 || project.lng !== 0;
 
   // Best-effort: a few units from this project. Never blocks the page.
-  const unitsResult = await fetchProjectUnits(project.id);
+  const unitsResult = await fetchProjectUnits(project.id, tenant.slug);
   const previewUnits = unitsResult.ok ? unitsResult.data.data : [];
 
   return (

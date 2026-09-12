@@ -265,9 +265,11 @@
   "fieldFullName": "Full name",
   "fieldPhone": "Phone number",
   "fieldOtpCode": "Verification code",
+  "fieldCompanyCode": "Company Code",
 
   "validationRequired": "This field is required",
   "validationEmail": "Enter a valid email",
+  "validationCompanyCode": "Enter the company code",
   "validationPhone": "Enter a valid phone number",
   "validationPasswordShort": "Password must be at least 8 characters",
   "validationCodeShort": "Enter the code you received",
@@ -511,6 +513,7 @@
   "navUnits": "Units",
 
   "staffLoginSubtitle": "Sign in to your staff account",
+  "errorTenantMismatch": "Your session does not match this company. Please sign in again.",
 
   "roleSales": "Sales",
   "roleSalesManager": "Sales Manager",
@@ -992,6 +995,15 @@
   "leadContextProject": "Project",
   "leadContextUnit": "Unit",
   "leadInterestPreFilled": "Interest pre-filled from",
+
+  "companySelectTitle": "Select Developer",
+  "companySelectSubtitle": "Search for the developer whose app you'd like to use",
+  "companySearchHint": "Search by company name or code",
+  "companySearchEmpty": "No companies found",
+  "companySearchMinLength": "Enter at least 2 characters to search",
+  "companySelectButton": "Select",
+  "companyNotAvailable": "This company is not available. Please try a different company.",
+  "companyChangeTitle": "Change Developer",
 
   "sectionFloorPlans": "Floor Plans",
   "sectionWarrantyItems": "Components & Warranties",

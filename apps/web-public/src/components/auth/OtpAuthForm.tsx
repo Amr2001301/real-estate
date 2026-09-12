@@ -4,8 +4,7 @@ import { useState } from 'react';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { Phone, KeyRound, ArrowRight } from 'lucide-react';
-import { safePost } from '@/lib/api';
-import { otpVerifyAction } from '@/lib/auth-actions';
+import { otpRequestAction, otpVerifyAction } from '@/lib/auth-actions';
 import { routes } from '@/lib/routes';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { Button } from '@/components/ui/Button';
@@ -71,12 +70,12 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
 
     setPending(true);
     setTopError('');
-    const res = await safePost('/auth/otp/request', { phone: normalized });
+    const res = await otpRequestAction(normalized);
     setPending(false);
     if (res.ok) {
       setStep('verify');
     } else {
-      setTopError(mapRequestError(res.error.status));
+      setTopError(mapRequestError(res.status));
     }
   }
 
@@ -108,9 +107,9 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
   async function resend() {
     setPending(true);
     setTopError('');
-    const res = await safePost('/auth/otp/request', { phone: normalizePhone(phone) });
+    const res = await otpRequestAction(normalizePhone(phone));
     setPending(false);
-    if (!res.ok) setTopError(mapRequestError(res.error.status));
+    if (!res.ok) setTopError(mapRequestError(res.status));
   }
 
   return (

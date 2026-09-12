@@ -6,7 +6,9 @@ import '../dtos/staff_auth_dtos.dart';
 /// Raw network access to the staff auth endpoints. All are public (no bearer).
 /// Returns DTOs; may throw `DioException`.
 abstract interface class StaffAuthRemoteDataSource {
-  Future<AuthBundleDto> login(String email, String password);
+  /// Tenant-aware staff login. Calls POST /auth/login-staff with
+  /// {slug, email, password}. Never calls the legacy /auth/login endpoint.
+  Future<AuthBundleDto> loginWithSlug(String slug, String email, String password);
   Future<AuthBundleDto> refresh(String refreshToken);
   Future<void> logout(String refreshToken);
   Future<void> forgotPassword(String email);
@@ -21,10 +23,11 @@ class StaffAuthRemoteDataSourceImpl implements StaffAuthRemoteDataSource {
       Options(extra: const {AuthInterceptor.skipAuthExtra: true});
 
   @override
-  Future<AuthBundleDto> login(String email, String password) async {
+  Future<AuthBundleDto> loginWithSlug(
+      String slug, String email, String password) async {
     final res = await _dio.post<Map<String, dynamic>>(
-      '/auth/login',
-      data: {'email': email, 'password': password},
+      '/auth/login-staff',
+      data: {'slug': slug, 'email': email, 'password': password},
       options: _public,
     );
     return AuthBundleDto.fromJson(res.data!);

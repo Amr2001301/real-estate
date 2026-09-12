@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { Building2, Calendar, Users, CreditCard } from 'lucide-react';
+import { cookies } from 'next/headers';
 import LoginForm from './form';
 
 export default async function LoginPage({
@@ -10,6 +11,8 @@ export default async function LoginPage({
   const sp = await searchParams;
   const from = typeof sp.from === 'string' ? sp.from : undefined;
   const passwordReset = sp.reset === '1';
+  const c = await cookies();
+  const lastCompanySlug = c.get('last_company_slug')?.value;
 
   return (
     // h-screen + overflow-y-auto = inner scroll container
@@ -77,8 +80,8 @@ export default async function LoginPage({
                       <p className="text-sm text-success-700">تم تغيير كلمة المرور بنجاح. سجّل دخولك بكلمة المرور الجديدة.</p>
                     </div>
                   )}
-                  {/* Form — all auth logic lives here, untouched */}
-                  <LoginForm from={from} />
+                  {/* Form — all auth logic lives here */}
+                  <LoginForm from={from} lastCompanySlug={lastCompanySlug} />
                 </div>
 
                 {/* Footer note */}

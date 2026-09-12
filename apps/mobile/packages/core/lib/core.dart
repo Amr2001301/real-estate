@@ -71,6 +71,7 @@ export 'src/network/interceptors/auth_interceptor.dart'
 export 'src/network/interceptors/request_id_interceptor.dart'
     show RequestIdInterceptor;
 export 'src/network/session_refresher_registry.dart';
+export 'src/network/tenant_mismatch_registry.dart';
 
 // Auth
 export 'src/auth/app_role.dart';

@@ -4,16 +4,21 @@ import 'package:dio/dio.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../dtos/auth_dtos.dart';
 
-/// Raw network access to the auth endpoints. All are public (no bearer).
-/// Returns DTOs; may throw `DioException`.
+/// Raw network access to the V2 tenant-aware auth endpoints.
+/// All are @PlatformPublic on the backend — no bearer token required.
+/// The [slug] in each method body identifies the tenant; the backend resolves
+/// slug → companyId. No companyId is ever sent from the client.
+///
+/// Tenant-neutral operations (refresh, logout, reset-password) are unchanged:
+/// they are token-only and require no slug.
 abstract interface class AuthRemoteDataSource {
-  Future<AuthBundleDto> loginCustomer(String email, String password);
-  Future<AuthBundleDto> registerCustomer(RegisterParams params);
-  Future<void> requestOtp(String phone);
-  Future<AuthBundleDto> verifyOtp(String phone, String code, String? fullName);
+  Future<AuthBundleDto> loginCustomer(String slug, String email, String password);
+  Future<AuthBundleDto> registerCustomer(String slug, RegisterParams params);
+  Future<void> requestOtp(String slug, String phone);
+  Future<AuthBundleDto> verifyOtp(String slug, String phone, String code, String? fullName);
   Future<AuthBundleDto> refresh(String refreshToken);
   Future<void> logout(String refreshToken);
-  Future<void> forgotPassword(String email);
+  Future<void> forgotPassword(String slug, String email);
   Future<void> resetPassword(String token, String newPassword);
 }
 
@@ -21,24 +26,26 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   AuthRemoteDataSourceImpl(this._dio);
 
   final Dio _dio;
+  // V2 auth endpoints are @PlatformPublic — no bearer injection needed.
   static final Options _public =
       Options(extra: const {AuthInterceptor.skipAuthExtra: true});
 
   @override
-  Future<AuthBundleDto> loginCustomer(String email, String password) async {
+  Future<AuthBundleDto> loginCustomer(String slug, String email, String password) async {
     final res = await _dio.post<Map<String, dynamic>>(
-      '/auth/customer/login',
-      data: {'email': email, 'password': password},
+      '/auth/tenant/customer/login',
+      data: {'slug': slug, 'email': email, 'password': password},
       options: _public,
     );
     return AuthBundleDto.fromJson(res.data!);
   }
 
   @override
-  Future<AuthBundleDto> registerCustomer(RegisterParams p) async {
+  Future<AuthBundleDto> registerCustomer(String slug, RegisterParams p) async {
     final res = await _dio.post<Map<String, dynamic>>(
-      '/auth/customer/register',
+      '/auth/tenant/customer/register',
       data: {
+        'slug': slug,
         'fullName': p.fullName,
         'phone': p.phone,
         'email': p.email,
@@ -55,19 +62,19 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
-  Future<void> requestOtp(String phone) async {
+  Future<void> requestOtp(String slug, String phone) async {
     await _dio.post<Map<String, dynamic>>(
-      '/auth/otp/request',
-      data: {'phone': phone},
+      '/auth/tenant/otp/request',
+      data: {'slug': slug, 'phone': phone},
       options: _public,
     );
   }
 
   @override
-  Future<AuthBundleDto> verifyOtp(String phone, String code, String? fullName) async {
+  Future<AuthBundleDto> verifyOtp(String slug, String phone, String code, String? fullName) async {
     final res = await _dio.post<Map<String, dynamic>>(
-      '/auth/otp/verify',
-      data: {'phone': phone, 'code': code, 'fullName': ?fullName},
+      '/auth/tenant/otp/verify',
+      data: {'slug': slug, 'phone': phone, 'code': code, 'fullName': ?fullName},
       options: _public,
     );
     return AuthBundleDto.fromJson(res.data!);
@@ -93,18 +100,20 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
-  Future<void> forgotPassword(String email) async {
+  Future<void> forgotPassword(String slug, String email) async {
     await _dio.post<void>(
-      '/auth/forgot-password',
-      data: {'email': email},
+      '/auth/tenant/forgot-password',
+      data: {'slug': slug, 'email': email},
       options: _public,
     );
   }
 
+  // Reset password is token-only — no slug needed; the opaque token
+  // already identifies the user and their tenant.
   @override
   Future<void> resetPassword(String token, String newPassword) async {
     await _dio.post<void>(
-      '/auth/reset-password',
+      '/auth/tenant/reset-password',
       data: {'token': token, 'newPassword': newPassword},
       options: _public,
     );

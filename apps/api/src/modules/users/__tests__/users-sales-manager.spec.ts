@@ -2,6 +2,9 @@ import { BadRequestException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { UsersService } from '../users.service';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { runTenantContext } from '../../../common/tenant/tenant-context';
+
+const TEST_COMPANY_ID = 'test-co-00000000-0000-4000-8000-000000000000';
 
 /**
  * SALES_MANAGER role foundation (Batch 7).
@@ -20,7 +23,12 @@ describe('Users · SALES_MANAGER role foundation', () => {
       email: data.email,
       phone: data.phone,
     }));
-    const prisma = { user: { create } } as unknown as PrismaService;
+    const prisma = {
+      user: { create, findFirst: jest.fn().mockResolvedValue(null) },
+      company: {
+        findUnique: jest.fn().mockResolvedValue({ maxUsers: null, _count: { users: 0 } }),
+      },
+    } as unknown as PrismaService;
     return { service: new UsersService(prisma, {} as never, {} as never), create };
   }
 
@@ -30,6 +38,7 @@ describe('Users · SALES_MANAGER role foundation', () => {
 
   it('requires a password for SALES_MANAGER (staff role)', async () => {
     const { service, create } = makeService();
+    // Validation throws before getRequiredCompanyId() — no tenant context needed.
     await expect(
       service.create({ role: UserRole.SALES_MANAGER, fullName: 'Mgr', email: 'm@example.com' } as never),
     ).rejects.toBeInstanceOf(BadRequestException);
@@ -38,12 +47,15 @@ describe('Users · SALES_MANAGER role foundation', () => {
 
   it('creates a SALES_MANAGER when a password is supplied', async () => {
     const { service, create } = makeService();
-    const result = await service.create({
-      role: UserRole.SALES_MANAGER,
-      fullName: 'Mgr',
-      email: 'm@example.com',
-      password: 'ManagerPass123!',
-    } as never);
+    const result = await runTenantContext(
+      { companyId: TEST_COMPANY_ID, bypass: false, isPublic: false },
+      () => service.create({
+        role: UserRole.SALES_MANAGER,
+        fullName: 'Mgr',
+        email: 'm@example.com',
+        password: 'ManagerPass123!',
+      } as never),
+    );
     expect(create).toHaveBeenCalledTimes(1);
     expect(create.mock.calls[0]![0].data.role).toBe(UserRole.SALES_MANAGER);
     expect(create.mock.calls[0]![0].data.passwordHash).toEqual(expect.any(String));

@@ -13,6 +13,7 @@ import { TenantContextInterceptor } from './common/interceptors/tenant-context.i
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
+import { CompanyLifecycleGuard } from './common/guards/lifecycle.guard';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -42,6 +43,9 @@ import { DocumentsModule } from './modules/documents/documents.module';
 import { MeDocumentsModule } from './modules/documents/me-documents.module';
 import { OwnershipModule } from './common/ownership/ownership.module';
 import { CronLockModule } from './common/cron/cron-lock.module';
+import { CapabilityModule } from './common/capabilities/capability.module';
+import { DomainModule } from './common/domain/domain.module';
+import { CompanyDomainsModule } from './modules/company-domains/company-domains.module';
 import { BrokersModule } from './modules/brokers/brokers.module';
 import { BrokerUsersModule } from './modules/broker-users/broker-users.module';
 import { BrokerAccessModule } from './modules/broker-access/broker-access.module';
@@ -57,6 +61,7 @@ import { MeHomeModule } from './modules/me-home/me-home.module';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { HealthController } from './modules/health/health.controller';
 import { MetricsModule } from './common/observability/metrics.module';
+import { PublicCompaniesModule } from './modules/public-companies/public-companies.module';
 
 @Module({
   imports: [
@@ -68,6 +73,8 @@ import { MetricsModule } from './common/observability/metrics.module';
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     PrismaModule,
     CronLockModule,
+    CapabilityModule,
+    DomainModule,
     OwnershipModule,
 
     AuthModule,
@@ -109,12 +116,19 @@ import { MetricsModule } from './common/observability/metrics.module';
     ChatModule,
     MeHomeModule,
     SuperAdminModule,
+    CompanyDomainsModule,
+    PublicCompaniesModule,
     MetricsModule,
   ],
   controllers: [HealthController],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    // MT-034: Runs after JwtAuthGuard so req.user (DB-authoritative companyId) is
+    // populated. Runs before RolesGuard so a suspended company is denied before any
+    // role check executes. Guards run before interceptors — TenantContextInterceptor
+    // has NOT yet populated ALS when this guard fires; only req.user.companyId is used.
+    { provide: APP_GUARD, useClass: CompanyLifecycleGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     // Runs after RolesGuard: routes without @Permissions short-circuit to allow.
     { provide: APP_GUARD, useClass: PermissionsGuard },

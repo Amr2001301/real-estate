@@ -1,45 +1,39 @@
 /**
- * P0-A — Tenant Query Policy (NOT wired to production PrismaModule)
+ * Tenant Query Policy — argument-transformation functions used by the live
+ * Prisma middleware in PrismaService.
  *
- * This module contains the pure argument-transformation logic that will
- * eventually run inside a Prisma `$extends` query hook. It is kept
- * disconnected from the production PrismaClient deliberately:
+ * STATUS (as of MT-015/MT-014):
+ *   - Middleware IS wired to the production PrismaClient via $use() in
+ *     PrismaService.onModuleInit. All TENANT_OWNED model reads/writes are
+ *     automatically scoped.
+ *   - The schema DOES have companyId columns on all TENANT_OWNED models.
+ *   - User is TENANT_CONTROLLED: the middleware passes User queries through
+ *     unchanged. Every UsersService method must enforce companyId isolation
+ *     explicitly.
+ *   - Raw SQL ($queryRaw / $executeRaw) is completely outside this layer.
+ *   - Nested Prisma relation writes (nested connect / create) are NOT
+ *     automatically scoped. Each nested write must be audited separately.
+ *   - Relation includes are not affected by this injection (read-only shape).
+ *   - MODEL_TENANCY (model-tenancy.ts) is the authoritative five-tier
+ *     classification; the middleware derives its active TENANT_OWNED set from
+ *     it at startup (see prisma.service.ts TENANT_OWNED_MODELS).
  *
- *   - The current schema.prisma has no companyId columns yet.
- *   - Wiring the extension now would require unsafe type casts throughout
- *     the generated client or would simply be inert (no column to filter on).
- *   - Keeping it as pure functions makes it independently unit-testable.
- *
- * WHAT THIS FILE PROVES (P0-A scope):
- *   Argument transformation behaves exactly as specified for every covered
- *   operation type. The actual PostgreSQL filtering effect can only be
- *   verified after MT-Mig-02 adds the companyId columns.
- *
- * WHAT THIS FILE DOES NOT PROVE:
- *   - Real database filtering (no tenant columns exist yet)
- *   - Nested writes / nested connects (NOT protected by this layer)
- *   - $queryRaw / $executeRaw (completely outside extension scope)
- *   - Interactive transaction client scope (requires real Prisma integration test)
- *   - Relation includes (require real Prisma integration test)
- *
- * Type note: query args are typed as Record<string, unknown> because the
- * current Prisma-generated client does not yet expose companyId fields.
- * This is the one localized type boundary required for the proof — it will
- * be replaced by proper Prisma types after MT-Mig-02.
+ * Type note: query args are typed as Record<string, unknown> because Prisma
+ * middleware params use a generic args type. This is intentional at this layer.
  */
 
 import { getTenantContext } from '../tenant/tenant-context';
 import { MissingTenantContextError, TenantScopeViolationError } from '../tenant/tenant-context.errors';
+import { MODEL_TENANCY, ModelTenancyTier } from './model-tenancy';
 
 // ---------------------------------------------------------------------------
 // Model set
 // ---------------------------------------------------------------------------
 
 /**
- * PROVISIONAL — NOT authoritative.
- *
- * Used only in the P0-A policy unit tests. Do not use in production code paths.
- * The authoritative set is TENANT_SCOPED_MODELS below.
+ * Small subset used only in policy unit tests.
+ * The authoritative production set is derived from MODEL_TENANCY in
+ * prisma.service.ts (TENANT_OWNED_MODELS).
  */
 export const PROVISIONAL_SCOPED_MODELS_FOR_POLICY_TEST = new Set([
   'lead',
@@ -50,37 +44,42 @@ export const PROVISIONAL_SCOPED_MODELS_FOR_POLICY_TEST = new Set([
   'deposit',
 ]);
 
+// ---------------------------------------------------------------------------
+// MT-014 — MODEL_TENANCY-based classification lookup
+// ---------------------------------------------------------------------------
+
 /**
- * Authoritative set of Prisma model names (lowercase camelCase) that carry a
- * companyId column and require tenant scoping. Derived from MT-Schema-03.
- * Update this set whenever a new model gains a companyId column.
+ * Lowercase → tier lookup derived at module load time from MODEL_TENANCY.
+ * Prisma middleware receives model names in lowercase camelCase (params.model);
+ * MODEL_TENANCY uses PascalCase (the canonical Prisma DMMF name). This map
+ * bridges the two without duplicating the classification.
+ *
+ * Example: 'project' → 'TENANT_OWNED', 'user' → 'TENANT_CONTROLLED'
+ *
+ * Built once at startup; read-only at runtime.
  */
-export const TENANT_SCOPED_MODELS = new Set([
-  // Projects / inventory
-  'project', 'phase', 'building', 'unit', 'unitstatushistory', 'unitmaintenanceitem',
-  // CRM
-  'leadsource', 'lead', 'leadnote', 'leadactivity',
-  // Requests / visits
-  'inforequest', 'visitrequest', 'visitappointment', 'visitactivity',
-  // Reservations / contracts / payments
-  'reservation', 'reservationnote', 'reservationactivity',
-  'contract', 'installmentplan', 'installment', 'deposit',
-  // Plan templates
-  'installmentplantemplate',
-  // Bonus / targets
-  'bonusrule', 'bonusentry', 'salestarget',
-  // Maintenance
-  'maintenancecategory', 'maintenancerequest', 'maintenancerequestitem',
-  // CMS / notifications
-  'cmspage', 'banner', 'article', 'notificationtemplate', 'notification', 'auditlog',
-  // Brokers
-  'broker', 'brokeruser', 'brokerprojectaccess', 'brokerunitaccess',
-  'brokercommission', 'brokerpayout', 'brokeractivitylog',
-  // Platform
-  'setting', 'document',
-  // Chat
-  'chatsession', 'chatmessage', 'chatfeedback',
-]);
+export const MODEL_TIER_BY_LOWERCASE: ReadonlyMap<string, ModelTenancyTier> = new Map(
+  Object.entries(MODEL_TENANCY).map(([name, tier]) => [name.toLowerCase(), tier]),
+);
+
+/**
+ * Resolve the MODEL_TENANCY tier for a Prisma middleware model key (lowercase).
+ *
+ * Throws a clear error if the model is not classified — defense-in-depth on
+ * top of the boot assertion. The boot assertion is the primary prevention;
+ * this guard catches any dynamic dispatch that somehow bypasses it.
+ */
+export function getModelTier(modelKey: string): ModelTenancyTier {
+  const tier = MODEL_TIER_BY_LOWERCASE.get(modelKey);
+  if (tier === undefined) {
+    throw new Error(
+      `[MT-014] Unclassified Prisma model '${modelKey}' reached the tenant middleware. ` +
+        'Add it to MODEL_TENANCY in model-tenancy.ts. ' +
+        'This is a security error — unclassified models must never reach production data access.',
+    );
+  }
+  return tier;
+}
 
 // ---------------------------------------------------------------------------
 // Policy options

@@ -262,9 +262,11 @@
   "fieldFullName": "الاسم الكامل",
   "fieldPhone": "رقم الهاتف",
   "fieldOtpCode": "رمز التحقّق",
+  "fieldCompanyCode": "كود الشركة",
 
   "validationRequired": "هذا الحقل مطلوب",
   "validationEmail": "أدخل بريدًا إلكترونيًا صحيحًا",
+  "validationCompanyCode": "أدخل كود الشركة",
   "validationPhone": "أدخل رقم هاتف صحيحًا",
   "validationPasswordShort": "يجب ألا تقل كلمة المرور عن ٨ أحرف",
   "validationCodeShort": "أدخل الرمز الذي وصلك",
@@ -508,6 +510,7 @@
   "navUnits": "الوحدات",
 
   "staffLoginSubtitle": "سجّل الدخول إلى حساب الموظف",
+  "errorTenantMismatch": "جلستك لا تتطابق مع هذه الشركة. يرجى تسجيل الدخول مجددًا.",
 
   "roleSales": "مبيعات",
   "roleSalesManager": "مدير مبيعات",
@@ -989,6 +992,15 @@
   "leadContextProject": "المشروع",
   "leadContextUnit": "الوحدة",
   "leadInterestPreFilled": "تم تحديد الاهتمام من",
+
+  "companySelectTitle": "اختيار المطوّر",
+  "companySelectSubtitle": "ابحث عن المطوّر الذي تريد استخدام تطبيقه",
+  "companySearchHint": "ابحث باسم الشركة أو الكود",
+  "companySearchEmpty": "لا توجد شركات",
+  "companySearchMinLength": "أدخل حرفين على الأقل للبحث",
+  "companySelectButton": "اختيار",
+  "companyNotAvailable": "هذه الشركة غير متاحة. يرجى اختيار شركة أخرى.",
+  "companyChangeTitle": "تغيير المطوّر",
 
   "sectionFloorPlans": "مخططات الطوابق",
   "sectionWarrantyItems": "مكونات وضمانات",

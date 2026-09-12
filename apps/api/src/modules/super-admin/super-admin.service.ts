@@ -1,12 +1,17 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, SubscriptionStatus } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { CapabilityService, type CompanyCapabilities } from '../../common/capabilities/capability.service';
+import { DomainResolverService } from '../../common/domain/domain-resolver.service';
+import { CompanyDomainsService, RESERVED_PLATFORM_SLUGS } from '../company-domains/company-domains.service';
 import type {
   CreateCompanyDto,
   UpdateCompanyDto,
+  UpdateCapabilitiesDto,
   CancelCompanyDto,
   CreateCompanyAdminDto,
+  CreateCompanyUserDto,
   CreatePricingPackageDto,
   UpdatePricingPackageDto,
   UpdateCompanyModulesDto,
@@ -14,13 +19,19 @@ import type {
 
 @Injectable()
 export class SuperAdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly capabilityService: CapabilityService,
+    private readonly domainResolver: DomainResolverService,
+    private readonly companyDomainsService: CompanyDomainsService,
+  ) {}
 
   async listCompanies() {
     const companies = await this.prisma.company.findMany({
       orderBy: { createdAt: 'desc' },
       include: { _count: { select: { users: { where: { role: { not: 'SUPER_ADMIN' } } } } } },
     });
+    // MT-043: include D1 foundation fields in platform-admin projection
     return companies.map((c) => ({
       id: c.id,
       name: c.name,
@@ -28,6 +39,12 @@ export class SuperAdminService {
       country: c.country,
       currency: c.currency,
       isActive: c.isActive,
+      type: c.type,
+      lifecycleStatus: c.lifecycleStatus,
+      capabilities: c.capabilities,
+      websiteEnabled: c.websiteEnabled,
+      customerAppEnabled: c.customerAppEnabled,
+      staffAppEnabled: c.staffAppEnabled,
       subscriptionPlan: c.subscriptionPlan,
       subscriptionStatus: c.subscriptionStatus,
       subscriptionStartAt: c.subscriptionStartAt,
@@ -62,26 +79,80 @@ export class SuperAdminService {
       },
     });
     if (!company) throw new NotFoundException('Company not found');
-    return company;
+    // MT-043: return D1 foundation fields in platform-admin detail view
+    return {
+      id: company.id,
+      name: company.name,
+      slug: company.slug,
+      logoUrl: company.logoUrl,
+      country: company.country,
+      currency: company.currency,
+      defaultLocale: company.defaultLocale,
+      timezone: company.timezone,
+      isActive: company.isActive,
+      type: company.type,
+      lifecycleStatus: company.lifecycleStatus,
+      capabilities: company.capabilities,
+      websiteEnabled: company.websiteEnabled,
+      customerAppEnabled: company.customerAppEnabled,
+      staffAppEnabled: company.staffAppEnabled,
+      subscriptionPlan: company.subscriptionPlan,
+      subscriptionStatus: company.subscriptionStatus,
+      subscriptionStartAt: company.subscriptionStartAt,
+      subscriptionEndAt: company.subscriptionEndAt,
+      maxUsers: company.maxUsers,
+      cancelledAt: company.cancelledAt,
+      cancelReason: company.cancelReason,
+      modules: company.modules,
+      userCount: company._count.users,
+      users: company.users,
+      createdAt: company.createdAt,
+      updatedAt: company.updatedAt,
+    };
   }
 
   async createCompany(dto: CreateCompanyDto) {
+    // Reserved slug check — before the duplicate check to give a clearer error message.
+    if (RESERVED_PLATFORM_SLUGS.has(dto.slug)) {
+      throw new BadRequestException({
+        message: `Slug "${dto.slug}" is reserved for platform use`,
+        code: 'SLUG_RESERVED',
+      });
+    }
+
     const existing = await this.prisma.company.findUnique({ where: { slug: dto.slug } });
     if (existing) throw new ConflictException('A company with this slug already exists');
 
-    const company = await this.prisma.company.create({
-      data: {
-        name: dto.name,
-        slug: dto.slug,
-        country: dto.country ?? 'SA',
-        currency: dto.currency ?? 'SAR',
-        timezone: dto.timezone ?? 'Asia/Riyadh',
-        subscriptionPlan: dto.subscriptionPlan ?? 'TRIAL',
-        subscriptionStatus: 'TRIAL',
-        subscriptionStartAt: dto.subscriptionStartAt ? new Date(dto.subscriptionStartAt) : null,
-        subscriptionEndAt: dto.subscriptionEndAt ? new Date(dto.subscriptionEndAt) : null,
-        maxUsers: dto.maxUsers ?? null,
-      },
+    // MT-045 + atomicity: company creation and platform subdomain provisioning are a single
+    // atomic unit. If provisioning fails, the company row is also rolled back.
+    const company = await this.prisma.$transaction(async (tx) => {
+      const newCompany = await tx.company.create({
+        data: {
+          name: dto.name,
+          slug: dto.slug,
+          country: dto.country ?? 'SA',
+          currency: dto.currency ?? 'SAR',
+          timezone: dto.timezone ?? 'Asia/Riyadh',
+          subscriptionPlan: dto.subscriptionPlan ?? 'TRIAL',
+          subscriptionStatus: 'TRIAL',
+          subscriptionStartAt: dto.subscriptionStartAt ? new Date(dto.subscriptionStartAt) : null,
+          subscriptionEndAt: dto.subscriptionEndAt ? new Date(dto.subscriptionEndAt) : null,
+          maxUsers: dto.maxUsers ?? null,
+          // MT-040: explicit type — default is DEVELOPER (current platform behavior).
+          // BROKERAGE companies are schema-representable but workflows are deferred.
+          type: dto.type ?? 'DEVELOPER',
+          // MT-036: lifecycle starts ACTIVE for all new companies.
+          lifecycleStatus: 'ACTIVE',
+          // MT-040A: exposure flags — DEVELOPER defaults to all surfaces enabled.
+          // Enforcement of these flags is deferred to their respective surface D2 tickets.
+          websiteEnabled: dto.websiteEnabled ?? true,
+          customerAppEnabled: dto.customerAppEnabled ?? true,
+          staffAppEnabled: dto.staffAppEnabled ?? true,
+        },
+      });
+
+      await this.companyDomainsService.provisionPlatformSubdomain(newCompany.id, newCompany.slug, tx);
+      return newCompany;
     });
 
     let adminUser = null;
@@ -115,7 +186,7 @@ export class SuperAdminService {
       }
     }
 
-    return this.prisma.company.update({
+    const updated = await this.prisma.company.update({
       where: { id },
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
@@ -135,8 +206,42 @@ export class SuperAdminService {
           ? { maxUsers: syncedMaxUsers }
           : dto.maxUsers !== undefined && { maxUsers: dto.maxUsers }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+        // MT-036 / MT-040A: lifecycle status and exposure flags are mutable by SUPER_ADMIN.
+        // Company.type is intentionally NOT mutable here (see MT-042 decision: type is
+        // immutable post-creation — reclassification requires a future safe workflow).
+        ...(dto.lifecycleStatus !== undefined && { lifecycleStatus: dto.lifecycleStatus }),
+        ...(dto.websiteEnabled !== undefined && { websiteEnabled: dto.websiteEnabled }),
+        ...(dto.customerAppEnabled !== undefined && { customerAppEnabled: dto.customerAppEnabled }),
+        ...(dto.staffAppEnabled !== undefined && { staffAppEnabled: dto.staffAppEnabled }),
       },
     });
+
+    // MT-055: Invalidate domain cache when lifecycle or websiteEnabled changes — these
+    // fields are part of the resolved domain projection cached by DomainResolverService.
+    if (dto.lifecycleStatus !== undefined || dto.websiteEnabled !== undefined) {
+      await this.domainResolver.invalidateAllForCompany(id);
+    }
+
+    return updated;
+  }
+
+  // MT-041: Company hard-delete is permanently blocked at the application layer.
+  // Use lifecycle archival (lifecycleStatus = ARCHIVED) instead.
+  // Physical DB deletion would orphan tenant data across ~40 tables; FK onDelete
+  // DB enforcement (Phase M) is a separate future defence-in-depth measure.
+  deleteCompany(_id: string): never {
+    throw new ForbiddenException({
+      message: 'Company hard-delete is not permitted. Transition to lifecycleStatus=ARCHIVED instead.',
+      code: 'COMPANY_DELETE_FORBIDDEN',
+    });
+  }
+
+  // MT-042: dedicated capability update — updates DB and invalidates the cache
+  async updateCapabilities(id: string, dto: UpdateCapabilitiesDto): Promise<{ capabilities: CompanyCapabilities }> {
+    await this.assertExists(id);
+    const caps = dto.capabilities as CompanyCapabilities;
+    await this.capabilityService.setCapabilities(id, caps);
+    return { capabilities: caps };
   }
 
   async cancelCompany(id: string, dto: CancelCompanyDto) {
@@ -188,8 +293,10 @@ export class SuperAdminService {
 
   async createCompanyAdmin(companyId: string, dto: CreateCompanyAdminDto) {
     await this.assertExists(companyId);
-    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
-    if (existing) throw new ConflictException('A user with this email already exists');
+    // Company-scoped duplicate check avoids leaking cross-tenant email existence.
+    // The global DB unique constraint on User.email provides the final guarantee.
+    const existing = await this.prisma.user.findFirst({ where: { email: dto.email, companyId } });
+    if (existing) throw new ConflictException('A user with this email already exists in this company');
     const passwordHash = await argon2.hash(dto.password);
     return this.prisma.user.create({
       data: {
@@ -201,6 +308,27 @@ export class SuperAdminService {
         companyId,
       },
       select: { id: true, fullName: true, email: true, role: true, createdAt: true },
+    });
+  }
+
+  // MT-033 — Create any staff user (role-parameterised) in a target company.
+  // SUPER_ADMIN is not a valid target role; the DTO enum enforces this.
+  async createCompanyUser(companyId: string, dto: CreateCompanyUserDto) {
+    await this.assertExists(companyId);
+    const existing = await this.prisma.user.findFirst({ where: { email: dto.email, companyId } });
+    if (existing) throw new ConflictException('A user with this email already exists in this company');
+    const passwordHash = await argon2.hash(dto.password);
+    return this.prisma.user.create({
+      data: {
+        role: dto.role,
+        fullName: dto.fullName,
+        email: dto.email,
+        phone: dto.phone ?? null,
+        passwordHash,
+        locale: 'ar',
+        companyId,
+      },
+      select: { id: true, fullName: true, email: true, role: true, phone: true, createdAt: true },
     });
   }
 

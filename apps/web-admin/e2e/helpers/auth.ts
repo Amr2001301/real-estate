@@ -11,38 +11,45 @@ export const SALES_PASSWORD = process.env.E2E_SALES_PASSWORD ?? 'SalesPass123!';
 export const MANAGER_EMAIL = process.env.E2E_MANAGER_EMAIL ?? 'manager@example.com';
 export const MANAGER_PASSWORD = process.env.E2E_MANAGER_PASSWORD ?? 'ManagerPass123!';
 
+// Company slug for tenant-aware login. Defaults to the dev-seed default company slug.
+export const COMPANY_SLUG = process.env.E2E_COMPANY_SLUG ?? 'default';
+
 /**
- * Log in through the real login form (email + password) and wait for the
- * dashboard to load. Throws a clear error if the form isn't found (web server /
- * API not running) or the redirect never happens (bad credentials / unseeded).
+ * Log in through the staff login form (company slug + email + password) and
+ * wait for the dashboard to load.
+ *
+ * Phase I: the login form now has three fields — slug, email, password. The
+ * backend endpoint is POST /auth/login-staff (tenant-aware). The legacy
+ * POST /auth/login endpoint is NOT used by this helper.
  */
-export async function login(page: Page, email: string, password: string): Promise<void> {
+export async function login(page: Page, email: string, password: string, slug = COMPANY_SLUG): Promise<void> {
   await page.goto('/login');
 
+  const slugField = page.locator('input[name="slug"]');
   const emailField = page.locator('input[name="email"]');
   const passwordField = page.locator('input[name="password"]');
 
   try {
-    await expect(emailField).toBeVisible({ timeout: 10_000 });
+    await expect(slugField).toBeVisible({ timeout: 10_000 });
   } catch {
     throw new Error(
       'Login form not found at /login. Is the web-admin server running on ' +
-        'E2E_BASE_URL and reachable? (input[name="email"] was never visible.)',
+        'E2E_BASE_URL and reachable? (input[name="slug"] was never visible.)',
     );
   }
 
+  await slugField.fill(slug);
   await emailField.fill(email);
   await passwordField.fill(password);
   await page.getByRole('button', { name: 'تسجيل الدخول' }).click();
 
-  // The login server action sets the auth cookie then redirects to /dashboard
-  // (or the ?from= path). If credentials are wrong we stay on /login.
   await page
     .waitForURL((url) => url.pathname.startsWith('/dashboard'), { timeout: 15_000 })
     .catch(() => {
       throw new Error(
-        `Login did not redirect to /dashboard for ${email}. Check the matching ` +
-          'E2E_*_EMAIL / E2E_*_PASSWORD and that the API is seeded with this user.',
+        `Login did not redirect to /dashboard for ${email} (slug: ${slug}). ` +
+          'Check E2E_*_EMAIL / E2E_*_PASSWORD / E2E_COMPANY_SLUG and that the ' +
+          'API is seeded with this user.',
       );
     });
 }

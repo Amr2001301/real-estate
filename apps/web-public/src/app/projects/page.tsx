@@ -1,5 +1,7 @@
+import { notFound } from 'next/navigation';
 import { buildMetadata } from '@/lib/seo';
 import { safeFetch } from '@/lib/api';
+import { getResolvedTenant } from '@/lib/tenant';
 import type { Paginated, PublicProjectListItem } from '@/lib/api-types';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
@@ -33,7 +35,8 @@ function firstStr(v: string | string[] | undefined): string {
 }
 
 export default async function ProjectsPage({ searchParams }: { searchParams: SearchParams }) {
-  const sp = await searchParams;
+  const [tenant, sp] = await Promise.all([getResolvedTenant(), searchParams]);
+  if (!tenant) notFound();
   const q = firstStr(sp.q).trim();
   const city = firstStr(sp.city).trim();
   const featured = firstStr(sp.featured) === 'true';
@@ -49,9 +52,9 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
   const [result, citiesResult, locale] = await Promise.all([
     safeFetch<Paginated<PublicProjectListItem>>(
       `/public/projects?${params.toString()}`,
-      { revalidate: REVALIDATE },
+      { revalidate: REVALIDATE, tenantSlug: tenant.slug },
     ),
-    safeFetch<{ cities: string[] }>('/public/projects/cities', { revalidate: 300 }),
+    safeFetch<{ cities: string[] }>('/public/projects/cities', { revalidate: 300, tenantSlug: tenant.slug }),
     getLocale(),
   ]);
   const m = siteT(locale);

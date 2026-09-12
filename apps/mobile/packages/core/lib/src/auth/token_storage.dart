@@ -20,6 +20,17 @@ class TokenStorage {
   static const _kSession = 'auth.session';
   static const _kAnonId = 'chat.anonymousId';
 
+  // Tenant slug keys — staff-app only, but defined here so clear() can be
+  // called from core without coupling core to the staff feature layer.
+  //
+  // selectedCompanySlug: the active tenant slug for the current session.
+  //   Cleared on logout. Used by TenantSlugInterceptor and session restore.
+  //
+  // lastCompanySlug: preserved after logout for UX pre-fill. Never an auth
+  //   authority — purely a convenience hint for the login form.
+  static const _kSelectedSlug = 'auth.selectedCompanySlug';
+  static const _kLastSlug = 'auth.lastCompanySlug';
+
   Future<String?> readAccessToken() => _storage.read(key: _kAccess);
   Future<String?> readRefreshToken() => _storage.read(key: _kRefresh);
 
@@ -57,10 +68,28 @@ class TokenStorage {
   Future<void> saveSessionJson(String json) =>
       _storage.write(key: _kSession, value: json);
 
-  /// Clears auth tokens and session (keeps the anonymous chat id).
+  // ── Tenant slug helpers (staff app only) ─────────────────────────────────
+
+  /// The active company slug for the current session. Cleared on [clear] /
+  /// logout. TenantSlugInterceptor reads this to set X-Tenant-Slug.
+  Future<String?> readSelectedCompanySlug() => _storage.read(key: _kSelectedSlug);
+  Future<void> saveSelectedCompanySlug(String slug) =>
+      _storage.write(key: _kSelectedSlug, value: slug);
+
+  /// The last-used company slug, kept across logout for UX pre-fill.
+  /// Never an auth authority — purely a login-form hint.
+  Future<String?> readLastCompanySlug() => _storage.read(key: _kLastSlug);
+  Future<void> saveLastCompanySlug(String slug) =>
+      _storage.write(key: _kLastSlug, value: slug);
+
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
+
+  /// Clears auth tokens, session, and the active tenant slug.
+  /// Keeps: anonymous chat id, last-company-slug (UX hint).
   Future<void> clear() async {
     await _storage.delete(key: _kAccess);
     await _storage.delete(key: _kRefresh);
     await _storage.delete(key: _kSession);
+    await _storage.delete(key: _kSelectedSlug);
   }
 }

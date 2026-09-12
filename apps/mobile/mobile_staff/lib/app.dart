@@ -52,6 +52,7 @@ import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'bootstrap.dart' show flutterLocalNotifications, pendingPushRoute, staffNavigatorKey;
+import 'common/tenant_mismatch_notifier.dart';
 import 'features/notifications/data/datasources/notifications_remote_data_source.dart';
 import 'features/notifications/data/firebase_push_token_provider.dart';
 import 'features/notifications/data/repositories/notifications_repository_impl.dart';
@@ -202,26 +203,29 @@ class StaffApp extends StatelessWidget {
           ),
         ),
       ],
-      child: MultiBlocProvider(
-        providers: [
-          BlocProvider<StaffAuthCubit>(
-            create: (ctx) {
-              final repo = ctx.read<StaffAuthRepository>();
-              return StaffAuthCubit(
-                sessionCubit: ctx.read<SessionCubit>(),
-                loginStaff: LoginStaff(repo),
-                logoutStaff: LogoutStaff(repo),
-              );
-            },
-          ),
-          BlocProvider<UnreadCountCubit>(
-            create: (ctx) => UnreadCountCubit(
-              GetUnreadCount(ctx.read<NotificationsRepository>()),
+      child: RepositoryProvider<TenantMismatchNotifier>(
+        create: (_) => TenantMismatchNotifier(),
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider<StaffAuthCubit>(
+              create: (ctx) {
+                final repo = ctx.read<StaffAuthRepository>();
+                return StaffAuthCubit(
+                  sessionCubit: ctx.read<SessionCubit>(),
+                  loginStaff: LoginStaff(repo),
+                  logoutStaff: LogoutStaff(repo),
+                );
+              },
             ),
-          ),
-          BlocProvider(create: (_) => ConnectivityCubit()),
-        ],
-        child: const _StaffRoot(),
+            BlocProvider<UnreadCountCubit>(
+              create: (ctx) => UnreadCountCubit(
+                GetUnreadCount(ctx.read<NotificationsRepository>()),
+              ),
+            ),
+            BlocProvider(create: (_) => ConnectivityCubit()),
+          ],
+          child: const _StaffRoot(),
+        ),
       ),
     );
   }
@@ -250,6 +254,7 @@ class _StaffRootState extends State<_StaffRoot> {
   void initState() {
     super.initState();
     _wireRefresher();
+    _wireMismatchHandler();
     _wireFcm();
     // BlocListener only fires on *transitions*. If the app relaunches with a
     // persisted session the state is already authenticated — no transition fires
@@ -328,6 +333,22 @@ class _StaffRootState extends State<_StaffRoot> {
       await tokenStorage.clear();
       sessionCubit.adoptSignedOut();
       return null;
+    };
+  }
+
+  /// Wires the Phase C tenant-mismatch handler. When [TenantSlugInterceptor]
+  /// detects a 403 mismatch response it calls through [TenantMismatchRegistry],
+  /// which clears the session and sets a pending UX message for the login screen.
+  void _wireMismatchHandler() {
+    final tokenStorage = context.read<TokenStorage>();
+    final sessionCubit = context.read<SessionCubit>();
+    final mismatchNotifier = context.read<TenantMismatchNotifier>();
+    final l10n = context.l10n;
+    context.read<TenantMismatchRegistry>().handler = () async {
+      await tokenStorage.clear();
+      sessionCubit.adoptSignedOut();
+      // Set the pending message consumed by StaffLoginScreen on next build.
+      mismatchNotifier.setMessage(l10n.errorTenantMismatch);
     };
   }
 

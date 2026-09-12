@@ -761,10 +761,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fieldOtpCode => 'Verification code';
 
   @override
+  String get fieldCompanyCode => 'Company Code';
+
+  @override
   String get validationRequired => 'This field is required';
 
   @override
   String get validationEmail => 'Enter a valid email';
+
+  @override
+  String get validationCompanyCode => 'Enter the company code';
 
   @override
   String get validationPhone => 'Enter a valid phone number';
@@ -1453,6 +1459,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get staffLoginSubtitle => 'Sign in to your staff account';
+
+  @override
+  String get errorTenantMismatch =>
+      'Your session does not match this company. Please sign in again.';
 
   @override
   String get roleSales => 'Sales';
@@ -2838,6 +2848,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get leadInterestPreFilled => 'Interest pre-filled from';
+
+  @override
+  String get companySelectTitle => 'Select Developer';
+
+  @override
+  String get companySelectSubtitle =>
+      'Search for the developer whose app you\'d like to use';
+
+  @override
+  String get companySearchHint => 'Search by company name or code';
+
+  @override
+  String get companySearchEmpty => 'No companies found';
+
+  @override
+  String get companySearchMinLength => 'Enter at least 2 characters to search';
+
+  @override
+  String get companySelectButton => 'Select';
+
+  @override
+  String get companyNotAvailable =>
+      'This company is not available. Please try a different company.';
+
+  @override
+  String get companyChangeTitle => 'Change Developer';
 
   @override
   String get sectionFloorPlans => 'Floor Plans';

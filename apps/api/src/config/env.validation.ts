@@ -77,6 +77,14 @@ const EnvSchema = z.object({
   // Must be set whenever multi-tenancy enforcement is active.
   DEFAULT_COMPANY_ID: z.string().uuid().optional(),
 
+  // MT-044: Platform subdomain base domain (e.g. "platform.example.com").
+  // Platform subdomains are provisioned as "{slug}.{PLATFORM_BASE_DOMAIN}".
+  // Optional in development/test; required in production.
+  PLATFORM_BASE_DOMAIN: z.string().min(1).optional(),
+
+  // MT-050: DNS verification timeout in milliseconds (default 5000ms).
+  DOMAIN_DNS_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
+
   // ─── Observability (all optional) ───────────────────────────────────────
   // When SENTRY_DSN is unset the SDK is never required at runtime.
   SENTRY_DSN: z.string().url().optional(),
@@ -206,6 +214,13 @@ function assertProductionRequirements(env: AppEnv): string[] {
   // will return 500 on any scoped model read.
   if (!env.DEFAULT_COMPANY_ID) {
     errs.push('DEFAULT_COMPANY_ID is required in production (public website catalog routes use it to scope tenant data)');
+  }
+
+  // MT-044: PLATFORM_BASE_DOMAIN is required so platform subdomains can be
+  // provisioned ({slug}.{PLATFORM_BASE_DOMAIN}) and DomainResolverService
+  // can route hostname → tenant without guessing.
+  if (!env.PLATFORM_BASE_DOMAIN) {
+    errs.push('PLATFORM_BASE_DOMAIN is required in production (platform subdomain provisioning)');
   }
 
   return errs;

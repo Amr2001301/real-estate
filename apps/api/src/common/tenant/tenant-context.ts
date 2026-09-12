@@ -5,19 +5,23 @@ import { MissingTenantContextError } from './tenant-context.errors';
  * The shape of the tenant context stored in AsyncLocalStorage for each
  * in-flight request (or background job / cron invocation).
  *
- * Three valid states:
+ * Valid states:
  *
  *   companyId=<uuid>, bypass=false, isPublic=false  — normal authenticated request
- *   companyId=<uuid>, bypass=false, isPublic=true   — public/anonymous request (resolved from server config)
- *   companyId=null,   bypass=true,  isPublic=false  — explicit platform operation (SUPER_ADMIN / cron coordinator)
+ *   companyId=<uuid>, bypass=false, isPublic=true   — legacy @Public() (DEFAULT_COMPANY_ID)
+ *   companyId=null,   bypass=false, isPlatformPublic=true — @PlatformPublic (MT-024);
+ *                                                     no tenant context; service layer owns companyId
+ *   companyId=null,   bypass=true,  isPublic=false  — explicit platform operation (SUPER_ADMIN / cron)
  *
  * Invalid state (security error — fail closed):
- *   companyId=null,   bypass=false  — missing or broken context setup
+ *   companyId=null,   bypass=false, isPlatformPublic=false — missing or broken context setup
  */
 export interface TenantContext {
   companyId: string | null;
   bypass: boolean;
   isPublic: boolean;
+  /** MT-024: set for @PlatformPublic routes. No tenant auto-injection; service layer is authoritative. */
+  isPlatformPublic?: boolean;
 }
 
 // One AsyncLocalStorage instance per Node.js process.

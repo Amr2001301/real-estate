@@ -68,14 +68,16 @@ async function readSafeCode(res: Response): Promise<{ code?: string }> {
 
 export async function safeFetch<T>(
   path: string,
-  init?: RequestInit & { revalidate?: number },
+  init?: RequestInit & { revalidate?: number; tenantSlug?: string },
 ): Promise<ApiResult<T>> {
-  const { revalidate, ...rest } = init ?? {};
+  const { revalidate, tenantSlug, ...rest } = init ?? {};
   const url = resolveUrl(path);
+  const baseHeaders: Record<string, string> = { Accept: 'application/json' };
+  if (tenantSlug) baseHeaders['x-tenant-slug'] = tenantSlug;
   try {
     const res = await fetch(url, {
       ...rest,
-      headers: { Accept: 'application/json', ...(rest.headers ?? {}) },
+      headers: { ...baseHeaders, ...(rest.headers as Record<string, string> | undefined ?? {}) },
       ...(revalidate !== undefined ? { next: { revalidate } } : {}),
     });
 

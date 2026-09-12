@@ -754,10 +754,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get fieldOtpCode => 'رمز التحقّق';
 
   @override
+  String get fieldCompanyCode => 'كود الشركة';
+
+  @override
   String get validationRequired => 'هذا الحقل مطلوب';
 
   @override
   String get validationEmail => 'أدخل بريدًا إلكترونيًا صحيحًا';
+
+  @override
+  String get validationCompanyCode => 'أدخل كود الشركة';
 
   @override
   String get validationPhone => 'أدخل رقم هاتف صحيحًا';
@@ -1437,6 +1443,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get staffLoginSubtitle => 'سجّل الدخول إلى حساب الموظف';
+
+  @override
+  String get errorTenantMismatch =>
+      'جلستك لا تتطابق مع هذه الشركة. يرجى تسجيل الدخول مجددًا.';
 
   @override
   String get roleSales => 'مبيعات';
@@ -2807,6 +2817,32 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get leadInterestPreFilled => 'تم تحديد الاهتمام من';
+
+  @override
+  String get companySelectTitle => 'اختيار المطوّر';
+
+  @override
+  String get companySelectSubtitle =>
+      'ابحث عن المطوّر الذي تريد استخدام تطبيقه';
+
+  @override
+  String get companySearchHint => 'ابحث باسم الشركة أو الكود';
+
+  @override
+  String get companySearchEmpty => 'لا توجد شركات';
+
+  @override
+  String get companySearchMinLength => 'أدخل حرفين على الأقل للبحث';
+
+  @override
+  String get companySelectButton => 'اختيار';
+
+  @override
+  String get companyNotAvailable =>
+      'هذه الشركة غير متاحة. يرجى اختيار شركة أخرى.';
+
+  @override
+  String get companyChangeTitle => 'تغيير المطوّر';
 
   @override
   String get sectionFloorPlans => 'مخططات الطوابق';

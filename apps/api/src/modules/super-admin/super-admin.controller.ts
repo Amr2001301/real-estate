@@ -8,6 +8,7 @@ import { SuperAdminService } from './super-admin.service';
 import {
   CreateCompanyDto,
   UpdateCompanyDto,
+  UpdateCapabilitiesDto,
   CancelCompanyDto,
   SuspendCompanyDto,
   CreateCompanyAdminDto,
@@ -50,6 +51,16 @@ export class SuperAdminController {
 
   @Post('companies/:id/activate')
   activateCompany(@Param('id') id: string) { return this.service.activateCompany(id); }
+
+  // MT-041: Hard delete blocked — lifecycle archival is the intended path
+  @Delete('companies/:id')
+  deleteCompany(@Param('id') id: string) { return this.service.deleteCompany(id); }
+
+  // MT-042: Dedicated capability update endpoint; invalidates Redis cache
+  @Patch('companies/:id/capabilities')
+  updateCapabilities(@Param('id') id: string, @Body() dto: UpdateCapabilitiesDto) {
+    return this.service.updateCapabilities(id, dto);
+  }
 
   @Post('companies/:id/admin')
   createCompanyAdmin(@Param('id') id: string, @Body() dto: CreateCompanyAdminDto) {

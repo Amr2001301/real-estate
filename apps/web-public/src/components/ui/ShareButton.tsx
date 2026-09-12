@@ -37,7 +37,7 @@ export function ShareButton({ title, variant = 'hero' }: ShareButtonProps) {
   // Close dropdown when clicking outside.
   useEffect(() => {
     if (!open) return;
-    function onPointerDown(e: PointerEvent) {
+    function onPointerDown(e: globalThis.PointerEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
       }

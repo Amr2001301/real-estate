@@ -3,20 +3,27 @@
 /**
  * Server actions for public-website (CLIENT / CUSTOMER) authentication.
  *
- * These run on the server, call the backend auth endpoints directly, and set
- * the session in httpOnly cookies — the access token NEVER reaches client JS.
- * Mirrors the cookie contract of apps/web-admin/src/app/login/actions.ts:
- *   * access_token   httpOnly, sameSite=lax, secure in prod, maxAge=expiresIn
- *   * refresh_token  httpOnly, sameSite=lax, secure in prod, maxAge=30d
- *   * user           non-httpOnly JSON { id, role, fullName }, maxAge=30d
+ * F2 — MT-052 / MT-094: All customer auth operations are now tenant-aware.
+ * The resolved tenant slug is read server-side from the F1 middleware header
+ * (x-resolved-tenant-slug) and injected into every backend request body.
+ * The browser NEVER controls which company the operation targets.
  *
- * NOTE: These actions are not yet wired into the auth forms — that is step 0.4
- * (CustomerAuthForm/OtpAuthForm rewire). They are self-contained and callable.
- * They return a typed result (status + optional code) so the client forms can
- * map failures to the existing friendly Arabic messages without changes here.
+ * Endpoint mapping (legacy → V2):
+ *   /auth/customer/login      → /auth/tenant/customer/login
+ *   /auth/customer/register   → /auth/tenant/customer/register
+ *   /auth/otp/request         → /auth/tenant/otp/request
+ *   /auth/otp/verify          → /auth/tenant/otp/verify
+ *   /auth/forgot-password     → /auth/tenant/forgot-password
+ *   /auth/reset-password      → /auth/tenant/reset-password  (no slug; token identifies user)
+ *   /auth/logout, /auth/refresh — tenant-neutral; kept as-is.
+ *
+ * Cookie contract (unchanged from legacy):
+ *   access_token   httpOnly, sameSite=lax, secure in prod, maxAge=expiresIn
+ *   refresh_token  httpOnly, sameSite=lax, secure in prod, maxAge=30d
+ *   user           non-httpOnly JSON { id, role, fullName }, maxAge=30d
  */
 
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { setSessionCookies, clearSessionCookies, type AuthSession } from '@/lib/auth-cookies';
 
@@ -46,8 +53,6 @@ async function postAuth(path: string, body: unknown): Promise<PostResult> {
       cache: 'no-store',
     });
   } catch {
-    // Network-level failure (API down / refused). Surface as status 0 so the
-    // form maps it to "تعذر الاتصال بالخادم".
     return { ok: false, status: 0 };
   }
 
@@ -57,7 +62,7 @@ async function postAuth(path: string, body: unknown): Promise<PostResult> {
       const errBody = (await res.clone().json()) as { code?: unknown };
       if (typeof errBody?.code === 'string' && errBody.code.length <= 40) code = errBody.code;
     } catch {
-      /* non-JSON error body — ignore */
+      /* non-JSON error body */
     }
     return { ok: false, status: res.status, code };
   }
@@ -68,6 +73,18 @@ async function postAuth(path: string, body: unknown): Promise<PostResult> {
   } catch {
     return { ok: false, status: res.status };
   }
+}
+
+/**
+ * Read the server-resolved tenant slug from the F1 middleware header.
+ * Returns null when running on a hostname with no associated tenant (platform
+ * base domain, unknown host, suspended/archived company, website disabled).
+ * Callers MUST treat null as a hard failure — never fall back to legacy.
+ */
+async function getServerTenantSlug(): Promise<string | null> {
+  const h = await headers();
+  const slug = h.get('x-resolved-tenant-slug');
+  return slug || null;
 }
 
 /**
@@ -90,13 +107,19 @@ export interface LoginInput {
   from?: string;
 }
 
-/** Customer/Client email+password login → POST /v1/auth/customer/login. */
+/**
+ * Customer/Client email+password login → POST /v1/auth/tenant/customer/login.
+ * Slug is server-derived (F1 header); browser payload cannot override Company.
+ */
 export async function customerLoginAction(input: LoginInput): Promise<AuthActionResult> {
+  const slug = await getServerTenantSlug();
+  if (!slug) return { ok: false, status: 503, code: 'no_tenant' };
+
   const email = input.email?.trim() ?? '';
   const password = input.password ?? '';
   if (!email || !password) return { ok: false, status: 400 };
 
-  const res = await postAuth('/auth/customer/login', { email, password });
+  const res = await postAuth('/auth/tenant/customer/login', { slug, email, password });
   if (!res.ok || !res.data) return { ok: false, status: res.status, code: res.code };
 
   await setSessionCookies(res.data);
@@ -108,7 +131,6 @@ export interface RegisterInput {
   phone: string;
   email: string;
   password: string;
-  /** Must be true — the user explicitly accepted terms in the form. */
   acceptTerms: boolean;
   city?: string;
   interestType?: string;
@@ -117,19 +139,29 @@ export interface RegisterInput {
   from?: string;
 }
 
-/** Customer/Client registration → POST /v1/auth/customer/register (auto-login). */
+/**
+ * Customer/Client registration → POST /v1/auth/tenant/customer/register.
+ * Slug is server-derived. Browser payload never contains companyId.
+ *
+ * Note: Global User email/phone uniqueness still exists (legacy constraint).
+ * A customer already registered in another Company may receive a conflict
+ * error. This is a known Expand-phase limitation resolved in B-Contract.
+ * Use a safe generic message for such conflicts.
+ */
 export async function customerRegisterAction(input: RegisterInput): Promise<AuthActionResult> {
+  const slug = await getServerTenantSlug();
+  if (!slug) return { ok: false, status: 503, code: 'no_tenant' };
+
   const fullName = input.fullName?.trim() ?? '';
   const email = input.email?.trim() ?? '';
   const phone = (input.phone ?? '').replace(/[\s-]/g, '');
   const password = input.password ?? '';
-  // Never register without explicit terms acceptance — defence-in-depth even
-  // though the form also validates this client-side.
   if (!fullName || !email || !phone || !password || input.acceptTerms !== true) {
     return { ok: false, status: 400 };
   }
 
-  const res = await postAuth('/auth/customer/register', {
+  const res = await postAuth('/auth/tenant/customer/register', {
+    slug,
     fullName,
     phone,
     email,
@@ -146,6 +178,18 @@ export async function customerRegisterAction(input: RegisterInput): Promise<Auth
   return { ok: true, redirectTo: safeAccountFrom(input.from) };
 }
 
+/**
+ * Request a phone OTP → POST /v1/auth/tenant/otp/request.
+ * Slug is server-derived. Backend resolves slug→companyId and scopes the OTP.
+ */
+export async function otpRequestAction(phone: string): Promise<{ ok: boolean; status: number }> {
+  const slug = await getServerTenantSlug();
+  if (!slug) return { ok: false, status: 503 };
+
+  const res = await postAuth('/auth/tenant/otp/request', { slug, phone });
+  return { ok: res.ok, status: res.status };
+}
+
 export interface OtpVerifyInput {
   phone: string;
   code: string;
@@ -153,13 +197,21 @@ export interface OtpVerifyInput {
   from?: string;
 }
 
-/** Verify a phone OTP and establish the session → POST /v1/auth/otp/verify. */
+/**
+ * Verify a phone OTP → POST /v1/auth/tenant/otp/verify.
+ * Slug is server-derived. OTP is scoped to the resolved company; an OTP issued
+ * for Company A cannot be consumed on Company B's host.
+ */
 export async function otpVerifyAction(input: OtpVerifyInput): Promise<AuthActionResult> {
+  const slug = await getServerTenantSlug();
+  if (!slug) return { ok: false, status: 503, code: 'no_tenant' };
+
   const phone = (input.phone ?? '').replace(/[\s-]/g, '');
   const code = input.code?.trim() ?? '';
   if (!phone || !code) return { ok: false, status: 400 };
 
-  const res = await postAuth('/auth/otp/verify', {
+  const res = await postAuth('/auth/tenant/otp/verify', {
+    slug,
     phone,
     code,
     ...(input.fullName?.trim() ? { fullName: input.fullName.trim() } : {}),
@@ -174,14 +226,20 @@ export interface ForgotPasswordInput {
   email: string;
 }
 
-/** Request a password-reset email → POST /v1/auth/forgot-password. */
+/**
+ * Request a password-reset email → POST /v1/auth/tenant/forgot-password.
+ * Slug is server-derived. Enumeration-safe: always returns success to the form.
+ */
 export async function forgotPasswordAction(
   input: ForgotPasswordInput,
 ): Promise<{ ok: boolean; status: number }> {
+  const slug = await getServerTenantSlug();
+  if (!slug) return { ok: false, status: 503 };
+
   const email = input.email?.trim() ?? '';
   if (!email) return { ok: false, status: 400 };
 
-  const res = await postAuth('/auth/forgot-password', { email });
+  const res = await postAuth('/auth/tenant/forgot-password', { slug, email });
   return { ok: res.ok, status: res.status };
 }
 
@@ -190,7 +248,12 @@ export interface ResetPasswordInput {
   newPassword: string;
 }
 
-/** Exchange a reset token for a new password → POST /v1/auth/reset-password. */
+/**
+ * Exchange a reset token for a new password → POST /v1/auth/tenant/reset-password.
+ * No slug required: the opaque token identifies the User directly.
+ * Opening a reset link from Company A on Company B's hostname still resets
+ * Company A's user's password (token is authoritative, not the host).
+ */
 export async function resetPasswordAction(
   input: ResetPasswordInput,
 ): Promise<{ ok: boolean; status: number }> {
@@ -198,7 +261,7 @@ export async function resetPasswordAction(
   const newPassword = input.newPassword ?? '';
   if (!token || newPassword.length < 8) return { ok: false, status: 400 };
 
-  const res = await postAuth('/auth/reset-password', { token, newPassword });
+  const res = await postAuth('/auth/tenant/reset-password', { token, newPassword });
   return { ok: res.ok, status: res.status };
 }
 
@@ -256,6 +319,7 @@ export async function resendVerificationAction(): Promise<{ ok: boolean; status:
 /**
  * Clear the session cookies and return to /login. Best-effort backend logout
  * (token revocation) is attempted but never blocks the local clear.
+ * Logout remains available even when the Company is suspended or token expired.
  */
 export async function logoutAction(): Promise<void> {
   const c = await cookies();

@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { IS_OPTIONAL_AUTH_KEY } from '../decorators/optional-auth.decorator';
+import { IS_PLATFORM_PUBLIC_KEY } from '../decorators/platform-public.decorator';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -15,6 +16,11 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       context.getHandler(),
       context.getClass(),
     ]);
+    // MT-024: @PlatformPublic routes also skip JWT authentication.
+    const isPlatformPublic = this.reflector.getAllAndOverride<boolean>(IS_PLATFORM_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
     const isOptional = this.reflector.getAllAndOverride<boolean>(
       IS_OPTIONAL_AUTH_KEY,
       [context.getHandler(), context.getClass()],
@@ -22,7 +28,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     // Public + optional: still run the passport-jwt strategy so a valid Bearer
     // populates `req.user` (and `@CurrentUser()` returns it); missing/invalid
     // tokens are tolerated below in handleRequest.
-    if (isPublic && !isOptional) return true;
+    if ((isPublic && !isOptional) || isPlatformPublic) return true;
     if (isOptional) {
       // Cache so handleRequest can decide whether to throw.
       const request = context.switchToHttp().getRequest<{ _isOptionalAuth?: boolean }>();

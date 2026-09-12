@@ -107,7 +107,7 @@ p{margin:0}
 </head>
 <body>
 <div dir="${isRtl ? 'rtl' : 'ltr'}" style="direction:${isRtl ? 'rtl' : 'ltr'}">${body}</div>
-<script>window.addEventListener('load',function(){setTimeout(function(){window.print();window.close();},700);});<\/script>
+<script>window.addEventListener('load',function(){setTimeout(function(){window.print();window.close();},700);});</script>
 </body>
 </html>`);
     win.document.close();

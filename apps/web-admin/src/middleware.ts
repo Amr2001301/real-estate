@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * Edge middleware. Two responsibilities, in priority order:
+ * Edge middleware. Three responsibilities, in priority order:
  *
- *   1. /api-proxy/*  → inject Authorization: Bearer from the access_token cookie
- *                       so the API receives a proper JWT. (Existing behavior;
- *                       the rewrite in next.config.ts handles the destination.)
+ *   1. /api-proxy/*          → inject Authorization: Bearer from the access_token cookie.
  *
- *   2. /dashboard/*, /portal/*  → redirect unauthenticated requests to /login.
- *      /login                   → redirect already-authenticated users to their
- *                                  workspace.
+ *   2. /dashboard/*, /portal/* → redirect unauthenticated requests to /login.
+ *      /login                   → redirect already-authenticated users to their workspace.
+ *
+ *   3. /super-admin/login    → platform-admin login page:
+ *      - unauthenticated     → serve the page
+ *      - authenticated SUPER_ADMIN → redirect to /dashboard/super-admin
+ *      - authenticated other       → redirect to their workspace (not this page)
  *
  * Transparent token refresh: when access_token is missing but refresh_token is
  * present, the middleware calls POST /v1/auth/refresh, sets new cookies on the
@@ -60,29 +62,26 @@ async function tryRefresh(req: NextRequest): Promise<RefreshResult | RefreshSucc
 function applyRefreshCookies(response: NextResponse, r: RefreshSuccess, req: NextRequest) {
   const secure = req.nextUrl.protocol === 'https:';
   response.cookies.set('access_token', r.accessToken, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure,
-    path: '/',
-    maxAge: r.expiresIn,
+    httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: r.expiresIn,
   });
   response.cookies.set('refresh_token', r.refreshToken, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure,
-    path: '/',
-    maxAge: THIRTY_DAYS,
+    httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: THIRTY_DAYS,
   });
-  response.cookies.set(
-    'user',
-    JSON.stringify({ id: r.user.id, role: r.user.role, fullName: r.user.fullName }),
-    {
-      httpOnly: false,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: THIRTY_DAYS,
-    },
-  );
+  response.cookies.set('user', JSON.stringify({ id: r.user.id, role: r.user.role, fullName: r.user.fullName }), {
+    httpOnly: false, sameSite: 'lax', path: '/', maxAge: THIRTY_DAYS,
+  });
+}
+
+/** Derive the role from the non-httpOnly `user` cookie. Returns null if unparseable. */
+function roleFromCookies(req: NextRequest): string | null {
+  try {
+    const raw = req.cookies.get('user')?.value;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { role?: unknown };
+    return typeof parsed.role === 'string' ? parsed.role : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function middleware(req: NextRequest) {
@@ -92,7 +91,6 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith('/api-proxy/')) {
     const token = req.cookies.get('access_token')?.value;
     if (!token) return NextResponse.next();
-
     const headers = new Headers(req.headers);
     headers.set('Authorization', `Bearer ${token}`);
     return NextResponse.next({ request: { headers } });
@@ -100,18 +98,26 @@ export async function middleware(req: NextRequest) {
 
   const hasToken = Boolean(req.cookies.get('access_token')?.value);
 
-  // ── 2a. Already-authenticated user hitting /login → bounce to workspace ─
+  // ── 2. /super-admin/login ────────────────────────────────────────────────
+  // Unauthenticated: serve the page.
+  // Authenticated SUPER_ADMIN: already logged in → bounce to their workspace.
+  // Authenticated other role: wrong page → bounce to their workspace.
+  if (pathname === '/super-admin/login') {
+    if (!hasToken) return NextResponse.next();
+    return NextResponse.redirect(new URL(landingPathForUser(req), req.url));
+  }
+
+  // ── 3a. Already-authenticated user hitting /login → bounce to workspace ──
   if (pathname === '/login') {
     if (!hasToken) return NextResponse.next();
     return NextResponse.redirect(new URL(landingPathForUser(req), req.url));
   }
 
-  // ── 2b. Protected app surfaces — require token presence ─────────────────
+  // ── 3b. Protected app surfaces — require token presence ──────────────────
   if (pathname.startsWith('/dashboard') || pathname.startsWith('/portal')) {
     if (hasToken) return NextResponse.next();
 
-    // Server Action POSTs carry a `Next-Action` header. 302-redirecting them to
-    // the login HTML page breaks the RSC action protocol on the client.
+    // Server Action POSTs carry a `Next-Action` header — don't redirect them.
     if (req.method === 'POST' && req.headers.has('next-action')) {
       return NextResponse.next();
     }
@@ -133,19 +139,19 @@ export async function middleware(req: NextRequest) {
 }
 
 function landingPathForUser(req: NextRequest): string {
-  const raw = req.cookies.get('user')?.value;
-  if (!raw) return '/dashboard';
-  try {
-    const parsed = JSON.parse(raw) as { role?: unknown };
-    if (parsed && parsed.role === 'SUPER_ADMIN') return '/dashboard/super-admin';
-    if (parsed && parsed.role === 'BROKER') return '/portal';
-    if (parsed && parsed.role === 'MAINTENANCE_SUPERVISOR') return '/maintenance-app';
-  } catch {
-    // fall through
-  }
+  const role = roleFromCookies(req);
+  if (role === 'SUPER_ADMIN') return '/dashboard/super-admin';
+  if (role === 'BROKER') return '/portal';
+  if (role === 'MAINTENANCE_SUPERVISOR') return '/maintenance-app';
   return '/dashboard';
 }
 
 export const config = {
-  matcher: ['/api-proxy/:path*', '/dashboard/:path*', '/portal/:path*', '/login'],
+  matcher: [
+    '/api-proxy/:path*',
+    '/dashboard/:path*',
+    '/portal/:path*',
+    '/login',
+    '/super-admin/login',
+  ],
 };

@@ -1,0 +1,395 @@
+name: MT-017 Production Identity Audit (Read-Only)
+
+# MANUALLY TRIGGERED ONLY — no push, no pull_request, no schedule.
+#
+# Runs the read-only MT-017 identity audit script against the production
+# database through the protected 'production' GitHub Environment.
+#
+# This workflow does NOT start B-Contract migrations.
+# MT-020, MT-022, MT-023, MT-009B must be authorized separately after
+# reviewing the audit report.
+#
+# Secret scope note:
+#   DATABASE_URL is a repository-level secret (used in db-backup.yml without
+#   environment protection). Required-reviewer protection is enforced here by
+#   the 'environment: production' job gate. Hardening recommendation: migrate
+#   DATABASE_URL to an environment-level secret under the 'production'
+#   environment so the credential is inaccessible to jobs outside that gate.
+#   Do NOT move it automatically — this is an operator decision.
+#
+# PRODUCTION_MIRROR note:
+#   Only PRODUCTION is accepted. A PRODUCTION_MIRROR option would require a
+#   separate protected GitHub Environment ('production-mirror') with its own
+#   DATABASE_URL secret. No such environment exists yet. Do not add a cosmetic
+#   mirror option that still connects to the production credential.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_read_only_audit:
+        description: "Safety confirmation — type exactly: RUN_MT017_READ_ONLY"
+        required: true
+        type: string
+
+jobs:
+  mt017-audit:
+    name: MT-017 Identity Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+
+    steps:
+      # ── Pre-DB input validation (no secrets accessed yet) ─────────────────────
+
+      - name: Validate — confirmation string
+        env:
+          CONFIRM: ${{ github.event.inputs.confirm_read_only_audit }}
+        run: |
+          set -euo pipefail
+          if [[ "$CONFIRM" != "RUN_MT017_READ_ONLY" ]]; then
+            echo "ERROR: confirm_read_only_audit must be exactly 'RUN_MT017_READ_ONLY'." >&2
+            echo "       Aborting before any DB access." >&2
+            exit 1
+          fi
+          echo "Confirmation string accepted."
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Print run metadata (no secrets)
+        run: |
+          set -euo pipefail
+          echo "========================================================"
+          echo "  MT-017 PRODUCTION IDENTITY AUDIT"
+          echo "========================================================"
+          echo "Git SHA:         ${{ github.sha }}"
+          echo "Ref:             ${{ github.ref }}"
+          echo "Actor:           ${{ github.actor }}"
+          echo "Timestamp (UTC): $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "Node version:    $(node --version)"
+          echo "pnpm version:    $(pnpm --version)"
+          echo "========================================================"
+
+      # ── Static mutation guard self-test ───────────────────────────────────────
+      # Proves the guard logic works before trusting it to evaluate the real script.
+      # Uses temp fixture strings — does NOT modify the audit script.
+      # Comment-stripping note: only leading-// and leading-* lines are stripped.
+      # Inline comments (foo(); // .update() ) are NOT stripped and would still
+      # trigger the guard — this is intentionally conservative.
+
+      - name: Static mutation guard — self-test
+        run: |
+          set -uo pipefail
+
+          PASS_COUNT=0
+          FAIL_COUNT=0
+
+          # Helper: run guard against a string, expect FAIL (violation found)
+          assert_guard_fail() {
+            local label="$1"
+            local content="$2"
+            local stripped
+            stripped="$(printf '%s' "$content" | grep -v '^[[:space:]]*//' | grep -v '^[[:space:]]*\*')"
+            local found=0
+            for PATTERN in \
+              '.create(' \
+              '.createMany(' \
+              '.update(' \
+              '.updateMany(' \
+              '.delete(' \
+              '.deleteMany(' \
+              '.upsert(' \
+              '$executeRaw' \
+              '$executeRawUnsafe' \
+              '$queryRaw' \
+              '$queryRawUnsafe'
+            do
+              GREP_EXIT=0
+              printf '%s' "$stripped" | grep -qF "$PATTERN" || GREP_EXIT=$?
+              if [[ $GREP_EXIT -eq 0 ]]; then
+                found=1
+                break
+              elif [[ $GREP_EXIT -ne 1 ]]; then
+                echo "SELF-TEST ERROR: grep exited unexpectedly (code $GREP_EXIT) for pattern '$PATTERN'" >&2
+                exit 1
+              fi
+            done
+            if [[ $found -eq 1 ]]; then
+              echo "  [PASS] $label → guard correctly detected violation"
+              PASS_COUNT=$((PASS_COUNT + 1))
+            else
+              echo "  [FAIL] $label → guard MISSED a violation (self-test failure)" >&2
+              FAIL_COUNT=$((FAIL_COUNT + 1))
+            fi
+          }
+
+          # Helper: run guard against a string, expect PASS (no violation)
+          assert_guard_pass() {
+            local label="$1"
+            local content="$2"
+            local stripped
+            stripped="$(printf '%s' "$content" | grep -v '^[[:space:]]*//' | grep -v '^[[:space:]]*\*')"
+            local found=0
+            for PATTERN in \
+              '.create(' \
+              '.createMany(' \
+              '.update(' \
+              '.updateMany(' \
+              '.delete(' \
+              '.deleteMany(' \
+              '.upsert(' \
+              '$executeRaw' \
+              '$executeRawUnsafe' \
+              '$queryRaw' \
+              '$queryRawUnsafe'
+            do
+              GREP_EXIT=0
+              printf '%s' "$stripped" | grep -qF "$PATTERN" || GREP_EXIT=$?
+              if [[ $GREP_EXIT -eq 0 ]]; then
+                found=1
+                break
+              elif [[ $GREP_EXIT -ne 1 ]]; then
+                echo "SELF-TEST ERROR: grep exited unexpectedly (code $GREP_EXIT) for pattern '$PATTERN'" >&2
+                exit 1
+              fi
+            done
+            if [[ $found -eq 0 ]]; then
+              echo "  [PASS] $label → guard correctly found no violations"
+              PASS_COUNT=$((PASS_COUNT + 1))
+            else
+              echo "  [FAIL] $label → guard reported a false violation (self-test failure)" >&2
+              FAIL_COUNT=$((FAIL_COUNT + 1))
+            fi
+          }
+
+          echo "--- Guard self-test: violation detection ---"
+
+          assert_guard_fail "create"          'await prisma.user.create({ data: {} });'
+          assert_guard_fail "createMany"      'await prisma.user.createMany({ data: [] });'
+          assert_guard_fail "update"          'await prisma.user.update({ where: {}, data: {} });'
+          assert_guard_fail "updateMany"      'await prisma.user.updateMany({ where: {}, data: {} });'
+          assert_guard_fail "delete"          'await prisma.user.delete({ where: {} });'
+          assert_guard_fail "deleteMany"      'await prisma.user.deleteMany({ where: {} });'
+          assert_guard_fail "upsert"          'await prisma.user.upsert({ where: {}, create: {}, update: {} });'
+          assert_guard_fail "executeRaw"      'await prisma.$executeRaw`UPDATE users SET x=1`;'
+          assert_guard_fail "executeRawUnsafe" 'await prisma.$executeRawUnsafe("UPDATE users SET x=1");'
+          assert_guard_fail "queryRaw"        'await prisma.$queryRaw`SELECT * FROM users`;'
+          assert_guard_fail "queryRawUnsafe"  'await prisma.$queryRawUnsafe("SELECT * FROM users");'
+
+          echo "--- Guard self-test: read-only operations (must not trigger) ---"
+
+          assert_guard_pass "findMany only"   'const r = await prisma.user.findMany({ where: {} });'
+          assert_guard_pass "findFirst only"  'const r = await prisma.user.findFirst({ where: {} });'
+          assert_guard_pass "count only"      'const n = await prisma.user.count({ where: {} });'
+          assert_guard_pass "multiple reads"  'const a = await prisma.user.findMany({}); const b = await prisma.company.count();'
+
+          echo "--- Guard self-test: comment stripping ---"
+          # Leading-// lines are stripped before scanning. Mutation pattern in a leading
+          # comment must be safely ignored (stripped). Inline comment: conservatively caught.
+          LEADING_COMMENT='// await prisma.user.update({ where: {}, data: {} });
+          const n = await prisma.user.count({});'
+          assert_guard_pass "leading-// mutation comment stripped" "$LEADING_COMMENT"
+
+          echo "---"
+          echo "Self-test results: $PASS_COUNT passed, $FAIL_COUNT failed."
+          if [[ $FAIL_COUNT -gt 0 ]]; then
+            echo "ERROR: guard self-test failed — do not trust the static guard." >&2
+            exit 1
+          fi
+          echo "Static mutation guard self-test: ALL PASSED."
+
+      # ── Static mutation guard — real audit script ─────────────────────────────
+      # Whitelist: only count, findMany, findFirst, $disconnect are expected.
+      # Raw SQL ($queryRaw, $executeRaw) is rejected — not required by this script.
+      # Uses fixed-string grep (-F) so pattern characters like '(' and '$' are
+      # treated literally, not as regex metacharacters. This avoids grep exit-2
+      # (syntax error) being silently treated as "no match."
+
+      - name: Static mutation guard — audit script
+        working-directory: apps/api
+        run: |
+          set -uo pipefail
+
+          SCRIPT="prisma/scripts/mt017-identity-audit.ts"
+          VIOLATIONS=0
+
+          # Strip leading single-line comment lines before scanning.
+          # Inline comments (code(); // .update() ) are NOT stripped — intentionally
+          # conservative. The audit script has been manually verified to be read-only.
+          STRIPPED="$(grep -v '^[[:space:]]*//' "$SCRIPT" | grep -v '^[[:space:]]*\*')"
+
+          for PATTERN in \
+            '.create(' \
+            '.createMany(' \
+            '.update(' \
+            '.updateMany(' \
+            '.delete(' \
+            '.deleteMany(' \
+            '.upsert(' \
+            '$executeRaw' \
+            '$executeRawUnsafe' \
+            '$queryRaw' \
+            '$queryRawUnsafe'
+          do
+            GREP_EXIT=0
+            printf '%s' "$STRIPPED" | grep -qF "$PATTERN" || GREP_EXIT=$?
+            if [[ $GREP_EXIT -eq 0 ]]; then
+              echo "GUARD FAIL: mutation pattern detected: $PATTERN" >&2
+              VIOLATIONS=$((VIOLATIONS + 1))
+            elif [[ $GREP_EXIT -ne 1 ]]; then
+              echo "GUARD ERROR: grep exited with unexpected code $GREP_EXIT for pattern '$PATTERN'" >&2
+              exit 1
+            fi
+          done
+
+          if [[ $VIOLATIONS -gt 0 ]]; then
+            echo "ERROR: $VIOLATIONS mutation pattern(s) found in audit script — aborting." >&2
+            exit 1
+          fi
+          echo "Static mutation guard: PASSED — no write operations detected."
+
+      # ── Install and generate ──────────────────────────────────────────────────
+      # Install at repo root (CI convention — matches ci.yml).
+      # Then generate Prisma client from apps/api (workspace package).
+      # No migrate, no db push, no seed, no reset.
+
+      - name: Install dependencies (repo root)
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        working-directory: apps/api
+        run: pnpm prisma:generate
+
+      - name: Print Prisma version (no secrets)
+        working-directory: apps/api
+        run: pnpm exec prisma --version
+
+      # ── Run audit ─────────────────────────────────────────────────────────────
+      # DATABASE_URL is scoped to this step env only — never a job-level env,
+      # never echoed, never in artifacts.
+      # MT017_ENVIRONMENT is the operator attestation passed to envLabel() so
+      # that cloud-hosted URLs (e.g. Railway) that don't contain "prod" are
+      # correctly classified. The script rejects the attestation if the URL
+      # contradicts it (localhost / staging URL with PRODUCTION attestation).
+      # pnpm exec tsx uses the workspace-installed tsx, not a fresh npx download.
+
+      - name: Run MT-017 identity audit
+        id: run_audit
+        working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          MT017_ENVIRONMENT: PRODUCTION
+          MT017_GIT_SHA: ${{ github.sha }}
+        run: |
+          set -o pipefail
+          pnpm exec tsx prisma/scripts/mt017-identity-audit.ts 2>&1 \
+            | tee mt017-production-audit-report.txt
+
+      # ── Sanitize report before upload ─────────────────────────────────────────
+      # Primary protection: the audit script is aggregate-only (counts, no rows).
+      # This step is defense-in-depth.
+      #
+      # Checks:
+      #   1. Connection strings / secret components
+      #   2. E.164 phone numbers  (\+[1-9][0-9]{7,14})
+      #   3. Email-like strings   (word@word.word) — pnpm/npm output may contain
+      #      email-shaped package metadata; this step runs on audit-only output,
+      #      not install logs, so false positives are minimal.
+      #   4. UUID-like row identifiers (8-4-4-4-12 hex)
+      #   5. Bearer tokens
+      #
+      # If any match is found the artifact is NOT uploaded. Inspect manually.
+
+      - name: Sanitize report — reject if PII or secrets detected
+        id: sanitize
+        if: always()
+        run: |
+          set -uo pipefail
+
+          REPORT="apps/api/mt017-production-audit-report.txt"
+          if [[ ! -f "$REPORT" ]]; then
+            echo "No report file found — skipping sanitization (nothing to upload)."
+            exit 0
+          fi
+
+          ISSUES=0
+
+          check() {
+            local label="$1"
+            local pattern="$2"
+            local use_ere="${3:-false}"
+            local GREP_EXIT=0
+            if [[ "$use_ere" == "true" ]]; then
+              grep -qE "$pattern" "$REPORT" || GREP_EXIT=$?
+            else
+              grep -qF "$pattern" "$REPORT" || GREP_EXIT=$?
+            fi
+            if [[ $GREP_EXIT -eq 0 ]]; then
+              echo "SANITIZATION FAIL: $label" >&2
+              ISSUES=$((ISSUES + 1))
+            elif [[ $GREP_EXIT -ne 1 ]]; then
+              echo "SANITIZATION ERROR: grep exited unexpectedly (code $GREP_EXIT) for: $label" >&2
+              exit 1
+            fi
+          }
+
+          # 1. Connection strings and secret components (fixed-string)
+          check "postgres:// connection string"    "postgres://"
+          check "postgresql:// connection string"  "postgresql://"
+          check "DATABASE_URL= assignment"         "DATABASE_URL="
+          check "password= in URL"                 "password="
+          check "sslmode=require in URL"           "sslmode=require"
+
+          # 2. Bearer token pattern
+          check "Bearer token" "Bearer " false
+
+          # 3. E.164 phone numbers — ERE
+          check "E.164 phone number" '\+[1-9][0-9]{7,14}' true
+
+          # 4. Email-like strings — ERE (conservative: word@word.word)
+          check "email-like string" '[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}' true
+
+          # 5. UUID-like row identifiers — ERE
+          check "UUID-like identifier" \
+            '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' true
+
+          if [[ $ISSUES -gt 0 ]]; then
+            echo "ERROR: $ISSUES sensitive pattern(s) detected — report will NOT be uploaded." >&2
+            echo "Inspect the audit script to verify no PII or secrets are printed." >&2
+            exit 1
+          fi
+          echo "Sanitization check: PASSED."
+
+      # ── Upload artifact ───────────────────────────────────────────────────────
+      # Uploads only if sanitization passed (step outcome check).
+      # Also uploads when the audit itself returned BLOCKED/non-zero so the
+      # BLOCKED verdict is preserved for review.
+      # 'if: always()' keeps this step reachable when run_audit fails.
+      # The sanitize outcome guard prevents upload on sanitization failure.
+
+      - name: Upload audit report artifact
+        if: always() && steps.sanitize.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mt017-production-audit-report-${{ github.run_id }}
+          path: apps/api/mt017-production-audit-report.txt
+          retention-days: 7
+          if-no-files-found: warn
+
+# ── END OF WORKFLOW ──────────────────────────────────────────────────────────
+# No B-Contract steps below.
+# After reviewing the report, B-Contract Gate 1 must be authorized manually:
+#   MT-020 (companyId backfill) → MT-022 (collision remediation)
+#   → MT-023 (partial unique indexes) → MT-009B (soft-delete restore 409)

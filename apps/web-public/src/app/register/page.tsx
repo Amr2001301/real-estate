@@ -1,7 +1,9 @@
+import { notFound } from 'next/navigation';
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
+import { getResolvedTenant } from '@/lib/tenant';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { CustomerAuthForm } from '@/components/auth/CustomerAuthForm';
 
@@ -12,6 +14,9 @@ export const metadata = buildMetadata({
 });
 
 export default async function RegisterPage() {
+  const tenant = await getResolvedTenant();
+  if (!tenant) notFound();
+
   const locale = await getLocale();
   const m = siteT(locale);
 

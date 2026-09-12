@@ -356,12 +356,12 @@ async function backfillCompanyId(companyId: string) {
       companyId,
     );
   }
-  // Backfill User table: all roles including CLIENT/CUSTOMER.
-  // CLIENT/CUSTOMER users must have a companyId so the TenantContextInterceptor
-  // can scope their requests correctly. The interceptor has a legacy fallback, but
-  // the authoritative fix is to populate the column at creation time (and here).
+  // Backfill User table for all non-SUPER_ADMIN rows.
+  // SUPER_ADMIN must remain companyId=null — it is a platform-level account and
+  // the TenantContextInterceptor enforces bypass for SUPER_ADMIN at runtime.
+  // MT-027 loginSuperAdmin requires role=SUPER_ADMIN AND companyId=null.
   await prisma.$executeRawUnsafe(
-    `UPDATE "User" SET "companyId" = $1::uuid WHERE "companyId" IS NULL`,
+    `UPDATE "User" SET "companyId" = $1::uuid WHERE "companyId" IS NULL AND "role" != 'SUPER_ADMIN'`,
     companyId,
   );
 }
@@ -393,6 +393,12 @@ async function main() {
       defaultLocale: 'ar',
       timezone: process.env.SEED_COMPANY_TIMEZONE ?? 'Asia/Riyadh',
       isActive: true,
+      // MT-040/MT-036/MT-040A: explicit provisioning for seed company.
+      type: 'DEVELOPER',
+      lifecycleStatus: 'ACTIVE',
+      websiteEnabled: true,
+      customerAppEnabled: true,
+      staffAppEnabled: true,
     },
     update: {
       name: process.env.SEED_COMPANY_NAME ?? 'Real Estate Platform',

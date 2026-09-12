@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { MapPin, ArrowLeft, Building2, LayoutPanelTop } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { safeFetch } from '@/lib/api';
+import { getResolvedTenant } from '@/lib/tenant';
 import { pickAr, formatPrice, formatArea, unitTypeLabel } from '@/lib/format';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
@@ -44,8 +45,8 @@ const DEFAULT_STATUS_TONE: StatusMeta['tone'] = 'success';
 
 type Params = Promise<{ id: string }>;
 
-function fetchUnit(id: string) {
-  return safeFetch<PublicUnit>(`/public/units/${id}`, { revalidate: REVALIDATE });
+function fetchUnit(id: string, tenantSlug: string) {
+  return safeFetch<PublicUnit>(`/public/units/${id}`, { revalidate: REVALIDATE, tenantSlug });
 }
 
 function unitTitle(unit: PublicUnit, fallbackPrefix = 'وحدة'): string {
@@ -83,7 +84,11 @@ function SectionHead({
 
 export async function generateMetadata({ params }: { params: Params }) {
   const { id } = await params;
-  const [result, locale] = await Promise.all([fetchUnit(id), getLocale()]);
+  const tenant = await getResolvedTenant();
+  const [result, locale] = await Promise.all([
+    tenant ? fetchUnit(id, tenant.slug) : Promise.resolve({ ok: false as const, error: { message: '', status: 404 } }),
+    getLocale(),
+  ]);
   const m = siteT(locale);
   if (!result.ok) return buildMetadata({ title: m.unitDetail.errorTitle });
 
@@ -97,7 +102,9 @@ export async function generateMetadata({ params }: { params: Params }) {
 
 export default async function UnitDetailPage({ params }: { params: Params }) {
   const { id } = await params;
-  const [result, locale] = await Promise.all([fetchUnit(id), getLocale()]);
+  const tenant = await getResolvedTenant();
+  if (!tenant) notFound();
+  const [result, locale] = await Promise.all([fetchUnit(id, tenant.slug), getLocale()]);
   const m = siteT(locale);
 
   if (!result.ok) {
@@ -136,7 +143,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
   if (unit.project) {
     const sim = await safeFetch<Paginated<PublicUnit>>(
       `/public/units?projectId=${unit.project.id}&pageSize=4`,
-      { revalidate: REVALIDATE },
+      { revalidate: REVALIDATE, tenantSlug: tenant.slug },
     );
     if (sim.ok) similarUnits = sim.data.data.filter((u) => u.id !== unit.id).slice(0, 3);
   }

@@ -1,5 +1,7 @@
+import { notFound } from 'next/navigation';
 import { buildMetadata } from '@/lib/seo';
 import { safeFetch } from '@/lib/api';
+import { getResolvedTenant } from '@/lib/tenant';
 import type { Paginated, PublicUnit } from '@/lib/api-types';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
@@ -45,7 +47,8 @@ function parseCompareIds(raw: string): string[] {
 }
 
 export default async function UnitsPage({ searchParams }: { searchParams: SearchParams }) {
-  const sp = await searchParams;
+  const [tenant, sp] = await Promise.all([getResolvedTenant(), searchParams]);
+  if (!tenant) notFound();
   const projectId = firstStr(sp.projectId);
   const city = firstStr(sp.city);
   const type = firstStr(sp.type);
@@ -74,7 +77,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
   if (sort) apiParams.set('sort', sort);
 
   const [result, locale] = await Promise.all([
-    safeFetch<Paginated<PublicUnit>>(`/public/units?${apiParams.toString()}`, { revalidate: REVALIDATE }),
+    safeFetch<Paginated<PublicUnit>>(`/public/units?${apiParams.toString()}`, { revalidate: REVALIDATE, tenantSlug: tenant.slug }),
     getLocale(),
   ]);
   const m = siteT(locale);

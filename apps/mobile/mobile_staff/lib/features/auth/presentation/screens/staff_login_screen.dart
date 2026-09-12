@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../common/tenant_mismatch_notifier.dart';
 import '../cubit/staff_auth_cubit.dart';
 
 class StaffLoginScreen extends StatefulWidget {
@@ -14,11 +15,39 @@ class StaffLoginScreen extends StatefulWidget {
 
 class _StaffLoginScreenState extends State<StaffLoginScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _slug = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    // Pre-fill the last-used company slug (UX convenience; not auth authority).
+    context.read<TokenStorage>().readLastCompanySlug().then((slug) {
+      if (mounted && slug != null && slug.isNotEmpty) {
+        _slug.text = slug;
+      }
+    });
+    // Show mismatch message if one is pending (set by TenantSlugInterceptor
+    // via the mismatch handler in _StaffRootState).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final notifier = context.read<TenantMismatchNotifier>();
+      if (notifier.hasPendingMessage) {
+        final msg = notifier.consumeMessage()!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    });
+  }
+
+  @override
   void dispose() {
+    _slug.dispose();
     _email.dispose();
     _password.dispose();
     super.dispose();
@@ -27,7 +56,11 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
   void _submit() {
     if (_formKey.currentState?.validate() != true) return;
     FocusScope.of(context).unfocus();
-    context.read<StaffAuthCubit>().login(_email.text, _password.text);
+    context.read<StaffAuthCubit>().login(
+          _slug.text,
+          _email.text,
+          _password.text,
+        );
   }
 
   @override
@@ -67,6 +100,20 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            // Company Code — first field. Label matches web
+                            // admin phrasing. Slug is normalized server-side.
+                            AuthField(
+                              controller: _slug,
+                              label: l10n.fieldCompanyCode,
+                              icon: Icons.business_outlined,
+                              keyboardType: TextInputType.text,
+                              textInputAction: TextInputAction.next,
+                              autofillHints: const [AutofillHints.organizationName],
+                              validator: (v) => (v == null || v.trim().isEmpty)
+                                  ? l10n.validationCompanyCode
+                                  : null,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
                             AuthField(
                               controller: _email,
                               label: l10n.fieldEmail,

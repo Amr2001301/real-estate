@@ -192,6 +192,36 @@ export async function login(email: string, password: string) {
   };
 }
 
+type AuthResult = {
+  user: { id: string; role: string; fullName: string };
+  tokens: { accessToken: string; refreshToken: string; expiresIn: number };
+};
+
+// MT-026 — Tenant-aware staff login. Called from the staff login form.
+// The slug is resolved server-side by the backend; companyId never comes from the client.
+export async function loginStaff(slug: string, email: string, password: string): Promise<AuthResult> {
+  const res = await fetch(`${API_BASE}/v1/auth/login-staff`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ slug, email, password }),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new ApiError(res.status, await res.text());
+  return (await res.json()) as AuthResult;
+}
+
+// MT-027 — Platform super-admin login. No company field — SUPER_ADMIN has companyId=null.
+export async function loginSuperAdmin(email: string, password: string): Promise<AuthResult> {
+  const res = await fetch(`${API_BASE}/v1/auth/login-super-admin`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new ApiError(res.status, await res.text());
+  return (await res.json()) as AuthResult;
+}
+
 /** Fetch with bearer auth and return json — for server actions/components calling our API directly. */
 export async function apiCall<T>(path: string, init?: RequestInit & { body?: unknown }): Promise<T> {
   const method = (init?.method as 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE') ?? 'GET';

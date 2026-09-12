@@ -1,6 +1,7 @@
 import 'package:core/core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../storage/customer_tenant_storage.dart';
 import '../domain/usecases/forgot_password.dart';
 import '../domain/usecases/reset_password.dart';
 
@@ -34,15 +35,20 @@ class ForgotPasswordState extends Equatable {
 }
 
 class ForgotPasswordCubit extends Cubit<ForgotPasswordState> {
-  ForgotPasswordCubit(this._forgotPassword, this._resetPassword)
-      : super(const ForgotPasswordState());
+  ForgotPasswordCubit(
+    this._forgotPassword,
+    this._resetPassword,
+    this._tenantStorage,
+  ) : super(const ForgotPasswordState());
 
   final ForgotPassword _forgotPassword;
   final ResetPassword _resetPassword;
+  final CustomerTenantStorage _tenantStorage;
 
   Future<void> sendResetLink(String email) async {
+    final slug = _tenantStorage.selectedCompanySlug ?? '';
     emit(state.copyWith(submitting: true, clearFailure: true));
-    final result = await _forgotPassword(email);
+    final result = await _forgotPassword(ForgotPasswordParams(slug: slug, email: email));
     result.when(
       ok: (_) => emit(state.copyWith(submitting: false, step: ForgotResetStep.resetForm)),
       err: (failure) => emit(state.copyWith(submitting: false, failure: failure)),

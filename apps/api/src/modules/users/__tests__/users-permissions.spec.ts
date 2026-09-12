@@ -1,14 +1,16 @@
-import { CanActivate, ExecutionContext, Global, INestApplication, Module } from '@nestjs/common';
-import { APP_GUARD, Reflector } from '@nestjs/core';
+import { CanActivate, CallHandler, ExecutionContext, Global, INestApplication, Injectable, Module, NestInterceptor } from '@nestjs/common';
+import { APP_GUARD, APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import request from 'supertest';
+import { Observable } from 'rxjs';
 import { UserRole } from '@prisma/client';
 import { UsersModule } from '../users.module';
 import { UsersController } from '../users.controller';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { enterTenantContext } from '../../../common/tenant/tenant-context';
 import {
   PERMISSIONS_KEY,
   type PermissionsMeta,
@@ -24,6 +26,21 @@ import {
  *   * The guard chain returns the standard 403 from @Roles when a non-admin
  *     tries to hit an admin route.
  */
+
+const TEST_COMPANY_ID = 'test-co-00000000-0000-4000-8000-000000000001';
+
+// MT-003/MT-004/MT-005: UsersService now calls getRequiredCompanyId() on every
+// data-access method. The real TenantContextInterceptor isn't wired in this test
+// module (it reads from the JWT, which isn't set up here). This lightweight
+// interceptor runs before the handler and injects a fake tenant context so the
+// service layer doesn't throw MissingTenantContextError.
+@Injectable()
+class FakeTenantInterceptor implements NestInterceptor {
+  intercept(_ctx: ExecutionContext, next: CallHandler): Observable<unknown> {
+    enterTenantContext({ companyId: TEST_COMPANY_ID, bypass: false, isPublic: false });
+    return next.handle();
+  }
+}
 
 interface FakeUser {
   sub: string;
@@ -46,6 +63,23 @@ class FakeAuthGuard implements CanActivate {
   }
 }
 
+const FAKE_USER_ROW = {
+  id: 'u1',
+  email: 'someone@example.com',
+  phone: null,
+  fullName: 'Test User',
+  role: UserRole.SALES,
+  active: true,
+  locale: 'ar',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  lastLoginAt: null,
+  deletedAt: null,
+  managerId: null,
+  manager: null,
+  avatarUrl: null,
+};
+
 function makePrismaMock() {
   return {
     userPermission: {
@@ -57,18 +91,9 @@ function makePrismaMock() {
     user: {
       findMany: jest.fn().mockResolvedValue([]),
       count: jest.fn().mockResolvedValue(0),
-      findUnique: jest.fn().mockResolvedValue({
-        id: 'u1',
-        email: 'someone@example.com',
-        phone: null,
-        fullName: 'Test User',
-        role: UserRole.SALES,
-        active: true,
-        locale: 'ar',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastLoginAt: null,
-      }),
+      // MT-005: findOne now uses findFirst; me() routes through findOne.
+      findFirst: jest.fn().mockResolvedValue(FAKE_USER_ROW),
+      findUnique: jest.fn().mockResolvedValue(FAKE_USER_ROW),
       create: jest.fn(),
       update: jest.fn(),
     },
@@ -99,6 +124,7 @@ describe('Users module · permissions enforcement', () => {
       imports: [MockPrismaModule, ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }), UsersModule],
       providers: [
         Reflector,
+        { provide: APP_INTERCEPTOR, useClass: FakeTenantInterceptor },
         { provide: APP_GUARD, useClass: FakeAuthGuard },
         { provide: APP_GUARD, useClass: RolesGuard },
         { provide: APP_GUARD, useClass: PermissionsGuard },
