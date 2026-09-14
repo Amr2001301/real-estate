@@ -110,6 +110,8 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   InstallmentPlan: 'TENANT_OWNED',
   Installment: 'TENANT_OWNED',
   Deposit: 'TENANT_OWNED',
+  // Step A (09-reversal-design.md §3.2) — payment instrument for cheques/transfers.
+  PaymentInstrument: 'TENANT_OWNED',
   InstallmentPlanTemplate: 'TENANT_OWNED',
 
   // Bonus / targets

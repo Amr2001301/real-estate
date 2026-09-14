@@ -119,6 +119,7 @@ model Company {
   chatMessages             ChatMessage[]
   chatFeedback             ChatFeedback[]
   pricingPackages          PricingPackage[]
+  paymentInstruments       PaymentInstrument[]
 
   // Module flags — controls which dashboard sections are visible for this company
   modules Json? // { broker, website, maintenance, reports, leads, visits, contracts, installments, deposits }
@@ -311,6 +312,7 @@ model User {
   brokerPayoutsCancelled    BrokerPayout[]      @relation("BrokerPayoutCancelledBy")
   brokerActivityLogs        BrokerActivityLog[] @relation("BrokerActivityLogAgent")
   uploadedDocuments         Document[]          @relation("DocumentUploader")
+  paymentInstrumentsRecorded    PaymentInstrument[] @relation("InstrumentRecordedBy")
 
   // ── Tenant scoping ───────────────────────────────────────────────────────
   // Nullable so existing users and platform-level ADMIN users without a
@@ -1240,6 +1242,11 @@ model Installment {
   paidAt    DateTime?
   createdAt DateTime          @default(now())
 
+  // ── Step A: correction marker — FK @relation added in Step C when PaymentCorrection exists ──
+  // Non-null signals that a PaymentCorrection has touched this installment.
+  // Used by portal, admin views, and XLSX export to show a correction badge.
+  lastCorrectionId String? @db.Uuid
+
   deposits Deposit[]
 
   companyId String?  @db.Uuid
@@ -1247,6 +1254,7 @@ model Installment {
 
   @@index([planId, dueDate])
   @@index([status])
+  @@index([lastCorrectionId])
   @@index([companyId])
 }
 
@@ -1269,6 +1277,74 @@ enum PaymentMethod {
   BANK_TRANSFER
   CHEQUE
   OTHER
+}
+
+// =============================================================================
+// PAYMENT INSTRUMENTS (Step A — schema + FK plumbing only; no behaviour yet)
+// =============================================================================
+
+/// Step A (09-reversal-design.md §3.2) — instrument type discriminator.
+enum PaymentInstrumentType {
+  BANK_TRANSFER
+  CHEQUE
+}
+
+/// Lifecycle of a physical payment instrument independent of Deposit.reviewStatus.
+/// BANK_TRANSFER instruments use only PENDING_CLEARANCE → CLEARED / CANCELLED.
+enum PaymentInstrumentStatus {
+  /// Cheque received physically; not yet submitted to bank.
+  PENDING_CLEARANCE
+  /// Submitted to bank; awaiting clearance confirmation.
+  DEPOSITED
+  /// Bank confirmed funds received / cheque cleared.
+  CLEARED
+  /// Bank returned cheque unpaid. NEVER soft-deleted — Hard Rule 2.
+  BOUNCED
+  /// This instrument was replaced by another (see replacedById chain).
+  REPLACED
+  /// Never presented; voided before use.
+  CANCELLED
+}
+
+/// One cheque or bank-transfer record that one or more Deposit rows reference.
+/// Carries its own lifecycle independent of the Deposit review lifecycle.
+/// Tenant-owned: companyId required on every write; middleware auto-injects on reads.
+model PaymentInstrument {
+  id   String                 @id @default(uuid()) @db.Uuid
+  type PaymentInstrumentType
+
+  // ── Bank-transfer fields (type = BANK_TRANSFER) ────────────────────────────
+  bankName        String? @db.VarChar(200)
+  referenceNumber String? @db.VarChar(100)
+
+  // ── Cheque-specific fields (type = CHEQUE) ─────────────────────────────────
+  chequeNumber   String?   @db.VarChar(100)
+  drawerBankName String?   @db.VarChar(200)
+  chequeDueDate  DateTime?
+  clearingDate   DateTime?
+  bounceReason   String?   @db.VarChar(500)
+  bounceDate     DateTime?
+
+  // ── Replacement chain (BOUNCED → REPLACED → new instrument) ───────────────
+  replacedById String?              @db.Uuid
+  replacedBy   PaymentInstrument?  @relation("InstrumentReplacement", fields: [replacedById], references: [id])
+  replacements PaymentInstrument[] @relation("InstrumentReplacement")
+
+  status    PaymentInstrumentStatus @default(PENDING_CLEARANCE)
+
+  recordedById String   @db.Uuid
+  recordedBy   User     @relation("InstrumentRecordedBy", fields: [recordedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  deposits Deposit[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([replacedById])
+  @@index([recordedById])
 }
 
 model Deposit {
@@ -1300,6 +1376,10 @@ model Deposit {
   proofDocument   Document?           @relation("DepositProofDocument", fields: [proofDocumentId], references: [id], onDelete: SetNull)
   paymentMethod   PaymentMethod?
 
+  // ── Step A: link to structured payment instrument (nullable; existing rows unaffected) ──
+  paymentInstrumentId String?             @db.Uuid
+  paymentInstrument   PaymentInstrument?  @relation(fields: [paymentInstrumentId], references: [id])
+
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
@@ -1310,6 +1390,7 @@ model Deposit {
   @@index([reviewStatus])
   @@index([reviewedById])
   @@index([proofDocumentId])
+  @@index([paymentInstrumentId])
   @@index([companyId])
   @@index([deletedAt])
 }
@@ -1895,6 +1976,12 @@ enum BrokerActivityType {
   PAYOUT_CANCELLED
 }
 
+// Product A model: a partner broker FIRM that belongs to exactly ONE developer
+// Company (companyId → developer). This is NOT an independent brokerage tenant.
+// Product B (a brokerage firm that is its own Company and works with MANY
+// developer companies) will need a separate BrokerageDeveloperAccess join table
+// linking Company(type=BROKERAGE) → Company(type=DEVELOPER). Do NOT retrofit
+// Product B onto Broker.companyId — that single FK cannot model the many-to-many.
 model Broker {
   id                     String                @id @default(uuid()) @db.Uuid
   companyName            String
