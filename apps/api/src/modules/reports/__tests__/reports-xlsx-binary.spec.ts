@@ -1,7 +1,17 @@
-import { CanActivate, ExecutionContext, Global, INestApplication, Module } from '@nestjs/common';
+import {
+  CallHandler,
+  CanActivate,
+  ExecutionContext,
+  Global,
+  INestApplication,
+  Injectable,
+  Module,
+  NestInterceptor,
+} from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
+import { Observable } from 'rxjs';
 import { UserRole } from '@prisma/client';
 import { Workbook } from 'exceljs';
 import { ReportsModule } from '../reports.module';
@@ -10,6 +20,7 @@ import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { DateSerializerInterceptor } from '../../../common/interceptors/date-serializer.interceptor';
 import { LocaleInterceptor } from '../../../common/interceptors/locale.interceptor';
+import { enterTenantContext } from '../../../common/tenant/tenant-context';
 
 /**
  * Regression for the P14.2 download bug: the XLSX arrived in Excel/Numbers as a
@@ -25,6 +36,18 @@ import { LocaleInterceptor } from '../../../common/interceptors/locale.intercept
  * pipeline (exactly as main.ts / app.module.ts do) and asserts the response is
  * the raw XLSX (ZIP "PK" magic), not JSON.
  */
+
+const TEST_COMPANY_ID = 'aaaaaaaa-0000-4000-8000-000000000001';
+
+@Injectable()
+class FakeTenantInterceptor implements NestInterceptor {
+  intercept(_ctx: ExecutionContext, next: CallHandler): Observable<unknown> {
+    return new Observable(subscriber => {
+      enterTenantContext({ companyId: TEST_COMPANY_ID, bypass: false, isPublic: false });
+      next.handle().subscribe(subscriber);
+    });
+  }
+}
 
 class FakeAuthGuard implements CanActivate {
   static currentUser: { sub: string; role: UserRole } | null = null;
@@ -109,6 +132,7 @@ describe('GET /reports/admin-summary/export.xlsx · binary streaming through glo
         { provide: APP_GUARD, useClass: FakeAuthGuard },
         { provide: APP_GUARD, useClass: RolesGuard },
         { provide: APP_GUARD, useClass: PermissionsGuard },
+        { provide: APP_INTERCEPTOR, useClass: FakeTenantInterceptor },
         // The two body-rewriting interceptors that previously mangled the stream.
         { provide: APP_INTERCEPTOR, useClass: LocaleInterceptor },
         { provide: APP_INTERCEPTOR, useClass: DateSerializerInterceptor },

@@ -1,20 +1,25 @@
 import {
+  CallHandler,
   CanActivate,
   ExecutionContext,
   Global,
   INestApplication,
+  Injectable,
   Module,
+  NestInterceptor,
   ValidationPipe,
 } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD, Reflector } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
+import { Observable } from 'rxjs';
 import { IS_PUBLIC_KEY } from '../../../common/decorators/public.decorator';
 import { RequestsModule } from '../requests.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { enterTenantContext } from '../../../common/tenant/tenant-context';
 
 /**
  * Public website lead intake: info/visit requests accept project/unit context,
@@ -25,6 +30,17 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
 const WEBSITE_SOURCE_ID = 'src-website-uuid';
 const PROJECT_ID = 'a1111111-1111-4111-8111-111111111111';
 const UNIT_ID = 'b2222222-2222-4222-8222-222222222222';
+const TEST_COMPANY_ID = 'aaaaaaaa-0000-4000-8000-000000000001';
+
+@Injectable()
+class FakeTenantInterceptor implements NestInterceptor {
+  intercept(_ctx: ExecutionContext, next: CallHandler): Observable<unknown> {
+    return new Observable(subscriber => {
+      enterTenantContext({ companyId: TEST_COMPANY_ID, bypass: false, isPublic: false });
+      next.handle().subscribe(subscriber);
+    });
+  }
+}
 
 class FakeAuthGuard implements CanActivate {
   /** When set, optionally-authenticated routes resolve req.user from this. */
@@ -138,6 +154,7 @@ describe('Public website · info/visit request intake', () => {
         { provide: APP_GUARD, useClass: FakeAuthGuard },
         { provide: APP_GUARD, useClass: RolesGuard },
         { provide: APP_GUARD, useClass: PermissionsGuard },
+        { provide: APP_INTERCEPTOR, useClass: FakeTenantInterceptor },
       ],
     }).compile();
 

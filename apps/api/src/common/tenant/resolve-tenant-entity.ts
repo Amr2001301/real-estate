@@ -11,6 +11,11 @@ type UserClient = {
     findFirst: <T extends Prisma.UserFindFirstArgs>(
       args: Prisma.SelectSubset<T, Prisma.UserFindFirstArgs>,
     ) => Promise<Prisma.UserGetPayload<T> | null>;
+    findMany: <T extends Prisma.UserFindManyArgs>(
+      args: Prisma.SelectSubset<T, Prisma.UserFindManyArgs>,
+    ) => Promise<Array<Prisma.UserGetPayload<T>>>;
+    // PrismaPromise is a subset of Promise that participates in $transaction([]).
+    count: (args: Prisma.UserCountArgs) => Prisma.PrismaPromise<number>;
   };
 };
 
@@ -60,4 +65,63 @@ export async function resolveTenantUser<T extends Prisma.UserSelect>(
   }
 
   return user as Prisma.UserGetPayload<{ select: T }>;
+}
+
+/**
+ * Resolve a User by id scoped to the current tenant, returning null when not
+ * found (or from a different tenant). Use when a missing user is not an error.
+ * For throws-on-miss semantics use resolveTenantUser instead.
+ */
+export async function findTenantUser<T extends Prisma.UserSelect>(
+  prisma: UserClient,
+  id: string,
+  select: T,
+): Promise<Prisma.UserGetPayload<{ select: T }> | null> {
+  const companyId = getRequiredCompanyId();
+  return prisma.user.findFirst({
+    where: { id, companyId } as Prisma.UserWhereInput,
+    select,
+  } as Prisma.UserFindFirstArgs) as Promise<Prisma.UserGetPayload<{ select: T }> | null>;
+}
+
+/**
+ * Fan-out query: find multiple Users scoped to the current tenant.
+ *
+ * Always merges companyId from AsyncLocalStorage into the where clause —
+ * the caller's where is NOT trusted to carry it. This is the required routing
+ * for any bulk prisma.user read outside the auth allowlist.
+ *
+ * Static limitation: the rule cannot verify the value of companyId at
+ * compile time. If getRequiredCompanyId() is bypassed (e.g. in a bypass
+ * context), this helper will reflect that bypass. The residual risk is the
+ * same as any other bypassed TENANT_CONTROLLED call — documented in
+ * docs/audit/13-user-tenancy.md.
+ */
+export function scopedUserFindMany<T extends Prisma.UserSelect>(
+  prisma: UserClient,
+  where: Prisma.UserWhereInput,
+  select: T,
+  opts?: {
+    orderBy?: Prisma.UserOrderByWithRelationInput | Prisma.UserOrderByWithRelationInput[];
+  },
+): Promise<Array<Prisma.UserGetPayload<{ select: T }>>> {
+  const companyId = getRequiredCompanyId();
+  return prisma.user.findMany({
+    where: { ...where, companyId } as Prisma.UserWhereInput,
+    select,
+    ...(opts?.orderBy ? { orderBy: opts.orderBy } : {}),
+  } as Prisma.UserFindManyArgs) as Promise<Array<Prisma.UserGetPayload<{ select: T }>>>;
+}
+
+/**
+ * Aggregate count of Users scoped to the current tenant.
+ * Same companyId-injection guarantee as scopedUserFindMany.
+ * Returns a PrismaPromise so it is safe to use inside prisma.$transaction([]).
+ */
+export function scopedUserCount(
+  prisma: UserClient,
+  where: Prisma.UserWhereInput,
+): Prisma.PrismaPromise<number> {
+  const companyId = getRequiredCompanyId();
+  return prisma.user.count({ where: { ...where, companyId } });
 }

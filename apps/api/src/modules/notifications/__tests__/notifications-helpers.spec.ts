@@ -4,6 +4,7 @@ import { NotificationsService } from '../notifications.module';
 import { PushService } from '../push.service';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { EmailService } from '../../auth/email.service';
+import { runTenantContext } from '../../../common/tenant/tenant-context';
 
 /**
  * P3 — Unit tests for the broadcast helpers added on top of the existing
@@ -64,6 +65,8 @@ function makeService(prismaLike: ReturnType<typeof makePrisma>, opts?: { pushThr
   jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
   return { svc, push };
 }
+
+const TEST_TENANT = { companyId: 'test-co-id', bypass: false as const, isPublic: false as const };
 
 describe('NotificationsService · broadcast helpers (P3)', () => {
   beforeEach(() => jest.clearAllMocks());
@@ -147,7 +150,7 @@ describe('NotificationsService · broadcast helpers (P3)', () => {
         { id: 's-1', role: UserRole.SALES, active: true },
       ]);
       const { svc } = makeService(prisma);
-      await svc.sendToRoles([UserRole.ADMIN, UserRole.SALES_MANAGER], 'test_code', {});
+      await runTenantContext(TEST_TENANT, () => svc.sendToRoles([UserRole.ADMIN, UserRole.SALES_MANAGER], 'test_code', {}));
       expect(prisma.notification.create).toHaveBeenCalledTimes(3);
       const ids = prisma.notifications.map((n) => n.userId).sort();
       expect(ids).toEqual(['a-1', 'a-2', 'm-1']);
@@ -156,7 +159,7 @@ describe('NotificationsService · broadcast helpers (P3)', () => {
     it('no-ops on an empty roles array', async () => {
       const prisma = makePrisma([{ id: 'a-1', role: UserRole.ADMIN, active: true }]);
       const { svc } = makeService(prisma);
-      await svc.sendToRoles([], 'test_code', {});
+      await runTenantContext(TEST_TENANT, () => svc.sendToRoles([], 'test_code', {}));
       expect(prisma.notification.create).not.toHaveBeenCalled();
     });
   });

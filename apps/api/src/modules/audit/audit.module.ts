@@ -13,6 +13,7 @@ import { Prisma, UserRole } from '@prisma/client';
 import { Type } from 'class-transformer';
 import { IsDateString, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { scopedUserFindMany } from '../../common/tenant/resolve-tenant-entity';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { paginate, takeSkip } from '../../common/utils/pagination';
@@ -129,11 +130,11 @@ class AuditService {
       .map((r) => r.actorId)
       .filter((v): v is string => Boolean(v));
     const actors = actorIds.length
-      ? // eslint-disable-next-line no-restricted-syntax -- IDs from middleware-scoped AuditLog rows (TENANT_OWNED); not caller-supplied
-        await this.prisma.user.findMany({
-          where: { id: { in: actorIds } },
-          select: { id: true, fullName: true, email: true, role: true },
-        })
+      ? await scopedUserFindMany(
+          this.prisma,
+          { id: { in: actorIds } },
+          { id: true, fullName: true, email: true, role: true },
+        )
       : [];
     const actorMap = new Map(actors.map((a) => [a.id, a]));
 

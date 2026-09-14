@@ -152,32 +152,89 @@ export default [
     },
   },
 
-  // Backend API — security-sensitive static restrictions.
+  // ── MT-012: Backend API — security-sensitive static restrictions ───────────
   //
-  // 1. $queryRawUnsafe: bypasses tenant middleware and is SQL-injection-prone.
-  // 2. prisma.user.*: User is TENANT_CONTROLLED (MT-012). Direct access outside
-  //    authorized files risks cross-tenant IDOR. Authorized files are listed in
-  //    the override block below.
+  // Rule 1: $queryRawUnsafe is always banned (SQL-injection + tenant bypass risk).
   //
-  // Limitations of the prisma.user selectors:
-  //   - Catches `this.prisma.user.*` and `prisma.user.*` call patterns.
-  //   - Does NOT catch destructuring (`const { user } = this.prisma`) or
-  //     index notation (`this.prisma['user']`). These are rare; treat as
-  //     known gap documented here.
-  //   - Test files (*.spec.ts, __tests__/**) are excluded via the ignores list
-  //     below because mock setup objects may reference .user properties.
+  // Rule 2 (prisma.user.*): User is TENANT_CONTROLLED.  The Prisma middleware
+  // does NOT auto-inject companyId for User, so every read outside the allowlist
+  // below is a potential cross-tenant data leak.
+  //
+  // DESIGN: Every non-auth prisma.user read must go through one of the helpers
+  // exported from resolve-tenant-entity.ts:
+  //   • resolveTenantUser()    — single record, throws 404 if not in tenant
+  //   • findTenantUser()       — single record, returns null if not in tenant
+  //   • scopedUserFindMany()   — bulk reads, always merges companyId from ALS
+  //   • scopedUserCount()      — aggregates, always merges companyId from ALS
+  //
+  // These helpers call getRequiredCompanyId() internally and are the ONLY
+  // approved path for scoped prisma.user reads outside the allowlist.
+  //
+  // STATIC LIMITATION: The rule verifies that direct prisma.user.* calls do not
+  // appear outside the allowlist. It does NOT verify the value of companyId at
+  // call sites inside allowlisted files — a developer could write a hardcoded
+  // ID or omit companyId entirely and the rule would not catch it. The residual
+  // risk is documented in docs/audit/13-user-tenancy.md §4 option (a).
+  //
+  // SELECTORS CATCH: `this.prisma.user.*` and `prisma.user.*` call expressions.
+  // SELECTORS MISS:  Destructuring (`const { user } = this.prisma`) and index
+  //   notation (`this.prisma['user']`). These are rare; treat as a known gap.
+  //   Test files (*.spec.ts, __tests__/**) are excluded because mock objects
+  //   routinely reference .user shape.
+  //
+  // ALLOWLIST TIERS:
+  //   Tier A — Cross-tenant by design: email/phone are @unique globally; JWT sub
+  //     is cross-company; OTP claim flow finds rows across tenants by phone.
+  //     These files must NOT add companyId to their user queries.
+  //   Tier B — Scoped-access helpers: must enforce companyId internally (via
+  //     getRequiredCompanyId() or explicit where clause). Adding companyId to
+  //     these files is a contract, not enforced by this lint rule.
+  //   Tier C — Identity/peer resolution: phone-suffix scan and email lookup for
+  //     building ownership filters must cross tenants (legacy identity merge).
+  //
+  // Keeping this allowlist SHORT and DOCUMENTED is the primary defence against
+  // the class of vulnerability that produced V-01..V-26. Any new file added here
+  // requires a PR comment explaining the cross-tenant or scoped justification.
   {
     files: ['apps/api/src/**/*.ts'],
     ignores: [
-      // Authorized prisma.user access locations (TENANT_CONTROLLED policy enforced internally):
-      'apps/api/src/modules/users/users.service.ts',
+      // ── Tier A: Cross-tenant auth paths ────────────────────────────────────
+      // email/phone are @unique globally; these files look up users before
+      // any tenant context exists (login, OTP, register, JWT validation).
       'apps/api/src/modules/auth/auth.service.ts',
       'apps/api/src/modules/auth/jwt.strategy.ts',
-      'apps/api/src/modules/super-admin/super-admin.service.ts',
-      'apps/api/src/common/utils/identity-claim.ts',
-      'apps/api/src/common/utils/sales-scope.ts',
+      // Broker portal: email/phone global uniqueness check before creating a
+      // broker team member. No caller-supplied user ID — existence-check only.
+      'apps/api/src/modules/broker-portal/broker-portal-team.service.ts',
+      // Broker-users: same global uniqueness guarantee as broker-portal-team.
+      'apps/api/src/modules/broker-users/broker-users.service.ts',
+      // Public inbound leads: find-or-create by phone/email; user may exist
+      // under any tenant (legacy anonymous rows with companyId: null).
+      'apps/api/src/modules/requests/requests.module.ts',
+
+      // ── Tier B: Scoped-access helpers ──────────────────────────────────────
+      // resolve-tenant-entity.ts: implements resolveTenantUser, findTenantUser,
+      // scopedUserFindMany, scopedUserCount. All helpers call getRequiredCompanyId().
       'apps/api/src/common/tenant/resolve-tenant-entity.ts',
-      // Tests: mock objects may reference prisma.user shape; exempt from this check.
+      // users.service.ts: user CRUD. Every query must include companyId in the
+      // where clause — enforced by code review, not by this rule.
+      'apps/api/src/modules/users/users.service.ts',
+      // sales-scope.ts: salesActorIds and teamSalesIds call getRequiredCompanyId().
+      'apps/api/src/common/utils/sales-scope.ts',
+      // identity-claim.ts: OTP claim flow — phone/email match may cross tenants
+      // (V2 multi-tenant redesign deferred; see docs/audit/13-user-tenancy.md).
+      'apps/api/src/common/utils/identity-claim.ts',
+      // super-admin.service.ts: SUPER_ADMIN operates in bypass mode; explicit,
+      // platform-wide queries are intentional.
+      'apps/api/src/modules/super-admin/super-admin.service.ts',
+
+      // ── Tier C: Identity-peer resolution ───────────────────────────────────
+      // reservations.module.ts: phone-suffix scan + email lookup to build
+      // ownership filters for legacy identity merging (lines with prisma.user.*
+      // after the findTenantUser refactor are cross-tenant by design).
+      'apps/api/src/modules/reservations/reservations.module.ts',
+
+      // Tests: mock objects reference prisma.user shape; exempt from this check.
       'apps/api/src/**/*.spec.ts',
       'apps/api/src/**/*.e2e-spec.ts',
       'apps/api/src/**/__tests__/**/*.ts',
@@ -193,31 +250,42 @@ export default [
           // Catches: this.prisma.user.findMany(...) — the most common pattern.
           selector: "MemberExpression[property.name='user'][object.property.name='prisma']",
           message:
-            "Direct prisma.user access is restricted. User is TENANT_CONTROLLED (MT-012) — " +
-            "route through UsersService or an explicitly authorized file.",
+            "Direct prisma.user access is restricted (MT-012). User is TENANT_CONTROLLED — " +
+            "use scopedUserFindMany/scopedUserCount/resolveTenantUser/findTenantUser from " +
+            "'../../common/tenant/resolve-tenant-entity', or add this file to the MT-012 " +
+            "allowlist in eslint.config.mjs with a documented justification.",
         },
         {
           // Catches: prisma.user.findMany(...) — when prisma is a local identifier.
           selector: "MemberExpression[property.name='user'][object.name='prisma']",
           message:
-            "Direct prisma.user access is restricted. User is TENANT_CONTROLLED (MT-012) — " +
-            "route through UsersService or an explicitly authorized file.",
+            "Direct prisma.user access is restricted (MT-012). User is TENANT_CONTROLLED — " +
+            "use scopedUserFindMany/scopedUserCount/resolveTenantUser/findTenantUser from " +
+            "'../../common/tenant/resolve-tenant-entity', or add this file to the MT-012 " +
+            "allowlist in eslint.config.mjs with a documented justification.",
         },
       ],
     },
   },
 
-  // Authorized files that need direct prisma.user access — keep $queryRawUnsafe
-  // restriction but remove the prisma.user restriction.
+  // Allowlisted files: keep $queryRawUnsafe restriction, lift prisma.user restriction.
+  // Every entry in this block has a documented justification in the ignores list above.
   {
     files: [
-      'apps/api/src/modules/users/users.service.ts',
+      // Tier A
       'apps/api/src/modules/auth/auth.service.ts',
       'apps/api/src/modules/auth/jwt.strategy.ts',
-      'apps/api/src/modules/super-admin/super-admin.service.ts',
-      'apps/api/src/common/utils/identity-claim.ts',
-      'apps/api/src/common/utils/sales-scope.ts',
+      'apps/api/src/modules/broker-portal/broker-portal-team.service.ts',
+      'apps/api/src/modules/broker-users/broker-users.service.ts',
+      'apps/api/src/modules/requests/requests.module.ts',
+      // Tier B
       'apps/api/src/common/tenant/resolve-tenant-entity.ts',
+      'apps/api/src/modules/users/users.service.ts',
+      'apps/api/src/common/utils/sales-scope.ts',
+      'apps/api/src/common/utils/identity-claim.ts',
+      'apps/api/src/modules/super-admin/super-admin.service.ts',
+      // Tier C
+      'apps/api/src/modules/reservations/reservations.module.ts',
     ],
     rules: {
       'no-restricted-syntax': [
@@ -226,7 +294,8 @@ export default [
           selector: "CallExpression[callee.property.name='$queryRawUnsafe']",
           message: 'Use $queryRaw(Prisma.sql`...`) — $queryRawUnsafe bypasses the tenant middleware and is SQL-injection-prone.',
         },
-        // prisma.user access is intentionally allowed in these files.
+        // prisma.user access is intentionally allowed — see justification in
+        // the MT-012 allowlist above.
       ],
     },
   },

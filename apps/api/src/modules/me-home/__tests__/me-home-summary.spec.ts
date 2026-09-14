@@ -1,25 +1,42 @@
 import {
+  CallHandler,
   CanActivate,
   ExecutionContext,
   Global,
   INestApplication,
+  Injectable,
   Module,
+  NestInterceptor,
 } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import request from 'supertest';
+import { Observable } from 'rxjs';
 import { Prisma, UserRole } from '@prisma/client';
 import { MeHomeModule } from '../me-home.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { enterTenantContext } from '../../../common/tenant/tenant-context';
 
 const CUSTOMER_ID = 'cust-home-1';
 
 const FUTURE_DATE = new Date(Date.now() + 30 * 86_400_000);  // 30 days ahead
 const DUE_SOON_DATE = new Date(Date.now() + 7 * 86_400_000); // 7 days ahead
 const PAST_DATE = new Date(Date.now() - 5 * 86_400_000);     // 5 days ago
+
+const TEST_COMPANY_ID = 'aaaaaaaa-0000-4000-8000-000000000001';
+
+@Injectable()
+class FakeTenantInterceptor implements NestInterceptor {
+  intercept(_ctx: ExecutionContext, next: CallHandler): Observable<unknown> {
+    return new Observable(subscriber => {
+      enterTenantContext({ companyId: TEST_COMPANY_ID, bypass: false, isPublic: false });
+      next.handle().subscribe(subscriber);
+    });
+  }
+}
 
 class FakeAuthGuard implements CanActivate {
   static currentUser: { sub: string; role: UserRole } | null = null;
@@ -78,7 +95,7 @@ function makePrismaMock() {
   return {
     userPermission: { findMany: jest.fn().mockResolvedValue([]) },
     user: {
-      findUnique: jest.fn().mockResolvedValue({ fullName: 'Amr Tarek' }),
+      findFirst: jest.fn().mockResolvedValue({ fullName: 'Amr Tarek' }),
     },
     contract: {
       findFirst: jest.fn().mockResolvedValue(CONTRACT_MOCK),
@@ -123,6 +140,7 @@ describe('GET /me/home-summary', () => {
         { provide: APP_GUARD, useClass: FakeAuthGuard },
         { provide: APP_GUARD, useClass: RolesGuard },
         { provide: APP_GUARD, useClass: PermissionsGuard },
+        { provide: APP_INTERCEPTOR, useClass: FakeTenantInterceptor },
       ],
     }).compile();
 
@@ -136,7 +154,7 @@ describe('GET /me/home-summary', () => {
 
   beforeEach(() => {
     FakeAuthGuard.currentUser = { sub: CUSTOMER_ID, role: UserRole.CUSTOMER };
-    mock.user.findUnique.mockClear();
+    mock.user.findFirst.mockClear();
     mock.contract.findFirst.mockClear();
     mock.contract.count.mockClear();
     mock.installment.count.mockClear();

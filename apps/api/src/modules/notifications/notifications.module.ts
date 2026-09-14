@@ -29,7 +29,10 @@ import {
 } from 'class-validator';
 import { Prisma, NotificationChannel, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
+import {
+  resolveTenantUser,
+  scopedUserFindMany,
+} from '../../common/tenant/resolve-tenant-entity';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -295,11 +298,11 @@ export class NotificationsService implements OnModuleInit {
   ): Promise<void> {
     if (roles.length === 0) return;
     try {
-      // eslint-disable-next-line no-restricted-syntax -- bulk role query, not an external-ID lookup; no IDOR risk
-      const users = await this.prisma.user.findMany({
-        where: { role: { in: [...roles] }, active: true },
-        select: { id: true },
-      });
+      const users = await scopedUserFindMany(
+        this.prisma,
+        { role: { in: [...roles] }, active: true },
+        { id: true },
+      );
       await this.sendToUsers(users.map((u) => u.id), templateCode, payload);
     } catch (err) {
       this.logger.warn(
@@ -570,11 +573,12 @@ export class NotificationsService implements OnModuleInit {
       ids: string[],
       notifIdByUser: Map<string, string>,
     ) => {
-      // eslint-disable-next-line no-restricted-syntax -- IDs from resolveRecipients; USER target tenant-validated via resolveTenantUser (V-19); role/ALL_ACTIVE targets are cross-tenant fan-out (V-20..V-24, tracked)
-      const usersWithLocale = await this.prisma.user.findMany({
-        where: { id: { in: ids } },
-        select: { id: true, locale: true },
-      });
+      // IDs from resolveRecipients which is now company-scoped (V-19..V-21 fixed).
+      const usersWithLocale = await scopedUserFindMany(
+        this.prisma,
+        { id: { in: ids } },
+        { id: true, locale: true },
+      );
       const localeMap = new Map(
         usersWithLocale.map((u) => [u.id, pickLocale(u.locale ?? 'ar')]),
       );
@@ -770,8 +774,7 @@ export class NotificationsService implements OnModuleInit {
       case BroadcastTarget.ALL_MAINTENANCE_SUPERVISORS:
         return this.activeUserIdsByRole([UserRole.MAINTENANCE_SUPERVISOR]);
       case BroadcastTarget.ALL_ACTIVE: {
-        // eslint-disable-next-line no-restricted-syntax -- broadcast to all active users (no external-ID IDOR risk)
-        const users = await this.prisma.user.findMany({ where: { active: true }, select: { id: true } });
+        const users = await scopedUserFindMany(this.prisma, { active: true }, { id: true });
         return users.map((u) => u.id);
       }
       default:
@@ -780,11 +783,11 @@ export class NotificationsService implements OnModuleInit {
   }
 
   private async activeUserIdsByRole(roles: UserRole[]): Promise<string[]> {
-    // eslint-disable-next-line no-restricted-syntax -- bulk role query, not an external-ID lookup; no IDOR risk
-    const users = await this.prisma.user.findMany({
-      where: { role: { in: roles }, active: true },
-      select: { id: true },
-    });
+    const users = await scopedUserFindMany(
+      this.prisma,
+      { role: { in: roles }, active: true },
+      { id: true },
+    );
     return users.map((u) => u.id);
   }
 }

@@ -17,6 +17,7 @@ import {
   UserRole,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { scopedUserCount } from '../../common/tenant/resolve-tenant-entity';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { toCsv, type CsvCell } from '../../common/utils/csv';
 import {
@@ -339,19 +340,15 @@ export class ReportsService {
       // ── extended inventory / pipeline ──
       this.prisma.unit.count({ where: { status: UnitStatus.SOLD } }),
       this.prisma.contract.count({ where: { signedAt: { not: null } } }),
-      // eslint-disable-next-line no-restricted-syntax -- role-only count; no caller-supplied id; cross-tenant aggregate is V-25 (tracked)
-      this.prisma.user.count({ where: { role: UserRole.CUSTOMER } }),
-      // eslint-disable-next-line no-restricted-syntax -- role-only count; no caller-supplied id; cross-tenant aggregate is V-26 (tracked)
-      this.prisma.user.count({
-        where: {
-          role: {
-            in: [
-              UserRole.ADMIN,
-              UserRole.SALES,
-              UserRole.SALES_MANAGER,
-              UserRole.MAINTENANCE_SUPERVISOR,
-            ],
-          },
+      scopedUserCount(this.prisma, { role: UserRole.CUSTOMER }),
+      scopedUserCount(this.prisma, {
+        role: {
+          in: [
+            UserRole.ADMIN,
+            UserRole.SALES,
+            UserRole.SALES_MANAGER,
+            UserRole.MAINTENANCE_SUPERVISOR,
+          ],
         },
       }),
       // ── funnel all-time volumes ──

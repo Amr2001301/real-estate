@@ -19,6 +19,7 @@ import {
   UserRole,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { scopedUserFindMany } from '../../common/tenant/resolve-tenant-entity';
 import { DocumentsService } from '../documents/documents.module';
 import { R2Service } from '../media/r2.service';
 import { NotificationsService } from '../notifications/notifications.module';
@@ -933,11 +934,11 @@ export class DepositsService {
    *  service contract. */
   private async notifyStaff(templateCode: string, payload: Record<string, unknown>) {
     try {
-      // eslint-disable-next-line no-restricted-syntax -- role-only filter; no caller-supplied id; cross-tenant fan-out is V-21 (tracked)
-      const staff = await this.prisma.user.findMany({
-        where: { role: { in: [UserRole.ADMIN, UserRole.SALES_MANAGER] }, active: true },
-        select: { id: true },
-      });
+      const staff = await scopedUserFindMany(
+        this.prisma,
+        { role: { in: [UserRole.ADMIN, UserRole.SALES_MANAGER] }, active: true },
+        { id: true },
+      );
       for (const u of staff) {
         await this.notifications.sendToUser(u.id, templateCode, payload);
       }

@@ -2,6 +2,7 @@ import { Controller, Get, Injectable, Module } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { InstallmentStatus, MaintenanceStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { findTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 
@@ -167,12 +168,8 @@ class MeHomeSummaryService {
       recentMaintenance,
       unreadNotifCount,
     ] = await Promise.all([
-      // Q0: customer display name
-      // eslint-disable-next-line no-restricted-syntax -- userId is user.sub from JWT (controller: getSummary(user.sub)); not caller-supplied
-      this.prisma.user.findUnique({
-        where: { id: userId },
-        select: { fullName: true },
-      }),
+      // Q0: customer display name (scoped to current tenant via findTenantUser)
+      findTenantUser(this.prisma, userId, { fullName: true }),
 
       // Q1: most recently signed contract → primary property
       this.prisma.contract.findFirst({

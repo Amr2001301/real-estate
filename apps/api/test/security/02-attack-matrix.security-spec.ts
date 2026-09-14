@@ -848,4 +848,167 @@ describe('SEC — Attack Matrix (STEP 3)', () => {
       }).catch(() => void 0);
     });
   });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // [V-20/V-21] Cross-tenant broadcast fan-out — rows 15 + 13/16
+  //
+  // User is TENANT_CONTROLLED. The middleware does NOT inject companyId for
+  // TENANT_CONTROLLED models (prisma.service.ts: TENANT_OWNED_MODELS is built
+  // from MODEL_TENANCY entries where tier === 'TENANT_OWNED' only; User is
+  // TENANT_CONTROLLED → not in scopedModels → applyReadPolicy is a no-op for
+  // every prisma.user.* call).
+  //
+  // resolveRecipients / activeUserIdsByRole / ALL_ACTIVE all call
+  // prisma.user.findMany without companyId → rows from every company returned.
+  //
+  // SECURE outcome: Company B users must NOT receive Notification rows from a
+  // Company A broadcast.
+  // FINDING if tests fail: V-20 (ALL_ACTIVE) and/or V-21 (ROLE=ADMIN) confirmed.
+  // ══════════════════════════════════════════════════════════════════════════
+
+  describe('[V-20/V-21] Cross-tenant broadcast fan-out (rows 15 + 13/16)', () => {
+
+    const BROADCAST_BODY = {
+      channel: 'IN_APP',
+      title_ar: 'اختبار',
+      title_en: 'V-20/V-21 test',
+      body_ar: 'نص',
+      body_en: 'Body',
+    };
+
+    // V-20: ALL_ACTIVE broadcasts to all active users across every company.
+    it('V-20: ALL_ACTIVE broadcast must not deliver to Company B users (row 15)', async () => {
+      const countBefore = await testApp.rawPrisma.notification.count({
+        where: { userId: fx.users.adminB.id },
+      });
+
+      const res = await http()
+        .post('/v1/notifications/broadcast')
+        .set('Authorization', bearer(adminAToken))
+        .send({ ...BROADCAST_BODY, target: 'ALL_ACTIVE' });
+
+      expect(res.status).toBe(201);
+      // Broadcast reached at least Company A's own users — proves the call succeeded.
+      expect(res.body.recipientCount).toBeGreaterThan(0);
+      // IN_APP channel: no push is ever attempted (push.sendToUser is never called).
+      // The only observable side-effect is Notification row creation.
+
+      const countAfter = await testApp.rawPrisma.notification.count({
+        where: { userId: fx.users.adminB.id },
+      });
+      // SECURE: Company B's admin must not have received a Notification row.
+      expect(countAfter).toBe(countBefore);
+    });
+
+    // V-21: ROLE=ADMIN broadcast — Company B also has an active ADMIN (adminB).
+    it('V-21: ROLE=ADMIN broadcast must not deliver to Company B ADMIN users (rows 13/16)', async () => {
+      const countBefore = await testApp.rawPrisma.notification.count({
+        where: { userId: fx.users.adminB.id },
+      });
+
+      const res = await http()
+        .post('/v1/notifications/broadcast')
+        .set('Authorization', bearer(adminAToken))
+        .send({ ...BROADCAST_BODY, target: 'ROLE', targetRole: 'ADMIN' });
+
+      expect(res.status).toBe(201);
+      expect(res.body.recipientCount).toBeGreaterThan(0);
+
+      const countAfter = await testApp.rawPrisma.notification.count({
+        where: { userId: fx.users.adminB.id },
+      });
+      // SECURE: Company B's admin must not have received a Notification row.
+      expect(countAfter).toBe(countBefore);
+    });
+
+    // V-20 sanity: Company A's own users DO receive the notification.
+    it('V-20 sanity: ALL_ACTIVE broadcast reaches Company A users', async () => {
+      const countBefore = await testApp.rawPrisma.notification.count({
+        where: { userId: fx.users.adminA.id },
+      });
+
+      await http()
+        .post('/v1/notifications/broadcast')
+        .set('Authorization', bearer(adminAToken))
+        .send({ ...BROADCAST_BODY, target: 'ALL_ACTIVE' })
+        .expect(201);
+
+      const countAfter = await testApp.rawPrisma.notification.count({
+        where: { userId: fx.users.adminA.id },
+      });
+      expect(countAfter).toBeGreaterThan(countBefore);
+    });
+
+    // V-20 bonus: Row 3 — GET /sales-targets/actors returns all SALES/SALES_MANAGER
+    // across every company when called by ADMIN. Company B's SALES user must not appear.
+    it('V-20 bonus/row-3: GET /sales-targets/actors must not return Company B SALES users', async () => {
+      const sales1B = await testApp.rawPrisma.user.findFirst({
+        where: { companyId: fx.companies.bId, role: 'SALES' },
+        select: { id: true },
+      });
+      // Only run assertion if Company B has a SALES user in the fixture.
+      if (!sales1B) return;
+
+      const res = await http()
+        .get('/v1/sales-targets/actors')
+        .set('Authorization', bearer(adminAToken))
+        .expect(200);
+
+      const returnedIds = (res.body as Array<{ id: string }>).map((u) => u.id);
+      // SECURE: Company B SALES user must not appear in Company A ADMIN's actor list.
+      expect(returnedIds).not.toContain(sales1B.id);
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // [V-25/V-26] Reports dashboard cross-tenant count contamination (rows 17/18)
+  //
+  // prisma.user.count({ where: { role: CUSTOMER } }) and
+  // prisma.user.count({ where: { role: { in: [ADMIN, SALES, SM, MAINTENANCE] } } })
+  // have no companyId filter. The Prisma tenant middleware does not inject
+  // companyId for TENANT_CONTROLLED models. Both counts include rows from every
+  // company in the database.
+  //
+  // Proof: compare the API-returned count with the rawPrisma count scoped to
+  // Company A only. If they differ, cross-tenant data is included.
+  //
+  // SECURE outcome: api count === Company A scoped count.
+  // FINDING if tests fail: V-25 (customers) and/or V-26 (staff) confirmed.
+  // ══════════════════════════════════════════════════════════════════════════
+
+  describe('[V-25/V-26] Reports dashboard cross-tenant count contamination (rows 17/18)', () => {
+
+    it('V-25: kpis.totalCustomers must be scoped to Company A only (row 17)', async () => {
+      const trueCompanyACount = await testApp.rawPrisma.user.count({
+        where: { role: 'CUSTOMER', companyId: fx.companies.aId },
+      });
+
+      const res = await http()
+        .get('/v1/reports/admin-summary')
+        .set('Authorization', bearer(adminAToken));
+
+      expect(res.status).toBe(200);
+      // SECURE: API totalCustomers must equal the Company A-scoped count.
+      // If this fails: the API count exceeds the scoped count → cross-tenant rows included.
+      expect(res.body.kpis.totalCustomers).toBe(trueCompanyACount);
+    });
+
+    it('V-26: kpis.totalTeam must be scoped to Company A only (row 18)', async () => {
+      const trueCompanyACount = await testApp.rawPrisma.user.count({
+        where: {
+          role: { in: ['ADMIN', 'SALES', 'SALES_MANAGER', 'MAINTENANCE_SUPERVISOR'] },
+          companyId: fx.companies.aId,
+        },
+      });
+
+      const res = await http()
+        .get('/v1/reports/admin-summary')
+        .set('Authorization', bearer(adminAToken));
+
+      expect(res.status).toBe(200);
+      // SECURE: API totalTeam must equal the Company A-scoped count.
+      // If this fails: the API count exceeds the scoped count → cross-tenant rows included.
+      expect(res.body.kpis.totalTeam).toBe(trueCompanyACount);
+    });
+  });
 });

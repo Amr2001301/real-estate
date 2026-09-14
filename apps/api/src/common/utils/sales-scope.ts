@@ -2,6 +2,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AuthUser } from '../decorators/current-user.decorator';
+import { getRequiredCompanyId } from '../tenant/tenant-context';
 
 /**
  * Sales-team scoping (Batch 9).
@@ -32,23 +33,25 @@ export interface SalesScopeArgs {
  */
 export const SALES_ACTOR_ROLES: UserRole[] = [UserRole.SALES, UserRole.SALES_MANAGER];
 
-/** All internal sales actors (SALES + SALES_MANAGER). */
+/** All internal sales actors (SALES + SALES_MANAGER) within the current tenant. */
 export async function salesActorIds(prisma: PrismaService): Promise<string[]> {
+  const companyId = getRequiredCompanyId();
   const rows = await prisma.user.findMany({
-    where: { role: { in: SALES_ACTOR_ROLES } },
+    where: { role: { in: SALES_ACTOR_ROLES }, companyId },
     select: { id: true },
   });
   return rows.map((r) => r.id);
 }
 
-/** A manager's team members: SALES reps whose managerId is this manager.
- *  Does NOT include the manager themselves. */
+/** A manager's team members within the current tenant: SALES reps whose
+ *  managerId is this manager. Does NOT include the manager themselves. */
 export async function teamSalesIds(
   prisma: PrismaService,
   managerId: string,
 ): Promise<string[]> {
+  const companyId = getRequiredCompanyId();
   const rows = await prisma.user.findMany({
-    where: { role: UserRole.SALES, managerId },
+    where: { role: UserRole.SALES, managerId, companyId },
     select: { id: true },
   });
   return rows.map((r) => r.id);

@@ -1,13 +1,24 @@
-import { CanActivate, ExecutionContext, Global, INestApplication, Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import {
+  CallHandler,
+  CanActivate,
+  ExecutionContext,
+  Global,
+  INestApplication,
+  Injectable,
+  Module,
+  NestInterceptor,
+} from '@nestjs/common';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
+import { Observable } from 'rxjs';
 import { UserRole } from '@prisma/client';
 import { Workbook } from 'exceljs';
 import { ReportsModule } from '../reports.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { enterTenantContext } from '../../../common/tenant/tenant-context';
 
 /**
  * P14 — GET /reports/admin-summary correctness. Boots the real ReportsModule
@@ -16,6 +27,18 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
  * distribution (sorted, names resolved), the unified recent-activity feed
  * (derived from real rows, newest-first), and actionable alert counts.
  */
+
+const TEST_COMPANY_ID = 'aaaaaaaa-0000-4000-8000-000000000001';
+
+@Injectable()
+class FakeTenantInterceptor implements NestInterceptor {
+  intercept(_ctx: ExecutionContext, next: CallHandler): Observable<unknown> {
+    return new Observable(subscriber => {
+      enterTenantContext({ companyId: TEST_COMPANY_ID, bypass: false, isPublic: false });
+      next.handle().subscribe(subscriber);
+    });
+  }
+}
 
 class FakeAuthGuard implements CanActivate {
   static currentUser: { sub: string; role: UserRole; codes: string[] } | null = null;
@@ -160,6 +183,7 @@ describe('GET /reports/admin-summary (P14)', () => {
         { provide: APP_GUARD, useClass: FakeAuthGuard },
         { provide: APP_GUARD, useClass: RolesGuard },
         { provide: APP_GUARD, useClass: PermissionsGuard },
+        { provide: APP_INTERCEPTOR, useClass: FakeTenantInterceptor },
       ],
     }).compile();
 

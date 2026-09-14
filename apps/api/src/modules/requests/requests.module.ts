@@ -153,15 +153,12 @@ export class RequestsService {
     phone: string,
     email: string | null,
   ): Promise<{ id: string; fullName: string; phone: string | null; email: string | null }> {
-    // eslint-disable-next-line no-restricted-syntax -- lookup by phone/email (not external ID); dedup upsert pattern
     const byPhone = await this.prisma.user.findUnique({ where: { phone } });
     if (byPhone) return byPhone;
     if (email) {
-      // eslint-disable-next-line no-restricted-syntax -- same pattern as above
       const byEmail = await this.prisma.user.findUnique({ where: { email } });
       if (byEmail) return byEmail;
     }
-    // eslint-disable-next-line no-restricted-syntax -- user creation, not a read IDOR
     return this.prisma.user.create({
       data: {
         role: 'CLIENT',
@@ -257,7 +254,6 @@ export class RequestsService {
         : null;
       let customerName = dto.name?.trim() ?? '';
       if (!customerName && userId) {
-        // eslint-disable-next-line no-restricted-syntax -- userId is the authenticated user's own ID (from JWT)
         const u = await this.prisma.user.findUnique({
           where: { id: userId },
           select: { fullName: true },

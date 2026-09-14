@@ -1,14 +1,18 @@
 import {
+  CallHandler,
   CanActivate,
   ExecutionContext,
   Global,
   INestApplication,
+  Injectable,
   Module,
+  NestInterceptor,
   ValidationPipe,
 } from '@nestjs/common';
-import { APP_GUARD, Reflector } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
+import { Observable } from 'rxjs';
 import { UserRole } from '@prisma/client';
 import { BonusModule } from '../bonus.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
@@ -18,6 +22,7 @@ import {
   PERMISSIONS_KEY,
   type PermissionsMeta,
 } from '../../../common/decorators/permissions.decorator';
+import { enterTenantContext } from '../../../common/tenant/tenant-context';
 
 /**
  * Verifies the bonus permissions rollout:
@@ -33,6 +38,18 @@ interface FakeUser {
   sub: string;
   role: UserRole;
   codes: string[];
+}
+
+const TEST_COMPANY_ID = 'aaaaaaaa-0000-4000-8000-000000000001';
+
+@Injectable()
+class FakeTenantInterceptor implements NestInterceptor {
+  intercept(_ctx: ExecutionContext, next: CallHandler): Observable<unknown> {
+    return new Observable(subscriber => {
+      enterTenantContext({ companyId: TEST_COMPANY_ID, bypass: false, isPublic: false });
+      next.handle().subscribe(subscriber);
+    });
+  }
 }
 
 class FakeAuthGuard implements CanActivate {
@@ -108,6 +125,7 @@ describe('Bonus module · permissions enforcement', () => {
         { provide: APP_GUARD, useClass: FakeAuthGuard },
         { provide: APP_GUARD, useClass: RolesGuard },
         { provide: APP_GUARD, useClass: PermissionsGuard },
+        { provide: APP_INTERCEPTOR, useClass: FakeTenantInterceptor },
       ],
     }).compile();
 

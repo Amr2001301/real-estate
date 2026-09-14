@@ -7,6 +7,7 @@ import {
 } from '../sales-scope';
 import type { PrismaService } from '../../prisma/prisma.service';
 import type { AuthUser } from '../../decorators/current-user.decorator';
+import { runTenantContext } from '../../tenant/tenant-context';
 
 /**
  * Per-record team ownership (Batch 10) + list scope resolution (Batch 9).
@@ -34,6 +35,7 @@ const admin: AuthUser = { sub: 'a', role: UserRole.ADMIN, email: null, phone: nu
 const sales: AuthUser = { sub: SALES_ID, role: UserRole.SALES, email: null, phone: null, companyId: null };
 const manager: AuthUser = { sub: MANAGER_ID, role: UserRole.SALES_MANAGER, email: null, phone: null, companyId: null };
 const customer: AuthUser = { sub: 'c', role: UserRole.CUSTOMER, email: null, phone: null, companyId: null };
+const TEST_TENANT = { companyId: 'test-co-id', bypass: false as const, isPublic: false as const };
 
 describe('sales-scope · isSalesIdInScope', () => {
   it('ADMIN is always in scope (even for null owner)', async () => {
@@ -48,10 +50,10 @@ describe('sales-scope · isSalesIdInScope', () => {
   });
 
   it('SALES_MANAGER is in scope for self and team members', async () => {
-    expect(await isSalesIdInScope(prismaMock(), manager, MANAGER_ID)).toBe(true); // self
-    expect(await isSalesIdInScope(prismaMock(), manager, SALES_ID)).toBe(true); // team
-    expect(await isSalesIdInScope(prismaMock(), manager, OTHER_SALES_ID)).toBe(false); // other team
-    expect(await isSalesIdInScope(prismaMock(), manager, null)).toBe(false);
+    expect(await runTenantContext(TEST_TENANT, () => isSalesIdInScope(prismaMock(), manager, MANAGER_ID))).toBe(true); // self
+    expect(await runTenantContext(TEST_TENANT, () => isSalesIdInScope(prismaMock(), manager, SALES_ID))).toBe(true); // team
+    expect(await runTenantContext(TEST_TENANT, () => isSalesIdInScope(prismaMock(), manager, OTHER_SALES_ID))).toBe(false); // other team
+    expect(await runTenantContext(TEST_TENANT, () => isSalesIdInScope(prismaMock(), manager, null))).toBe(false);
   });
 
   it('other roles are never in scope', async () => {
@@ -65,18 +67,20 @@ describe('sales-scope · assertSalesRecordInScope', () => {
   });
 
   it('throws NotFound (default) for a manager on an out-of-team record', async () => {
-    await expect(assertSalesRecordInScope(prismaMock(), manager, OTHER_SALES_ID)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      runTenantContext(TEST_TENANT, () => assertSalesRecordInScope(prismaMock(), manager, OTHER_SALES_ID)),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('passes for a manager on a team record', async () => {
-    await expect(assertSalesRecordInScope(prismaMock(), manager, SALES_ID)).resolves.toBeUndefined();
+    await expect(
+      runTenantContext(TEST_TENANT, () => assertSalesRecordInScope(prismaMock(), manager, SALES_ID)),
+    ).resolves.toBeUndefined();
   });
 
   it('throws Forbidden when mode=forbidden', async () => {
     await expect(
-      assertSalesRecordInScope(prismaMock(), manager, OTHER_SALES_ID, { mode: 'forbidden' }),
+      runTenantContext(TEST_TENANT, () => assertSalesRecordInScope(prismaMock(), manager, OTHER_SALES_ID, { mode: 'forbidden' })),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
@@ -87,23 +91,23 @@ describe('sales-scope · assertSalesRecordInScope', () => {
     ).resolves.toBeUndefined();
     // …but a manager is still enforced.
     await expect(
-      assertSalesRecordInScope(prismaMock(), manager, OTHER_SALES_ID, { managersOnly: true }),
+      runTenantContext(TEST_TENANT, () => assertSalesRecordInScope(prismaMock(), manager, OTHER_SALES_ID, { managersOnly: true })),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 });
 
 describe('sales-scope · resolveSalesScope (regression)', () => {
   it('manager out-of-team salesId yields an empty set', async () => {
-    expect(await resolveSalesScope(prismaMock(), manager, OTHER_SALES_ID)).toEqual({ salesIds: [] });
+    expect(await runTenantContext(TEST_TENANT, () => resolveSalesScope(prismaMock(), manager, OTHER_SALES_ID))).toEqual({ salesIds: [] });
   });
   it('manager in-team salesId narrows to that rep', async () => {
-    expect(await resolveSalesScope(prismaMock(), manager, SALES_ID)).toEqual({ salesId: SALES_ID });
+    expect(await runTenantContext(TEST_TENANT, () => resolveSalesScope(prismaMock(), manager, SALES_ID))).toEqual({ salesId: SALES_ID });
   });
   it('manager own salesId narrows to self', async () => {
-    expect(await resolveSalesScope(prismaMock(), manager, MANAGER_ID)).toEqual({ salesId: MANAGER_ID });
+    expect(await runTenantContext(TEST_TENANT, () => resolveSalesScope(prismaMock(), manager, MANAGER_ID))).toEqual({ salesId: MANAGER_ID });
   });
   it('manager with no salesId returns self + team', async () => {
-    expect(await resolveSalesScope(prismaMock(), manager, undefined)).toEqual({
+    expect(await runTenantContext(TEST_TENANT, () => resolveSalesScope(prismaMock(), manager, undefined))).toEqual({
       salesIds: [MANAGER_ID, SALES_ID],
     });
   });
