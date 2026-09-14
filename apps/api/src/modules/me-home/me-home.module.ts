@@ -168,7 +168,7 @@ class MeHomeSummaryService {
       unreadNotifCount,
     ] = await Promise.all([
       // Q0: customer display name
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- userId is user.sub from JWT (controller: getSummary(user.sub)); not caller-supplied
       this.prisma.user.findUnique({
         where: { id: userId },
         select: { fullName: true },

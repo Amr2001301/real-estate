@@ -711,6 +711,80 @@ describe('SEC — Attack Matrix (STEP 3)', () => {
         })
         .expect(201);
     });
+
+    // ── V-18: bonus salesPerformance ?salesId cross-tenant IDOR ────────────────
+    //
+    // SECURE outcome: 404 (resolveTenantUser rejects salesId not in Company A)
+    // VULNERABLE outcome (before fix): 200 with Company B user's fullName in body
+
+    // V-18-1: ADMIN supplies cross-tenant salesId → 404
+    it('V-18: GET /sales-targets/performance?salesId=<Company B user> → 404', async () => {
+      const res = await http()
+        .get('/v1/sales-targets/performance')
+        .set('Authorization', bearer(adminAToken))
+        .query({ salesId: fx.users.adminB.id });
+      expect(res.status).toBe(404);
+    });
+
+    // V-18-2: sanity — ADMIN with valid Company A salesId works
+    it('V-18 sanity: ADMIN with a Company A salesId → 200', async () => {
+      const res = await http()
+        .get('/v1/sales-targets/performance')
+        .set('Authorization', bearer(adminAToken))
+        .query({ salesId: fx.users.sales1A.id });
+      expect(res.status).toBe(200);
+    });
+
+    // ── V-19: notification broadcast USER target cross-tenant action ─────────
+    //
+    // SECURE outcome: 404 (resolveTenantUser rejects targetUserId not in Company A)
+    //   AND no Notification row created for the cross-tenant user (no action taken)
+    // VULNERABLE outcome (before fix): 201 + push delivered to Company B user
+
+    // V-19-1: broadcast to a cross-tenant user → 404
+    it('V-19: POST /notifications/broadcast { target: USER, targetUserId: Company B } → 404', async () => {
+      const countBefore = await testApp.rawPrisma.notification.count({
+        where: { userId: fx.users.adminB.id },
+      });
+
+      const res = await http()
+        .post('/v1/notifications/broadcast')
+        .set('Authorization', bearer(adminAToken))
+        .send({
+          target: 'USER',
+          targetUserId: fx.users.adminB.id,
+          channel: 'IN_APP',
+          title_ar: 'هجوم',
+          title_en: 'Attack',
+          body_ar: 'اختبار متقاطع الشركات',
+          body_en: 'Cross-tenant test',
+        });
+
+      expect(res.status).toBe(404);
+
+      // No Notification row was written for the cross-tenant user — action fully blocked.
+      const countAfter = await testApp.rawPrisma.notification.count({
+        where: { userId: fx.users.adminB.id },
+      });
+      expect(countAfter).toBe(countBefore);
+    });
+
+    // V-19-2: sanity — broadcast to a valid Company A user works
+    it('V-19 sanity: broadcast to Company A user → 201', async () => {
+      const res = await http()
+        .post('/v1/notifications/broadcast')
+        .set('Authorization', bearer(adminAToken))
+        .send({
+          target: 'USER',
+          targetUserId: fx.users.sales1A.id,
+          channel: 'IN_APP',
+          title_ar: 'إشعار صحيح',
+          title_en: 'Valid broadcast',
+          body_ar: 'اختبار',
+          body_en: 'Test',
+        });
+      expect(res.status).toBe(201);
+    });
   });
 
   // ══════════════════════════════════════════════════════════════════════════

@@ -339,9 +339,9 @@ export class ReportsService {
       // ── extended inventory / pipeline ──
       this.prisma.unit.count({ where: { status: UnitStatus.SOLD } }),
       this.prisma.contract.count({ where: { signedAt: { not: null } } }),
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- role-only count; no caller-supplied id; cross-tenant aggregate is V-25 (tracked)
       this.prisma.user.count({ where: { role: UserRole.CUSTOMER } }),
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- role-only count; no caller-supplied id; cross-tenant aggregate is V-26 (tracked)
       this.prisma.user.count({
         where: {
           role: {

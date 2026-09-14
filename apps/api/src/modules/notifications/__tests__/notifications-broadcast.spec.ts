@@ -4,6 +4,9 @@ import { NotificationsService, BroadcastTarget, BroadcastChannel } from '../noti
 import { PushService, PushResult } from '../push.service';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { EmailService } from '../../auth/email.service';
+import { runTenantContext } from '../../../common/tenant/tenant-context';
+
+const TEST_TENANT = { companyId: 'test-co-00000000-0000-0000-0000', bypass: false as const, isPublic: false as const };
 
 /**
  * Broadcast hardening unit tests.
@@ -57,6 +60,9 @@ function makePrisma(
     user: {
       findUnique: jest.fn(async ({ where }: { where: { id: string } }) =>
         users.find((u) => u.id === where.id) ?? { locale: 'ar' },
+      ),
+      findFirst: jest.fn(async ({ where }: { where: { id: string } }) =>
+        users.find((u) => u.id === where.id) ?? null,
       ),
       findMany: jest.fn(
         async ({
@@ -285,11 +291,13 @@ describe('NotificationsService · IN_APP strict channel semantics', () => {
     const prisma = makePrisma([{ id: 'c-1', role: UserRole.CUSTOMER, active: true }]);
     const { svc } = makeService(prisma);
 
-    await svc.broadcastNotification('admin-1', {
-      ...BASE_IN_APP,
-      target: BroadcastTarget.USER,
-      targetUserId: 'c-1',
-    });
+    await runTenantContext(TEST_TENANT, () =>
+      svc.broadcastNotification('admin-1', {
+        ...BASE_IN_APP,
+        target: BroadcastTarget.USER,
+        targetUserId: 'c-1',
+      }),
+    );
 
     expect(prisma.notifications[0]?.channel).toBe(NotificationChannel.IN_APP);
   });
@@ -298,11 +306,13 @@ describe('NotificationsService · IN_APP strict channel semantics', () => {
     const prisma = makePrisma([{ id: 'c-1', role: UserRole.CUSTOMER, active: true }]);
     const { svc } = makeService(prisma);
 
-    const result = await svc.broadcastNotification('admin-1', {
-      ...BASE_IN_APP,
-      target: BroadcastTarget.USER,
-      targetUserId: 'c-1',
-    });
+    const result = await runTenantContext(TEST_TENANT, () =>
+      svc.broadcastNotification('admin-1', {
+        ...BASE_IN_APP,
+        target: BroadcastTarget.USER,
+        targetUserId: 'c-1',
+      }),
+    );
 
     expect(result).not.toHaveProperty('pushSent');
     expect(result).not.toHaveProperty('pushFailed');
@@ -419,9 +429,11 @@ describe('NotificationsService · resolveRecipients — correct fan-out per targ
   it('USER + targetUserId → exactly one notification', async () => {
     const prisma = makePrisma(users);
     const { svc } = makeService(prisma);
-    const r = await svc.broadcastNotification('admin-1', {
-      ...BASE_IN_APP, target: BroadcastTarget.USER, targetUserId: 'c-1',
-    });
+    const r = await runTenantContext(TEST_TENANT, () =>
+      svc.broadcastNotification('admin-1', {
+        ...BASE_IN_APP, target: BroadcastTarget.USER, targetUserId: 'c-1',
+      }),
+    );
     expect(r.recipientCount).toBe(1);
     expect(prisma.notifications[0]?.userId).toBe('c-1');
   });
@@ -496,22 +508,26 @@ describe('NotificationsService · audit payload fields', () => {
   it('targetValue is targetUserId when target=USER', async () => {
     const prisma = makePrisma([{ id: 'c-1', role: UserRole.CUSTOMER, active: true }]);
     const { svc } = makeService(prisma);
-    await svc.broadcastNotification('admin-1', {
-      ...BASE_IN_APP, target: BroadcastTarget.USER, targetUserId: 'c-1',
-    });
+    await runTenantContext(TEST_TENANT, () =>
+      svc.broadcastNotification('admin-1', {
+        ...BASE_IN_APP, target: BroadcastTarget.USER, targetUserId: 'c-1',
+      }),
+    );
     expect((prisma.notifications[0]!.payload as Record<string, unknown>)['targetValue']).toBe('c-1');
   });
 
   it('entityType and entityId are included in payload when provided', async () => {
     const prisma = makePrisma([{ id: 'c-1', role: UserRole.CUSTOMER, active: true }]);
     const { svc } = makeService(prisma);
-    await svc.broadcastNotification('admin-1', {
-      ...BASE_IN_APP,
-      target: BroadcastTarget.USER,
-      targetUserId: 'c-1',
-      entityType: 'maintenance',
-      entityId: 'maint-uuid-1',
-    });
+    await runTenantContext(TEST_TENANT, () =>
+      svc.broadcastNotification('admin-1', {
+        ...BASE_IN_APP,
+        target: BroadcastTarget.USER,
+        targetUserId: 'c-1',
+        entityType: 'maintenance',
+        entityId: 'maint-uuid-1',
+      }),
+    );
     const p = prisma.notifications[0]!.payload as Record<string, unknown>;
     expect(p['entityType']).toBe('maintenance');
     expect(p['entityId']).toBe('maint-uuid-1');
@@ -520,9 +536,11 @@ describe('NotificationsService · audit payload fields', () => {
   it('payload has no sensitive keys (phone, email, password, token, bank, etc.)', async () => {
     const prisma = makePrisma([{ id: 'c-1', role: UserRole.CUSTOMER, active: true }]);
     const { svc } = makeService(prisma);
-    await svc.broadcastNotification('admin-1', {
-      ...BASE_IN_APP, target: BroadcastTarget.USER, targetUserId: 'c-1',
-    });
+    await runTenantContext(TEST_TENANT, () =>
+      svc.broadcastNotification('admin-1', {
+        ...BASE_IN_APP, target: BroadcastTarget.USER, targetUserId: 'c-1',
+      }),
+    );
     const p = prisma.notifications[0]!.payload as Record<string, unknown>;
     const forbidden = ['phone', 'email', 'password', 'token', 'secret', 'bank', 'iban', 'url', 'storage'];
     for (const key of forbidden) {

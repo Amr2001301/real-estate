@@ -570,7 +570,7 @@ export class NotificationsService implements OnModuleInit {
       ids: string[],
       notifIdByUser: Map<string, string>,
     ) => {
-      // eslint-disable-next-line no-restricted-syntax -- bulk IDs supplied by this service, not from external input
+      // eslint-disable-next-line no-restricted-syntax -- IDs from resolveRecipients; USER target tenant-validated via resolveTenantUser (V-19); role/ALL_ACTIVE targets are cross-tenant fan-out (V-20..V-24, tracked)
       const usersWithLocale = await this.prisma.user.findMany({
         where: { id: { in: ids } },
         select: { id: true, locale: true },
@@ -754,6 +754,9 @@ export class NotificationsService implements OnModuleInit {
     switch (target) {
       case BroadcastTarget.USER:
         if (!targetUserId) throw new BadRequestException('targetUserId required when target is USER');
+        // V-19: validate targetUserId belongs to the current tenant before any action.
+        // Throws 404 for cross-tenant or missing user (no existence leak).
+        await resolveTenantUser(this.prisma, targetUserId, { id: true });
         return [targetUserId];
       case BroadcastTarget.ROLE:
         if (!targetRole) throw new BadRequestException('targetRole required when target is ROLE');

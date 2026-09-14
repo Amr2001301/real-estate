@@ -1,19 +1,24 @@
 import {
+  CallHandler,
   CanActivate,
   ExecutionContext,
   Global,
   INestApplication,
+  Injectable,
   Module,
+  NestInterceptor,
   ValidationPipe,
 } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
+import { Observable } from 'rxjs';
 import { UserRole } from '@prisma/client';
 import { BonusModule } from '../bonus.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { enterTenantContext } from '../../../common/tenant/tenant-context';
 
 /**
  * Read-only sales performance report (GET /sales-targets/performance).
@@ -33,6 +38,18 @@ const OTHER_SALES_ID = 'c0000000-0000-4000-8000-000000000003';
 // Manager whose team is exactly [SALES_ID] in the mock below.
 const MANAGER_ID = 'd0000000-0000-4000-8000-000000000004';
 const EMPTY_MANAGER_ID = 'e0000000-0000-4000-8000-000000000005';
+
+const TEST_COMPANY_ID = 'aaaaaaaa-0000-4000-8000-000000000001';
+
+@Injectable()
+class FakeTenantInterceptor implements NestInterceptor {
+  intercept(_ctx: ExecutionContext, next: CallHandler): Observable<unknown> {
+    return new Observable(subscriber => {
+      enterTenantContext({ companyId: TEST_COMPANY_ID, bypass: false, isPublic: false });
+      next.handle().subscribe(subscriber);
+    });
+  }
+}
 
 // Per-test overrides for the data-shaped mocks.
 const data: {
@@ -64,6 +81,12 @@ function makePrismaMock() {
       }),
     },
     user: {
+      findFirst: jest.fn().mockImplementation(
+        async ({ where }: { where: { id: string } }) => {
+          const knownIds = [ADMIN_ID, SALES_ID, OTHER_SALES_ID, MANAGER_ID, EMPTY_MANAGER_ID];
+          return knownIds.includes(where.id) ? { id: where.id } : null;
+        },
+      ),
       findMany: jest.fn().mockImplementation(
         async ({ where }: { where: { role?: UserRole | { in: UserRole[] }; managerId?: string } }) => {
           // Team lookup (manager): SALES reps whose managerId = this manager.
@@ -120,6 +143,7 @@ describe('Bonus · sales performance report', () => {
     const moduleRef = await Test.createTestingModule({
       imports: [MockPrismaModule, BonusModule],
       providers: [
+        { provide: APP_INTERCEPTOR, useClass: FakeTenantInterceptor },
         { provide: APP_GUARD, useClass: FakeAuthGuard },
         { provide: APP_GUARD, useClass: RolesGuard },
         { provide: APP_GUARD, useClass: PermissionsGuard },
@@ -145,6 +169,7 @@ describe('Bonus · sales performance report', () => {
   beforeEach(() => {
     data.targets = [];
     data.contracts = [];
+    mock.user.findFirst.mockClear();
     mock.user.findMany.mockClear();
   });
 

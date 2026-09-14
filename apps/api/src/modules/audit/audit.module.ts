@@ -129,7 +129,7 @@ class AuditService {
       .map((r) => r.actorId)
       .filter((v): v is string => Boolean(v));
     const actors = actorIds.length
-      ? // eslint-disable-next-line no-restricted-syntax
+      ? // eslint-disable-next-line no-restricted-syntax -- IDs from middleware-scoped AuditLog rows (TENANT_OWNED); not caller-supplied
         await this.prisma.user.findMany({
           where: { id: { in: actorIds } },
           select: { id: true, fullName: true, email: true, role: true },

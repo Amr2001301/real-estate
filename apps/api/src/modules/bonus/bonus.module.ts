@@ -49,6 +49,8 @@ import {
   managerScopeIds,
   assertSalesRecordInScope,
 } from '../../common/utils/sales-scope';
+import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
+import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -430,15 +432,23 @@ export class BonusService {
     const period = opts.period ?? currentPeriod();
     const { start, end } = periodRange(period);
     const now = new Date();
+    const companyId = getRequiredCompanyId();
 
     // Rep scoping by role (sales actors = SALES + SALES_MANAGER):
     //   ADMIN         → any salesId, or all sales actors when none is given.
+    //                   V-18: ADMIN-supplied salesId is validated via resolveTenantUser
+    //                   before use — throws 404 if not in current tenant.
     //   SALES_MANAGER → self + team, or a single in-scope actor when a salesId
     //                   is given. Out-of-scope salesId ⇒ no rows.
     //   SALES (+ any other role) → self only; salesId is ignored.
     let repIds: string[];
     if (opts.role === UserRole.ADMIN) {
-      repIds = opts.salesId ? [opts.salesId] : await salesActorIds(this.prisma);
+      if (opts.salesId) {
+        await resolveTenantUser(this.prisma, opts.salesId, { id: true });
+        repIds = [opts.salesId];
+      } else {
+        repIds = await salesActorIds(this.prisma);
+      }
     } else if (opts.role === UserRole.SALES_MANAGER) {
       const scope = await managerScopeIds(this.prisma, opts.requesterId);
       repIds = opts.salesId ? (scope.includes(opts.salesId) ? [opts.salesId] : []) : scope;
@@ -462,8 +472,8 @@ export class BonusService {
       convertedReservations,
       signedContracts,
     ] = await Promise.all([
-      // eslint-disable-next-line no-restricted-syntax
-      this.prisma.user.findMany({ where: { id: inReps }, select: { id: true, fullName: true } }),
+      // eslint-disable-next-line no-restricted-syntax -- companyId-scoped; ADMIN salesId pre-validated by resolveTenantUser (V-18)
+      this.prisma.user.findMany({ where: { id: inReps, companyId }, select: { id: true, fullName: true } }),
       this.prisma.salesTarget.findMany({ where: { salesId: inReps, period } }),
       this.prisma.lead.groupBy({
         by: ['assignedSalesId'],
@@ -723,7 +733,7 @@ class BonusController {
   @Get('sales-targets/actors')
   async listTargetActors(@CurrentUser() user: AuthUser) {
     if (user.role === UserRole.ADMIN) {
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- role-only filter; no caller-supplied id; cross-tenant fan-out is V-20 (tracked)
       return this.prisma.user.findMany({
         where: { role: { in: [UserRole.SALES, UserRole.SALES_MANAGER] } },
         select: { id: true, fullName: true, role: true },
@@ -731,7 +741,7 @@ class BonusController {
       });
     }
     const ids = await managerScopeIds(this.prisma, user.sub);
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- IDs from managerScopeIds(user.sub); no caller-supplied id
     return this.prisma.user.findMany({
       where: { id: { in: ids } },
       select: { id: true, fullName: true, role: true },
