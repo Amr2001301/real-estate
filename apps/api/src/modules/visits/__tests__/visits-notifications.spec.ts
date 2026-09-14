@@ -7,6 +7,7 @@ import { VisitsService } from '../visits.service';
 import type { PrismaService } from '../../../common/prisma/prisma.service';
 import type { NotificationsService } from '../../notifications/notifications.module';
 import type { AuthUser } from '../../../common/decorators/current-user.decorator';
+import { runTenantContext } from '../../../common/tenant/tenant-context';
 
 /**
  * P3 — Visit lifecycle notifications.
@@ -103,7 +104,7 @@ interface PrismaMock {
   };
   visitRequest: { findUnique: jest.Mock; update: jest.Mock };
   visitActivity: { create: jest.Mock };
-  user: { findUnique: jest.Mock };
+  user: { findUnique: jest.Mock; findFirst: jest.Mock };
   lead: { updateMany: jest.Mock };
   leadActivity: { create: jest.Mock };
   $transaction: jest.Mock;
@@ -145,6 +146,7 @@ function makePrisma(): PrismaService {
     visitActivity: { create: jest.fn().mockResolvedValue({}) },
     user: {
       findUnique: jest.fn(async () => fixtures.salesUser),
+      findFirst: jest.fn(async () => fixtures.salesUser),
     },
     lead: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
     leadActivity: { create: jest.fn().mockResolvedValue({}) },
@@ -283,10 +285,8 @@ describe('Visits · lifecycle notifications (P3)', () => {
   });
 
   it('assignSales → visit_sales_assigned to new sales only', async () => {
-    await svc.assignSales(
-      'a-1',
-      { assignedSalesId: SALES_ID },
-      ADMIN_USER,
+    await runTenantContext({ companyId: 'test-company', bypass: false, isPublic: false }, () =>
+      svc.assignSales('a-1', { assignedSalesId: SALES_ID }, ADMIN_USER),
     );
     expect(notifications.sendToUser).toHaveBeenCalledWith(
       SALES_ID,

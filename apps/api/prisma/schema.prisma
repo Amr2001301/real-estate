@@ -194,6 +194,9 @@ enum Locale {
 }
 
 // MT-040 — Company classification.
+// BROKERAGE is stored and returned by the super-admin API but is NEVER branched
+// on at runtime — no guard, service, or controller changes behaviour based on
+// it. No independent-brokerage functionality exists yet (Product B is deferred).
 enum CompanyType {
   DEVELOPER
   BROKERAGE

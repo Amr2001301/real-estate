@@ -16,6 +16,7 @@ import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 
 /**
  * Lightweight, ADMIN-only management surface for the existing
@@ -70,18 +71,11 @@ class PermissionsService {
   // ── User's permissions ──────────────────────────────────────────────
 
   async listForUser(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        fullName: true,
-        email: true,
-        phone: true,
-        role: true,
-        active: true,
-      },
-    });
-    if (!user) throw new NotFoundException('User not found');
+    const user = await resolveTenantUser(
+      this.prisma,
+      userId,
+      { id: true, fullName: true, email: true, phone: true, role: true, active: true },
+    );
 
     const [assignedRows, allPermissions] = await this.prisma.$transaction([
       this.prisma.userPermission.findMany({
@@ -108,11 +102,7 @@ class PermissionsService {
   // ── Apply diff to a user's permissions ──────────────────────────────
 
   async updateForUser(userId: string, dto: PatchUserPermissionsDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true },
-    });
-    if (!user) throw new NotFoundException('User not found');
+    const user = await resolveTenantUser(this.prisma, userId, { id: true });
 
     const addCodes = (dto.addPermissionCodes ?? []).filter(Boolean);
     const removeCodes = (dto.removePermissionCodes ?? []).filter(Boolean);

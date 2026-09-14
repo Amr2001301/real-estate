@@ -1,12 +1,15 @@
-import { CanActivate, ExecutionContext, Global, INestApplication, Module } from '@nestjs/common';
-import { APP_GUARD, Reflector } from '@nestjs/core';
+import { CallHandler, CanActivate, ExecutionContext, Global, INestApplication, Module, NestInterceptor } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD, APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { UserRole } from '@prisma/client';
+import { Observable } from 'rxjs';
 import { NotificationsModule } from '../notifications.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { enterTenantContext } from '../../../common/tenant/tenant-context';
 import { FirebaseService } from '../../../common/firebase/firebase.service';
 import {
   PERMISSIONS_KEY,
@@ -43,6 +46,15 @@ class FakeAuthGuard implements CanActivate {
       phone: null,
     };
     return true;
+  }
+}
+
+// upsertTemplate calls getRequiredCompanyId() (ALS). Provide a minimal fake
+// interceptor so the ALS context is set for every request in this test module.
+class FakeTenantInterceptor implements NestInterceptor {
+  intercept(_: ExecutionContext, next: CallHandler): Observable<unknown> {
+    enterTenantContext({ companyId: 'test-company-id', bypass: false, isPublic: false });
+    return next.handle();
   }
 }
 
@@ -93,6 +105,9 @@ function makePrismaMock() {
       if (Array.isArray(ops)) return Promise.all(ops);
       return ops;
     }),
+    // upsertTemplate calls $queryRaw to detect cross-tenant code conflicts before
+    // upserting. Return empty array (no conflict) by default so the upsert proceeds.
+    $queryRaw: jest.fn().mockResolvedValue([]),
   };
 }
 
@@ -112,9 +127,10 @@ describe('Notifications module · permissions enforcement', () => {
     class MockPrismaModule {}
 
     const moduleRef = await Test.createTestingModule({
-      imports: [MockPrismaModule, NotificationsModule],
+      imports: [MockPrismaModule, ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }), NotificationsModule],
       providers: [
         Reflector,
+        { provide: APP_INTERCEPTOR, useClass: FakeTenantInterceptor },
         { provide: APP_GUARD, useClass: FakeAuthGuard },
         { provide: APP_GUARD, useClass: RolesGuard },
         { provide: APP_GUARD, useClass: PermissionsGuard },

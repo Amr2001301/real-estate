@@ -12,6 +12,7 @@ import {
   UserRole,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import { toCsv, type CsvCell } from '../../common/utils/csv';
 import {
   addFooter,
@@ -370,11 +371,7 @@ export class MaintenanceService {
   // linked to the chosen customer. Ownership source is Contract (not loose
   // reservations) for v1. Returns a deduped list; [] when the customer has none.
   async customerUnits(customerId: string) {
-    const customer = await this.prisma.user.findUnique({
-      where: { id: customerId },
-      select: { id: true, role: true },
-    });
-    if (!customer) throw new NotFoundException('Customer not found');
+    const customer = await resolveTenantUser(this.prisma, customerId, { id: true, role: true });
     if (customer.role !== UserRole.CUSTOMER) {
       throw new BadRequestException('User is not a customer');
     }
@@ -505,13 +502,12 @@ export class MaintenanceService {
   // timer starts immediately: dueAt = now + max handling SLA across categories.
   // An optional assignee (active ADMIN/supervisor) starts the request ASSIGNED.
   async adminCreateRequest(dto: AdminCreateRequestDto) {
-    const customer = await this.prisma.user.findUnique({
-      where: { id: dto.customerId },
-      select: { id: true, role: true },
-    });
-    if (!customer || customer.role !== UserRole.CUSTOMER) {
-      throw new BadRequestException('customerId must reference a customer');
-    }
+    await resolveTenantUser(
+      this.prisma,
+      dto.customerId,
+      { id: true, role: true },
+      { expectRoles: [UserRole.CUSTOMER], label: 'customerId must reference a customer', throwBadRequest: true },
+    );
     const unit = await this.prisma.unit.findUnique({ where: { id: dto.unitId } });
     if (!unit) throw new NotFoundException('Unit not found');
     const categoryIds = this.resolveCategoryIds(dto);
@@ -671,13 +667,16 @@ export class MaintenanceService {
   // An assignee may be active ADMIN staff or an active MAINTENANCE_SUPERVISOR.
   // (The column is still named assignedAdminId for v1 — see Batch 10 report.)
   private async assertAssignableAdmin(userId: string) {
-    const staff = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, role: true, active: true },
-    });
-    if (!staff || (staff.role !== UserRole.ADMIN && staff.role !== UserRole.MAINTENANCE_SUPERVISOR)) {
-      throw new BadRequestException('Assignee must be an admin or maintenance supervisor');
-    }
+    const staff = await resolveTenantUser(
+      this.prisma,
+      userId,
+      { id: true, role: true, active: true },
+      {
+        expectRoles: [UserRole.ADMIN, UserRole.MAINTENANCE_SUPERVISOR],
+        label: 'Assignee must be an admin or maintenance supervisor',
+        throwBadRequest: true,
+      },
+    );
     if (!staff.active) throw new BadRequestException('Assignee is inactive');
   }
 

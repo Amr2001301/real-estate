@@ -3,6 +3,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Headers,
   Injectable,
@@ -28,6 +29,8 @@ import {
 } from 'class-validator';
 import { Prisma, NotificationChannel, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
+import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -196,7 +199,22 @@ export class NotificationsService implements OnModuleInit {
     }
   }
 
-  upsertTemplate(dto: UpsertTemplateDto) {
+  async upsertTemplate(dto: UpsertTemplateDto) {
+    const companyId = getRequiredCompanyId();
+
+    // Guard: code has a global @unique constraint (schema migration pending).
+    // Use $queryRaw to bypass the tenant middleware and detect cross-tenant conflicts
+    // before the upsert would hit a unique constraint violation.
+    const conflicts = await this.prisma.$queryRaw<Array<{ companyId: string | null }>>`
+      SELECT "companyId" FROM "NotificationTemplate" WHERE code = ${dto.code} LIMIT 1
+    `;
+    const first = conflicts[0];
+    if (first && first.companyId !== companyId) {
+      throw new ForbiddenException(
+        `Notification template code '${dto.code}' belongs to another tenant.`,
+      );
+    }
+
     return this.prisma.notificationTemplate.upsert({
       where: { code: dto.code },
       create: {
@@ -309,10 +327,11 @@ export class NotificationsService implements OnModuleInit {
 
     // Best-effort push + email in the recipient's locale; never fail the write.
     try {
-      const user = await this.prisma.user.findUnique({
-        where: { id: dto.userId },
-        select: { locale: true, email: true },
-      });
+      const user = await resolveTenantUser(
+        this.prisma,
+        dto.userId,
+        { locale: true, email: true },
+      );
       const locale = pickLocale(user?.locale ?? 'ar');
       // FCM data values must all be strings. Include entityType/entityId so
       // the mobile app can deep-link directly from the push tap without a

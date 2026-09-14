@@ -4,8 +4,9 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import { NotificationsService } from '../notifications/notifications.module';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import type { AuthUser } from '../../common/decorators/current-user.decorator';
@@ -118,19 +119,14 @@ export class BrokerLeadsService {
       throw new BadRequestException('Lead is already approved');
     }
     if (dto.assignedSalesId) {
-      // Validate the assignee exists and is sales-eligible.
-      const sales = await this.prisma.user.findUnique({
-        where: { id: dto.assignedSalesId },
-        select: { id: true, role: true, active: true },
-      });
-      if (!sales) throw new NotFoundException('Sales user not found');
+      const sales = await resolveTenantUser(
+        this.prisma,
+        dto.assignedSalesId,
+        { id: true, role: true, active: true },
+        { expectRoles: [UserRole.SALES, UserRole.ADMIN], label: 'Sales user not found' },
+      );
       if (!sales.active) {
         throw new BadRequestException('Sales user is not active');
-      }
-      if (sales.role !== 'ADMIN' && sales.role !== 'SALES') {
-        throw new BadRequestException(
-          'assignedSalesId must reference a SALES or ADMIN user',
-        );
       }
     }
 

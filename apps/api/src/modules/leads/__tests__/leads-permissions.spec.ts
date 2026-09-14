@@ -76,7 +76,7 @@ function makePrismaMock() {
       findUnique: jest.fn().mockResolvedValue({
         id: 'lead-1',
         stage: 'NEW',
-        assignedSalesId: null,
+        assignedSalesId: 'sales-1',
         clientId: 'client-1',
         fullName: 'Test',
         phone: '0500000000',

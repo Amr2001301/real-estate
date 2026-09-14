@@ -22,6 +22,10 @@ export interface BrokerScopeContext {
  * On success, attaches { brokerId, brokerUserId, brokerAgentUserId } to the
  * request so portal services can scope their queries. The brokerId is NEVER
  * read from query/body — it is resolved from the authenticated identity here.
+ *
+ * Product A assumption: user.companyId points to the DEVELOPER company the
+ * broker agent works for, not to a brokerage firm's own tenant. Product B
+ * (an independent brokerage Company) will need a different resolution path.
  */
 @Injectable()
 export class BrokerScopeGuard implements CanActivate {

@@ -18,7 +18,8 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { resolveSalesScope, assertSalesRecordInScope } from '../../common/utils/sales-scope';
+import { resolveSalesScope } from '../../common/utils/sales-scope';
+import { LeadScopeGuard } from './guards/lead-scope.guard';
 import { LeadsService } from './leads.service';
 import {
   AssignLeadDto,
@@ -116,9 +117,9 @@ export class LeadsController {
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('leads:read')
+  @UseInterceptors(LeadScopeGuard)
   @Get('leads/:id')
-  async get(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
-    await this.assertLeadInScope(user, id);
+  async get(@Param('id', ParseUUIDPipe) id: string) {
     return this.leads.findOne(id);
   }
 
@@ -152,25 +153,23 @@ export class LeadsController {
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('leads:update')
+  @UseInterceptors(LeadScopeGuard)
   @Patch('leads/:id')
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateLeadDto,
-    @CurrentUser() user: AuthUser,
   ) {
-    await this.assertLeadInScope(user, id);
     return this.leads.update(id, dto);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('leads:advance-stage')
+  @UseInterceptors(LeadScopeGuard)
   @Patch('leads/:id/stage')
   async updateStage(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateLeadStageDto,
-    @CurrentUser() user: AuthUser,
   ) {
-    await this.assertLeadInScope(user, id);
     return this.leads.updateStage(id, dto);
   }
 
@@ -183,25 +182,13 @@ export class LeadsController {
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('leads:note')
+  @UseInterceptors(LeadScopeGuard)
   @Post('leads/:id/notes')
   async addNote(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateLeadNoteDto,
     @CurrentUser() user: AuthUser,
   ) {
-    await this.assertLeadInScope(user, id);
     return this.leads.addNote(id, user.sub, dto);
-  }
-
-  // SALES_MANAGER may only touch leads assigned to a rep on their team. No-op
-  // for ADMIN; SALES detail access is unchanged (managersOnly).
-  private async assertLeadInScope(user: AuthUser, id: string) {
-    const lead = await this.prisma.lead.findUnique({
-      where: { id },
-      select: { assignedSalesId: true },
-    });
-    await assertSalesRecordInScope(this.prisma, user, lead?.assignedSalesId ?? null, {
-      managersOnly: true,
-    });
   }
 }

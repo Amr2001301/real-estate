@@ -141,9 +141,11 @@ describe('Requests module · permissions enforcement (legacy admin surface)', ()
       });
     });
 
-    it('listInfo (GET /info-requests) → no permission metadata (role-only, deferred)', () => {
-      expect(getPermissions('listInfo')).toBeUndefined();
-      // Confirm it's still role-gated to ADMIN/SALES/SALES_MANAGER.
+    it('listInfo (GET /info-requests) → @Permissions(visits:read), adminBypass true', () => {
+      expect(getPermissions('listInfo')).toMatchObject({
+        codes: ['visits:read'],
+        adminBypass: true,
+      });
       expect(getRoles('listInfo')).toEqual([
         UserRole.ADMIN,
         UserRole.SALES,
@@ -200,15 +202,22 @@ describe('Requests module · permissions enforcement (legacy admin surface)', ()
     });
   });
 
-  // ── Sanity: GET /info-requests stays accessible to SALES with no code ─
+  // ── GET /info-requests is now gated by @Permissions('visits:read') ──
 
-  describe('GET /info-requests (role-only by design)', () => {
-    it('SALES with zero permissions → 200 (no permission gate)', async () => {
-      FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: [] };
+  describe('GET /info-requests (visits:read required)', () => {
+    it('SALES with visits:read → 200', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: ['visits:read'] };
       await request(app.getHttpServer()).get('/info-requests').expect(200);
-      // Permissions DB was never consulted because the route has no
-      // @Permissions metadata.
-      expect(mock.userPermission.findMany).not.toHaveBeenCalled();
+      expect(mock.userPermission.findMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('SALES without visits:read → structured 403', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-2', role: UserRole.SALES, codes: [] };
+      const res = await request(app.getHttpServer()).get('/info-requests').expect(403);
+      expect(res.body).toMatchObject({
+        code: 'missing_permission',
+        permissions: ['visits:read'],
+      });
     });
   });
 

@@ -3,6 +3,7 @@ import { UserRole } from '@prisma/client';
 import { VisitsService } from '../visits.service';
 import type { PrismaService } from '../../../common/prisma/prisma.service';
 import type { AuthUser } from '../../../common/decorators/current-user.decorator';
+import { runTenantContext } from '../../../common/tenant/tenant-context';
 
 /**
  * SALES_MANAGER visit-assignment scope (sales-actor batch).
@@ -28,10 +29,14 @@ const USERS: Record<string, { id: string; role: UserRole; active: boolean }> = {
   [INACTIVE_SALES_ID]: { id: INACTIVE_SALES_ID, role: UserRole.SALES, active: false },
 };
 
+const FAKE_COMPANY_ID = 'test-company-id';
+const TEST_CTX = { companyId: FAKE_COMPANY_ID, bypass: false, isPublic: false } as const;
+
 function makeService() {
   const prisma = {
     user: {
       findUnique: jest.fn(async ({ where }: { where: { id: string } }) => USERS[where.id] ?? null),
+      findFirst: jest.fn(async ({ where }: { where: { id: string } }) => USERS[where.id] ?? null),
       // managerScopeIds → teamSalesIds: SALES reps whose managerId = this manager.
       findMany: jest.fn(async ({ where }: { where: { role: UserRole; managerId?: string } }) =>
         where.managerId === MANAGER_ID ? [{ id: TEAM_SALES_ID }] : [],
@@ -65,26 +70,36 @@ const manager: AuthUser = {
 describe('Visits · SALES_MANAGER assignment scope', () => {
   it('manager can assign to themselves (self in scope)', async () => {
     const { resolve } = makeService();
-    await expect(resolve(MANAGER_ID, manager)).resolves.toBe(MANAGER_ID);
+    await runTenantContext(TEST_CTX, () =>
+      expect(resolve(MANAGER_ID, manager)).resolves.toBe(MANAGER_ID),
+    );
   });
 
   it('manager can assign to a team member', async () => {
     const { resolve } = makeService();
-    await expect(resolve(TEAM_SALES_ID, manager)).resolves.toBe(TEAM_SALES_ID);
+    await runTenantContext(TEST_CTX, () =>
+      expect(resolve(TEAM_SALES_ID, manager)).resolves.toBe(TEAM_SALES_ID),
+    );
   });
 
   it('manager cannot assign to an out-of-team SALES rep', async () => {
     const { resolve } = makeService();
-    await expect(resolve(OUT_SALES_ID, manager)).rejects.toBeInstanceOf(BadRequestException);
+    await runTenantContext(TEST_CTX, () =>
+      expect(resolve(OUT_SALES_ID, manager)).rejects.toBeInstanceOf(BadRequestException),
+    );
   });
 
   it('manager cannot assign to another SALES_MANAGER', async () => {
     const { resolve } = makeService();
-    await expect(resolve(OTHER_MANAGER_ID, manager)).rejects.toBeInstanceOf(BadRequestException);
+    await runTenantContext(TEST_CTX, () =>
+      expect(resolve(OTHER_MANAGER_ID, manager)).rejects.toBeInstanceOf(BadRequestException),
+    );
   });
 
   it('rejects an inactive sales rep', async () => {
     const { resolve } = makeService();
-    await expect(resolve(INACTIVE_SALES_ID, manager)).rejects.toBeInstanceOf(BadRequestException);
+    await runTenantContext(TEST_CTX, () =>
+      expect(resolve(INACTIVE_SALES_ID, manager)).rejects.toBeInstanceOf(BadRequestException),
+    );
   });
 });

@@ -1,7 +1,8 @@
-import { CanActivate, ExecutionContext, Global, INestApplication, Module } from '@nestjs/common';
+import { CallHandler, CanActivate, ExecutionContext, Global, INestApplication, Injectable, Module, NestInterceptor } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD, Reflector } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
+import { Observable, from, lastValueFrom } from 'rxjs';
 import request from 'supertest';
 import { UserRole, MaintenanceStatus, MaintenancePriority, MaintenanceReviewStatus } from '@prisma/client';
 import { ROLES_KEY } from '../../../common/decorators/roles.decorator';
@@ -14,6 +15,19 @@ import {
   PERMISSIONS_KEY,
   type PermissionsMeta,
 } from '../../../common/decorators/permissions.decorator';
+import { runTenantContext } from '../../../common/tenant/tenant-context';
+
+@Injectable()
+class FakeTenantInterceptor implements NestInterceptor {
+  intercept(_ctx: ExecutionContext, next: CallHandler): Observable<unknown> {
+    return from(
+      runTenantContext(
+        { companyId: 'test-company-id', bypass: false, isPublic: false },
+        () => lastValueFrom(next.handle()),
+      ),
+    );
+  }
+}
 
 /**
  * Verifies the maintenance permissions rollout:
@@ -141,6 +155,17 @@ function makePrismaMock() {
     },
     user: {
       findUnique: jest.fn().mockImplementation(async ({ where }: { where: { id: string } }) => {
+        if (where.id === ADMIN_ASSIGNEE) return { id: where.id, role: UserRole.ADMIN, active: true };
+        if (where.id === CUSTOMER_ID) return { id: where.id, role: UserRole.CUSTOMER, active: true };
+        if (where.id === SUPERVISOR_ASSIGNEE) {
+          return { id: where.id, role: UserRole.MAINTENANCE_SUPERVISOR, active: true };
+        }
+        if (where.id === INACTIVE_SUPERVISOR) {
+          return { id: where.id, role: UserRole.MAINTENANCE_SUPERVISOR, active: false };
+        }
+        return null;
+      }),
+      findFirst: jest.fn().mockImplementation(async ({ where }: { where: { id: string } }) => {
         if (where.id === ADMIN_ASSIGNEE) return { id: where.id, role: UserRole.ADMIN, active: true };
         if (where.id === CUSTOMER_ID) return { id: where.id, role: UserRole.CUSTOMER, active: true };
         if (where.id === SUPERVISOR_ASSIGNEE) {
@@ -279,6 +304,7 @@ describe('Maintenance module · permissions enforcement', () => {
         { provide: APP_GUARD, useClass: FakeAuthGuard },
         { provide: APP_GUARD, useClass: RolesGuard },
         { provide: APP_GUARD, useClass: PermissionsGuard },
+        { provide: APP_INTERCEPTOR, useClass: FakeTenantInterceptor },
       ],
     })
       .overrideProvider(DocumentsService)

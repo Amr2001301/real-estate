@@ -36,6 +36,7 @@ import {
   UserRole,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -404,7 +405,7 @@ export class DocumentsService {
         await this.assertFound(this.prisma.brokerPayout.findUnique({ where: { id: ownerId }, select: { id: true } }), 'BrokerPayout');
         break;
       case DocumentOwnerType.USER:
-        await this.assertFound(this.prisma.user.findUnique({ where: { id: ownerId }, select: { id: true } }), 'User');
+        await resolveTenantUser(this.prisma, ownerId, { id: true });
         break;
       case DocumentOwnerType.MAINTENANCE_REQUEST:
         await this.assertFound(this.prisma.maintenanceRequest.findUnique({ where: { id: ownerId }, select: { id: true } }), 'MaintenanceRequest');

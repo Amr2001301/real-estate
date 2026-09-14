@@ -18,6 +18,7 @@ import { paginate, takeSkip } from '../../common/utils/pagination';
 import { managerScopeIds, SALES_ACTOR_ROLES } from '../../common/utils/sales-scope';
 import { matchOrCreateLeadForClient } from '../crm/crm-lead-matching';
 import { NotificationsService } from '../notifications/notifications.module';
+import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import {
   AssignSalesDto,
   CreateDirectAppointmentDto,
@@ -379,7 +380,7 @@ export class VisitsService {
 
       if (req.leadId) {
         const salesName = dto.assignedSalesId
-          ? (await tx.user.findUnique({ where: { id: dto.assignedSalesId }, select: { fullName: true } }))?.fullName
+          ? (await resolveTenantUser(tx, dto.assignedSalesId, { fullName: true }, { throwBadRequest: true }).catch(() => null))?.fullName
           : null;
 
         // Advance lead to VISIT stage if still in an early stage
@@ -448,14 +449,16 @@ export class VisitsService {
     let derivedPhone = customerPhone;
 
     if (dto.clientId) {
-      const c = await this.prisma.user.findUnique({
-        where: { id: dto.clientId },
-        select: { id: true, role: true, active: true, fullName: true, phone: true, email: true },
-      });
-      if (!c) throw new BadRequestException('Client not found');
-      if (c.role !== UserRole.CLIENT && c.role !== UserRole.CUSTOMER) {
-        throw new BadRequestException('Selected user is not a client or customer');
-      }
+      const c = await resolveTenantUser(
+        this.prisma,
+        dto.clientId,
+        { id: true, role: true, active: true, fullName: true, phone: true, email: true },
+        {
+          expectRoles: [UserRole.CLIENT, UserRole.CUSTOMER],
+          label: 'Client not found',
+          throwBadRequest: true,
+        },
+      );
       if (!c.active) throw new BadRequestException('Selected client is inactive');
       resolvedClientId = c.id;
       clientFullName = c.fullName;
@@ -736,11 +739,12 @@ export class VisitsService {
   // SALES_MANAGER). A SALES_MANAGER may only assign within their own scope
   // (self + team). Returns the validated salesId.
   private async resolveAssignableSalesId(salesId: string, user: AuthUser): Promise<string> {
-    const s = await this.prisma.user.findUnique({
-      where: { id: salesId },
-      select: { id: true, role: true, active: true },
-    });
-    if (!s) throw new BadRequestException('Sales person not found');
+    const s = await resolveTenantUser(
+      this.prisma,
+      salesId,
+      { id: true, role: true, active: true },
+      { label: 'Sales person not found', throwBadRequest: true },
+    );
     if (!SALES_ACTOR_ROLES.includes(s.role)) {
       throw new BadRequestException('Selected user is not a sales person');
     }
@@ -1034,13 +1038,16 @@ export class VisitsService {
       throw new BadRequestException(`Cannot reassign appointment in status: ${appt.status}`);
     }
 
-    const salesUser = await this.prisma.user.findUnique({
-      where: { id: dto.assignedSalesId },
-      select: { id: true, fullName: true, role: true },
-    });
-    if (!salesUser || (salesUser.role !== UserRole.SALES && salesUser.role !== UserRole.ADMIN)) {
-      throw new BadRequestException('Assigned user must be a sales representative');
-    }
+    const salesUser = await resolveTenantUser(
+      this.prisma,
+      dto.assignedSalesId,
+      { id: true, fullName: true, role: true },
+      {
+        expectRoles: [UserRole.SALES, UserRole.ADMIN],
+        label: 'Assigned user must be a sales representative',
+        throwBadRequest: true,
+      },
+    );
 
     // SALES_REASSIGNED captures a change from one sales user to another;
     // SALES_ASSIGNED stays for the initial assignment.

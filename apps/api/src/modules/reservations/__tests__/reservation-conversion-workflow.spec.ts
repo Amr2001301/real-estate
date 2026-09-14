@@ -234,6 +234,7 @@ function makePrismaMock() {
         installment: m.installment,
         deposit: m.deposit,
         lead: m.lead,
+        refreshToken: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
       };
       return (ops as (tx: unknown) => Promise<unknown>)(tx);
     }

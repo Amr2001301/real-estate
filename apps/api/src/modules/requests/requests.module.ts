@@ -572,6 +572,7 @@ class RequestsController {
 
   // Admin/Sales
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
+  @Permissions('visits:read')
   @Get('info-requests')
   listInfo(@Query('page') page = 1, @Query('pageSize') pageSize = 20) {
     return this.svc.listInfoRequests({ page: Number(page), pageSize: Number(pageSize) });

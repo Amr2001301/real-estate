@@ -61,6 +61,7 @@ const fixture: {
     id: string;
     reservationNumber: string;
     status: RStatus;
+    salesId: string;
     unitId: string;
     leadId: string | null;
     clientId: string | null;
@@ -96,6 +97,7 @@ function resetFixture() {
     id: '00000000-0000-0000-0000-000000000001',
     reservationNumber: 'RES-0001',
     status: 'PENDING',
+    salesId: 'sales-1',
     unitId: 'unit-1',
     leadId: 'lead-1',
     clientId: 'client-1',

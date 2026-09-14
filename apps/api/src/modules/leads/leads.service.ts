@@ -6,6 +6,7 @@ import {
 import * as ExcelJS from 'exceljs';
 import { AppointmentStatus, Prisma, LeadStage, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import { NotificationsService } from '../notifications/notifications.module';
 import {
   CreateLeadDto,
@@ -114,11 +115,11 @@ export class LeadsService {
     dto: CreateLeadDto,
   ): Promise<{ id: string; fullName: string; phone: string | null; email: string | null }> {
     if (dto.clientId) {
-      const found = await tx.user.findUnique({
-        where: { id: dto.clientId },
-        select: { id: true, fullName: true, phone: true, email: true },
-      });
-      if (!found) throw new NotFoundException('Client not found');
+      const found = await resolveTenantUser(
+        tx,
+        dto.clientId,
+        { id: true, fullName: true, phone: true, email: true },
+      );
       return found;
     }
 

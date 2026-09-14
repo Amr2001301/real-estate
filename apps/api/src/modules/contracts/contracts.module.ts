@@ -43,6 +43,8 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { teamSalesIds, assertSalesRecordInScope } from '../../common/utils/sales-scope';
+import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
+import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { BrokerCommissionsModule } from '../broker-commissions/broker-commissions.module';
 import { BrokerCommissionsService } from '../broker-commissions/broker-commissions.service';
@@ -326,11 +328,18 @@ export class ContractsService {
   }
 
   async create(dto: CreateContractDto, actorId: string) {
+    const companyId = getRequiredCompanyId();
     const unit = await this.prisma.unit.findUnique({ where: { id: dto.unitId } });
     if (!unit) throw new NotFoundException('Unit not found');
     if (unit.status === UnitStatus.SOLD) {
       throw new BadRequestException('Unit already sold');
     }
+
+    await resolveTenantUser(
+      this.prisma,
+      dto.customerId,
+      { id: true },
+    );
 
     const contract = await this.prisma.$transaction(async (tx) => {
       const created = await tx.contract.create({
@@ -351,7 +360,7 @@ export class ContractsService {
       // can still walk away from a reservation. Mirrored test:
       // apps/api/test/e2e/me-reservations.e2e-spec.ts
       const promoted = await tx.user.updateMany({
-        where: { id: dto.customerId, role: 'CLIENT' },
+        where: { id: dto.customerId, role: 'CLIENT', companyId },
         data: { role: 'CUSTOMER' },
       });
       // Invalidate active refresh tokens so the portal immediately reflects the

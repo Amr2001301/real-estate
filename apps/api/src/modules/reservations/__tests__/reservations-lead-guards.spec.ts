@@ -6,16 +6,33 @@
  *   Bug C — client-linked reservation leadId not persisted back to reservation
  */
 import {
+  CallHandler,
   CanActivate,
   ExecutionContext,
   Global,
   INestApplication,
+  Injectable,
   Module,
+  NestInterceptor,
   ValidationPipe,
 } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
+import { Observable, from, lastValueFrom } from 'rxjs';
+import { runTenantContext } from '../../../common/tenant/tenant-context';
+
+@Injectable()
+class FakeTenantInterceptor implements NestInterceptor {
+  intercept(_ctx: ExecutionContext, next: CallHandler): Observable<unknown> {
+    return from(
+      runTenantContext(
+        { companyId: 'test-company-id', bypass: false, isPublic: false },
+        () => lastValueFrom(next.handle()),
+      ),
+    );
+  }
+}
 import request from 'supertest';
 import { LeadStage, ReservationStatus, UserRole } from '@prisma/client';
 import { ReservationsModule } from '../reservations.module';
@@ -123,6 +140,7 @@ function makePrismaMock(leadOverrides: Parameters<typeof makeLead>[0] = {}) {
     unitStatusHistory: { create: jest.fn().mockResolvedValue({}) },
     user: {
       findUnique: jest.fn().mockResolvedValue(null),
+      findFirst: jest.fn().mockResolvedValue(null),
       updateMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     installmentPlan: { create: jest.fn().mockResolvedValue({ id: 'plan-1' }) },
@@ -173,6 +191,7 @@ async function buildApp(mock: ReturnType<typeof makePrismaMock>) {
       { provide: APP_GUARD, useClass: FakeAuthGuard },
       { provide: APP_GUARD, useClass: RolesGuard },
       { provide: APP_GUARD, useClass: PermissionsGuard },
+      { provide: APP_INTERCEPTOR, useClass: FakeTenantInterceptor },
     ],
   }).compile();
 
@@ -339,6 +358,14 @@ describe('POST /reservations — client-linked path persists leadId (Bug C fix)'
     // Use clientId instead of leadId
     mock = makePrismaMock();
     mock.user.findUnique.mockResolvedValue({
+      id: CLIENT_UUID,
+      role: UserRole.CLIENT,
+      active: true,
+      fullName: 'Test Client',
+      phone: '0501234567',
+      email: null,
+    });
+    mock.user.findFirst.mockResolvedValue({
       id: CLIENT_UUID,
       role: UserRole.CLIENT,
       active: true,

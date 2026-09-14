@@ -39,6 +39,15 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     // than silently leaving data unprotected.
     this.assertModelTenancyComplete();
 
+    // MT-016 — every model with a companyId column must be tenant-aware.
+    this.assertCompanyIdModelsClassified();
+
+    // MT-015 — verify the Prisma middleware API is still present before using it.
+    // $use is deprecated in Prisma 5 and removed in Prisma 6. If a Prisma major
+    // version upgrade removes $use, tenant scoping silently disappears unless this
+    // guard fails startup first.
+    this.assertMiddlewareApiAvailable();
+
     // $use is deprecated in Prisma 5 — scheduled for removal in Prisma 6.
     // Migration path: when PrismaService is refactored from `extends PrismaClient`
     // to composition, replace this with $extends({ query: { ... } }).
@@ -67,6 +76,61 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         `[MT-013] Missing MODEL_TENANCY classification for: ${unclassified.join(', ')}. ` +
           'Every Prisma model must be classified before the application can start. ' +
           'Add the missing model(s) to apps/api/src/common/prisma/model-tenancy.ts.',
+      );
+    }
+  }
+
+  /**
+   * MT-016 — Verify every model with a `companyId` column is classified as
+   * TENANT_OWNED or TENANT_CONTROLLED. PLATFORM_GLOBAL / TENANT_VIA_RELATION
+   * models must not have a companyId field (they are cross-tenant by design).
+   *
+   * Exposed as a non-private method so tests can inject a synthetic DMMF.
+   */
+  assertCompanyIdModelsClassified(
+    models: ReadonlyArray<{ name: string; fields: ReadonlyArray<{ name: string; isRequired?: boolean }> }> =
+      Prisma.dmmf.datamodel.models,
+  ): void {
+    const tenantAware = new Set<string>(['TENANT_OWNED', 'TENANT_CONTROLLED']);
+    const violators: string[] = [];
+
+    for (const model of models) {
+      // A nullable companyId? is a legitimate cross-tenant reference (e.g. PricingPackage).
+      // Only a required (non-nullable) companyId signals tenant ownership.
+      const hasRequiredCompanyId = model.fields.some(
+        (f) => f.name === 'companyId' && f.isRequired !== false,
+      );
+      if (!hasRequiredCompanyId) continue;
+
+      const tier = MODEL_TENANCY[model.name as keyof typeof MODEL_TENANCY];
+      if (!tier || !tenantAware.has(tier)) {
+        violators.push(`${model.name} (${tier ?? 'UNCLASSIFIED'})`);
+      }
+    }
+
+    if (violators.length > 0) {
+      throw new Error(
+        `[MT-016] Models with a companyId column must be classified as TENANT_OWNED or ` +
+          `TENANT_CONTROLLED. Violations: ${violators.join(', ')}. ` +
+          'Fix the classification in apps/api/src/common/prisma/model-tenancy.ts.',
+      );
+    }
+  }
+
+  /**
+   * MT-015 — Verify that the Prisma `$use` middleware API is still present.
+   * $use is deprecated in Prisma 5 and removed in Prisma 6. If a Prisma upgrade
+   * removes it before the codebase migrates to `$extends`, all tenant scoping
+   * silently disappears. This guard causes startup to fail with a clear message.
+   *
+   * Exposed as a non-private method so tests can verify the guard logic.
+   */
+  assertMiddlewareApiAvailable(): void {
+    if (typeof this.$use !== 'function') {
+      throw new Error(
+        '[MT-015] PrismaClient.$use is no longer available — tenant middleware cannot be ' +
+          'registered. Migrate from $use to $extends({ query: { ... } }) before upgrading ' +
+          'Prisma past version 5.',
       );
     }
   }

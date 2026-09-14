@@ -1,13 +1,30 @@
 import {
+  CallHandler,
   CanActivate,
   ExecutionContext,
   Global,
   INestApplication,
+  Injectable,
   Module,
+  NestInterceptor,
   ValidationPipe,
 } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD, Reflector } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR, Reflector } from '@nestjs/core';
+import { Observable, from, lastValueFrom } from 'rxjs';
+import { runTenantContext } from '../../../common/tenant/tenant-context';
+
+@Injectable()
+class FakeTenantInterceptor implements NestInterceptor {
+  intercept(_ctx: ExecutionContext, next: CallHandler): Observable<unknown> {
+    return from(
+      runTenantContext(
+        { companyId: 'test-company-id', bypass: false, isPublic: false },
+        () => lastValueFrom(next.handle()),
+      ),
+    );
+  }
+}
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { UserRole } from '@prisma/client';
@@ -115,6 +132,9 @@ function makePrismaMock() {
     unit: {
       findUnique: jest.fn().mockResolvedValue({ id: 'unit-1', status: 'AVAILABLE' }),
     },
+    user: {
+      findFirst: jest.fn().mockResolvedValue({ id: 'customer-1' }),
+    },
     // P12 — contract-document linking probes for an existing doc; null ⇒ a new
     // CUSTOMER_VISIBLE doc is registered (via the overridden DocumentsService)
     // and `contract_document_available` is fired.
@@ -189,6 +209,7 @@ describe('Contracts module · permissions enforcement', () => {
         { provide: APP_GUARD, useClass: FakeAuthGuard },
         { provide: APP_GUARD, useClass: RolesGuard },
         { provide: APP_GUARD, useClass: PermissionsGuard },
+        { provide: APP_INTERCEPTOR, useClass: FakeTenantInterceptor },
       ],
     })
       .overrideProvider(BrokerCommissionsService)

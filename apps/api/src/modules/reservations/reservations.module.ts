@@ -72,6 +72,7 @@ import { ContractsModule, ContractsService } from '../contracts/contracts.module
 import { CronLockService } from '../../common/cron/cron-lock.service';
 import { captureExceptionSafe } from '../../common/observability/sentry';
 import { runTenantContext } from '../../common/tenant/tenant-context';
+import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 // BrokerCommissionsModule/Service no longer imported here. Commission
 // materialisation runs from ContractsService.sign() — the only path that
 // signs a contract — and convert always produces an unsigned contract.
@@ -370,16 +371,12 @@ export class ReservationsService {
     let effectiveSalesId = actor.sub;
 
     if (actor.role === UserRole.ADMIN && dto.salesId) {
-      const salesUser = await this.prisma.user.findUnique({
-        where: { id: dto.salesId },
-        select: { id: true, role: true, active: true },
-      });
-      if (!salesUser) {
-        throw new BadRequestException('Sales person not found');
-      }
-      if (salesUser.role !== UserRole.SALES) {
-        throw new BadRequestException('Selected user is not a sales person');
-      }
+      const salesUser = await resolveTenantUser(
+        this.prisma,
+        dto.salesId,
+        { id: true, role: true, active: true },
+        { expectRoles: [UserRole.SALES], label: 'Sales person not found', throwBadRequest: true },
+      );
       if (!salesUser.active) {
         throw new BadRequestException('Selected sales person is inactive');
       }
@@ -393,16 +390,16 @@ export class ReservationsService {
     let clientEmail: string | null = null;
     let genericLeadId: string | null = null;
     if (dto.clientId) {
-      const clientUser = await this.prisma.user.findUnique({
-        where: { id: dto.clientId },
-        select: { id: true, role: true, active: true, fullName: true, phone: true, email: true },
-      });
-      if (!clientUser) {
-        throw new BadRequestException('Client not found');
-      }
-      if (clientUser.role !== UserRole.CLIENT && clientUser.role !== UserRole.CUSTOMER) {
-        throw new BadRequestException('Selected user is not a client or customer');
-      }
+      const clientUser = await resolveTenantUser(
+        this.prisma,
+        dto.clientId,
+        { id: true, role: true, active: true, fullName: true, phone: true, email: true },
+        {
+          expectRoles: [UserRole.CLIENT, UserRole.CUSTOMER],
+          label: 'Client not found',
+          throwBadRequest: true,
+        },
+      );
       if (!clientUser.active) {
         throw new BadRequestException('Selected client is inactive');
       }
@@ -1415,14 +1412,12 @@ export class ReservationsService {
     const changes: string[] = [];
 
     if (dto.salesId && dto.salesId !== reservation.salesId) {
-      const salesUser = await this.prisma.user.findUnique({
-        where: { id: dto.salesId },
-        select: { id: true, role: true, active: true, fullName: true },
-      });
-      if (!salesUser) throw new BadRequestException('Sales person not found');
-      if (salesUser.role !== UserRole.SALES) {
-        throw new BadRequestException('Selected user is not a sales person');
-      }
+      const salesUser = await resolveTenantUser(
+        this.prisma,
+        dto.salesId,
+        { id: true, role: true, active: true, fullName: true },
+        { expectRoles: [UserRole.SALES], label: 'Sales person not found', throwBadRequest: true },
+      );
       if (!salesUser.active) {
         throw new BadRequestException('Selected sales person is inactive');
       }
@@ -2221,15 +2216,15 @@ class ReservationsController {
     return this.svc.addNote(id, dto, user.sub);
   }
 
-  // SALES_MANAGER may only touch reservations owned by a rep on their team.
-  // No-op for ADMIN; SALES behavior unchanged (managersOnly).
+  // ADMIN: no-op. SALES: only own reservations (salesId = self).
+  // SALES_MANAGER: only reservations owned by reps on their team.
   private async assertReservationInScope(user: AuthUser, id: string) {
     const reservation = await this.prisma.reservation.findUnique({
       where: { id },
       select: { salesId: true },
     });
     await assertSalesRecordInScope(this.prisma, user, reservation?.salesId ?? null, {
-      managersOnly: true,
+      mode: 'forbidden',
     });
   }
 
