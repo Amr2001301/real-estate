@@ -232,3 +232,43 @@ adds one comment line — no merge conflicts).
 separate commit ("feat(mt): tenant-scoped user resolution — resolveTenantUser
 helper, LeadScopeGuard, MT-015/MT-016 boot assertions") and then commit Step A.
 This keeps the graph readable and makes any future bisect unambiguous.
+
+---
+
+## Post-commit state (2026-09-14, after four feature commits + one lint-fix commit)
+
+### Commits landed on `main`
+
+| SHA | Message |
+|---|---|
+| `801bc62` | docs(audit): add CLAUDE.md and full audit document set |
+| `e14eed0` | feat(security): tenant-scoped user resolution and row-level lead scope |
+| `606d972` | ci: add security test job and all-checks-passed aggregate gate |
+| `a005b7b` | feat(step-a): PaymentInstrument schema plumbing and tenancy classification |
+| `6bfc7d5` | test(security): add attack-matrix security spec (missed from commit 1) |
+| `6a21dd1` | fix(lint): add resolve-tenant-entity and sales-scope to prisma.user allowlist |
+| `404f567` | fix(lint): suppress pre-existing prisma.user MT-012 violations across modules |
+
+### Suite results at HEAD (`404f567`)
+
+| Suite | Count | Result |
+|---|---|---|
+| Unit (`pnpm --filter @rep/api test`) | 2003/2003 | PASS |
+| Security (`jest --config test/jest-security.json`) | 93/93 | PASS |
+| Typecheck (`tsc --noEmit`) | 0 errors | PASS |
+| Lint (`eslint .`) | 0 errors, 20 warnings | PASS |
+
+### Accepted e2e failure baseline
+
+**20 failures on current tree — all pre-exist on clean HEAD.**
+See Q3 table above for attribution. None are introduced by Step A or the MT security work.
+
+The 20 failures fall into five independent categories:
+
+1. **Wrong HTTP method in test** (4): `broker_leads:approve/reject` (POST vs PATCH), `brokers:suspend/terminate` (PATCH vs POST) in `strict-permissions.e2e-spec.ts`.
+2. **Jest-circus hook ordering** (1): `afterAll` nested inside `beforeAll` in `strict-permissions.e2e-spec.ts` — suite fails to run but individual tests still execute.
+3. **Missing customer-portal routes** (3): `/v1/me/contracts` and `/v1/me/documents` not yet wired for customer-app access.
+4. **Reports MT isolation** (4): `reports-mt-isolation.e2e-spec.ts` ISO-R1–R4.
+5. **MinIO/storage unreachable** (8): E5, F5, G2/G3/G4/G6/G8/G9 — require object storage running; pass in CI with MinIO or when MinIO is stopped.
+
+**Step B must not introduce any new e2e failures beyond this baseline.**
