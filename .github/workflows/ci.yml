@@ -207,6 +207,57 @@ jobs:
         run: pnpm test:e2e
 
   # ─────────────────────────────────────────────────────────────────────────────
+  # Security test suite (real Postgres, real Nest app). Tests V-01..V-17 body-
+  # supplied FK cross-tenant checks, $queryRaw guard, LeadScopeGuard, and the
+  # full attack matrix. Runs whenever API code changes (same path filter as
+  # api-unit). Mark `all-checks-passed` (below) as the required status check —
+  # NOT this job directly — so docs-only PRs are not blocked by a skipped gate.
+  # ─────────────────────────────────────────────────────────────────────────────
+  api-security:
+    name: api · jest (security, real Postgres)
+    needs: [changes, build]
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: realestate_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/realestate_e2e?schema=public
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/realestate_e2e?schema=public
+      JWT_ACCESS_SECRET: ci-access-secret-placeholder-1234567890
+      JWT_REFRESH_SECRET: ci-refresh-secret-placeholder-1234567890
+      # Security tests share globalSetup with e2e: applies migrations + seeds
+      # the Permission table. SEED_ADMIN_EMAIL must match the seed default.
+      SEED_ADMIN_EMAIL: admin@example.com
+      SEED_ADMIN_PASSWORD: ChangeMe123!
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.9, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        working-directory: apps/api
+        run: pnpm prisma:generate
+      - name: Run security tests
+        working-directory: apps/api
+        run: pnpm exec jest -c test/jest-security.json --runInBand
+
+  # ─────────────────────────────────────────────────────────────────────────────
   # Mobile static analysis + unit/widget tests across all 3 packages.
   # No emulator → no integration_test in CI (deferred).
   # ─────────────────────────────────────────────────────────────────────────────
@@ -463,3 +514,25 @@ jobs:
           name: web-public-playwright-report
           path: apps/web-public/playwright-report/
           retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Aggregate gate — always runs regardless of path filters. Mark THIS job
+  # ("all checks passed") as the required status check in branch protection,
+  # not the individual path-filtered jobs. It passes when every dependency
+  # succeeded or was skipped; it fails when any dependency actually failed or
+  # was cancelled. A docs-only PR skips every filtered job, leaving only
+  # `build` (success) + skips → gate is green, merge is allowed.
+  # ─────────────────────────────────────────────────────────────────────────────
+  all-checks-passed:
+    name: all checks passed
+    runs-on: ubuntu-latest
+    needs: [build, api-unit, api-e2e, api-security, mobile-static, web-admin-e2e, web-public-e2e]
+    if: always()
+    steps:
+      - name: Verify no job failed or was cancelled
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "One or more jobs failed or were cancelled"
+            exit 1
+          fi
+          echo "All jobs passed or were skipped — gate green"
