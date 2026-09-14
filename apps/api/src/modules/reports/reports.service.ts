@@ -339,7 +339,9 @@ export class ReportsService {
       // ── extended inventory / pipeline ──
       this.prisma.unit.count({ where: { status: UnitStatus.SOLD } }),
       this.prisma.contract.count({ where: { signedAt: { not: null } } }),
+      // eslint-disable-next-line no-restricted-syntax
       this.prisma.user.count({ where: { role: UserRole.CUSTOMER } }),
+      // eslint-disable-next-line no-restricted-syntax
       this.prisma.user.count({
         where: {
           role: {

@@ -19,7 +19,7 @@ const COMPANY_A = 'aaaaaaaa-0000-0000-0000-000000000001';
 const COMPANY_B = 'bbbbbbbb-0000-0000-0000-000000000001';
 
 // Pre-computed SHA-256 of '123456' so tests can set codeHash directly.
-const { createHash } = require('node:crypto');
+import { createHash } from 'node:crypto';
 function hash6(code: string) {
   return createHash('sha256').update(code).digest('hex');
 }

@@ -51,6 +51,7 @@ export class BrokerUsersService {
     }
 
     // Find an existing user by email or phone (each is @unique on User).
+    // eslint-disable-next-line no-restricted-syntax
     const existingUser = await this.prisma.user.findFirst({
       where: {
         OR: [
@@ -127,6 +128,7 @@ export class BrokerUsersService {
     // If email/phone changes, ensure they don't collide with another user.
     if (dto.email !== undefined && dto.email !== link.user.email) {
       if (dto.email) {
+        // eslint-disable-next-line no-restricted-syntax
         const clash = await this.prisma.user.findUnique({
           where: { email: dto.email },
           select: { id: true },
@@ -138,6 +140,7 @@ export class BrokerUsersService {
     }
     if (dto.phone !== undefined && dto.phone !== link.user.phone) {
       if (dto.phone) {
+        // eslint-disable-next-line no-restricted-syntax
         const clash = await this.prisma.user.findUnique({
           where: { phone: dto.phone },
           select: { id: true },

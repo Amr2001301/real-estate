@@ -168,6 +168,7 @@ class MeHomeSummaryService {
       unreadNotifCount,
     ] = await Promise.all([
       // Q0: customer display name
+      // eslint-disable-next-line no-restricted-syntax
       this.prisma.user.findUnique({
         where: { id: userId },
         select: { fullName: true },

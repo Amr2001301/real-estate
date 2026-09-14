@@ -295,6 +295,7 @@ export class NotificationsService implements OnModuleInit {
   ): Promise<void> {
     if (roles.length === 0) return;
     try {
+      // eslint-disable-next-line no-restricted-syntax -- bulk role query, not an external-ID lookup; no IDOR risk
       const users = await this.prisma.user.findMany({
         where: { role: { in: [...roles] }, active: true },
         select: { id: true },
@@ -569,6 +570,7 @@ export class NotificationsService implements OnModuleInit {
       ids: string[],
       notifIdByUser: Map<string, string>,
     ) => {
+      // eslint-disable-next-line no-restricted-syntax -- bulk IDs supplied by this service, not from external input
       const usersWithLocale = await this.prisma.user.findMany({
         where: { id: { in: ids } },
         select: { id: true, locale: true },
@@ -765,6 +767,7 @@ export class NotificationsService implements OnModuleInit {
       case BroadcastTarget.ALL_MAINTENANCE_SUPERVISORS:
         return this.activeUserIdsByRole([UserRole.MAINTENANCE_SUPERVISOR]);
       case BroadcastTarget.ALL_ACTIVE: {
+        // eslint-disable-next-line no-restricted-syntax -- broadcast to all active users (no external-ID IDOR risk)
         const users = await this.prisma.user.findMany({ where: { active: true }, select: { id: true } });
         return users.map((u) => u.id);
       }
@@ -774,6 +777,7 @@ export class NotificationsService implements OnModuleInit {
   }
 
   private async activeUserIdsByRole(roles: UserRole[]): Promise<string[]> {
+    // eslint-disable-next-line no-restricted-syntax -- bulk role query, not an external-ID lookup; no IDOR risk
     const users = await this.prisma.user.findMany({
       where: { role: { in: roles }, active: true },
       select: { id: true },

@@ -190,8 +190,7 @@ describe('TEST-002 — @PermissionsStrict two-person rule (e2e)', () => {
   describe('bareAdmin (ADMIN role, zero explicit codes) → 403 on every strict endpoint', () => {
     for (const [code, method, url, body] of STRICT_ENDPOINTS) {
       it(`${code} — ${method.toUpperCase()} ${url} → 403`, async () => {
-        const res = await (request(testApp.app.getHttpServer()) as any)
-          [method](url)
+        const res = await (request(testApp.app.getHttpServer()) as any)[method](url)
           .set('Authorization', `Bearer ${bareToken}`)
           .send(body ?? {});
 
@@ -208,8 +207,7 @@ describe('TEST-002 — @PermissionsStrict two-person rule (e2e)', () => {
   describe('seededAdmin (ADMIN role + all strict codes) → NOT 403/401 on every strict endpoint', () => {
     for (const [code, method, url, body] of STRICT_ENDPOINTS) {
       it(`${code} — ${method.toUpperCase()} ${url} → not 401/403`, async () => {
-        const res = await (request(testApp.app.getHttpServer()) as any)
-          [method](url)
+        const res = await (request(testApp.app.getHttpServer()) as any)[method](url)
           .set('Authorization', `Bearer ${adminToken}`)
           .send(body ?? {});
 

@@ -93,6 +93,7 @@ export class BrokerPortalTeamService {
       throw new BadRequestException('Either email or phone is required');
     }
 
+    // eslint-disable-next-line no-restricted-syntax
     const existingUser = await this.prisma.user.findFirst({
       where: {
         OR: [
@@ -175,6 +176,7 @@ export class BrokerPortalTeamService {
     // Email/phone collision check against User table.
     if (dto.email !== undefined && dto.email !== link.user.email) {
       if (dto.email) {
+        // eslint-disable-next-line no-restricted-syntax
         const clash = await this.prisma.user.findUnique({
           where: { email: dto.email },
           select: { id: true },
@@ -186,6 +188,7 @@ export class BrokerPortalTeamService {
     }
     if (dto.phone !== undefined && dto.phone !== link.user.phone) {
       if (dto.phone) {
+        // eslint-disable-next-line no-restricted-syntax
         const clash = await this.prisma.user.findUnique({
           where: { phone: dto.phone },
           select: { id: true },

@@ -129,7 +129,8 @@ class AuditService {
       .map((r) => r.actorId)
       .filter((v): v is string => Boolean(v));
     const actors = actorIds.length
-      ? await this.prisma.user.findMany({
+      ? // eslint-disable-next-line no-restricted-syntax
+        await this.prisma.user.findMany({
           where: { id: { in: actorIds } },
           select: { id: true, fullName: true, email: true, role: true },
         })

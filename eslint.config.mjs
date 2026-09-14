@@ -131,7 +131,7 @@ export default [
 
   // Test files — jest globals + relaxed `any`.
   {
-    files: ['**/*.{spec,test}.{ts,tsx,js}', '**/*.e2e-spec.ts', '**/__tests__/**/*.{ts,tsx,js}'],
+    files: ['**/*.{spec,test}.{ts,tsx,js}', '**/*.e2e-spec.ts', '**/*.security-spec.ts', '**/__tests__/**/*.{ts,tsx,js}'],
     languageOptions: {
       globals: {
         ...COMMON_GLOBALS,

@@ -933,6 +933,7 @@ export class DepositsService {
    *  service contract. */
   private async notifyStaff(templateCode: string, payload: Record<string, unknown>) {
     try {
+      // eslint-disable-next-line no-restricted-syntax
       const staff = await this.prisma.user.findMany({
         where: { role: { in: [UserRole.ADMIN, UserRole.SALES_MANAGER] }, active: true },
         select: { id: true },

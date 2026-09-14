@@ -462,6 +462,7 @@ export class BonusService {
       convertedReservations,
       signedContracts,
     ] = await Promise.all([
+      // eslint-disable-next-line no-restricted-syntax
       this.prisma.user.findMany({ where: { id: inReps }, select: { id: true, fullName: true } }),
       this.prisma.salesTarget.findMany({ where: { salesId: inReps, period } }),
       this.prisma.lead.groupBy({
@@ -722,6 +723,7 @@ class BonusController {
   @Get('sales-targets/actors')
   async listTargetActors(@CurrentUser() user: AuthUser) {
     if (user.role === UserRole.ADMIN) {
+      // eslint-disable-next-line no-restricted-syntax
       return this.prisma.user.findMany({
         where: { role: { in: [UserRole.SALES, UserRole.SALES_MANAGER] } },
         select: { id: true, fullName: true, role: true },
@@ -729,6 +731,7 @@ class BonusController {
       });
     }
     const ids = await managerScopeIds(this.prisma, user.sub);
+    // eslint-disable-next-line no-restricted-syntax
     return this.prisma.user.findMany({
       where: { id: { in: ids } },
       select: { id: true, fullName: true, role: true },

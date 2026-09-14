@@ -950,6 +950,7 @@ export class ReservationsService {
   private async buildUserOwnershipFilter(
     userId: string,
   ): Promise<Prisma.ReservationWhereInput[]> {
+    // eslint-disable-next-line no-restricted-syntax -- userId is the authenticated user's own ID; identity-resolution for ownership filter
     const contact = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { phone: true, email: true },
@@ -967,6 +968,7 @@ export class ReservationsService {
       // suffix is the LAST 8 digits — enough to forgive a dropped country
       // code while bounding the scan via the `phone` index.
       const suffix = phoneDigits.slice(-8);
+      // eslint-disable-next-line no-restricted-syntax -- phone-suffix scan for identity peers; no external-ID supplied
       const candidates = await this.prisma.user.findMany({
         where: { phone: { contains: suffix } },
         select: { id: true, phone: true },
@@ -976,6 +978,7 @@ export class ReservationsService {
       }
     }
     if (emailKey) {
+      // eslint-disable-next-line no-restricted-syntax -- canonical-email lookup for identity peers; no external-ID supplied
       const byEmail = await this.prisma.user.findUnique({
         where: { email: emailKey },
         select: { id: true },
