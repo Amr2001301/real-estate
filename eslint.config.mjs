@@ -175,6 +175,8 @@ export default [
       'apps/api/src/modules/auth/jwt.strategy.ts',
       'apps/api/src/modules/super-admin/super-admin.service.ts',
       'apps/api/src/common/utils/identity-claim.ts',
+      'apps/api/src/common/utils/sales-scope.ts',
+      'apps/api/src/common/tenant/resolve-tenant-entity.ts',
       // Tests: mock objects may reference prisma.user shape; exempt from this check.
       'apps/api/src/**/*.spec.ts',
       'apps/api/src/**/*.e2e-spec.ts',
@@ -214,6 +216,8 @@ export default [
       'apps/api/src/modules/auth/jwt.strategy.ts',
       'apps/api/src/modules/super-admin/super-admin.service.ts',
       'apps/api/src/common/utils/identity-claim.ts',
+      'apps/api/src/common/utils/sales-scope.ts',
+      'apps/api/src/common/tenant/resolve-tenant-entity.ts',
     ],
     rules: {
       'no-restricted-syntax': [
