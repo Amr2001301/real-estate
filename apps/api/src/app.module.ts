@@ -30,6 +30,7 @@ import { ReservationsModule } from './modules/reservations/reservations.module';
 import { ContractsModule } from './modules/contracts/contracts.module';
 import { InstallmentsModule } from './modules/installments/installments.module';
 import { DepositsModule } from './modules/deposits/deposits.module';
+import { PaymentInstrumentsModule } from './modules/payment-instruments/payment-instruments.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 import { UnitMaintenanceItemsModule } from './modules/maintenance/unit-maintenance-items.module';
 import { BonusModule } from './modules/bonus/bonus.module';
@@ -92,6 +93,7 @@ import { PublicCompaniesModule } from './modules/public-companies/public-compani
     ContractsModule,
     InstallmentsModule,
     DepositsModule,
+    PaymentInstrumentsModule,
     MaintenanceModule,
     UnitMaintenanceItemsModule,
     BonusModule,

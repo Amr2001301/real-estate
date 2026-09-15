@@ -1257,6 +1257,8 @@ async function main() {
     { code: 'deposits:read', description: 'Read deposit records' },
     { code: 'deposits:register', description: 'Register deposit payments' },
     { code: 'deposits:verify', description: 'Verify deposit payments' },
+    { code: 'payment-instruments:manage', description: 'Create and transition payment instruments (cheques, bank transfers)' },
+    { code: 'payment-instruments:bounce', description: 'Record cheque bounce (ADMIN-only, strict permission)' },
     { code: 'contracts:read', description: 'Read contract records' },
     { code: 'contracts:upload', description: 'Create contracts and attach PDFs' },
     { code: 'contracts:update', description: 'Update editable contract fields' },

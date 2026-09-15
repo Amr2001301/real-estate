@@ -66,3 +66,56 @@ Pre-existing failures confirmed unrelated to Step A:
 ---
 
 *Next: Step B — ChequeLifecycleService + Sub-case A bounce path*
+
+---
+
+## Step B — ChequeLifecycleService + Sub-case A bounce path
+
+**Date:** 2026-09-15
+**Design ref:** `09-reversal-design.md` §3.3, §3.4 Sub-case A, §4.4, §6.2, §6.3, §8.1 step B
+**Status:** DONE ✓
+
+### Migration
+
+`20260915081820_step_b_bounce_penalty_enum` — purely additive:
+
+```sql
+ALTER TYPE "PlanPaymentType" ADD VALUE 'BOUNCE_PENALTY';
+```
+
+No drops. No type changes. No NOT NULL on existing columns.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `apps/api/prisma/schema.prisma` | Added `BOUNCE_PENALTY` to `PlanPaymentType` enum |
+| `apps/api/prisma/migrations/20260915081820_step_b_bounce_penalty_enum/migration.sql` | Generated migration (new file) |
+| `apps/api/src/modules/payment-instruments/payment-instruments.service.ts` | New: `ChequeLifecycleService` — all transitions, Sub-case A bounce, AuditLog write, BOUNCE_PENALTY installment |
+| `apps/api/src/modules/payment-instruments/payment-instruments.controller.ts` | New: REST endpoints for all transitions with correct authorization |
+| `apps/api/src/modules/payment-instruments/payment-instruments.dto.ts` | New: DTOs for create, bounce, clear, replace |
+| `apps/api/src/modules/payment-instruments/payment-instruments.module.ts` | New: NestJS module wiring |
+| `apps/api/src/app.module.ts` | Added `PaymentInstrumentsModule` import |
+| `apps/api/prisma/seed.ts` | Added `payment-instruments:manage` and `payment-instruments:bounce` permission codes |
+| `apps/api/src/modules/payment-instruments/__tests__/cheque-lifecycle.spec.ts` | New: 27 unit + integration tests |
+| `apps/api/test/security/05-payment-instrument-attack.security-spec.ts` | New: 8 cross-tenant attack matrix tests (PI-B-1 through PI-B-8) |
+
+### Test results
+
+| Suite | Before | After | Delta |
+|---|---|---|---|
+| Unit (`jest`) | 2003 pass | **2035 pass** | +32 tests, 0 new failures |
+| Security (`jest-security.json`) | 115 tests (115 pass) | **123 tests (123 pass)** | +8 tests, 0 new failures |
+| Typecheck | 3 errors (pre-existing) | 3 errors (same pre-existing) | 0 new errors |
+| Lint | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |
+
+### Implementation notes
+
+- All state-machine transitions from §3.3 are implemented: PENDING_CLEARANCE→DEPOSITED, PENDING_CLEARANCE→CANCELLED, DEPOSITED→CLEARED, DEPOSITED→BOUNCED (Sub-case A), BOUNCED→REPLACED.
+- `DEPOSITED→BOUNCED` guard: if any linked deposit is APPROVED (Sub-case B), throws 501 Not Implemented with a clear message. Sub-case B deferred to Step C.
+- Bounce AuditLog entry exactly matches §6.3 structure: `action:"payment-instrument.bounced"`, `subCase:"A"`, `correctionRowsWritten:0`, `penaltyInstallmentId`.
+- `DEPOSITED→CLEARED` atomically approves linked deposits and marks installments PAID in a single `$transaction`.
+- Settings values (`cheque.bounced.penaltyAmount`) are read as suggestions only per Hard Rule 1 — the operator's submitted value is what gets stored.
+- `cheque_bounced` notification is best-effort post-transaction (catch swallowed to avoid blocking the response).
+
+*Next: Step C — PaymentCorrection model + Sub-case B bounce + verify(false) fix*

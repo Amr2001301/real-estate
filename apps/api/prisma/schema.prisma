@@ -1428,6 +1428,8 @@ enum PlanPaymentType {
   DOWN_PAYMENT
   INSTALLMENT
   FINAL_PAYMENT
+  /// Ad-hoc charge appended to a plan when a cheque bounces (Step B).
+  BOUNCE_PENALTY
 }
 
 model InstallmentPlanTemplate {
