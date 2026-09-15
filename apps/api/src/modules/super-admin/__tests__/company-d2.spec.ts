@@ -97,6 +97,7 @@ function makeService(
     },
     user: { findUnique: jest.fn().mockResolvedValue(null), findFirst: jest.fn().mockResolvedValue(null), create: jest.fn(), update: jest.fn() },
     pricingPackage: { findFirst: jest.fn().mockResolvedValue(null) },
+    setting: { createMany: jest.fn().mockResolvedValue({ count: 8 }) },
   };
   const prisma = {
     ...basePrisma,

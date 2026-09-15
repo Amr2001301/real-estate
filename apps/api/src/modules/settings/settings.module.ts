@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -90,6 +91,57 @@ class SettingsQueryDto {
   @IsOptional() @IsString() group?: string;
 }
 
+// ── Per-key validators for the 8 cancellation / cheque settings (§4.4) ───────
+// Called at write time (PUT/PATCH). Invalid values are rejected with 400.
+
+function validateIntPercent(key: string, v: unknown): void {
+  if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v > 100) {
+    throw new BadRequestException(`${key}: must be an integer between 0 and 100`);
+  }
+}
+
+function validateNonNegativeDecimal(key: string, v: unknown): void {
+  if (typeof v !== 'number' || v < 0 || !isFinite(v)) {
+    throw new BadRequestException(`${key}: must be a non-negative number`);
+  }
+  // Max 2 decimal places
+  if (Math.round(v * 100) !== v * 100) {
+    throw new BadRequestException(`${key}: maximum 2 decimal places`);
+  }
+}
+
+function validateEnum(key: string, v: unknown, allowed: string[]): void {
+  if (typeof v !== 'string' || !allowed.includes(v)) {
+    throw new BadRequestException(`${key}: must be one of ${allowed.join(', ')}`);
+  }
+}
+
+function validateBoolean(key: string, v: unknown): void {
+  if (typeof v !== 'boolean') {
+    throw new BadRequestException(`${key}: must be a boolean`);
+  }
+}
+
+const SETTING_VALIDATORS: Record<string, (key: string, v: unknown) => void> = {
+  'cancellation.bookingAmount.refundPct': (k, v) => validateIntPercent(k, v),
+  'cancellation.contract.penaltyPct': (k, v) => validateIntPercent(k, v),
+  'cancellation.unit.returnToAvailable': (k, v) =>
+    validateEnum(k, v, ['AUTO', 'REQUIRES_APPROVAL']),
+  'cancellation.customer.demoteToClient': (k, v) => validateBoolean(k, v),
+  'cancellation.brokerCommission.action': (k, v) =>
+    validateEnum(k, v, ['CLAWBACK', 'RETAIN', 'MANUAL']),
+  'cancellation.salesBonus.action': (k, v) =>
+    validateEnum(k, v, ['CLAWBACK', 'RETAIN', 'MANUAL']),
+  'cheque.bounced.installmentAction': (k, v) =>
+    validateEnum(k, v, ['REOPEN_AS_OVERDUE', 'REOPEN_AS_PENDING']),
+  'cheque.bounced.penaltyAmount': (k, v) => validateNonNegativeDecimal(k, v),
+};
+
+function validateSettingValue(key: string, value: unknown): void {
+  const validator = SETTING_VALIDATORS[key];
+  if (validator) validator(key, value);
+}
+
 @Injectable()
 class SettingsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -115,6 +167,7 @@ class SettingsService {
   }
 
   async upsert(key: string, value: Prisma.InputJsonValue): Promise<SettingView> {
+    validateSettingValue(key, value);
     const companyId = getRequiredCompanyId();
     const row = await this.prisma.setting.upsert({
       where: { companyId_key: { companyId, key } },

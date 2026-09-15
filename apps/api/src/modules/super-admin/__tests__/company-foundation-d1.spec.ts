@@ -68,6 +68,9 @@ function makeService(overrides: Record<string, unknown> = {}) {
     pricingPackage: {
       findFirst: jest.fn().mockResolvedValue(null),
     },
+    setting: {
+      createMany: jest.fn().mockResolvedValue({ count: 8 }),
+    },
     ...overrides,
   };
 

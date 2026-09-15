@@ -5,6 +5,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { CapabilityService, type CompanyCapabilities } from '../../common/capabilities/capability.service';
 import { DomainResolverService } from '../../common/domain/domain-resolver.service';
 import { CompanyDomainsService, RESERVED_PLATFORM_SLUGS } from '../company-domains/company-domains.service';
+import { seedCancellationSettingsForCompany } from '../contracts/cancellation-settings.constants';
 import type {
   CreateCompanyDto,
   UpdateCompanyDto,
@@ -154,6 +155,13 @@ export class SuperAdminService {
       await this.companyDomainsService.provisionPlatformSubdomain(newCompany.id, newCompany.slug, tx);
       return newCompany;
     });
+
+    // Step D2: seed the 8 cancellation/cheque settings with documented defaults.
+    // SUPER_ADMIN calls run in bypass context (bypass=true) so the middleware
+    // passes createMany through without tenant-scope injection — the explicit
+    // companyId per row is respected. Idempotent (skipDuplicates); existing
+    // operator-configured values are never overwritten.
+    await seedCancellationSettingsForCompany(this.prisma, company.id);
 
     let adminUser = null;
     if (dto.adminEmail && dto.adminPassword && dto.adminFullName) {

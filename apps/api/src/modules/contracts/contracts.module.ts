@@ -50,6 +50,7 @@ import { BrokerCommissionsModule } from '../broker-commissions/broker-commission
 import { BrokerCommissionsService } from '../broker-commissions/broker-commissions.service';
 import { BonusModule } from '../bonus/bonus.module';
 import { BonusService } from '../bonus/bonus.module';
+import { CancellationPolicyService } from './cancellation-policy.service';
 
 // ── P12 legacy backfill helpers ─────────────────────────────────────────────
 // Pure (exported for unit tests). Derive safe display metadata for a backfilled
@@ -775,6 +776,7 @@ class ContractsController {
   constructor(
     private readonly svc: ContractsService,
     private readonly prisma: PrismaService,
+    private readonly cancellationPolicy: CancellationPolicyService,
   ) {}
 
   @Roles(UserRole.ADMIN)
@@ -939,12 +941,22 @@ class ContractsController {
   restore(@Param('id', ParseUUIDPipe) id: string) {
     return this.svc.restore(id);
   }
+
+  // Step D2 — Cancellation suggestion (READ ONLY; ADMIN only)
+  // Returns the pre-fill for the cancellation modal. D3 will use this as input;
+  // it changes nothing. 404 for contracts not belonging to this company.
+  @Roles(UserRole.ADMIN)
+  @Permissions('contracts:read')
+  @Get(':id/cancellation-suggestion')
+  getCancellationSuggestion(@Param('id', ParseUUIDPipe) id: string) {
+    return this.cancellationPolicy.getCancellationSuggestion(id);
+  }
 }
 
 @Module({
   imports: [BrokerCommissionsModule, BonusModule, DocumentsModule, NotificationsModule],
   controllers: [ContractsController],
-  providers: [ContractsService],
-  exports: [ContractsService],
+  providers: [ContractsService, CancellationPolicyService],
+  exports: [ContractsService, CancellationPolicyService],
 })
 export class ContractsModule {}

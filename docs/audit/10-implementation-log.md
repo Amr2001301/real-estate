@@ -266,4 +266,80 @@ ALTER TABLE "BonusEntry"        ADD COLUMN clawback overlay (3 columns + index +
 
 ---
 
-*Next: Step D2 — contracts:cancel endpoint + unit-release + clawback overlay*
+## Step D2 — Eight tenant Settings + CancellationPolicyService (suggestion layer)
+
+**Date:** 2026-09-15
+**Design ref:** `09-reversal-design.md` §4.4, §8.1 step E (pulled forward as D2 because D3 depends on it)
+**Status:** DONE ✓
+
+### Scope
+
+Eight per-tenant `Setting` rows that govern cancellation and cheque-bounce workflows. A read-only `CancellationPolicyService` that computes `getCancellationSuggestion` and `getBounceSuggestion` from those rows. Per-key write-time validation wired into `SettingsService.upsert`. Idempotent seed helper (`createMany + skipDuplicates`) called from `seed.ts` (existing companies) and `SuperAdminService.createCompany` (new companies).
+
+**Hard Rule 1 (design constraint):** Policy produces a SUGGESTION only. Operator-entered values are the truth. A setting is never used to compute a historical amount, never applied automatically.
+
+**Out of scope:** `contracts:cancel` endpoint, `contracts:release-unit`, clawback resolution (Step D3).
+
+### No migration
+
+All 8 keys are stored in the existing `Setting` model (`@@unique([companyId, key])`). No schema change required.
+
+### Seeding defaults
+
+| Key | Default |
+|---|---|
+| `cancellation.bookingAmount.refundPct` | `0` |
+| `cancellation.contract.penaltyPct` | `10` |
+| `cancellation.unit.returnToAvailable` | `REQUIRES_APPROVAL` |
+| `cancellation.customer.demoteToClient` | `false` |
+| `cancellation.brokerCommission.action` | `CLAWBACK` |
+| `cancellation.salesBonus.action` | `CLAWBACK` |
+| `cheque.bounced.installmentAction` | `REOPEN_AS_OVERDUE` |
+| `cheque.bounced.penaltyAmount` | `0` |
+
+### Suggestion formula (§4.4 S2)
+
+```
+bookingCollected       = Σ APPROVED Deposits where type=BOOKING_AMOUNT
+otherCollected         = totalCollected − bookingCollected
+suggestedBookingRefund = bookingCollected × (bookingRefundPct / 100)
+suggestedPenalty       = otherCollected × (penaltyPct / 100)
+suggestedRetained      = (bookingCollected − suggestedBookingRefund) + suggestedPenalty
+suggestedRefund        = totalCollected − suggestedRetained
+```
+
+S2 worked example: 25,000 booking + 300,000 installments = 325,000 total; 0% booking refund, 10% penalty → retained 55,000, refund 270,000.
+
+### Security model
+
+`getCancellationSuggestion` uses middleware-scoped `PrismaService.findFirst({ where: { id } })`. Middleware injects `companyId`, so a cross-tenant `contractId` resolves to `null` → `NotFoundException` (404, not 403 — no existence leak).
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `apps/api/src/modules/contracts/cancellation-settings.constants.ts` | New: 8 defaults + interfaces (`CancellationSettings`, `CancellationPolicySnapshot`, `BouncePolicySnapshot`) + `seedCancellationSettingsForCompany` helper |
+| `apps/api/src/modules/contracts/cancellation-policy.service.ts` | New: `CancellationPolicyService` — `getCancellationSuggestion`, `getBounceSuggestion`, private `readSettings` |
+| `apps/api/src/modules/contracts/__tests__/cancellation-policy.spec.ts` | New: 37 unit tests (SP-1–SP-9 formula/bounce/seed, VAL-1–VAL-12 per-key validation) |
+| `apps/api/test/security/09-d2-settings-security.security-spec.ts` | New: 19 security tests (DS-1–DS-9b cross-tenant isolation + validation + seed) |
+| `apps/api/src/modules/settings/settings.module.ts` | Added `SETTING_VALIDATORS` registry + `validateSettingValue` call in `upsert()` |
+| `apps/api/src/modules/contracts/contracts.module.ts` | Added `CancellationPolicyService` to providers + exports; added `GET :id/cancellation-suggestion` endpoint |
+| `apps/api/src/modules/payment-instruments/payment-instruments.controller.ts` | Added `CancellationPolicyService` injection + `GET :id/bounce-suggestion` endpoint |
+| `apps/api/src/modules/payment-instruments/payment-instruments.module.ts` | Added `ContractsModule` import (to resolve `CancellationPolicyService`) |
+| `apps/api/src/modules/super-admin/super-admin.service.ts` | Added `seedCancellationSettingsForCompany` call after `createCompany` transaction |
+| `apps/api/prisma/seed.ts` | Added loop to seed 8 defaults for all existing companies |
+| `apps/api/src/modules/super-admin/__tests__/company-foundation-d1.spec.ts` | Added `setting.createMany` mock stub |
+| `apps/api/src/modules/super-admin/__tests__/company-d2.spec.ts` | Added `setting.createMany` mock stub |
+
+### Test results
+
+| Suite | Before | After | Delta |
+|---|---|---|---|
+| Unit (`jest --runInBand`) | 2071 pass | **2108 pass** | +37 tests, 0 new failures |
+| Security (`jest-security.json`) | 144 tests | **163 tests (163 pass)** | +19 tests, 0 new failures |
+| Typecheck (`tsc --noEmit`) | 0 errors | 0 errors | 0 new errors |
+| Lint (`eslint`) | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |
+
+---
+
+*Next: Step D3 — contracts:cancel endpoint + unit-release + clawback overlay*

@@ -20,11 +20,15 @@ import {
   RecordClearingDto,
   ReplaceInstrumentDto,
 } from './payment-instruments.dto';
+import { CancellationPolicyService } from '../contracts/cancellation-policy.service';
 
 @ApiTags('payment-instruments')
 @Controller('payment-instruments')
 export class PaymentInstrumentsController {
-  constructor(private readonly svc: ChequeLifecycleService) {}
+  constructor(
+    private readonly svc: ChequeLifecycleService,
+    private readonly cancellationPolicy: CancellationPolicyService,
+  ) {}
 
   // ── Create instrument ────────────────────────────────────────────────────────
   // ADMIN + SALES_MANAGER; no strict (routine operation)
@@ -101,5 +105,15 @@ export class PaymentInstrumentsController {
     @Body() dto: ReplaceInstrumentDto,
   ) {
     return this.svc.transitionToReplaced(id, dto, user.sub);
+  }
+
+  // Step D2 — Bounce suggestion (READ ONLY; ADMIN only)
+  // Returns the two cheque.bounced.* policy values as a pre-fill for the
+  // bounce modal. 404 for instruments not belonging to this company.
+  @Roles(UserRole.ADMIN)
+  @Permissions('payment-instruments:manage')
+  @Get(':id/bounce-suggestion')
+  getBounceSuggestion(@Param('id', ParseUUIDPipe) id: string) {
+    return this.cancellationPolicy.getBounceSuggestion(id);
   }
 }

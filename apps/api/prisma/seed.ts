@@ -7,6 +7,7 @@ import {
   NotificationChannel,
 } from '@prisma/client';
 import * as argon2 from 'argon2';
+import { seedCancellationSettingsForCompany } from '../src/modules/contracts/cancellation-settings.constants';
 
 const prisma = new PrismaClient();
 
@@ -1466,6 +1467,14 @@ async function main() {
 
   // Optional: realistic public-website demo data (dev/staging only).
   await seedPublicDemo();
+
+  // ---- Step D2: seed cancellation/cheque settings for every company --------
+  // Idempotent (createMany skipDuplicates). New companies get defaults; already-
+  // configured values are never overwritten.
+  const allCompanies = await prisma.company.findMany({ select: { id: true } });
+  for (const c of allCompanies) {
+    await seedCancellationSettingsForCompany(prisma, c.id);
+  }
 
   // ---- Backfill companyId on all rows that were created before this seed run ----
   await backfillCompanyId(company.id);
