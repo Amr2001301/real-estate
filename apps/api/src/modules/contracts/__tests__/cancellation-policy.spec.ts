@@ -7,8 +7,11 @@
  *   SP-3   settings fall back to documented defaults when rows are absent
  *   SP-4   getCancellationSuggestion throws 404 for an unknown contract
  *   SP-5   getBounceSuggestion throws 404 for an unknown instrument
- *   SP-6   Changing a setting after suggestion is computed does not alter the
- *           returned snapshot (immutability — snapshot is a plain object copy)
+ *   SP-6   policySnapshot is a fresh object on each call — in-memory mutation of
+ *           the returned value does not bleed into a subsequent call's result
+ *           (NOTE: storage immutability — that a saved JSONB policySnapshot on
+ *           ContractCancellation survives a later settings change — is tested
+ *           in Step D3, where the cancellation row is written)
  *   SP-7   seedCancellationSettingsForCompany calls createMany with all 8 keys
  *   SP-8   seedCancellationSettingsForCompany is idempotent (skipDuplicates=true)
  *   SP-9   Default value assertions — each key has the exact documented default
@@ -241,7 +244,12 @@ describe('CancellationPolicyService — suggestion formula', () => {
     await expect(svc.getBounceSuggestion('no-such-id')).rejects.toThrow(NotFoundException);
   });
 
-  it('SP-6: policySnapshot is a plain value — mutating it after return does not affect re-computed snapshots', async () => {
+  it('SP-6: policySnapshot is a fresh object on each call — in-memory mutation does not bleed into a subsequent call', async () => {
+    // This test proves only in-memory isolation: the returned object is a plain
+    // value, not a cached reference shared across calls.  The storage guarantee
+    // (a saved policySnapshot JSONB column survives a settings change) is
+    // enforced structurally in D3 — once written to ContractCancellation the
+    // column is never re-derived from settings.
     const prisma = buildPrismaStub({
       contract: { id: 'c-id', companyId: 'co-a' },
       settingRows: buildSettingRows(),

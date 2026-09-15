@@ -4,6 +4,30 @@
 > **Convention:** one entry per step, opened when work starts, closed when green.
 > Format: `Step | Date | Files changed | Migration | Test delta | Status`
 
+### Verification rule (adopted 2026-09-15)
+
+No number in this document is claimed as measured unless it was produced by a
+command actually run at that commit.  Projected counts are never written as if
+they were measurements.
+
+**Methodology for historical unit counts:** checked out each step's final commit
+and ran `npx jest --runInBand --silent | grep "^Tests:"`.  Steps A–C show a
+small number of spurious failures (3–5) in `MT-013 MODEL_TENANCY boot assertion`
+when run against today's Prisma client, because the installed client now contains
+models added in later steps (ContractCancellation, Refund).  Those tests passed
+at commit time when the generated client matched the schema.  The *total* count
+(pass + fail) from the re-run is therefore the best proxy for the original count.
+
+**Steps A–C unit counts**: recorded at commit time; re-running today produces the
+same total but 3–5 schema-drift failures in MT-013.  Marked "recorded at commit
+time" rather than UNVERIFIED, because the totals match and the mechanism is
+understood.
+
+**Security suite counts (Steps A–D1)**: not re-verified — security tests require
+the live database to be at a specific migration state; re-running at older commits
+would require rolling back the applied migrations.  Marked UNVERIFIED.  D2
+security count (163) is directly verified at HEAD.
+
 ---
 
 ## Step A — PaymentInstrument schema + plumbing
@@ -50,8 +74,8 @@ No drops. No type changes. No NOT NULL on existing columns.
 
 | Suite | Before | After | Delta |
 |---|---|---|---|
-| Security (`jest-security.json`) | 66 tests (62 pass, 4 fail) | **93 tests (93 pass, 0 fail)** | +27 tests, 0 new failures |
-| Unit (`jest`) | 2003 pass | **2003 pass** | 0 delta |
+| Security (`jest-security.json`) | 66 tests (62 pass, 4 fail) | **93 tests (93 pass, 0 fail)** — UNVERIFIED (see verification rule above) | +27 tests, 0 new failures |
+| Unit (`jest`) | 2003 pass | **2003 pass** — recorded at commit time (a005b7b); re-run today: 2003 total, 5 schema-drift failures in MT-013 | 0 delta |
 | e2e (`jest-e2e.json`) | 20 fail (pre-existing) | 20 fail (same pre-existing) | 0 new failures |
 | Typecheck | 3 errors (pre-existing) | 3 errors (same pre-existing) | 0 new errors |
 
@@ -104,8 +128,8 @@ No drops. No type changes. No NOT NULL on existing columns.
 
 | Suite | Before | After | Delta |
 |---|---|---|---|
-| Unit (`jest`) | 2003 pass | **2035 pass** | +32 tests, 0 new failures |
-| Security (`jest-security.json`) | 115 tests (115 pass) | **123 tests (123 pass)** | +8 tests, 0 new failures |
+| Unit (`jest`) | 2003 pass | **2035 pass** — recorded at commit time (594d192); re-run today: 2035 total, 3 schema-drift failures in MT-013 | +32 tests, 0 new failures |
+| Security (`jest-security.json`) | 115 tests (115 pass) | **123 tests (123 pass)** — UNVERIFIED | +8 tests, 0 new failures |
 | Typecheck | 3 errors (pre-existing) | 3 errors (same pre-existing) | 0 new errors |
 | Lint | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |
 
@@ -172,8 +196,8 @@ No drops. No type changes. No NOT NULL on existing columns.
 
 | Suite | Before | After | Delta |
 |---|---|---|---|
-| Unit (`jest`) | 2035 pass | **2056 pass** | +21 tests, 0 new failures |
-| Security (`jest-security.json`) | 123 tests | **128 tests (128 pass)** | +5 tests, 0 new failures |
+| Unit (`jest`) | 2035 pass | **2056 pass** — recorded at commit time (8a7d2b1); re-run today: 2056 total, 3 schema-drift failures in MT-013 | +21 tests, 0 new failures |
+| Security (`jest-security.json`) | 123 tests | **128 tests (128 pass)** — UNVERIFIED | +5 tests, 0 new failures |
 | Typecheck | 0 errors | 0 errors | 0 new errors |
 | Lint | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |
 
@@ -259,8 +283,8 @@ ALTER TABLE "BonusEntry"        ADD COLUMN clawback overlay (3 columns + index +
 
 | Suite | Before | After | Delta |
 |---|---|---|---|
-| Unit (`jest --runInBand`) | 2056 pass | **2071 pass** | +15 tests, 0 new failures |
-| Security (`jest-security.json`) | 132 tests | **144 tests (144 pass)** | +12 tests, 0 new failures |
+| Unit (`jest --runInBand`) | 2056 pass | **2069 pass** — directly measured at commit ea2b25a | +13 tests, 0 new failures |
+| Security (`jest-security.json`) | 132 tests | **144 tests (144 pass)** — UNVERIFIED | +12 tests, 0 new failures |
 | Typecheck (`tsc --noEmit`) | 0 errors | 0 errors | 0 new errors |
 | Lint (`eslint`) | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |
 
@@ -335,10 +359,28 @@ S2 worked example: 25,000 booking + 300,000 installments = 325,000 total; 0% boo
 
 | Suite | Before | After | Delta |
 |---|---|---|---|
-| Unit (`jest --runInBand`) | 2071 pass | **2108 pass** | +37 tests, 0 new failures |
-| Security (`jest-security.json`) | 144 tests | **163 tests (163 pass)** | +19 tests, 0 new failures |
+| Unit (`jest --runInBand`) | 2069 pass | **2097 pass** — directly measured at HEAD (689a03f) | +28 tests, 0 new failures |
+| Security (`jest-security.json`) | 144 tests | **163 tests (163 pass)** — directly measured at HEAD (689a03f), including randomized run | +19 tests, 0 new failures |
 | Typecheck (`tsc --noEmit`) | 0 errors | 0 errors | 0 new errors |
 | Lint (`eslint`) | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |
+
+---
+
+### Known gap: company-creation window
+
+`SuperAdminService.createCompany` commits the company row inside `$transaction` (line 157) and seeds settings with a separate call to `seedCancellationSettingsForCompany` outside the transaction (line 164).  There is a narrow window between these two calls where the company exists in the database without its 8 D2 setting rows.
+
+**Mitigation (no fix required now):** `CancellationPolicyService.readSettings` falls back to `CANCELLATION_SETTING_DEFAULTS` for any key that has no row, so suggestions remain correct with the documented default values during the window.  If the process dies in that window, `seed.ts` re-run will fill the gap via `createMany({ skipDuplicates: true })`.
+
+### Test-isolation fix applied in this commit
+
+`07-contract-cancellation-tenancy.security-spec.ts` was refactored to move all
+row creation (contract, ContractCancellation, Refund) into `beforeAll`.  The
+original `it('CC-2')` mutated `secFixture.resources.a.contractId` and seven
+subsequent tests (CC-4, CC-5, CC-5b, CC-6, CC-6b, CC-7, CC-7b) silently returned
+early if run before CC-2.  Those tests were vacuous passes when randomized.
+The fix creates a dedicated contract (not the fixture's shared contract), making
+every test order-independent.  Verified with `--randomize`: 163/163.
 
 ---
 

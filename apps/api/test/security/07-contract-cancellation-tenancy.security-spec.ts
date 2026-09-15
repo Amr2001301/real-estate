@@ -14,9 +14,15 @@
  *         ContractCancellation via the middleware-scoped app (returns 0 rows).
  *   CC-6  Attack matrix — Company B admin cannot read Company A's Refund via
  *         the middleware-scoped app (returns 0 rows).
+ *   CC-7  Correct-tenant context reads its own rows.
+ *
+ * Test isolation design: all rows (ownContract, cancellation, refund) are
+ * created in beforeAll, not inside individual it() blocks. This makes every
+ * test order-independent: no test depends on a prior test having run.
+ * The fixture's shared contractId is NOT mutated.
  */
 
-import { ContractStatus, PaymentMethod, UserRole } from '@prisma/client';
+import { ContractStatus, PaymentMethod } from '@prisma/client';
 import { MissingTenantContextError } from '../../src/common/tenant/tenant-context.errors';
 import { runTenantContext } from '../../src/common/tenant/tenant-context';
 import {
@@ -31,11 +37,11 @@ let secFixture: SecurityFixture;
 let companyAId: string;
 let companyBId: string;
 let adminAId: string;
-let adminBId: string;
 
-// Tracks IDs created in this spec for afterAll cleanup.
-let cancellationId: string | undefined;
-let refundId: string | undefined;
+// Rows created exclusively for this spec — set up in beforeAll, torn down in afterAll.
+let ownContractId: string;
+let cancellationId: string;
+let refundId: string;
 
 describe('SEC — ContractCancellation + Refund Tenancy (Step D1)', () => {
   beforeAll(async () => {
@@ -44,17 +50,62 @@ describe('SEC — ContractCancellation + Refund Tenancy (Step D1)', () => {
     companyAId = secFixture.companies.aId;
     companyBId = secFixture.companies.bId;
     adminAId = secFixture.users.adminA.id;
-    adminBId = secFixture.users.adminB.id;
+
+    // Create a dedicated contract owned by Company A in CANCELLED state.
+    // We do NOT mutate secFixture.resources.a.contractId so the fixture's
+    // shared contract remains unchanged for every test.
+    const ownContract = await testApp.rawPrisma.contract.create({
+      data: {
+        companyId: companyAId,
+        unitId: secFixture.resources.a.unit1Id,
+        customerId: adminAId,
+        totalAmount: 0,
+        status: ContractStatus.CANCELLED,
+        cancelledAt: new Date(),
+      },
+    });
+    ownContractId = ownContract.id;
+
+    const cancellation = await testApp.rawPrisma.contractCancellation.create({
+      data: {
+        contractId: ownContractId,
+        cancelledById: adminAId,
+        companyId: companyAId,
+        reason: 'SEC-TEST: cross-tenant isolation check',
+        cancellationDate: new Date(),
+        totalCollectedSnapshot: 0,
+        retainedAmount: 0,
+        refundAmount: 0,
+        policySnapshot: {},
+      },
+    });
+    cancellationId = cancellation.id;
+
+    const refund = await testApp.rawPrisma.refund.create({
+      data: {
+        contractCancellationId: cancellationId,
+        amount: 5000,
+        companyId: companyAId,
+        recordedById: adminAId,
+        paidAt: new Date(),
+        paymentMethod: PaymentMethod.BANK_TRANSFER,
+        notes: 'SEC-TEST: cross-tenant refund isolation check',
+      },
+    });
+    refundId = refund.id;
   }, 60_000);
 
   afterAll(async () => {
-    // Clean up in FK dependency order.
-    if (refundId) {
-      await testApp.rawPrisma.refund.deleteMany({ where: { id: refundId } }).catch(() => void 0);
-    }
-    if (cancellationId) {
-      await testApp.rawPrisma.contractCancellation.deleteMany({ where: { id: cancellationId } }).catch(() => void 0);
-    }
+    // Clean up in FK dependency order before fixture teardown.
+    await testApp.rawPrisma.refund
+      .deleteMany({ where: { id: refundId } })
+      .catch(() => void 0);
+    await testApp.rawPrisma.contractCancellation
+      .deleteMany({ where: { id: cancellationId } })
+      .catch(() => void 0);
+    await testApp.rawPrisma.contract
+      .delete({ where: { id: ownContractId } })
+      .catch(() => void 0);
     await teardownSecurityFixture(testApp.rawPrisma);
     await testApp.close();
   });
@@ -76,43 +127,16 @@ describe('SEC — ContractCancellation + Refund Tenancy (Step D1)', () => {
   // ── CC-2: ContractCancellation cross-tenant isolation ─────────────────────
 
   it('CC-2: ContractCancellation created under Company A has companyId=A and is absent from Company B queries', async () => {
-    const contractId = secFixture.resources.a.contractId;
-
-    // Mark the seeded contract as CANCELLED so the FK constraint is satisfiable.
-    // rawPrisma bypasses middleware — this is fixture setup, not the SUT.
-    await testApp.rawPrisma.contract.update({
-      where: { id: contractId },
-      data: { status: ContractStatus.CANCELLED, cancelledAt: new Date() },
-    });
-
-    const cancellation = await testApp.rawPrisma.contractCancellation.create({
-      data: {
-        contractId,
-        cancelledById: adminAId,
-        companyId: companyAId,
-        reason: 'SEC-TEST: cross-tenant isolation check',
-        cancellationDate: new Date(),
-        totalCollectedSnapshot: 0,
-        retainedAmount: 0,
-        refundAmount: 0,
-        policySnapshot: {},
-      },
-    });
-    cancellationId = cancellation.id;
-
-    expect(cancellation.companyId).toBe(companyAId);
-
-    // Simulate the middleware filter: Company B's context should not see it.
+    // Row created in beforeAll — this test is pure assertion.
     const fromB = await testApp.rawPrisma.contractCancellation.findMany({
       where: { companyId: companyBId },
     });
-    expect(fromB.map((c) => c.id)).not.toContain(cancellation.id);
+    expect(fromB.map((c) => c.id)).not.toContain(cancellationId);
 
-    // Company A context sees it.
     const fromA = await testApp.rawPrisma.contractCancellation.findMany({
       where: { companyId: companyAId },
     });
-    expect(fromA.map((c) => c.id)).toContain(cancellation.id);
+    expect(fromA.map((c) => c.id)).toContain(cancellationId);
   });
 
   // ── CC-3: Refund fail-closed outside ALS ──────────────────────────────────
@@ -132,34 +156,16 @@ describe('SEC — ContractCancellation + Refund Tenancy (Step D1)', () => {
   // ── CC-4: Refund cross-tenant isolation ───────────────────────────────────
 
   it('CC-4: Refund created under Company A has companyId=A and is absent from Company B queries', async () => {
-    if (!cancellationId) {
-      throw new Error('CC-2 must run first to create the ContractCancellation');
-    }
-
-    const refund = await testApp.rawPrisma.refund.create({
-      data: {
-        contractCancellationId: cancellationId,
-        amount: 5000,
-        companyId: companyAId,
-        recordedById: adminAId,
-        paidAt: new Date(),
-        paymentMethod: PaymentMethod.BANK_TRANSFER,
-        notes: 'SEC-TEST: cross-tenant refund isolation check',
-      },
-    });
-    refundId = refund.id;
-
-    expect(refund.companyId).toBe(companyAId);
-
+    // Row created in beforeAll — this test is pure assertion.
     const fromB = await testApp.rawPrisma.refund.findMany({
       where: { companyId: companyBId },
     });
-    expect(fromB.map((r) => r.id)).not.toContain(refund.id);
+    expect(fromB.map((r) => r.id)).not.toContain(refundId);
 
     const fromA = await testApp.rawPrisma.refund.findMany({
       where: { companyId: companyAId },
     });
-    expect(fromA.map((r) => r.id)).toContain(refund.id);
+    expect(fromA.map((r) => r.id)).toContain(refundId);
   });
 
   // ── CC-5: Attack matrix — middleware blocks cross-tenant CC read ──────────
@@ -174,8 +180,6 @@ describe('SEC — ContractCancellation + Refund Tenancy (Step D1)', () => {
   // outside the `als.run()` scope and misses the tenant context injection.
 
   it('CC-5: middleware-scoped query for ContractCancellation from Company B context returns 0 rows', async () => {
-    if (!cancellationId) return; // CC-2 must have succeeded
-
     const rows = await runTenantContext({ companyId: companyBId, bypass: false, isPublic: false },
       async () => await testApp.prisma.contractCancellation.findMany(),
     );
@@ -183,10 +187,8 @@ describe('SEC — ContractCancellation + Refund Tenancy (Step D1)', () => {
   });
 
   it('CC-5b: middleware-scoped findUnique for Company A ContractCancellation with Company B context returns null', async () => {
-    if (!cancellationId) return;
-
     const row = await runTenantContext({ companyId: companyBId, bypass: false, isPublic: false },
-      async () => await testApp.prisma.contractCancellation.findUnique({ where: { id: cancellationId! } }),
+      async () => await testApp.prisma.contractCancellation.findUnique({ where: { id: cancellationId } }),
     );
     // The middleware injects AND companyId=B — so companyId=A row is not found.
     expect(row).toBeNull();
@@ -195,8 +197,6 @@ describe('SEC — ContractCancellation + Refund Tenancy (Step D1)', () => {
   // ── CC-6: Attack matrix — middleware blocks cross-tenant Refund read ───────
 
   it('CC-6: middleware-scoped query for Refund from Company B context returns 0 rows', async () => {
-    if (!refundId) return; // CC-4 must have succeeded
-
     const rows = await runTenantContext({ companyId: companyBId, bypass: false, isPublic: false },
       async () => await testApp.prisma.refund.findMany(),
     );
@@ -204,10 +204,8 @@ describe('SEC — ContractCancellation + Refund Tenancy (Step D1)', () => {
   });
 
   it('CC-6b: middleware-scoped findUnique for Company A Refund with Company B context returns null', async () => {
-    if (!refundId) return;
-
     const row = await runTenantContext({ companyId: companyBId, bypass: false, isPublic: false },
-      async () => await testApp.prisma.refund.findUnique({ where: { id: refundId! } }),
+      async () => await testApp.prisma.refund.findUnique({ where: { id: refundId } }),
     );
     expect(row).toBeNull();
   });
@@ -215,8 +213,6 @@ describe('SEC — ContractCancellation + Refund Tenancy (Step D1)', () => {
   // ── CC-7: Correct-tenant context reads its own rows ───────────────────────
 
   it('CC-7: middleware-scoped query for ContractCancellation from Company A context returns the row', async () => {
-    if (!cancellationId) return;
-
     const rows = await runTenantContext({ companyId: companyAId, bypass: false, isPublic: false },
       async () => await testApp.prisma.contractCancellation.findMany(),
     );
@@ -224,8 +220,6 @@ describe('SEC — ContractCancellation + Refund Tenancy (Step D1)', () => {
   });
 
   it('CC-7b: middleware-scoped query for Refund from Company A context returns the row', async () => {
-    if (!refundId) return;
-
     const rows = await runTenantContext({ companyId: companyAId, bypass: false, isPublic: false },
       async () => await testApp.prisma.refund.findMany(),
     );
