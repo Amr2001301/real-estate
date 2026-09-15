@@ -101,7 +101,7 @@ export class ReportsService {
   async sales(period?: string, dateFrom?: string, dateTo?: string) {
     const companyId = getRequiredCompanyId();
     let where: Prisma.ContractWhereInput = {};
-    const conditions: Prisma.Sql[] = [Prisma.sql`c."companyId" = ${companyId}`];
+    const conditions: Prisma.Sql[] = [Prisma.sql`c."companyId" = ${companyId}::uuid`];
     if (dateFrom || dateTo) {
       where = {
         createdAt: {
@@ -204,7 +204,7 @@ export class ReportsService {
   async brokerLeaderboard(dateFrom?: string, dateTo?: string) {
     const companyId = getRequiredCompanyId();
     const conditions: Prisma.Sql[] = [
-      Prisma.sql`bc."companyId" = ${companyId}`,
+      Prisma.sql`bc."companyId" = ${companyId}::uuid`,
       Prisma.sql`bc.status IN ('APPROVED', 'PAID')`,
     ];
     if (dateFrom) conditions.push(Prisma.sql`bc."earnedAt" >= ${new Date(dateFrom)}`);
@@ -239,7 +239,7 @@ export class ReportsService {
          JOIN "Phase" ph ON ph.id = b."phaseId"`
       : Prisma.empty;
     const projectFilter = projectId
-      ? Prisma.sql`AND ph."projectId" = ${projectId}`
+      ? Prisma.sql`AND ph."projectId" = ${projectId}::uuid`
       : Prisma.empty;
     const rows = await this.prisma.$queryRaw<
       Array<{ month: number; contracts: number; total: number }>
@@ -250,7 +250,7 @@ export class ReportsService {
        FROM "Contract" c
        ${projectJoin}
        WHERE EXTRACT(YEAR FROM c."createdAt") = ${safeYear}
-       AND c."companyId" = ${companyId}
+       AND c."companyId" = ${companyId}::uuid
        ${projectFilter}
        GROUP BY EXTRACT(MONTH FROM c."createdAt")
     `);
