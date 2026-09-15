@@ -1292,11 +1292,30 @@ sets those deposits to `REJECTED` (cleared from queue). No query change needed.
 
 ---
 
+**Query 7 — Deposit creation guard (BREAKS — found during D1 implementation)**
+
+`deposits.service.ts:212` — the atomic `updateMany` that marks an installment
+PAID before creating the deposit row used `status: { not: PAID }`. With
+`InstallmentStatus.CANCELLED` this guard no longer excludes CANCELLED installments,
+allowing a deposit to be recorded against a cancelled installment and wrongly
+transitioning it back to PAID.
+
+This is a **financial correctness bug**, not a filter tidy-up: a CANCELLED
+installment that becomes PAID is counted as collected revenue even though the
+underlying contract has been cancelled.
+
+**Fix:** `deposits.service.ts:212` — change `status: { not: InstallmentStatus.PAID }`
+to `status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] }`.
+Applied in Step D1. Covered by D1-REG-4 (`test/security/08-d1-regression.security-spec.ts`).
+
+---
+
 **Summary of report service changes required:**
 
 | Change | Breaking? | Must fix before go-live? |
 |---|---|---|
 | Replace `status NOT IN ('PAID')` with `status IN ('PENDING', 'OVERDUE')` | Yes — CANCELLED rows inflate outstanding total | **Yes** (lands with step D which adds the enum value) |
+| Fix deposit creation guard (`deposits.service.ts:212`) | Yes — allows deposit against CANCELLED installment | **Yes** (lands with step D1; found during implementation) |
 | Add refunds-owed query | No — new line | No (additive) |
 | Add outstanding clawbacks query | No — new line | No (additive) |
 | Fix XLSX export to exclude/label CANCELLED installments | Yes — misleading export | **Yes** (lands with step D) |

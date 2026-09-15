@@ -4,41 +4,19 @@
  * Covers:
  *  D1-1  Migration backfill: contract with signedAt becomes ACTIVE; without
  *        becomes UNSIGNED (pure SQL logic test — no DB required).
- *  D1-2  Report totals: outstanding and overdue aggregates EXCLUDE CANCELLED
- *        rows (the fix in reports.service.ts uses IN[PENDING,OVERDUE] not NOT PAID).
- *        This test must FAIL if the old `{ not: PAID }` query is restored.
  *  D1-3  MeInstallmentsService summary: CANCELLED rows are NOT counted in
  *        remaining / overdue totals or in the next-due result.
  *  D1-4  planXlsx: CANCELLED rows appear with label "ملغى", PAID rows with
  *        "مدفوع", and the outstanding summary total excludes CANCELLED amounts.
  *  D1-5  deposits.service: attempting to record a deposit for a CANCELLED
  *        installment is rejected (updateMany hits zero rows → ConflictException).
+ *
+ * Regression coverage for the { not: PAID } → { in: [PENDING, OVERDUE] } fixes
+ * is in test/security/08-d1-regression.security-spec.ts (real Postgres, each
+ * test proved to fail against the old query).
  */
 
-import { CanActivate, ExecutionContext, Global, INestApplication, Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
-import { Test } from '@nestjs/testing';
-import request from 'supertest';
-import { UserRole, InstallmentStatus, Prisma } from '@prisma/client';
-import { ReportsModule } from '../../reports/reports.module';
-import { PrismaService } from '../../../common/prisma/prisma.service';
-
-// ── shared fake guard ──────────────────────────────────────────────────────────
-
-class FakeAuthGuard implements CanActivate {
-  static currentUser: { sub: string; role: UserRole; codes: string[] } | null = null;
-  canActivate(context: ExecutionContext): boolean {
-    if (!FakeAuthGuard.currentUser) return false;
-    const req = context.switchToHttp().getRequest();
-    req.user = {
-      sub: FakeAuthGuard.currentUser.sub,
-      role: FakeAuthGuard.currentUser.role,
-      email: null,
-      phone: null,
-    };
-    return true;
-  }
-}
+import { InstallmentStatus, Prisma } from '@prisma/client';
 
 // ── D1-1: migration backfill SQL logic ────────────────────────────────────────
 
@@ -77,108 +55,6 @@ describe('D1-1: migration backfill — ContractStatus derivation from signedAt',
     ];
     const expected = ['ACTIVE', 'ACTIVE', 'UNSIGNED', 'UNSIGNED'];
     expect(contracts.map((c) => deriveStatus(c.signedAt))).toEqual(expected);
-  });
-});
-
-// ── D1-2: report totals exclude CANCELLED ─────────────────────────────────────
-
-const capturedD1: { installmentWheres: unknown[] } = { installmentWheres: [] };
-
-const has = (where: unknown, needle: string) => JSON.stringify(where ?? {}).includes(needle);
-
-function makeD1PrismaMock() {
-  return {
-    userPermission: { findMany: jest.fn().mockResolvedValue([]) },
-    contract: {
-      count: jest.fn().mockResolvedValue(1),
-      aggregate: jest.fn().mockResolvedValue({ _sum: { totalAmount: 0 } }),
-      findMany: jest.fn().mockResolvedValue([]),
-    },
-    deposit: {
-      count: jest.fn().mockResolvedValue(0),
-      findMany: jest.fn().mockResolvedValue([]),
-      aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
-      groupBy: jest.fn().mockResolvedValue([]),
-    },
-    installment: {
-      count: jest.fn().mockResolvedValue(0),
-      findMany: jest.fn().mockResolvedValue([]),
-      aggregate: jest.fn().mockImplementation(async ({ where }: { where: unknown }) => {
-        capturedD1.installmentWheres.push(where);
-        return { _sum: { amount: 200 }, _count: { _all: 2 } };
-      }),
-    },
-    reservation: {
-      groupBy: jest.fn().mockResolvedValue([]),
-      count: jest.fn().mockResolvedValue(0),
-      aggregate: jest.fn().mockResolvedValue({ _sum: { bookingAmount: 0 } }),
-    },
-    bonusEntry: {
-      aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 }, _count: { _all: 0 } }),
-      groupBy: jest.fn().mockResolvedValue([]),
-    },
-    brokerCommission: {
-      aggregate: jest.fn().mockResolvedValue({ _sum: { netAmount: 0 }, _count: { _all: 0 } }),
-      groupBy: jest.fn().mockResolvedValue([]),
-    },
-    brokerPayout: {
-      groupBy: jest.fn().mockResolvedValue([
-        { status: 'DRAFT', _sum: { totalNet: 0 }, _count: { _all: 0 } },
-        { status: 'PAID', _sum: { totalNet: 0 }, _count: { _all: 0 } },
-      ]),
-    },
-    document: {
-      count: jest.fn().mockResolvedValue(0),
-      findMany: jest.fn().mockResolvedValue([]),
-    },
-  };
-}
-
-@Global()
-@Module({ providers: [{ provide: PrismaService, useValue: makeD1PrismaMock() }], exports: [PrismaService] })
-class D1PrismaModule {}
-
-describe('D1-2: report outstanding totals use IN[PENDING,OVERDUE] — CANCELLED excluded', () => {
-  let app: INestApplication;
-  let body: { summary: { totalOutstanding: string } };
-
-  beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [D1PrismaModule, ReportsModule],
-      providers: [{ provide: APP_GUARD, useClass: FakeAuthGuard }],
-    }).compile();
-
-    app = moduleRef.createNestApplication();
-    await app.init();
-
-    FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: ['reports:read'] };
-    capturedD1.installmentWheres = [];
-
-    const res = await request(app.getHttpServer())
-      .get('/reports/financial-dashboard');
-    body = res.body;
-  }, 30_000);
-
-  afterAll(() => app.close());
-
-  it('outstanding query uses status IN [PENDING, OVERDUE] — not { not: PAID }', () => {
-    // Must find a where-clause that has both PENDING and OVERDUE in an "in" array,
-    // with no dueDate filter (that would be dueSoon or aging).
-    const outstanding = capturedD1.installmentWheres.find(
-      (w) => has(w, '"PENDING"') && has(w, '"OVERDUE"') && !has(w, '"dueDate"'),
-    );
-    expect(outstanding).toBeDefined();
-    // Must NOT use the old negation pattern — any regression to { not: PAID }
-    // would silently include CANCELLED in the outstanding total.
-    expect(has(outstanding, '"not"')).toBe(false);
-  });
-
-  it('CANCELLED string does not appear in any outstanding/aging query where-clause', () => {
-    const affectedByCancel = capturedD1.installmentWheres.filter(
-      (w) => has(w, '"PENDING"') && has(w, '"OVERDUE"') && has(w, '"CANCELLED"'),
-    );
-    // CANCELLED must never appear in the IN list of outstanding queries.
-    expect(affectedByCancel).toHaveLength(0);
   });
 });
 
