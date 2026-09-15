@@ -436,6 +436,19 @@ export async function seedSecurityFixture(raw: PrismaClient): Promise<SecurityFi
     }).catch(() => void 0); // skip if already exists
   }
 
+  // Grant contracts:cancel + contracts:release-unit to adminA so D3 cross-tenant
+  // tests (D3-7, D3-8) can reach the service layer past the @PermissionsStrict
+  // gate. The contracts belong to Company B so the service returns 404 before
+  // modifying anything — confirms no 2xx is returned.
+  for (const code of ['contracts:cancel', 'contracts:release-unit']) {
+    const perm = await raw.permission.findFirst({ where: { code } });
+    if (perm) {
+      await raw.userPermission.create({
+        data: { userId: adminA.id, permissionId: perm.id },
+      }).catch(() => void 0);
+    }
+  }
+
   // ── Resources — Company B (minimal — used as cross-tenant attack targets) ──
 
   const projectB = await raw.project.create({

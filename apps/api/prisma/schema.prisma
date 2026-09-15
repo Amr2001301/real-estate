@@ -1700,6 +1700,8 @@ enum BonusEntryStatus {
   PENDING
   APPROVED
   PAID
+  /// Step D3 — bonus obligation cancelled when parent contract is cancelled.
+  CANCELLED
 }
 
 // How a BonusEntry was created. MANUAL = admin-entered (existing v1 workflow).

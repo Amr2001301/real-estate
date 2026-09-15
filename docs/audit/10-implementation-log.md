@@ -385,3 +385,71 @@ every test order-independent.  Verified with `--randomize`: 163/163.
 ---
 
 *Next: Step D3 — contracts:cancel endpoint + unit-release + clawback overlay*
+
+---
+
+## Step D3 — contracts:cancel + contracts:release-unit
+
+**Date:** 2026-09-15
+**Design ref:** `09-reversal-design.md` §4.3, §4.5, §4.6, §6.2, §6.3, §8.1 step D (D3)
+**Status:** DONE ✓
+
+### Scope
+
+`POST /contracts/:id/cancel` and `POST /contracts/:id/release-unit`. Both endpoints shipped together because the default `cancellation.unit.returnToAvailable` setting is `REQUIRES_APPROVAL`, which would leave every cancelled unit permanently SOLD without the release endpoint.
+
+**Out of scope:** D4 clawback collect/waive resolution.
+
+### Migration
+
+`20260915300000_step_d3_bonus_entry_cancelled` — purely additive:
+
+```sql
+ALTER TYPE "BonusEntryStatus" ADD VALUE 'CANCELLED';
+```
+
+No drops. No type changes. No NOT NULL on existing columns.
+
+`BonusEntryStatus` previously had `PENDING`, `APPROVED`, `PAID`. The `CANCELLED` value is needed so PENDING/APPROVED bonuses can be cancelled when their parent contract is cancelled.
+
+### Hard Rules (from design §4.3)
+
+1. **Hard Rule 1 — operator amounts are truth.** `retainedAmount` and `refundAmount` come from the request body verbatim; the D2 suggestion is never stored.
+2. **Hard Rule 2 — nothing settled is deleted.** A PAID commission or bonus keeps its `status`. Clawback is an overlay (`clawbackStatus = OUTSTANDING`). Cancelled installments are marked `CANCELLED`, not deleted.
+3. **Atomicity.** All 9 cancellation steps run in ONE `$transaction`. The `ContractCancellation` row is created last inside the transaction so `unitReleasedAt` / `customerDemotedAt` are available when the row is written.
+
+### Authorization (§6.2)
+
+- `cancel`: `@Roles(ADMIN)`, `@PermissionsStrict('contracts:cancel')`, reason MANDATORY
+- `release-unit`: `@Roles(ADMIN)`, `@PermissionsStrict('contracts:release-unit')`
+- Cross-tenant: contract not found in current company → 404, not 403 (no existence leak)
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `apps/api/prisma/schema.prisma` | Added `CANCELLED` to `BonusEntryStatus` enum |
+| `apps/api/prisma/migrations/20260915300000_step_d3_bonus_entry_cancelled/migration.sql` | New migration (additive) |
+| `apps/api/src/modules/contracts/contract-cancellation.service.ts` | New: `ContractCancellationService` — `cancel()` + `releaseUnit()` methods; `isCommissionEffectivelyPaid()` helper; all 9 cancellation steps in one `$transaction` |
+| `apps/api/src/modules/contracts/contracts.module.ts` | Added `CancelContractDto`; wired `ContractCancellationService` into controller + module; added `POST :id/cancel` and `POST :id/release-unit` endpoints |
+| `apps/api/prisma/seed.ts` | Added `contracts:cancel` and `contracts:release-unit` permission codes |
+| `apps/api/src/modules/bonus/bonus.module.ts` | Added `BonusEntryStatus.CANCELLED` to the two `Record<BonusEntryStatus, string>` label maps (`entriesCsv`, `entriesXlsx`) |
+| `apps/api/src/modules/contracts/__tests__/contract-cancellation.spec.ts` | New: 16 unit tests (CC-U-1 through CC-U-16) covering happy path, Hard Rule 1 and 2 invariants, AUTO release, customer demotion, CANCELLED terminal, UNSIGNED, atomicity, cross-tenant |
+| `apps/api/test/security/10-d3-cancel-attack.security-spec.ts` | New: 9 security/e2e tests (S2 scenario, D3-1 through D3-8) with real Postgres |
+| `apps/api/test/security/seed/security-fixture.ts` | Added `contracts:cancel` + `contracts:release-unit` permission grants to `adminA` |
+
+### Implementation notes
+
+- **`isCommissionEffectivelyPaid()`**: `BrokerCommissionStatus` has no `PAID` value. "Effectively paid" = `payoutId != null AND payout.status IN ['APPROVED', 'PROCESSING', 'PAID']`. The helper reads the payout status via `include: { payout: { select: { status: true } } }` in the pre-transaction read.
+- **policySnapshot** captures the *tenant setting values* at cancel time (not the operator's per-transaction overrides). Operator overrides are stored in separate `unitReleaseOverride`, `commissionActionOverride` etc. columns.
+- **AuditLog**: `payload` is not a field on `AuditLog` — the cancel audit data is merged into the `after` JSON column per `contract.cancelled` schema.
+- **NOT VALID constraint** (D3-6 atomicity test): `ALTER TABLE "ContractCancellation" ADD CONSTRAINT ... CHECK (1 = 0) NOT VALID` is used instead of `CHECK (1 = 0)` so that pre-existing CC rows (from the S2 test) do not cause the ADD CONSTRAINT to fail. `NOT VALID` applies to new inserts only, which is sufficient to force the `$transaction` to roll back.
+
+### Test results
+
+| Suite | Before | After | Delta |
+|---|---|---|---|
+| Unit (`jest --runInBand`) | 2097 pass | **2113 pass** — directly measured at HEAD | +16 tests, 0 new failures |
+| Security (`jest-security.json --randomize`) | 163 tests | **172 tests (172 pass)** — directly measured at HEAD | +9 tests, 0 new failures |
+| Typecheck (`tsc --noEmit`) | 0 errors | 0 errors | 0 new errors |
+| Lint (`eslint`) | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |

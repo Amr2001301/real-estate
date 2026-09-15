@@ -1265,6 +1265,8 @@ async function main() {
     { code: 'contracts:upload', description: 'Create contracts and attach PDFs' },
     { code: 'contracts:update', description: 'Update editable contract fields' },
     { code: 'contracts:sign', description: 'Sign contracts and materialize commission side effects' },
+    { code: 'contracts:cancel', description: 'Cancel a contract and apply financial settlement (Step D3)' },
+    { code: 'contracts:release-unit', description: 'Release the unit after a REQUIRES_APPROVAL cancellation (Step D3)' },
     { code: 'broker_commissions:read', description: 'Read broker commission records' },
     { code: 'broker_commissions:approve', description: 'Approve broker commissions' },
     { code: 'broker_commissions:reject', description: 'Reject broker commissions' },

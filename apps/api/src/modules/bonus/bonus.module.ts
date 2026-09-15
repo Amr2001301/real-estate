@@ -328,6 +328,7 @@ export class BonusService {
       [BonusEntryStatus.PENDING]: 'معلق',
       [BonusEntryStatus.APPROVED]: 'معتمد',
       [BonusEntryStatus.PAID]: 'مدفوع',
+      [BonusEntryStatus.CANCELLED]: 'ملغي',
     };
     const rows = entries.map((e) => [
       e.sales?.fullName ?? '',
@@ -353,6 +354,7 @@ export class BonusService {
       [BonusEntryStatus.PENDING]: 'معلق',
       [BonusEntryStatus.APPROVED]: 'معتمد',
       [BonusEntryStatus.PAID]: 'مدفوع',
+      [BonusEntryStatus.CANCELLED]: 'ملغي',
     };
     const wb = createReportWorkbook();
     const ws = wb.addWorksheet('مكافآت المندوبين');

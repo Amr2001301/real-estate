@@ -16,13 +16,17 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import {
+  IsBoolean,
   IsDateString,
+  IsIn,
   IsNumber,
   IsOptional,
   IsPositive,
   IsString,
   IsUUID,
+  MaxLength,
   Min,
+  MinLength,
 } from 'class-validator';
 import {
   DocumentCategory,
@@ -51,6 +55,7 @@ import { BrokerCommissionsService } from '../broker-commissions/broker-commissio
 import { BonusModule } from '../bonus/bonus.module';
 import { BonusService } from '../bonus/bonus.module';
 import { CancellationPolicyService } from './cancellation-policy.service';
+import { ContractCancellationService } from './contract-cancellation.service';
 
 // ── P12 legacy backfill helpers ─────────────────────────────────────────────
 // Pure (exported for unit tests). Derive safe display metadata for a backfilled
@@ -131,6 +136,22 @@ class AttachContractDocumentDto {
   @IsOptional() @IsString() mimeType?: string;
   @IsOptional() @IsNumber() @Min(0) sizeBytes?: number;
   @IsOptional() @IsString() title?: string;
+}
+
+// ── Step D3 — CancelContractDto ──────────────────────────────────────────────
+// Hard Rule 1: the operator's submitted amounts are stored verbatim. The
+// suggestion from GET /contracts/:id/cancellation-suggestion is only a pre-fill.
+
+class CancelContractDto {
+  @IsString() @MinLength(1) @MaxLength(2000) reason!: string;
+  @IsNumber() @Min(0) retainedAmount!: number;
+  @IsNumber() @Min(0) refundAmount!: number;
+  @IsOptional() @IsString() @MaxLength(2000) financialNotes?: string;
+  @IsOptional() @IsIn(['AUTO', 'REQUIRES_APPROVAL']) unitReleaseOverride?: 'AUTO' | 'REQUIRES_APPROVAL';
+  @IsOptional() @IsBoolean() demoteCustomerOverride?: boolean;
+  @IsOptional() @IsIn(['CLAWBACK', 'RETAIN', 'MANUAL']) commissionActionOverride?: 'CLAWBACK' | 'RETAIN' | 'MANUAL';
+  @IsOptional() @IsIn(['CLAWBACK', 'RETAIN', 'MANUAL']) bonusActionOverride?: 'CLAWBACK' | 'RETAIN' | 'MANUAL';
+  @IsOptional() @IsString() @MaxLength(2000) clawbackReason?: string;
 }
 
 @Injectable()
@@ -777,6 +798,7 @@ class ContractsController {
     private readonly svc: ContractsService,
     private readonly prisma: PrismaService,
     private readonly cancellationPolicy: CancellationPolicyService,
+    private readonly cancellationSvc: ContractCancellationService,
   ) {}
 
   @Roles(UserRole.ADMIN)
@@ -951,12 +973,40 @@ class ContractsController {
   getCancellationSuggestion(@Param('id', ParseUUIDPipe) id: string) {
     return this.cancellationPolicy.getCancellationSuggestion(id);
   }
+
+  // Step D3 — Cancel contract (ADMIN only; contracts:cancel; reason MANDATORY)
+  // Stores the operator-submitted retainedAmount/refundAmount verbatim.
+  // @PermissionsStrict: even an ADMIN with 'contracts:cancel' in their assigned
+  // set can cancel. Without that permission they get 403.
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('contracts:cancel')
+  @Post(':id/cancel')
+  cancel(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CancelContractDto,
+  ) {
+    return this.cancellationSvc.cancel(id, dto, user.sub);
+  }
+
+  // Step D3 — Release unit (ADMIN only; contracts:release-unit)
+  // Flips unit to AVAILABLE and records unitReleasedAt on ContractCancellation.
+  // Only valid after a REQUIRES_APPROVAL cancellation where unit is still SOLD.
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('contracts:release-unit')
+  @Post(':id/release-unit')
+  releaseUnit(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.cancellationSvc.releaseUnit(id, user.sub);
+  }
 }
 
 @Module({
   imports: [BrokerCommissionsModule, BonusModule, DocumentsModule, NotificationsModule],
   controllers: [ContractsController],
-  providers: [ContractsService, CancellationPolicyService],
-  exports: [ContractsService, CancellationPolicyService],
+  providers: [ContractsService, CancellationPolicyService, ContractCancellationService],
+  exports: [ContractsService, CancellationPolicyService, ContractCancellationService],
 })
 export class ContractsModule {}
