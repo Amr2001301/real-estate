@@ -25,6 +25,7 @@ import {
   ListDepositsQueryDto,
   RecordDepositDto,
   RejectDepositDto,
+  ReverseDepositDto,
   VerifyDepositDto,
 } from './deposits.dto';
 
@@ -121,8 +122,25 @@ export class DepositsController {
   @Roles(UserRole.ADMIN)
   @PermissionsStrict('deposits:verify')
   @Patch('deposits/:id/verify')
-  verify(@Param('id', ParseUUIDPipe) id: string, @Body() dto: VerifyDepositDto) {
-    return this.svc.verify(id, dto);
+  verify(
+    @CurrentUser() actor: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: VerifyDepositDto,
+  ) {
+    return this.svc.verify(id, dto, actor);
+  }
+
+  // §6.2 — Admin manually reverses an APPROVED deposit. Writes PaymentCorrection
+  // (REVERSAL), reopens installment as PENDING. Reason is MANDATORY.
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('deposits:reverse')
+  @Post('deposits/:id/reverse')
+  reverseDeposit(
+    @CurrentUser() actor: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReverseDepositDto,
+  ) {
+    return this.svc.reverseDeposit(id, dto, actor);
   }
 
   // ── P11 — Admin approve / reject payment proof ──────────────────────────

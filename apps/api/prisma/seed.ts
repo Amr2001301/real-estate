@@ -1257,6 +1257,7 @@ async function main() {
     { code: 'deposits:read', description: 'Read deposit records' },
     { code: 'deposits:register', description: 'Register deposit payments' },
     { code: 'deposits:verify', description: 'Verify deposit payments' },
+    { code: 'deposits:reverse', description: 'Manually reverse an approved deposit (writes PaymentCorrection audit trail)' },
     { code: 'payment-instruments:manage', description: 'Create and transition payment instruments (cheques, bank transfers)' },
     { code: 'payment-instruments:bounce', description: 'Record cheque bounce (ADMIN-only, strict permission)' },
     { code: 'contracts:read', description: 'Read contract records' },

@@ -1,15 +1,16 @@
 /**
  * ChequeLifecycleService — unit tests.
  *
- * Covers (09-reversal-design.md §3.3, §3.4 Sub-case A, §6.2, §8.1 Step B):
+ * Covers (09-reversal-design.md §3.3, §3.4 Sub-case A, §3.4 Sub-case B, §6.2, §8.1 Step B+C):
  *   - every valid transition in the state machine succeeds
  *   - every invalid transition throws BadRequestException
  *   - Sub-case A bounce: PENDING_REVIEW deposits → REJECTED; installments unchanged;
  *     zero PaymentCorrection rows
+ *   - Sub-case B bounce: APPROVED deposits stay APPROVED; PaymentCorrection(REVERSAL) written;
+ *     installment reopened; paidAt NOT cleared; lastCorrectionId set
  *   - bounce with operator penalty > 0 creates a BOUNCE_PENALTY installment;
  *     penalty = 0 creates none
  *   - operator-entered values override the Settings suggestion and are stored
- *   - bounce attempted on APPROVED deposits throws NotImplementedException
  * Integration (S1 walkthrough steps 1-3):
  *   - walk the scenario exactly and assert final state matches the design
  */
@@ -136,6 +137,8 @@ function resetPendingClearance() {
 function resetDeposited(depositStatuses: DepositReviewStatus[] = [DepositReviewStatus.PENDING_REVIEW, DepositReviewStatus.PENDING_REVIEW]) {
   createdInstallments.length = 0;
   createdAuditLogs.length = 0;
+  mock.paymentCorrection.create.mockClear();
+  mock.installment.update.mockClear();
   piFixture = {
     id: PI_ID,
     type: PaymentInstrumentType.CHEQUE,
@@ -213,12 +216,19 @@ function makePrismaMock() {
     },
     installment: {
       updateMany: jest.fn().mockResolvedValue({ count: 2 }),
+      update: jest.fn().mockResolvedValue({}),
       create: jest.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => {
         instIdGen.n += 1;
         const row = { id: `penalty-inst-${instIdGen.n}`, ...data };
         createdInstallments.push(row as unknown as typeof createdInstallments[0]);
         return row;
       }),
+    },
+    paymentCorrection: {
+      create: jest.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
+        id: `corr-${Date.now()}`,
+        ...data,
+      })),
     },
     installmentPlan: {
       findFirst: jest.fn().mockImplementation(async ({ where }: { where: { id: string } }) =>
@@ -237,6 +247,7 @@ function makePrismaMock() {
           paymentInstrument: m.paymentInstrument,
           deposit: m.deposit,
           installment: m.installment,
+          paymentCorrection: m.paymentCorrection,
           auditLog: m.auditLog,
         });
       }
@@ -471,9 +482,7 @@ describe('Sub-case A bounce — PENDING_REVIEW deposits become REJECTED', () => 
       .send({ bounceReason: 'Insufficient funds', bounceDate: '2027-01-08', penaltyAmount: 0 })
       .expect(200);
 
-    // paymentCorrection is not even defined on the mock — any call would throw
-    // so the correct assertion is that no attempt was made
-    expect(createdInstallments.filter((i) => i.type !== PlanPaymentType.BOUNCE_PENALTY)).toHaveLength(0);
+    expect(mock.paymentCorrection.create).not.toHaveBeenCalled();
   });
 
   it('writes an AuditLog entry with action=payment-instrument.bounced, subCase=A, correctionRowsWritten=0', async () => {
@@ -597,27 +606,155 @@ describe('operator values are stored verbatim', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 6. Sub-case B guard — bounce on APPROVED deposits throws 501 Not Implemented
+// 6. Sub-case B bounce — APPROVED deposits: PaymentCorrection written, installment reopened
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('Sub-case B guard', () => {
-  it('bounce on APPROVED deposits throws 501 with a not-supported message', async () => {
-    resetDeposited([DepositReviewStatus.APPROVED, DepositReviewStatus.APPROVED]);
-    const res = await request(app.getHttpServer())
-      .post(`/payment-instruments/${PI_ID}/bounce`)
-      .send({ bounceReason: 'Fraud', bounceDate: '2027-01-08', penaltyAmount: 0 })
-      .expect(501);
+describe('Sub-case B bounce — APPROVED deposits get a PaymentCorrection(REVERSAL)', () => {
+  function resetDepositedApproved(
+    statuses: DepositReviewStatus[] = [DepositReviewStatus.APPROVED, DepositReviewStatus.APPROVED],
+  ) {
+    createdInstallments.length = 0;
+    createdAuditLogs.length = 0;
+    mock.paymentCorrection.create.mockClear();
+    mock.installment.update.mockClear();
+    piFixture = {
+      id: PI_ID,
+      type: PaymentInstrumentType.CHEQUE,
+      status: PaymentInstrumentStatus.DEPOSITED,
+      chequeNumber: 'CH-001',
+      referenceNumber: null,
+      bounceReason: null,
+      bounceDate: null,
+      clearingDate: null,
+      replacedById: null,
+      companyId: COMPANY_A,
+      deposits: [
+        {
+          id: DEP1_ID,
+          reviewStatus: statuses[0]!,
+          installmentId: INST1_ID,
+          installment: { id: INST1_ID, status: 'PAID', dueDate: new Date('2026-01-01'), planId: PLAN_ID },
+        },
+        {
+          id: DEP2_ID,
+          reviewStatus: statuses[1]!,
+          installmentId: INST2_ID,
+          installment: { id: INST2_ID, status: 'PAID', dueDate: new Date('2027-01-01'), planId: PLAN_ID },
+        },
+      ],
+    };
+  }
 
-    expect(res.body.message).toContain('Sub-case B');
-    expect(res.body.message).toContain('not yet supported');
-  });
-
-  it('bounce on mixed deposits (one APPROVED, one PENDING_REVIEW) also throws 501', async () => {
-    resetDeposited([DepositReviewStatus.APPROVED, DepositReviewStatus.PENDING_REVIEW]);
+  it('returns 200 (no longer 501)', async () => {
+    resetDepositedApproved();
     await request(app.getHttpServer())
       .post(`/payment-instruments/${PI_ID}/bounce`)
       .send({ bounceReason: 'Fraud', bounceDate: '2027-01-08', penaltyAmount: 0 })
-      .expect(501);
+      .expect(200);
+  });
+
+  it('writes one PaymentCorrection(REVERSAL) per APPROVED deposit', async () => {
+    resetDepositedApproved();
+    await request(app.getHttpServer())
+      .post(`/payment-instruments/${PI_ID}/bounce`)
+      .send({ bounceReason: 'Fraud', bounceDate: '2027-01-08', penaltyAmount: 0 })
+      .expect(200);
+
+    expect(mock.paymentCorrection.create).toHaveBeenCalledTimes(2);
+    const firstCall = mock.paymentCorrection.create.mock.calls[0]![0] as {
+      data: { type: string; depositId: string; sourceInstallmentId: string; reason: string };
+    };
+    expect(firstCall.data.type).toBe('REVERSAL');
+    expect(firstCall.data.depositId).toBe(DEP1_ID);
+    expect(firstCall.data.sourceInstallmentId).toBe(INST1_ID);
+    expect(firstCall.data.reason).toBe('Fraud');
+  });
+
+  it('calls installment.update (NOT updateMany) once per APPROVED deposit', async () => {
+    resetDepositedApproved();
+    await request(app.getHttpServer())
+      .post(`/payment-instruments/${PI_ID}/bounce`)
+      .send({ bounceReason: 'Fraud', bounceDate: '2027-01-08', penaltyAmount: 0 })
+      .expect(200);
+
+    expect(mock.installment.update).toHaveBeenCalledTimes(2);
+  });
+
+  it('does NOT call deposit.updateMany (reviewStatus stays APPROVED — Hard Rule 2)', async () => {
+    resetDepositedApproved();
+    await request(app.getHttpServer())
+      .post(`/payment-instruments/${PI_ID}/bounce`)
+      .send({ bounceReason: 'Fraud', bounceDate: '2027-01-08', penaltyAmount: 0 })
+      .expect(200);
+
+    expect(mock.deposit.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('REOPEN_AS_OVERDUE: past-due installment gets status OVERDUE', async () => {
+    resetDepositedApproved([DepositReviewStatus.APPROVED, DepositReviewStatus.APPROVED]);
+    // Both installments have past dueDates (2026-01-01, earlier in the series)
+    await request(app.getHttpServer())
+      .post(`/payment-instruments/${PI_ID}/bounce`)
+      .send({
+        bounceReason: 'Fraud',
+        bounceDate: '2027-01-08',
+        penaltyAmount: 0,
+        installmentAction: 'REOPEN_AS_OVERDUE',
+      })
+      .expect(200);
+
+    const calls = mock.installment.update.mock.calls as Array<[{ where: unknown; data: { status: string } }]>;
+    // INST1 dueDate=2026-01-01 → OVERDUE; INST2 dueDate=2027-01-01 → depends on run date
+    expect(calls[0]![0].data.status).toBe('OVERDUE');
+  });
+
+  it('REOPEN_AS_PENDING: all installments get status PENDING regardless of dueDate', async () => {
+    resetDepositedApproved();
+    await request(app.getHttpServer())
+      .post(`/payment-instruments/${PI_ID}/bounce`)
+      .send({
+        bounceReason: 'Fraud',
+        bounceDate: '2027-01-08',
+        penaltyAmount: 0,
+        installmentAction: 'REOPEN_AS_PENDING',
+      })
+      .expect(200);
+
+    const calls = mock.installment.update.mock.calls as Array<[{ where: unknown; data: { status: string } }]>;
+    for (const [call] of calls) {
+      expect(call.data.status).toBe('PENDING');
+    }
+  });
+
+  it('AuditLog subCase=B, correctionRowsWritten=2', async () => {
+    resetDepositedApproved();
+    await request(app.getHttpServer())
+      .post(`/payment-instruments/${PI_ID}/bounce`)
+      .send({ bounceReason: 'Fraud', bounceDate: '2027-01-08', penaltyAmount: 0 })
+      .expect(200);
+
+    expect(createdAuditLogs).toHaveLength(1);
+    const after = createdAuditLogs[0]!.after as Record<string, unknown>;
+    expect(after.subCase).toBe('B');
+    expect(after.correctionRowsWritten).toBe(2);
+  });
+
+  it('mixed: PENDING_REVIEW gets REJECTED, APPROVED gets PaymentCorrection, AuditLog subCase=A+B', async () => {
+    resetDepositedApproved([DepositReviewStatus.APPROVED, DepositReviewStatus.PENDING_REVIEW]);
+    await request(app.getHttpServer())
+      .post(`/payment-instruments/${PI_ID}/bounce`)
+      .send({ bounceReason: 'Fraud', bounceDate: '2027-01-08', penaltyAmount: 0 })
+      .expect(200);
+
+    // DEP2 is PENDING_REVIEW → updateMany called with [DEP2_ID]
+    expect(mock.deposit.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: { in: [DEP2_ID] } } }),
+    );
+    // DEP1 is APPROVED → one correction written
+    expect(mock.paymentCorrection.create).toHaveBeenCalledTimes(1);
+    const after = createdAuditLogs[0]!.after as Record<string, unknown>;
+    expect(after.subCase).toBe('A+B');
+    expect(after.correctionRowsWritten).toBe(1);
   });
 });
 

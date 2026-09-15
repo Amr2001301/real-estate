@@ -119,3 +119,67 @@ No drops. No type changes. No NOT NULL on existing columns.
 - `cheque_bounced` notification is best-effort post-transaction (catch swallowed to avoid blocking the response).
 
 *Next: Step C — PaymentCorrection model + Sub-case B bounce + verify(false) fix*
+
+---
+
+## Step C — PaymentCorrection model + Sub-case B bounce + deposits:reverse endpoint
+
+**Date:** 2026-09-15
+**Design ref:** `09-reversal-design.md` §3.2, §3.4 Sub-case B, §5.1, §6.2, §6.3, §8.1 step C
+**Status:** DONE ✓
+
+### Migration
+
+`20260915120000_step_c_payment_correction` — purely additive:
+
+```sql
+CREATE TYPE "PaymentCorrectionType" AS ENUM ('REVERSAL', 'REASSIGNMENT');
+CREATE TABLE "PaymentCorrection" (...);  -- 5 FKs, 4 indexes
+ALTER TABLE "Installment" ADD CONSTRAINT "Installment_lastCorrectionId_fkey" FOREIGN KEY ("lastCorrectionId") REFERENCES "PaymentCorrection"("id");
+```
+
+No drops. No type changes. No NOT NULL on existing columns.
+`Installment.lastCorrectionId` column was added in Step A; Step C wires the FK.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `apps/api/prisma/schema.prisma` | Added `PaymentCorrectionType` enum; `PaymentCorrection` model; wired `Installment.lastCorrectionId` as real `@relation`; back-relations on `Installment`, `Deposit`, `User`, `Company` |
+| `apps/api/prisma/migrations/20260915120000_step_c_payment_correction/migration.sql` | New migration (purely additive) |
+| `apps/api/src/common/prisma/model-tenancy.ts` | Added `PaymentCorrection: 'TENANT_OWNED'` (48 models comment) |
+| `apps/api/src/common/prisma/__tests__/fixtures/legacy-tenant-scoped-models.fixture.ts` | Added `'paymentcorrection'` |
+| `apps/api/src/common/prisma/__tests__/mt014-model-tenancy-policy.spec.ts` | Cardinality assertions: 47 → 48 (×2) |
+| `apps/api/test/security/01-middleware-classification.security-spec.ts` | MC-2: 47 → 48; added `PaymentCorrection` to spot-checks |
+| `apps/api/src/modules/payment-instruments/payment-instruments.dto.ts` | Added optional `installmentAction` to `RecordBounceDto` |
+| `apps/api/src/modules/payment-instruments/payment-instruments.service.ts` | Sub-case B: writes `PaymentCorrection(REVERSAL)` per APPROVED deposit, reopens installment per `installmentAction`, preserves `paidAt`; `computeReopenStatus` helper; removed 501 guard |
+| `apps/api/src/modules/deposits/deposits.dto.ts` | Added `ReverseDepositDto` |
+| `apps/api/src/modules/deposits/deposits.service.ts` | `DEPOSIT_INCLUDE.installment` exposes `lastCorrectionId` + `lastCorrection` context; `reverseDeposit` method; FG-06: `verify(false)` on APPROVED+PAID routes through reversal path |
+| `apps/api/src/modules/deposits/deposits.controller.ts` | Added `POST deposits/:id/reverse`; updated `verify` to pass `actor` |
+| `apps/api/prisma/seed.ts` | Added `deposits:reverse` permission |
+| `apps/api/src/modules/payment-instruments/__tests__/cheque-lifecycle.spec.ts` | Added Sub-case B tests (9 tests); added `paymentCorrection`/`installment.update` to mock; fixed Sub-case A zero-corrections assertion |
+| `apps/api/src/modules/deposits/__tests__/deposit-reversal.spec.ts` | New file: 15 tests for `reverseDeposit` + FG-06 |
+| `apps/api/test/security/06-deposit-correction-attack.security-spec.ts` | New file: 4 cross-tenant attack tests (DC-1 through DC-4) |
+| `apps/api/test/security/seed/security-fixture.ts` | Added `paymentCorrection.deleteMany` to teardown; granted `deposits:reverse` to adminA |
+
+### Three Invariants (§3.6 Hard Rules)
+
+1. **`paidAt` NEVER cleared on REVERSAL** — `installment.update` data intentionally omits `paidAt`.
+2. **`Deposit.reviewStatus` stays APPROVED on Sub-case B** — `deposit.updateMany` is NOT called for APPROVED deposits.
+3. **Correction + status update + `lastCorrectionId` in ONE `$transaction`** — both sub-paths (`recordBounce` Sub-case B and `reverseDeposit`) use a single `$transaction`.
+
+### Test results
+
+| Suite | Before | After | Delta |
+|---|---|---|---|
+| Unit (`jest`) | 2035 pass | **2056 pass** | +21 tests, 0 new failures |
+| Security (`jest-security.json`) | 123 tests | **128 tests (128 pass)** | +5 tests, 0 new failures |
+| Typecheck | 0 errors | 0 errors | 0 new errors |
+| Lint | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |
+
+### Follow-up (not in Step C scope)
+
+- Frontend/web-admin: installment list cards should check `lastCorrectionId !== null` to show a "Corrected" badge
+- Flutter customer app: `InstallmentCard` should display correction context when `lastCorrectionId` is set
+- XLSX reports: installment export should include `lastCorrectionId` column
+- Step D: `ReassignDeposit` — move deposit from one installment to another (§8.1 Step D)

@@ -3,10 +3,10 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  NotImplementedException,
 } from '@nestjs/common';
 import {
   DepositReviewStatus,
+  PaymentCorrectionType,
   PaymentInstrumentStatus,
   PaymentInstrumentType,
   PlanPaymentType,
@@ -21,6 +21,16 @@ import {
   RecordClearingDto,
   ReplaceInstrumentDto,
 } from './payment-instruments.dto';
+
+// Compute the status an installment should be re-opened to after a Sub-case B
+// bounce, per the operator-submitted installmentAction (§4.4).
+function computeReopenStatus(
+  dueDate: Date,
+  action: 'REOPEN_AS_OVERDUE' | 'REOPEN_AS_PENDING',
+): 'PENDING' | 'OVERDUE' {
+  if (action === 'REOPEN_AS_PENDING') return 'PENDING';
+  return dueDate < new Date() ? 'OVERDUE' : 'PENDING';
+}
 
 // Valid state-machine transitions (from → to)
 const VALID_TRANSITIONS: Partial<Record<PaymentInstrumentStatus, PaymentInstrumentStatus[]>> = {
@@ -60,7 +70,7 @@ export class ChequeLifecycleService {
             reviewStatus: true,
             installmentId: true,
             installment: {
-              select: { id: true, status: true, dueDate: true, planId: true },
+              select: { id: true, status: true, dueDate: true, paidAt: true, planId: true },
             },
           },
         },
@@ -188,17 +198,18 @@ export class ChequeLifecycleService {
     return this.findOne(id);
   }
 
-  // ── DEPOSITED → BOUNCED (Sub-case A only) ───────────────────────────────────
+  // ── DEPOSITED → BOUNCED ─────────────────────────────────────────────────────
   //
-  // Sub-case A: all linked deposits are PENDING_REVIEW (never cleared).
-  // Sub-case B: any linked deposit is APPROVED → throw "not yet supported".
+  // Branches per deposit, not per instrument — one cheque may cover deposits
+  // at different review states (mixed instrument).
   //
-  // Sub-case A transaction:
-  // 1. PI.status = BOUNCED, bounceDate, bounceReason
-  // 2. PENDING_REVIEW deposits → REJECTED with structured rejectionReason
-  // 3. Installments: NOT touched (they were never PAID)
-  // 4. ZERO PaymentCorrection rows
-  // 5. If penaltyAmount > 0: create BOUNCE_PENALTY installment on the first linked plan
+  // Sub-case A (deposit PENDING_REVIEW): deposits → REJECTED; installments unchanged;
+  //   zero PaymentCorrection rows. (design §3.4 Sub-case A)
+  //
+  // Sub-case B (deposit APPROVED): Deposit.reviewStatus stays APPROVED (Hard Rule 2
+  //   / §3.6); PaymentCorrection(REVERSAL) written per deposit; installment status
+  //   updated per installmentAction setting; lastCorrectionId set; paidAt NOT cleared.
+  //   All in ONE $transaction. (design §3.4 Sub-case B, invariants 1–3)
 
   async recordBounce(id: string, dto: RecordBounceDto, performedById: string) {
     const pi = await this.loadOwned(id);
@@ -207,30 +218,25 @@ export class ChequeLifecycleService {
     const bounceDate = new Date(dto.bounceDate);
     const bounceDateStr = bounceDate.toISOString().slice(0, 10);
     const instrumentLabel = pi.chequeNumber ?? pi.referenceNumber ?? pi.id.slice(0, 8);
-
-    // Guard: Sub-case B not yet supported
-    const approvedDeposits = pi.deposits.filter(
-      (d) => d.reviewStatus === DepositReviewStatus.APPROVED,
-    );
-    if (approvedDeposits.length > 0) {
-      throw new NotImplementedException(
-        `Sub-case B bounce (deposits already APPROVED) is not yet supported. ` +
-        `Affected deposit IDs: ${approvedDeposits.map((d) => d.id).join(', ')}`,
-      );
-    }
+    const installmentAction = dto.installmentAction ?? 'REOPEN_AS_OVERDUE';
 
     const pendingDeposits = pi.deposits.filter(
       (d) => d.reviewStatus === DepositReviewStatus.PENDING_REVIEW,
     );
+    const approvedDeposits = pi.deposits.filter(
+      (d) => d.reviewStatus === DepositReviewStatus.APPROVED,
+    );
+
     const affectedDepositIds = pendingDeposits.map((d) => d.id);
     const rejectionReason = `Instrument bounced — ${pi.type === PaymentInstrumentType.CHEQUE ? 'cheque' : 'transfer'} ${instrumentLabel} returned ${bounceDateStr}`;
 
     // Determine the installment plan for a potential penalty installment.
-    // Use the first linked installment's planId.
     const firstInstallmentWithPlan = pi.deposits.find((d) => d.installment?.planId);
     const planId = firstInstallmentWithPlan?.installment?.planId ?? null;
 
     let penaltyInstallmentId: string | null = null;
+    let correctionRowsWritten = 0;
+    const correctionIds: string[] = [];
 
     await this.prisma.$transaction(async (tx) => {
       await tx.paymentInstrument.update({
@@ -242,6 +248,7 @@ export class ChequeLifecycleService {
         },
       });
 
+      // ── Sub-case A: PENDING_REVIEW deposits → REJECTED ──────────────────
       if (affectedDepositIds.length > 0) {
         await tx.deposit.updateMany({
           where: { id: { in: affectedDepositIds } },
@@ -252,12 +259,41 @@ export class ChequeLifecycleService {
         });
       }
 
+      // ── Sub-case B: APPROVED deposits — write correction + reopen installment ──
+      // Deposit.reviewStatus stays APPROVED (§3.6). paidAt NOT cleared (§3.6 / Hard Rule 2).
+      const companyId = getRequiredCompanyId();
+      for (const d of approvedDeposits) {
+        if (!d.installmentId || !d.installment) continue;
+
+        const correction = await tx.paymentCorrection.create({
+          data: {
+            type: PaymentCorrectionType.REVERSAL,
+            depositId: d.id,
+            sourceInstallmentId: d.installmentId,
+            reason: dto.bounceReason,
+            performedById,
+            companyId,
+          },
+        });
+        correctionIds.push(correction.id);
+        correctionRowsWritten += 1;
+
+        const newStatus = computeReopenStatus(d.installment.dueDate, installmentAction);
+        await tx.installment.update({
+          where: { id: d.installmentId },
+          data: {
+            status: newStatus,
+            lastCorrectionId: correction.id,
+            // paidAt intentionally NOT cleared — Hard Rule 2 / §3.6
+          },
+        });
+      }
+
       // BOUNCE_PENALTY installment — only when planId is known and penalty > 0
       if (dto.penaltyAmount > 0 && planId) {
         if (!dto.penaltyDueDate) {
           throw new BadRequestException('penaltyDueDate is required when penaltyAmount > 0');
         }
-        const companyId = getRequiredCompanyId();
         const penalty = await tx.installment.create({
           data: {
             planId,
@@ -275,8 +311,9 @@ export class ChequeLifecycleService {
         );
       }
 
-      // AuditLog — section 6.3 Sub-case A entry
-      const companyId = getRequiredCompanyId();
+      // AuditLog — §6.3
+      const hasSubCaseB = approvedDeposits.length > 0;
+      const subCase = hasSubCaseB ? (pendingDeposits.length > 0 ? 'A+B' : 'B') : 'A';
       await tx.auditLog.create({
         data: {
           actorId: performedById,
@@ -288,10 +325,11 @@ export class ChequeLifecycleService {
             status: PaymentInstrumentStatus.BOUNCED,
             bounceDate: bounceDate.toISOString(),
             bounceReason: dto.bounceReason,
-            subCase: 'A',
-            affectedDepositIds,
+            subCase,
+            affectedDepositIds: pi.deposits.map((d) => d.id),
             depositsSetToRejected: affectedDepositIds,
-            correctionRowsWritten: 0,
+            correctionRowsWritten,
+            correctionIds,
             penaltyInstallmentId,
           },
           companyId,

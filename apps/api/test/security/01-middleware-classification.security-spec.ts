@@ -56,6 +56,8 @@ const EXPECTED_CLASSIFICATIONS: [string, ModelTenancyTier][] = [
   ['AuditLog', 'TENANT_OWNED'],
   // Step A
   ['PaymentInstrument', 'TENANT_OWNED'],
+  // Step C
+  ['PaymentCorrection', 'TENANT_OWNED'],
 ];
 
 describe('SEC — Middleware Classification (STEP 2)', () => {
@@ -80,9 +82,9 @@ describe('SEC — Middleware Classification (STEP 2)', () => {
   });
 
   // MC-2
-  it('MC-2: TENANT_OWNED count matches audit-documented 47 (46 + PaymentInstrument from Step A)', () => {
+  it('MC-2: TENANT_OWNED count matches audit-documented 48 (46 + PaymentInstrument from Step A + PaymentCorrection from Step C)', () => {
     const owned = Object.entries(MODEL_TENANCY).filter(([, t]) => t === 'TENANT_OWNED');
-    expect(owned.length).toBe(47);
+    expect(owned.length).toBe(48);
   });
 
   // MC-3

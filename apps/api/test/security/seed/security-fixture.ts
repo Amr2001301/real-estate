@@ -117,6 +117,8 @@ async function teardownCompany(raw: PrismaClient, companyId: string): Promise<vo
   await raw.broker.deleteMany({ where: { companyId } });
   // Step A: PaymentInstrument.recordedById → User (RESTRICT); must clear before users.
   // PaymentInstrument.replacedById self-FK is SET NULL so order within the table is safe.
+  // Step C: PaymentCorrection.depositId → Deposit (RESTRICT); must clear before deposits.
+  await raw.paymentCorrection.deleteMany({ where: { companyId } });
   await raw.paymentInstrument.deleteMany({ where: { companyId } });
   await raw.deposit.deleteMany({ where: { companyId } });
   await raw.installment.deleteMany({ where: { companyId } });
@@ -407,6 +409,16 @@ export async function seedSecurityFixture(raw: PrismaClient): Promise<SecurityFi
         skipDuplicates: true,
       });
     }
+  }
+
+  // Grant deposits:reverse to adminA so DC-1 cross-tenant test can reach the service
+  // layer (past the @PermissionsStrict gate). The deposit belongs to Company B so the
+  // service returns 404 before modifying anything — confirms no 2xx is returned.
+  const depositsReversePerm = await raw.permission.findFirst({ where: { code: 'deposits:reverse' } });
+  if (depositsReversePerm) {
+    await raw.userPermission.create({
+      data: { userId: adminA.id, permissionId: depositsReversePerm.id },
+    }).catch(() => void 0);
   }
 
   // Grant broker_leads:approve to adminA so the V-08 test can reach the service

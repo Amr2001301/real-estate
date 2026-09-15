@@ -40,6 +40,17 @@ export class RecordBounceDto {
    * Due date for the BOUNCE_PENALTY installment. Required when penaltyAmount > 0.
    */
   @IsOptional() @IsDateString() penaltyDueDate?: string;
+
+  /**
+   * Sub-case B only: how to reopen installments that were PAID.
+   * REOPEN_AS_OVERDUE = OVERDUE if dueDate < now(), else PENDING (tenant default).
+   * REOPEN_AS_PENDING = always PENDING.
+   * Operator selects from dropdown in bounce modal; this stored value is what counts.
+   * Has no effect on Sub-case A installments (they were never PAID).
+   */
+  @IsOptional()
+  @IsEnum(['REOPEN_AS_OVERDUE', 'REOPEN_AS_PENDING'])
+  installmentAction?: 'REOPEN_AS_OVERDUE' | 'REOPEN_AS_PENDING';
 }
 
 export class ReplaceInstrumentDto {

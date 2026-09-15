@@ -3,6 +3,7 @@ import {
   IsDateString,
   IsEnum,
   IsInt,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsPositive,
@@ -83,6 +84,15 @@ export class ApproveDepositDto {
  *  Mirrors RejectBrokerLeadDto in shape and cap. */
 export class RejectDepositDto {
   @IsString() @MaxLength(2000) reason!: string;
+}
+
+/**
+ * Admin manually reverses an APPROVED deposit (deposits:reverse).
+ * Writes a PaymentCorrection(REVERSAL) and reopens the linked installment as
+ * PENDING. Reason is MANDATORY (§6.2) and stored in the correction row.
+ */
+export class ReverseDepositDto {
+  @IsString() @IsNotEmpty() @MaxLength(2000) reason!: string;
 }
 
 /** Customer-side presign request (folder forced to 'receipts' server-side). */

@@ -120,6 +120,7 @@ model Company {
   chatFeedback             ChatFeedback[]
   pricingPackages          PricingPackage[]
   paymentInstruments       PaymentInstrument[]
+  paymentCorrections       PaymentCorrection[]
 
   // Module flags — controls which dashboard sections are visible for this company
   modules Json? // { broker, website, maintenance, reports, leads, visits, contracts, installments, deposits }
@@ -313,6 +314,7 @@ model User {
   brokerActivityLogs        BrokerActivityLog[] @relation("BrokerActivityLogAgent")
   uploadedDocuments         Document[]          @relation("DocumentUploader")
   paymentInstrumentsRecorded    PaymentInstrument[] @relation("InstrumentRecordedBy")
+  performedCorrections          PaymentCorrection[] @relation("CorrectionPerformedBy")
 
   // ── Tenant scoping ───────────────────────────────────────────────────────
   // Nullable so existing users and platform-level ADMIN users without a
@@ -1242,10 +1244,15 @@ model Installment {
   paidAt    DateTime?
   createdAt DateTime          @default(now())
 
-  // ── Step A: correction marker — FK @relation added in Step C when PaymentCorrection exists ──
+  // ── Step C: correction marker — FK wired now that PaymentCorrection model exists ──
   // Non-null signals that a PaymentCorrection has touched this installment.
   // Used by portal, admin views, and XLSX export to show a correction badge.
-  lastCorrectionId String? @db.Uuid
+  lastCorrectionId String?            @db.Uuid
+  lastCorrection   PaymentCorrection? @relation("InstallmentLastCorrection", fields: [lastCorrectionId], references: [id])
+
+  // Reverse sides for CorrectionSource / CorrectionTarget relations on PaymentCorrection
+  correctionSources PaymentCorrection[] @relation("CorrectionSource")
+  correctionTargets PaymentCorrection[] @relation("CorrectionTarget")
 
   deposits Deposit[]
 
@@ -1380,6 +1387,9 @@ model Deposit {
   paymentInstrumentId String?             @db.Uuid
   paymentInstrument   PaymentInstrument?  @relation(fields: [paymentInstrumentId], references: [id])
 
+  // ── Step C: correction history (LEDGER — never delete, never mutate settled rows) ──
+  paymentCorrections  PaymentCorrection[] @relation("CorrectionDeposit")
+
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
@@ -1393,6 +1403,57 @@ model Deposit {
   @@index([paymentInstrumentId])
   @@index([companyId])
   @@index([deletedAt])
+}
+
+// =============================================================================
+// PAYMENT CORRECTION (Step C — reversal & correction ledger)
+// =============================================================================
+
+/// REVERSAL: deposit nullified (bounce, fraud, data-entry error).
+/// REASSIGNMENT: deposit moved to the correct installment (Step H).
+enum PaymentCorrectionType {
+  REVERSAL
+  REASSIGNMENT
+}
+
+/// Append-only correction record (LEDGER — 09-reversal-design.md §2.2).
+/// Settled payment rows are NEVER mutated; this row IS the audit trail.
+/// Correction row + Installment.status update + lastCorrectionId all happen
+/// in a single $transaction (invariant 3 in Step C spec).
+/// NEVER soft-deleted — Hard Rule 2.
+model PaymentCorrection {
+  id   String                @id @default(uuid()) @db.Uuid
+  type PaymentCorrectionType
+
+  depositId  String  @db.Uuid
+  deposit    Deposit @relation("CorrectionDeposit", fields: [depositId], references: [id])
+
+  /// For REVERSAL: the installment being un-paid.
+  /// For REASSIGNMENT: the source (wrong) installment.
+  sourceInstallmentId  String?      @db.Uuid
+  sourceInstallment    Installment? @relation("CorrectionSource", fields: [sourceInstallmentId], references: [id])
+
+  /// For REASSIGNMENT only: the target (correct) installment being credited.
+  targetInstallmentId  String?      @db.Uuid
+  targetInstallment    Installment? @relation("CorrectionTarget", fields: [targetInstallmentId], references: [id])
+
+  /// MANDATORY — freetext reason shown in audit view and dispute export.
+  reason  String  @db.VarChar(2000)
+
+  performedById  String   @db.Uuid
+  performedBy    User     @relation("CorrectionPerformedBy", fields: [performedById], references: [id])
+  createdAt      DateTime @default(now())
+
+  companyId  String?  @db.Uuid
+  company    Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  /// Reverse relation: Installment rows that carry this as their lastCorrection pointer.
+  lastCorrectionOf  Installment[] @relation("InstallmentLastCorrection")
+
+  @@index([depositId])
+  @@index([sourceInstallmentId])
+  @@index([targetInstallmentId])
+  @@index([companyId])
 }
 
 // =============================================================================

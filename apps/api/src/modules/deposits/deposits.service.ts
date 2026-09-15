@@ -12,12 +12,14 @@ import {
   DocumentOwnerType,
   DocumentVisibility,
   InstallmentStatus,
+  PaymentCorrectionType,
   PaymentMethod,
   PlanPaymentType,
   Prisma,
   ReservationBookingPaymentStatus,
   UserRole,
 } from '@prisma/client';
+import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { scopedUserFindMany } from '../../common/tenant/resolve-tenant-entity';
 import { DocumentsService } from '../documents/documents.module';
@@ -45,7 +47,27 @@ const DEPOSIT_INCLUDE = {
       unit: { select: { id: true, code: true } },
     },
   },
-  installment: { select: { id: true, dueDate: true, amount: true, type: true } },
+  installment: {
+    select: {
+      id: true,
+      dueDate: true,
+      amount: true,
+      type: true,
+      status: true,
+      paidAt: true,
+      lastCorrectionId: true,
+      // Correction context — null when lastCorrectionId is null (§3.5)
+      lastCorrection: {
+        select: {
+          id: true,
+          type: true,
+          reason: true,
+          createdAt: true,
+          performedBy: { select: { id: true, fullName: true } },
+        },
+      },
+    },
+  },
   reservation: {
     select: {
       id: true,
@@ -390,7 +412,7 @@ export class DepositsService {
     };
   }
 
-  async verify(id: string, dto: VerifyDepositDto) {
+  async verify(id: string, dto: VerifyDepositDto, actor: AuthUser) {
     // P11 — keep `verified` in lockstep with `reviewStatus`. Toggling
     // verified=true is equivalent to a manual approve action; verified=false
     // resets the row to the pre-review state (NO_PROOF if no receipt exists,
@@ -398,7 +420,14 @@ export class DepositsService {
     // the new approve/reject endpoints carry forward.
     const target = await this.prisma.deposit.findUnique({
       where: { id },
-      select: { receiptUrl: true, reviewStatus: true },
+      select: {
+        receiptUrl: true,
+        reviewStatus: true,
+        verified: true,
+        amount: true,
+        installmentId: true,
+        installment: { select: { id: true, status: true, paidAt: true } },
+      },
     });
     if (!target) throw new NotFoundException('Deposit not found');
     const nextReviewStatus: DepositReviewStatus = dto.verified
@@ -406,6 +435,72 @@ export class DepositsService {
       : target.receiptUrl
         ? DepositReviewStatus.PENDING_REVIEW
         : DepositReviewStatus.NO_PROOF;
+
+    // FG-06: un-verifying an APPROVED deposit that already settled an installment
+    // must write a PaymentCorrection and reopen the installment. Without this,
+    // the deposit status goes back to PENDING_REVIEW but the installment stays
+    // PAID — an inconsistency that was the root of FG-06.
+    const needsReversal =
+      !dto.verified &&
+      target.reviewStatus === DepositReviewStatus.APPROVED &&
+      !!target.installmentId &&
+      target.installment?.status === InstallmentStatus.PAID;
+
+    if (needsReversal) {
+      const companyId = getRequiredCompanyId();
+      await this.prisma.$transaction(async (tx) => {
+        await tx.deposit.update({
+          where: { id },
+          data: { verified: false, reviewStatus: nextReviewStatus, rejectionReason: null },
+        });
+
+        const correction = await tx.paymentCorrection.create({
+          data: {
+            type: PaymentCorrectionType.REVERSAL,
+            depositId: id,
+            sourceInstallmentId: target.installmentId!,
+            reason: 'Deposit un-verified by admin',
+            performedById: actor.sub,
+            companyId,
+          },
+        });
+
+        // Manual reversal always reopens as PENDING (§5.1)
+        await tx.installment.update({
+          where: { id: target.installmentId! },
+          data: {
+            status: InstallmentStatus.PENDING,
+            lastCorrectionId: correction.id,
+            // paidAt intentionally NOT cleared — Hard Rule 2 / §3.6
+          },
+        });
+
+        await tx.auditLog.create({
+          data: {
+            actorId: actor.sub,
+            action: 'deposit.reversed',
+            entityType: 'Deposit',
+            entityId: id,
+            before: {
+              reviewStatus: target.reviewStatus,
+              verified: target.verified,
+              amount: Number(target.amount),
+            },
+            after: {
+              correctionId: correction.id,
+              correctionType: 'REVERSAL',
+              affectedInstallmentId: target.installmentId,
+              installmentPreviousStatus: target.installment!.status,
+              installmentNewStatus: 'PENDING',
+              installmentPaidAtPreserved: target.installment!.paidAt?.toISOString() ?? null,
+              reason: 'Deposit un-verified by admin',
+            },
+            companyId,
+          },
+        });
+      });
+      return this.findOne(id);
+    }
 
     const updated = await this.prisma.deposit.update({
       where: { id },
@@ -430,6 +525,84 @@ export class DepositsService {
       );
     }
     return updated;
+  }
+
+  /**
+   * Admin manually reverses an APPROVED deposit (deposits:reverse — §6.2).
+   * Writes a PaymentCorrection(REVERSAL), reopens the linked installment as
+   * PENDING, sets lastCorrectionId, preserves paidAt. All in ONE $transaction.
+   *
+   * AuditLog entry matches §6.3 deposit.reversed structure exactly.
+   */
+  async reverseDeposit(id: string, dto: import('./deposits.dto').ReverseDepositDto, actor: AuthUser) {
+    const companyId = getRequiredCompanyId();
+    const deposit = await this.prisma.deposit.findFirst({
+      where: { id, companyId },
+      select: {
+        id: true,
+        reviewStatus: true,
+        verified: true,
+        amount: true,
+        installmentId: true,
+        installment: { select: { id: true, status: true, paidAt: true } },
+      },
+    });
+    if (!deposit) throw new NotFoundException('Deposit not found');
+    if (deposit.reviewStatus !== DepositReviewStatus.APPROVED) {
+      throw new BadRequestException('Only APPROVED deposits can be reversed');
+    }
+    if (!deposit.installmentId || !deposit.installment) {
+      throw new BadRequestException('Deposit is not linked to an installment');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const correction = await tx.paymentCorrection.create({
+        data: {
+          type: PaymentCorrectionType.REVERSAL,
+          depositId: id,
+          sourceInstallmentId: deposit.installmentId!,
+          reason: dto.reason.trim(),
+          performedById: actor.sub,
+          companyId,
+        },
+      });
+
+      // Manual admin reversal always reopens as PENDING (§5.1)
+      await tx.installment.update({
+        where: { id: deposit.installmentId! },
+        data: {
+          status: InstallmentStatus.PENDING,
+          lastCorrectionId: correction.id,
+          // paidAt intentionally NOT cleared — Hard Rule 2 / §3.6
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.sub,
+          action: 'deposit.reversed',
+          entityType: 'Deposit',
+          entityId: id,
+          before: {
+            reviewStatus: deposit.reviewStatus,
+            verified: deposit.verified,
+            amount: Number(deposit.amount),
+          },
+          after: {
+            correctionId: correction.id,
+            correctionType: 'REVERSAL',
+            affectedInstallmentId: deposit.installmentId,
+            installmentPreviousStatus: deposit.installment!.status,
+            installmentNewStatus: 'PENDING',
+            installmentPaidAtPreserved: deposit.installment!.paidAt?.toISOString() ?? null,
+            reason: dto.reason.trim(),
+          },
+          companyId,
+        },
+      });
+    });
+
+    return this.findOne(id);
   }
 
   // ── P11 — Customer payment-proof submission + admin review ────────────
