@@ -178,28 +178,30 @@ describe('Reports · financial-dashboard summary correctness (F1)', () => {
     );
   });
 
-  it('computes overdue from dueDate<today AND status!=PAID (not the stored OVERDUE flag)', () => {
+  it('computes overdue from dueDate<today AND status IN [PENDING,OVERDUE] (Step D1: explicit IN, not negation)', () => {
+    // Step D1: query uses { in: [PENDING, OVERDUE] } so CANCELLED is excluded.
     const computedOverdue = captured.installmentWheres.find(
-      (w) => has(w, '"not":"PAID"') && has(w, '"dueDate"') && has(w, '"lt"') && !has(w, '"gte"'),
+      (w) => has(w, '"PENDING"') && has(w, '"OVERDUE"') && has(w, '"dueDate"') && has(w, '"lt"') && !has(w, '"gte"'),
     );
     expect(computedOverdue).toBeDefined();
     expect(body.summary.overdueInstallmentCountComputed).toBe(1);
     expect(body.summary.overdueAmountComputed).toBe('100');
   });
 
-  it('outstanding excludes PAID and has no dueDate bound', () => {
+  it('outstanding uses status IN [PENDING,OVERDUE] — CANCELLED excluded (Step D1)', () => {
+    // Outstanding query: { in: [PENDING, OVERDUE] } with no dueDate filter.
     const outstanding = captured.installmentWheres.find(
-      (w) => has(w, '"not":"PAID"') && !has(w, '"dueDate"'),
+      (w) => has(w, '"PENDING"') && has(w, '"OVERDUE"') && !has(w, '"dueDate"'),
     );
     expect(outstanding).toBeDefined();
     expect(body.summary.totalOutstanding).toBe('100');
   });
 
-  it('produces four aging buckets, all scoped to unpaid', () => {
+  it('produces four aging buckets, all scoped to status IN [PENDING,OVERDUE]', () => {
     expect(body.aging.map((a) => a.label)).toEqual(['1-30', '31-60', '61-90', '90+']);
-    // Each aging query is status!=PAID with a dueDate range.
+    // Each aging query carries the PENDING+OVERDUE IN filter and a dueDate range.
     const agingQueries = captured.installmentWheres.filter(
-      (w) => has(w, '"not":"PAID"') && has(w, '"dueDate"'),
+      (w) => has(w, '"PENDING"') && has(w, '"OVERDUE"') && has(w, '"dueDate"'),
     );
     expect(agingQueries.length).toBeGreaterThanOrEqual(4);
   });

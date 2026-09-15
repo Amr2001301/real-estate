@@ -20,6 +20,8 @@ export const TENANT_SCOPED_MODELS_LEGACY = new Set([
   'contract', 'installmentplan', 'installment', 'deposit',
   'paymentinstrument', // Step A (09-reversal-design.md §3.2)
   'paymentcorrection', // Step C (09-reversal-design.md §3.2)
+  'contractcancellation', // Step D1 (09-reversal-design.md §4.2)
+  'refund', // Step D1 (09-reversal-design.md §4.2)
   // Plan templates
   'installmentplantemplate',
   // Bonus / targets

@@ -223,11 +223,12 @@ describe('Deposits · recording + verification workflow', () => {
 
     expect(mock.installment.updateMany).toHaveBeenCalledTimes(1);
     const instArgs = mock.installment.updateMany.mock.calls[0]![0] as {
-      where: { id: string; status: { not: string } };
+      where: { id: string; status: { in: string[] } };
       data: { status: string; paidAt: Date };
     };
     expect(instArgs.where.id).toBe(INSTALLMENT_ID);
-    expect(instArgs.where.status).toEqual({ not: 'PAID' });
+    // Step D1: guard uses explicit IN [PENDING, OVERDUE] — CANCELLED is blocked too.
+    expect(instArgs.where.status).toEqual({ in: ['PENDING', 'OVERDUE'] });
     expect(instArgs.data.status).toBe('PAID');
     expect(instArgs.data.paidAt).toBeInstanceOf(Date);
 

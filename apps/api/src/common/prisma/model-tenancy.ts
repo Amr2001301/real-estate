@@ -80,7 +80,7 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   PlanTemplateScheduleItem: 'TENANT_VIA_RELATION',  // planId → InstallmentPlanTemplate
 
   // ── TENANT_OWNED ───────────────────────────────────────────────────────────
-  // Has companyId column. Middleware auto-injects and filters. (48 models)
+  // Has companyId column. Middleware auto-injects and filters. (50 models)
 
   // Projects / inventory
   Project: 'TENANT_OWNED',
@@ -114,6 +114,9 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   PaymentInstrument: 'TENANT_OWNED',
   // Step C (09-reversal-design.md §3.2) — correction/reversal ledger entry.
   PaymentCorrection: 'TENANT_OWNED',
+  // Step D1 (09-reversal-design.md §4.2) — cancellation accounting.
+  ContractCancellation: 'TENANT_OWNED',
+  Refund: 'TENANT_OWNED',
   InstallmentPlanTemplate: 'TENANT_OWNED',
 
   // Bonus / targets

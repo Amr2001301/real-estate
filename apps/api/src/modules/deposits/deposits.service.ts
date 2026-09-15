@@ -205,15 +205,15 @@ export class DepositsService {
     const paidAt = dto.paidAt ? new Date(dto.paidAt) : new Date();
 
     const deposit = await this.prisma.$transaction(async (tx) => {
-      // Atomic claim: mark PAID only if still PENDING. Row-level locking in
-      // Postgres serializes concurrent calls — the second transaction to reach
-      // this UPDATE sees count=0 and aborts before any Deposit row is written.
+      // Atomic claim: mark PAID only if PENDING or OVERDUE.
+      // Explicit IN excludes both PAID and CANCELLED (Step D1) — a cancelled
+      // installment must not be re-activated by recording a new deposit.
       const claimed = await tx.installment.updateMany({
-        where: { id: dto.installmentId, status: { not: InstallmentStatus.PAID } },
+        where: { id: dto.installmentId, status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] } },
         data: { status: InstallmentStatus.PAID, paidAt },
       });
       if (claimed.count === 0) {
-        throw new ConflictException('هذا القسط مدفوع بالفعل');
+        throw new ConflictException('هذا القسط مدفوع بالفعل أو ملغى');
       }
       return tx.deposit.create({
         data: {

@@ -118,6 +118,10 @@ async function teardownCompany(raw: PrismaClient, companyId: string): Promise<vo
   // Step A: PaymentInstrument.recordedById → User (RESTRICT); must clear before users.
   // PaymentInstrument.replacedById self-FK is SET NULL so order within the table is safe.
   // Step C: PaymentCorrection.depositId → Deposit (RESTRICT); must clear before deposits.
+  // Step D1: Refund.cancellationId → ContractCancellation (RESTRICT); clear Refund first,
+  //          then ContractCancellation (contractId FK), then Contract itself.
+  await raw.refund.deleteMany({ where: { companyId } });
+  await raw.contractCancellation.deleteMany({ where: { companyId } });
   await raw.paymentCorrection.deleteMany({ where: { companyId } });
   await raw.paymentInstrument.deleteMany({ where: { companyId } });
   await raw.deposit.deleteMany({ where: { companyId } });

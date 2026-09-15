@@ -121,6 +121,8 @@ model Company {
   pricingPackages          PricingPackage[]
   paymentInstruments       PaymentInstrument[]
   paymentCorrections       PaymentCorrection[]
+  contractCancellations    ContractCancellation[]
+  refunds                  Refund[]
 
   // Module flags — controls which dashboard sections are visible for this company
   modules Json? // { broker, website, maintenance, reports, leads, visits, contracts, installments, deposits }
@@ -313,8 +315,17 @@ model User {
   brokerPayoutsCancelled    BrokerPayout[]      @relation("BrokerPayoutCancelledBy")
   brokerActivityLogs        BrokerActivityLog[] @relation("BrokerActivityLogAgent")
   uploadedDocuments         Document[]          @relation("DocumentUploader")
-  paymentInstrumentsRecorded    PaymentInstrument[] @relation("InstrumentRecordedBy")
-  performedCorrections          PaymentCorrection[] @relation("CorrectionPerformedBy")
+  paymentInstrumentsRecorded    PaymentInstrument[]   @relation("InstrumentRecordedBy")
+  performedCorrections          PaymentCorrection[]   @relation("CorrectionPerformedBy")
+  contractCancellations         ContractCancellation[] @relation("CancellationPerformedBy")
+  refundsRecorded               Refund[]              @relation("RefundRecordedBy")
+  // Step D1: clawback-resolution actor relations
+  commissionsClawbackInitiated  BrokerCommission[]    @relation("CommissionClawbackBy")
+  commissionsClawbackCollected  BrokerCommission[]    @relation("CommissionClawbackCollectedBy")
+  commissionsClawbackWaived     BrokerCommission[]    @relation("CommissionClawbackWaivedBy")
+  bonusesClawbackInitiated      BonusEntry[]          @relation("BonusClawbackBy")
+  bonusesClawbackCollected      BonusEntry[]          @relation("BonusClawbackCollectedBy")
+  bonusesClawbackWaived         BonusEntry[]          @relation("BonusClawbackWaivedBy")
 
   // ── Tenant scoping ───────────────────────────────────────────────────────
   // Nullable so existing users and platform-level ADMIN users without a
@@ -1039,6 +1050,22 @@ enum InstallmentStatus {
   PENDING
   PAID
   OVERDUE
+  /// Obligation cancelled (e.g. contract cancellation). Step D1.
+  CANCELLED
+}
+
+/// Step D1 — lifecycle of a Contract once D1 lands.
+enum ContractStatus {
+  UNSIGNED  // created, not yet signed. signedAt = null.
+  ACTIVE    // signed. Normal operational state.
+  CANCELLED // deal unwound — see ContractCancellation record.
+}
+
+/// Step D1 — clawback state for PAID commissions/bonuses after contract cancel.
+enum ClawbackStatus {
+  OUTSTANDING // money owed; not yet recovered
+  COLLECTED   // broker/sales returned the money
+  WAIVED      // operator chose not to pursue
 }
 
 enum DepositType {
@@ -1189,6 +1216,10 @@ model Contract {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
+  // ── Step D1: contract lifecycle ──────────────────────────────────────────
+  status      ContractStatus @default(UNSIGNED)
+  cancelledAt DateTime?
+
   // ── Broker attribution (additive, all nullable) ─────────────────────────
   brokerId      String? @db.Uuid
   broker        Broker? @relation(fields: [brokerId], references: [id])
@@ -1200,6 +1231,7 @@ model Contract {
   brokerCommission BrokerCommission?
   // At most one auto-generated sales commission entry (Batch B wires creation).
   bonusEntry       BonusEntry?
+  cancellation     ContractCancellation?
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1212,6 +1244,7 @@ model Contract {
   @@index([brokerId])
   @@index([brokerAgentId])
   @@index([companyId])
+  @@index([status])
   @@index([deletedAt])
 }
 
@@ -1224,6 +1257,9 @@ model InstallmentPlan {
   startsAt      DateTime
   frequency     InstallmentFrequency @default(MONTHLY)
   createdAt     DateTime             @default(now())
+
+  // ── Step D1: set when contract is cancelled ──────────────────────────────
+  cancelledAt DateTime?
 
   installments Installment[]
 
@@ -1403,6 +1439,83 @@ model Deposit {
   @@index([paymentInstrumentId])
   @@index([companyId])
   @@index([deletedAt])
+}
+
+// =============================================================================
+// CONTRACT CANCELLATION (Step D1 — cancellation accounting)
+// =============================================================================
+
+/// Every contract cancellation produces one ContractCancellation row.
+/// Amounts are entered by the operator; policySnapshot captures Setting values at
+/// cancellation time (Rule 1 — historical record never recomputed from settings).
+/// TENANT_OWNED: middleware auto-scopes on reads; companyId required on every write.
+model ContractCancellation {
+  id         String   @id @default(uuid()) @db.Uuid
+  contractId String   @unique @db.Uuid
+  contract   Contract @relation(fields: [contractId], references: [id])
+
+  cancelledById String @db.Uuid
+  cancelledBy   User   @relation("CancellationPerformedBy", fields: [cancelledById], references: [id])
+
+  reason String @db.VarChar(2000)
+
+  cancellationDate DateTime
+
+  // ── Financial settlement (operator-entered; policy produces suggestion only) ──
+  totalCollectedSnapshot Decimal  @db.Decimal(14, 2)
+  retainedAmount         Decimal  @db.Decimal(14, 2)
+  refundAmount           Decimal  @db.Decimal(14, 2)
+  financialNotes         String?  @db.VarChar(2000)
+
+  // ── Per-transaction overrides ─────────────────────────────────────────────
+  unitReleaseOverride      String?  @db.VarChar(50)
+  demoteCustomerOverride   Boolean?
+  commissionActionOverride String?  @db.VarChar(20)
+  bonusActionOverride      String?  @db.VarChar(20)
+
+  // ── Policy snapshot (immutable; never recomputed from current settings) ──
+  policySnapshot Json
+
+  // ── Post-cancellation status ─────────────────────────────────────────────
+  unitReleasedAt    DateTime?
+  customerDemotedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  refunds Refund[]
+
+  @@index([contractId])
+  @@index([companyId])
+}
+
+/// A refund disbursement against a ContractCancellation.
+/// Append-only: one row per actual transfer. Multiple partial transfers are
+/// supported by creating multiple Refund rows against the same cancellation.
+/// TENANT_OWNED: middleware auto-scopes on reads; companyId required on every write.
+model Refund {
+  id                     String               @id @default(uuid()) @db.Uuid
+  contractCancellationId String               @db.Uuid
+  cancellation           ContractCancellation @relation(fields: [contractCancellationId], references: [id])
+
+  amount          Decimal       @db.Decimal(14, 2)
+  paymentMethod   PaymentMethod
+  referenceNumber String?       @db.VarChar(100)
+  bankName        String?       @db.VarChar(200)
+  paidAt          DateTime
+  notes           String?       @db.VarChar(2000)
+
+  recordedById String   @db.Uuid
+  recordedBy   User     @relation("RefundRecordedBy", fields: [recordedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([contractCancellationId])
+  @@index([companyId])
 }
 
 // =============================================================================
@@ -1637,11 +1750,25 @@ model BonusEntry {
   basisAmount   Decimal?         @db.Decimal(14, 2)
   commissionPct Decimal?         @db.Decimal(5, 2)
 
+  // ── Step D1: clawback overlay for PAID bonuses (same pattern as BrokerCommission) ──
+  clawbackStatus        ClawbackStatus? // null = no clawback applicable
+  clawbackReason        String?         @db.VarChar(2000)
+  clawbackAt            DateTime?
+  clawbackById          String?         @db.Uuid
+  clawbackBy            User?           @relation("BonusClawbackBy", fields: [clawbackById], references: [id])
+  clawbackCollectedAt   DateTime?
+  clawbackCollectedById String?         @db.Uuid
+  clawbackCollectedBy   User?           @relation("BonusClawbackCollectedBy", fields: [clawbackCollectedById], references: [id])
+  clawbackWaivedAt      DateTime?
+  clawbackWaivedById    String?         @db.Uuid
+  clawbackWaivedBy      User?           @relation("BonusClawbackWaivedBy", fields: [clawbackWaivedById], references: [id])
+
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
   @@index([salesId, period])
   @@index([status])
+  @@index([clawbackStatus])
   @@index([companyId])
 }
 
@@ -2198,6 +2325,20 @@ model BrokerCommission {
   payoutId String?       @db.Uuid
   payout   BrokerPayout? @relation(fields: [payoutId], references: [id])
 
+  // ── Step D1: clawback overlay for PAID commissions (Hard Rule 2) ─────────
+  // status stays PAID; the clawback overlay records what is owed/resolved.
+  clawbackStatus        ClawbackStatus? // null = no clawback applicable
+  clawbackReason        String?         @db.VarChar(2000)
+  clawbackAt            DateTime?
+  clawbackById          String?         @db.Uuid
+  clawbackBy            User?           @relation("CommissionClawbackBy", fields: [clawbackById], references: [id])
+  clawbackCollectedAt   DateTime?
+  clawbackCollectedById String?         @db.Uuid
+  clawbackCollectedBy   User?           @relation("CommissionClawbackCollectedBy", fields: [clawbackCollectedById], references: [id])
+  clawbackWaivedAt      DateTime?
+  clawbackWaivedById    String?         @db.Uuid
+  clawbackWaivedBy      User?           @relation("CommissionClawbackWaivedBy", fields: [clawbackWaivedById], references: [id])
+
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
@@ -2206,6 +2347,7 @@ model BrokerCommission {
   @@index([brokerAgentId])
   @@index([status, earnedAt])
   @@index([payoutId])
+  @@index([clawbackStatus])
   @@index([companyId])
 }
 

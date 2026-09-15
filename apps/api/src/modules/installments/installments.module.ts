@@ -5,6 +5,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Injectable,
   Logger,
   Module,
@@ -16,6 +17,7 @@ import {
   Post,
   Query,
   Req,
+  StreamableFile,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -57,6 +59,13 @@ import { CronLockService } from '../../common/cron/cron-lock.service';
 import { captureExceptionSafe } from '../../common/observability/sentry';
 import { runTenantContext } from '../../common/tenant/tenant-context';
 import { computeDurationOption } from './duration-calc';
+import {
+  addTitledTable,
+  addFooter,
+  createReportWorkbook,
+  workbookToBuffer,
+  xlsxFilename,
+} from '../../common/utils/xlsx';
 
 // ─── Existing contract-based plan DTOs ────────────────────────────────────────
 
@@ -185,6 +194,71 @@ class InstallmentsService {
       where: { contractId },
       include: { installments: { orderBy: { dueDate: 'asc' } } },
     });
+  }
+
+  /**
+   * Step D1 — installment plan XLSX export.
+   *
+   * CANCELLED rows are included and labelled "ملغى" — auditors need the full
+   * picture, but they must not appear as outstanding obligations in summaries.
+   * Outstanding total only sums PENDING + OVERDUE rows.
+   */
+  async planXlsx(planId: string): Promise<Buffer> {
+    const plan = await this.prisma.installmentPlan.findUnique({
+      where: { id: planId },
+      include: {
+        installments: { orderBy: { dueDate: 'asc' } },
+        contract: { select: { contractNumber: true } },
+      },
+    });
+    if (!plan) throw new NotFoundException('Installment plan not found');
+
+    const STATUS_LABEL: Record<string, string> = {
+      PENDING: 'معلّق',
+      OVERDUE: 'متأخر',
+      PAID: 'مدفوع',
+      CANCELLED: 'ملغى',
+    };
+
+    const rows = plan.installments.map((inst) => [
+      inst.dueDate.toISOString().slice(0, 10),
+      Number(inst.amount),
+      STATUS_LABEL[inst.status] ?? inst.status,
+      inst.paidAt ? inst.paidAt.toISOString().slice(0, 10) : '',
+      inst.type,
+    ]);
+
+    // Outstanding = PENDING + OVERDUE only — CANCELLED excluded.
+    const outstandingTotal = plan.installments
+      .filter((i) => i.status === InstallmentStatus.PENDING || i.status === InstallmentStatus.OVERDUE)
+      .reduce((acc, i) => acc + Number(i.amount), 0);
+
+    const paidTotal = plan.installments
+      .filter((i) => i.status === InstallmentStatus.PAID)
+      .reduce((acc, i) => acc + Number(i.amount), 0);
+
+    const wb = createReportWorkbook();
+    const ws = wb.addWorksheet('جدول الأقساط');
+    ws.properties.defaultRowHeight = 18;
+
+    const contractRef = plan.contract?.contractNumber ?? planId;
+    addTitledTable(ws, {
+      title: `جدول الأقساط — عقد ${contractRef}`,
+      headers: ['تاريخ الاستحقاق', 'المبلغ', 'الحالة', 'تاريخ الدفع', 'النوع'],
+      rows,
+      widths: [18, 16, 14, 18, 16],
+    });
+
+    // Summary rows below the table — outstanding excludes CANCELLED.
+    const summaryStartRow = ws.rowCount + 2;
+    ws.getCell(summaryStartRow, 1).value = 'إجمالي المدفوع';
+    ws.getCell(summaryStartRow, 2).value = paidTotal;
+    ws.getCell(summaryStartRow + 1, 1).value = 'إجمالي المتبقي (معلّق + متأخر)';
+    ws.getCell(summaryStartRow + 1, 2).value = outstandingTotal;
+
+    addFooter(ws);
+
+    return workbookToBuffer(wb);
   }
 
   async markOverdue() {
@@ -1135,9 +1209,10 @@ class MeInstallmentsService {
         _count: { _all: true },
         orderBy: { status: 'asc' },
       }),
-      // Next due = soonest unpaid installment (PENDING or OVERDUE).
+      // Next due = soonest PENDING or OVERDUE installment.
+      // Explicit IN excludes CANCELLED (Step D1) from the next-due calculation.
       this.prisma.installment.findFirst({
-        where: { ...summaryWhere, status: { not: InstallmentStatus.PAID } },
+        where: { ...summaryWhere, status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] } },
         orderBy: { dueDate: 'asc' },
         select: { amount: true, dueDate: true },
       }),
@@ -1224,6 +1299,17 @@ class InstallmentsController {
   @Get('contracts/:contractId/installment-plan')
   byContract(@Param('contractId', ParseUUIDPipe) contractId: string) {
     return this.svc.findByContract(contractId);
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @Permissions('installments:read')
+  @Get('installment-plans/:planId/export.xlsx')
+  @Header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+  async planXlsx(@Param('planId', ParseUUIDPipe) planId: string) {
+    const buf = await this.svc.planXlsx(planId);
+    return new StreamableFile(buf, {
+      disposition: `attachment; filename="${xlsxFilename(`installment-plan-${planId}`)}"`,
+    });
   }
 }
 

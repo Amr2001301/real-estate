@@ -1232,9 +1232,9 @@ export class ReportsService {
         : {}),
     });
 
-    // Unpaid = anything not PAID (covers PENDING + OVERDUE without trusting the
-    // possibly-stale stored OVERDUE flag).
-    const unpaid = { status: { not: InstallmentStatus.PAID } } as const;
+    // Unpaid = PENDING or OVERDUE. Explicit IN avoids silently including
+    // InstallmentStatus.CANCELLED (added in Step D1) in outstanding totals.
+    const unpaid: Prisma.InstallmentWhereInput = { status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] } };
     const agingWhere = (range: Prisma.DateTimeFilter<'Installment'>): Prisma.InstallmentWhereInput =>
       instWhere({ ...unpaid, dueDate: range });
 

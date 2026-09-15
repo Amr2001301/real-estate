@@ -231,11 +231,11 @@ class MeHomeSummaryService {
         },
       }),
 
-      // Q4: earliest unpaid installment
+      // Q4: earliest unpaid installment — explicit IN excludes CANCELLED (Step D1).
       this.prisma.installment.findFirst({
         where: {
           plan: { contract: { customerId: userId } },
-          status: { not: InstallmentStatus.PAID },
+          status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] },
         },
         orderBy: { dueDate: 'asc' },
         select: { id: true, amount: true, dueDate: true, status: true },

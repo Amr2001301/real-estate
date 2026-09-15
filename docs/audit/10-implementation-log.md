@@ -185,3 +185,85 @@ No drops. No type changes. No NOT NULL on existing columns.
 - `apps/mobile/mobile_customer/lib/features/installments/presentation/widgets/installment_card.dart` — Flutter customer installment card; add correction badge when `lastCorrectionId` is set
 - `apps/mobile/mobile_staff/lib/features/contracts/presentation/screens/contract_detail_screen.dart` — Flutter staff contract detail; installment plan view needs correction context
 - Step D: `ReassignDeposit` — move deposit from one installment to another (§8.1 Step D)
+
+---
+
+## Step D1 — ContractCancellation schema + report query protection
+
+**Date:** 2026-09-15
+**Design ref:** `09-reversal-design.md` §4.1, §4.2, §4.5, §8.1 step D (D1 only)
+**Status:** DONE ✓
+
+### Scope
+
+D1 is strictly schema + report query protection. **Out of scope:** `contracts:cancel` endpoint, `contracts:release-unit`, clawback collect/waive, tenant Settings, refund recording.
+
+### Migration
+
+`20260915200000_step_d1_cancellation_schema` — additive + one backfill:
+
+```sql
+CREATE TYPE "ContractStatus"  AS ENUM ('UNSIGNED', 'ACTIVE', 'CANCELLED');
+CREATE TYPE "ClawbackStatus"  AS ENUM ('OUTSTANDING', 'COLLECTED', 'WAIVED');
+ALTER TYPE  "InstallmentStatus" ADD VALUE 'CANCELLED';
+ALTER TABLE "Contract"        ADD COLUMN "status" "ContractStatus" NOT NULL DEFAULT 'UNSIGNED';
+ALTER TABLE "Contract"        ADD COLUMN "cancelledAt" TIMESTAMP(3);
+-- BACKFILL (non-additive): derive status from signedAt
+UPDATE "Contract" SET "status" = CASE
+  WHEN "signedAt" IS NOT NULL THEN 'ACTIVE'::"ContractStatus"
+  ELSE 'UNSIGNED'::"ContractStatus" END;
+CREATE INDEX "Contract_status_idx" ON "Contract"("status");
+ALTER TABLE "InstallmentPlan"  ADD COLUMN "cancelledAt" TIMESTAMP(3);
+CREATE TABLE "ContractCancellation" (...);  -- 6 FKs, 3 indexes
+CREATE TABLE "Refund"           (...);      -- 4 FKs, 2 indexes
+ALTER TABLE "BrokerCommission"  ADD COLUMN clawback overlay (3 columns + index + 1 FK);
+ALTER TABLE "BonusEntry"        ADD COLUMN clawback overlay (3 columns + index + 1 FK);
+```
+
+### Report query protection
+
+`InstallmentStatus.CANCELLED` would silently bloat outstanding totals if any query used `status: { not: PAID }` negation. Four queries were affected — all changed to explicit `IN [PENDING, OVERDUE]`:
+
+| File | Query | Before | After |
+|---|---|---|---|
+| `reports.service.ts:1237` | `unpaid` filter (outstanding + aging + overdue) | `{ not: PAID }` | `{ in: [PENDING, OVERDUE] }` |
+| `me-home.module.ts:238` | Q4 next-due installment | `{ not: PAID }` | `{ in: [PENDING, OVERDUE] }` |
+| `installments.module.ts:1140` | next-due in plan listing | `{ not: PAID }` | `{ in: [PENDING, OVERDUE] }` |
+| `deposits.service.ts:212` | deposit creation guard | `{ not: PAID }` | `{ in: [PENDING, OVERDUE] }` |
+
+### XLSX export
+
+`GET /installment-plans/:planId/export.xlsx` added to `InstallmentsController`. CANCELLED rows appear labelled "ملغى" but are excluded from the outstanding summary total.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `apps/api/prisma/schema.prisma` | Added `ContractStatus`, `ClawbackStatus` enums; `CANCELLED` to `InstallmentStatus`; `Contract.status/cancelledAt/@@index`; `InstallmentPlan.cancelledAt`; `ContractCancellation` + `Refund` models; clawback overlay on `BrokerCommission`/`BonusEntry`; back-relations on `Company`/`User` |
+| `apps/api/prisma/migrations/20260915200000_step_d1_cancellation_schema/migration.sql` | New migration with backfill |
+| `apps/api/src/common/prisma/model-tenancy.ts` | Added `ContractCancellation: 'TENANT_OWNED'`, `Refund: 'TENANT_OWNED'` (50 models) |
+| `apps/api/src/common/prisma/__tests__/fixtures/legacy-tenant-scoped-models.fixture.ts` | Added `'contractcancellation'`, `'refund'` |
+| `apps/api/src/common/prisma/__tests__/mt014-model-tenancy-policy.spec.ts` | Cardinality: 48 → 50 (both assertions) |
+| `apps/api/test/security/01-middleware-classification.security-spec.ts` | MC-2: 48 → 50; added `ContractCancellation`/`Refund` spot-checks |
+| `apps/api/src/modules/reports/reports.service.ts` | `unpaid` const: `{ not: PAID }` → `Prisma.InstallmentWhereInput { in: [PENDING, OVERDUE] }` |
+| `apps/api/src/modules/me-home/me-home.module.ts` | Q4: `{ not: PAID }` → `{ in: [PENDING, OVERDUE] }` |
+| `apps/api/src/modules/installments/installments.module.ts` | Next-due + `planXlsx` service + export endpoint |
+| `apps/api/src/modules/deposits/deposits.service.ts` | Guard: `{ not: PAID }` → `{ in: [PENDING, OVERDUE] }`; error msg updated |
+| `apps/api/src/modules/reports/__tests__/financial-summary.spec.ts` | 3 `has(w, '"not":"PAID"')` → `has(w, '"PENDING"') && has(w, '"OVERDUE"')` |
+| `apps/api/src/modules/deposits/__tests__/deposit-recording-workflow.spec.ts` | Guard assertion updated: `{ not: 'PAID' }` → `{ in: ['PENDING', 'OVERDUE'] }` |
+| `apps/api/src/modules/installments/__tests__/step-d1-cancelled-installments.spec.ts` | New: 15 tests (D1-1 backfill, D1-2 report query, D1-3 me-home, D1-4 XLSX, D1-5 deposit guard) |
+| `apps/api/test/security/07-contract-cancellation-tenancy.security-spec.ts` | New: 12 tests (CC-1 fail-closed, CC-2 data isolation, CC-3 Refund fail-closed, CC-4 Refund isolation, CC-5/6 cross-tenant attack, CC-7 positive path) |
+| `apps/api/test/security/seed/security-fixture.ts` | Added `refund.deleteMany` + `contractCancellation.deleteMany` to `teardownCompany` |
+
+### Test results
+
+| Suite | Before | After | Delta |
+|---|---|---|---|
+| Unit (`jest --runInBand`) | 2056 pass | **2071 pass** | +15 tests, 0 new failures |
+| Security (`jest-security.json`) | 132 tests | **144 tests (144 pass)** | +12 tests, 0 new failures |
+| Typecheck (`tsc --noEmit`) | 0 errors | 0 errors | 0 new errors |
+| Lint (`eslint`) | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |
+
+---
+
+*Next: Step D2 — contracts:cancel endpoint + unit-release + clawback overlay*
