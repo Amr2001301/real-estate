@@ -678,6 +678,11 @@ describe('Sub-case B bounce — APPROVED deposits get a PaymentCorrection(REVERS
       .expect(200);
 
     expect(mock.installment.update).toHaveBeenCalledTimes(2);
+    // Hard Rule 2: paidAt MUST NOT appear in any installment.update call
+    const calls = mock.installment.update.mock.calls as Array<[{ where: unknown; data: { status: string; paidAt?: unknown } }]>;
+    for (const [call] of calls) {
+      expect(call.data.paidAt).toBeUndefined();
+    }
   });
 
   it('does NOT call deposit.updateMany (reviewStatus stays APPROVED — Hard Rule 2)', async () => {
@@ -703,9 +708,13 @@ describe('Sub-case B bounce — APPROVED deposits get a PaymentCorrection(REVERS
       })
       .expect(200);
 
-    const calls = mock.installment.update.mock.calls as Array<[{ where: unknown; data: { status: string } }]>;
+    const calls = mock.installment.update.mock.calls as Array<[{ where: unknown; data: { status: string; paidAt?: unknown } }]>;
     // INST1 dueDate=2026-01-01 → OVERDUE; INST2 dueDate=2027-01-01 → depends on run date
     expect(calls[0]![0].data.status).toBe('OVERDUE');
+    // Hard Rule 2: paidAt MUST NOT appear in any installment.update call
+    for (const [call] of calls) {
+      expect(call.data.paidAt).toBeUndefined();
+    }
   });
 
   it('REOPEN_AS_PENDING: all installments get status PENDING regardless of dueDate', async () => {
@@ -720,9 +729,11 @@ describe('Sub-case B bounce — APPROVED deposits get a PaymentCorrection(REVERS
       })
       .expect(200);
 
-    const calls = mock.installment.update.mock.calls as Array<[{ where: unknown; data: { status: string } }]>;
+    const calls = mock.installment.update.mock.calls as Array<[{ where: unknown; data: { status: string; paidAt?: unknown } }]>;
     for (const [call] of calls) {
       expect(call.data.status).toBe('PENDING');
+      // Hard Rule 2: paidAt MUST NOT appear in any installment.update call
+      expect(call.data.paidAt).toBeUndefined();
     }
   });
 
@@ -755,6 +766,11 @@ describe('Sub-case B bounce — APPROVED deposits get a PaymentCorrection(REVERS
     const after = createdAuditLogs[0]!.after as Record<string, unknown>;
     expect(after.subCase).toBe('A+B');
     expect(after.correctionRowsWritten).toBe(1);
+    // Hard Rule 2: paidAt MUST NOT appear in the installment.update call for DEP1
+    const instCalls = mock.installment.update.mock.calls as Array<[{ data: { paidAt?: unknown } }]>;
+    for (const [call] of instCalls) {
+      expect(call.data.paidAt).toBeUndefined();
+    }
   });
 });
 

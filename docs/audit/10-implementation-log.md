@@ -179,7 +179,9 @@ No drops. No type changes. No NOT NULL on existing columns.
 
 ### Follow-up (not in Step C scope)
 
-- Frontend/web-admin: installment list cards should check `lastCorrectionId !== null` to show a "Corrected" badge
-- Flutter customer app: `InstallmentCard` should display correction context when `lastCorrectionId` is set
-- XLSX reports: installment export should include `lastCorrectionId` column
+- `apps/web-admin/src/app/dashboard/contracts/[id]/page.tsx` — renders `inst.paidAt` and `inst.status`; should show a "Corrected" badge when `lastCorrectionId !== null` and display `lastCorrection.reason`
+- `apps/web-admin/src/app/dashboard/payments/review/page.tsx` — deposit review queue; should surface correction context on previously-reversed deposits
+- `apps/web-public/src/app/account/(customer)/installments/page.tsx` — customer installment list with `STATUS_LABELS`; should flag corrected installments
+- `apps/mobile/mobile_customer/lib/features/installments/presentation/widgets/installment_card.dart` — Flutter customer installment card; add correction badge when `lastCorrectionId` is set
+- `apps/mobile/mobile_staff/lib/features/contracts/presentation/screens/contract_detail_screen.dart` — Flutter staff contract detail; installment plan view needs correction context
 - Step D: `ReassignDeposit` — move deposit from one installment to another (§8.1 Step D)
