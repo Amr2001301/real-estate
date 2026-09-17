@@ -22,6 +22,7 @@ export class RecordDepositDto {
   @IsNumber() @IsPositive() amount!: number;
   @IsOptional() @IsDateString() paidAt?: string;
   @IsOptional() @IsString() receiptUrl?: string;
+  @IsOptional() @IsEnum(PaymentMethod) paymentMethod?: PaymentMethod;
 }
 
 export class VerifyDepositDto {

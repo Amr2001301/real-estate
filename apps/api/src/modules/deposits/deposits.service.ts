@@ -223,6 +223,7 @@ export class DepositsService {
           amount: new Prisma.Decimal(dto.amount),
           paidAt,
           receiptUrl: dto.receiptUrl ?? null,
+          paymentMethod: dto.paymentMethod ?? null,
           recordedById,
         },
       });

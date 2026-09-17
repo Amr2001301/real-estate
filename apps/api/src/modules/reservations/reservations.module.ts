@@ -1232,6 +1232,14 @@ export class ReservationsService {
     });
     if (!reservation) throw new NotFoundException('Reservation not found');
 
+    // Step G: block admin confirm while a customer proof is under review.
+    // Guard 1 — FG-13 dual-path collision prevention.
+    if (reservation.bookingPaymentStatus === ReservationBookingPaymentStatus.PENDING) {
+      throw new ConflictException(
+        'A customer payment proof is under review. Resolve it before confirming manually.',
+      );
+    }
+
     if (
       reservation.status !== ReservationStatus.PENDING &&
       reservation.status !== ReservationStatus.APPROVED
@@ -1308,21 +1316,38 @@ export class ReservationsService {
       throw new BadRequestException('مبلغ الحجز ليس في حالة "مدفوع"');
     }
 
-    const newStatus = dto.newStatus ?? ReservationBookingPaymentStatus.UNPAID;
-    if (newStatus === ReservationBookingPaymentStatus.PAID) {
+    const requestedStatus = dto.newStatus ?? ReservationBookingPaymentStatus.UNPAID;
+    if (requestedStatus === ReservationBookingPaymentStatus.PAID) {
       throw new BadRequestException('الحالة الجديدة يجب ألا تكون "مدفوع"');
     }
 
     return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.reservation.update({
-        where: { id },
-        data: {
-          bookingPaymentStatus: newStatus,
-          bookingPaidAt: null,
+      // Step G guard 2: delete only admin-created BOOKING_AMOUNT deposits
+      // (those without a proofDocumentId). Customer-submitted proof deposits
+      // are preserved — deleting them would orphan the document and destroy
+      // evidence (Hard Rule 2 applies to submitted proofs).
+      await tx.deposit.deleteMany({
+        where: { reservationId: id, type: DepositType.BOOKING_AMOUNT, proofDocumentId: null },
+      });
+
+      // If a customer-proof deposit remains (PENDING_REVIEW), revert to PENDING
+      // so the proof can still be reviewed. Setting UNPAID here would block the
+      // customer from resubmitting (FG-13 collision scenario).
+      const proofDepositCount = await tx.deposit.count({
+        where: {
+          reservationId: id,
+          type: DepositType.BOOKING_AMOUNT,
+          proofDocumentId: { not: null },
         },
       });
-      await tx.deposit.deleteMany({
-        where: { reservationId: id, type: DepositType.BOOKING_AMOUNT },
+      const effectiveStatus =
+        proofDepositCount > 0
+          ? ReservationBookingPaymentStatus.PENDING
+          : requestedStatus;
+
+      const updated = await tx.reservation.update({
+        where: { id },
+        data: { bookingPaymentStatus: effectiveStatus, bookingPaidAt: null },
       });
       await tx.reservationActivity.create({
         data: {

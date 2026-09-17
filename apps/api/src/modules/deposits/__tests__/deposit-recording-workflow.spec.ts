@@ -422,4 +422,52 @@ describe('Deposits · recording + verification workflow', () => {
     const res = await request(app.getHttpServer()).get(`/deposits/${DEPOSIT_ID}`).expect(200);
     expect(res.body.id).toBe(DEPOSIT_ID);
   });
+
+  // ── Step F — paymentMethod on the admin recording path ────────────────
+  // FG-08: admin-recorded deposits must capture the payment method so that
+  // cheque-bounce workflows have the correct method on the deposit row.
+
+  it('Step F: record() stores paymentMethod=CHEQUE when provided', async () => {
+    await request(app.getHttpServer())
+      .post('/deposits')
+      .send({
+        contractId: CONTRACT_ID,
+        installmentId: INSTALLMENT_ID,
+        amount: 5000,
+        paymentMethod: 'CHEQUE',
+      })
+      .expect(201);
+
+    expect(mock.deposit.create).toHaveBeenCalledTimes(1);
+    const args = mock.deposit.create.mock.calls[0]![0] as {
+      data: Record<string, unknown>;
+    };
+    expect(args.data.paymentMethod).toBe('CHEQUE');
+  });
+
+  it('Step F: record() stores paymentMethod=null when field is omitted (existing behaviour)', async () => {
+    await request(app.getHttpServer())
+      .post('/deposits')
+      .send({ contractId: CONTRACT_ID, installmentId: INSTALLMENT_ID, amount: 5000 })
+      .expect(201);
+
+    expect(mock.deposit.create).toHaveBeenCalledTimes(1);
+    const args = mock.deposit.create.mock.calls[0]![0] as {
+      data: Record<string, unknown>;
+    };
+    expect(args.data.paymentMethod).toBeNull();
+  });
+
+  it('Step F: record() rejects an invalid paymentMethod enum value (400)', async () => {
+    await request(app.getHttpServer())
+      .post('/deposits')
+      .send({
+        contractId: CONTRACT_ID,
+        installmentId: INSTALLMENT_ID,
+        amount: 5000,
+        paymentMethod: 'WIRE',
+      })
+      .expect(400);
+    expect(mock.deposit.create).not.toHaveBeenCalled();
+  });
 });
