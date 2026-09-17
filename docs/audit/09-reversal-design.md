@@ -1,7 +1,8 @@
 # Reversal & Correction Design
 
 > **Type:** Design document — read-only. No source files, schema, or tests modified.
-> **Date:** 2026-09-17 (rev 5: payout dimension — APPROVED payout side-effects; see Appendix C-23)
+> **Date:** 2026-09-17 (rev 6: D4 three decisions — §8.2 step L corrected; PARTIALLY_COLLECTED; waive reason column; see Appendix C-24/C-25/C-26)
+> *(rev 5: 2026-09-17 — payout dimension — APPROVED payout side-effects; see Appendix C-23)*
 > *(rev 4: 2026-09-16 — BrokerCommissionStatus PAID clarification, §6.3 AuditLog payload fix)*
 > *(rev 3: 2026-09-13 — traceability, paidAt, three scenarios, reporting correctness)*
 > **Input documents:** `08-functional-gaps.md` (sections 4, 5, 7, FG-01/FG-02 details),
@@ -1507,7 +1508,7 @@ permanently SOLD with no recovery path. The two endpoints are inseparable.
 | **I** | `PATCH /info-requests/:id` to advance status. Closes FG-04. | S | Unit: OPEN → RESPONDED → CLOSED; invalid transitions rejected. |
 | **J** | `payment_proof_approved` / `payment_proof_rejected` added to `EMAIL_ELIGIBLE_TEMPLATES`. Closes FG-07. | S | Integration: approve proof; notification flagged email-eligible. |
 | **K** | `paymentMethod` on admin booking-confirmation path. | S | Unit: confirmBookingPayment stores paymentMethod on the created Deposit. |
-| **L** | `broker-commissions:clawback:resolve` + `bonus:clawback:resolve` (collect / waive). Must land before first commission payout cycle after go-live. | M | Unit: OUTSTANDING → COLLECTED; commission.status unchanged (still PAID). OUTSTANDING → WAIVED with mandatory reason. |
+| **L** | `broker-commissions:clawback:resolve` + `bonus:clawback:resolve` (collect / waive). Must land before first commission payout cycle after go-live. Three new columns on both models: `clawbackCollectedAmount`, `clawbackCollectedReference`, `clawbackCollectedPaymentMethod`. Plus `clawbackWaiveReason` (separate from `clawbackReason`). New `ClawbackStatus.PARTIALLY_COLLECTED` value for partial recovery. | M | Unit: OUTSTANDING → COLLECTED (full amount); commission.status unchanged (still APPROVED; BrokerCommissionStatus has no PAID value — see §D4 design note). bonusEntry.status unchanged (still PAID). Partial repayment → PARTIALLY_COLLECTED, NOT COLLECTED. OUTSTANDING → WAIVED: waiveReason stored separately from cancellation clawbackReason. COLLECTED/WAIVED row → 409 on second resolve. clawbackStatus null → 409. Cross-tenant: 404. Atomicity: rollback leaves nothing changed. |
 | **M** | Refunds-owed + outstanding-clawbacks lines added to financial report. | S | Unit: report with a cancelled contract shows correct refundsOwed and clawback receivable totals. |
 
 ### 8.3 Dependency order
@@ -1696,3 +1697,13 @@ Changes from each revision are recorded here for traceability.
 | # | Location in rev 4 | Prior statement | New statement / addition | Reason |
 |---|---|---|---|---|
 | C-23 | §4.3 BrokerCommission table + narrative | Four-row table with no payout-status dimension beyond "effectively disbursed"; `isCommissionEffectivelyPaid()` checked APPROVED\|PROCESSING\|PAID payout | Five-row table adding explicit `APPROVED payout` row with payout side-effects (remove from payout, recompute totals, revert to DRAFT or CANCELLED); `isCommissionEffectivelyPaid()` narrowed to PROCESSING\|PAID; added payout side-effects narrative | An APPROVED payout has not yet disbursed money; treating it as "effectively paid" creates a phantom clawback receivable. Narrowing alone creates a money-loss path (cancelled commission amount stays in APPROVED payout totals). Both changes must land atomically. BonusEntry has no equivalent payout batching model — no change needed there. |
+
+### Rev 6 changes (from rev 5)
+
+> **Date:** 2026-09-17 (rev 6: D4 three decisions — §8.2 step L text corrected; PARTIALLY_COLLECTED; separate waive-reason column)
+
+| # | Location in rev 5 | Prior statement | New statement / addition | Reason |
+|---|---|---|---|---|
+| C-24 | §8.2 step L test note | "commission.status unchanged (still PAID)" | "commission.status unchanged (still APPROVED); bonusEntry.status unchanged (still PAID)" | `BrokerCommissionStatus` has no `PAID` value (established in C-19/C-20). A commission on the clawback path is `APPROVED` with a `PROCESSING` or `PAID` payout. The step L text repeated the same wrong assumption that was corrected in rev 4 for §4.3 and §4.5. |
+| C-25 | §4.5 clawback state machine + §8.2 step L schema note | No partial-recovery state; schema had only OUTSTANDING/COLLECTED/WAIVED | Added `PARTIALLY_COLLECTED` to `ClawbackStatus` enum; added `clawbackCollectedAmount`, `clawbackCollectedReference`, `clawbackCollectedPaymentMethod` columns on both `BrokerCommission` and `BonusEntry` | A broker returning 50,000 of a 75,000 commission is a distinct, reportable state. Leaving `clawbackStatus = OUTSTANDING` with a partial amount would cause the outstanding-clawbacks report query (`WHERE clawbackStatus = 'OUTSTANDING'`) to overstate receivables by the already-recovered amount — the same class of reporting error the LEDGER design exists to prevent. The three new columns record the financial detail of each collection. `PARTIALLY_COLLECTED` rows are included in the outstanding-receivables aggregate with balance = `commission.netAmount - clawbackCollectedAmount`. A second `collect` call accumulates the amount and re-evaluates. |
+| C-26 | §4.5 clawback overlay schema note | `clawbackReason` described as covering both the cancellation reason and future waive reason | Added `clawbackWaiveReason String? @db.VarChar(2000)` to both models; waive endpoint requires it; stored separately from `clawbackReason` (the cancellation reason) | `clawbackReason` is set at contract cancellation time to record why the clawback was created. Waiving a receivable is a distinct, later financial decision — forcing both reasons into the same column conflates two different actors, two different moments, and two different justifications. A dispute auditor must be able to read both independently. |

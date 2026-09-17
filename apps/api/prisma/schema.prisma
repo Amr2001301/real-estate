@@ -1062,10 +1062,12 @@ enum ContractStatus {
 }
 
 /// Step D1 — clawback state for PAID commissions/bonuses after contract cancel.
+/// Step D4 — added PARTIALLY_COLLECTED for partial broker repayment.
 enum ClawbackStatus {
-  OUTSTANDING // money owed; not yet recovered
-  COLLECTED   // broker/sales returned the money
-  WAIVED      // operator chose not to pursue
+  OUTSTANDING         // money owed; not yet recovered
+  PARTIALLY_COLLECTED // partial repayment received; remaining balance still owed
+  COLLECTED           // broker/sales returned the full amount
+  WAIVED              // operator chose not to pursue
 }
 
 enum DepositType {
@@ -1753,17 +1755,22 @@ model BonusEntry {
   commissionPct Decimal?         @db.Decimal(5, 2)
 
   // ── Step D1: clawback overlay for PAID bonuses (same pattern as BrokerCommission) ──
-  clawbackStatus        ClawbackStatus? // null = no clawback applicable
-  clawbackReason        String?         @db.VarChar(2000)
-  clawbackAt            DateTime?
-  clawbackById          String?         @db.Uuid
-  clawbackBy            User?           @relation("BonusClawbackBy", fields: [clawbackById], references: [id])
-  clawbackCollectedAt   DateTime?
-  clawbackCollectedById String?         @db.Uuid
-  clawbackCollectedBy   User?           @relation("BonusClawbackCollectedBy", fields: [clawbackCollectedById], references: [id])
-  clawbackWaivedAt      DateTime?
-  clawbackWaivedById    String?         @db.Uuid
-  clawbackWaivedBy      User?           @relation("BonusClawbackWaivedBy", fields: [clawbackWaivedById], references: [id])
+  // Step D4: added clawbackCollectedAmount/Reference/PaymentMethod + clawbackWaiveReason.
+  clawbackStatus                ClawbackStatus? // null = no clawback applicable
+  clawbackReason                String?         @db.VarChar(2000) // cancellation reason
+  clawbackAt                    DateTime?
+  clawbackById                  String?         @db.Uuid
+  clawbackBy                    User?           @relation("BonusClawbackBy", fields: [clawbackById], references: [id])
+  clawbackCollectedAt           DateTime?
+  clawbackCollectedById         String?         @db.Uuid
+  clawbackCollectedBy           User?           @relation("BonusClawbackCollectedBy", fields: [clawbackCollectedById], references: [id])
+  clawbackCollectedAmount       Decimal?        @db.Decimal(14, 2) // accumulated across collect calls
+  clawbackCollectedReference    String?         @db.VarChar(100)
+  clawbackCollectedPaymentMethod PaymentMethod?
+  clawbackWaivedAt              DateTime?
+  clawbackWaivedById            String?         @db.Uuid
+  clawbackWaivedBy              User?           @relation("BonusClawbackWaivedBy", fields: [clawbackWaivedById], references: [id])
+  clawbackWaiveReason           String?         @db.VarChar(2000) // separate from clawbackReason (the cancellation reason)
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -2327,19 +2334,25 @@ model BrokerCommission {
   payoutId String?       @db.Uuid
   payout   BrokerPayout? @relation(fields: [payoutId], references: [id])
 
-  // ── Step D1: clawback overlay for PAID commissions (Hard Rule 2) ─────────
-  // status stays PAID; the clawback overlay records what is owed/resolved.
-  clawbackStatus        ClawbackStatus? // null = no clawback applicable
-  clawbackReason        String?         @db.VarChar(2000)
-  clawbackAt            DateTime?
-  clawbackById          String?         @db.Uuid
-  clawbackBy            User?           @relation("CommissionClawbackBy", fields: [clawbackById], references: [id])
-  clawbackCollectedAt   DateTime?
-  clawbackCollectedById String?         @db.Uuid
-  clawbackCollectedBy   User?           @relation("CommissionClawbackCollectedBy", fields: [clawbackCollectedById], references: [id])
-  clawbackWaivedAt      DateTime?
-  clawbackWaivedById    String?         @db.Uuid
-  clawbackWaivedBy      User?           @relation("CommissionClawbackWaivedBy", fields: [clawbackWaivedById], references: [id])
+  // ── Step D1: clawback overlay for APPROVED commissions (Hard Rule 2) ──────
+  // commission.status stays APPROVED (BrokerCommissionStatus has no PAID value);
+  // disbursement is tracked via payoutId → BrokerPayout.status (PROCESSING|PAID).
+  // Step D4: added clawbackCollectedAmount/Reference/PaymentMethod + clawbackWaiveReason.
+  clawbackStatus                ClawbackStatus? // null = no clawback applicable
+  clawbackReason                String?         @db.VarChar(2000) // cancellation reason
+  clawbackAt                    DateTime?
+  clawbackById                  String?         @db.Uuid
+  clawbackBy                    User?           @relation("CommissionClawbackBy", fields: [clawbackById], references: [id])
+  clawbackCollectedAt           DateTime?
+  clawbackCollectedById         String?         @db.Uuid
+  clawbackCollectedBy           User?           @relation("CommissionClawbackCollectedBy", fields: [clawbackCollectedById], references: [id])
+  clawbackCollectedAmount       Decimal?        @db.Decimal(14, 2) // accumulated across collect calls
+  clawbackCollectedReference    String?         @db.VarChar(100)
+  clawbackCollectedPaymentMethod PaymentMethod?
+  clawbackWaivedAt              DateTime?
+  clawbackWaivedById            String?         @db.Uuid
+  clawbackWaivedBy              User?           @relation("CommissionClawbackWaivedBy", fields: [clawbackWaivedById], references: [id])
+  clawbackWaiveReason           String?         @db.VarChar(2000) // separate from clawbackReason (the cancellation reason)
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)

@@ -53,6 +53,8 @@ import { resolveTenantUser, scopedUserFindMany } from '../../common/tenant/resol
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
+import { ClawbackResolutionService } from '../broker-commissions/clawback-resolution.service';
+import { CollectClawbackDto, WaiveClawbackDto } from '../broker-commissions/dto/broker-commission.dto';
 
 class CreateRuleDto {
   @IsString() name!: string;
@@ -597,6 +599,7 @@ class BonusController {
   constructor(
     private readonly svc: BonusService,
     private readonly prisma: PrismaService,
+    private readonly clawbackSvc: ClawbackResolutionService,
   ) {}
 
   // Rules
@@ -701,6 +704,32 @@ class BonusController {
     return this.svc.setEntryStatus(id, dto);
   }
 
+  // Clawback resolve — OUTSTANDING|PARTIALLY_COLLECTED → COLLECTED.
+  // BonusEntry path is simpler: no payout batching; PAID is a real status here.
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('bonus:clawback:resolve')
+  @Post('bonus-entries/:id/clawback/collect')
+  collectBonusClawback(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CollectClawbackDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.clawbackSvc.collectBonus(id, dto, user);
+  }
+
+  // Clawback waive — OUTSTANDING|PARTIALLY_COLLECTED → WAIVED.
+  // Mandatory reason stored in clawbackWaiveReason (separate from clawbackReason).
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('bonus:clawback:resolve')
+  @Post('bonus-entries/:id/clawback/waive')
+  waiveBonusClawback(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: WaiveClawbackDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.clawbackSvc.waiveBonus(id, dto, user);
+  }
+
   // Targets
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
   @Permissions('targets:manage')
@@ -765,7 +794,7 @@ class BonusController {
 
 @Module({
   controllers: [BonusController],
-  providers: [BonusService],
+  providers: [BonusService, ClawbackResolutionService],
   exports: [BonusService],
 })
 export class BonusModule {}

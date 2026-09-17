@@ -7,6 +7,7 @@ import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import { BrokerCommissionsController } from '../broker-commissions.controller';
 import { BrokerCommissionsService } from '../broker-commissions.service';
+import { ClawbackResolutionService } from '../clawback-resolution.service';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
@@ -143,7 +144,7 @@ describe('Broker-commissions module · permissions enforcement', () => {
     @Module({
       imports: [MockPrismaModule],
       controllers: [BrokerCommissionsController],
-      providers: [{ provide: NotificationsService, useValue: notificationsMock }, BrokerCommissionsService],
+      providers: [{ provide: NotificationsService, useValue: notificationsMock }, BrokerCommissionsService, ClawbackResolutionService],
     })
     class TestBrokerCommissionsModule {}
 

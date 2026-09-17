@@ -1271,6 +1271,8 @@ async function main() {
     { code: 'broker_commissions:approve', description: 'Approve broker commissions' },
     { code: 'broker_commissions:reject', description: 'Reject broker commissions' },
     { code: 'broker_commissions:cancel', description: 'Cancel broker commissions' },
+    { code: 'broker-commissions:clawback:resolve', description: 'Collect or waive an outstanding commission clawback receivable (Step D4)' },
+    { code: 'bonus:clawback:resolve', description: 'Collect or waive an outstanding bonus entry clawback receivable (Step D4)' },
     { code: 'broker_payouts:read', description: 'Read broker payout records' },
     { code: 'broker_payouts:create', description: 'Create broker payout drafts' },
     { code: 'broker_payouts:update', description: 'Update broker payout drafts' },

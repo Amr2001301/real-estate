@@ -568,3 +568,73 @@ No schema change. No migration.
 | Security (`jest-security.json --randomize`) | 181 pass | **192 pass** — directly measured at HEAD | +11 (FG-1 ×3, FG-2 ×5, FG-3 ×3) |
 | Typecheck (`tsc --noEmit`) | 0 errors | 0 errors | 0 new errors |
 | Lint (`eslint`) | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |
+
+---
+
+## Step D4 — Clawback collect + waive (BrokerCommission + BonusEntry)
+
+**Date:** 2026-09-17
+**Design ref:** `09-reversal-design.md` §4.5, §4.3, §8.2 step L, §6 (rev 6)
+**Status:** DONE ✓
+
+### What this step implements
+
+Four endpoints for resolving an outstanding clawback receivable:
+
+- `POST /broker-commissions/:id/clawback/collect` — record full or partial repayment from broker
+- `POST /broker-commissions/:id/clawback/waive` — waive outstanding receivable with mandatory reason
+- `POST /bonus-entries/:id/clawback/collect` — same for BonusEntry (simpler: no payout batching)
+- `POST /bonus-entries/:id/clawback/waive` — waive BonusEntry receivable
+
+**Hard Rule 2** (non-negotiable): collecting or waiving NEVER changes `commission.status` or `bonusEntry.status`. The clawback overlay is the only thing that moves.
+
+**Partial recovery:** introduced `PARTIALLY_COLLECTED` as a new `ClawbackStatus` enum value. A 75,000 commission with 50,000 returned becomes `PARTIALLY_COLLECTED` (not `COLLECTED`). Second collect accumulates and promotes to `COLLECTED` when total ≥ netAmount. This preserves reporting accuracy — OUTSTANDING queries never overstate if partial repayment occurred.
+
+**Separate waive reason:** `clawbackWaiveReason` is stored in its own column, distinct from `clawbackReason` (which records the cancellation reason). Both are independently readable.
+
+### Migration
+
+`20260917000000_step_d4_clawback_resolve` — purely additive:
+
+```sql
+ALTER TYPE "ClawbackStatus" ADD VALUE 'PARTIALLY_COLLECTED';
+ALTER TABLE "BrokerCommission"
+  ADD COLUMN "clawbackCollectedAmount"        DECIMAL(14,2),
+  ADD COLUMN "clawbackCollectedReference"     VARCHAR(100),
+  ADD COLUMN "clawbackCollectedPaymentMethod" "PaymentMethod",
+  ADD COLUMN "clawbackWaiveReason"            VARCHAR(2000);
+ALTER TABLE "BonusEntry"
+  ADD COLUMN "clawbackCollectedAmount"        DECIMAL(14,2),
+  ADD COLUMN "clawbackCollectedReference"     VARCHAR(100),
+  ADD COLUMN "clawbackCollectedPaymentMethod" "PaymentMethod",
+  ADD COLUMN "clawbackWaiveReason"            VARCHAR(2000);
+```
+
+No drops. No type changes. No NOT NULL on existing columns.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `docs/audit/09-reversal-design.md` | Rev 6: fixed §8.2 step L (removed wrong "commission.status=PAID" claim; added PARTIALLY_COLLECTED, separate waiveReason, correct status references); added conflict log C-24/C-25/C-26 |
+| `apps/api/prisma/schema.prisma` | `ClawbackStatus` enum: added `PARTIALLY_COLLECTED`; `BrokerCommission` + `BonusEntry`: 4 new nullable columns (clawbackCollectedAmount/Reference/PaymentMethod, clawbackWaiveReason); fixed schema comment |
+| `apps/api/prisma/migrations/20260917000000_step_d4_clawback_resolve/migration.sql` | New additive migration (see above) |
+| `apps/api/src/modules/broker-commissions/clawback-resolution.service.ts` | New: `ClawbackResolutionService` — 4 methods (collectCommission, waiveCommission, collectBonus, waiveBonus); `$transaction` for atomicity; Hard Rule 2 enforced (status never set); AuditLog entries with before/after shape |
+| `apps/api/src/modules/broker-commissions/dto/broker-commission.dto.ts` | Added `CollectClawbackDto` (amount, paymentMethod, optional reference) and `WaiveClawbackDto` (mandatory reason) |
+| `apps/api/src/modules/broker-commissions/broker-commissions.controller.ts` | Added `collectClawback` + `waiveClawback` endpoints; ADMIN-only + `@PermissionsStrict('broker-commissions:clawback:resolve')` |
+| `apps/api/src/modules/broker-commissions/broker-commissions.module.ts` | Added `ClawbackResolutionService` to providers + exports |
+| `apps/api/src/modules/bonus/bonus.module.ts` | Added `collectBonusClawback` + `waiveBonusClawback` to BonusController; `ClawbackResolutionService` to BonusModule providers |
+| `apps/api/prisma/seed.ts` | Added 2 permissions: `broker-commissions:clawback:resolve`, `bonus:clawback:resolve` |
+| `apps/api/src/modules/broker-commissions/__tests__/clawback-resolution.spec.ts` | New: 16 unit tests (D4-C-1–D4-C-11 commission path, D4-B-1–D4-B-5 BonusEntry path); all mock-based |
+| `apps/api/src/modules/broker-commissions/__tests__/broker-commissions-permissions.spec.ts` | Added `ClawbackResolutionService` to test module providers (DI fix) |
+| `apps/api/test/security/12-d4-clawback-resolve.security-spec.ts` | New: 27 real-Postgres security tests (D4-1 through D4-14; atomicity via NOT VALID constraint) |
+
+### Test counts
+
+| Suite | Before (F+G) | After (D4) | Delta |
+|---|---|---|---|
+| Unit (`jest --runInBand`) | 2119 pass | **2135 pass** — directly measured at HEAD | +16 (D4 unit tests) |
+| Security (`jest-security.json --randomize`) | 192 pass | **219 pass** — directly measured at HEAD | +27 (D4-1–D4-14) |
+| Typecheck (`tsc --noEmit`) | 0 errors | 0 errors | 0 new errors |
+| Lint (`eslint`) | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |
+

@@ -3,14 +3,16 @@ import {
   IsDateString,
   IsEnum,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
   Max,
   MaxLength,
   Min,
+  MinLength,
 } from 'class-validator';
-import { BrokerCommissionStatus } from '@prisma/client';
+import { BrokerCommissionStatus, PaymentMethod } from '@prisma/client';
 
 export class BrokerCommissionsQueryDto {
   @IsOptional()
@@ -74,6 +76,27 @@ export class RejectBrokerCommissionDto {
 
 export class CancelBrokerCommissionDto {
   @IsString()
+  @MaxLength(2000)
+  reason!: string;
+}
+
+export class CollectClawbackDto {
+  @IsNumber()
+  @Min(0.01)
+  amount!: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  reference?: string;
+
+  @IsEnum(PaymentMethod)
+  paymentMethod!: PaymentMethod;
+}
+
+export class WaiveClawbackDto {
+  @IsString()
+  @MinLength(1)
   @MaxLength(2000)
   reason!: string;
 }
