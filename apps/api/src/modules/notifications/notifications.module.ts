@@ -144,12 +144,21 @@ function resolveText(
   return interpolate(raw, payload);
 }
 
-/** Template codes for which an email is also dispatched (best-effort). */
+/**
+ * Template codes for which an email is also dispatched alongside the primary
+ * push/in-app channel.
+ * FG-07 (Step 15): payment_proof_approved/rejected added — customers must learn
+ * payment proof decisions even without a device.
+ * Step 15 A.2: reservation_expired, installment_plan_created,
+ * maintenance_request_status_changed added — all three are customer-facing and
+ * previously reached the customer through no channel at all.
+ */
 const EMAIL_ELIGIBLE_TEMPLATES = new Set([
   'reservation_status_changed',
   'reservation_submitted_admin',
   'reservation_payment_requested',
   'reservation_booking_paid',
+  'reservation_expired',
   'contract_created_customer',
   'contract_signed_customer',
   'contract_document_available',
@@ -159,11 +168,15 @@ const EMAIL_ELIGIBLE_TEMPLATES = new Set([
   'maintenance_request_assigned',
   'maintenance_request_resolved',
   'maintenance_request_closed',
+  'maintenance_request_status_changed',
   'installment_due_soon',
+  'installment_plan_created',
   'broker_approved',
   'broker_suspended',
   'user_account_approved',
   'user_account_suspended',
+  'payment_proof_approved',
+  'payment_proof_rejected',
 ]);
 
 @Injectable()
@@ -319,6 +332,8 @@ export class NotificationsService implements OnModuleInit {
     const channel = dto.channel ?? tpl.channel;
     const payload = (dto.payload ?? {}) as Record<string, unknown>;
 
+    // sentAt = row-creation timestamp. Delivery truth is in the four outcome
+    // columns (emailSentAt, emailError, pushSentAt, pushError) written below.
     const notification = await this.prisma.notification.create({
       data: {
         userId: dto.userId,
@@ -329,7 +344,14 @@ export class NotificationsService implements OnModuleInit {
       },
     });
 
-    // Best-effort push + email in the recipient's locale; never fail the write.
+    // Delivery outcome accumulator — written back to the row once at the end.
+    const outcome: {
+      pushSentAt?: Date;
+      pushError?: string;
+      emailSentAt?: Date;
+      emailError?: string;
+    } = {};
+
     try {
       const user = await resolveTenantUser(
         this.prisma,
@@ -337,6 +359,7 @@ export class NotificationsService implements OnModuleInit {
         { locale: true, email: true },
       );
       const locale = pickLocale(user?.locale ?? 'ar');
+
       // FCM data values must all be strings. Include entityType/entityId so
       // the mobile app can deep-link directly from the push tap without a
       // separate API call. Never include sensitive fields.
@@ -350,29 +373,64 @@ export class NotificationsService implements OnModuleInit {
       if (payload.entityId && typeof payload.entityId === 'string') {
         fcmData['entityId'] = payload.entityId;
       }
-      await this.push.sendToUser(dto.userId, {
-        title: resolveText(tpl.subject, payload, locale, dto.templateCode),
-        body: resolveText(tpl.body, payload, locale, ''),
-        data: fcmData,
-      });
 
-      // Email fan-out for key domain events — best-effort alongside push.
-      if (user?.email && EMAIL_ELIGIBLE_TEMPLATES.has(dto.templateCode)) {
-        const subject = resolveText(tpl.subject, payload, locale, dto.templateCode);
-        const bodyText = resolveText(tpl.body, payload, locale, '');
-        const htmlBody = `
-          <div dir="${locale === 'ar' ? 'rtl' : 'ltr'}" style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px;color:#1a1a2e;">
-            <h2 style="margin:0 0 16px;color:#0F1E33;">${subject}</h2>
-            <p style="margin:0 0 24px;line-height:1.7;">${bodyText}</p>
-            <hr style="margin:28px 0;border:none;border-top:1px solid #eee;"/>
-            <p style="margin:0;font-size:12px;color:#999;">© ديفورا — منصة الإدارة العقارية</p>
-          </div>`;
-        void this.email.sendNotificationEmail(user.email, subject, htmlBody);
-      }
+      // Push and email run concurrently so SMTP latency does not stack on top
+      // of FCM latency. Each promise catches its own errors and records them
+      // in `outcome`; neither can reject Promise.all.
+      const pushPromise: Promise<void> = this.push
+        .sendToUser(dto.userId, {
+          title: resolveText(tpl.subject, payload, locale, dto.templateCode),
+          body:  resolveText(tpl.body,    payload, locale, ''),
+          data:  fcmData,
+        })
+        .then((result) => {
+          if (!result.enabled) {
+            outcome.pushError = 'FCM not configured';
+          } else if (result.sent > 0) {
+            outcome.pushSentAt = new Date();
+          }
+          // sent === 0 with no failure: user has no registered device.
+          // Not an error — no pushError, no pushSentAt.
+        })
+        .catch((err: unknown) => {
+          outcome.pushError = ((err as Error).message ?? 'FCM error').slice(0, 500);
+        });
+
+      const emailPromise: Promise<void> =
+        user?.email && EMAIL_ELIGIBLE_TEMPLATES.has(dto.templateCode)
+          ? (() => {
+              const subject  = resolveText(tpl.subject, payload, locale, dto.templateCode);
+              const bodyText = resolveText(tpl.body,    payload, locale, '');
+              const dir      = locale === 'ar' ? 'rtl' : 'ltr';
+              const htmlBody = `<div dir="${dir}" style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px;color:#1a1a2e;"><h2 style="margin:0 0 16px;color:#0F1E33;">${subject}</h2><p style="margin:0 0 24px;line-height:1.7;">${bodyText}</p><hr style="margin:28px 0;border:none;border-top:1px solid #eee;"/><p style="margin:0;font-size:12px;color:#999;">© ديفورا — منصة الإدارة العقارية</p></div>`;
+              return this.email
+                .sendNotificationEmail(user.email, subject, htmlBody)
+                .then((result) => {
+                  if (result.ok) {
+                    outcome.emailSentAt = result.sentAt;
+                  } else {
+                    outcome.emailError = result.error;
+                  }
+                });
+            })()
+          : Promise.resolve();
+
+      await Promise.all([pushPromise, emailPromise]);
     } catch (err) {
-      this.logger.warn(
-        `Push delivery failed for ${dto.templateCode}: ${(err as Error).message}`,
-      );
+      // user lookup failed or another setup error — record on push channel
+      // (the most likely recipient of the original intent).
+      const msg = ((err as Error).message ?? 'delivery setup error').slice(0, 500);
+      this.logger.warn(`Delivery setup failed for ${dto.templateCode}: ${msg}`);
+      outcome.pushError = outcome.pushError ?? `Delivery error: ${msg}`;
+    }
+
+    // Write delivery outcome back in a single update. Skip when nothing was
+    // attempted (e.g. template has no eligible channels and user has no email).
+    if (Object.keys(outcome).length > 0) {
+      await this.prisma.notification.update({
+        where: { id: notification.id },
+        data:  outcome,
+      });
     }
 
     return notification;

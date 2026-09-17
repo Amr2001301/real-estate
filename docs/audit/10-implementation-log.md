@@ -638,3 +638,85 @@ No drops. No type changes. No NOT NULL on existing columns.
 | Typecheck (`tsc --noEmit`) | 0 errors | 0 errors | 0 new errors |
 | Lint (`eslint`) | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |
 
+---
+
+## Step 15 — Email delivery observability + gap fill
+
+**Date:** 2026-09-17
+**Design ref:** `docs/audit/15-email-delivery.md`
+**Status:** DONE ✓
+
+### What this step implements
+
+**Part A — Email delivery gap fill (FG-07 + A.2):**
+Five template codes added to `EMAIL_ELIGIBLE_TEMPLATES`:
+- `payment_proof_approved`, `payment_proof_rejected` (FG-07, Step 15 A.1): customers must learn payment proof decisions even without an FCM device.
+- `reservation_expired` (Step 15 A.2): lost sale with zero customer notification. Highest severity.
+- `installment_plan_created` (Step 15 A.2): customer's payment schedule — previously IN_APP only.
+- `maintenance_request_status_changed` (Step 15 A.2): previously IN_APP only.
+
+All five were previously customer-facing with no email fallback when FCM was unconfigured or the customer had no device.
+
+**Part B — Delivery observability:**
+- `sendNotificationEmail` in `email.service.ts` now returns `{ ok: true; sentAt: Date } | { ok: false; error: string }` instead of `Promise<void>`.
+- `send()` in `notifications.module.ts` runs push and email **concurrently** via `Promise.all` (latency = `max(FCM, SMTP)`, not `FCM + SMTP`).
+- After both settle, a single `notification.update` writes four outcome columns: `emailSentAt`, `emailError`, `pushSentAt`, `pushError`.
+- `sentAt` is NOT repurposed — it still means "row created". Delivery truth lives exclusively in the four new columns. Schema comment documents this.
+
+**Latency impact of awaiting email:**
+Push and email run concurrently, so total added latency is `max(FCM_latency, SMTP_latency)` rather than sequential `FCM + SMTP`. FCM multicast is typically ~200–400 ms; a slow SMTP relay can be 2–5 s. All current call sites are post-transaction fire-and-forget (the business layer does not await `sendToUser`), so SMTP latency does not currently reach any user-facing HTTP response. If a future call site changes this, the smallest mitigation without a queue is to detach the email promise with `setImmediate` — one line, no new infra, no BullMQ.
+
+**Also: stale Firebase comment fixed:**
+`env.validation.ts:204` previously said "FCM is not yet wired in code." FCM is fully wired. Comment replaced; all three `FIREBASE_*` vars now required in production.
+
+**Part C — deferred, next step after this one:**
+`EMAIL_ELIGIBLE_TEMPLATES` (runtime Set) and `NotificationTemplate.channel` (DB column) are two independent sources of truth invisible to the admin template editor. **Recommended fix:** add `emailEnabled Boolean @default(false)` to `NotificationTemplate`. This requires:
+1. Migration: add nullable `emailEnabled` column; backfill via seed upsert for the 23 currently eligible codes.
+2. `send()`: replace `EMAIL_ELIGIBLE_TEMPLATES.has(code)` with `tpl.emailEnabled` (already in scope from the template lookup at line 322).
+3. Admin API: expose `emailEnabled` in the template upsert DTO and response shape.
+4. Admin UI (web-admin): add a toggle in the template edit form.
+5. Remove `EMAIL_ELIGIBLE_TEMPLATES` entirely.
+Separate step because it changes the admin API shape and the dashboard form.
+
+### Migration
+
+`20260917100000_notification_delivery_tracking` — purely additive:
+
+```sql
+ALTER TABLE "Notification"
+  ADD COLUMN "emailSentAt"  TIMESTAMP(3),
+  ADD COLUMN "emailError"   VARCHAR(500),
+  ADD COLUMN "pushSentAt"   TIMESTAMP(3),
+  ADD COLUMN "pushError"    VARCHAR(500);
+```
+
+No drops. No type changes. No NOT NULL on existing columns.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `apps/api/prisma/schema.prisma` | Added 4 nullable outcome columns to `Notification`; `sentAt` schema comment |
+| `apps/api/prisma/migrations/20260917100000_notification_delivery_tracking/migration.sql` | New additive migration |
+| `apps/api/src/modules/notifications/notifications.module.ts` | Added 5 codes to `EMAIL_ELIGIBLE_TEMPLATES`; rewrote `send()` delivery section: concurrent push+email via `Promise.all`, outcome accumulator, single `notification.update` |
+| `apps/api/src/modules/auth/email.service.ts` | `sendNotificationEmail` return type changed from `Promise<void>` to discriminated union |
+| `apps/api/src/config/env.validation.ts` | Stale Firebase comment replaced; `FIREBASE_*` vars required in production |
+| `apps/api/src/modules/notifications/__tests__/notification-delivery-tracking.spec.ts` | New: 18 unit tests covering all delivery outcome scenarios |
+| `apps/api/src/modules/notifications/__tests__/notifications-helpers.spec.ts` | Added `notification.update` mock |
+| `apps/api/src/modules/notifications/__tests__/notifications-permissions.spec.ts` | Added `user.findFirst` + `notification.update` to mock + `beforeEach` clear |
+| `apps/api/src/config/__tests__/env.validation.spec.ts` | Added `FIREBASE_*` credentials to `validProd()` fixture |
+| `docs/audit/15-email-delivery.md` | New: investigation findings |
+
+### Test results
+
+| Suite | Before (D4) | After (Step 15) | Delta |
+|---|---|---|---|
+| Unit (`jest --runInBand`) | 2135 pass | **2153 pass** — directly measured at HEAD | +18 |
+| Security (`jest-security.json --runInBand`) | 219 pass | **219 pass** — directly measured at HEAD | 0 (no new security specs in this step) |
+| Typecheck (`tsc --noEmit`) | 0 errors | 0 errors | 0 new errors |
+| Lint (`eslint`) | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |
+
+---
+
+*Next step (Part C): Add `emailEnabled Boolean @default(false)` to `NotificationTemplate`; remove `EMAIL_ELIGIBLE_TEMPLATES` set; expose in admin API + web-admin template editor.*
+

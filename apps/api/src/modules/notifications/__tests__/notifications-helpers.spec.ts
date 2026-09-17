@@ -40,6 +40,8 @@ function makePrisma(users: { id: string; role: UserRole; active: boolean }[] = [
         });
         return { id: `n-${notifications.length}`, ...data, createdAt: new Date() };
       }),
+      // Delivery-tracking update — called after push/email resolve.
+      update: jest.fn().mockResolvedValue({}),
     },
     user: {
       findUnique: jest.fn(async ({ where }: { where: { id: string } }) =>

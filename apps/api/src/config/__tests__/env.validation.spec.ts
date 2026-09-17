@@ -40,6 +40,9 @@ function validProd(overrides: Record<string, string | undefined> = {}): Record<s
     SEED_ADMIN_PASSWORD: 'Pr0ductionSecurePass!',
     DEFAULT_COMPANY_ID: 'a0000000-0000-4000-8000-000000000001',
     PLATFORM_BASE_DOMAIN: 'platform.example.com',
+    FIREBASE_PROJECT_ID: 'prod-project-id',
+    FIREBASE_CLIENT_EMAIL: 'firebase-adminsdk@prod-project-id.iam.gserviceaccount.com',
+    FIREBASE_PRIVATE_KEY: '-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA0stub\n-----END RSA PRIVATE KEY-----\n',
     ...overrides,
   };
 }

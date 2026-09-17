@@ -100,22 +100,34 @@ export class EmailService {
   /**
    * Generic transactional email for domain events (reservation, contract,
    * deposit, maintenance). Subject and HTML body are resolved by the caller
-   * from the notification template. Best-effort — never throws.
+   * from the notification template.
+   *
+   * Returns a discriminated union so the caller can record the outcome on the
+   * Notification row without catching exceptions themselves:
+   *   { ok: true,  sentAt: Date }   — SMTP accepted the message
+   *   { ok: false, error: string }  — SMTP unconfigured or provider rejected
    */
-  async sendNotificationEmail(to: string, subject: string, htmlBody: string): Promise<void> {
+  async sendNotificationEmail(
+    to: string,
+    subject: string,
+    htmlBody: string,
+  ): Promise<{ ok: true; sentAt: Date } | { ok: false; error: string }> {
     const from = this.config.get<string>('SMTP_FROM') ?? 'noreply@devora.sa';
     const transporter = this.createTransporter();
     if (!transporter) {
       if (this.config.get<string>('NODE_ENV') !== 'production') {
         this.logger.warn(`[email] notification email to ${to} — ${subject}`);
       }
-      return;
+      return { ok: false, error: 'SMTP not configured' };
     }
     try {
       const text = htmlBody.replace(/<[^>]+>/g, '');
       await transporter.sendMail({ from, to, subject, text, html: htmlBody });
+      return { ok: true, sentAt: new Date() };
     } catch (err) {
-      this.logger.error(`Failed to send notification email to ${to}: ${(err as Error).message}`);
+      const msg = ((err as Error).message ?? 'unknown SMTP error').slice(0, 500);
+      this.logger.error(`Failed to send notification email to ${to}: ${msg}`);
+      return { ok: false, error: msg };
     }
   }
 

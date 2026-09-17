@@ -2081,9 +2081,18 @@ model Notification {
   templateCode String
   payload      Json                @default("{}")
   channel      NotificationChannel
+  // sentAt = row-creation timestamp only, NOT a delivery confirmation.
+  // Delivery truth lives in the four columns below (Step 15).
   sentAt       DateTime?
   readAt       DateTime?
   createdAt    DateTime            @default(now())
+
+  // Delivery outcome — written back by NotificationsService.send() after the
+  // push and email calls complete. Null means not attempted or not applicable.
+  emailSentAt  DateTime?
+  emailError   String?    @db.VarChar(500)
+  pushSentAt   DateTime?
+  pushError    String?    @db.VarChar(500)
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)

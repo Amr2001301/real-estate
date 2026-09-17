@@ -201,8 +201,17 @@ function assertProductionRequirements(env: AppEnv): string[] {
     );
   }
 
-  // Firebase is intentionally NOT required — FCM is not yet wired in code.
-  // See apps/api/.env.example for the documented reason.
+  // Firebase: FCM push is fully wired (FirebaseService + PushService).
+  // Without credentials every PUSH-only notification silently no-ops — the
+  // same failure class as unconfigured SMTP. Require all three in production.
+  const firebaseFields: Array<[keyof AppEnv, string]> = [
+    ['FIREBASE_PROJECT_ID',    'FIREBASE_PROJECT_ID'],
+    ['FIREBASE_CLIENT_EMAIL',  'FIREBASE_CLIENT_EMAIL'],
+    ['FIREBASE_PRIVATE_KEY',   'FIREBASE_PRIVATE_KEY'],
+  ];
+  for (const [key, label] of firebaseFields) {
+    if (!env[key]) errs.push(`${label} is required in production (FCM push notifications will silently fail without it)`);
+  }
 
   // Don't ship to production with the default admin password.
   if (env.SEED_ADMIN_PASSWORD === PLACEHOLDER_SEED_PASSWORD) {

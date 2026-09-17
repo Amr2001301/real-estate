@@ -88,11 +88,13 @@ function makePrismaMock() {
         id: 'notif-new',
         ...data,
       })),
+      update: jest.fn().mockResolvedValue({}),
       updateMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     user: {
-      findUnique: jest.fn().mockResolvedValue({ locale: 'ar' }),
-      findMany: jest.fn().mockResolvedValue([{ id: 'u-1' }]),
+      findUnique: jest.fn().mockResolvedValue({ locale: 'ar', email: null }),
+      findFirst:  jest.fn().mockResolvedValue({ locale: 'ar', email: null }),
+      findMany:   jest.fn().mockResolvedValue([{ id: 'u-1' }]),
     },
     deviceToken: {
       upsert: jest.fn().mockImplementation(async ({ where, create, update }) => ({
@@ -158,6 +160,7 @@ describe('Notifications module · permissions enforcement', () => {
     mock.notificationTemplate.findUnique.mockClear();
     mock.notificationTemplate.upsert.mockClear();
     mock.notification.create.mockClear();
+    mock.notification.update.mockClear();
     mock.notification.findMany.mockClear();
     mock.notification.updateMany.mockClear();
     mock.deviceToken.upsert.mockClear();
