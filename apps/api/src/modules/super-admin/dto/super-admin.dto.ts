@@ -116,11 +116,18 @@ export class UpdateCompanyDto {
   staffAppEnabled?: boolean;
 }
 
-// MT-042 — Dedicated DTO for capability updates.
-// Validated as a plain object; CapabilityService enforces boolean values.
+// MT-042 — Legacy blob write (raw Record<string,boolean>).
+// Kept for backward compat; prefer UpdateCapabilityOverridesDto for typed writes.
 export class UpdateCapabilitiesDto {
   @IsObject()
   capabilities!: Record<string, boolean>;
+}
+
+// Phase 1 — Typed capability override write.
+// Accepts only OVERRIDE_ELIGIBLE_KEYS; validated by CapabilityService.setCapabilityOverrides.
+export class UpdateCapabilityOverridesDto {
+  @IsObject()
+  overrides!: Record<string, unknown>;
 }
 
 export class CancelCompanyDto {
@@ -172,8 +179,8 @@ export class CreateCompanyUserDto {
 // ── Pricing ──────────────────────────────────────────────────────────────────
 
 export class CreatePricingPackageDto {
-  @IsString() @IsNotEmpty()
-  planTier!: string;
+  @IsEnum(SubscriptionPlan)
+  planTier!: SubscriptionPlan;
 
   @IsString() @IsNotEmpty()
   nameAr!: string;
@@ -221,8 +228,8 @@ export class CreatePricingPackageDto {
 }
 
 export class UpdatePricingPackageDto {
-  @IsString() @IsOptional()
-  planTier?: string;
+  @IsEnum(SubscriptionPlan) @IsOptional()
+  planTier?: SubscriptionPlan;
 
   @IsString() @IsOptional()
   nameAr?: string;

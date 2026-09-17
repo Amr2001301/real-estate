@@ -1,5 +1,5 @@
 import {
-  Body, Controller, Delete, Get, Param, Patch, Post, UseGuards,
+  Body, Controller, Delete, Get, Param, Patch, Post, Put, UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { SuperAdminGuard } from '../../common/guards/super-admin.guard';
@@ -9,6 +9,7 @@ import {
   CreateCompanyDto,
   UpdateCompanyDto,
   UpdateCapabilitiesDto,
+  UpdateCapabilityOverridesDto,
   CancelCompanyDto,
   SuspendCompanyDto,
   CreateCompanyAdminDto,
@@ -56,10 +57,34 @@ export class SuperAdminController {
   @Delete('companies/:id')
   deleteCompany(@Param('id') id: string) { return this.service.deleteCompany(id); }
 
-  // MT-042: Dedicated capability update endpoint; invalidates Redis cache
+  // MT-042: Legacy raw capability blob update; invalidates Redis cache
   @Patch('companies/:id/capabilities')
   updateCapabilities(@Param('id') id: string, @Body() dto: UpdateCapabilitiesDto) {
     return this.service.updateCapabilities(id, dto);
+  }
+
+  // Phase 1 — side-by-side view (plan default / override / effective) for every capability key
+  @Get('companies/:id/capabilities/view')
+  getCapabilitiesView(@Param('id') id: string) {
+    return this.service.getCapabilitiesView(id);
+  }
+
+  // Phase 1 — write typed overrides (OVERRIDE_ELIGIBLE_KEYS only; validated on write)
+  @Put('companies/:id/capabilities/overrides')
+  setCapabilityOverrides(@Param('id') id: string, @Body() dto: UpdateCapabilityOverridesDto) {
+    return this.service.setCapabilityOverrides(id, dto);
+  }
+
+  // Phase 1 — usage counts (units / users / projects) vs effective limits for one company
+  @Get('companies/:id/usage')
+  getCompanyUsage(@Param('id') id: string) {
+    return this.service.getCompanyUsage(id);
+  }
+
+  // Phase 1 — cross-company compliance report (over-limit, near-limit, feature state)
+  @Get('capabilities/report')
+  getCapabilityReport() {
+    return this.service.getCapabilityReport();
   }
 
   @Post('companies/:id/admin')

@@ -3,6 +3,7 @@ import { Prisma, SubscriptionStatus } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CapabilityService, type CompanyCapabilities } from '../../common/capabilities/capability.service';
+import { buildEffectiveView } from '../../common/capabilities/capability-schema';
 import { DomainResolverService } from '../../common/domain/domain-resolver.service';
 import { CompanyDomainsService, RESERVED_PLATFORM_SLUGS } from '../company-domains/company-domains.service';
 import { seedCancellationSettingsForCompany } from '../contracts/cancellation-settings.constants';
@@ -10,6 +11,7 @@ import type {
   CreateCompanyDto,
   UpdateCompanyDto,
   UpdateCapabilitiesDto,
+  UpdateCapabilityOverridesDto,
   CancelCompanyDto,
   CreateCompanyAdminDto,
   CreateCompanyUserDto,
@@ -250,6 +252,126 @@ export class SuperAdminService {
     const caps = dto.capabilities as CompanyCapabilities;
     await this.capabilityService.setCapabilities(id, caps);
     return { capabilities: caps };
+  }
+
+  // Phase 1 — typed override write
+  async setCapabilityOverrides(id: string, dto: UpdateCapabilityOverridesDto) {
+    return this.capabilityService.setCapabilityOverrides(id, dto.overrides);
+  }
+
+  // Phase 1 — side-by-side view (plan default / override / effective) for all keys
+  async getCapabilitiesView(id: string) {
+    return this.capabilityService.getEffectiveCapabilities(id);
+  }
+
+  // Phase 1 — usage counts (units, users, projects) vs effective limits
+  async getCompanyUsage(id: string) {
+    // assertExists handled inside getEffectiveCapabilities (throws NotFoundException)
+    const [effectiveView, unitCount, userCount, projectCount] = await Promise.all([
+      this.capabilityService.getEffectiveCapabilities(id),
+      this.prisma.unit.count({ where: { companyId: id } }),
+      this.prisma.user.count({ where: { companyId: id, role: { not: 'SUPER_ADMIN' } } }),
+      this.prisma.project.count({ where: { companyId: id } }),
+    ]);
+
+    const getEffective = (key: string) =>
+      effectiveView.keys.find((k) => k.key === key)?.effective ?? null;
+
+    return {
+      companyId: id,
+      plan: effectiveView.plan,
+      limits: {
+        units:    { limit: getEffective('limit.maxUnits')    as number | null, used: unitCount },
+        users:    { limit: getEffective('limit.maxUsers')    as number | null, used: userCount },
+        projects: { limit: getEffective('limit.maxProjects') as number | null, used: projectCount },
+      },
+    };
+  }
+
+  // Phase 1 — cross-company compliance report
+  // Returns every company with its effective limits, usage, and which features are enabled.
+  // Used by the super-admin before enforcing limits in Phase 2.
+  async getCapabilityReport() {
+    const companies = await this.prisma.company.findMany({
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        subscriptionPlan: true,
+        subscriptionStatus: true,
+        lifecycleStatus: true,
+        capabilities: true,
+        websiteEnabled: true,
+        customerAppEnabled: true,
+        staffAppEnabled: true,
+        _count: {
+          select: {
+            units: true,
+            projects: true,
+            users: { where: { role: { not: 'SUPER_ADMIN' } } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const rows = companies.map((c) => {
+      const view = buildEffectiveView(
+        c.subscriptionPlan,
+        (c.capabilities as Record<string, unknown> | null) ?? {},
+        c.websiteEnabled,
+        c.customerAppEnabled,
+        c.staffAppEnabled,
+      );
+
+      const maxUnits    = view.keys.find((k) => k.key === 'limit.maxUnits')?.effective    as number | null;
+      const maxUsers    = view.keys.find((k) => k.key === 'limit.maxUsers')?.effective    as number | null;
+      const maxProjects = view.keys.find((k) => k.key === 'limit.maxProjects')?.effective as number | null;
+
+      const usedUnits    = c._count.units;
+      const usedUsers    = c._count.users;
+      const usedProjects = c._count.projects;
+
+      const overLimit = (
+        (maxUnits    !== null && usedUnits    > maxUnits) ||
+        (maxUsers    !== null && usedUsers    > maxUsers) ||
+        (maxProjects !== null && usedProjects > maxProjects)
+      );
+      const nearLimit = !overLimit && (
+        (maxUnits    !== null && usedUnits    >= maxUnits    * 0.8) ||
+        (maxUsers    !== null && usedUsers    >= maxUsers    * 0.8) ||
+        (maxProjects !== null && usedProjects >= maxProjects * 0.8)
+      );
+
+      const features = Object.fromEntries(
+        view.keys
+          .filter((k) => k.key.startsWith('feature.'))
+          .map((k) => [k.key, k.effective]),
+      );
+
+      return {
+        id: c.id,
+        name: c.name,
+        slug: c.slug,
+        plan: c.subscriptionPlan,
+        subscriptionStatus: c.subscriptionStatus,
+        lifecycleStatus: c.lifecycleStatus,
+        usage: {
+          units:    { used: usedUnits,    limit: maxUnits },
+          users:    { used: usedUsers,    limit: maxUsers },
+          projects: { used: usedProjects, limit: maxProjects },
+        },
+        flags: { overLimit, nearLimit },
+        features,
+      };
+    });
+
+    return {
+      total: rows.length,
+      overLimit: rows.filter((r) => r.flags.overLimit).length,
+      nearLimit:  rows.filter((r) => r.flags.nearLimit  && !r.flags.overLimit).length,
+      companies: rows,
+    };
   }
 
   async cancelCompany(id: string, dto: CancelCompanyDto) {

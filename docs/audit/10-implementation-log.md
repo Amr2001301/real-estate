@@ -784,3 +784,94 @@ No drops. No type changes. No NOT NULL added to existing non-null columns.
 | Typecheck (`tsc --noEmit`) | 0 errors | 0 errors | 0 new errors |
 | Lint (`eslint`) | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |
 
+---
+
+## Phase 1 — Capability & Plan Limits: definition, resolution, and reporting
+
+**Date:** 2026-09-17
+**Design ref:** `docs/audit/07-product-split.md` Q4; `docs/audit/13-user-tenancy.md`
+**Status:** DONE ✓
+
+### Scope
+
+Definition, resolution, and reporting of plan-based capability limits. **No enforcement in this phase.** Nothing blocks routes, creation, or login. The phase adds:
+
+1. **Three-layer capability model**: plan defaults (code constants) ← per-company override (JSONB blob) ← column-backed app-enablement flags (`websiteEnabled`, `customerAppEnabled`, `staffAppEnabled`).
+2. **`CUSTOM` plan tier** added to `SubscriptionPlan` enum. `PricingPackage.planTier` column promoted from `String` to the enum type.
+3. **`capability-schema.ts`**: typed key sets, plan defaults for TRIAL/STARTER/PROFESSIONAL/ENTERPRISE/CUSTOM, `buildEffectiveView()` sync helper (used by both per-company read and bulk report), `validateCapabilityOverrides()` (rejects unknown keys, column-backed keys, float/negative limits, non-boolean features).
+4. **Extended `CapabilityService`**: `getEffectiveCapabilities(id)`, `setCapabilityOverrides(id, overrides)` (validated write + cache invalidation), `getEffectiveLimits(id)`.
+5. **Super-admin endpoints** (SUPER_ADMIN only, `@BypassTenant`): view three-layer breakdown, write typed overrides, read usage counts, cross-company capability report.
+6. **Tenant-facing endpoints** (ADMIN/SALES_MANAGER, no companyId param — cross-tenant structurally impossible): `GET /capabilities/me`, `GET /capabilities/me/usage`.
+7. **Security test file 13**: 20 `it` blocks (CAP-1 through CAP-12) covering the full attack matrix.
+
+### Single source of truth decision
+
+`websiteEnabled`, `customerAppEnabled`, `staffAppEnabled` remain authoritative as Company columns. They are NOT in the overridable blob (`OVERRIDE_ELIGIBLE_KEYS` excludes them). `buildEffectiveView` reads them directly from the Company row with `source = 'company_column'`. Super-admin continues to set them via `PATCH /super-admin/companies/:id`. No two sources of truth.
+
+### Plan defaults
+
+| Capability | TRIAL | STARTER | PROFESSIONAL | ENTERPRISE / CUSTOM |
+|---|---|---|---|---|
+| `limit.maxUnits` | 150 | 150 | 750 | null (unlimited) |
+| `limit.maxUsers` | 15 | 15 | 50 | null |
+| `limit.maxProjects` | 5 | 5 | 20 | null |
+| `feature.brokers` | true | false | true | true |
+| `feature.advancedReports` | true | false | true | true |
+| `feature.maintenance` | true | false | false | true |
+| `feature.customDomain` | true | false | false | true |
+| `feature.publicWebsite` | true (col) | — (col) | — (col) | — (col) |
+| `feature.customerApp` | true (col) | — (col) | — (col) | — (col) |
+| `feature.staffApp` | true (col) | — (col) | — (col) | — (col) |
+| All core features | true | true | true | true |
+
+TRIAL intentionally shows the full product (evaluation). Column-backed features are controlled by Company columns, not plan defaults.
+
+### Migration
+
+`20260917300000_plan_tier_enum` — non-destructive type promotion:
+
+```sql
+ALTER TYPE "SubscriptionPlan" ADD VALUE IF NOT EXISTS 'CUSTOM';
+DROP INDEX IF EXISTS "PricingPackage_planTier_idx";
+ALTER TABLE "PricingPackage"
+  ALTER COLUMN "planTier" TYPE "SubscriptionPlan"
+  USING "planTier"::"SubscriptionPlan";
+CREATE INDEX "PricingPackage_planTier_idx" ON "PricingPackage"("planTier");
+```
+
+No drops. No existing rows affected (the column is nullable; existing String values cast safely).
+
+### Security model
+
+- Only SUPER_ADMIN reads or writes overrides. Super-admin endpoints are behind `SuperAdminGuard`.
+- Company ADMIN reads own effective capabilities and usage via `GET /capabilities/me` (no companyId param — cross-tenant structurally impossible). SALES_MANAGER also allowed read-only.
+- No write endpoint exists for company ADMIN.
+- Cross-tenant attempts to super-admin endpoints return 403. Nonexistent company in super-admin endpoints returns 404.
+- `OVERRIDE_ELIGIBLE_KEYS`: only 7 keys can go in the capabilities blob. Column-backed keys (`feature.publicWebsite`, `feature.customerApp`, `feature.staffApp`) are rejected on write with 400.
+- No `@RequireCapability` on any route. No creation blocking. No login blocking. No app gating.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `apps/api/prisma/schema.prisma` | Added `CUSTOM` to `SubscriptionPlan`; `PricingPackage.planTier: SubscriptionPlan` (was `String`) |
+| `apps/api/prisma/migrations/20260917300000_plan_tier_enum/migration.sql` | New migration (enum promotion) |
+| `apps/api/src/common/capabilities/capability-schema.ts` | New: typed keys, plan defaults, `buildEffectiveView`, `validateCapabilityOverrides` |
+| `apps/api/src/common/capabilities/capability.service.ts` | Added `getEffectiveCapabilities`, `setCapabilityOverrides`, `getEffectiveLimits`; added `Prisma` import |
+| `apps/api/src/modules/super-admin/dto/super-admin.dto.ts` | `planTier: @IsEnum(SubscriptionPlan)` (was `@IsString`); added `UpdateCapabilityOverridesDto` |
+| `apps/api/src/modules/super-admin/super-admin.service.ts` | Added 4 methods: `setCapabilityOverrides`, `getCapabilitiesView`, `getCompanyUsage`, `getCapabilityReport` |
+| `apps/api/src/modules/super-admin/super-admin.controller.ts` | Added 4 endpoints: view, overrides, usage, report |
+| `apps/api/src/modules/capabilities/capabilities.module.ts` | New: `CompanyCapabilitiesController` + `CompanyCapabilitiesModule` (tenant-facing) |
+| `apps/api/src/app.module.ts` | Added `CompanyCapabilitiesModule` |
+| `apps/api/src/common/capabilities/__tests__/capability-resolution.spec.ts` | New: 7 test groups (per-plan defaults, override both directions, override survives plan change, invalid rejected, cache invalidation, tenant scope, cross-tenant 404) |
+| `apps/api/test/security/13-capability-tenancy.security-spec.ts` | New: 20 `it` blocks (CAP-1 through CAP-12 attack matrix) |
+
+### Test results
+
+| Suite | Before (Step 15C) | After (Phase 1) | Delta |
+|---|---|---|---|
+| Unit (`jest --runInBand`) | 2188 pass | **2224 pass** — directly measured at HEAD | +36 (7 groups, capability-resolution.spec.ts) |
+| Security (`jest-security.json --randomize`) | 219 pass | **239 pass** — directly measured at HEAD | +20 (CAP-1 through CAP-12) |
+| Typecheck (`tsc --noEmit`) | 0 errors | 0 errors | 0 new errors |
+| Lint (`eslint`) | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |
+

@@ -60,6 +60,7 @@ import { BrokerReportsModule } from './modules/broker-reports/broker-reports.mod
 import { ChatModule } from './modules/chat/chat.module';
 import { MeHomeModule } from './modules/me-home/me-home.module';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
+import { CompanyCapabilitiesModule } from './modules/capabilities/capabilities.module';
 import { HealthController } from './modules/health/health.controller';
 import { MetricsModule } from './common/observability/metrics.module';
 import { PublicCompaniesModule } from './modules/public-companies/public-companies.module';
@@ -118,6 +119,7 @@ import { PublicCompaniesModule } from './modules/public-companies/public-compani
     ChatModule,
     MeHomeModule,
     SuperAdminModule,
+    CompanyCapabilitiesModule,
     CompanyDomainsModule,
     PublicCompaniesModule,
     MetricsModule,

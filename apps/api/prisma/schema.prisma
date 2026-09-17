@@ -140,7 +140,7 @@ model PricingPackage {
   companyId String?  @db.Uuid // null = global template
   company   Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  planTier     String // TRIAL | STARTER | PROFESSIONAL | ENTERPRISE | CUSTOM
+  planTier     SubscriptionPlan
   nameAr       String
   nameEn       String
   descAr       String?
@@ -181,6 +181,7 @@ enum SubscriptionPlan {
   STARTER
   PROFESSIONAL
   ENTERPRISE
+  CUSTOM
 }
 
 enum SubscriptionStatus {
