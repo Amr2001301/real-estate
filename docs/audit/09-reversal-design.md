@@ -1,8 +1,9 @@
 # Reversal & Correction Design
 
 > **Type:** Design document — read-only. No source files, schema, or tests modified.
-> **Date:** 2026-09-13 (rev 3: self-review — traceability, paidAt, three scenarios,
-> reporting correctness, sequence corrections)
+> **Date:** 2026-09-17 (rev 5: payout dimension — APPROVED payout side-effects; see Appendix C-23)
+> *(rev 4: 2026-09-16 — BrokerCommissionStatus PAID clarification, §6.3 AuditLog payload fix)*
+> *(rev 3: 2026-09-13 — traceability, paidAt, three scenarios, reporting correctness)*
 > **Input documents:** `08-functional-gaps.md` (sections 4, 5, 7, FG-01/FG-02 details),
 > `01-system-map.md` (section 2)
 > **Governing constraint:** Policy is configurable, not hardcoded. No refund percentage,
@@ -697,18 +698,45 @@ immutably.
 Governed by `cancellation.brokerCommission.action` setting (default `CLAWBACK`),
 per-transaction overridable.
 
-| Commission status | CLAWBACK action | RETAIN | MANUAL |
-|---|---|---|---|
-| PENDING | `status = CANCELLED` in transaction | No change | No change |
-| APPROVED | `status = CANCELLED` in transaction | No change | No change |
-| REJECTED / CANCELLED | No action (already stopped) | No action | No action |
-| **PAID** | `clawbackStatus = OUTSTANDING` — see section 4.5 | No change | No change |
+`BrokerCommissionStatus` has no `PAID` value. Commission payment is tracked via
+the `payoutId → BrokerPayout.status` relation, not on the commission record itself.
+A commission is "effectively disbursed" when `payoutId` is set and `payout.status`
+is `PROCESSING` or `PAID`. `isCommissionEffectivelyPaid()` in the service encodes
+this check.
 
-The original PAID status is never changed (Hard Rule 2).
+| Commission state | CLAWBACK action | RETAIN | MANUAL |
+|---|---|---|---|
+| PENDING — no payout, or payout in DRAFT | `status = CANCELLED`; if in DRAFT payout: remove from payout + recompute totals (see below) | No change | No change |
+| APPROVED — no payout, or payout in DRAFT | Same as PENDING | No change | No change |
+| APPROVED + payout in APPROVED state | `status = CANCELLED`; `payoutId = null`; payout reverted to DRAFT (re-approval required) + totals recomputed from remaining; if 0 remaining → payout CANCELLED | No change | No change |
+| APPROVED + payout in PROCESSING or PAID (effectively disbursed) | `clawbackStatus = OUTSTANDING` — see section 4.5; `status` unchanged (Hard Rule 2) | No change | No change |
+| REJECTED / CANCELLED | No action (already stopped) | No action | No action |
+
+**Payout side-effects (atomically inside `$transaction`):**
+
+When a non-disbursed commission (payout DRAFT or APPROVED) is cancelled, the
+payout must be reconciled in the same transaction to prevent disbursing a removed
+commission:
+
+1. Set `commission.payoutId = null`.
+2. Aggregate remaining commissions' `grossAmount`, `taxAmount`, `withholdingAmount`,
+   `netAmount` from the payout.
+3. If 0 remaining: set `payout.status = CANCELLED`.
+4. If ≥ 1 remaining: recompute payout totals from those aggregates; if payout was
+   `APPROVED`, revert to `DRAFT` — the original approval was for a higher amount
+   and must be re-issued. Payout `approvedAt` / `approvedById` are preserved as
+   audit history.
+
+If the payout was already `CANCELLED`, the commission's payoutId is set to null
+but no further payout update is needed.
+
+The commission's `status` field is never changed when a clawback overlay is applied
+(Hard Rule 2).
 
 #### BonusEntry
 
-Identical structure to BrokerCommission. Setting: `cancellation.salesBonus.action`
+`BonusEntryStatus` **does** have a `PAID` value, so the clawback trigger is a direct
+`status === PAID` check — no payout-relation lookup. Setting: `cancellation.salesBonus.action`
 (default `CLAWBACK`). Same PAID→clawback-overlay pattern (section 4.5).
 
 #### Customer role (CUSTOMER → CLIENT demotion)
@@ -898,8 +926,9 @@ Installment action:  [REOPEN_AS_OVERDUE ▾]
 
 ### 4.5 Commission and Bonus Clawback for PAID Records
 
-When cancellation action = CLAWBACK and the commission/bonus is already PAID,
-the PAID status is not changed (Hard Rule 2). A clawback overlay is added.
+When cancellation action = CLAWBACK and the commission/bonus is effectively
+disbursed (commission: `isCommissionEffectivelyPaid()` true; bonus: `status = PAID`),
+the status is not changed (Hard Rule 2). A clawback overlay is added instead.
 
 ```prisma
 enum ClawbackStatus {
@@ -925,7 +954,9 @@ enum ClawbackStatus {
 
 **Clawback state machine:**
 ```
-(null)       →  OUTSTANDING   contract cancelled; CLAWBACK action; commission was PAID
+(null)       →  OUTSTANDING   contract cancelled; CLAWBACK action; commission effectively disbursed
+                              (BrokerCommission: payoutId set, payout.status PROCESSING or PAID;
+                               BonusEntry: status = PAID)
 OUTSTANDING  →  COLLECTED     admin records broker/sales returned the funds
 OUTSTANDING  →  WAIVED        admin records decision not to pursue
 COLLECTED    →  (terminal)
@@ -1042,7 +1073,7 @@ covers both explicitly.
 **Starting state:** Contract C1 ACTIVE, signed. InstallmentPlan: 60 × EGP 50,000.
 Inst1–6: PAID (Deposits D1–D6, each APPROVED). Inst7–60: PENDING.
 Booking deposit DB: APPROVED, EGP 25,000.
-BrokerCommission BC1: `status=PAID`, `netAmount=75,000`.
+BrokerCommission BC1: `status=APPROVED`, `payoutId` → payout with `status=PAID`, `netAmount=75,000`.
 BonusEntry BE1: `status=PAID`, `amount=20,000`.
 Unit U1: SOLD.
 Settings: `unit.returnToAvailable=REQUIRES_APPROVAL`, all others at defaults.
@@ -1060,7 +1091,7 @@ suggestedRetained      = 25,000 + 30,000 = 55,000
 suggestedRefund        = 325,000 − 55,000 = 270,000
 ```
 
-Commission BC1 is PAID → modal shows warning banner. Clawback reason field appears.
+Commission BC1 is effectively disbursed (APPROVED, attached to a PAID payout) → modal shows warning banner. Clawback reason field appears.
 
 **Step 2 — Operator submits with overrides**
 
@@ -1075,7 +1106,7 @@ Rows written/changed:
 2. UPDATE InstallmentPlan IP1: `{cancelledAt:now()}`
 3. BULK UPDATE Inst7–60 (54 rows): `{status:CANCELLED}`
 4. CREATE ContractCancellation CC1: `{contractId, cancelledById, reason, cancellationDate, totalCollectedSnapshot:325000, retainedAmount:50000, refundAmount:275000, unitReleasedAt:null, customerDemotedAt:null, policySnapshot:{penaltyPct:10, bookingRefundPct:0, unitRelease:"REQUIRES_APPROVAL", demoteClient:false, commissionAction:"CLAWBACK", bonusAction:"CLAWBACK"}, commissionActionOverride:null, bonusActionOverride:null}`
-5. UPDATE BrokerCommission BC1: `{clawbackStatus:OUTSTANDING, clawbackReason:"...", clawbackAt:now(), clawbackById:adminId}` (BC1.status stays PAID)
+5. UPDATE BrokerCommission BC1: `{clawbackStatus:OUTSTANDING, clawbackReason:"...", clawbackAt:now(), clawbackById:adminId}` (BC1.status stays APPROVED — Hard Rule 2; money was already disbursed via the PAID payout)
 6. UPDATE BonusEntry BE1: `{clawbackStatus:OUTSTANDING, clawbackReason:"Contract cancelled", clawbackAt:now(), clawbackById:adminId}` (BE1.status stays PAID)
 7. Unit U1: **not changed** (REQUIRES_APPROVAL path)
 
@@ -1102,7 +1133,7 @@ Rows NOT changed: Inst1–6 (remain PAID), D1–D6 (remain APPROVED), Customer r
 
 **Admin sees:**
 - Contract CANCELLED | Unit still SOLD (until step 4)
-- BC1: status=PAID, clawbackStatus=OUTSTANDING (EGP 75,000 receivable)
+- BC1: status=APPROVED (unchanged), clawbackStatus=OUTSTANDING (EGP 75,000 receivable)
 - BE1: status=PAID, clawbackStatus=OUTSTANDING (EGP 20,000 receivable)
 
 **Financial report:**
@@ -1367,8 +1398,9 @@ all corrective actions — this is a hard rule, not configurable.
   "entityType": "Deposit",
   "entityId": "<depositId>",
   "before": { "reviewStatus": "APPROVED", "verified": true, "amount": 50000 },
-  "after":  { "correctionId": "<correctionId>", "correctionType": "REVERSAL" },
-  "payload": {
+  "after": {
+    "correctionId": "<correctionId>",
+    "correctionType": "REVERSAL",
     "affectedInstallmentId": "<id>",
     "installmentPreviousStatus": "PAID",
     "installmentNewStatus": "OVERDUE",
@@ -1385,8 +1417,7 @@ all corrective actions — this is a hard rule, not configurable.
   "entityType": "Deposit",
   "entityId": "<depositId>",
   "before": { "installmentId": "<sourceId>" },
-  "after":  { "installmentId": "<targetId>", "correctionId": "<id>" },
-  "payload": { "reason": "..." }
+  "after": { "installmentId": "<targetId>", "correctionId": "<id>", "reason": "..." }
 }
 ```
 
@@ -1397,8 +1428,9 @@ all corrective actions — this is a hard rule, not configurable.
   "entityType": "Contract",
   "entityId": "<contractId>",
   "before": { "status": "ACTIVE", "signedAt": "2026-09-01T...", "totalAmount": 2500000 },
-  "after":  { "status": "CANCELLED", "cancellationId": "<id>" },
-  "payload": {
+  "after": {
+    "status": "CANCELLED",
+    "cancellationId": "<id>",
     "unitId": "<id>",
     "unitReleaseMode": "REQUIRES_APPROVAL",
     "customerId": "<id>",
@@ -1424,8 +1456,10 @@ all corrective actions — this is a hard rule, not configurable.
   "entityType": "PaymentInstrument",
   "entityId": "<id>",
   "before": { "status": "DEPOSITED" },
-  "after":  { "status": "BOUNCED", "bounceDate": "...", "bounceReason": "..." },
-  "payload": {
+  "after": {
+    "status": "BOUNCED",
+    "bounceDate": "...",
+    "bounceReason": "...",
     "subCase": "A",
     "affectedDepositIds": ["D3", "D4", "D5"],
     "depositsSetToRejected": ["D3", "D4", "D5"],
@@ -1532,6 +1566,84 @@ they confirm it meets their legal disclosure requirements.
 
 ---
 
+## Design assumptions that did not survive contact with the schema
+
+These four discrepancies were found during implementation — not review — because the
+design was written against an assumed schema that was never built exactly as assumed.
+All four are corrected in the implementation; they are recorded here so D4 and later
+steps are not written against the same wrong assumptions.
+
+---
+
+### 1. `AuditLog` has no `payload` field
+
+**Assumed:** `AuditLog` has three JSON columns — `before`, `after`, and `payload` — where
+audit metadata (correctionId, affectedInstallmentIds, policySnapshot, etc.) lives in `payload`.
+§6.3 showed four audit examples with a three-field structure.
+
+**Reality:** `AuditLog` has only `before` and `after`. There is no `payload` column.
+Confirmed by schema inspection and by reading live rows written by the Step B/C/D3 services.
+
+**Resolution:** All fields previously shown under `payload` were merged into `after`.
+§6.3 was corrected in rev 4 (Appendix C-22). All services write to `before`/`after` only.
+
+---
+
+### 2. `BrokerCommissionStatus` has no `PAID` value
+
+**Assumed:** The enum is `PENDING | APPROVED | REJECTED | CANCELLED | PAID`. The design
+used `PAID` as a commission status throughout §4.3 and §4.6 S2 to mean "money was sent."
+
+**Reality:** The actual enum is `PENDING | APPROVED | REJECTED | CANCELLED`. There is no
+`PAID` value. Commission payment is tracked via the `payoutId → BrokerPayout.status` relation.
+A "paid" commission is one with `payoutId IS NOT NULL AND payout.status IN ('PROCESSING', 'PAID')`.
+
+**Resolution:** Introduced `isCommissionEffectivelyPaid()` in D3 to identify disbursed
+commissions via the payout relation. §4.3 table and §4.6 S2 corrected in rev 4 (C-19, C-20, C-21).
+
+*Note for D4:* The clawback resolve endpoint guards against `clawbackStatus = OUTSTANDING`,
+not against `commission.status = PAID` (which cannot exist). §8.2 step L's phrase
+"commission.status unchanged (still PAID)" is wrong — the status is `APPROVED` and stays `APPROVED`.
+
+---
+
+### 3. S2's BC1 state was unrepresentable as written
+
+**Assumed:** S2 walkthrough started with `BC1: status=PAID` (before correction). This starting
+state cannot exist — `BrokerCommissionStatus` has no `PAID` value — so the scenario could
+not be seeded as written.
+
+**Reality:** The equivalent state is `BC1: status=APPROVED, payoutId → BrokerPayout{status:PAID}`.
+This is what `isCommissionEffectivelyPaid()` correctly identifies as effectively disbursed.
+
+**Resolution:** The D3-9e and D3-10c security tests seed BC1 as `APPROVED` with a payout
+whose status is `PROCESSING` or `PAID`. §4.6 S2 corrected in rev 4 (C-21).
+
+---
+
+### 4. `CLAWBACK` path depends on payout status, not commission status alone
+
+**Assumed (implicit):** Commission status alone (`PENDING` → cancel; `PAID` → overlay) determines
+the CLAWBACK action. No additional payout-status dimension was modelled.
+
+**Reality:** There are five meaningful states:
+1. PENDING, no payout → cancel
+2. APPROVED, no payout or DRAFT payout → cancel (+ remove from payout, recompute totals)
+3. APPROVED + APPROVED payout → cancel commission, revert payout to DRAFT or CANCELLED if empty
+4. APPROVED + PROCESSING or PAID payout → overlay (Hard Rule 2; money in flight or confirmed)
+5. REJECTED / CANCELLED → no action
+
+Case 3 is the critical gap: an APPROVED payout has authorised payment but money has not left.
+Treating it as "effectively paid" creates a phantom clawback receivable. Treating it as
+"not paid" (and cancelling the commission) requires atomically recomputing the payout totals
+and reverting the payout to DRAFT for re-approval.
+
+**Resolution:** D3b landed both the narrowing of `isCommissionEffectivelyPaid()` to
+`PROCESSING|PAID` and the payout side-effects (aggregate remaining commissions →
+DRAFT or CANCELLED) atomically in the same `$transaction`. §4.3 updated in rev 5 (C-23).
+
+---
+
 ## Appendix — Conflict Log
 
 Changes from each revision are recorded here for traceability.
@@ -1563,3 +1675,24 @@ Changes from each revision are recorded here for traceability.
 | C-16 | §5 (new §5.3) | Not present | Reporting correctness: identified two breaking queries (`NOT IN ('PAID')` and XLSX export), two new needed queries (refunds owed, outstanding clawbacks) | Review question 4 |
 | C-17 | §7 (now §8) step K | K in post-go-live additive list | Merged K into step D (must ship with cancel endpoint) | `contracts:release-unit` is required when default is REQUIRES_APPROVAL; shipping cancel without release leaves no recovery path for the unit |
 | C-18 | §8.1 step D | Not in original step | Added report query fixes (`status NOT IN ('PAID')` → `status IN ('PENDING', 'OVERDUE')`, XLSX) to step D | These queries break the moment `InstallmentStatus.CANCELLED` is introduced; must ship together |
+
+### Rev 4 changes (from rev 3)
+
+> **Date:** 2026-09-16 (rev 4: schema-accuracy pass — BrokerCommissionStatus enum
+> has no PAID value; §6.3 AuditLog has no payload column)
+
+| # | Location in rev 3 | Prior statement | New statement / addition | Reason |
+|---|---|---|---|---|
+| C-19 | §4.3 BrokerCommission table | Four-row table using `PAID` as a `BrokerCommissionStatus` value; single "APPROVED → CANCELLED" row | Replaced with five-row table distinguishing APPROVED-with-no-paid-payout (→ CANCELLED) from APPROVED-with-payout-PROCESSING/PAID (→ clawback overlay); added explicit note that `BrokerCommissionStatus` has no `PAID` value and that disbursement is tracked via `payoutId → BrokerPayout.status` | `BrokerCommissionStatus` enum is PENDING/APPROVED/REJECTED/CANCELLED — no PAID. The design was written against a schema that was never implemented. Service uses `isCommissionEffectivelyPaid()` to identify disbursed commissions via the payout relation. |
+| C-20 | §4.5 clawback state machine | "commission was PAID" | "commission effectively disbursed (BrokerCommission: payoutId set, payout.status PROCESSING or PAID; BonusEntry: status = PAID)" | Removes the impossible `BrokerCommissionStatus.PAID` reference; `BonusEntryStatus` does have PAID so that branch is kept as-is |
+| C-21 | §4.6 S2 starting state + step 3 + admin view | `BC1: status=PAID` in three places | `BC1: status=APPROVED, payoutId → payout with status=PAID` | `BrokerCommissionStatus` has no PAID. The S2 fixture seeds BC1 as APPROVED with a paid payout, which is what `isCommissionEffectivelyPaid()` identifies as effectively disbursed. |
+| C-22 | §6.3 AuditLog entries (all four examples) | Three-field structure: `before`, `after`, `payload` | Two-field structure: `before`, `after` — all fields previously shown under `payload` moved into `after` | `AuditLog` schema has no `payload` column. Confirmed by schema inspection and by reading live DB rows written by the Step B/C/D3 services. |
+
+### Rev 5 changes (from rev 4)
+
+> **Date:** 2026-09-17 (rev 5: payout dimension — CLAWBACK on APPROVED payout commission
+> requires atomic payout side-effects; narrowed `isCommissionEffectivelyPaid()`)
+
+| # | Location in rev 4 | Prior statement | New statement / addition | Reason |
+|---|---|---|---|---|
+| C-23 | §4.3 BrokerCommission table + narrative | Four-row table with no payout-status dimension beyond "effectively disbursed"; `isCommissionEffectivelyPaid()` checked APPROVED\|PROCESSING\|PAID payout | Five-row table adding explicit `APPROVED payout` row with payout side-effects (remove from payout, recompute totals, revert to DRAFT or CANCELLED); `isCommissionEffectivelyPaid()` narrowed to PROCESSING\|PAID; added payout side-effects narrative | An APPROVED payout has not yet disbursed money; treating it as "effectively paid" creates a phantom clawback receivable. Narrowing alone creates a money-loss path (cancelled commission amount stays in APPROVED payout totals). Both changes must land atomically. BonusEntry has no equivalent payout batching model — no change needed there. |

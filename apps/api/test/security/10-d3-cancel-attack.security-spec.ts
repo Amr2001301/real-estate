@@ -19,6 +19,18 @@
  *           (contract still ACTIVE, installments still PENDING, no CC row)
  *   D3-7   Cross-tenant cancel: Company A admin → Company B contract → 404
  *   D3-8   Cross-tenant release-unit: Company A admin → Company B contract → 404
+ *   D3-9   Enum round-trip for BonusEntryStatus.CANCELLED and the commission
+ *           else-branch: 5 contracts, every row read back from Postgres:
+ *             BonusEntry PENDING → CANCELLED
+ *             BonusEntry APPROVED → CANCELLED
+ *             BrokerCommission PENDING (no payout) → CANCELLED
+ *             BrokerCommission APPROVED (no payout) → CANCELLED
+ *             BrokerCommission APPROVED + payout PAID → status unchanged, clawbackStatus OUTSTANDING
+ *   D3-10  Payout dimension (D3b) — isCommissionEffectivelyPaid() narrowed to PROCESSING|PAID:
+ *           D3-10a: APPROVED commission, sole in APPROVED payout → commission CANCELLED + payout CANCELLED
+ *           D3-10b: APPROVED commission, one of two in APPROVED payout → payout DRAFT + recomputed totals
+ *           D3-10c: APPROVED commission in PROCESSING payout → overlay path; payout untouched
+ *           D3-10d: atomicity — ContractCancellation.create failure rolls back commission + payout updates
  *
  * Design notes:
  *   - State-mutating tests that depend on prior state run inside nested describes
@@ -29,7 +41,7 @@
  */
 
 import request from 'supertest';
-import { BrokerCommissionStatus, ContractStatus, InstallmentStatus, UnitStatus } from '@prisma/client';
+import { BonusEntryStatus, BrokerCommissionStatus, BrokerPayoutStatus, ClawbackStatus, ContractStatus, InstallmentStatus, UnitStatus } from '@prisma/client';
 import { type TestApp, createTestApp } from '../setup-app';
 import { bearer, loginAs } from '../helpers/login';
 import {
@@ -745,6 +757,698 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
     } finally {
       await testApp.rawPrisma.contract.deleteMany({ where: { id: bContract.id } }).catch(() => void 0);
     }
+  });
+
+  // ── D3-9: BonusEntryStatus.CANCELLED + commission else-branch round-trip ──
+  //
+  // Five contracts, each cancelled in beforeAll. Tests are assertion-only and
+  // order-independent under --randomize.
+  //
+  // Exercises:
+  //   (a) BonusEntry PENDING      → status = CANCELLED  (enum round-trip to real Postgres)
+  //   (b) BonusEntry APPROVED     → status = CANCELLED
+  //   (c) BrokerCommission PENDING, no payout  → status = CANCELLED (else-branch)
+  //   (d) BrokerCommission APPROVED, no payout → status = CANCELLED (else-branch)
+  //   (e) BrokerCommission APPROVED + PAID payout → status unchanged; clawbackStatus OUTSTANDING
+
+  describe('D3-9: enum round-trip — CANCELLED for unpaid, clawback overlay for effectively-paid', () => {
+    // IDs for all five contracts and their commission/bonus rows
+    let contractBonusPendingId: string;
+    let contractBonusApprovedId: string;
+    let contractCommPendingId: string;
+    let contractCommApprovedId: string;
+    let contractCommEffPaidId: string;
+
+    let bonusPendingId: string;
+    let bonusApprovedId: string;
+    let commPendingId: string;
+    let commApprovedId: string;
+    let commEffPaidId: string;
+
+    // Shared unit and bonus rule — all five contracts reuse the same unit
+    let d9UnitId: string;
+    let d9BonusRuleId: string;
+    let d9PayoutId: string;
+
+    beforeAll(async () => {
+      // Shared unit (one per company — these contracts don't conflict with each other
+      // because we cancel them; the service doesn't block on unit SOLD status)
+      const unit = await testApp.rawPrisma.unit.create({
+        data: {
+          buildingId: fx.resources.a.buildingId,
+          code: 'D3-D9-UNIT',
+          type: '2BR',
+          area: 100,
+          price: 1_000_000,
+          status: UnitStatus.SOLD,
+          companyId: fx.companies.aId,
+        },
+      });
+      d9UnitId = unit.id;
+
+      const bonusRule = await testApp.rawPrisma.bonusRule.create({
+        data: { name: 'D3-D9 Bonus Rule', percentage: 2, active: true, companyId: fx.companies.aId },
+      });
+      d9BonusRuleId = bonusRule.id;
+
+      // PAID payout for the effectively-paid commission (e)
+      const payout = await testApp.rawPrisma.brokerPayout.create({
+        data: {
+          payoutNumber: 'PAY-D3-D9-001',
+          brokerId: fx.resources.a.brokerId,
+          status: 'PAID',
+          companyId: fx.companies.aId,
+        },
+      });
+      d9PayoutId = payout.id;
+
+      // ── (a) Contract with BonusEntry PENDING ─────────────────────────────
+      const ca = await testApp.rawPrisma.contract.create({
+        data: {
+          customerId: fx.users.customerA.id,
+          unitId: d9UnitId,
+          totalAmount: 1_000_000,
+          signedAt: new Date('2026-09-01'),
+          status: ContractStatus.ACTIVE,
+          companyId: fx.companies.aId,
+        },
+      });
+      contractBonusPendingId = ca.id;
+      const ba = await testApp.rawPrisma.bonusEntry.create({
+        data: {
+          salesId: fx.users.sales1A.id,
+          ruleId: d9BonusRuleId,
+          amount: 5_000,
+          period: '2026-09',
+          status: BonusEntryStatus.PENDING,
+          contractId: contractBonusPendingId,
+          companyId: fx.companies.aId,
+        },
+      });
+      bonusPendingId = ba.id;
+
+      // ── (b) Contract with BonusEntry APPROVED ────────────────────────────
+      const cb = await testApp.rawPrisma.contract.create({
+        data: {
+          customerId: fx.users.customerA.id,
+          unitId: d9UnitId,
+          totalAmount: 1_000_000,
+          signedAt: new Date('2026-09-01'),
+          status: ContractStatus.ACTIVE,
+          companyId: fx.companies.aId,
+        },
+      });
+      contractBonusApprovedId = cb.id;
+      const bb = await testApp.rawPrisma.bonusEntry.create({
+        data: {
+          salesId: fx.users.sales1A.id,
+          ruleId: d9BonusRuleId,
+          amount: 5_000,
+          period: '2026-09',
+          status: BonusEntryStatus.APPROVED,
+          contractId: contractBonusApprovedId,
+          companyId: fx.companies.aId,
+        },
+      });
+      bonusApprovedId = bb.id;
+
+      // ── (c) Contract with BrokerCommission PENDING, no payout ────────────
+      const cc = await testApp.rawPrisma.contract.create({
+        data: {
+          customerId: fx.users.customerA.id,
+          unitId: d9UnitId,
+          totalAmount: 1_000_000,
+          signedAt: new Date('2026-09-01'),
+          status: ContractStatus.ACTIVE,
+          companyId: fx.companies.aId,
+        },
+      });
+      contractCommPendingId = cc.id;
+      const bcc = await testApp.rawPrisma.brokerCommission.create({
+        data: {
+          commissionNumber: 'BC-D3-D9-PENDING',
+          brokerId: fx.resources.a.brokerId,
+          contractId: contractCommPendingId,
+          unitId: d9UnitId,
+          projectId: fx.resources.a.projectId,
+          basisAmount: 1_000_000,
+          commissionPct: 2.5,
+          grossAmount: 25_000,
+          netAmount: 25_000,
+          status: BrokerCommissionStatus.PENDING,
+          earnedAt: new Date('2026-09-01'),
+          companyId: fx.companies.aId,
+        },
+      });
+      commPendingId = bcc.id;
+
+      // ── (d) Contract with BrokerCommission APPROVED, no payout ───────────
+      const cd = await testApp.rawPrisma.contract.create({
+        data: {
+          customerId: fx.users.customerA.id,
+          unitId: d9UnitId,
+          totalAmount: 1_000_000,
+          signedAt: new Date('2026-09-01'),
+          status: ContractStatus.ACTIVE,
+          companyId: fx.companies.aId,
+        },
+      });
+      contractCommApprovedId = cd.id;
+      const bcd = await testApp.rawPrisma.brokerCommission.create({
+        data: {
+          commissionNumber: 'BC-D3-D9-APPROVED',
+          brokerId: fx.resources.a.brokerId,
+          contractId: contractCommApprovedId,
+          unitId: d9UnitId,
+          projectId: fx.resources.a.projectId,
+          basisAmount: 1_000_000,
+          commissionPct: 2.5,
+          grossAmount: 25_000,
+          netAmount: 25_000,
+          status: BrokerCommissionStatus.APPROVED,
+          earnedAt: new Date('2026-09-01'),
+          companyId: fx.companies.aId,
+        },
+      });
+      commApprovedId = bcd.id;
+
+      // ── (e) Contract with BrokerCommission APPROVED + PAID payout ────────
+      const ce = await testApp.rawPrisma.contract.create({
+        data: {
+          customerId: fx.users.customerA.id,
+          unitId: d9UnitId,
+          totalAmount: 1_000_000,
+          signedAt: new Date('2026-09-01'),
+          status: ContractStatus.ACTIVE,
+          companyId: fx.companies.aId,
+        },
+      });
+      contractCommEffPaidId = ce.id;
+      const bce = await testApp.rawPrisma.brokerCommission.create({
+        data: {
+          commissionNumber: 'BC-D3-D9-EFF-PAID',
+          brokerId: fx.resources.a.brokerId,
+          contractId: contractCommEffPaidId,
+          unitId: d9UnitId,
+          projectId: fx.resources.a.projectId,
+          basisAmount: 1_000_000,
+          commissionPct: 2.5,
+          grossAmount: 25_000,
+          netAmount: 25_000,
+          status: BrokerCommissionStatus.APPROVED,
+          earnedAt: new Date('2026-09-01'),
+          payoutId: d9PayoutId,
+          companyId: fx.companies.aId,
+        },
+      });
+      commEffPaidId = bce.id;
+
+      // ── Cancel all five contracts ─────────────────────────────────────────
+      for (const id of [
+        contractBonusPendingId,
+        contractBonusApprovedId,
+        contractCommPendingId,
+        contractCommApprovedId,
+        contractCommEffPaidId,
+      ]) {
+        const res = await request(testApp.app.getHttpServer())
+          .post(`/v1/contracts/${id}/cancel`)
+          .set('Authorization', bearer(adminAToken))
+          .set('X-Tenant-Slug', SEC_SLUG_A)
+          .send({ reason: 'D3-9 enum round-trip test', retainedAmount: 0, refundAmount: 0 });
+        if (res.status !== 201) {
+          throw new Error(`D3-9 beforeAll cancel failed for contract ${id}: status=${res.status} body=${JSON.stringify(res.body)}`);
+        }
+      }
+    }, 120_000);
+
+    afterAll(async () => {
+      for (const id of [
+        contractBonusPendingId,
+        contractBonusApprovedId,
+        contractCommPendingId,
+        contractCommApprovedId,
+        contractCommEffPaidId,
+      ]) {
+        if (!id) continue;
+        await testApp.rawPrisma.bonusEntry.deleteMany({ where: { contractId: id } }).catch(() => void 0);
+        await testApp.rawPrisma.brokerCommission.deleteMany({ where: { contractId: id } }).catch(() => void 0);
+        await testApp.rawPrisma.contractCancellation.deleteMany({ where: { contractId: id } }).catch(() => void 0);
+        await testApp.rawPrisma.contract.deleteMany({ where: { id } }).catch(() => void 0);
+      }
+      await testApp.rawPrisma.brokerPayout.deleteMany({ where: { id: d9PayoutId } }).catch(() => void 0);
+      await testApp.rawPrisma.bonusRule.deleteMany({ where: { id: d9BonusRuleId } }).catch(() => void 0);
+      await testApp.rawPrisma.unit.deleteMany({ where: { id: d9UnitId } }).catch(() => void 0);
+    });
+
+    it('D3-9a: BonusEntry PENDING → status CANCELLED after contract cancel', async () => {
+      const bonus = await testApp.rawPrisma.bonusEntry.findUnique({ where: { id: bonusPendingId } });
+      if (!bonus) throw new Error('D3-9a: BonusEntry not found');
+      expect(bonus.status).toBe(BonusEntryStatus.CANCELLED);
+      expect(bonus.clawbackStatus).toBeNull();
+    });
+
+    it('D3-9b: BonusEntry APPROVED → status CANCELLED after contract cancel', async () => {
+      const bonus = await testApp.rawPrisma.bonusEntry.findUnique({ where: { id: bonusApprovedId } });
+      if (!bonus) throw new Error('D3-9b: BonusEntry not found');
+      expect(bonus.status).toBe(BonusEntryStatus.CANCELLED);
+      expect(bonus.clawbackStatus).toBeNull();
+    });
+
+    it('D3-9c: BrokerCommission PENDING (no payout) → status CANCELLED after contract cancel', async () => {
+      const comm = await testApp.rawPrisma.brokerCommission.findUnique({ where: { id: commPendingId } });
+      if (!comm) throw new Error('D3-9c: BrokerCommission not found');
+      expect(comm.status).toBe(BrokerCommissionStatus.CANCELLED);
+      expect(comm.clawbackStatus).toBeNull();
+    });
+
+    it('D3-9d: BrokerCommission APPROVED (no payout) → status CANCELLED after contract cancel', async () => {
+      const comm = await testApp.rawPrisma.brokerCommission.findUnique({ where: { id: commApprovedId } });
+      if (!comm) throw new Error('D3-9d: BrokerCommission not found');
+      expect(comm.status).toBe(BrokerCommissionStatus.CANCELLED);
+      expect(comm.clawbackStatus).toBeNull();
+    });
+
+    it('D3-9e: BrokerCommission APPROVED + PAID payout → status unchanged; clawbackStatus OUTSTANDING', async () => {
+      const comm = await testApp.rawPrisma.brokerCommission.findUnique({ where: { id: commEffPaidId } });
+      if (!comm) throw new Error('D3-9e: BrokerCommission not found');
+      // Hard Rule 2: status is never changed when clawback overlay is applied
+      expect(comm.status).toBe(BrokerCommissionStatus.APPROVED);
+      expect(comm.clawbackStatus).toBe(ClawbackStatus.OUTSTANDING);
+      expect(comm.clawbackAt).toBeTruthy();
+    });
+  });
+
+  // ── D3-10: Payout dimension (D3b) ────────────────────────────────────────
+  //
+  // Tests that narrowing isCommissionEffectivelyPaid() to PROCESSING|PAID is
+  // correct and that the payout side-effects are atomic with the cancellation.
+  //
+  // Each sub-test creates its own isolated payout(s) and contract(s).
+
+  describe('D3-10: payout dimension — APPROVED payout side-effects (D3b)', () => {
+    // ── D3-10a: sole commission in APPROVED payout → payout CANCELLED ─────
+    it('D3-10a: APPROVED commission, sole in APPROVED payout → commission CANCELLED + payout CANCELLED', async () => {
+      const payout = await testApp.rawPrisma.brokerPayout.create({
+        data: {
+          payoutNumber: 'PAY-D310A-001',
+          brokerId: fx.resources.a.brokerId,
+          totalGross: 40_000,
+          totalNet: 40_000,
+          status: 'APPROVED',
+          companyId: fx.companies.aId,
+        },
+      });
+
+      const unit = await testApp.rawPrisma.unit.create({
+        data: {
+          buildingId: fx.resources.a.buildingId,
+          code: 'D3-10A-UNIT',
+          type: '1BR',
+          area: 80,
+          price: 1_000_000,
+          status: UnitStatus.SOLD,
+          companyId: fx.companies.aId,
+        },
+      });
+      const contract = await testApp.rawPrisma.contract.create({
+        data: {
+          customerId: fx.users.customerA.id,
+          unitId: unit.id,
+          totalAmount: 1_000_000,
+          signedAt: new Date('2026-09-01'),
+          status: ContractStatus.ACTIVE,
+          companyId: fx.companies.aId,
+        },
+      });
+      const commission = await testApp.rawPrisma.brokerCommission.create({
+        data: {
+          commissionNumber: 'BC-D310A-001',
+          brokerId: fx.resources.a.brokerId,
+          contractId: contract.id,
+          unitId: unit.id,
+          projectId: fx.resources.a.projectId,
+          basisAmount: 1_000_000,
+          commissionPct: 4,
+          grossAmount: 40_000,
+          netAmount: 40_000,
+          status: BrokerCommissionStatus.APPROVED,
+          earnedAt: new Date('2026-09-01'),
+          payoutId: payout.id,
+          companyId: fx.companies.aId,
+        },
+      });
+
+      try {
+        const res = await request(testApp.app.getHttpServer())
+          .post(`/v1/contracts/${contract.id}/cancel`)
+          .set('Authorization', bearer(adminAToken))
+          .set('X-Tenant-Slug', SEC_SLUG_A)
+          .send({ reason: 'D3-10a test', retainedAmount: 0, refundAmount: 0 });
+        if (res.status !== 201) throw new Error(`D3-10a: cancel failed ${res.status} ${JSON.stringify(res.body)}`);
+
+        // Commission: CANCELLED, payoutId = null
+        const bc = await testApp.rawPrisma.brokerCommission.findUnique({ where: { id: commission.id } });
+        if (!bc) throw new Error('D3-10a: commission not found');
+        expect(bc.status).toBe(BrokerCommissionStatus.CANCELLED);
+        expect(bc.payoutId).toBeNull();
+
+        // Payout: CANCELLED (was the sole commission)
+        const po = await testApp.rawPrisma.brokerPayout.findUnique({ where: { id: payout.id } });
+        if (!po) throw new Error('D3-10a: payout not found');
+        expect(po.status).toBe(BrokerPayoutStatus.CANCELLED);
+        expect(po.cancelledAt).toBeTruthy();
+        expect(po.cancelledById).toBeTruthy();
+      } finally {
+        await testApp.rawPrisma.contractCancellation.deleteMany({ where: { contractId: contract.id } }).catch(() => void 0);
+        await testApp.rawPrisma.brokerCommission.deleteMany({ where: { id: commission.id } }).catch(() => void 0);
+        await testApp.rawPrisma.contract.deleteMany({ where: { id: contract.id } }).catch(() => void 0);
+        await testApp.rawPrisma.unit.deleteMany({ where: { id: unit.id } }).catch(() => void 0);
+        await testApp.rawPrisma.brokerPayout.deleteMany({ where: { id: payout.id } }).catch(() => void 0);
+      }
+    });
+
+    // ── D3-10b: two commissions, one cancelled → payout DRAFT + recomputed ─
+    it('D3-10b: APPROVED commission (one of two) in APPROVED payout → payout DRAFT + totals = remaining', async () => {
+      const payout = await testApp.rawPrisma.brokerPayout.create({
+        data: {
+          payoutNumber: 'PAY-D310B-001',
+          brokerId: fx.resources.a.brokerId,
+          totalGross: 65_000,
+          totalTax: 6_500,
+          totalWithholding: 0,
+          totalNet: 58_500,
+          status: 'APPROVED',
+          companyId: fx.companies.aId,
+        },
+      });
+
+      // Contract A — the one we cancel
+      const unitA = await testApp.rawPrisma.unit.create({
+        data: {
+          buildingId: fx.resources.a.buildingId,
+          code: 'D3-10B-UNIT-A',
+          type: '1BR',
+          area: 80,
+          price: 1_000_000,
+          status: UnitStatus.SOLD,
+          companyId: fx.companies.aId,
+        },
+      });
+      const contractA = await testApp.rawPrisma.contract.create({
+        data: {
+          customerId: fx.users.customerA.id,
+          unitId: unitA.id,
+          totalAmount: 1_000_000,
+          signedAt: new Date('2026-09-01'),
+          status: ContractStatus.ACTIVE,
+          companyId: fx.companies.aId,
+        },
+      });
+      // Commission A: grossAmount=40,000 taxAmount=4,000 netAmount=36,000
+      const commissionA = await testApp.rawPrisma.brokerCommission.create({
+        data: {
+          commissionNumber: 'BC-D310B-A',
+          brokerId: fx.resources.a.brokerId,
+          contractId: contractA.id,
+          unitId: unitA.id,
+          projectId: fx.resources.a.projectId,
+          basisAmount: 1_000_000,
+          commissionPct: 4,
+          grossAmount: 40_000,
+          taxPct: 10,
+          taxAmount: 4_000,
+          netAmount: 36_000,
+          status: BrokerCommissionStatus.APPROVED,
+          earnedAt: new Date('2026-09-01'),
+          payoutId: payout.id,
+          companyId: fx.companies.aId,
+        },
+      });
+
+      // Contract B — stays active; commission stays in payout
+      const unitB = await testApp.rawPrisma.unit.create({
+        data: {
+          buildingId: fx.resources.a.buildingId,
+          code: 'D3-10B-UNIT-B',
+          type: '2BR',
+          area: 120,
+          price: 625_000,
+          status: UnitStatus.SOLD,
+          companyId: fx.companies.aId,
+        },
+      });
+      const contractB = await testApp.rawPrisma.contract.create({
+        data: {
+          customerId: fx.users.customerA.id,
+          unitId: unitB.id,
+          totalAmount: 625_000,
+          signedAt: new Date('2026-09-01'),
+          status: ContractStatus.ACTIVE,
+          companyId: fx.companies.aId,
+        },
+      });
+      // Commission B: grossAmount=25,000 taxAmount=2,500 netAmount=22,500 — stays in payout
+      const commissionB = await testApp.rawPrisma.brokerCommission.create({
+        data: {
+          commissionNumber: 'BC-D310B-B',
+          brokerId: fx.resources.a.brokerId,
+          contractId: contractB.id,
+          unitId: unitB.id,
+          projectId: fx.resources.a.projectId,
+          basisAmount: 625_000,
+          commissionPct: 4,
+          grossAmount: 25_000,
+          taxPct: 10,
+          taxAmount: 2_500,
+          netAmount: 22_500,
+          status: BrokerCommissionStatus.APPROVED,
+          earnedAt: new Date('2026-09-01'),
+          payoutId: payout.id,
+          companyId: fx.companies.aId,
+        },
+      });
+
+      try {
+        // Cancel only contract A
+        const res = await request(testApp.app.getHttpServer())
+          .post(`/v1/contracts/${contractA.id}/cancel`)
+          .set('Authorization', bearer(adminAToken))
+          .set('X-Tenant-Slug', SEC_SLUG_A)
+          .send({ reason: 'D3-10b test', retainedAmount: 0, refundAmount: 0 });
+        if (res.status !== 201) throw new Error(`D3-10b: cancel failed ${res.status} ${JSON.stringify(res.body)}`);
+
+        // Commission A: CANCELLED, removed from payout
+        const bcA = await testApp.rawPrisma.brokerCommission.findUnique({ where: { id: commissionA.id } });
+        if (!bcA) throw new Error('D3-10b: commissionA not found');
+        expect(bcA.status).toBe(BrokerCommissionStatus.CANCELLED);
+        expect(bcA.payoutId).toBeNull();
+
+        // Commission B: unchanged — still APPROVED, still in payout
+        const bcB = await testApp.rawPrisma.brokerCommission.findUnique({ where: { id: commissionB.id } });
+        if (!bcB) throw new Error('D3-10b: commissionB not found');
+        expect(bcB.status).toBe(BrokerCommissionStatus.APPROVED);
+        expect(bcB.payoutId).toBe(payout.id);
+
+        // Payout: DRAFT with totals = commission B only
+        const po = await testApp.rawPrisma.brokerPayout.findUnique({ where: { id: payout.id } });
+        if (!po) throw new Error('D3-10b: payout not found');
+        expect(po.status).toBe(BrokerPayoutStatus.DRAFT);
+        expect(Number(po.totalGross)).toBe(25_000);
+        expect(Number(po.totalTax)).toBe(2_500);
+        expect(Number(po.totalWithholding)).toBe(0);
+        expect(Number(po.totalNet)).toBe(22_500);
+      } finally {
+        await testApp.rawPrisma.contractCancellation.deleteMany({ where: { contractId: contractA.id } }).catch(() => void 0);
+        await testApp.rawPrisma.brokerCommission.deleteMany({ where: { id: { in: [commissionA.id, commissionB.id] } } }).catch(() => void 0);
+        await testApp.rawPrisma.contract.deleteMany({ where: { id: { in: [contractA.id, contractB.id] } } }).catch(() => void 0);
+        await testApp.rawPrisma.unit.deleteMany({ where: { id: { in: [unitA.id, unitB.id] } } }).catch(() => void 0);
+        await testApp.rawPrisma.brokerPayout.deleteMany({ where: { id: payout.id } }).catch(() => void 0);
+      }
+    });
+
+    // ── D3-10c: PROCESSING payout → overlay path, payout untouched ────────
+    it('D3-10c: APPROVED commission in PROCESSING payout → overlay; payout status + totals unchanged', async () => {
+      const payout = await testApp.rawPrisma.brokerPayout.create({
+        data: {
+          payoutNumber: 'PAY-D310C-001',
+          brokerId: fx.resources.a.brokerId,
+          totalGross: 75_000,
+          totalNet: 75_000,
+          status: 'PROCESSING',
+          companyId: fx.companies.aId,
+        },
+      });
+
+      const unit = await testApp.rawPrisma.unit.create({
+        data: {
+          buildingId: fx.resources.a.buildingId,
+          code: 'D3-10C-UNIT',
+          type: '1BR',
+          area: 80,
+          price: 1_000_000,
+          status: UnitStatus.SOLD,
+          companyId: fx.companies.aId,
+        },
+      });
+      const contract = await testApp.rawPrisma.contract.create({
+        data: {
+          customerId: fx.users.customerA.id,
+          unitId: unit.id,
+          totalAmount: 1_000_000,
+          signedAt: new Date('2026-09-01'),
+          status: ContractStatus.ACTIVE,
+          companyId: fx.companies.aId,
+        },
+      });
+      const commission = await testApp.rawPrisma.brokerCommission.create({
+        data: {
+          commissionNumber: 'BC-D310C-001',
+          brokerId: fx.resources.a.brokerId,
+          contractId: contract.id,
+          unitId: unit.id,
+          projectId: fx.resources.a.projectId,
+          basisAmount: 1_000_000,
+          commissionPct: 7.5,
+          grossAmount: 75_000,
+          netAmount: 75_000,
+          status: BrokerCommissionStatus.APPROVED,
+          earnedAt: new Date('2026-09-01'),
+          payoutId: payout.id,
+          companyId: fx.companies.aId,
+        },
+      });
+
+      try {
+        const res = await request(testApp.app.getHttpServer())
+          .post(`/v1/contracts/${contract.id}/cancel`)
+          .set('Authorization', bearer(adminAToken))
+          .set('X-Tenant-Slug', SEC_SLUG_A)
+          .send({
+            reason: 'D3-10c test',
+            retainedAmount: 0,
+            refundAmount: 0,
+            clawbackReason: 'Commission in flight — clawback',
+          });
+        if (res.status !== 201) throw new Error(`D3-10c: cancel failed ${res.status} ${JSON.stringify(res.body)}`);
+
+        // Commission: status UNCHANGED (Hard Rule 2), clawbackStatus OUTSTANDING
+        const bc = await testApp.rawPrisma.brokerCommission.findUnique({ where: { id: commission.id } });
+        if (!bc) throw new Error('D3-10c: commission not found');
+        expect(bc.status).toBe(BrokerCommissionStatus.APPROVED);
+        expect(bc.payoutId).toBe(payout.id); // still linked
+        expect(bc.clawbackStatus).toBe(ClawbackStatus.OUTSTANDING);
+
+        // Payout: completely untouched
+        const po = await testApp.rawPrisma.brokerPayout.findUnique({ where: { id: payout.id } });
+        if (!po) throw new Error('D3-10c: payout not found');
+        expect(po.status).toBe('PROCESSING');
+        expect(Number(po.totalGross)).toBe(75_000);
+        expect(Number(po.totalNet)).toBe(75_000);
+      } finally {
+        await testApp.rawPrisma.contractCancellation.deleteMany({ where: { contractId: contract.id } }).catch(() => void 0);
+        await testApp.rawPrisma.brokerCommission.deleteMany({ where: { id: commission.id } }).catch(() => void 0);
+        await testApp.rawPrisma.contract.deleteMany({ where: { id: contract.id } }).catch(() => void 0);
+        await testApp.rawPrisma.unit.deleteMany({ where: { id: unit.id } }).catch(() => void 0);
+        await testApp.rawPrisma.brokerPayout.deleteMany({ where: { id: payout.id } }).catch(() => void 0);
+      }
+    });
+
+    // ── D3-10d: atomicity — CC.create failure → commission + payout unchanged
+    it('D3-10d: ContractCancellation.create failure rolls back commission update AND payout update', async () => {
+      const payout = await testApp.rawPrisma.brokerPayout.create({
+        data: {
+          payoutNumber: 'PAY-D310D-001',
+          brokerId: fx.resources.a.brokerId,
+          totalGross: 50_000,
+          totalNet: 50_000,
+          status: 'APPROVED',
+          companyId: fx.companies.aId,
+        },
+      });
+
+      const unit = await testApp.rawPrisma.unit.create({
+        data: {
+          buildingId: fx.resources.a.buildingId,
+          code: 'D3-10D-UNIT',
+          type: '1BR',
+          area: 80,
+          price: 1_000_000,
+          status: UnitStatus.SOLD,
+          companyId: fx.companies.aId,
+        },
+      });
+      const contract = await testApp.rawPrisma.contract.create({
+        data: {
+          customerId: fx.users.customerA.id,
+          unitId: unit.id,
+          totalAmount: 1_000_000,
+          signedAt: new Date('2026-09-01'),
+          status: ContractStatus.ACTIVE,
+          companyId: fx.companies.aId,
+        },
+      });
+      const commission = await testApp.rawPrisma.brokerCommission.create({
+        data: {
+          commissionNumber: 'BC-D310D-001',
+          brokerId: fx.resources.a.brokerId,
+          contractId: contract.id,
+          unitId: unit.id,
+          projectId: fx.resources.a.projectId,
+          basisAmount: 1_000_000,
+          commissionPct: 5,
+          grossAmount: 50_000,
+          netAmount: 50_000,
+          status: BrokerCommissionStatus.APPROVED,
+          earnedAt: new Date('2026-09-01'),
+          payoutId: payout.id,
+          companyId: fx.companies.aId,
+        },
+      });
+
+      try {
+        // NOT VALID: add constraint without scanning existing rows;
+        // new ContractCancellation inserts fail → rolls back entire transaction
+        await testApp.rawPrisma.$executeRaw`ALTER TABLE "ContractCancellation" ADD CONSTRAINT "d3b_atomic_check" CHECK (1 = 0) NOT VALID`;
+
+        const res = await request(testApp.app.getHttpServer())
+          .post(`/v1/contracts/${contract.id}/cancel`)
+          .set('Authorization', bearer(adminAToken))
+          .set('X-Tenant-Slug', SEC_SLUG_A)
+          .send({ reason: 'D3-10d atomicity test', retainedAmount: 0, refundAmount: 0 });
+        expect(res.status).toBeGreaterThanOrEqual(400);
+
+        // Contract: still ACTIVE
+        const c = await testApp.rawPrisma.contract.findUnique({ where: { id: contract.id } });
+        if (!c) throw new Error('D3-10d: contract not found');
+        expect(c.status).toBe(ContractStatus.ACTIVE);
+        expect(c.cancelledAt).toBeNull();
+
+        // Commission: unchanged (still APPROVED, payoutId still set)
+        const bc = await testApp.rawPrisma.brokerCommission.findUnique({ where: { id: commission.id } });
+        if (!bc) throw new Error('D3-10d: commission not found');
+        expect(bc.status).toBe(BrokerCommissionStatus.APPROVED);
+        expect(bc.payoutId).toBe(payout.id);
+
+        // Payout: unchanged (still APPROVED, totals unmodified)
+        const po = await testApp.rawPrisma.brokerPayout.findUnique({ where: { id: payout.id } });
+        if (!po) throw new Error('D3-10d: payout not found');
+        expect(po.status).toBe('APPROVED');
+        expect(Number(po.totalGross)).toBe(50_000);
+        expect(Number(po.totalNet)).toBe(50_000);
+
+        // No CC row created
+        const cc = await testApp.rawPrisma.contractCancellation.findUnique({ where: { contractId: contract.id } });
+        expect(cc).toBeNull();
+      } finally {
+        await testApp.rawPrisma.$executeRaw`ALTER TABLE "ContractCancellation" DROP CONSTRAINT IF EXISTS "d3b_atomic_check"`;
+        await testApp.rawPrisma.contractCancellation.deleteMany({ where: { contractId: contract.id } }).catch(() => void 0);
+        await testApp.rawPrisma.brokerCommission.deleteMany({ where: { id: commission.id } }).catch(() => void 0);
+        await testApp.rawPrisma.contract.deleteMany({ where: { id: contract.id } }).catch(() => void 0);
+        await testApp.rawPrisma.unit.deleteMany({ where: { id: unit.id } }).catch(() => void 0);
+        await testApp.rawPrisma.brokerPayout.deleteMany({ where: { id: payout.id } }).catch(() => void 0);
+      }
+    });
   });
 
   it('D3-8: Company A admin cannot release-unit on Company B contract → 404', async () => {

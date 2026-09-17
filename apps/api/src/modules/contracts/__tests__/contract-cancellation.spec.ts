@@ -25,6 +25,9 @@
  *  CC-U-14 releaseUnit() 404 when contract not found
  *  CC-U-15 releaseUnit() ConflictException when contract is not CANCELLED
  *  CC-U-16 releaseUnit() ConflictException when unit already released
+ *  CC-U-17 cancel() CLAWBACK + commission APPROVED + PROCESSING payout → overlay (PROCESSING = effectively paid)
+ *  CC-U-18 cancel() CLAWBACK + commission APPROVED + APPROVED payout, no remaining → commission CANCELLED + payout CANCELLED
+ *  CC-U-19 cancel() CLAWBACK + commission APPROVED + APPROVED payout, 1 remaining → payout DRAFT + recomputed totals
  */
 
 import { ConflictException, NotFoundException } from '@nestjs/common';
@@ -58,7 +61,14 @@ function buildTx() {
       findFirst: jest.fn().mockResolvedValue(null),
     },
     installment: { updateMany: jest.fn().mockResolvedValue({ count: 54 }) },
-    brokerCommission: { update: jest.fn().mockResolvedValue({}) },
+    brokerCommission: {
+      update: jest.fn().mockResolvedValue({}),
+      aggregate: jest.fn().mockResolvedValue({
+        _count: { id: 0 },
+        _sum: { grossAmount: null, taxAmount: null, withholdingAmount: null, netAmount: null },
+      }),
+    },
+    brokerPayout: { update: jest.fn().mockResolvedValue({}) },
     bonusEntry: { update: jest.fn().mockResolvedValue({}) },
     unit: { update: jest.fn().mockResolvedValue({}) },
     unitStatusHistory: { create: jest.fn().mockResolvedValue({}) },
@@ -408,6 +418,106 @@ describe('ContractCancellationService.cancel()', () => {
     const ccData = (prisma._tx.contractCancellation.create.mock.calls[0]?.[0] as { data: Record<string, unknown> }).data;
     expect(String(ccData['retainedAmount'])).toBe('99000');
     expect(String(ccData['refundAmount'])).toBe('226000');
+  });
+
+  it('CC-U-17: CLAWBACK + commission APPROVED in PROCESSING payout → clawback overlay (PROCESSING = effectively paid)', async () => {
+    const prisma = buildPrisma({
+      commission: {
+        id: COMMISSION_ID,
+        status: 'APPROVED',
+        clawbackStatus: null,
+        payoutId: PAYOUT_ID,
+        payout: { status: 'PROCESSING' },
+      },
+    });
+    const svc = buildSvc(prisma);
+
+    await svc.cancel(CONTRACT_ID, { ...BASE_INPUT, clawbackReason: 'Commission recovery' }, ACTOR_ID);
+
+    const bcUpdate = prisma._tx.brokerCommission.update.mock.calls[0]?.[0] as { where: Record<string, unknown>; data: Record<string, unknown> };
+    if (!bcUpdate) throw new Error('brokerCommission.update was not called');
+    // Overlay path: status unchanged, clawbackStatus set
+    expect(bcUpdate.data['status']).toBeUndefined();
+    expect(bcUpdate.data['clawbackStatus']).toBe('OUTSTANDING');
+    // Payout side-effects must NOT run in overlay path
+    expect(prisma._tx.brokerPayout.update).not.toHaveBeenCalled();
+    expect(prisma._tx.brokerCommission.aggregate).not.toHaveBeenCalled();
+  });
+
+  it('CC-U-18: CLAWBACK + commission APPROVED in APPROVED payout, no remaining → commission CANCELLED + payout CANCELLED', async () => {
+    const prisma = buildPrisma({
+      commission: {
+        id: COMMISSION_ID,
+        status: 'APPROVED',
+        clawbackStatus: null,
+        payoutId: PAYOUT_ID,
+        payout: { status: 'APPROVED' },
+      },
+    });
+    const svc = buildSvc(prisma);
+
+    await svc.cancel(CONTRACT_ID, BASE_INPUT, ACTOR_ID);
+
+    // Commission cancelled and removed from payout
+    const bcUpdate = prisma._tx.brokerCommission.update.mock.calls[0]?.[0] as { where: Record<string, unknown>; data: Record<string, unknown> };
+    if (!bcUpdate) throw new Error('brokerCommission.update was not called');
+    expect(bcUpdate.data['status']).toBe('CANCELLED');
+    expect(bcUpdate.data['payoutId']).toBeNull();
+
+    // Aggregate was called to count remaining commissions
+    expect(prisma._tx.brokerCommission.aggregate).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { payoutId: PAYOUT_ID } }),
+    );
+
+    // Default mock returns _count.id=0 → payout CANCELLED
+    const payoutUpdate = prisma._tx.brokerPayout.update.mock.calls[0]?.[0] as { where: Record<string, unknown>; data: Record<string, unknown> };
+    if (!payoutUpdate) throw new Error('brokerPayout.update was not called');
+    expect(payoutUpdate.where['id']).toBe(PAYOUT_ID);
+    expect(payoutUpdate.data['status']).toBe('CANCELLED');
+    expect(payoutUpdate.data['cancelledAt']).toBeInstanceOf(Date);
+    expect(payoutUpdate.data['cancelledById']).toBe(ACTOR_ID);
+  });
+
+  it('CC-U-19: CLAWBACK + commission APPROVED in APPROVED payout, 1 remaining → payout DRAFT + recomputed totals', async () => {
+    const tx = buildTx();
+    (tx.brokerCommission.aggregate as jest.Mock).mockResolvedValue({
+      _count: { id: 1 },
+      _sum: {
+        grossAmount: new Prisma.Decimal(30_000),
+        taxAmount: new Prisma.Decimal(3_000),
+        withholdingAmount: new Prisma.Decimal(1_500),
+        netAmount: new Prisma.Decimal(25_500),
+      },
+    });
+    const prisma = buildPrisma({
+      commission: {
+        id: COMMISSION_ID,
+        status: 'APPROVED',
+        clawbackStatus: null,
+        payoutId: PAYOUT_ID,
+        payout: { status: 'APPROVED' },
+      },
+      tx,
+    });
+    const svc = buildSvc(prisma);
+
+    await svc.cancel(CONTRACT_ID, BASE_INPUT, ACTOR_ID);
+
+    // Commission cancelled
+    const bcUpdate = tx.brokerCommission.update.mock.calls[0]?.[0] as { where: Record<string, unknown>; data: Record<string, unknown> };
+    if (!bcUpdate) throw new Error('brokerCommission.update was not called');
+    expect(bcUpdate.data['status']).toBe('CANCELLED');
+    expect(bcUpdate.data['payoutId']).toBeNull();
+
+    // Payout reverted to DRAFT with recomputed totals
+    const payoutUpdate = tx.brokerPayout.update.mock.calls[0]?.[0] as { where: Record<string, unknown>; data: Record<string, unknown> };
+    if (!payoutUpdate) throw new Error('brokerPayout.update was not called');
+    expect(payoutUpdate.where['id']).toBe(PAYOUT_ID);
+    expect(payoutUpdate.data['status']).toBe('DRAFT');
+    expect(String(payoutUpdate.data['totalGross'])).toBe('30000');
+    expect(String(payoutUpdate.data['totalTax'])).toBe('3000');
+    expect(String(payoutUpdate.data['totalWithholding'])).toBe('1500');
+    expect(String(payoutUpdate.data['totalNet'])).toBe('25500');
   });
 
   it('CC-U-12: policySnapshot stores current setting values, not operator overrides', async () => {

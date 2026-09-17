@@ -440,7 +440,7 @@ No drops. No type changes. No NOT NULL on existing columns.
 
 ### Implementation notes
 
-- **`isCommissionEffectivelyPaid()`**: `BrokerCommissionStatus` has no `PAID` value. "Effectively paid" = `payoutId != null AND payout.status IN ['APPROVED', 'PROCESSING', 'PAID']`. The helper reads the payout status via `include: { payout: { select: { status: true } } }` in the pre-transaction read.
+- **`isCommissionEffectivelyPaid()`**: `BrokerCommissionStatus` has no `PAID` value. "Effectively paid" = `payoutId != null AND payout.status IN ['APPROVED', 'PROCESSING', 'PAID']`. The helper reads the payout status via `include: { payout: { select: { status: true } } }` in the pre-transaction read. *(Narrowed to PROCESSING|PAID only in D3b below — APPROVED is not effectively paid.)*
 - **policySnapshot** captures the *tenant setting values* at cancel time (not the operator's per-transaction overrides). Operator overrides are stored in separate `unitReleaseOverride`, `commissionActionOverride` etc. columns.
 - **AuditLog**: `payload` is not a field on `AuditLog` — the cancel audit data is merged into the `after` JSON column per `contract.cancelled` schema.
 - **NOT VALID constraint** (D3-6 atomicity test): `ALTER TABLE "ContractCancellation" ADD CONSTRAINT ... CHECK (1 = 0) NOT VALID` is used instead of `CHECK (1 = 0)` so that pre-existing CC rows (from the S2 test) do not cause the ADD CONSTRAINT to fail. `NOT VALID` applies to new inserts only, which is sufficient to force the `$transaction` to roll back.
@@ -451,5 +451,120 @@ No drops. No type changes. No NOT NULL on existing columns.
 |---|---|---|---|
 | Unit (`jest --runInBand`) | 2097 pass | **2113 pass** — directly measured at HEAD | +16 tests, 0 new failures |
 | Security (`jest-security.json --randomize`) | 163 tests | **172 tests (172 pass)** — directly measured at HEAD | +9 tests, 0 new failures |
+| Typecheck (`tsc --noEmit`) | 0 errors | 0 errors | 0 new errors |
+| Lint (`eslint`) | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |
+
+---
+
+*Next: Step D3b — narrow `isCommissionEffectivelyPaid()` + atomic payout side-effects*
+
+---
+
+## Step D3b — Narrow `isCommissionEffectivelyPaid()` + atomic payout side-effects
+
+**Date:** 2026-09-17
+**Design ref:** `09-reversal-design.md` §4.3 (rev 5), Appendix C-23, §8.1 step D
+**Status:** DONE ✓
+
+### Scope
+
+D3 shipped with `isCommissionEffectivelyPaid()` treating payout status `APPROVED|PROCESSING|PAID`
+as "effectively paid." This was wrong: APPROVED means authorisation given but money not yet sent.
+Cancelling an APPROVED-payout commission is safe, but the commission amount stays in the payout
+totals, creating a phantom clawback receivable. Both corrections must land atomically.
+
+**No migration.** All schema columns (`payoutId`, `totalGross`, `totalTax`, `totalWithholding`,
+`totalNet`, `status`, `cancelledAt`, `cancelledById`, `cancelReason`) already exist on `BrokerPayout`.
+
+### What changed
+
+1. **Narrowed helper** — `isCommissionEffectivelyPaid()` now returns `true` only for `PROCESSING` or
+   `PAID` payout status. `APPROVED` falls into the cancel path, not the overlay path.
+2. **Atomic payout side-effects** — when an APPROVED-payout commission is cancelled, inside the
+   same `$transaction`:
+   - commission `payoutId` is set to `null`
+   - remaining commissions on the payout are aggregated
+   - if count = 0 → payout transitions to `CANCELLED` (with `cancelledAt`, `cancelledById`, `cancelReason`)
+   - if count > 0 → payout reverts to `DRAFT` with recomputed totals (re-approval required;
+     original approval was for a different amount)
+3. **Design rev 5** — `09-reversal-design.md` updated with five-row §4.3 table, payout side-effects
+   narrative, and Appendix C-23.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `apps/api/src/modules/contracts/contract-cancellation.service.ts` | Narrowed `isCommissionEffectivelyPaid()` to `PROCESSING\|PAID`; added payout side-effects (aggregate + DRAFT/CANCELLED) in the else branch |
+| `apps/api/src/modules/contracts/__tests__/contract-cancellation.spec.ts` | Added CC-U-17 (PROCESSING payout → overlay), CC-U-18 (sole APPROVED commission → payout CANCELLED), CC-U-19 (one of two → payout DRAFT with recomputed totals); updated `buildTx()` to include `brokerCommission.aggregate` and `brokerPayout.update` mocks |
+| `apps/api/test/security/10-d3-cancel-attack.security-spec.ts` | Added D3-9 (5 tests: BonusEntry PENDING/APPROVED, BrokerCommission PENDING-no-payout/APPROVED-no-payout/APPROVED+PAID-payout) and D3-10 (4 tests: APPROVED payout → payout CANCELLED, partial payout → DRAFT with exact totals, PROCESSING payout → overlay, atomicity via NOT VALID) — all real-Postgres |
+| `docs/audit/09-reversal-design.md` | Rev 5: §4.3 five-row table with APPROVED payout row and payout side-effects narrative; Appendix C-23 |
+
+### Test results
+
+| Suite | Before (D3) | After (D3b) | Delta |
+|---|---|---|---|
+| Unit (`jest --runInBand`) | 2113 pass | **2116 pass** — directly measured at HEAD | +3 (CC-U-17, CC-U-18, CC-U-19) |
+| Security (`jest-security.json --randomize`) | 172 pass | **181 pass** — directly measured at HEAD | +9 (D3-9 ×5, D3-10 ×4) |
+| Typecheck (`tsc --noEmit`) | 0 errors | 0 errors | 0 new errors |
+| Lint (`eslint`) | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |
+
+---
+
+*Next: Steps F + G — RecordDepositDto.paymentMethod + booking-payment dual-path guards*
+
+---
+
+## Steps F + G — paymentMethod on admin deposit path + booking-payment collision guards
+
+**Date:** 2026-09-17
+**Design ref:** `09-reversal-design.md` §5.2, §8.1 steps F and G; `08-functional-gaps.md` FG-08, §6.4
+**Status:** DONE ✓
+
+### Scope
+
+Last two §8.1 pre-launch blockers:
+
+**Step F (FG-08):** `RecordDepositDto` had no `paymentMethod` field, so every admin-recorded
+installment deposit stored `NULL`. Added as an optional field (`PaymentMethod?`) — existing
+deposits are unaffected; callers who do not send the field continue to get `null`.
+
+**Step G (FG-13):** Two guards on the booking-payment dual-path collision:
+1. `confirmBookingPayment()` — throws 409 if `bookingPaymentStatus === PENDING`. Prevents admin
+   confirm from silently overriding a customer proof that is under review.
+2. `unconfirmBookingPayment()` — no longer calls `deleteMany` on all `BOOKING_AMOUNT` deposits.
+   Only deletes deposits with `proofDocumentId = null` (admin-created). Customer-submitted proof
+   deposits (with `proofDocumentId` set) are left intact. After deleting admin deposits, counts
+   remaining customer-proof deposits: if any remain, reverts `bookingPaymentStatus` to `PENDING`
+   (proof still under review), not the caller's requested status (default `UNPAID`).
+
+**PaymentInstrumentId link — NOT built (reported):**
+The `Deposit` model already has a nullable `paymentInstrumentId` FK (added in Step A). The admin
+`record()` path does NOT expose it. To link a `PaymentInstrument` from the admin recording flow
+would require: (1) add `@IsOptional() @IsUUID() paymentInstrumentId?` to `RecordDepositDto`,
+(2) load and validate the PI belongs to the same company in the pre-transaction read, (3) sync
+`paymentMethod` from PI.type, (4) pass `paymentInstrumentId` to `deposit.create`. The validation
+logic is non-trivial; the request did not include this and it is not built.
+
+### No migration
+
+All changed columns (`paymentMethod`, `proofDocumentId`) already exist on the `Deposit` model.
+No schema change. No migration.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `apps/api/src/modules/deposits/deposits.dto.ts` | Added `@IsOptional() @IsEnum(PaymentMethod) paymentMethod?: PaymentMethod` to `RecordDepositDto` |
+| `apps/api/src/modules/deposits/deposits.service.ts` | Passes `paymentMethod: dto.paymentMethod ?? null` to `deposit.create` in `record()` |
+| `apps/api/src/modules/reservations/reservations.module.ts` | `confirmBookingPayment()`: added PENDING guard (ConflictException, Step G); `unconfirmBookingPayment()`: scoped deleteMany to `proofDocumentId: null` and added customer-proof count to determine effective status (PENDING vs UNPAID) |
+| `apps/api/src/modules/deposits/__tests__/deposit-recording-workflow.spec.ts` | Added 3 unit tests (Step F): paymentMethod=CHEQUE stored; omitted → null; invalid enum → 400 |
+| `apps/api/test/security/11-fg-booking-payment-guards.security-spec.ts` | New: 11 real-Postgres security tests (FG-1a/b/c: confirm blocked while PENDING; FG-2a–e: unconfirm with customer-proof deposit — proof and document survive, admin deposit deleted, status=PENDING; FG-3a/b/c: unconfirm with admin-only deposit — deleted, status=UNPAID) |
+
+### Test results
+
+| Suite | Before (D3b) | After (F+G) | Delta |
+|---|---|---|---|
+| Unit (`jest --runInBand`) | 2116 pass | **2119 pass** — directly measured at HEAD | +3 (Step F: paymentMethod tests) |
+| Security (`jest-security.json --randomize`) | 181 pass | **192 pass** — directly measured at HEAD | +11 (FG-1 ×3, FG-2 ×5, FG-3 ×3) |
 | Typecheck (`tsc --noEmit`) | 0 errors | 0 errors | 0 new errors |
 | Lint (`eslint`) | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |

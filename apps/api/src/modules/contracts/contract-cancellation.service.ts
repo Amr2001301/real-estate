@@ -21,6 +21,7 @@ import {
 import {
   BonusEntryStatus,
   BrokerCommissionStatus,
+  BrokerPayoutStatus,
   ClawbackStatus,
   ContractStatus,
   InstallmentStatus,
@@ -49,15 +50,20 @@ export interface CancelContractInput {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** A commission is "effectively paid" when it's attached to a payout that has
- *  left DRAFT state (APPROVED, PROCESSING, or PAID). Hard Rule 2 applies. */
+/** A commission is "effectively paid" when it's attached to a payout whose
+ *  payment is in-flight (PROCESSING) or confirmed (PAID). Hard Rule 2 applies:
+ *  do not cancel; add clawback overlay instead.
+ *
+ *  APPROVED is NOT effectively paid — authorization given, money not yet sent.
+ *  Cancelling an APPROVED-payout commission is safe; the payout must be
+ *  recomputed and reverted to DRAFT (or CANCELLED if now empty) atomically. */
 function isCommissionEffectivelyPaid(commission: {
   payoutId: string | null;
   payout?: { status: string } | null;
 }): boolean {
   if (!commission.payoutId) return false;
   const s = commission.payout?.status ?? '';
-  return s === 'APPROVED' || s === 'PROCESSING' || s === 'PAID';
+  return s === 'PROCESSING' || s === 'PAID';
 }
 
 @Injectable()
@@ -185,11 +191,51 @@ export class ContractCancellationService {
             });
             commissionClawbackIds.push(commission.id);
           } else {
-            // Not paid — cancel it
+            // No effective disbursement (PENDING, APPROVED-no-payout, or APPROVED
+            // with a DRAFT/APPROVED payout) — cancel commission and, if it was
+            // in a non-disbursed payout, recompute that payout atomically.
+            const cancelledPayoutId = commission.payoutId;
+            const cancelledPayoutStatus = commission.payout?.status ?? '';
             await tx.brokerCommission.update({
               where: { id: commission.id },
-              data: { status: BrokerCommissionStatus.CANCELLED },
+              data: { status: BrokerCommissionStatus.CANCELLED, payoutId: null },
             });
+
+            // Payout side-effects (only for DRAFT / APPROVED payouts — CANCELLED
+            // payouts are already terminal; PROCESSING / PAID go through overlay path).
+            if (cancelledPayoutId && (cancelledPayoutStatus === 'DRAFT' || cancelledPayoutStatus === 'APPROVED')) {
+              const remainingAgg = await tx.brokerCommission.aggregate({
+                where: { payoutId: cancelledPayoutId },
+                _sum: { grossAmount: true, taxAmount: true, withholdingAmount: true, netAmount: true },
+                _count: { id: true },
+              });
+
+              if (remainingAgg._count.id === 0) {
+                // Nothing left to disburse — cancel the payout
+                await tx.brokerPayout.update({
+                  where: { id: cancelledPayoutId },
+                  data: {
+                    status: BrokerPayoutStatus.CANCELLED,
+                    cancelledAt: now,
+                    cancelledById: actorId,
+                    cancelReason: `Contract ${contractId} cancelled — no remaining commissions`,
+                  },
+                });
+              } else {
+                // Recompute totals and revert to DRAFT: the original approval was
+                // for a different (higher) amount; management must re-approve.
+                await tx.brokerPayout.update({
+                  where: { id: cancelledPayoutId },
+                  data: {
+                    status: BrokerPayoutStatus.DRAFT,
+                    totalGross: remainingAgg._sum.grossAmount ?? new Prisma.Decimal(0),
+                    totalTax: remainingAgg._sum.taxAmount ?? new Prisma.Decimal(0),
+                    totalWithholding: remainingAgg._sum.withholdingAmount ?? new Prisma.Decimal(0),
+                    totalNet: remainingAgg._sum.netAmount ?? new Prisma.Decimal(0),
+                  },
+                });
+              }
+            }
           }
         }
       }
