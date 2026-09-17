@@ -23,6 +23,7 @@ interface Template {
   subject: Translatable;
   body: Translatable;
   active: boolean;
+  emailEnabled: boolean;
   updatedAt: string;
 }
 
@@ -37,6 +38,7 @@ async function upsertTemplateAction(formData: FormData) {
     en_subject: String(formData.get('en_subject') ?? ''),
     ar_body: String(formData.get('ar_body') ?? ''),
     en_body: String(formData.get('en_body') ?? ''),
+    emailEnabled: formData.get('emailEnabled') === 'true',
   });
   revalidatePath('/dashboard/notifications/templates');
 }
@@ -105,6 +107,7 @@ export default async function NotificationTemplatesPage() {
                   <th className="px-5 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">{m.colCode}</th>
                   <th className="px-4 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">{m.colChannel}</th>
                   <th className="px-4 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">{m.colSubject}</th>
+                  <th className="px-4 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">{m.colEmail}</th>
                   <th className="px-4 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">{m.colStatus}</th>
                   <th className="px-4 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">{m.colUpdated}</th>
                 </tr>
@@ -125,6 +128,11 @@ export default async function NotificationTemplatesPage() {
                     <td className="px-4 py-3 max-w-[220px]">
                       <p className="text-sm font-medium text-slate-800 truncate">{tx(t.subject)}</p>
                       <p className="text-xs text-slate-400 truncate mt-0.5">{tx(t.body)}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge tone={t.emailEnabled ? 'brand' : 'gray'} size="sm">
+                        {t.emailEnabled ? m.emailOn : m.emailOff}
+                      </Badge>
                     </td>
                     <td className="px-4 py-3">
                       <Badge tone={t.active ? 'success' : 'gray'} size="sm" dot>
@@ -178,6 +186,10 @@ export default async function NotificationTemplatesPage() {
                 <Textarea name="ar_body" required dir="rtl" rows={3} placeholder={m.arBodyPlaceholder} className="text-sm" />
                 <Textarea name="en_body" required dir="ltr" rows={3} placeholder="Notification body (English)" className="text-sm" />
               </div>
+              <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-slate-700">
+                <input type="checkbox" name="emailEnabled" value="true" className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+                {m.emailEnabledLabel}
+              </label>
               <div className="flex justify-end">
                 <Button type="submit" size="sm">
                   {m.saveButton}

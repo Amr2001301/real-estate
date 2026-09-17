@@ -13,6 +13,8 @@
  *               the provider rejected the message
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { Logger } from '@nestjs/common';
 import { NotificationChannel } from '@prisma/client';
 import { NotificationsService } from '../notifications.module';
@@ -41,6 +43,7 @@ function makePrisma(userEmail?: string) {
       findUnique: jest.fn().mockResolvedValue({
         code: 'deposit_recorded',
         channel: NotificationChannel.PUSH,
+        emailEnabled: true,
         subject: { ar: 'موضوع', en: 'Subject' },
         body:    { ar: 'نص',   en: 'Body'    },
       }),
@@ -130,6 +133,7 @@ describe('Step 15 — Notification delivery tracking', () => {
       prisma.notificationTemplate.findUnique.mockResolvedValue({
         code: templateCode,
         channel: NotificationChannel.PUSH,
+        emailEnabled: true,
         subject: { ar: 'موضوع', en: 'Subject' },
         body:    { ar: 'نص',   en: 'Body'    },
       });
@@ -219,6 +223,7 @@ describe('Step 15 — Notification delivery tracking', () => {
       prisma.notificationTemplate.findUnique.mockResolvedValue({
         code: 'visit_approved',
         channel: NotificationChannel.PUSH,
+        emailEnabled: false,
         subject: { ar: 'زيارة', en: 'Visit' },
         body:    { ar: 'نص',   en: 'Body'  },
       });
@@ -357,6 +362,157 @@ describe('Step 15 — Notification delivery tracking', () => {
       const svc    = makeService(prisma, push, email);
 
       await expect(svc.sendToUser('u-1', 'deposit_recorded', {})).resolves.toBeUndefined();
+    });
+  });
+
+  // ── Part C: emailEnabled replaces EMAIL_ELIGIBLE_TEMPLATES ───────────────
+
+  describe('Part C: tpl.emailEnabled controls email delivery', () => {
+    it('emailEnabled=true → email attempted, emailSentAt written', async () => {
+      const sentAt = new Date();
+      const prisma = makePrisma('user@example.com');
+      // visit_approved was NOT in the old Set — now explicitly enabled via field
+      prisma.notificationTemplate.findUnique.mockResolvedValue({
+        code: 'visit_approved',
+        channel: NotificationChannel.PUSH,
+        emailEnabled: true,
+        subject: { ar: 'z', en: 'z' },
+        body:    { ar: 'z', en: 'z' },
+      });
+      const email = makeEmailService({ ok: true, sentAt });
+      const push  = makePushService({ enabled: false });
+      const svc   = makeService(prisma, push, email);
+
+      await runTenantContext(TEST_TENANT, () =>
+        svc.send({ userId: 'u-1', templateCode: 'visit_approved', payload: {} }),
+      );
+
+      expect(email.sendNotificationEmail).toHaveBeenCalledTimes(1);
+      expect(prisma._updates[0]!.data.emailSentAt).toEqual(sentAt);
+    });
+
+    it('emailEnabled=false → email NOT attempted, push columns unaffected', async () => {
+      const prisma = makePrisma('user@example.com');
+      // deposit_recorded was in the old Set — now disabled by emailEnabled=false
+      prisma.notificationTemplate.findUnique.mockResolvedValue({
+        code: 'deposit_recorded',
+        channel: NotificationChannel.PUSH,
+        emailEnabled: false,
+        subject: { ar: 'z', en: 'z' },
+        body:    { ar: 'z', en: 'z' },
+      });
+      const email = makeEmailService({ ok: true, sentAt: new Date() });
+      const push  = makePushService({ enabled: true, sent: 2 });
+      const svc   = makeService(prisma, push, email);
+
+      await runTenantContext(TEST_TENANT, () =>
+        svc.send({ userId: 'u-1', templateCode: 'deposit_recorded', payload: {} }),
+      );
+
+      expect(email.sendNotificationEmail).not.toHaveBeenCalled();
+      const update = prisma._updates[0]!.data;
+      expect(update.emailSentAt).toBeUndefined();
+      expect(update.emailError).toBeUndefined();
+      expect(update.pushSentAt).toBeInstanceOf(Date);
+    });
+
+    it('toggling emailEnabled off: emailSentAt absent, emailError absent, push unchanged', async () => {
+      // Same as above but verify the update row itself has no email columns.
+      const prisma = makePrisma('user@example.com');
+      prisma.notificationTemplate.findUnique.mockResolvedValue({
+        code: 'deposit_recorded',
+        channel: NotificationChannel.PUSH,
+        emailEnabled: false,
+        subject: { ar: 'z', en: 'z' },
+        body:    { ar: 'z', en: 'z' },
+      });
+      const email = makeEmailService({ ok: true, sentAt: new Date() });
+      const push  = makePushService({ enabled: false });
+      const svc   = makeService(prisma, push, email);
+
+      await runTenantContext(TEST_TENANT, () =>
+        svc.send({ userId: 'u-1', templateCode: 'deposit_recorded', payload: {} }),
+      );
+
+      const update = prisma._updates[0]!.data;
+      expect(Object.keys(update)).not.toContain('emailSentAt');
+      expect(Object.keys(update)).not.toContain('emailError');
+    });
+  });
+
+  // ── Part C: seed consistency ──────────────────────────────────────────────
+
+  describe('Part C: seed consistency', () => {
+    const SEED_PATH = join(__dirname, '../../../../prisma/seed.ts');
+    const seedSrc   = readFileSync(SEED_PATH, 'utf8');
+
+    const ELIGIBLE_CODES = [
+      'reservation_status_changed',
+      'reservation_submitted_admin',
+      'reservation_payment_requested',
+      'reservation_booking_paid',
+      'reservation_expired',
+      'contract_created_customer',
+      'contract_signed_customer',
+      'contract_document_available',
+      'deposit_recorded',
+      'deposit_verified',
+      'maintenance_request_created',
+      'maintenance_request_assigned',
+      'maintenance_request_resolved',
+      'maintenance_request_closed',
+      'maintenance_request_status_changed',
+      'installment_due_soon',
+      'installment_plan_created',
+      'broker_approved',
+      'broker_suspended',
+      'user_account_approved',
+      'user_account_suspended',
+      'payment_proof_approved',
+      'payment_proof_rejected',
+    ];
+
+    // Non-eligible samples that MUST NOT have emailEnabled: true in the seed.
+    const NON_ELIGIBLE_SAMPLE = [
+      'visit_approved',
+      'broker_contract_signed',
+      'payment_proof_submitted',
+      'booking_payment_proof_submitted',
+      'admin_broadcast',
+      'lead_created',
+    ];
+
+    function blockFor(code: string): string {
+      const start = seedSrc.indexOf(`code: '${code}'`);
+      if (start === -1) return '';
+      const next  = seedSrc.indexOf(`code: '`, start + code.length + 8);
+      const arrEnd = seedSrc.indexOf('].map((t)', start);
+      const stop  = Math.min(
+        ...[next, arrEnd].filter((n) => n > start && n !== -1),
+      );
+      return seedSrc.slice(start, stop > start ? stop : start + 400);
+    }
+
+    it.each(ELIGIBLE_CODES)('%s — seed create block has emailEnabled: true', (code) => {
+      const block = blockFor(code);
+      expect(block).not.toBe('');
+      expect(block).toMatch(/emailEnabled:\s*true/);
+    });
+
+    it.each(NON_ELIGIBLE_SAMPLE)('%s — seed create block does NOT have emailEnabled: true', (code) => {
+      const block = blockFor(code);
+      // Either the block is absent (fine) or it must not carry emailEnabled: true.
+      if (block !== '') {
+        expect(block).not.toMatch(/emailEnabled:\s*true/);
+      }
+    });
+
+    it('eligible set in seed matches the migration backfill list (same 23 codes)', () => {
+      const found = ELIGIBLE_CODES.filter((code) => {
+        const block = blockFor(code);
+        return block !== '' && /emailEnabled:\s*true/.test(block);
+      });
+      expect(found).toHaveLength(ELIGIBLE_CODES.length);
     });
   });
 });

@@ -2059,14 +2059,17 @@ enum NotificationChannel {
 }
 
 model NotificationTemplate {
-  id        String              @id @default(uuid()) @db.Uuid
-  code      String              @unique // "visit_approved", "deposit_recorded"
-  channel   NotificationChannel
-  subject   Json // Translatable
-  body      Json // Translatable (supports {{var}} placeholders)
-  active    Boolean             @default(true)
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
+  id           String              @id @default(uuid()) @db.Uuid
+  code         String              @unique // "visit_approved", "deposit_recorded"
+  channel      NotificationChannel
+  subject      Json // Translatable
+  body         Json // Translatable (supports {{var}} placeholders)
+  active       Boolean             @default(true)
+  // When true, NotificationsService.send() also dispatches an email alongside push/in-app.
+  // Replaces the hardcoded EMAIL_ELIGIBLE_TEMPLATES Set (Part C). Managed by the admin UI.
+  emailEnabled Boolean             @default(false)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)

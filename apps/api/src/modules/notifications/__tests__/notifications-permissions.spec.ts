@@ -242,6 +242,46 @@ describe('Notifications module · permissions enforcement', () => {
       expect(mock.notificationTemplate.upsert).toHaveBeenCalledTimes(1);
     });
 
+    it('POST /notification-templates with emailEnabled:true → 201; emailEnabled passed to upsert', async () => {
+      await request(app.getHttpServer())
+        .post('/notification-templates')
+        .send({
+          code: 'deposit_recorded',
+          channel: 'PUSH',
+          ar_subject: 'تم تسجيل دفعة',
+          en_subject: 'Deposit recorded',
+          ar_body: 'نص',
+          en_body: 'Body',
+          emailEnabled: true,
+        })
+        .expect(201);
+      expect(mock.notificationTemplate.upsert).toHaveBeenCalledTimes(1);
+      const upsertCall = mock.notificationTemplate.upsert.mock.calls[0]![0] as {
+        create: { emailEnabled: boolean };
+        update: { emailEnabled: boolean | undefined };
+      };
+      expect(upsertCall.create.emailEnabled).toBe(true);
+      expect(upsertCall.update.emailEnabled).toBe(true);
+    });
+
+    it('cross-tenant code conflict → 403; upsert NOT called even when emailEnabled is in payload', async () => {
+      // $queryRaw returns a companyId that is not the current tenant's ('test-company-id')
+      mock.$queryRaw.mockResolvedValueOnce([{ companyId: 'other-company-id' }]);
+      await request(app.getHttpServer())
+        .post('/notification-templates')
+        .send({
+          code: 'deposit_recorded',
+          channel: 'PUSH',
+          ar_subject: 'تم',
+          en_subject: 'Done',
+          ar_body: 'نص',
+          en_body: 'Body',
+          emailEnabled: true,
+        })
+        .expect(403);
+      expect(mock.notificationTemplate.upsert).not.toHaveBeenCalled();
+    });
+
     it('POST /notifications/send → 201; template lookup + notification.create both run', async () => {
       await request(app.getHttpServer())
         .post('/notifications/send')

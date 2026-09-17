@@ -51,6 +51,7 @@ class UpsertTemplateDto {
   @IsString() ar_body!: string;
   @IsString() en_body!: string;
   @IsOptional() @IsBoolean() active?: boolean;
+  @IsOptional() @IsBoolean() emailEnabled?: boolean;
 }
 
 class SendNotificationDto {
@@ -144,40 +145,6 @@ function resolveText(
   return interpolate(raw, payload);
 }
 
-/**
- * Template codes for which an email is also dispatched alongside the primary
- * push/in-app channel.
- * FG-07 (Step 15): payment_proof_approved/rejected added — customers must learn
- * payment proof decisions even without a device.
- * Step 15 A.2: reservation_expired, installment_plan_created,
- * maintenance_request_status_changed added — all three are customer-facing and
- * previously reached the customer through no channel at all.
- */
-const EMAIL_ELIGIBLE_TEMPLATES = new Set([
-  'reservation_status_changed',
-  'reservation_submitted_admin',
-  'reservation_payment_requested',
-  'reservation_booking_paid',
-  'reservation_expired',
-  'contract_created_customer',
-  'contract_signed_customer',
-  'contract_document_available',
-  'deposit_recorded',
-  'deposit_verified',
-  'maintenance_request_created',
-  'maintenance_request_assigned',
-  'maintenance_request_resolved',
-  'maintenance_request_closed',
-  'maintenance_request_status_changed',
-  'installment_due_soon',
-  'installment_plan_created',
-  'broker_approved',
-  'broker_suspended',
-  'user_account_approved',
-  'user_account_suspended',
-  'payment_proof_approved',
-  'payment_proof_rejected',
-]);
 
 @Injectable()
 export class NotificationsService implements OnModuleInit {
@@ -239,12 +206,14 @@ export class NotificationsService implements OnModuleInit {
         subject: { ar: dto.ar_subject, en: dto.en_subject } as Prisma.InputJsonValue,
         body: { ar: dto.ar_body, en: dto.en_body } as Prisma.InputJsonValue,
         active: dto.active ?? true,
+        emailEnabled: dto.emailEnabled ?? false,
       },
       update: {
         channel: dto.channel,
         subject: { ar: dto.ar_subject, en: dto.en_subject } as Prisma.InputJsonValue,
         body: { ar: dto.ar_body, en: dto.en_body } as Prisma.InputJsonValue,
         active: dto.active ?? undefined,
+        emailEnabled: dto.emailEnabled,
       },
     });
   }
@@ -397,7 +366,7 @@ export class NotificationsService implements OnModuleInit {
         });
 
       const emailPromise: Promise<void> =
-        user?.email && EMAIL_ELIGIBLE_TEMPLATES.has(dto.templateCode)
+        user?.email && tpl.emailEnabled
           ? (() => {
               const subject  = resolveText(tpl.subject, payload, locale, dto.templateCode);
               const bodyText = resolveText(tpl.body,    payload, locale, '');

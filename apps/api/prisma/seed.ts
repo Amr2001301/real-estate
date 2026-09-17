@@ -592,6 +592,7 @@ async function main() {
       {
         code: 'deposit_recorded',
         channel: NotificationChannel.PUSH,
+        emailEnabled: true,
         ar_subject: 'تم تسجيل دفعة',
         en_subject: 'Deposit recorded',
         ar_body: 'تم تسجيل دفعة بقيمة {{amount}} لعقدك',
@@ -600,6 +601,7 @@ async function main() {
       {
         code: 'reservation_expired',
         channel: NotificationChannel.IN_APP,
+        emailEnabled: true,
         ar_subject: 'انتهت صلاحية الحجز',
         en_subject: 'Reservation expired',
         ar_body: 'انتهت صلاحية حجز الوحدة {{unitCode}}',
@@ -608,6 +610,7 @@ async function main() {
       {
         code: 'maintenance_request_created',
         channel: NotificationChannel.IN_APP,
+        emailEnabled: true,
         ar_subject: 'طلب صيانة جديد',
         en_subject: 'New maintenance request',
         ar_body: 'تم إنشاء طلب صيانة جديد للوحدة {{unitCode}}.',
@@ -616,6 +619,7 @@ async function main() {
       {
         code: 'maintenance_request_assigned',
         channel: NotificationChannel.IN_APP,
+        emailEnabled: true,
         ar_subject: 'تم إسناد طلب صيانة',
         en_subject: 'Maintenance request assigned',
         ar_body: 'تم إسناد طلب الصيانة للوحدة {{unitCode}} إليك.',
@@ -624,6 +628,7 @@ async function main() {
       {
         code: 'maintenance_request_status_changed',
         channel: NotificationChannel.IN_APP,
+        emailEnabled: true,
         ar_subject: 'تحديث حالة طلب الصيانة',
         en_subject: 'Maintenance status updated',
         ar_body: 'تم تحديث حالة طلب الصيانة للوحدة {{unitCode}} إلى {{statusLabel}}.',
@@ -632,6 +637,7 @@ async function main() {
       {
         code: 'maintenance_request_resolved',
         channel: NotificationChannel.IN_APP,
+        emailEnabled: true,
         ar_subject: 'تم حل طلب الصيانة',
         en_subject: 'Maintenance request resolved',
         ar_body: 'تم وضع طلب الصيانة للوحدة {{unitCode}} كتم حله.',
@@ -640,6 +646,7 @@ async function main() {
       {
         code: 'maintenance_request_closed',
         channel: NotificationChannel.IN_APP,
+        emailEnabled: true,
         ar_subject: 'تم إغلاق طلب الصيانة',
         en_subject: 'Maintenance request closed',
         ar_body: 'تم إغلاق طلب الصيانة للوحدة {{unitCode}}.',
@@ -790,6 +797,7 @@ async function main() {
       {
         code: 'reservation_submitted_admin',
         channel: NotificationChannel.IN_APP,
+        emailEnabled: true,
         ar_subject: 'حجز جديد بانتظار الموافقة',
         en_subject: 'New reservation pending approval',
         ar_body: 'حجز جديد للوحدة {{unitCode}} في {{projectName}} بانتظار المراجعة.',
@@ -798,6 +806,7 @@ async function main() {
       {
         code: 'reservation_status_changed',
         channel: NotificationChannel.PUSH,
+        emailEnabled: true,
         ar_subject: 'تحديث حالة حجزك',
         en_subject: 'Reservation status updated',
         ar_body: 'تم تحديث حالة حجز الوحدة {{unitCode}} إلى {{status}}.',
@@ -806,6 +815,7 @@ async function main() {
       {
         code: 'reservation_booking_paid',
         channel: NotificationChannel.PUSH,
+        emailEnabled: true,
         ar_subject: 'تم تأكيد دفعة الحجز',
         en_subject: 'Booking payment confirmed',
         ar_body: 'تم تأكيد استلام دفعة الحجز للوحدة {{unitCode}}.',
@@ -816,6 +826,7 @@ async function main() {
       {
         code: 'reservation_payment_requested',
         channel: NotificationChannel.PUSH,
+        emailEnabled: true,
         ar_subject: 'مطلوب سداد مبلغ الحجز',
         en_subject: 'Booking payment required',
         ar_body:
@@ -827,6 +838,7 @@ async function main() {
       {
         code: 'contract_created_customer',
         channel: NotificationChannel.PUSH,
+        emailEnabled: true,
         ar_subject: 'تم إنشاء عقدك',
         en_subject: 'Your contract is ready',
         ar_body: 'تم إنشاء عقد للوحدة {{unitCode}} في {{projectName}}.',
@@ -835,6 +847,7 @@ async function main() {
       {
         code: 'contract_signed_customer',
         channel: NotificationChannel.PUSH,
+        emailEnabled: true,
         ar_subject: 'تم توقيع عقدك',
         en_subject: 'Your contract was signed',
         ar_body: 'تم توقيع العقد رقم {{contractNumber}} للوحدة {{unitCode}}.',
@@ -847,6 +860,7 @@ async function main() {
       {
         code: 'contract_document_available',
         channel: NotificationChannel.PUSH,
+        emailEnabled: true,
         ar_subject: 'عقدك جاهز للتحميل',
         en_subject: 'Your contract is ready to download',
         ar_body: 'أصبح ملف العقد رقم {{contractNumber}} للوحدة {{unitCode}} متاحًا للتحميل.',
@@ -873,6 +887,7 @@ async function main() {
       {
         code: 'deposit_verified',
         channel: NotificationChannel.IN_APP,
+        emailEnabled: true,
         ar_subject: 'تم اعتماد دفعتك',
         en_subject: 'Deposit verified',
         ar_body: 'تم اعتماد دفعة بقيمة {{amount}} لعقدك.',
@@ -914,6 +929,7 @@ async function main() {
       {
         code: 'payment_proof_approved',
         channel: NotificationChannel.PUSH,
+        emailEnabled: true,
         ar_subject: 'تم التحقق من دفعتك',
         en_subject: 'Your payment was verified',
         ar_body: 'تم التحقق من دفعة بقيمة {{amount}} للقسط المستحق بتاريخ {{installmentDueDate}}.',
@@ -922,6 +938,7 @@ async function main() {
       {
         code: 'payment_proof_rejected',
         channel: NotificationChannel.PUSH,
+        emailEnabled: true,
         ar_subject: 'تم رفض إثبات الدفع',
         en_subject: 'Payment proof rejected',
         ar_body: 'تم رفض إثبات دفعة بقيمة {{amount}} للقسط المستحق بتاريخ {{installmentDueDate}}. السبب: {{reasonShort}}',
@@ -931,6 +948,7 @@ async function main() {
       {
         code: 'installment_plan_created',
         channel: NotificationChannel.IN_APP,
+        emailEnabled: true,
         ar_subject: 'خطة تقسيط جديدة',
         en_subject: 'New installment plan',
         ar_body: 'تمت إضافة خطة تقسيط جديدة لمشروع {{projectName}}.',
@@ -942,6 +960,7 @@ async function main() {
       {
         code: 'installment_due_soon',
         channel: NotificationChannel.PUSH,
+        emailEnabled: true,
         ar_subject: 'تذكير بقسط مستحق قريباً',
         en_subject: 'Upcoming installment due',
         ar_body: 'تذكير: قسط بقيمة {{amount}} مستحق بتاريخ {{dueDate}} لمشروع {{projectName}}.',
@@ -1092,6 +1111,7 @@ async function main() {
       {
         code: 'broker_approved',
         channel: NotificationChannel.PUSH,
+        emailEnabled: true,
         ar_subject: 'تم تفعيل حساب الوسيط',
         en_subject: 'Broker account activated',
         ar_body: 'تم تفعيل حساب شركة {{companyName}} والسماح بالوصول إلى المنصة.',
@@ -1100,6 +1120,7 @@ async function main() {
       {
         code: 'broker_suspended',
         channel: NotificationChannel.PUSH,
+        emailEnabled: true,
         ar_subject: 'تم تعليق حساب الوسيط',
         en_subject: 'Broker account suspended',
         ar_body: 'تم تعليق حساب شركة {{companyName}} مؤقتاً.',
@@ -1151,6 +1172,7 @@ async function main() {
       {
         code: 'user_account_approved',
         channel: NotificationChannel.PUSH,
+        emailEnabled: true,
         ar_subject: 'تم تفعيل حسابك',
         en_subject: 'Your account is active',
         ar_body: 'مرحباً {{name}}! تم تفعيل حسابك ويمكنك الآن تسجيل الدخول.',
@@ -1159,6 +1181,7 @@ async function main() {
       {
         code: 'user_account_suspended',
         channel: NotificationChannel.IN_APP,
+        emailEnabled: true,
         ar_subject: 'تم تعليق حسابك',
         en_subject: 'Your account has been suspended',
         ar_body: 'تم تعليق حسابك مؤقتاً. يرجى التواصل مع الإدارة للاستفسار.',
@@ -1179,6 +1202,7 @@ async function main() {
         create: {
           code: t.code,
           channel: t.channel,
+          emailEnabled: (t as { emailEnabled?: boolean }).emailEnabled ?? false,
           subject: { ar: t.ar_subject, en: t.en_subject },
           body: { ar: t.ar_body, en: t.en_body },
         },

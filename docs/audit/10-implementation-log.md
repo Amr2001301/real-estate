@@ -718,5 +718,69 @@ No drops. No type changes. No NOT NULL on existing columns.
 
 ---
 
-*Next step (Part C): Add `emailEnabled Boolean @default(false)` to `NotificationTemplate`; remove `EMAIL_ELIGIBLE_TEMPLATES` set; expose in admin API + web-admin template editor.*
+---
+
+## Step 15C — `emailEnabled` column: single source of truth for email eligibility
+
+**Date:** 2026-09-17
+**Design ref:** `docs/audit/15-email-delivery.md` §7 Part C
+**Status:** DONE ✓
+
+### What this step implements
+
+**Problem:** `EMAIL_ELIGIBLE_TEMPLATES` (a hardcoded runtime `Set`) and
+`NotificationTemplate.channel` (the DB column) were two independent sources of
+truth for the same question. An admin editing a template in the dashboard
+couldn't see that email was also sent, and any new template code added without
+touching the Set silently lost email delivery.
+
+**Fix:**
+1. `NotificationTemplate.emailEnabled Boolean @default(false)` — the DB is now
+   the only authority.
+2. Migration backfills `emailEnabled = true` for exactly the 23 codes that were
+   in `EMAIL_ELIGIBLE_TEMPLATES`. Behaviour is unchanged on existing databases.
+3. `send()` reads `tpl.emailEnabled` instead of `EMAIL_ELIGIBLE_TEMPLATES.has()`.
+4. `EMAIL_ELIGIBLE_TEMPLATES` deleted entirely — no fallback that could recreate
+   the two-sources problem.
+5. Seed: every template object now carries `emailEnabled: true/false` explicitly
+   so a fresh database matches a migrated one without running the backfill SQL.
+6. Admin API: `UpsertTemplateDto` gains `@IsOptional() @IsBoolean() emailEnabled?`
+   and the create/update blocks include it. `listTemplates` returns it via Prisma
+   automatically.
+7. web-admin: `Template` interface updated; table shows an "Email On/Off" badge
+   per row; create/edit form adds an "Also send email" checkbox. Admins can now
+   see and change email eligibility from the dashboard.
+
+### Migration
+
+`20260917200000_notification_template_email_enabled` — additive + backfill:
+
+```sql
+ALTER TABLE "NotificationTemplate" ADD COLUMN "emailEnabled" BOOLEAN NOT NULL DEFAULT false;
+UPDATE "NotificationTemplate" SET "emailEnabled" = true WHERE code IN (... 23 codes ...);
+```
+
+No drops. No type changes. No NOT NULL added to existing non-null columns.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `apps/api/prisma/schema.prisma` | Added `emailEnabled Boolean @default(false)` to `NotificationTemplate` |
+| `apps/api/prisma/migrations/20260917200000_notification_template_email_enabled/migration.sql` | New additive migration with backfill |
+| `apps/api/src/modules/notifications/notifications.module.ts` | Deleted `EMAIL_ELIGIBLE_TEMPLATES`; added `emailEnabled?` to `UpsertTemplateDto`; updated `upsertTemplate()` create/update; `send()` reads `tpl.emailEnabled` |
+| `apps/api/prisma/seed.ts` | Added `emailEnabled: true` to 23 template objects; `create` block now passes `emailEnabled` |
+| `apps/api/src/modules/notifications/__tests__/notification-delivery-tracking.spec.ts` | Updated template mocks to include `emailEnabled`; new `Part C` describe: 3 behavioral + 3 seed-consistency groups (23 + 6 + 1 checks) |
+| `apps/api/src/modules/notifications/__tests__/notifications-permissions.spec.ts` | Added `emailEnabled:true` write test + cross-tenant 403 guard test |
+| `apps/web-admin/src/app/dashboard/notifications/templates/page.tsx` | `emailEnabled` in `Template` type, action, table column, form checkbox |
+| `apps/web-admin/src/messages/ui.ts` | Added AR + EN labels: `colEmail`, `emailOn`, `emailOff`, `emailEnabledLabel` |
+
+### Test results
+
+| Suite | Before (Step 15) | After (Step 15C) | Delta |
+|---|---|---|---|
+| Unit (`jest --runInBand`) | 2153 pass | **2188 pass** — directly measured at HEAD | +35 |
+| Security (`jest-security.json --randomize`) | 219 pass | **219 pass** — directly measured at HEAD | 0 (no new security specs) |
+| Typecheck (`tsc --noEmit`) | 0 errors | 0 errors | 0 new errors |
+| Lint (`eslint`) | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |
 
