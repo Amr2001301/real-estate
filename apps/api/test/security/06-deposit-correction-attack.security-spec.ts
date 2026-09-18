@@ -128,6 +128,11 @@ describe('SEC — Deposit Correction cross-tenant attack matrix (Step C)', () =>
     let atomicBounceInstId: string;
     const bouncePaidAt = new Date('2026-03-01');
 
+    afterAll(async () => {
+      // Safety net: drop constraint if DC-5 was interrupted before its own finally ran.
+      await testApp.rawPrisma.$executeRaw`ALTER TABLE "PaymentCorrection" DROP CONSTRAINT IF EXISTS "test_atomic_bounce_check"`.catch(() => void 0);
+    });
+
     beforeAll(async () => {
       const pi = await testApp.rawPrisma.paymentInstrument.create({
         data: {
@@ -207,6 +212,11 @@ describe('SEC — Deposit Correction cross-tenant attack matrix (Step C)', () =>
     let atomicRevDepId: string;
     let atomicRevInstId: string;
     const reversePaidAt = new Date('2026-04-01');
+
+    afterAll(async () => {
+      // Safety net: drop constraint if DC-6 was interrupted before its own finally ran.
+      await testApp.rawPrisma.$executeRaw`ALTER TABLE "PaymentCorrection" DROP CONSTRAINT IF EXISTS "test_atomic_reverse_check"`.catch(() => void 0);
+    });
 
     beforeAll(async () => {
       const inst = await testApp.rawPrisma.installment.create({
