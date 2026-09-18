@@ -32,6 +32,8 @@ class _FakeRemote implements LeadsRemoteDataSource {
   Future<LeadRowDto> create(NewLead input) async => throw UnimplementedError();
   @override
   Future<List<LeadSourceDto>> listSources() async => const [];
+  @override
+  Future<List<ClientSearchDto>> searchClients(String q) async => const [];
 }
 
 class _FakeRepo implements LeadsRepository {
@@ -57,6 +59,8 @@ class _FakeRepo implements LeadsRepository {
   Future<Result<Lead>> createLead(NewLead input) async => throw UnimplementedError();
   @override
   Future<Result<List<LeadSource>>> getSources() async => const Ok([]);
+  @override
+  Future<Result<List<ClientSearchResult>>> searchClients(String q) async => const Ok([]);
 }
 
 Map<String, dynamic> _row({String stage = 'NEW'}) => {

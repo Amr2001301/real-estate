@@ -198,6 +198,13 @@ jobs:
       JWT_ACCESS_SECRET: ci-access-secret-placeholder-1234567890
       JWT_REFRESH_SECRET: ci-refresh-secret-placeholder-1234567890
       REDIS_URL: redis://localhost:6379
+      # Required by TenantContextInterceptor for @Public() routes (auth login,
+      # customer registration). Without it every unauthenticated call returns 503.
+      # The seed pins the seeded company to this UUID (see prisma/seed.ts L385).
+      # WARNING: if DISABLE_DEFAULT_COMPANY_FALLBACK is ever set to "true" in
+      # production, these jobs will also need X-Tenant-Slug headers instead of
+      # this fallback. Record: docs/audit/06-ci-gaps.md G5.
+      DEFAULT_COMPANY_ID: 00000000-0000-0000-0000-000000000001
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -224,7 +231,9 @@ jobs:
     needs: [changes, build]
     if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # 20 min: ~1 min for DB startup + migrations + seed, then test execution.
+    # 10 min was too short — the suite was killed before producing a summary.
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16-alpine
@@ -248,6 +257,10 @@ jobs:
       JWT_ACCESS_SECRET: ci-access-secret-placeholder-1234567890
       JWT_REFRESH_SECRET: ci-refresh-secret-placeholder-1234567890
       REDIS_URL: redis://localhost:6379
+      # Required by TenantContextInterceptor for @Public() routes. See api-e2e
+      # comment above for full rationale. WARNING: if DISABLE_DEFAULT_COMPANY_FALLBACK
+      # is ever set to "true" in production, these jobs need X-Tenant-Slug headers.
+      DEFAULT_COMPANY_ID: 00000000-0000-0000-0000-000000000001
       # Security tests share globalSetup with e2e: applies migrations + seeds
       # the Permission table. SEED_ADMIN_EMAIL must match the seed default.
       SEED_ADMIN_EMAIL: admin@example.com
@@ -390,6 +403,11 @@ jobs:
       API_BASE_URL: http://localhost:4000
       E2E_BASE_URL: http://localhost:3001
       E2E_NO_WEBSERVER: '1' # webServer not needed — we start it manually below
+      # Required by TenantContextInterceptor for @Public() routes (admin login).
+      # Seed pins the company to this UUID (prisma/seed.ts L385) so auth resolves.
+      # node dist/main.js inherits this job-level env — no separate step env needed.
+      # WARNING: docs/audit/06-ci-gaps.md G5 — coupling to DEFAULT_COMPANY fallback.
+      DEFAULT_COMPANY_ID: 00000000-0000-0000-0000-000000000001
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -487,6 +505,11 @@ jobs:
       NEXT_PUBLIC_SITE_URL: http://localhost:3002
       E2E_BASE_URL: http://localhost:3002
       E2E_NO_WEBSERVER: '1'
+      # Required by TenantContextInterceptor for @Public() catalog routes.
+      # Seed pins the company to this UUID (prisma/seed.ts L385) so catalog pages
+      # resolve data instead of returning 503/spinning.
+      # WARNING: docs/audit/06-ci-gaps.md G5 — coupling to DEFAULT_COMPANY fallback.
+      DEFAULT_COMPANY_ID: 00000000-0000-0000-0000-000000000001
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

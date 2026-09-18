@@ -27,6 +27,18 @@ class _FakeRemote implements PerformanceRemoteDataSource {
     if (error != null) throw error!;
     return targets;
   }
+
+  @override
+  Future<List<TeamPerformanceRowDto>> getTeamPerformance({String? period}) async => const [];
+  @override
+  Future<List<SalesActorDto>> listActors() async => const [];
+  @override
+  Future<void> upsertTarget({
+    required String salesId,
+    required String period,
+    required String amountTarget,
+    required int unitsTarget,
+  }) async {}
 }
 
 class _FakeRepo implements PerformanceRepository {
@@ -40,6 +52,17 @@ class _FakeRepo implements PerformanceRepository {
       perfFailure != null ? Result.err(perfFailure!) : Result.ok(perf!);
   @override
   Future<Result<List<SalesTarget>>> getTargets() async => Result.ok(targets);
+  @override
+  Future<Result<List<TeamMemberPerformance>>> getTeamPerformance({String? period}) async => const Ok([]);
+  @override
+  Future<Result<List<SalesActor>>> listActors() async => const Ok([]);
+  @override
+  Future<Result<void>> upsertTarget({
+    required String salesId,
+    required String period,
+    required String amountTarget,
+    required int unitsTarget,
+  }) async => const Ok(null);
 }
 
 Map<String, dynamic> _perfJson() => {
@@ -107,7 +130,7 @@ void main() {
 
     test('targets list maps', () async {
       final repo = PerformanceRepositoryImpl(_FakeRemote(targets: [
-        const SalesTargetDto(id: 't1', period: '2026-05', amountTarget: '1000000', unitsTarget: 4),
+        const SalesTargetDto(id: 't1', salesId: 's1', salesName: 'Rep', period: '2026-05', amountTarget: '1000000', unitsTarget: 4),
       ]));
       final r = await repo.getTargets();
       expect(r.dataOrNull?.single.unitsTarget, 4);
@@ -118,7 +141,7 @@ void main() {
     test('loads performance + targets on success', () async {
       final perf = SalesPerformanceDto.fromJson(_perfJson()).toEntity();
       final repo = _FakeRepo(perf: perf, targets: const [
-        SalesTarget(id: 't1', period: '2026-05', amountTarget: '1000000', unitsTarget: 4),
+        SalesTarget(id: 't1', salesId: 's1', salesName: 'Rep', period: '2026-05', amountTarget: '1000000', unitsTarget: 4),
       ]);
       final cubit = TargetsCubit(GetSalesPerformance(repo), GetSalesTargets(repo));
       await cubit.load();
