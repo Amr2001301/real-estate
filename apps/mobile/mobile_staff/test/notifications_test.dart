@@ -10,6 +10,7 @@ import 'package:mobile_staff/features/notifications/domain/repositories/notifica
 import 'package:mobile_staff/features/notifications/domain/usecases/notification_use_cases.dart';
 import 'package:mobile_staff/features/notifications/presentation/cubit/notifications_cubit.dart';
 import 'package:mobile_staff/features/notifications/presentation/cubit/unread_count_cubit.dart';
+import 'package:mobile_staff/features/splash/splash_screen.dart';
 import 'package:mobile_staff/router/app_router.dart';
 
 class _FakeRemote implements NotificationsRemoteDataSource {
@@ -351,6 +352,9 @@ void main() {
   });
 
   group('staffRedirect — /notifications is shared', () {
+    setUp(() => SplashScreen.splashDone.value = true);
+    tearDown(() => SplashScreen.splashDone.value = false);
+
     SessionState signedIn(AppRole role) => SessionState.authenticated(
           Session(userId: 'u1', role: role),
         );
