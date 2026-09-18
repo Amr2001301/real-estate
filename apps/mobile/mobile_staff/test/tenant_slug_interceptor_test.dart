@@ -151,7 +151,7 @@ void main() {
         adapter: MockAdapter(
           statusCode: 403,
           body:
-              '{"message":"X-Tenant-Slug does not match authenticated user tenant","statusCode":403,"error":"Forbidden"}',
+              '{"statusCode":403,"message":"Tenant mismatch","code":"TENANT_CONTEXT_MISMATCH","error":"Forbidden"}',
         ),
       );
       try {
@@ -225,7 +225,7 @@ void main() {
         onMismatch: () async {},
         adapter: MockAdapter(
           statusCode: 403,
-          body: '{"message":"X-Tenant-Slug mismatch"}',
+          body: '{"message":"Tenant mismatch","code":"TENANT_CONTEXT_MISMATCH"}',
         ),
       );
       expect(
