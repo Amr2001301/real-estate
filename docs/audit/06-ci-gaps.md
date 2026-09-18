@@ -16,7 +16,9 @@
 | G4 — no coverage threshold | Open | Deferred |
 | G5 — DEFAULT_COMPANY_ID/DISABLE_DEFAULT_COMPANY_FALLBACK coupling | **New, open** | See below |
 | G6 — api-e2e suite too slow | **New, open** | See below |
-| G7 — api-security budget near-exhausted | **New, open** | See below |
+| G7 — api-security budget near-exhausted | **Partially mitigated** — 20→35 min (commit `bcbe697`+) | See below |
+| G8 — cancelled job misread as test failure | **New, recorded** | See below |
+| G9 — atomic test `afterAll` safety nets missing | **Partially fixed** | D3-10d fixed; DC-5/DC-6/D4-13/D4-14 still open |
 
 ### Infrastructure fixes applied in this sprint
 
@@ -25,7 +27,7 @@
 - **api-e2e / api-security DATABASE_URL collision** — globalSetup safety guard rejected runs where `TEST_DATABASE_URL === DATABASE_URL`. Fixed by setting `DATABASE_URL: ci_placeholder` in both jobs (commit `530befa`).
 - **Flutter version** — mobile-static was resolving `3.38.x` to a version that no longer exists; updated to `3.44.x` (commit `530befa`).
 - **DEFAULT_COMPANY_ID** — added to api-e2e, api-security, web-admin-e2e, web-public-e2e envs (commit `d54ac61`). Without this value `TenantContextInterceptor` throws 503 on every unauthenticated request, breaking all e2e tests.
-- **api-security timeout** — raised from 10 → 20 min (commit `d54ac61`). Suite requires ~1 min for migrations + seed before any test runs.
+- **api-security timeout** — raised from 10 → 20 min (commit `d54ac61`), then 20 → 35 min after the 20-minute budget was exhausted. Suite requires ~1 min for migrations + seed before any test runs. See G7/G8.
 
 ---
 
@@ -159,28 +161,67 @@ The api-security suite took 19.3 of its 20-minute budget in run `35372621639`
 against a real Postgres database. As new security test files are added (D3, D4,
 capability enforcement, etc.) the suite grows linearly.
 
-In the same run, 1 test was reported as failed but the job was CANCELLED (not
-FAILED) — the process was killed by GitHub Actions timeout at 20m19s. The failure
-attribution was to `02-attack-matrix.security-spec.ts` but that file has no
-atomicity tests; the D3 atomicity constraints (`d3_atomic_check`, `d3b_atomic_check`)
-live only in `10-d3-cancel-attack.security-spec.ts`. The most likely explanation is
-a test interrupted by SIGTERM, not a genuine assertion failure.
+The budget was raised to 35 minutes (commit after `07f0f36`) to obtain one
+complete, trustworthy run. This is not a structural fix — splitting the slowest
+file(s) into a separate job or reducing per-file fixture cost is still needed.
 
 **D3 atomicity analysis:** The cancellation transaction is correctly scoped —
 `ContractCancellation.create()` is step 8 of 9 inside a single `$transaction`.
 Any failure at step 8 rolls back steps 1–7 via standard Postgres ROLLBACK. The
 service has no error-swallowing around the transaction. D3-6 and D3-10d pass
-locally. The CI "failure" is consistent with a timeout interruption.
+locally. The prior CI "failure" is consistent with a timeout interruption (see G8).
 
-**Structural gap:** D3-6 has a belt-and-suspenders `afterAll` that drops
-`d3_atomic_check` in case SIGTERM kills the `finally` block mid-run. D3-10d has
-no equivalent `afterAll` for `d3b_atomic_check`. If D3-10d is killed before its
-`finally` runs, the constraint leaks into later test files in the same run
-(notably `12-d4-clawback-resolve.security-spec.ts` which cancels contracts).
-This is a resilience gap, not a product bug.
+---
 
-**Required action:** raise `timeout-minutes` for api-security before adding more
-test files, and/or split the slowest file(s) into a separate job.
+## G8 — Cancelled job misread as a test failure
+
+**Incident (2026-09-18):** Run `35372621639` api-security job was reported as
+"271 passed, 1 failed" and the failure was attributed to `02-attack-matrix.security-spec.ts`.
+**Both parts were wrong.**
+
+1. The job `conclusion` field in the GitHub Actions API is `"cancelled"`, not
+   `"failure"`. The job was killed by the 20-minute timeout at 20m19s.
+
+2. `02-attack-matrix.security-spec.ts` contains no D3/atomicity tests and no
+   `ContractCancellation` constraint operations. The constraint names
+   `d3_atomic_check` and `d3b_atomic_check` exist only in
+   `10-d3-cancel-attack.security-spec.ts`.
+
+3. A cancelled job produces a partial Jest summary that reads exactly like a real
+   test result. The `X passed, Y failed` line only reflects what Jest printed
+   before the process was killed — it is not the full suite result.
+
+**Rule to follow:** When a CI job reports failures, check the job's `conclusion`
+field first. If it is `"cancelled"`, the failure count is unreliable. Do not
+report a cancelled job as a test failure. Investigate which test was running
+when the timeout occurred, not which test Jest's partial output blames.
+
+---
+
+## G9 — Atomic-test `afterAll` safety nets missing
+
+Several security spec tests add a `CHECK (1=0) NOT VALID` constraint to force
+a transaction failure, then rely solely on a `finally` block to drop the
+constraint. If the process is killed mid-test (SIGTERM before `finally` runs),
+the constraint remains on the shared test database for the rest of that CI run
+and breaks subsequent tests that insert into the same table.
+
+**Pattern that is safe (D3-6 example):**
+- `it()` block has `finally` that drops the constraint
+- Enclosing `describe` has `afterAll` that also drops it as a backup
+
+**Tests with only the `finally` (no `afterAll` backstop):**
+
+| File | Test | Constraint | Table | Cascade risk |
+|---|---|---|---|---|
+| `06-deposit-correction-attack.security-spec.ts` | DC-5 | `test_atomic_bounce_check` | `PaymentCorrection` | Medium — only bounce/reverse-deposit tests in later files affected |
+| `06-deposit-correction-attack.security-spec.ts` | DC-6 | `test_atomic_reverse_check` | `PaymentCorrection` | Medium — same |
+| `10-d3-cancel-attack.security-spec.ts` | **D3-10d** | `d3b_atomic_check` | `ContractCancellation` | **High** — directly triggered the G8 incident; file 12 calls cancel |
+| `12-d4-clawback-resolve.security-spec.ts` | D4-13 | `_d4_atomicity_commission` | `AuditLog` | **Critical** — `AuditLog.create()` called by every state-changing service; files 13–15 would all fail |
+| `12-d4-clawback-resolve.security-spec.ts` | D4-14 | `_d4_atomicity_bonus` | `AuditLog` | **Critical** — same; sequentially after D4-13 |
+
+**Status:** D3-10d fixed (afterAll added to `describe('D3-10...')`).
+DC-5, DC-6, D4-13, D4-14 remain open pending owner decision.
 
 ---
 
@@ -194,7 +235,9 @@ test files, and/or split the slowest file(s) into a separate job.
 | G4 | Low | No coverage threshold |
 | G5 | Medium | DEFAULT_COMPANY_ID + DISABLE_DEFAULT_COMPANY_FALLBACK coupling in CI envs |
 | G6 | High | api-e2e suite exceeds 15-minute budget; specs 4+ min each |
-| G7 | High | api-security at 97% of 20-minute budget; one more file and it times out |
+| G7 | High | api-security budget near-exhausted; raised to 35 min as stop-gap |
+| G8 | Process | Cancelled job must never be reported as test failure; check `conclusion` first |
+| G9 | High | 4 atomic tests missing `afterAll` safety net; D3-10d fixed, 4 remain |
 
 ---
 

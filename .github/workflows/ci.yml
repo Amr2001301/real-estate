@@ -231,9 +231,11 @@ jobs:
     needs: [changes, build]
     if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
-    # 20 min: ~1 min for DB startup + migrations + seed, then test execution.
-    # 10 min was too short — the suite was killed before producing a summary.
-    timeout-minutes: 20
+    # 35 min: previous 20 min budget was exhausted (suite ran 19m19s, killed).
+    # The cancelled job produced a partial Jest summary that was misread as a
+    # real failure. 35 min gives a safe margin to get one complete, trustworthy
+    # result. See docs/audit/06-ci-gaps.md G7.
+    timeout-minutes: 35
     services:
       postgres:
         image: postgres:16-alpine
