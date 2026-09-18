@@ -258,6 +258,28 @@ jobs:
         run: pnpm exec jest -c test/jest-security.json --runInBand
 
   # ─────────────────────────────────────────────────────────────────────────────
+  # web-public Jest unit tests (jsdom, no server deps). Covers analytics PII
+  # blocking, middleware tenant-header spoofing, 403 narrowing, auth-actions,
+  # and sitemap. No services needed. Runs when web-public paths change.
+  # ─────────────────────────────────────────────────────────────────────────────
+  web-public-unit:
+    name: web-public · jest (unit)
+    needs: [changes, build]
+    if: needs.changes.outputs.webPublic == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.9, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Run unit tests
+        working-directory: apps/web-public
+        run: pnpm test
+
+  # ─────────────────────────────────────────────────────────────────────────────
   # Mobile static analysis + unit/widget tests across all 3 packages.
   # No emulator → no integration_test in CI (deferred).
   # ─────────────────────────────────────────────────────────────────────────────
@@ -522,11 +544,18 @@ jobs:
   # succeeded or was skipped; it fails when any dependency actually failed or
   # was cancelled. A docs-only PR skips every filtered job, leaving only
   # `build` (success) + skips → gate is green, merge is allowed.
+  #
+  # MAINTENANCE: every new CI job MUST be added to the `needs` list below.
+  # A job omitted from this list runs invisibly — its result is never checked
+  # and a failure will not block a merge. This repo has already had three
+  # instances of unprotected suites: web-public tests hidden for weeks,
+  # api-security which never executed in CI, and web-public-unit (added here).
+  # If you add a job, wire it here or it does not protect anything.
   # ─────────────────────────────────────────────────────────────────────────────
   all-checks-passed:
     name: all checks passed
     runs-on: ubuntu-latest
-    needs: [build, api-unit, api-e2e, api-security, mobile-static, web-admin-e2e, web-public-e2e]
+    needs: [build, api-unit, api-e2e, api-security, mobile-static, web-admin-e2e, web-public-e2e, web-public-unit]
     if: always()
     steps:
       - name: Verify no job failed or was cancelled
