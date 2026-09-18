@@ -96,6 +96,10 @@ describe('SEC — D4: clawback:collect + clawback:waive (Step D4)', () => {
     await testApp.rawPrisma.bonusRule.deleteMany({
       where: { name: { startsWith: 'D4-Rule-' } },
     });
+    // Safety net: drop atomicity test constraints if D4-13/D4-14 were killed before their finally ran.
+    // AuditLog is written by every state-changing service; a leaked constraint destroys files 13-15.
+    await testApp.rawPrisma.$executeRawUnsafe(`ALTER TABLE "AuditLog" DROP CONSTRAINT IF EXISTS "_d4_atomicity_commission"`).catch(() => void 0);
+    await testApp.rawPrisma.$executeRawUnsafe(`ALTER TABLE "AuditLog" DROP CONSTRAINT IF EXISTS "_d4_atomicity_bonus"`).catch(() => void 0);
     await teardownSecurityFixture(testApp.rawPrisma);
     await testApp.close();
   });
