@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # ─── Stage 1: workspace install ───────────────────────────────────────────────
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 WORKDIR /repo
 
 RUN apk add --no-cache libc6-compat \
@@ -17,7 +17,7 @@ COPY packages/tsconfig/package.json packages/tsconfig/package.json
 RUN pnpm install --frozen-lockfile
 
 # ─── Stage 2: build ───────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /repo
 
 RUN apk add --no-cache libc6-compat \
@@ -41,7 +41,7 @@ ENV API_BASE_URL=http://api:4000 \
 RUN pnpm --filter @rep/web-admin build
 
 # ─── Stage 3: runtime ─────────────────────────────────────────────────────────
-FROM node:20-alpine AS runtime
+FROM node:22-alpine AS runtime
 WORKDIR /app
 
 RUN apk add --no-cache tini \

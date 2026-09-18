@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # ─── Stage 1: workspace install ───────────────────────────────────────────────
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 WORKDIR /repo
 
 RUN apk add --no-cache libc6-compat openssl \
@@ -18,7 +18,7 @@ COPY packages/tsconfig/package.json packages/tsconfig/package.json
 RUN pnpm install --frozen-lockfile
 
 # ─── Stage 2: build ───────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /repo
 
 RUN apk add --no-cache libc6-compat openssl \
@@ -37,7 +37,7 @@ RUN pnpm --filter @rep/api prisma:generate \
  && pnpm --filter @rep/api build
 
 # ─── Stage 3: prod deps only ─────────────────────────────────────────────────
-FROM node:20-alpine AS prod-deps
+FROM node:22-alpine AS prod-deps
 WORKDIR /repo
 
 RUN apk add --no-cache libc6-compat openssl \
@@ -53,7 +53,7 @@ COPY packages ./packages
 RUN pnpm install --frozen-lockfile --prod --filter @rep/api...
 
 # ─── Stage 4: runtime ─────────────────────────────────────────────────────────
-FROM node:20-alpine AS runtime
+FROM node:22-alpine AS runtime
 WORKDIR /app
 
 RUN apk add --no-cache libc6-compat openssl tini \

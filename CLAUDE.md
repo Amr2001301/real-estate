@@ -11,7 +11,7 @@ Surfaces: NestJS API, Next.js admin dashboard, Next.js public website, Flutter c
 
 | Concern | Choice |
 |---|---|
-| Backend | NestJS 10, Node 20, TypeScript 5.6 |
+| Backend | NestJS 10, Node 22, TypeScript 5.6 |
 | Database | PostgreSQL 16, Prisma 5.22 ORM |
 | Cache / jobs | Redis 7, @nestjs/schedule (in-process cron) |
 | Auth | JWT (passport-jwt) + phone OTP; httpOnly cookie session on web |
@@ -121,7 +121,7 @@ pnpm --filter @rep/api openapi:export   # exports spec → mobile consumes it
 - **Web ↔ API**: Next.js rewrites `/api-proxy/:path*` → `${API_BASE_URL}/v1/:path*`. Auth via httpOnly cookies; web apps use server actions — no client-side token handling.
 - **Mobile ↔ API**: Dio HTTP client (OpenAPI-generated). JWT access + refresh tokens in platform secure storage (Keychain / Keystore). Translatable fields (`{ar, en}`) flattened by `LocaleInterceptor`; Flutter must use `Translatable.fromJson` which tolerates `Map | String | null`.
 - **Scheduled jobs**: in-process `@nestjs/schedule` (BullMQ is present but not used). Cron env-gated, jsonb-payload deduplication, direct PrismaClient pattern.
-- **Deployment**: API → Railway (Docker multi-stage, Node 20-alpine). Web apps → Vercel (`next build` with `output: 'standalone'`). Mobile → App Store / Google Play (planned, pending credentials).
+- **Deployment**: API → Railway (Docker multi-stage, Node 22-alpine). Web apps → Vercel (`next build` with `output: 'standalone'`). Mobile → App Store / Google Play (planned, pending credentials).
 - **Business logic location**: `apps/api/src/modules/<feature>/<feature>.service.ts`. Controllers are thin (validate, delegate, return).
 
 ---

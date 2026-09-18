@@ -100,7 +100,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - name: Install dependencies
@@ -142,7 +142,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 9.15.9, run_install: false }
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
+        with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - name: Generate Prisma client
         working-directory: apps/api
@@ -197,7 +197,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 9.15.9, run_install: false }
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
+        with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - name: Generate Prisma client
         working-directory: apps/api
@@ -248,7 +248,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 9.15.9, run_install: false }
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
+        with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - name: Generate Prisma client
         working-directory: apps/api
@@ -273,7 +273,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 9.15.9, run_install: false }
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
+        with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - name: Run unit tests
         working-directory: apps/web-public
@@ -386,7 +386,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 9.15.9, run_install: false }
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
+        with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma client
@@ -483,7 +483,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 9.15.9, run_install: false }
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
+        with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma client
