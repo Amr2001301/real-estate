@@ -155,6 +155,10 @@ jobs:
           DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
           JWT_ACCESS_SECRET: ci-access-secret-placeholder-1234567890
           JWT_REFRESH_SECRET: ci-refresh-secret-placeholder-1234567890
+          # Unit tests use ConfigModule.forRoot({ isGlobal: true }) without Zod
+          # validation, so Zod's default for REDIS_URL is not applied. Must be set
+          # explicitly or ConfigService.getOrThrow('REDIS_URL') throws.
+          REDIS_URL: redis://localhost:6379
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Backend Jest e2e (real ephemeral Postgres, real Nest app, real auth flow).
@@ -184,14 +188,16 @@ jobs:
           --health-retries 10
     env:
       NODE_ENV: test
-      # The actual e2e DB pointer — the jest globalSetup will validate it
-      # and then rewrite process.env.DATABASE_URL to it before any spec boots.
+      # The actual e2e DB pointer — globalSetup validates it and then rewrites
+      # process.env.DATABASE_URL to this value before any spec boots.
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/realestate_e2e?schema=public
-      # DATABASE_URL is required by env.validation; a placeholder satisfies
-      # the schema check at import time before globalSetup rewrites it.
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/realestate_e2e?schema=public
+      # DATABASE_URL must differ from TEST_DATABASE_URL — globalSetup has a
+      # safety guard that rejects equal values to prevent accidental prod access.
+      # globalSetup overwrites this with TEST_DATABASE_URL at runtime.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci_placeholder?schema=public
       JWT_ACCESS_SECRET: ci-access-secret-placeholder-1234567890
       JWT_REFRESH_SECRET: ci-refresh-secret-placeholder-1234567890
+      REDIS_URL: redis://localhost:6379
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -236,9 +242,12 @@ jobs:
     env:
       NODE_ENV: test
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/realestate_e2e?schema=public
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/realestate_e2e?schema=public
+      # DATABASE_URL must differ from TEST_DATABASE_URL — globalSetup safety guard.
+      # globalSetup overwrites this with TEST_DATABASE_URL at runtime.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci_placeholder?schema=public
       JWT_ACCESS_SECRET: ci-access-secret-placeholder-1234567890
       JWT_REFRESH_SECRET: ci-refresh-secret-placeholder-1234567890
+      REDIS_URL: redis://localhost:6379
       # Security tests share globalSetup with e2e: applies migrations + seeds
       # the Permission table. SEED_ADMIN_EMAIL must match the seed default.
       SEED_ADMIN_EMAIL: admin@example.com
@@ -294,7 +303,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: '3.38.x'
+          flutter-version: '3.44.x'
       - name: Resolve workspace deps
         working-directory: apps/mobile
         run: flutter pub get
