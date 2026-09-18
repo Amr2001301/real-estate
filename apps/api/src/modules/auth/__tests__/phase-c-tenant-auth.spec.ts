@@ -67,12 +67,14 @@ function makeAuthService(overrides: Record<string, unknown> = {}) {
   };
   const sms = { sendOtp: jest.fn().mockResolvedValue(undefined) };
   const email = { sendPasswordReset: jest.fn().mockResolvedValue(undefined) };
+  const caps = { hasCapability: jest.fn().mockResolvedValue(true) };
   const service = new AuthService(
     prisma as never,
     jwt as never,
     config as never,
     sms as never,
     email as never,
+    caps as never,
   );
   return { service, prisma, sms, email };
 }

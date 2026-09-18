@@ -45,13 +45,15 @@ function makeCapabilityService(has: boolean = true) {
 
 // ── 1. No decorator ───────────────────────────────────────────────────────────
 
-test('no @RequireCapability decorator → guard passes without calling CapabilityService', async () => {
+test('no @RequireCapability decorator → guard passes but still runs app-level always-check', async () => {
+  // Phase 2: even without a decorator, ADMIN role triggers staffApp always-check.
   const { reflector, ctx } = makeContext({ sub: 'u1', role: 'ADMIN', companyId: 'c1' }, undefined);
   const service = makeCapabilityService();
   const guard = new CapabilityGuard(reflector, service as never);
   const result = await guard.canActivate(ctx);
   expect(result).toBe(true);
-  expect(service.requireCapability).not.toHaveBeenCalled();
+  // Always-check fires for staff roles even without @RequireCapability
+  expect(service.requireCapability).toHaveBeenCalledWith('c1', 'feature.staffApp');
 });
 
 // ── 2. SUPER_ADMIN bypasses capability check ───────────────────────────────────
@@ -116,16 +118,26 @@ test('Company A capability does not affect Company B (uses correct companyId)', 
   await guard.canActivate(makeCtx('company-aaa'));
   await guard.canActivate(makeCtx('company-bbb'));
 
-  expect(capService.requireCapability).toHaveBeenNthCalledWith(1, 'company-aaa', 'crm');
-  expect(capService.requireCapability).toHaveBeenNthCalledWith(2, 'company-bbb', 'crm');
+  // Phase 2: ADMIN triggers always-check (feature.staffApp) then decorator check (crm).
+  // Calls per activation: (companyId, 'feature.staffApp') then (companyId, 'crm').
+  const calls = (capService.requireCapability as jest.Mock).mock.calls;
+  expect(calls.filter((c: string[]) => c[0] === 'company-aaa' && c[1] === 'feature.staffApp').length).toBe(1);
+  expect(calls.filter((c: string[]) => c[0] === 'company-aaa' && c[1] === 'crm').length).toBe(1);
+  expect(calls.filter((c: string[]) => c[0] === 'company-bbb' && c[1] === 'feature.staffApp').length).toBe(1);
+  expect(calls.filter((c: string[]) => c[0] === 'company-bbb' && c[1] === 'crm').length).toBe(1);
+  // No Company A call leaked into Company B's checks
+  expect(calls.every((c: string[]) => ['company-aaa', 'company-bbb'].includes(c[0]!))).toBe(true);
 });
 
 // ── 7. Unauthenticated ────────────────────────────────────────────────────────
 
-test('no user on request → canActivate returns false', async () => {
+test('no user on request → canActivate returns true (public route, no checks)', async () => {
+  // Phase 2: unauthenticated request is treated as a public route — guard passes.
+  // The auth guard is responsible for rejecting unauthenticated calls to protected routes.
   const { reflector, ctx } = makeContext(null, 'crm');
   const service = makeCapabilityService();
   const guard = new CapabilityGuard(reflector, service as never);
   const result = await guard.canActivate(ctx);
-  expect(result).toBe(false);
+  expect(result).toBe(true);
+  expect(service.requireCapability).not.toHaveBeenCalled();
 });

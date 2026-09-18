@@ -3,6 +3,7 @@ import { Prisma, ProjectStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateProjectDto, ProjectQueryDto, ProjectSort, UpdateProjectDto } from './dto/project.dto';
 import { paginate, takeSkip } from '../../common/utils/pagination';
+import { PlanLimitService } from '../../common/capabilities/plan-limit.service';
 import {
   serializePublicProjectDetail,
   serializePublicProjectListItem,
@@ -12,9 +13,13 @@ import {
 
 @Injectable()
 export class ProjectsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly planLimits: PlanLimitService,
+  ) {}
 
   async create(dto: CreateProjectDto) {
+    await this.planLimits.checkProjectLimit();
     return this.prisma.project.create({
       data: {
         name: dto.name as unknown as Prisma.InputJsonValue,

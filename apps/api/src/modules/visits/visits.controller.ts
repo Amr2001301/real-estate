@@ -13,6 +13,7 @@ import { AppointmentStatus, UserRole } from '@prisma/client';
 import { IsOptional, IsString } from 'class-validator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { VisitsService } from './visits.service';
 import {
@@ -235,6 +236,7 @@ export class VisitsController {
   // service enforces ownership — anything that isn't theirs returns 404 (no
   // existence leak), matching the OwnershipService convention used elsewhere.
 
+  @RequireCapability('feature.customerApp')
   @Roles(UserRole.CLIENT, UserRole.CUSTOMER)
   @Post('me/visit-appointments/:id/confirm')
   meConfirm(
@@ -244,6 +246,7 @@ export class VisitsController {
     return this.visits.customerConfirmAppointment(id, user);
   }
 
+  @RequireCapability('feature.customerApp')
   @Roles(UserRole.CLIENT, UserRole.CUSTOMER)
   @Post('me/visit-appointments/:id/request-reschedule')
   meRequestReschedule(
@@ -256,6 +259,7 @@ export class VisitsController {
 
   // Gap 7 — customer rates a COMPLETED visit (one-time). Ownership enforced in
   // the service (404 on non-owned, matching the confirm/reschedule routes).
+  @RequireCapability('feature.customerApp')
   @Roles(UserRole.CLIENT, UserRole.CUSTOMER)
   @Post('me/visit-appointments/:id/feedback')
   meSubmitFeedback(

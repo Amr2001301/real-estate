@@ -73,12 +73,14 @@ function makeService(overrides: {
   const emailSend = overrides.sendPasswordReset ?? jest.fn().mockResolvedValue(undefined);
   const email = { sendPasswordReset: emailSend };
 
+  const caps = { hasCapability: jest.fn().mockResolvedValue(true) };
   const service = new AuthService(
     prisma as never,
     jwt as never,
     config as never,
     sms as never,
     email as never,
+    caps as never,
   );
 
   return { service, prisma, email };

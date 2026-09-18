@@ -875,3 +875,112 @@ No drops. No existing rows affected (the column is nullable; existing String val
 | Typecheck (`tsc --noEmit`) | 0 errors | 0 errors | 0 new errors |
 | Lint (`eslint`) | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |
 
+---
+
+## Phase 2 — Capability Enforcement (blocking)
+
+**Date:** 2026-09-18
+**Scope:** Tasks 7–11 of the Capability Enforcement roadmap.
+**Status:** DONE ✓
+
+### What changed
+
+Phase 2 is where capability checks actually block requests. Phase 1 only
+wired the infrastructure; Phase 2 applies it at every relevant surface.
+
+**Rule enforced by every change in this phase:**
+_Limits block CREATION only. Reads, updates, and deletes always work.
+A company over its limit must continue running its business on existing data._
+
+#### Task 7 — @RequireCapability('feature.customerApp') on me/* routes
+
+Applied to every customer-only endpoint. Notifications routes (`me/notifications`,
+`me/devices`) were deliberately excluded — they serve all authenticated roles and
+the CapabilityGuard already handles staffApp/customerApp gating per the user's role
+via the always-check in Stage 1.
+
+Controllers updated: `MeInstallmentsController`, `DepositsController` (4 methods),
+`VisitsController` (3 methods), `ContractsModule` (myContracts), `RequestsModule` (4 methods).
+
+#### Task 8 — Creation limits
+
+- `PlanLimitService.checkUserLimit(role)` called in `users.service.ts::create()`.
+  CLIENT/CUSTOMER roles bypass the count. ENTERPRISE with `null` limits is never blocked.
+- `PlanLimitService.checkUnitLimit()` called in `units.service.ts::create()`.
+- `PlanLimitService.checkProjectLimit()` called in `projects.service.ts::create()`.
+
+`getRequiredCompanyId()` is called inside each `PlanLimitService` method (not by the
+caller), so the caller cannot influence which company's limits are checked. Callers that
+no longer need `companyId` exclusively for the limit check had the redundant ALS call
+removed.
+
+#### Task 9 — Domain resolver
+
+Already correct from Phase 1 — `feature.publicWebsite` reads the `websiteEnabled`
+column via the three-layer effective view. No change needed.
+
+#### Task 10 — Cache invalidation on company update
+
+`super-admin.service.ts::updateCompany()` calls `capabilityService.invalidateCache(id)`
+when `subscriptionPlan`, `staffAppEnabled`, `customerAppEnabled`, or `websiteEnabled` is
+included in the DTO. Both cache keys (`company-capabilities:*` and
+`company-caps-effective:*`) are purged atomically.
+
+#### Task 11 — Phase 2 security test file
+
+`test/security/14-phase2-capability-enforcement.security-spec.ts` — 4 groups:
+- **P2A**: Feature gates (STARTER plan broker/maintenance route → 403; blob override → 200)
+- **P2B**: App-level enforcement (staffApp/customerApp disabled → login 403, refresh 403,
+  existing token on protected route 403; re-enable → 200)
+- **P2C**: Creation limits (maxUsers seat count; CLIENT never blocked; reads/updates pass
+  at limit; limit raise takes immediate effect; cross-tenant isolation)
+- **P2D**: SUPER_ADMIN bypass (never blocked by any capability check)
+
+### Key design decisions
+
+- `PlanLimitService` methods take no `companyId` parameter — they read from ALS
+  internally. This ensures the check always uses the authenticated tenant's identity.
+- `CapabilityGuard` Stage 1 (always-check) fires for every authenticated request; Stage 2
+  fires only when `@RequireCapability` is present. Notification routes are not decorated
+  because Stage 1 already gates them per role.
+- `AuthModule` explicitly imports `CapabilityModule` because `AuthService` depends on
+  `CapabilityService` for app-level login blocking.
+- Test modules provide `PlanLimitService` mock via the `@Global()` `MockPrismaModule`
+  (not `providers[]` at root level, which doesn't propagate to nested imported modules).
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `apps/api/src/common/capabilities/plan-limit.service.ts` | `getRequiredCompanyId()` moved inside each method; parameters removed from public API |
+| `apps/api/src/modules/installments/installments.module.ts` | `@RequireCapability('feature.customerApp')` on `MeInstallmentsController` |
+| `apps/api/src/modules/deposits/deposits.controller.ts` | `@RequireCapability` on 4 me/* methods |
+| `apps/api/src/modules/visits/visits.controller.ts` | `@RequireCapability` on 3 me/* methods |
+| `apps/api/src/modules/contracts/contracts.module.ts` | `@RequireCapability` on `myContracts` |
+| `apps/api/src/modules/requests/requests.module.ts` | `@RequireCapability` on 4 me/* methods |
+| `apps/api/src/modules/users/users.service.ts` | `checkUserLimit(dto.role)` replaces manual `company.maxUsers` guard |
+| `apps/api/src/modules/units/units.service.ts` | `checkUnitLimit()` at top of `create()` |
+| `apps/api/src/modules/projects/projects.service.ts` | `checkProjectLimit()` at top of `create()`; unused `getRequiredCompanyId` import removed |
+| `apps/api/src/modules/super-admin/super-admin.service.ts` | `invalidateCache(id)` after plan/app-flag changes in `updateCompany()` |
+| `apps/api/src/modules/auth/auth.module.ts` | Added `CapabilityModule` to imports (AuthService depends on CapabilityService) |
+| `apps/api/src/common/guards/__tests__/capability.guard.spec.ts` | Updated for Phase 2 always-check semantics; `c[0]!` assertion fix |
+| `apps/api/src/common/capabilities/__tests__/capability.service.spec.ts` | Updated `makePrisma()` to return full row; fixed schema key references |
+| `apps/api/src/common/capabilities/__tests__/capability-resolution.spec.ts` | Updated `redis.del` assertions for dual-key invalidation |
+| `apps/api/src/modules/units/__tests__/units-permissions.spec.ts` | `MockPrismaModule` exports `PlanLimitService` mock |
+| `apps/api/src/modules/units/__tests__/public-units-contract.spec.ts` | Same |
+| `apps/api/src/modules/projects/__tests__/projects-permissions.spec.ts` | Same (+ `overrideProvider(R2Service)` preserved) |
+| `apps/api/src/modules/projects/__tests__/public-projects-contract.spec.ts` | Same (+ `overrideProvider(R2Service)` preserved) |
+| `apps/api/src/modules/users/__tests__/users-*.spec.ts` (4 files) | Added 4th constructor arg `planLimits` mock to `new UsersService(...)` |
+| `apps/api/src/modules/auth/__tests__/auth-*.spec.ts` (7 files) | Added 6th constructor arg `caps` mock to `new AuthService(...)` |
+| `apps/api/eslint.config.mjs` | Added `plan-limit.service.ts` to Tier B `prisma.user` allowlist |
+| `apps/api/test/security/14-phase2-capability-enforcement.security-spec.ts` | New: P2A/P2B/P2C/P2D attack matrix |
+
+### Test results
+
+| Suite | Before (Phase 1) | After (Phase 2) | Delta |
+|---|---|---|---|
+| Unit (`jest --runInBand`) | 2224 pass | **2237 pass** — directly measured at HEAD | +13 (capability.guard, plan-limit, auth, users, units, projects test fixes) |
+| Security (`jest-security.json --runInBand`) | 239 pass | **257 pass** — directly measured at HEAD (`SKIP_DB_RESET=1`, 14/14 suites) | +18 (14-phase2: P2A×3, P2B×7, P2C×6, P2D×1) |
+| Typecheck (`tsc --noEmit`) | 0 errors | 0 errors | 0 new errors |
+| Lint (`eslint`) | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |
+

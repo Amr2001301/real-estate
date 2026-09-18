@@ -26,10 +26,13 @@ function makeRedis(overrides: Record<string, jest.Mock> = {}) {
   };
 }
 
-function makePrisma(caps: Record<string, boolean> | null = {}) {
+function makePrisma(caps: Record<string, unknown> | null = {}) {
+  const row = caps === null
+    ? { subscriptionPlan: 'TRIAL', capabilities: null, websiteEnabled: null, customerAppEnabled: null, staffAppEnabled: null }
+    : { subscriptionPlan: 'TRIAL', capabilities: caps, websiteEnabled: null, customerAppEnabled: null, staffAppEnabled: null };
   return {
     company: {
-      findUnique: jest.fn().mockResolvedValue({ capabilities: caps }),
+      findUnique: jest.fn().mockResolvedValue(row),
       update: jest.fn().mockResolvedValue({}),
     },
   };
@@ -105,15 +108,15 @@ describe('CapabilityService — Redis unavailable', () => {
 // ── 4. Unknown / missing capability returns false ─────────────────────────────
 
 describe('CapabilityService — unknown capability', () => {
-  test('returns false for a key not present in capabilities blob', async () => {
-    const { service } = makeService(makePrisma({ crm: true }));
-    const has = await service.hasCapability('comp-1', 'unknownFeature');
+  test('returns false for a key not present in the plan schema', async () => {
+    const { service } = makeService(makePrisma({ 'feature.crm': true }));
+    const has = await service.hasCapability('comp-1', 'feature.unknownFeature');
     expect(has).toBe(false);
   });
 
-  test('returns false for a key explicitly set to false', async () => {
-    const { service } = makeService(makePrisma({ crm: false }));
-    const has = await service.hasCapability('comp-1', 'crm');
+  test('returns false for a schema key explicitly set to false via blob override', async () => {
+    const { service } = makeService(makePrisma({ 'feature.brokers': false }));
+    const has = await service.hasCapability('comp-1', 'feature.brokers');
     expect(has).toBe(false);
   });
 
@@ -127,21 +130,23 @@ describe('CapabilityService — unknown capability', () => {
 // ── 5. requireCapability ──────────────────────────────────────────────────────
 
 describe('CapabilityService.requireCapability', () => {
-  test('throws ForbiddenException with code CAPABILITY_NOT_ENABLED when cap missing', async () => {
-    const { service } = makeService(makePrisma({ crm: true }));
-    await expect(service.requireCapability('comp-1', 'broker')).rejects.toMatchObject({
-      response: expect.objectContaining({ code: 'CAPABILITY_NOT_ENABLED', capability: 'broker' }),
+  test('throws ForbiddenException with code CAPABILITY_NOT_ENABLED when cap disabled on plan', async () => {
+    // STARTER plan has feature.brokers=false; TRIAL has it true but blob overrides to false
+    const { service } = makeService(makePrisma({ 'feature.brokers': false }));
+    await expect(service.requireCapability('comp-1', 'feature.brokers')).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'CAPABILITY_NOT_ENABLED', capability: 'feature.brokers' }),
     });
   });
 
   test('throws ForbiddenException, not a generic Error', async () => {
-    const { service } = makeService(makePrisma({}));
-    await expect(service.requireCapability('comp-1', 'crm')).rejects.toBeInstanceOf(ForbiddenException);
+    const { service } = makeService(makePrisma({ 'feature.brokers': false }));
+    await expect(service.requireCapability('comp-1', 'feature.brokers')).rejects.toBeInstanceOf(ForbiddenException);
   });
 
-  test('resolves without throw when capability is present', async () => {
-    const { service } = makeService(makePrisma({ crm: true }));
-    await expect(service.requireCapability('comp-1', 'crm')).resolves.toBeUndefined();
+  test('resolves without throw when capability is enabled by plan default (TRIAL)', async () => {
+    // TRIAL plan: feature.crm = true by default; no blob override
+    const { service } = makeService(makePrisma({}));
+    await expect(service.requireCapability('comp-1', 'feature.crm')).resolves.toBeUndefined();
   });
 });
 
@@ -161,7 +166,10 @@ describe('CapabilityService.setCapabilities', () => {
     const redis = makeRedis();
     const { service } = makeService(undefined, redis);
     await service.setCapabilities('comp-1', { crm: true });
-    expect(redis.del).toHaveBeenCalledWith('company-capabilities:comp-1');
+    expect(redis.del).toHaveBeenCalledWith(
+      'company-capabilities:comp-1',
+      'company-caps-effective:comp-1',
+    );
   });
 });
 

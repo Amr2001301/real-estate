@@ -227,6 +227,9 @@ export default [
       // super-admin.service.ts: SUPER_ADMIN operates in bypass mode; explicit,
       // platform-wide queries are intentional.
       'apps/api/src/modules/super-admin/super-admin.service.ts',
+      // plan-limit.service.ts: creation-limit enforcement; companyId is always
+      // passed explicitly from the caller's ALS context (never from the request).
+      'apps/api/src/common/capabilities/plan-limit.service.ts',
 
       // ── Tier C: Identity-peer resolution ───────────────────────────────────
       // reservations.module.ts: phone-suffix scan + email lookup to build

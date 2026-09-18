@@ -36,12 +36,14 @@ describe('AuthService · email login role gate', () => {
       get: jest.fn().mockImplementation((k: string) => (k.includes('REFRESH') ? '30d' : '15m')),
     };
     const sms = {};
+    const caps = { hasCapability: jest.fn().mockResolvedValue(true) };
     const service = new AuthService(
       prisma as never,
       jwt as never,
       config as never,
       sms as never,
       { sendPasswordReset: jest.fn() } as never,
+      caps as never,
     );
     return { service, prisma };
   }

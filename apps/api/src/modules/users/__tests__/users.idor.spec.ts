@@ -127,7 +127,8 @@ function makePrisma(overrides: Record<string, unknown> = {}): PrismaService {
 function makeService(prismaOverrides: Record<string, unknown> = {}) {
   const prisma = makePrisma(prismaOverrides);
   const notifications = { sendToUser: jest.fn().mockResolvedValue(undefined) };
-  const service = new UsersService(prisma, {} as never, notifications as never);
+  const planLimits = { checkUserLimit: jest.fn().mockResolvedValue(undefined) } as never;
+  const service = new UsersService(prisma, {} as never, notifications as never, planLimits);
   return { service, prisma };
 }
 

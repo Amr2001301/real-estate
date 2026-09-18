@@ -18,6 +18,7 @@
 import 'reflect-metadata';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { ThrottlerStorage } from '@nestjs/throttler';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { PrismaClient } from '@prisma/client';
@@ -44,10 +45,29 @@ export interface TestApp {
   close: () => Promise<void>;
 }
 
-export async function createTestApp(): Promise<TestApp> {
-  const moduleRef = await Test.createTestingModule({
+export interface CreateTestAppOptions {
+  /**
+   * When true, overrides ThrottlerGuard with a pass-through so tests that make
+   * many login calls within 60 s are not blocked by the per-IP rate limit.
+   * Use only in specs that are testing capability enforcement, not rate limiting.
+   */
+  skipThrottle?: boolean;
+}
+
+export async function createTestApp(options: CreateTestAppOptions = {}): Promise<TestApp> {
+  let builder = Test.createTestingModule({
     imports: [AppModule],
-  }).compile();
+  });
+
+  if (options.skipThrottle) {
+    // Override the throttler storage so increment() always reports 1 hit (never blocked).
+    // overrideGuard(ThrottlerGuard) does not work for APP_GUARD useClass registrations.
+    builder = builder.overrideProvider(ThrottlerStorage).useValue({
+      increment: () => Promise.resolve({ totalHits: 1, timeToExpire: 0, isBlocked: false, blockExpiresAt: 0 }),
+    });
+  }
+
+  const moduleRef = await builder.compile();
 
   const app = moduleRef.createNestApplication({ bufferLogs: false });
 

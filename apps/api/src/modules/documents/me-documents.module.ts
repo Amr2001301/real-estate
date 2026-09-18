@@ -10,6 +10,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { DocumentOwnerType, DocumentVisibility, UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { OwnershipService } from '../../common/ownership/ownership.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -28,6 +29,7 @@ const CUSTOMER_OWNER_TYPES = new Set<DocumentOwnerType>([
 // Customer-facing documents: list CUSTOMER_VISIBLE metadata for an owned entity
 // (no fileUrl leaked) and mint short-lived signed download URLs just-in-time.
 @ApiTags('me-documents')
+@RequireCapability('feature.customerApp')
 @Controller('me/documents')
 class MeDocumentsController {
   constructor(

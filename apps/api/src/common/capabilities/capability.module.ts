@@ -2,10 +2,12 @@ import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { CAPABILITY_CACHE_REDIS, CapabilityService } from './capability.service';
+import { PlanLimitService } from './plan-limit.service';
+import { CapabilityGuard } from '../guards/capability.guard';
 
 /**
- * MT-038 — @Global module so CapabilityService is injectable everywhere
- * without each feature module importing this explicitly.
+ * MT-038 — @Global module so CapabilityService, PlanLimitService, and CapabilityGuard
+ * are injectable everywhere without each feature module importing this explicitly.
  * Uses a dedicated ioredis connection (separate from CronLockModule's lock redis).
  */
 @Global()
@@ -22,7 +24,9 @@ import { CAPABILITY_CACHE_REDIS, CapabilityService } from './capability.service'
         }),
     },
     CapabilityService,
+    PlanLimitService,
+    CapabilityGuard,
   ],
-  exports: [CapabilityService],
+  exports: [CapabilityService, PlanLimitService, CapabilityGuard],
 })
 export class CapabilityModule {}

@@ -35,7 +35,8 @@ function makeService() {
       findUnique: jest.fn().mockResolvedValue({ maxUsers: null, _count: { users: 0 } }),
     },
   } as unknown as PrismaService;
-  return { service: new UsersService(prisma, {} as never, {} as never), findFirst, update, create };
+  const planLimits = { checkUserLimit: jest.fn().mockResolvedValue(undefined) } as never;
+  return { service: new UsersService(prisma, {} as never, {} as never, planLimits), findFirst, update, create };
 }
 
 function asTenant<T>(fn: () => Promise<T>): Promise<T> {

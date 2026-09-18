@@ -4,6 +4,7 @@ import { InstallmentStatus, MaintenanceStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { findTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -380,6 +381,7 @@ class MeHomeSummaryService {
 // ── Controller ────────────────────────────────────────────────────────────────
 
 @ApiTags('me-home')
+@RequireCapability('feature.customerApp')
 @Controller('me/home-summary')
 class MeHomeSummaryController {
   constructor(private readonly svc: MeHomeSummaryService) {}

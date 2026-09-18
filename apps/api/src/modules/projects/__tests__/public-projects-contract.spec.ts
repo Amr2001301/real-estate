@@ -5,6 +5,7 @@ import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import { IS_PUBLIC_KEY } from '../../../common/decorators/public.decorator';
 import { ProjectsModule } from '../projects.module';
+import { PlanLimitService } from '../../../common/capabilities/plan-limit.service';
 import { PhasesModule } from '../../phases/phases.module';
 import { BuildingsModule } from '../../buildings/buildings.module';
 import { MediaModule } from '../../media/media.module';
@@ -109,8 +110,11 @@ describe('Public projects · response contract', () => {
 
     @Global()
     @Module({
-      providers: [{ provide: PrismaService, useValue: mock }],
-      exports: [PrismaService],
+      providers: [
+        { provide: PrismaService, useValue: mock },
+        { provide: PlanLimitService, useValue: { checkProjectLimit: jest.fn().mockResolvedValue(undefined) } },
+      ],
+      exports: [PrismaService, PlanLimitService],
     })
     class MockPrismaModule {}
 

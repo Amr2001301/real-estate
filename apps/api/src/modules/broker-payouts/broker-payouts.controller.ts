@@ -12,6 +12,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
+import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { BrokerPayoutsService } from './broker-payouts.service';
 import {
@@ -26,6 +27,7 @@ import {
 } from './dto/broker-payout.dto';
 
 @ApiTags('broker-payouts')
+@RequireCapability('feature.brokers')
 @Controller('broker-payouts')
 export class BrokerPayoutsController {
   constructor(private readonly svc: BrokerPayoutsService) {}

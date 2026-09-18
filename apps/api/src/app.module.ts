@@ -14,6 +14,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { CompanyLifecycleGuard } from './common/guards/lifecycle.guard';
+import { CapabilityGuard } from './common/guards/capability.guard';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -136,6 +137,10 @@ import { PublicCompaniesModule } from './modules/public-companies/public-compani
     { provide: APP_GUARD, useClass: RolesGuard },
     // Runs after RolesGuard: routes without @Permissions short-circuit to allow.
     { provide: APP_GUARD, useClass: PermissionsGuard },
+    // Phase 2 capability enforcement: (a) always-checks staffApp/customerApp by role,
+    // (b) enforces @RequireCapability decorators on feature-gated routes.
+    // Runs after PermissionsGuard so role + permission rejections occur first.
+    { provide: APP_GUARD, useClass: CapabilityGuard },
     // Logger runs first so errors thrown by other interceptors still get
     // logged + forwarded to Sentry.
     { provide: APP_INTERCEPTOR, useClass: RequestLoggerInterceptor },

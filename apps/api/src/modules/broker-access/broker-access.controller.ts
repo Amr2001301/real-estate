@@ -11,6 +11,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { BrokerAccessService } from './broker-access.service';
 import {
   GrantBrokerProjectAccessDto,
@@ -18,6 +19,7 @@ import {
 } from './dto/broker-access.dto';
 
 @ApiTags('broker-access')
+@RequireCapability('feature.brokers')
 @Controller()
 export class BrokerAccessController {
   constructor(private readonly access: BrokerAccessService) {}

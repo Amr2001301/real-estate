@@ -9,11 +9,13 @@ import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { BrokerContractsService } from './broker-contracts.service';
 import { BrokerContractsQueryDto } from './dto/broker-contract.dto';
 
 @ApiTags('broker-contracts')
+@RequireCapability('feature.brokers')
 @Controller('broker-contracts')
 export class BrokerContractsController {
   constructor(private readonly svc: BrokerContractsService) {}

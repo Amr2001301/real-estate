@@ -26,6 +26,7 @@ import { Prisma, UserRole, WarrantyStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 
 class CreateMaintenanceItemDto {
   @IsString() @MinLength(1) ar!: string;
@@ -179,6 +180,7 @@ class UnitMaintenanceItemsService {
 }
 
 @ApiTags('maintenance')
+@RequireCapability('feature.maintenance')
 @Controller()
 class UnitMaintenanceItemsController {
   constructor(private readonly svc: UnitMaintenanceItemsService) {}

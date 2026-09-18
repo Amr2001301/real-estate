@@ -16,6 +16,7 @@ import {
   UpdateUnitStatusDto,
 } from './dto/unit.dto';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
+import { PlanLimitService } from '../../common/capabilities/plan-limit.service';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { serializePublicUnit } from './public-unit.serializer';
 
@@ -47,9 +48,13 @@ function unitOrderBy(sort?: UnitSort): Prisma.UnitOrderByWithRelationInput[] {
 
 @Injectable()
 export class UnitsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly planLimits: PlanLimitService,
+  ) {}
 
   async create(dto: CreateUnitDto) {
+    await this.planLimits.checkUnitLimit();
     return this.prisma.unit.create({
       data: {
         buildingId: dto.buildingId,

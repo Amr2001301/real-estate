@@ -5,6 +5,7 @@ import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import { IS_PUBLIC_KEY } from '../../../common/decorators/public.decorator';
 import { UnitsModule } from '../units.module';
+import { PlanLimitService } from '../../../common/capabilities/plan-limit.service';
 import { UnitsController } from '../units.controller';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
@@ -139,8 +140,11 @@ describe('Units module · permissions enforcement', () => {
 
     @Global()
     @Module({
-      providers: [{ provide: PrismaService, useValue: mock }],
-      exports: [PrismaService],
+      providers: [
+        { provide: PrismaService, useValue: mock },
+        { provide: PlanLimitService, useValue: { checkUnitLimit: jest.fn().mockResolvedValue(undefined) } },
+      ],
+      exports: [PrismaService, PlanLimitService],
     })
     class MockPrismaModule {}
 

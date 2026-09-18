@@ -17,6 +17,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { MaintenanceStatus, MaintenanceReviewStatus, UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { MaintenanceService, ATTACH_MAX_BYTES, UploadedFile } from './maintenance.service';
 import {
@@ -32,6 +33,7 @@ import {
 } from './maintenance.dto';
 
 @ApiTags('maintenance')
+@RequireCapability('feature.maintenance')
 @Controller()
 export class MaintenanceController {
   constructor(private readonly svc: MaintenanceService) {}

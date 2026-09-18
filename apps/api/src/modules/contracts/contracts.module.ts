@@ -45,6 +45,7 @@ import {
 } from '../notifications/notifications.module';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
+import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { teamSalesIds, assertSalesRecordInScope } from '../../common/utils/sales-scope';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
@@ -868,6 +869,7 @@ class ContractsController {
   // expose a permanent storage URL. Admin / sales / broker contract
   // listings are unchanged — they go through `@Get()` / `@Get(':id')`
   // above, not this method.
+  @RequireCapability('feature.customerApp')
   @Roles(UserRole.CUSTOMER)
   @Get('me/contracts')
   async myContracts(

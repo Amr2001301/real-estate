@@ -57,6 +57,7 @@ import {
 import { resolveSalesScope, assertSalesRecordInScope } from '../../common/utils/sales-scope';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
+import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { matchOrCreateLeadForClient } from '../crm/crm-lead-matching';
@@ -2361,6 +2362,7 @@ class ReservationsController {
  *    and financial snapshots beyond bookingAmount.
  */
 @ApiTags('me-reservations')
+@RequireCapability('feature.customerApp')
 @Controller('me/reservations')
 class MeReservationsController {
   constructor(private readonly svc: ReservationsService) {}

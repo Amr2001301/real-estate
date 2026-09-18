@@ -11,6 +11,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { BrokerReportsService } from './broker-reports.service';
 import {
   AgentsReportQueryDto,
@@ -21,6 +22,7 @@ import {
 } from './dto/broker-report.dto';
 
 @ApiTags('broker-reports')
+@RequireCapability('feature.brokers')
 @Roles(UserRole.ADMIN)
 // Controller-level: every report read + CSV export route requires this code.
 // PermissionsGuard resolves via getAllAndOverride([handler, class]), so a

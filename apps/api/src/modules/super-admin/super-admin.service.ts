@@ -232,6 +232,16 @@ export class SuperAdminService {
       await this.domainResolver.invalidateAllForCompany(id);
     }
 
+    // Phase 2: invalidate capability cache when plan or app-flag columns change.
+    if (
+      dto.subscriptionPlan !== undefined ||
+      dto.staffAppEnabled !== undefined ||
+      dto.customerAppEnabled !== undefined ||
+      dto.websiteEnabled !== undefined
+    ) {
+      await this.capabilityService.invalidateCache(id);
+    }
+
     return updated;
   }
 

@@ -12,6 +12,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
+import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { BrokerCommissionsService } from './broker-commissions.service';
 import { ClawbackResolutionService } from './clawback-resolution.service';
@@ -25,6 +26,7 @@ import {
 } from './dto/broker-commission.dto';
 
 @ApiTags('broker-commissions')
+@RequireCapability('feature.brokers')
 @Controller('broker-commissions')
 export class BrokerCommissionsController {
   constructor(

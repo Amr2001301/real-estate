@@ -15,6 +15,7 @@ import { IsOptional, IsUUID } from 'class-validator';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 
 class CreateFavoriteDto {
@@ -76,6 +77,7 @@ class FavoritesService {
 }
 
 @ApiTags('favorites')
+@RequireCapability('feature.customerApp')
 @Controller('me/favorites')
 class FavoritesController {
   constructor(private readonly svc: FavoritesService) {}

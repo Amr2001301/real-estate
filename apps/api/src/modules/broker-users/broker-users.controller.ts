@@ -14,6 +14,7 @@ import {
   Permissions,
   PermissionsStrict,
 } from '../../common/decorators/permissions.decorator';
+import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { BrokerUsersService } from './broker-users.service';
 import {
   CreateBrokerUserDto,
@@ -22,6 +23,7 @@ import {
 } from './dto/broker-user.dto';
 
 @ApiTags('broker-users')
+@RequireCapability('feature.brokers')
 @Controller()
 export class BrokerUsersController {
   constructor(private readonly brokerUsers: BrokerUsersService) {}

@@ -11,6 +11,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { IS_PUBLIC_KEY } from '../../../common/decorators/public.decorator';
 import { UnitsModule } from '../units.module';
+import { PlanLimitService } from '../../../common/capabilities/plan-limit.service';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
@@ -114,8 +115,11 @@ describe('Public units · response contract', () => {
 
     @Global()
     @Module({
-      providers: [{ provide: PrismaService, useValue: mock }],
-      exports: [PrismaService],
+      providers: [
+        { provide: PrismaService, useValue: mock },
+        { provide: PlanLimitService, useValue: { checkUnitLimit: jest.fn().mockResolvedValue(undefined) } },
+      ],
+      exports: [PrismaService, PlanLimitService],
     })
     class MockPrismaModule {}
 

@@ -8,9 +8,11 @@ import { JwtStrategy } from './jwt.strategy';
 import { SmsService } from './sms.service';
 import { EmailService } from './email.service';
 import { TenantResolverService } from './tenant-resolver.service';
+import { CapabilityModule } from '../../common/capabilities/capability.module';
 
 @Module({
   imports: [
+    CapabilityModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -8,12 +7,13 @@ import {
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { claimSyntheticPeers } from '../../common/utils/identity-claim';
-import { getTenantContext, getRequiredCompanyId } from '../../common/tenant/tenant-context';
+import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { Prisma, UserRole } from '@prisma/client';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { R2Service } from '../media/r2.service';
 import { NotificationsService } from '../notifications/notifications.module';
+import { PlanLimitService } from '../../common/capabilities/plan-limit.service';
 
 /** Avatars: small images only, capped well below the document limit. */
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
@@ -39,6 +39,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly r2: R2Service,
     private readonly notifications: NotificationsService,
+    private readonly planLimits: PlanLimitService,
   ) {}
 
   async create(dto: CreateUserDto) {
@@ -60,20 +61,7 @@ export class UsersService {
     // which passes the target companyId explicitly — they never reach this path.
     const companyId = getRequiredCompanyId();
 
-    // Enforce plan user limit — only applies inside a tenant context (company admin).
-    // Super-admin bypass context is already excluded above via getRequiredCompanyId().
-    const tenantCtx = getTenantContext();
-    if (tenantCtx && !tenantCtx.bypass && tenantCtx.companyId) {
-      const company = await this.prisma.company.findUnique({
-        where: { id: tenantCtx.companyId },
-        select: { maxUsers: true, _count: { select: { users: { where: { role: { not: 'SUPER_ADMIN' } } } } } },
-      });
-      if (company?.maxUsers != null && company._count.users >= company.maxUsers) {
-        throw new ForbiddenException(
-          `لقد وصلت إلى الحد الأقصى للمستخدمين (${company.maxUsers}) في باقتك الحالية. يرجى الترقية للإضافة المزيد.`,
-        );
-      }
-    }
+    await this.planLimits.checkUserLimit(dto.role);
 
     if (dto.managerId) await this.assertIsManager(dto.managerId, companyId);
     const passwordHash = dto.password ? await argon2.hash(dto.password) : null;

@@ -16,6 +16,7 @@ import { UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { BrokerScope } from '../../common/decorators/broker-scope.decorator';
+import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import {
   BrokerScopeGuard,
   type BrokerScopeContext,
@@ -58,6 +59,7 @@ import {
 } from './dto/portal-reservation.dto';
 
 @ApiTags('broker-portal')
+@RequireCapability('feature.brokers')
 @Roles(UserRole.BROKER)
 @UseGuards(BrokerScopeGuard)
 @Controller('portal')

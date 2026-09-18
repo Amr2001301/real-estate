@@ -54,6 +54,7 @@ import {
 } from '../notifications/notifications.module';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { paginate } from '../../common/utils/pagination';
 import { CronLockService } from '../../common/cron/cron-lock.service';
 import { captureExceptionSafe } from '../../common/observability/sentry';
@@ -1264,6 +1265,7 @@ class MeInstallmentsService {
 }
 
 @ApiTags('me-installments')
+@RequireCapability('feature.customerApp')
 @Controller('me/installments')
 class MeInstallmentsController {
   constructor(private readonly svc: MeInstallmentsService) {}

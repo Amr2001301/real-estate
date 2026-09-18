@@ -13,6 +13,11 @@
  * Phase 1 additions:
  * - getEffectiveCapabilities(): three-layer merge (plan defaults → overrides → column values)
  * - setCapabilityOverrides(): typed write with validation, cache invalidation
+ *
+ * Phase 2 additions:
+ * - requireCapability() now checks the effective three-layer view, not the raw blob alone.
+ * - getEffectiveValuesMap(): cached flat Record<key, effective-value> for fast per-request checks.
+ * - invalidateCache() now removes both the raw-blob cache AND the effective-values cache.
  */
 
 import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
@@ -33,6 +38,8 @@ export type CompanyCapabilities = Record<string, boolean>;
 
 const CACHE_TTL_SECONDS = 300;
 const cacheKey = (companyId: string) => `company-capabilities:${companyId}`;
+/** Cache key for the flat effective-values map (plan default + overrides + columns). */
+const effectiveCacheKey = (companyId: string) => `company-caps-effective:${companyId}`;
 
 @Injectable()
 export class CapabilityService {
@@ -43,31 +50,83 @@ export class CapabilityService {
     @Inject(CAPABILITY_CACHE_REDIS) private readonly redis: Redis,
   ) {}
 
-  // ── Legacy blob API (backward compat) ────────────────────────────────────────
+  // ── Effective-view API (Phase 2: the canonical check path) ──────────────────
 
   /**
-   * Returns true iff the Company has the named capability explicitly set to true.
-   * A missing or null capabilities blob, or a missing key, returns false.
+   * Returns a flat map of all capability keys to their effective values.
+   * Uses a dedicated Redis cache (TTL 300 s) that collapses all three layers
+   * (plan default → capabilities blob → Company columns) into a single lookup.
+   * Invalidated by invalidateCache() — which must be called whenever the plan,
+   * capabilities blob, or any of the three *Enabled columns change.
+   */
+  async getEffectiveValuesMap(companyId: string): Promise<Record<string, CapabilityValue>> {
+    const key = effectiveCacheKey(companyId);
+    try {
+      const cached = await this.redis.get(key);
+      if (cached !== null) return JSON.parse(cached) as Record<string, CapabilityValue>;
+    } catch (err) {
+      this.logger.warn(`[CapabilityService] effective cache read error for ${companyId}: ${(err as Error).message}`);
+    }
+
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: {
+        subscriptionPlan: true,
+        capabilities: true,
+        websiteEnabled: true,
+        customerAppEnabled: true,
+        staffAppEnabled: true,
+      },
+    });
+
+    if (!company) return {};
+
+    const view = buildEffectiveView(
+      company.subscriptionPlan,
+      (company.capabilities as Record<string, unknown> | null) ?? {},
+      company.websiteEnabled,
+      company.customerAppEnabled,
+      company.staffAppEnabled,
+    );
+
+    const flat = Object.fromEntries(view.keys.map((k) => [k.key, k.effective]));
+
+    try {
+      await this.redis.set(key, JSON.stringify(flat), 'EX', CACHE_TTL_SECONDS);
+    } catch {
+      // Non-fatal
+    }
+
+    return flat;
+  }
+
+  /**
+   * Returns true iff the Company's effective capability for the given key is boolean true.
+   * Uses the three-layer effective view (plan default → overrides → column).
    */
   async hasCapability(companyId: string, capability: string): Promise<boolean> {
-    const caps = await this.getCapabilities(companyId);
-    return caps[capability] === true;
+    const map = await this.getEffectiveValuesMap(companyId);
+    return map[capability] === true;
   }
 
   /**
    * Throws ForbiddenException with stable code CAPABILITY_NOT_ENABLED when
-   * the Company does not have the named capability. Resolves silently if it does.
+   * the Company's effective capability is not true. Feature flags that are false
+   * by plan default (e.g. feature.brokers on STARTER) are correctly blocked even
+   * with an empty capabilities blob.
    */
   async requireCapability(companyId: string, capability: string): Promise<void> {
     const has = await this.hasCapability(companyId, capability);
     if (!has) {
       throw new ForbiddenException({
-        message: `Capability not enabled: ${capability}`,
+        message: `This feature is not available on your current plan: ${capability}. Upgrade your plan or contact support to enable it.`,
         code: 'CAPABILITY_NOT_ENABLED',
         capability,
       });
     }
   }
+
+  // ── Legacy blob API (kept for super-admin direct blob reads) ─────────────────
 
   /**
    * Returns the raw capabilities blob for a Company.
@@ -113,10 +172,16 @@ export class CapabilityService {
     await this.invalidateCache(companyId);
   }
 
-  /** Removes the cached capabilities entry for a Company. */
+  /**
+   * Removes the cached capabilities entries for a Company.
+   * Must be called whenever any input to the three-layer merge changes:
+   *   - Company.capabilities blob (setCapabilityOverrides, setCapabilities)
+   *   - Company.subscriptionPlan
+   *   - Company.websiteEnabled / customerAppEnabled / staffAppEnabled
+   */
   async invalidateCache(companyId: string): Promise<void> {
     try {
-      await this.redis.del(cacheKey(companyId));
+      await this.redis.del(cacheKey(companyId), effectiveCacheKey(companyId));
     } catch (err) {
       this.logger.warn(`[CapabilityService] Redis del error for ${companyId}: ${(err as Error).message}`);
     }
@@ -197,10 +262,9 @@ export class CapabilityService {
 
   /**
    * Returns the flat effective values map (key → effective value).
-   * Convenience method for usage count comparisons.
+   * Delegates to getEffectiveValuesMap which is Redis-cached.
    */
   async getEffectiveLimits(companyId: string): Promise<Record<string, CapabilityValue>> {
-    const view = await this.getEffectiveCapabilities(companyId);
-    return Object.fromEntries(view.keys.map((k) => [k.key, k.effective]));
+    return this.getEffectiveValuesMap(companyId);
   }
 }

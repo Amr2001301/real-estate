@@ -11,6 +11,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { BrokerReservationsService } from './broker-reservations.service';
 import {
@@ -19,6 +20,7 @@ import {
 } from './dto/broker-reservation.dto';
 
 @ApiTags('broker-reservations')
+@RequireCapability('feature.brokers')
 @Controller('broker-reservations')
 export class BrokerReservationsController {
   constructor(private readonly svc: BrokerReservationsService) {}

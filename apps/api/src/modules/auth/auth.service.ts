@@ -18,6 +18,7 @@ import { claimSyntheticPeers } from '../../common/utils/identity-claim';
 import { canonicalEmail, canonicalPhone } from '../../common/utils/identity-normalize';
 import { SmsService } from './sms.service';
 import { EmailService } from './email.service';
+import { CapabilityService } from '../../common/capabilities/capability.service';
 import type { UserRole } from '@prisma/client';
 
 // MT-035: Response header emitted on legacy /auth/login to signal deprecation.
@@ -39,6 +40,7 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly sms: SmsService,
     private readonly email: EmailService,
+    private readonly capabilityService: CapabilityService,
   ) {}
 
   // ------------- Email + password (Admin / Sales / Broker) -------------
@@ -397,6 +399,30 @@ export class AuthService {
               });
             }
           }
+        }
+      }
+    }
+
+    // Phase 2 — Layer 2: app-enabled check on refresh (closes sessions when app is disabled).
+    // Applies only to users with a company (SUPER_ADMIN and null-companyId legacy users exempt).
+    const refreshCompanyId = user.companyId;
+    if (refreshCompanyId && user.role !== 'SUPER_ADMIN') {
+      const staffRoles: UserRole[] = ['ADMIN', 'SALES', 'SALES_MANAGER', 'MAINTENANCE_SUPERVISOR', 'BROKER'];
+      if (staffRoles.includes(user.role)) {
+        const staffAppEnabled = await this.capabilityService.hasCapability(refreshCompanyId, 'feature.staffApp');
+        if (!staffAppEnabled) {
+          throw new ForbiddenException({
+            message: 'The staff mobile app is not enabled on this account. Your session has expired.',
+            code: 'STAFF_APP_NOT_ENABLED',
+          });
+        }
+      } else if (user.role === 'CLIENT' || user.role === 'CUSTOMER') {
+        const customerAppEnabled = await this.capabilityService.hasCapability(refreshCompanyId, 'feature.customerApp');
+        if (!customerAppEnabled) {
+          throw new ForbiddenException({
+            message: 'The customer mobile app is not enabled on this account. Your session has expired.',
+            code: 'CUSTOMER_APP_NOT_ENABLED',
+          });
         }
       }
     }
@@ -767,6 +793,16 @@ export class AuthService {
       }
     }
 
+    // Phase 2 — Layer 1: staff-app feature gate at login.
+    // Uses effective capabilities (plan default → override → column).
+    const staffAppEnabled = await this.capabilityService.hasCapability(companyId, 'feature.staffApp');
+    if (!staffAppEnabled) {
+      throw new ForbiddenException({
+        message: 'The staff mobile app is not enabled on this account. Contact your account administrator or upgrade your plan.',
+        code: 'STAFF_APP_NOT_ENABLED',
+      });
+    }
+
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
     return this.issueTokens(user.id, user.role);
   }
@@ -829,6 +865,15 @@ export class AuthService {
       throw new ForbiddenException({
         message: 'Company access is currently disabled',
         code: 'COMPANY_NOT_ACTIVE',
+      });
+    }
+
+    // Phase 2 — Layer 1: customer-app feature gate at login.
+    const customerAppEnabled = await this.capabilityService.hasCapability(companyId, 'feature.customerApp');
+    if (!customerAppEnabled) {
+      throw new ForbiddenException({
+        message: 'The customer mobile app is not enabled on this account. Contact your account administrator.',
+        code: 'CUSTOMER_APP_NOT_ENABLED',
       });
     }
 
@@ -934,6 +979,15 @@ export class AuthService {
     const phone = canonicalPhone(rawPhone) ?? canonicalPhone(rawPhone, country);
     if (!phone) throw new BadRequestException('Invalid phone number');
 
+    // Phase 2: OTP is the customer-app login path; gate before sending SMS cost.
+    const customerAppEnabled = await this.capabilityService.hasCapability(companyId, 'feature.customerApp');
+    if (!customerAppEnabled) {
+      throw new ForbiddenException({
+        message: 'The customer mobile app is not enabled on this account.',
+        code: 'CUSTOMER_APP_NOT_ENABLED',
+      });
+    }
+
     const recent = await this.prisma.otpCode.findFirst({
       where: { phone, companyId, createdAt: { gte: new Date(Date.now() - 60_000) } },
       orderBy: { createdAt: 'desc' },
@@ -967,6 +1021,15 @@ export class AuthService {
   ) {
     const phone = canonicalPhone(rawPhone) ?? canonicalPhone(rawPhone, country);
     if (!phone) throw new BadRequestException('Invalid phone number');
+
+    // Phase 2: gate before consuming the OTP code.
+    const customerAppEnabled = await this.capabilityService.hasCapability(companyId, 'feature.customerApp');
+    if (!customerAppEnabled) {
+      throw new ForbiddenException({
+        message: 'The customer mobile app is not enabled on this account.',
+        code: 'CUSTOMER_APP_NOT_ENABLED',
+      });
+    }
 
     const otp = await this.prisma.otpCode.findFirst({
       where: { phone, companyId, consumed: false, expiresAt: { gt: new Date() } },

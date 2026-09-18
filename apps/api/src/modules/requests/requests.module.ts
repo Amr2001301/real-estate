@@ -27,6 +27,7 @@ import { UserRole, VisitRequestSource, VisitRequestStatus, VisitStatus } from '@
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { resolveSalesScope } from '../../common/utils/sales-scope';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { OptionalAuth } from '../../common/decorators/optional-auth.decorator';
@@ -530,18 +531,21 @@ class RequestsController {
   }
 
   // Logged-in clients
+  @RequireCapability('feature.customerApp')
   @Roles(UserRole.CLIENT, UserRole.CUSTOMER)
   @Post('me/info-requests')
   meInfo(@CurrentUser() user: AuthUser, @Body() dto: CreateInfoRequestDto) {
     return this.svc.createInfoRequest(dto, { userId: user.sub });
   }
 
+  @RequireCapability('feature.customerApp')
   @Roles(UserRole.CLIENT, UserRole.CUSTOMER)
   @Post('me/visit-requests')
   meVisit(@CurrentUser() user: AuthUser, @Body() dto: CreateVisitRequestDto) {
     return this.svc.createVisitRequest(dto, { userId: user.sub });
   }
 
+  @RequireCapability('feature.customerApp')
   @Roles(UserRole.CLIENT, UserRole.CUSTOMER)
   @Get('me/visit-requests')
   myVisits(
@@ -556,6 +560,7 @@ class RequestsController {
     });
   }
 
+  @RequireCapability('feature.customerApp')
   @Roles(UserRole.CLIENT, UserRole.CUSTOMER)
   @Get('me/info-requests')
   myInfoRequests(

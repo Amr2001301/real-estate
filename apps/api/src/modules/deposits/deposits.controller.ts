@@ -14,6 +14,7 @@ import { DepositReviewStatus, UserRole } from '@prisma/client';
 import { DocumentsService } from '../documents/documents.module';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
+import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { DepositsService } from './deposits.service';
 import {
@@ -192,6 +193,7 @@ export class DepositsController {
   // P11 — reviewStatus + rejectionReason + paymentMethod ARE exposed (they
   // are not URLs and the customer needs them to drive the UI). receiptUrl
   // remains redacted to null.
+  @RequireCapability('feature.customerApp')
   @Roles(UserRole.CUSTOMER)
   @Get('me/deposits')
   async myDeposits(@CurrentUser() user: AuthUser) {
@@ -203,6 +205,7 @@ export class DepositsController {
   }
 
   // ── P11 — Customer submits / resubmits a payment proof ─────────────────
+  @RequireCapability('feature.customerApp')
   @Roles(UserRole.CUSTOMER)
   @Post('me/deposits')
   submitProof(
@@ -212,6 +215,7 @@ export class DepositsController {
     return this.svc.submitProofForCustomer(user.sub, dto);
   }
 
+  @RequireCapability('feature.customerApp')
   @Roles(UserRole.CUSTOMER)
   @Post('me/deposits/:id/resubmit')
   resubmitProof(
@@ -225,6 +229,7 @@ export class DepositsController {
   // Customer-scoped presign for payment-proof uploads. Folder is forced to
   // 'receipts' server-side; the standard MIME + size whitelist applies.
   // Reuses the existing DocumentsService.presign which already validates.
+  @RequireCapability('feature.customerApp')
   @Roles(UserRole.CUSTOMER)
   @Post('me/payments/presign')
   customerPresign(@Body() dto: CustomerPresignDto) {

@@ -310,7 +310,7 @@ describe('CapabilityService — cache invalidation on override write', () => {
 
     await svc.setCapabilityOverrides('comp-x', { 'feature.brokers': true });
 
-    expect(redis.del).toHaveBeenCalledWith('company-capabilities:comp-x');
+    expect(redis.del).toHaveBeenCalledWith('company-capabilities:comp-x', 'company-caps-effective:comp-x');
   });
 
   test('after override write, next getEffectiveCapabilities reflects new override', async () => {
@@ -340,7 +340,7 @@ describe('CapabilityService — cache invalidation on override write', () => {
     const { svc } = makeService(undefined, redis);
 
     await svc.setCapabilities('comp-y', { crm: true });
-    expect(redis.del).toHaveBeenCalledWith('company-capabilities:comp-y');
+    expect(redis.del).toHaveBeenCalledWith('company-capabilities:comp-y', 'company-caps-effective:comp-y');
   });
 });
 
