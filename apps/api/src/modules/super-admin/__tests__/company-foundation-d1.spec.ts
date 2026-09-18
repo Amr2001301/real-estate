@@ -167,13 +167,13 @@ describe('New DEVELOPER Company provisioning', () => {
     expect(createCall.data.lifecycleStatus).toBe('ACTIVE');
   });
 
-  test('createCompany defaults all exposure flags to true', async () => {
+  test('createCompany defaults exposure flags to null (use plan default)', async () => {
     const { service, prisma } = makeService();
     await service.createCompany({ name: 'NewCo', slug: 'newco' });
     const data = (prisma.company.create as jest.Mock).mock.calls[0][0].data;
-    expect(data.websiteEnabled).toBe(true);
-    expect(data.customerAppEnabled).toBe(true);
-    expect(data.staffAppEnabled).toBe(true);
+    expect(data.websiteEnabled).toBeNull();
+    expect(data.customerAppEnabled).toBeNull();
+    expect(data.staffAppEnabled).toBeNull();
   });
 
   test('createCompany accepts explicit type=DEVELOPER', async () => {

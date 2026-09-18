@@ -18,6 +18,7 @@
  */
 
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { PLAN_DEFAULTS } from '../capabilities/capability-schema';
 import { PrismaService } from '../prisma/prisma.service';
 import { normalizeHostname } from '../utils/hostname-normalize';
 import type { Redis } from 'ioredis';
@@ -73,6 +74,7 @@ export class DomainResolverService {
           select: {
             id: true,
             slug: true,
+            subscriptionPlan: true,
             lifecycleStatus: true,
             websiteEnabled: true,
           },
@@ -92,7 +94,9 @@ export class DomainResolverService {
       hostname: row.hostname,
       domainType: row.type,
       lifecycleStatus: row.company.lifecycleStatus,
-      websiteEnabled: row.company.websiteEnabled,
+      // Resolve null column to plan default (null = "use plan default")
+      websiteEnabled: row.company.websiteEnabled ??
+        (PLAN_DEFAULTS[row.company.subscriptionPlan]['feature.publicWebsite'] as boolean),
     };
 
     try {

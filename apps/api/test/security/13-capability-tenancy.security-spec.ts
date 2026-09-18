@@ -314,11 +314,16 @@ describe('SEC — CAP: capability tenancy and access-control (Phase 1)', () => {
 
     it('user count does not include Company B users', async () => {
       const limits = usageA.limits as Record<string, { limit: number | null; used: number } | undefined>;
+      // Must match the staff-seat definition: deletedAt=null + role in STAFF_SEAT_ROLES
+      const staffFilter = {
+        deletedAt: null,
+        role: { in: ['ADMIN', 'SALES', 'SALES_MANAGER', 'MAINTENANCE_SUPERVISOR', 'BROKER'] as UserRole[] },
+      };
       const aUsers = await testApp.rawPrisma.user.count({
-        where: { companyId: fx.companies.aId, role: { not: UserRole.SUPER_ADMIN } },
+        where: { companyId: fx.companies.aId, ...staffFilter },
       });
       const bUsers = await testApp.rawPrisma.user.count({
-        where: { companyId: fx.companies.bId, role: { not: UserRole.SUPER_ADMIN } },
+        where: { companyId: fx.companies.bId, ...staffFilter },
       });
       expect(limits['users']!.used).toBe(aUsers);
       expect(limits['users']!.used).not.toBe(aUsers + bUsers);

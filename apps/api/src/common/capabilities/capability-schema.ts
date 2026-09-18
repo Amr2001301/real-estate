@@ -8,14 +8,32 @@
  *
  * For feature.publicWebsite / feature.customerApp / feature.staffApp:
  *   These map 1-to-1 to Company.websiteEnabled / customerAppEnabled / staffAppEnabled
- *   columns, which are already enforced by existing infrastructure.  The effective
- *   value for these three keys is ALWAYS read from the Company column — not from the
- *   capabilities blob — so there is no second source of truth.  A super-admin who
- *   wants to override these uses PATCH /super-admin/companies/:id (websiteEnabled etc.).
- *   The plan defaults below are displayed as the "plan expectation" reference only.
+ *   columns, which are nullable.  NULL means "no explicit override — use the plan
+ *   default."  A non-null column value always wins over the plan default.
+ *   A super-admin who wants to override these uses PATCH /super-admin/companies/:id.
+ *
+ * USER SEAT COUNTING:
+ *   Only staff roles consume a seat (STAFF_SEAT_ROLES below).
+ *   Soft-deleted users (deletedAt IS NOT NULL) are excluded.
+ *   Inactive staff (active=false) STILL count — the account holds a seat.
+ *   CLIENT, CUSTOMER, and SUPER_ADMIN never count toward the seat limit.
  */
 
-import type { SubscriptionPlan } from '@prisma/client';
+import type { SubscriptionPlan, UserRole } from '@prisma/client';
+
+// ── Staff seat roles ──────────────────────────────────────────────────────────
+// Only these roles consume a user seat toward the plan's limit.maxUsers limit.
+// Excluded: CLIENT, CUSTOMER (end-users, not staff), SUPER_ADMIN (platform-level).
+// Soft-deleted users (deletedAt IS NOT NULL) are additionally excluded at query time.
+// Inactive staff (active=false) STILL count — the account holds the seat.
+
+export const STAFF_SEAT_ROLES = [
+  'ADMIN',
+  'SALES',
+  'SALES_MANAGER',
+  'MAINTENANCE_SUPERVISOR',
+  'BROKER',
+] as const satisfies readonly UserRole[];
 
 // ── Key sets ─────────────────────────────────────────────────────────────────
 
@@ -112,7 +130,7 @@ export const PLAN_DEFAULTS: Record<SubscriptionPlan, PlanDefaults> = {
     'feature.customDomain': true,
   },
   STARTER: {
-    'limit.maxUnits':       150,
+    'limit.maxUnits':       500,
     'limit.maxUsers':       15,
     'limit.maxProjects':    5,
     'feature.dashboard':    true,
@@ -128,7 +146,7 @@ export const PLAN_DEFAULTS: Record<SubscriptionPlan, PlanDefaults> = {
     'feature.customDomain': false,
   },
   PROFESSIONAL: {
-    'limit.maxUnits':       750,
+    'limit.maxUnits':       2500,
     'limit.maxUsers':       50,
     'limit.maxProjects':    20,
     'feature.dashboard':    true,
@@ -187,16 +205,17 @@ export const PLAN_DEFAULTS: Record<SubscriptionPlan, PlanDefaults> = {
 export function buildEffectiveView(
   plan: SubscriptionPlan,
   rawOverrides: Record<string, unknown>,
-  websiteEnabled: boolean,
-  customerAppEnabled: boolean,
-  staffAppEnabled: boolean,
+  websiteEnabled: boolean | null,
+  customerAppEnabled: boolean | null,
+  staffAppEnabled: boolean | null,
 ): EffectiveCapabilitiesView {
   const planDefaults = PLAN_DEFAULTS[plan];
-  const columnValues: Record<string, boolean> = {
-    'feature.publicWebsite': websiteEnabled,
-    'feature.customerApp':   customerAppEnabled,
-    'feature.staffApp':      staffAppEnabled,
-  };
+  // Only include a column key when it carries an explicit (non-null) value.
+  // A null column means "no override — fall through to plan default" below.
+  const columnValues: Record<string, boolean> = {};
+  if (websiteEnabled !== null)     columnValues['feature.publicWebsite'] = websiteEnabled;
+  if (customerAppEnabled !== null) columnValues['feature.customerApp']   = customerAppEnabled;
+  if (staffAppEnabled !== null)    columnValues['feature.staffApp']      = staffAppEnabled;
 
   const keys = ALL_CAPABILITY_KEYS.map((key: CapabilityKey) => {
     const planDefault: CapabilityValue = planDefaults[key];

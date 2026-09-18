@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { CapabilityService } from '../../common/capabilities/capability.service';
+import { STAFF_SEAT_ROLES } from '../../common/capabilities/capability-schema';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { scopedUserCount } from '../../common/tenant/resolve-tenant-entity';
 
@@ -51,7 +52,7 @@ class CompanyCapabilitiesController {
     const [effectiveView, unitCount, userCount, projectCount] = await Promise.all([
       this.capabilityService.getEffectiveCapabilities(companyId!),
       this.prisma.unit.count({ where: { companyId: companyId! } }),
-      scopedUserCount(this.prisma, { role: { not: 'SUPER_ADMIN' } }),
+      scopedUserCount(this.prisma, { deletedAt: null, role: { in: [...STAFF_SEAT_ROLES] } }),
       this.prisma.project.count({ where: { companyId: companyId! } }),
     ]);
 

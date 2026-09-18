@@ -3,7 +3,7 @@ import { Prisma, SubscriptionStatus } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CapabilityService, type CompanyCapabilities } from '../../common/capabilities/capability.service';
-import { buildEffectiveView } from '../../common/capabilities/capability-schema';
+import { buildEffectiveView, STAFF_SEAT_ROLES } from '../../common/capabilities/capability-schema';
 import { DomainResolverService } from '../../common/domain/domain-resolver.service';
 import { CompanyDomainsService, RESERVED_PLATFORM_SLUGS } from '../company-domains/company-domains.service';
 import { seedCancellationSettingsForCompany } from '../contracts/cancellation-settings.constants';
@@ -146,11 +146,11 @@ export class SuperAdminService {
           type: dto.type ?? 'DEVELOPER',
           // MT-036: lifecycle starts ACTIVE for all new companies.
           lifecycleStatus: 'ACTIVE',
-          // MT-040A: exposure flags — DEVELOPER defaults to all surfaces enabled.
-          // Enforcement of these flags is deferred to their respective surface D2 tickets.
-          websiteEnabled: dto.websiteEnabled ?? true,
-          customerAppEnabled: dto.customerAppEnabled ?? true,
-          staffAppEnabled: dto.staffAppEnabled ?? true,
+          // MT-040A: exposure flags — null means "use plan default."
+          // Only store an explicit boolean when the caller explicitly overrides the plan.
+          websiteEnabled: dto.websiteEnabled ?? null,
+          customerAppEnabled: dto.customerAppEnabled ?? null,
+          staffAppEnabled: dto.staffAppEnabled ?? null,
         },
       });
 
@@ -270,7 +270,7 @@ export class SuperAdminService {
     const [effectiveView, unitCount, userCount, projectCount] = await Promise.all([
       this.capabilityService.getEffectiveCapabilities(id),
       this.prisma.unit.count({ where: { companyId: id } }),
-      this.prisma.user.count({ where: { companyId: id, role: { not: 'SUPER_ADMIN' } } }),
+      this.prisma.user.count({ where: { companyId: id, deletedAt: null, role: { in: [...STAFF_SEAT_ROLES] } } }),
       this.prisma.project.count({ where: { companyId: id } }),
     ]);
 
@@ -308,7 +308,7 @@ export class SuperAdminService {
           select: {
             units: true,
             projects: true,
-            users: { where: { role: { not: 'SUPER_ADMIN' } } },
+            users: { where: { deletedAt: null, role: { in: [...STAFF_SEAT_ROLES] } } },
           },
         },
       },

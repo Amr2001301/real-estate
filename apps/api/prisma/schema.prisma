@@ -57,15 +57,16 @@ model Company {
   // CapabilityService (future). Null = no explicit entitlements stored yet.
   capabilities        Json?
 
-  // ── MT-040A: Exposure / channel flags (schema only — enforcement deferred) ─
+  // ── MT-040A: Exposure / channel flags ─────────────────────────────────────
   // These are channel controls, independent of CompanyType and capabilities.
   // websiteEnabled:       may this company have a public web presence?
   // customerAppEnabled:   may this company appear in the shared customer app?
   // staffAppEnabled:      may staff access this company via the shared staff app?
-  // All existing rows default to true to preserve current product behavior.
-  websiteEnabled      Boolean                @default(true)
-  customerAppEnabled  Boolean                @default(true)
-  staffAppEnabled     Boolean                @default(true)
+  // NULL = no explicit override — use the plan default.
+  // Resolution: column (if NOT NULL) > plan default.
+  websiteEnabled      Boolean?
+  customerAppEnabled  Boolean?
+  staffAppEnabled     Boolean?
 
   // ── Relations ──────────────────────────────────────────────────────────────
   // MT-044: Platform subdomains are provisioned here at company creation time.

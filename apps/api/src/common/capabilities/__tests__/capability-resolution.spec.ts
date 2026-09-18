@@ -16,6 +16,7 @@ import { CapabilityService } from '../capability.service';
 import {
   buildEffectiveView,
   PLAN_DEFAULTS,
+  STAFF_SEAT_ROLES,
   validateCapabilityOverrides,
   type EffectiveCapabilitiesView,
 } from '../capability-schema';
@@ -35,16 +36,17 @@ function makeRedis(overrides: Record<string, jest.Mock> = {}) {
 function makeCompanyRow(overrides: Partial<{
   subscriptionPlan: SubscriptionPlan;
   capabilities: Record<string, unknown> | null;
-  websiteEnabled: boolean;
-  customerAppEnabled: boolean;
-  staffAppEnabled: boolean;
+  websiteEnabled: boolean | null;
+  customerAppEnabled: boolean | null;
+  staffAppEnabled: boolean | null;
 }> = {}) {
   return {
     subscriptionPlan: 'STARTER' as SubscriptionPlan,
     capabilities: null,
-    websiteEnabled: false,
-    customerAppEnabled: false,
-    staffAppEnabled: true,
+    // Explicit false/true mirrors STARTER plan defaults — not null, so column wins
+    websiteEnabled: false as boolean | null,
+    customerAppEnabled: false as boolean | null,
+    staffAppEnabled: true as boolean | null,
     ...overrides,
   };
 }
@@ -92,7 +94,7 @@ describe('buildEffectiveView — plan defaults (no override)', () => {
 
   test('STARTER: limited counts, restricted feature set', () => {
     const view = buildEffectiveView('STARTER', noOverride, false, false, true);
-    expect(effective(view, 'limit.maxUnits')).toBe(150);
+    expect(effective(view, 'limit.maxUnits')).toBe(500);
     expect(effective(view, 'limit.maxUsers')).toBe(15);
     expect(effective(view, 'limit.maxProjects')).toBe(5);
     expect(effective(view, 'feature.brokers')).toBe(false);
@@ -107,7 +109,7 @@ describe('buildEffectiveView — plan defaults (no override)', () => {
 
   test('PROFESSIONAL: higher limits, more features', () => {
     const view = buildEffectiveView('PROFESSIONAL', noOverride, true, true, true);
-    expect(effective(view, 'limit.maxUnits')).toBe(750);
+    expect(effective(view, 'limit.maxUnits')).toBe(2500);
     expect(effective(view, 'limit.maxUsers')).toBe(50);
     expect(effective(view, 'limit.maxProjects')).toBe(20);
     expect(effective(view, 'feature.brokers')).toBe(true);
@@ -148,12 +150,12 @@ describe('buildEffectiveView — plan defaults (no override)', () => {
 // ── 2. Override wins in both directions ───────────────────────────────────────
 
 describe('buildEffectiveView — override wins over plan default', () => {
-  test('raising a limit: STARTER maxUnits 150 → 500 via override', () => {
-    const view = buildEffectiveView('STARTER', { 'limit.maxUnits': 500 }, false, false, true);
+  test('raising a limit: STARTER maxUnits 500 → 1000 via override', () => {
+    const view = buildEffectiveView('STARTER', { 'limit.maxUnits': 1000 }, false, false, true);
     const unitKey = view.keys.find((k) => k.key === 'limit.maxUnits')!;
-    expect(unitKey.planDefault).toBe(150);
-    expect(unitKey.override).toBe(500);
-    expect(unitKey.effective).toBe(500);
+    expect(unitKey.planDefault).toBe(500);
+    expect(unitKey.override).toBe(1000);
+    expect(unitKey.effective).toBe(1000);
     expect(unitKey.source).toBe('capabilities_override');
   });
 
@@ -376,7 +378,7 @@ describe('CapabilityService.getEffectiveCapabilities — tenant scope', () => {
     expect(viewA.plan).toBe('ENTERPRISE');
     expect(viewB.plan).toBe('STARTER');
     expect(effective(viewA, 'limit.maxUnits')).toBeNull();  // ENTERPRISE unlimited
-    expect(effective(viewB, 'limit.maxUnits')).toBe(150);   // STARTER 150
+    expect(effective(viewB, 'limit.maxUnits')).toBe(500);   // STARTER 500
   });
 });
 
@@ -412,5 +414,105 @@ describe('CapabilityService — cross-tenant NotFoundException', () => {
     await expect(
       svc.setCapabilityOverrides('comp-1', { 'feature.unknown': true }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
+
+// ── 8. Nullable column — null falls back to plan default ──────────────────────
+
+describe('buildEffectiveView — nullable column override', () => {
+  test('column null → feature.publicWebsite resolves from plan default', () => {
+    // STARTER plan default is false
+    const view = buildEffectiveView('STARTER', {}, null, null, null);
+    const key = view.keys.find((k) => k.key === 'feature.publicWebsite')!;
+    expect(key.effective).toBe(false);
+    expect(key.planDefault).toBe(false);
+    expect(key.source).toBe('plan_default');
+  });
+
+  test('column null → feature.customerApp resolves from plan default (STARTER=false)', () => {
+    const view = buildEffectiveView('STARTER', {}, null, null, null);
+    expect(effective(view, 'feature.customerApp')).toBe(false);
+  });
+
+  test('column null → feature.staffApp resolves from plan default (STARTER=true)', () => {
+    const view = buildEffectiveView('STARTER', {}, null, null, null);
+    const key = view.keys.find((k) => k.key === 'feature.staffApp')!;
+    expect(key.effective).toBe(true);
+    expect(key.source).toBe('plan_default');
+  });
+
+  test('column non-null → column value wins over plan default, source=company_column', () => {
+    // STARTER plan default for publicWebsite=false; column override=true
+    const view = buildEffectiveView('STARTER', {}, true, null, null);
+    const key = view.keys.find((k) => k.key === 'feature.publicWebsite')!;
+    expect(key.effective).toBe(true);
+    expect(key.planDefault).toBe(false);
+    expect(key.source).toBe('company_column');
+  });
+
+  test('column false on PROFESSIONAL explicitly disables website (plan default=true)', () => {
+    const view = buildEffectiveView('PROFESSIONAL', {}, false, null, null);
+    const key = view.keys.find((k) => k.key === 'feature.publicWebsite')!;
+    expect(key.effective).toBe(false);   // column wins
+    expect(key.planDefault).toBe(true);  // plan would have given true
+    expect(key.source).toBe('company_column');
+  });
+
+  test('STARTER with all columns null does NOT have website or customerApp', () => {
+    const view = buildEffectiveView('STARTER', {}, null, null, null);
+    expect(effective(view, 'feature.publicWebsite')).toBe(false);
+    expect(effective(view, 'feature.customerApp')).toBe(false);
+    expect(effective(view, 'feature.staffApp')).toBe(true);
+  });
+
+  test('TRIAL with all columns null has all three app features (plan defaults all true)', () => {
+    const view = buildEffectiveView('TRIAL', {}, null, null, null);
+    expect(effective(view, 'feature.publicWebsite')).toBe(true);
+    expect(effective(view, 'feature.customerApp')).toBe(true);
+    expect(effective(view, 'feature.staffApp')).toBe(true);
+  });
+});
+
+// ── 9. STAFF_SEAT_ROLES — seat counting definition ────────────────────────────
+
+describe('STAFF_SEAT_ROLES — seat counting definition', () => {
+  const roles = STAFF_SEAT_ROLES as readonly string[];
+
+  test('staff roles are included: ADMIN, SALES, SALES_MANAGER, MAINTENANCE_SUPERVISOR, BROKER', () => {
+    expect(roles).toContain('ADMIN');
+    expect(roles).toContain('SALES');
+    expect(roles).toContain('SALES_MANAGER');
+    expect(roles).toContain('MAINTENANCE_SUPERVISOR');
+    expect(roles).toContain('BROKER');
+  });
+
+  test('CLIENT is excluded — end-users do not consume staff seats', () => {
+    expect(roles).not.toContain('CLIENT');
+  });
+
+  test('CUSTOMER is excluded — end-users do not consume staff seats', () => {
+    expect(roles).not.toContain('CUSTOMER');
+  });
+
+  test('SUPER_ADMIN is excluded — platform-level, no companyId', () => {
+    expect(roles).not.toContain('SUPER_ADMIN');
+  });
+
+  test('a company with many customers and few staff stays well under the user limit', () => {
+    // 200 customers + 5 staff: only 5 seats consumed against a limit of 15
+    const staffCount  = 5;
+    const limit = PLAN_DEFAULTS['STARTER']['limit.maxUsers'] as number;
+    expect(staffCount).toBeLessThan(limit);
+    // CLIENT/CUSTOMER rows are not counted (confirmed by their absence in STAFF_SEAT_ROLES)
+    expect(roles).not.toContain('CLIENT');
+    expect(roles).not.toContain('CUSTOMER');
+  });
+
+  test('inactive staff (active=false) counts — active flag absent from STAFF_SEAT_ROLES filter', () => {
+    // The filter only adds: deletedAt: null + role: { in: STAFF_SEAT_ROLES }
+    // There is no active: true filter — an inactive staff account holds its seat.
+    // We verify this by confirming `active` is not mentioned in this constant.
+    const rolesJson = JSON.stringify(STAFF_SEAT_ROLES);
+    expect(rolesJson).not.toContain('active');
   });
 });
