@@ -1,8 +1,14 @@
 import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile_staff/features/splash/splash_screen.dart';
 import 'package:mobile_staff/router/app_router.dart';
 
 void main() {
+  // staffRedirect gates on SplashScreen.splashDone (defaults false).
+  // These tests exercise post-splash routing logic, so the precondition is true.
+  setUp(() => SplashScreen.splashDone.value = true);
+  tearDown(() => SplashScreen.splashDone.value = false);
+
   const broker = SessionState.authenticated(Session(userId: '1', role: AppRole.broker));
   const sales = SessionState.authenticated(Session(userId: '2', role: AppRole.sales));
 
