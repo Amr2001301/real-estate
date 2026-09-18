@@ -1,8 +1,6 @@
 name: CD — Deploy to Production
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       service:
