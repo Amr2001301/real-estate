@@ -667,7 +667,7 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
 
     afterAll(async () => {
       // Drop constraint in case test failed before its own finally block ran
-      await testApp.rawPrisma.$executeRaw`ALTER TABLE "ContractCancellation" DROP CONSTRAINT IF EXISTS "d3_atomic_check"`.catch(() => void 0);
+      await testApp.rawPrisma.$executeRaw`ALTER TABLE "ContractCancellation" DROP CONSTRAINT IF EXISTS "zz_test_d3_atomicity"`.catch(() => void 0);
       if (atomicPlanId !== '00000000-0000-0000-0000-000000000002') {
         await testApp.rawPrisma.installment.deleteMany({ where: { planId: atomicPlanId } }).catch(() => void 0);
         await testApp.rawPrisma.installmentPlan.deleteMany({ where: { id: atomicPlanId } }).catch(() => void 0);
@@ -684,7 +684,7 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
     it('D3-6: forced ContractCancellation.create failure rolls back entire cancel transaction', async () => {
       try {
         // NOT VALID: add constraint without scanning existing rows; new inserts still fail
-        await testApp.rawPrisma.$executeRaw`ALTER TABLE "ContractCancellation" ADD CONSTRAINT "d3_atomic_check" CHECK (1 = 0) NOT VALID`;
+        await testApp.rawPrisma.$executeRaw`ALTER TABLE "ContractCancellation" ADD CONSTRAINT "zz_test_d3_atomicity" CHECK (1 = 0) NOT VALID`;
 
         const res = await request(testApp.app.getHttpServer())
           .post(`/v1/contracts/${atomicContractId}/cancel`)
@@ -720,7 +720,7 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
         });
         expect(cc).toBeNull();
       } finally {
-        await testApp.rawPrisma.$executeRaw`ALTER TABLE "ContractCancellation" DROP CONSTRAINT IF EXISTS "d3_atomic_check"`;
+        await testApp.rawPrisma.$executeRaw`ALTER TABLE "ContractCancellation" DROP CONSTRAINT IF EXISTS "zz_test_d3_atomicity"`;
       }
     });
   });
@@ -1050,8 +1050,8 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
     afterAll(async () => {
       // Safety net: drop constraint if D3-10d was interrupted before its own finally ran.
       // Mirrors the D3-6 describe-level afterAll. Without this, a SIGKILL mid-D3-10d
-      // leaves d3b_atomic_check on ContractCancellation and breaks file 12 in the same run.
-      await testApp.rawPrisma.$executeRaw`ALTER TABLE "ContractCancellation" DROP CONSTRAINT IF EXISTS "d3b_atomic_check"`.catch(() => void 0);
+      // leaves zz_test_d3b_atomicity on ContractCancellation and breaks file 12 in the same run.
+      await testApp.rawPrisma.$executeRaw`ALTER TABLE "ContractCancellation" DROP CONSTRAINT IF EXISTS "zz_test_d3b_atomicity"`.catch(() => void 0);
     });
 
     // ── D3-10a: sole commission in APPROVED payout → payout CANCELLED ─────
@@ -1416,7 +1416,7 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
       try {
         // NOT VALID: add constraint without scanning existing rows;
         // new ContractCancellation inserts fail → rolls back entire transaction
-        await testApp.rawPrisma.$executeRaw`ALTER TABLE "ContractCancellation" ADD CONSTRAINT "d3b_atomic_check" CHECK (1 = 0) NOT VALID`;
+        await testApp.rawPrisma.$executeRaw`ALTER TABLE "ContractCancellation" ADD CONSTRAINT "zz_test_d3b_atomicity" CHECK (1 = 0) NOT VALID`;
 
         const res = await request(testApp.app.getHttpServer())
           .post(`/v1/contracts/${contract.id}/cancel`)
@@ -1448,7 +1448,7 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
         const cc = await testApp.rawPrisma.contractCancellation.findUnique({ where: { contractId: contract.id } });
         expect(cc).toBeNull();
       } finally {
-        await testApp.rawPrisma.$executeRaw`ALTER TABLE "ContractCancellation" DROP CONSTRAINT IF EXISTS "d3b_atomic_check"`;
+        await testApp.rawPrisma.$executeRaw`ALTER TABLE "ContractCancellation" DROP CONSTRAINT IF EXISTS "zz_test_d3b_atomicity"`;
         await testApp.rawPrisma.contractCancellation.deleteMany({ where: { contractId: contract.id } }).catch(() => void 0);
         await testApp.rawPrisma.brokerCommission.deleteMany({ where: { id: commission.id } }).catch(() => void 0);
         await testApp.rawPrisma.contract.deleteMany({ where: { id: contract.id } }).catch(() => void 0);

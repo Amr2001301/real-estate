@@ -130,7 +130,7 @@ describe('SEC — Deposit Correction cross-tenant attack matrix (Step C)', () =>
 
     afterAll(async () => {
       // Safety net: drop constraint if DC-5 was interrupted before its own finally ran.
-      await testApp.rawPrisma.$executeRaw`ALTER TABLE "PaymentCorrection" DROP CONSTRAINT IF EXISTS "test_atomic_bounce_check"`.catch(() => void 0);
+      await testApp.rawPrisma.$executeRaw`ALTER TABLE "PaymentCorrection" DROP CONSTRAINT IF EXISTS "zz_test_dc5_bounce"`.catch(() => void 0);
     });
 
     beforeAll(async () => {
@@ -173,7 +173,7 @@ describe('SEC — Deposit Correction cross-tenant attack matrix (Step C)', () =>
 
     it('DC-5: forced paymentCorrection.create failure rolls back the entire bounce transaction', async () => {
       try {
-        await testApp.rawPrisma.$executeRaw`ALTER TABLE "PaymentCorrection" ADD CONSTRAINT "test_atomic_bounce_check" CHECK (1 = 0)`;
+        await testApp.rawPrisma.$executeRaw`ALTER TABLE "PaymentCorrection" ADD CONSTRAINT "zz_test_dc5_bounce" CHECK (1 = 0)`;
 
         const res = await request(testApp.app.getHttpServer())
           .post(`/v1/payment-instruments/${atomicPiId}/bounce`)
@@ -199,7 +199,7 @@ describe('SEC — Deposit Correction cross-tenant attack matrix (Step C)', () =>
         });
         expect(corrections).toHaveLength(0);
       } finally {
-        await testApp.rawPrisma.$executeRaw`ALTER TABLE "PaymentCorrection" DROP CONSTRAINT IF EXISTS "test_atomic_bounce_check"`;
+        await testApp.rawPrisma.$executeRaw`ALTER TABLE "PaymentCorrection" DROP CONSTRAINT IF EXISTS "zz_test_dc5_bounce"`;
       }
     });
   });
@@ -215,7 +215,7 @@ describe('SEC — Deposit Correction cross-tenant attack matrix (Step C)', () =>
 
     afterAll(async () => {
       // Safety net: drop constraint if DC-6 was interrupted before its own finally ran.
-      await testApp.rawPrisma.$executeRaw`ALTER TABLE "PaymentCorrection" DROP CONSTRAINT IF EXISTS "test_atomic_reverse_check"`.catch(() => void 0);
+      await testApp.rawPrisma.$executeRaw`ALTER TABLE "PaymentCorrection" DROP CONSTRAINT IF EXISTS "zz_test_dc6_reverse"`.catch(() => void 0);
     });
 
     beforeAll(async () => {
@@ -247,7 +247,7 @@ describe('SEC — Deposit Correction cross-tenant attack matrix (Step C)', () =>
 
     it('DC-6: forced paymentCorrection.create failure rolls back the entire reverseDeposit transaction', async () => {
       try {
-        await testApp.rawPrisma.$executeRaw`ALTER TABLE "PaymentCorrection" ADD CONSTRAINT "test_atomic_reverse_check" CHECK (1 = 0)`;
+        await testApp.rawPrisma.$executeRaw`ALTER TABLE "PaymentCorrection" ADD CONSTRAINT "zz_test_dc6_reverse" CHECK (1 = 0)`;
 
         const res = await request(testApp.app.getHttpServer())
           .post(`/v1/deposits/${atomicRevDepId}/reverse`)
@@ -273,7 +273,7 @@ describe('SEC — Deposit Correction cross-tenant attack matrix (Step C)', () =>
         });
         expect(corrections).toHaveLength(0);
       } finally {
-        await testApp.rawPrisma.$executeRaw`ALTER TABLE "PaymentCorrection" DROP CONSTRAINT IF EXISTS "test_atomic_reverse_check"`;
+        await testApp.rawPrisma.$executeRaw`ALTER TABLE "PaymentCorrection" DROP CONSTRAINT IF EXISTS "zz_test_dc6_reverse"`;
       }
     });
   });

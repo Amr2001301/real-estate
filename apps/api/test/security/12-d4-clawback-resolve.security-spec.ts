@@ -98,8 +98,8 @@ describe('SEC — D4: clawback:collect + clawback:waive (Step D4)', () => {
     });
     // Safety net: drop atomicity test constraints if D4-13/D4-14 were killed before their finally ran.
     // AuditLog is written by every state-changing service; a leaked constraint destroys files 13-15.
-    await testApp.rawPrisma.$executeRawUnsafe(`ALTER TABLE "AuditLog" DROP CONSTRAINT IF EXISTS "_d4_atomicity_commission"`).catch(() => void 0);
-    await testApp.rawPrisma.$executeRawUnsafe(`ALTER TABLE "AuditLog" DROP CONSTRAINT IF EXISTS "_d4_atomicity_bonus"`).catch(() => void 0);
+    await testApp.rawPrisma.$executeRawUnsafe(`ALTER TABLE "AuditLog" DROP CONSTRAINT IF EXISTS "zz_test_d4_commission"`).catch(() => void 0);
+    await testApp.rawPrisma.$executeRawUnsafe(`ALTER TABLE "AuditLog" DROP CONSTRAINT IF EXISTS "zz_test_d4_bonus"`).catch(() => void 0);
     await teardownSecurityFixture(testApp.rawPrisma);
     await testApp.close();
   });
@@ -632,7 +632,7 @@ describe('SEC — D4: clawback:collect + clawback:waive (Step D4)', () => {
     // Add NOT VALID CHECK on AuditLog to force the transaction to fail during
     // auditLog.create (which happens inside the $transaction after the update).
     await testApp.rawPrisma.$executeRawUnsafe(
-      `ALTER TABLE "AuditLog" ADD CONSTRAINT "_d4_atomicity_commission" CHECK (1 = 0) NOT VALID`,
+      `ALTER TABLE "AuditLog" ADD CONSTRAINT "zz_test_d4_commission" CHECK (1 = 0) NOT VALID`,
     );
 
     let res;
@@ -644,7 +644,7 @@ describe('SEC — D4: clawback:collect + clawback:waive (Step D4)', () => {
         .send({ amount: NET_AMOUNT, paymentMethod: PaymentMethod.BANK_TRANSFER });
     } finally {
       await testApp.rawPrisma.$executeRawUnsafe(
-        `ALTER TABLE "AuditLog" DROP CONSTRAINT IF EXISTS "_d4_atomicity_commission"`,
+        `ALTER TABLE "AuditLog" DROP CONSTRAINT IF EXISTS "zz_test_d4_commission"`,
       );
     }
 
@@ -663,7 +663,7 @@ describe('SEC — D4: clawback:collect + clawback:waive (Step D4)', () => {
     const b = await seedOutstandingBonus(fx.companies.aId);
 
     await testApp.rawPrisma.$executeRawUnsafe(
-      `ALTER TABLE "AuditLog" ADD CONSTRAINT "_d4_atomicity_bonus" CHECK (1 = 0) NOT VALID`,
+      `ALTER TABLE "AuditLog" ADD CONSTRAINT "zz_test_d4_bonus" CHECK (1 = 0) NOT VALID`,
     );
 
     let res;
@@ -675,7 +675,7 @@ describe('SEC — D4: clawback:collect + clawback:waive (Step D4)', () => {
         .send({ reason: 'Atomicity test waive' });
     } finally {
       await testApp.rawPrisma.$executeRawUnsafe(
-        `ALTER TABLE "AuditLog" DROP CONSTRAINT IF EXISTS "_d4_atomicity_bonus"`,
+        `ALTER TABLE "AuditLog" DROP CONSTRAINT IF EXISTS "zz_test_d4_bonus"`,
       );
     }
 

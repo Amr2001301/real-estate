@@ -137,6 +137,7 @@ pnpm --filter @rep/api openapi:export   # exports spec → mobile consumes it
 - **Tenant scoping**: every new Prisma query that touches a tenanted model must include `companyId` in the `where` clause. Use ownership guards; never trust the caller's claimed companyId alone.
 - **Shared types**: add domain types/schemas to `packages/shared-types`, not inside a single app.
 - **Mobile**: Clean Architecture (data / domain / presentation layers); state via Riverpod providers; routing via GoRouter named routes.
+- **Test-only schema objects**: any constraint, trigger, or index added by a security test must be named with the `zz_test_` prefix (e.g. `zz_test_d3_atomicity`). The security `globalSetup` queries `pg_constraint`, `pg_trigger`, and `pg_indexes` for this prefix at suite start and fails with an actionable drop-SQL message if any are found. Every such test must also have both a `finally` block that drops the object and a describe-level `afterAll` as a backup — see `test/security/10-d3-cancel-attack.security-spec.ts` D3-6 for the canonical pattern.
 
 ---
 

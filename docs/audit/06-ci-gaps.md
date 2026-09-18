@@ -18,7 +18,7 @@
 | G6 — api-e2e suite too slow | **New, open** | See below |
 | G7 — api-security budget near-exhausted | **Partially mitigated** — 20→35 min (commit `bcbe697`+) | See below |
 | G8 — cancelled job misread as test failure | **New, recorded** | See below |
-| G9 — atomic test `afterAll` safety nets missing | **Partially fixed** | D3-10d fixed; DC-5/DC-6/D4-13/D4-14 still open |
+| G9 — atomic test `afterAll` safety nets missing | **CLOSED** | All 5 constraints have afterAll + globalSetup guard added |
 
 ### Infrastructure fixes applied in this sprint
 
@@ -220,8 +220,14 @@ and breaks subsequent tests that insert into the same table.
 | `12-d4-clawback-resolve.security-spec.ts` | D4-13 | `_d4_atomicity_commission` | `AuditLog` | **Critical** — `AuditLog.create()` called by every state-changing service; files 13–15 would all fail |
 | `12-d4-clawback-resolve.security-spec.ts` | D4-14 | `_d4_atomicity_bonus` | `AuditLog` | **Critical** — same; sequentially after D4-13 |
 
-**Status:** D3-10d fixed (afterAll added to `describe('D3-10...')`).
-DC-5, DC-6, D4-13, D4-14 remain open pending owner decision.
+**Status:** All five constraints are now covered:
+- D3-6: already had both `finally` + describe `afterAll` (the canonical pattern)
+- D3-10d: describe `afterAll` added (commit `72101fe`)
+- DC-5, DC-6: describe `afterAll` added (commit `e5bb18f`)
+- D4-13, D4-14: outer `afterAll` drops added (commit `134aaa8`)
+
+All six constraint names have been renamed to the `zz_test_` prefix (see below).
+A `globalSetup` guard now fails loudly if any `zz_test_*` objects are found at suite start.
 
 ---
 
@@ -237,7 +243,7 @@ DC-5, DC-6, D4-13, D4-14 remain open pending owner decision.
 | G6 | High | api-e2e suite exceeds 15-minute budget; specs 4+ min each |
 | G7 | High | api-security budget near-exhausted; raised to 35 min as stop-gap |
 | G8 | Process | Cancelled job must never be reported as test failure; check `conclusion` first |
-| G9 | High | 4 atomic tests missing `afterAll` safety net; D3-10d fixed, 4 remain |
+| G9 | ~~High~~ | ~~Atomic tests missing `afterAll` safety net~~ — **CLOSED**: all afterAlls added; `zz_test_` prefix enforced; globalSetup guard added |
 
 ---
 

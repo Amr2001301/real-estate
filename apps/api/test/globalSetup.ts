@@ -27,6 +27,83 @@
 
 import { execSync } from 'node:child_process';
 import * as path from 'node:path';
+import { PrismaClient } from '@prisma/client';
+
+/**
+ * Fails loudly if test-created schema objects from a previous interrupted run remain.
+ * Objects named `zz_test_*` are test-only and must not exist at suite start.
+ * See CLAUDE.md "Test-only schema objects" for the naming convention.
+ */
+async function checkForLeakedTestObjects(testUrl: string): Promise<void> {
+  const probe = new PrismaClient({ datasources: { db: { url: testUrl } } });
+  try {
+    type Row = { object_type: string; name: string; table_name: string };
+    const leaked = await probe.$queryRaw<Row[]>`
+      SELECT 'CONSTRAINT'  AS object_type,
+             c.conname      AS name,
+             r.relname      AS table_name
+        FROM pg_constraint c
+        JOIN pg_class      r ON r.oid = c.conrelid
+       WHERE c.conname LIKE 'zz_test_%'
+      UNION ALL
+      SELECT 'TRIGGER',
+             t.tgname,
+             r.relname
+        FROM pg_trigger t
+        JOIN pg_class   r ON r.oid = t.tgrelid
+       WHERE t.tgname LIKE 'zz_test_%' AND NOT t.tgisinternal
+      UNION ALL
+      SELECT 'INDEX',
+             i.indexname,
+             i.tablename
+        FROM pg_indexes i
+       WHERE i.indexname LIKE 'zz_test_%' AND i.schemaname = 'public'
+      ORDER BY object_type, table_name, name
+    `;
+
+    if (leaked.length === 0) return;
+
+    const redacted = testUrl.replace(/:\/\/[^:]+:[^@]+@/, '://***:***@');
+    const objectList = leaked
+      .map(r => `  ${r.object_type.padEnd(10)} "${r.name}"  →  table "${r.table_name}"`)
+      .join('\n');
+    const dropSql = leaked
+      .map(r => {
+        if (r.object_type === 'CONSTRAINT')
+          return `ALTER TABLE "${r.table_name}" DROP CONSTRAINT IF EXISTS "${r.name}";`;
+        if (r.object_type === 'TRIGGER')
+          return `DROP TRIGGER IF EXISTS "${r.name}" ON "${r.table_name}";`;
+        return `DROP INDEX IF EXISTS "${r.name}";`;
+      })
+      .join('\n');
+
+    throw new Error(
+      `\n` +
+      `[globalSetup] ── LEAKED TEST SCHEMA OBJECTS ─────────────────────────────────────\n` +
+      `\n` +
+      `  The previous security suite run was interrupted (SIGTERM or test timeout)\n` +
+      `  before cleanup code ran. These test-only objects remain in the database:\n` +
+      `\n` +
+      `${objectList}\n` +
+      `\n` +
+      `  Target DB: ${redacted}\n` +
+      `\n` +
+      `  Drop them with this SQL, then retry the suite:\n` +
+      `\n` +
+      dropSql.split('\n').map(l => `    ${l}`).join('\n') +
+      `\n` +
+      `\n` +
+      `  Alternatively, run without SKIP_DB_RESET=1 — the full migration reset clears them.\n` +
+      `─────────────────────────────────────────────────────────────────────────────────\n`,
+    );
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('[globalSetup] ── LEAKED')) throw err;
+    // DB not yet reachable (fresh container, first-ever run). The migration reset
+    // below will create the schema from scratch.
+  } finally {
+    await probe.$disconnect();
+  }
+}
 
 export default async function globalSetup(): Promise<void> {
   const testUrl = process.env.TEST_DATABASE_URL;
@@ -72,6 +149,8 @@ export default async function globalSetup(): Promise<void> {
   // included) reads from the e2e DB. Setting it on process.env propagates
   // to execSync's spawned children via their inherited env.
   process.env.DATABASE_URL = testUrl;
+
+  await checkForLeakedTestObjects(testUrl);
 
   const apiRoot = path.resolve(__dirname, '..');
   const env = { ...process.env, DATABASE_URL: testUrl };
