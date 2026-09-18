@@ -1047,6 +1047,13 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
   // Each sub-test creates its own isolated payout(s) and contract(s).
 
   describe('D3-10: payout dimension — APPROVED payout side-effects (D3b)', () => {
+    afterAll(async () => {
+      // Safety net: drop constraint if D3-10d was interrupted before its own finally ran.
+      // Mirrors the D3-6 describe-level afterAll. Without this, a SIGKILL mid-D3-10d
+      // leaves d3b_atomic_check on ContractCancellation and breaks file 12 in the same run.
+      await testApp.rawPrisma.$executeRaw`ALTER TABLE "ContractCancellation" DROP CONSTRAINT IF EXISTS "d3b_atomic_check"`.catch(() => void 0);
+    });
+
     // ── D3-10a: sole commission in APPROVED payout → payout CANCELLED ─────
     it('D3-10a: APPROVED commission, sole in APPROVED payout → commission CANCELLED + payout CANCELLED', async () => {
       const payout = await testApp.rawPrisma.brokerPayout.create({
