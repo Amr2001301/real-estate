@@ -613,8 +613,6 @@ class _FocusItemCardState extends State<_FocusItemCard> {
     final colors = context.appColors;
     final toneColor = widget.item.tone.baseColor(colors);
     final hasAction = widget.item.onTap != null;
-    final isRtl = context.read<LocaleCubit>().isRtl;
-
     return GestureDetector(
       onTapDown: hasAction ? (_) => setState(() => _pressed = true) : null,
       onTapUp: hasAction ? (_) => setState(() => _pressed = false) : null,
@@ -767,7 +765,6 @@ class _PrimaryActionCellState extends State<_PrimaryActionCell> {
 
   @override
   Widget build(BuildContext context) {
-    final isRtl = context.read<LocaleCubit>().isRtl;
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) => setState(() => _pressed = false),

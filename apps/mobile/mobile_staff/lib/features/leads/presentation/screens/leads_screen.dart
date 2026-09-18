@@ -1190,11 +1190,12 @@ class _LeadFilterSheetState extends State<_LeadFilterSheet> {
 
   Future<void> _loadSources() async {
     final sources = await widget.cubit.fetchSources();
-    if (mounted)
+    if (mounted) {
       setState(() {
         _sources = sources;
         _loadingSources = false;
       });
+    }
   }
 
   Future<void> _pickDate(bool isFrom) async {
