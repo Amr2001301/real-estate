@@ -14,9 +14,14 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  packages: write
+
 env:
   REGISTRY: ghcr.io
-  IMAGE_PREFIX: ${{ github.repository_owner }}/devora
+  # Must be all-lowercase for Docker image tags (GHCR requirement).
+  IMAGE_PREFIX: amr2001301/devora
 
 jobs:
   # ─── Detect what changed (mirrors ci.yml) ────────────────────────────────────
