@@ -29,6 +29,7 @@ import {
   DocumentCategory,
   DocumentOwnerType,
   DocumentVisibility,
+  DomainType,
   MaintenanceStatus,
   PlanTemplateStatus,
   PrismaClient,
@@ -536,6 +537,22 @@ async function main(): Promise<void> {
   // seed already ran its backfill, so this pass only touches e2e-new rows.
   const defaultCompany = await prisma.company.findFirstOrThrow({ where: { isActive: true } });
   await backfillCompanyId(defaultCompany.id);
+
+  // Register localhost as a verified PLATFORM_SUBDOMAIN so DomainResolverService
+  // resolves it in CI and local e2e runs without requiring the DEV_TENANT_SLUG
+  // bypass. The bypass skips the resolution path these tests exist to exercise.
+  await prisma.companyDomain.upsert({
+    where: { hostname: 'localhost' },
+    update: {},
+    create: {
+      companyId: defaultCompany.id,
+      hostname: 'localhost',
+      type: DomainType.PLATFORM_SUBDOMAIN,
+      isPrimary: true,
+      verifiedAt: new Date(),
+      verificationToken: 'e2e-localhost-verification-token',
+    },
+  });
 
   console.log('   Brokers:');
   console.log(`     ${E2E_BROKER_CODES.BROKER_1} → projects [${p1.id}, ${p2.id}]`);

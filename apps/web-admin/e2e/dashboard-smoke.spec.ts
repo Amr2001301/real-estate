@@ -14,7 +14,7 @@ test.use({ storageState: ADMIN_STORAGE });
  * fine — we assert the shell + heading only.
  */
 const ROUTES: RouteCheck[] = [
-  { path: '/dashboard', heading: 'مرحباً بك في المجلس الرقمي' },
+  { path: '/dashboard', heading: 'لوحة التحكم' },
   { path: '/dashboard/leads', heading: 'مسار مبيعات العقارات' },
   { path: '/dashboard/projects', heading: 'قائمة المشاريع' },
   { path: '/dashboard/units', heading: 'إدارة الوحدات السكنية' },
@@ -28,7 +28,7 @@ test.describe('Dashboard smoke', () => {
     page,
   }) => {
     await page.goto('/dashboard');
-    await expect(page.getByText('مرحباً بك في المجلس الرقمي').first()).toBeVisible();
+    await expect(page.getByText('لوحة التحكم').first()).toBeVisible();
     for (const route of ROUTES) {
       await assertRouteLoads(page, route);
     }

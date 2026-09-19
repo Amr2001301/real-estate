@@ -460,7 +460,7 @@ jobs:
       - name: Start API (background, port 4000)
         working-directory: apps/api
         run: |
-          PORT=4000 node dist/main.js &
+          PORT=4000 node dist/main.js > /tmp/api.log 2>&1 &
           echo $! > /tmp/api.pid
           # Wait for /health
           for i in $(seq 1 60); do
@@ -490,6 +490,14 @@ jobs:
         with:
           name: web-admin-playwright-report
           path: apps/web-admin/playwright-report/
+          retention-days: 7
+
+      - name: Upload API log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-admin-api-log
+          path: /tmp/api.log
           retention-days: 7
 
   # ─────────────────────────────────────────────────────────────────────────────
@@ -562,7 +570,7 @@ jobs:
       - name: Start API (background, port 4000)
         working-directory: apps/api
         run: |
-          PORT=4000 node dist/main.js &
+          PORT=4000 node dist/main.js > /tmp/api.log 2>&1 &
           echo $! > /tmp/api.pid
           for i in $(seq 1 60); do
             if curl -fs http://localhost:4000/health > /dev/null; then echo "API up"; break; fi
@@ -591,6 +599,14 @@ jobs:
         with:
           name: web-public-playwright-report
           path: apps/web-public/playwright-report/
+          retention-days: 7
+
+      - name: Upload API log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-public-api-log
+          path: /tmp/api.log
           retention-days: 7
 
   # ─────────────────────────────────────────────────────────────────────────────

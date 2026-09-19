@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 
 import '../interceptors/auth_interceptor.dart';
@@ -28,9 +30,15 @@ typedef TenantMismatchHandler = Future<void> Function();
 ///
 /// When the backend TenantContextInterceptor rejects a request because the
 /// slug header does not match the DB-loaded user company, it returns HTTP 403
-/// with a body containing "X-Tenant-Slug". This interceptor detects that
-/// specific response, calls [onMismatch] to clear the session, and re-throws
-/// so callers surface a generic Forbidden failure.
+/// with `body.code == "TENANT_CONTEXT_MISMATCH"`. This interceptor detects
+/// that specific response, calls [onMismatch] to clear the session, and
+/// re-throws so callers surface a generic Forbidden failure.
+///
+/// The response body is handled as both `Map<String, dynamic>` (Dio auto-
+/// decoded when Content-Type is application/json) and `String` (raw JSON
+/// string, e.g. from mock adapters in tests). Only the `code` field is
+/// checked; the `message` field is deliberately ignored so natural-language
+/// message changes never silently break detection.
 ///
 /// Important: the slug header is NEVER used as an authorization source.
 /// Backend uses `req.user.companyId` (from JwtStrategy DB reload) as the
@@ -71,9 +79,17 @@ class TenantSlugInterceptor extends Interceptor {
     final slugWasSent = err.requestOptions.extra[_slugSentExtra] == true;
 
     if (is403 && slugWasSent && _onMismatch != null) {
-      final body = err.response?.data;
-      final code = body is Map<String, dynamic> ? body['code'] as String? : null;
-      if (code == _mismatchCode) {
+      final raw = err.response?.data;
+      Map<String, dynamic>? body;
+      if (raw is Map<String, dynamic>) {
+        body = raw;
+      } else if (raw is String) {
+        try {
+          final decoded = jsonDecode(raw);
+          if (decoded is Map<String, dynamic>) body = decoded;
+        } catch (_) {}
+      }
+      if (body?['code'] == _mismatchCode) {
         await _onMismatch();
       }
     }
