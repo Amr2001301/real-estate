@@ -22,7 +22,7 @@
  */
 
 import request from 'supertest';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
 import { bearer, loginAs } from '../helpers/login';
 
@@ -34,7 +34,7 @@ describe('me/* scope audit (e2e)', () => {
   let customer2Token: string;
 
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createE2ETestApp();
     fixtures = await loadE2EFixtures(testApp.rawPrisma);
     [customer1Token, customer2Token] = await Promise.all([
       loginAs(testApp.app, fixtures.users.CUSTOMER_1.email, fixtures.users.CUSTOMER_1.password, 'customer'),
@@ -42,9 +42,6 @@ describe('me/* scope audit (e2e)', () => {
     ]);
   });
 
-  afterAll(async () => {
-    await testApp.close();
-  });
 
   const http = () => request(testApp.app.getHttpServer());
 

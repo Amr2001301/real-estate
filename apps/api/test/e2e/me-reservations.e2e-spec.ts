@@ -25,10 +25,8 @@
 
 import request from 'supertest';
 import * as argon2 from 'argon2';
-import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
 import { LeadStage, ReservationStatus, UnitStatus, UserRole } from '@prisma/client';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
 import { bearer, loginAs } from '../helpers/login';
 
@@ -47,7 +45,7 @@ describe('P7 — /me/reservations (e2e)', () => {
   let testCompanyId: string;
 
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createE2ETestApp();
     fixtures = await loadE2EFixtures(testApp.rawPrisma);
 
     [adminToken, salesToken, client1Token, customer1Token, customer2Token] = await Promise.all([
@@ -69,9 +67,6 @@ describe('P7 — /me/reservations (e2e)', () => {
     salesUserId = fixtures.userIds.salesId;
   });
 
-  afterAll(async () => {
-    await testApp.close();
-  });
 
   const http = () => request(testApp.app.getHttpServer());
 
@@ -376,16 +371,8 @@ describe('P7 — /me/reservations (e2e)', () => {
    * MUST still call `loginAs()` (HTTP) — call this only for setup hops that
    * have nothing to do with the claim path.
    */
-  async function mintAccessToken(userId: string, role: UserRole): Promise<string> {
-    const jwt = testApp.app.get(JwtService);
-    const config = testApp.app.get(ConfigService);
-    return jwt.signAsync(
-      { sub: userId, role },
-      {
-        secret: config.getOrThrow<string>('JWT_ACCESS_SECRET'),
-        expiresIn: config.get<string>('JWT_ACCESS_EXPIRES_IN') ?? '15m',
-      },
-    );
+  function mintAccessToken(userId: string, role: UserRole): Promise<string> {
+    return testApp.signAccessToken(userId, role);
   }
 
   describe('P8 — Synthetic User claim at registration', () => {

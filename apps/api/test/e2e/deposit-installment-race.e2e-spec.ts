@@ -26,7 +26,7 @@
 
 import request from 'supertest';
 import { InstallmentStatus, UnitStatus } from '@prisma/client';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
 import { bearer, loginAs } from '../helpers/login';
 
@@ -42,7 +42,7 @@ describe('Deposit installment race condition — real Postgres concurrency proof
   let testCompanyId: string;
 
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createE2ETestApp();
     fixtures = await loadE2EFixtures(testApp.rawPrisma);
     // SEED_ADMIN_PASSWORD may be overridden in .env for local dev (Admin12345!).
     // CI uses the default ChangeMe123! set in seed.ts.
@@ -98,9 +98,6 @@ describe('Deposit installment race condition — real Postgres concurrency proof
     planId = plan.id;
   }, 60_000);
 
-  afterAll(async () => {
-    await testApp.close();
-  });
 
   const http = () => request(testApp.app.getHttpServer());
 

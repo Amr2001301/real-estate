@@ -27,7 +27,7 @@
 
 import request from 'supertest';
 import { LeadStage } from '@prisma/client';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
 import { bearer, loginAs } from '../helpers/login';
 
@@ -42,7 +42,7 @@ describe('Flow B — Lead journey (e2e)', () => {
   let customer1Token: string;
 
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createE2ETestApp();
     fixtures = await loadE2EFixtures(testApp.rawPrisma);
 
     [adminToken, salesToken, broker1Token, broker2Token, customer1Token] = await Promise.all([
@@ -54,9 +54,6 @@ describe('Flow B — Lead journey (e2e)', () => {
     ]);
   });
 
-  afterAll(async () => {
-    await testApp.close();
-  });
 
   const http = () => request(testApp.app.getHttpServer());
 

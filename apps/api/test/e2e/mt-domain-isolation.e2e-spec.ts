@@ -36,7 +36,7 @@
 import { UserRole } from '@prisma/client';
 import * as argon2 from 'argon2';
 import request from 'supertest';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createE2ETestApp } from '../setup-app';
 import { bearer, loginAs } from '../helpers/login';
 
 const SLUG_B = 'mt-7b-company-b';
@@ -69,7 +69,7 @@ describe('MT-Test-02B — multi-tenant domain isolation Phase 7B (e2e)', () => {
   let projectBRawId: string;
 
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createE2ETestApp();
     const raw = testApp.rawPrisma;
 
     // ── Company A ─────────────────────────────────────────────────────────
@@ -234,8 +234,6 @@ describe('MT-Test-02B — multi-tenant domain isolation Phase 7B (e2e)', () => {
 
     await raw.user.deleteMany({ where: { companyId: companyBId } });
     await raw.company.delete({ where: { id: companyBId } });
-
-    await testApp.close();
   }, 30_000);
 
   const http = () => request(testApp.app.getHttpServer());

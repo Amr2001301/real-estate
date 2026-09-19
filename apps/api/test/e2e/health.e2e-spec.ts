@@ -5,16 +5,13 @@
  */
 
 import request from 'supertest';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createE2ETestApp } from '../setup-app';
 
 describe('Health (e2e)', () => {
   let testApp: TestApp;
 
   beforeAll(async () => {
-    testApp = await createTestApp();
-  });
-  afterAll(async () => {
-    await testApp.close();
+    testApp = await createE2ETestApp();
   });
 
   // --- Liveness ---

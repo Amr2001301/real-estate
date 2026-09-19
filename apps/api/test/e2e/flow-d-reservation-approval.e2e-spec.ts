@@ -33,7 +33,7 @@ import {
   ReservationStatus,
   UnitStatus,
 } from '@prisma/client';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
 import { bearer, loginAs } from '../helpers/login';
 
@@ -46,7 +46,7 @@ describe('Phase 7C — Admin reservation approval / lifecycle (e2e)', () => {
   let broker1Token: string;
 
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createE2ETestApp();
     fixtures = await loadE2EFixtures(testApp.rawPrisma);
 
     [adminToken, salesToken, broker1Token] = await Promise.all([
@@ -56,9 +56,6 @@ describe('Phase 7C — Admin reservation approval / lifecycle (e2e)', () => {
     ]);
   });
 
-  afterAll(async () => {
-    await testApp.close();
-  });
 
   const http = () => request(testApp.app.getHttpServer());
 

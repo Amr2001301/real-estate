@@ -17,6 +17,8 @@
 
 import 'reflect-metadata';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { ThrottlerStorage } from '@nestjs/throttler';
 import cookieParser from 'cookie-parser';
@@ -51,6 +53,13 @@ export interface TestApp {
    * so it works correctly even when called from a different Jest vm context.
    */
   flushCapabilities: (companyId: string) => Promise<void>;
+  /**
+   * Sign a JWT access token for an existing user. Use this instead of
+   * `app.get(JwtService)` — the JwtService and ConfigService references
+   * captured here belong to the app's vm context and work correctly even
+   * when called from a different Jest vm context (e.g. from a singleton spec).
+   */
+  signAccessToken: (userId: string, role: string, expiresIn?: string) => Promise<string>;
 }
 
 export interface CreateTestAppOptions {
@@ -97,6 +106,10 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
 
   const prisma = app.get(PrismaService);
   const capabilitySvc = app.get(CapabilityService);
+  const jwtService = app.get(JwtService);
+  const configService = app.get(ConfigService);
+  const jwtSecret = configService.getOrThrow<string>('JWT_ACCESS_SECRET');
+  const jwtDefaultExpiry = configService.get<string>('JWT_ACCESS_EXPIRES_IN') ?? '15m';
   // Raw client with no tenant middleware — for test fixture setup and direct
   // DB assertions that happen outside the HTTP request lifecycle.
   const rawPrisma = new PrismaClient();
@@ -107,6 +120,8 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
     prisma,
     rawPrisma,
     flushCapabilities: (companyId) => capabilitySvc.invalidateCache(companyId),
+    signAccessToken: (userId, role, expiresIn) =>
+      jwtService.signAsync({ sub: userId, role }, { secret: jwtSecret, expiresIn: expiresIn ?? jwtDefaultExpiry }),
     close: async () => {
       await rawPrisma.$disconnect();
       await app.close();
@@ -143,6 +158,111 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
 // Files 01/03/07 use createTestApp() (isolated apps) because they test ALS
 // fail-closed behavior and instanceof checks that require the ALS instance and
 // error class to come from the SAME vm context as the app.
+
+// ─── E2E suite singleton ──────────────────────────────────────────────────────
+// All 23 standard e2e spec files share one NestJS application instance via the
+// same Module._cache mechanism used by the security suite.
+//
+// ── vm-context rules for e2e spec authors ────────────────────────────────────
+//
+//   SAFE  testApp.app.getHttpServer()  — native HTTP server, no DI lookup
+//   SAFE  testApp.rawPrisma.*          — plain PrismaClient, no middleware
+//   SAFE  testApp.flushCapabilities()  — closed over the correct vm context
+//   SAFE  HTTP requests via supertest  — transport-level, no class refs
+//
+//   UNSAFE  testApp.app.get(SomeClass)     — SEALED; throws E2E_VM_CONTEXT_UNSAFE
+//   UNSAFE  instanceof SomeClass           — class from a different vm context
+//   UNSAFE  testApp.prisma.model.*()       — requires ALS context; use rawPrisma
+//
+// email-verification and password-reset use createTestApp() (isolated apps)
+// because they override providers (ThrottlerStorage). rbac-route-coverage
+// is standalone (boots its own module, closes itself). All others use this.
+
+const E2E_CACHE_KEY = '\0jest-e2e-shared-app';
+
+export async function createE2ETestApp(): Promise<TestApp> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const NativeModule = require('module') as {
+    _cache: Record<string, { exports: Record<string, unknown> }>;
+  };
+  const cached = NativeModule._cache[E2E_CACHE_KEY];
+  if (cached?.exports?.e2eTestApp) return cached.exports.e2eTestApp as TestApp;
+
+  // Guard: if another spec file already compiled the singleton, a second MISS means
+  // Module._cache is no longer shared across vm contexts (Jest or Node upgrade).
+  // Fail immediately so CI shows a clear error instead of silently booting 23 apps.
+  if (process.env.__E2E_SINGLETON_COMPILED__) {
+    throw new Error(
+      '[E2E_SINGLETON_BROKEN] createE2ETestApp() compiled a fresh NestJS app ' +
+        'even though Module._cache[E2E_CACHE_KEY] was already set in this Jest run. ' +
+        'The cross-vm cache-sharing mechanism has stopped working — check whether ' +
+        'a Jest or Node.js upgrade changed how vm contexts share require cache entries.',
+    );
+  }
+
+  // Override ThrottlerStorage so 23 sequential beforeAll logins don't exhaust
+  // the per-IP rate-limit window that would otherwise be shared across all specs.
+  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+    .overrideProvider(ThrottlerStorage)
+    .useValue({
+      increment: () => Promise.resolve({ totalHits: 1, timeToExpire: 0, isBlocked: false, blockExpiresAt: 0 }),
+    })
+    .compile();
+
+  const app = moduleRef.createNestApplication({ bufferLogs: false });
+  app.use(requestIdMiddleware);
+  app.use(helmet());
+  app.use(cookieParser());
+  app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/'] });
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+      transformOptions: { enableImplicitConversion: true },
+    }),
+  );
+  app.useGlobalInterceptors(new DateSerializerInterceptor());
+  await app.init();
+
+  const prisma = app.get(PrismaService);
+  const capabilitySvc = app.get(CapabilityService);
+  const jwtService = app.get(JwtService);
+  const configService = app.get(ConfigService);
+  const jwtSecret = configService.getOrThrow<string>('JWT_ACCESS_SECRET');
+  const jwtDefaultExpiry = configService.get<string>('JWT_ACCESS_EXPIRES_IN') ?? '15m';
+  const rawPrisma = new PrismaClient();
+  await rawPrisma.$connect();
+
+  const testApp: TestApp = {
+    app,
+    prisma,
+    rawPrisma,
+    flushCapabilities: (companyId) => capabilitySvc.invalidateCache(companyId),
+    signAccessToken: (userId, role, expiresIn) =>
+      jwtService.signAsync({ sub: userId, role }, { secret: jwtSecret, expiresIn: expiresIn ?? jwtDefaultExpiry }),
+    close: async () => {},
+  };
+
+  NativeModule._cache[E2E_CACHE_KEY] = {
+    exports: { e2eTestApp: testApp },
+  } as unknown as { exports: Record<string, unknown> };
+
+  process.env.__E2E_SINGLETON_COMPILED__ = '1';
+
+  (app as unknown as Record<string, unknown>).get = (token: unknown): never => {
+    throw new Error(
+      `[E2E_VM_CONTEXT_UNSAFE] testApp.app.get(${
+        typeof token === 'function' ? (token as { name?: string }).name ?? 'unknown' : String(token)
+      }) called on the shared e2e singleton from a different Jest vm context. ` +
+        'Class references in this file are different objects from those registered in the app. ' +
+        'Add a TestApp helper in setup-app.ts instead (pattern: see flushCapabilities). ' +
+        'Never call app.get() directly from e2e spec files using the singleton.',
+    );
+  };
+
+  return testApp;
+}
 
 const SEC_CACHE_KEY = '\0jest-security-shared-app';
 
@@ -194,6 +314,10 @@ export async function createSecurityTestApp(): Promise<TestApp> {
   // Storing it in the closure means callers in OTHER vm contexts can call
   // testApp.flushCapabilities() without needing to resolve the class token themselves.
   const capabilitySvc = app.get(CapabilityService);
+  const jwtService = app.get(JwtService);
+  const configService = app.get(ConfigService);
+  const jwtSecret = configService.getOrThrow<string>('JWT_ACCESS_SECRET');
+  const jwtDefaultExpiry = configService.get<string>('JWT_ACCESS_EXPIRES_IN') ?? '15m';
   const rawPrisma = new PrismaClient();
   await rawPrisma.$connect();
 
@@ -202,6 +326,8 @@ export async function createSecurityTestApp(): Promise<TestApp> {
     prisma,
     rawPrisma,
     flushCapabilities: (companyId) => capabilitySvc.invalidateCache(companyId),
+    signAccessToken: (userId, role, expiresIn) =>
+      jwtService.signAsync({ sub: userId, role }, { secret: jwtSecret, expiresIn: expiresIn ?? jwtDefaultExpiry }),
     close: async () => {},
   };
 

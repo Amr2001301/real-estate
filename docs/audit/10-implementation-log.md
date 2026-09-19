@@ -984,3 +984,98 @@ included in the DTO. Both cache keys (`company-capabilities:*` and
 | Typecheck (`tsc --noEmit`) | 0 errors | 0 errors | 0 new errors |
 | Lint (`eslint`) | 0 errors (warnings only) | 0 errors (warnings only) | 0 new issues |
 
+---
+
+## E2E singleton — shared NestJS app for 26-file suite
+
+**Date:** 2026-09-19
+**Status:** DONE ✓
+
+### Motivation
+
+Local timing (SKIP_DB_RESET=1): 14.8 s for 26 specs, 311 tests.
+CI cancelled at timeout-minutes=15 every run — confirmed via GitHub API step status.
+Root cause: each spec file booted its own NestJS application (ts-jest cold compile + `AppModule.onModuleInit` + Prisma connect = ~90 s × 26 files > 15 min in CI).
+
+### Step 1 (rbac-route-coverage → unit suite) — considered and rejected
+
+Moving `rbac-route-coverage.e2e-spec.ts` to the unit suite (`src/`) was proposed as
+a free win because it only does DI reflection (no HTTP, no DB). Rejected because
+`PrismaService.onModuleInit()` calls `await this.$connect()` unconditionally on
+every `AppModule` boot — there is no lazy-connect option. The unit suite runs against
+a placeholder `DATABASE_URL` with no real Postgres, so the boot would fail.
+
+The spec was never part of the 26-boot pool anyway (it manages its own module and
+closes itself). Calling it a free win was wrong; the correct number is 25 files with
+close() calls, 23 of which share no provider overrides (the shareable pool).
+
+Do not revisit this idea without first making `PrismaService.onModuleInit()` lazy.
+
+### Step 2 — singleton implementation
+
+Same Module._cache mechanism as the security suite (`createSecurityTestApp`):
+- `E2E_CACHE_KEY = '\0jest-e2e-shared-app'`
+- `__E2E_SINGLETON_COMPILED__` env flag + `[E2E_SINGLETON_BROKEN]` guard
+- `[E2E_VM_CONTEXT_UNSAFE]` seal on `app.get()`
+- `close: async () => {}` (no-op) — `forceExit: true` in jest-e2e.json handles cleanup
+- ThrottlerStorage override: 23 sequential `beforeAll` logins would exhaust the
+  shared per-IP window; override passes through (totalHits=1, never blocked)
+
+**Boot categorization:**
+| Category | Count | Action |
+|---|---|---|
+| Shareable (no provider overrides) | 23 | → `createE2ETestApp()` |
+| Isolated (provider overrides) | 2 | `email-verification`, `password-reset` → `createTestApp()` unchanged |
+| Standalone | 1 | `rbac-route-coverage` — manages own module, unchanged |
+
+**Teardown changes in the 23 shared specs:**
+- 18 specs: afterAll only had `testApp.close()` → entire afterAll removed
+- `mt-domain-isolation`, `mt-write-isolation`: rawPrisma cleanup + remove close()
+- `strict-permissions`: inner afterAll (registered inside beforeAll) + remove close()
+- `mt-tenant-isolation`, `reports-mt-isolation`: converted `testApp.prisma` +
+  `runTenantContext(bypass)` to `testApp.rawPrisma` (cross-vm ALS issue: the
+  spec's ALS instance is different from the singleton's PrismaService middleware ALS,
+  so bypass wouldn't propagate). `runTenantContext` import removed from both files.
+
+**`signAccessToken` helper — p11 + me-reservations:**
+Both files called `app.get(JwtService)` + `app.get(ConfigService)` to mint tokens.
+Sealed by `[E2E_VM_CONTEXT_UNSAFE]`. Fix: added `signAccessToken(userId, role, expiresIn?)`
+to the `TestApp` interface, capturing `JwtService` and `ConfigService` closures in the
+singleton's vm context at compile time (same pattern as `flushCapabilities`). Both specs
+updated to use `testApp.signAccessToken()`.
+
+**p12 — kept isolated (`createTestApp`):**
+`p12-contract-conversion-documents` uses `testApp.app.get(ContractsService)` and
+`enterTenantContext()` directly — both are vm-context-specific and cannot be bridged
+via a closure helper. Reverted to isolated `createTestApp()` with `testApp.close()` in afterAll.
+
+**mt-tenant-isolation — Phase 2 regression fix:**
+Phase 2 added `checkProjectLimit()` in `projects.service.ts::create()`. The seeded
+company is on TRIAL plan (maxProjects=5) but seed bypasses the service layer and creates
+6 projects. HTTP `POST /v1/projects` always returned 403 from the singleton app.
+Fix: create both projects via `rawPrisma.project.create()` directly — isolation invariants
+(ISO-1–ISO-4) are tested via GET endpoints only, not by the project creation path.
+
+### Step 3 — Isolation audit + two-run confirmation
+
+**Isolation findings:**
+- `strict-permissions`: grants 22 permission codes to `admin@example.com` in beforeAll. Not
+  cleaned up (no delete in afterAll), but this only adds permissions — it never removes them
+  from other specs' subjects. No ordering hazard found.
+- `mt-tenant-isolation` + `reports-mt-isolation`: pre-existing issue resolved (rawPrisma
+  replacement). No residual ordering hazard.
+- All other MT specs already used rawPrisma correctly.
+
+**Two-run results (same 7 pre-existing failures both times):**
+
+| Run | Order | Suites | Tests | Time |
+|---|---|---|---|---|
+| 1 (forward, fresh DB) | alphabetical (Jest default) | 7 fail / 19 pass | 17 fail / 294 pass | 13.82 s |
+| 2 (forward, fresh DB) | alphabetical (Jest default) | 7 fail / 19 pass | 17 fail / 294 pass | 13.364 s |
+| 3 (reverse, fresh DB) | reverse-alphabetical (custom sequencer) | 7 fail / 19 pass | 17 fail / 294 pass | 14.21 s |
+
+Failing suites are identical in all three runs (pre-existing baseline from 11-tree-state.md):
+`flow-e-financial-documents`, `flow-f-maintenance`, `flow-g-upload` (MinIO),
+`idor-penetration`, `rbac-route-coverage`, `reports-mt-isolation`, `strict-permissions`.
+
+

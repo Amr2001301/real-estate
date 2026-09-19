@@ -29,7 +29,7 @@
  */
 
 import request from 'supertest';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
 import { bearer, loginAs } from '../helpers/login';
 
@@ -43,7 +43,7 @@ describe('IDOR Penetration Tests (e2e)', () => {
   let broker2Token: string;
 
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createE2ETestApp();
     fixtures = await loadE2EFixtures(testApp.rawPrisma);
 
     [customer1Token, customer2Token, broker1Token, broker2Token] = await Promise.all([
@@ -54,9 +54,6 @@ describe('IDOR Penetration Tests (e2e)', () => {
     ]);
   });
 
-  afterAll(async () => {
-    await testApp.close();
-  });
 
   const http = () => request(testApp.app.getHttpServer());
 

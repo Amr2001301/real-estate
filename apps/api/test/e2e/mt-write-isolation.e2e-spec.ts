@@ -38,7 +38,7 @@
 import { UserRole } from '@prisma/client';
 import * as argon2 from 'argon2';
 import request from 'supertest';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
 import { bearer, loginAs } from '../helpers/login';
 
@@ -69,7 +69,7 @@ describe('MT-Test-03 — multi-tenant write-path isolation Phase 7C (e2e)', () =
   let leadBId: string;
 
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createE2ETestApp();
     fixtures = await loadE2EFixtures(testApp.rawPrisma);
     const raw = testApp.rawPrisma;
 
@@ -139,8 +139,6 @@ describe('MT-Test-03 — multi-tenant write-path isolation Phase 7C (e2e)', () =
       if (row?.clientId) await raw.user.delete({ where: { id: row.clientId } }).catch(() => void 0);
     }
     await raw.setting.deleteMany({ where: { companyId: companyAId, key: WI_SETTING_KEY } });
-
-    await testApp.close();
   }, 30_000);
 
   const http = () => request(testApp.app.getHttpServer());

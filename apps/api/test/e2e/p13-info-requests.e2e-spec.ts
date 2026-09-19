@@ -19,7 +19,7 @@
  */
 
 import request from 'supertest';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
 import { bearer, loginAs } from '../helpers/login';
 
@@ -46,7 +46,7 @@ describe('P13 — Info requests admin visibility + notifications (e2e)', () => {
   const http = () => request(testApp.app.getHttpServer());
 
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createE2ETestApp();
     fixtures = await loadE2EFixtures(testApp.rawPrisma);
 
     [adminToken, clientToken, customer1Token, customer2Token] = await Promise.all([
@@ -86,9 +86,6 @@ describe('P13 — Info requests admin visibility + notifications (e2e)', () => {
     customer1ReqId = customer.body.id;
   });
 
-  afterAll(async () => {
-    await testApp.close();
-  });
 
   // ── P13.1 / P13.2 / P13.3 — persistence + userId attribution ─────────────
 

@@ -26,7 +26,7 @@
 
 import * as argon2 from 'argon2';
 import request from 'supertest';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createE2ETestApp } from '../setup-app';
 
 // ---------------------------------------------------------------------------
 // Fake UUID — valid format, no real resource. ParseUUIDPipe will accept it.
@@ -87,7 +87,7 @@ describe('TEST-002 — @PermissionsStrict two-person rule (e2e)', () => {
   let adminToken: string;
 
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createE2ETestApp();
     const raw = testApp.rawPrisma;
 
     // ── 1. Active company (same as seed uses) ─────────────────────────────
@@ -179,7 +179,6 @@ describe('TEST-002 — @PermissionsStrict two-person rule (e2e)', () => {
     // other specs if the DB isn't reset between runs.
     afterAll(async () => {
       await raw.user.delete({ where: { id: bareUser.id } }).catch(() => {/* already gone */});
-      await testApp.close();
     });
   }, 60_000);
 

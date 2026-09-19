@@ -22,9 +22,8 @@
 import { UserRole } from '@prisma/client';
 import * as argon2 from 'argon2';
 import request from 'supertest';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createE2ETestApp } from '../setup-app';
 import { bearer, loginAs } from '../helpers/login';
-import { runTenantContext } from '../../src/common/tenant/tenant-context';
 
 const COMPANY_B_SLUG = 'reports-mt-test-company-b';
 const COMPANY_B_ADMIN_EMAIL = 'admin-b@reports-mt-test.local';
@@ -38,28 +37,26 @@ describe('Reports MT Isolation (e2e)', () => {
   let adminBToken: string;
 
   beforeAll(async () => {
-    testApp = await createTestApp();
-    const prisma = testApp.prisma;
+    testApp = await createE2ETestApp();
+    const raw = testApp.rawPrisma;
 
     // ── Company B: create a fresh isolated tenant ─────────────────────────
-    const leftover = await prisma.company.findFirst({ where: { slug: COMPANY_B_SLUG } });
+    const leftover = await raw.company.findFirst({ where: { slug: COMPANY_B_SLUG } });
     if (leftover) {
-      await runTenantContext({ companyId: null, bypass: true, isPublic: false }, async () => {
-        await prisma.contract.deleteMany({ where: { companyId: leftover.id } });
-        await prisma.project.deleteMany({ where: { companyId: leftover.id } });
-        await prisma.brokerCommission.deleteMany({ where: { companyId: leftover.id } });
-      });
-      await prisma.user.deleteMany({ where: { companyId: leftover.id } });
-      await prisma.company.delete({ where: { id: leftover.id } });
+      await raw.contract.deleteMany({ where: { companyId: leftover.id } });
+      await raw.project.deleteMany({ where: { companyId: leftover.id } });
+      await raw.brokerCommission.deleteMany({ where: { companyId: leftover.id } });
+      await raw.user.deleteMany({ where: { companyId: leftover.id } });
+      await raw.company.delete({ where: { id: leftover.id } });
     }
 
-    const companyB = await prisma.company.create({
+    const companyB = await raw.company.create({
       data: { name: 'Reports MT Test Company B', slug: COMPANY_B_SLUG, isActive: true },
     });
     companyBId = companyB.id;
 
     const passwordHash = await argon2.hash(COMPANY_B_ADMIN_PASSWORD);
-    await prisma.user.create({
+    await raw.user.create({
       data: {
         email: COMPANY_B_ADMIN_EMAIL,
         passwordHash,
@@ -77,15 +74,12 @@ describe('Reports MT Isolation (e2e)', () => {
   });
 
   afterAll(async () => {
-    const prisma = testApp.prisma;
-    await runTenantContext({ companyId: null, bypass: true, isPublic: false }, async () => {
-      await prisma.brokerCommission.deleteMany({ where: { companyId: companyBId } });
-      await prisma.contract.deleteMany({ where: { companyId: companyBId } });
-      await prisma.project.deleteMany({ where: { companyId: companyBId } });
-    });
-    await prisma.user.deleteMany({ where: { companyId: companyBId } });
-    await prisma.company.delete({ where: { id: companyBId } });
-    await testApp.close();
+    const raw = testApp.rawPrisma;
+    await raw.brokerCommission.deleteMany({ where: { companyId: companyBId } });
+    await raw.contract.deleteMany({ where: { companyId: companyBId } });
+    await raw.project.deleteMany({ where: { companyId: companyBId } });
+    await raw.user.deleteMany({ where: { companyId: companyBId } });
+    await raw.company.delete({ where: { id: companyBId } });
   });
 
   const http = () => request(testApp.app.getHttpServer());

@@ -31,7 +31,7 @@
 
 import request from 'supertest';
 import { ReservationStatus, UnitStatus } from '@prisma/client';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
 import { bearer, loginAs } from '../helpers/login';
 
@@ -45,7 +45,7 @@ describe('Unit reservation race condition — real Postgres concurrency proof (e
   let testCompanyId: string;
 
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createE2ETestApp();
     fixtures = await loadE2EFixtures(testApp.rawPrisma);
 
     salesToken = await loginAs(testApp.app, 'sales@example.com', 'SalesPass123!');
@@ -63,9 +63,6 @@ describe('Unit reservation race condition — real Postgres concurrency proof (e
     buildingId = building.id;
   }, 60_000);
 
-  afterAll(async () => {
-    await testApp.close();
-  });
 
   const http = () => request(testApp.app.getHttpServer());
 

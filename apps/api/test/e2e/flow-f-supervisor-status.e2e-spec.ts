@@ -23,7 +23,7 @@
 
 import request from 'supertest';
 import { MaintenanceStatus } from '@prisma/client';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
 import { bearer, loginAs } from '../helpers/login';
 
@@ -36,7 +36,7 @@ describe('Flow F — Maintenance supervisor status machine (e2e)', () => {
   let salesToken: string;
 
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createE2ETestApp();
     fixtures = await loadE2EFixtures(testApp.rawPrisma);
 
     [supervisorToken, customer1Token, salesToken] = await Promise.all([
@@ -46,9 +46,6 @@ describe('Flow F — Maintenance supervisor status machine (e2e)', () => {
     ]);
   });
 
-  afterAll(async () => {
-    await testApp.close();
-  });
 
   const http = () => request(testApp.app.getHttpServer());
   const reqId = () => fixtures.flowF.customer1MaintenanceRequestId;

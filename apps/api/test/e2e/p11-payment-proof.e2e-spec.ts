@@ -26,8 +26,6 @@
 
 import request from 'supertest';
 import * as argon2 from 'argon2';
-import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
 import {
   DepositReviewStatus,
   DocumentCategory,
@@ -39,7 +37,7 @@ import {
   Prisma,
   UserRole,
 } from '@prisma/client';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
 import { bearer, loginAs } from '../helpers/login';
 
@@ -52,7 +50,7 @@ describe('P11 — Payment-proof review (e2e)', () => {
   let customer2Token: string;
 
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createE2ETestApp();
     fixtures = await loadE2EFixtures(testApp.rawPrisma);
     [adminToken, customer1Token, customer2Token] = await Promise.all([
       loginAs(testApp.app, 'admin@example.com', 'ChangeMe123!'),
@@ -61,9 +59,6 @@ describe('P11 — Payment-proof review (e2e)', () => {
     ]);
   });
 
-  afterAll(async () => {
-    await testApp.close();
-  });
 
   const http = () => request(testApp.app.getHttpServer());
 
@@ -120,12 +115,9 @@ describe('P11 — Payment-proof review (e2e)', () => {
     p11Customer1Id = c1.id;
     p11Customer2Id = c2.id;
 
-    const jwt = testApp.app.get(JwtService);
-    const config = testApp.app.get(ConfigService);
-    const secret = config.getOrThrow<string>('JWT_ACCESS_SECRET');
     [p11Customer1Token, p11Customer2Token] = await Promise.all([
-      jwt.signAsync({ sub: c1.id, role: UserRole.CUSTOMER }, { secret, expiresIn: '15m' }),
-      jwt.signAsync({ sub: c2.id, role: UserRole.CUSTOMER }, { secret, expiresIn: '15m' }),
+      testApp.signAccessToken(c1.id, UserRole.CUSTOMER, '15m'),
+      testApp.signAccessToken(c2.id, UserRole.CUSTOMER, '15m'),
     ]);
 
     // Pick ANY non-p1 unit — status doesn't matter for a Contract FK (which

@@ -117,9 +117,6 @@ describe('P12 — Contract conversion document linking + notifications (e2e)', (
     expect(typeof contractId).toBe('string');
   });
 
-  afterAll(async () => {
-    await testApp.close();
-  });
 
   const http = () => request(testApp.app.getHttpServer());
 
@@ -376,5 +373,9 @@ describe('P12 — Contract conversion document linking + notifications (e2e)', (
       expect(result).toBe('exists');
       expect(await countContractDocs()).toBe(1);
     });
+  });
+
+  afterAll(async () => {
+    await testApp.close();
   });
 });
