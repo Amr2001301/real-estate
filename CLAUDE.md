@@ -138,6 +138,16 @@ pnpm --filter @rep/api openapi:export   # exports spec → mobile consumes it
 - **Shared types**: add domain types/schemas to `packages/shared-types`, not inside a single app.
 - **Mobile**: Clean Architecture (data / domain / presentation layers); state via Riverpod providers; routing via GoRouter named routes.
 - **Test-only schema objects**: any constraint, trigger, or index added by a security test must be named with the `zz_test_` prefix (e.g. `zz_test_d3_atomicity`). The security `globalSetup` queries `pg_constraint`, `pg_trigger`, and `pg_indexes` for this prefix at suite start and fails with an actionable drop-SQL message if any are found. Every such test must also have both a `finally` block that drops the object and a describe-level `afterAll` as a backup — see `test/security/10-d3-cancel-attack.security-spec.ts` D3-6 for the canonical pattern.
+- **Security spec vm-context rules**: all 15 security spec files share one NestJS app singleton via `Module._cache`. Each file runs in its own Jest vm context, so a class imported in one file is a different object than the same class in another file. This means `app.get(SomeClass)` from a security spec always fails — `app.get()` is sealed on the singleton and throws `SEC_VM_CONTEXT_UNSAFE`. Use only the `TestApp` helpers instead:
+  - **SAFE**: `testApp.app.getHttpServer()` — native HTTP server, no DI lookup
+  - **SAFE**: `testApp.rawPrisma.*` — plain PrismaClient, no middleware
+  - **SAFE**: `testApp.flushCapabilities(companyId)` — closed over the correct vm context
+  - **SAFE**: HTTP requests via supertest — transport-level, no class refs
+  - **UNSAFE**: `testApp.app.get(SomeClass)` — sealed; throws `SEC_VM_CONTEXT_UNSAFE`
+  - **UNSAFE**: `instanceof SomeClass` in security specs — different vm contexts mean different class objects; match on `error.message` instead
+  - **UNSAFE**: `testApp.prisma.*` in most files — requires ALS context; only files 01/03/07 (which use isolated apps) may use it
+  - To expose a new service operation to security specs, add a helper to `TestApp` in `test/setup-app.ts` following the `flushCapabilities` pattern (capture at compile time, expose as a closure).
+- **Never widen a security test assertion to accept a status that means the check was skipped**: a 503 means storage is unavailable and the authorization path was never reached. If a security test cannot exercise its target path in CI, fix the CI environment (add MinIO, seed data, etc.) — do not relax the assertion.
 
 ---
 

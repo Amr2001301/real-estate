@@ -314,9 +314,9 @@ describe('SEC — Attack Matrix (STEP 3)', () => {
         .get(`/v1/me/documents/${fx.resources.a.documentId}/download`)
         .set('Authorization', bearer(customerAToken));
       // customerA IS the contract customer → should 200/302/307 (signed URL).
-      // 503 is acceptable when storage (R2/MinIO) is not available in the CI
-      // environment: authorization passed, only the downstream storage call failed.
-      expect([200, 302, 307, 503]).toContain(res.status);
+      // MinIO is started by the api-security CI job, so storage is always available.
+      // If this returns 503, storage is not configured and the auth check was never reached.
+      expect([200, 302, 307]).toContain(res.status);
     });
 
     it('A9-3: fabricated document UUID → 404', async () => {

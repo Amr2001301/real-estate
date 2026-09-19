@@ -126,6 +126,23 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
 //
 // close() is a no-op: forceExit:true in jest-security.json terminates the
 // process (and all DB connections) after the suite completes.
+//
+// ── vm-context rules for security spec authors ──────────────────────────────
+//
+//   SAFE  testApp.app.getHttpServer()  — native HTTP server, no DI lookup
+//   SAFE  testApp.rawPrisma.*          — plain PrismaClient, no middleware
+//   SAFE  testApp.flushCapabilities()  — closed over the correct vm context
+//   SAFE  HTTP requests via supertest  — transport-level, no class refs
+//
+//   UNSAFE  testApp.app.get(SomeClass)     — SEALED; throws SEC_VM_CONTEXT_UNSAFE
+//   UNSAFE  instanceof SomeClass           — class from a different vm context;
+//                                            use error.message matching instead
+//   UNSAFE  testApp.prisma.model.*()       — requires ALS context; only used in
+//                                            files 01/03/07 which have isolated apps
+//
+// Files 01/03/07 use createTestApp() (isolated apps) because they test ALS
+// fail-closed behavior and instanceof checks that require the ALS instance and
+// error class to come from the SAME vm context as the app.
 
 const SEC_CACHE_KEY = '\0jest-security-shared-app';
 
@@ -196,6 +213,25 @@ export async function createSecurityTestApp(): Promise<TestApp> {
   // (from a spec file that can't see the cache) fails loudly rather than
   // silently spawning a 15-app boot cycle.
   process.env.__SEC_SINGLETON_COMPILED__ = '1';
+
+  // Seal app.get() so future spec files cannot accidentally call it.
+  // Every spec file runs in its own Jest vm context: the class reference they
+  // import (e.g. CapabilityService) is a different object than the one the
+  // singleton app was compiled with, so app.get(SomeSvcClass) always fails
+  // with a confusing "element not found" Nest error. Replacing the method with
+  // an explicit throw makes the cause and fix immediately obvious.
+  const _realGet = (app as unknown as Record<string, unknown>).get;
+  (app as unknown as Record<string, unknown>).get = (token: unknown): never => {
+    throw new Error(
+      `[SEC_VM_CONTEXT_UNSAFE] testApp.app.get(${
+        typeof token === 'function' ? (token as { name?: string }).name ?? 'unknown' : String(token)
+      }) called on the shared security singleton from a different Jest vm context. ` +
+        'Class references in this file are different objects from those registered in the app. ' +
+        'Add a TestApp helper in setup-app.ts instead (pattern: see flushCapabilities). ' +
+        'Never call app.get() directly from security spec files.',
+    );
+    void _realGet; // suppress unused-variable lint
+  };
 
   return testApp;
 }

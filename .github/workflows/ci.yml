@@ -267,6 +267,17 @@ jobs:
       # the Permission table. SEED_ADMIN_EMAIL must match the seed default.
       SEED_ADMIN_EMAIL: admin@example.com
       SEED_ADMIN_PASSWORD: ChangeMe123!
+      # MinIO (local S3-compatible storage) — same credentials as docker-compose.
+      # Required for A9-2 and any other test that exercises the presigned-download
+      # path. Without storage, the endpoint returns 503 before the auth check runs.
+      S3_ENDPOINT: http://localhost:9000
+      S3_REGION: us-east-1
+      S3_FORCE_PATH_STYLE: 'true'
+      R2_ACCESS_KEY_ID: minioadmin
+      R2_SECRET_ACCESS_KEY: minioadmin
+      R2_BUCKET: real-estate-media
+      R2_PUBLIC_URL: http://localhost:9000/real-estate-media
+      R2_PRIVATE_BUCKET: real-estate-private
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -277,6 +288,17 @@ jobs:
       - name: Generate Prisma client
         working-directory: apps/api
         run: pnpm prisma:generate
+      - name: Start MinIO and create buckets
+        run: |
+          docker run -d --name ci-minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio:RELEASE.2024-12-18T13-15-44Z server /data
+          until curl -sf http://localhost:9000/minio/health/live; do sleep 1; done
+          AWS_ACCESS_KEY_ID=minioadmin AWS_SECRET_ACCESS_KEY=minioadmin AWS_DEFAULT_REGION=us-east-1 \
+            aws s3 mb s3://real-estate-media --endpoint-url http://localhost:9000
+          AWS_ACCESS_KEY_ID=minioadmin AWS_SECRET_ACCESS_KEY=minioadmin AWS_DEFAULT_REGION=us-east-1 \
+            aws s3 mb s3://real-estate-private --endpoint-url http://localhost:9000
       - name: Run security tests
         working-directory: apps/api
         run: pnpm exec jest -c test/jest-security.json --runInBand
