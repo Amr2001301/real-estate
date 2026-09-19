@@ -18,7 +18,7 @@
 
 import request from 'supertest';
 import { DepositReviewStatus } from '@prisma/client';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createSecurityTestApp } from '../setup-app';
 import { bearer, loginAs } from '../helpers/login';
 import {
   seedSecurityFixture,
@@ -41,7 +41,7 @@ let depBId: string;
 
 describe('SEC — Deposit Correction cross-tenant attack matrix (Step C)', () => {
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createSecurityTestApp();
     fx = await seedSecurityFixture(testApp.rawPrisma);
 
     adminAToken = await loginAs(testApp.app, fx.users.adminA.email, fx.users.adminA.password);
@@ -80,7 +80,6 @@ describe('SEC — Deposit Correction cross-tenant attack matrix (Step C)', () =>
 
   afterAll(async () => {
     await teardownSecurityFixture(testApp.rawPrisma);
-    await testApp.close();
   });
 
   // DC-1: cross-tenant reversal → 404

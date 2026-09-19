@@ -23,7 +23,7 @@ import {
   PaymentInstrumentStatus,
   PaymentInstrumentType,
 } from '@prisma/client';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createSecurityTestApp } from '../setup-app';
 import { bearer, loginAs } from '../helpers/login';
 import {
   seedSecurityFixture,
@@ -46,7 +46,7 @@ let piBId: string;  // belongs to Company B (DEPOSITED, for bounce test)
 
 describe('SEC — PaymentInstrument cross-tenant attack matrix (Step B)', () => {
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createSecurityTestApp();
     fx = await seedSecurityFixture(testApp.rawPrisma);
 
     adminAToken = await loginAs(testApp.app, fx.users.adminA.email, fx.users.adminA.password);
@@ -108,7 +108,6 @@ describe('SEC — PaymentInstrument cross-tenant attack matrix (Step B)', () => 
       .deleteMany({ where: { id: { in: [piAId, piBId] } } })
       .catch(() => void 0);
     await teardownSecurityFixture(testApp.rawPrisma);
-    await testApp.close();
   });
 
   // ── PI-B-1: read cross-tenant ─────────────────────────────────────────────

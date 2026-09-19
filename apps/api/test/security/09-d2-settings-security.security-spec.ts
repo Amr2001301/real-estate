@@ -19,7 +19,7 @@
  */
 
 import request from 'supertest';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createSecurityTestApp } from '../setup-app';
 import { bearer, loginAs } from '../helpers/login';
 import {
   seedSecurityFixture,
@@ -41,7 +41,7 @@ let adminBToken: string;
 let extraCompanyId: string | undefined;
 
 beforeAll(async () => {
-  testApp = await createTestApp();
+  testApp = await createSecurityTestApp();
   fx = await seedSecurityFixture(testApp.rawPrisma);
 
   // Seed D2 settings for both fixture companies (rawPrisma = no middleware)
@@ -60,7 +60,6 @@ afterAll(async () => {
     await testApp.rawPrisma.company.delete({ where: { id: extraCompanyId } }).catch(() => void 0);
   }
   await teardownSecurityFixture(testApp.rawPrisma);
-  await testApp.close();
 });
 
 // ── DS-1: Settings cross-tenant read isolation ────────────────────────────────

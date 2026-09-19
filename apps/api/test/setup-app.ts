@@ -103,3 +103,62 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
     },
   };
 }
+
+// ─── Security suite singleton ─────────────────────────────────────────────────
+// All 15 security spec files share one NestJS application instance.
+//
+// Jest creates a fresh vm context per test file, so `process`, `global`, and
+// the Jest module registry are all reset between files. However, the real
+// Node.js require cache (Module._cache) lives outside Jest's sandbox and IS
+// shared across vm contexts — exactly what our vm-context isolation test
+// confirmed. We store the TestApp under a NUL-prefixed synthetic key that
+// can never collide with a real file path.
+//
+// close() is a no-op: forceExit:true in jest-security.json terminates the
+// process (and all DB connections) after the suite completes.
+
+const SEC_CACHE_KEY = '\0jest-security-shared-app';
+
+export async function createSecurityTestApp(): Promise<TestApp> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const NativeModule = require('module') as {
+    _cache: Record<string, { exports: Record<string, unknown> }>;
+  };
+  const cached = NativeModule._cache[SEC_CACHE_KEY];
+  if (cached?.exports?.secTestApp) return cached.exports.secTestApp as TestApp;
+
+  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+    .overrideProvider(ThrottlerStorage)
+    .useValue({
+      increment: () => Promise.resolve({ totalHits: 1, timeToExpire: 0, isBlocked: false, blockExpiresAt: 0 }),
+    })
+    .compile();
+
+  const app = moduleRef.createNestApplication({ bufferLogs: false });
+  app.use(requestIdMiddleware);
+  app.use(helmet());
+  app.use(cookieParser());
+  app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/'] });
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+      transformOptions: { enableImplicitConversion: true },
+    }),
+  );
+  app.useGlobalInterceptors(new DateSerializerInterceptor());
+  await app.init();
+
+  const prisma = app.get(PrismaService);
+  const rawPrisma = new PrismaClient();
+  await rawPrisma.$connect();
+
+  const testApp: TestApp = { app, prisma, rawPrisma, close: async () => {} };
+
+  NativeModule._cache[SEC_CACHE_KEY] = {
+    exports: { secTestApp: testApp },
+  } as unknown as { exports: Record<string, unknown> };
+
+  return testApp;
+}

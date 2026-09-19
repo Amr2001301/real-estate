@@ -67,6 +67,12 @@ describe('SEC — Middleware Classification (STEP 2)', () => {
   let testApp: TestApp;
 
   beforeAll(async () => {
+    // File 01 tests the ALS "fail-closed" property (MC-5/5b/5c): calling
+    // PrismaService outside any tenant context must throw. This requires a
+    // fresh NestJS app whose PrismaService has never had als.enterWith() called
+    // on any of its execution-context ancestors. Using the shared singleton
+    // (createSecurityTestApp) would inherit residual ALS context from previous
+    // HTTP requests in other files, causing MC-5 to incorrectly pass through.
     testApp = await createTestApp();
   }, 30_000);
 

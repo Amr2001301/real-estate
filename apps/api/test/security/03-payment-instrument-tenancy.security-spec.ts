@@ -34,6 +34,10 @@ let secFixture: SecurityFixture;
 
 describe('SEC — PaymentInstrument Tenancy (Step A)', () => {
   beforeAll(async () => {
+    // File 03 tests PI-1/PI-1b which call testApp.prisma directly outside ALS
+    // and expect MissingTenantContextError. Using the shared singleton would
+    // give a PrismaService whose ALS and error class identities are from a
+    // different Jest vm context — causing the instanceof check to fail.
     testApp = await createTestApp();
     secFixture = await seedSecurityFixture(testApp.rawPrisma);
     companyAId = secFixture.companies.aId;

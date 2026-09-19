@@ -45,6 +45,12 @@ let refundId: string;
 
 describe('SEC — ContractCancellation + Refund Tenancy (Step D1)', () => {
   beforeAll(async () => {
+    // File 07 tests CC-1/CC-3 (ALS fail-closed) and CC-5/CC-6/CC-7 (tenant-
+    // context queries via runTenantContext). Both rely on the PrismaService's
+    // ALS instance and error class identities matching those in THIS file's
+    // Jest vm context. Using the shared singleton would give a PrismaService
+    // whose ALS and class identities are from a different vm context — causing
+    // instanceof checks and runTenantContext scoping to silently fail.
     testApp = await createTestApp();
     secFixture = await seedSecurityFixture(testApp.rawPrisma);
     companyAId = secFixture.companies.aId;

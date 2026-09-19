@@ -22,7 +22,7 @@ import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import * as argon2 from 'argon2';
 import type { INestApplication } from '@nestjs/common';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createSecurityTestApp } from '../setup-app';
 import { bearer } from '../helpers/login';
 import {
   seedSecurityFixture,
@@ -56,7 +56,7 @@ async function loginSuperAdmin(app: INestApplication, email: string, password: s
 
 describe('SEC — CAP: capability tenancy and access-control (Phase 1)', () => {
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createSecurityTestApp();
     fx = await seedSecurityFixture(testApp.rawPrisma);
 
     // Clean up any leftover SUPER_ADMIN from a prior run
@@ -94,7 +94,6 @@ describe('SEC — CAP: capability tenancy and access-control (Phase 1)', () => {
     await testApp.rawPrisma.refreshToken.deleteMany({ where: { userId: superAdminId } });
     await testApp.rawPrisma.user.delete({ where: { id: superAdminId } });
     await teardownSecurityFixture(testApp.rawPrisma);
-    await testApp.close();
   });
 
   // ── CAP-1: SUPER_ADMIN reads capabilities view ────────────────────────────

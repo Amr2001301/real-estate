@@ -33,7 +33,7 @@ import {
   ContractStatus,
   PaymentMethod,
 } from '@prisma/client';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createSecurityTestApp } from '../setup-app';
 import { bearer, loginAs } from '../helpers/login';
 import {
   seedSecurityFixture,
@@ -55,7 +55,7 @@ let unitCounter = 0;
 
 describe('SEC — D4: clawback:collect + clawback:waive (Step D4)', () => {
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createSecurityTestApp();
     fx = await seedSecurityFixture(testApp.rawPrisma);
     adminAToken = await loginAs(testApp.app, fx.users.adminA.email, fx.users.adminA.password);
     adminBToken = await loginAs(testApp.app, fx.users.adminB.email, fx.users.adminB.password);
@@ -101,7 +101,6 @@ describe('SEC — D4: clawback:collect + clawback:waive (Step D4)', () => {
     await testApp.rawPrisma.$executeRawUnsafe(`ALTER TABLE "AuditLog" DROP CONSTRAINT IF EXISTS "zz_test_d4_commission"`).catch(() => void 0);
     await testApp.rawPrisma.$executeRawUnsafe(`ALTER TABLE "AuditLog" DROP CONSTRAINT IF EXISTS "zz_test_d4_bonus"`).catch(() => void 0);
     await teardownSecurityFixture(testApp.rawPrisma);
-    await testApp.close();
   });
 
   // ── Seed helpers ──────────────────────────────────────────────────────────

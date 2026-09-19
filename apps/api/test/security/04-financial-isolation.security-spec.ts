@@ -27,7 +27,7 @@
 
 import { Prisma } from '@prisma/client';
 import request from 'supertest';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createSecurityTestApp } from '../setup-app';
 import { bearer, loginAs } from '../helpers/login';
 import {
   seedSecurityFixture,
@@ -60,7 +60,7 @@ describe('SEC — Financial aggregate isolation (STEP 4)', () => {
   let platformDepositTotal: number;
 
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createSecurityTestApp();
     fx = await seedSecurityFixture(testApp.rawPrisma);
 
     adminAToken = await loginAs(testApp.app, fx.users.adminA.email, fx.users.adminA.password);
@@ -121,7 +121,6 @@ describe('SEC — Financial aggregate isolation (STEP 4)', () => {
       where: { id: { in: [markerDepositAId, markerDepositBId].filter(Boolean) } },
     });
     await teardownSecurityFixture(testApp.rawPrisma);
-    await testApp.close();
   });
 
   // ── FI-1: GET /v1/reports/financial ───────────────────────────────────────

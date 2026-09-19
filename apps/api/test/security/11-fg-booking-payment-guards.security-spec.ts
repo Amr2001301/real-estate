@@ -19,7 +19,7 @@
 
 import request from 'supertest';
 import { DocumentCategory, DocumentOwnerType, DocumentVisibility, ReservationBookingPaymentStatus } from '@prisma/client';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createSecurityTestApp } from '../setup-app';
 import { bearer, loginAs } from '../helpers/login';
 import {
   seedSecurityFixture,
@@ -34,7 +34,7 @@ let adminAToken: string;
 
 describe('SEC — Steps F + G: booking-payment guards (FG-08, FG-13)', () => {
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createSecurityTestApp();
     fx = await seedSecurityFixture(testApp.rawPrisma);
 
     adminAToken = await loginAs(testApp.app, fx.users.adminA.email, fx.users.adminA.password);
@@ -53,7 +53,6 @@ describe('SEC — Steps F + G: booking-payment guards (FG-08, FG-13)', () => {
 
   afterAll(async () => {
     await teardownSecurityFixture(testApp.rawPrisma);
-    await testApp.close();
   });
 
   // ── FG-1: confirm guard — blocked when customer proof under review ──────

@@ -16,7 +16,7 @@ import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import * as argon2 from 'argon2';
 import type { INestApplication } from '@nestjs/common';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createSecurityTestApp } from '../setup-app';
 import { bearer } from '../helpers/login';
 import { CapabilityService } from '../../src/common/capabilities/capability.service';
 
@@ -108,12 +108,10 @@ function extractRefreshToken(body: Record<string, unknown>): string {
 let testApp: TestApp;
 
 beforeAll(async () => {
-  testApp = await createTestApp({ skipThrottle: true });
+  testApp = await createSecurityTestApp();
 }, 60_000);
 
-afterAll(async () => {
-  await testApp.close();
-});
+afterAll(async () => {});
 
 // ══════════════════════════════════════════════════════════════════════════════
 // P2A — Feature gates

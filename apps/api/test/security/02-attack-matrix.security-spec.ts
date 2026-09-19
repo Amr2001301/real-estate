@@ -24,7 +24,7 @@
  */
 
 import request from 'supertest';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createSecurityTestApp } from '../setup-app';
 import { bearer, loginAs } from '../helpers/login';
 import {
   seedSecurityFixture,
@@ -51,7 +51,7 @@ describe('SEC — Attack Matrix (STEP 3)', () => {
   let customerAToken: string;
 
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createSecurityTestApp();
     fx = await seedSecurityFixture(testApp.rawPrisma);
 
     [adminAToken, sales1AToken, sales2AToken, adminBToken, brokerAToken, customerAToken] =
@@ -67,7 +67,6 @@ describe('SEC — Attack Matrix (STEP 3)', () => {
 
   afterAll(async () => {
     await teardownSecurityFixture(testApp.rawPrisma);
-    await testApp.close();
   }, 30_000);
 
   const http = () => request(testApp.app.getHttpServer());

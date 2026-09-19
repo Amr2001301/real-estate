@@ -42,7 +42,7 @@
 
 import request from 'supertest';
 import { BonusEntryStatus, BrokerCommissionStatus, BrokerPayoutStatus, ClawbackStatus, ContractStatus, InstallmentStatus, UnitStatus } from '@prisma/client';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createSecurityTestApp } from '../setup-app';
 import { bearer, loginAs } from '../helpers/login';
 import {
   seedSecurityFixture,
@@ -58,7 +58,7 @@ let adminAToken: string;
 
 describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () => {
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createSecurityTestApp();
     fx = await seedSecurityFixture(testApp.rawPrisma);
 
     // Seed D2 cancellation settings for both fixture companies
@@ -84,7 +84,6 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
 
   afterAll(async () => {
     await teardownSecurityFixture(testApp.rawPrisma);
-    await testApp.close();
   });
 
   // ── S2 scenario + D3-5 terminal test ─────────────────────────────────────

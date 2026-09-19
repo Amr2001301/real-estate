@@ -18,7 +18,7 @@ import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import * as argon2 from 'argon2';
 import type { INestApplication } from '@nestjs/common';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createSecurityTestApp } from '../setup-app';
 import { bearer } from '../helpers/login';
 
 const PASS = 'StarterSmoke-1!';
@@ -29,7 +29,7 @@ let adminToken: string;
 const SLUG = 'starter-smoke-co';
 
 beforeAll(async () => {
-  testApp = await createTestApp({ skipThrottle: true });
+  testApp = await createSecurityTestApp();
 
   await testApp.rawPrisma.user.deleteMany({ where: { company: { slug: SLUG } } });
   await testApp.rawPrisma.company.deleteMany({ where: { slug: SLUG } });
@@ -73,7 +73,6 @@ afterAll(async () => {
   await testApp.rawPrisma.lead.deleteMany({ where: { company: { slug: SLUG } } });
   await testApp.rawPrisma.user.deleteMany({ where: { company: { slug: SLUG } } });
   await testApp.rawPrisma.company.deleteMany({ where: { slug: SLUG } });
-  await testApp.close();
 });
 
 function headers() {

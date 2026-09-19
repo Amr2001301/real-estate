@@ -36,7 +36,7 @@ import {
   SEC_SLUG_A,
   type SecurityFixture,
 } from './seed/security-fixture';
-import { type TestApp, createTestApp } from '../setup-app';
+import { type TestApp, createSecurityTestApp } from '../setup-app';
 import { loginAs, bearer } from '../helpers/login';
 
 let testApp: TestApp;
@@ -47,7 +47,7 @@ let cancelledInstallmentId: string;
 
 describe('D1-REG — CANCELLED installment regression (real Postgres)', () => {
   beforeAll(async () => {
-    testApp = await createTestApp();
+    testApp = await createSecurityTestApp();
     secFixture = await seedSecurityFixture(testApp.rawPrisma);
 
     const companyAId = secFixture.companies.aId;
@@ -123,7 +123,6 @@ describe('D1-REG — CANCELLED installment regression (real Postgres)', () => {
 
   afterAll(async () => {
     await teardownSecurityFixture(testApp.rawPrisma);
-    await testApp.close();
   });
 
   // ── D1-REG-1: reports.service.ts:1237 ────────────────────────────────────
