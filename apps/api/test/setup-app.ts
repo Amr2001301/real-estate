@@ -127,6 +127,18 @@ export async function createSecurityTestApp(): Promise<TestApp> {
   const cached = NativeModule._cache[SEC_CACHE_KEY];
   if (cached?.exports?.secTestApp) return cached.exports.secTestApp as TestApp;
 
+  // Guard: if another spec file already compiled the singleton, a second MISS means
+  // Module._cache is no longer shared across vm contexts (Jest or Node upgrade).
+  // Fail immediately so CI shows a clear error instead of slowly timing out.
+  if (process.env.__SEC_SINGLETON_COMPILED__) {
+    throw new Error(
+      '[SEC_SINGLETON_BROKEN] createSecurityTestApp() compiled a fresh NestJS app ' +
+        'even though Module._cache[SEC_CACHE_KEY] was already set in this Jest run. ' +
+        'The cross-vm cache-sharing mechanism has stopped working — check whether ' +
+        'a Jest or Node.js upgrade changed how vm contexts share require cache entries.',
+    );
+  }
+
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(ThrottlerStorage)
     .useValue({
@@ -159,6 +171,11 @@ export async function createSecurityTestApp(): Promise<TestApp> {
   NativeModule._cache[SEC_CACHE_KEY] = {
     exports: { secTestApp: testApp },
   } as unknown as { exports: Record<string, unknown> };
+
+  // Mark this process as having compiled the singleton so any future MISS
+  // (from a spec file that can't see the cache) fails loudly rather than
+  // silently spawning a 15-app boot cycle.
+  process.env.__SEC_SINGLETON_COMPILED__ = '1';
 
   return testApp;
 }

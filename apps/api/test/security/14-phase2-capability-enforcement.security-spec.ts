@@ -172,22 +172,25 @@ describe('SEC — P2A: feature gates (feature.brokers, STARTER plan)', () => {
     });
     await flushCapabilities(testApp.app, companyId);
 
-    const res = await request(testApp.app.getHttpServer())
-      .get('/v1/brokers')
-      .set('Authorization', bearer(adminToken))
-      .set('X-Tenant-Slug', SLUG);
+    try {
+      const res = await request(testApp.app.getHttpServer())
+        .get('/v1/brokers')
+        .set('Authorization', bearer(adminToken))
+        .set('X-Tenant-Slug', SLUG);
 
-    expect(res.status).toBe(200);
+      expect(res.status).toBe(200);
+    } finally {
+      // Restore STARTER default (no capabilities override) so P2A-1 and P2A-3
+      // see the correct gated state regardless of which order tests run.
+      await testApp.rawPrisma.company.update({
+        where: { id: companyId },
+        data: { capabilities: {} },
+      });
+      await flushCapabilities(testApp.app, companyId);
+    }
   });
 
   it('P2A-3: STARTER plan — maintenance route → 403 (feature.maintenance = false)', async () => {
-    // Restore: remove the broker override to go back to clean STARTER state
-    await testApp.rawPrisma.company.update({
-      where: { id: companyId },
-      data: { capabilities: {} },
-    });
-    await flushCapabilities(testApp.app, companyId);
-
     const res = await request(testApp.app.getHttpServer())
       .get('/v1/maintenance-requests')
       .set('Authorization', bearer(adminToken))
@@ -283,8 +286,18 @@ describe('SEC — P2B-staff: staffApp disabled — three-layer enforcement', () 
     });
     await flushCapabilities(testApp.app, companyId);
 
-    const res = await loginStaff(testApp.app, SLUG, adminEmail);
-    expect([200, 201]).toContain(res.status);
+    try {
+      const res = await loginStaff(testApp.app, SLUG, adminEmail);
+      expect([200, 201]).toContain(res.status);
+    } finally {
+      // Restore disabled state so P2B-1/2/3 see the correct 403 behavior
+      // regardless of which order the tests run (--randomize safe).
+      await testApp.rawPrisma.company.update({
+        where: { id: companyId },
+        data: { staffAppEnabled: false },
+      });
+      await flushCapabilities(testApp.app, companyId);
+    }
   });
 });
 
@@ -462,13 +475,23 @@ describe('SEC — P2C: creation limits (limit.maxUsers)', () => {
     });
     await flushCapabilities(testApp.app, companyId);
 
-    const res = await request(testApp.app.getHttpServer())
-      .post('/v1/users')
-      .set('Authorization', bearer(adminToken))
-      .set('X-Tenant-Slug', SLUG)
-      .send({ email: 'p2c-new-staff@p2test.test', role: 'SALES', fullName: 'New Staff', password: PASS });
+    try {
+      const res = await request(testApp.app.getHttpServer())
+        .post('/v1/users')
+        .set('Authorization', bearer(adminToken))
+        .set('X-Tenant-Slug', SLUG)
+        .send({ email: 'p2c-new-staff@p2test.test', role: 'SALES', fullName: 'New Staff', password: PASS });
 
-    expect(res.status).toBe(201);
+      expect(res.status).toBe(201);
+    } finally {
+      // Restore limit=1 so P2C-1 (expects 403 at limit) passes regardless of
+      // which order tests run (--randomize safe).
+      await testApp.rawPrisma.company.update({
+        where: { id: companyId },
+        data: { capabilities: { 'limit.maxUsers': 1 } },
+      });
+      await flushCapabilities(testApp.app, companyId);
+    }
   });
 });
 
