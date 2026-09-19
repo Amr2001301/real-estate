@@ -293,7 +293,7 @@ jobs:
           docker run -d --name ci-minio -p 9000:9000 \
             -e MINIO_ROOT_USER=minioadmin \
             -e MINIO_ROOT_PASSWORD=minioadmin \
-            minio/minio:RELEASE.2024-12-18T13-15-44Z server /data
+            quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z server /data
           until curl -sf http://localhost:9000/minio/health/live; do sleep 1; done
           AWS_ACCESS_KEY_ID=minioadmin AWS_SECRET_ACCESS_KEY=minioadmin AWS_DEFAULT_REGION=us-east-1 \
             aws s3 mb s3://real-estate-media --endpoint-url http://localhost:9000

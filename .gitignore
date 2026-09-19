@@ -52,6 +52,9 @@ ios/Pods/
 android/.gradle/
 android/app/release/
 
+# Claude Code — local permissions and lock files; machine-specific, never commit
+.claude/
+
 # Misc
 *.tsbuildinfo
 .eslintcache
