@@ -220,7 +220,7 @@ export async function createSecurityTestApp(): Promise<TestApp> {
   // singleton app was compiled with, so app.get(SomeSvcClass) always fails
   // with a confusing "element not found" Nest error. Replacing the method with
   // an explicit throw makes the cause and fix immediately obvious.
-  const _realGet = (app as unknown as Record<string, unknown>).get;
+  // Discard the real get() — callers must use TestApp helpers instead.
   (app as unknown as Record<string, unknown>).get = (token: unknown): never => {
     throw new Error(
       `[SEC_VM_CONTEXT_UNSAFE] testApp.app.get(${
@@ -230,7 +230,6 @@ export async function createSecurityTestApp(): Promise<TestApp> {
         'Add a TestApp helper in setup-app.ts instead (pattern: see flushCapabilities). ' +
         'Never call app.get() directly from security spec files.',
     );
-    void _realGet; // suppress unused-variable lint
   };
 
   return testApp;
