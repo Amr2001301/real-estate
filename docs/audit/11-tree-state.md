@@ -258,7 +258,7 @@ This keeps the graph readable and makes any future bisect unambiguous.
 | Typecheck (`tsc --noEmit`) | 0 errors | PASS |
 | Lint (`eslint .`) | 0 errors, 20 warnings | PASS |
 
-### Accepted e2e failure baseline
+### Accepted e2e failure baseline (local run, 2026-09-14)
 
 **20 failures on current tree — all pre-exist on clean HEAD.**
 See Q3 table above for attribution. None are introduced by Step A or the MT security work.
@@ -272,3 +272,38 @@ The 20 failures fall into five independent categories:
 5. **MinIO/storage unreachable** (8): E5, F5, G2/G3/G4/G6/G8/G9 — require object storage running; pass in CI with MinIO or when MinIO is stopped.
 
 **Step B must not introduce any new e2e failures beyond this baseline.**
+
+---
+
+### Revised baseline after e2e singleton (commit b6bd13f, 2026-09-19)
+
+**Source: local runs only. CI e2e job was cancelled in both the pre-singleton and post-singleton runs; no test results were produced by CI.**
+
+The e2e singleton (`createE2ETestApp`) was applied to 23 of 26 spec files (commit b6bd13f).
+Three local runs (forward × 2, reverse-alphabetical × 1) all produced:
+
+- **Test Suites: 7 failed, 19 passed, 26 total**
+- **Tests: 17 failed, 294 passed, 311 total**
+
+The failure count dropped from 20 → 17 tests (3 fewer). The 7 failing suites are unchanged.
+
+**What changed:**
+
+| # | Test | Before (baseline) | After (singleton) | Explanation |
+|---|---|---|---|---|
+| 1–4 | strict-permissions wrong-method (×4) | FAIL | FAIL | unchanged |
+| 5–7 | idor CUST-03/03b/05 | FAIL | FAIL | unchanged |
+| 8 | reports-mt ISO-R1 | FAIL | **PASS** | test setup fixed (see below) |
+| 9 | reports-mt ISO-R2 | FAIL | **PASS** | same |
+| 10 | reports-mt ISO-R3 | FAIL | FAIL | genuine isolation bug remains |
+| 11 | reports-mt ISO-R4 | FAIL | **PASS** | test setup fixed (see below) |
+| 12 | flow-e E5 | FAIL | FAIL | unchanged (MinIO) |
+| 13 | flow-f F5 | FAIL | FAIL | unchanged (MinIO) |
+| 14–19 | flow-g G2/G3/G4/G6/G8/G9 | FAIL | FAIL | unchanged (MinIO) |
+| 20 | rbac-route-coverage | FAIL | FAIL | unchanged |
+
+**ISO-R1, ISO-R2, ISO-R4 now pass — not because the application changed, but because the test setup was fixed.** The original `reports-mt-isolation.e2e-spec.ts` beforeAll used `testApp.prisma` + `runTenantContext(bypass: true)`. In the singleton, the spec's vm context has a different `AsyncLocalStorage` instance than the app, so `bypass` never reached the Prisma middleware. Company B setup completed partially but the admin login silently failed. Converting to `rawPrisma` fixed the setup; all three assertions now actually execute and pass. ISO-R3 remains failed — a genuine broker-leaderboard cross-tenant isolation bug.
+
+**"Test suite failed to run" counting:** Jest counts this as 1 failed Test Suite but 0 failed Tests. The 4 wrong-method tests in strict-permissions are 4 individual test failures counted separately. This explains the difference between the category totals (4+1+3+4+1+1+6+1 = 21 if you count the suite error as a test, 20 if you don't — the baseline counted it as 1 in the category list but it does not appear in `Tests: 17 failed`).
+
+**CI status:** The e2e job was cancelled at 15m 18s on both runs (pre- and post-singleton). The bottleneck is ts-jest compilation (26 spec files × ~30s/file = ~13 min), not NestJS boots. ts-jest performs full type-checking per file because `isolatedModules` is not set. Adding `"isolatedModules": true` to the ts-jest transform in `jest-e2e.json` (and `jest-security.json`) is the correct next fix.
