@@ -24,6 +24,7 @@ import helmet from 'helmet';
 import { PrismaClient } from '@prisma/client';
 
 import { AppModule } from '../src/app.module';
+import { CapabilityService } from '../src/common/capabilities/capability.service';
 import { DateSerializerInterceptor } from '../src/common/interceptors/date-serializer.interceptor';
 import { requestIdMiddleware } from '../src/common/logging/request-id.middleware';
 import { PrismaService } from '../src/common/prisma/prisma.service';
@@ -43,6 +44,13 @@ export interface TestApp {
    */
   rawPrisma: PrismaClient;
   close: () => Promise<void>;
+  /**
+   * Flush the capability cache for a company. Use this instead of calling
+   * `app.get(CapabilityService).invalidateCache()` directly — the class
+   * reference captured here matches the DI token the app was compiled with,
+   * so it works correctly even when called from a different Jest vm context.
+   */
+  flushCapabilities: (companyId: string) => Promise<void>;
 }
 
 export interface CreateTestAppOptions {
@@ -88,6 +96,7 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
   await app.init();
 
   const prisma = app.get(PrismaService);
+  const capabilitySvc = app.get(CapabilityService);
   // Raw client with no tenant middleware — for test fixture setup and direct
   // DB assertions that happen outside the HTTP request lifecycle.
   const rawPrisma = new PrismaClient();
@@ -97,6 +106,7 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
     app,
     prisma,
     rawPrisma,
+    flushCapabilities: (companyId) => capabilitySvc.invalidateCache(companyId),
     close: async () => {
       await rawPrisma.$disconnect();
       await app.close();
@@ -163,10 +173,20 @@ export async function createSecurityTestApp(): Promise<TestApp> {
   await app.init();
 
   const prisma = app.get(PrismaService);
+  // Capture CapabilityService here, in the same vm context the app was compiled in.
+  // Storing it in the closure means callers in OTHER vm contexts can call
+  // testApp.flushCapabilities() without needing to resolve the class token themselves.
+  const capabilitySvc = app.get(CapabilityService);
   const rawPrisma = new PrismaClient();
   await rawPrisma.$connect();
 
-  const testApp: TestApp = { app, prisma, rawPrisma, close: async () => {} };
+  const testApp: TestApp = {
+    app,
+    prisma,
+    rawPrisma,
+    flushCapabilities: (companyId) => capabilitySvc.invalidateCache(companyId),
+    close: async () => {},
+  };
 
   NativeModule._cache[SEC_CACHE_KEY] = {
     exports: { secTestApp: testApp },

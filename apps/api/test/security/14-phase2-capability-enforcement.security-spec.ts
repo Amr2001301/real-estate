@@ -18,7 +18,6 @@ import * as argon2 from 'argon2';
 import type { INestApplication } from '@nestjs/common';
 import { type TestApp, createSecurityTestApp } from '../setup-app';
 import { bearer } from '../helpers/login';
-import { CapabilityService } from '../../src/common/capabilities/capability.service';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -86,9 +85,8 @@ async function loginCustomer(app: INestApplication, slug: string, email: string)
   return { status: res.status, body: res.body as Record<string, unknown> };
 }
 
-async function flushCapabilities(app: INestApplication, companyId: string): Promise<void> {
-  const svc = app.get(CapabilityService);
-  await svc.invalidateCache(companyId);
+async function flushCapabilities(ta: TestApp, companyId: string): Promise<void> {
+  await ta.flushCapabilities(companyId);
 }
 
 function extractAccessToken(body: Record<string, unknown>): string {
@@ -170,7 +168,7 @@ describe('SEC — P2A: feature gates (feature.brokers, STARTER plan)', () => {
       where: { id: companyId },
       data: { capabilities: { 'feature.brokers': true } },
     });
-    await flushCapabilities(testApp.app, companyId);
+    await flushCapabilities(testApp, companyId);
 
     try {
       const res = await request(testApp.app.getHttpServer())
@@ -186,7 +184,7 @@ describe('SEC — P2A: feature gates (feature.brokers, STARTER plan)', () => {
         where: { id: companyId },
         data: { capabilities: {} },
       });
-      await flushCapabilities(testApp.app, companyId);
+      await flushCapabilities(testApp, companyId);
     }
   });
 
@@ -244,7 +242,7 @@ describe('SEC — P2B-staff: staffApp disabled — three-layer enforcement', () 
       where: { id: companyId },
       data: { staffAppEnabled: false },
     });
-    await flushCapabilities(testApp.app, companyId);
+    await flushCapabilities(testApp, companyId);
   }, 30_000);
 
   afterAll(async () => {
@@ -284,7 +282,7 @@ describe('SEC — P2B-staff: staffApp disabled — three-layer enforcement', () 
       where: { id: companyId },
       data: { staffAppEnabled: true },
     });
-    await flushCapabilities(testApp.app, companyId);
+    await flushCapabilities(testApp, companyId);
 
     try {
       const res = await loginStaff(testApp.app, SLUG, adminEmail);
@@ -296,7 +294,7 @@ describe('SEC — P2B-staff: staffApp disabled — three-layer enforcement', () 
         where: { id: companyId },
         data: { staffAppEnabled: false },
       });
-      await flushCapabilities(testApp.app, companyId);
+      await flushCapabilities(testApp, companyId);
     }
   });
 });
@@ -344,7 +342,7 @@ describe('SEC — P2B-customer: customerApp disabled — three-layer enforcement
       where: { id: companyId },
       data: { customerAppEnabled: false },
     });
-    await flushCapabilities(testApp.app, companyId);
+    await flushCapabilities(testApp, companyId);
   }, 30_000);
 
   afterAll(async () => {
@@ -473,7 +471,7 @@ describe('SEC — P2C: creation limits (limit.maxUsers)', () => {
       where: { id: companyId },
       data: { capabilities: { 'limit.maxUsers': 10 } },
     });
-    await flushCapabilities(testApp.app, companyId);
+    await flushCapabilities(testApp, companyId);
 
     try {
       const res = await request(testApp.app.getHttpServer())
@@ -490,7 +488,7 @@ describe('SEC — P2C: creation limits (limit.maxUsers)', () => {
         where: { id: companyId },
         data: { capabilities: { 'limit.maxUsers': 1 } },
       });
-      await flushCapabilities(testApp.app, companyId);
+      await flushCapabilities(testApp, companyId);
     }
   });
 });
@@ -607,7 +605,7 @@ describe('SEC — P2C-enterprise: ENTERPRISE plan with null limits is never bloc
       where: { id: companyId },
       data: { capabilities: { 'limit.maxUsers': null } },
     });
-    await flushCapabilities(testApp.app, companyId);
+    await flushCapabilities(testApp, companyId);
 
     const res = await request(testApp.app.getHttpServer())
       .post('/v1/users')
