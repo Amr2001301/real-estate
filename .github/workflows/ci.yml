@@ -237,9 +237,7 @@ jobs:
         run: pnpm prisma:generate
       - name: Run e2e-1 (catalog-auth + reservations + financial)
         working-directory: apps/api
-        run: |
-          jest --config ./test/jest-e2e.json --runInBand \
-            --testPathPattern="e2e-catalog-auth|e2e-reservations|e2e-financial"
+        run: pnpm exec jest --config ./test/jest-e2e.json --runInBand --testPathPattern="e2e-catalog-auth|e2e-reservations|e2e-financial"
 
   api-e2e-2:
     name: api · jest (e2e-2, real Postgres)
@@ -286,9 +284,7 @@ jobs:
         run: pnpm prisma:generate
       - name: Run e2e-2 (maintenance + mt-security + isolated-apps)
         working-directory: apps/api
-        run: |
-          jest --config ./test/jest-e2e.json --runInBand \
-            --testPathPattern="e2e-maintenance|e2e-mt-security|e2e-isolated-apps"
+        run: pnpm exec jest --config ./test/jest-e2e.json --runInBand --testPathPattern="e2e-maintenance|e2e-mt-security|e2e-isolated-apps"
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Security test suite (real Postgres, real Nest app). Tests V-01..V-17 body-
