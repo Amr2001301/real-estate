@@ -485,7 +485,7 @@ describe('P7–P9: me/reservations + me/contracts + contract installments (e2e)'
         passwordHash: hash,
         role: UserRole.CUSTOMER,
         companyId: testCompanyId,
-        emailVerified: true,
+        emailVerifiedAt: new Date(),
       },
       select: { id: true },
     });
