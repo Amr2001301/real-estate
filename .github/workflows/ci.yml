@@ -7,6 +7,16 @@ on:
   schedule:
     # Run e2e nightly at 02:00 UTC to catch drift even without a PR.
     - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Which suites to run (all = everything path-filtered + e2e; e2e-only = build + e2e only)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - e2e-only
 
 # Cancel in-flight runs for the same ref to save minutes.
 concurrency:
@@ -137,7 +147,9 @@ jobs:
   api-unit:
     name: api · jest (unit)
     needs: [changes, build]
-    if: needs.changes.outputs.api == 'true'
+    if: >
+      needs.changes.outputs.api == 'true' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.suite != 'e2e-only')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -171,20 +183,22 @@ jobs:
   #   api-e2e-1: e2e-catalog-auth + e2e-reservations + e2e-financial
   #   api-e2e-2: e2e-maintenance + e2e-mt-security + e2e-isolated-apps
   #
-  # Trigger policy: PRs to main and the nightly schedule only. Push-to-main does
-  # NOT trigger e2e — the PR run has already validated the branch before merge.
-  # The `all-checks-passed` gate accepts `skipped` from push-to-main runs.
+  # Trigger policy: PRs to main, nightly schedule, and workflow_dispatch.
+  # Push-to-main does NOT trigger e2e — the PR run has already validated the
+  # branch before merge. The `all-checks-passed` gate accepts `skipped` on
+  # push-to-main. workflow_dispatch (suite=all or suite=e2e-only) always runs
+  # e2e regardless of path filter — useful for manual verification and bisect.
   #
   # DB-safety: globalSetup requires TEST_DATABASE_URL to contain "e2e" or "test".
-  # Both jobs use separate Postgres service containers (different ports) so they
-  # can truly run in parallel without port or DB conflicts.
+  # Both jobs use separate Postgres service containers so they run in parallel.
   # ─────────────────────────────────────────────────────────────────────────────
   api-e2e-1:
     name: api · jest (e2e-1, real Postgres)
     needs: [changes, build]
     if: >
-      (needs.changes.outputs.api == 'true' || github.event_name == 'schedule') &&
-      (github.event_name == 'pull_request' || github.event_name == 'schedule')
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && needs.changes.outputs.api == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -231,8 +245,9 @@ jobs:
     name: api · jest (e2e-2, real Postgres)
     needs: [changes, build]
     if: >
-      (needs.changes.outputs.api == 'true' || github.event_name == 'schedule') &&
-      (github.event_name == 'pull_request' || github.event_name == 'schedule')
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && needs.changes.outputs.api == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -285,7 +300,9 @@ jobs:
   api-security:
     name: api · jest (security, real Postgres)
     needs: [changes, build]
-    if: needs.changes.outputs.api == 'true'
+    if: >
+      needs.changes.outputs.api == 'true' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.suite != 'e2e-only')
     runs-on: ubuntu-latest
     # 35 min: previous 20 min budget was exhausted (suite ran 19m19s, killed).
     # The cancelled job produced a partial Jest summary that was misread as a
@@ -367,7 +384,9 @@ jobs:
   web-public-unit:
     name: web-public · jest (unit)
     needs: [changes, build]
-    if: needs.changes.outputs.webPublic == 'true'
+    if: >
+      needs.changes.outputs.webPublic == 'true' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.suite != 'e2e-only')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -388,7 +407,9 @@ jobs:
   mobile-static:
     name: mobile · analyze + unit tests
     needs: [changes, build]
-    if: needs.changes.outputs.mobile == 'true'
+    if: >
+      needs.changes.outputs.mobile == 'true' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.suite != 'e2e-only')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -453,7 +474,10 @@ jobs:
   web-admin-e2e:
     name: web-admin · playwright
     needs: [changes, build]
-    if: needs.changes.outputs.webAdmin == 'true' || needs.changes.outputs.api == 'true'
+    if: >
+      needs.changes.outputs.webAdmin == 'true' ||
+      needs.changes.outputs.api == 'true' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.suite != 'e2e-only')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -567,7 +591,10 @@ jobs:
   web-public-e2e:
     name: web-public · playwright
     needs: [changes, build]
-    if: needs.changes.outputs.webPublic == 'true' || needs.changes.outputs.api == 'true'
+    if: >
+      needs.changes.outputs.webPublic == 'true' ||
+      needs.changes.outputs.api == 'true' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.suite != 'e2e-only')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
