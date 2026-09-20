@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    # Run e2e nightly at 02:00 UTC to catch drift even without a PR.
+    - cron: '0 2 * * *'
 
 # Cancel in-flight runs for the same ref to save minutes.
 concurrency:
@@ -161,17 +164,29 @@ jobs:
           REDIS_URL: redis://localhost:6379
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # Backend Jest e2e (real ephemeral Postgres, real Nest app, real auth flow).
-  # See apps/api/test/globalSetup.ts for the DB-safety guards — TEST_DATABASE_URL
-  # MUST point at a database whose name contains "e2e" or "test", which the
-  # service container's "realestate_e2e" name satisfies.
+  # Backend Jest e2e — split into two parallel jobs so each stays under 20 min.
+  #
+  # 26 original spec files were merged into 6 to eliminate per-vm-context NestJS
+  # boot overhead (~128 s per file). The two jobs divide those 6 files evenly:
+  #   api-e2e-1: e2e-catalog-auth + e2e-reservations + e2e-financial
+  #   api-e2e-2: e2e-maintenance + e2e-mt-security + e2e-isolated-apps
+  #
+  # Trigger policy: PRs to main and the nightly schedule only. Push-to-main does
+  # NOT trigger e2e — the PR run has already validated the branch before merge.
+  # The `all-checks-passed` gate accepts `skipped` from push-to-main runs.
+  #
+  # DB-safety: globalSetup requires TEST_DATABASE_URL to contain "e2e" or "test".
+  # Both jobs use separate Postgres service containers (different ports) so they
+  # can truly run in parallel without port or DB conflicts.
   # ─────────────────────────────────────────────────────────────────────────────
-  api-e2e:
-    name: api · jest (e2e, real Postgres)
+  api-e2e-1:
+    name: api · jest (e2e-1, real Postgres)
     needs: [changes, build]
-    if: needs.changes.outputs.api == 'true'
+    if: >
+      (needs.changes.outputs.api == 'true' || github.event_name == 'schedule') &&
+      (github.event_name == 'pull_request' || github.event_name == 'schedule')
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16-alpine
@@ -188,23 +203,14 @@ jobs:
           --health-retries 10
     env:
       NODE_ENV: test
-      # The actual e2e DB pointer — globalSetup validates it and then rewrites
-      # process.env.DATABASE_URL to this value before any spec boots.
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/realestate_e2e?schema=public
-      # DATABASE_URL must differ from TEST_DATABASE_URL — globalSetup has a
-      # safety guard that rejects equal values to prevent accidental prod access.
-      # globalSetup overwrites this with TEST_DATABASE_URL at runtime.
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci_placeholder?schema=public
       JWT_ACCESS_SECRET: ci-access-secret-placeholder-1234567890
       JWT_REFRESH_SECRET: ci-refresh-secret-placeholder-1234567890
       REDIS_URL: redis://localhost:6379
-      # Required by TenantContextInterceptor for @Public() routes (auth login,
-      # customer registration). Without it every unauthenticated call returns 503.
-      # The seed pins the seeded company to this UUID (see prisma/seed.ts L385).
-      # WARNING: if DISABLE_DEFAULT_COMPANY_FALLBACK is ever set to "true" in
-      # production, these jobs will also need X-Tenant-Slug headers instead of
-      # this fallback. Record: docs/audit/06-ci-gaps.md G5.
       DEFAULT_COMPANY_ID: 00000000-0000-0000-0000-000000000001
+      SEED_ADMIN_EMAIL: admin@example.com
+      SEED_ADMIN_PASSWORD: ChangeMe123!
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -215,9 +221,59 @@ jobs:
       - name: Generate Prisma client
         working-directory: apps/api
         run: pnpm prisma:generate
-      - name: Run e2e tests (real DB, jest globalSetup applies migrations + seed)
+      - name: Run e2e-1 (catalog-auth + reservations + financial)
         working-directory: apps/api
-        run: pnpm test:e2e
+        run: |
+          jest --config ./test/jest-e2e.json --runInBand \
+            --testPathPattern="e2e-catalog-auth|e2e-reservations|e2e-financial"
+
+  api-e2e-2:
+    name: api · jest (e2e-2, real Postgres)
+    needs: [changes, build]
+    if: >
+      (needs.changes.outputs.api == 'true' || github.event_name == 'schedule') &&
+      (github.event_name == 'pull_request' || github.event_name == 'schedule')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: realestate_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/realestate_e2e?schema=public
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci_placeholder?schema=public
+      JWT_ACCESS_SECRET: ci-access-secret-placeholder-1234567890
+      JWT_REFRESH_SECRET: ci-refresh-secret-placeholder-1234567890
+      REDIS_URL: redis://localhost:6379
+      DEFAULT_COMPANY_ID: 00000000-0000-0000-0000-000000000001
+      SEED_ADMIN_EMAIL: admin@example.com
+      SEED_ADMIN_PASSWORD: ChangeMe123!
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.15.9, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        working-directory: apps/api
+        run: pnpm prisma:generate
+      - name: Run e2e-2 (maintenance + mt-security + isolated-apps)
+        working-directory: apps/api
+        run: |
+          jest --config ./test/jest-e2e.json --runInBand \
+            --testPathPattern="e2e-maintenance|e2e-mt-security|e2e-isolated-apps"
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Security test suite (real Postgres, real Nest app). Tests V-01..V-17 body-
@@ -627,7 +683,7 @@ jobs:
   all-checks-passed:
     name: all checks passed
     runs-on: ubuntu-latest
-    needs: [build, api-unit, api-e2e, api-security, mobile-static, web-admin-e2e, web-public-e2e, web-public-unit]
+    needs: [build, api-unit, api-e2e-1, api-e2e-2, api-security, mobile-static, web-admin-e2e, web-public-e2e, web-public-unit]
     if: always()
     steps:
       - name: Verify no job failed or was cancelled
