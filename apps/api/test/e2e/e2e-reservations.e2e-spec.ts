@@ -1,271 +1,283 @@
 /**
- * Merged e2e group 2: Flow-D + Flow-D-Approval + me-reservations
+ * Merged e2e group 2: Flow-D + Flow-D-Approval + me-reservations (P7/P8/P9)
  *
- * Flow-D and Flow-D-Approval previously shared the seeded AVAILABLE unit pool,
- * creating ordering dependencies. Fixed: each describe that needs a unit creates
- * one via rawPrisma in its own beforeAll, making every describe fully self-contained
- * and order-independent.
- *
- * me-reservations already uses pickFreshUnit() which excludes p1 units, so it
- * is compatible with the new unit-creation approach for flow-d/flow-d-approval.
+ * Each top-level describe is self-contained — it manages its own testApp /
+ * fixtures / token variables so the three original specs are fully
+ * independent despite sharing one Jest vm context.
  */
 
 import request from 'supertest';
-import { ReservationBookingPaymentStatus, ReservationStatus, UnitStatus } from '@prisma/client';
+import * as argon2 from 'argon2';
+import {
+  LeadStage,
+  ReservationBookingPaymentStatus,
+  ReservationStatus,
+  UnitStatus,
+  UserRole,
+} from '@prisma/client';
 import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
 import { bearer, loginAs } from '../helpers/login';
-import argon2 from 'argon2';
-import { UserRole } from '@prisma/client';
 
-// ── Shared module-level state ─────────────────────────────────────────────────
-
-let testApp: TestApp;
-let fixtures: E2EFixtures;
-let adminToken: string;
-let salesToken: string;
-let broker1Token: string;
-let broker2Token: string;
-let customer1Token: string;
-
-// Shared infrastructure for unit creation (flow-d + flow-d-approval)
-let p1BuildingId: string;
-let testCompanyId: string;
-let unitSeq = 0;
-
-beforeAll(async () => {
-  testApp = await createE2ETestApp();
-  fixtures = await loadE2EFixtures(testApp.rawPrisma);
-  [adminToken, salesToken, broker1Token, broker2Token, customer1Token] = await Promise.all([
-    loginAs(testApp.app, 'admin@example.com', 'ChangeMe123!'),
-    loginAs(testApp.app, 'sales@example.com', 'SalesPass123!'),
-    loginAs(testApp.app, fixtures.users.BROKER_1.email, fixtures.users.BROKER_1.password),
-    loginAs(testApp.app, fixtures.users.BROKER_2.email, fixtures.users.BROKER_2.password),
-    loginAs(testApp.app, fixtures.users.CUSTOMER_1.email, fixtures.users.CUSTOMER_1.password, 'customer'),
-  ]);
-
-  const company = await testApp.rawPrisma.company.findFirstOrThrow({
-    where: { isActive: true },
-    select: { id: true },
-  });
-  testCompanyId = company.id;
-
-  const p1Building = await testApp.rawPrisma.building.findFirstOrThrow({
-    where: { phase: { projectId: fixtures.projects.p1Id } },
-    select: { id: true },
-  });
-  p1BuildingId = p1Building.id;
-});
-
-const http = () => request(testApp.app.getHttpServer());
-
-async function createFreshUnit(label: string): Promise<string> {
-  const unit = await testApp.rawPrisma.unit.create({
-    data: {
-      buildingId: p1BuildingId,
-      companyId: testCompanyId,
-      code: `${label}-${Date.now()}-${unitSeq++}`,
-      type: '2BR',
-      area: 100,
-      price: 1_000_000,
-      status: UnitStatus.AVAILABLE,
-    },
-    select: { id: true },
-  });
-  return unit.id;
+/** Pull ids out of either a bare array or `{ data: [...] }` page wrapper. */
+function collectIds(body: unknown): string[] {
+  const list: unknown = Array.isArray(body)
+    ? body
+    : (body as { data?: unknown })?.data;
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((row) =>
+      row && typeof row === 'object' && typeof (row as { id?: unknown }).id === 'string'
+        ? (row as { id: string }).id
+        : undefined,
+    )
+    .filter((id): id is string => typeof id === 'string');
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Flow D — Reservations (e2e)
 // ═════════════════════════════════════════════════════════════════════════════
 
-describe('Flow D — Reservations (e2e)', () => {
-  describe('D1–D4: sales creates, extends, and cancels a reservation', () => {
-    let reservationId: string;
-    let unitId: string;
+describe('Flow D — Reservation journey (e2e)', () => {
+  let testApp: TestApp;
+  let fixtures: E2EFixtures;
 
-    beforeAll(async () => {
-      unitId = await createFreshUnit('D-UNIT');
+  let adminToken: string;
+  let salesToken: string;
+  let broker1Token: string;
+  let broker2Token: string;
+  let customer1Token: string;
+
+  beforeAll(async () => {
+    testApp = await createE2ETestApp();
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
+
+    [adminToken, salesToken, broker1Token, broker2Token, customer1Token] = await Promise.all([
+      loginAs(testApp.app, 'admin@example.com', 'ChangeMe123!'),
+      loginAs(testApp.app, 'sales@example.com', 'SalesPass123!'),
+      loginAs(testApp.app, fixtures.users.BROKER_1.email, fixtures.users.BROKER_1.password),
+      loginAs(testApp.app, fixtures.users.BROKER_2.email, fixtures.users.BROKER_2.password),
+      loginAs(testApp.app, fixtures.users.CUSTOMER_1.email, fixtures.users.CUSTOMER_1.password, 'customer'),
+    ]);
+  });
+
+  const http = () => request(testApp.app.getHttpServer());
+
+  /**
+   * Find a unit on `projectId` that is currently AVAILABLE. We pick from
+   * the END of the project's unit list (newest first, id-desc tiebreaker)
+   * so we don't collide with Flow A's `sampleUnitInP1Id` (which picks
+   * from the START). `seedPublicDemo` createMany's all units with the
+   * same `createdAt`, so an `id` tiebreaker is required to keep the
+   * choice deterministic across calls.
+   */
+  async function pickAvailableUnit(projectId: string): Promise<{ id: string }> {
+    const u = await testApp.rawPrisma.unit.findFirst({
+      where: { status: UnitStatus.AVAILABLE, building: { phase: { projectId } } },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      select: { id: true },
     });
+    if (!u) {
+      throw new Error(
+        `[flow-d] No AVAILABLE unit found on project ${projectId}. ` +
+          'Did a previous spec consume every unit? Try a full reset: unset SKIP_DB_RESET.',
+      );
+    }
+    return u;
+  }
 
-    it('D1: SALES POST /v1/reservations creates a PENDING reservation', async () => {
+  // ── D1, D2, D3, D4 — sales create + unit transition + read scoping ──────
+  describe('D1–D4: sales creates a reservation; unit transitions to RESERVED; reads scope correctly', () => {
+    let salesReservationId: string;
+    let salesReservationUnitId: string;
+
+    it('D1: SALES POST /v1/reservations with clientId + unitId → 201, status=PENDING', async () => {
+      const unit = await pickAvailableUnit(fixtures.projects.p1Id);
+      salesReservationUnitId = unit.id;
+
       const res = await http()
         .post('/v1/reservations')
         .set('Authorization', bearer(salesToken))
         .send({
-          unitId,
+          unitId: unit.id,
           clientId: fixtures.userIds.customer1UserId,
-          notes: 'phase 7b — basic sales reservation',
+          notes: 'phase 7b — sales reservation',
           expiresInHours: 72,
         });
       expect(res.status).toBe(201);
       const id: unknown = res.body?.id ?? res.body?.reservation?.id;
       expect(typeof id).toBe('string');
-      reservationId = id as string;
+      salesReservationId = id as string;
 
       const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
-        where: { id: reservationId },
-        select: { status: true, unitId: true, clientId: true },
+        where: { id: salesReservationId },
+        select: { status: true, unitId: true, brokerId: true, salesId: true },
       });
       expect(row.status).toBe(ReservationStatus.PENDING);
-      expect(row.unitId).toBe(unitId);
-      expect(row.clientId).toBe(fixtures.userIds.customer1UserId);
-
-      const unit = await testApp.rawPrisma.unit.findUniqueOrThrow({
-        where: { id: unitId },
-        select: { status: true },
-      });
-      expect(unit.status).toBe(UnitStatus.RESERVED);
+      expect(row.unitId).toBe(unit.id);
+      expect(row.brokerId).toBeNull(); // sales-origin → no broker
+      expect(row.salesId).toBe(fixtures.userIds.salesId);
     });
 
-    it('D2: SALES can PATCH /v1/reservations/:id/extend to push expiry', async () => {
-      const before = await testApp.rawPrisma.reservation.findUniqueOrThrow({
-        where: { id: reservationId },
-        select: { expiresAt: true },
+    it('D2: the unit transitions AVAILABLE → RESERVED after the create', async () => {
+      const u = await testApp.rawPrisma.unit.findUniqueOrThrow({
+        where: { id: salesReservationUnitId },
+        select: { status: true, reservationExpiresAt: true },
       });
+      expect(u.status).toBe(UnitStatus.RESERVED);
+      expect(u.reservationExpiresAt).not.toBeNull();
+    });
+
+    it('D3: SALES GET /v1/reservations returns the just-created reservation', async () => {
       const res = await http()
-        .patch(`/v1/reservations/${reservationId}/extend`)
-        .set('Authorization', bearer(salesToken))
-        .send({ additionalHours: 48 });
+        .get('/v1/reservations')
+        .set('Authorization', bearer(salesToken));
       expect(res.status).toBe(200);
-      const after = await testApp.rawPrisma.reservation.findUniqueOrThrow({
-        where: { id: reservationId },
-        select: { expiresAt: true },
-      });
-      expect(new Date(after.expiresAt).getTime()).toBeGreaterThan(
-        new Date(before.expiresAt).getTime(),
-      );
+      const ids = collectIds(res.body);
+      expect(ids).toContain(salesReservationId);
     });
 
-    it('D3: duplicate reservation on the same unit is rejected (409)', async () => {
+    it('D4: ADMIN GET /v1/reservations also returns the same row', async () => {
       const res = await http()
-        .post('/v1/reservations')
-        .set('Authorization', bearer(salesToken))
-        .send({
-          unitId,
-          clientId: fixtures.userIds.customer1UserId,
-          notes: 'phase 7b — should fail — already reserved',
-          expiresInHours: 24,
-        });
-      expect(res.status).toBe(409);
-    });
-
-    it('D4: SALES cancels → CANCELLED, unit reverts to AVAILABLE', async () => {
-      const res = await http()
-        .post(`/v1/reservations/${reservationId}/cancel`)
-        .set('Authorization', bearer(salesToken))
-        .send({ reason: 'phase 7b — cancel test' });
-      expect(res.status).toBe(201);
-
-      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
-        where: { id: reservationId },
-        select: { status: true },
-      });
-      expect(row.status).toBe(ReservationStatus.CANCELLED);
-
-      const unit = await testApp.rawPrisma.unit.findUniqueOrThrow({
-        where: { id: unitId },
-        select: { status: true },
-      });
-      expect(unit.status).toBe(UnitStatus.AVAILABLE);
+        .get('/v1/reservations')
+        .set('Authorization', bearer(adminToken));
+      expect(res.status).toBe(200);
+      const ids = collectIds(res.body);
+      expect(ids).toContain(salesReservationId);
     });
   });
 
-  describe('D5–D7: broker portal reservation', () => {
-    let reservationId: string;
-    let unitId: string;
+  // ── D5, D6, D7 — broker create + portal scoping + cross-tenancy ────────
+  describe('D5–D7: broker1 creates a portal reservation; broker2 cannot see it', () => {
+    let brokerReservationId: string;
 
-    beforeAll(async () => {
-      unitId = await createFreshUnit('D-BROKER-UNIT');
-    });
+    it('D5: broker1 POST /v1/portal/reservations with approved lead + plan → 201 PENDING', async () => {
+      const unit = await pickAvailableUnit(fixtures.projects.p1Id);
 
-    it('D5: broker1 POST /v1/portal/reservations creates a reservation', async () => {
       const res = await http()
         .post('/v1/portal/reservations')
         .set('Authorization', bearer(broker1Token))
         .send({
-          unitId,
-          clientId: fixtures.userIds.customer1UserId,
-          notes: 'phase 7b — broker portal reservation',
-          expiresInHours: 48,
+          leadId: fixtures.flowD.broker1ApprovedLeadId,
+          unitId: unit.id,
+          installmentPlanTemplateId: fixtures.flowD.planTemplateP1Id,
+          selectedDurationOptionId: fixtures.flowD.planP1DurationOptionId,
+          notes: 'phase 7b — broker reservation',
+          expiresInHours: 72,
         });
       expect(res.status).toBe(201);
       const id: unknown = res.body?.id ?? res.body?.reservation?.id;
       expect(typeof id).toBe('string');
-      reservationId = id as string;
+      brokerReservationId = id as string;
 
       const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
-        where: { id: reservationId },
+        where: { id: brokerReservationId },
         select: { status: true, brokerId: true },
       });
       expect(row.status).toBe(ReservationStatus.PENDING);
+      expect(row.brokerId).not.toBeNull(); // attributed to broker1's firm
     });
 
-    it('D6: broker1 GET /v1/portal/reservations sees own reservation', async () => {
+    it('D6: broker1 GET /v1/portal/reservations returns their reservation', async () => {
       const res = await http()
         .get('/v1/portal/reservations')
         .set('Authorization', bearer(broker1Token));
       expect(res.status).toBe(200);
       const ids = collectIds(res.body);
-      expect(ids).toContain(reservationId);
+      expect(ids).toContain(brokerReservationId);
     });
 
-    it("D7: broker2 does NOT see broker1's reservation", async () => {
+    it('D7: broker2 GET /v1/portal/reservations does NOT see broker1\'s reservation', async () => {
       const res = await http()
         .get('/v1/portal/reservations')
         .set('Authorization', bearer(broker2Token));
       expect(res.status).toBe(200);
-      expect(collectIds(res.body)).not.toContain(reservationId);
+      const ids = collectIds(res.body);
+      expect(ids).not.toContain(brokerReservationId);
     });
   });
 
-  describe('D8–D10: RBAC negatives', () => {
-    it('D8: POST /v1/reservations without token → 401', async () => {
-      expect((await http().post('/v1/reservations').send({})).status).toBe(401);
-    });
-
-    it('D9: POST /v1/reservations as CUSTOMER → 403', async () => {
+  // ── D8, D9, D10 — RBAC negatives ────────────────────────────────────────
+  describe('D8–D10: RBAC negatives on the reservation surface', () => {
+    it('D8: GET /v1/portal/reservations as SALES → 403', async () => {
       const res = await http()
-        .post('/v1/reservations')
-        .set('Authorization', bearer(customer1Token))
-        .send({ unitId: fixtures.units.sampleUnitInP1Id, expiresInHours: 24 });
+        .get('/v1/portal/reservations')
+        .set('Authorization', bearer(salesToken));
       expect(res.status).toBe(403);
     });
 
-    it('D10: POST /v1/portal/reservations as SALES → 403 (broker surface)', async () => {
+    it('D9: POST /v1/reservations as BROKER → 403 (brokers use /portal/reservations)', async () => {
       const res = await http()
-        .post('/v1/portal/reservations')
-        .set('Authorization', bearer(salesToken))
-        .send({ unitId: fixtures.units.sampleUnitInP1Id, expiresInHours: 24 });
+        .post('/v1/reservations')
+        .set('Authorization', bearer(broker1Token))
+        .send({});
+      expect(res.status).toBe(403);
+    });
+
+    it('D10: GET /v1/reservations without token → 401', async () => {
+      const res = await http().get('/v1/reservations');
+      expect(res.status).toBe(401);
+    });
+
+    it('D10(b): GET /v1/reservations as CUSTOMER → 403', async () => {
+      const res = await http()
+        .get('/v1/reservations')
+        .set('Authorization', bearer(customer1Token));
       expect(res.status).toBe(403);
     });
   });
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
-// Flow D Approval — Reservation approval workflow (e2e)
+// Flow D Approval — Admin reservation approval / lifecycle (e2e)
 // ═════════════════════════════════════════════════════════════════════════════
 
-describe('Flow D Approval — Reservation approval workflow (e2e)', () => {
+describe('Phase 7C — Admin reservation approval / lifecycle (e2e)', () => {
+  let testApp: TestApp;
+  let fixtures: E2EFixtures;
+
+  let adminToken: string;
+  let salesToken: string;
+  let broker1Token: string;
+
+  beforeAll(async () => {
+    testApp = await createE2ETestApp();
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
+
+    [adminToken, salesToken, broker1Token] = await Promise.all([
+      loginAs(testApp.app, 'admin@example.com', 'ChangeMe123!'),
+      loginAs(testApp.app, 'sales@example.com', 'SalesPass123!'),
+      loginAs(testApp.app, fixtures.users.BROKER_1.email, fixtures.users.BROKER_1.password),
+    ]);
+  });
+
+  const http = () => request(testApp.app.getHttpServer());
+
   async function createSalesReservation(): Promise<{ reservationId: string; unitId: string }> {
-    const unitId = await createFreshUnit('DA-UNIT');
+    const unit = await testApp.rawPrisma.unit.findFirstOrThrow({
+      where: { status: UnitStatus.AVAILABLE },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      select: { id: true },
+    });
     const res = await http()
       .post('/v1/reservations')
       .set('Authorization', bearer(salesToken))
       .send({
-        unitId,
+        unitId: unit.id,
         clientId: fixtures.userIds.customer1UserId,
         notes: 'phase 7c — admin-approval prep',
         expiresInHours: 72,
       });
     expect(res.status).toBe(201);
     const id: unknown = res.body?.id ?? res.body?.reservation?.id;
-    if (typeof id !== 'string')
+    if (typeof id !== 'string') {
       throw new Error(`createSalesReservation: no id returned: ${JSON.stringify(res.body)}`);
-    return { reservationId: id, unitId };
+    }
+    return { reservationId: id, unitId: unit.id };
   }
 
-  describe('DA1–DA4: approval path — admin approves a sales reservation', () => {
+  // ── DA1 — approve ────────────────────────────────────────────────────────
+  describe('DA1: PENDING → APPROVED', () => {
     let reservationId: string;
     let unitId: string;
 
@@ -273,27 +285,11 @@ describe('Flow D Approval — Reservation approval workflow (e2e)', () => {
       ({ reservationId, unitId } = await createSalesReservation());
     });
 
-    it('DA1: reservation exists and is PENDING', async () => {
-      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
-        where: { id: reservationId },
-        select: { status: true },
-      });
-      expect(row.status).toBe(ReservationStatus.PENDING);
-    });
-
-    it('DA2: ADMIN can GET /v1/reservations/pending-approval and see it in the queue', async () => {
-      const res = await http()
-        .get('/v1/reservations/pending-approval')
-        .set('Authorization', bearer(adminToken));
-      expect(res.status).toBe(200);
-      expect(collectIds(res.body)).toContain(reservationId);
-    });
-
-    it('DA3: ADMIN approves → APPROVED', async () => {
+    it('POST /:id/approve as admin → status APPROVED, approvedAt set, unit stays RESERVED', async () => {
       const res = await http()
         .post(`/v1/reservations/${reservationId}/approve`)
         .set('Authorization', bearer(adminToken))
-        .send({ adminNotes: 'phase 7c — approved for test' });
+        .send({});
       expect(res.status).toBe(201);
 
       const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
@@ -302,9 +298,7 @@ describe('Flow D Approval — Reservation approval workflow (e2e)', () => {
       });
       expect(row.status).toBe(ReservationStatus.APPROVED);
       expect(row.approvedAt).not.toBeNull();
-    });
 
-    it('DA4: unit transitions to RESERVED after approval', async () => {
       const unit = await testApp.rawPrisma.unit.findUniqueOrThrow({
         where: { id: unitId },
         select: { status: true },
@@ -313,22 +307,20 @@ describe('Flow D Approval — Reservation approval workflow (e2e)', () => {
     });
   });
 
-  describe('DA5: rejection path — admin rejects a sales reservation', () => {
+  // ── DA2 — reject (free the unit) ─────────────────────────────────────────
+  describe('DA2: PENDING → REJECTED frees the unit', () => {
     let reservationId: string;
+    let unitId: string;
 
     beforeAll(async () => {
-      ({ reservationId } = await createSalesReservation());
+      ({ reservationId, unitId } = await createSalesReservation());
     });
 
-    it('DA5: ADMIN rejects → REJECTED, unit back to AVAILABLE', async () => {
-      const row0 = await testApp.rawPrisma.reservation.findUniqueOrThrow({
-        where: { id: reservationId },
-        select: { unitId: true },
-      });
+    it('POST /:id/reject as admin with reason → REJECTED + unit → AVAILABLE', async () => {
       const res = await http()
         .post(`/v1/reservations/${reservationId}/reject`)
         .set('Authorization', bearer(adminToken))
-        .send({ rejectionReason: 'phase 7c — rejected for test' });
+        .send({ reason: 'phase 7c — reject path' });
       expect(res.status).toBe(201);
 
       const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
@@ -339,14 +331,51 @@ describe('Flow D Approval — Reservation approval workflow (e2e)', () => {
       expect(row.rejectedAt).not.toBeNull();
 
       const unit = await testApp.rawPrisma.unit.findUniqueOrThrow({
-        where: { id: row0.unitId },
+        where: { id: unitId },
         select: { status: true },
       });
       expect(unit.status).toBe(UnitStatus.AVAILABLE);
     });
   });
 
-  describe('DA6: deposit after approval', () => {
+  // ── DA3 — cancel (from APPROVED) frees the unit ─────────────────────────
+  describe('DA3: APPROVED → CANCELLED frees the unit', () => {
+    let reservationId: string;
+    let unitId: string;
+
+    beforeAll(async () => {
+      ({ reservationId, unitId } = await createSalesReservation());
+      const approve = await http()
+        .post(`/v1/reservations/${reservationId}/approve`)
+        .set('Authorization', bearer(adminToken))
+        .send({});
+      expect(approve.status).toBe(201);
+    });
+
+    it('POST /:id/cancel as admin with reason → CANCELLED + unit → AVAILABLE', async () => {
+      const res = await http()
+        .post(`/v1/reservations/${reservationId}/cancel`)
+        .set('Authorization', bearer(adminToken))
+        .send({ reason: 'phase 7c — cancel after approve' });
+      expect(res.status).toBe(201);
+
+      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
+        where: { id: reservationId },
+        select: { status: true, cancelledAt: true },
+      });
+      expect(row.status).toBe(ReservationStatus.CANCELLED);
+      expect(row.cancelledAt).not.toBeNull();
+
+      const unit = await testApp.rawPrisma.unit.findUniqueOrThrow({
+        where: { id: unitId },
+        select: { status: true },
+      });
+      expect(unit.status).toBe(UnitStatus.AVAILABLE);
+    });
+  });
+
+  // ── DA4 — booking-payment/confirm creates a deposit ─────────────────────
+  describe('DA4: booking-payment/confirm flips bookingPaymentStatus + creates a Deposit', () => {
     let reservationId: string;
 
     beforeAll(async () => {
@@ -354,54 +383,126 @@ describe('Flow D Approval — Reservation approval workflow (e2e)', () => {
       await http()
         .post(`/v1/reservations/${reservationId}/approve`)
         .set('Authorization', bearer(adminToken))
-        .send({ adminNotes: 'phase 7c — deposit test' });
+        .send({});
+      await http()
+        .patch(`/v1/reservations/${reservationId}`)
+        .set('Authorization', bearer(adminToken))
+        .send({ bookingAmount: 50_000 });
     });
 
-    it('DA6: SALES records a booking deposit on an APPROVED reservation', async () => {
+    it('POST /:id/booking-payment/confirm as admin → status=PAID + new Deposit row', async () => {
       const res = await http()
-        .post(`/v1/reservations/${reservationId}/booking-payment`)
-        .set('Authorization', bearer(salesToken))
-        .send({
-          amount: 50000,
-          paymentMethod: 'BANK_TRANSFER',
-          referenceNumber: 'DA6-REF-001',
-        });
+        .post(`/v1/reservations/${reservationId}/booking-payment/confirm`)
+        .set('Authorization', bearer(adminToken))
+        .send({ note: 'phase 7c — booking payment confirmed' });
       expect(res.status).toBe(201);
 
       const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
         where: { id: reservationId },
-        select: { bookingPaymentStatus: true, bookingAmount: true },
+        select: { bookingPaymentStatus: true, bookingPaidAt: true },
       });
       expect(row.bookingPaymentStatus).toBe(ReservationBookingPaymentStatus.PAID);
-      expect(Number(row.bookingAmount)).toBe(50000);
+      expect(row.bookingPaidAt).not.toBeNull();
+
+      const deposit = await testApp.rawPrisma.deposit.findFirst({
+        where: { reservationId },
+        select: { id: true, type: true, amount: true, verified: true },
+      });
+      expect(deposit).not.toBeNull();
+      expect(deposit!.type).toBe('BOOKING_AMOUNT');
+      expect(deposit!.verified).toBe(true);
     });
   });
 
-  describe('DA7: booking-payment blocked on non-approved reservation', () => {
+  // ── DA5 — convert APPROVED → CONVERTED, unit → SOLD, contract created ───
+  describe('DA5: APPROVED → CONVERTED creates Contract, Unit → SOLD', () => {
+    let reservationId: string;
+    let unitId: string;
+
+    beforeAll(async () => {
+      ({ reservationId, unitId } = await createSalesReservation());
+      await http()
+        .post(`/v1/reservations/${reservationId}/approve`)
+        .set('Authorization', bearer(adminToken))
+        .send({});
+      await http()
+        .patch(`/v1/reservations/${reservationId}`)
+        .set('Authorization', bearer(adminToken))
+        .send({ bookingAmount: 50_000 });
+      await http()
+        .post(`/v1/reservations/${reservationId}/booking-payment/confirm`)
+        .set('Authorization', bearer(adminToken))
+        .send({});
+    });
+
+    it('POST /:id/convert as admin → CONVERTED + Unit SOLD + Contract row', async () => {
+      const res = await http()
+        .post(`/v1/reservations/${reservationId}/convert`)
+        .set('Authorization', bearer(adminToken))
+        .send({});
+      expect(res.status).toBe(201);
+
+      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
+        where: { id: reservationId },
+        select: { status: true },
+      });
+      expect(row.status).toBe(ReservationStatus.CONVERTED);
+
+      const unit = await testApp.rawPrisma.unit.findUniqueOrThrow({
+        where: { id: unitId },
+        select: { status: true },
+      });
+      expect(unit.status).toBe(UnitStatus.SOLD);
+
+      const contract = await testApp.rawPrisma.contract.findFirst({
+        where: { reservationId },
+        select: { id: true, customerId: true },
+      });
+      expect(contract).not.toBeNull();
+      expect(contract!.customerId).toBe(fixtures.userIds.customer1UserId);
+    });
+  });
+
+  // ── DA6_neg — convert without paid booking → 400 ────────────────────────
+  describe('DA6 (negative): convert with unpaid booking → 400', () => {
     let reservationId: string;
 
     beforeAll(async () => {
       ({ reservationId } = await createSalesReservation());
+      await http()
+        .post(`/v1/reservations/${reservationId}/approve`)
+        .set('Authorization', bearer(adminToken))
+        .send({});
+      await http()
+        .patch(`/v1/reservations/${reservationId}`)
+        .set('Authorization', bearer(adminToken))
+        .send({ bookingAmount: 50_000 });
     });
 
-    it('DA7: recording deposit on a PENDING reservation fails (400/409/422)', async () => {
+    it('POST /:id/convert without prior payment → 400 (status remains APPROVED)', async () => {
       const res = await http()
-        .post(`/v1/reservations/${reservationId}/booking-payment`)
-        .set('Authorization', bearer(salesToken))
-        .send({ amount: 25000, paymentMethod: 'CASH' });
+        .post(`/v1/reservations/${reservationId}/convert`)
+        .set('Authorization', bearer(adminToken))
+        .send({});
       expect(res.status).toBeGreaterThanOrEqual(400);
       expect(res.status).toBeLessThan(500);
+      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
+        where: { id: reservationId },
+        select: { status: true },
+      });
+      expect(row.status).toBe(ReservationStatus.APPROVED);
     });
   });
 
-  describe('DA8 / DA8b: RBAC negatives for approval endpoints', () => {
+  // ── DA7, DA8 — RBAC negatives ───────────────────────────────────────────
+  describe('DA7/DA8: only ADMIN can run transitions', () => {
     let reservationId: string;
 
     beforeAll(async () => {
       ({ reservationId } = await createSalesReservation());
     });
 
-    it('DA8: SALES cannot approve a reservation (403)', async () => {
+    it('DA7: SALES cannot approve → 403', async () => {
       const res = await http()
         .post(`/v1/reservations/${reservationId}/approve`)
         .set('Authorization', bearer(salesToken))
@@ -409,24 +510,65 @@ describe('Flow D Approval — Reservation approval workflow (e2e)', () => {
       expect(res.status).toBe(403);
     });
 
-    it('DA8b: SALES cannot reject a reservation (403)', async () => {
+    it('DA8: BROKER cannot reject → 403', async () => {
       const res = await http()
         .post(`/v1/reservations/${reservationId}/reject`)
-        .set('Authorization', bearer(salesToken))
-        .send({ rejectionReason: 'should fail' });
+        .set('Authorization', bearer(broker1Token))
+        .send({ reason: 'attempt' });
       expect(res.status).toBe(403);
+    });
+
+    it('DA8b: no-token convert → 401', async () => {
+      const res = await http()
+        .post(`/v1/reservations/${reservationId}/convert`)
+        .send({});
+      expect(res.status).toBe(401);
     });
   });
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
-// P7–P9: me/reservations + me/contracts + contract installments (e2e)
+// P7 — /me/reservations + P8 + P9 (customer-facing reservation visibility)
 // ═════════════════════════════════════════════════════════════════════════════
 
-describe('P7–P9: me/reservations + me/contracts + contract installments (e2e)', () => {
+describe('P7 — /me/reservations (e2e)', () => {
+  let testApp: TestApp;
+  let fixtures: E2EFixtures;
+
+  let adminToken: string;
+  let client1Token: string;
+  let customer1Token: string;
+  let customer2Token: string;
+  let salesToken: string;
+
   let client1UserId: string;
   let salesUserId: string;
-  let p8Seq = 0;
+  let testCompanyId: string;
+
+  beforeAll(async () => {
+    testApp = await createE2ETestApp();
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
+
+    [adminToken, salesToken, client1Token, customer1Token, customer2Token] = await Promise.all([
+      loginAs(testApp.app, 'admin@example.com', 'ChangeMe123!'),
+      loginAs(testApp.app, 'sales@example.com', 'SalesPass123!'),
+      loginAs(testApp.app, fixtures.users.CLIENT_1.email, fixtures.users.CLIENT_1.password, 'customer'),
+      loginAs(testApp.app, fixtures.users.CUSTOMER_1.email, fixtures.users.CUSTOMER_1.password, 'customer'),
+      loginAs(testApp.app, fixtures.users.CUSTOMER_2.email, fixtures.users.CUSTOMER_2.password, 'customer'),
+    ]);
+
+    const company = await testApp.rawPrisma.company.findFirstOrThrow({ where: { isActive: true }, select: { id: true } });
+    testCompanyId = company.id;
+
+    const client1 = await testApp.rawPrisma.user.findUniqueOrThrow({
+      where: { email: fixtures.users.CLIENT_1.email },
+      select: { id: true },
+    });
+    client1UserId = client1.id;
+    salesUserId = fixtures.userIds.salesId;
+  });
+
+  const http = () => request(testApp.app.getHttpServer());
 
   const consumedUnitIds = new Set<string>();
 
@@ -444,269 +586,760 @@ describe('P7–P9: me/reservations + me/contracts + contract installments (e2e)'
     return unit;
   }
 
-  async function reserveFreshUnitFor(
-    clientUserId: string,
-    agentToken: string,
-    label = '',
-  ): Promise<string> {
+  async function createDirectReservation(opts: {
+    clientId: string;
+    leadId?: string;
+  }): Promise<{ id: string }> {
     const unit = await pickFreshUnit();
-    const res = await http()
-      .post('/v1/reservations')
-      .set('Authorization', bearer(agentToken))
-      .send({
-        unitId: unit.id,
-        clientId: clientUserId,
-        notes: `P7-reservation${label}`,
-        expiresInHours: 48,
-      });
-    expect(res.status).toBe(201);
-    const id: unknown = res.body?.id ?? res.body?.reservation?.id;
-    if (typeof id !== 'string')
-      throw new Error(`reserveFreshUnitFor: no id: ${JSON.stringify(res.body)}`);
-    return id;
-  }
-
-  function uniqueSuffix(): string {
-    return `${Date.now()}-${(p8Seq++).toString().padStart(3, '0')}`;
-  }
-
-  async function createRealUser(opts: {
-    email: string;
-    phone: string;
-    fullName: string;
-    password: string;
-  }): Promise<string> {
-    const hash = await argon2.hash(opts.password);
-    const user = await testApp.rawPrisma.user.create({
+    const reservation = await testApp.rawPrisma.reservation.create({
       data: {
-        email: opts.email,
-        phone: opts.phone,
-        fullName: opts.fullName,
-        passwordHash: hash,
-        role: UserRole.CUSTOMER,
         companyId: testCompanyId,
-        emailVerifiedAt: new Date(),
+        unitId: unit.id,
+        salesId: salesUserId,
+        clientId: opts.clientId,
+        leadId: opts.leadId,
+        status: ReservationStatus.PENDING,
+        expiresAt: new Date(Date.now() + 72 * 3_600_000),
+        reservationNumber: `P7-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        bookingAmount: 0,
       },
       select: { id: true },
     });
-    return user.id;
+    await testApp.rawPrisma.unit.update({
+      where: { id: unit.id },
+      data: { status: UnitStatus.RESERVED, reservationExpiresAt: new Date(Date.now() + 72 * 3_600_000) },
+    });
+    return reservation;
   }
 
-  async function mintAccessToken(userId: string): Promise<string> {
-    return testApp.signAccessToken(userId, UserRole.CUSTOMER);
+  function mintAccessToken(userId: string, role: UserRole): Promise<string> {
+    return testApp.signAccessToken(userId, role);
   }
 
-  describe('P7: GET /v1/me/reservations — customer sees only own rows', () => {
-    let client1Token: string;
-    let client2Token: string;
-    let r1Id: string;
+  describe('P7 — customer-facing reservation visibility', () => {
+    let p7ReservationId: string;
 
     beforeAll(async () => {
-      const suf = uniqueSuffix();
-      client1UserId = await createRealUser({
-        email: `p7c1-${suf}@example.com`,
-        phone: `+96655${suf.slice(-7).padStart(7, '0')}`,
-        fullName: 'P7 Client1',
-        password: 'TestPass123!',
-      });
-      const c2Id = await createRealUser({
-        email: `p7c2-${suf}@example.com`,
-        phone: `+96655${(Number(suf.slice(-7)) + 1).toString().padStart(7, '0')}`,
-        fullName: 'P7 Client2',
-        password: 'TestPass123!',
-      });
-      salesUserId = fixtures.userIds.salesId;
-
-      client1Token = await mintAccessToken(client1UserId);
-      client2Token = await mintAccessToken(c2Id);
-
-      r1Id = await reserveFreshUnitFor(client1UserId, salesToken, '-P7c1');
-      await reserveFreshUnitFor(c2Id, salesToken, '-P7c2');
+      const reservation = await createDirectReservation({ clientId: client1UserId });
+      p7ReservationId = reservation.id;
     });
 
-    it('P7-01: GET /v1/me/reservations returns only the caller\'s reservations', async () => {
+    it('P7.1: ADMIN creates a reservation for CLIENT_1; CLIENT_1 sees it on /me/reservations', async () => {
       const res = await http()
         .get('/v1/me/reservations')
         .set('Authorization', bearer(client1Token));
       expect(res.status).toBe(200);
-      const ids = collectIds(res.body);
-      expect(ids).toContain(r1Id);
+      expect(collectIds(res.body)).toContain(p7ReservationId);
     });
 
-    it('P7-02: cross-user isolation — client2 cannot see client1 reservations', async () => {
+    it('P7.2: CUSTOMER_2 cannot see CLIENT_1\'s reservation (cross-tenancy)', async () => {
       const res = await http()
         .get('/v1/me/reservations')
-        .set('Authorization', bearer(client2Token));
+        .set('Authorization', bearer(customer2Token));
       expect(res.status).toBe(200);
-      expect(collectIds(res.body)).not.toContain(r1Id);
+      expect(collectIds(res.body)).not.toContain(p7ReservationId);
     });
 
-    it('P7-03: unauthenticated request → 401', async () => {
-      expect((await http().get('/v1/me/reservations')).status).toBe(401);
+    it('P7.3: CUSTOMER_1 can also call /me/reservations (CLIENT + CUSTOMER both allowed)', async () => {
+      const res = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(customer1Token));
+      expect(res.status).toBe(200);
+    });
+
+    it('P7.4b: GET /me/reservations/:id returns the row only to its owner; 404 for other users', async () => {
+      const ownerRes = await http()
+        .get(`/v1/me/reservations/${p7ReservationId}`)
+        .set('Authorization', bearer(client1Token));
+      expect(ownerRes.status).toBe(200);
+
+      const otherRes = await http()
+        .get(`/v1/me/reservations/${p7ReservationId}`)
+        .set('Authorization', bearer(customer2Token));
+      expect(otherRes.status).toBe(404);
+    });
+
+    it('P7.5: a reservation whose owner is reached via lead.clientId also surfaces on /me/reservations', async () => {
+      const suffix = `${Date.now()}`;
+      const lead = await testApp.rawPrisma.lead.create({
+        data: {
+          companyId: testCompanyId,
+          clientId: client1UserId,
+          fullName: 'P7.5 Lead Client',
+          phone: `+96650099${suffix.slice(-4)}`,
+          stage: LeadStage.NEW,
+          assignedSalesId: salesUserId,
+        },
+        select: { id: true },
+      });
+      const { id: leadReservationId } = await createDirectReservation({
+        clientId: client1UserId,
+        leadId: lead.id,
+      });
+
+      const res = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(client1Token));
+      expect(res.status).toBe(200);
+      expect(collectIds(res.body)).toContain(leadReservationId);
+
+      const other = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(customer2Token));
+      expect(collectIds(other.body)).not.toContain(leadReservationId);
+    });
+
+    it('P7.7a: unauthenticated GET /me/reservations → 401', async () => {
+      const res = await http().get('/v1/me/reservations');
+      expect(res.status).toBe(401);
+    });
+
+    it('P7.7b: SALES GET /me/reservations → 403 (staff use /v1/reservations)', async () => {
+      const res = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(salesToken));
+      expect(res.status).toBe(403);
     });
   });
 
-  describe('P8: GET /v1/me/contracts — customer sees only own rows', () => {
-    let client3Token: string;
-    let client4Token: string;
-    let contractId: string;
+  // ── P8 — Synthetic User claim + phone/email fallback ─────────────────────
 
-    beforeAll(async () => {
-      const suf = uniqueSuffix();
-      const c3Id = await createRealUser({
-        email: `p8c3-${suf}@example.com`,
-        phone: `+96656${suf.slice(-7).padStart(7, '0')}`,
-        fullName: 'P8 Client3',
-        password: 'TestPass123!',
+  let p8Seq = 0;
+  async function uniqueSuffix(): Promise<string> {
+    const userCount = await testApp.rawPrisma.user.count();
+    p8Seq += 1;
+    return String(userCount * 100 + p8Seq).padStart(6, '0');
+  }
+
+  async function createRealUser(opts: {
+    fullName: string;
+    email: string;
+    phone: string | null;
+    password: string;
+  }): Promise<{ id: string }> {
+    const passwordHash = await argon2.hash(opts.password);
+    return testApp.rawPrisma.user.create({
+      data: {
+        companyId: testCompanyId,
+        role: UserRole.CLIENT,
+        fullName: opts.fullName,
+        email: opts.email.toLowerCase(),
+        phone: opts.phone,
+        passwordHash,
+        locale: 'ar',
+      },
+      select: { id: true },
+    });
+  }
+
+  describe('P8 — Synthetic User claim at registration', () => {
+    it('P8.1: registering with phone/email matching a synthetic CLIENT claims that row (existing Lead/Reservation surface)', async () => {
+      const suffix = await uniqueSuffix();
+      const phone = `+966500999${suffix}`;
+      const email = `p8-claim-${suffix}@example.com`;
+
+      const synthetic = await testApp.rawPrisma.user.create({
+        data: {
+          companyId: testCompanyId,
+          role: UserRole.CLIENT,
+          fullName: 'P8 Walk-in Lead',
+          phone,
+          email,
+          locale: 'ar',
+        },
+        select: { id: true },
       });
-      const c4Id = await createRealUser({
-        email: `p8c4-${suf}@example.com`,
-        phone: `+96656${(Number(suf.slice(-7)) + 1).toString().padStart(7, '0')}`,
-        fullName: 'P8 Client4',
-        password: 'TestPass123!',
+      const lead = await testApp.rawPrisma.lead.create({
+        data: {
+          companyId: testCompanyId,
+          clientId: synthetic.id,
+          fullName: 'P8 Walk-in Lead',
+          phone,
+          email,
+          stage: LeadStage.NEW,
+          assignedSalesId: salesUserId,
+        },
+        select: { id: true },
       });
-
-      client3Token = await mintAccessToken(c3Id);
-      client4Token = await mintAccessToken(c4Id);
-
-      const reservationId = await reserveFreshUnitFor(c3Id, salesToken, '-P8c3');
-      const reservationRow = await testApp.rawPrisma.reservation.findUniqueOrThrow({
-        where: { id: reservationId },
-        select: { unitId: true },
-      });
-
-      const contractRes = await http()
-        .post('/v1/contracts')
-        .set('Authorization', bearer(adminToken))
-        .send({
-          reservationId,
-          unitId: reservationRow.unitId,
-          clientId: c3Id,
+      const unit = await pickFreshUnit();
+      const reservation = await testApp.rawPrisma.reservation.create({
+        data: {
+          companyId: testCompanyId,
+          unitId: unit.id,
           salesId: salesUserId,
-          signingDate: new Date().toISOString(),
-          totalPrice: 500000,
-          downPayment: 50000,
+          leadId: lead.id,
+          status: ReservationStatus.PENDING,
+          expiresAt: new Date(Date.now() + 72 * 3_600_000),
+          reservationNumber: `P8C-${suffix}`,
+          bookingAmount: 0,
+        },
+        select: { id: true },
+      });
+      await testApp.rawPrisma.unit.update({
+        where: { id: unit.id },
+        data: {
+          status: UnitStatus.RESERVED,
+          reservationExpiresAt: new Date(Date.now() + 72 * 3_600_000),
+        },
+      });
+
+      const registerRes = await http()
+        .post('/v1/auth/customer/register')
+        .send({
+          fullName: 'P8 Real Customer',
+          phone,
+          email,
+          password: 'StrongPass1!',
+          acceptTerms: true,
         });
-      expect(contractRes.status).toBe(201);
-      contractId = contractRes.body?.id ?? contractRes.body?.contract?.id;
-      expect(typeof contractId).toBe('string');
+      expect(registerRes.status).toBe(201);
 
-      await reserveFreshUnitFor(c4Id, salesToken, '-P8c4');
+      const claimed = await testApp.rawPrisma.user.findUniqueOrThrow({
+        where: { id: synthetic.id },
+        select: { id: true, role: true, email: true, phone: true, passwordHash: true },
+      });
+      expect(claimed.passwordHash).toBeTruthy();
+      expect(claimed.role).toBe(UserRole.CLIENT);
+      expect(claimed.email).toBe(email);
+      expect(claimed.phone).toBe(phone);
+
+      const claimedToken = await mintAccessToken(claimed.id, UserRole.CLIENT);
+      const meRes = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(claimedToken));
+      expect(meRes.status).toBe(200);
+      expect(collectIds(meRes.body)).toContain(reservation.id);
     });
 
-    it('P8-01: GET /v1/me/contracts returns client3\'s contract', async () => {
-      const res = await http()
-        .get('/v1/me/contracts')
-        .set('Authorization', bearer(client3Token));
-      expect(res.status).toBe(200);
-      expect(collectIds(res.body)).toContain(contractId);
-    });
+    it('P8.2: registering against a REAL (passwordHash set) row still 409s — claim only applies to synthetic rows', async () => {
+      const suffix = await uniqueSuffix();
+      const phone = `+966500888${suffix}`;
+      const email = `p8-real-${suffix}@example.com`;
 
-    it('P8-02: client4 cannot see client3\'s contract', async () => {
-      const res = await http()
-        .get('/v1/me/contracts')
-        .set('Authorization', bearer(client4Token));
-      expect(res.status).toBe(200);
-      expect(collectIds(res.body)).not.toContain(contractId);
-    });
+      const first = await http()
+        .post('/v1/auth/customer/register')
+        .send({ fullName: 'P8 First Register', phone, email, password: 'StrongPass1!', acceptTerms: true });
+      expect(first.status).toBe(201);
 
-    it('P8-03: unauthenticated → 401', async () => {
-      expect((await http().get('/v1/me/contracts')).status).toBe(401);
+      const second = await http()
+        .post('/v1/auth/customer/register')
+        .send({ fullName: 'P8 Impostor', phone, email, password: 'OtherPass2!', acceptTerms: true });
+      expect(second.status).toBe(409);
     });
   });
 
-  describe('P9: GET /v1/me/contracts/:id/installments — customer sees only own installments', () => {
-    let c5Token: string;
-    let c6Token: string;
-    let c5ContractId: string;
-
-    beforeAll(async () => {
-      const suf = uniqueSuffix();
-      const c5Id = await createRealUser({
-        email: `p9c5-${suf}@example.com`,
-        phone: `+96657${suf.slice(-7).padStart(7, '0')}`,
-        fullName: 'P9 Client5',
-        password: 'TestPass123!',
-      });
-      const c6Id = await createRealUser({
-        email: `p9c6-${suf}@example.com`,
-        phone: `+96657${(Number(suf.slice(-7)) + 1).toString().padStart(7, '0')}`,
-        fullName: 'P9 Client6',
-        password: 'TestPass123!',
-      });
-      c5Token = await mintAccessToken(c5Id);
-      c6Token = await mintAccessToken(c6Id);
-
-      const r5Id = await reserveFreshUnitFor(c5Id, salesToken, '-P9c5');
-      const r5Row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
-        where: { id: r5Id },
-        select: { unitId: true },
-      });
-      const contractRes = await http()
-        .post('/v1/contracts')
+  describe('P8 — booking amount mode (FIXED vs PERCENTAGE)', () => {
+    it('P8.4: FIXED mode persists the exact admin-entered amount and bookingAmountMode=FIXED', async () => {
+      const unit = await pickFreshUnit();
+      const res = await http()
+        .post('/v1/reservations')
         .set('Authorization', bearer(adminToken))
         .send({
-          reservationId: r5Id,
-          unitId: r5Row.unitId,
-          clientId: c5Id,
+          unitId: unit.id,
+          clientId: fixtures.userIds.customer1UserId,
+          expiresInHours: 72,
+          bookingAmountMode: 'FIXED',
+          bookingAmount: 42_500,
+        });
+      expect(res.status).toBe(201);
+      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
+        where: { id: res.body.id as string },
+        select: {
+          bookingAmount: true,
+          bookingAmountMode: true,
+          bookingAmountPercent: true,
+          bookingAmountUnitPriceSnapshot: true,
+        },
+      });
+      expect(row.bookingAmountMode).toBe('FIXED');
+      expect(Number(row.bookingAmount)).toBe(42_500);
+      expect(row.bookingAmountPercent).toBeNull();
+      expect(row.bookingAmountUnitPriceSnapshot).toBeNull();
+    });
+
+    it('P8.5: PERCENTAGE mode computes bookingAmount = unit.price * percent / 100 and snapshots the inputs', async () => {
+      const unit = await pickFreshUnit();
+      const unitRow = await testApp.rawPrisma.unit.findUniqueOrThrow({
+        where: { id: unit.id },
+        select: { price: true },
+      });
+      const unitPrice = Number(unitRow.price);
+      expect(unitPrice).toBeGreaterThan(0);
+
+      const res = await http()
+        .post('/v1/reservations')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          unitId: unit.id,
+          clientId: fixtures.userIds.customer1UserId,
+          expiresInHours: 72,
+          bookingAmountMode: 'PERCENTAGE',
+          bookingAmountPercent: 5,
+        });
+      expect(res.status).toBe(201);
+      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
+        where: { id: res.body.id as string },
+        select: {
+          bookingAmount: true,
+          bookingAmountMode: true,
+          bookingAmountPercent: true,
+          bookingAmountUnitPriceSnapshot: true,
+        },
+      });
+      expect(row.bookingAmountMode).toBe('PERCENTAGE');
+      expect(Number(row.bookingAmountPercent)).toBe(5);
+      expect(Number(row.bookingAmountUnitPriceSnapshot)).toBe(unitPrice);
+      const expected = Math.round(unitPrice * 0.05 * 100) / 100;
+      expect(Number(row.bookingAmount)).toBe(expected);
+    });
+
+    it('P8.6: PERCENTAGE with invalid percent → 400; PERCENTAGE > 100 → 400 (DTO clamp)', async () => {
+      const unit = await pickFreshUnit();
+      const zero = await http()
+        .post('/v1/reservations')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          unitId: unit.id,
+          clientId: fixtures.userIds.customer1UserId,
+          bookingAmountMode: 'PERCENTAGE',
+          bookingAmountPercent: 0,
+        });
+      expect(zero.status).toBe(400);
+      const tooHigh = await http()
+        .post('/v1/reservations')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          unitId: unit.id,
+          clientId: fixtures.userIds.customer1UserId,
+          bookingAmountMode: 'PERCENTAGE',
+          bookingAmountPercent: 150,
+        });
+      expect(tooHigh.status).toBe(400);
+    });
+
+    it('P8.7: FIXED with non-positive amount → 400', async () => {
+      const unit = await pickFreshUnit();
+      const res = await http()
+        .post('/v1/reservations')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          unitId: unit.id,
+          clientId: fixtures.userIds.customer1UserId,
+          bookingAmountMode: 'FIXED',
+          bookingAmount: 0,
+        });
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe('P8 — phone/email fallback for legacy lead linkage', () => {
+    it('P8.3: a logged-in user sees a reservation linked via lead.phone == user.phone even when lead.clientId points elsewhere', async () => {
+      const suffix = await uniqueSuffix();
+      const phone = `+966500777${suffix}`;
+      const email = `p8-fallback-${suffix}@example.com`;
+
+      const real = await createRealUser({
+        fullName: 'P8 Real Customer 2',
+        phone,
+        email,
+        password: 'StrongPass1!',
+      });
+
+      const orphanSynthetic = await testApp.rawPrisma.user.create({
+        data: {
+          companyId: testCompanyId,
+          role: UserRole.CLIENT,
+          fullName: 'P8 Drifted Synthetic',
+          phone: `${phone}-orphan`,
+          locale: 'ar',
+        },
+        select: { id: true },
+      });
+      const lead = await testApp.rawPrisma.lead.create({
+        data: {
+          companyId: testCompanyId,
+          clientId: orphanSynthetic.id,
+          fullName: 'P8 Drifted Synthetic',
+          phone,
+          email,
+          stage: LeadStage.NEW,
+          assignedSalesId: salesUserId,
+        },
+        select: { id: true },
+      });
+      const unit = await pickFreshUnit();
+      const reservation = await testApp.rawPrisma.reservation.create({
+        data: {
+          companyId: testCompanyId,
+          unitId: unit.id,
           salesId: salesUserId,
-          signingDate: new Date().toISOString(),
-          totalPrice: 600000,
-          downPayment: 60000,
-        });
-      expect(contractRes.status).toBe(201);
-      c5ContractId = contractRes.body?.id ?? contractRes.body?.contract?.id;
+          leadId: lead.id,
+          status: ReservationStatus.APPROVED,
+          expiresAt: new Date(Date.now() + 72 * 3_600_000),
+          reservationNumber: `P8F-${suffix}`,
+          bookingAmount: 50_000,
+          bookingPaymentStatus: 'PAID',
+          bookingPaidAt: new Date(),
+        },
+        select: { id: true },
+      });
+      await testApp.rawPrisma.unit.update({
+        where: { id: unit.id },
+        data: {
+          status: UnitStatus.RESERVED,
+          reservationExpiresAt: new Date(Date.now() + 72 * 3_600_000),
+        },
+      });
 
-      const planRes = await http()
-        .post(`/v1/contracts/${c5ContractId}/installment-plans`)
-        .set('Authorization', bearer(adminToken))
-        .send({
-          downPaymentAmount: 60000,
-          installmentCount: 12,
-          installmentAmount: 45000,
-          paymentDay: 1,
-          startDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        });
-      expect(planRes.status).toBe(201);
+      const realToken = await mintAccessToken(real.id, UserRole.CLIENT);
+      const meRes = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(realToken));
+      expect(meRes.status).toBe(200);
+      const ids = collectIds(meRes.body);
+      expect(ids).toContain(reservation.id);
 
-      await reserveFreshUnitFor(c6Id, salesToken, '-P9c6');
+      const c2 = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(customer2Token));
+      expect(collectIds(c2.body)).not.toContain(reservation.id);
+
+      const realAfter = await testApp.rawPrisma.user.findUniqueOrThrow({
+        where: { id: real.id },
+        select: { role: true },
+      });
+      expect(realAfter.role).toBe(UserRole.CLIENT);
+    });
+  });
+
+  // ── P9 — normalized phone matching + login-time synthetic claim ─────────
+
+  describe('P9 — normalized phone matching in ownership filter', () => {
+    it('P9.1: a reservation whose lead.phone format differs from user.phone (no `+`) still surfaces after normalization', async () => {
+      const suffix = await uniqueSuffix();
+      const userPhone = `+966500${suffix}`;
+      const leadPhoneNoPlus = `966500${suffix}`;
+      const email = `p9-fmt-${suffix}@example.com`;
+
+      const real = await createRealUser({
+        fullName: 'P9 Format Drift',
+        phone: userPhone,
+        email,
+        password: 'StrongPass1!',
+      });
+
+      const orphan = await testApp.rawPrisma.user.create({
+        data: {
+          companyId: testCompanyId,
+          role: UserRole.CLIENT,
+          fullName: 'P9 Orphan',
+          phone: `+966500other${suffix.slice(-2)}`.replace(/\D/g, ''),
+          locale: 'ar',
+        },
+        select: { id: true },
+      });
+      const lead = await testApp.rawPrisma.lead.create({
+        data: {
+          companyId: testCompanyId,
+          clientId: orphan.id,
+          fullName: 'P9 Format Drift',
+          phone: leadPhoneNoPlus,
+          stage: LeadStage.NEW,
+          assignedSalesId: salesUserId,
+        },
+        select: { id: true },
+      });
+      const unit = await pickFreshUnit();
+      const reservation = await testApp.rawPrisma.reservation.create({
+        data: {
+          companyId: testCompanyId,
+          unitId: unit.id,
+          salesId: salesUserId,
+          leadId: lead.id,
+          status: ReservationStatus.APPROVED,
+          expiresAt: new Date(Date.now() + 72 * 3_600_000),
+          reservationNumber: `P9F-${suffix}`,
+          bookingAmount: 1,
+        },
+        select: { id: true },
+      });
+      await testApp.rawPrisma.unit.update({
+        where: { id: unit.id },
+        data: { status: UnitStatus.RESERVED, reservationExpiresAt: new Date(Date.now() + 72 * 3_600_000) },
+      });
+
+      const tok = await mintAccessToken(real.id, UserRole.CLIENT);
+      const meRes = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(tok));
+      expect(meRes.status).toBe(200);
+      expect(collectIds(meRes.body)).toContain(reservation.id);
+
+      const c2 = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(customer2Token));
+      expect(collectIds(c2.body)).not.toContain(reservation.id);
+
+      const realAfter = await testApp.rawPrisma.user.findUniqueOrThrow({
+        where: { id: real.id },
+        select: { role: true },
+      });
+      expect(realAfter.role).toBe(UserRole.CLIENT);
     });
 
-    it('P9-01: GET /v1/me/contracts/:id/installments shows client5\'s installments', async () => {
-      const res = await http()
-        .get(`/v1/me/contracts/${c5ContractId}/installments`)
-        .set('Authorization', bearer(c5Token));
-      expect(res.status).toBe(200);
-      const list = Array.isArray(res.body) ? res.body : res.body?.data ?? [];
-      expect(list.length).toBeGreaterThan(0);
+    it('P9.2: a reservation whose lead.clientId is a synthetic peer matched only by user.email surfaces too', async () => {
+      const suffix = await uniqueSuffix();
+      const phone = `+966500${suffix}`;
+      const email = `p9-peer-${suffix}@example.com`;
+
+      const synthetic = await testApp.rawPrisma.user.create({
+        data: {
+          companyId: testCompanyId,
+          role: UserRole.CLIENT,
+          fullName: 'P9 Identity Peer',
+          email,
+          locale: 'ar',
+        },
+        select: { id: true },
+      });
+      const lead = await testApp.rawPrisma.lead.create({
+        data: {
+          companyId: testCompanyId,
+          clientId: synthetic.id,
+          fullName: 'P9 Identity Peer',
+          phone: '+999999999999',
+          email,
+          stage: LeadStage.NEW,
+          assignedSalesId: salesUserId,
+        },
+        select: { id: true },
+      });
+      const unit = await pickFreshUnit();
+      const reservation = await testApp.rawPrisma.reservation.create({
+        data: {
+          companyId: testCompanyId,
+          unitId: unit.id,
+          salesId: salesUserId,
+          leadId: lead.id,
+          status: ReservationStatus.PENDING,
+          expiresAt: new Date(Date.now() + 72 * 3_600_000),
+          reservationNumber: `P9P-${suffix}`,
+          bookingAmount: 1,
+        },
+        select: { id: true },
+      });
+      await testApp.rawPrisma.unit.update({
+        where: { id: unit.id },
+        data: { status: UnitStatus.RESERVED, reservationExpiresAt: new Date(Date.now() + 72 * 3_600_000) },
+      });
+
+      const reg = await http()
+        .post('/v1/auth/customer/register')
+        .send({ fullName: 'P9 Real Identity', phone, email, password: 'StrongPass1!', acceptTerms: true });
+      expect(reg.status).toBe(201);
+
+      const claimed = await testApp.rawPrisma.user.findUniqueOrThrow({
+        where: { email },
+        select: { id: true },
+      });
+      const tok = await mintAccessToken(claimed.id, UserRole.CLIENT);
+      const meRes = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(tok));
+      expect(meRes.status).toBe(200);
+      expect(collectIds(meRes.body)).toContain(reservation.id);
+    });
+  });
+
+  describe('P9 — login-time synthetic claim merges FK references', () => {
+    it('P9.3: logging in opportunistically merges synthetic CLIENT peers matching by normalized phone (Lead/Reservation repoint, synthetic deleted)', async () => {
+      const suffix = await uniqueSuffix();
+      const phone = `+966500${suffix}`;
+      const email = `p9-claim-${suffix}@example.com`;
+
+      const real = await createRealUser({
+        fullName: 'P9 Real Claimer',
+        phone,
+        email,
+        password: 'StrongPass1!',
+      });
+
+      const syntheticPhoneVariant = phone.replace('+', '');
+      const synthetic = await testApp.rawPrisma.user.create({
+        data: {
+          companyId: testCompanyId,
+          role: UserRole.CLIENT,
+          fullName: 'P9 Drifted Synthetic',
+          phone: syntheticPhoneVariant,
+          locale: 'ar',
+        },
+        select: { id: true },
+      });
+      const lead = await testApp.rawPrisma.lead.create({
+        data: {
+          companyId: testCompanyId,
+          clientId: synthetic.id,
+          fullName: 'P9 Drifted Synthetic',
+          phone: syntheticPhoneVariant,
+          stage: LeadStage.NEW,
+          assignedSalesId: salesUserId,
+        },
+        select: { id: true },
+      });
+      const unit = await pickFreshUnit();
+      const reservation = await testApp.rawPrisma.reservation.create({
+        data: {
+          companyId: testCompanyId,
+          unitId: unit.id,
+          salesId: salesUserId,
+          leadId: lead.id,
+          status: ReservationStatus.APPROVED,
+          expiresAt: new Date(Date.now() + 72 * 3_600_000),
+          reservationNumber: `P9C-${suffix}`,
+          bookingAmount: 1,
+        },
+        select: { id: true },
+      });
+      await testApp.rawPrisma.unit.update({
+        where: { id: unit.id },
+        data: { status: UnitStatus.RESERVED, reservationExpiresAt: new Date(Date.now() + 72 * 3_600_000) },
+      });
+
+      const tok = await loginAs(testApp.app, email, 'StrongPass1!', 'customer');
+      expect(tok).toBeTruthy();
+
+      const syntheticAfter = await testApp.rawPrisma.user.findUnique({
+        where: { id: synthetic.id },
+        select: { id: true },
+      });
+      expect(syntheticAfter).toBeNull();
+      const leadAfter = await testApp.rawPrisma.lead.findUniqueOrThrow({
+        where: { id: lead.id },
+        select: { clientId: true },
+      });
+      expect(leadAfter.clientId).toBe(real.id);
+      const meRes = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(tok));
+      expect(collectIds(meRes.body)).toContain(reservation.id);
     });
 
-    it('P9-02: client6 cannot access client5\'s installments → 403 or 404', async () => {
-      const res = await http()
-        .get(`/v1/me/contracts/${c5ContractId}/installments`)
-        .set('Authorization', bearer(c6Token));
-      expect([403, 404]).toContain(res.status);
+    it('P9.4: PATCH /v1/users/me adding a phone triggers the same merge (covers email-only registered + phone-only synthetic)', async () => {
+      const suffix = await uniqueSuffix();
+      const phone = `+966500${suffix}`;
+      const email = `p9-patch-${suffix}@example.com`;
+
+      const real = await createRealUser({
+        fullName: 'P9 Patcher',
+        phone: null,
+        email,
+        password: 'StrongPass1!',
+      });
+
+      const synthetic = await testApp.rawPrisma.user.create({
+        data: {
+          companyId: testCompanyId,
+          role: UserRole.CLIENT,
+          fullName: 'P9 Patcher',
+          phone,
+          locale: 'ar',
+        },
+        select: { id: true },
+      });
+      const lead = await testApp.rawPrisma.lead.create({
+        data: {
+          companyId: testCompanyId,
+          clientId: synthetic.id,
+          fullName: 'P9 Patcher',
+          phone,
+          stage: LeadStage.NEW,
+          assignedSalesId: salesUserId,
+        },
+        select: { id: true },
+      });
+      const unit = await pickFreshUnit();
+      const reservation = await testApp.rawPrisma.reservation.create({
+        data: {
+          companyId: testCompanyId,
+          unitId: unit.id,
+          salesId: salesUserId,
+          leadId: lead.id,
+          status: ReservationStatus.PENDING,
+          expiresAt: new Date(Date.now() + 72 * 3_600_000),
+          reservationNumber: `P9PT-${suffix}`,
+          bookingAmount: 1,
+        },
+        select: { id: true },
+      });
+      await testApp.rawPrisma.unit.update({
+        where: { id: unit.id },
+        data: { status: UnitStatus.RESERVED, reservationExpiresAt: new Date(Date.now() + 72 * 3_600_000) },
+      });
+
+      const tok = await mintAccessToken(real.id, UserRole.CLIENT);
+      const before = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(tok));
+      expect(collectIds(before.body)).not.toContain(reservation.id);
+
+      const patch = await http()
+        .patch('/v1/users/me')
+        .set('Authorization', bearer(tok))
+        .send({ phone });
+      expect(patch.status).toBe(200);
+
+      const syntheticAfter = await testApp.rawPrisma.user.findUnique({
+        where: { id: synthetic.id },
+        select: { id: true },
+      });
+      expect(syntheticAfter).toBeNull();
+      const leadAfter = await testApp.rawPrisma.lead.findUniqueOrThrow({
+        where: { id: lead.id },
+        select: { clientId: true },
+      });
+      expect(leadAfter.clientId).toBe(real.id);
+
+      const after = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(tok));
+      expect(collectIds(after.body)).toContain(reservation.id);
     });
 
-    it('P9-03: unauthenticated → 401', async () => {
-      expect(
-        (await http().get(`/v1/me/contracts/${c5ContractId}/installments`)).status,
-      ).toBe(401);
+    it('P9.5: claim refuses to merge a row with passwordHash set (real account), even on contact match', async () => {
+      const suffix = await uniqueSuffix();
+      const phone = `+966500${suffix}`;
+      const emailA = `p9-realA-${suffix}@example.com`;
+      const emailB = `p9-realB-${suffix}@example.com`;
+
+      const realA = await createRealUser({
+        fullName: 'P9 Real A',
+        phone,
+        email: emailA,
+        password: 'StrongPass1!',
+      });
+      const phoneB = `+966500${suffix}9`;
+      const realB = await createRealUser({
+        fullName: 'P9 Real B',
+        phone: phoneB,
+        email: emailB,
+        password: 'StrongPass1!',
+      });
+      const realBRow = await testApp.rawPrisma.user.findUniqueOrThrow({
+        where: { id: realB.id },
+        select: { passwordHash: true },
+      });
+      expect(realBRow.passwordHash).toBeTruthy();
+
+      const tokA = await loginAs(testApp.app, emailA, 'StrongPass1!', 'customer');
+      expect(tokA).toBeTruthy();
+
+      const bAfter = await testApp.rawPrisma.user.findUniqueOrThrow({
+        where: { id: realB.id },
+        select: { passwordHash: true, email: true },
+      });
+      expect(bAfter.passwordHash).toBeTruthy();
+      expect(bAfter.email).toBe(emailB.toLowerCase());
+      expect(realA.id).not.toBe(realB.id);
     });
   });
 });
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function collectIds(body: unknown): string[] {
-  const list: unknown = Array.isArray(body) ? body : (body as { data?: unknown })?.data;
-  if (!Array.isArray(list)) return [];
-  return list
-    .map((row) => {
-      if (row && typeof row === 'object' && 'id' in row && typeof (row as { id?: unknown }).id === 'string') {
-        return (row as { id: string }).id;
-      }
-      return undefined;
-    })
-    .filter((id): id is string => typeof id === 'string');
-}
