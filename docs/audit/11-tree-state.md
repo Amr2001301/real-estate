@@ -306,4 +306,71 @@ The failure count dropped from 20 → 17 tests (3 fewer). The 7 failing suites a
 
 **"Test suite failed to run" counting:** Jest counts this as 1 failed Test Suite but 0 failed Tests. The 4 wrong-method tests in strict-permissions are 4 individual test failures counted separately. This explains the difference between the category totals (4+1+3+4+1+1+6+1 = 21 if you count the suite error as a test, 20 if you don't — the baseline counted it as 1 in the category list but it does not appear in `Tests: 17 failed`).
 
-**CI status:** The e2e job was cancelled at 15m 18s on both runs (pre- and post-singleton). The bottleneck is ts-jest compilation (26 spec files × ~30s/file = ~13 min), not NestJS boots. ts-jest performs full type-checking per file because `isolatedModules` is not set. Adding `"isolatedModules": true` to the ts-jest transform in `jest-e2e.json` (and `jest-security.json`) is the correct next fix.
+**CI status:** The e2e job was cancelled at 15m 18s on both runs (pre- and post-singleton). The bottleneck is ts-jet compilation (26 spec files × ~30s/file = ~13 min), not NestJS boots. ts-jest performs full type-checking per file because `isolatedModules` is not set. Adding `"isolatedModules": true` to the ts-jet transform in `jest-e2e.json` (and `jest-security.json`) is the correct next fix.
+
+---
+
+### CI-verified baseline (2026-09-24, commits `df58f9f` → `8707e06`)
+
+**Source: CI run `35975368603` (workflow\_dispatch, `suite=e2e-only`), commit `8707e06`.**  
+This is the first run where both e2e jobs were driven to completion in CI (not cancelled, not locally). Numbers below supersede the local-only baselines above.
+
+#### api-e2e-1 — **PASS** ✓
+
+**Wall time:** job 82s total; Jest step 27s (`08:35:35` → `08:36:02`).  
+**File order chosen by Jest:** e2e-reservations first (failed-first sequencer from the prior run), then e2e-catalog-auth, then e2e-financial.
+
+```
+PASS test/e2e/e2e-reservations.e2e-spec.ts (11.514 s)
+PASS test/e2e/e2e-catalog-auth.e2e-spec.ts
+PASS test/e2e/e2e-financial.e2e-spec.ts
+Test Suites: 3 passed, 3 total
+Tests:       133 passed, 133 total
+```
+
+**No failures.** The fix in `8707e06` (restore `NOT: p1Id` in `pickFreshUnit` + expand Avenue Business Hub from 4 to 10 units) resolved all regressions.
+
+#### api-e2e-2 — **FAIL** (9 pre-existing)
+
+**Wall time:** job 82s total; Jest step 29s (`08:35:41` → `08:36:10`).
+
+```
+FAIL test/e2e/e2e-mt-security.e2e-spec.ts
+FAIL test/e2e/e2e-isolated-apps.e2e-spec.ts
+PASS test/e2e/e2e-maintenance.e2e-spec.ts
+Test Suites: 2 failed, 1 passed, 3 total
+Tests:       9 failed, 14 skipped, 153 passed, 176 total
+```
+
+**Failing tests (9, all pre-existing — unchanged from prior runs):**
+
+| Test | File | Root cause |
+|---|---|---|
+| ISO-R3: Company B broker-leaderboard returns empty | `e2e-mt-security` | Genuine cross-tenant isolation bug in reports service |
+| CUST-03: Customer1 /me/contracts isolation | `e2e-isolated-apps` | `/v1/me/contracts` route not wired |
+| CUST-03b: Customer2 /me/contracts isolation | `e2e-isolated-apps` | Same |
+| CUST-05: Customer1 /me/documents IDOR | `e2e-isolated-apps` | Same route gap |
+| TEST-002 `broker_leads:approve` bareAdmin → 403 | `e2e-isolated-apps` | Controller uses `@Patch`, test sends `POST` |
+| TEST-002 `broker_leads:reject` bareAdmin → 403 | `e2e-isolated-apps` | Same |
+| TEST-002 `brokers:suspend` bareAdmin → 403 | `e2e-isolated-apps` | Controller uses `@Post`, test sends `PATCH` |
+| TEST-002 `brokers:terminate` bareAdmin → 403 | `e2e-isolated-apps` | Same |
+| RBAC route coverage: 36 routes lack `@Public()` or `@Roles()` | `e2e-isolated-apps` | Auth/RBAC decorators missing on several controllers |
+
+`e2e-isolated-apps` also emits "Test suite failed to run" (1 suite error, 0 extra test failures — `afterAll` inside `beforeAll` Jest-circus restriction).
+
+#### Order-independence verification (local, 2026-09-24)
+
+Two local runs against a fresh seed, same commit (`8707e06`), different file orders:
+
+| Order | Suites | Tests | Notes |
+|---|---|---|---|
+| catalog-auth → reservations → financial (alphabetical) | 1 failed / 3 | 1 failed / 133 | E5 MinIO — pre-existing |
+| reservations → catalog-auth → financial (CI's failing order) | 1 failed / 3 | 1 failed / 133 | Same E5 only |
+
+Same result both ways. The fix is order-independent.
+
+#### Design note: shared pool fragility
+
+Jest's default `TestSequencer` re-runs previously-failed files first. When e2e-reservations failed (P9.2/P9.3/P9.4), the next CI run sequenced it before e2e-catalog-auth — the opposite of alphabetical order. The unit pool in the seed was then exhausted in the wrong order, causing catalog-auth's `loadE2EFixtures` to crash with *"Expected at least one AVAILABLE unit under p1; got none."*
+
+The current fix buys headroom (non-P1 pool expanded from ~9 to ~15 after DA permanently reserves 5 units), but the dependency on a shared seeded pool is still fragile by construction. A future test that adds one more `pickFreshUnit` call will silently shrink the slack. The correct long-term fix is for each describe that needs a unit to rawPrisma-create its own scratch unit instead of drawing from the seed (see the self-provisioning analysis in the session log).
