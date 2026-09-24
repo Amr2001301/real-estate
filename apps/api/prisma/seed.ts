@@ -293,6 +293,12 @@ async function seedPublicDemo() {
     { code: 'AV-O-205', type: 'office', area: 180, bedrooms: 0, bathrooms: 2, floor: 2, price: 2800000, media: [DEMO_IMG.officeInt, DEMO_IMG.officeExt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
     { code: 'AV-R-001', type: 'retail', area: 90, bedrooms: 0, bathrooms: 1, floor: 0, price: 1600000, media: [DEMO_IMG.officeExt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
     { code: 'AV-O-310', type: 'office', area: 250, bedrooms: 0, bathrooms: 2, floor: 3, price: 3500000, media: [DEMO_IMG.officeInt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
+    { code: 'AV-O-401', type: 'office', area: 140, bedrooms: 0, bathrooms: 1, floor: 4, price: 2100000, media: [DEMO_IMG.officeInt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
+    { code: 'AV-O-402', type: 'office', area: 160, bedrooms: 0, bathrooms: 1, floor: 4, price: 2400000, media: [DEMO_IMG.officeExt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
+    { code: 'AV-O-501', type: 'office', area: 200, bedrooms: 0, bathrooms: 2, floor: 5, price: 3000000, media: [DEMO_IMG.officeInt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
+    { code: 'AV-O-502', type: 'office', area: 220, bedrooms: 0, bathrooms: 2, floor: 5, price: 3200000, media: [DEMO_IMG.officeExt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
+    { code: 'AV-R-002', type: 'retail', area: 75, bedrooms: 0, bathrooms: 1, floor: 0, price: 1400000, media: [DEMO_IMG.officeExt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
+    { code: 'AV-R-003', type: 'retail', area: 85, bedrooms: 0, bathrooms: 1, floor: 0, price: 1550000, media: [DEMO_IMG.officeInt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
   ]);
 
   // ── 4) Solara Heights — modern high-rise apartments (مكة المكرمة) ──
@@ -326,7 +332,7 @@ async function seedPublicDemo() {
     { code: 'SH-1505', type: 'studio', area: 70, bedrooms: 1, bathrooms: 1, floor: 15, price: 1100000, media: [DEMO_IMG.interior1], latitude: 21.3891, longitude: 39.8579, address: 'Solara Tower One، شارع إبراهيم الخليل، مكة المكرمة' },
   ]);
 
-  console.log('🏙️  Public demo data ready: 4 projects · 18 units.');
+  console.log('🏙️  Public demo data ready: 4 projects · 24 units.');
 }
 
 // ============================================================================

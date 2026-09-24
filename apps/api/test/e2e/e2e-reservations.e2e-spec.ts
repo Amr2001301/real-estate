@@ -573,14 +573,15 @@ describe('P7 — /me/reservations (e2e)', () => {
   const consumedUnitIds = new Set<string>();
 
   async function pickFreshUnit(): Promise<{ id: string }> {
-    // P1 is intentionally included: e2e-catalog-auth (alphabetically first in
-    // e2e-1) reserves sampleUnitInP1Id before this file runs, so that unit is
-    // already non-AVAILABLE. Excluding all of P1 starves P9 after the D/DA
-    // describes consume the non-P1 pool (they pick DESC, we pick ASC).
+    // Exclude P1 so that seed-fixtures (loadE2EFixtures) can always find at
+    // least one AVAILABLE unit there — regardless of which spec file Jest
+    // sequences first. D1/D5 use pickAvailableUnit(p1Id) for their P1 needs.
+    // seed.ts adds extra non-P1 units so this pool never runs dry for P7-P9.
     const unit = await testApp.rawPrisma.unit.findFirstOrThrow({
       where: {
         status: UnitStatus.AVAILABLE,
         id: { notIn: Array.from(consumedUnitIds) },
+        NOT: { building: { phase: { projectId: fixtures.projects.p1Id } } },
       },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       select: { id: true },
