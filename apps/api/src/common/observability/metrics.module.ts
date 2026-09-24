@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response, NextFunction } from 'express';
+import { Public } from '../decorators/public.decorator';
 import { register, collectDefaultMetrics, Counter, Histogram } from 'prom-client';
 
 // Collect Node.js default metrics (GC, event loop, memory).
@@ -57,12 +58,16 @@ export class MetricsMiddleware implements NestMiddleware {
 class MetricsController {
   constructor(private readonly config: ConfigService) {}
 
-  // Exposed outside v1 prefix (excluded in main.ts via setGlobalPrefix exclusions).
-  // Protected by a shared secret so scrapers (Prometheus) can reach it but
-  // the endpoint is not publicly browseable.
+  // JWT is bypassed (@Public) so Prometheus scrapers can reach this without
+  // a user token. Authorization is enforced inside the handler via METRICS_TOKEN:
+  // if the env var is set, the caller must present it as Bearer <token>.
+  // Without the env var the endpoint is open — set METRICS_TOKEN in production.
+  @Public()
   @Get('metrics')
   async metrics(@Res() res: Response) {
-    const token = this.config.get<string>('METRICS_TOKEN');
+    // Read directly from process.env so tests that set the var at runtime
+    // (after app startup) are observed — ConfigService caches at startup.
+    const token = process.env['METRICS_TOKEN'];
     if (token) {
       const authHeader = (res.req as Request).headers['authorization'] ?? '';
       const provided = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;

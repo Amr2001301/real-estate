@@ -89,8 +89,8 @@ beforeAll(async () => {
   };
 
   [adminToken, salesToken] = await Promise.all([
-    loginStaff(adminUser.email),
-    loginStaff(salesUser.email),
+    loginStaff(adminUser.email!),
+    loginStaff(salesUser.email!),
   ]);
 }, 60_000);
 
@@ -113,9 +113,8 @@ describe('SA-GUARD — SuperAdminController blocks non-super-admins', () => {
   describe('unauthenticated caller (no JWT) → 401 on every super-admin route', () => {
     for (const [method, path, label] of ROUTES) {
       it(`SA-UNAUTH: ${method} ${path} (${label}) → 401`, async () => {
-        const res = await (request(testApp.app.getHttpServer()) as unknown as Record<string, (path: string) => request.Test>)
-          [method.toLowerCase()](path)
-          .send({});
+        const agent = request(testApp.app.getHttpServer()) as unknown as Record<string, (p: string) => request.Test>;
+        const res = await agent[method.toLowerCase()]!(path).send({});
         if (res.status === 200 || res.status === 201) {
           throw new Error(
             `CONFIRMED VULNERABILITY: unauthenticated ${method} ${path} returned ${res.status}. ` +
@@ -130,10 +129,8 @@ describe('SA-GUARD — SuperAdminController blocks non-super-admins', () => {
   describe('company ADMIN (role=ADMIN, not SUPER_ADMIN) → 403 on every super-admin route', () => {
     for (const [method, path, label] of ROUTES) {
       it(`SA-ADMIN: ${method} ${path} (${label}) → 403`, async () => {
-        const res = await (request(testApp.app.getHttpServer()) as unknown as Record<string, (path: string) => request.Test>)
-          [method.toLowerCase()](path)
-          .set('Authorization', bearer(adminToken))
-          .send({});
+        const agent = request(testApp.app.getHttpServer()) as unknown as Record<string, (p: string) => request.Test>;
+        const res = await agent[method.toLowerCase()]!(path).set('Authorization', bearer(adminToken)).send({});
         if (res.status === 200 || res.status === 201) {
           throw new Error(
             `CONFIRMED VULNERABILITY — PRIVILEGE ESCALATION: company ADMIN reached ${method} ${path} (status=${res.status}). ` +
@@ -148,10 +145,8 @@ describe('SA-GUARD — SuperAdminController blocks non-super-admins', () => {
   describe('SALES user (role=SALES) → 403 on every super-admin route', () => {
     for (const [method, path, label] of ROUTES) {
       it(`SA-SALES: ${method} ${path} (${label}) → 403`, async () => {
-        const res = await (request(testApp.app.getHttpServer()) as unknown as Record<string, (path: string) => request.Test>)
-          [method.toLowerCase()](path)
-          .set('Authorization', bearer(salesToken))
-          .send({});
+        const agent = request(testApp.app.getHttpServer()) as unknown as Record<string, (p: string) => request.Test>;
+        const res = await agent[method.toLowerCase()]!(path).set('Authorization', bearer(salesToken)).send({});
         if (res.status === 200 || res.status === 201) {
           throw new Error(
             `CONFIRMED VULNERABILITY — PRIVILEGE ESCALATION: SALES user reached ${method} ${path} (status=${res.status}). ` +

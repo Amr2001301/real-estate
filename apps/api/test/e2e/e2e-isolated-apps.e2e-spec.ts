@@ -33,6 +33,7 @@ import { bearer, loginAs } from '../helpers/login';
 import { ContractsService } from '../../src/modules/contracts/contracts.module';
 import { enterTenantContext } from '../../src/common/tenant/tenant-context';
 import { IS_PUBLIC_KEY } from '../../src/common/decorators/public.decorator';
+import { IS_PLATFORM_PUBLIC_KEY } from '../../src/common/decorators/platform-public.decorator';
 import { ROLES_KEY } from '../../src/common/decorators/roles.decorator';
 
 // ── Noop throttler storage ─────────────────────────────────────────────────────
@@ -824,7 +825,11 @@ describe('P12 — Contract conversion document linking + notifications (e2e)', (
 // RBAC route coverage (master spec)
 // ═════════════════════════════════════════════════════════════════════════════
 
+// Routes that use neither @Public()/@PlatformPublic() nor @Roles() but are
+// protected by an alternative mechanism reviewed and documented here.
+// Keep this list minimal — every entry must have a justification comment.
 const ALLOW_LIST_FULL_NAMES = new Set<string>([
+  // Authenticated self-service: JWT required (global guard), no role restriction.
   'UsersController.me',
   'UsersController.updateMe',
   'NotificationsController.myList',
@@ -835,10 +840,14 @@ const ALLOW_LIST_FULL_NAMES = new Set<string>([
   'AuthController.changePassword',
   'AuthController.resendVerification',
   'UsersController.uploadAvatar',
+  // Prometheus scrape endpoint. @Public() so scrapers reach it without a JWT.
+  // Authorization is enforced in the handler via METRICS_TOKEN bearer secret.
+  // Set METRICS_TOKEN in production — without it the endpoint is open.
+  'MetricsController.metrics',
 ]);
 
 describe('RBAC route coverage (master spec)', () => {
-  it('every controller HTTP route is either @Public() or has @Roles(...)', async () => {
+  it('every controller HTTP route is guarded by @Public(), @PlatformPublic(), @Roles(), @UseGuards(SuperAdminGuard), or the allow-list', async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     const app = moduleRef.createNestApplication();
     await app.init();
@@ -856,6 +865,12 @@ describe('RBAC route coverage (master spec)', () => {
       const proto = Object.getPrototypeOf(instance);
       const methodNames = scanner.getAllMethodNames(proto);
 
+      // Class-level @UseGuards(SuperAdminGuard) is a valid protection mechanism.
+      // Stored by NestJS under the '__guards__' metadata key on the class.
+      const classGuards: Array<{ name?: string }> =
+        (Reflect.getMetadata('__guards__', metatype) as Array<{ name?: string }> | undefined) ?? [];
+      const hasSuperAdminGuard = classGuards.some((g) => g?.name === 'SuperAdminGuard');
+
       for (const methodName of methodNames) {
         const handler = (proto as Record<string, unknown>)[methodName];
         if (typeof handler !== 'function') continue;
@@ -869,7 +884,19 @@ describe('RBAC route coverage (master spec)', () => {
           continue;
         }
 
+        // SuperAdminGuard at the class level protects every route on the controller.
+        if (hasSuperAdminGuard) {
+          checked++;
+          continue;
+        }
+
         const isPublic = reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+          handler as (...args: unknown[]) => unknown,
+          metatype,
+        ]);
+        // @PlatformPublic() (MT-024) is functionally equivalent to @Public() for
+        // access-control purposes: JwtAuthGuard skips authentication for both.
+        const isPlatformPublic = reflector.getAllAndOverride<boolean>(IS_PLATFORM_PUBLIC_KEY, [
           handler as (...args: unknown[]) => unknown,
           metatype,
         ]);
@@ -879,7 +906,7 @@ describe('RBAC route coverage (master spec)', () => {
         ]);
 
         const hasRoles = Array.isArray(roles) && roles.length > 0;
-        if (!isPublic && !hasRoles) {
+        if (!isPublic && !isPlatformPublic && !hasRoles) {
           violations.push(`${fullName} (${String(httpMethod)} ${path})`);
         }
         checked++;
@@ -890,11 +917,12 @@ describe('RBAC route coverage (master spec)', () => {
 
     if (violations.length > 0) {
       throw new Error(
-        `${violations.length} controller route(s) lack both @Public() and @Roles(): \n  ` +
+        `${violations.length} controller route(s) lack any recognized access guard: \n  ` +
           violations.join('\n  ') +
-          '\n(If a route is genuinely meant to be unguarded, add its ' +
-          '"ControllerName.methodName" exact name to ALLOW_LIST_FULL_NAMES in ' +
-          'this spec — keep that list tiny and reviewed.)',
+          '\n\nAccepted guards: @Public(), @PlatformPublic(), @Roles(...), ' +
+          'class-level @UseGuards(SuperAdminGuard), or ALLOW_LIST_FULL_NAMES.\n' +
+          'Add the "ControllerName.methodName" to ALLOW_LIST_FULL_NAMES only if ' +
+          'the route has a documented alternative auth mechanism.',
       );
     }
 

@@ -205,7 +205,7 @@ export class ReportsService {
     const companyId = getRequiredCompanyId();
     const conditions: Prisma.Sql[] = [
       Prisma.sql`bc."companyId" = ${companyId}::uuid`,
-      Prisma.sql`bc.status IN ('APPROVED', 'PAID')`,
+      Prisma.sql`bc.status = 'APPROVED'`,
     ];
     if (dateFrom) conditions.push(Prisma.sql`bc."earnedAt" >= ${new Date(dateFrom)}`);
     if (dateTo)   conditions.push(Prisma.sql`bc."earnedAt" <= ${new Date(dateTo + 'T23:59:59.999Z')}`);

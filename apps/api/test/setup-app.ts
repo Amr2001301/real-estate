@@ -91,7 +91,7 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
   app.use(requestIdMiddleware);
   app.use(helmet());
   app.use(cookieParser());
-  app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/'] });
+  app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/', 'metrics'] });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -213,7 +213,7 @@ export async function createE2ETestApp(): Promise<TestApp> {
   app.use(requestIdMiddleware);
   app.use(helmet());
   app.use(cookieParser());
-  app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/'] });
+  app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/', 'metrics'] });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -297,7 +297,7 @@ export async function createSecurityTestApp(): Promise<TestApp> {
   app.use(requestIdMiddleware);
   app.use(helmet());
   app.use(cookieParser());
-  app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/'] });
+  app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/', 'metrics'] });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
