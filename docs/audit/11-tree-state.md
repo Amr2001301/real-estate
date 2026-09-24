@@ -346,17 +346,62 @@ Tests:       9 failed, 14 skipped, 153 passed, 176 total
 
 | Test | File | Root cause |
 |---|---|---|
-| ISO-R3: Company B broker-leaderboard returns empty | `e2e-mt-security` | Genuine cross-tenant isolation bug in reports service |
-| CUST-03: Customer1 /me/contracts isolation | `e2e-isolated-apps` | `/v1/me/contracts` route not wired |
+| ISO-R3: Company B broker-leaderboard returns empty | `e2e-mt-security` | Product bug — see analysis below |
+| CUST-03: Customer1 /me/contracts isolation | `e2e-isolated-apps` | Test bug — wrong URL |
 | CUST-03b: Customer2 /me/contracts isolation | `e2e-isolated-apps` | Same |
-| CUST-05: Customer1 /me/documents IDOR | `e2e-isolated-apps` | Same route gap |
-| TEST-002 `broker_leads:approve` bareAdmin → 403 | `e2e-isolated-apps` | Controller uses `@Patch`, test sends `POST` |
+| CUST-05: Customer1 /me/documents IDOR | `e2e-isolated-apps` | Test bug — wrong assertion for 404 |
+| TEST-002 `broker_leads:approve` bareAdmin → 403 | `e2e-isolated-apps` | Test bug — HTTP method mismatch |
 | TEST-002 `broker_leads:reject` bareAdmin → 403 | `e2e-isolated-apps` | Same |
-| TEST-002 `brokers:suspend` bareAdmin → 403 | `e2e-isolated-apps` | Controller uses `@Post`, test sends `PATCH` |
+| TEST-002 `brokers:suspend` bareAdmin → 403 | `e2e-isolated-apps` | Same |
 | TEST-002 `brokers:terminate` bareAdmin → 403 | `e2e-isolated-apps` | Same |
-| RBAC route coverage: 36 routes lack `@Public()` or `@Roles()` | `e2e-isolated-apps` | Auth/RBAC decorators missing on several controllers |
+| RBAC route coverage: 36 routes lack `@Public()` or `@Roles()` | `e2e-isolated-apps` | Spec blind spot — see analysis below |
 
 `e2e-isolated-apps` also emits "Test suite failed to run" (1 suite error, 0 extra test failures — `afterAll` inside `beforeAll` Jest-circus restriction).
+
+---
+
+#### e2e-2 failures: full categorization and resolution (2026-09-24, commits `9dc10f2` + `1194e70`)
+
+**CUST-03, CUST-03b — Fixed (test bug).** Route is at `GET /v1/contracts/me/contracts` (`@Controller('contracts')` + `@Get('me/contracts')`), not `/v1/me/contracts`. Tests corrected. Isolation assertion now executes and passes — customer1's token returns only customer1's contracts, customer2's ID is absent.
+
+**CUST-05 — Fixed (test bug).** `GET /v1/me/documents?ownerType=CONTRACT&ownerId=<c2>` returns 404, not 200. `OwnershipService.assertOwnsOwner` throws `NotFoundException("Contract not found")` by design ("never Forbidden — no existence leak") when the caller doesn't own the ownerId. The 404 IS the proof of isolation: the route refuses before returning data. Test assertion changed from `expect(200)` to `expect(404)`.
+
+**TEST-002 ×4 — Fixed (test bug).** HTTP method mismatch in the strict-endpoint table:
+
+| Permission code | Was | Is | Effect |
+|---|---|---|---|
+| `broker_leads:approve` | `post` | `patch` | NestJS found no POST handler → 404 → guard never ran |
+| `broker_leads:reject` | `post` | `patch` | Same |
+| `brokers:suspend` | `patch` | `post` | Same |
+| `brokers:terminate` | `patch` | `post` | Same |
+
+After correction, bareAdmin correctly receives 403 on all four — `@PermissionsStrict` fires before the DB lookup.
+
+**RBAC 36 unguarded routes — Spec blind spot (not a security hole), proof added.**
+
+The RBAC spec checks only `IS_PUBLIC_KEY` (`@Public()`) and `ROLES_KEY` (`@Roles()`). It has three blind spots:
+
+1. **SuperAdminController (23 routes):** Protected by class-level `@UseGuards(JwtAuthGuard, SuperAdminGuard)`. `SuperAdminGuard` checks `req.user.role === 'SUPER_ADMIN'` and throws `ForbiddenException`. Actual URL prefix is `/v1/super-admin/...`. Security spec `16-super-admin-guard` (commit `1194e70`) proves 15/15: unauthenticated → 401, company ADMIN → 403, SALES → 403 on five representative routes. **No privilege escalation.**
+
+2. **Auth routes (8) and Public* routes (3):** Protected by `@PlatformPublic()`. `JwtAuthGuard.canActivate` explicitly handles it: `if (isPlatformPublic) return true`. Functionally equivalent to `@Public()` — the spec simply doesn't look for this decorator.
+
+3. **MetricsController.metrics (1):** Uses a manual `METRICS_TOKEN` bearer check inside the handler (see `metrics.module.ts`). **But the global `JwtAuthGuard` runs first** — unauthenticated Prometheus scrapers would get 401 before reaching the handler. The endpoint is broken for Prometheus unless `@Public()` is added to bypass JWT. **Recommendation: add `@Public()` to this route and rely on the existing METRICS_TOKEN check; add `MetricsController.metrics` to `ALLOW_LIST_FULL_NAMES` in the RBAC spec with a comment explaining the custom token auth.** Severity: low (broken scraping, not a data-leak path), but must be fixed before Prometheus monitoring is relied on.
+
+The RBAC spec itself needs two enhancements to eliminate all 36 false positives:
+- Add `IS_PLATFORM_PUBLIC_KEY` check alongside `IS_PUBLIC_KEY`
+- Add SuperAdmin routes (or `SuperAdminController.*`) to `ALLOW_LIST_FULL_NAMES` with a review comment
+
+**ISO-R3 — Product bug, recorded (not fixed).**
+
+`GET /v1/reports/broker-leaderboard` returns 500 with error:
+```
+Raw query failed. Code: 22P02.
+ERROR: invalid input value for enum "BrokerCommissionStatus": "PAID"
+```
+
+`ReportsService.brokerLeaderboard` queries `bc.status IN ('APPROVED', 'PAID')` but `BrokerCommissionStatus` enum has only: `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`. No `PAID` value exists. **Fix: remove `'PAID'` from the IN clause.** One line, no schema change.
+
+Severity: **HIGH** — every tenant hits this on day one of using the broker leaderboard report (the company has brokers but no `PAID` commissions). Fix is trivial; the delay is unjustified. Not a security defect (Company B cannot read Company A's data — the endpoint crashes before returning anything). Isolation holds. But the crash degrades usability for any admin who opens the leaderboard.
 
 #### Order-independence verification (local, 2026-09-24)
 
