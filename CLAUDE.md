@@ -99,6 +99,8 @@ pnpm db:seed            # tsx prisma/seed.ts
 pnpm db:studio          # Prisma Studio GUI
 ```
 
+> **Migration workflow in this environment**: `prisma migrate dev` requires an interactive TTY and cannot run here. Write the SQL file manually, apply it with `psql "$DATABASE_URL" < migration.sql`, then register it with `npx prisma migrate resolve --applied <migration_name>`. Skipping the resolve step leaves `_prisma_migrations` out of sync and breaks the next `migrate deploy`.
+
 ### Mobile (from apps/mobile/)
 ```bash
 melos run gen           # dart run build_runner build (code gen)
