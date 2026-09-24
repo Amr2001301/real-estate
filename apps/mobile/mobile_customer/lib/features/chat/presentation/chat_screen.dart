@@ -281,7 +281,7 @@ class _AiBadge extends StatelessWidget {
         borderRadius: AppRadii.pillAll,
       ),
       child: const Text(
-        'Devora AI',
+        'المساعد الذكي',
         style: TextStyle(
           color: AppPalette.navy,
           fontSize: 9.5,

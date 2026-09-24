@@ -186,6 +186,9 @@ class CustomerApp extends StatelessWidget {
         RepositoryProvider<CustomerTenantStorage>(
           create: (ctx) => CustomerTenantStorage(ctx.read<SharedPreferences>()),
         ),
+        RepositoryProvider<BrandingRepository>(
+          create: (ctx) => BrandingRepository(ctx.read<Dio>()),
+        ),
         RepositoryProvider<CustomerStartupService>(
           create: (ctx) => CustomerStartupService(
             ctx.read<CustomerTenantStorage>(),
@@ -201,6 +204,9 @@ class CustomerApp extends StatelessWidget {
       ],
       child: MultiBlocProvider(
         providers: [
+          BlocProvider<BrandingCubit>(
+            create: (ctx) => BrandingCubit(ctx.read<BrandingRepository>()),
+          ),
           BlocProvider(create: (_) => CompareCubit()),
           BlocProvider<FavoritesCubit>(
             create: (ctx) {
@@ -269,6 +275,8 @@ class _CustomerRootState extends State<_CustomerRoot> {
     _wireRefresher();
     _wireMismatchHandler();
     _wireFcm();
+    _loadBranding();
+    context.read<CustomerTenantStorage>().addListener(_loadBranding);
     // BlocListener only fires on *transitions*. If the app relaunches with a
     // persisted session the state is already authenticated — no transition fires
     // and registration would be skipped. Run best-effort after the first frame.
@@ -286,8 +294,19 @@ class _CustomerRootState extends State<_CustomerRoot> {
     });
   }
 
+  void _loadBranding() {
+    final slug = context.read<CustomerTenantStorage>().selectedCompanySlug;
+    // Clear before fetching so A's tokens never appear on B's screens while the
+    // new request is in-flight. Also clears on logout (slug becomes null).
+    context.read<BrandingCubit>().clear();
+    if (slug != null && slug.isNotEmpty) {
+      context.read<BrandingCubit>().load(slug);
+    }
+  }
+
   @override
   void dispose() {
+    context.read<CustomerTenantStorage>().removeListener(_loadBranding);
     _fcmOpenSub?.cancel();
     _fcmFgSub?.cancel();
     _tokenSub?.cancel();
@@ -396,7 +415,7 @@ class _CustomerRootState extends State<_CustomerRoot> {
       const details = NotificationDetails(
         android: AndroidNotificationDetails(
           'devora_sound',
-          'Devora Sound',
+          'Notification Sound',
           importance: Importance.defaultImportance,
           priority: Priority.defaultPriority,
           playSound: true,
@@ -424,6 +443,7 @@ class _CustomerRootState extends State<_CustomerRoot> {
     final themeMode = context.watch<ThemeCubit>().state;
     final locale = context.watch<LocaleCubit>().state;
     final isArabic = locale.languageCode == 'ar';
+    final brandTokens = context.watch<BrandingCubit>().state;
 
     return BlocListener<SessionCubit, SessionState>(
       listenWhen: (a, b) => a.isAuthenticated != b.isAuthenticated,
@@ -441,8 +461,8 @@ class _CustomerRootState extends State<_CustomerRoot> {
       child: MaterialApp.router(
         onGenerateTitle: (ctx) => ctx.l10n.customerAppTitle,
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.light(isArabic: isArabic),
-        darkTheme: AppTheme.dark(isArabic: isArabic),
+        theme: AppTheme.light(isArabic: isArabic, tokens: brandTokens),
+        darkTheme: AppTheme.dark(isArabic: isArabic, tokens: brandTokens),
         themeMode: themeMode,
         locale: locale,
         supportedLocales: AppLocalizations.supportedLocales,

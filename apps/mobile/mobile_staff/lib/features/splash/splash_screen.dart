@@ -231,6 +231,7 @@ class _Wordmark extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Gold accent line
         Container(
           width: 40,
           height: 2,
@@ -241,17 +242,17 @@ class _Wordmark extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
           ),
         ),
-        const SizedBox(height: 10),
-        const Text(
+        const SizedBox(height: 14),
+        Text(
           'DEVORA',
           style: TextStyle(
             color: Colors.white,
             fontSize: 22,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
             letterSpacing: 6,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Text(
           'STAFF',
           style: TextStyle(

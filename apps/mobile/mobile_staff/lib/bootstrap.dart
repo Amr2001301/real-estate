@@ -68,12 +68,12 @@ Future<void> _initLocalNotifications() async {
             AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.createNotificationChannel(const AndroidNotificationChannel(
       'devora_push',
-      'Devora Push',
+      'Push Notifications',
       importance: Importance.high,
     ));
     await androidPlugin?.createNotificationChannel(const AndroidNotificationChannel(
       'devora_sound',
-      'Devora Sound',
+      'Notification Sound',
       importance: Importance.defaultImportance,
       playSound: true,
       enableVibration: false,

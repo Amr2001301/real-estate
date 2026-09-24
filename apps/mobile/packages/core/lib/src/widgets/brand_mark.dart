@@ -1,15 +1,18 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../design/tokens/app_colors.dart';
 
-/// The Devora logo as a small rounded "badge". The brand PNG ships with a baked
-/// dark-navy background, so it's clipped into a rounded square with a faint gold
-/// rim — reading as an intentional premium mark on any (navy) surface rather
-/// than a stray dark rectangle. Decorative only.
+/// The tenant logo rendered as a small rounded badge.
+///
+/// When [logoUrl] is supplied the image is fetched from the network (cached).
+/// On load failure, or when [logoUrl] is null, falls back to the neutral local
+/// asset `assets/brand/devora-logo.png`.
 class BrandMark extends StatelessWidget {
-  const BrandMark({super.key, this.size = 34});
+  const BrandMark({super.key, this.size = 34, this.logoUrl});
 
   final double size;
+  final String? logoUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -31,11 +34,24 @@ class BrandMark extends StatelessWidget {
         ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: Image.asset(
-        'assets/brand/devora-logo.png',
-        fit: BoxFit.cover,
-        excludeFromSemantics: true,
-      ),
+      child: logoUrl != null && logoUrl!.isNotEmpty
+          ? CachedNetworkImage(
+              imageUrl: logoUrl!,
+              fit: BoxFit.cover,
+              fadeInDuration: const Duration(milliseconds: 200),
+              placeholder: (_, _) =>
+                  const ColoredBox(color: AppPalette.navy),
+              errorWidget: (_, _, _) => Image.asset(
+                'assets/brand/devora-logo.png',
+                fit: BoxFit.cover,
+                excludeFromSemantics: true,
+              ),
+            )
+          : Image.asset(
+              'assets/brand/devora-logo.png',
+              fit: BoxFit.cover,
+              excludeFromSemantics: true,
+            ),
     );
   }
 }

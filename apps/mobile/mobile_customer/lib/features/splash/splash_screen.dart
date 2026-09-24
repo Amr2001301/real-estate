@@ -284,17 +284,7 @@ class _Wordmark extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
           ),
         ),
-        const SizedBox(height: 10),
-        const Text(
-          'DEVORA',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 6,
-          ),
-        ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 14),
         Text(
           'REAL ESTATE',
           style: TextStyle(

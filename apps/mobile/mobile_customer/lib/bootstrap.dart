@@ -166,13 +166,13 @@ Future<void> _initLocalNotifications() async {
     // High-importance channel for background/terminated FCM (shows heads-up).
     await androidPlugin?.createNotificationChannel(const AndroidNotificationChannel(
       'devora_push',
-      'Devora Push',
+      'Push Notifications',
       importance: Importance.high,
     ));
     // Default-importance channel for foreground sound only (no heads-up popup).
     await androidPlugin?.createNotificationChannel(const AndroidNotificationChannel(
       'devora_sound',
-      'Devora Sound',
+      'Notification Sound',
       importance: Importance.defaultImportance,
       playSound: true,
       enableVibration: false,

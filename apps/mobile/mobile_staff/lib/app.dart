@@ -357,7 +357,7 @@ class _StaffRootState extends State<_StaffRoot> {
       const details = NotificationDetails(
         android: AndroidNotificationDetails(
           'devora_sound',
-          'Devora Sound',
+          'Notification Sound',
           importance: Importance.defaultImportance,
           priority: Priority.defaultPriority,
           playSound: true,

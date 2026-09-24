@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 
-import '../tokens/app_colors.dart';
+import '../../branding/brand_tokens.dart';
 import '../tokens/app_radii.dart';
 import '../tokens/app_spacing.dart';
 import '../tokens/app_typography.dart';
@@ -12,23 +12,36 @@ import 'app_theme_ext.dart';
 /// [isArabic] selects the body font (Inter vs IBM Plex Sans Arabic). Headings
 /// always use Tajawal. The brand identity (navy + gold) is identical across
 /// both apps so they read as one family.
+///
+/// [tokens] optionally overrides the navy/gold palette with tenant-supplied
+/// colours. When null the default AppPalette values are used.
 abstract final class AppTheme {
-  static ThemeData light({required bool isArabic}) =>
-      _build(Brightness.light, isArabic: isArabic);
+  static ThemeData light({required bool isArabic, BrandTokens? tokens}) =>
+      _build(Brightness.light, isArabic: isArabic, tokens: tokens);
 
-  static ThemeData dark({required bool isArabic}) =>
-      _build(Brightness.dark, isArabic: isArabic);
+  static ThemeData dark({required bool isArabic, BrandTokens? tokens}) =>
+      _build(Brightness.dark, isArabic: isArabic, tokens: tokens);
 
-  static ThemeData _build(Brightness brightness, {required bool isArabic}) {
+  static ThemeData _build(
+    Brightness brightness, {
+    required bool isArabic,
+    BrandTokens? tokens,
+  }) {
     final isDark = brightness == Brightness.dark;
-    final ext = AppColorsExt.resolve(brightness);
+    var ext = AppColorsExt.resolve(brightness);
+    if (tokens != null) {
+      ext = ext.copyWith(
+        brandGold: tokens.accentColor ?? ext.brandGold,
+        brandNavy: tokens.primaryColor ?? ext.brandNavy,
+      );
+    }
 
     final scheme = ColorScheme.fromSeed(
-      seedColor: AppPalette.gold400,
+      seedColor: ext.brandGold,
       brightness: brightness,
     ).copyWith(
       primary: ext.brandGold,
-      onPrimary: AppPalette.navy,
+      onPrimary: ext.brandNavy,
       secondary: ext.brandNavy,
       onSecondary: Colors.white,
       surface: ext.surface,

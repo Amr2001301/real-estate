@@ -12,6 +12,11 @@ export 'package:flutter_animate/flutter_animate.dart';
 // Re-export Equatable so feature cubit states can use it via `core`.
 export 'package:equatable/equatable.dart';
 
+// Branding
+export 'src/branding/brand_tokens.dart';
+export 'src/branding/branding_cubit.dart';
+export 'src/branding/branding_repository.dart';
+
 // Environment
 export 'src/env/app_environment.dart';
 export 'src/env/env_config.dart';
