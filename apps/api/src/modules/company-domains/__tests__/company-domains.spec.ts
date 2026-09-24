@@ -339,14 +339,19 @@ describe('CompanyDomainsService.provisionPlatformSubdomain', () => {
     expect(upsertCall.where.hostname).toBe('acme.platform.example.com');
   });
 
-  test('no-op when PLATFORM_BASE_DOMAIN is not configured', async () => {
+  test('no-op when PLATFORM_BASE_DOMAIN is not configured — and emits a warn', async () => {
     const resolver = makeResolver();
-    // Config returns undefined for all keys — PLATFORM_BASE_DOMAIN not set
     const config = { get: jest.fn().mockReturnValue(undefined), getOrThrow: jest.fn() };
     const prisma = makePrisma();
     const service = new CompanyDomainsService(prisma as never, resolver as never, config as never);
+
+    const warnSpy = jest.spyOn((service as unknown as { logger: { warn: jest.Mock } }).logger, 'warn');
+
     await service.provisionPlatformSubdomain(COMPANY_A, 'acme');
+
     expect(prisma.companyDomain.upsert).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringMatching(/public site.*404|404.*public site/i));
   });
 
   test('www slug throws PLATFORM_DOMAIN_INVALID — subdomain collapses to base domain (Section 5)', async () => {

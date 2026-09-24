@@ -18,6 +18,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -41,6 +42,8 @@ export const RESERVED_PLATFORM_SLUGS = new Set(['www', 'api', 'admin']);
 
 @Injectable()
 export class CompanyDomainsService {
+  private readonly logger = new Logger(CompanyDomainsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly resolver: DomainResolverService,
@@ -257,7 +260,14 @@ export class CompanyDomainsService {
     tx?: Prisma.TransactionClient,
   ): Promise<void> {
     const baseDomain = this.config.get<string>('PLATFORM_BASE_DOMAIN');
-    if (!baseDomain) return; // Not configured — skip in dev/test
+    if (!baseDomain) {
+      this.logger.warn(
+        'PLATFORM_BASE_DOMAIN is not set — platform subdomain provisioning skipped. ' +
+        'Every page on this tenant\'s public site will 404 until the domain is resolved. ' +
+        'Set PLATFORM_BASE_DOMAIN in your environment, or set DEV_TENANT_SLUG for local/CI use.',
+      );
+      return;
+    }
 
     const rawHostname = `${slug}.${baseDomain}`;
     let hostname: string;

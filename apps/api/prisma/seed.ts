@@ -6,8 +6,10 @@ import {
   MediaType,
   NotificationChannel,
 } from '@prisma/client';
+import { randomBytes } from 'node:crypto';
 import * as argon2 from 'argon2';
 import { seedCancellationSettingsForCompany } from '../src/modules/contracts/cancellation-settings.constants';
+import { normalizeHostname } from '../src/common/utils/hostname-normalize';
 
 const prisma = new PrismaClient();
 
@@ -336,6 +338,51 @@ async function seedPublicDemo() {
 }
 
 // ============================================================================
+// Platform subdomain provisioning
+//
+// Mirrors SuperAdminService.createCompany() → provisionPlatformSubdomain().
+// When PLATFORM_BASE_DOMAIN is set, creates {slug}.{PLATFORM_BASE_DOMAIN} as
+// a PLATFORM_SUBDOMAIN domain row so the public website resolves the tenant
+// from the real domain resolution path instead of needing DEV_TENANT_SLUG.
+// When unset, logs a warning so local/CI operators know to set DEV_TENANT_SLUG.
+// ============================================================================
+
+async function seedPlatformSubdomain(companyId: string, slug: string): Promise<void> {
+  const baseDomain = process.env.PLATFORM_BASE_DOMAIN;
+  if (!baseDomain) {
+    console.warn(
+      '   ⚠  PLATFORM_BASE_DOMAIN is not set — platform subdomain provisioning skipped.' +
+      ' Every page on this tenant\'s public site will 404 until the domain is resolved.' +
+      ' Set PLATFORM_BASE_DOMAIN or DEV_TENANT_SLUG for local/CI use.',
+    );
+    return;
+  }
+
+  const rawHostname = `${slug}.${baseDomain}`;
+  let hostname: string;
+  try {
+    hostname = normalizeHostname(rawHostname);
+  } catch (err) {
+    console.warn(`   ⚠  Could not normalize platform subdomain "${rawHostname}": ${(err as Error).message}. Skipping.`);
+    return;
+  }
+
+  await prisma.companyDomain.upsert({
+    where: { hostname },
+    create: {
+      companyId,
+      hostname,
+      type: 'PLATFORM_SUBDOMAIN',
+      isPrimary: true,
+      verifiedAt: new Date(),
+      verificationToken: randomBytes(24).toString('hex'),
+    },
+    update: {},
+  });
+  console.log(`   ✓ Platform subdomain provisioned: ${hostname}`);
+}
+
+// ============================================================================
 // Seed
 // ============================================================================
 
@@ -411,6 +458,9 @@ async function main() {
       name: process.env.SEED_COMPANY_NAME ?? 'Real Estate Platform',
     },
   });
+
+  // ---- Platform subdomain (idempotent via hostname upsert) ----
+  await seedPlatformSubdomain(company.id, company.slug);
 
   // ---- Users (idempotent via email upsert) ----
   const adminHash = await argon2.hash(adminPassword);

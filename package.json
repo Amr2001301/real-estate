@@ -14,6 +14,7 @@
     "db:migrate": "pnpm --filter @rep/api prisma:migrate",
     "db:deploy": "pnpm --filter @rep/api prisma:deploy",
     "db:status": "pnpm --filter @rep/api exec prisma migrate status",
+    "db:schema-check": "pnpm --filter @rep/api prisma:schema-check",
     "db:seed": "pnpm --filter @rep/api prisma:seed",
     "db:studio": "pnpm --filter @rep/api prisma:studio",
     "db:backup": "DATABASE_URL=\"${DATABASE_URL:?}\" ./scripts/db-backup.sh",

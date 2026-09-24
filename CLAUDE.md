@@ -95,11 +95,22 @@ pnpm db:generate        # prisma generate (after schema changes)
 pnpm db:migrate         # prisma migrate dev (creates migration + applies)
 pnpm db:deploy          # prisma migrate deploy (CI/prod, no schema drift)
 pnpm db:status          # prisma migrate status
+pnpm db:schema-check    # prisma migrate diff --exit-code (0 = clean, 2 = drift)
 pnpm db:seed            # tsx prisma/seed.ts
 pnpm db:studio          # Prisma Studio GUI
 ```
 
-> **Migration workflow in this environment**: `prisma migrate dev` requires an interactive TTY and cannot run here. Write the SQL file manually, apply it with `psql "$DATABASE_URL" < migration.sql`, then register it with `npx prisma migrate resolve --applied <migration_name>`. Skipping the resolve step leaves `_prisma_migrations` out of sync and breaks the next `migrate deploy`.
+> **Migration workflow in this environment**: `prisma migrate dev` requires an interactive TTY and cannot run here. When adding a migration manually, the steps are strictly ordered — skipping or reversing them silently diverges the DB:
+>
+> 1. **Write the SQL** — create `prisma/migrations/<timestamp>_<name>/migration.sql`
+> 2. **Apply the SQL** — `psql "$DATABASE_URL" < prisma/migrations/<timestamp>_<name>/migration.sql`  
+>    *(This actually modifies the database. Nothing else does.)*
+> 3. **Register it** — `npx prisma migrate resolve --applied <timestamp>_<name>`  
+>    *(Bookkeeping only — writes a row to `_prisma_migrations`. Does NOT touch the DB.)*
+> 4. **Verify** — `pnpm db:schema-check`  
+>    *(Exits 0 if the DB matches `schema.prisma`. Exits 2 if any drift remains.)*
+>
+> **The failure mode**: running step 3 without step 2 is silent. `prisma migrate status` reports "Database schema is up to date!" and CI passes, but the columns/tables are missing. Seeds fail, the API throws at runtime, and `prisma migrate deploy` in production applies nothing (already "resolved") while the DB stays broken. Always run the SQL first, always verify with `pnpm db:schema-check`.
 
 ### Mobile (from apps/mobile/)
 ```bash

@@ -124,13 +124,20 @@ jobs:
         run: pnpm prisma:generate
 
       # Prove all committed migrations apply cleanly to a fresh database, then
-      # verify no schema drift exists (schema.prisma out of sync with migrations).
-      # Both commands must succeed — CI fails on migration error or drift.
+      # verify no schema drift — i.e. no column/table added to schema.prisma
+      # without a corresponding migration SQL that was actually run.
+      # `migrate status` detects pending/failed migrations; `migrate diff --exit-code`
+      # detects the silent failure mode: resolve --applied without running the SQL
+      # (status says "up to date" but the DB is missing columns).
       - name: Validate migration integrity
         working-directory: apps/api
         run: |
           npx prisma migrate deploy --schema=./prisma/schema.prisma
           npx prisma migrate status --schema=./prisma/schema.prisma
+          npx prisma migrate diff \
+            --from-schema-datasource ./prisma/schema.prisma \
+            --to-schema-datamodel ./prisma/schema.prisma \
+            --exit-code
 
       - name: Lint
         run: pnpm -r lint
@@ -595,6 +602,10 @@ jobs:
         working-directory: apps/api
         run: |
           npx prisma migrate deploy
+          npx prisma migrate diff \
+            --from-schema-datasource ./prisma/schema.prisma \
+            --to-schema-datamodel ./prisma/schema.prisma \
+            --exit-code
           pnpm prisma:seed:e2e
 
       - name: Build apps (Next.js prod builds are more stable for CI)
@@ -684,7 +695,12 @@ jobs:
       JWT_ACCESS_SECRET: ci-access-secret-placeholder-1234567890
       JWT_REFRESH_SECRET: ci-refresh-secret-placeholder-1234567890
       API_BASE_URL: http://localhost:4000
-      NEXT_PUBLIC_SITE_URL: http://localhost:3002
+      # Set to an https:// URL (non-localhost) so isProduction=true inside robots.ts,
+      # which checks for localhost/127.0.0.1 to decide whether to emit Disallow: /.
+      # The robots smoke test asserts production-mode content; it must run against a
+      # server that believes it is production. E2E_BASE_URL stays localhost:3002 —
+      # that is the actual address Playwright connects to (separate concern).
+      NEXT_PUBLIC_SITE_URL: https://example.com
       E2E_BASE_URL: http://localhost:3002
       E2E_NO_WEBSERVER: '1'
       # Required by TenantContextInterceptor for @Public() catalog routes.
@@ -692,6 +708,13 @@ jobs:
       # resolve data instead of returning 503/spinning.
       # WARNING: docs/audit/06-ci-gaps.md G5 — coupling to DEFAULT_COMPANY fallback.
       DEFAULT_COMPANY_ID: 00000000-0000-0000-0000-000000000001
+      # normalizeHostname() rejects single-label hostnames (e.g. "localhost"), so no
+      # CompanyDomain row can map to the CI request hostname. DEV_TENANT_SLUG is the
+      # correct bypass: the web-public middleware returns the slug immediately without
+      # a DB round-trip, and it is gated NODE_ENV !== production so it is inert in prod.
+      # Without this, every page that calls getResolvedTenant() returns null → notFound()
+      # → 404, causing all Playwright tests to fail regardless of seed state.
+      DEV_TENANT_SLUG: default
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -708,6 +731,10 @@ jobs:
         working-directory: apps/api
         run: |
           npx prisma migrate deploy
+          npx prisma migrate diff \
+            --from-schema-datasource ./prisma/schema.prisma \
+            --to-schema-datamodel ./prisma/schema.prisma \
+            --exit-code
           pnpm prisma:seed:e2e
 
       - name: Build apps

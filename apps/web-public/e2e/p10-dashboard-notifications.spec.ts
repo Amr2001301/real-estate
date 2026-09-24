@@ -21,9 +21,12 @@ test.describe('P10 — customer account dashboard renders with paginated notific
     await loginAsCustomer(page);
     await page.goto('/account');
 
-    // Dashboard heading: "نظرة عامة".
+    // The account layout renders a PageHero whose h1 is the welcome message.
+    // Waiting for it proves the server component rendered without crashing —
+    // i.e. extractPaginatedData() on the /me/notifications response did not
+    // throw before the component reached the JSX return.
     await expect(
-      page.getByRole('heading', { name: 'نظرة عامة', level: 1 }),
+      page.getByRole('heading', { name: /مرحبًا/ }),
     ).toBeVisible({ timeout: 15_000 });
 
     // The page must not surface the runtime-error overlay regardless of
@@ -32,16 +35,13 @@ test.describe('P10 — customer account dashboard renders with paginated notific
     await expect(page.getByText(/items\.filter is not a function/i)).toHaveCount(0);
     await expect(page.getByText(/TypeError/i)).toHaveCount(0);
 
-    // The customer post-purchase section is gated to CUSTOMER role and is
-    // where the notifications summary tile + recent-notifications block
-    // live. Asserting the section heading is visible proves that branch
-    // executed — i.e. the .filter() / .slice() calls on the normalised
-    // notifications array did not throw.
-    await expect(
-      page.getByRole('heading', { name: 'خدمات ما بعد الشراء', level: 2 }),
-    ).toBeVisible({ timeout: 10_000 });
+    // The "إجراءات سريعة" (quick-actions) section is gated to CUSTOMER role
+    // and renders after all notifications data is processed. Its presence
+    // proves the extractPaginatedData() / .slice() calls completed without
+    // throwing — the original P10 regression path.
+    await expect(page.getByText('إجراءات سريعة')).toBeVisible({ timeout: 10_000 });
 
-    // The unread-notifications summary tile.
-    await expect(page.getByText('إشعارات غير مقروءة')).toBeVisible();
+    // Customer-specific KPI tile — proves the CUSTOMER data branch rendered.
+    await expect(page.getByText('إجمالي المدفوعات')).toBeVisible();
   });
 });

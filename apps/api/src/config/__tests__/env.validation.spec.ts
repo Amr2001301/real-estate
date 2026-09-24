@@ -271,6 +271,27 @@ describe('R2 storage isolation (R2_PRIVATE_BUCKET)', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PLATFORM_BASE_DOMAIN — required in production for subdomain provisioning
+// ─────────────────────────────────────────────────────────────────────────────
+// Without this, provisionPlatformSubdomain() silently skips and every new
+// tenant's public site 404s on every page from day one. Boot-time validation
+// is the only reliable guard — a company can be created and look healthy (201)
+// while its site is permanently broken if this check is absent.
+
+describe('PLATFORM_BASE_DOMAIN', () => {
+  it('production rejects missing PLATFORM_BASE_DOMAIN — public sites would 404 forever', () => {
+    expectValidationError(
+      validProd({ PLATFORM_BASE_DOMAIN: undefined }),
+      'PLATFORM_BASE_DOMAIN is required in production',
+    );
+  });
+
+  it('development allows missing PLATFORM_BASE_DOMAIN', () => {
+    expectValidationPass(devEnv({ PLATFORM_BASE_DOMAIN: undefined }));
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Full valid production config passes
 // ─────────────────────────────────────────────────────────────────────────────
 
