@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-type Folder = 'projects' | 'units' | 'receipts' | 'banners';
+type Folder = 'projects' | 'units' | 'receipts' | 'banners' | 'branding';
 type MediaType = 'IMAGE' | 'VIDEO' | 'FLOORPLAN' | 'DOCUMENT';
 
 // Mirrors the backend ALLOWED_MEDIA_MIME_TYPES and MAX_MEDIA_UPLOAD_SIZE_BYTES.
@@ -33,9 +33,11 @@ interface Props {
   };
   accept?: string;
   buttonLabel?: string;
+  /** Extra fields merged into the presign request body (e.g. brandingAsset). */
+  presignExtra?: Record<string, string>;
 }
 
-export function MediaUploader({ folder, onUploaded, attach, accept, buttonLabel }: Props) {
+export function MediaUploader({ folder, onUploaded, attach, accept, buttonLabel, presignExtra }: Props) {
   const [status, setStatus] = useState<'idle' | 'signing' | 'uploading' | 'attaching' | 'done' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
@@ -70,6 +72,7 @@ export function MediaUploader({ folder, onUploaded, attach, accept, buttonLabel 
           folder,
           sizeBytes: file.size,
           extension: file.name.split('.').pop(),
+          ...presignExtra,
         }),
       });
       if (!res.ok) throw new Error(`presign failed (${res.status})`);

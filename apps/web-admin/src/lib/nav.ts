@@ -28,6 +28,7 @@ import {
   MessageSquareText,
   Target,
   Tag,
+  Palette,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -71,6 +72,7 @@ export const NAV_ICONS = {
   Files,
   MessageSquareText,
   Target,
+  Palette,
 } satisfies Record<string, LucideIcon>;
 
 export type IconKey = keyof typeof NAV_ICONS;
@@ -170,6 +172,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/dashboard/permissions', label: 'الصلاحيات', labelKey: 'permissions', iconKey: 'ShieldCheck', admin: true },
       { href: '/dashboard/operations', label: 'مركز العمليات', labelKey: 'operations', iconKey: 'Gauge', admin: true },
       { href: '/dashboard/audit-logs', label: 'سجلات التدقيق', labelKey: 'auditLogs', iconKey: 'ScrollText', admin: true },
+      { href: '/dashboard/company/branding', label: 'الهوية البصرية', labelKey: 'branding', iconKey: 'Palette', admin: true },
       { href: '/dashboard/settings', label: 'الإعدادات', labelKey: 'settings', iconKey: 'Settings', admin: true },
     ],
   },
