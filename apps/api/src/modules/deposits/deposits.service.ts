@@ -169,6 +169,8 @@ export class DepositsService {
       sizeBytes: dto.sizeBytes,
       title: dto.title,
     });
+    // Link document as the deposit's proof so proof/download can resolve it.
+    await this.prisma.deposit.update({ where: { id }, data: { proofDocumentId: document.id } });
     return { deposit: await this.findOne(id), document };
   }
 

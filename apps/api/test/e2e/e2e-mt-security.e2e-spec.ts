@@ -857,6 +857,7 @@ describe('TEST-002 — @PermissionsStrict two-person rule (e2e)', () => {
   let testApp: TestApp;
   let bareToken: string;
   let adminToken: string;
+  let bareUserId: string;
 
   beforeAll(async () => {
     testApp = await createE2ETestApp();
@@ -878,6 +879,7 @@ describe('TEST-002 — @PermissionsStrict two-person rule (e2e)', () => {
         companyId: company.id,
       },
     });
+    bareUserId = bareUser.id;
 
     const adminUser = await raw.user.findFirstOrThrow({ where: { email: 'admin@example.com' } });
 
@@ -934,11 +936,13 @@ describe('TEST-002 — @PermissionsStrict two-person rule (e2e)', () => {
 
     bareToken = bareRes.body?.tokens?.accessToken ?? bareRes.body?.accessToken;
     adminToken = adminRes.body?.tokens?.accessToken ?? adminRes.body?.accessToken;
-
-    afterAll(async () => {
-      await raw.user.delete({ where: { id: bareUser.id } }).catch(() => void 0);
-    });
   }, 60_000);
+
+  afterAll(async () => {
+    if (bareUserId) {
+      await testApp.rawPrisma.user.delete({ where: { id: bareUserId } }).catch(() => void 0);
+    }
+  });
 
   describe('bareAdmin (ADMIN role, zero explicit codes) → 403 on every strict endpoint', () => {
     for (const [code, method, url, body] of STRICT_ENDPOINTS) {

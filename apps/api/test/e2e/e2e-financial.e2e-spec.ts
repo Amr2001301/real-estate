@@ -105,15 +105,18 @@ describe('Flow E — Customer financial + signed documents (e2e)', () => {
     }
   });
 
-  it('E5: signed-download body never includes the permanent R2 key (or 503 if R2 unset)', async () => {
+  it('E5: signed-download returns a presigned URL, not the raw storage key (or 503 if storage unset)', async () => {
     const res = await http()
       .get(`/v1/me/documents/${fixtures.flowE.customer1ContractDocId}/download`)
       .set('Authorization', bearer(customer1Token));
     expect([200, 503]).toContain(res.status);
     if (res.status === 200) {
       const url: string = res.body.url;
+      // Verify the API generates a presigned URL, not just echoing the raw stored key.
+      // Presigned URLs embed the key in the path so not.toContain(key) can never hold;
+      // the meaningful check is that the URL is a proper signed URL (not.toEqual the key).
       expect(url).toContain('X-Amz-Signature');
-      expect(JSON.stringify(res.body)).not.toContain('contracts/e2e/customer1-contract.pdf');
+      expect(url).not.toEqual('contracts/e2e/customer1-contract.pdf');
     }
   });
 

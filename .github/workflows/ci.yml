@@ -246,7 +246,18 @@ jobs:
         run: pnpm prisma:generate
       - name: Run e2e-1 (catalog-auth + reservations + financial)
         working-directory: apps/api
-        run: pnpm exec jest --config ./test/jest-e2e.json --runInBand --testPathPattern="e2e-catalog-auth|e2e-reservations|e2e-financial"
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec jest --config ./test/jest-e2e.json --runInBand \
+            --testPathPattern="e2e-catalog-auth|e2e-reservations|e2e-financial" \
+            2>&1 | tee /tmp/jest-e2e1.log
+          # Guard: any pending/skipped tests indicate a silent suite failure
+          # (e.g. a hook registered inside another hook marks tests pending).
+          if grep -qE 'Tests:.*[1-9][0-9]* skipped' /tmp/jest-e2e1.log; then
+            echo "::error::Non-zero skipped test count in e2e-1 — check for suite initialization failures"
+            exit 1
+          fi
 
   api-e2e-2:
     name: api · jest (e2e-2, real Postgres)
@@ -290,6 +301,17 @@ jobs:
       DEFAULT_COMPANY_ID: 00000000-0000-0000-0000-000000000001
       SEED_ADMIN_EMAIL: admin@example.com
       SEED_ADMIN_PASSWORD: ChangeMe123!
+      # MinIO is required for Flow G (presigned upload/download). Without it,
+      # STORAGE_AVAILABLE=false and describeIfStorage wraps all G tests in
+      # describe.skip, producing numPendingTests > 0 and failing the skip guard.
+      S3_ENDPOINT: http://localhost:9000
+      S3_REGION: us-east-1
+      S3_FORCE_PATH_STYLE: 'true'
+      R2_ACCESS_KEY_ID: minioadmin
+      R2_SECRET_ACCESS_KEY: minioadmin
+      R2_BUCKET: real-estate-media
+      R2_PUBLIC_URL: http://localhost:9000/real-estate-media
+      R2_PRIVATE_BUCKET: real-estate-private
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -300,9 +322,31 @@ jobs:
       - name: Generate Prisma client
         working-directory: apps/api
         run: pnpm prisma:generate
+      - name: Start MinIO and create buckets
+        run: |
+          docker run -d --name ci-minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z server /data
+          until curl -sf http://localhost:9000/minio/health/live; do sleep 1; done
+          AWS_ACCESS_KEY_ID=minioadmin AWS_SECRET_ACCESS_KEY=minioadmin AWS_DEFAULT_REGION=us-east-1 \
+            aws s3 mb s3://real-estate-media --endpoint-url http://localhost:9000
+          AWS_ACCESS_KEY_ID=minioadmin AWS_SECRET_ACCESS_KEY=minioadmin AWS_DEFAULT_REGION=us-east-1 \
+            aws s3 mb s3://real-estate-private --endpoint-url http://localhost:9000
       - name: Run e2e-2 (maintenance + mt-security + isolated-apps)
         working-directory: apps/api
-        run: pnpm exec jest --config ./test/jest-e2e.json --runInBand --testPathPattern="e2e-maintenance|e2e-mt-security|e2e-isolated-apps"
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec jest --config ./test/jest-e2e.json --runInBand \
+            --testPathPattern="e2e-maintenance|e2e-mt-security|e2e-isolated-apps" \
+            2>&1 | tee /tmp/jest-e2e2.log
+          # Guard: any pending/skipped tests indicate a silent suite failure
+          # (e.g. a hook registered inside another hook marks tests pending).
+          if grep -qE 'Tests:.*[1-9][0-9]* skipped' /tmp/jest-e2e2.log; then
+            echo "::error::Non-zero skipped test count in e2e-2 — check for suite initialization failures"
+            exit 1
+          fi
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Security test suite (real Postgres, real Nest app). Tests V-01..V-17 body-
@@ -388,7 +432,16 @@ jobs:
             aws s3 mb s3://real-estate-private --endpoint-url http://localhost:9000
       - name: Run security tests
         working-directory: apps/api
-        run: pnpm exec jest -c test/jest-security.json --runInBand
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec jest -c test/jest-security.json --runInBand \
+            2>&1 | tee /tmp/jest-security.log
+          # Guard: any pending/skipped tests indicate a silent suite failure.
+          if grep -qE 'Tests:.*[1-9][0-9]* skipped' /tmp/jest-security.log; then
+            echo "::error::Non-zero skipped test count in security suite — check for suite initialization failures"
+            exit 1
+          fi
 
   # ─────────────────────────────────────────────────────────────────────────────
   # web-public Jest unit tests (jsdom, no server deps). Covers analytics PII
