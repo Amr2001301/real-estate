@@ -727,18 +727,18 @@ describe('IDOR Penetration Tests (e2e)', () => {
     expect(res.status).toBe(404);
   });
 
-  it('CUST-03: Customer1 GET /v1/me/contracts does NOT include Customer2 contract', async () => {
+  it('CUST-03: Customer1 GET /v1/contracts/me/contracts does NOT include Customer2 contract', async () => {
     const res = await http()
-      .get('/v1/me/contracts')
+      .get('/v1/contracts/me/contracts')
       .set('Authorization', bearer(customer1Token));
     expect(res.status).toBe(200);
     const ids: string[] = (res.body?.data ?? []).map((r: { id: string }) => r.id);
     expect(ids).not.toContain(fixtures.flowE.customer2ContractId);
   });
 
-  it('CUST-03b: Customer2 GET /v1/me/contracts does NOT include Customer1 contract', async () => {
+  it('CUST-03b: Customer2 GET /v1/contracts/me/contracts does NOT include Customer1 contract', async () => {
     const res = await http()
-      .get('/v1/me/contracts')
+      .get('/v1/contracts/me/contracts')
       .set('Authorization', bearer(customer2Token));
     expect(res.status).toBe(200);
     const ids: string[] = (res.body?.data ?? []).map((r: { id: string }) => r.id);
@@ -754,14 +754,15 @@ describe('IDOR Penetration Tests (e2e)', () => {
     expect(ids).not.toContain(fixtures.flowE.customer1DepositId);
   });
 
-  it('CUST-05: Customer1 GET /v1/me/documents?ownerType=CONTRACT&ownerId=<c2> returns empty list', async () => {
+  it('CUST-05: Customer1 GET /v1/me/documents?ownerType=CONTRACT&ownerId=<c2> → 404 (ownership check, no existence leak)', async () => {
+    // assertOwnsOwner throws NotFoundException("Contract not found") when the
+    // caller does not own the requested ownerId — by design (no existence leak).
+    // 404 is the proof of isolation: the route refuses before returning any data.
     const res = await http()
       .get('/v1/me/documents')
       .query({ ownerType: 'CONTRACT', ownerId: fixtures.flowE.customer2ContractId })
       .set('Authorization', bearer(customer1Token));
-    expect(res.status).toBe(200);
-    const ids: string[] = collectIds(res.body);
-    expect(ids).not.toContain(fixtures.flowE.customer2ContractDocId);
+    expect(res.status).toBe(404);
   });
 
   it('BROKER-01: Broker2 GET /v1/portal/leads/:id for Broker1 lead → 404', async () => {
@@ -836,8 +837,8 @@ const STRICT_ENDPOINTS: readonly [string, string, string, Record<string, unknown
   ['reservations:convert',         'post',  `/v1/reservations/${FAKE}/convert`,              {}],
   ['reservations:booking-payment', 'post',  `/v1/reservations/${FAKE}/booking-payment/confirm`, {}],
   ['contracts:sign',               'post',  `/v1/contracts/${FAKE}/sign`,                    { signedAt: '2026-01-01T00:00:00.000Z' }],
-  ['broker_leads:approve',         'post',  `/v1/broker-leads/${FAKE}/approve`,              {}],
-  ['broker_leads:reject',          'post',  `/v1/broker-leads/${FAKE}/reject`,               { reason: 'test' }],
+  ['broker_leads:approve',         'patch', `/v1/broker-leads/${FAKE}/approve`,              {}],
+  ['broker_leads:reject',          'patch', `/v1/broker-leads/${FAKE}/reject`,               { reason: 'test' }],
   ['bonus:entries:approve',        'post',  `/v1/bonus-entries/${FAKE}/approve`,             {}],
   ['bonus:entries:pay',            'post',  `/v1/bonus-entries/${FAKE}/pay`,                 {}],
   ['broker_payouts:approve',       'patch', `/v1/broker-payouts/${FAKE}/approve`,            {}],
@@ -847,8 +848,8 @@ const STRICT_ENDPOINTS: readonly [string, string, string, Record<string, unknown
   ['broker_commissions:approve',   'patch', `/v1/broker-commissions/${FAKE}/approve`,        {}],
   ['broker_commissions:reject',    'patch', `/v1/broker-commissions/${FAKE}/reject`,         { reason: 'test' }],
   ['broker_commissions:cancel',    'patch', `/v1/broker-commissions/${FAKE}/cancel`,         {}],
-  ['brokers:suspend',              'patch', `/v1/brokers/${FAKE}/suspend`,                   {}],
-  ['brokers:terminate',            'patch', `/v1/brokers/${FAKE}/terminate`,                 {}],
+  ['brokers:suspend',              'post',  `/v1/brokers/${FAKE}/suspend`,                   {}],
+  ['brokers:terminate',            'post',  `/v1/brokers/${FAKE}/terminate`,                 {}],
   ['broker_users:remove',          'patch', `/v1/broker-users/${FAKE}/status`,              { active: false }],
 ] as const;
 
