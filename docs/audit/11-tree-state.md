@@ -373,4 +373,65 @@ Same result both ways. The fix is order-independent.
 
 Jest's default `TestSequencer` re-runs previously-failed files first. When e2e-reservations failed (P9.2/P9.3/P9.4), the next CI run sequenced it before e2e-catalog-auth — the opposite of alphabetical order. The unit pool in the seed was then exhausted in the wrong order, causing catalog-auth's `loadE2EFixtures` to crash with *"Expected at least one AVAILABLE unit under p1; got none."*
 
-The current fix buys headroom (non-P1 pool expanded from ~9 to ~15 after DA permanently reserves 5 units), but the dependency on a shared seeded pool is still fragile by construction. A future test that adds one more `pickFreshUnit` call will silently shrink the slack. The correct long-term fix is for each describe that needs a unit to rawPrisma-create its own scratch unit instead of drawing from the seed (see the self-provisioning analysis in the session log).
+The current fix buys headroom (non-P1 pool expanded from ~9 to ~15 after DA permanently reserves 5 units), but the dependency on a shared seeded pool is still fragile by construction. A future test that adds one more `pickFreshUnit` call will silently shrink the slack. The correct long-term fix is for each describe that needs a unit to rawPrisma-create its own scratch unit instead of drawing from the seed (see the "Deferred: self-provisioned units" section below).
+
+---
+
+## Deferred: self-provisioned units in e2e-reservations
+
+**Why this matters.** Jest's `TestSequencer` re-runs previously-failed files first. Any file ordering is legal. If a future spec is added that calls `pickFreshUnit`, the non-P1 pool shrinks by one with no visible signal — the failure shows up in a *different* file (e2e-catalog-auth) many calls later, not at the call site. The only permanent fix is for each describe that needs a unit to rawPrisma-create its own scratch unit on demand, the way the security specs already do.
+
+### Pool consumers as of commit `8707e06`
+
+| Consumer | Helper | Project | Net effect on pool |
+|---|---|---|---|
+| D1–D4 | `pickAvailableUnit(p1Id)` × 1 call | P1 only | 1 P1 permanently RESERVED |
+| D5–D7 | `pickAvailableUnit(p1Id)` × 1 call | P1 only | 1 P1 permanently RESERVED |
+| DA1 | `createSalesReservation` (DESC, any project) | any | 1 permanently RESERVED |
+| DA2 | `createSalesReservation` | any | 1 REJECTED → **back to AVAILABLE** |
+| DA3 | `createSalesReservation` (re-picks DA2 unit) | any | approved then cancelled → **back to AVAILABLE** |
+| DA4 | `createSalesReservation` (re-picks DA2/3 unit) | any | payment confirmed → permanently RESERVED |
+| DA5 | `createSalesReservation` | any | CONVERTED → permanently SOLD |
+| DA6 | `createSalesReservation` | any | convert-rejected → permanently RESERVED |
+| DA7, DA8 | `createSalesReservation` | any | RBAC-only tests → permanently RESERVED |
+| P7 (×1) | `pickFreshUnit` → rawPrisma.unit.update | non-P1 | 1 permanently RESERVED |
+| P8 Synthetic (×1) | `pickFreshUnit` → rawPrisma.unit.update | non-P1 | 1 permanently RESERVED |
+| P8.4 FIXED (×1) | `pickFreshUnit` → HTTP | non-P1 | 1 permanently RESERVED |
+| P8.5 PERCENTAGE (×1) | `pickFreshUnit` → HTTP | non-P1 | 1 permanently RESERVED |
+| P8.6 invalid % (×1) | `pickFreshUnit` → HTTP 400 | non-P1 | stays AVAILABLE, slot wasted in `consumedUnitIds` |
+| P8.7 zero amount (×1) | `pickFreshUnit` → HTTP 400 | non-P1 | stays AVAILABLE, slot wasted |
+| P8.3 phone fallback (×1) | `pickFreshUnit` → rawPrisma.unit.update | non-P1 | 1 permanently RESERVED |
+| P9.1, P9.2, P9.3, P9.4 (×4) | `pickFreshUnit` → rawPrisma.unit.update | non-P1 | 4 permanently RESERVED |
+
+**Three consumer groups:**
+
+1. **D-group (D1–D7):** Uses `pickAvailableUnit(projectId)` with an explicit P1 project filter. P1 is always the target because flow-D tests need the seeded installment plan template (`planTemplateP1Id`), which is bound to P1 only. This is a hard constraint — D5 in particular requires P1's `selectedDurationOptionId` from the plan template. D-group uses DESC ordering (newest first), while `loadE2EFixtures` uses ASC (oldest first), so they naturally pick opposite ends of the P1 pool and do not collide.
+
+2. **DA-group (DA1–DA8):** Uses `createSalesReservation`, which picks DESC from *any* available unit with no project filter. DA2 and DA3 both reject/cancel their unit (returning it to AVAILABLE), and DA4 re-picks that same unit. Net permanent non-P1 consumption from 8 DA calls: **5 units** (DA1 + DA4 + DA5 + DA6 + DA7/DA8 = 2+1+1+1 ... actually DA7 and DA8 are one unit each that stays RESERVED = 5 total permanent non-recycled).
+
+3. **P-group (P7/P8/P9):** Uses `pickFreshUnit`, which picks ASC from non-P1 only (the `NOT: p1Id` clause is critical). The in-memory `consumedUnitIds` set prevents re-picking within a single spec run. **11 calls total** consume 11 non-P1 slots (9 permanently RESERVED; 2 stay AVAILABLE but are excluded by the in-memory set for the duration of the run).
+
+### Non-P1 pool capacity after `8707e06`
+
+Seeded non-P1 units: P3 Nile Crest (4) + P4 Palm District (2) + P5 Avenue Business Hub (10) + P6 Solara Heights (5) = **21 total**.  
+DA permanently consumes 5.  
+P-group consumes 11 slots (9 RESERVED + 2 AVAILABLE-but-excluded).  
+**Remaining slack: 21 − 5 − 11 = 5 free slots.** A new spec that adds up to 5 more `pickFreshUnit` calls is safe. A 6th call will fail in the run order that depletes DA first.
+
+### Self-provisioning pattern (deferred)
+
+When this is eventually refactored, each describe that needs a unit should use the rawPrisma creation pattern already in use by the security specs:
+
+```typescript
+// In beforeAll:
+const scratchProject = await testApp.rawPrisma.project.create({ data: { ... } });
+const scratchBuilding = await testApp.rawPrisma.building.create({ ... });
+const scratchUnit = await testApp.rawPrisma.unit.create({ ... });
+
+// In afterAll:
+await testApp.rawPrisma.unit.deleteMany({ where: { buildingId: scratchBuilding.id } });
+await testApp.rawPrisma.building.deleteMany({ where: { phaseId: scratchPhase.id } });
+// etc. (cascade)
+```
+
+This makes each describe hermetically independent of file order, prior run state, and seed data volume. The D-group (D1–D7) can keep using `pickAvailableUnit(p1Id)` because P1 is never touched by `pickFreshUnit` — but only DA and P-group need the refactor.
