@@ -65,6 +65,7 @@ import { CompanyCapabilitiesModule } from './modules/capabilities/capabilities.m
 import { HealthController } from './modules/health/health.controller';
 import { MetricsModule } from './common/observability/metrics.module';
 import { PublicCompaniesModule } from './modules/public-companies/public-companies.module';
+import { CompanyBrandingModule } from './modules/company-branding/company-branding.module';
 
 @Module({
   imports: [
@@ -123,6 +124,7 @@ import { PublicCompaniesModule } from './modules/public-companies/public-compani
     CompanyCapabilitiesModule,
     CompanyDomainsModule,
     PublicCompaniesModule,
+    CompanyBrandingModule,
     MetricsModule,
   ],
   controllers: [HealthController],

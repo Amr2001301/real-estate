@@ -18,7 +18,25 @@ model Company {
   id                  String                 @id @default(uuid()) @db.Uuid
   name                String
   slug                String                 @unique // URL-safe identifier, used for subdomain routing
-  logoUrl             String?
+
+  // ── MT-055: Public branding ────────────────────────────────────────────────
+  // All nullable — null means "use platform default". Never blocks company creation.
+  // Served by GET /v1/public/branding; null fields are omitted from the response.
+  logoUrl             String?   // square 1:1, PNG/WebP/SVG
+  faviconUrl          String?   // 32×32 or 64×64, PNG/ICO/SVG
+  ogImageUrl          String?   // 1200×630 social share banner
+  displayName         String?   // public-facing name override; falls back to Company.name
+  primaryColor        String?   // #RRGGBB — buttons, CTAs, nav accent
+  accentColor         String?   // #RRGGBB — secondary highlight
+  tagline             Json?     // { ar: String, en: String }
+  contactEmail        String?
+  contactPhone        String?
+  contactWhatsApp     String?   // digits only, for wa.me links
+  contactAddress      Json?     // { ar: String, en: String }
+  officeHours         Json?     // { ar: String, en: String }
+  socialLinks         Json?     // { instagram?, facebook?, twitter?, linkedin?, youtube?, tiktok? }
+  registrationNumber  String?   // developer/brokerage license ID (RERA, REGA, etc.)
+
   country             String? // ISO 3166-1 alpha-2 (SA, AE, EG …)
   currency            String                 @default("SAR") // ISO 4217
   defaultLocale       Locale                 @default(ar)
