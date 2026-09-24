@@ -573,11 +573,14 @@ describe('P7 — /me/reservations (e2e)', () => {
   const consumedUnitIds = new Set<string>();
 
   async function pickFreshUnit(): Promise<{ id: string }> {
+    // P1 is intentionally included: e2e-catalog-auth (alphabetically first in
+    // e2e-1) reserves sampleUnitInP1Id before this file runs, so that unit is
+    // already non-AVAILABLE. Excluding all of P1 starves P9 after the D/DA
+    // describes consume the non-P1 pool (they pick DESC, we pick ASC).
     const unit = await testApp.rawPrisma.unit.findFirstOrThrow({
       where: {
         status: UnitStatus.AVAILABLE,
         id: { notIn: Array.from(consumedUnitIds) },
-        NOT: { building: { phase: { projectId: fixtures.projects.p1Id } } },
       },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       select: { id: true },
