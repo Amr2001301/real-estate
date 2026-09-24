@@ -20,6 +20,12 @@
     --c-success: 62 124 90; /* #3E7C5A */
     --c-warning: 201 138 43; /* #C98A2B */
     --c-error: 178 59 59; /* #B23B3B */
+    /* Per-tenant brand tokens. Overridden by the root layout <style> when the
+       backend branding response supplies primaryColor / accentColor. Defaults
+       match navy DEFAULT and gold-400 so existing utilities still resolve. */
+    --c-brand-primary: 15 30 51;    /* navy DEFAULT #0F1E33 */
+    --c-brand-accent:  200 162 75;  /* gold-400  #C8A24B  */
+
     /* Skeleton shimmer sweep highlight (over surface-soft). */
     --skeleton-highlight: rgb(255 255 255 / 0.55);
   }

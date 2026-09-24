@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import type { BrandingData } from './branding';
+import type { Locale } from './locale';
 
 export const SITE = {
   name: 'ديفورا',
@@ -28,6 +30,10 @@ interface BuildMetaInput extends Partial<Metadata> {
   image?: string;
   /** Absolute path → canonical + og:url. */
   path?: string;
+  /** Per-tenant branding — overrides SITE.name, SITE.tagline, og-image, favicon. */
+  branding?: BrandingData;
+  /** Current locale for tagline + contactAddress selection. */
+  locale?: Locale;
 }
 
 /** Build page metadata with polished Arabic + OpenGraph + Twitter defaults. */
@@ -36,20 +42,24 @@ export function buildMetadata({
   description,
   image,
   path,
+  branding,
+  locale,
   openGraph,
   twitter,
   ...rest
 }: BuildMetaInput = {}): Metadata {
-  const fullTitle = title ? `${title} · ${SITE.name}` : `${SITE.name} · ${SITE.tagline}`;
-  const desc = (description as string) ?? SITE.description;
-  // Fall back to the brand OG image when a page has no specific cover.
-  const images = [image ?? DEFAULT_OG_IMAGE];
+  const siteName    = branding?.displayName ?? branding?.name ?? SITE.name;
+  const siteTagline = (locale && branding?.tagline?.[locale]) ?? SITE.tagline;
+  const fullTitle   = title ? `${title} · ${siteName}` : `${siteName} · ${siteTagline}`;
+  const desc        = (description as string) ?? SITE.description;
+  // Tenant og-image supersedes the platform default when present.
+  const images = [image ?? branding?.ogImageUrl ?? DEFAULT_OG_IMAGE];
 
   return {
     metadataBase: new URL(SITE_URL),
     title: fullTitle,
     description: desc,
-    icons: { icon: '/favicon.ico' },
+    icons: { icon: branding?.faviconUrl ?? '/favicon.ico' },
     robots: { index: true, follow: true },
     ...(path ? { alternates: { canonical: path } } : {}),
     openGraph: {
@@ -57,7 +67,7 @@ export function buildMetadata({
       description: desc,
       type: 'website',
       locale: SITE.locale,
-      siteName: SITE.name,
+      siteName: siteName,
       ...(path ? { url: path } : {}),
       ...(images ? { images } : {}),
       ...((openGraph as object) ?? {}),

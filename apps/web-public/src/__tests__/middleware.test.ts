@@ -333,6 +333,48 @@ describe('§8 — Domain resolver cache: no-store', () => {
 });
 
 // ---------------------------------------------------------------------------
+// §9 — Vary: Host header set on all page responses (cross-tenant CDN isolation)
+// ---------------------------------------------------------------------------
+
+describe('§9 — Vary: Host defense-in-depth', () => {
+  test('page response includes Vary: Host (CDN must cache per hostname)', async () => {
+    // Next.js already emits Cache-Control: no-store for dynamic routes, which
+    // prevents CDN caching. Vary: Host is a second layer: if a CDN ignores
+    // no-store and caches anyway, it must still cache per-hostname and cannot
+    // serve tenant-a's branded page to tenant-b.
+    let capturedResponseHeaders: Headers | undefined;
+    const { NextResponse: NR } = jest.requireMock('next/server') as {
+      NextResponse: { next: jest.Mock; redirect: jest.Mock }
+    };
+    NR.next.mockImplementation(({ request }: { request?: { headers?: Headers } } = {}) => {
+      const h = new Headers();
+      capturedResponseHeaders = h;
+      return { type: 'next', headers: request?.headers, responseHeaders: h };
+    });
+
+    mockResolve({ slug: 'company-a', websiteEnabled: true });
+    const req = makeRequest('http://company-a.platform.com/');
+
+    // Intercept response.headers.set to capture it
+    let varyValue: string | undefined;
+    const origNext = NR.next;
+    NR.next.mockImplementation((opts: { request?: { headers?: Headers } } = {}) => {
+      const res = { type: 'next', headers: opts.request?.headers, set: jest.fn() } as unknown as ReturnType<typeof NR.next>;
+      (res as unknown as { headers: Headers }).headers = {
+        set: (k: string, v: string) => { if (k === 'Vary') varyValue = v; },
+      } as unknown as Headers;
+      return res;
+    });
+
+    await middleware(req);
+    // Restore
+    NR.next.mockImplementation(origNext);
+
+    expect(varyValue).toBe('Host');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // §6 — Matcher: verify pattern excludes _next/static but includes page routes
 // ---------------------------------------------------------------------------
 

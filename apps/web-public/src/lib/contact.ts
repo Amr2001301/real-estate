@@ -23,6 +23,11 @@ export function getWhatsappPhone(): string | null {
   return clean(process.env.NEXT_PUBLIC_WHATSAPP_PHONE);
 }
 
+/** Configured contact email, or null when unset. */
+export function getContactEmail(): string | null {
+  return clean(process.env.NEXT_PUBLIC_CONTACT_EMAIL);
+}
+
 /** `tel:` link — keeps a leading +, strips spaces/dashes/parentheses. */
 export function telHref(phone: string): string {
   return `tel:${phone.replace(/[\s()-]/g, '')}`;

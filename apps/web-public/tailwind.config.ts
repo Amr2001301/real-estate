@@ -27,6 +27,14 @@ const config: Config = {
         },
         hairline: 'rgb(var(--c-hairline) / <alpha-value>)',
 
+        /**
+         * Per-tenant brand tokens. CSS custom properties are injected by the
+         * root layout as space-separated RGB channels so opacity modifiers work.
+         * Defaults defined in globals.css fall back to navy and gold-400.
+         */
+        'brand-primary': 'rgb(var(--c-brand-primary) / <alpha-value>)',
+        'brand-accent':  'rgb(var(--c-brand-accent)  / <alpha-value>)',
+
         navy: {
           DEFAULT: '#0F1E33',
           700: '#1C3050',

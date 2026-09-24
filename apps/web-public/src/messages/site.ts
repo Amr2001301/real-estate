@@ -486,7 +486,7 @@ const SITE_MESSAGES = {
       sections: [
         {
           title: 'تحترم ديفورا خصوصية زوّارها وعملائها',
-          body: 'تحترم ديفورا خصوصية زوّارها وعملائها، وتلتزم بحماية البيانات الشخصية التي تتم مشاركتها معنا عبر الموقع.',
+          body: 'تحترم المنصة خصوصية زوّارها وعملائها، وتلتزم بحماية البيانات الشخصية التي تتم مشاركتها معنا عبر الموقع.',
         },
         {
           title: 'البيانات التي نجمعها',
@@ -510,7 +510,7 @@ const SITE_MESSAGES = {
       sections: [
         {
           title: 'باستخدامك لموقع ديفورا',
-          body: 'باستخدامك لموقع ديفورا فإنك توافق على الالتزام بهذه الشروط والأحكام. يرجى قراءتها بعناية.',
+          body: 'باستخدامك لهذه المنصة فإنك توافق على الالتزام بهذه الشروط والأحكام. يرجى قراءتها بعناية.',
         },
         {
           title: 'استخدام الموقع',
@@ -1320,7 +1320,7 @@ const SITE_MESSAGES = {
       sections: [
         {
           title: 'Devora Respects Your Privacy',
-          body: 'Devora respects the privacy of its visitors and clients, and is committed to protecting personal data shared with us through the website.',
+          body: 'This platform respects the privacy of its visitors and clients, and is committed to protecting personal data shared with us through the website.',
         },
         {
           title: 'Data We Collect',
@@ -1344,7 +1344,7 @@ const SITE_MESSAGES = {
       sections: [
         {
           title: 'By Using the Devora Website',
-          body: 'By using the Devora website, you agree to comply with these terms and conditions. Please read them carefully.',
+          body: 'By using this platform, you agree to comply with these terms and conditions. Please read them carefully.',
         },
         {
           title: 'Use of the Website',

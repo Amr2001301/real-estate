@@ -208,7 +208,14 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next({ request: { headers: forwardHeaders } });
+  const response = NextResponse.next({ request: { headers: forwardHeaders } });
+
+  // Defense-in-depth: if a CDN ignores Cache-Control: no-store (set by Next.js
+  // for all dynamic routes), Vary: Host ensures cached entries are keyed per
+  // hostname and can never serve one tenant's page to another.
+  response.headers.set('Vary', 'Host');
+
+  return response;
 }
 
 export const config = {

@@ -1,16 +1,16 @@
 import { Phone, Mail, MessageCircle, Clock, MapPin, Navigation } from 'lucide-react';
-import { getContactPhone, getWhatsappPhone, telHref, whatsappHref } from '@/lib/contact';
+import { getContactPhone, getContactEmail, getWhatsappPhone, telHref, whatsappHref } from '@/lib/contact';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { ButtonLink } from '@/components/ui/Button';
 import { OpenStatus } from './OpenStatus';
 
-const EMAIL = 'devorasoftware@gmail.com';
 const MAP_URL = 'https://maps.google.com/?q=الرياض،+المملكة+العربية+السعودية';
 const WHATSAPP_MESSAGE = 'مرحبًا، أرغب في الاستفسار عن خدماتكم العقارية.';
 
 /** Side support block: instant help, working hours, and HQ location. */
 export function ContactSupport() {
   const contactPhone = getContactPhone();
+  const contactEmail = getContactEmail();
   const whatsappPhone = getWhatsappPhone();
 
   return (
@@ -46,20 +46,22 @@ export function ContactSupport() {
                 </span>
               </a>
             )}
-            <a
-              href={`mailto:${EMAIL}`}
-              className="group flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10 transition-colors hover:bg-white/[0.1]"
-            >
-              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-400/15 text-gold-200">
-                <Mail className="h-4 w-4" aria-hidden />
-              </span>
-              <span className="min-w-0">
-                <span className="block text-xs text-white/55">راسلنا عبر البريد</span>
-                <span dir="ltr" className="block truncate text-sm text-white/85 group-hover:text-white">
-                  {EMAIL}
+            {contactEmail && (
+              <a
+                href={`mailto:${contactEmail}`}
+                className="group flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10 transition-colors hover:bg-white/[0.1]"
+              >
+                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-400/15 text-gold-200">
+                  <Mail className="h-4 w-4" aria-hidden />
                 </span>
-              </span>
-            </a>
+                <span className="min-w-0">
+                  <span className="block text-xs text-white/55">راسلنا عبر البريد</span>
+                  <span dir="ltr" className="block truncate text-sm text-white/85 group-hover:text-white">
+                    {contactEmail}
+                  </span>
+                </span>
+              </a>
+            )}
           </div>
 
           {whatsappPhone && (

@@ -10,6 +10,7 @@ import { cn } from '@/lib/cn';
 import { PRIMARY_NAV, routes } from '@/lib/routes';
 import { SITE } from '@/lib/seo';
 import type { Locale } from '@/lib/locale';
+import type { BrandingData } from '@/lib/branding';
 import { siteT } from '@/messages/site';
 import { ButtonLink } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
@@ -18,28 +19,32 @@ import { LangToggle } from '@/components/theme/LangToggle';
 import { logoutAction } from '@/lib/auth-actions';
 import { readClientUser, type ClientUser } from '@/lib/client-user';
 
-function Wordmark({ invert }: { invert: boolean }) {
+const PLATFORM_LOGO = '/brand/platform-logo.svg';
+
+function Wordmark({ invert, branding }: { invert: boolean; branding?: BrandingData }) {
+  const logo = branding?.logoUrl ?? PLATFORM_LOGO;
+  const name = branding?.displayName ?? branding?.name ?? SITE.name;
   return (
     <Link
       href={routes.home}
       className="flex items-center gap-2 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-gold-400/60 focus-visible:ring-offset-0"
     >
       <Image
-        src="/brand/devora-logo.png"
-        alt={SITE.name}
+        src={logo}
+        alt={name}
         width={28}
         height={28}
         priority
         className="h-7 w-7 rounded-md object-cover"
       />
       <span className={cn('font-display text-xl tracking-tight', invert ? 'text-white' : 'text-ink-strong')}>
-        {SITE.name}
+        {name}
       </span>
     </Link>
   );
 }
 
-export function Navbar({ locale }: { locale: Locale }) {
+export function Navbar({ locale, branding }: { locale: Locale; branding?: BrandingData }) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -71,7 +76,7 @@ export function Navbar({ locale }: { locale: Locale }) {
       )}
     >
       <Container className="flex h-20 items-center justify-between py-4">
-        <Wordmark invert={!solid} />
+        <Wordmark invert={!solid} branding={branding} />
 
         <nav className="hidden items-center gap-1 lg:flex">
           {PRIMARY_NAV.map((item) => {
@@ -89,7 +94,9 @@ export function Navbar({ locale }: { locale: Locale }) {
               >
                 {locale === 'ar' ? item.label : item.labelEn}
                 {active && (
-                  <span className="absolute inset-x-4 -bottom-0.5 h-0.5 rounded-full bg-gold-400" aria-hidden />
+                  // Brand-accent underline: this is the per-page identity marker —
+                  // it carries tenant meaning, not structural chrome.
+                  <span className="absolute inset-x-4 -bottom-0.5 h-0.5 rounded-full bg-brand-accent" aria-hidden />
                 )}
               </Link>
             );
