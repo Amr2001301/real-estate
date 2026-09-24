@@ -18,7 +18,8 @@ export type StorageFolder =
   | 'maintenance'
   | 'banners'
   | 'documents'
-  | 'avatars';
+  | 'avatars'
+  | 'branding';
 
 /**
  * Private folders — always uploaded to / downloaded from the private bucket.
