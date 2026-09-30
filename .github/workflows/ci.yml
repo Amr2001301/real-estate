@@ -331,10 +331,14 @@ jobs:
         run: pnpm prisma:generate
       - name: Start MinIO and create buckets
         run: |
-          docker run -d --name ci-minio -p 9000:9000 \
-            -e MINIO_ROOT_USER=minioadmin \
-            -e MINIO_ROOT_PASSWORD=minioadmin \
-            quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z server /data
+          # quay.io now requires auth even for public images; download the binary
+          # directly from GitHub releases (same pinned version, no registry needed).
+          curl -fsSL https://github.com/minio/minio/releases/download/RELEASE.2024-12-18T13-15-44Z/minio.linux-amd64.RELEASE.2024-12-18T13-15-44Z \
+            -o /usr/local/bin/minio
+          chmod +x /usr/local/bin/minio
+          mkdir -p /tmp/minio-data
+          MINIO_ROOT_USER=minioadmin MINIO_ROOT_PASSWORD=minioadmin \
+            /usr/local/bin/minio server /tmp/minio-data --address :9000 > /tmp/minio.log 2>&1 &
           until curl -sf http://localhost:9000/minio/health/live; do sleep 1; done
           AWS_ACCESS_KEY_ID=minioadmin AWS_SECRET_ACCESS_KEY=minioadmin AWS_DEFAULT_REGION=us-east-1 \
             aws s3 mb s3://real-estate-media --endpoint-url http://localhost:9000
@@ -428,10 +432,14 @@ jobs:
         run: pnpm prisma:generate
       - name: Start MinIO and create buckets
         run: |
-          docker run -d --name ci-minio -p 9000:9000 \
-            -e MINIO_ROOT_USER=minioadmin \
-            -e MINIO_ROOT_PASSWORD=minioadmin \
-            quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z server /data
+          # quay.io now requires auth even for public images; download the binary
+          # directly from GitHub releases (same pinned version, no registry needed).
+          curl -fsSL https://github.com/minio/minio/releases/download/RELEASE.2024-12-18T13-15-44Z/minio.linux-amd64.RELEASE.2024-12-18T13-15-44Z \
+            -o /usr/local/bin/minio
+          chmod +x /usr/local/bin/minio
+          mkdir -p /tmp/minio-data
+          MINIO_ROOT_USER=minioadmin MINIO_ROOT_PASSWORD=minioadmin \
+            /usr/local/bin/minio server /tmp/minio-data --address :9000 > /tmp/minio.log 2>&1 &
           until curl -sf http://localhost:9000/minio/health/live; do sleep 1; done
           AWS_ACCESS_KEY_ID=minioadmin AWS_SECRET_ACCESS_KEY=minioadmin AWS_DEFAULT_REGION=us-east-1 \
             aws s3 mb s3://real-estate-media --endpoint-url http://localhost:9000
