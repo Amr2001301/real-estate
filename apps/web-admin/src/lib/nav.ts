@@ -29,6 +29,8 @@ import {
   Target,
   Tag,
   Palette,
+  HardDriveDownload,
+  Upload,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -73,6 +75,8 @@ export const NAV_ICONS = {
   MessageSquareText,
   Target,
   Palette,
+  HardDriveDownload,
+  Upload,
 } satisfies Record<string, LucideIcon>;
 
 export type IconKey = keyof typeof NAV_ICONS;
@@ -173,6 +177,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/dashboard/operations', label: 'مركز العمليات', labelKey: 'operations', iconKey: 'Gauge', admin: true },
       { href: '/dashboard/audit-logs', label: 'سجلات التدقيق', labelKey: 'auditLogs', iconKey: 'ScrollText', admin: true },
       { href: '/dashboard/company/branding', label: 'الهوية البصرية', labelKey: 'branding', iconKey: 'Palette', admin: true },
+      { href: '/dashboard/data-export', label: 'تصدير البيانات', labelKey: 'dataExport', iconKey: 'HardDriveDownload', admin: true },
+      { href: '/dashboard/data-import', label: 'استيراد البيانات', labelKey: 'dataImport', iconKey: 'Upload', admin: true },
       { href: '/dashboard/settings', label: 'الإعدادات', labelKey: 'settings', iconKey: 'Settings', admin: true },
     ],
   },

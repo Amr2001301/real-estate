@@ -179,19 +179,6 @@ export const api = {
     request<T>(path, { ...opts, method: 'DELETE' }),
 };
 
-export async function login(email: string, password: string) {
-  const res = await fetch(`${API_BASE}/v1/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
-  return (await res.json()) as {
-    user: { id: string; role: string; fullName: string };
-    tokens: { accessToken: string; refreshToken: string; expiresIn: number };
-  };
-}
-
 type AuthResult = {
   user: { id: string; role: string; fullName: string };
   tokens: { accessToken: string; refreshToken: string; expiresIn: number };
