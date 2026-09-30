@@ -265,7 +265,7 @@ async function seedBrokerDemo(companyId: string) {
 
   // Broker firm
   const broker = await prisma.broker.upsert({
-    where: { code: BROKER_FIRM_CODE },
+    where: { companyId_code: { companyId, code: BROKER_FIRM_CODE } },
     create: {
       code: BROKER_FIRM_CODE,
       companyName: 'شركة الوسيط التجريبي',
@@ -331,7 +331,7 @@ async function seedBrokerLeadsAndReservations(companyId: string) {
   console.log('🤝  Seeding broker leads & reservations…');
 
   // Resolve the demo broker firm
-  const broker = await prisma.broker.findUnique({
+  const broker = await prisma.broker.findFirst({
     where: { code: BROKER_FIRM_CODE },
     select: { id: true },
   });

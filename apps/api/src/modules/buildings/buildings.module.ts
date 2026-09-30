@@ -13,7 +13,9 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUUID, Matches, MaxLength, Min, MinLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { ENTITY_CODE_PATTERN, normalizeEntityCode } from '../../common/utils/entity-code';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -22,6 +24,15 @@ import { UserRole } from '@prisma/client';
 class CreateBuildingDto {
   @IsUUID()
   phaseId!: string;
+
+  @Transform(({ value }) => normalizeEntityCode(value))
+  @IsString()
+  @MinLength(2)
+  @MaxLength(64)
+  @Matches(ENTITY_CODE_PATTERN, {
+    message: 'code must be 2–64 characters: uppercase letters, digits, and hyphens (e.g. TOWER-A)',
+  })
+  code!: string;
 
   @IsString()
   name!: string;
@@ -68,6 +79,7 @@ class BuildingsService {
     return this.prisma.building.create({
       data: {
         phaseId: dto.phaseId,
+        code: dto.code,
         name: dto.name,
         totalFloors: dto.totalFloors ?? 1,
         order: dto.order ?? 0,

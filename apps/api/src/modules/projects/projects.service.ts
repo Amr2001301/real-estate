@@ -22,6 +22,7 @@ export class ProjectsService {
     await this.planLimits.checkProjectLimit();
     return this.prisma.project.create({
       data: {
+        code: dto.code,
         name: dto.name as unknown as Prisma.InputJsonValue,
         description: dto.description as unknown as Prisma.InputJsonValue,
         city: dto.city,
@@ -187,6 +188,7 @@ export class ProjectsService {
   async update(id: string, dto: UpdateProjectDto) {
     await this.assertExists(id);
     const data: Prisma.ProjectUpdateInput = {};
+    if (dto.code !== undefined) data.code = dto.code;
     if (dto.name) data.name = dto.name as unknown as Prisma.InputJsonValue;
     if (dto.description) data.description = dto.description as unknown as Prisma.InputJsonValue;
     if (dto.city !== undefined) data.city = dto.city;

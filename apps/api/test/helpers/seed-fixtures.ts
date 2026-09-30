@@ -115,7 +115,7 @@ export async function loadE2EFixtures(prisma: PrismaClient): Promise<E2EFixtures
   // Phase 7B Flow D prerequisites — seeded once by seed-e2e.ts. We look them
   // up by the same identifying keys the seed uses (broker firm + assigned
   // sales rep + APPROVED status; project + plan name).
-  const broker1Firm = await prisma.broker.findUniqueOrThrow({
+  const broker1Firm = await prisma.broker.findFirstOrThrow({
     where: { code: E2E_BROKER_CODES.BROKER_1 },
     select: { id: true },
   });

@@ -275,109 +275,53 @@ async function main(): Promise<void> {
   };
 
   const [b1, b2, b3, b4, b5] = await Promise.all([
-    prisma.broker.upsert({
-      where: { code: BROKER_CODES.B1 },
-      create: {
-        code: BROKER_CODES.B1,
-        companyName: 'شركة المهيدب للعقارات',
-        commercialName: 'Al-Muhaidib Real Estate',
-        email: 'info@demo-muhaidib.com',
-        phone: '+966112000001',
-        address: 'طريق الملك فهد، حي العليا',
-        city: 'الرياض',
-        taxId: 'DEMO-TAX-001',
-        commercialRegistration: 'DEMO-CR-001',
-        bankName: 'بنك الرياض',
-        bankAccountName: 'شركة المهيدب للعقارات',
-        bankIban: 'SA0380000000608010167519',
-        defaultCommissionPct: 2.5,
-        status: BrokerStatus.ACTIVE,
-        contractStartAt: d(12),
-        contractEndAt: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+    prisma.broker.findFirst({ where: { code: BROKER_CODES.B1 }, select: { id: true } }).then(
+      (e) => e ?? prisma.broker.create({ data: {
+        code: BROKER_CODES.B1, companyName: 'شركة المهيدب للعقارات', commercialName: 'Al-Muhaidib Real Estate',
+        email: 'info@demo-muhaidib.com', phone: '+966112000001', address: 'طريق الملك فهد، حي العليا',
+        city: 'الرياض', taxId: 'DEMO-TAX-001', commercialRegistration: 'DEMO-CR-001',
+        bankName: 'بنك الرياض', bankAccountName: 'شركة المهيدب للعقارات', bankIban: 'SA0380000000608010167519',
+        defaultCommissionPct: 2.5, status: BrokerStatus.ACTIVE,
+        contractStartAt: d(12), contractEndAt: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+        createdById: adminUser.id, notes: 'وكيل معتمد في منطقة الرياض',
+      }, select: { id: true } })
+    ),
+    prisma.broker.findFirst({ where: { code: BROKER_CODES.B2 }, select: { id: true } }).then(
+      (e) => e ?? prisma.broker.create({ data: {
+        code: BROKER_CODES.B2, companyName: 'دار المشاريع العقارية', commercialName: 'Dar Al-Mashari Real Estate',
+        email: 'contact@demo-mashari.com', phone: '+966122000002', address: 'شارع التحلية، جدة',
+        city: 'جدة', taxId: 'DEMO-TAX-002', commercialRegistration: 'DEMO-CR-002',
+        bankName: 'البنك الأهلي', bankAccountName: 'دار المشاريع العقارية', bankIban: 'SA4420000001234567891234',
+        defaultCommissionPct: 3.0, status: BrokerStatus.ACTIVE,
+        contractStartAt: d(8), contractEndAt: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
         createdById: adminUser.id,
-        notes: 'وكيل معتمد في منطقة الرياض',
-      },
-      update: {},
-      select: { id: true },
-    }),
-    prisma.broker.upsert({
-      where: { code: BROKER_CODES.B2 },
-      create: {
-        code: BROKER_CODES.B2,
-        companyName: 'دار المشاريع العقارية',
-        commercialName: 'Dar Al-Mashari Real Estate',
-        email: 'contact@demo-mashari.com',
-        phone: '+966122000002',
-        address: 'شارع التحلية، جدة',
-        city: 'جدة',
-        taxId: 'DEMO-TAX-002',
-        commercialRegistration: 'DEMO-CR-002',
-        bankName: 'البنك الأهلي',
-        bankAccountName: 'دار المشاريع العقارية',
-        bankIban: 'SA4420000001234567891234',
-        defaultCommissionPct: 3.0,
-        status: BrokerStatus.ACTIVE,
-        contractStartAt: d(8),
-        contractEndAt: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+      }, select: { id: true } })
+    ),
+    prisma.broker.findFirst({ where: { code: BROKER_CODES.B3 }, select: { id: true } }).then(
+      (e) => e ?? prisma.broker.create({ data: {
+        code: BROKER_CODES.B3, companyName: 'مجموعة العثيم العقارية', commercialName: 'Al-Othaim Real Estate Group',
+        email: 'hello@demo-othaim.com', phone: '+966133000003', address: 'طريق الملك عبدالعزيز، الدمام',
+        city: 'الدمام', taxId: 'DEMO-TAX-003', defaultCommissionPct: 2.0, status: BrokerStatus.ACTIVE,
+        contractStartAt: d(6), contractEndAt: new Date(new Date().setFullYear(new Date().getFullYear() + 2)),
         createdById: adminUser.id,
-      },
-      update: {},
-      select: { id: true },
-    }),
-    prisma.broker.upsert({
-      where: { code: BROKER_CODES.B3 },
-      create: {
-        code: BROKER_CODES.B3,
-        companyName: 'مجموعة العثيم العقارية',
-        commercialName: 'Al-Othaim Real Estate Group',
-        email: 'hello@demo-othaim.com',
-        phone: '+966133000003',
-        address: 'طريق الملك عبدالعزيز، الدمام',
-        city: 'الدمام',
-        taxId: 'DEMO-TAX-003',
-        defaultCommissionPct: 2.0,
-        status: BrokerStatus.ACTIVE,
-        contractStartAt: d(6),
-        contractEndAt: new Date(new Date().setFullYear(new Date().getFullYear() + 2)),
-        createdById: adminUser.id,
-      },
-      update: {},
-      select: { id: true },
-    }),
-    prisma.broker.upsert({
-      where: { code: BROKER_CODES.B4 },
-      create: {
-        code: BROKER_CODES.B4,
-        companyName: 'شركة الجديدة للتطوير',
-        commercialName: 'Al-Jadeedah Development',
-        email: 'info@demo-jadeedah.com',
-        phone: '+966144000004',
-        city: 'الرياض',
-        defaultCommissionPct: 2.0,
-        status: BrokerStatus.PENDING,
-        createdById: adminUser.id,
-        notes: 'قيد استكمال التوثيق',
-      },
-      update: {},
-      select: { id: true },
-    }),
-    prisma.broker.upsert({
-      where: { code: BROKER_CODES.B5 },
-      create: {
-        code: BROKER_CODES.B5,
-        companyName: 'مكتب النجم العقاري',
-        commercialName: 'Al-Najm Real Estate Office',
-        email: 'office@demo-najm.com',
-        phone: '+966155000005',
-        city: 'جدة',
-        defaultCommissionPct: 1.5,
-        status: BrokerStatus.SUSPENDED,
-        createdById: adminUser.id,
-        notes: 'موقوف بسبب مخالفة الشروط',
-      },
-      update: {},
-      select: { id: true },
-    }),
+      }, select: { id: true } })
+    ),
+    prisma.broker.findFirst({ where: { code: BROKER_CODES.B4 }, select: { id: true } }).then(
+      (e) => e ?? prisma.broker.create({ data: {
+        code: BROKER_CODES.B4, companyName: 'شركة الجديدة للتطوير', commercialName: 'Al-Jadeedah Development',
+        email: 'info@demo-jadeedah.com', phone: '+966144000004', city: 'الرياض',
+        defaultCommissionPct: 2.0, status: BrokerStatus.PENDING,
+        createdById: adminUser.id, notes: 'قيد استكمال التوثيق',
+      }, select: { id: true } })
+    ),
+    prisma.broker.findFirst({ where: { code: BROKER_CODES.B5 }, select: { id: true } }).then(
+      (e) => e ?? prisma.broker.create({ data: {
+        code: BROKER_CODES.B5, companyName: 'مكتب النجم العقاري', commercialName: 'Al-Najm Real Estate Office',
+        email: 'office@demo-najm.com', phone: '+966155000005', city: 'جدة',
+        defaultCommissionPct: 1.5, status: BrokerStatus.SUSPENDED,
+        createdById: adminUser.id, notes: 'موقوف بسبب مخالفة الشروط',
+      }, select: { id: true } })
+    ),
   ]);
 
   // ── 2. Broker users ─────────────────────────────────────────────────────────
@@ -669,7 +613,7 @@ async function main(): Promise<void> {
 
   const contractIds = new Map<string, string>();
   for (const spec of contractSpecs) {
-    const existing = await prisma.contract.findUnique({
+    const existing = await prisma.contract.findFirst({
       where: { contractNumber: spec.number },
       select: { id: true },
     });

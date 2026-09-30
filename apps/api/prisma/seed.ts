@@ -64,6 +64,7 @@ async function findMaintenanceCategoryByEn(nameEn: string) {
 type Translatable = { ar: string; en: string };
 
 async function ensureProject(params: {
+  code: string;
   nameAr: string;
   nameEn: string;
   descriptionAr: string;
@@ -80,6 +81,7 @@ async function ensureProject(params: {
   if (existing) return existing;
   return prisma.project.create({
     data: {
+      code: params.code,
       name: { ar: params.nameAr, en: params.nameEn },
       description: { ar: params.descriptionAr, en: params.descriptionEn },
       city: params.city,
@@ -105,6 +107,7 @@ async function ensureProject(params: {
 
 async function ensurePhase(
   projectId: string,
+  code: string,
   nameAr: string,
   nameEn: string,
   order: number,
@@ -112,12 +115,13 @@ async function ensurePhase(
   const existing = await findPhaseByTranslatedName(projectId, nameAr, nameEn);
   if (existing) return existing;
   return prisma.phase.create({
-    data: { projectId, name: { ar: nameAr, en: nameEn }, order },
+    data: { projectId, code, name: { ar: nameAr, en: nameEn }, order },
   });
 }
 
 async function ensureBuilding(
   phaseId: string,
+  code: string,
   name: string,
   totalFloors: number,
   order: number,
@@ -125,7 +129,7 @@ async function ensureBuilding(
   const existing = await findBuildingByName(phaseId, name);
   if (existing) return existing;
   return prisma.building.create({
-    data: { phaseId, name, totalFloors, order },
+    data: { phaseId, code, name, totalFloors, order },
   });
 }
 
@@ -204,6 +208,7 @@ async function seedPublicDemo() {
 
   // ── 1) Nile Crest Residences — luxury waterfront apartments (جدة, featured) ──
   const nileCrest = await ensureProject({
+    code: 'NILE-CREST',
     nameAr: 'نايل كريست ريزيدنس',
     nameEn: 'Nile Crest Residences',
     descriptionAr:
@@ -224,9 +229,9 @@ async function seedPublicDemo() {
     ],
     mediaUrls: [DEMO_IMG.apartment1, DEMO_IMG.apartment2, DEMO_IMG.interior1],
   });
-  const ncPhase = await ensurePhase(nileCrest.id, 'المرحلة الأولى', 'Phase 1', 0);
-  const ncTowerA = await ensureBuilding(ncPhase.id, 'Nile Tower A', 20, 0);
-  const ncTowerB = await ensureBuilding(ncPhase.id, 'Nile Tower B', 18, 1);
+  const ncPhase = await ensurePhase(nileCrest.id, 'NC-PH1', 'المرحلة الأولى', 'Phase 1', 0);
+  const ncTowerA = await ensureBuilding(ncPhase.id, 'NC-TOWER-A', 'Nile Tower A', 20, 0);
+  const ncTowerB = await ensureBuilding(ncPhase.id, 'NC-TOWER-B', 'Nile Tower B', 18, 1);
   await ensureUnits(ncTowerA.id, [
     { code: 'NC-A-101', type: 'studio', area: 80, bedrooms: 1, bathrooms: 1, floor: 1, price: 1200000, media: [DEMO_IMG.interior1], latitude: 21.5433, longitude: 39.1728, address: 'Nile Tower A، شارع الأمير محمد بن عبدالعزيز، جدة' },
     { code: 'NC-A-102', type: '1BR', area: 95, bedrooms: 1, bathrooms: 1, floor: 1, price: 1450000, media: [DEMO_IMG.apartment2], latitude: 21.5433, longitude: 39.1728, address: 'Nile Tower A، شارع الأمير محمد بن عبدالعزيز، جدة' },
@@ -239,6 +244,7 @@ async function seedPublicDemo() {
 
   // ── 2) Palm District — villas & townhouses (الرياض, featured) ──
   const palm = await ensureProject({
+    code: 'PALM-DISTRICT',
     nameAr: 'حي النخيل',
     nameEn: 'Palm District',
     descriptionAr:
@@ -258,8 +264,8 @@ async function seedPublicDemo() {
     ],
     mediaUrls: [DEMO_IMG.villa1, DEMO_IMG.villa2, DEMO_IMG.modernHouse],
   });
-  const palmPhase = await ensurePhase(palm.id, 'المرحلة الأولى', 'Phase 1', 0);
-  const palmCluster = await ensureBuilding(palmPhase.id, 'Palm Cluster A', 2, 0);
+  const palmPhase = await ensurePhase(palm.id, 'PD-PH1', 'المرحلة الأولى', 'Phase 1', 0);
+  const palmCluster = await ensureBuilding(palmPhase.id, 'PD-CLUSTER-A', 'Palm Cluster A', 2, 0);
   await ensureUnits(palmCluster.id, [
     { code: 'PD-V-01', type: 'villa', area: 420, bedrooms: 5, bathrooms: 5, floor: 0, price: 6500000, media: [DEMO_IMG.villa1, DEMO_IMG.villa2], latitude: 24.7136, longitude: 46.6753, address: 'Palm Cluster A، حي النرجس، الرياض' },
     { code: 'PD-V-02', type: 'villa', area: 380, bedrooms: 4, bathrooms: 4, floor: 0, price: 5800000, media: [DEMO_IMG.villa2], latitude: 24.7138, longitude: 46.6755, address: 'Palm Cluster A، حي النرجس، الرياض' },
@@ -269,6 +275,7 @@ async function seedPublicDemo() {
 
   // ── 3) The Avenue Business Hub — commercial / offices (الدمام) ──
   const avenue = await ensureProject({
+    code: 'AVENUE-BIZ',
     nameAr: 'ذا أفنيو للأعمال',
     nameEn: 'The Avenue Business Hub',
     descriptionAr:
@@ -288,8 +295,8 @@ async function seedPublicDemo() {
     ],
     mediaUrls: [DEMO_IMG.officeExt, DEMO_IMG.officeInt, DEMO_IMG.highrise],
   });
-  const avPhase = await ensurePhase(avenue.id, 'المرحلة الأولى', 'Phase 1', 0);
-  const avTower = await ensureBuilding(avPhase.id, 'Business Tower', 24, 0);
+  const avPhase = await ensurePhase(avenue.id, 'AV-PH1', 'المرحلة الأولى', 'Phase 1', 0);
+  const avTower = await ensureBuilding(avPhase.id, 'AV-TOWER', 'Business Tower', 24, 0);
   await ensureUnits(avTower.id, [
     { code: 'AV-O-101', type: 'office', area: 120, bedrooms: 0, bathrooms: 1, floor: 1, price: 1900000, media: [DEMO_IMG.officeInt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
     { code: 'AV-O-205', type: 'office', area: 180, bedrooms: 0, bathrooms: 2, floor: 2, price: 2800000, media: [DEMO_IMG.officeInt, DEMO_IMG.officeExt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
@@ -305,6 +312,7 @@ async function seedPublicDemo() {
 
   // ── 4) Solara Heights — modern high-rise apartments (مكة المكرمة) ──
   const solara = await ensureProject({
+    code: 'SOLARA-HEIGHTS',
     nameAr: 'سولارا هايتس',
     nameEn: 'Solara Heights',
     descriptionAr:
@@ -324,8 +332,8 @@ async function seedPublicDemo() {
     ],
     mediaUrls: [DEMO_IMG.highrise, DEMO_IMG.apartment1, DEMO_IMG.interior1],
   });
-  const solPhase = await ensurePhase(solara.id, 'المرحلة الأولى', 'Phase 1', 0);
-  const solTower = await ensureBuilding(solPhase.id, 'Solara Tower One', 30, 0);
+  const solPhase = await ensurePhase(solara.id, 'SH-PH1', 'المرحلة الأولى', 'Phase 1', 0);
+  const solTower = await ensureBuilding(solPhase.id, 'SH-TOWER-1', 'Solara Tower One', 30, 0);
   await ensureUnits(solTower.id, [
     { code: 'SH-101', type: '1BR', area: 90, bedrooms: 1, bathrooms: 1, floor: 1, price: 1300000, media: [DEMO_IMG.interior1], latitude: 21.3891, longitude: 39.8579, address: 'Solara Tower One، شارع إبراهيم الخليل، مكة المكرمة' },
     { code: 'SH-205', type: '2BR', area: 120, bedrooms: 2, bathrooms: 2, floor: 2, price: 1950000, media: [DEMO_IMG.apartment1], latitude: 21.3891, longitude: 39.8579, address: 'Solara Tower One، شارع إبراهيم الخليل، مكة المكرمة' },
@@ -442,7 +450,7 @@ async function main() {
       ...(seedCompanyId ? { id: seedCompanyId } : {}),
       name: process.env.SEED_COMPANY_NAME ?? 'Real Estate Platform',
       slug: process.env.SEED_COMPANY_SLUG ?? 'default',
-      country: process.env.SEED_COMPANY_COUNTRY ?? 'SA',
+      country: process.env.SEED_COMPANY_COUNTRY ?? 'EG',
       currency: process.env.SEED_COMPANY_CURRENCY ?? 'SAR',
       defaultLocale: 'ar',
       timezone: process.env.SEED_COMPANY_TIMEZONE ?? 'Asia/Riyadh',
@@ -456,6 +464,10 @@ async function main() {
     },
     update: {
       name: process.env.SEED_COMPANY_NAME ?? 'Real Estate Platform',
+      lifecycleStatus: 'ACTIVE',
+      customerAppEnabled: true,
+      staffAppEnabled: true,
+      websiteEnabled: true,
     },
   });
 
@@ -545,6 +557,7 @@ async function main() {
 
   // ---- Demo project 1: idempotent project + phase + buildings + units ----
   const proj1 = await ensureProject({
+    code: 'RIYADH-CP',
     nameAr: 'كمبوند الرياض الجديدة',
     nameEn: 'New Riyadh Compound',
     descriptionAr: 'مجتمع سكني فاخر بإطلالات خلابة ومرافق متكاملة.',
@@ -568,12 +581,13 @@ async function main() {
 
   const phase1 = await ensurePhase(
     proj1.id,
+    'RY-PH1',
     'المرحلة الأولى',
     'Phase 1',
     0,
   );
-  const buildingA = await ensureBuilding(phase1.id, 'Building A', 6, 0);
-  const buildingB = await ensureBuilding(phase1.id, 'Building B', 4, 1);
+  const buildingA = await ensureBuilding(phase1.id, 'RY-BLD-A', 'Building A', 6, 0);
+  const buildingB = await ensureBuilding(phase1.id, 'RY-BLD-B', 'Building B', 4, 1);
 
   await ensureUnits(buildingA.id, [
     { code: 'A-101', type: '1BR', area: 75, bedrooms: 1, bathrooms: 1, floor: 1, price: 850000, latitude: 24.7136, longitude: 46.6753, address: 'Building A، كمبوند الرياض الجديدة، الرياض' },
@@ -588,6 +602,7 @@ async function main() {
 
   // ---- Demo project 2 (draft) ----
   await ensureProject({
+    code: 'GOLF-VILLAS',
     nameAr: 'فيلات الجولف',
     nameEn: 'Golf Villas',
     descriptionAr: 'فيلات راقية بإطلالة على الجولف.',
@@ -1270,7 +1285,7 @@ async function main() {
   // ---- Lead + assignment (idempotent by clientId + projectInterestId) ----
   const fbSource = await findLeadSourceByEn('Facebook');
   if (fbSource) {
-    const phone = '+966500000001';
+    const phone = '+201060000001';
     const email = 'ahmed@example.com';
     const fullName = 'Ahmed Khaled';
     const client =

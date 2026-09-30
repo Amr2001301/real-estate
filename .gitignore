@@ -72,3 +72,17 @@ playwright/.cache/
 backups/
 *.dump
 *.pgdump
+
+# Mobile Firebase / APNs credentials — real files live next to the .example stubs
+apps/mobile/**/google-services.json
+apps/mobile/**/GoogleService-Info.plist
+!apps/mobile/**/*.example
+
+# Security credentials — never commit key material
+*.pem
+*.key
+*service-account*.json
+*.p12
+
+# Local dev utilities that write to ~/Desktop — useful locally, not for CI
+apps/api/scripts/gen-test-xlsx.ts

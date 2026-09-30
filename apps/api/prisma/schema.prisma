@@ -484,6 +484,7 @@ enum MediaType {
 
 model Project {
   id          String        @id @default(uuid()) @db.Uuid
+  code        String?
   name        Json // Translatable { ar, en }
   description Json
   city        String
@@ -509,6 +510,7 @@ model Project {
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  @@unique([companyId, code])
   @@index([city])
   @@index([status, featured])
   @@index([companyId])
@@ -530,6 +532,7 @@ model Phase {
   id        String     @id @default(uuid()) @db.Uuid
   projectId String     @db.Uuid
   project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  code      String?
   name      Json // Translatable
   order     Int        @default(0)
   createdAt DateTime   @default(now())
@@ -538,6 +541,7 @@ model Phase {
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  @@unique([projectId, code])
   @@index([projectId])
   @@index([companyId])
 }
@@ -547,6 +551,7 @@ model Building {
   phaseId     String   @db.Uuid
   phase       Phase    @relation(fields: [phaseId], references: [id], onDelete: Cascade)
   name        String
+  code        String?
   totalFloors Int      @default(1)
   order       Int      @default(0)
   createdAt   DateTime @default(now())
@@ -555,6 +560,7 @@ model Building {
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  @@unique([phaseId, code])
   @@index([phaseId])
   @@index([companyId])
 }
@@ -1224,7 +1230,7 @@ model ReservationActivity {
 
 model Contract {
   id             String       @id @default(uuid()) @db.Uuid
-  contractNumber String?      @unique
+  contractNumber String?
   customerId     String       @db.Uuid
   customer       User         @relation("ContractCustomer", fields: [customerId], references: [id])
   unitId         String       @db.Uuid
@@ -1260,6 +1266,7 @@ model Contract {
 
   deletedAt DateTime?
 
+  @@unique([companyId, contractNumber])
   @@index([customerId])
   @@index([unitId])
   @@index([reservationId])
@@ -2217,13 +2224,13 @@ model Broker {
   id                     String                @id @default(uuid()) @db.Uuid
   companyName            String
   commercialName         String?
-  code                   String                @unique
+  code                   String
   logoUrl                String?
   email                  String?
   phone                  String?
   address                String?
   city                   String?
-  taxId                  String?               @unique
+  taxId                  String?
   commercialRegistration String?
   bankName               String?
   bankAccountName        String?
@@ -2255,6 +2262,8 @@ model Broker {
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  @@unique([companyId, code])
+  @@unique([companyId, taxId])
   @@index([status])
   @@index([code])
   @@index([companyId])

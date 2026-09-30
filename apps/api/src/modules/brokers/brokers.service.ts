@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, BrokerStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { NotificationsService } from '../notifications/notifications.module';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import {
@@ -229,33 +230,36 @@ export class BrokersService {
   }
 
   private async ensureCodeAvailable(code: string) {
-    const exists = await this.prisma.broker.findUnique({
-      where: { code },
+    const companyId = getRequiredCompanyId();
+    const exists = await this.prisma.broker.findFirst({
+      where: { code, companyId },
       select: { id: true },
     });
-    if (exists) throw new ConflictException(`Broker code "${code}" is already in use`);
+    if (exists) throw new ConflictException(`Broker code "${code}" is already in use in this company`);
     return code;
   }
 
   private async ensureTaxIdAvailable(taxId: string) {
-    const exists = await this.prisma.broker.findUnique({
-      where: { taxId },
+    const companyId = getRequiredCompanyId();
+    const exists = await this.prisma.broker.findFirst({
+      where: { taxId, companyId },
       select: { id: true },
     });
-    if (exists) throw new ConflictException(`Broker taxId "${taxId}" is already in use`);
+    if (exists) throw new ConflictException(`Broker tax ID "${taxId}" is already in use in this company`);
     return taxId;
   }
 
-  // Generate a safe URL-friendly code from companyName, ensuring uniqueness.
-  // Falls back to "BROKER" if the name has no ASCII letters/digits (e.g. Arabic only).
+  // Generate a safe URL-friendly code from companyName, ensuring uniqueness
+  // within the current tenant. Falls back to "BROKER" for Arabic-only names.
   private async generateUniqueCode(companyName: string): Promise<string> {
+    const companyId = getRequiredCompanyId();
     const ascii = companyName.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '');
     const base = (ascii.toUpperCase() || 'BROKER').slice(0, 16);
 
     for (let i = 0; i < 1000; i++) {
       const candidate = i === 0 ? base : `${base}-${i.toString().padStart(3, '0')}`;
-      const exists = await this.prisma.broker.findUnique({
-        where: { code: candidate },
+      const exists = await this.prisma.broker.findFirst({
+        where: { code: candidate, companyId },
         select: { id: true },
       });
       if (!exists) return candidate;

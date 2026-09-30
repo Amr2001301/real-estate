@@ -94,23 +94,30 @@ async function main(): Promise<void> {
     upsertE2EUser(E2E_USERS.CUSTOMER_2.email, E2E_USERS.CUSTOMER_2.password, E2E_USERS.CUSTOMER_2.fullName, UserRole.CUSTOMER),
   ]);
 
+  // Resolve the default company early so broker rows carry companyId at creation
+  // time. Broker.code is now unique per-company (@@unique([companyId, code])), so
+  // the upsert where-clause needs the composite key.
+  const defaultCompany = await prisma.company.findFirstOrThrow({ where: { isActive: true } });
+
   console.log('🌱 [e2e] Step 3/4 — upserting 2 broker firms + linking each broker user…');
   const broker1Firm = await prisma.broker.upsert({
-    where: { code: E2E_BROKER_CODES.BROKER_1 },
+    where: { companyId_code: { companyId: defaultCompany.id, code: E2E_BROKER_CODES.BROKER_1 } },
     create: {
       code: E2E_BROKER_CODES.BROKER_1,
       companyName: 'E2E Brokerage One',
       status: BrokerStatus.ACTIVE,
+      companyId: defaultCompany.id,
     },
     update: { status: BrokerStatus.ACTIVE },
     select: { id: true },
   });
   const broker2Firm = await prisma.broker.upsert({
-    where: { code: E2E_BROKER_CODES.BROKER_2 },
+    where: { companyId_code: { companyId: defaultCompany.id, code: E2E_BROKER_CODES.BROKER_2 } },
     create: {
       code: E2E_BROKER_CODES.BROKER_2,
       companyName: 'E2E Brokerage Two',
       status: BrokerStatus.ACTIVE,
+      companyId: defaultCompany.id,
     },
     update: { status: BrokerStatus.ACTIVE },
     select: { id: true },
@@ -533,9 +540,7 @@ async function main(): Promise<void> {
   }
 
   console.log('✅ [e2e] Seed complete.');
-  // Backfill companyId on any e2e-created rows that still have NULL. The dev
-  // seed already ran its backfill, so this pass only touches e2e-new rows.
-  const defaultCompany = await prisma.company.findFirstOrThrow({ where: { isActive: true } });
+  // Backfill companyId on any e2e-created rows that still have NULL.
   await backfillCompanyId(defaultCompany.id);
 
   // Register localhost as a verified PLATFORM_SUBDOMAIN so DomainResolverService

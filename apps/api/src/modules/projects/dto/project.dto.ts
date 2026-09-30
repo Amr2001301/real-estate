@@ -7,10 +7,14 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
+  MaxLength,
+  MinLength,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { ProjectStatus } from '@prisma/client';
+import { ENTITY_CODE_PATTERN, normalizeEntityCode } from '../../../common/utils/entity-code';
 
 export class TranslatableDto {
   @IsString()
@@ -21,6 +25,15 @@ export class TranslatableDto {
 }
 
 export class CreateProjectDto {
+  @Transform(({ value }) => normalizeEntityCode(value))
+  @IsString()
+  @MinLength(2)
+  @MaxLength(64)
+  @Matches(ENTITY_CODE_PATTERN, {
+    message: 'code must be 2–64 characters: uppercase letters, digits, and hyphens (e.g. NILE-CREST)',
+  })
+  code!: string;
+
   @ValidateNested()
   @Type(() => TranslatableDto)
   name!: TranslatableDto;
@@ -54,6 +67,16 @@ export class CreateProjectDto {
 }
 
 export class UpdateProjectDto {
+  @IsOptional()
+  @Transform(({ value }) => normalizeEntityCode(value))
+  @IsString()
+  @MinLength(2)
+  @MaxLength(64)
+  @Matches(ENTITY_CODE_PATTERN, {
+    message: 'code must be 2–64 characters: uppercase letters, digits, and hyphens (e.g. NILE-CREST)',
+  })
+  code?: string;
+
   @IsOptional()
   @ValidateNested()
   @Type(() => TranslatableDto)

@@ -1,9 +1,10 @@
 import { Body, Controller, Delete, Get, Module, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID, IsInt, Min, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional, IsString, IsUUID, IsInt, Matches, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { Prisma } from '@prisma/client';
+import { ENTITY_CODE_PATTERN, normalizeEntityCode } from '../../common/utils/entity-code';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -17,6 +18,15 @@ class TranslatableDto {
 class CreatePhaseDto {
   @IsUUID()
   projectId!: string;
+
+  @Transform(({ value }) => normalizeEntityCode(value))
+  @IsString()
+  @MinLength(2)
+  @MaxLength(64)
+  @Matches(ENTITY_CODE_PATTERN, {
+    message: 'code must be 2–64 characters: uppercase letters, digits, and hyphens (e.g. PH-1)',
+  })
+  code!: string;
 
   @ValidateNested()
   @Type(() => TranslatableDto)
@@ -65,6 +75,7 @@ class PhasesService {
     return this.prisma.phase.create({
       data: {
         projectId: dto.projectId,
+        code: dto.code,
         name: dto.name as unknown as Prisma.InputJsonValue,
         order: dto.order ?? 0,
       },

@@ -71,31 +71,30 @@ async function main() {
 
   // ── 2. Broker firm ────────────────────────────────────────────────────────
   console.log('2/8  Upserting broker firm…');
-  const broker = await prisma.broker.upsert({
-    where: { code: FIRM_CODE },
-    create: {
-      code: FIRM_CODE,
-      companyName: 'شركة الوسيط الجديد',
-      commercialName: 'New Broker Firm',
-      email: 'firm@devora-demo.com',
-      phone: '+966199000001',
-      address: 'طريق الملك فهد، العليا',
-      city: 'الرياض',
-      taxId: 'DEMO-TAX-NEW-01',
-      commercialRegistration: 'DEMO-CR-NEW-01',
-      bankName: 'بنك الرياض',
-      bankAccountName: 'شركة الوسيط الجديد',
-      bankIban: 'SA0380000000608010167520',
-      defaultCommissionPct: 2.5,
-      status: BrokerStatus.ACTIVE,
-      contractStartAt: ago(90),
-      contractEndAt: future(275),
-      createdById: adminUser.id,
-      notes: 'حساب تجريبي للاختبار',
-    },
-    update: {},
-    select: { id: true },
-  });
+  const broker = await prisma.broker.findFirst({ where: { code: FIRM_CODE }, select: { id: true } })
+    ?? await prisma.broker.create({
+      data: {
+        code: FIRM_CODE,
+        companyName: 'شركة الوسيط الجديد',
+        commercialName: 'New Broker Firm',
+        email: 'firm@devora-demo.com',
+        phone: '+966199000001',
+        address: 'طريق الملك فهد، العليا',
+        city: 'الرياض',
+        taxId: 'DEMO-TAX-NEW-01',
+        commercialRegistration: 'DEMO-CR-NEW-01',
+        bankName: 'بنك الرياض',
+        bankAccountName: 'شركة الوسيط الجديد',
+        bankIban: 'SA0380000000608010167520',
+        defaultCommissionPct: 2.5,
+        status: BrokerStatus.ACTIVE,
+        contractStartAt: ago(90),
+        contractEndAt: future(275),
+        createdById: adminUser.id,
+        notes: 'حساب تجريبي للاختبار',
+      },
+      select: { id: true },
+    });
 
   // ── 3. BrokerUser link ────────────────────────────────────────────────────
   console.log('3/8  Linking user → firm…');
@@ -210,7 +209,7 @@ async function main() {
 
   // ── Contracts ─────────────────────────────────────────────────────────────
   const ensureContract = async (num: string, unitId: string, clientId: string, reservationId: string | undefined, totalAmount: number, downPayment: number, signedDaysAgo?: number, createdDaysAgo: number = 0) => {
-    const existing = await prisma.contract.findUnique({ where: { contractNumber: num }, select: { id: true } });
+    const existing = await prisma.contract.findFirst({ where: { contractNumber: num }, select: { id: true } });
     if (existing) return existing;
     return prisma.contract.create({
       data: {
