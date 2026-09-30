@@ -332,4 +332,59 @@ Without this setting, the CI jobs are advisory only — a red job does not block
 | Security suite: never runs | Runs on every API PR, blocks merge on failure |
 | Unit suite: runs but not required | Runs (unchanged); adding it as a required check blocks failure from merging |
 | V-01..V-17 regression: undetected | Caught in CI before PR is merged |
+
+---
+
+## G10 — Node version drift between CI and local
+
+**Discovered 2026-09-30** during the MT-rollout / data-import sprint.
+
+CI used `node-version: 22` in `setup-node@v4`, which resolves to the latest
+available 22.x patch at run time. On 2026-09-30 that resolved to **22.23.2**.
+Local development ran **22.12.0**. Neither side knew the other had drifted.
+
+**How it surfaced:** `multer@2.0.2` → `concat-stream@2.0.0` → `readable-stream@3.6.2`.
+The `Writable` constructor in `readable-stream@3.6.2` does a lazy
+`require('./_stream_duplex')` inside the function body. Under Node 22.23.2
+with Jest 29 vm-context isolation, this `require` returned `undefined`, causing
+`TypeError: Right-hand side of 'instanceof' is not callable` when multer
+processed any authenticated file upload. Auth guards reject before multer runs,
+so auth-failure tests (401/403) passed; cross-tenant isolation and audit-log tests
+(DI-3, DI-3b, DI-5, DI-6) timed out at 60s each.
+
+The security suite failed on run `36761406261`. The full suite passed locally with
+the identical code because 22.12.0 does not trigger the bug.
+
+**Fix applied 2026-09-30 (two-part):**
+
+1. `multer` upgraded from `2.0.2` → `2.4.0` via `pnpm.overrides` in root
+   `package.json`. `multer@2.4.0` removed `concat-stream` entirely; depends only
+   on `busboy`. This eliminates the `readable-stream` issue for any Node 22.x.
+
+2. Node version pinned structurally:
+   - `.nvmrc` added at repo root: `22.23.2`
+   - `ci.yml` all `node-version: 22` replaced with `node-version-file: .nvmrc`
+   - `package.json` `engines.node` changed from `>=22.0.0` to `22.23.2`
+   - Drift-guard step added in the `build` job: fails if `node --version` does
+     not equal the `.nvmrc` value, so any future drift announces itself.
+
+**Local action required:** `nvm use` at the repo root will now auto-select
+22.23.2. Developers on 22.12.0 will see the `.nvmrc` and know to upgrade.
+
+**Security suite timing trend (record here so drift is visible next time):**
+
+| Date | Run | Wall time | Budget | Longest file |
+|---|---|---|---|---|
+| 2026-09-18 | `35372621639` | ~19 min (cancelled at 20 min) | 20 min | `02-attack-matrix` |
+| 2026-09-18 | (after budget raise) | budget raised to 35 min | 35 min | `02-attack-matrix` |
+| 2026-09-30 | `36761406261` | **30 min 4 sec** | 35 min | `02-attack-matrix` 464 s |
+
+At the 2026-09-30 run rate the suite has **4 min 56 sec of remaining budget**.
+`02-attack-matrix.security-spec.ts` alone ran 464 seconds (7 min 44 sec) — it is
+the split candidate when the suite next exceeds budget.
+
+**e2e tests do not run on push events:** `api-e2e-1` and `api-e2e-2` require
+`pull_request`, `schedule`, or `workflow_dispatch`. They are always skipped on
+direct pushes to `main`. Use `workflow_dispatch` or open a PR to run them against
+a specific branch.
 | Broken suites can survive 3+ weeks | Caught on the next PR that touches `apps/api/**` |

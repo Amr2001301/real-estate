@@ -26,12 +26,12 @@
     "typescript": "^5.6.3"
   },
   "engines": {
-    "node": ">=22.0.0",
+    "node": "22.23.2",
     "pnpm": ">=9.0.0"
   },
   "pnpm": {
     "overrides": {
-      "multer": "2.4.0"
+      "readable-stream": "4.7.0"
     }
   }
 }
