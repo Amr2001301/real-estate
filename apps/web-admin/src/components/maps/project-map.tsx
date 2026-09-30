@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useCallback, useMemo } from 'react';
 import {
   GoogleMap,
@@ -8,6 +9,17 @@ import {
 } from '@react-google-maps/api';
 import { AlertTriangle, ExternalLink, Loader2, MapPin } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import type { OsmDisplayMapProps } from './OsmDisplayMap';
+
+const OsmDisplayMap = dynamic<OsmDisplayMapProps>(
+  () => import('./OsmDisplayMap').then((m) => ({ default: m.OsmDisplayMap })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full animate-pulse rounded-2xl bg-slate-100" />
+    ),
+  },
+);
 
 const DEFAULT_CENTER = { lat: 30.0444, lng: 31.2357 };
 const DEFAULT_ZOOM_EMPTY = 6;
@@ -108,7 +120,7 @@ export function ProjectMap(props: Props) {
   );
 }
 
-// ── Iframe display map (no API key) ──────────────────────────────────────────
+// ── OSM display map (Leaflet + OpenStreetMap, no API key) ────────────────────
 
 function IframeMap({
   lat,
@@ -125,46 +137,31 @@ function IframeMap({
 }) {
   const hasCoords = lat !== null && lng !== null;
 
-  return (
-    <div
-      className={cn(
-        'relative overflow-hidden rounded-2xl bg-slate-100 ring-1 ring-inset ring-hairline',
-        HEIGHT_CLASS[height],
-        className,
-      )}
-    >
-      {hasCoords ? (
-        <>
-          <iframe
-            src={`https://maps.google.com/maps?q=${lat},${lng}&z=14&output=embed`}
-            className="absolute inset-0 h-full w-full border-0"
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            title="موقع المشروع على الخريطة"
-          />
-          {city && (
-            <div className="pointer-events-none absolute end-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-2xs font-semibold text-slate-700 shadow-sm backdrop-blur">
-              <MapPin className="h-3 w-3 text-brand-600" />
-              {city}
-            </div>
-          )}
-          <a
-            href={`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="absolute bottom-3 start-3 z-10 inline-flex items-center gap-1.5 rounded-xl bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm backdrop-blur transition-colors hover:bg-white"
-          >
-            افتح في خرائط جوجل
-            <ExternalLink className="h-3.5 w-3.5" />
-          </a>
-        </>
-      ) : (
+  if (!hasCoords) {
+    return (
+      <div
+        className={cn(
+          'relative overflow-hidden rounded-2xl bg-slate-100 ring-1 ring-inset ring-hairline',
+          HEIGHT_CLASS[height],
+          className,
+        )}
+      >
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-400">
           <MapPin className="h-6 w-6" strokeWidth={1.5} />
           <p className="text-xs">لم يُحدد موقع للمشروع</p>
         </div>
-      )}
-    </div>
+      </div>
+    );
+  }
+
+  return (
+    <OsmDisplayMap
+      lat={lat}
+      lng={lng}
+      city={city}
+      heightClass={HEIGHT_CLASS[height]}
+      className={cn(className)}
+    />
   );
 }
 

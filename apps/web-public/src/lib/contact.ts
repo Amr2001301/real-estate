@@ -28,6 +28,15 @@ export function getContactEmail(): string | null {
   return clean(process.env.NEXT_PUBLIC_CONTACT_EMAIL);
 }
 
+/**
+ * Human-readable office address for the contact page HQ block, or null when
+ * unset. Set NEXT_PUBLIC_CONTACT_ADDRESS in the tenant's env to enable the
+ * location card; omit it to hide the card entirely.
+ */
+export function getContactAddress(): string | null {
+  return clean(process.env.NEXT_PUBLIC_CONTACT_ADDRESS);
+}
+
 /** `tel:` link — keeps a leading +, strips spaces/dashes/parentheses. */
 export function telHref(phone: string): string {
   return `tel:${phone.replace(/[\s()-]/g, '')}`;

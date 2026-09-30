@@ -24,6 +24,8 @@ dependencies:
   file_picker: ^8.1.2 # P11.5 — PDF/image selection for payment-proof submission
   mime: ^1.0.5 # P11.5 — derive Content-Type from picked file extension
   video_player: ^2.9.2 # video splash screen
+  flutter_map: ^7.0.0 # embedded OSM map tiles (project location)
+  latlong2: ^0.9.0 # LatLng type for flutter_map
 
   # Firebase — push notifications, crash reporting + performance monitoring.
   firebase_core: ^3.6.0

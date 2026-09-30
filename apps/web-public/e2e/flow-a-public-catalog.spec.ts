@@ -32,6 +32,21 @@ test.describe('Flow A — public catalog sync (requires seeded backend)', () => 
     ).toBeVisible();
   });
 
+  test('project detail page renders OSM map container after hydration', async ({ page }) => {
+    await page.goto('/projects');
+    const firstProjectLink = page.locator('a[href^="/projects/"]').first();
+    await expect(
+      firstProjectLink,
+      'expected at least one project card — is the catalog seeded?',
+    ).toBeVisible();
+    await firstProjectLink.click();
+    await expect(page).toHaveURL(/\/projects\/.+/);
+    await expect(
+      page.locator('.leaflet-container').first(),
+      'Leaflet map container must be present in the DOM after hydration',
+    ).toBeVisible({ timeout: 10000 });
+  });
+
   test('public /units list page loads with at least one unit card', async ({ page }) => {
     const res = await page.goto('/units');
     expect(res?.status()).toBe(200);

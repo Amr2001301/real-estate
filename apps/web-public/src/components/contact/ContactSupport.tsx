@@ -1,10 +1,9 @@
 import { Phone, Mail, MessageCircle, Clock, MapPin, Navigation } from 'lucide-react';
-import { getContactPhone, getContactEmail, getWhatsappPhone, telHref, whatsappHref } from '@/lib/contact';
+import { getContactPhone, getContactEmail, getWhatsappPhone, getContactAddress, telHref, whatsappHref } from '@/lib/contact';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { ButtonLink } from '@/components/ui/Button';
 import { OpenStatus } from './OpenStatus';
 
-const MAP_URL = 'https://maps.google.com/?q=الرياض،+المملكة+العربية+السعودية';
 const WHATSAPP_MESSAGE = 'مرحبًا، أرغب في الاستفسار عن خدماتكم العقارية.';
 
 /** Side support block: instant help, working hours, and HQ location. */
@@ -12,6 +11,7 @@ export function ContactSupport() {
   const contactPhone = getContactPhone();
   const contactEmail = getContactEmail();
   const whatsappPhone = getWhatsappPhone();
+  const contactAddress = getContactAddress();
 
   return (
     <div className="space-y-5">
@@ -90,27 +90,29 @@ export function ContactSupport() {
         </div>
       </PremiumCard>
 
-      {/* Location */}
-      <PremiumCard className="p-6">
-        <div className="flex items-start gap-4">
-          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/70">
-            <MapPin className="h-5 w-5" aria-hidden />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h3 className="text-base font-semibold text-ink-strong">مقر الشركة</h3>
-            <p className="mt-1 text-sm text-ink-muted">الرياض، المملكة العربية السعودية</p>
-            <a
-              href={MAP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-gold-600 transition-colors hover:text-gold-500"
-            >
-              <Navigation className="h-4 w-4" aria-hidden />
-              الحصول على الاتجاهات
-            </a>
+      {/* Location — only rendered when NEXT_PUBLIC_CONTACT_ADDRESS is set */}
+      {contactAddress && (
+        <PremiumCard className="p-6">
+          <div className="flex items-start gap-4">
+            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/70">
+              <MapPin className="h-5 w-5" aria-hidden />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-base font-semibold text-ink-strong">مقر الشركة</h3>
+              <p className="mt-1 text-sm text-ink-muted">{contactAddress}</p>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contactAddress)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-gold-600 transition-colors hover:text-gold-500"
+              >
+                <Navigation className="h-4 w-4" aria-hidden />
+                الحصول على الاتجاهات
+              </a>
+            </div>
           </div>
-        </div>
-      </PremiumCard>
+        </PremiumCard>
+      )}
     </div>
   );
 }

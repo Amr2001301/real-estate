@@ -1,6 +1,15 @@
+'use client';
+
+import dynamic from 'next/dynamic';
 import { MapPin, ExternalLink } from 'lucide-react';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { ButtonLink } from '@/components/ui/Button';
+
+// OSM/Leaflet requires window — load client-only.
+const OsmMap = dynamic(
+  () => import('../maps/OsmMap').then((m) => ({ default: m.OsmMap })),
+  { ssr: false, loading: () => <div className="h-[340px] w-full animate-pulse bg-slate-100 sm:h-[440px]" /> },
+);
 
 interface ProjectLocationProps {
   city: string;
@@ -14,12 +23,11 @@ function hasCoords(lat: number | null, lng: number | null): lat is number {
 
 export function ProjectLocation({ city, lat, lng }: ProjectLocationProps) {
   const coords = hasCoords(lat, lng);
-  const embedUrl = coords ? `https://maps.google.com/maps?q=${lat},${lng}&z=15&hl=ar&output=embed` : null;
   const mapsUrl = coords ? `https://www.google.com/maps?q=${lat},${lng}` : null;
 
   return (
     <div>
-      {/* Section heading — inline pattern, small label + strong title */}
+      {/* Section heading */}
       <div>
         <div className="mb-3 h-0.5 w-10 rounded-full bg-gold-400" />
         <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-gold-500">
@@ -34,14 +42,8 @@ export function ProjectLocation({ city, lat, lng }: ProjectLocationProps) {
       </div>
 
       <PremiumCard className="mt-8 overflow-hidden">
-        {embedUrl ? (
-          <iframe
-            src={embedUrl}
-            title={`خريطة موقع المشروع${city ? ` في ${city}` : ''}`}
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            className="block h-[340px] w-full border-0 sm:h-[440px]"
-          />
+        {coords ? (
+          <OsmMap lat={lat!} lng={lng!} height="340px" className="sm:!h-[440px]" />
         ) : (
           <div
             className="relative flex min-h-56 items-center justify-center"

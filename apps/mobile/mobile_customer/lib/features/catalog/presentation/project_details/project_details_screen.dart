@@ -2,7 +2,9 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../../router/auth_navigation.dart';
 import '../../../favorites/presentation/widgets/favorite_toggle_button.dart';
@@ -15,9 +17,7 @@ import '../widgets/section_header.dart';
 import '../widgets/unit_card.dart';
 import 'project_details_cubit.dart';
 
-// Navy palette.
 const _navyDeep = Color(0xFF0B1726);
-const _navyMid = Color(0xFF14273F);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
@@ -984,7 +984,7 @@ class _AboutBlock extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Location tile
+// Location section — embedded OSM map + secondary navigation button
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _LocationTile extends StatelessWidget {
@@ -1000,85 +1000,112 @@ class _LocationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final point = LatLng(project.lat!, project.lng!);
+    final label = project.name.resolve(lang);
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => ContactActions.openMap(
-          lat: project.lat!,
-          lng: project.lng!,
-          label: project.name.resolve(lang),
-        ),
-        borderRadius: BorderRadius.circular(AppRadii.xl),
-        child: Ink(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment(0, -1),
-              end: Alignment(0.8, 1),
-              colors: [_navyMid, _navyDeep],
-            ),
-            borderRadius: BorderRadius.circular(AppRadii.xl),
-            boxShadow: [
-              BoxShadow(
-                color: _navyDeep.withValues(alpha: 0.40),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              // Icon container
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(AppRadii.md),
-                  border: Border.all(
-                    color: AppPalette.gold400.withValues(alpha: 0.40),
-                    width: 0.8,
-                  ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadii.lg),
+          child: SizedBox(
+            height: 220,
+            child: FlutterMap(
+              options: MapOptions(
+                initialCenter: point,
+                initialZoom: 15,
+                interactionOptions: const InteractionOptions(
+                  flags:
+                      InteractiveFlag.pinchZoom | InteractiveFlag.doubleTapZoom,
                 ),
-                child: const Icon(Icons.location_on_outlined,
-                    size: 22, color: AppPalette.gold300),
               ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      project.city,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.1,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      l10n.openInMaps,
-                      style: const TextStyle(
-                        color: AppPalette.gold300,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
+              children: [
+                TileLayer(
+                  urlTemplate:
+                      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  subdomains: const ['a', 'b', 'c'],
+                  userAgentPackageName: 'com.devora.customer',
+                  maxZoom: 19,
+                  additionalOptions: const {
+                    'attribution':
+                        '© OpenStreetMap contributors',
+                  },
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: point,
+                      width: 48,
+                      height: 48,
+                      child: const _MapPin(),
                     ),
                   ],
                 ),
-              ),
-              Icon(
-                AppIcons.chevronForward,
-                size: 18,
-                color: Colors.white.withValues(alpha: 0.40),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        OutlinedButton.icon(
+          onPressed: () => ContactActions.openMap(
+            lat: project.lat!,
+            lng: project.lng!,
+            label: label,
+          ),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppPalette.gold500,
+            side: const BorderSide(color: AppPalette.gold400, width: 1.2),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadii.md),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+          icon: const Icon(Icons.open_in_new_rounded, size: 16),
+          label: Text(l10n.openInMaps),
+        ),
+      ],
+    );
+  }
+}
+
+class _MapPin extends StatelessWidget {
+  const _MapPin();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: AppPalette.gold400,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2.5),
+            boxShadow: [
+              BoxShadow(
+                color: AppPalette.gold400.withValues(alpha: 0.5),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
+          child: const Icon(
+            Icons.apartment_rounded,
+            size: 16,
+            color: Colors.white,
+          ),
         ),
-      ),
+        Container(
+          width: 2,
+          height: 8,
+          decoration: BoxDecoration(
+            color: AppPalette.gold400,
+            borderRadius: BorderRadius.circular(1),
+          ),
+        ),
+      ],
     );
   }
 }
