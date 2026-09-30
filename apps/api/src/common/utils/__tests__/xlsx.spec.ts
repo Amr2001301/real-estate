@@ -1,4 +1,4 @@
-import { Workbook } from 'exceljs';
+import { type Cell, Workbook, type Worksheet } from 'exceljs';
 import {
   addBoardBanner,
   addChartBlock,
@@ -13,6 +13,9 @@ import {
   styleHeaderCell,
   styleTotalsRow,
   workbookToBuffer,
+  writeAmountCell,
+  writeDateCell,
+  writeTextCell,
   xlsxFilename,
   XLSX_BRAND,
 } from '../xlsx';
@@ -118,5 +121,120 @@ describe('shared XLSX foundation', () => {
 
     expect(formatStamp(new Date('2026-05-31T07:09:00'))).toMatch(/^2026-05-31 \d{2}:09$/);
     expect(xlsxFilename('my report!!')).toMatch(/^my_report_-\d{4}-\d{2}-\d{2}\.xlsx$/);
+  });
+});
+
+// ── Cell-type safety helpers ──────────────────────────────────────────────────
+
+/**
+ * Writes one cell via `fn`, serializes to XLSX buffer, reloads via a fresh
+ * Workbook, and returns the reloaded cell. This is the only way to prove the
+ * value survived ExcelJS serialization — in-memory state is not sufficient
+ * because ExcelJS normalizes on write.
+ */
+async function roundTripCell(
+  fn: (ws: Worksheet) => void,
+): Promise<(row: number, col: number) => Cell> {
+  const wb = new Workbook();
+  const ws = wb.addWorksheet('data');
+  fn(ws);
+  const buf = await workbookToBuffer(wb);
+  const wb2 = new Workbook();
+  await wb2.xlsx.load(buf as unknown as ArrayBuffer);
+  return (r: number, c: number) => wb2.getWorksheet('data')!.getRow(r).getCell(c);
+}
+
+describe('cell-type safety helpers — round-trip through xlsx serialization', () => {
+  it('writeTextCell: phone with leading zero survives unchanged', async () => {
+    const get = await roundTripCell((ws) =>
+      writeTextCell(ws.getRow(1).getCell(1), '01062800394'),
+    );
+    expect(get(1, 1).value).toBe('01062800394');
+    expect(get(1, 1).numFmt).toBe('@');
+  });
+
+  it('writeTextCell: 14-digit national ID is not rounded', async () => {
+    const get = await roundTripCell((ws) =>
+      writeTextCell(ws.getRow(1).getCell(1), '29901011234567'),
+    );
+    // If stored as a number, Excel rounds at 15 sig-digits → last digit zeroed.
+    expect(get(1, 1).value).toBe('29901011234567');
+    expect(get(1, 1).numFmt).toBe('@');
+  });
+
+  it('writeTextCell: _Ref resembling scientific notation is preserved as-is', async () => {
+    // "3e7f9c12" matches [digit]e[hex] — auto-parser bait without text typing.
+    const get = await roundTripCell((ws) =>
+      writeTextCell(ws.getRow(1).getCell(1), '3e7f9c12'),
+    );
+    expect(get(1, 1).value).toBe('3e7f9c12');
+    expect(get(1, 1).numFmt).toBe('@');
+  });
+
+  it('writeTextCell: number argument is coerced to string (no silent leading-zero drop)', async () => {
+    // Callers should always pass strings, but if they pass a number it must not
+    // silently become the wrong type.
+    const get = await roundTripCell((ws) =>
+      writeTextCell(ws.getRow(1).getCell(1), 42 as unknown as string),
+    );
+    expect(typeof get(1, 1).value).toBe('string');
+    expect(get(1, 1).value).toBe('42');
+  });
+
+  it('writeTextCell: null writes empty string (import contract: empty = no value)', async () => {
+    const get = await roundTripCell((ws) =>
+      writeTextCell(ws.getRow(1).getCell(1), null),
+    );
+    // null → '' so the cell is always present in the serialized file.
+    // ExcelJS may return '' or null after round-trip for an empty text cell;
+    // both satisfy the contract (cell exists, no data loss risk).
+    expect(get(1, 1).value == null || get(1, 1).value === '').toBe(true);
+  });
+
+  it('writeDateCell: Date value round-trips with YYYY-MM-DD numFmt (locale-independent)', async () => {
+    const get = await roundTripCell((ws) =>
+      writeDateCell(ws.getRow(1).getCell(1), new Date('2026-09-24T12:00:00Z')),
+    );
+    expect(get(1, 1).value).toBeInstanceOf(Date);
+    expect(get(1, 1).numFmt).toBe('YYYY-MM-DD');
+  });
+
+  it('writeDateCell: ISO string is accepted and stored as a Date', async () => {
+    const get = await roundTripCell((ws) =>
+      writeDateCell(ws.getRow(1).getCell(1), '2026-01-15'),
+    );
+    expect(get(1, 1).value).toBeInstanceOf(Date);
+  });
+
+  it('writeDateCell: null writes null without throwing', async () => {
+    const get = await roundTripCell((ws) =>
+      writeDateCell(ws.getRow(1).getCell(1), null),
+    );
+    expect(get(1, 1).value).toBeNull();
+  });
+
+  it('writeAmountCell: number stored with #,##0.00 format and correct value', async () => {
+    const get = await roundTripCell((ws) =>
+      writeAmountCell(ws.getRow(1).getCell(1), 1_234_567.89),
+    );
+    expect(typeof get(1, 1).value).toBe('number');
+    expect(get(1, 1).numFmt).toBe('#,##0.00');
+    expect(get(1, 1).value as number).toBeCloseTo(1_234_567.89);
+  });
+
+  it('writeAmountCell: Prisma Decimal-like object (toString) is accepted', async () => {
+    const decimal = { toString: () => '99999.50' };
+    const get = await roundTripCell((ws) =>
+      writeAmountCell(ws.getRow(1).getCell(1), decimal),
+    );
+    expect(typeof get(1, 1).value).toBe('number');
+    expect(get(1, 1).value as number).toBeCloseTo(99999.5);
+  });
+
+  it('writeAmountCell: null writes null without throwing', async () => {
+    const get = await roundTripCell((ws) =>
+      writeAmountCell(ws.getRow(1).getCell(1), null),
+    );
+    expect(get(1, 1).value).toBeNull();
   });
 });

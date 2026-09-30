@@ -27,6 +27,23 @@ export const THIN_BORDER = {
   right: { style: 'thin' as const, color: { argb: 'FFE2E8F0' } },
 };
 
+/** Hairline bottom-only border for data rows (replaces THIN_BORDER in data sheets). */
+export const HAIRLINE_BORDER = {
+  bottom: { style: 'thin' as const, color: { argb: 'FFE4E7EC' } },
+};
+
+// ── Tab colour palette (ARGB) ─────────────────────────────────────────────────
+export const XLSX_TAB_README    = 'FFC8A24B'; // README cover       → gold
+export const XLSX_TAB_CATALOG   = 'FF1E3348'; // Projects/Phases/Buildings/Units → navy
+export const XLSX_TAB_PEOPLE    = 'FF17696B'; // Customers/Leads    → teal
+export const XLSX_TAB_FINANCIAL = 'FF1F6F43'; // Contracts/InstallmentPlans/Installments → green
+export const XLSX_TAB_PAYMENTS  = 'FF8A2E3B'; // Deposits/PaymentInstruments/Refunds → burgundy
+export const XLSX_TAB_BROKERS   = 'FF5B3E8E'; // Brokers/Commissions → purple
+export const XLSX_TAB_OPS       = 'FF4A5568'; // Maintenance        → slate
+
+export const XLSX_META_FILL  = 'FFF2F4F7'; // metadata label cell background
+export const XLSX_GOLD_COVER = 'FFC8A24B'; // README cover gold (same as TAB_README)
+
 function pad2(n: number): string {
   return String(n).padStart(2, '0');
 }
@@ -375,11 +392,143 @@ export function addChartImage(
   });
 }
 
+// ── Data-sheet layout helpers ─────────────────────────────────────────────────
+
+/**
+ * Apply the standard catalogue-sheet chrome to a worksheet that already has a
+ * header row at row 1: frozen header, RTL, AutoFilter, tab colour, print setup
+ * (landscape, fit to 1 page wide, repeat row 1, 0.5-inch margins, page footer).
+ *
+ * Call AFTER adding the header row so autoFilter correctly references it.
+ */
+export function applySheetChrome(
+  ws: Worksheet,
+  opts: {
+    headerCount: number;
+    tabColor: string;
+  },
+): void {
+  ws.views = [{ state: 'frozen', ySplit: 1, rightToLeft: true }];
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: opts.headerCount } };
+  ws.properties.tabColor = { argb: opts.tabColor };
+  ws.pageSetup = {
+    orientation: 'landscape',
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+    printTitlesRow: '1:1',
+    margins: { left: 0.5, right: 0.5, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
+  };
+  ws.headerFooter.oddFooter = `&L${ws.name}&R&P / &N`;
+}
+
+/**
+ * Apply alternating XLSX_ZEBRA fill to even-numbered data rows (0-indexed).
+ * `firstDataRow` is the 1-based row number of the first data row (typically 2,
+ * immediately after the header at row 1).
+ */
+export function applyRowStripes(ws: Worksheet, firstDataRow: number): void {
+  for (let rowNum = firstDataRow; rowNum <= ws.rowCount; rowNum++) {
+    const dataIdx = rowNum - firstDataRow; // 0-based
+    if (dataIdx % 2 === 1) {
+      ws.getRow(rowNum).eachCell({ includeEmpty: false }, (cell) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLSX_ZEBRA } };
+      });
+    }
+  }
+}
+
 /** A browser-safe `<base>-YYYY-MM-DD.xlsx` download name. Mirrors csvFilename. */
 export function xlsxFilename(base: string): string {
   const safe = base.replace(/[^\w.-]+/g, '_');
   const stamp = new Date().toISOString().slice(0, 10);
   return `${safe}-${stamp}.xlsx`;
+}
+
+// ── Cell-type safety helpers (data export) ────────────────────────────────────
+//
+// Excel silently mangles cell values on open: "3e7f9c12" → scientific notation,
+// "01062800394" → 1062800394, 14-digit IDs get rounded. These helpers enforce
+// the correct underlying cell type so the XLSX survives open-save-reopen cycles
+// regardless of the viewer's locale or Excel's auto-detection heuristics.
+
+/**
+ * Write `value` as an Excel Text cell (numFmt '@').
+ *
+ * Use for: phone numbers, national IDs, _Ref columns, cheque/contract numbers,
+ * or any identifier that is numeric-looking but must not be treated as a number.
+ * Passing a `number` is safe — it is coerced to string before assignment so the
+ * XLSX cell type is String, not Number.
+ */
+export function writeTextCell(
+  cell: Cell,
+  value: string | number | null | undefined,
+): void {
+  // null/undefined → '' (canonical empty cell; import contract: empty = no value)
+  cell.value = value != null ? String(value) : '';
+  cell.numFmt = '@';
+}
+
+/**
+ * Write `value` as an Excel calendar-date cell with format `YYYY-MM-DD`.
+ *
+ * Use this for date-only fields: due dates, signing dates, cancellation dates,
+ * cheque dates — values where the time-of-day component is meaningless.
+ * numFmt is always set so the column format is stable even when value is null.
+ */
+export function writeDateCell(
+  cell: Cell,
+  value: Date | string | null | undefined,
+): void {
+  cell.numFmt = 'YYYY-MM-DD';
+  if (value == null) { cell.value = null; return; }
+  cell.value = value instanceof Date ? value : new Date(value);
+}
+
+/**
+ * Write `value` as a full UTC timestamp cell with format `YYYY-MM-DD HH:MM:SS`.
+ *
+ * Use this for system timestamp fields: createdAt, updatedAt, paidAt, resolvedAt,
+ * earnedAt — anything that originates as a Prisma `DateTime` and where the time
+ * component (seconds precision) is meaningful. The "(UTC)" label on the column
+ * header signals that all values are in UTC with no timezone conversion.
+ */
+export function writeDateTimeCell(
+  cell: Cell,
+  value: Date | string | null | undefined,
+): void {
+  cell.numFmt = 'YYYY-MM-DD HH:MM:SS';
+  if (value == null) { cell.value = null; return; }
+  cell.value = value instanceof Date ? value : new Date(value);
+}
+
+/**
+ * Write `value` as an Excel Number cell with format `#,##0.00`.
+ *
+ * Accepts a JS `number` or any Prisma `Decimal`-like object that implements
+ * `toString()`. numFmt is always set so the column format is stable even when
+ * value is null.
+ */
+export function writeAmountCell(
+  cell: Cell,
+  value: number | { toString(): string } | null | undefined,
+): void {
+  cell.numFmt = '#,##0.00';
+  if (value == null) { cell.value = null; return; }
+  const n = typeof value === 'number' ? value : parseFloat(String(value));
+  cell.value = Number.isFinite(n) ? n : null;
+}
+
+/** Write an integer value with `#,##0` format (no decimal places). */
+export function writeIntCell(cell: Cell, value: number | null | undefined): void {
+  cell.numFmt = '#,##0';
+  cell.value = value ?? null;
+}
+
+/** Write a decimal number (non-currency) with `#,##0.00` format. */
+export function writeDecimalCell(cell: Cell, value: number | null | undefined): void {
+  cell.numFmt = '#,##0.00';
+  cell.value = value ?? null;
 }
 
 /** Serialize a workbook to a Node Buffer for a StreamableFile response. */

@@ -30,6 +30,8 @@ const ALLOWED = [
   /^\/broker-reports\/export\/summary\.xlsx$/,
   // P15.5 — broker-portal performance (broker-scoped; firm comes from the token)
   /^\/portal\/performance\/export\.xlsx$/,
+  // Data export — full-tenant workbook (ADMIN only)
+  /^\/data-export\/export\.xlsx$/,
   // PDF exports — sales, financial, broker leaderboard
   /^\/reports\/sales\/export\.pdf$/,
   /^\/reports\/financial\/export\.pdf$/,
