@@ -51,7 +51,7 @@ beforeAll(async () => {
     loginAs(testApp.app, fx.users.adminB.email, fx.users.adminB.password),
     loginAs(testApp.app, fx.users.sales1A.email, fx.users.sales1A.password),
     loginAs(testApp.app, fx.users.smA.email, fx.users.smA.password),
-    loginAs(testApp.app, fx.users.customerA.email, fx.users.customerA.password, 'customer'),
+    loginAs(testApp.app, fx.users.customerA.email, fx.users.customerA.password, 'customer', SEC_SLUG_A),
   ]);
 }, 90_000);
 

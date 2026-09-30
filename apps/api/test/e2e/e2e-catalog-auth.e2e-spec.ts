@@ -513,7 +513,7 @@ describe('Flow B — Lead journey (e2e)', () => {
       .set('Authorization', bearer(broker2Token));
     expect(listRes.status).toBe(200);
     const ids = collectIds(listRes.body);
-    const broker1Firm = await testApp.rawPrisma.broker.findUniqueOrThrow({
+    const broker1Firm = await testApp.rawPrisma.broker.findFirstOrThrow({
       where: { code: fixtures.brokerCodes.BROKER_1 },
       select: { id: true },
     });

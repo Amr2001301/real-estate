@@ -6,12 +6,8 @@ import { AuthService, DEPRECATED_ENDPOINT_HEADER } from './auth.service';
 import { TenantResolverService } from './tenant-resolver.service';
 import {
   ChangePasswordDto,
-  CustomerLoginDto,
-  CustomerRegisterDto,
   ForgotPasswordDto,
   LoginEmailDto,
-  OtpRequestDto,
-  OtpVerifyDto,
   RefreshDto,
   ResetPasswordDto,
   VerifyEmailDto,
@@ -126,35 +122,6 @@ export class AuthController {
   @Post('tenant/reset-password')
   tenantResetPassword(@Body() dto: TenantResetPasswordDto) {
     return this.auth.resetPassword(dto.token, dto.newPassword);
-  }
-
-  // ── Legacy public customer email/password (DEFAULT_COMPANY_ID scoped) ─────
-  @Public()
-  @Throttle({ default: { ttl: 60_000, limit: 5 } })
-  @Post('customer/register')
-  customerRegister(@Body() dto: CustomerRegisterDto) {
-    return this.auth.registerCustomer(dto);
-  }
-
-  @Public()
-  @Throttle({ default: { ttl: 60_000, limit: 5 } })
-  @Post('customer/login')
-  customerLogin(@Body() dto: CustomerLoginDto) {
-    return this.auth.loginCustomer(dto.email, dto.password);
-  }
-
-  @Public()
-  @Throttle({ default: { ttl: 60_000, limit: 3 } })
-  @Post('otp/request')
-  otpRequest(@Body() dto: OtpRequestDto) {
-    return this.auth.requestOtp(dto.phone);
-  }
-
-  @Public()
-  @Throttle({ default: { ttl: 60_000, limit: 5 } })
-  @Post('otp/verify')
-  otpVerify(@Body() dto: OtpVerifyDto) {
-    return this.auth.verifyOtp(dto.phone, dto.code, dto.fullName);
   }
 
   // Authenticated self-service password change. NOT @Public — the global

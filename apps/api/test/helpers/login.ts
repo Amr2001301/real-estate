@@ -8,13 +8,15 @@ import request from 'supertest';
  * tokens directly.
  *
  * Two endpoints exist by design:
- *   - `POST /v1/auth/login`           — staff + brokers (ADMIN, SALES,
- *                                       SALES_MANAGER, MAINTENANCE_SUPERVISOR,
- *                                       BROKER). Rejects CLIENT/CUSTOMER.
- *   - `POST /v1/auth/customer/login`  — CLIENT/CUSTOMER. Rejects staff.
+ *   - `POST /v1/auth/login`                — staff + brokers (ADMIN, SALES,
+ *                                            SALES_MANAGER, MAINTENANCE_SUPERVISOR,
+ *                                            BROKER). Rejects CLIENT/CUSTOMER.
+ *   - `POST /v1/auth/tenant/customer/login` — CLIENT/CUSTOMER. Rejects staff.
+ *                                            Requires slug to identify the tenant.
  *
  * The audience parameter picks the right one. Defaults to staff so
- * existing callers don't change.
+ * existing callers don't change. For customer logins, pass the company
+ * slug as the 5th argument (defaults to SEED_COMPANY_SLUG ?? 'default').
  *
  * Throws loudly on a non-2xx response so the offending status appears in
  * the failure output instead of a confusing "undefined token" further
@@ -25,9 +27,12 @@ export async function loginAs(
   email: string,
   password: string,
   audience: 'staff' | 'customer' = 'staff',
+  slug: string = process.env.SEED_COMPANY_SLUG ?? 'default',
 ): Promise<string> {
-  const path = audience === 'customer' ? '/v1/auth/customer/login' : '/v1/auth/login';
-  const res = await request(app.getHttpServer()).post(path).send({ email, password });
+  const isCustomer = audience === 'customer';
+  const path = isCustomer ? '/v1/auth/tenant/customer/login' : '/v1/auth/login';
+  const body = isCustomer ? { slug, email, password } : { email, password };
+  const res = await request(app.getHttpServer()).post(path).send(body);
 
   if (res.status !== 200 && res.status !== 201) {
     throw new Error(

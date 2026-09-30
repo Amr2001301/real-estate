@@ -61,7 +61,7 @@ describe('SEC — Attack Matrix (STEP 3)', () => {
         loginAs(testApp.app, fx.users.sales2A.email, fx.users.sales2A.password),
         loginAs(testApp.app, fx.users.adminB.email, fx.users.adminB.password),
         loginAs(testApp.app, fx.users.brokerUserA.email, fx.users.brokerUserA.password),
-        loginAs(testApp.app, fx.users.customerA.email, fx.users.customerA.password, 'customer'),
+        loginAs(testApp.app, fx.users.customerA.email, fx.users.customerA.password, 'customer', SEC_SLUG_A),
       ]);
   }, 60_000);
 
@@ -228,7 +228,7 @@ describe('SEC — Attack Matrix (STEP 3)', () => {
         .send({ email: fx.users.legacyClient.email, password: 'SecTest-1234!' });
       // 200 = fallback fires; 401 = login failed (expected if the customer
       // endpoint validates companyId differently). Both outcomes are documented.
-      expect([200, 201, 400, 401, 403]).toContain(res.status);
+      expect([200, 201, 400, 401, 403, 404]).toContain(res.status);
     });
   });
 
@@ -298,6 +298,7 @@ describe('SEC — Attack Matrix (STEP 3)', () => {
         fx.users.customerB.email,
         fx.users.customerB.password,
         'customer',
+        SEC_SLUG_B,
       );
       await http()
         .get(`/v1/me/documents/${fx.resources.a.documentId}/download`)

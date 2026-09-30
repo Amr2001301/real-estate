@@ -118,6 +118,7 @@ describe('D1-REG — CANCELLED installment regression (real Postgres)', () => {
       secFixture.users.customerA.email,
       secFixture.users.customerA.password,
       'customer',
+      SEC_SLUG_A,
     );
   }, 60_000);
 

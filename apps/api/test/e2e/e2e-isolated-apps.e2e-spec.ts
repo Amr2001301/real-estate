@@ -134,8 +134,9 @@ describe('Email verification flow (e2e, real Postgres)', () => {
     testApp = await createIsolatedEmailApp(new VerifyStubEmailService());
 
     const reg = await request(testApp.app.getHttpServer())
-      .post('/v1/auth/customer/register')
+      .post('/v1/auth/tenant/customer/register')
       .send({
+        slug: process.env.SEED_COMPANY_SLUG ?? 'default',
         fullName: 'Email Verify Test User',
         phone: `+9665${Math.floor(10_000_000 + Math.random() * 89_999_999)}`,
         email: USER_EMAIL,
@@ -252,8 +253,9 @@ describe('Email verification flow (e2e, real Postgres)', () => {
   it('V14: resend for unverified user sends email and invalidates old tokens', async () => {
     const newEmail = `ev-resend-${Date.now()}@example.com`;
     const reg = await http()
-      .post('/v1/auth/customer/register')
+      .post('/v1/auth/tenant/customer/register')
       .send({
+        slug: process.env.SEED_COMPANY_SLUG ?? 'default',
         fullName: 'Resend Test User',
         phone: `+9665${Math.floor(10_000_000 + Math.random() * 89_999_999)}`,
         email: newEmail,
@@ -328,8 +330,9 @@ describe('Password reset flow (e2e, real Postgres)', () => {
     testApp = await createIsolatedEmailApp(new ResetStubEmailService());
 
     const reg = await request(testApp.app.getHttpServer())
-      .post('/v1/auth/customer/register')
+      .post('/v1/auth/tenant/customer/register')
       .send({
+        slug: process.env.SEED_COMPANY_SLUG ?? 'default',
         fullName: 'Password Reset Test User',
         phone: `+9665${Math.floor(10_000_000 + Math.random() * 89_999_999)}`,
         email: USER_EMAIL,
@@ -425,23 +428,23 @@ describe('Password reset flow (e2e, real Postgres)', () => {
 
   it('R7: new password works for login after reset', async () => {
     const res = await http()
-      .post('/v1/auth/customer/login')
-      .send({ email: USER_EMAIL, password: NEW_PW });
+      .post('/v1/auth/tenant/customer/login')
+      .send({ slug: process.env.SEED_COMPANY_SLUG ?? 'default', email: USER_EMAIL, password: NEW_PW });
     expect(res.status).toBe(201);
     expect(res.body.tokens.accessToken).toBeTruthy();
   });
 
   it('R8: old password no longer works after reset', async () => {
     const res = await http()
-      .post('/v1/auth/customer/login')
-      .send({ email: USER_EMAIL, password: INITIAL_PW });
+      .post('/v1/auth/tenant/customer/login')
+      .send({ slug: process.env.SEED_COMPANY_SLUG ?? 'default', email: USER_EMAIL, password: INITIAL_PW });
     expect(res.status).toBe(401);
   });
 
   it('R9: all pre-reset refresh tokens are revoked', async () => {
     const login = await http()
-      .post('/v1/auth/customer/login')
-      .send({ email: USER_EMAIL, password: NEW_PW });
+      .post('/v1/auth/tenant/customer/login')
+      .send({ slug: process.env.SEED_COMPANY_SLUG ?? 'default', email: USER_EMAIL, password: NEW_PW });
     expect(login.status).toBe(201);
     const preResetRefresh = login.body.tokens.refreshToken as string;
 

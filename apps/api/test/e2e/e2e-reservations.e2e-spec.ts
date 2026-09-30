@@ -739,7 +739,7 @@ describe('P7 — /me/reservations (e2e)', () => {
   describe('P8 — Synthetic User claim at registration', () => {
     it('P8.1: registering with phone/email matching a synthetic CLIENT claims that row (existing Lead/Reservation surface)', async () => {
       const suffix = await uniqueSuffix();
-      const phone = `+966500999${suffix}`;
+      const phone = `+966500${suffix}`;
       const email = `p8-claim-${suffix}@example.com`;
 
       const synthetic = await testApp.rawPrisma.user.create({
@@ -788,8 +788,9 @@ describe('P7 — /me/reservations (e2e)', () => {
       });
 
       const registerRes = await http()
-        .post('/v1/auth/customer/register')
+        .post('/v1/auth/tenant/customer/register')
         .send({
+          slug: process.env.SEED_COMPANY_SLUG ?? 'default',
           fullName: 'P8 Real Customer',
           phone,
           email,
@@ -817,17 +818,17 @@ describe('P7 — /me/reservations (e2e)', () => {
 
     it('P8.2: registering against a REAL (passwordHash set) row still 409s — claim only applies to synthetic rows', async () => {
       const suffix = await uniqueSuffix();
-      const phone = `+966500888${suffix}`;
+      const phone = `+966501${suffix}`;
       const email = `p8-real-${suffix}@example.com`;
 
       const first = await http()
-        .post('/v1/auth/customer/register')
-        .send({ fullName: 'P8 First Register', phone, email, password: 'StrongPass1!', acceptTerms: true });
+        .post('/v1/auth/tenant/customer/register')
+        .send({ slug: process.env.SEED_COMPANY_SLUG ?? 'default', fullName: 'P8 First Register', phone, email, password: 'StrongPass1!', acceptTerms: true });
       expect(first.status).toBe(201);
 
       const second = await http()
-        .post('/v1/auth/customer/register')
-        .send({ fullName: 'P8 Impostor', phone, email, password: 'OtherPass2!', acceptTerms: true });
+        .post('/v1/auth/tenant/customer/register')
+        .send({ slug: process.env.SEED_COMPANY_SLUG ?? 'default', fullName: 'P8 Impostor', phone, email, password: 'OtherPass2!', acceptTerms: true });
       expect(second.status).toBe(409);
     });
   });
@@ -1138,8 +1139,8 @@ describe('P7 — /me/reservations (e2e)', () => {
       });
 
       const reg = await http()
-        .post('/v1/auth/customer/register')
-        .send({ fullName: 'P9 Real Identity', phone, email, password: 'StrongPass1!', acceptTerms: true });
+        .post('/v1/auth/tenant/customer/register')
+        .send({ slug: process.env.SEED_COMPANY_SLUG ?? 'default', fullName: 'P9 Real Identity', phone, email, password: 'StrongPass1!', acceptTerms: true });
       expect(reg.status).toBe(201);
 
       const claimed = await testApp.rawPrisma.user.findUniqueOrThrow({

@@ -13,9 +13,9 @@ import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
 import { randomBytes, randomInt, createHash } from 'node:crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { getTenantContext } from '../../common/tenant/tenant-context';
 import { claimSyntheticPeers } from '../../common/utils/identity-claim';
 import { canonicalEmail, canonicalPhone } from '../../common/utils/identity-normalize';
+import { getTenantContext, runTenantContext } from '../../common/tenant/tenant-context';
 import { SmsService } from './sms.service';
 import { EmailService } from './email.service';
 import { CapabilityService } from '../../common/capabilities/capability.service';
@@ -99,249 +99,25 @@ export class AuthService {
     this.logger.warn('legacy-login-used: /auth/login called; migrate to /auth/login-staff');
   }
 
-  // ------------- Email + password (Public customer) -------------
-
-  /**
-   * Public customer registration. Role is forced to CLIENT server-side (the
-   * same role the OTP/lead flows use) — the payload can never choose a role, so
-   * self-escalation is impossible. Optional preference fields are accepted but
-   * not yet persisted (no CustomerProfile store).
-   */
-  async registerCustomer(dto: {
-    fullName: string;
-    phone: string;
-    email: string;
-    password: string;
-  }) {
-    // MT-034: Lifecycle enforcement on legacy customer registration.
-    // Legacy public registration uses DEFAULT_COMPANY_ID as the tenant.
-    // New registrations must not be accepted for a non-active company.
-    const defaultCompanyId = process.env.DEFAULT_COMPANY_ID;
-    if (defaultCompanyId) {
-      const defaultCompany = await this.prisma.company.findUnique({
-        where: { id: defaultCompanyId },
-        select: { lifecycleStatus: true },
-      });
-      if (!defaultCompany || defaultCompany.lifecycleStatus !== 'ACTIVE') {
-        throw new ForbiddenException({
-          message: 'Company access is currently disabled',
-          code: 'COMPANY_NOT_ACTIVE',
-        });
-      }
-    }
-
-    const email = dto.email.trim().toLowerCase();
-    const phone = dto.phone.trim();
-    const fullName = dto.fullName.trim();
-
-    const [byEmail, byPhone] = await Promise.all([
-      this.prisma.user.findUnique({
-        where: { email },
-        select: { id: true, role: true, passwordHash: true, phone: true, companyId: true },
-      }),
-      this.prisma.user.findUnique({
-        where: { phone },
-        select: { id: true, role: true, passwordHash: true, email: true, companyId: true },
-      }),
-    ]);
-
-    // P8 — Synthetic-User claim. When a customer signs up with credentials that
-    // match an EXISTING CLIENT row created by the lead/visit-request flow (i.e.
-    // a synthetic User with no passwordHash, never logged in), claim that row
-    // instead of throwing a conflict. This preserves the link to every Lead /
-    // Reservation / VisitRequest already pointing at that row — without it the
-    // customer would register as a fresh User and never see records that the
-    // sales team already attached to their CRM identity.
-    //
-    // Claim conditions (strict): role=CLIENT, passwordHash=null, and the row
-    // matched on either phone or email. A row with passwordHash set is a real
-    // account → conflict (genuine duplicate). A staff/broker row matched by
-    // typo is also a conflict.
-    const matchedRow = byEmail ?? byPhone;
-    if (matchedRow) {
-      const isSynthetic =
-        matchedRow.role === 'CLIENT' && matchedRow.passwordHash === null;
-      if (!isSynthetic) {
-        if (byEmail) throw new ConflictException({ code: 'email_taken' });
-        if (byPhone) throw new ConflictException({ code: 'phone_taken' });
-      }
-      // Both email AND phone matched, but to two DIFFERENT synthetic rows.
-      // Don't silently merge those — that's an admin/CRM data conflict and
-      // requires manual cleanup. Fail loudly so we never lose history.
-      if (byEmail && byPhone && byEmail.id !== byPhone.id) {
-        throw new ConflictException({ code: 'identity_split_synthetic' });
-      }
-      // Safe to claim. Update credentials + canonical contact fields; existing
-      // FK rows (Lead.clientId, Reservation.clientId, …) continue to resolve.
-      const passwordHash = await argon2.hash(dto.password);
-      // Preserve existing companyId from the synthetic row (it was set by the
-      // staff/lead flow when the row was first created). Fall back to the active
-      // tenant context companyId (set by the interceptor from DEFAULT_COMPANY_ID
-      // for public routes) for legacy rows that pre-date the MT migration.
-      const claimCompanyId = matchedRow.companyId ?? (getTenantContext()?.companyId ?? null);
-      const claimed = await this.prisma.user.update({
-        where: { id: matchedRow.id },
-        // Claiming a synthetic row: clear emailVerifiedAt because the email may
-        // have changed (synthetic rows can have stale or null emails).
-        data: { fullName, email, phone, passwordHash, locale: 'ar', emailVerifiedAt: null, companyId: claimCompanyId },
-      });
-      // P9 — sweep any OTHER synthetic peers (e.g. one matched by phone
-      // here, another that holds an email-only stub) that the in-place
-      // claim above didn't touch.
-      await this.tryClaimSyntheticPeers(claimed.id);
-      // Send verification email for the claimed email address.
-      await this.sendVerificationEmailSafe(claimed.id, email);
-      return this.issueTokens(claimed.id, claimed.role);
-    }
-
-    const passwordHash = await argon2.hash(dto.password);
-    const user = await this.prisma.user.create({
-      data: {
-        role: 'CLIENT',
-        fullName,
-        email,
-        phone,
-        passwordHash,
-        locale: 'ar',
-        companyId: getTenantContext()?.companyId ?? null,
-      },
-    });
-    await this.tryClaimSyntheticPeers(user.id);
-    // Send verification email after successful registration (best-effort — a
-    // delivery failure must never block the registration itself).
-    await this.sendVerificationEmailSafe(user.id, email);
-    return this.issueTokens(user.id, user.role);
-  }
-
-  /**
-   * Public customer login. Accepts only CLIENT/CUSTOMER accounts — staff and
-   * brokers are rejected here even with valid credentials, keeping the public
-   * surface isolated from the staff login gate.
-   */
-  async loginCustomer(rawEmail: string, password: string) {
-    const email = rawEmail.trim().toLowerCase();
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-      include: { company: { select: { lifecycleStatus: true } } },
-    });
-    if (!user || !user.passwordHash) throw new UnauthorizedException('Invalid credentials');
-    if (user.role !== 'CLIENT' && user.role !== 'CUSTOMER') {
-      throw new ForbiddenException({ code: 'not_customer' });
-    }
-    if (!user.active) throw new ForbiddenException('Account inactive');
-    const ok = await argon2.verify(user.passwordHash, password);
-    if (!ok) throw new UnauthorizedException('Invalid credentials');
-
-    // MT-034: Lifecycle enforcement on legacy customer login.
-    // user.company is set when companyId is non-null (V2 rows); null for legacy rows.
-    if (user.company && user.company.lifecycleStatus !== 'ACTIVE') {
-      throw new ForbiddenException({
-        message: 'Company access is currently disabled',
-        code: 'COMPANY_NOT_ACTIVE',
-      });
-    }
-    // Legacy null-companyId rows: check DEFAULT_COMPANY_ID company.
-    if (!user.company && !user.companyId) {
-      const defaultId = process.env.DEFAULT_COMPANY_ID;
-      if (defaultId) {
-        const defaultCompany = await this.prisma.company.findUnique({
-          where: { id: defaultId },
-          select: { lifecycleStatus: true },
-        });
-        if (!defaultCompany || defaultCompany.lifecycleStatus !== 'ACTIVE') {
-          throw new ForbiddenException({
-            message: 'Company access is currently disabled',
-            code: 'COMPANY_NOT_ACTIVE',
-          });
-        }
-      }
-    }
-
-    await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-    // P9 — opportunistic synthetic-peer claim. If a CRM-only stub exists for
-    // this customer (a Lead-side row created by findOrCreateClient before
-    // they registered) and shares phone / email, fold its FK references
-    // into the real account so /me/reservations etc. resolve correctly.
-    await this.tryClaimSyntheticPeers(user.id);
-    return this.issueTokens(user.id, user.role);
-  }
-
-  // ------------- Phone OTP (Client / Customer) -------------
-
-  async requestOtp(phone: string) {
-    // Rate-limit window: max 1 OTP per phone per 60s — scoped to legacy namespace only.
-    // companyId: null isolates legacy rows from V2 tenant-scoped rows (Option-A cutover).
-    const recent = await this.prisma.otpCode.findFirst({
-      where: { phone, companyId: null, createdAt: { gte: new Date(Date.now() - 60_000) } },
-      orderBy: { createdAt: 'desc' },
-    });
-    if (recent) throw new BadRequestException('Please wait before requesting another code');
-
-    const code = String(randomInt(100_000, 999_999));
-    const codeHash = createHash('sha256').update(code).digest('hex');
-    const expiresAt = new Date(Date.now() + OTP_TTL_MIN * 60_000);
-
-    // Legacy OTP rows always have companyId=null. Prisma schema default is null so
-    // omitting companyId here is correct; explicit null is provided for clarity.
-    await this.prisma.otpCode.create({ data: { phone, codeHash, expiresAt, companyId: null } });
-    await this.sms.sendOtp(phone, code);
-    return { ok: true };
-  }
-
-  async verifyOtp(phone: string, code: string, fullName?: string) {
-    // companyId: null — legacy verify must not match V2 tenant-scoped rows.
-    // A V2 OTP (companyId=tenant) can never be consumed through this path.
-    const otp = await this.prisma.otpCode.findFirst({
-      where: { phone, companyId: null, consumed: false, expiresAt: { gt: new Date() } },
-      orderBy: { createdAt: 'desc' },
-    });
-    if (!otp) throw new BadRequestException('Code expired or not found');
-    if (otp.attempts >= OTP_MAX_ATTEMPTS) {
-      throw new ForbiddenException('Too many attempts; request a new code');
-    }
-    const codeHash = createHash('sha256').update(code).digest('hex');
-    if (codeHash !== otp.codeHash) {
-      await this.prisma.otpCode.update({
-        where: { id: otp.id },
-        data: { attempts: { increment: 1 } },
-      });
-      throw new UnauthorizedException('Invalid code');
-    }
-    await this.prisma.otpCode.update({ where: { id: otp.id }, data: { consumed: true } });
-
-    let user = await this.prisma.user.findUnique({ where: { phone } });
-    if (!user) {
-      user = await this.prisma.user.create({
-        data: {
-          phone,
-          fullName: fullName ?? 'New User',
-          role: 'CLIENT',
-          locale: 'ar',
-          companyId: getTenantContext()?.companyId ?? null,
-        },
-      });
-    } else {
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: { lastLoginAt: new Date() },
-      });
-    }
-    // P9 — same opportunistic claim as the password path. Useful when an
-    // OTP customer has an *email* somewhere in the CRM that doesn't match
-    // their phone-anchored row.
-    await this.tryClaimSyntheticPeers(user.id);
-    return this.issueTokens(user.id, user.role);
-  }
-
   /**
    * Best-effort merge of synthetic CLIENT peers into the just-resolved user.
    * Swallows errors — a failed merge must NEVER block the login it followed.
    * Surfaces results via Logger so operators can see when the safety net
    * fired without spamming the login response.
    */
-  private async tryClaimSyntheticPeers(userId: string): Promise<void> {
+  private async tryClaimSyntheticPeers(userId: string, companyId?: string): Promise<void> {
     try {
-      const result = await claimSyntheticPeers(this.prisma, userId);
+      // When called from a @PlatformPublic() route the ALS context has
+      // companyId=null/bypass=false, which the Prisma middleware rejects for
+      // writes on tenanted tables. If the caller supplies the resolved companyId
+      // we run the claim inside a proper tenant context so the middleware allows
+      // the lead/reservation/etc. updateMany calls.
+      const ctx = getTenantContext();
+      const needsContext = ctx?.isPlatformPublic && companyId;
+      const run = () => claimSyntheticPeers(this.prisma, userId);
+      const result = needsContext
+        ? await runTenantContext({ companyId: companyId!, bypass: false, isPublic: false }, run)
+        : await run();
       if (result.claimedCount > 0) {
         this.logger.log(
           `[identity-claim] merged ${result.claimedCount} synthetic peer(s) into ${userId}: ${result.claimedIds.join(', ')}`,
@@ -878,7 +654,7 @@ export class AuthService {
     }
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-    await this.tryClaimSyntheticPeers(user.id);
+    await this.tryClaimSyntheticPeers(user.id, companyId);
     return this.issueTokens(user.id, user.role);
   }
 
@@ -951,7 +727,7 @@ export class AuthService {
         where: { id: matchedRow.id },
         data: { fullName, email, phone, passwordHash, locale: 'ar', emailVerifiedAt: null, companyId },
       });
-      await this.tryClaimSyntheticPeers(claimed.id);
+      await this.tryClaimSyntheticPeers(claimed.id, companyId);
       await this.sendVerificationEmailSafe(claimed.id, email);
       return this.issueTokens(claimed.id, claimed.role);
     }
@@ -960,7 +736,7 @@ export class AuthService {
     const user = await this.prisma.user.create({
       data: { role: 'CLIENT', fullName, email, phone, passwordHash, locale: 'ar', companyId },
     });
-    await this.tryClaimSyntheticPeers(user.id);
+    await this.tryClaimSyntheticPeers(user.id, companyId);
     await this.sendVerificationEmailSafe(user.id, email);
     return this.issueTokens(user.id, user.role);
   }
@@ -1058,7 +834,7 @@ export class AuthService {
     } else {
       await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
     }
-    await this.tryClaimSyntheticPeers(user.id);
+    await this.tryClaimSyntheticPeers(user.id, companyId);
     return this.issueTokens(user.id, user.role);
   }
 
