@@ -360,6 +360,9 @@ Ranked by: customer-facing severity, whether failure is silent, and whether it b
 | 12 | FG-12 | Unit status has no reverse path from SOLD | Low | No | Consequence of FG-02 |
 | 13 | FG-13 | Booking-payment dual-path collision (admin confirm + customer proof) | Low | Partly | Rare race condition |
 | 14 | FG-14 | Customer not notified of role promotion on convert | Low | Yes | No — customer re-logs in naturally |
+| 15 | FG-15 | Phase and Building have no `updatedAt` column | Low | No | No — operational gap only |
+| 20 | FG-20 | `User.phone` is stored in two incompatible formats (E.164 `+201…` and local `01…`) across different write paths | High | **Fixed 2026-09-27** — importer now writes E.164; dev DB backfilled; DI-E2E-4 proves OTP round-trip | Residual: pre-existing write paths listed in FG-21 |
+| 21 | FG-21 | Three non-importer write paths store phone as-is from the DTO with no normalisation (`findOrCreateClient`, `createCompanyUser`, broker user creation) | Medium | Yes — same OTP split-account defect applies to customers created via leads or by admin | Not fixed in Phase 2 — scope to a dedicated phone-normalisation pass |
 
 ---
 
@@ -404,3 +407,198 @@ If a signed contract is cancelled by mutual agreement, the current system has no
 `reservation-conversion-workflow.spec.ts` — all 6 success-path tests return HTTP 500 since commit `d489400` (2026-08-18), which added `tx.refreshToken.updateMany()` to the convert transaction. The test mock does not include `refreshToken` as a mocked Prisma delegate, so the service throws. Source: `docs/audit/05-broken-suites.md`.
 
 This means the most consequential transaction in the platform (unit SOLD, CLIENT→CUSTOMER, installment plan materialized, lead WON) has zero running unit-test coverage. Any regression in `convertReservation()` will reach production undetected.
+
+---
+
+### FG-04: Contract number is unreachable for directly-created contracts
+
+**Severity:** Legal / compliance  
+**Discovered:** 2026-09-26 during import schema investigation
+
+`Contract.contractNumber` is a nullable column (`String? @unique`). It is only assigned in one place: `nextContractNumber()` called during `convertReservation()` (`reservations.module.ts:1671`). The direct-creation path — `POST /contracts` → `contracts.module.ts:368` — creates the contract with no `contractNumber` field in the `data` object, leaving it NULL.
+
+`CreateContractDto` (`contracts.module.ts:104`) has no `contractNumber` field. `UpdateContractDto` (`contracts.module.ts:119`) also has no `contractNumber` field. There is no endpoint that can assign a number to a directly-created contract after the fact.
+
+**Impact:** Contracts created by staff via `POST /contracts` (the admin data-entry path used for offline deals or pre-system contracts) are permanently numberless. A contract number is a legal document reference that appears on the PDF, on installment receipts, and in communications. A contract with `contractNumber = NULL` cannot be referenced by document number.
+
+**Current behaviour in dev DB:** 2 contracts exist, both created via `POST /contracts`, both have `contractNumber = NULL`.
+
+**Required fix (not in scope for this session):**
+- Add `contractNumber?: string` to `UpdateContractDto` so staff can assign a number to a directly-created contract.
+- Or: add `contractNumber` to `CreateContractDto` (optional) so it can be supplied at creation time.
+- Either way, the uniqueness constraint (`contractNumber @unique`, currently global, planned to become `@@unique([companyId, contractNumber])`) must be respected.
+
+**Import consequence:** the data importer will reject contract rows where `contractNumber` is NULL with a blocking validation error. This is correct — a contract with no number cannot be idempotently matched on re-import. Staff must assign numbers to any unNumbered contracts before attempting an import.
+
+---
+
+### FG-15: Phase and Building have no `updatedAt` column
+
+**Severity:** Low  
+**Discovered:** 2026-09-26 during data-import test design
+
+Every other entity in the property tree (`Project`, `Unit`, `Contract`, `Lead`, etc.) carries an `updatedAt DateTime @updatedAt` column that records the wall-clock time of the last write. `Phase` (`schema.prisma:531`) and `Building` (`schema.prisma:549`) have only `createdAt`; there is no `updatedAt`.
+
+**Consequence:** there is no record in the database of when a phase or building last changed. Admin and audit queries that ask "what changed recently?" cannot include phases or buildings. The data-export sheet includes a `createdAt` column for both but no last-modified date.
+
+**Test implication:** because Phase and Building lack `updatedAt`, the import idempotency test (DI-E2E-1) cannot use timestamp comparison to prove a no-op UPDATE did not run on those rows. The test uses Postgres `xmin` (the system column holding the transaction ID of the last write, bumped by any UPDATE regardless of value changes) as the primary write-detection mechanism for all four tables.
+
+**Required fix (not in scope for this session):**
+- Add `updatedAt DateTime @updatedAt` to the `Phase` model.
+- Add `updatedAt DateTime @updatedAt` to the `Building` model.
+- Migration: backfill `updatedAt = createdAt` for all existing rows.
+- No application-code change needed beyond the schema — Prisma handles `@updatedAt` automatically.
+
+---
+
+### FG-20: `User.phone` stored in two incompatible formats
+
+**Severity:** High  
+**Discovered:** 2026-09-27 during data-import Phase 2 review  
+**Ticket:** MT-020 (deferred backfill migration)
+
+#### What exists
+
+`User.phone` is a `String? @unique` column. The platform has always treated the phone as an opaque string — there is no Postgres-level normalisation, no application-level `CHECK` constraint, and no enforced canonical format. As a result, two different write paths have always stored different formats:
+
+| Write path | Format stored | Example |
+|---|---|---|
+| `auth.service.ts:registerCustomerV2` | E.164 via `canonicalPhone()` | `+201062800394` |
+| `auth.service.ts:verifyOtpV2` | E.164 via `canonicalPhone()` | `+201062800394` |
+| `data-import.service.ts` | Import-canonical (local form) | `01062800394` |
+| `leads.service.ts:findOrCreateClient` | Raw trimmed from DTO (no normalisation) | whatever the caller sends |
+| `super-admin.service.ts:createCompanyUser` | Raw from DTO (no normalisation) | whatever the admin types |
+| `broker-users.service.ts` | Raw from DTO (no normalisation) | whatever the broker types |
+| All seeds | E.164 hard-coded | `+966500000001`, `+201062800394` |
+
+`canonicalPhone()` was introduced in MT-019 and is used exclusively in the auth service. The comment in `identity-normalize.ts` already states: "These functions do NOT mutate existing stored values. All stored phone values remain in their current form until a separate backfill migration is run (MT-020, deferred)."
+
+#### Counts in `realestate_local` (as of 2026-09-27)
+
+```
+fmt       | count
+----------+------
+local-0   |    40    (01XXXXXXXXXX — importer-created CLIENTs, one Egyptian company)
+E.164     |     6    (+966... — auth/seed-created CLIENTs, one Saudi company)
+null      |    12    (staff, SUPER_ADMIN, broker users with no phone)
+```
+
+No cross-format duplicates exist today in the dev DB (zero rows where `+201XXXXXXXXXX` and `01XXXXXXXXXX` co-exist for the same mobile number). This is because the Egyptian company's 40 rows were all written by the data importer, and the Saudi company's 6 rows were all written by seeds — there is no overlap. In production, where real users can register via the mobile app AND be imported from Excel, the split is live.
+
+#### The auth defect
+
+The split causes a live auth defect for Egyptian customers:
+
+1. An admin imports a customer with phone `01062800394` → stored as `01062800394`.
+2. The same person downloads the mobile app and tries to register or log in via OTP.
+3. `requestOtpV2` calls `canonicalPhone('01062800394', 'EG')` → `+201062800394`.
+4. `verifyOtpV2` does `user.findFirst({ where: { phone: '+201062800394', companyId } })` → **not found**.
+5. A **new user is created** with phone `+201062800394`.
+
+Now one mobile number has two accounts: `01062800394` (the importer row, with any leads/contracts) and `+201062800394` (the OTP row, empty). `User.phone @unique` does not protect against this because the two strings are distinct.
+
+The same defect applies in reverse: a user who registered via OTP (phone stored as E.164) and is then included in an Excel import will appear as a `create` operation in the importer rather than an `update`, and the importer will fail with a unique-constraint error at write time.
+
+#### The read-path gap
+
+`verifyOtpV2` looks up the user by the E.164-normalised phone (`canonicalPhone`). If the stored phone is `01...`, the lookup misses. The only currently safe path is if both the OTP request and the stored user are E.164 (i.e., the user originally registered via OTP). There is no normalisation on the read side.
+
+`forgotPasswordV2` and `loginCustomerV2` both look up by email, not phone — they are unaffected.
+
+#### The importer's current workaround
+
+`data-import.service.ts` now contains `storedToImportPhone(stored)` and the `globalPhoneHits` DB query includes both `01...` and `+201...` forms. This is the correct **immediate fix** for the importer: it absorbs the inconsistency so that import operations correctly detect existing users regardless of how their phone was stored.
+
+It is the **wrong permanent state**: every future feature that matches on phone (OTP login, duplicate detection, lead matching, synthetic-peer claims) must independently remember to handle both formats. `storedToImportPhone` will accumulate callers and eventually be missed somewhere.
+
+#### Required fix (not yet scoped)
+
+Two orthogonal decisions:
+
+**Option A — Write-side normalisation (MT-020 backfill):**
+- One-time migration: `UPDATE "User" SET phone = '+20' || substring(phone FROM 2) WHERE phone LIKE '01%'` for Egyptian companies, similar rules for other countries.
+- After the migration, all auth-service read paths naturally find users because everything is E.164.
+- The importer must then write E.164 (use `canonicalPhone` in `applyPlan`, not `c.phone` directly). `storedToImportPhone` can be removed.
+- Risk: any downstream system that hard-codes `01...` format breaks. All seeds must be audited.
+
+**Option B — Read-side normalisation without backfill:**
+- All read paths that look up by phone call `canonicalPhone` first, and if that fails, also try the local-form equivalent.
+- Equivalent to what `storedToImportPhone` + expanded IN clause does for the importer.
+- Safer short-term but permanently increases cognitive load for every phone-based lookup.
+
+The decision between A and B requires knowing the production phone format distribution. Run the query below on production before proceeding:
+
+```sql
+SELECT
+  CASE
+    WHEN phone LIKE '+%'  THEN 'E.164'
+    WHEN phone LIKE '0%'  THEN 'local-0'
+    WHEN phone IS NULL    THEN 'null'
+    ELSE 'other'
+  END AS fmt,
+  COUNT(*)
+FROM "User"
+GROUP BY 1
+ORDER BY 2 DESC;
+```
+
+And the cross-format duplicate check (should return 0 rows; if non-zero, those are split accounts):
+
+```sql
+SELECT u1.phone AS local_form, u2.phone AS e164_form, u1.id AS local_id, u2.id AS e164_id
+FROM "User" u1
+JOIN "User" u2
+  ON u1.phone LIKE '01%'
+ AND u2.phone = '+20' || substring(u1.phone FROM 2)
+WHERE u1."companyId" = u2."companyId";
+```
+
+#### Fix applied (2026-09-27, data-import Phase 2)
+
+**Root cause clarified:** The 40 `local-0` rows counted above were introduced entirely by the data importer shipped in this phase. Before the importer existed, no code path in this codebase wrote `01...` format — all app-created users were E.164. The gap was introduced, not pre-existing.
+
+**Write-side fix:** `applyPlan` in `data-import.service.ts` now calls `canonicalPhone(c.phone, 'EG') ?? c.phone` when creating a new `User` row. The importer will never again store `01...` at rest. The 40 existing dev rows were backfilled with a one-time SQL update (`UPDATE "User" SET phone = '+20' || substring(phone FROM 2) WHERE phone LIKE '01%' AND phone ~ '^01[0-9]{9}$'`).
+
+**`storedToImportPhone` moved** to `phone-normaliser.ts` (exported) so both the import service and the export service can use it as a bridge for the transitional period:
+- **Import service** — still uses it on the read/match side so that any pre-existing `01...` rows in older prod DBs do not trigger false create-vs-update mismatches.
+- **Export service** (`buildCustomers`, `buildLeads`) — converts stored phones to `01...` for display in the Excel file, removing the `+` prefix formula-injection risk in phone columns.
+
+**OTP round-trip verified (DI-E2E-4):** A new e2e test proves end-to-end:
+1. Import a customer with local phone `01099887766`.
+2. Assert stored phone is E.164 `+201099887766`.
+3. Seed an OtpCode (bypass SMS), call `verifyOtpV2` with the local phone.
+4. Assert JWT sub equals the imported user ID and user count did not increase.
+
+**Remaining pre-existing write paths not fixed in this phase:** See FG-21.
+
+---
+
+### FG-21: Pre-existing un-normalised phone write paths
+
+**Severity:** Medium  
+**Discovered:** 2026-09-27, as a side-effect of FG-20 investigation  
+**Status:** Not fixed — scope to a dedicated phone-normalisation pass
+
+#### What exists
+
+Three code paths outside the importer write `User.phone` directly from the incoming DTO without calling `canonicalPhone()`:
+
+| Path | File | Behaviour |
+|---|---|---|
+| `findOrCreateClient` | `apps/api/src/modules/leads/leads.service.ts` | Creates a CLIENT user from the lead DTO `phone` field; no normalisation. Caller may send `01...` or `+201...`. |
+| `createCompanyUser` | `apps/api/src/modules/super-admin/super-admin.service.ts` | Creates any role user from admin DTO. Phone stored verbatim. |
+| Broker user creation | `apps/api/src/modules/brokers/broker-users.service.ts` | Creates BROKER_STAFF users from broker DTO. Phone stored verbatim. |
+
+#### Why it matters
+
+The same OTP split-account defect described in FG-20 applies to these paths. A customer created via `findOrCreateClient` (e.g., when a sales agent adds a lead with a local phone) and who then tries to log in via OTP will get a second empty account.
+
+#### Not fixed in Phase 2
+
+These are pre-existing gaps — they existed before the data importer was built. The importer write-side fix (FG-20) was the immediate fix because the importer was the cause of the 40 `local-0` rows. Normalising the remaining paths requires:
+
+1. Ensuring every caller already sends strings that `canonicalPhone` can parse (all three paths use `IsString` validators with no phone format constraint — callers may send any string).
+2. Deciding what to do when `canonicalPhone` returns null (i.e., the caller sent a non-normalizable phone). Currently those rows would just be stored verbatim; after the fix, they would need to be rejected with a 400.
+3. Auditing seeds and test data that may hard-code local-format phones into these paths.
+
+Scope this as part of the MT-020 normalisation pass or a separate "phone hygiene" ticket.
