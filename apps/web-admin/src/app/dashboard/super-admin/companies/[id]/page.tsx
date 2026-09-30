@@ -455,8 +455,13 @@ function EditForm({ company, m, onSave, pending }: {
         <Field label={m.fields.name} name="name" required>
           <Input name="name" defaultValue={company.name} required />
         </Field>
-        <Field label={m.fields.country} name="country">
-          <Input name="country" defaultValue={company.country ?? ''} dir="ltr" />
+        <Field label={m.fields.country} name="country" required>
+          <Select name="country" required defaultValue={company.country ?? ''}>
+            <option value="" disabled>{m.countryPlaceholder}</option>
+            {Object.entries(m.countryOptions).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
+          </Select>
         </Field>
         <Field label={m.fields.currency} name="currency">
           <Input name="currency" defaultValue={company.currency} dir="ltr" />

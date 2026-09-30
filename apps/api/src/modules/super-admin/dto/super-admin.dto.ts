@@ -3,6 +3,7 @@ import {
   IsDateString,
   IsEmail,
   IsEnum,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -13,6 +14,7 @@ import {
   Min,
 } from 'class-validator';
 import { CompanyLifecycleStatus, CompanyType, SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
+import { SUPPORTED_COUNTRIES } from '../../../common/utils/identity-normalize';
 // CompanyType imported for CreateCompanyDto.type — intentionally NOT in UpdateCompanyDto
 // (type is immutable post-creation; see MT-042 company type mutability decision)
 
@@ -23,8 +25,8 @@ export class CreateCompanyDto {
   @IsString() @IsNotEmpty()
   slug!: string;
 
-  @IsString() @IsOptional()
-  country?: string;
+  @IsString() @IsNotEmpty() @IsIn(SUPPORTED_COUNTRIES)
+  country!: string;
 
   @IsString() @IsOptional()
   currency?: string;
@@ -72,7 +74,7 @@ export class UpdateCompanyDto {
   @IsString() @IsNotEmpty() @IsOptional()
   name?: string;
 
-  @IsString() @IsOptional()
+  @IsString() @IsIn(SUPPORTED_COUNTRIES) @IsOptional()
   country?: string;
 
   @IsString() @IsOptional()

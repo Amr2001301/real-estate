@@ -375,6 +375,7 @@ describe('SEC — CAP: capability tenancy and access-control (Phase 1)', () => {
         name: 'CAP-12 Test Co',
         slug: `cap-12-test-${Date.now()}`,
         isActive: true,
+        country: 'EG',
         subscriptionPlan: 'STARTER',
       },
     });

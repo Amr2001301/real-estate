@@ -32,7 +32,7 @@ export default function NewCompanyPage() {
     const body = {
       name:                fd.get('name') as string,
       slug:                fd.get('slug') as string,
-      country:            (fd.get('country') as string)  || 'SA',
+      country:            fd.get('country') as string,
       currency:           (fd.get('currency') as string) || 'SAR',
       timezone:           (fd.get('timezone') as string) || 'Asia/Riyadh',
       subscriptionPlan:   (fd.get('subscriptionPlan') as string) || 'TRIAL',
@@ -105,8 +105,13 @@ export default function NewCompanyPage() {
               <Field label={m.fields.slug} name="slug" required>
                 <Input name="slug" required placeholder="al-madina-realestate" dir="ltr" />
               </Field>
-              <Field label={m.fields.country} name="country">
-                <Input name="country" defaultValue="SA" dir="ltr" />
+              <Field label={m.fields.country} name="country" required>
+                <Select name="country" required defaultValue="">
+                  <option value="" disabled>{m.countryPlaceholder}</option>
+                  {Object.entries(m.countryOptions).map(([k, v]) => (
+                    <option key={k} value={k}>{v}</option>
+                  ))}
+                </Select>
               </Field>
               <Field label={m.fields.currency} name="currency">
                 <Input name="currency" defaultValue="SAR" dir="ltr" />

@@ -39,6 +39,7 @@ beforeAll(async () => {
       slug: SLUG,
       name: 'Starter Smoke Company',
       isActive: true,
+      country: 'EG',
       subscriptionPlan: 'STARTER' as never,
       staffAppEnabled: true,
       customerAppEnabled: false,

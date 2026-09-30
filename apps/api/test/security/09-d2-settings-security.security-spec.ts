@@ -338,7 +338,7 @@ it('DS-8b: Company B has all 8 D2 keys in the database with documented defaults'
 it('DS-9: newly created company (seeded via rawPrisma) receives all 8 D2 keys', async () => {
   const slug = 'sec-d2-new-co';
   const newCo = await testApp.rawPrisma.company.create({
-    data: { name: 'D2 New Co', slug, isActive: true },
+    data: { name: 'D2 New Co', slug, isActive: true, country: 'EG' },
   });
   extraCompanyId = newCo.id;
 

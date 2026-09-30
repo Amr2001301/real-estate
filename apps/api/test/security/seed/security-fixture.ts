@@ -183,10 +183,10 @@ export async function seedSecurityFixture(raw: PrismaClient): Promise<SecurityFi
   // ── Companies ──────────────────────────────────────────────────────────────
 
   const [companyA, companyB, companyBroker] = await Promise.all([
-    raw.company.create({ data: { name: 'Sec Company A', slug: SEC_SLUG_A, isActive: true } }),
-    raw.company.create({ data: { name: 'Sec Company B', slug: SEC_SLUG_B, isActive: true } }),
+    raw.company.create({ data: { name: 'Sec Company A', slug: SEC_SLUG_A, isActive: true, country: 'EG' } }),
+    raw.company.create({ data: { name: 'Sec Company B', slug: SEC_SLUG_B, isActive: true, country: 'EG' } }),
     raw.company.create({
-      data: { name: 'Sec Broker Co', slug: SEC_SLUG_BROKER, isActive: true, type: CompanyType.BROKERAGE },
+      data: { name: 'Sec Broker Co', slug: SEC_SLUG_BROKER, isActive: true, country: 'EG', type: CompanyType.BROKERAGE },
     }),
   ]);
 
@@ -231,6 +231,7 @@ export async function seedSecurityFixture(raw: PrismaClient): Promise<SecurityFi
 
   const project = await raw.project.create({
     data: {
+      code: 'SEC-A-P1',
       name: { ar: 'مشروع أ', en: 'Project A' },
       description: { ar: 'وصف', en: 'desc' },
       city: 'Cairo',
@@ -243,6 +244,7 @@ export async function seedSecurityFixture(raw: PrismaClient): Promise<SecurityFi
   const phase = await raw.phase.create({
     data: {
       projectId: project.id,
+      code: 'SEC-A-PH1',
       name: { ar: 'مرحلة 1', en: 'Phase 1' },
       order: 1,
       companyId: companyA.id,
@@ -252,6 +254,7 @@ export async function seedSecurityFixture(raw: PrismaClient): Promise<SecurityFi
   const building = await raw.building.create({
     data: {
       phaseId: phase.id,
+      code: 'SEC-A-B1',
       name: 'Building 1',
       totalFloors: 5,
       order: 1,
@@ -453,6 +456,7 @@ export async function seedSecurityFixture(raw: PrismaClient): Promise<SecurityFi
 
   const projectB = await raw.project.create({
     data: {
+      code: 'SEC-B-P1',
       name: { ar: 'مشروع ب', en: 'Project B' },
       description: { ar: 'وصف', en: 'desc' },
       city: 'Alex',
@@ -463,11 +467,11 @@ export async function seedSecurityFixture(raw: PrismaClient): Promise<SecurityFi
   });
 
   const phaseB = await raw.phase.create({
-    data: { projectId: projectB.id, name: { ar: 'مرحلة 1', en: 'Phase 1' }, order: 1, companyId: companyB.id },
+    data: { projectId: projectB.id, code: 'SEC-B-PH1', name: { ar: 'مرحلة 1', en: 'Phase 1' }, order: 1, companyId: companyB.id },
   });
 
   const buildingB = await raw.building.create({
-    data: { phaseId: phaseB.id, name: 'Building B1', totalFloors: 3, order: 1, companyId: companyB.id },
+    data: { phaseId: phaseB.id, code: 'SEC-B-B1', name: 'Building B1', totalFloors: 3, order: 1, companyId: companyB.id },
   });
 
   const unit1B = await raw.unit.create({

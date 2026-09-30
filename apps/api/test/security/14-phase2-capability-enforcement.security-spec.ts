@@ -39,6 +39,7 @@ async function createCompany(
       slug: opts.slug,
       name: opts.name,
       isActive: true,
+      country: 'EG',
       ...(opts.subscriptionPlan !== undefined && { subscriptionPlan: opts.subscriptionPlan as never }),
       ...(opts.staffAppEnabled !== undefined && { staffAppEnabled: opts.staffAppEnabled }),
       ...(opts.customerAppEnabled !== undefined && { customerAppEnabled: opts.customerAppEnabled }),

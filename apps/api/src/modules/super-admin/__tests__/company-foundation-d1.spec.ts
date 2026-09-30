@@ -15,7 +15,10 @@
  */
 
 import { ConflictException, NotFoundException } from '@nestjs/common';
+import { validate } from 'class-validator';
+import { plainToInstance } from 'class-transformer';
 import { SuperAdminService } from '../super-admin.service';
+import { CreateCompanyDto } from '../dto/super-admin.dto';
 import { CompanyType, CompanyLifecycleStatus } from '@prisma/client';
 
 jest.mock('argon2', () => ({
@@ -155,21 +158,21 @@ describe('Existing Company after D1 migration backfill', () => {
 describe('New DEVELOPER Company provisioning', () => {
   test('createCompany defaults type to DEVELOPER when not specified', async () => {
     const { service, prisma } = makeService();
-    await service.createCompany({ name: 'NewCo', slug: 'newco' });
+    await service.createCompany({ name: 'NewCo', slug: 'newco', country: 'EG' });
     const createCall = (prisma.company.create as jest.Mock).mock.calls[0][0];
     expect(createCall.data.type).toBe('DEVELOPER');
   });
 
   test('createCompany sets lifecycleStatus = ACTIVE', async () => {
     const { service, prisma } = makeService();
-    await service.createCompany({ name: 'NewCo', slug: 'newco' });
+    await service.createCompany({ name: 'NewCo', slug: 'newco', country: 'EG' });
     const createCall = (prisma.company.create as jest.Mock).mock.calls[0][0];
     expect(createCall.data.lifecycleStatus).toBe('ACTIVE');
   });
 
   test('createCompany defaults exposure flags to null (use plan default)', async () => {
     const { service, prisma } = makeService();
-    await service.createCompany({ name: 'NewCo', slug: 'newco' });
+    await service.createCompany({ name: 'NewCo', slug: 'newco', country: 'EG' });
     const data = (prisma.company.create as jest.Mock).mock.calls[0][0].data;
     expect(data.websiteEnabled).toBeNull();
     expect(data.customerAppEnabled).toBeNull();
@@ -178,7 +181,7 @@ describe('New DEVELOPER Company provisioning', () => {
 
   test('createCompany accepts explicit type=DEVELOPER', async () => {
     const { service, prisma } = makeService();
-    await service.createCompany({ name: 'NewCo', slug: 'newco', type: 'DEVELOPER' });
+    await service.createCompany({ name: 'NewCo', slug: 'newco', type: 'DEVELOPER', country: 'EG' });
     const data = (prisma.company.create as jest.Mock).mock.calls[0][0].data;
     expect(data.type).toBe('DEVELOPER');
   });
@@ -186,40 +189,40 @@ describe('New DEVELOPER Company provisioning', () => {
   test('createCompany throws ConflictException when slug already exists', async () => {
     const { service, prisma } = makeService();
     (prisma.company.findUnique as jest.Mock).mockResolvedValueOnce(makeCompanyRow());
-    await expect(service.createCompany({ name: 'Dup', slug: 'newco' })).rejects.toThrow(
+    await expect(service.createCompany({ name: 'Dup', slug: 'newco', country: 'EG' })).rejects.toThrow(
       ConflictException,
     );
   });
 
   test('createCompany throws BadRequestException with SLUG_RESERVED for slug=www', async () => {
     const { service } = makeService();
-    await expect(service.createCompany({ name: 'Www Co', slug: 'www' })).rejects.toMatchObject({
+    await expect(service.createCompany({ name: 'Www Co', slug: 'www', country: 'EG' })).rejects.toMatchObject({
       response: expect.objectContaining({ code: 'SLUG_RESERVED' }),
     });
   });
 
   test('createCompany throws BadRequestException with SLUG_RESERVED for slug=api', async () => {
     const { service } = makeService();
-    await expect(service.createCompany({ name: 'Api Co', slug: 'api' })).rejects.toMatchObject({
+    await expect(service.createCompany({ name: 'Api Co', slug: 'api', country: 'EG' })).rejects.toMatchObject({
       response: expect.objectContaining({ code: 'SLUG_RESERVED' }),
     });
   });
 
   test('createCompany throws BadRequestException with SLUG_RESERVED for slug=admin', async () => {
     const { service } = makeService();
-    await expect(service.createCompany({ name: 'Admin Co', slug: 'admin' })).rejects.toMatchObject({
+    await expect(service.createCompany({ name: 'Admin Co', slug: 'admin', country: 'EG' })).rejects.toMatchObject({
       response: expect.objectContaining({ code: 'SLUG_RESERVED' }),
     });
   });
 
   test('createCompany accepts non-reserved slug', async () => {
     const { service } = makeService();
-    await expect(service.createCompany({ name: 'Acme', slug: 'acme' })).resolves.toBeDefined();
+    await expect(service.createCompany({ name: 'Acme', slug: 'acme', country: 'EG' })).resolves.toBeDefined();
   });
 
   test('createCompany wraps company.create and provisionPlatformSubdomain in a single $transaction', async () => {
     const { service, prisma } = makeService();
-    await service.createCompany({ name: 'NewCo', slug: 'newco' });
+    await service.createCompany({ name: 'NewCo', slug: 'newco', country: 'EG' });
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
   });
 });
@@ -229,7 +232,7 @@ describe('New DEVELOPER Company provisioning', () => {
 describe('New BROKERAGE Company schema representation', () => {
   test('createCompany accepts type=BROKERAGE (no Developer FK required)', async () => {
     const { service, prisma } = makeService();
-    await service.createCompany({ name: 'Broker Co', slug: 'broker-co', type: 'BROKERAGE' });
+    await service.createCompany({ name: 'Broker Co', slug: 'broker-co', type: 'BROKERAGE', country: 'EG' });
     const data = (prisma.company.create as jest.Mock).mock.calls[0][0].data;
     expect(data.type).toBe('BROKERAGE');
   });
@@ -271,6 +274,7 @@ describe('MT-040A — Exposure flags are independent booleans', () => {
     const { service, prisma } = makeService();
     await service.createCompany({
       name: 'SelCo', slug: 'selco',
+      country: 'EG',
       websiteEnabled: false,
       customerAppEnabled: true,
       staffAppEnabled: false,
@@ -287,7 +291,7 @@ describe('MT-040A — Exposure flags are independent booleans', () => {
 describe('MT-037 — Capabilities JSONB storage', () => {
   test('capabilities defaults to null (no entitlements stored at creation)', async () => {
     const { service, prisma } = makeService();
-    await service.createCompany({ name: 'Cap Co', slug: 'capco' });
+    await service.createCompany({ name: 'Cap Co', slug: 'capco', country: 'EG' });
     const data = (prisma.company.create as jest.Mock).mock.calls[0][0].data;
     // capabilities is not set explicitly — DB default (null) applies
     expect(data.capabilities).toBeUndefined(); // not sent in create payload = DB null
@@ -399,5 +403,29 @@ describe('CompanyLifecycleStatus enum values (MT-036)', () => {
     expect(values).not.toContain('TRIAL');
     expect(values).not.toContain('CANCELLED');
     expect(values).not.toContain('EXPIRED');
+  });
+});
+
+// ── 7. CreateCompanyDto country enforcement ───────────────────────────────────
+
+describe('CreateCompanyDto — country is required and validated', () => {
+  test('rejects when country is omitted', async () => {
+    const dto = plainToInstance(CreateCompanyDto, { name: 'Test Co', slug: 'test-co' });
+    const errors = await validate(dto);
+    expect(errors.some((e) => e.property === 'country')).toBe(true);
+  });
+
+  test('rejects when country is not in SUPPORTED_COUNTRIES', async () => {
+    const dto = plainToInstance(CreateCompanyDto, { name: 'Test Co', slug: 'test-co', country: 'US' });
+    const errors = await validate(dto);
+    expect(errors.some((e) => e.property === 'country')).toBe(true);
+  });
+
+  test('accepts each value in SUPPORTED_COUNTRIES', async () => {
+    for (const code of ['EG', 'SA', 'AE']) {
+      const dto = plainToInstance(CreateCompanyDto, { name: 'Test Co', slug: 'test-co', country: code });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'country')).toBe(false);
+    }
   });
 });

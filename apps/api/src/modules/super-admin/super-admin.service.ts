@@ -133,7 +133,7 @@ export class SuperAdminService {
         data: {
           name: dto.name,
           slug: dto.slug,
-          country: dto.country ?? 'SA',
+          country: dto.country,
           currency: dto.currency ?? 'SAR',
           timezone: dto.timezone ?? 'Asia/Riyadh',
           subscriptionPlan: dto.subscriptionPlan ?? 'TRIAL',

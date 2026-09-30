@@ -47,6 +47,7 @@ beforeAll(async () => {
       slug: SLUG,
       name: 'SA Guard Test Company',
       isActive: true,
+      country: 'EG',
       staffAppEnabled: true,
       customerAppEnabled: false,
     },

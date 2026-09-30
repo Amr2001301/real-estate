@@ -56,7 +56,7 @@ describe('MT-Test-02 — multi-tenant data isolation (e2e)', () => {
       await raw.company.delete({ where: { id: leftover.id } });
     }
     const companyB = await raw.company.create({
-      data: { name: 'MT Test Company B', slug: COMPANY_B_SLUG, isActive: true },
+      data: { name: 'MT Test Company B', slug: COMPANY_B_SLUG, isActive: true, country: 'EG' },
     });
     companyBId = companyB.id;
 
@@ -80,6 +80,7 @@ describe('MT-Test-02 — multi-tenant data isolation (e2e)', () => {
     const projectA = await raw.project.create({
       data: {
         companyId: companyAId,
+        code: 'MT-TEST-A',
         name: { ar: 'مشروع أ - اختبار عزل المستأجر', en: 'MT-Test Project A' },
         description: { ar: 'وصف', en: 'desc' },
         city: 'Riyadh',
@@ -93,6 +94,7 @@ describe('MT-Test-02 — multi-tenant data isolation (e2e)', () => {
     const projectB = await raw.project.create({
       data: {
         companyId: companyBId,
+        code: 'MT-TEST-B',
         name: { ar: 'مشروع ب - اختبار عزل المستأجر', en: 'MT-Test Project B' },
         description: { ar: 'وصف', en: 'desc' },
         city: 'Jeddah',
@@ -190,7 +192,7 @@ describe('MT-Test-02B — multi-tenant domain isolation Phase 7B (e2e)', () => {
     }
 
     const companyB = await raw.company.create({
-      data: { name: 'MT-7B Company B', slug: SLUG_B, isActive: true },
+      data: { name: 'MT-7B Company B', slug: SLUG_B, isActive: true, country: 'EG' },
     });
     companyBId = companyB.id;
 
@@ -253,6 +255,7 @@ describe('MT-Test-02B — multi-tenant domain isolation Phase 7B (e2e)', () => {
 
     const projectB = await raw.project.create({
       data: {
+        code: 'MT-RAW-B',
         name: { ar: 'مشروع ب', en: 'Project B' },
         description: { ar: 'وصف', en: 'desc' },
         city: 'Jeddah',
@@ -266,13 +269,14 @@ describe('MT-Test-02B — multi-tenant domain isolation Phase 7B (e2e)', () => {
     const phaseB = await raw.phase.create({
       data: {
         projectId: projectB.id,
+        code: 'MT-RAW-B-PH1',
         name: { ar: 'مرحلة', en: 'Phase 1' },
         order: 1,
         companyId: companyBId,
       },
     });
     const buildingB = await raw.building.create({
-      data: { phaseId: phaseB.id, name: 'B1', totalFloors: 5, order: 1, companyId: companyBId },
+      data: { phaseId: phaseB.id, code: 'MT-RAW-B-B1', name: 'B1', totalFloors: 5, order: 1, companyId: companyBId },
     });
     const unitB = await raw.unit.create({
       data: {
@@ -431,7 +435,7 @@ describe('MT-Test-03 — multi-tenant write-path isolation Phase 7C (e2e)', () =
     }
 
     const companyB = await raw.company.create({
-      data: { name: 'MT-7C Company B', slug: SLUG_B, isActive: true },
+      data: { name: 'MT-7C Company B', slug: SLUG_B, isActive: true, country: 'EG' },
     });
     companyBId = companyB.id;
 
@@ -609,7 +613,7 @@ describe('Reports MT Isolation (e2e)', () => {
     }
 
     const companyB = await raw.company.create({
-      data: { name: 'Reports MT Test Company B', slug: COMPANY_B_SLUG, isActive: true },
+      data: { name: 'Reports MT Test Company B', slug: COMPANY_B_SLUG, isActive: true, country: 'EG' },
     });
     companyBId = companyB.id;
 
