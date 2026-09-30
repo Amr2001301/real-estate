@@ -13,6 +13,7 @@ import { writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { randomUUID } from 'crypto';
+import { performance } from 'perf_hooks';
 import { config } from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 

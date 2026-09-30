@@ -15,6 +15,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { createHash } from 'node:crypto';
+import * as argon2 from 'argon2';
 import { AuthService } from '../auth.service';
 import { TenantResolverService } from '../tenant-resolver.service';
 
@@ -348,8 +349,7 @@ describe('AuthService · loginCustomerV2', () => {
   it('rejects wrong password', async () => {
     const { service, prisma } = makeAuthService();
     prisma.user.findFirst.mockResolvedValue(customer);
-    const argon2 = require('argon2') as { verify: jest.Mock };
-    argon2.verify.mockResolvedValueOnce(false);
+    (argon2.verify as jest.Mock).mockResolvedValueOnce(false);
     await expect(
       service.loginCustomerV2(COMPANY_A, 'customer@example.com', 'WrongPass'),
     ).rejects.toBeInstanceOf(UnauthorizedException);

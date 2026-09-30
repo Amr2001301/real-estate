@@ -231,6 +231,16 @@ export default [
       // passed explicitly from the caller's ALS context (never from the request).
       'apps/api/src/common/capabilities/plan-limit.service.ts',
 
+      // ── Tier B (continued): Bulk data services ─────────────────────────────
+      // data-export.service.ts: generates tenant-scoped workbook; all user
+      // queries use companyId in the where clause except the actor lookup which
+      // fetches the exporting user by their own authenticated actorId.
+      'apps/api/src/modules/data-export/data-export.service.ts',
+      // data-import.service.ts: bulk import with idempotency; user queries
+      // are scoped by companyId. The phone-lookup in the lead-dedup path
+      // crosses tenants by design (phone is globally unique; same as auth flow).
+      'apps/api/src/modules/data-import/data-import.service.ts',
+
       // ── Tier C: Identity-peer resolution ───────────────────────────────────
       // reservations.module.ts: phone-suffix scan + email lookup to build
       // ownership filters for legacy identity merging (lines with prisma.user.*
@@ -287,6 +297,9 @@ export default [
       'apps/api/src/common/utils/sales-scope.ts',
       'apps/api/src/common/utils/identity-claim.ts',
       'apps/api/src/modules/super-admin/super-admin.service.ts',
+      // Tier B (bulk data)
+      'apps/api/src/modules/data-export/data-export.service.ts',
+      'apps/api/src/modules/data-import/data-import.service.ts',
       // Tier C
       'apps/api/src/modules/reservations/reservations.module.ts',
     ],
