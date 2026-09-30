@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 
 import 'brand_tokens.dart';
 
-/// Fetches tenant branding from GET /public/branding?slug=<slug>.
+/// Fetches tenant branding from `GET /public/branding?slug=<slug>`.
 ///
 /// Returns null on any failure (network, timeout, unknown slug).
 /// The caller never needs to handle exceptions from this class.
