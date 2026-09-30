@@ -11,7 +11,7 @@
  *   - A number ambiguous across countries without a hint is always null
  */
 
-import { canonicalEmail, canonicalPhone } from '../identity-normalize';
+import { canonicalEmail, canonicalPhone, _canonicalPhoneImpl } from '../identity-normalize';
 
 // ---------------------------------------------------------------------------
 // MT-018 — canonicalEmail
@@ -218,5 +218,50 @@ describe('canonicalPhone — consistency across input formats', () => {
     expect(saResult).toBe('+966501234567');
     expect(aeResult).toBe('+971501234567');
     expect(saResult).not.toBe(aeResult);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MT-019 — Ambiguous fallback: order-independence guard
+//
+// This test uses _canonicalPhoneImpl with a custom country list to construct
+// a genuine collision. It stays in the suite permanently to guard the day
+// someone adds a country whose mobile format overlaps an existing one.
+// ---------------------------------------------------------------------------
+
+describe('canonicalPhone — ambiguous fallback is order-independent (_canonicalPhoneImpl)', () => {
+  // Uses 'ZZ' as hint throughout — not a real country code, so libphonenumber-js
+  // returns null from parsePhoneNumberFromString('...', 'ZZ'), step 2 fails, and
+  // execution falls through to the multi-country fallback. This isolates the
+  // fallback logic from the hint-success path.
+
+  it('returns null when two fallback countries produce different E.164 values, regardless of list order', () => {
+    // SA and AE both accept 05XXXXXXXX but map to different E.164 (+966 vs +971).
+    const overlap = '0501234567';
+
+    const result_sa_first = _canonicalPhoneImpl(overlap, 'ZZ', ['SA', 'AE']);
+    const result_ae_first = _canonicalPhoneImpl(overlap, 'ZZ', ['AE', 'SA']);
+
+    // Null regardless of which order SA/AE appear — array order must not decide.
+    expect(result_sa_first).toBeNull();
+    expect(result_ae_first).toBeNull();
+  });
+
+  it('returns the value when all fallback countries agree on the same E.164', () => {
+    // EG 01XXXXXXXXX is unambiguous — SA and AE cannot parse it.
+    const eg_local = '01012345678';
+    expect(_canonicalPhoneImpl(eg_local, 'ZZ', ['EG', 'SA', 'AE'])).toBe('+201012345678');
+    expect(_canonicalPhoneImpl(eg_local, 'ZZ', ['EG', 'AE', 'SA'])).toBe('+201012345678');
+  });
+
+  it('returns null when a third country is added whose format overlaps an existing pair', () => {
+    // Guards the day someone adds a country to SUPPORTED_COUNTRIES whose mobile
+    // format collides with SA or AE. Jordan (JO, +962) uses 07XXXXXXXX for mobile
+    // but 05XXXXXXXX for some landlines, so the SA/AE collision is still the
+    // majority. Regardless of whether JO parses this specific number or not, SA
+    // and AE already disagree — any list containing both must return null.
+    const overlap = '0501234567';
+    const result = _canonicalPhoneImpl(overlap, 'ZZ', ['SA', 'AE', 'JO']);
+    expect(result).toBeNull();
   });
 });

@@ -140,7 +140,7 @@ describe('TenantResolverService · resolveBySlug', () => {
     expect(result).toBeNull();
   });
 
-  it('defaults country to SA when company.country is null', async () => {
+  it('defaults country to EG when company.country is null', async () => {
     const resolver = makeResolverService({
       id: COMPANY_A,
       slug: 'no-country',
@@ -148,7 +148,7 @@ describe('TenantResolverService · resolveBySlug', () => {
       isActive: true,
     });
     const result = await resolver.resolveBySlug('no-country');
-    expect(result.country).toBe('SA');
+    expect(result.country).toBe('EG');
   });
 });
 
@@ -344,6 +344,16 @@ describe('AuthService · loginCustomerV2', () => {
       service.loginCustomerV2(COMPANY_A, 'customer@example.com', 'pass'),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
+
+  it('rejects wrong password', async () => {
+    const { service, prisma } = makeAuthService();
+    prisma.user.findFirst.mockResolvedValue(customer);
+    const argon2 = require('argon2') as { verify: jest.Mock };
+    argon2.verify.mockResolvedValueOnce(false);
+    await expect(
+      service.loginCustomerV2(COMPANY_A, 'customer@example.com', 'WrongPass'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
 });
 
 // ── MT-029 — registerCustomerV2 ───────────────────────────────────────────────
@@ -397,6 +407,26 @@ describe('AuthService · registerCustomerV2', () => {
         data: expect.objectContaining({ companyId: COMPANY_A }),
       }),
     );
+  });
+
+  it('claims a synthetic CLIENT (passwordHash=null) rather than rejecting or creating a new account', async () => {
+    const { service, prisma } = makeAuthService();
+    const synthetic = { id: 'synth-1', role: 'CLIENT', passwordHash: null, email: regDto.email, companyId: COMPANY_A };
+    // byEmail returns the synthetic row; byPhone returns null (Promise.all order).
+    prisma.user.findFirst
+      .mockResolvedValueOnce(synthetic)
+      .mockResolvedValueOnce(null);
+    prisma.user.update.mockResolvedValue({ id: 'synth-1', role: 'CLIENT' });
+    const result = await service.registerCustomerV2(COMPANY_A, 'SA', regDto);
+    // Claim path: update the existing row, never create a new one.
+    expect(prisma.user.create).not.toHaveBeenCalled();
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'synth-1' },
+        data: expect.objectContaining({ passwordHash: '$hashed', companyId: COMPANY_A }),
+      }),
+    );
+    expect(result.tokens.accessToken).toBe('access-token');
   });
 });
 

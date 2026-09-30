@@ -19,6 +19,22 @@
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import type { CountryCode } from 'libphonenumber-js';
 
+/**
+ * ISO 3166-1 alpha-2 country codes the platform actively supports.
+ * Used for:
+ *   1. Validating Company.country on creation.
+ *   2. The multi-country fallback in canonicalPhone() — when the caller's
+ *      country hint fails, the function tries each supported country and
+ *      resolves the number when exactly one match exists.
+ *
+ * Overlap note: 05XXXXXXXX numbers are valid in both SA and AE. For those
+ * inputs the fallback produces two candidates and returns null; the caller's
+ * hint is authoritative for that overlap. EG mobile numbers (01XXXXXXXXX,
+ * 11 digits) are unambiguous across all three countries.
+ */
+export const SUPPORTED_COUNTRIES = ['EG', 'SA', 'AE'] as const;
+export type SupportedCountry = (typeof SUPPORTED_COUNTRIES)[number];
+
 // ---------------------------------------------------------------------------
 // MT-018 — Canonical email normalization
 // ---------------------------------------------------------------------------
@@ -73,25 +89,62 @@ export function canonicalEmail(value: string | null | undefined): string | null 
  *   canonicalPhone('00966500000000')             // null (IDD, no hint — ambiguous)
  *   canonicalPhone('not-a-phone')               // null
  */
-export function canonicalPhone(
+/**
+ * Internal implementation that accepts an explicit country list.
+ * Exported only for unit tests that need to inject a custom country set to
+ * construct a collision and verify the ambiguous-rejection path.
+ * Production code must call canonicalPhone() which passes SUPPORTED_COUNTRIES.
+ */
+export function _canonicalPhoneImpl(
   value: string | null | undefined,
-  countryHint?: string | null,
+  countryHint: string | null | undefined,
+  countries: readonly string[],
 ): string | null {
   if (!value) return null;
   const raw = value.trim();
   if (raw.length === 0) return null;
 
-  // E.164 / explicit + prefix: self-identifying international format.
-  // The library resolves these without a country. Malformed → null.
+  // Step 1 — E.164 / explicit + prefix: self-identifying; no country needed.
   if (raw.startsWith('+')) {
     const parsed = parsePhoneNumberFromString(raw);
     return parsed?.isValid() ? parsed.number : null;
   }
 
-  // All other formats (00 IDD, local, national) require an explicit country.
-  // Without one the number is ambiguous — never guess.
+  // Step 2 — Try the caller's explicit country hint first.
+  if (countryHint) {
+    const parsed = parsePhoneNumberFromString(raw, countryHint.toUpperCase() as CountryCode);
+    if (parsed?.isValid()) return parsed.number;
+  }
+
+  // Step 3 — Multi-country fallback (only when a hint was supplied but failed).
+  // Without a hint there is no country context and we must return null.
   if (!countryHint) return null;
 
-  const parsed = parsePhoneNumberFromString(raw, countryHint.toUpperCase() as CountryCode);
-  return parsed?.isValid() ? parsed.number : null;
+  // Try every country in the list except the hint (already tried in step 2).
+  // Collect ALL unique E.164 results — every country is tried regardless of order.
+  const hintNorm = countryHint.toUpperCase();
+  const candidates: string[] = [];
+  for (const c of countries) {
+    if (c === hintNorm) continue;
+    const parsed = parsePhoneNumberFromString(raw, c as CountryCode);
+    if (parsed?.isValid()) {
+      const e164 = parsed.number;
+      if (!candidates.includes(e164)) candidates.push(e164);
+    }
+  }
+
+  // Three-way decision — order of iteration does not influence the result:
+  //   0 matches → unparseable without a valid country hint
+  //   1 unique E.164 → unambiguous (possibly multiple countries agreed on it)
+  //   2+ distinct E.164 values → genuinely ambiguous across the country set; caller
+  //     must supply a correct hint to resolve (e.g. 05XXXXXXXX in both SA and AE)
+  if (candidates.length === 1) return candidates[0];
+  return null;
+}
+
+export function canonicalPhone(
+  value: string | null | undefined,
+  countryHint?: string | null,
+): string | null {
+  return _canonicalPhoneImpl(value, countryHint, SUPPORTED_COUNTRIES);
 }

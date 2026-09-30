@@ -7,7 +7,7 @@
  * directly; the server derives it from the slug.
  */
 
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 
 export interface ResolvedTenant {
@@ -20,6 +20,8 @@ export interface ResolvedTenant {
 
 @Injectable()
 export class TenantResolverService {
+  private readonly logger = new Logger(TenantResolverService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
@@ -48,10 +50,17 @@ export class TenantResolverService {
       throw new NotFoundException('Company not found');
     }
 
+    if (!company.country) {
+      this.logger.warn(
+        `Company country is null for id=${company.id} slug=${company.slug} — ` +
+          `falling back to EG. Backfill Company.country to silence this warning.`,
+      );
+    }
+
     return {
       companyId: company.id,
       slug: company.slug,
-      country: company.country ?? 'SA',
+      country: company.country ?? 'EG',
       isActive: company.isActive,
       lifecycleStatus: company.lifecycleStatus,
     };
