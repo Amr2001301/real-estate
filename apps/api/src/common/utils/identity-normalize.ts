@@ -138,7 +138,7 @@ export function _canonicalPhoneImpl(
   //   1 unique E.164 → unambiguous (possibly multiple countries agreed on it)
   //   2+ distinct E.164 values → genuinely ambiguous across the country set; caller
   //     must supply a correct hint to resolve (e.g. 05XXXXXXXX in both SA and AE)
-  if (candidates.length === 1) return candidates[0];
+  if (candidates.length === 1) return candidates[0] ?? null;
   return null;
 }
 

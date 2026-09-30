@@ -940,8 +940,8 @@ describe('DI-E2E-4 — write-side E.164 + OTP login round-trip', () => {
     expect(verifyRes.body.user.id).toBe(importedUserId);
 
     // Decode the JWT sub to confirm it resolves to the imported user
-    const { decode } = await import('jsonwebtoken');
-    const payload = decode(verifyRes.body.tokens.accessToken) as { sub?: string } | null;
+    const payloadB64 = verifyRes.body.tokens.accessToken.split('.')[1] ?? '';
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString()) as { sub?: string } | null;
     expect(payload?.sub).toBe(importedUserId);
 
     // No second account was created
