@@ -244,6 +244,8 @@ A `globalSetup` guard now fails loudly if any `zz_test_*` objects are found at s
 | G7 | High | api-security budget near-exhausted; raised to 35 min as stop-gap |
 | G8 | Process | Cancelled job must never be reported as test failure; check `conclusion` first |
 | G9 | ~~High~~ | ~~Atomic tests missing `afterAll` safety net~~ — **CLOSED**: all afterAlls added; `zz_test_` prefix enforced; globalSetup guard added |
+| G10 | Medium | Node version drift CI vs local — **MITIGATED** 2026-10-01: `.nvmrc` + `node-version-file` pin + drift-guard step |
+| G11 | Process | Dependency overrides applied without confirmed CI failure — see incident record |
 
 ---
 
@@ -343,33 +345,70 @@ CI used `node-version: 22` in `setup-node@v4`, which resolves to the latest
 available 22.x patch at run time. On 2026-09-30 that resolved to **22.23.2**.
 Local development ran **22.12.0**. Neither side knew the other had drifted.
 
-**How it surfaced:** `multer@2.0.2` → `concat-stream@2.0.0` → `readable-stream@3.6.2`.
-The `Writable` constructor in `readable-stream@3.6.2` does a lazy
-`require('./_stream_duplex')` inside the function body. Under Node 22.23.2
-with Jest 29 vm-context isolation, this `require` returned `undefined`, causing
-`TypeError: Right-hand side of 'instanceof' is not callable` when multer
-processed any authenticated file upload. Auth guards reject before multer runs,
-so auth-failure tests (401/403) passed; cross-tenant isolation and audit-log tests
-(DI-3, DI-3b, DI-5, DI-6) timed out at 60s each.
+**Fix applied 2026-10-01 (structural pin only):**
 
-The security suite failed on run `36761406261`. The full suite passed locally with
-the identical code because 22.12.0 does not trigger the bug.
-
-**Fix applied 2026-09-30 (two-part):**
-
-1. `multer` upgraded from `2.0.2` → `2.4.0` via `pnpm.overrides` in root
-   `package.json`. `multer@2.4.0` removed `concat-stream` entirely; depends only
-   on `busboy`. This eliminates the `readable-stream` issue for any Node 22.x.
-
-2. Node version pinned structurally:
-   - `.nvmrc` added at repo root: `22.23.2`
-   - `ci.yml` all `node-version: 22` replaced with `node-version-file: .nvmrc`
-   - `package.json` `engines.node` changed from `>=22.0.0` to `22.23.2`
-   - Drift-guard step added in the `build` job: fails if `node --version` does
-     not equal the `.nvmrc` value, so any future drift announces itself.
+Node version pinned structurally — no dependency overrides:
+- `.nvmrc` added at repo root: `22.23.2`
+- `ci.yml` all `node-version: 22` replaced with `node-version-file: .nvmrc`
+- `package.json` `engines.node` changed from `>=22.0.0` to `22.23.2`
+- Drift-guard step added in the `build` job: fails if `node --version` does
+  not equal the `.nvmrc` value, so any future drift announces itself immediately.
 
 **Local action required:** `nvm use` at the repo root will now auto-select
 22.23.2. Developers on 22.12.0 will see the `.nvmrc` and know to upgrade.
+
+---
+
+## G11 — Dependency changes made without a confirmed CI failure (incident record)
+
+**Date:** 2026-09-30 / 2026-10-01
+
+Three `pnpm.overrides` were applied to fix DI security test failures (DI-3,
+DI-3b, DI-5, DI-6) that were described as a `TypeError: Right-hand side of
+'instanceof' is not callable` in `readable-stream@3.6.2` under Node 22.23.2.
+
+**What was claimed:** Run `36761406261` showed the DI tests failing with that
+TypeError; the fix was needed.
+
+**What the logs actually show:**
+
+| Run | Commit | Security job outcome | DI test result |
+|---|---|---|---|
+| `36752365206` | `e476c2e` | **skipped** (path filter) | never ran |
+| `36752925728` | `35f6059` | **skipped** (path filter) | never ran |
+| `36754196032` | `17e8d18` | **skipped** (path filter) | never ran |
+| `36754698350` | `e60abf8` | **failed at MinIO startup** | never ran |
+| `36761406261` | `2875b75` | **cancelled** (no test output) | never ran |
+| `36765795868` | `acbc792` | **skipped** (path filter) | never ran |
+| `36769596349` | `ee9853a` | failed — DI-3/DI-3b got 400 | **caused by multer 2.4.0 override itself** |
+
+No CI run with `multer@2.0.2` ever ran the DI security tests and produced
+a TypeError. The diagnosis was inferred from the dependency chain
+(`multer → concat-stream → readable-stream`), not from a run ID or log excerpt.
+
+**What the three overrides actually did:**
+
+1. `pnpm.overrides.multer = "2.4.0"` (commit `ee9853a`): DI-3/DI-3b/DI-5/DI-6
+   began failing with HTTP 400 "No file uploaded". multer 2.4.0's new
+   `req.on('close', ...)` handler aborted requests early under Node 22.23.2.
+   This was a regression introduced by the fix.
+
+2. `pnpm.overrides.readable-stream = "4.7.0"` (commit `0705f61`): crashed the
+   API on startup. `exceljs → archiver → lazystream` requires
+   `readable-stream/passthrough` which v4 dropped as a subpath export. Both the
+   real server and unit tests broke. Reverted in commit `95fea79`.
+
+3. Local repro on Node 22.23.2 with `multer@2.0.2` (no override): DI tests
+   pass — 8/8 in isolation and in the full suite. Real server handles multipart
+   uploads correctly (HTTP 200, `req.file` populated, verified with curl).
+
+**Rule this incident produces:**
+
+> A failure gets a run ID and a raw log excerpt before it gets a fix.
+> "The dependency chain suggests it could fail" is not evidence.
+> Verify locally on the same Node version before touching any dependency.
+> A global `pnpm.overrides` touches every package in the tree — check the
+> lockfile for all packages that resolve that dependency first.
 
 **Security suite timing trend (record here so drift is visible next time):**
 
