@@ -1,7 +1,8 @@
+import type { Readable } from 'stream';
 import type { Request } from 'express';
 
 interface MulterFile {
-  stream: NodeJS.ReadableStream;
+  stream: Readable;
   buffer?: Buffer;
   [key: string]: unknown;
 }

@@ -4,7 +4,7 @@ import type { Request } from 'express';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-function makeFile(stream: Readable): { stream: NodeJS.ReadableStream; buffer?: Buffer } {
+function makeFile(stream: Readable): { stream: Readable; buffer?: Buffer } {
   return { stream };
 }
 
@@ -86,7 +86,7 @@ describe('NativeMemoryStorage', () => {
       const pre = Buffer.from('abc'); // data before limit
       storage._handleFile(noop, makeFile(readableWithLimit([pre])), (err) => {
         expect(err).not.toBeNull();
-        expect((err as NodeJS.ErrnoException).code).toBe('LIMIT_FILE_SIZE');
+        expect((err as Error & { code?: string }).code).toBe('LIMIT_FILE_SIZE');
         done();
       });
     });
