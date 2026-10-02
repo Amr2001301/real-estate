@@ -16,6 +16,18 @@
  */
 
 import 'reflect-metadata';
+// ── readable-stream lazy-require warm-up ──────────────────────────────────────
+// readable-stream@3 has `var Duplex; function Writable() { if (!Duplex) Duplex =
+// require('./_stream_duplex'); }` — a lazy require captured in the module closure.
+// Jest tears down each spec file's vm-context after the file completes, leaving
+// that captured `require` pointing into a dead registry. Any later call to
+// `new Writable()` (including exceljs's XLSX.load → new PassThrough() inside
+// DataImportService) fires the lazy require, gets undefined, and throws TypeError.
+// Constructing one PassThrough here, at module-load time in the FIRST spec file's
+// vm-context, forces the lazy require to execute and caches the Duplex reference
+// inside readable-stream. All subsequent instantiations skip the lazy require.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+void new (require('readable-stream') as { PassThrough: new () => unknown }).PassThrough();
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
