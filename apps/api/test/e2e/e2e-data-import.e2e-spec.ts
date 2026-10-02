@@ -993,3 +993,37 @@ describe('DI-E2E-5 — corrupt file → 400 Bad Request (not 500)', () => {
     expect(body.message).toMatch(/xlsx/i);
   });
 });
+
+// ── DI-E2E-6: Oversized upload → 413 with Arabic message ─────────────────────
+//
+// Verifies the end-to-end wiring of limits.fileSize = 10 MB:
+//   multer (busboy) emits 'limit' → NestJS maps LIMIT_FILE_SIZE to
+//   PayloadTooLargeException → ImportFileTooLargeFilter converts it to 413
+//   with a bilingual Arabic/English message.
+//
+// Engine-level tests (multer-native-memory.spec.ts) prove the storage engine
+// calls back correctly when 'limit' fires. This test proves the limit is
+// actually wired through FileInterceptor and produces a meaningful HTTP response.
+
+describe('DI-E2E-6 — oversized upload → 413 Payload Too Large', () => {
+  it('preview: file over 10 MB returns 413 with an Arabic message', async () => {
+    // 11 MB of zeros — exceeds the 10 MB ceiling regardless of content
+    const oversized = Buffer.alloc(11 * 1024 * 1024, 0x00);
+
+    const res = await http()
+      .post('/v1/data-import/preview')
+      .set('Authorization', bearer(adminToken))
+      .attach('file', oversized, {
+        filename: 'too-big.xlsx',
+        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      })
+      .expect(413);
+
+    const body = res.body as { statusCode?: number; message?: string; error?: string };
+    expect(body.statusCode).toBe(413);
+    // Message must contain Arabic text — confirms ImportFileTooLargeFilter fired,
+    // not the default NestJS English fallback.
+    expect(body.message).toMatch(/ميغابايت/);
+    expect(body.error).toBe('Payload Too Large');
+  });
+});
