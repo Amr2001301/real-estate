@@ -158,6 +158,57 @@ jobs:
       - name: Build
         run: pnpm -r build
 
+      - name: Check no e2e or security spec files are orphaned
+        # Runs in the always-on build job so it fails even when path filters skip
+        # the e2e / security jobs. A new spec file that is not listed in any
+        # testPathPattern would silently never run — this catches that early.
+        run: |
+          set -euo pipefail
+
+          # ── E2E orphan check ─────────────────────────────────────────────────
+          # Extract every testPathPattern alternative from this workflow file.
+          # Each --testPathPattern="a|b|c" line contributes a, b, c as covered names.
+          covered=$(grep -oE -- '--testPathPattern="[^"]*"' .github/workflows/ci.yml \
+            | sed 's/--testPathPattern="//;s/"//' \
+            | tr '|' '\n')
+
+          orphans=()
+          for spec in apps/api/test/e2e/*.e2e-spec.ts; do
+            name=$(basename "$spec" .e2e-spec.ts)
+            if ! echo "$covered" | grep -qxF "$name"; then
+              orphans+=("$spec")
+            fi
+          done
+
+          if [ ${#orphans[@]} -ne 0 ]; then
+            echo "::error::Orphaned e2e spec files — not in any testPathPattern in ci.yml:"
+            printf '  %s\n' "${orphans[@]}"
+            echo "Add them to e2e-1 or e2e-2 testPathPattern before merging."
+            exit 1
+          fi
+          total=$(ls apps/api/test/e2e/*.e2e-spec.ts | wc -l | tr -d ' ')
+          echo "e2e orphan check OK — all ${total} spec files are in a CI job"
+
+          # ── Security orphan check ────────────────────────────────────────────
+          # Security config uses testRegex (glob over the full directory) so orphans
+          # are structurally impossible, but verify the regex still matches every
+          # file on disk in case the directory layout ever changes.
+          sec_regex="test/security/.*\.security-spec\.ts"
+          orphans=()
+          for spec in apps/api/test/security/*.security-spec.ts; do
+            if ! echo "$spec" | grep -qE "$sec_regex"; then
+              orphans+=("$spec")
+            fi
+          done
+
+          if [ ${#orphans[@]} -ne 0 ]; then
+            echo "::error::Security spec files not matched by jest-security.json testRegex:"
+            printf '  %s\n' "${orphans[@]}"
+            exit 1
+          fi
+          total=$(ls apps/api/test/security/*.security-spec.ts | wc -l | tr -d ' ')
+          echo "security orphan check OK — all ${total} spec files matched by testRegex"
+
   # ─────────────────────────────────────────────────────────────────────────────
   # Backend Jest unit tests (mocked Prisma). Fast. Only runs when api/ changes.
   # ─────────────────────────────────────────────────────────────────────────────
@@ -198,6 +249,7 @@ jobs:
   # 26 original spec files were merged into 6 to eliminate per-vm-context NestJS
   # boot overhead (~128 s per file). The two jobs divide those 6 files evenly:
   #   api-e2e-1: e2e-catalog-auth + e2e-reservations + e2e-financial
+  #              + e2e-data-import + e2e-schema-constraints
   #   api-e2e-2: e2e-maintenance + e2e-mt-security + e2e-isolated-apps
   #
   # Trigger policy: PRs to main, nightly schedule, and workflow_dispatch.
@@ -261,13 +313,13 @@ jobs:
       - name: Generate Prisma client
         working-directory: apps/api
         run: pnpm prisma:generate
-      - name: Run e2e-1 (catalog-auth + reservations + financial)
+      - name: Run e2e-1 (catalog-auth + reservations + financial + data-import + schema-constraints)
         working-directory: apps/api
         shell: bash
         run: |
           set -o pipefail
           pnpm exec jest --config ./test/jest-e2e.json --runInBand \
-            --testPathPattern="e2e-catalog-auth|e2e-reservations|e2e-financial" \
+            --testPathPattern="e2e-catalog-auth|e2e-reservations|e2e-financial|e2e-data-import|e2e-schema-constraints" \
             2>&1 | tee /tmp/jest-e2e1.log
           # Guard: any pending/skipped tests indicate a silent suite failure
           # (e.g. a hook registered inside another hook marks tests pending).

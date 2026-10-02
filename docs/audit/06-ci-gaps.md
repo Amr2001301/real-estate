@@ -245,7 +245,8 @@ A `globalSetup` guard now fails loudly if any `zz_test_*` objects are found at s
 | G8 | Process | Cancelled job must never be reported as test failure; check `conclusion` first |
 | G9 | ~~High~~ | ~~Atomic tests missing `afterAll` safety net~~ — **CLOSED**: all afterAlls added; `zz_test_` prefix enforced; globalSetup guard added |
 | G10 | Medium | Node version drift CI vs local — **MITIGATED** 2026-10-01: `.nvmrc` + `node-version-file` pin + drift-guard step |
-| G11 | Process | Dependency overrides applied without confirmed CI failure — see incident record |
+| G11 | Process | Dependency overrides applied without confirmed CI failure — see incident record; TypeError subsequently confirmed in run `36907374243` with correct root-cause and fix |
+| G12 | ~~High~~ | ~~e2e spec files silently omitted from CI~~ — **CLOSED** 2026-10-02: `e2e-data-import` + `e2e-schema-constraints` added to e2e-1; orphan guard added to build job |
 
 ---
 
@@ -361,16 +362,16 @@ Node version pinned structurally — no dependency overrides:
 
 ## G11 — Dependency changes made without a confirmed CI failure (incident record)
 
-**Date:** 2026-09-30 / 2026-10-01
+**Date:** 2026-09-30 / 2026-10-01 / resolved 2026-10-02
 
 Three `pnpm.overrides` were applied to fix DI security test failures (DI-3,
 DI-3b, DI-5, DI-6) that were described as a `TypeError: Right-hand side of
 'instanceof' is not callable` in `readable-stream@3.6.2` under Node 22.23.2.
 
-**What was claimed:** Run `36761406261` showed the DI tests failing with that
-TypeError; the fix was needed.
+**What was claimed at the time:** Run `36761406261` showed the DI tests failing
+with that TypeError; the fix was needed.
 
-**What the logs actually show:**
+**What the run logs actually showed (first audit, 2026-10-01):**
 
 | Run | Commit | Security job outcome | DI test result |
 |---|---|---|---|
@@ -382,25 +383,61 @@ TypeError; the fix was needed.
 | `36765795868` | `acbc792` | **skipped** (path filter) | never ran |
 | `36769596349` | `ee9853a` | failed — DI-3/DI-3b got 400 | **caused by multer 2.4.0 override itself** |
 
-No CI run with `multer@2.0.2` ever ran the DI security tests and produced
-a TypeError. The diagnosis was inferred from the dependency chain
-(`multer → concat-stream → readable-stream`), not from a run ID or log excerpt.
+No CI run with `multer@2.0.2` had run the DI security tests at that point.
+The diagnosis was inferred from the dependency chain, not from a run ID or log
+excerpt — hence the premature overrides.
 
-**What the three overrides actually did:**
+**Subsequent confirmation (run `36907374243`, 2026-10-01):**
+
+After reverting all overrides and pinning Node to 22.23.2 via `.nvmrc`, the
+security suite ran cleanly for the first time. DI-3, DI-3b, DI-5, DI-6 failed
+with the TypeError. The confirmed stack trace:
+
+```
+TypeError: Right-hand side of 'instanceof' is not callable
+  at ConcatStream.Writable (_stream_writable.js:244:23)     ← lazy require fires here
+  at new ConcatStream (concat-stream@2.0.0/index.js:32:12)
+  at MemoryStorage._handleFile (multer@2.0.2/storage/memory.js:6:20)
+```
+
+**Root cause (confirmed mechanism):**
+
+The NestJS app is compiled inside the **first** security spec file's Jest
+vm-context via `createSecurityTestApp()`. All of multer → concat-stream →
+`readable-stream@3.6.2` load with that vm-context's `require` function captured
+in their closures. `_stream_writable.js` has a lazy
+`Duplex = Duplex || require('./_stream_duplex')` at line 244 that fires on the
+first `new ConcatStream()` call. DI-1/DI-2 pass because auth guards reject before
+multer processes the file. DI-3 is the first actual file upload in the suite — by
+then, the first spec file's vm-context has been torn down. `require('./_stream_duplex')`
+fires from that torn-down context → returns `undefined` → `this instanceof undefined`
+→ TypeError. This does not reproduce locally when running spec 20 in isolation
+because the vm-context is not torn down before the test runs.
+
+**Fix (commit after run `36907374243`):**
+
+Replaced multer's default `MemoryStorage` (which depends on `concat-stream` →
+`readable-stream@3`) with `NativeMemoryStorage` — a custom storage engine that
+collects file data using only Node.js built-in stream events (`data`, `end`,
+`error`, `limit`) and `Buffer.concat()`. No npm readable-stream, no lazy requires,
+no vm-context dependency. Tested with 7 unit tests covering: normal file, zero
+bytes, stream error, limit-before-end, no double-callback, concurrent uploads.
+No dependency changes required. Files: `src/common/utils/multer-native-memory.ts`,
+`src/modules/data-import/data-import.controller.ts`.
+
+**What the three overrides that preceded the fix actually did:**
 
 1. `pnpm.overrides.multer = "2.4.0"` (commit `ee9853a`): DI-3/DI-3b/DI-5/DI-6
    began failing with HTTP 400 "No file uploaded". multer 2.4.0's new
    `req.on('close', ...)` handler aborted requests early under Node 22.23.2.
-   This was a regression introduced by the fix.
 
 2. `pnpm.overrides.readable-stream = "4.7.0"` (commit `0705f61`): crashed the
    API on startup. `exceljs → archiver → lazystream` requires
-   `readable-stream/passthrough` which v4 dropped as a subpath export. Both the
-   real server and unit tests broke. Reverted in commit `95fea79`.
+   `readable-stream/passthrough` which v4 dropped as a subpath export. Reverted.
 
-3. Local repro on Node 22.23.2 with `multer@2.0.2` (no override): DI tests
-   pass — 8/8 in isolation and in the full suite. Real server handles multipart
-   uploads correctly (HTTP 200, `req.file` populated, verified with curl).
+3. Local repro on Node 22.23.2 with `multer@2.0.2`: tests passed in isolation
+   (spec 20 alone) but failed in the full suite — the vm-context teardown only
+   happens when other spec files have run and been torn down first.
 
 **Rule this incident produces:**
 
@@ -409,6 +446,46 @@ a TypeError. The diagnosis was inferred from the dependency chain
 > Verify locally on the same Node version before touching any dependency.
 > A global `pnpm.overrides` touches every package in the tree — check the
 > lockfile for all packages that resolve that dependency first.
+> When a test passes in isolation but fails in the full suite, the failure
+> is about suite-level state (vm-context lifecycle, shared singletons, etc.),
+> not about the test's own logic.
+
+---
+
+## G12 — e2e spec files silently omitted from testPathPattern
+
+**Date:** 2026-10-02 (discovered while chasing DI-E2E-1 through DI-E2E-5)
+
+Two `test/e2e/*.e2e-spec.ts` files existed on disk but were not listed in any
+e2e job's `--testPathPattern`, so they had **never run in CI**:
+
+| File | Missing since | Tests never run |
+|---|---|---|
+| `e2e-data-import.e2e-spec.ts` | File creation | DI-E2E-1 through DI-E2E-5 |
+| `e2e-schema-constraints.e2e-spec.ts` | File creation | B4 per-tenant unique constraint tests |
+
+The `testPathPattern` approach uses a hand-maintained list of spec file names.
+A new spec file silently never runs unless the author also updates the CI yaml —
+there was no gate to catch the omission.
+
+**Fix applied 2026-10-02:**
+
+1. Both files added to e2e-1's `testPathPattern`.
+2. Orphan guard step added to the `build` job (always runs, even when e2e jobs
+   are skipped by path filter). It greps the workflow file for all
+   `--testPathPattern=` values and fails if any `test/e2e/*.e2e-spec.ts` file
+   on disk is not covered. Same check for security (testRegex must match all
+   `*.security-spec.ts` files).
+
+The security suite is not at risk because `jest-security.json` uses
+`testRegex: "test/security/.*\.security-spec\.ts$"` — a glob over the full
+directory, not a hand-maintained list.
+
+**Rule:** Any test runner configuration that uses explicit file lists (not glob
+patterns) must be paired with a CI check that verifies coverage. The orphan guard
+runs before any path filter can skip it.
+
+---
 
 **Security suite timing trend (record here so drift is visible next time):**
 

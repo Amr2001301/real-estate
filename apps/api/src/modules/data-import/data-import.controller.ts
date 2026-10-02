@@ -13,6 +13,7 @@ import { UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator';
 import { DataImportService } from './data-import.service';
+import { nativeMemoryStorage } from '../../common/utils/multer-native-memory';
 
 /** Minimal multer file shape — avoids a hard @types/multer dependency. */
 interface UploadedXlsx {
@@ -37,7 +38,7 @@ export class DataImportController {
   @HttpCode(200)
   @ApiConsumes('multipart/form-data')
   @ApiBody({ schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } } })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { storage: nativeMemoryStorage() }))
   async preview(
     @UploadedFile() file: UploadedXlsx,
     @CurrentUser() user: AuthUser,
@@ -73,7 +74,7 @@ export class DataImportController {
   @HttpCode(200)
   @ApiConsumes('multipart/form-data')
   @ApiBody({ schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } } })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { storage: nativeMemoryStorage() }))
   async importData(
     @UploadedFile() file: UploadedXlsx,
     @CurrentUser() user: AuthUser,
