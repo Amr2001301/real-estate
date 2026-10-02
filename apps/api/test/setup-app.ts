@@ -17,17 +17,32 @@
 
 import 'reflect-metadata';
 // ── readable-stream lazy-require warm-up ──────────────────────────────────────
-// readable-stream@3 has `var Duplex; function Writable() { if (!Duplex) Duplex =
-// require('./_stream_duplex'); }` — a lazy require captured in the module closure.
+// readable-stream@3 has TWO lazy requires that are captured in module-level
+// closures and fire on first use:
+//
+//   1. _stream_writable.js: `var Duplex; if (!Duplex) Duplex = require('./_stream_duplex')`
+//      — fires when the first Writable is instantiated (i.e. `new PassThrough()`)
+//
+//   2. _stream_readable.js: `if (createReadableStreamAsyncIterator === undefined)
+//        createReadableStreamAsyncIterator = require('./internal/streams/async_iterator')`
+//      — fires when Symbol.asyncIterator is first called on a Readable
+//        (i.e. `for await...of stream`, used by exceljs's parse-sax.js)
+//
 // Jest tears down each spec file's vm-context after the file completes, leaving
-// that captured `require` pointing into a dead registry. Any later call to
-// `new Writable()` (including exceljs's XLSX.load → new PassThrough() inside
-// DataImportService) fires the lazy require, gets undefined, and throws TypeError.
-// Constructing one PassThrough here, at module-load time in the FIRST spec file's
-// vm-context, forces the lazy require to execute and caches the Duplex reference
-// inside readable-stream. All subsequent instantiations skip the lazy require.
+// those captured `require` functions pointing into a dead registry. DI-3 runs in
+// file 20; by then both lazy requires fire against the dead registry → undefined →
+// TypeError (caught by the service's try/catch → 400 Bad Request).
+//
+// Both must be triggered here, at module-load time in the FIRST spec file's
+// vm-context, while the registry is still live. All subsequent calls skip the
+// lazy requires and use the cached references.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-void new (require('readable-stream') as { PassThrough: new () => unknown }).PassThrough();
+const _rs = require('readable-stream') as {
+  PassThrough: new () => { [Symbol.asyncIterator](): unknown; end(): void };
+};
+const _rsWarmup = new _rs.PassThrough();
+void _rsWarmup[Symbol.asyncIterator](); // triggers async_iterator lazy require
+_rsWarmup.end();
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
