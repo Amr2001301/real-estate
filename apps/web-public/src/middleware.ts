@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
  *      the backend /v1/public/domains/resolve endpoint. The result is forwarded
  *      to server components via x-resolved-tenant-slug and
  *      x-resolved-tenant-website-enabled request headers.
- *      Dev override: DEV_TENANT_SLUG env var bypasses the network call when running
+ *      Dev override: E2E_TENANT_BYPASS_SLUG env var bypasses the network call when running
  *      on localhost so the app works without a configured platform domain.
  *
  *   2. /api-proxy/* → inject Bearer from cookie AND X-Tenant-Slug from the
@@ -21,12 +21,12 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 
 const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
-// DEV_TENANT_SLUG bypasses tenant resolution on localhost only.
+// E2E_TENANT_BYPASS_SLUG bypasses tenant resolution on localhost only.
 // LOCAL_HOSTS guard is the real protection: production requests arrive on real
 // domains, never localhost, so this constant is inert in any deployed environment.
 // Do NOT add a NODE_ENV gate — next build sets NODE_ENV='production' before
 // bundling, which would bake this as undefined regardless of the CI env block.
-const DEV_TENANT_SLUG = process.env.DEV_TENANT_SLUG;
+const E2E_TENANT_BYPASS_SLUG = process.env.E2E_TENANT_BYPASS_SLUG;
 const THIRTY_DAYS = 60 * 60 * 24 * 30;
 
 // Hostnames that indicate a local development environment.
@@ -45,9 +45,9 @@ interface ResolvedTenant {
  * or when the backend is unreachable.
  */
 async function resolveTenant(hostname: string): Promise<ResolvedTenant | null> {
-  // Dev fallback: skip the network call on localhost when DEV_TENANT_SLUG is set.
-  if (DEV_TENANT_SLUG && LOCAL_HOSTS.has(hostname)) {
-    return { slug: DEV_TENANT_SLUG, websiteEnabled: true };
+  // Dev fallback: skip the network call on localhost when E2E_TENANT_BYPASS_SLUG is set.
+  if (E2E_TENANT_BYPASS_SLUG && LOCAL_HOSTS.has(hostname)) {
+    return { slug: E2E_TENANT_BYPASS_SLUG, websiteEnabled: true };
   }
 
   try {
