@@ -21,10 +21,12 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 
 const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
-// DEV_TENANT_SLUG is NEVER active in production regardless of env var presence.
-// NODE_ENV gate is explicit so the guarantee is auditable in source.
-const DEV_TENANT_SLUG =
-  process.env.NODE_ENV !== 'production' ? process.env.DEV_TENANT_SLUG : undefined;
+// DEV_TENANT_SLUG bypasses tenant resolution on localhost only.
+// LOCAL_HOSTS guard is the real protection: production requests arrive on real
+// domains, never localhost, so this constant is inert in any deployed environment.
+// Do NOT add a NODE_ENV gate — next build sets NODE_ENV='production' before
+// bundling, which would bake this as undefined regardless of the CI env block.
+const DEV_TENANT_SLUG = process.env.DEV_TENANT_SLUG;
 const THIRTY_DAYS = 60 * 60 * 24 * 30;
 
 // Hostnames that indicate a local development environment.
