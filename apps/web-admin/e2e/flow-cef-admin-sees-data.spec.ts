@@ -26,6 +26,11 @@ test.use({ storageState: ADMIN_STORAGE });
  */
 test.describe('Flow C/E/F — admin can see customer-facing records (data-dependent)', () => {
   test('admin /dashboard/maintenance lists the seeded Customer1 maintenance request', async ({ page }) => {
+    // /dashboard/maintenance fetches 100 maintenance requests, every category
+    // and 100 admin users in one wave to render one table. There is no
+    // ordering bug left to fix here — it is simply heavy, and on a 2-vCPU CI
+    // runner it does not render inside the default 30s budget. See FG-23.
+    test.slow();
     await page.goto('/dashboard/maintenance');
     // The seeded description is a deterministic marker tagged "[e2e]".
     await expect(

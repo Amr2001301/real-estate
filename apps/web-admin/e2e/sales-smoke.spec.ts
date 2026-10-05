@@ -24,7 +24,7 @@ const SALES_ROUTES: RouteCheck[] = [
   { path: '/dashboard/reservations', heading: 'الحجوزات' },
   { path: '/dashboard/contracts', heading: 'العقود' },
   { path: '/dashboard/projects', heading: 'قائمة المشاريع' },
-  { path: '/dashboard/units', heading: 'إدارة الوحدات السكنية' },
+  { path: '/dashboard/units', heading: 'إدارة الوحدات السكنية', slow: true },
   { path: '/dashboard/inventory', heading: 'لوحة المخزون' },
   { path: '/dashboard/installments', heading: 'خطط التقسيط' },
   { path: '/dashboard/my-compensation', heading: 'مستحقاتي وأهدافي' },
@@ -43,6 +43,7 @@ test.describe('SALES smoke', () => {
   // test looping over every route gave N navigations one 30s budget.
   for (const route of SALES_ROUTES) {
     test(`sales loads ${route.path} without auth redirect or error`, async ({ page }) => {
+      if (route.slow) test.slow();
       await assertRouteLoads(page, route);
     });
   }

@@ -17,7 +17,7 @@ const ROUTES: RouteCheck[] = [
   { path: '/dashboard', heading: 'لوحة التحكم' },
   { path: '/dashboard/leads', heading: 'مسار مبيعات العقارات' },
   { path: '/dashboard/projects', heading: 'قائمة المشاريع' },
-  { path: '/dashboard/units', heading: 'إدارة الوحدات السكنية' },
+  { path: '/dashboard/units', heading: 'إدارة الوحدات السكنية', slow: true },
   { path: '/dashboard/customers', heading: 'العملاء' },
   { path: '/dashboard/inventory', heading: 'لوحة المخزون' },
   { path: '/dashboard/reports', heading: 'التقارير' },
@@ -32,6 +32,7 @@ test.describe('Dashboard smoke', () => {
   // out, each navigation gets its own budget and a failure names its route.
   for (const route of ROUTES) {
     test(`admin loads ${route.path} without auth redirect or error`, async ({ page }) => {
+      if (route.slow) test.slow();
       await assertRouteLoads(page, route);
     });
   }

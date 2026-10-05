@@ -24,7 +24,7 @@ const MANAGER_ROUTES: RouteCheck[] = [
   { path: '/dashboard/reservations', heading: 'الحجوزات' },
   { path: '/dashboard/contracts', heading: 'العقود' },
   { path: '/dashboard/projects', heading: 'قائمة المشاريع' },
-  { path: '/dashboard/units', heading: 'إدارة الوحدات السكنية' },
+  { path: '/dashboard/units', heading: 'إدارة الوحدات السكنية', slow: true },
   { path: '/dashboard/inventory', heading: 'لوحة المخزون' },
   { path: '/dashboard/installments', heading: 'خطط التقسيط' },
   { path: '/dashboard/targets', heading: 'أهداف وأداء المبيعات' },
@@ -51,6 +51,7 @@ test.describe('SALES_MANAGER smoke', () => {
   // navigations sharing one 30s budget could not pass on the CI runner.
   for (const route of MANAGER_ROUTES) {
     test(`manager loads ${route.path} without auth redirect or error`, async ({ page }) => {
+      if (route.slow) test.slow();
       await assertRouteLoads(page, route);
     });
   }

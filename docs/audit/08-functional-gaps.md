@@ -651,3 +651,67 @@ These are the OWASP-recommended minimum parameters for argon2id as of 2023. They
 3. Consider whether `parallelism` should be capped at 1 or 2 on single-core or dual-core deployments. `parallelism=4` on a 2-vCPU host means argon2 is over-provisioned relative to the machine — each call already exceeds the available CPU.
 
 **Do not lower parameters to fix a CI timeout.** The correct motivation is a deliberate security/throughput trade-off, written down, reviewed, and applied uniformly. The current implicit defaults are the wrong long-term state not because they are insecure but because the next person to read the code has no way to know whether the parameters were chosen deliberately or inherited by accident.
+
+---
+
+## FG-23 — Admin list pages fetch whole tables to compute a handful of aggregates
+
+**Severity:** Medium · **Blocks launch:** no · **Status:** open
+
+### What exists
+
+Two admin pages fetch far more rows than they render, on every request:
+
+| Page | Fetched per render | Rendered | Why the extra rows are fetched |
+|---|---|---|---|
+| `/dashboard/units` | `?pageSize=500` units + `?pageSize=200` projects | 20 rows | Four KPI aggregates (total, AVAILABLE, RESERVED, SOLD counts) and a total-price sum, computed client-side with `.filter().length` and `.reduce()`; projects feed a filter dropdown |
+| `/dashboard/maintenance` | 100 maintenance requests + all categories + `?pageSize=100` admin users | one table | Assignee and category dropdowns |
+
+`apps/web-admin/src/app/dashboard/units/page.tsx:77-83` and
+`apps/web-admin/src/app/dashboard/maintenance/page.tsx:131-135`.
+
+Both are already a single parallel wave — the sequential-preamble bug that
+affected `/account`, `/dashboard/contracts` and `/dashboard/units` was fixed in
+`d5b8468`, `8711615` and `ee22b2c`. What remains is payload size, not ordering.
+
+### How it was found
+
+`/dashboard/units` was the only route failing in three separate Playwright
+suites (dashboard-smoke, sales-smoke, sales-manager-smoke) after the ordering
+fixes landed, and `/dashboard/maintenance` was the fourth failure. Collapsing
+the fetch waves on `/dashboard/units` did not move it, which is what
+distinguishes this from the ordering bugs: the cost is in the rows, not the
+round trips.
+
+### Impact
+
+On the 2-vCPU CI runner these two routes do not render inside Playwright's
+default 30s per-test budget. Production hardware is faster and no user-facing
+timeout has been reported, but the shape is the same everywhere: seven hundred
+rows crossing the network to produce four integers and a sum. Cost grows
+linearly with tenant size, and the `pageSize` ceilings (500, 200, 100) mean the
+aggregates also silently go **wrong** for any company that exceeds them — a
+tenant with 600 units will show KPI counts computed from only the first 500.
+That correctness bug is the more serious half of this finding.
+
+### Current mitigation
+
+The affected routes are marked `slow: true` in the e2e `RouteCheck` lists and
+call Playwright's `test.slow()`, which triples the budget. This is an explicit
+acknowledgement of a measured cost, not a flake suppression — see the comment
+on `RouteCheck.slow` in `apps/web-admin/e2e/helpers/assert.ts`.
+
+### What is needed
+
+1. A stats endpoint per resource (`GET /units/stats`, `GET /maintenance-requests/stats`)
+   returning the counts and sums the KPI strip needs, computed in SQL.
+2. Replace the oversized snapshot fetches with that endpoint plus the paged
+   list the table actually renders.
+3. Feed filter dropdowns from a dedicated lightweight endpoint (id + name only)
+   rather than full entity pages.
+4. Once the snapshot fetches are gone, remove the `slow: true` marks and
+   confirm the routes pass at the default 30s budget. The marks are the
+   regression test for this work.
+
+Point 1 also fixes the silent correctness bug: aggregates computed in SQL are
+not capped by a client-side page size.
