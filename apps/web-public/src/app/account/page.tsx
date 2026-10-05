@@ -272,7 +272,15 @@ function TimelineItem({
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+// Monotonically-incrementing render counter so concurrent renders are
+// distinguishable in the log without threading a prop through every call site.
+let _renderSeq = 0;
+
 export default async function AccountPage() {
+  const rid = `acct-${(++_renderSeq).toString(16)}-${Date.now().toString(36).slice(-4)}`;
+  const t0 = performance.now();
+  console.log(`[account-page][${rid}] ${new Date().toISOString()} start`);
+
   const session = await getSession();
   if (!session) redirect('/login');
   const isCustomer = session.role === 'CUSTOMER';
@@ -281,12 +289,14 @@ export default async function AccountPage() {
   const m = siteT(locale).accountPages.dashboard;
 
   // ── Data fetching — unchanged ─────────────────────────────────────────────
+  console.log(`[account-page][${rid}] ${new Date().toISOString()} batch1-start t=${(performance.now() - t0).toFixed(0)}ms`);
   const [favsR, visitsR, reqsR, resvR] = await Promise.allSettled([
     authFetch<FavoriteItem[]>('/me/favorites'),
     authFetch<Paginated<MeVisitRequest>>('/me/visit-requests?page=1&pageSize=3'),
     authFetch<Paginated<MeInfoRequest>>('/me/info-requests?page=1&pageSize=3'),
     authFetch<Paginated<MeReservation>>('/me/reservations?page=1&pageSize=3'),
   ]);
+  console.log(`[account-page][${rid}] ${new Date().toISOString()} batch1-end t=${(performance.now() - t0).toFixed(0)}ms`);
   if (
     [favsR, visitsR, reqsR, resvR].some(
       (r) => r.status === 'rejected' && r.reason instanceof AuthError,
@@ -320,6 +330,7 @@ export default async function AccountPage() {
   let unpaidCount = 0;
 
   if (isCustomer) {
+    console.log(`[account-page][${rid}] ${new Date().toISOString()} batch2-start t=${(performance.now() - t0).toFixed(0)}ms`);
     const [contractsR, depositsR, maintR, notifsR, instR] = await Promise.allSettled([
       authFetch<Paginated<MeContract>>('/contracts/me/contracts?page=1&pageSize=3'),
       authFetch<MeDepositsResponse>('/me/deposits'),
@@ -327,6 +338,7 @@ export default async function AccountPage() {
       authFetch<Paginated<MeNotification> | MeNotification[]>('/me/notifications'),
       authFetch<Paginated<MeInstallment>>('/me/installments?page=1&pageSize=200'),
     ]);
+    console.log(`[account-page][${rid}] ${new Date().toISOString()} batch2-end t=${(performance.now() - t0).toFixed(0)}ms`);
     if (
       [contractsR, depositsR, maintR, notifsR, instR].some(
         (r) => r.status === 'rejected' && r.reason instanceof AuthError,
@@ -484,6 +496,7 @@ export default async function AccountPage() {
   const leftHref   = isCustomer ? routes.accountNotifications : routes.accountVisits;
   const hasActivity = rightRows.length > 0 || leftItems.length > 0;
 
+  console.log(`[account-page][${rid}] ${new Date().toISOString()} render t=${(performance.now() - t0).toFixed(0)}ms`);
   return (
     <div className="space-y-8">
 

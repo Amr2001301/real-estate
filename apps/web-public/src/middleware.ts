@@ -145,8 +145,12 @@ export async function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
   const hostname = req.nextUrl.hostname;
 
+  const mwT0 = performance.now();
+
   // Resolve tenant once per request — used by all branches below.
   const tenant = await resolveTenant(hostname);
+
+  const mwT1 = performance.now();
 
   // ── 1. /api-proxy/* — attach Bearer and X-Tenant-Slug ──────────────────────
   if (pathname.startsWith('/api-proxy/')) {
@@ -172,6 +176,10 @@ export async function middleware(req: NextRequest) {
       headers.delete('x-tenant-slug');
     }
 
+    const mwT2 = performance.now();
+    console.log(
+      `[middleware] ${new Date().toISOString()} ${pathname} tenant=${(mwT1 - mwT0).toFixed(0)}ms mw-total=${(mwT2 - mwT0).toFixed(0)}ms`,
+    );
     return NextResponse.next({ request: { headers } });
   }
 
