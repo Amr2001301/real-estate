@@ -97,7 +97,7 @@ describe('createPresignedUpload — bucket routing', () => {
 
   it('public folder (projects) → returns publicUrl, no private bucket used', async () => {
     const svc = makeService();
-    const result = await svc.createPresignedUpload({ contentType: 'image/jpeg', folder: 'projects' });
+    const result = await svc.createPresignedUpload({ contentType: 'image/jpeg', folder: 'projects', sizeBytes: 1 });
     expect(result.publicUrl).toMatch(/^https:\/\/cdn\.example\.com\/projects\//);
     expect(result.key).toMatch(/^projects\//);
     expect(result.uploadUrl).toBe('https://signed.r2.example/upload?sig=x');
@@ -105,52 +105,52 @@ describe('createPresignedUpload — bucket routing', () => {
 
   it('public folder (units) → publicUrl present', async () => {
     const svc = makeService();
-    const result = await svc.createPresignedUpload({ contentType: 'image/png', folder: 'units' });
+    const result = await svc.createPresignedUpload({ contentType: 'image/png', folder: 'units', sizeBytes: 1 });
     expect(result.publicUrl).toBeDefined();
     expect(result.publicUrl).toMatch(/^https:\/\/cdn\.example\.com\/units\//);
   });
 
   it('public folder (banners) → publicUrl present', async () => {
     const svc = makeService();
-    const result = await svc.createPresignedUpload({ contentType: 'image/webp', folder: 'banners' });
+    const result = await svc.createPresignedUpload({ contentType: 'image/webp', folder: 'banners', sizeBytes: 1 });
     expect(result.publicUrl).toBeDefined();
   });
 
   it('public folder (avatars) → publicUrl present', async () => {
     const svc = makeService();
-    const result = await svc.createPresignedUpload({ contentType: 'image/jpeg', folder: 'avatars' });
+    const result = await svc.createPresignedUpload({ contentType: 'image/jpeg', folder: 'avatars', sizeBytes: 1 });
     expect(result.publicUrl).toBeDefined();
   });
 
   it('private folder (documents) → publicUrl absent', async () => {
     const svc = makeService();
-    const result = await svc.createPresignedUpload({ contentType: 'application/pdf', folder: 'documents' });
+    const result = await svc.createPresignedUpload({ contentType: 'application/pdf', folder: 'documents', sizeBytes: 1 });
     expect(result.publicUrl).toBeUndefined();
     expect(result.key).toMatch(/^documents\//);
   });
 
   it('private folder (contracts) → publicUrl absent', async () => {
     const svc = makeService();
-    const result = await svc.createPresignedUpload({ contentType: 'application/pdf', folder: 'contracts' });
+    const result = await svc.createPresignedUpload({ contentType: 'application/pdf', folder: 'contracts', sizeBytes: 1 });
     expect(result.publicUrl).toBeUndefined();
   });
 
   it('private folder (receipts) → publicUrl absent', async () => {
     const svc = makeService();
-    const result = await svc.createPresignedUpload({ contentType: 'application/pdf', folder: 'receipts' });
+    const result = await svc.createPresignedUpload({ contentType: 'application/pdf', folder: 'receipts', sizeBytes: 1 });
     expect(result.publicUrl).toBeUndefined();
   });
 
   it('private folder (maintenance) → publicUrl absent', async () => {
     const svc = makeService();
-    const result = await svc.createPresignedUpload({ contentType: 'image/jpeg', folder: 'maintenance' });
+    const result = await svc.createPresignedUpload({ contentType: 'image/jpeg', folder: 'maintenance', sizeBytes: 1 });
     expect(result.publicUrl).toBeUndefined();
   });
 
   it('key always present for any folder', async () => {
     const svc = makeService();
     for (const folder of ['projects', 'documents', 'receipts', 'contracts'] as StorageFolder[]) {
-      const result = await svc.createPresignedUpload({ contentType: 'application/pdf', folder });
+      const result = await svc.createPresignedUpload({ contentType: 'application/pdf', folder, sizeBytes: 1 });
       expect(result.key).toBeTruthy();
     }
   });
@@ -159,7 +159,7 @@ describe('createPresignedUpload — bucket routing', () => {
     const config = { get: () => '' } as unknown as ConfigService;
     const svc = new R2Service(config);
     await expect(
-      svc.createPresignedUpload({ contentType: 'image/jpeg', folder: 'projects' }),
+      svc.createPresignedUpload({ contentType: 'image/jpeg', folder: 'projects', sizeBytes: 1 }),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 });
@@ -297,6 +297,7 @@ describe('Storage isolation — no publicUrl ever returned for private folders',
       const result = await svc.createPresignedUpload({
         contentType: 'application/pdf',
         folder,
+        sizeBytes: 1,
       });
       expect(result.publicUrl).toBeUndefined();
     }

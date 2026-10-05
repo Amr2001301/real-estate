@@ -93,12 +93,16 @@ None. Both clients already send `Content-Length` equal to the declared
 - **G-SIZE-2**: Presign for 1 byte, PUT `TINY_JPEG` (which is larger) → 403.
   Fails (returns 200) without the fix; passes after.
 
-## Caveat — R2 production verification
+## Caveat — R2 production verification (assumed, unverified)
 
 The G-SIZE test exercises MinIO in CI. Cloudflare R2 is S3 Signature V4
-compatible and should enforce signed headers identically, but it should be
-verified with a smoke test after the first production deploy. If R2 does not
-enforce signed ContentLength, the fallback control is `createPresignedPost`
-with a `content-length-range` policy condition — a stronger server-side
-enforcement but requires client changes (multipart form POST instead of
-direct PUT).
+compatible and should enforce signed `Content-Length` identically, but this
+has **not been verified against R2 in production**. Until the smoke test in
+`docs/production-deployment.md § Post-deploy verification` is run and passes,
+R2 enforcement is **assumed, unverified**.
+
+If that smoke test shows R2 returns 200 on an oversized PUT (i.e. does not
+enforce the signed value), the fallback control is `createPresignedPost` with
+a `content-length-range` policy condition — enforced server-side regardless of
+what the client sends, but requires client changes (multipart form POST instead
+of direct PUT).

@@ -42,7 +42,7 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { MediaModule } from '../media/media.module';
-import { R2Service } from '../media/r2.service';
+import { R2Service, type StorageFolder } from '../media/r2.service';
 
 // ── URL safety ────────────────────────────────────────────────────────────
 
@@ -201,7 +201,7 @@ export class DocumentsService {
    * The eventual public URL is also returned so the client can post it to
    * `POST /documents` once the PUT succeeds.
    */
-  async presign(dto: DocumentsPresignDto) {
+  async presign(dto: DocumentsPresignDto, folder: StorageFolder = 'documents') {
     const contentType = dto.contentType.trim().toLowerCase();
     if (!ALLOWED_DOCUMENT_MIME_TYPES.has(contentType)) {
       throw new BadRequestException(
@@ -227,7 +227,7 @@ export class DocumentsService {
     }
     return this.r2.createPresignedUpload({
       contentType,
-      folder: 'documents',
+      folder,
       extension,
       sizeBytes: dto.sizeBytes,
     });

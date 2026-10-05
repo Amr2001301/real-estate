@@ -117,6 +117,14 @@ Deploy `web-admin` and `web-public` after the API is healthy. These are Next.js 
 - [ ] `pnpm db:status` still reports "up to date"
 - [ ] Check application logs / Sentry for unexpected errors in the first 5 minutes
 - [ ] Spot-check one reservation or contract record in the database
+- [ ] **R2 ContentLength enforcement** — R2 enforces signed `Content-Length` on
+  presigned PUTs, but this has not yet been verified in production (assumed, unverified).
+  After the first deploy that includes commit `c40b03c` (sign ContentLength):
+  call `POST /v1/media/presign` with `sizeBytes: 1`, then issue a PUT to the
+  returned `uploadUrl` with a larger body (e.g. 100 bytes) and assert the
+  response is `403`. If it is `200`, R2 is not enforcing the signed value and
+  `createPresignedPost` with a `content-length-range` condition must replace the
+  current approach. Remove this checklist item once verified.
 
 ---
 

@@ -103,7 +103,7 @@ export class R2Service {
     contentType: string;
     folder: StorageFolder;
     extension?: string;
-    sizeBytes?: number;
+    sizeBytes: number;
   }): Promise<{ uploadUrl: string; key: string; publicUrl?: string }> {
     const isPrivate = this.isPrivateFolder(opts.folder);
     const client = isPrivate ? this.privateClient : this.publicClient;
@@ -118,7 +118,7 @@ export class R2Service {
       Bucket: bucket,
       Key: key,
       ContentType: opts.contentType,
-      ...(opts.sizeBytes !== undefined ? { ContentLength: opts.sizeBytes } : {}),
+      ContentLength: opts.sizeBytes,
     });
     let uploadUrl: string;
     try {

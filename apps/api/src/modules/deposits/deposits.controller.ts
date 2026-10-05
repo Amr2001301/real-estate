@@ -233,11 +233,10 @@ export class DepositsController {
   @Roles(UserRole.CUSTOMER)
   @Post('me/payments/presign')
   customerPresign(@Body() dto: CustomerPresignDto) {
-    return this.documents.presign({
-      contentType: dto.contentType,
-      sizeBytes: dto.sizeBytes,
-      fileName: dto.fileName,
-    });
+    return this.documents.presign(
+      { contentType: dto.contentType, sizeBytes: dto.sizeBytes, fileName: dto.fileName },
+      'receipts',
+    );
   }
 
   @Roles(UserRole.ADMIN)
