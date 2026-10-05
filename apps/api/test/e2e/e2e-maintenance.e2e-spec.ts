@@ -405,7 +405,7 @@ describeIfStorage('Flow G — Mobile upload flows (e2e)', () => {
       expect(typeof res.body.uploadUrl).toBe('string');
       expect(typeof res.body.key).toBe('string');
       expect(res.body.uploadUrl).toMatch(/^https?:\/\//);
-      expect(res.body.key).toMatch(/^documents\//);
+      expect(res.body.key).toMatch(/^receipts\//);
 
       uploadUrl = res.body.uploadUrl as string;
       objectKey = res.body.key as string;
