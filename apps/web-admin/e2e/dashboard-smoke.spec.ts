@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 import { assertRouteLoads, type RouteCheck } from './helpers/assert';
 import { ADMIN_STORAGE } from './global-setup';
 
@@ -24,13 +24,15 @@ const ROUTES: RouteCheck[] = [
 ];
 
 test.describe('Dashboard smoke', () => {
-  test('admin can load every core dashboard route without auth redirect or error', async ({
-    page,
-  }) => {
-    await page.goto('/dashboard');
-    await expect(page.getByText('لوحة التحكم').first()).toBeVisible();
-    for (const route of ROUTES) {
+  // One test per route. These were a single test looping over all seven
+  // routes, which gave eight full page navigations a single 30s budget —
+  // about 3.7s per navigation on a 2-vCPU runner that is also hosting
+  // Postgres, the API, Next and Chromium. The first slow route consumed the
+  // budget and the next goto aborted mid-flight (net::ERR_ABORTED). Split
+  // out, each navigation gets its own budget and a failure names its route.
+  for (const route of ROUTES) {
+    test(`admin loads ${route.path} without auth redirect or error`, async ({ page }) => {
       await assertRouteLoads(page, route);
-    }
-  });
+    });
+  }
 });

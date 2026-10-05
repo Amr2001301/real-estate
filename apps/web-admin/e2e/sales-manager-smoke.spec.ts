@@ -47,11 +47,13 @@ test.describe('SALES_MANAGER smoke', () => {
     await expect(teamTable.or(emptyState).first()).toBeVisible();
   });
 
-  test('can load every manager route without auth redirect or error', async ({ page }) => {
-    for (const route of MANAGER_ROUTES) {
+  // One test per route — see the note in dashboard-smoke.spec.ts. Nine
+  // navigations sharing one 30s budget could not pass on the CI runner.
+  for (const route of MANAGER_ROUTES) {
+    test(`manager loads ${route.path} without auth redirect or error`, async ({ page }) => {
       await assertRouteLoads(page, route);
-    }
-  });
+    });
+  }
 
   // Phase 7E — the manager dashboard DOES expose the
   // `/dashboard/my-compensation` link by current product design (managers
