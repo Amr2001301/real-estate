@@ -56,12 +56,7 @@ export default async function UnitsPage({
   searchParams: Promise<Filters>;
 }) {
   const sp = await searchParams;
-  const currency = await getReportsCurrency();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
-
-  // Unit mutations are ADMIN-only — SALES browses read-only.
-  const session = await getSession();
-  const isAdmin = session?.role === 'ADMIN';
 
   const qs = new URLSearchParams({
     page: String(page),
@@ -75,12 +70,21 @@ export default async function UnitsPage({
   if (sp.areaMin)   qs.set('areaMin',   sp.areaMin);
   if (sp.areaMax)   qs.set('areaMax',   sp.areaMax);
 
-  const [pagedRes, snapshotRes, projectsRes, locale] = await Promise.all([
+  // One wave. getReportsCurrency() and getSession() used to run sequentially
+  // ahead of the data fetches even though neither gates them — currency feeds
+  // display and the session feeds an isAdmin check. Three round trips became
+  // one. Same shape as the contracts and /account fixes.
+  const [currency, session, pagedRes, snapshotRes, projectsRes, locale] = await Promise.all([
+    getReportsCurrency(),
+    getSession(),
     safe(api.get<Paged<Unit>>(`/units?${qs.toString()}`)),
     safe(api.get<Paged<Unit>>('/units?pageSize=500')),
     safe(api.get<Paged<Project>>('/projects?pageSize=200')),
     getLocale(),
   ]);
+
+  // Unit mutations are ADMIN-only — SALES browses read-only.
+  const isAdmin = session?.role === 'ADMIN';
   const m = uiT(locale).pages.units;
 
   const paged = pagedRes.data;
