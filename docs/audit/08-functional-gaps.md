@@ -363,6 +363,7 @@ Ranked by: customer-facing severity, whether failure is silent, and whether it b
 | 15 | FG-15 | Phase and Building have no `updatedAt` column | Low | No | No — operational gap only |
 | 20 | FG-20 | `User.phone` is stored in two incompatible formats (E.164 `+201…` and local `01…`) across different write paths | High | **Fixed 2026-09-27** — importer now writes E.164; dev DB backfilled; DI-E2E-4 proves OTP round-trip | Residual: pre-existing write paths listed in FG-21 |
 | 21 | FG-21 | Three non-importer write paths store phone as-is from the DTO with no normalisation (`findOrCreateClient`, `createCompanyUser`, broker user creation) | Medium | Yes — same OTP split-account defect applies to customers created via leads or by admin | Not fixed in Phase 2 — scope to a dedicated phone-normalisation pass |
+| 22 | FG-22 | argon2 called at library defaults everywhere — no config, no recorded rationale; 382 ms/login uncontended on CI, 11–19× degradation at 3 concurrent; production not measured | Medium | No — defaults are safe; risk is throughput, not security | No — login works; concurrent sign-in capacity is unknown |
 
 ---
 
@@ -602,3 +603,51 @@ These are pre-existing gaps — they existed before the data importer was built.
 3. Auditing seeds and test data that may hard-code local-format phones into these paths.
 
 Scope this as part of the MT-020 normalisation pass or a separate "phone hygiene" ticket.
+
+---
+
+### FG-22: argon2 at library defaults — no explicit configuration, no recorded rationale
+
+**Severity:** Medium (performance / throughput)  
+**Security note:** The defaults are conservatively strong — this is not a security defect.  
+**Discovered:** 2026-10-05 during CI Playwright instrumentation analysis (run 143)
+
+#### What exists
+
+`apps/api/src/modules/auth/auth.service.ts` calls `argon2.verify()` and `argon2.hash()` with no options at lines 65, 243, 246, 251, 326, 554, 605, 636, 725, and 735. `argon2` is imported at line 13. No argon2 configuration exists anywhere in `apps/api/src`.
+
+The installed version is `argon2@0.41.1`. Its defaults, confirmed from `node_modules/argon2/argon2.cjs`:
+
+| Parameter | Default | Notes |
+|---|---|---|
+| `memoryCost` | 65536 (64 MiB) | Per-invocation, not pooled |
+| `timeCost` | 3 | Iterations |
+| `parallelism` | 4 | Spawns 4 pthreads via libuv `Napi::AsyncWorker` |
+| `type` | argon2id | Correct choice |
+| `hashLength` | 32 | bytes |
+
+These are the OWASP-recommended minimum parameters for argon2id as of 2023. They are not wrong. The problem is that no decision was ever made: the parameters were inherited by omission, not chosen.
+
+#### Measured cost (CI runner only — production not measured)
+
+| Condition | `durationMs` | Source |
+|---|---|---|
+| Non-contended — 1 login, CI 2-vCPU runner, wave 1 | 382 ms | CI run 143, API log 06:41:52 |
+| Contended — waves 2–7, concurrent RSC renders | 4,299–7,382 ms | CI run 143, API log 06:42:00–06:43:21 |
+| Production | not measured | argon2.verify has never been timed on production hardware |
+
+**What was directly observed (run 143):** every API handler completed in 5–74 ms across all endpoints and all waves; `fetch()` calls in the Next.js SSR layer reported ~14,000 ms wall time for the same requests. The 14-second gap is not inside any handler. By elimination, the time must be spent waiting before the handler starts — most likely in the OS TCP queue or the event loop accept backlog. The queue was not directly instrumented; this is an inference from the handler/caller gap, not an observation.
+
+**The finding is in the scaling, not the absolute number.** 382 ms uncontended implies a theoretical ceiling of roughly 2.6 logins per second per core before any contention. The observed degradation at three concurrent logins was 11–19× (4,299–7,382 ms vs 382 ms). Simple CPU division would predict ~3×. The super-linear gap is the actual finding: a memory-hard function at 64 MiB with `parallelism=4` does not degrade linearly, and the extent of the degradation is not predictable from the uncontended figure alone.
+
+**Open question:** 382 ms × 3 concurrent logins = 1,146 ms of pure argon2 serial time. The measured wave-2 login handler was 5,239 ms. The remaining ~4,100 ms is unaccounted for — either contention effects are doing all of it, or something else in the login handler is slow under load. This was not resolved. Do not treat argon2 as the complete explanation until the login handler is profiled under controlled concurrent load.
+
+**Production ceiling:** unknown. The CI 2-vCPU runner is not representative of production hardware. The ceiling must be measured there before any parameter change is justified by throughput arguments.
+
+#### What is needed
+
+1. Add an explicit argon2 options constant to `auth.service.ts` (or a `security.config.ts` helper), replacing every bare `argon2.verify(...)` call. Include a comment citing the OWASP guideline version and the trade-offs considered.
+2. Decide whether to adjust `parallelism` (reduces CPU contention per call, weakens parallel-attack resistance), `timeCost`/`memoryCost` (reduces wall time, weakens brute-force resistance), or keep the defaults unchanged — and record whichever choice is made.
+3. Consider whether `parallelism` should be capped at 1 or 2 on single-core or dual-core deployments. `parallelism=4` on a 2-vCPU host means argon2 is over-provisioned relative to the machine — each call already exceeds the available CPU.
+
+**Do not lower parameters to fix a CI timeout.** The correct motivation is a deliberate security/throughput trade-off, written down, reviewed, and applied uniformly. The current implicit defaults are the wrong long-term state not because they are insecure but because the next person to read the code has no way to know whether the parameters were chosen deliberately or inherited by accident.
