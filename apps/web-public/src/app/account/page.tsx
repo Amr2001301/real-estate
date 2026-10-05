@@ -272,15 +272,7 @@ function TimelineItem({
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-// Monotonically-incrementing render counter so concurrent renders are
-// distinguishable in the log without threading a prop through every call site.
-let _renderSeq = 0;
-
 export default async function AccountPage() {
-  const rid = `acct-${(++_renderSeq).toString(16)}-${Date.now().toString(36).slice(-4)}`;
-  const t0 = performance.now();
-  console.log(`[account-page][${rid}] ${new Date().toISOString()} start`);
-
   const session = await getSession();
   if (!session) redirect('/login');
   const isCustomer = session.role === 'CUSTOMER';
@@ -291,10 +283,10 @@ export default async function AccountPage() {
   // ── Data fetching ─────────────────────────────────────────────────────────
   // Both groups are STARTED here, concurrently. The customer-only group used
   // to be awaited after the core group even though nothing in it depends on
-  // that data, which serialised two ~16s round-trip waves into ~32s. Firing
-  // them together halves the render. The customer group is still only issued
-  // for customers, so non-customers make no extra calls.
-  console.log(`[account-page][${rid}] ${new Date().toISOString()} fetch-start t=${(performance.now() - t0).toFixed(0)}ms`);
+  // it — the only thing between them is an AuthError check on the core
+  // results — which serialised two round-trip waves and doubled the render.
+  // The customer group is still only issued for customers, so non-customers
+  // make no extra calls.
   const corePromise = Promise.allSettled([
     authFetch<FavoriteItem[]>('/me/favorites'),
     authFetch<Paginated<MeVisitRequest>>('/me/visit-requests?page=1&pageSize=3'),
@@ -312,7 +304,6 @@ export default async function AccountPage() {
     : null;
 
   const [favsR, visitsR, reqsR, resvR] = await corePromise;
-  console.log(`[account-page][${rid}] ${new Date().toISOString()} core-end t=${(performance.now() - t0).toFixed(0)}ms`);
   if (
     [favsR, visitsR, reqsR, resvR].some(
       (r) => r.status === 'rejected' && r.reason instanceof AuthError,
@@ -348,7 +339,6 @@ export default async function AccountPage() {
   if (customerPromise) {
     // Already in flight since the top of the render — this only awaits it.
     const [contractsR, depositsR, maintR, notifsR, instR] = await customerPromise;
-    console.log(`[account-page][${rid}] ${new Date().toISOString()} customer-end t=${(performance.now() - t0).toFixed(0)}ms`);
     if (
       [contractsR, depositsR, maintR, notifsR, instR].some(
         (r) => r.status === 'rejected' && r.reason instanceof AuthError,
@@ -505,8 +495,6 @@ export default async function AccountPage() {
   const leftTitle  = isCustomer ? m.notificationsVisits : m.recentVisits;
   const leftHref   = isCustomer ? routes.accountNotifications : routes.accountVisits;
   const hasActivity = rightRows.length > 0 || leftItems.length > 0;
-
-  console.log(`[account-page][${rid}] ${new Date().toISOString()} render t=${(performance.now() - t0).toFixed(0)}ms`);
   return (
     <div className="space-y-8">
 

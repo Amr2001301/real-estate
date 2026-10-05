@@ -121,9 +121,7 @@ export async function authFetch<T>(path: string, init?: RequestInit): Promise<T>
 }
 
 async function doFetch(path: string, init?: RequestInit): Promise<Response> {
-  const t0 = performance.now();
   const [c, h] = await Promise.all([cookies(), headers()]);
-  const t1 = performance.now();
   const token = c.get('access_token')?.value;
   const tenantSlug = h.get('x-resolved-tenant-slug');
   const isFormData = typeof FormData !== 'undefined' && init?.body instanceof FormData;
@@ -138,10 +136,6 @@ async function doFetch(path: string, init?: RequestInit): Promise<Response> {
     },
     cache: 'no-store',
   });
-  const t2 = performance.now();
-  console.log(
-    `[auth-fetch] ${new Date().toISOString()} ${path} ctx=${(t1 - t0).toFixed(0)}ms fetch=${(t2 - t1).toFixed(0)}ms status=${res.status}`,
-  );
   return res;
 }
 
