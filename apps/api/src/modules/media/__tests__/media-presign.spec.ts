@@ -343,16 +343,15 @@ describe('POST /media/presign — MIME allowlist + size validation + authorizati
       );
     });
 
-    it('sizeBytes is NOT forwarded to R2 (upload size not cryptographically bound)', async () => {
+    it('sizeBytes is forwarded to R2 and bound into the presigned URL signature', async () => {
       await request(app.getHttpServer())
         .post('/media/presign')
         .send({ contentType: 'image/jpeg', folder: 'projects', sizeBytes: 1024 })
         .expect(201);
       const callArgs = r2Mock.createPresignedUpload.mock.calls[0][0] as Record<string, unknown>;
-      // sizeBytes is validated server-side but not passed to R2; actual uploaded
-      // bytes are not cryptographically enforced by presigned PUT (see residual
-      // risk documentation in media.module.ts).
-      expect(callArgs).not.toHaveProperty('sizeBytes');
+      // sizeBytes reaches R2Service as ContentLength so the storage backend
+      // enforces it via Signature V4 — see docs/audit/20-presigned-url-size.md.
+      expect(callArgs).toHaveProperty('sizeBytes', 1024);
     });
   });
 });
