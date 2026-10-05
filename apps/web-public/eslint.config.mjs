@@ -29,6 +29,7 @@ const REACT_AND_DOM_GLOBALS = {
   IntersectionObserver: 'readonly',
   IntersectionObserverEntry: 'readonly',
   IntersectionObserverInit: 'readonly',
+  performance: 'readonly',
 };
 
 const config = [
