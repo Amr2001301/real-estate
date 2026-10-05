@@ -288,15 +288,31 @@ export default async function AccountPage() {
   const locale = await getLocale();
   const m = siteT(locale).accountPages.dashboard;
 
-  // ── Data fetching — unchanged ─────────────────────────────────────────────
-  console.log(`[account-page][${rid}] ${new Date().toISOString()} batch1-start t=${(performance.now() - t0).toFixed(0)}ms`);
-  const [favsR, visitsR, reqsR, resvR] = await Promise.allSettled([
+  // ── Data fetching ─────────────────────────────────────────────────────────
+  // Both groups are STARTED here, concurrently. The customer-only group used
+  // to be awaited after the core group even though nothing in it depends on
+  // that data, which serialised two ~16s round-trip waves into ~32s. Firing
+  // them together halves the render. The customer group is still only issued
+  // for customers, so non-customers make no extra calls.
+  console.log(`[account-page][${rid}] ${new Date().toISOString()} fetch-start t=${(performance.now() - t0).toFixed(0)}ms`);
+  const corePromise = Promise.allSettled([
     authFetch<FavoriteItem[]>('/me/favorites'),
     authFetch<Paginated<MeVisitRequest>>('/me/visit-requests?page=1&pageSize=3'),
     authFetch<Paginated<MeInfoRequest>>('/me/info-requests?page=1&pageSize=3'),
     authFetch<Paginated<MeReservation>>('/me/reservations?page=1&pageSize=3'),
   ]);
-  console.log(`[account-page][${rid}] ${new Date().toISOString()} batch1-end t=${(performance.now() - t0).toFixed(0)}ms`);
+  const customerPromise = isCustomer
+    ? Promise.allSettled([
+        authFetch<Paginated<MeContract>>('/contracts/me/contracts?page=1&pageSize=3'),
+        authFetch<MeDepositsResponse>('/me/deposits'),
+        authFetch<Paginated<MeMaintenanceRequest>>('/me/maintenance-requests?page=1&pageSize=3'),
+        authFetch<Paginated<MeNotification> | MeNotification[]>('/me/notifications'),
+        authFetch<Paginated<MeInstallment>>('/me/installments?page=1&pageSize=200'),
+      ])
+    : null;
+
+  const [favsR, visitsR, reqsR, resvR] = await corePromise;
+  console.log(`[account-page][${rid}] ${new Date().toISOString()} core-end t=${(performance.now() - t0).toFixed(0)}ms`);
   if (
     [favsR, visitsR, reqsR, resvR].some(
       (r) => r.status === 'rejected' && r.reason instanceof AuthError,
@@ -329,16 +345,10 @@ export default async function AccountPage() {
   let nextInstallment:    MeInstallment | null = null;
   let unpaidCount = 0;
 
-  if (isCustomer) {
-    console.log(`[account-page][${rid}] ${new Date().toISOString()} batch2-start t=${(performance.now() - t0).toFixed(0)}ms`);
-    const [contractsR, depositsR, maintR, notifsR, instR] = await Promise.allSettled([
-      authFetch<Paginated<MeContract>>('/contracts/me/contracts?page=1&pageSize=3'),
-      authFetch<MeDepositsResponse>('/me/deposits'),
-      authFetch<Paginated<MeMaintenanceRequest>>('/me/maintenance-requests?page=1&pageSize=3'),
-      authFetch<Paginated<MeNotification> | MeNotification[]>('/me/notifications'),
-      authFetch<Paginated<MeInstallment>>('/me/installments?page=1&pageSize=200'),
-    ]);
-    console.log(`[account-page][${rid}] ${new Date().toISOString()} batch2-end t=${(performance.now() - t0).toFixed(0)}ms`);
+  if (customerPromise) {
+    // Already in flight since the top of the render — this only awaits it.
+    const [contractsR, depositsR, maintR, notifsR, instR] = await customerPromise;
+    console.log(`[account-page][${rid}] ${new Date().toISOString()} customer-end t=${(performance.now() - t0).toFixed(0)}ms`);
     if (
       [contractsR, depositsR, maintR, notifsR, instR].some(
         (r) => r.status === 'rejected' && r.reason instanceof AuthError,

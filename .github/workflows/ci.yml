@@ -267,7 +267,8 @@ jobs:
     if: >
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' && needs.changes.outputs.api == 'true')
+      ((github.event_name == 'pull_request' || github.event_name == 'push')
+        && needs.changes.outputs.api == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -334,7 +335,8 @@ jobs:
     if: >
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' && needs.changes.outputs.api == 'true')
+      ((github.event_name == 'pull_request' || github.event_name == 'push')
+        && needs.changes.outputs.api == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
