@@ -130,6 +130,7 @@ class MediaService {
       contentType: dto.contentType,
       folder: dto.folder,
       extension: dto.extension,
+      sizeBytes: dto.sizeBytes,
     });
   }
 

@@ -547,6 +547,38 @@ describeIfStorage('Flow G — Mobile upload flows (e2e)', () => {
     });
   });
 
+  describe('G-SIZE: ContentLength enforcement on presigned PUT', () => {
+    // These tests verify that a signed ContentLength is enforced by the storage
+    // backend. G-SIZE-1 confirms a correctly-sized upload succeeds; G-SIZE-2
+    // confirms an oversized upload is rejected. Without the fix (ContentLength
+    // absent from the PutObjectCommand), G-SIZE-2 would return 200 — test red.
+
+    it('G-SIZE-1: PUT matching the declared sizeBytes succeeds', async () => {
+      const res = await http()
+        .post('/v1/me/payments/presign')
+        .set('Authorization', bearer(customer1Token))
+        .send({ contentType: 'image/jpeg', sizeBytes: TINY_JPEG.length, fileName: 'check.jpg' });
+      expect(res.status).toBe(201);
+      const url = res.body.uploadUrl as string;
+      const status = await putToPresignedUrl(url, TINY_JPEG, 'image/jpeg');
+      expect([200, 204]).toContain(status);
+    });
+
+    it('G-SIZE-2: PUT exceeding the declared sizeBytes is rejected by storage (403)', async () => {
+      // Declare 1 byte, upload TINY_JPEG which is larger. The signed
+      // Content-Length (1) will not match the actual body length — MinIO and
+      // R2 reject the request with 403 SignatureDoesNotMatch.
+      const res = await http()
+        .post('/v1/me/payments/presign')
+        .set('Authorization', bearer(customer1Token))
+        .send({ contentType: 'image/jpeg', sizeBytes: 1, fileName: 'oversized.jpg' });
+      expect(res.status).toBe(201);
+      const url = res.body.uploadUrl as string;
+      const status = await putToPresignedUrl(url, TINY_JPEG, 'image/jpeg');
+      expect(status).toBe(403);
+    });
+  });
+
   describe('G-RBAC: upload endpoint auth guards', () => {
     it('unauthenticated POST /v1/me/payments/presign → 401 or 403', async () => {
       const res = await http()

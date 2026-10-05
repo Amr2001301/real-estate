@@ -229,6 +229,7 @@ export class DocumentsService {
       contentType,
       folder: 'documents',
       extension,
+      sizeBytes: dto.sizeBytes,
     });
   }
 
