@@ -24,7 +24,7 @@ const SALES_ROUTES: RouteCheck[] = [
   { path: '/dashboard/reservations', heading: 'الحجوزات' },
   { path: '/dashboard/contracts', heading: 'العقود' },
   { path: '/dashboard/projects', heading: 'قائمة المشاريع' },
-  { path: '/dashboard/units', heading: 'إدارة الوحدات السكنية', slow: true },
+  { path: '/dashboard/units', heading: 'قائمة الوحدات', slow: true },
   { path: '/dashboard/inventory', heading: 'لوحة المخزون' },
   { path: '/dashboard/installments', heading: 'خطط التقسيط' },
   { path: '/dashboard/my-compensation', heading: 'مستحقاتي وأهدافي' },
