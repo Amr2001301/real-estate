@@ -125,7 +125,7 @@ export class UnitsService {
       ...(query.withoutPlan ? { planTemplates: { none: {} } } : {}),
     };
 
-    const [data, total, statusGroups, priceAgg] = await this.prisma.$transaction([
+    const [data, total] = await this.prisma.$transaction([
       this.prisma.unit.findMany({
         where,
         ...takeSkip({ page, pageSize }),
@@ -136,17 +136,25 @@ export class UnitsService {
         },
       }),
       this.prisma.unit.count({ where }),
-      // Facets — computed over the whole filtered set, not the returned page,
-      // so the admin KPI strip stays correct above any page size. FG-23.
-      this.prisma.unit.groupBy({ by: ['status'], where, _count: { _all: true } }),
+    ]);
+
+    // Facets — computed over the whole filtered set, not the returned page, so
+    // the admin KPI strip stays correct at any page size. FG-23.
+    //
+    // Deliberately outside the $transaction above: Prisma's groupBy relies on
+    // heavy generic inference that degrades inside a $transaction array
+    // literal, and these are independent read-only aggregates that gain
+    // nothing from sharing the snapshot.
+    const [statusGroups, priceAgg] = await Promise.all([
+      this.prisma.unit.groupBy({ by: ['status'], where, _count: true }),
       this.prisma.unit.aggregate({ where, _sum: { price: true } }),
     ]);
 
     const facets = {
       counts: {
         status: Object.fromEntries(
-          statusGroups.map((g) => [g.status, g._count._all]),
-        ),
+          statusGroups.map((g) => [g.status, g._count] as const),
+        ) as Record<string, number>,
       },
       sums: {
         // Decimal → string, matching how money is serialised elsewhere in this
