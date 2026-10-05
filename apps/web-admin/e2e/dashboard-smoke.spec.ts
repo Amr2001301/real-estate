@@ -17,7 +17,7 @@ const ROUTES: RouteCheck[] = [
   { path: '/dashboard', heading: 'لوحة التحكم' },
   { path: '/dashboard/leads', heading: 'مسار مبيعات العقارات' },
   { path: '/dashboard/projects', heading: 'قائمة المشاريع' },
-  { path: '/dashboard/units', heading: 'قائمة الوحدات', slow: true },
+  { path: '/dashboard/units', heading: 'قائمة الوحدات' },
   { path: '/dashboard/customers', heading: 'العملاء' },
   { path: '/dashboard/inventory', heading: 'لوحة المخزون' },
   { path: '/dashboard/reports', heading: 'التقارير' },

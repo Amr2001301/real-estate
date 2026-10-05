@@ -269,6 +269,68 @@ describe('Flow A — Catalog sync (e2e)', () => {
     });
   });
 
+  // ── FG-23 — facets are computed over the filtered set, not the page ────────
+  //
+  // Admin KPI strips used to be computed client-side from an oversized page
+  // (`?pageSize=500`), which made every count silently wrong for any company
+  // holding more rows than the cap. meta.facets moves the aggregation into SQL.
+  //
+  // The gate is `pageSize=1`: the returned page holds one row, so any facet
+  // derived from the page would sum to 1. Asserting that the facet counts sum
+  // to meta.total is therefore a direct test of the property that matters, and
+  // it fails both if facets are missing entirely and if a later change
+  // computes them from `data` instead of from `where`.
+  describe('A4b — unit list facets (FG-23)', () => {
+    it('facet counts sum to meta.total, not to the returned page size', async () => {
+      const res = await http()
+        .get('/v1/units?pageSize=1')
+        .set('Authorization', bearer(adminToken));
+      expect(res.status).toBe(200);
+
+      // The assertion is only meaningful when the page is a strict subset.
+      expect(res.body.meta.total).toBeGreaterThan(1);
+      expect(res.body.data).toHaveLength(1);
+
+      const byStatus = res.body.meta?.facets?.counts?.status;
+      expect(byStatus).toBeDefined();
+
+      const summed = Object.values(byStatus as Record<string, number>).reduce(
+        (a, b) => a + b,
+        0,
+      );
+      expect(summed).toBe(res.body.meta.total);
+    });
+
+    it('facet counts honour the same filters as the list query', async () => {
+      const all = await http()
+        .get('/v1/units?pageSize=1')
+        .set('Authorization', bearer(adminToken));
+      const available = await http()
+        .get('/v1/units?pageSize=1&status=AVAILABLE')
+        .set('Authorization', bearer(adminToken));
+      expect(available.status).toBe(200);
+
+      // Filtering to one status must leave exactly that status in the facet,
+      // with a count equal to the filtered total — proving `where` is shared
+      // between the page query and the aggregate rather than applied to one.
+      const filtered = available.body.meta.facets.counts.status;
+      expect(Object.keys(filtered)).toEqual(['AVAILABLE']);
+      expect(filtered.AVAILABLE).toBe(available.body.meta.total);
+      expect(available.body.meta.total).toBeLessThanOrEqual(all.body.meta.total);
+    });
+
+    it('the price sum is a decimal string, not a float', async () => {
+      const res = await http()
+        .get('/v1/units?pageSize=1')
+        .set('Authorization', bearer(adminToken));
+      // Money is Decimal(14,2) in Postgres. Serialising it as a JSON number
+      // would lose precision on large portfolios, so the contract is a string
+      // — same as DepositsService totals.
+      expect(typeof res.body.meta.facets.sums.price).toBe('string');
+      expect(res.body.meta.facets.sums.price).toMatch(/^-?\d+(\.\d+)?$/);
+    });
+  });
+
   describe('A5 — Broker1 portal returns only the broker1-granted projects', () => {
     it('GET /v1/portal/projects as broker1 returns exactly {p1, p2}', async () => {
       const res = await http()

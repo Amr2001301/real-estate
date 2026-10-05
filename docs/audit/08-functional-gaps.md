@@ -656,7 +656,7 @@ These are the OWASP-recommended minimum parameters for argon2id as of 2023. They
 
 ## FG-23 — Admin list pages fetch whole tables to compute a handful of aggregates
 
-**Severity:** Medium · **Blocks launch:** no · **Status:** open
+**Severity:** Medium · **Blocks launch:** no · **Status:** partially fixed — `/dashboard/units` done, six pages remain
 
 ### What exists
 
@@ -694,12 +694,84 @@ aggregates also silently go **wrong** for any company that exceeds them — a
 tenant with 600 units will show KPI counts computed from only the first 500.
 That correctness bug is the more serious half of this finding.
 
+### Scope — wider than the two routes CI surfaced
+
+The CI timeouts pointed at two pages. Sweeping every admin page that computes
+an aggregate from a fetched array found seven, and the worst caps are the
+smallest ones:
+
+| Page | Cap | Numbers that go wrong above it |
+|---|---|---|
+| `_components/sales-home` | **100** | won / lost leads, converted deals |
+| `_components/sales-manager-home` | **100** | reservation stats |
+| `my-compensation` | **100** | leads, reservations |
+| `users` | **100** | user counts |
+| `brokers` | 200 | active / pending / suspended |
+| `units` | 500 | available / reserved / sold, total value |
+| `requests` | 500 | open / responded / closed |
+
+A cap of 100 on a sales rep's own lead counts is not an edge case — it is the
+normal state a couple of months into use. `contracts` is a near miss: it
+computes its KPI counts from the current page and carries a comment admitting
+they are approximate, which is the same defect wearing a disclaimer.
+
+### Fix shape — `meta.facets` on existing list responses
+
+Chosen over per-resource `/stats` endpoints: no new routes, no new permission
+surface, no second round trip, and the field is optional so the
+OpenAPI-generated mobile client is unaffected.
+
+```
+GET /v1/units?page=1&pageSize=20
+{ "data": [ ...20 rows... ],
+  "meta": { "total": 1340, "page": 1, "pageSize": 20,
+            "facets": { "counts": { "status": { "AVAILABLE": 812, … } },
+                        "sums":   { "price": "4821000000.00" } } } }
+```
+
+Counts are numbers; sums are decimal strings, matching how `DepositsService`
+already serialises money so that `Decimal(14,2)` does not lose precision
+through a JSON float. `PaginationFacets` is declared in three places that must
+stay in step: `apps/api/src/common/utils/pagination.ts`,
+`packages/shared-types/src/pagination.ts`, `apps/web-admin/src/lib/types.ts`.
+
+**Done:** `/units` returns facets; `/dashboard/units` reads them and no longer
+fetches 500 rows. The KPI strip stays deliberately unfiltered — it describes
+the whole portfolio and always has. Making it follow the table's filters would
+change what the numbers mean, which is a separate decision from making them
+correct.
+
+**Gate:** `e2e-catalog-auth` A4b asserts the facet counts sum to `meta.total`
+while `pageSize=1`. That fails if facets are absent and also if a later change
+computes them from the returned page instead of from the `where` clause, which
+is the property that actually matters.
+
+**Remaining:** the six other pages in the table above, each needing facets on
+its list endpoint (`/leads`, `/reservations`, `/brokers`, `/info-requests`,
+`/users`) and the client rewritten to read them.
+
+### Adjacent finding — `pageSize` is unbounded on 22 of 26 list endpoints
+
+While sweeping for this, only four list DTOs were found to cap `pageSize`
+(`audit`, `deposits`, `documents`, `installments`). The other twenty-two accept
+any integer, including `@Public() GET /v1/public/units`. `PaginationQuerySchema`
+in `packages/shared-types` does declare `.max(100)`, but nothing in the API
+imports it — it is documentation, not a control.
+
+This is why the oversized client fetches were possible at all, and it is its
+own availability risk: a single request can ask for every row a tenant owns.
+Capping it is blocked on this work, not independent of it — the dropdowns that
+legitimately request 200–500 rows today need a lightweight options endpoint
+first, or they will silently truncate. Sequence: facets → options endpoints →
+cap `pageSize` everywhere.
+
 ### Current mitigation
 
-The affected routes are marked `slow: true` in the e2e `RouteCheck` lists and
-call Playwright's `test.slow()`, which triples the budget. This is an explicit
-acknowledgement of a measured cost, not a flake suppression — see the comment
-on `RouteCheck.slow` in `apps/web-admin/e2e/helpers/assert.ts`.
+`/dashboard/units` was marked `slow: true` in the e2e `RouteCheck` lists while
+it still fetched 500 rows. That mark has been removed now the fetch is gone —
+CI is the proof that the fix worked, which is what the mark was for.
+`/dashboard/maintenance` still carries `test.slow()`; it has no ordering bug,
+only volume, and is covered by the remaining work above.
 
 ### What is needed
 

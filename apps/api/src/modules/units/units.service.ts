@@ -125,7 +125,7 @@ export class UnitsService {
       ...(query.withoutPlan ? { planTemplates: { none: {} } } : {}),
     };
 
-    const [data, total] = await this.prisma.$transaction([
+    const [data, total, statusGroups, priceAgg] = await this.prisma.$transaction([
       this.prisma.unit.findMany({
         where,
         ...takeSkip({ page, pageSize }),
@@ -136,16 +136,33 @@ export class UnitsService {
         },
       }),
       this.prisma.unit.count({ where }),
+      // Facets — computed over the whole filtered set, not the returned page,
+      // so the admin KPI strip stays correct above any page size. FG-23.
+      this.prisma.unit.groupBy({ by: ['status'], where, _count: { _all: true } }),
+      this.prisma.unit.aggregate({ where, _sum: { price: true } }),
     ]);
+
+    const facets = {
+      counts: {
+        status: Object.fromEntries(
+          statusGroups.map((g) => [g.status, g._count._all]),
+        ),
+      },
+      sums: {
+        // Decimal → string, matching how money is serialised elsewhere in this
+        // API. _sum is null when the filtered set is empty.
+        price: (priceAgg._sum.price ?? new Prisma.Decimal(0)).toString(),
+      },
+    };
 
     if (publicOnly) {
       const serialized = data.map((u) =>
         serializePublicUnit({ ...u, project: u.building.phase.project }),
       );
-      return paginate(serialized, total, { page, pageSize });
+      return paginate(serialized, total, { page, pageSize }, facets);
     }
 
-    return paginate(data, total, { page, pageSize });
+    return paginate(data, total, { page, pageSize }, facets);
   }
 
   async findOne(id: string, publicOnly = false) {

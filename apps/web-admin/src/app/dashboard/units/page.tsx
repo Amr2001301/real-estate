@@ -74,11 +74,19 @@ export default async function UnitsPage({
   // ahead of the data fetches even though neither gates them — currency feeds
   // display and the session feeds an isAdmin check. Three round trips became
   // one. Same shape as the contracts and /account fixes.
-  const [currency, session, pagedRes, snapshotRes, projectsRes, locale] = await Promise.all([
+  const [currency, session, pagedRes, statsRes, projectsRes, locale] = await Promise.all([
     getReportsCurrency(),
     getSession(),
     safe(api.get<Paged<Unit>>(`/units?${qs.toString()}`)),
-    safe(api.get<Paged<Unit>>('/units?pageSize=500')),
+    // FG-23 — the KPI strip used to be computed here from ?pageSize=500 with
+    // .filter().length, which made every count silently wrong for a company
+    // holding more than 500 units. The server now returns the aggregates in
+    // meta.facets, computed in SQL over the whole set, so we ask for a single
+    // row and read the numbers off the meta. Deliberately unfiltered, because
+    // the strip describes the whole portfolio and always has — making it
+    // follow the table's filters would change what the numbers mean, which is
+    // a separate decision from making them correct.
+    safe(api.get<Paged<Unit>>('/units?pageSize=1')),
     safe(api.get<Paged<Project>>('/projects?pageSize=200')),
     getLocale(),
   ]);
@@ -89,12 +97,18 @@ export default async function UnitsPage({
 
   const paged = pagedRes.data;
   const rows  = paged?.data ?? [];
-  const all   = snapshotRes.data?.data ?? [];
 
-  const total     = snapshotRes.data?.meta.total ?? all.length;
-  const available = all.filter((u) => u.status === 'AVAILABLE').length;
-  const reserved  = all.filter((u) => u.status === 'RESERVED').length;
-  const sold      = all.filter((u) => u.status === 'SOLD').length;
+  const facets    = statsRes.data?.meta.facets;
+  const byStatus  = facets?.counts?.status ?? {};
+  const total     = statsRes.data?.meta.total ?? 0;
+  // A status absent from the facet means zero rows hold it — the server only
+  // reports values present in the set.
+  const available = byStatus.AVAILABLE ?? 0;
+  const reserved  = byStatus.RESERVED  ?? 0;
+  const sold      = byStatus.SOLD      ?? 0;
+  // Decimal string from the API; formatCurrency takes a number, and the
+  // display rounds anyway, so the narrowing is safe for presentation.
+  const totalValue = Number(facets?.sums?.price ?? 0);
 
   const projects = projectsRes.data?.data ?? [];
 
@@ -152,7 +166,7 @@ export default async function UnitsPage({
         metrics={[
           {
             label:   m.kpi.totalValue,
-            value:   formatCurrency(all.reduce((s, u) => s + Number(u.price ?? 0), 0), currency),
+            value:   formatCurrency(totalValue, currency),
             icon:    <CircleDollarSign />,
             tone:    'brand',
             primary: true,

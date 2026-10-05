@@ -3,9 +3,30 @@ export interface Translatable {
   en: string;
 }
 
+/**
+ * Server-computed aggregates over the whole filtered set, not the returned
+ * page. Mirrors PaginationFacets in the API and in packages/shared-types —
+ * keep the three in step. Present only on endpoints that compute them, so
+ * always optional. See docs/audit/08-functional-gaps.md FG-23.
+ */
+export interface PaginationFacets {
+  /** dimension → value → count. A missing key means zero: the server omits
+   *  values that no row holds. Read with `?? 0`, never assume every member. */
+  counts?: Record<string, Record<string, number>>;
+  /** field → sum as a decimal string. Money is Decimal(14,2) server-side and
+   *  stays a string so JSON floats cannot lose precision. */
+  sums?: Record<string, string>;
+}
+
 export interface Paged<T> {
   data: T[];
-  meta: { page: number; pageSize: number; total: number; totalPages: number };
+  meta: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    facets?: PaginationFacets;
+  };
 }
 
 export type ProjectStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
