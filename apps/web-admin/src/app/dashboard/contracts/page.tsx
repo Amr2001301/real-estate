@@ -61,7 +61,6 @@ export default async function ContractsPage({
   const locale = await getLocale();
   const m = uiT(locale).pages.contracts;
   const sp = await searchParams;
-  const currency = await getReportsCurrency();
   const page = Number(sp.page ?? 1);
   const pageSize = 20;
 
@@ -70,9 +69,15 @@ export default async function ContractsPage({
   if (sp.signed) qs.set('signed', sp.signed);
   if (sp.hasReservation) qs.set('hasReservation', sp.hasReservation);
 
-  const [contractsRes, allRes] = await Promise.all([
+  // One wave. getReportsCurrency() used to run before the contract fetches and
+  // getSession() after them, so a render that needs no ordering at all cost
+  // three sequential round trips. Nothing here depends on anything else here:
+  // currency and session only feed display and a role check.
+  const [currency, contractsRes, allRes, session] = await Promise.all([
+    getReportsCurrency(),
     safe(api.get<Paged<ContractRow>>(`/contracts?${qs}`)),
     safe(api.get<Paged<ContractRow>>('/contracts?pageSize=1')),
+    getSession(),
   ]);
 
   const contracts = contractsRes.data?.data ?? [];
@@ -85,7 +90,6 @@ export default async function ContractsPage({
   const withReservationCount = contracts.filter((c) => c.reservation).length;
 
   // Manual contract creation (contracts:upload) is ADMIN-only; SALES reads.
-  const session = await getSession();
   const isAdmin = session?.role === 'ADMIN';
 
   return (

@@ -39,11 +39,13 @@ test.describe('SALES smoke', () => {
     await expect(page.getByText('مرحباً بك في المجلس الرقمي')).toHaveCount(0);
   });
 
-  test('can load every sales route without auth redirect or error', async ({ page }) => {
-    for (const route of SALES_ROUTES) {
+  // One test per route — see the note in dashboard-smoke.spec.ts. A single
+  // test looping over every route gave N navigations one 30s budget.
+  for (const route of SALES_ROUTES) {
+    test(`sales loads ${route.path} without auth redirect or error`, async ({ page }) => {
       await assertRouteLoads(page, route);
-    }
-  });
+    });
+  }
 
   test('admin-only nav links are hidden', async ({ page }) => {
     await page.goto('/dashboard');
