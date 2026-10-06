@@ -248,6 +248,8 @@ A `globalSetup` guard now fails loudly if any `zz_test_*` objects are found at s
 | G11 | Process | Dependency overrides applied without confirmed CI failure — see incident record; TypeError subsequently confirmed in run `36907374243` with correct root-cause and fix |
 | G12 | ~~High~~ | ~~e2e spec files silently omitted from CI~~ — **CLOSED** 2026-10-02: `e2e-data-import` + `e2e-schema-constraints` added to e2e-1; orphan guard added to build job |
 | G13 | Low (accepted) | `E2E_TENANT_BYPASS_SLUG` has no deploy-time enforcement — see below |
+| G15 | Critical | A failed path filter skipped every job and the gate reported green — **FIX PUSHED** 2026-10-06, verified by the PR run — see below |
+| G14 | Medium (dated) | `ubuntu-latest` → 26.04 from 2026-10-19; Node 20 action runtimes — **MITIGATED** 2026-10-06: runners pinned to 24.04, actions on Node 24 majors; the 26.04 move itself still open — see below |
 
 ---
 
@@ -565,3 +567,112 @@ When `deploy.yml` is re-armed, add a step that fails the deployment if any
 Do not describe this gap as mitigated or enforced until that step exists and the
 deploy pipeline is active. The `E2E_` prefix is documentation of intent, not a
 technical control.
+
+---
+
+## G14 — Runner image and action runtimes drift underneath the pipeline
+
+> Recorded 2026-10-06. Fixed in this session for the dated part; the 26.04
+> move itself is deliberately left as its own change.
+
+### What was wrong
+
+Two changes GitHub makes on its own schedule, neither visible in a diff:
+
+1. **`ubuntu-latest` → 26.04.** Every job used `ubuntu-latest`. GitHub migrates
+   that label to Ubuntu 26.04 between **2026-10-19 and 2026-11-19**
+   ([changelog](https://github.blog/changelog/2026-09-17-ubuntu-26-generally-available-and-latest-migration),
+   [runner-images#14226](https://github.com/actions/runner-images/issues/14226)).
+   Jobs would have changed OS mid-rollout, some runs on 24.04 and some on 26.04,
+   with no commit to point at when one goes red.
+2. **Node 20 action runtime.** Every run warned that `actions/checkout@v4`,
+   `actions/setup-node@v4`, `pnpm/action-setup@v4` and `dorny/paths-filter@v3`
+   target Node 20 and were being forced onto Node 24 (verified in the run 165 job
+   logs). The other node-based actions in use — `upload-artifact@v4` and the three
+   `docker/*` actions in `deploy.yml` — target Node 20 too (verified from each
+   tag's `action.yml`); they only did not warn because those steps did not run.
+
+### What in this repo the 26.04 image would change
+
+Read from the runner-images breaking-changes issue against what the workflows
+actually use:
+
+| Change on 26.04 | Where it hits us |
+|---|---|
+| `postgresql-client` from apt becomes 18 (was 16) | `db-backup.yml` installs it from apt. A `pg_dump` 18 archive is not readable by an older `pg_restore`, and `scripts/db-restore-test.sh` uses whatever `pg_restore` the operator has installed — production runs Postgres 16. |
+| Playwright system deps on a new OS | `playwright install --with-deps chromium` in both Playwright jobs |
+| Docker 28 → 29, Compose 2 → 5 | `services:` containers in every DB-backed job; the MinIO steps |
+| Python: only 3.14 cached | `db-backup.yml` runs `pip install awscli` |
+| Java 17 → 25 default | Not used today (the mobile job runs analyze + test, no Android build) |
+
+Node itself is unaffected: every job pins it via `setup-node` + `.nvmrc`.
+
+### Fix
+
+- All 17 jobs across the four workflows pin `runs-on: ubuntu-24.04`.
+- Each node-based action moved to the **lowest** major that runs on Node 24, to
+  keep the behaviour change to the runtime and nothing else:
+
+| Action | From | To | Breaking notes checked against our usage |
+|---|---|---|---|
+| `actions/checkout` | v4 | v5 | Runtime only; needs runner ≥ 2.327.1 (hosted runners are) |
+| `actions/setup-node` | v4 | v5 | Auto-caches when `packageManager` is set — every call already passes `cache: pnpm`, so no change |
+| `pnpm/action-setup` | v4 | v5 | Same inputs; we pass `version` + `run_install` only |
+| `actions/upload-artifact` | v4 | v6 | v5 still defaulted to Node 20; v6 is runtime only |
+| `dorny/paths-filter` | v3 | v4 | Runtime; our filters are plain `dir/**` globs |
+| `docker/setup-buildx-action` | v3 | v4 | Removed deprecated inputs — we pass none |
+| `docker/login-action` | v3 | v4 | Runtime only |
+| `docker/build-push-action` | v6 | v7 | Removed `DOCKER_BUILD_NO_SUMMARY` / `DOCKER_BUILD_EXPORT_RETENTION_DAYS` — we set neither |
+
+`subosito/flutter-action@v2` is a composite action (it uses `actions/cache@v5`
+internally) and needs no change.
+
+### What is verified and what is not
+
+- `ci.yml` is verified by a green run of this change.
+- `deploy.yml`, `db-backup.yml` and `mt017-production-identity-audit.yml` are
+  manual or scheduled jobs that touch production. They were **not** run to test
+  this change. The `db-backup` change is runner and action versions only; its
+  first scheduled run after merge is the proof, and it should be checked.
+
+### Still to do — moving to 26.04 on purpose
+
+Pinning buys time; it does not move us. 24.04 stays supported, but the move
+should be one deliberate change: switch `ci.yml` to `ubuntu-26.04` on a branch,
+run it via `workflow_dispatch`, and fix what breaks. Do `db-backup.yml` last,
+and pin the Postgres client major explicitly (PGDG `postgresql-client-16`) rather
+than taking whatever apt ships.
+
+---
+
+## G15 — A failed path filter turned the whole run green
+
+> Recorded and fixed 2026-10-06, on the first pull request this repository
+> has had (Amr2001301/real-estate#1, run 167).
+
+### What happened
+
+`detect changed areas` failed with `Resource not accessible by integration`.
+On `pull_request` events `dorny/paths-filter` lists the PR's files through the
+GitHub API; the default token here is read-only on contents and cannot read
+pull requests. `push`, `schedule` and `workflow_dispatch` use git instead,
+which is why no run before the first PR ever hit it. It is not caused by the
+v3 → v4 bump in G14 — every version takes the API path on `pull_request`.
+
+Every filtered job `needs: changes`, so all of them were **skipped**. The
+gate checks its `needs` for `failure` or `cancelled`; `changes` was not in
+that list and a skip is neither, so **`all checks passed` went green on a run
+where no test executed.** That is the serious half: with branch protection
+pointed at the gate (G3), this would have let any PR merge untested.
+
+### Fix
+
+- `changes` gets `permissions: { contents: read, pull-requests: read }`.
+- `changes` is added to the gate's `needs`, so a failure there is a failure of
+  the gate. This holds for any future reason the filter breaks, not just this
+  one.
+
+### Verification
+
+The PR run after the fix must show `detect changed areas` green, the
+filtered jobs actually running, and the gate green on their results.
