@@ -247,6 +247,7 @@ A `globalSetup` guard now fails loudly if any `zz_test_*` objects are found at s
 | G10 | Medium | Node version drift CI vs local — **MITIGATED** 2026-10-01: `.nvmrc` + `node-version-file` pin + drift-guard step |
 | G11 | Process | Dependency overrides applied without confirmed CI failure — see incident record; TypeError subsequently confirmed in run `36907374243` with correct root-cause and fix |
 | G12 | ~~High~~ | ~~e2e spec files silently omitted from CI~~ — **CLOSED** 2026-10-02: `e2e-data-import` + `e2e-schema-constraints` added to e2e-1; orphan guard added to build job |
+| G13 | Low (accepted) | `E2E_TENANT_BYPASS_SLUG` has no deploy-time enforcement — see below |
 
 ---
 
@@ -504,3 +505,63 @@ the split candidate when the suite next exceeds budget.
 direct pushes to `main`. Use `workflow_dispatch` or open a PR to run them against
 a specific branch.
 | Broken suites can survive 3+ weeks | Caught on the next PR that touches `apps/api/**` |
+
+---
+
+## G13 — `E2E_TENANT_BYPASS_SLUG` has no deploy-time enforcement
+
+**Date recorded:** 2026-10-04
+
+`apps/web-public/src/middleware.ts` reads `process.env.E2E_TENANT_BYPASS_SLUG` at
+module load and, when set, skips the backend tenant-resolution API call entirely
+for requests arriving on localhost:
+
+```typescript
+const E2E_TENANT_BYPASS_SLUG = process.env.E2E_TENANT_BYPASS_SLUG;
+// ...
+if (E2E_TENANT_BYPASS_SLUG && LOCAL_HOSTS.has(hostname)) {
+  return { slug: E2E_TENANT_BYPASS_SLUG, websiteEnabled: true };
+}
+```
+
+### Exposure
+
+If `E2E_TENANT_BYPASS_SLUG` were ever set in a production environment, a request
+arriving with `Host: localhost` — a health check, an internal SSR fetch, a
+reverse proxy that does not rewrite the `Host` header — would be served the bypass
+tenant without any backend domain check. The `LOCAL_HOSTS` guard (`localhost`,
+`127.0.0.1`, `[::1]`) is the real protection; the `E2E_` prefix is a naming
+convention, not a runtime control.
+
+### Why this is accepted
+
+- Deployed traffic arrives on real registered domain names. A production edge
+  node never sees `Host: localhost`.
+- `E2E_TENANT_BYPASS_SLUG` has no reason to exist in a production environment.
+  The variable is injected exclusively in CI `env:` blocks (`.github/workflows/ci.yml`).
+- The obvious alternative — a `NODE_ENV !== 'production'` guard around the const —
+  is the exact mechanism that caused the 14 Playwright failures fixed in commit
+  `a36f7c2`. `next build` sets `process.env.NODE_ENV = 'production'` before
+  bundling Edge middleware, so that guard bakes as `false` at build time regardless
+  of what the CI job's `NODE_ENV:` block says, silently making the bypass inert and
+  rendering all tenant-dependent pages as the not-found shell.
+
+### TODO — the real control does not exist yet
+
+When `deploy.yml` is re-armed, add a step that fails the deployment if any
+`E2E_*` variable is present in the production environment:
+
+```yaml
+- name: Reject E2E variables in production
+  run: |
+    E2E_VARS=$(env | grep '^E2E_' || true)
+    if [ -n "$E2E_VARS" ]; then
+      echo "ERROR: E2E_ variables must not be set in production:"
+      echo "$E2E_VARS"
+      exit 1
+    fi
+```
+
+Do not describe this gap as mitigated or enforced until that step exists and the
+deploy pipeline is active. The `E2E_` prefix is documentation of intent, not a
+technical control.
