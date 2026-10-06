@@ -248,6 +248,7 @@ A `globalSetup` guard now fails loudly if any `zz_test_*` objects are found at s
 | G11 | Process | Dependency overrides applied without confirmed CI failure — see incident record; TypeError subsequently confirmed in run `36907374243` with correct root-cause and fix |
 | G12 | ~~High~~ | ~~e2e spec files silently omitted from CI~~ — **CLOSED** 2026-10-02: `e2e-data-import` + `e2e-schema-constraints` added to e2e-1; orphan guard added to build job |
 | G13 | Low (accepted) | `E2E_TENANT_BYPASS_SLUG` has no deploy-time enforcement — see below |
+| G15 | Critical | A failed path filter skipped every job and the gate reported green — **FIX PUSHED** 2026-10-06, verified by the PR run — see below |
 | G14 | Medium (dated) | `ubuntu-latest` → 26.04 from 2026-10-19; Node 20 action runtimes — **MITIGATED** 2026-10-06: runners pinned to 24.04, actions on Node 24 majors; the 26.04 move itself still open — see below |
 
 ---
@@ -641,3 +642,37 @@ should be one deliberate change: switch `ci.yml` to `ubuntu-26.04` on a branch,
 run it via `workflow_dispatch`, and fix what breaks. Do `db-backup.yml` last,
 and pin the Postgres client major explicitly (PGDG `postgresql-client-16`) rather
 than taking whatever apt ships.
+
+---
+
+## G15 — A failed path filter turned the whole run green
+
+> Recorded and fixed 2026-10-06, on the first pull request this repository
+> has had (Amr2001301/real-estate#1, run 167).
+
+### What happened
+
+`detect changed areas` failed with `Resource not accessible by integration`.
+On `pull_request` events `dorny/paths-filter` lists the PR's files through the
+GitHub API; the default token here is read-only on contents and cannot read
+pull requests. `push`, `schedule` and `workflow_dispatch` use git instead,
+which is why no run before the first PR ever hit it. It is not caused by the
+v3 → v4 bump in G14 — every version takes the API path on `pull_request`.
+
+Every filtered job `needs: changes`, so all of them were **skipped**. The
+gate checks its `needs` for `failure` or `cancelled`; `changes` was not in
+that list and a skip is neither, so **`all checks passed` went green on a run
+where no test executed.** That is the serious half: with branch protection
+pointed at the gate (G3), this would have let any PR merge untested.
+
+### Fix
+
+- `changes` gets `permissions: { contents: read, pull-requests: read }`.
+- `changes` is added to the gate's `needs`, so a failure there is a failure of
+  the gate. This holds for any future reason the filter breaks, not just this
+  one.
+
+### Verification
+
+The PR run after the fix must show `detect changed areas` green, the
+filtered jobs actually running, and the gate green on their results.
