@@ -97,6 +97,13 @@ function makePrismaMock() {
         },
       })),
       count: jest.fn().mockResolvedValue(0),
+      // FG-23 — findAll also computes meta.facets from a groupBy and an
+      // aggregate over the same `where`. This spec asserts authorization, not
+      // the facet contract (that is e2e-catalog-auth A4b against real
+      // Postgres), so an empty set matching the empty findMany above is the
+      // honest shape here.
+      groupBy: jest.fn().mockResolvedValue([]),
+      aggregate: jest.fn().mockResolvedValue({ _sum: { price: null } }),
       create: jest.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
         id: 'u-new',
         ...data,

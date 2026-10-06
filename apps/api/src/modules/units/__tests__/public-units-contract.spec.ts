@@ -83,6 +83,14 @@ function makePrismaMock() {
     unit: {
       findMany: jest.fn().mockResolvedValue([rawUnit(PUBLISHED_UNIT, 'PUBLISHED')]),
       count: jest.fn().mockResolvedValue(1),
+      // FG-23 — findAll now also computes meta.facets from a groupBy and an
+      // aggregate over the same `where`. The values here only need to be
+      // well-shaped: this spec asserts the public unit payload, and the facet
+      // contract itself is covered by e2e-catalog-auth A4b against real
+      // Postgres, where a mock could not prove the counts come from the
+      // filtered set rather than the page.
+      groupBy: jest.fn().mockResolvedValue([{ status: 'PUBLISHED', _count: 1 }]),
+      aggregate: jest.fn().mockResolvedValue({ _sum: { price: null } }),
       findUnique: jest.fn().mockImplementation(async ({ where }: { where: { id: string } }) =>
         rawUnit(where.id, where.id === DRAFT_UNIT ? 'DRAFT' : 'PUBLISHED'),
       ),
