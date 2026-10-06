@@ -797,20 +797,54 @@ rows and that its `meta.total` equals the `active.true` facet of the
 unfiltered call. If the server-side filter is removed the param is ignored,
 the two totals become equal to the directory size, and the test fails.
 
-### Adjacent finding — `pageSize` is unbounded on 22 of 26 list endpoints
+### Adjacent finding — `pageSize` had no upper bound — fixed
 
-While sweeping for this, only four list DTOs were found to cap `pageSize`
-(`audit`, `deposits`, `documents`, `installments`). The other twenty-two accept
-any integer, including `@Public() GET /v1/public/units`. `PaginationQuerySchema`
-in `packages/shared-types` does declare `.max(100)`, but nothing in the API
-imports it — it is documentation, not a control.
+**Correction first.** An earlier version of this section, and the commit
+message that introduced it, said "22 of 26 list DTOs place no upper bound on
+`pageSize`". That number was wrong. It came from grepping for `@Max` on the
+same line as the field, which misses the many DTOs that put each decorator on
+its own line. The real count was **18 of 25 already capped, 5 DTO fields
+not** — plus two service method signatures, which class-validator never sees
+anyway. The claim is corrected here rather than quietly dropped, because a
+wrong number in an audit doc is worse than no number.
 
-This is why the oversized client fetches were possible at all, and it is its
-own availability risk: a single request can ask for every row a tenant owns.
-Capping it is blocked on this work, not independent of it — the dropdowns that
-legitimately request 200–500 rows today need a lightweight options endpoint
-first, or they will silently truncate. Sequence: facets → options endpoints →
-cap `pageSize` everywhere.
+What was true, and is the actual hole: **sixteen controllers read `pageSize`
+straight off `@Query` with no DTO at all**, so no decorator could ever reach
+them. `@Public() GET /v1/public/units` was among the reachable surface. A
+single unauthenticated request could ask for every row a tenant owns.
+`PaginationQuerySchema` in `packages/shared-types` does declare `.max(100)`,
+but nothing in the API imports it — it was documentation, not a control.
+
+**Fix — clamp at the chokepoint, validate at the edge.**
+
+`takeSkip()` and `paginate()` both clamp through one `clampPageSize()` rule, so
+the bound holds for every list that uses them — 34 of 36 `paginate` call sites,
+and anything added later, validated or not. Both clamp, not just the query:
+clamping the query alone would make `meta` lie, reporting a `pageSize` of
+10,000 while 500 rows came back and computing `totalPages` from the fiction.
+The clamp also guards `NaN`, which `Number(undefined)` in a controller produces
+and which would otherwise reach Prisma as `take: NaN`.
+
+The two sites that build `take`/`skip` by hand were brought in:
+`installments.module.ts` now uses `takeSkip`, and
+`broker-portal-activity.service.ts` clamps its inputs. The latter needed care —
+it over-fetches `page * pageSize` from two sources before merging, so clamping
+the derived limit would have dropped rows that belong on the requested page,
+turning a cost problem into a correctness one. Its inputs are clamped instead.
+
+The five uncapped DTO fields gained `@Max(MAX_PAGE_SIZE)` so a caller gets a
+clear 400 rather than a quietly truncated page. The clamp is the guarantee; the
+decorator is the good error message.
+
+**Ceiling is 500, not 100,** because 500 is the largest page any client asks
+for today, so this breaks nothing. Tightening to 100 still depends on the
+filter dropdowns getting a lightweight options endpoint; until then they
+legitimately need large pages.
+
+**Gate:** `e2e-catalog-auth` A4d asks for `pageSize=100000` three ways — an
+unvalidated route (`/v1/users`, which must clamp and report 500 in `meta`), a
+validated one (`/v1/units`, which must 400), and the unauthenticated public
+catalogue. Remove the clamp and the first and third fail.
 
 ### Current mitigation
 

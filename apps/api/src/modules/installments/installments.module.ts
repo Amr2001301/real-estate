@@ -55,7 +55,7 @@ import {
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
-import { paginate } from '../../common/utils/pagination';
+import { paginate, takeSkip } from '../../common/utils/pagination';
 import { CronLockService } from '../../common/cron/cron-lock.service';
 import { captureExceptionSafe } from '../../common/observability/sentry';
 import { runTenantContext } from '../../common/tenant/tenant-context';
@@ -475,7 +475,6 @@ class PlanTemplatesService {
     role: UserRole;
   }) {
     const { page, pageSize, q, projectId, status, role } = query;
-    const skip = (page - 1) * pageSize;
 
     const where: Prisma.InstallmentPlanTemplateWhereInput = {};
 
@@ -500,8 +499,8 @@ class PlanTemplatesService {
     const [data, total] = await Promise.all([
       this.prisma.installmentPlanTemplate.findMany({
         where,
-        skip,
-        take: pageSize,
+        // FG-23 — clamped; see the note on the other manual site in this file.
+        ...takeSkip({ page, pageSize }),
         orderBy: { createdAt: 'desc' },
         include: {
           project: { select: { id: true, name: true } },
@@ -1157,8 +1156,9 @@ class MeInstallmentsService {
     const [data, total] = await this.prisma.$transaction([
       this.prisma.installment.findMany({
         where: listWhere,
-        skip: (opts.page - 1) * opts.pageSize,
-        take: opts.pageSize,
+        // FG-23 — clamped like every other list; this one builds take/skip by
+        // hand instead of going through takeSkip().
+        ...takeSkip({ page: opts.page, pageSize: opts.pageSize }),
         orderBy: { dueDate: 'asc' },
         select: {
           id: true,

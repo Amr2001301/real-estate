@@ -9,8 +9,10 @@ import {
   MaxLength,
   Min,
   MinLength,
+  Max,
 } from 'class-validator';
 import { BrokerUserStatus, Locale } from '@prisma/client';
+import { MAX_PAGE_SIZE } from '../../../common/utils/pagination';
 
 export class PortalTeamQueryDto {
   @IsOptional()
@@ -32,6 +34,7 @@ export class PortalTeamQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(MAX_PAGE_SIZE)
   pageSize?: number;
 }
 

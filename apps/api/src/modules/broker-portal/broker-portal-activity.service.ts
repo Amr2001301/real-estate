@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { BrokerActivityType, LeadActivityType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { paginate } from '../../common/utils/pagination';
+import { paginate, clampPage, clampPageSize } from '../../common/utils/pagination';
 import type { BrokerScopeContext } from '../../common/guards/broker-scope.guard';
 import {
   PortalActivityQueryDto,
@@ -77,8 +77,15 @@ export class BrokerPortalActivityService {
    * grows large we can move to a materialised view without touching callers.
    */
   async list(scope: BrokerScopeContext, query: PortalActivityQueryDto) {
-    const page = query.page ?? 1;
-    const pageSize = query.pageSize ?? 30;
+    // FG-23 — clamped at the source. This method does not go through
+    // takeSkip(), and its over-fetch below multiplies page by pageSize, so an
+    // unclamped request compounds: page=1000&pageSize=10000 would pull ten
+    // million rows from each source. Clamping the inputs rather than the
+    // derived limit keeps the merge correct — a smaller limit would drop rows
+    // that belong on the requested page, turning a cost problem into a
+    // correctness one.
+    const page = clampPage(query.page ?? 1);
+    const pageSize = clampPageSize(query.pageSize ?? 30);
 
     // Filter routing: when the user picks a type or entityType, only one of
     // the two sources may contribute. Reduces query cost in the common case.

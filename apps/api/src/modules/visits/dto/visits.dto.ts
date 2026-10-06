@@ -16,6 +16,7 @@ import {
   VisitRequestStatus,
 } from '@prisma/client';
 import { Type } from 'class-transformer';
+import { MAX_PAGE_SIZE } from '../../../common/utils/pagination';
 
 export class ListRequestsDto {
   @IsOptional() @IsEnum(VisitRequestStatus) status?: VisitRequestStatus;
@@ -26,7 +27,7 @@ export class ListRequestsDto {
   @IsOptional() @IsDateString() dateTo?: string;
   @IsOptional() @IsString() q?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
-  @IsOptional() @Type(() => Number) @IsInt() @Min(1) pageSize?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(MAX_PAGE_SIZE) pageSize?: number;
 }
 
 export class ListAppointmentsDto {
@@ -40,7 +41,7 @@ export class ListAppointmentsDto {
   @IsOptional() @IsString() today?: string;
   @IsOptional() @IsString() q?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
-  @IsOptional() @Type(() => Number) @IsInt() @Min(1) pageSize?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(MAX_PAGE_SIZE) pageSize?: number;
 }
 
 export class UpdateRequestStatusDto {

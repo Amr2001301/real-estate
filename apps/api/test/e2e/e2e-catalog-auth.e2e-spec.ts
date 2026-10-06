@@ -377,6 +377,48 @@ describe('Flow A — Catalog sync (e2e)', () => {
     });
   });
 
+  // ── FG-23 — pageSize is bounded, on validated and unvalidated routes alike ─
+  //
+  // Sixteen controllers read pageSize straight off @Query with no DTO, so no
+  // decorator can reach them. takeSkip() and paginate() clamp instead, which
+  // makes the bound hold for every list including any added later. The DTO
+  // @Max is the good error message, not the guarantee — these assert both.
+  describe('A4d — pageSize upper bound (FG-23)', () => {
+    const ABSURD = 100_000;
+
+    it('an unvalidated route clamps rather than honouring an absurd pageSize', async () => {
+      // /v1/users takes pageSize through a raw @Query with no DTO.
+      const res = await http()
+        .get(`/v1/users?pageSize=${ABSURD}`)
+        .set('Authorization', bearer(adminToken));
+      expect(res.status).toBe(200);
+
+      // meta must report what was served, not what was asked for — clamping the
+      // query while echoing the request would make totalPages a fiction.
+      expect(res.body.meta.pageSize).toBe(500);
+      expect(res.body.data.length).toBeLessThanOrEqual(500);
+    });
+
+    it('a validated route rejects an absurd pageSize outright', async () => {
+      // /v1/units goes through UnitQueryDto, which now carries @Max.
+      const res = await http()
+        .get(`/v1/units?pageSize=${ABSURD}`)
+        .set('Authorization', bearer(adminToken));
+      expect(res.status).toBe(400);
+    });
+
+    it('the public catalogue is bounded too', async () => {
+      // No auth at all. This was the worst of it: anyone could ask for every
+      // unit row a tenant owns.
+      const res = await http().get(`/v1/public/units?pageSize=${ABSURD}`);
+      expect([200, 400]).toContain(res.status);
+      if (res.status === 200) {
+        expect(res.body.meta.pageSize).toBeLessThanOrEqual(500);
+        expect(res.body.data.length).toBeLessThanOrEqual(500);
+      }
+    });
+  });
+
   describe('A5 — Broker1 portal returns only the broker1-granted projects', () => {
     it('GET /v1/portal/projects as broker1 returns exactly {p1, p2}', async () => {
       const res = await http()

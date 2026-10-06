@@ -51,27 +51,73 @@ export interface Paginated<T> {
   };
 }
 
+export const MAX_PAGE_SIZE = 500;
+
+/**
+ * The single clamp rule. Also guards against NaN, which `Number(undefined)` in
+ * a controller produces and which would otherwise reach Prisma as `take: NaN`.
+ */
+export function clampPageSize(pageSize: number): number {
+  if (!Number.isFinite(pageSize)) return 20;
+  return Math.min(Math.max(1, Math.floor(pageSize)), MAX_PAGE_SIZE);
+}
+
+/** Same NaN guard for the page number — `Number('abc')` must not become skip: NaN. */
+export function clampPage(page: number): number {
+  if (!Number.isFinite(page)) return 1;
+  return Math.max(1, Math.floor(page));
+}
+
+export function takeSkip(p: PaginationParams) {
+  const pageSize = clampPageSize(p.pageSize);
+  const page = clampPage(p.page);
+  return { take: pageSize, skip: (page - 1) * pageSize };
+}
+
 export function paginate<T>(
   data: T[],
   total: number,
   p: PaginationParams,
   facets?: PaginationFacets,
 ): Paginated<T> {
+  // Clamp with the same rule takeSkip uses. Clamping only the query would make
+  // meta lie: a caller asking for 10,000 would be told pageSize is 10,000 while
+  // 500 rows came back, and totalPages would be computed from the fiction.
+  const pageSize = clampPageSize(p.pageSize);
+  const page = clampPage(p.page);
   return {
     data,
     meta: {
-      page: p.page,
-      pageSize: p.pageSize,
+      page,
+      pageSize,
       total,
-      totalPages: Math.max(1, Math.ceil(total / p.pageSize)),
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
       ...(facets ? { facets } : {}),
     },
   };
 }
 
-export function takeSkip(p: PaginationParams) {
-  return { take: p.pageSize, skip: (p.page - 1) * p.pageSize };
-}
+/**
+ * Hard ceiling on rows returned in one page, enforced in `takeSkip` regardless
+ * of what the caller asked for.
+ *
+ * WHY — 22 of 26 list DTOs placed no upper bound on `pageSize`, including
+ * `@Public() GET /v1/public/units`, and sixteen controllers read it straight
+ * off `@Query` with no validation at all. A single unauthenticated request
+ * could ask for every row a tenant owns. `PaginationQuerySchema` in
+ * packages/shared-types does declare `.max(100)`, but nothing in the API
+ * imports it — it was documentation, not a control.
+ *
+ * 500 rather than 100 because 500 is the largest page any client asks for
+ * today, so this breaks nothing. Tightening it to 100 is a follow-up that
+ * depends on the filter dropdowns getting a lightweight options endpoint of
+ * their own; until then they legitimately need large pages. See
+ * docs/audit/08-functional-gaps.md FG-23.
+ *
+ * This clamp is the backstop, not the contract. DTO-validated routes also
+ * carry `@Max(MAX_PAGE_SIZE)` so a caller gets a clear 400 instead of a
+ * quietly truncated page.
+ */
 
 /**
  * Turn a Prisma `groupBy` result into a facet dimension.

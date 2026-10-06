@@ -9,8 +9,10 @@ import {
   IsUUID,
   Min,
   IsPositive,
+  Max,
 } from 'class-validator';
 import { UnitStatus } from '@prisma/client';
+import { MAX_PAGE_SIZE } from '../../../common/utils/pagination';
 
 export class CreateUnitDto {
   @IsUUID('all', { message: 'يجب اختيار مبنى صالح' })
@@ -87,7 +89,7 @@ export class UnitQueryDto {
   @IsOptional() @IsInt() bedrooms?: number;
   @IsOptional() @IsInt() bathrooms?: number;
   @IsOptional() @IsInt() page?: number;
-  @IsOptional() @IsInt() pageSize?: number;
+  @IsOptional() @IsInt() @Max(MAX_PAGE_SIZE) pageSize?: number;
   @IsOptional() @IsBoolean() withoutPlan?: boolean;
 }
 

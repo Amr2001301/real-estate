@@ -11,10 +11,12 @@ import {
   MaxLength,
   MinLength,
   ValidateNested,
+  Max,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ProjectStatus } from '@prisma/client';
 import { ENTITY_CODE_PATTERN, normalizeEntityCode } from '../../../common/utils/entity-code';
+import { MAX_PAGE_SIZE } from '../../../common/utils/pagination';
 
 export class TranslatableDto {
   @IsString()
@@ -157,5 +159,6 @@ export class ProjectQueryDto {
 
   @IsOptional()
   @IsNumber()
+  @Max(MAX_PAGE_SIZE)
   pageSize?: number;
 }
