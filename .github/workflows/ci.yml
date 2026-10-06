@@ -23,6 +23,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Runners are pinned to ubuntu-24.04, not ubuntu-latest, in every workflow.
+# GitHub moves ubuntu-latest to 26.04 between 2026-10-19 and 2026-11-19, which
+# changes the Postgres client, Docker, Compose and Playwright's system deps
+# underneath us. Moving to 26.04 is a deliberate change, tested on its own —
+# see G14 in docs/audit/06-ci-gaps.md.
+
 jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   # Detect which directories changed so the heavier jobs below can self-skip
@@ -31,7 +37,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   changes:
     name: detect changed areas
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 2
     outputs:
       api: ${{ steps.filter.outputs.api }}
@@ -39,9 +45,9 @@ jobs:
       webAdmin: ${{ steps.filter.outputs.webAdmin }}
       webPublic: ${{ steps.filter.outputs.webPublic }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - id: filter
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           filters: |
             api:
@@ -71,7 +77,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   build:
     name: lint · typecheck · build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
 
     # An ephemeral Postgres is provided so that any Prisma schema-validation
@@ -102,16 +108,16 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.15.9
           run_install: false
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -218,13 +224,13 @@ jobs:
     if: >
       needs.changes.outputs.api == 'true' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.suite != 'e2e-only')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
         with: { version: 9.15.9, run_install: false }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with: { node-version-file: .nvmrc, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - name: Generate Prisma client
@@ -269,7 +275,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       ((github.event_name == 'pull_request' || github.event_name == 'push')
         && needs.changes.outputs.api == 'true')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     services:
       postgres:
@@ -305,10 +311,10 @@ jobs:
       SEED_ADMIN_EMAIL: admin@example.com
       SEED_ADMIN_PASSWORD: ChangeMe123!
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
         with: { version: 9.15.9, run_install: false }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with: { node-version-file: .nvmrc, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - name: Generate Prisma client
@@ -337,7 +343,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       ((github.event_name == 'pull_request' || github.event_name == 'push')
         && needs.changes.outputs.api == 'true')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     services:
       postgres:
@@ -384,10 +390,10 @@ jobs:
       R2_PUBLIC_URL: http://localhost:9000/real-estate-media
       R2_PRIVATE_BUCKET: real-estate-private
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
         with: { version: 9.15.9, run_install: false }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with: { node-version-file: .nvmrc, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - name: Generate Prisma client
@@ -436,7 +442,7 @@ jobs:
     if: >
       needs.changes.outputs.api == 'true' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.suite != 'e2e-only')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # 35 min: previous 20 min budget was exhausted (suite ran 19m19s, killed).
     # The cancelled job produced a partial Jest summary that was misread as a
     # real failure. 35 min gives a safe margin to get one complete, trustworthy
@@ -485,10 +491,10 @@ jobs:
       R2_PUBLIC_URL: http://localhost:9000/real-estate-media
       R2_PRIVATE_BUCKET: real-estate-private
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
         with: { version: 9.15.9, run_install: false }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with: { node-version-file: .nvmrc, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - name: Generate Prisma client
@@ -533,13 +539,13 @@ jobs:
     if: >
       needs.changes.outputs.webPublic == 'true' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.suite != 'e2e-only')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
         with: { version: 9.15.9, run_install: false }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with: { node-version-file: .nvmrc, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - name: Run unit tests
@@ -556,10 +562,10 @@ jobs:
     if: >
       needs.changes.outputs.mobile == 'true' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.suite != 'e2e-only')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -624,7 +630,7 @@ jobs:
       needs.changes.outputs.webAdmin == 'true' ||
       needs.changes.outputs.api == 'true' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.suite != 'e2e-only')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     services:
       postgres:
@@ -659,10 +665,10 @@ jobs:
       # WARNING: docs/audit/06-ci-gaps.md G5 — coupling to DEFAULT_COMPANY fallback.
       DEFAULT_COMPANY_ID: 00000000-0000-0000-0000-000000000001
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
         with: { version: 9.15.9, run_install: false }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with: { node-version-file: .nvmrc, cache: pnpm }
       - run: pnpm install --frozen-lockfile
 
@@ -716,7 +722,7 @@ jobs:
 
       - name: Upload Playwright report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: web-admin-playwright-report
           path: apps/web-admin/playwright-report/
@@ -724,7 +730,7 @@ jobs:
 
       - name: Upload API log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: web-admin-api-log
           path: /tmp/api.log
@@ -745,7 +751,7 @@ jobs:
       needs.changes.outputs.webPublic == 'true' ||
       needs.changes.outputs.api == 'true' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.suite != 'e2e-only')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     services:
       postgres:
@@ -790,10 +796,10 @@ jobs:
       # → 404, causing all Playwright tests to fail regardless of seed state.
       E2E_TENANT_BYPASS_SLUG: default
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
         with: { version: 9.15.9, run_install: false }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with: { node-version-file: .nvmrc, cache: pnpm }
       - run: pnpm install --frozen-lockfile
 
@@ -845,7 +851,7 @@ jobs:
 
       - name: Upload Playwright report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: web-public-playwright-report
           path: apps/web-public/playwright-report/
@@ -853,7 +859,7 @@ jobs:
 
       - name: Upload web-public server log
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: web-public-server-log
           path: /tmp/web-public.log
@@ -861,7 +867,7 @@ jobs:
 
       - name: Upload API log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: web-public-api-log
           path: /tmp/api.log
@@ -884,7 +890,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   all-checks-passed:
     name: all checks passed
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [build, api-unit, api-e2e-1, api-e2e-2, api-security, mobile-static, web-admin-e2e, web-public-e2e, web-public-unit]
     if: always()
     steps:

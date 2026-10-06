@@ -34,7 +34,7 @@ on:
 jobs:
   mt017-audit:
     name: MT-017 Identity Audit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment: production
 
@@ -54,16 +54,16 @@ jobs:
           echo "Confirmation string accepted."
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 9.15.9
           run_install: false
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: pnpm
@@ -402,7 +402,7 @@ jobs:
 
       - name: Upload audit report artifact
         if: always() && steps.sanitize.outcome == 'success'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: mt017-production-audit-report-${{ github.run_id }}
           path: apps/api/mt017-production-audit-report.txt
