@@ -17,6 +17,7 @@ import {
   CreateLeadSourceDto,
 } from './dto/lead.dto';
 import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
+import { enumFilter } from '../../common/utils/query-filters';
 import { getTenantContext } from '../../common/tenant/tenant-context';
 
 @Injectable()
@@ -194,7 +195,7 @@ export class LeadsService {
   async findAll(opts: {
     page?: number;
     pageSize?: number;
-    stage?: LeadStage;
+    stage?: LeadStage | LeadStage[];
     salesId?: string;
     salesIds?: string[];
     q?: string;
@@ -203,11 +204,16 @@ export class LeadsService {
     sourceId?: string;
     dateFrom?: string;
     dateTo?: string;
+    /** Exact instant, exclusive. Day-granular `dateTo` cannot express "older than 72 hours". */
+    createdBefore?: Date;
   }) {
     const page = opts.page ?? 1;
     const pageSize = opts.pageSize ?? 20;
+    const stageFilter = enumFilter(
+      opts.stage === undefined ? undefined : Array.isArray(opts.stage) ? opts.stage : [opts.stage],
+    );
     const where: Prisma.LeadWhereInput = {
-      ...(opts.stage ? { stage: opts.stage } : {}),
+      ...(stageFilter ? { stage: stageFilter } : {}),
       ...(opts.salesIds
         ? { assignedSalesId: { in: opts.salesIds } }
         : opts.salesId
@@ -216,11 +222,12 @@ export class LeadsService {
       ...(opts.assignedToMe ? { assignedSalesId: opts.assignedToMe } : {}),
       ...(opts.clientId ? { clientId: opts.clientId } : {}),
       ...(opts.sourceId ? { sourceId: opts.sourceId } : {}),
-      ...(opts.dateFrom || opts.dateTo
+      ...(opts.dateFrom || opts.dateTo || opts.createdBefore
         ? {
             createdAt: {
               ...(opts.dateFrom ? { gte: new Date(opts.dateFrom) } : {}),
               ...(opts.dateTo ? { lte: new Date(opts.dateTo + 'T23:59:59.999Z') } : {}),
+              ...(opts.createdBefore ? { lt: opts.createdBefore } : {}),
             },
           }
         : {}),

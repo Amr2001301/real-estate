@@ -166,18 +166,30 @@ export async function SalesManagerDashboard() {
   const currency = await getReportsCurrency();
   const symbol = currencySymbol(currency);
 
-  const [perfRes, leadsRes, reservationsRes, visitsRes] = await Promise.all([
+  const in7DaysIso = new Date(Date.now() + 7 * 86400000).toISOString();
+
+  // FG-23 — every count below comes from meta.total or meta.facets. These
+  // used to be ?pageSize=100 snapshots counted client-side, so a team past a
+  // hundred leads or reservations saw wrong KPIs, funnel and pipeline.
+  const [perfRes, leadsRes, reservationsRes, activeRes, expiringRes, visitsRes] = await Promise.all([
     safe(api.get<PerformanceRow[]>(`/sales-targets/performance?period=${period}`)),
-    safe(api.get<Paged<Lead>>('/leads?pageSize=100')),
-    safe(api.get<Paged<Reservation>>('/reservations?pageSize=100')),
+    // Newest five (the API orders by createdAt desc) + stage facets.
+    safe(api.get<Paged<Lead>>('/leads?pageSize=5')),
+    // Status facets only.
+    safe(api.get<Paged<Reservation>>('/reservations?pageSize=1')),
+    // The five active reservations that lapse soonest.
+    safe(api.get<Paged<Reservation>>('/reservations?status=PENDING,APPROVED&sort=expiresAt&pageSize=5')),
+    safe(api.get<Paged<Reservation>>(
+      `/reservations?status=PENDING,APPROVED&expiresFrom=${nowIso}&expiresTo=${in7DaysIso}&pageSize=1`,
+    )),
     safe(api.get<Paged<VisitAppointment>>(
       `/visits/appointments?scheduledFrom=${nowIso}&pageSize=50`,
     )),
   ]);
 
   const perf         = perfRes.data        ?? [];
-  const leads        = leadsRes.data?.data ?? [];
-  const reservations = reservationsRes.data?.data ?? [];
+  const leadStages   = leadsRes.data?.meta.facets?.counts?.stage ?? {};
+  const resvStatus   = reservationsRes.data?.meta.facets?.counts?.status ?? {};
   const visits       = (visitsRes.data?.data ?? [])
     .slice()
     .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
@@ -202,15 +214,16 @@ export async function SalesManagerDashboard() {
   const teamReservations       = sum((r) => r.reservationsCount);
 
   // ── Pipeline distribution ─────────────────────────────────────────────────
-  const openLeads              = leads.filter((l) => l.stage !== 'WON' && l.stage !== 'LOST');
-  const pipelineTotal          = openLeads.length;
+  const allLeadsCount          = leadsRes.data?.meta.total ?? 0;
+  const openLeadsCount         = allLeadsCount - (leadStages.WON ?? 0) - (leadStages.LOST ?? 0);
+  const pipelineTotal          = openLeadsCount;
+  const upcomingVisitsCount    = visitsRes.data?.meta.total ?? 0;
   // Funnel: use direct-fetch counts (not monthly perf which can be 0 mid-month)
-  const funnelReservations     = reservations.filter((r) => r.status === 'PENDING' || r.status === 'APPROVED').length;
-  const funnelContracts        = Math.max(teamSigned, reservations.filter((r) => r.status === 'CONVERTED').length);
-  const pipelineStageCount = openLeads.reduce<Record<string, number>>((acc, l) => {
-    acc[l.stage] = (acc[l.stage] ?? 0) + 1;
-    return acc;
-  }, {});
+  const funnelReservations     = (resvStatus.PENDING ?? 0) + (resvStatus.APPROVED ?? 0);
+  const funnelContracts        = Math.max(teamSigned, resvStatus.CONVERTED ?? 0);
+  const pipelineStageCount: Record<string, number> = Object.fromEntries(
+    Object.entries(leadStages).filter(([stage]) => stage !== 'WON' && stage !== 'LOST'),
+  );
 
   // ── Top performer ─────────────────────────────────────────────────────────
   const repRows = perf.slice().sort((a, b) => b.realizedValue - a.realizedValue);
@@ -220,13 +233,8 @@ export async function SalesManagerDashboard() {
   const inactiveReps = repRows.filter(
     (r) => r.leadsCount === 0 && r.visitsCount === 0 && r.reservationsCount === 0,
   );
-  const teamExpiringCount = reservations.filter((r) => {
-    if (!r.expiresAt || r.status === 'CONVERTED' || r.status === 'CANCELLED' || r.status === 'EXPIRED')
-      return false;
-    const d = daysUntil(r.expiresAt);
-    return d >= 0 && d <= 7;
-  }).length;
-  const teamPendingCount = reservations.filter((r) => r.status === 'PENDING').length;
+  const teamExpiringCount = expiringRes.data?.meta.total ?? 0;
+  const teamPendingCount  = resvStatus.PENDING ?? 0;
 
   const managerAlerts: ManagerAlert[] = [];
   if (teamExpiringCount > 0) {
@@ -265,21 +273,14 @@ export async function SalesManagerDashboard() {
   }
 
   // ── Section rows ──────────────────────────────────────────────────────────
-  const recentLeads = leads
-    .slice()
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 5);
+  const recentLeads = leadsRes.data?.data ?? [];
 
-  const activeReservationRows = reservations
-    .filter((r) => r.status === 'PENDING' || r.status === 'APPROVED')
-    .slice()
-    .sort((a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime())
-    .slice(0, 5);
+  const activeReservationRows = activeRes.data?.data ?? [];
 
   const upcomingVisitRows = visits.slice(0, 5);
 
   const showVisits       = !visitsRes.error       && upcomingVisitRows.length     > 0;
-  const showReservations = !reservationsRes.error  && activeReservationRows.length > 0;
+  const showReservations = !activeRes.error        && activeReservationRows.length > 0;
   const showLeads        = !leadsRes.error         && recentLeads.length           > 0;
   const bottomCount      = [showVisits, showReservations, showLeads].filter(Boolean).length;
 
@@ -321,8 +322,8 @@ export async function SalesManagerDashboard() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <KpiTile
           label={m.kpiTeamLeads}
-          value={leadsRes.error ? '—' : leads.length}
-          sub={m.kpiTeamLeadsSub(openLeads.length)}
+          value={leadsRes.error ? '—' : allLeadsCount}
+          sub={m.kpiTeamLeadsSub(openLeadsCount)}
           icon={<Users />}
           topBar="from-brand-300 via-brand-500 to-brand-300"
           iconCls="bg-brand-50 text-brand-600 ring-1 ring-brand-100"
@@ -330,8 +331,8 @@ export async function SalesManagerDashboard() {
         />
         <KpiTile
           label={m.kpiOpenLeads}
-          value={leadsRes.error ? '—' : openLeads.length}
-          sub={m.kpiOpenLeadsSub(leads.length)}
+          value={leadsRes.error ? '—' : openLeadsCount}
+          sub={m.kpiOpenLeadsSub(allLeadsCount)}
           icon={<Zap />}
           topBar="from-violet-300 via-violet-500 to-violet-300"
           iconCls="bg-violet-50 text-violet-600 ring-1 ring-violet-100"
@@ -339,7 +340,7 @@ export async function SalesManagerDashboard() {
         />
         <KpiTile
           label={m.kpiUpcomingVisits}
-          value={visitsRes.error ? '—' : visits.length}
+          value={visitsRes.error ? '—' : upcomingVisitsCount}
           sub={m.kpiUpcomingVisitsSub}
           icon={<CalendarClock />}
           topBar="from-sky-300 via-sky-500 to-sky-300"
@@ -422,8 +423,8 @@ export async function SalesManagerDashboard() {
       {/* ── Team Conversion Funnel ────────────────────────────────────────── */}
       {!leadsRes.error && (
         <TeamFunnel
-          teamLeads={openLeads.length}
-          teamVisits={visits.length}
+          teamLeads={openLeadsCount}
+          teamVisits={upcomingVisitsCount}
           teamReservations={funnelReservations}
           teamContracts={funnelContracts}
           topPerformer={topPerformer}
@@ -527,7 +528,7 @@ export async function SalesManagerDashboard() {
                     iconCls="bg-emerald-50 text-emerald-600 ring-emerald-100"
                     href="/dashboard/reservations"
                     hrefLabel={m.cardReservationsLink}
-                    error={reservationsRes.error}
+                    error={activeRes.error}
                     empty={activeReservationRows.length === 0}
                     emptyText={m.emptyActiveReservations}
                     loadErrorText={m.cardLoadError}
@@ -635,7 +636,7 @@ export async function SalesManagerDashboard() {
                   iconCls="bg-emerald-50 text-emerald-600 ring-emerald-100"
                   href="/dashboard/reservations"
                   hrefLabel={m.cardReservationsLink}
-                  error={reservationsRes.error}
+                  error={activeRes.error}
                   empty={activeReservationRows.length === 0}
                   emptyText={m.emptyActiveReservations}
                   loadErrorText={m.cardLoadError}

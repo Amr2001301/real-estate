@@ -7,7 +7,7 @@
  */
 
 import request from 'supertest';
-import { LeadStage } from '@prisma/client';
+import { LeadStage, ReservationStatus } from '@prisma/client';
 import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
 import { bearer, loginAs } from '../helpers/login';
@@ -415,6 +415,137 @@ describe('Flow A — Catalog sync (e2e)', () => {
       if (res.status === 200) {
         expect(res.body.meta.pageSize).toBeLessThanOrEqual(500);
         expect(res.body.data.length).toBeLessThanOrEqual(500);
+      }
+    });
+  });
+
+  // ── FG-23 — the sales dashboards count on the server ──────────────────────
+  //
+  // The sales, sales-manager and my-compensation homes used to fetch
+  // ?pageSize=100 of leads and reservations and count them client-side. Two of
+  // those numbers — stale leads and reservations lapsing within 7 days — are
+  // not facets, so the dashboards now ask for them as filtered totals. These
+  // assert the filters they depend on. Every query is narrowed with `q` to the
+  // rows created here, so the counts are exact rather than "at least".
+  describe('A4e — lead and reservation filters behind the sales dashboards (FG-23)', () => {
+    const MARK = `A4E${Date.now().toString(36).toUpperCase()}`;
+    const DAY = 86_400_000;
+    const at = (days: number) => new Date(Date.now() + days * DAY);
+    const leadIds: string[] = [];
+    const resvIds: Record<string, string> = {};
+
+    beforeAll(async () => {
+      const admin = await testApp.rawPrisma.user.findUniqueOrThrow({
+        where: { id: fixtures.userIds.adminId },
+        select: { companyId: true },
+      });
+      const companyId = admin.companyId!;
+
+      const leads: Array<[LeadStage, number]> = [
+        [LeadStage.NEW, -5],        // stale
+        [LeadStage.INTERESTED, -4], // stale
+        [LeadStage.NEW, -1],        // in the stage set, but too young
+        [LeadStage.VISIT, -10],     // old, but not in the stage set
+        [LeadStage.WON, -10],
+      ];
+      for (const [i, [stage, ageDays]] of leads.entries()) {
+        const lead = await testApp.rawPrisma.lead.create({
+          data: {
+            companyId,
+            clientId: fixtures.userIds.customer1UserId,
+            fullName: `${MARK} lead ${i}`,
+            phone: phoneFor(`${MARK}${i}`),
+            stage,
+            assignedSalesId: fixtures.userIds.salesId,
+            createdAt: at(ageDays),
+          },
+          select: { id: true },
+        });
+        leadIds.push(lead.id);
+      }
+
+      const reservations: Array<[string, ReservationStatus, number]> = [
+        ['soon', ReservationStatus.PENDING, 1],
+        ['week', ReservationStatus.APPROVED, 5],
+        ['later', ReservationStatus.APPROVED, 10],
+        // The old client-side filter only excluded CONVERTED/CANCELLED/EXPIRED,
+        // so a REJECTED reservation with a future expiry counted as "expiring".
+        ['rejected', ReservationStatus.REJECTED, 2],
+        ['cancelled', ReservationStatus.CANCELLED, 3],
+      ];
+      for (const [key, status, days] of reservations) {
+        const r = await testApp.rawPrisma.reservation.create({
+          data: {
+            companyId,
+            unitId: fixtures.units.sampleUnitInP1Id,
+            salesId: fixtures.userIds.salesId,
+            status,
+            expiresAt: at(days),
+            reservationNumber: `${MARK}-${key}`,
+          },
+          select: { id: true },
+        });
+        resvIds[key] = r.id;
+      }
+    });
+
+    afterAll(async () => {
+      await testApp.rawPrisma.reservation.deleteMany({ where: { id: { in: Object.values(resvIds) } } });
+      await testApp.rawPrisma.lead.deleteMany({ where: { id: { in: leadIds } } });
+    });
+
+    it('stage accepts a list and filters to exactly those stages', async () => {
+      const res = await http()
+        .get(`/v1/leads?q=${MARK}&stage=NEW,INTERESTED&pageSize=50`)
+        .set('Authorization', bearer(adminToken));
+      expect(res.status).toBe(200);
+      expect(res.body.meta.total).toBe(3);
+      for (const l of res.body.data) expect(['NEW', 'INTERESTED']).toContain(l.stage);
+    });
+
+    it('createdBefore is exact, so "stale" is a server-side total', async () => {
+      // What the sales home asks for: NEW or INTERESTED, created 3+ days ago.
+      const res = await http()
+        .get(`/v1/leads?q=${MARK}&stage=NEW,INTERESTED&createdBefore=${at(-3).toISOString()}&pageSize=1`)
+        .set('Authorization', bearer(adminToken));
+      expect(res.status).toBe(200);
+      expect(res.body.meta.total).toBe(2);
+    });
+
+    it('active reservations lapsing within 7 days exclude rejected, cancelled and later ones', async () => {
+      const res = await http()
+        .get(
+          `/v1/reservations?q=${MARK}&status=PENDING,APPROVED` +
+            `&expiresFrom=${at(0).toISOString()}&expiresTo=${at(7).toISOString()}&pageSize=1`,
+        )
+        .set('Authorization', bearer(adminToken));
+      expect(res.status).toBe(200);
+      expect(res.body.meta.total).toBe(2);
+    });
+
+    it('sort=expiresAt returns the soonest-lapsing reservations first', async () => {
+      const res = await http()
+        .get(`/v1/reservations?q=${MARK}&status=PENDING,APPROVED&sort=expiresAt&pageSize=5`)
+        .set('Authorization', bearer(adminToken));
+      expect(res.status).toBe(200);
+      expect(res.body.data.map((r: { id: string }) => r.id)).toEqual([
+        resvIds.soon,
+        resvIds.week,
+        resvIds.later,
+      ]);
+    });
+
+    it('unknown enum members and malformed instants are a 400, not a silent widening', async () => {
+      const cases = [
+        '/v1/leads?stage=NEW,BOGUS',
+        '/v1/leads?createdBefore=not-a-date',
+        '/v1/reservations?status=PENDING,NOPE',
+        '/v1/reservations?expiresTo=yesterday-ish',
+        '/v1/reservations?sort=price',
+      ];
+      for (const path of cases) {
+        const res = await http().get(path).set('Authorization', bearer(adminToken));
+        expect({ path, status: res.status }).toEqual({ path, status: 400 });
       }
     });
   });

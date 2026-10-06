@@ -47,6 +47,11 @@ function isToday(dateStr: string): boolean {
     d.getDate()  === now.getDate();
 }
 
+// A NEW or INTERESTED lead this many days old counts as stale on the KPI
+// tile. The server applies it via ?createdBefore, so the tile and the row
+// badges below share one threshold.
+const STALE_AFTER_DAYS = 3;
+
 function leadAgeDays(lead: Lead): number {
   return Math.floor((Date.now() - new Date(lead.createdAt).getTime()) / 86400000);
 }
@@ -196,63 +201,72 @@ export async function SalesDashboard({ userId }: { userId: string }) {
   const locale = await getLocale();
   const m = uiT(locale).pages.salesHome;
 
-  const nowIso = new Date().toISOString();
+  const now       = new Date();
+  const nowIso    = now.toISOString();
+  const staleIso  = new Date(now.getTime() - STALE_AFTER_DAYS * 86400000).toISOString();
+  const in7DaysIso = new Date(now.getTime() + 7 * 86400000).toISOString();
 
-  const [leadsRes, reservationsRes, visitsRes, unitsRes, perfRes] = await Promise.all([
-    safe(api.get<Paged<Lead>>('/leads?pageSize=100')),
-    safe(api.get<Paged<Reservation>>('/reservations?pageSize=100')),
-    safe(api.get<Paged<VisitAppointment>>(
-      `/visits/appointments?assignedSalesId=${userId}&scheduledFrom=${nowIso}&pageSize=50`,
-    )),
-    safe(api.get<Paged<unknown>>('/units?status=AVAILABLE&pageSize=1')),
-    safe(api.get<PerformanceRow[]>(`/sales-targets/performance?period=${nowIso.slice(0, 7)}`)),
-  ]);
+  // FG-23 — every count below comes from the server (meta.total or
+  // meta.facets), never from counting a capped page of rows. These calls used
+  // to be ?pageSize=100 snapshots, so a rep past a hundred leads or
+  // reservations saw wrong KPIs with nothing on screen to say so.
+  const [leadsRes, staleRes, reservationsRes, activeRes, expiringRes, visitsRes, unitsRes, perfRes] =
+    await Promise.all([
+      // Newest five (the API orders by createdAt desc) + stage facets.
+      safe(api.get<Paged<Lead>>('/leads?pageSize=5')),
+      safe(api.get<Paged<Lead>>(`/leads?stage=NEW,INTERESTED&createdBefore=${staleIso}&pageSize=1`)),
+      // Status facets only.
+      safe(api.get<Paged<Reservation>>('/reservations?pageSize=1')),
+      // The five active reservations that lapse soonest.
+      safe(api.get<Paged<Reservation>>('/reservations?status=PENDING,APPROVED&sort=expiresAt&pageSize=5')),
+      // Active and lapsing within 7 days, soonest first. The urgent (<48h)
+      // rows are the head of this list; 50 is far above what one rep can
+      // have lapse in two days, and the 7-day count is meta.total regardless.
+      safe(api.get<Paged<Reservation>>(
+        `/reservations?status=PENDING,APPROVED&expiresFrom=${nowIso}&expiresTo=${in7DaysIso}&sort=expiresAt&pageSize=50`,
+      )),
+      safe(api.get<Paged<VisitAppointment>>(
+        `/visits/appointments?assignedSalesId=${userId}&scheduledFrom=${nowIso}&pageSize=50`,
+      )),
+      safe(api.get<Paged<unknown>>('/units?status=AVAILABLE&pageSize=1')),
+      safe(api.get<PerformanceRow[]>(`/sales-targets/performance?period=${nowIso.slice(0, 7)}`)),
+    ]);
 
-  const leads        = leadsRes.data?.data        ?? [];
-  const reservations = reservationsRes.data?.data ?? [];
-  const visits       = (visitsRes.data?.data ?? [])
+  const leadStages  = leadsRes.data?.meta.facets?.counts?.stage ?? {};
+  const resvStatus  = reservationsRes.data?.meta.facets?.counts?.status ?? {};
+  const visits      = (visitsRes.data?.data ?? [])
     .slice()
     .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
 
   // ── KPI computations ──────────────────────────────────────────────────────
-  const openLeads          = leads.filter((l) => l.stage !== 'WON' && l.stage !== 'LOST');
-  const wonLeads           = leads.filter((l) => l.stage === 'WON').length;
-  const lostLeads          = leads.filter((l) => l.stage === 'LOST').length;
-  const activeReservations = reservations.filter((r) => r.status === 'PENDING' || r.status === 'APPROVED');
-  const signedThisMonth    = (perfRes.data ?? [])[0]?.signedContractsCount;
-  const convertedDeals     = reservations.filter((r) => r.status === 'CONVERTED').length;
-  const closedDeals        = signedThisMonth ?? convertedDeals;
-  const availableUnits     = unitsRes.data?.meta.total ?? 0;
+  const wonLeads             = leadStages.WON ?? 0;
+  const lostLeads            = leadStages.LOST ?? 0;
+  const openLeadsCount       = (leadsRes.data?.meta.total ?? 0) - wonLeads - lostLeads;
+  const activeReservationsCount = (resvStatus.PENDING ?? 0) + (resvStatus.APPROVED ?? 0);
+  const signedThisMonth      = (perfRes.data ?? [])[0]?.signedContractsCount;
+  const convertedDeals       = resvStatus.CONVERTED ?? 0;
+  const closedDeals          = signedThisMonth ?? convertedDeals;
+  const availableUnits       = unitsRes.data?.meta.total ?? 0;
+  const upcomingVisitsCount  = visitsRes.data?.meta.total ?? 0;
 
-  // Stale = NEW or INTERESTED stage and no activity for 3+ days
-  const staleLeadsCount    = openLeads.filter(
-    (l) => (l.stage === 'NEW' || l.stage === 'INTERESTED') && leadAgeDays(l) >= 3,
-  ).length;
-  const expiringWithin7    = reservations.filter((r) => {
-    if (r.status === 'CONVERTED' || r.status === 'CANCELLED' || r.status === 'EXPIRED') return false;
-    const d = daysUntil(r.expiresAt);
-    return d >= 0 && d <= 7;
-  });
+  // Stale = NEW or INTERESTED and created STALE_AFTER_DAYS or more ago.
+  const staleLeadsCount      = staleRes.data?.meta.total ?? 0;
+  const expiringWithin7      = expiringRes.data?.meta.total ?? 0;
   const todayVisits = visits.filter((v) => isToday(v.scheduledAt));
-  const expiringUrgent = reservations.filter((r) => {
-    if (r.status === 'CONVERTED' || r.status === 'CANCELLED' || r.status === 'EXPIRED') return false;
-    const d = daysUntil(r.expiresAt);
-    return d >= 0 && d < 2;
-  });
+  const expiringUrgent = (expiringRes.data?.data ?? []).filter((r) => daysUntil(r.expiresAt) < 2);
 
-  // Stage distribution
-  const stageGroups = openLeads.reduce<Record<string, number>>((acc, l) => {
-    acc[l.stage] = (acc[l.stage] ?? 0) + 1;
-    return acc;
-  }, {});
+  // Stage distribution — open stages only, as before.
+  const stageGroups: Record<string, number> = Object.fromEntries(
+    Object.entries(leadStages).filter(([stage]) => stage !== 'WON' && stage !== 'LOST'),
+  );
 
   // Content rows
-  const recentLeads           = [...leads].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5);
+  const recentLeads           = leadsRes.data?.data ?? [];
   const upcomingVisitRows     = visits.slice(0, 5);
-  const activeReservationRows = [...activeReservations].sort((a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime()).slice(0, 5);
+  const activeReservationRows = activeRes.data?.data ?? [];
 
   const showVisits       = !visitsRes.error && upcomingVisitRows.length > 0;
-  const showReservations = !reservationsRes.error && activeReservationRows.length > 0;
+  const showReservations = !activeRes.error && activeReservationRows.length > 0;
   const hasPriorities    = todayVisits.length > 0 || expiringUrgent.length > 0;
 
   // Expiry label helper (locale-aware)
@@ -296,7 +310,7 @@ export async function SalesDashboard({ userId }: { userId: string }) {
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
         <KpiTile
           label={m.kpiOpenLeads}
-          value={openLeads.length}
+          value={openLeadsCount}
           sub={m.kpiOpenLeadsSub(wonLeads, lostLeads)}
           icon={<Zap />}
           topBar="from-brand-300 via-brand-500 to-brand-300"
@@ -314,7 +328,7 @@ export async function SalesDashboard({ userId }: { userId: string }) {
         />
         <KpiTile
           label={m.kpiUpcomingVisits}
-          value={visits.length}
+          value={upcomingVisitsCount}
           sub={todayVisits.length > 0 ? m.kpiUpcomingVisitsSubToday(todayVisits.length) : m.kpiUpcomingVisitsSubNone}
           icon={<CalendarClock />}
           topBar="from-sky-300 via-sky-500 to-sky-300"
@@ -323,12 +337,12 @@ export async function SalesDashboard({ userId }: { userId: string }) {
         />
         <KpiTile
           label={m.kpiActiveReservations}
-          value={activeReservations.length}
-          sub={expiringWithin7.length > 0 ? m.kpiActiveReservationsSubWarning(expiringWithin7.length) : m.kpiActiveReservationsSubOk}
+          value={activeReservationsCount}
+          sub={expiringWithin7 > 0 ? m.kpiActiveReservationsSubWarning(expiringWithin7) : m.kpiActiveReservationsSubOk}
           icon={<BookmarkCheck />}
-          topBar={expiringWithin7.length > 0 ? 'from-amber-300 via-amber-500 to-amber-300' : 'from-emerald-300 via-emerald-500 to-emerald-300'}
-          iconCls={expiringWithin7.length > 0 ? 'bg-amber-50 text-amber-600 ring-1 ring-amber-100' : 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100'}
-          valueCls={expiringWithin7.length > 0 ? 'text-amber-700' : 'text-emerald-700'}
+          topBar={expiringWithin7 > 0 ? 'from-amber-300 via-amber-500 to-amber-300' : 'from-emerald-300 via-emerald-500 to-emerald-300'}
+          iconCls={expiringWithin7 > 0 ? 'bg-amber-50 text-amber-600 ring-1 ring-amber-100' : 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100'}
+          valueCls={expiringWithin7 > 0 ? 'text-amber-700' : 'text-emerald-700'}
         />
         <KpiTile
           label={m.kpiMonthContracts}
@@ -352,9 +366,9 @@ export async function SalesDashboard({ userId }: { userId: string }) {
 
       {/* ── Sales pipeline ────────────────────────────────────────────────── */}
       <SalesPipeline
-        openLeads={openLeads.length}
-        visitsCount={visits.length}
-        reservationsCount={activeReservations.length}
+        openLeads={openLeadsCount}
+        visitsCount={upcomingVisitsCount}
+        reservationsCount={activeReservationsCount}
         contractsCount={closedDeals}
         stageGroups={stageGroups}
         m={m}
@@ -407,7 +421,7 @@ export async function SalesDashboard({ userId }: { userId: string }) {
                 iconCls="bg-emerald-50 ring-emerald-100 text-emerald-600"
                 href="/dashboard/reservations"
                 hrefLabel={m.cardReservationsLink}
-                error={reservationsRes.error}
+                error={activeRes.error}
                 empty={activeReservationRows.length === 0}
                 emptyText={m.emptyActiveReservations}
                 loadErrorText={m.cardLoadError}
@@ -453,7 +467,7 @@ export async function SalesDashboard({ userId }: { userId: string }) {
                 iconCls="bg-emerald-50 ring-emerald-100 text-emerald-600"
                 href="/dashboard/reservations"
                 hrefLabel={m.cardReservationsLink}
-                error={reservationsRes.error}
+                error={activeRes.error}
                 empty={activeReservationRows.length === 0}
                 emptyText={m.emptyActiveReservations}
                 loadErrorText={m.cardLoadError}
@@ -486,7 +500,7 @@ export async function SalesDashboard({ userId }: { userId: string }) {
 // ── Row sub-components ────────────────────────────────────────────────────────
 function LeadRow({ lead: l, m }: { lead: Lead; m: ReturnType<typeof uiT>['pages']['salesHome'] }) {
   const age     = leadAgeDays(l);
-  const isStale = !l.upcomingVisit && age >= 3;
+  const isStale = !l.upcomingVisit && age >= STALE_AFTER_DAYS;
   return (
     <Link
       href={`/dashboard/leads/${l.id}` as never}

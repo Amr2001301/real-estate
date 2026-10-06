@@ -60,6 +60,7 @@ import { Permissions, PermissionsStrict } from '../../common/decorators/permissi
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
+import { enumFilter, parseEnumList, parseIsoInstant } from '../../common/utils/query-filters';
 import { matchOrCreateLeadForClient } from '../crm/crm-lead-matching';
 import { computeDurationOption } from '../installments/duration-calc';
 import {
@@ -834,7 +835,7 @@ export class ReservationsService {
   async list(opts: {
     page: number;
     pageSize: number;
-    status?: ReservationStatus;
+    status?: ReservationStatus | ReservationStatus[];
     salesId?: string;
     salesIds?: string[];
     projectId?: string;
@@ -844,10 +845,17 @@ export class ReservationsService {
     q?: string;
     dateFrom?: string;
     dateTo?: string;
+    expiresFrom?: Date;
+    expiresTo?: Date;
+    /** `expiresAt` = soonest expiry first, for "what lapses next" lists. Default newest first. */
+    sort?: 'createdAt' | 'expiresAt';
   }) {
+    const statusFilter = enumFilter(
+      opts.status === undefined ? undefined : Array.isArray(opts.status) ? opts.status : [opts.status],
+    );
     const where: Prisma.ReservationWhereInput = {
       deletedAt: null,
-      ...(opts.status ? { status: opts.status } : {}),
+      ...(statusFilter ? { status: statusFilter } : {}),
       ...(opts.salesIds
         ? { salesId: { in: opts.salesIds } }
         : opts.salesId
@@ -878,13 +886,25 @@ export class ReservationsService {
             },
           }
         : {}),
+      ...(opts.expiresFrom || opts.expiresTo
+        ? {
+            expiresAt: {
+              ...(opts.expiresFrom ? { gte: opts.expiresFrom } : {}),
+              ...(opts.expiresTo ? { lte: opts.expiresTo } : {}),
+            },
+          }
+        : {}),
     };
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.reservation.findMany({
         where,
         ...takeSkip(opts),
-        orderBy: { createdAt: 'desc' },
+        // id breaks ties so paging stays stable when expiries collide.
+        orderBy:
+          opts.sort === 'expiresAt'
+            ? [{ expiresAt: 'asc' }, { id: 'asc' }]
+            : { createdAt: 'desc' },
         include: {
           unit: { include: { building: { include: { phase: { include: { project: true } } } } } },
           sales: { select: { id: true, fullName: true } },
@@ -2183,7 +2203,8 @@ class ReservationsController {
   @Get()
   async list(
     @CurrentUser() user: AuthUser,
-    @Query('status') status?: ReservationStatus,
+    // One status or a comma-separated list, e.g. `PENDING,APPROVED`.
+    @Query('status') status?: string,
     @Query('salesId') salesId?: string,
     @Query('projectId') projectId?: string,
     @Query('unitId') unitId?: string,
@@ -2192,14 +2213,20 @@ class ReservationsController {
     @Query('q') q?: string,
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
+    @Query('expiresFrom') expiresFrom?: string,
+    @Query('expiresTo') expiresTo?: string,
+    @Query('sort') sort?: string,
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
   ) {
+    if (sort !== undefined && sort !== 'createdAt' && sort !== 'expiresAt') {
+      throw new BadRequestException('Invalid sort: expected createdAt or expiresAt');
+    }
     const scope = await resolveSalesScope(this.prisma, user, salesId);
     return this.svc.list({
       page: Number(page),
       pageSize: Number(pageSize),
-      status,
+      status: parseEnumList(status, ReservationStatus, 'status'),
       ...scope,
       projectId,
       unitId,
@@ -2208,6 +2235,9 @@ class ReservationsController {
       q,
       dateFrom,
       dateTo,
+      expiresFrom: parseIsoInstant(expiresFrom, 'expiresFrom'),
+      expiresTo: parseIsoInstant(expiresTo, 'expiresTo'),
+      sort,
     });
   }
 

@@ -19,6 +19,7 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { resolveSalesScope } from '../../common/utils/sales-scope';
+import { parseEnumList, parseIsoInstant } from '../../common/utils/query-filters';
 import { LeadScopeGuard } from './guards/lead-scope.guard';
 import { LeadsService } from './leads.service';
 import {
@@ -88,7 +89,8 @@ export class LeadsController {
   @Get('leads')
   async list(
     @CurrentUser() user: AuthUser,
-    @Query('stage') stage?: LeadStage,
+    // One stage or a comma-separated list, e.g. `NEW,INTERESTED`.
+    @Query('stage') stage?: string,
     @Query('salesId') salesId?: string,
     @Query('q') q?: string,
     @Query('mine') mine?: string,
@@ -96,6 +98,7 @@ export class LeadsController {
     @Query('sourceId') sourceId?: string,
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
+    @Query('createdBefore') createdBefore?: string,
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
   ) {
@@ -104,7 +107,7 @@ export class LeadsController {
     return this.leads.findAll({
       page: Number(page),
       pageSize: Number(pageSize),
-      stage,
+      stage: parseEnumList(stage, LeadStage, 'stage'),
       ...scope,
       q,
       assignedToMe,
@@ -112,6 +115,7 @@ export class LeadsController {
       sourceId,
       dateFrom,
       dateTo,
+      createdBefore: parseIsoInstant(createdBefore, 'createdBefore'),
     });
   }
 
