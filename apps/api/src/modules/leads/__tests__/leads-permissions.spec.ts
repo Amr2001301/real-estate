@@ -83,6 +83,11 @@ function makePrismaMock() {
         email: null,
       }),
       count: jest.fn().mockResolvedValue(0),
+      // FG-23 — the list now also issues a groupBy for meta.facets. This spec
+      // asserts authorization, not the facet contract (that lives in e2e
+      // against real Postgres, where a mock cannot tell counts over the
+      // filtered set from counts over the page). Empty matches findMany above.
+      groupBy: jest.fn().mockResolvedValue([]),
       create: jest.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
         id: 'lead-new',
         ...data,
