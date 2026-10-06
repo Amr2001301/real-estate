@@ -656,7 +656,7 @@ These are the OWASP-recommended minimum parameters for argon2id as of 2023. They
 
 ## FG-23 — Admin list pages fetch whole tables to compute a handful of aggregates
 
-**Severity:** Medium · **Blocks launch:** no · **Status:** partially fixed — units, brokers, requests and users done; three sales dashboards remain
+**Severity:** Medium · **Blocks launch:** no · **Status:** fixed for every page in the sweep — units, brokers, requests, users and the three sales dashboards; `/dashboard/maintenance` volume and the dropdown options endpoint remain (see "What is needed")
 
 ### What exists
 
@@ -754,17 +754,49 @@ Facets are tenant-scoped for free: `groupBy` and `aggregate` are both in
 `READ_OPS` in `prisma.service.ts` and pass through `applyReadPolicy`, so a
 facet cannot count another company's rows. This was verified, not assumed.
 
-**Remaining, and not all the same shape:**
+**The three sales dashboards — fixed.** `_components/sales-home`,
+`_components/sales-manager-home` and `my-compensation` no longer count rows.
+Applying facets alone would have fixed three numbers and left two wrong with
+nothing on screen to tell them apart, so the two that are not facets got
+server-side support of their own:
 
-- `_components/sales-home`, `_components/sales-manager-home` and
-  `my-compensation` use the fetched rows for more than counting. `wonLeads`,
-  `lostLeads` and `convertedDeals` are plain counts that facets fix, but
-  `staleLeadsCount` and `expiringWithin7` are computed per row from
-  `leadAgeDays()` and reservation expiry dates. Those need server-side
-  support of their own — a facet cannot express "NEW or INTERESTED and
-  untouched for three days". Applying facets to these pages makes three
-  numbers correct and leaves two wrong, with nothing on screen to tell them
-  apart, so they are being done deliberately rather than mechanically.
+- `GET /leads` — `stage` accepts a comma-separated list, and `createdBefore`
+  takes an exact ISO instant. "Stale" is then a filtered total:
+  `?stage=NEW,INTERESTED&createdBefore=<now − 3 days>&pageSize=1` →
+  `meta.total`. The existing `dateTo` could not do this — it is day-granular
+  and would have been off by up to a day.
+- `GET /reservations` — `status` accepts a list; `expiresFrom` / `expiresTo`
+  bound `expiresAt`; `sort=expiresAt` returns soonest-lapsing first (with `id`
+  as tiebreak so paging is stable). "Expiring within 7 days" is a filtered
+  total, and the active-reservations card is the first five rows of the
+  sorted list rather than five rows sorted out of an arbitrary hundred.
+- Unknown enum members and malformed instants are a 400. Silently dropping a
+  misspelled value would widen the filter to everything; passing it through
+  was a Prisma 500.
+
+Everything else on the pages reads `meta.total` or `meta.facets`: open, won
+and lost leads and the stage distribution (lead facets); active, pending and
+converted reservations (reservation facets); upcoming visits (`meta.total` —
+this was `.length` of a 50-row page). Recent leads are the API's own newest
+five instead of five sorted out of a capped page.
+
+**What a number means changed in one place, deliberately.** "Expiring within
+7 days" used to exclude only CONVERTED, CANCELLED and EXPIRED, so a REJECTED
+reservation whose expiry was still in the future counted as expiring. It is
+now PENDING and APPROVED only — the same set as the Active Reservations tile
+it is a sub-count of. A rejected reservation is not about to lapse.
+
+**One bound left, on purpose.** The urgent (<48 h) reservation rows on the
+sales home are the head of the 7-day list, fetched 50 at a time. The 7-day
+count is `meta.total` and exact; the urgent rows would only be incomplete if
+one rep had more than 50 reservations lapsing within two days. Today's visits
+are the same shape: the first rows of a 50-row page sorted by time.
+
+**Gate:** `e2e-catalog-auth` A4e creates its own leads and reservations,
+narrows every query to them with `q`, and asserts exact totals for the stage
+list, the stale filter and the 7-day window (the REJECTED and CANCELLED rows
+must not count), the `sort=expiresAt` order, and the 400s. Reverting the API
+change fails all five.
 
 - `users` is a different and worse defect, recorded separately below.
 

@@ -169,8 +169,10 @@ export default async function MyCompensationPage() {
     await Promise.all([
       safe(api.get<BonusEntry[] | Paged<BonusEntry>>(`/bonus-entries${selfParam ? `?${selfParam}` : ''}`)),
       safe(api.get<SalesTarget[]>(`/sales-targets${selfParam ? `?${selfParam}` : ''}`)),
-      safe(api.get<Paged<Lead>>(`/leads?pageSize=100${selfParam ? `&${selfParam}` : ''}`)),
-      safe(api.get<Paged<Reservation>>(`/reservations?pageSize=100${selfParam ? `&${selfParam}` : ''}`)),
+      // FG-23 — only the facets are read, so one row is enough. These were
+      // ?pageSize=100 snapshots counted client-side.
+      safe(api.get<Paged<Lead>>(`/leads?pageSize=1${selfParam ? `&${selfParam}` : ''}`)),
+      safe(api.get<Paged<Reservation>>(`/reservations?pageSize=1${selfParam ? `&${selfParam}` : ''}`)),
       selfId
         ? safe(
             api.get<Paged<VisitAppointment>>(
@@ -200,9 +202,8 @@ export default async function MyCompensationPage() {
     ? bonusRes.data
     : (bonusRes.data?.data ?? []);
   const targets = targetsRes.data ?? [];
-  const leads = leadsRes.data?.data ?? [];
-  const reservations = reservationsRes.data?.data ?? [];
-  const upcomingVisits = visitsRes.data?.data ?? [];
+  const leadStages = leadsRes.data?.meta.facets?.counts?.stage ?? {};
+  const resvStatus = reservationsRes.data?.meta.facets?.counts?.status ?? {};
 
   const currentPeriod = nowIso.slice(0, 7);
   const perfPeriods = [...new Set([currentPeriod, ...targets.map((t) => t.period)])];
@@ -235,12 +236,12 @@ export default async function MyCompensationPage() {
     .sort()
     .at(-1);
 
-  const openLeads          = leads.filter((l) => l.stage !== 'WON' && l.stage !== 'LOST').length;
-  const activeReservations = reservations.filter((r) => r.status === 'PENDING' || r.status === 'APPROVED').length;
-  const convertedDeals     = reservations.filter((r) => r.status === 'CONVERTED').length;
+  const openLeads          = (leadsRes.data?.meta.total ?? 0) - (leadStages.WON ?? 0) - (leadStages.LOST ?? 0);
+  const activeReservations = (resvStatus.PENDING ?? 0) + (resvStatus.APPROVED ?? 0);
+  const convertedDeals     = resvStatus.CONVERTED ?? 0;
 
   const perfOpenLeads          = currentPerf?.openLeadsCount          ?? openLeads;
-  const perfUpcomingVisits     = currentPerf?.upcomingVisitsCount      ?? upcomingVisits.length;
+  const perfUpcomingVisits     = currentPerf?.upcomingVisitsCount      ?? (visitsRes.data?.meta.total ?? 0);
   const perfActiveReservations = currentPerf?.activeReservationsCount  ?? activeReservations;
   const perfClosed             = currentPerf?.signedContractsCount      ?? convertedDeals;
   const perfClosedLabel        = currentPerf ? m.perfClosedContractsLabel : m.perfClosedDealsLabel;
