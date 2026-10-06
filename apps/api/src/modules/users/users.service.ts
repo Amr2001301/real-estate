@@ -10,7 +10,7 @@ import { claimSyntheticPeers } from '../../common/utils/identity-claim';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { Prisma, UserRole } from '@prisma/client';
-import { paginate, takeSkip } from '../../common/utils/pagination';
+import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { R2Service } from '../media/r2.service';
 import { NotificationsService } from '../notifications/notifications.module';
 import { PlanLimitService } from '../../common/capabilities/plan-limit.service';
@@ -137,7 +137,22 @@ export class UsersService {
       }),
       this.prisma.user.count({ where }),
     ]);
-    return paginate(data, total, { page, pageSize });
+
+    // FG-23 — the active/inactive split on /dashboard/users was counted
+    // client-side from ?pageSize=100. `active` is a boolean column, so the
+    // facet keys come back as "true" / "false".
+    const activeGroups = await this.prisma.user.groupBy({
+      by: ['active'],
+      where,
+      _count: true,
+    });
+    const facets = {
+      counts: {
+        active: toCounts(activeGroups.map((g) => [String(g.active), g._count] as const)),
+      },
+    };
+
+    return paginate(data, total, { page, pageSize }, facets);
   }
 
   async findOne(id: string) {

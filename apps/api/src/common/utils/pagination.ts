@@ -66,3 +66,22 @@ export function paginate<T>(
 export function takeSkip(p: PaginationParams) {
   return { take: p.pageSize, skip: (p.page - 1) * p.pageSize };
 }
+
+/**
+ * Turn a Prisma `groupBy` result into a facet dimension.
+ *
+ * Call it as `toCounts(groups.map((g) => [String(g.status), g._count] as const))`.
+ * The mapping stays at the call site on purpose: Prisma types each model's
+ * groupBy row differently and a generic that tried to reach into `g[key]`
+ * collapses into an unusable union. Keeping this function non-generic means
+ * the awkward part is one `as const` per call and the shared part is written
+ * once.
+ *
+ * `String()` on the key is deliberate — it normalises enum members and the
+ * boolean dimensions (`active`) that some lists group on.
+ */
+export function toCounts(
+  pairs: ReadonlyArray<readonly [string, number]>,
+): Record<string, number> {
+  return Object.fromEntries(pairs) as Record<string, number>;
+}

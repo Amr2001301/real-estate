@@ -656,7 +656,7 @@ These are the OWASP-recommended minimum parameters for argon2id as of 2023. They
 
 ## FG-23 — Admin list pages fetch whole tables to compute a handful of aggregates
 
-**Severity:** Medium · **Blocks launch:** no · **Status:** partially fixed — `/dashboard/units` done, six pages remain
+**Severity:** Medium · **Blocks launch:** no · **Status:** partially fixed — units, brokers and requests done; three sales dashboards and `users` remain
 
 ### What exists
 
@@ -746,9 +746,40 @@ while `pageSize=1`. That fails if facets are absent and also if a later change
 computes them from the returned page instead of from the `where` clause, which
 is the property that actually matters.
 
-**Remaining:** the six other pages in the table above, each needing facets on
-its list endpoint (`/leads`, `/reservations`, `/brokers`, `/info-requests`,
-`/users`) and the client rewritten to read them.
+**Done so far:** `/units`, `/brokers`, `/info-requests`, `/leads`,
+`/reservations` and `/users` all return facets. The clients rewired are
+`/dashboard/units`, `/dashboard/brokers` and `/dashboard/requests`.
+
+Facets are tenant-scoped for free: `groupBy` and `aggregate` are both in
+`READ_OPS` in `prisma.service.ts` and pass through `applyReadPolicy`, so a
+facet cannot count another company's rows. This was verified, not assumed.
+
+**Remaining, and not all the same shape:**
+
+- `_components/sales-home`, `_components/sales-manager-home` and
+  `my-compensation` use the fetched rows for more than counting. `wonLeads`,
+  `lostLeads` and `convertedDeals` are plain counts that facets fix, but
+  `staleLeadsCount` and `expiringWithin7` are computed per row from
+  `leadAgeDays()` and reservation expiry dates. Those need server-side
+  support of their own — a facet cannot express "NEW or INTERESTED and
+  untouched for three days". Applying facets to these pages makes three
+  numbers correct and leaves two wrong, with nothing on screen to tell them
+  apart, so they are being done deliberately rather than mechanically.
+
+- `users` is a different and worse defect, recorded separately below.
+
+### The `users` page does not paginate at all
+
+`/dashboard/users` fetches `?pageSize=100` and then does its searching,
+filtering **and row rendering** from that array
+(`const rows = allUsers.filter(...)`). There is no server-side pagination on
+the page. Above one hundred users the page does not merely show wrong counts —
+it does not show the users. A facet would correct the KPI while leaving the
+list silently truncated, which is the worse half.
+
+Fixing it means moving search, filter and pagination to the server, which is a
+page rewrite rather than a facets swap. Tracked here so the smaller fix is not
+mistaken for the whole one.
 
 ### Adjacent finding — `pageSize` is unbounded on 22 of 26 list endpoints
 

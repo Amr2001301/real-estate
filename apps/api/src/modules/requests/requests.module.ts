@@ -32,7 +32,7 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { OptionalAuth } from '../../common/decorators/optional-auth.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
-import { paginate, takeSkip } from '../../common/utils/pagination';
+import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { getTenantContext } from '../../common/tenant/tenant-context';
 import {
   NotificationsModule,
@@ -294,7 +294,21 @@ export class RequestsService {
       }),
       this.prisma.infoRequest.count(),
     ]);
-    return paginate(data, total, opts);
+
+    // FG-23 — /dashboard/requests counted open/responded/closed client-side
+    // from ?pageSize=500. This list takes no filters, so the facet covers
+    // every row the tenant owns.
+    const statusGroups = await this.prisma.infoRequest.groupBy({
+      by: ['status'],
+      _count: true,
+    });
+    const facets = {
+      counts: {
+        status: toCounts(statusGroups.map((g) => [String(g.status), g._count] as const)),
+      },
+    };
+
+    return paginate(data, total, opts, facets);
   }
 
   /**

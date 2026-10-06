@@ -81,10 +81,19 @@ export default async function BrokersPage({
     new Set(allBrokers.map((b) => b.city).filter((c): c is string => Boolean(c))),
   );
 
-  const total = paged?.meta.total ?? allBrokers.length;
-  const active = allBrokers.filter((b) => b.status === 'ACTIVE').length;
-  const pending = allBrokers.filter((b) => b.status === 'PENDING').length;
-  const suspended = allBrokers.filter((b) => b.status === 'SUSPENDED').length;
+  // FG-23 — these were counted client-side from the ?pageSize=200 snapshot,
+  // so they were wrong for any company with more brokers than that. The server
+  // now returns them in meta.facets, computed in SQL over the whole set.
+  //
+  // The snapshot fetch stays because the city dropdown below is built from the
+  // rows themselves, and that is the other half of FG-23 (filter options need a
+  // lightweight endpoint of their own). The counts are correct now; the city
+  // list is still capped at 200.
+  const byStatus = snapshot?.meta.facets?.counts?.status ?? {};
+  const total = snapshot?.meta.total ?? paged?.meta.total ?? 0;
+  const active = byStatus.ACTIVE ?? 0;
+  const pending = byStatus.PENDING ?? 0;
+  const suspended = byStatus.SUSPENDED ?? 0;
 
   return (
     <div className="flex flex-col gap-5 lg:gap-6">

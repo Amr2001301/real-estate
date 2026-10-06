@@ -16,7 +16,7 @@ import {
   CreateLeadNoteDto,
   CreateLeadSourceDto,
 } from './dto/lead.dto';
-import { paginate, takeSkip } from '../../common/utils/pagination';
+import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { getTenantContext } from '../../common/tenant/tenant-context';
 
 @Injectable()
@@ -293,7 +293,22 @@ export class LeadsService {
         upcomingVisit: appointments[0] ?? null,
       };
     });
-    return paginate(data, total, { page, pageSize });
+    // FG-23 — the sales and manager home dashboards counted won/lost stages
+    // client-side from ?pageSize=100, so a rep with more than a hundred leads
+    // saw wrong numbers. Computed over the same `where`, so a self-scoped
+    // query (my-compensation) gets self-scoped counts for free.
+    const stageGroups = await this.prisma.lead.groupBy({
+      by: ['stage'],
+      where,
+      _count: true,
+    });
+    const facets = {
+      counts: {
+        stage: toCounts(stageGroups.map((g) => [String(g.stage), g._count] as const)),
+      },
+    };
+
+    return paginate(data, total, { page, pageSize }, facets);
   }
 
   async findOne(id: string) {

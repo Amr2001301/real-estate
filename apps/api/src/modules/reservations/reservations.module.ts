@@ -59,7 +59,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
-import { paginate, takeSkip } from '../../common/utils/pagination';
+import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { matchOrCreateLeadForClient } from '../crm/crm-lead-matching';
 import { computeDurationOption } from '../installments/duration-calc';
 import {
@@ -897,7 +897,21 @@ export class ReservationsService {
       }),
       this.prisma.reservation.count({ where }),
     ]);
-    return paginate(data, total, opts);
+
+    // FG-23 — reservation status counts fed three dashboards from a
+    // ?pageSize=100 client-side filter. Computed over the same `where`.
+    const statusGroups = await this.prisma.reservation.groupBy({
+      by: ['status'],
+      where,
+      _count: true,
+    });
+    const facets = {
+      counts: {
+        status: toCounts(statusGroups.map((g) => [String(g.status), g._count] as const)),
+      },
+    };
+
+    return paginate(data, total, opts, facets);
   }
 
   async findOne(id: string) {

@@ -17,7 +17,7 @@ import {
 } from './dto/unit.dto';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { PlanLimitService } from '../../common/capabilities/plan-limit.service';
-import { paginate, takeSkip } from '../../common/utils/pagination';
+import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { serializePublicUnit } from './public-unit.serializer';
 
 /**
@@ -152,9 +152,7 @@ export class UnitsService {
 
     const facets = {
       counts: {
-        status: Object.fromEntries(
-          statusGroups.map((g) => [g.status, g._count] as const),
-        ) as Record<string, number>,
+        status: toCounts(statusGroups.map((g) => [String(g.status), g._count] as const)),
       },
       sums: {
         // Decimal → string, matching how money is serialised elsewhere in this

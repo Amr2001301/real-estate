@@ -75,19 +75,24 @@ export default async function InfoRequestsPage({
   const pageQs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
   if (statusFilter) pageQs.set('status', statusFilter);
 
-  // Two fetches: paginated display + wide snapshot for accurate KPI counts.
+  // Two fetches: the page the table renders, and a single row whose meta
+  // carries the server-computed status counts for the KPI strip (FG-23).
   const [res, snapshotRes] = await Promise.all([
     safe(api.get<Paged<AdminInfoRequest>>(`/info-requests?${pageQs.toString()}`)),
-    safe(api.get<Paged<AdminInfoRequest>>('/info-requests?pageSize=500')),
+    safe(api.get<Paged<AdminInfoRequest>>('/info-requests?pageSize=1')),
   ]);
 
   const rows = res.data?.data ?? [];
   const total = res.data?.meta.total ?? 0;
-  const snapshot = snapshotRes.data?.data ?? [];
-  const grandTotal = snapshotRes.data?.meta.total ?? snapshot.length;
-  const openCount = snapshot.filter((r) => r.status === 'OPEN').length;
-  const respondedCount = snapshot.filter((r) => r.status === 'RESPONDED').length;
-  const closedCount = snapshot.filter((r) => r.status === 'CLOSED').length;
+  // FG-23 — these were counted client-side from the ?pageSize=500 snapshot,
+  // so a tenant with more than 500 info requests saw wrong totals. The server
+  // returns them in meta.facets now, computed in SQL over every row, so the
+  // snapshot only needs to carry one.
+  const facets = snapshotRes.data?.meta.facets?.counts?.status ?? {};
+  const grandTotal = snapshotRes.data?.meta.total ?? 0;
+  const openCount = facets.OPEN ?? 0;
+  const respondedCount = facets.RESPONDED ?? 0;
+  const closedCount = facets.CLOSED ?? 0;
 
   return (
     <div className="flex flex-col gap-5 lg:gap-6">

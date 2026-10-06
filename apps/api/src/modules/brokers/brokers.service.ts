@@ -7,7 +7,7 @@ import { Prisma, BrokerStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { NotificationsService } from '../notifications/notifications.module';
-import { paginate, takeSkip } from '../../common/utils/pagination';
+import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import {
   CreateBrokerDto,
   UpdateBrokerDto,
@@ -101,7 +101,24 @@ export class BrokersService {
       }),
       this.prisma.broker.count({ where }),
     ]);
-    return paginate(data, total, { page, pageSize });
+
+    // FG-23 — the admin KPI strip used to count these client-side from
+    // ?pageSize=200, so they were wrong for any company with more brokers
+    // than that. Computed over the same `where`, outside the transaction
+    // because Prisma's groupBy inference degrades inside a $transaction
+    // tuple.
+    const statusGroups = await this.prisma.broker.groupBy({
+      by: ['status'],
+      where,
+      _count: true,
+    });
+    const facets = {
+      counts: {
+        status: toCounts(statusGroups.map((g) => [String(g.status), g._count] as const)),
+      },
+    };
+
+    return paginate(data, total, { page, pageSize }, facets);
   }
 
   async findOne(id: string) {
