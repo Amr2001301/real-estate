@@ -32,6 +32,12 @@ export interface PaginationFacets {
    * add more to it.
    */
   sums?: Record<string, string>;
+  /**
+   * field → maximum, as an ISO string. Added for "most recent X across the
+   * whole set" tiles, which are neither a count nor a sum. Absent when the
+   * filtered set is empty or every row holds null.
+   */
+  max?: Record<string, string>;
 }
 
 export interface Paginated<T> {

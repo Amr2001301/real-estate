@@ -104,7 +104,7 @@ export class UsersService {
     }
   }
 
-  async findAll(role?: string, page = 1, pageSize = 20, q?: string) {
+  async findAll(role?: string, page = 1, pageSize = 20, q?: string, active?: boolean) {
     const companyId = getRequiredCompanyId(); // MT-004
     const trimmed = q?.trim();
     // `role` may be a single role or a comma-separated list (e.g.
@@ -118,6 +118,7 @@ export class UsersService {
       companyId,
       deletedAt: null,
       ...roleFilter,
+      ...(active !== undefined ? { active } : {}),
       ...(trimmed
         ? {
             OR: [
@@ -141,15 +142,19 @@ export class UsersService {
     // FG-23 — the active/inactive split on /dashboard/users was counted
     // client-side from ?pageSize=100. `active` is a boolean column, so the
     // facet keys come back as "true" / "false".
-    const activeGroups = await this.prisma.user.groupBy({
-      by: ['active'],
-      where,
-      _count: true,
-    });
+    const [activeGroups, roleGroups, lastLoginAgg] = await Promise.all([
+      this.prisma.user.groupBy({ by: ['active'], where, _count: true }),
+      this.prisma.user.groupBy({ by: ['role'], where, _count: true }),
+      this.prisma.user.aggregate({ where, _max: { lastLoginAt: true } }),
+    ]);
     const facets = {
       counts: {
         active: toCounts(activeGroups.map((g) => [String(g.active), g._count] as const)),
+        role: toCounts(roleGroups.map((g) => [String(g.role), g._count] as const)),
       },
+      ...(lastLoginAgg._max.lastLoginAt
+        ? { max: { lastLoginAt: lastLoginAgg._max.lastLoginAt.toISOString() } }
+        : {}),
     };
 
     return paginate(data, total, { page, pageSize }, facets);

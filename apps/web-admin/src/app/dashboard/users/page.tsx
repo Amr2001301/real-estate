@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Pagination } from '@/components/ui/pagination';
 import {
   PremiumPageHero,
   PremiumSectionCard,
@@ -101,8 +102,13 @@ interface Search {
   role?: string;
   q?: string;
   status?: string;
+  page?: string;
   showCreate?: string;
 }
+
+// Rows per page. The list is server-paged (FG-23); this is the page the table
+// renders, not a ceiling on how many users the directory may hold.
+const PAGE_SIZE = 20;
 
 export default async function UsersPage({
   searchParams,
@@ -130,43 +136,45 @@ export default async function UsersPage({
     BROKER:                 m.roleLabels.BROKER,
   };
 
-  const qs = new URLSearchParams({ pageSize: '100' });
-  if (sp.role) qs.set('role', sp.role);
+  // FG-23 — this page used to fetch ?pageSize=100 and then search, filter AND
+  // render from that array. Above a hundred users it did not show wrong counts;
+  // it did not show the users, with nothing on screen to say so. Search, status
+  // and paging are now the server's job.
+  const page   = Math.max(1, Number(sp.page ?? '1') || 1);
+  const q      = sp.q?.trim() ?? '';
+  const status = sp.status ?? '';
 
-  const [usersRes, managersRes] = await Promise.all([
-    safe(api.get<Paged<User>>(`/users?${qs}`)),
+  const listQs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (sp.role) listQs.set('role', sp.role);
+  if (q) listQs.set('q', q);
+  if (status === 'active')   listQs.set('active', 'true');
+  if (status === 'inactive') listQs.set('active', 'false');
+
+  // A second call carries the KPI strip. It keeps the role filter but drops q
+  // and status on purpose: the tiles describe the directory, not the current
+  // search, which is what they did before. Changing the page size made them
+  // correct; changing what they count would be a separate decision.
+  const kpiQs = new URLSearchParams({ pageSize: '1' });
+  if (sp.role) kpiQs.set('role', sp.role);
+
+  const [usersRes, kpiRes, managersRes] = await Promise.all([
+    safe(api.get<Paged<User>>(`/users?${listQs}`)),
+    safe(api.get<Paged<User>>(`/users?${kpiQs}`)),
     safe(api.get<Paged<User>>('/users?role=SALES_MANAGER&pageSize=100')),
   ]);
 
-  const allUsers = usersRes.data?.data ?? [];
+  const paged    = usersRes.data;
+  const rows     = paged?.data ?? [];
   const managers = managersRes.data?.data ?? [];
 
-  // Client-side text + status filter (all rows are already fetched)
-  const q      = sp.q?.trim().toLowerCase() ?? '';
-  const status = sp.status ?? '';
-
-  const rows = allUsers.filter((u) => {
-    if (q) {
-      const hay = `${u.fullName} ${u.email ?? ''} ${u.phone ?? ''}`.toLowerCase();
-      if (!hay.includes(q)) return false;
-    }
-    if (status === 'active'   && !u.active) return false;
-    if (status === 'inactive' &&  u.active) return false;
-    return true;
-  });
-
-  // KPI metrics — computed from unfiltered set
-  const total    = allUsers.length;
-  const active   = allUsers.filter((u) => u.active).length;
-  const inactive = total - active;
-  const adminRoles = allUsers.filter(
-    (u) => u.role === 'ADMIN' || u.role === 'SALES_MANAGER',
-  ).length;
-  const lastLogin = allUsers
-    .map((u) => u.lastLoginAt)
-    .filter(Boolean)
-    .sort()
-    .pop();
+  const facets     = kpiRes.data?.meta.facets;
+  const byActive   = facets?.counts?.active ?? {};
+  const byRole     = facets?.counts?.role ?? {};
+  const total      = kpiRes.data?.meta.total ?? 0;
+  const active     = byActive.true ?? 0;
+  const inactive   = byActive.false ?? 0;
+  const adminRoles = (byRole.ADMIN ?? 0) + (byRole.SALES_MANAGER ?? 0);
+  const lastLogin  = facets?.max?.lastLoginAt;
 
   const showCreate = sp.showCreate === '1';
   const hasFilter  = !!(sp.q || sp.role || sp.status);
@@ -361,7 +369,7 @@ export default async function UsersPage({
       <PremiumSectionCard
         icon={<Users />}
         title={m.sectionTitle}
-        description={`${rows.length} ${m.userSuffix}`}
+        description={`${paged?.meta.total ?? 0} ${m.userSuffix}`}
         padded={false}
       >
         {rows.length === 0 ? (
@@ -528,6 +536,21 @@ export default async function UsersPage({
           </div>
         )}
       </PremiumSectionCard>
+
+      {/* ── Pagination ──────────────────────────────────────────────────── */}
+      {paged && paged.meta.total > paged.meta.pageSize && (
+        <Pagination
+          page={paged.meta.page}
+          pageSize={paged.meta.pageSize}
+          total={paged.meta.total}
+          basePath="/dashboard/users"
+          params={{
+            role:   sp.role,
+            q:      sp.q,
+            status: sp.status,
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -96,6 +96,9 @@ function makePrismaMock() {
       // against real Postgres, where a mock cannot tell counts over the
       // filtered set from counts over the page). Empty matches findMany above.
       groupBy: jest.fn().mockResolvedValue([]),
+      // FG-23 — findAll now also aggregates _max.lastLoginAt for the KPI strip,
+      // alongside the two groupBy calls. Null matches the empty findMany above.
+      aggregate: jest.fn().mockResolvedValue({ _max: { lastLoginAt: null } }),
       // MT-005: findOne now uses findFirst; me() routes through findOne.
       findFirst: jest.fn().mockResolvedValue(FAKE_USER_ROW),
       findUnique: jest.fn().mockResolvedValue(FAKE_USER_ROW),

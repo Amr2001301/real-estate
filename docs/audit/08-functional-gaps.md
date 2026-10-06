@@ -656,7 +656,7 @@ These are the OWASP-recommended minimum parameters for argon2id as of 2023. They
 
 ## FG-23 — Admin list pages fetch whole tables to compute a handful of aggregates
 
-**Severity:** Medium · **Blocks launch:** no · **Status:** partially fixed — units, brokers and requests done; three sales dashboards and `users` remain
+**Severity:** Medium · **Blocks launch:** no · **Status:** partially fixed — units, brokers, requests and users done; three sales dashboards remain
 
 ### What exists
 
@@ -768,18 +768,34 @@ facet cannot count another company's rows. This was verified, not assumed.
 
 - `users` is a different and worse defect, recorded separately below.
 
-### The `users` page does not paginate at all
+### The `users` page did not paginate at all — fixed
 
-`/dashboard/users` fetches `?pageSize=100` and then does its searching,
+`/dashboard/users` fetched `?pageSize=100` and then did its searching,
 filtering **and row rendering** from that array
-(`const rows = allUsers.filter(...)`). There is no server-side pagination on
-the page. Above one hundred users the page does not merely show wrong counts —
-it does not show the users. A facet would correct the KPI while leaving the
-list silently truncated, which is the worse half.
+(`const rows = allUsers.filter(...)`). There was no server-side pagination on
+the page. Above one hundred users it did not merely show wrong counts — it did
+not show the users, with nothing on screen to say anything had been cut.
 
-Fixing it means moving search, filter and pagination to the server, which is a
-page rewrite rather than a facets swap. Tracked here so the smaller fix is not
-mistaken for the whole one.
+Fixed by moving the work to the server rather than adding a facet to a
+truncated list:
+
+- `GET /v1/users` gained an `active` filter. It is parsed explicitly rather
+  than through a boolean pipe so that an absent param stays `undefined` and is
+  not coerced to `false`, which would have silently hidden every inactive user.
+- The list already supported `role`, `q` and `page`/`pageSize`; the page now
+  passes all four instead of filtering in the browser.
+- Facets gained a `role` dimension and a `max` dimension (`lastLoginAt`) to
+  back the "admins + managers" and "last login" tiles. `max` is a third facet
+  shape alongside `counts` and `sums` — a most-recent-timestamp is neither.
+- The KPI call deliberately keeps the role filter but drops `q` and `status`.
+  The tiles describe the directory, not the current search, which is what they
+  did before. Making them correct is one change; changing what they count
+  would be another.
+
+**Gate:** `e2e-catalog-auth` A4c asserts `?active=true` returns only active
+rows and that its `meta.total` equals the `active.true` facet of the
+unfiltered call. If the server-side filter is removed the param is ignored,
+the two totals become equal to the directory size, and the test fails.
 
 ### Adjacent finding — `pageSize` is unbounded on 22 of 26 list endpoints
 

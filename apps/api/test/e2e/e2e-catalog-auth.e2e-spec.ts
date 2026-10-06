@@ -331,6 +331,52 @@ describe('Flow A — Catalog sync (e2e)', () => {
     });
   });
 
+  // ── FG-23 — the users directory is paged and filtered by the server ───────
+  //
+  // /dashboard/users used to fetch ?pageSize=100 and then search, filter AND
+  // render from that array, so a company with more than a hundred users simply
+  // did not see them. These assert the server-side capability the page now
+  // depends on; without it the page silently truncates again.
+  describe('A4c — users list server-side filtering (FG-23)', () => {
+    it('?active=true returns only active users and a matching total', async () => {
+      const all = await http()
+        .get('/v1/users?pageSize=1')
+        .set('Authorization', bearer(adminToken));
+      expect(all.status).toBe(200);
+
+      const activeOnly = await http()
+        .get('/v1/users?pageSize=50&active=true')
+        .set('Authorization', bearer(adminToken));
+      expect(activeOnly.status).toBe(200);
+
+      // Every returned row honours the filter...
+      for (const u of activeOnly.body.data as Array<{ active: boolean }>) {
+        expect(u.active).toBe(true);
+      }
+      // ...and the total is the filtered count, not the directory size. Without
+      // a server-side filter the param is ignored and these two are equal.
+      expect(activeOnly.body.meta.total).toBeLessThanOrEqual(all.body.meta.total);
+      expect(activeOnly.body.meta.total).toBe(
+        all.body.meta.facets.counts.active.true ?? 0,
+      );
+    });
+
+    it('facets cover the whole directory while the page holds one row', async () => {
+      const res = await http()
+        .get('/v1/users?pageSize=1')
+        .set('Authorization', bearer(adminToken));
+      expect(res.body.data).toHaveLength(1);
+      expect(res.body.meta.total).toBeGreaterThan(1);
+
+      const byActive = res.body.meta.facets.counts.active as Record<string, number>;
+      const summed = Object.values(byActive).reduce((a, b) => a + b, 0);
+      expect(summed).toBe(res.body.meta.total);
+
+      // The role facet backs the "admins + managers" tile.
+      expect(res.body.meta.facets.counts.role).toBeDefined();
+    });
+  });
+
   describe('A5 — Broker1 portal returns only the broker1-granted projects', () => {
     it('GET /v1/portal/projects as broker1 returns exactly {p1, p2}', async () => {
       const res = await http()

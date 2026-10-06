@@ -16,6 +16,9 @@ export interface PaginationFacets {
   /** field → sum as a decimal string. Money is Decimal(14,2) server-side and
    *  stays a string so JSON floats cannot lose precision. */
   sums?: Record<string, string>;
+  /** field → maximum as an ISO string, for "most recent X" tiles.
+   *  Absent when the set is empty or every row holds null. */
+  max?: Record<string, string>;
 }
 
 export interface Paged<T> {

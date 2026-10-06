@@ -43,8 +43,14 @@ export class UsersController {
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
     @Query('q') q?: string,
+    // FG-23 — /dashboard/users used to filter active/inactive in the browser
+    // over a capped page. Parsed explicitly rather than with a pipe so that an
+    // absent param stays undefined (no filter) and is not coerced to false.
+    @Query('active') active?: string,
   ) {
-    return this.users.findAll(role, Number(page), Number(pageSize), q);
+    const activeFilter =
+      active === 'true' ? true : active === 'false' ? false : undefined;
+    return this.users.findAll(role, Number(page), Number(pageSize), q, activeFilter);
   }
 
   // Self-profile routes — no role gate, no permission gate. Any authenticated

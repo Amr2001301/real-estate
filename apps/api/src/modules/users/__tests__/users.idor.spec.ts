@@ -116,7 +116,12 @@ function makePrisma(overrides: Record<string, unknown> = {}): PrismaService {
 
   return {
     // FG-23 — the list now also issues a groupBy for meta.facets.
-    user: { findUnique, findFirst, findMany, count, update, create, groupBy: jest.fn().mockResolvedValue([]) },
+    user: {
+      findUnique, findFirst, findMany, count, update, create,
+      groupBy: jest.fn().mockResolvedValue([]),
+      // FG-23 — findAll also aggregates _max.lastLoginAt for the KPI strip.
+      aggregate: jest.fn().mockResolvedValue({ _max: { lastLoginAt: null } }),
+    },
     company: {
       findUnique: jest.fn().mockResolvedValue({ maxUsers: null, _count: { users: 1 } }),
     },
