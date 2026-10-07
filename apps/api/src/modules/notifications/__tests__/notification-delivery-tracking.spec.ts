@@ -40,13 +40,13 @@ function makePrisma(userEmail?: string) {
     _createdNotif: createdNotif,
     _updates: updates,
     notificationTemplate: {
-      findUnique: jest.fn().mockResolvedValue({
+      findMany: jest.fn().mockResolvedValue([{
         code: 'deposit_recorded',
         channel: NotificationChannel.PUSH,
         emailEnabled: true,
         subject: { ar: 'موضوع', en: 'Subject' },
         body:    { ar: 'نص',   en: 'Body'    },
-      }),
+      }]),
     },
     notification: {
       create: jest.fn().mockResolvedValue(createdNotif),
@@ -130,13 +130,13 @@ describe('Step 15 — Notification delivery tracking', () => {
   describe('Part A: EMAIL_ELIGIBLE_TEMPLATES inclusions', () => {
     async function assertEmailFired(templateCode: string) {
       const prisma = makePrisma('customer@example.com');
-      prisma.notificationTemplate.findUnique.mockResolvedValue({
+      prisma.notificationTemplate.findMany.mockResolvedValue([{
         code: templateCode,
         channel: NotificationChannel.PUSH,
         emailEnabled: true,
         subject: { ar: 'موضوع', en: 'Subject' },
         body:    { ar: 'نص',   en: 'Body'    },
-      });
+      }]);
       const email = makeEmailService({ ok: true, sentAt: new Date() });
       const push  = makePushService({ enabled: false });
       const svc   = makeService(prisma, push, email);
@@ -220,13 +220,13 @@ describe('Step 15 — Notification delivery tracking', () => {
 
     it('email is not attempted for a non-eligible template', async () => {
       const prisma = makePrisma('user@example.com');
-      prisma.notificationTemplate.findUnique.mockResolvedValue({
+      prisma.notificationTemplate.findMany.mockResolvedValue([{
         code: 'visit_approved',
         channel: NotificationChannel.PUSH,
         emailEnabled: false,
         subject: { ar: 'زيارة', en: 'Visit' },
         body:    { ar: 'نص',   en: 'Body'  },
-      });
+      }]);
       const email = makeEmailService({ ok: true, sentAt: new Date() });
       const push  = makePushService({ enabled: false });
       const svc   = makeService(prisma, push, email);
@@ -372,13 +372,13 @@ describe('Step 15 — Notification delivery tracking', () => {
       const sentAt = new Date();
       const prisma = makePrisma('user@example.com');
       // visit_approved was NOT in the old Set — now explicitly enabled via field
-      prisma.notificationTemplate.findUnique.mockResolvedValue({
+      prisma.notificationTemplate.findMany.mockResolvedValue([{
         code: 'visit_approved',
         channel: NotificationChannel.PUSH,
         emailEnabled: true,
         subject: { ar: 'z', en: 'z' },
         body:    { ar: 'z', en: 'z' },
-      });
+      }]);
       const email = makeEmailService({ ok: true, sentAt });
       const push  = makePushService({ enabled: false });
       const svc   = makeService(prisma, push, email);
@@ -394,13 +394,13 @@ describe('Step 15 — Notification delivery tracking', () => {
     it('emailEnabled=false → email NOT attempted, push columns unaffected', async () => {
       const prisma = makePrisma('user@example.com');
       // deposit_recorded was in the old Set — now disabled by emailEnabled=false
-      prisma.notificationTemplate.findUnique.mockResolvedValue({
+      prisma.notificationTemplate.findMany.mockResolvedValue([{
         code: 'deposit_recorded',
         channel: NotificationChannel.PUSH,
         emailEnabled: false,
         subject: { ar: 'z', en: 'z' },
         body:    { ar: 'z', en: 'z' },
-      });
+      }]);
       const email = makeEmailService({ ok: true, sentAt: new Date() });
       const push  = makePushService({ enabled: true, sent: 2 });
       const svc   = makeService(prisma, push, email);
@@ -419,13 +419,13 @@ describe('Step 15 — Notification delivery tracking', () => {
     it('toggling emailEnabled off: emailSentAt absent, emailError absent, push unchanged', async () => {
       // Same as above but verify the update row itself has no email columns.
       const prisma = makePrisma('user@example.com');
-      prisma.notificationTemplate.findUnique.mockResolvedValue({
+      prisma.notificationTemplate.findMany.mockResolvedValue([{
         code: 'deposit_recorded',
         channel: NotificationChannel.PUSH,
         emailEnabled: false,
         subject: { ar: 'z', en: 'z' },
         body:    { ar: 'z', en: 'z' },
-      });
+      }]);
       const email = makeEmailService({ ok: true, sentAt: new Date() });
       const push  = makePushService({ enabled: false });
       const svc   = makeService(prisma, push, email);

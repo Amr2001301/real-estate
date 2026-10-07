@@ -408,7 +408,9 @@ async function backfillCompanyId(companyId: string) {
     'Contract', 'InstallmentPlan', 'Installment', 'Deposit',
     'InstallmentPlanTemplate', 'BonusRule', 'BonusEntry', 'SalesTarget',
     'MaintenanceCategory', 'MaintenanceRequest', 'MaintenanceRequestItem',
-    'CmsPage', 'Banner', 'Article', 'NotificationTemplate', 'Notification', 'AuditLog',
+    // NotificationTemplate is not here: its NULL-company rows are the platform
+    // defaults (FG-26), not orphans.
+    'CmsPage', 'Banner', 'Article', 'Notification', 'AuditLog',
     'Broker', 'BrokerUser', 'BrokerProjectAccess', 'BrokerUnitAccess',
     'BrokerCommission', 'BrokerPayout', 'BrokerActivityLog',
     'Setting', 'Document', 'ChatSession', 'ChatMessage', 'ChatFeedback',
@@ -1259,6 +1261,27 @@ async function main() {
         ar_body: 'معاينتك رقم {{visitNumber}} في {{projectName}} تبدأ خلال ساعة.',
         en_body: 'Your visit {{visitNumber}} at {{projectName}} starts in about an hour.',
       },
+      // ─── Payment reversal (09-reversal-design.md) ─────────────────────────
+      // Sent by PaymentInstrumentsService and ContractCancellationService but
+      // never seeded, so both failed with "Template not found" (FG-26).
+      {
+        code: 'cheque_bounced',
+        channel: NotificationChannel.PUSH,
+        emailEnabled: true,
+        ar_subject: 'تم ارتداد شيك',
+        en_subject: 'A cheque has bounced',
+        ar_body: 'تم ارتداد الشيك {{chequeNumber}} بتاريخ {{bounceDate}}. غرامة الارتداد: {{penaltyAmount}}. يرجى التواصل معنا لتسوية المبلغ.',
+        en_body: 'Cheque {{chequeNumber}} bounced on {{bounceDate}}. Bounce penalty: {{penaltyAmount}}. Please contact us to settle the amount.',
+      },
+      {
+        code: 'contract_cancelled_customer',
+        channel: NotificationChannel.PUSH,
+        emailEnabled: true,
+        ar_subject: 'تم إلغاء عقدك',
+        en_subject: 'Your contract has been cancelled',
+        ar_body: 'تم إلغاء عقدك. سيتواصل معك فريق المبيعات بخصوص الخطوات التالية.',
+        en_body: 'Your contract has been cancelled. Our sales team will contact you about the next steps.',
+      },
       // ─── User account lifecycle ───────────────────────────────────────────
       {
         code: 'user_account_approved',
@@ -1287,19 +1310,24 @@ async function main() {
         ar_body: '{{body_ar}}',
         en_body: '{{body_en}}',
       },
-    ].map((t) =>
-      prisma.notificationTemplate.upsert({
-        where: { code: t.code },
-        create: {
+    ].map(async (t) => {
+      // FG-26: platform defaults (companyId NULL), created once; a company's
+      // edits live in its own override row and are never overwritten here.
+      const existing = await prisma.notificationTemplate.findFirst({
+        where: { code: t.code, companyId: null },
+        select: { id: true },
+      });
+      if (existing) return;
+      await prisma.notificationTemplate.create({
+        data: {
           code: t.code,
           channel: t.channel,
           emailEnabled: (t as { emailEnabled?: boolean }).emailEnabled ?? false,
           subject: { ar: t.ar_subject, en: t.en_subject },
           body: { ar: t.ar_body, en: t.en_body },
         },
-        update: {},
-      }),
-    ),
+      });
+    }),
   );
 
   // ---- Lead + assignment (idempotent by clientId + projectInterestId) ----

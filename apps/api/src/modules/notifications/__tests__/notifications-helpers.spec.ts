@@ -27,8 +27,8 @@ function makePrisma(users: { id: string; role: UserRole; active: boolean }[] = [
   return {
     notifications,
     notificationTemplate: {
-      findUnique: jest.fn(async ({ where }: { where: { code: string } }) =>
-        tplStore.get(where.code) ?? null,
+      findMany: jest.fn(async ({ where }: { where: { code: { in: string[] } } }) =>
+        where.code.in.map((c) => tplStore.get(c)).filter(Boolean),
       ),
     },
     notification: {

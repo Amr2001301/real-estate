@@ -366,7 +366,7 @@ Ranked by: customer-facing severity, whether failure is silent, and whether it b
 | 22 | FG-22 | argon2 called at library defaults everywhere — no config, no recorded rationale; 382 ms/login uncontended on CI, 11–19× degradation at 3 concurrent; production not measured | Medium | No — defaults are safe; risk is throughput, not security | No — login works; concurrent sign-in capacity is unknown |
 | 24 | FG-24 | Three user-create paths (broker-portal lead client, broker-portal team, admin broker users) wrote no `companyId` on the TENANT_CONTROLLED `User` model | High | Partly — users vanish from tenant-scoped lists | **Fixed 2026-10-07** — companyId set, foreign-user attach refused, unambiguous rows backfilled |
 | 25 | FG-25 | Scheduled jobs did their per-row work in bypass: every cron notification was stored with `companyId` NULL and never pushed or emailed, role fan-outs (maintenance SLA) sent nothing, reservation-expiry activity lost its company; the two appointment-reminder templates were never seeded | High | Yes — nothing failed visibly; reminders simply never arrived | **Fixed 2026-10-07** — each row is handled in its own company (`runInCompany`); templates seeded; CRON-CTX e2e |
-| 26 | FG-26 | `NotificationTemplate.code` is unique platform-wide but the model is `TENANT_OWNED` and seeded under the default company only — every notification for any other company fails at the template lookup; `cheque_bounced` and `contract_cancelled_customer` are not seeded at all | **Critical** for a second tenant | Yes — sends are best-effort and swallow the error | **Open** — needs a design decision (§FG-26) |
+| 26 | FG-26 | `NotificationTemplate.code` is unique platform-wide but the model is `TENANT_OWNED` and seeded under the default company only — every notification for any other company fails at the template lookup; `cheque_bounced` and `contract_cancelled_customer` are not seeded at all | **Critical** for a second tenant | Yes — sends are best-effort and swallow the error | **Fixed 2026-10-07** — platform defaults + per-company overrides (option 1); missing templates seeded |
 
 ---
 
@@ -743,7 +743,7 @@ carries its company. All three fail with the cron files reverted.
 
 ### FG-26: Notification templates exist for the default company only
 
-**Severity:** Critical as soon as a second company is live · **Status:** Open
+**Severity:** Critical as soon as a second company is live · **Status:** Fixed 2026-10-07 (option 1)
 
 `NotificationTemplate.code` is `@unique` platform-wide, the model is
 `TENANT_OWNED`, and `seed.ts` creates the templates and then backfills them
@@ -769,6 +769,25 @@ every company.
 2. *Platform-only templates.* Reclassify as `PLATFORM_GLOBAL`, `companyId`
    NULL, editing restricted to SUPER_ADMIN. Smallest change; tenants lose
    per-company wording.
+
+**Decision (2026-10-07): option 1.** The product is white-label (ADR-17); each
+developer may want its own wording.
+
+| Change | Where |
+|---|---|
+| `code` is unique per `(companyId, code)`, `NULLS NOT DISTINCT` — exactly one platform row per code and one override per company. Existing rows become platform defaults | migration `20261007000003_notification_template_platform_defaults` |
+| `NotificationTemplate` is `TENANT_CONTROLLED`: a tenant-scoped read could never see a `companyId` NULL row. `NotificationsService` is the only reader/writer | `model-tenancy.ts` |
+| `templatesFor(codes)`: the company's override, else the platform default. With no company in context (bypass) only platform defaults — never another company's override | `send`, `/me/notifications`, broadcast |
+| The editor (`POST /notification-templates`) writes the caller's override keyed on its own `companyId`; the 403 "belongs to another tenant" guard is gone because there is nothing shared to collide with. The list shows the company's effective templates | `upsertTemplate`, `listTemplates` |
+| `admin_broadcast` is created as a platform row on boot. Before, that upsert ran with no tenant context on a tenant-scoped model and failed on every start | `onModuleInit` |
+| Seed: templates are platform rows, removed from the `companyId` backfill; `cheque_bounced` and `contract_cancelled_customer` added | `seed.ts` |
+
+**Gate:** e2e `e2e-mt-security` **FG-26** — an SLA breach in a company other
+than the seed company reaches that company's admin; company B's override of
+`maintenance_sla_breached` changes B's title only, A keeps the platform text,
+and the platform row is untouched. Both fail on the previous code (B receives
+nothing). Security **NOTIF-1/2** rewritten for the new model: A posting B's code
+creates A's own override; B's row and B's editor view are unchanged.
 
 ---
 

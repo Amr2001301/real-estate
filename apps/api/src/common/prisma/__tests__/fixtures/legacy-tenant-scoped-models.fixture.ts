@@ -29,7 +29,8 @@ export const TENANT_SCOPED_MODELS_LEGACY = new Set([
   // Maintenance
   'maintenancecategory', 'maintenancerequest', 'maintenancerequestitem',
   // CMS / notifications
-  'cmspage', 'banner', 'article', 'notificationtemplate', 'notification', 'auditlog',
+  'cmspage', 'banner', 'article', 'notification', 'auditlog',
+  // notificationtemplate → TENANT_CONTROLLED in FG-26 (platform defaults + overrides)
   // Brokers
   'broker', 'brokeruser', 'brokerprojectaccess', 'brokerunitaccess',
   'brokercommission', 'brokerpayout', 'brokeractivitylog',

@@ -65,9 +65,9 @@ describe('MT-014 equivalence: TENANT_SCOPED_MODELS ↔ MODEL_TENANCY TENANT_OWNE
     expect(missing).toEqual([]);
   });
 
-  it('both sets have the same cardinality (51 models after Step A + Step C + Step D1 + Option B User)', () => {
-    expect(TENANT_SCOPED_MODELS.size).toBe(51);
-    expect(ownedFromModelTenancy.size).toBe(51);
+  it('both sets have the same cardinality (50: Step A + Step C + Step D1 + Option B User − FG-26 NotificationTemplate)', () => {
+    expect(TENANT_SCOPED_MODELS.size).toBe(50);
+    expect(ownedFromModelTenancy.size).toBe(50);
   });
 
   it('MODEL_TIER_BY_LOWERCASE includes all TENANT_OWNED models with correct tier', () => {
@@ -353,9 +353,9 @@ describe('MT-014 MODEL_TIER_BY_LOWERCASE derived set', () => {
     }
   });
 
-  it('TENANT_OWNED count matches TENANT_SCOPED_MODELS count (51 after Step A + Step C + Step D1 + Option B User)', () => {
+  it('TENANT_OWNED count matches TENANT_SCOPED_MODELS count (50 after Option B User and FG-26)', () => {
     const ownedCount = [...MODEL_TIER_BY_LOWERCASE.values()].filter((t) => t === 'TENANT_OWNED').length;
-    expect(ownedCount).toBe(51);
+    expect(ownedCount).toBe(50);
   });
 });
 

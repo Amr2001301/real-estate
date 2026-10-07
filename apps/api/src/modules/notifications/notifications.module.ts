@@ -3,7 +3,6 @@ import {
   BadRequestException,
   Body,
   Controller,
-  ForbiddenException,
   Get,
   Headers,
   Injectable,
@@ -27,13 +26,13 @@ import {
   IsUUID,
   MaxLength,
 } from 'class-validator';
-import { Prisma, NotificationChannel, UserRole } from '@prisma/client';
+import { Prisma, NotificationChannel, UserRole, type NotificationTemplate } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   resolveTenantUser,
   scopedUserFindMany,
 } from '../../common/tenant/resolve-tenant-entity';
-import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
+import { getRequiredCompanyId, getTenantContext } from '../../common/tenant/tenant-context';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -146,6 +145,16 @@ function resolveText(
 }
 
 
+/** One template per code: a company override beats the platform default. */
+function pickEffective(rows: NotificationTemplate[]): Map<string, NotificationTemplate> {
+  const byCode = new Map<string, NotificationTemplate>();
+  for (const row of rows) {
+    const current = byCode.get(row.code);
+    if (!current || (row.companyId !== null && current.companyId === null)) byCode.set(row.code, row);
+  }
+  return byCode;
+}
+
 @Injectable()
 export class NotificationsService implements OnModuleInit {
   private readonly logger = new Logger(NotificationsService.name);
@@ -164,16 +173,23 @@ export class NotificationsService implements OnModuleInit {
    */
   async onModuleInit() {
     try {
-      await this.prisma.notificationTemplate.upsert({
-        where: { code: 'admin_broadcast' },
-        create: {
-          code: 'admin_broadcast',
-          channel: NotificationChannel.IN_APP,
-          subject: { ar: '{{title_ar}}', en: '{{title_en}}' } as Prisma.InputJsonValue,
-          body:    { ar: '{{body_ar}}',  en: '{{body_en}}'  } as Prisma.InputJsonValue,
-        },
-        update: {},
+      // A platform default (companyId NULL) — every company resolves to it.
+      // Before FG-26 this upsert ran with no tenant context on a tenant-scoped
+      // model and failed on every boot.
+      const existing = await this.prisma.notificationTemplate.findFirst({
+        where: { code: 'admin_broadcast', companyId: null },
+        select: { id: true },
       });
+      if (!existing) {
+        await this.prisma.notificationTemplate.create({
+          data: {
+            code: 'admin_broadcast',
+            channel: NotificationChannel.IN_APP,
+            subject: { ar: '{{title_ar}}', en: '{{title_en}}' } as Prisma.InputJsonValue,
+            body:    { ar: '{{body_ar}}',  en: '{{body_en}}'  } as Prisma.InputJsonValue,
+          },
+        });
+      }
       this.logger.log('admin_broadcast template verified');
     } catch (err) {
       // Non-fatal: log and continue — send() will fail with a clear message if
@@ -182,44 +198,69 @@ export class NotificationsService implements OnModuleInit {
     }
   }
 
+  /**
+   * FG-26 — writes the caller's company override for `code`. The platform
+   * default and other companies' overrides are never touched: the row is
+   * keyed on (companyId, code) and companyId always comes from the context.
+   */
   async upsertTemplate(dto: UpsertTemplateDto) {
     const companyId = getRequiredCompanyId();
-
-    // Guard: code has a global @unique constraint (schema migration pending).
-    // Use $queryRaw to bypass the tenant middleware and detect cross-tenant conflicts
-    // before the upsert would hit a unique constraint violation.
-    const conflicts = await this.prisma.$queryRaw<Array<{ companyId: string | null }>>`
-      SELECT "companyId" FROM "NotificationTemplate" WHERE code = ${dto.code} LIMIT 1
-    `;
-    const first = conflicts[0];
-    if (first && first.companyId !== companyId) {
-      throw new ForbiddenException(
-        `Notification template code '${dto.code}' belongs to another tenant.`,
-      );
+    const existing = await this.prisma.notificationTemplate.findFirst({
+      where: { companyId, code: dto.code },
+      select: { id: true },
+    });
+    const content = {
+      channel: dto.channel,
+      subject: { ar: dto.ar_subject, en: dto.en_subject } as Prisma.InputJsonValue,
+      body: { ar: dto.ar_body, en: dto.en_body } as Prisma.InputJsonValue,
+    };
+    if (existing) {
+      return this.prisma.notificationTemplate.update({
+        where: { id: existing.id },
+        data: { ...content, active: dto.active ?? undefined, emailEnabled: dto.emailEnabled },
+      });
     }
-
-    return this.prisma.notificationTemplate.upsert({
-      where: { code: dto.code },
-      create: {
+    return this.prisma.notificationTemplate.create({
+      data: {
+        ...content,
         code: dto.code,
-        channel: dto.channel,
-        subject: { ar: dto.ar_subject, en: dto.en_subject } as Prisma.InputJsonValue,
-        body: { ar: dto.ar_body, en: dto.en_body } as Prisma.InputJsonValue,
+        companyId,
         active: dto.active ?? true,
         emailEnabled: dto.emailEnabled ?? false,
-      },
-      update: {
-        channel: dto.channel,
-        subject: { ar: dto.ar_subject, en: dto.en_subject } as Prisma.InputJsonValue,
-        body: { ar: dto.ar_body, en: dto.en_body } as Prisma.InputJsonValue,
-        active: dto.active ?? undefined,
-        emailEnabled: dto.emailEnabled,
       },
     });
   }
 
-  listTemplates() {
-    return this.prisma.notificationTemplate.findMany({ orderBy: { updatedAt: 'desc' } });
+  /** The templates this company actually uses: its overrides over the platform defaults. */
+  async listTemplates() {
+    const companyId = getRequiredCompanyId();
+    const rows = await this.prisma.notificationTemplate.findMany({
+      where: { OR: [{ companyId: null }, { companyId }] },
+    });
+    return [...pickEffective(rows).values()].sort(
+      (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+    );
+  }
+
+  /**
+   * FG-26 — resolve templates for the current company: its override where it
+   * has one, else the platform default. With no company in context (a cron in
+   * bypass) only platform defaults are considered — never another company's
+   * override.
+   */
+  private async templatesFor(codes: string[]): Promise<Map<string, NotificationTemplate>> {
+    const companyId = getTenantContext()?.companyId ?? null;
+    const rows = await this.prisma.notificationTemplate.findMany({
+      where: {
+        code: { in: codes },
+        OR: companyId ? [{ companyId: null }, { companyId }] : [{ companyId: null }],
+      },
+    });
+    return pickEffective(rows);
+  }
+
+  private async templateFor(code: string): Promise<NotificationTemplate | null> {
+    return (await this.templatesFor([code])).get(code) ?? null;
   }
 
   /**
@@ -294,9 +335,7 @@ export class NotificationsService implements OnModuleInit {
   }
 
   async send(dto: SendNotificationDto) {
-    const tpl = await this.prisma.notificationTemplate.findUnique({
-      where: { code: dto.templateCode },
-    });
+    const tpl = await this.templateFor(dto.templateCode);
     if (!tpl) throw new Error(`Template ${dto.templateCode} not found`);
     const channel = dto.channel ?? tpl.channel;
     const payload = (dto.payload ?? {}) as Record<string, unknown>;
@@ -424,10 +463,7 @@ export class NotificationsService implements OnModuleInit {
 
     // Resolve titles/bodies from templates (batched) in the requested locale.
     const codes = [...new Set(rows.map((r) => r.templateCode))];
-    const templates = await this.prisma.notificationTemplate.findMany({
-      where: { code: { in: codes } },
-    });
-    const byCode = new Map(templates.map((t) => [t.code, t]));
+    const byCode = await this.templatesFor(codes);
 
     const data = rows.map((r) => {
       const tpl = byCode.get(r.templateCode);
@@ -545,9 +581,7 @@ export class NotificationsService implements OnModuleInit {
 
     // ── IN_APP path ───────────────────────────────────────────────────────────
     if (dto.channel === BroadcastChannel.IN_APP) {
-      const tpl = await this.prisma.notificationTemplate.findUnique({
-        where: { code: 'admin_broadcast' },
-      });
+      const tpl = await this.templateFor('admin_broadcast');
       if (!tpl) {
         throw new BadRequestException(
           'Template admin_broadcast not found in the database — restart the API to auto-create it.',
@@ -677,9 +711,7 @@ export class NotificationsService implements OnModuleInit {
 
     // ── IN_APP_AND_PUSH path ──────────────────────────────────────────────────
     // Phase 1: create one Notification DB row per recipient (channel=IN_APP).
-    const tpl2 = await this.prisma.notificationTemplate.findUnique({
-      where: { code: 'admin_broadcast' },
-    });
+    const tpl2 = await this.templateFor('admin_broadcast');
     if (!tpl2) {
       throw new BadRequestException(
         'Template admin_broadcast not found — restart the API to auto-create it.',

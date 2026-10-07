@@ -69,17 +69,18 @@ function makePrismaMock() {
       }),
     },
     notificationTemplate: {
-      findMany: jest.fn().mockResolvedValue([]),
-      findUnique: jest.fn().mockImplementation(async () =>
-        fixture.templateExists
-          ? { code: 'visit_approved', channel: 'IN_APP', subject: {}, body: {}, active: true }
-          : null,
+      // send() resolves templates with findMany({ code: { in } }); the admin
+      // list calls findMany without a code filter.
+      findMany: jest.fn().mockImplementation(async ({ where }: { where?: { code?: { in: string[] } } } = {}) =>
+        where?.code && fixture.templateExists
+          ? where.code.in.map((code) => ({
+              code, companyId: null, channel: 'IN_APP', subject: {}, body: {}, active: true, updatedAt: new Date(),
+            }))
+          : [],
       ),
-      upsert: jest.fn().mockImplementation(async ({ where, create, update }) => ({
-        code: where.code,
-        ...create,
-        ...update,
-      })),
+      findFirst: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockImplementation(async ({ data }) => data),
+      update: jest.fn().mockImplementation(async ({ data }) => data),
     },
     notification: {
       findMany: jest.fn().mockResolvedValue([]),
@@ -157,8 +158,9 @@ describe('Notifications module · permissions enforcement', () => {
     fixture.templateExists = true;
     mock.userPermission.findMany.mockClear();
     mock.notificationTemplate.findMany.mockClear();
-    mock.notificationTemplate.findUnique.mockClear();
-    mock.notificationTemplate.upsert.mockClear();
+    mock.notificationTemplate.findFirst.mockClear();
+    mock.notificationTemplate.create.mockClear();
+    mock.notificationTemplate.update.mockClear();
     mock.notification.create.mockClear();
     mock.notification.update.mockClear();
     mock.notification.findMany.mockClear();
@@ -228,7 +230,7 @@ describe('Notifications module · permissions enforcement', () => {
       expect(mock.notificationTemplate.findMany).toHaveBeenCalled();
     });
 
-    it('POST /notification-templates → 201; template.upsert called', async () => {
+    it('POST /notification-templates → 201; the company override is created', async () => {
       await request(app.getHttpServer())
         .post('/notification-templates')
         .send({
@@ -239,10 +241,10 @@ describe('Notifications module · permissions enforcement', () => {
           active: true,
         })
         .expect(201);
-      expect(mock.notificationTemplate.upsert).toHaveBeenCalledTimes(1);
+      expect(mock.notificationTemplate.create).toHaveBeenCalledTimes(1);
     });
 
-    it('POST /notification-templates with emailEnabled:true → 201; emailEnabled passed to upsert', async () => {
+    it('POST /notification-templates with emailEnabled:true → 201; emailEnabled stored on the override', async () => {
       await request(app.getHttpServer())
         .post('/notification-templates')
         .send({
@@ -255,18 +257,14 @@ describe('Notifications module · permissions enforcement', () => {
           emailEnabled: true,
         })
         .expect(201);
-      expect(mock.notificationTemplate.upsert).toHaveBeenCalledTimes(1);
-      const upsertCall = mock.notificationTemplate.upsert.mock.calls[0]![0] as {
-        create: { emailEnabled: boolean };
-        update: { emailEnabled: boolean | undefined };
+      expect(mock.notificationTemplate.create).toHaveBeenCalledTimes(1);
+      const createCall = mock.notificationTemplate.create.mock.calls[0]![0] as {
+        data: { emailEnabled: boolean };
       };
-      expect(upsertCall.create.emailEnabled).toBe(true);
-      expect(upsertCall.update.emailEnabled).toBe(true);
+      expect(createCall.data.emailEnabled).toBe(true);
     });
 
-    it('cross-tenant code conflict → 403; upsert NOT called even when emailEnabled is in payload', async () => {
-      // $queryRaw returns a companyId that is not the current tenant's ('test-company-id')
-      mock.$queryRaw.mockResolvedValueOnce([{ companyId: 'other-company-id' }]);
+    it("FG-26: the editor writes only the caller's company override, keyed on its companyId", async () => {
       await request(app.getHttpServer())
         .post('/notification-templates')
         .send({
@@ -276,10 +274,16 @@ describe('Notifications module · permissions enforcement', () => {
           en_subject: 'Done',
           ar_body: 'نص',
           en_body: 'Body',
-          emailEnabled: true,
         })
-        .expect(403);
-      expect(mock.notificationTemplate.upsert).not.toHaveBeenCalled();
+        .expect(201);
+      expect(mock.notificationTemplate.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { companyId: 'test-company-id', code: 'deposit_recorded' } }),
+      );
+      const createCall = mock.notificationTemplate.create.mock.calls[0]![0] as {
+        data: { companyId: string; code: string };
+      };
+      expect(createCall.data).toMatchObject({ companyId: 'test-company-id', code: 'deposit_recorded' });
+      expect(mock.notificationTemplate.update).not.toHaveBeenCalled();
     });
 
     it('POST /notifications/send → 201; template lookup + notification.create both run', async () => {
@@ -291,7 +295,7 @@ describe('Notifications module · permissions enforcement', () => {
           payload: { visitId: 'v1' },
         })
         .expect(201);
-      expect(mock.notificationTemplate.findUnique).toHaveBeenCalledTimes(1);
+      expect(mock.notificationTemplate.findMany).toHaveBeenCalledTimes(1);
       expect(mock.notification.create).toHaveBeenCalledTimes(1);
     });
   });
@@ -355,7 +359,7 @@ describe('Notifications module · permissions enforcement', () => {
         })
         .expect(403);
       expect(mock.userPermission.findMany).not.toHaveBeenCalled();
-      expect(mock.notificationTemplate.upsert).not.toHaveBeenCalled();
+      expect(mock.notificationTemplate.create).not.toHaveBeenCalled();
     });
 
     it('SALES even with notifications:send → 403 on POST /notifications/send; template lookup + create NOT called', async () => {
@@ -371,7 +375,7 @@ describe('Notifications module · permissions enforcement', () => {
           templateCode: 'visit_approved',
         })
         .expect(403);
-      expect(mock.notificationTemplate.findUnique).not.toHaveBeenCalled();
+      expect(mock.notificationTemplate.findMany).not.toHaveBeenCalled();
       expect(mock.notification.create).not.toHaveBeenCalled();
     });
   });
@@ -459,7 +463,7 @@ describe('Notifications module · permissions enforcement', () => {
         });
       // The service throws a plain Error (not HttpException), so Nest surfaces 500.
       expect([400, 500]).toContain(res.status);
-      expect(mock.notificationTemplate.findUnique).toHaveBeenCalledTimes(1);
+      expect(mock.notificationTemplate.findMany).toHaveBeenCalledTimes(1);
       expect(mock.notification.create).not.toHaveBeenCalled();
     });
   });
