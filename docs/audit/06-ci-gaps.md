@@ -250,7 +250,7 @@ A `globalSetup` guard now fails loudly if any `zz_test_*` objects are found at s
 | G13 | Low (accepted) | `E2E_TENANT_BYPASS_SLUG` has no deploy-time enforcement — see below |
 | G15 | Critical | A failed path filter skipped every job and the gate reported green — **FIX PUSHED** 2026-10-06, verified by the PR run — see below |
 | G14 | Medium (dated) | `ubuntu-latest` → 26.04 from 2026-10-19; Node 20 action runtimes — **MITIGATED** 2026-10-06: runners pinned to 24.04, actions on Node 24 majors; the 26.04 move itself still open — see below |
-| G16 | High (cost + feedback time) | Security job had no Redis: every capability/branding cache read waited on ioredis reconnects, ~30 min per run instead of ~1–2 — **FIX PUSHED** 2026-10-07, Redis service added — see below |
+| G16 | High (cost + feedback time) | Security job had no Redis: every capability/branding cache read waited on ioredis reconnects, ~30 min per run instead of ~1–2 — **CLOSED** 2026-10-07: Redis service added (security job 31 min → 1m23s); the same slow path in production fixed by fail-fast cache clients — see below |
 
 ---
 
@@ -704,12 +704,22 @@ Redis stopped, `02-attack-matrix` alone took 440 s before the run was stopped.
 - `timeout-minutes` 35 → 15, so a regression back to the slow path fails
   loudly instead of silently costing 30 minutes per run.
 
-### Open (production)
+### Production — fixed 2026-10-07
 
-The same path applies in production: if Redis goes down, every request that
-reads the capability cache waits on reconnect attempts before falling back.
-Failing fast (`enableOfflineQueue: false` with an eager connection and an
-`error` listener) would keep the API at database speed during a Redis outage.
-Not changed here — it alters production connection behaviour and needs its
-own test.
+The same path applied in production: during a Redis outage every request
+that read a cache (capabilities on most authenticated requests, domain
+resolution on every public request, branding) waited on reconnect attempts
+before falling back to the database.
+
+The three request-path caches now share `createCacheRedis`
+(`common/redis/cache-redis.ts`): `enableOfflineQueue: false` rejects a
+command at once while disconnected, so the existing database fallback runs
+immediately; `lazyConnect` is kept; a rate-limited `error` listener replaces
+ioredis's "Unhandled error event" spam. The cron lock keeps its old options on
+purpose — a lock command should wait for the connection, otherwise the first
+run after a deploy would be skipped (a daily job would miss its day).
+
+**Gate:** `cache-redis.spec.ts` points a client at a closed port: every command
+rejects in well under 250 ms, and `CapabilityService.hasCapability` returns the
+database value within the same budget.
 
