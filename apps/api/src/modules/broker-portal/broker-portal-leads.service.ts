@@ -275,6 +275,9 @@ export class BrokerPortalLeadsService {
           phone,
           email,
           locale: 'ar',
+          // FG-24 — same as the sibling portal-visits path. User is
+          // TENANT_CONTROLLED, so nothing injects this.
+          companyId: getTenantContext()?.companyId ?? null,
         },
         select: { id: true, fullName: true, phone: true, email: true },
       });

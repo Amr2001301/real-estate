@@ -46,7 +46,7 @@ export class BrokerUsersService {
   }
 
   async create(brokerId: string, dto: CreateBrokerUserDto) {
-    await this.assertBrokerExists(brokerId);
+    const { companyId } = await this.assertBrokerExists(brokerId);
 
     if (!dto.email && !dto.phone) {
       throw new BadRequestException('Either email or phone is required');
@@ -71,6 +71,13 @@ export class BrokerUsersService {
         `A user with this ${existingUser.email === dto.email ? 'email' : 'phone'} ` +
           `already exists with role ${existingUser.role}. Refusing to silently convert to BROKER.`,
       );
+    }
+
+    // FG-24 — a broker's users belong to the broker's company. User email and
+    // phone are still globally unique, so the lookup above can return another
+    // company's user; attaching it would hand this company a foreign account.
+    if (existingUser?.companyId && existingUser.companyId !== companyId) {
+      throw new ConflictException('This user belongs to another company');
     }
 
     if (existingUser) {
@@ -98,18 +105,25 @@ export class BrokerUsersService {
         });
       }
 
-      const user =
-        existingUser ??
-        (await tx.user.create({
-          data: {
-            role: UserRole.BROKER,
-            fullName: dto.fullName,
-            email: dto.email ?? null,
-            phone: phone ?? null,
-            passwordHash,
-            locale: dto.locale ?? 'ar',
-          },
-        }));
+      // FG-24 — User is TENANT_CONTROLLED: nothing injects companyId, so it is
+      // set here. Without it the account is invisible to every tenant-scoped
+      // query, cannot use the tenant staff login, and escapes the company
+      // lifecycle check on token refresh.
+      const user = existingUser
+        ? existingUser.companyId
+          ? existingUser
+          : await tx.user.update({ where: { id: existingUser.id }, data: { companyId } })
+        : await tx.user.create({
+            data: {
+              role: UserRole.BROKER,
+              fullName: dto.fullName,
+              email: dto.email ?? null,
+              phone: phone ?? null,
+              passwordHash,
+              locale: dto.locale ?? 'ar',
+              companyId,
+            },
+          });
 
       return tx.brokerUser.create({
         data: {
@@ -223,7 +237,7 @@ export class BrokerUsersService {
   private async assertBrokerExists(brokerId: string) {
     const broker = await this.prisma.broker.findUnique({
       where: { id: brokerId },
-      select: { id: true, status: true },
+      select: { id: true, status: true, companyId: true },
     });
     if (!broker) throw new NotFoundException('Broker not found');
     return broker;
