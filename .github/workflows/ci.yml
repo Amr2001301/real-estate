@@ -449,11 +449,10 @@ jobs:
       needs.changes.outputs.api == 'true' ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.suite != 'e2e-only')
     runs-on: ubuntu-24.04
-    # 35 min: previous 20 min budget was exhausted (suite ran 19m19s, killed).
-    # The cancelled job produced a partial Jest summary that was misread as a
-    # real failure. 35 min gives a safe margin to get one complete, trustworthy
-    # result. See docs/audit/06-ci-gaps.md G7.
-    timeout-minutes: 35
+    # The 35 min budget (G7) was sized for the Redis-less run (~30 min). With
+    # Redis provided (G16) the suite runs in a few minutes; 15 still leaves
+    # room for a slow runner while catching a regression back to the old path.
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:16-alpine
@@ -467,6 +466,21 @@ jobs:
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s
           --health-timeout 5s
+          --health-retries 10
+      # Redis like the e2e jobs. CapabilityService, CompanyBrandingService and
+      # CronLockService each hold a Redis connection; without a server every
+      # cache read waits for ioredis to retry the connection before falling
+      # back to the database. That turned a ~1 min suite into ~30 min
+      # (02-attack-matrix alone: 7+ min locally with Redis stopped, seconds
+      # with it running). See docs/audit/06-ci-gaps.md G16.
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
           --health-retries 10
     env:
       NODE_ENV: test
