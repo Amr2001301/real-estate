@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-14  
 **Author:** security audit  
-**Status:** decided 2026-10-07 — **Option B**. Part 1 (per-company uniqueness) done; part 2 (`User` → `TENANT_OWNED`, §7 B-1..B-5) next.
+**Status:** decided 2026-10-07 — **Option B**. Part 1 (per-company uniqueness) done; part 2 (`User` → `TENANT_OWNED`) done — see §0.1. Remaining: retire the option-(a) helpers and the `prisma.user` lint rule (§0.1, follow-up).
 
 ---
 
@@ -49,6 +49,46 @@ own customer and leaves B's untouched.
 `prisma.user` query by email or phone can now return *another company's* account,
 not merely fail to find one — which makes `TENANT_OWNED` enforcement more valuable
 than when this document was written.
+
+## 0.1 Part 2 — `User` is `TENANT_OWNED` (2026-10-07)
+
+`MODEL_TENANCY.User` is `TENANT_OWNED`: the middleware scopes every user query
+to the request's company, stamps it on create, and refuses a user query with no
+context. §7 estimated this at several PRs; once the auth routes ran in the right
+context, every e2e and security test passed without touching a single service,
+because PR 1's sweep had already put an explicit `companyId` on the lookups.
+
+| Path | Context | Why |
+|---|---|---|
+| `login-staff`, `tenant/customer/login`, `tenant/customer/register`, `tenant/otp/request`, `tenant/otp/verify`, `tenant/forgot-password` | `runInCompany(slug's company)` | They resolve the company from the slug first; every user lookup inside is that company's |
+| `JwtStrategy.validate` | `runAsPlatform` | Runs before `TenantContextInterceptor`; the signed `sub` is what tells us the company |
+| `refresh`, `reset-password`, `tenant/reset-password`, `verify-email` | `runAsPlatform` | `@Public` without a slug resolves to `DEFAULT_COMPANY_ID`; the token identifies one account in any company |
+| legacy `login`, legacy `forgot-password` | `runAsPlatform` | Tenant-less by design (web-admin and the staff app send no slug); §0 table |
+| `login-super-admin` | `runAsPlatform` | SUPER_ADMIN has no company |
+| authenticated requests, `@Public` with slug/default, crons | unchanged | Already ran in the caller's company or in bypass |
+
+- **Helpers** (`common/tenant/tenant-context.ts`): `runInCompany` and
+  `runAsPlatform` await `fn` inside the context — a `PrismaPromise` is lazy and
+  only meets the middleware when awaited, so returning it un-awaited ran it
+  outside the context (found on the first run: every JWT check failed).
+- **Lint:** importing `runAsPlatform` outside `auth.controller.ts` and
+  `jwt.strategy.ts` is an error (`eslint.config.mjs`, Option B allowlist).
+- **Seeds** create every user with its `companyId`; `upsertUserByEmail` takes the
+  company. The two demo broker seeds attach their users to the admin's company.
+- **Gate:** security **MC-5e** — `user.findFirst` with no context throws
+  `MissingTenantContextError` (red with `TENANT_CONTROLLED`). e2e **B-OPTB**:
+  Ahmed's account at developer B — not the default company — refreshes through the
+  tenant-less `/auth/refresh` and `/users/me` returns B's account (red, 401,
+  without `runAsPlatform` on refresh); developer A's admin gets 404 on B's
+  account by id.
+- **Data:** any non-SUPER_ADMIN user with `companyId = NULL` is unreachable from
+  now on. FG-24's backfill covered the unambiguous rows; the current data is test
+  data and is reset and re-seeded after this merges.
+
+**Follow-up:** `scopedUserFindMany`, `scopedUserCount`, `findTenantUser`,
+`resolveTenantUser` and the MT-012 `prisma.user` lint rule are now redundant with
+the middleware (harmless: the explicit `companyId` equals the injected one).
+Retire them together in one PR.
 
 ---
 

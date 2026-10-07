@@ -39,7 +39,9 @@ const future = (n: number) => { const d = new Date(); d.setDate(d.getDate() + n)
 
 async function main() {
   // ── Prerequisites ─────────────────────────────────────────────────────────
-  const adminUser = await prisma.user.findFirst({ where: { role: UserRole.ADMIN }, select: { id: true } });
+  const adminUser = await prisma.user.findFirst({ where: { role: UserRole.ADMIN }, select: { id: true, companyId: true } });
+  // Option B — every user this script creates belongs to the admin's company.
+  const companyId = adminUser?.companyId ?? null;
   if (!adminUser) throw new Error('No ADMIN user — run dev seed first.');
 
   const salesUser = await prisma.user.findFirst({ where: { email: 'sales@example.com' }, select: { id: true } });
@@ -63,8 +65,8 @@ async function main() {
   // ── 1. Broker user ────────────────────────────────────────────────────────
   console.log('1/8  Upserting broker user…');
   const hash = await argon2.hash(PASSWORD);
-  const user = await upsertUserByEmail(prisma, EMAIL, {
-    create: { email: EMAIL, passwordHash: hash, fullName: 'New Broker User', role: UserRole.BROKER, locale: 'ar' },
+  const user = await upsertUserByEmail(prisma, EMAIL, companyId, {
+    create: { email: EMAIL, passwordHash: hash, fullName: 'New Broker User', role: UserRole.BROKER, locale: 'ar', companyId },
     update: { passwordHash: hash },
     select: { id: true },
   });
@@ -129,9 +131,9 @@ async function main() {
   // ── 5. Demo clients ───────────────────────────────────────────────────────
   console.log('5/8  Creating demo clients…');
   const ensureClient = async (phone: string, fullName: string) => {
-    const existing = await prisma.user.findFirst({ where: { phone } });
+    const existing = await prisma.user.findFirst({ where: { phone, companyId } });
     if (existing) return existing;
-    return prisma.user.create({ data: { role: UserRole.CLIENT, fullName, phone, locale: 'ar' } });
+    return prisma.user.create({ data: { role: UserRole.CLIENT, fullName, phone, locale: 'ar', companyId } });
   };
 
   const [c1, c2, c3, c4, c5] = await Promise.all([

@@ -5,7 +5,9 @@ import type { Prisma, PrismaClient, User } from '@prisma/client';
  * not platform-wide, so Prisma no longer accepts `user.upsert({ where: { email } })`.
  *
  * The seeds create their fixed users once and refresh them on every re-run.
- * This keeps that idempotency by looking the email up first. Seeds run alone
+ * This keeps that idempotency by looking the email up first, inside the one
+ * company the account belongs to (pass the same companyId in `create`; null is
+ * a platform account such as SUPER_ADMIN). Seeds run alone
  * and sequentially, so the non-atomic find-then-write is not a race here; do
  * not use this from request handlers.
  *
@@ -15,13 +17,14 @@ import type { Prisma, PrismaClient, User } from '@prisma/client';
 export async function upsertUserByEmail(
   prisma: PrismaClient,
   email: string,
+  companyId: string | null,
   args: {
     create: Prisma.XOR<Prisma.UserCreateInput, Prisma.UserUncheckedCreateInput>;
     update: Prisma.XOR<Prisma.UserUpdateInput, Prisma.UserUncheckedUpdateInput>;
     select?: Prisma.UserSelect;
   },
 ): Promise<User> {
-  const existing = await prisma.user.findFirst({ where: { email }, select: { id: true } });
+  const existing = await prisma.user.findFirst({ where: { email, companyId }, select: { id: true } });
   return existing
     ? prisma.user.update({ where: { id: existing.id }, data: args.update })
     : prisma.user.create({ data: args.create });

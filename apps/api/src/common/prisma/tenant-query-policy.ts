@@ -7,9 +7,9 @@
  *     PrismaService.onModuleInit. All TENANT_OWNED model reads/writes are
  *     automatically scoped.
  *   - The schema DOES have companyId columns on all TENANT_OWNED models.
- *   - User is TENANT_CONTROLLED: the middleware passes User queries through
- *     unchanged. Every UsersService method must enforce companyId isolation
- *     explicitly.
+ *   - User is TENANT_OWNED since Option B part 2 (docs/audit/13-user-tenancy.md):
+ *     user queries are scoped like any other owned model. Cross-tenant identity
+ *     lookups (JWT sub, tokens, legacy login) run in runAsPlatform.
  *   - Raw SQL ($queryRaw / $executeRaw) is completely outside this layer.
  *   - Nested Prisma relation writes (nested connect / create) are NOT
  *     automatically scoped. Each nested write must be audited separately.
@@ -54,7 +54,7 @@ export const PROVISIONAL_SCOPED_MODELS_FOR_POLICY_TEST = new Set([
  * MODEL_TENANCY uses PascalCase (the canonical Prisma DMMF name). This map
  * bridges the two without duplicating the classification.
  *
- * Example: 'project' → 'TENANT_OWNED', 'user' → 'TENANT_CONTROLLED'
+ * Example: 'project' → 'TENANT_OWNED', 'otpcode' → 'TENANT_CONTROLLED'
  *
  * Built once at startup; read-only at runtime.
  */

@@ -7,7 +7,7 @@
  *
  *   TENANT_OWNED         — Has companyId column. Middleware auto-injects and
  *                          filters. Throws MissingTenantContextError when no
- *                          context and no bypass. 46 domain models total.
+ *                          context and no bypass. 51 models total (User included).
  *
  *   TENANT_VIA_RELATION  — No companyId column. Scoped through a parent FK
  *                          (e.g. userId → User, projectId → Project). No
@@ -16,7 +16,9 @@
  *
  *   TENANT_CONTROLLED    — Has companyId but middleware does NOT inject it.
  *                          Every query must carry an explicit companyId at the
- *                          service layer. User is the only current member.
+ *                          service layer. Members: OtpCode, CompanyDomain.
+ *                          (User left this tier for TENANT_OWNED in Option B
+ *                          part 2 — docs/audit/13-user-tenancy.md.)
  *
  *   CROSS_TENANT_CONTROLLED — Reserved for future cross-tenant models (V2.1).
  *                             Middleware throws on any unguarded access. No
@@ -54,9 +56,17 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   Permission: 'PLATFORM_GLOBAL',
   PricingPackage: 'PLATFORM_GLOBAL', // nullable companyId; filtered explicitly by callers
 
+  // ── User ───────────────────────────────────────────────────────────────────
+  // Option B part 2 (docs/audit/13-user-tenancy.md): an account belongs to one
+  // company — email and phone are unique per company — so the middleware scopes
+  // every user query like any other tenant-owned row. @PlatformPublic auth
+  // routes run in the slug's company (runInCompany); the few lookups keyed on a
+  // token or JWT sub run in runAsPlatform. SUPER_ADMIN (companyId null) is only
+  // reached in bypass.
+  User: 'TENANT_OWNED',
+
   // ── TENANT_CONTROLLED ──────────────────────────────────────────────────────
   // Middleware pass-through. Explicit service-level companyId enforcement required.
-  User: 'TENANT_CONTROLLED',
   // MT-030: OtpCode reclassified from PLATFORM_GLOBAL. companyId column added in
   // MT-021. Service layer supplies companyId on every OtpCode read and write.
   // Option-A cutover: new OTPs written with companyId; legacy null-companyId OTPs
@@ -80,7 +90,7 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   PlanTemplateScheduleItem: 'TENANT_VIA_RELATION',  // planId → InstallmentPlanTemplate
 
   // ── TENANT_OWNED ───────────────────────────────────────────────────────────
-  // Has companyId column. Middleware auto-injects and filters. (50 models)
+  // Has companyId column. Middleware auto-injects and filters. (50 domain models; User above makes 51)
 
   // Projects / inventory
   Project: 'TENANT_OWNED',

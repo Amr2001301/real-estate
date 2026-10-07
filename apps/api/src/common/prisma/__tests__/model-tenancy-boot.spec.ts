@@ -120,9 +120,9 @@ describe('MT-016 companyId models must be tenant-aware', () => {
 // ---------------------------------------------------------------------------
 
 describe('MODEL_TENANCY tier spot-checks', () => {
-  // User is the only TENANT_CONTROLLED model — middleware pass-through.
-  it('User is TENANT_CONTROLLED', () => {
-    expect(MODEL_TENANCY['User']).toBe<ModelTenancyTier>('TENANT_CONTROLLED');
+  // Option B part 2 — an account belongs to one company; the middleware scopes it.
+  it('User is TENANT_OWNED', () => {
+    expect(MODEL_TENANCY['User']).toBe<ModelTenancyTier>('TENANT_OWNED');
   });
 
   // Auth-token models must be TENANT_VIA_RELATION (scoped through userId → User).

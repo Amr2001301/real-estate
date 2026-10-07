@@ -40,6 +40,34 @@ export function runTenantContext<T>(ctx: TenantContext, fn: () => Promise<T>): P
 }
 
 /**
+ * Option B part 2 (docs/audit/13-user-tenancy.md) — runs `fn` scoped to one
+ * company. For @PlatformPublic routes that resolve the company from a slug and
+ * then read or write its users: the middleware scopes every TENANT_OWNED query
+ * (User included) to `companyId`, so a lookup by email or phone can only ever
+ * find that company's account.
+ */
+export function runInCompany<T>(companyId: string, fn: () => Promise<T>): Promise<T> {
+  return als.run({ companyId, bypass: false, isPublic: false }, async () => await fn());
+}
+
+/**
+ * Option B part 2 — runs `fn` with tenant scoping switched off, for the few
+ * identity lookups that are cross-tenant by design and identify the account by
+ * something only its owner holds: a JWT `sub`, a refresh / reset / verification
+ * token, or the tenant-less legacy login that checks the password against every
+ * candidate. Everything inside sees every company, so keep `fn` to that lookup
+ * and the writes on the account it found. Callers are allow-listed in
+ * eslint.config.mjs (MT-012); do not add one without a justification there.
+ *
+ * Both helpers await `fn` inside the context on purpose: a Prisma query is a
+ * lazy PrismaPromise that only runs (and only meets the middleware) when it is
+ * awaited, so returning it un-awaited would run it outside the context.
+ */
+export function runAsPlatform<T>(fn: () => Promise<T>): Promise<T> {
+  return als.run({ companyId: null, bypass: true, isPublic: false }, async () => await fn());
+}
+
+/**
  * Sets the tenant context on the CURRENT async resource (the calling async
  * context and all child resources it spawns). Unlike runTenantContext(), it
  * does NOT restore the previous context when the current work unit finishes.

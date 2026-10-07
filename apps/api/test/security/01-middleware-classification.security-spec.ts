@@ -5,7 +5,7 @@
  *   MC-1  Every model in MODEL_TENANCY has a valid tier string.
  *   MC-2  The count of TENANT_OWNED models matches the audit-documented 46.
  *   MC-3  Specific representative models land in their documented tiers.
- *   MC-4  TENANT_OWNED model counts: PLATFORM_GLOBAL=3, TENANT_CONTROLLED=3,
+ *   MC-4  TENANT_OWNED model counts: PLATFORM_GLOBAL=3, TENANT_CONTROLLED=2,
  *          TENANT_VIA_RELATION≥7.
  *   MC-5  Middleware fails CLOSED: calling PrismaService.lead.findMany() outside
  *          any ALS context throws MissingTenantContextError (not silently unscoped).
@@ -36,8 +36,9 @@ const EXPECTED_CLASSIFICATIONS: [string, ModelTenancyTier][] = [
   ['Company', 'PLATFORM_GLOBAL'],
   ['Permission', 'PLATFORM_GLOBAL'],
   ['PricingPackage', 'PLATFORM_GLOBAL'],
+  // TENANT_OWNED since Option B part 2 (docs/audit/13-user-tenancy.md)
+  ['User', 'TENANT_OWNED'],
   // TENANT_CONTROLLED
-  ['User', 'TENANT_CONTROLLED'],
   ['OtpCode', 'TENANT_CONTROLLED'],
   ['CompanyDomain', 'TENANT_CONTROLLED'],
   // TENANT_VIA_RELATION
@@ -91,9 +92,9 @@ describe('SEC — Middleware Classification (STEP 2)', () => {
   });
 
   // MC-2
-  it('MC-2: TENANT_OWNED count matches audit-documented 50 (48 + ContractCancellation + Refund from Step D1)', () => {
+  it('MC-2: TENANT_OWNED count matches audit-documented 51 (48 + ContractCancellation + Refund from Step D1 + User from Option B)', () => {
     const owned = Object.entries(MODEL_TENANCY).filter(([, t]) => t === 'TENANT_OWNED');
-    expect(owned.length).toBe(50);
+    expect(owned.length).toBe(51);
   });
 
   // MC-3
@@ -105,12 +106,12 @@ describe('SEC — Middleware Classification (STEP 2)', () => {
   );
 
   // MC-4
-  it('MC-4: PLATFORM_GLOBAL=3, TENANT_CONTROLLED=3, TENANT_VIA_RELATION≥7', () => {
+  it('MC-4: PLATFORM_GLOBAL=3, TENANT_CONTROLLED=2, TENANT_VIA_RELATION≥7', () => {
     const byTier = (tier: ModelTenancyTier) =>
       Object.values(MODEL_TENANCY).filter((t) => t === tier).length;
 
     expect(byTier('PLATFORM_GLOBAL')).toBe(3);
-    expect(byTier('TENANT_CONTROLLED')).toBe(3);
+    expect(byTier('TENANT_CONTROLLED')).toBe(2);
     expect(byTier('TENANT_VIA_RELATION')).toBeGreaterThanOrEqual(7);
   });
 
@@ -129,6 +130,14 @@ describe('SEC — Middleware Classification (STEP 2)', () => {
     await expect(testApp.prisma.contract.count()).rejects.toThrow(MissingTenantContextError);
   });
 
+  // Option B part 2 — a user lookup with no tenant context is refused, not
+  // answered from every company.
+  it('MC-5e: PrismaService.user.findFirst() outside ALS context throws (User is TENANT_OWNED)', async () => {
+    await expect(testApp.prisma.user.findFirst({ where: { email: 'admin@example.com' } })).rejects.toThrow(
+      MissingTenantContextError,
+    );
+  });
+
   // PLATFORM_GLOBAL models must NOT throw even without an ALS context
   it('MC-5d: PrismaService.company.findMany() outside ALS does NOT throw (PLATFORM_GLOBAL)', async () => {
     await expect(testApp.prisma.company.findMany({ take: 0 })).resolves.toBeDefined();
@@ -137,7 +146,7 @@ describe('SEC — Middleware Classification (STEP 2)', () => {
   // MC-6
   it('MC-6: MODEL_TIER_BY_LOWERCASE maps lowercase Prisma model keys to correct tiers', () => {
     expect(MODEL_TIER_BY_LOWERCASE.get('lead')).toBe('TENANT_OWNED');
-    expect(MODEL_TIER_BY_LOWERCASE.get('user')).toBe('TENANT_CONTROLLED');
+    expect(MODEL_TIER_BY_LOWERCASE.get('user')).toBe('TENANT_OWNED');
     expect(MODEL_TIER_BY_LOWERCASE.get('company')).toBe('PLATFORM_GLOBAL');
     expect(MODEL_TIER_BY_LOWERCASE.get('refreshtoken')).toBe('TENANT_VIA_RELATION');
     expect(MODEL_TIER_BY_LOWERCASE.get('reservation')).toBe('TENANT_OWNED');

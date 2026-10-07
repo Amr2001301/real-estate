@@ -63,14 +63,15 @@ export const E2E_BROKER_CODES = {
 } as const;
 
 async function upsertE2EUser(
+  companyId: string,
   email: string,
   password: string,
   fullName: string,
   role: UserRole,
 ): Promise<{ id: string }> {
   const passwordHash = await argon2.hash(password);
-  return upsertUserByEmail(prisma, email, {
-    create: { email, passwordHash, fullName, role, locale: 'en' },
+  return upsertUserByEmail(prisma, email, companyId, {
+    create: { email, passwordHash, fullName, role, locale: 'en', companyId },
     // Refresh hash + name + role on every run so the credentials in
     // SEED_USERS.md always work, even after a manual edit in the DB.
     update: { passwordHash, fullName, role },
@@ -82,22 +83,23 @@ async function main(): Promise<void> {
   console.log('🌱 [e2e] Step 1/4 — running dev seed (additive, idempotent)…');
   await runDevSeed();
 
+  // Resolve the default company early so user and broker rows carry companyId
+  // at creation time. Broker.code is unique per-company
+  // (@@unique([companyId, code])), so the upsert where-clause needs the
+  // composite key; users belong to a company under Option B.
+  const defaultCompany = await prisma.company.findFirstOrThrow({ where: { isActive: true } });
+
   console.log('🌱 [e2e] Step 2/4 — upserting 5 e2e users…');
   const [broker1User, broker2User] = await Promise.all([
-    upsertE2EUser(E2E_USERS.BROKER_1.email, E2E_USERS.BROKER_1.password, E2E_USERS.BROKER_1.fullName, UserRole.BROKER),
-    upsertE2EUser(E2E_USERS.BROKER_2.email, E2E_USERS.BROKER_2.password, E2E_USERS.BROKER_2.fullName, UserRole.BROKER),
+    upsertE2EUser(defaultCompany.id, E2E_USERS.BROKER_1.email, E2E_USERS.BROKER_1.password, E2E_USERS.BROKER_1.fullName, UserRole.BROKER),
+    upsertE2EUser(defaultCompany.id, E2E_USERS.BROKER_2.email, E2E_USERS.BROKER_2.password, E2E_USERS.BROKER_2.fullName, UserRole.BROKER),
   ]);
   // Customers / client — not in Flow A, but seeded now so Phase 7B has data.
   await Promise.all([
-    upsertE2EUser(E2E_USERS.CLIENT_1.email, E2E_USERS.CLIENT_1.password, E2E_USERS.CLIENT_1.fullName, UserRole.CLIENT),
-    upsertE2EUser(E2E_USERS.CUSTOMER_1.email, E2E_USERS.CUSTOMER_1.password, E2E_USERS.CUSTOMER_1.fullName, UserRole.CUSTOMER),
-    upsertE2EUser(E2E_USERS.CUSTOMER_2.email, E2E_USERS.CUSTOMER_2.password, E2E_USERS.CUSTOMER_2.fullName, UserRole.CUSTOMER),
+    upsertE2EUser(defaultCompany.id, E2E_USERS.CLIENT_1.email, E2E_USERS.CLIENT_1.password, E2E_USERS.CLIENT_1.fullName, UserRole.CLIENT),
+    upsertE2EUser(defaultCompany.id, E2E_USERS.CUSTOMER_1.email, E2E_USERS.CUSTOMER_1.password, E2E_USERS.CUSTOMER_1.fullName, UserRole.CUSTOMER),
+    upsertE2EUser(defaultCompany.id, E2E_USERS.CUSTOMER_2.email, E2E_USERS.CUSTOMER_2.password, E2E_USERS.CUSTOMER_2.fullName, UserRole.CUSTOMER),
   ]);
-
-  // Resolve the default company early so broker rows carry companyId at creation
-  // time. Broker.code is now unique per-company (@@unique([companyId, code])), so
-  // the upsert where-clause needs the composite key.
-  const defaultCompany = await prisma.company.findFirstOrThrow({ where: { isActive: true } });
 
   console.log('🌱 [e2e] Step 3/4 — upserting 2 broker firms + linking each broker user…');
   const broker1Firm = await prisma.broker.upsert({
@@ -220,13 +222,14 @@ async function main(): Promise<void> {
   // We also need a User (CLIENT role) to hang the lead off — use a stable phone.
   const broker1LeadPhone = '+966500000777';
   const broker1ClientUser =
-    (await prisma.user.findFirst({ where: { phone: broker1LeadPhone } })) ??
+    (await prisma.user.findFirst({ where: { phone: broker1LeadPhone, companyId: defaultCompany.id } })) ??
     (await prisma.user.create({
       data: {
         role: UserRole.CLIENT,
         fullName: 'E2E Broker1 Client',
         phone: broker1LeadPhone,
         locale: 'en',
+        companyId: defaultCompany.id,
       },
     }));
 

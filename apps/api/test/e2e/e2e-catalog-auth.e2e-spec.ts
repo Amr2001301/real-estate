@@ -1190,6 +1190,27 @@ describe('B-OPTB — the same customer at two developers (e2e)', () => {
     const again = await register(slugA, 'Another!!789');
     expect(again.status).toBe(409);
   });
+
+  // Part 2 — User is TENANT_OWNED. Developer B is not the default company, so
+  // these prove the tenant-less token routes still find B's account and the
+  // session then runs scoped to B.
+  it("B's session refreshes through the tenant-less /auth/refresh and stays B's", async () => {
+    const inB = await login(slugB, PASS_B);
+    const refreshed = await http()
+      .post('/v1/auth/refresh')
+      .send({ refreshToken: inB.body.tokens.refreshToken });
+    expect([200, 201]).toContain(refreshed.status);
+    expect(refreshed.body.user.id).toBe(ahmedB);
+
+    const me = await http().get('/v1/users/me').set('Authorization', bearer(refreshed.body.tokens.accessToken));
+    expect(me.status).toBe(200);
+    expect(me.body.id).toBe(ahmedB);
+  });
+
+  it("developer A's admin cannot open Ahmed's B account by id", async () => {
+    const res = await http().get(`/v1/users/${ahmedB}`).set('Authorization', bearer(adminToken));
+    expect(res.status).toBe(404);
+  });
 });
 
 describe('Flow C — Visit journey (e2e)', () => {
