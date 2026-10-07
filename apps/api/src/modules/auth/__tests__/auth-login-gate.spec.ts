@@ -26,6 +26,7 @@ describe('AuthService · email login role gate', () => {
     const prisma = {
       user: {
         findUnique: jest.fn().mockResolvedValue(user),
+        findMany: jest.fn().mockResolvedValue([user]),
         update: jest.fn().mockResolvedValue(user),
       },
       refreshToken: { create: jest.fn().mockResolvedValue({}) },
@@ -53,6 +54,33 @@ describe('AuthService · email login role gate', () => {
     const res = await service.loginEmail('x@example.com', 'MaintenancePass123!');
     expect(res.tokens.accessToken).toBe('access-token');
     expect(res.user?.role).toBe(UserRole.MAINTENANCE_SUPERVISOR);
+  });
+
+  it('picks the account whose password matches when the email exists in two companies', async () => {
+    const argon2 = jest.requireMock('argon2') as { verify: jest.Mock };
+    const { service, prisma } = makeService(UserRole.SALES);
+    (prisma.user.findMany as jest.Mock).mockResolvedValueOnce([
+      { id: 'in-a', role: UserRole.SALES, active: true, passwordHash: 'hash-a', company: null },
+      { id: 'in-b', role: UserRole.SALES, active: true, passwordHash: 'hash-b', company: null },
+    ]);
+    argon2.verify.mockImplementation(async (hash: string) => hash === 'hash-b');
+    try {
+      await service.loginEmail('x@example.com', 'pw');
+      expect(prisma.user.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'in-b' } }));
+    } finally {
+      argon2.verify.mockResolvedValue(true);
+    }
+  });
+
+  it('refuses to guess when the same email and password open accounts in two companies', async () => {
+    const { service, prisma } = makeService(UserRole.SALES);
+    (prisma.user.findMany as jest.Mock).mockResolvedValueOnce([
+      { id: 'in-a', role: UserRole.SALES, active: true, passwordHash: 'h', company: null },
+      { id: 'in-b', role: UserRole.SALES, active: true, passwordHash: 'h', company: null },
+    ]);
+    await expect(service.loginEmail('x@example.com', 'pw')).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'TENANT_REQUIRED' }),
+    });
   });
 
   it('still rejects phone-only roles (CLIENT) at the email gate', async () => {

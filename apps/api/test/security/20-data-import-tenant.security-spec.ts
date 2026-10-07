@@ -200,18 +200,24 @@ it('DI-3b: Company A admin cannot create entities by uploading a file with B-onl
   expect(body.phases.errorCount).toBeGreaterThan(0);
 });
 
-// ── DI-6: Cross-tenant phone collision ────────────────────────────────────────
+// ── DI-6: The same phone at another company is a separate customer ──────────
+//
+// Option B (docs/audit/13-user-tenancy.md) — email and phone are unique per
+// company. Before it, this row was rejected as a "platform limitation". The
+// property that must hold now is isolation: importing into Company A creates
+// A's own account and leaves Company B's customer exactly as it was — no
+// merge, no re-parenting, no field overwritten.
 
-it('DI-6: phone already registered to a Company B customer is blocked, crossTenantPhoneConflicts=1, no user created in Company A', async () => {
+it('DI-6: importing a phone that Company B holds creates a separate Company A customer and leaves B untouched', async () => {
   const crossPhone = '01099887766';
+  const crossPhoneE164 = '+201099887766';
 
-  // Create a CLIENT user in Company B that holds this phone.
   // teardownSecurityFixture calls user.deleteMany({ where: { companyId: bId } }),
   // so the finally block below is belt-and-suspenders.
   const clientInB = await testApp.rawPrisma.user.create({
     data: {
-      fullName: 'Cross-Tenant Client',
-      phone: crossPhone,
+      fullName: 'Company B Customer',
+      phone: crossPhoneE164,
       role: 'CLIENT',
       active: true,
       companyId: fx.companies.bId,
@@ -220,12 +226,11 @@ it('DI-6: phone already registered to a Company B customer is blocked, crossTena
   });
 
   try {
-    // Build a Customers-only xlsx with that phone targeting Company A
     const wb = new Workbook();
     const ws = wb.addWorksheet(CUSTOMERS_SHEET.name);
     ws.addRow(CUSTOMERS_SHEET.headers);
     // headers order: fullName, phone, email, locale, createdAt
-    ws.getRow(2).getCell(1).value = 'محاولة استيراد';
+    ws.getRow(2).getCell(1).value = 'Company A Customer';
     ws.getRow(2).getCell(2).value = crossPhone;
     ws.getRow(2).getCell(2).numFmt = '@';
 
@@ -235,21 +240,27 @@ it('DI-6: phone already registered to a Company B customer is blocked, crossTena
       .post('/v1/data-import/import')
       .set('Authorization', bearer(adminAToken))
       .set('X-Tenant-Slug', SEC_SLUG_A)
-      .attach('file', buf, { filename: 'import.xlsx', contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-      .expect((r) => {
-        // The Customers sheet has a blocking error → success must be false
-        expect((r.body as { success: boolean }).success).toBe(false);
-      });
+      .attach('file', buf, { filename: 'import.xlsx', contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    expect(res.status).toBe(200);
+    expect((res.body as { success: boolean }).success).toBe(true);
 
-    // Counter must be exactly 1 — only the cross-tenant collision row
-    expect((res.body as { crossTenantPhoneConflicts: number }).crossTenantPhoneConflicts).toBe(1);
-
-    // No CLIENT user with this phone must have been created in Company A
-    const inA = await testApp.rawPrisma.user.findFirst({
-      where: { phone: crossPhone, companyId: fx.companies.aId },
+    // Company A has its own account for the number…
+    const inA = await testApp.rawPrisma.user.findMany({
+      where: { phone: crossPhoneE164, companyId: fx.companies.aId },
+      select: { id: true, fullName: true },
     });
-    expect(inA).toBeNull();
+    expect(inA).toHaveLength(1);
+    expect(inA[0]!.id).not.toBe(clientInB.id);
+    expect(inA[0]!.fullName).toBe('Company A Customer');
+
+    // …and Company B's customer is exactly as it was.
+    const bAfter = await testApp.rawPrisma.user.findUniqueOrThrow({
+      where: { id: clientInB.id },
+      select: { companyId: true, fullName: true, phone: true },
+    });
+    expect(bAfter).toEqual({ companyId: fx.companies.bId, fullName: 'Company B Customer', phone: crossPhoneE164 });
   } finally {
+    await testApp.rawPrisma.user.deleteMany({ where: { phone: crossPhoneE164, companyId: fx.companies.aId } });
     await testApp.rawPrisma.user.deleteMany({ where: { id: clientInB.id } });
   }
 });

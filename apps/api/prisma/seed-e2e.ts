@@ -43,6 +43,7 @@ import * as argon2 from 'argon2';
 process.env.SEED_PUBLIC_DEMO = 'true';
 
 import { main as runDevSeed, backfillCompanyId } from './seed';
+import { upsertUserByEmail } from './seed-user-upsert';
 
 const prisma = new PrismaClient();
 
@@ -68,8 +69,7 @@ async function upsertE2EUser(
   role: UserRole,
 ): Promise<{ id: string }> {
   const passwordHash = await argon2.hash(password);
-  return prisma.user.upsert({
-    where: { email },
+  return upsertUserByEmail(prisma, email, {
     create: { email, passwordHash, fullName, role, locale: 'en' },
     // Refresh hash + name + role on every run so the credentials in
     // SEED_USERS.md always work, even after a manual edit in the DB.
@@ -206,12 +206,12 @@ async function main(): Promise<void> {
   // semantics rather than rebuilding the dependency tree.
   console.log('🌱 [e2e] Step 5/5 — Phase 7B prerequisites (Flow D broker lead + plan)…');
 
-  const salesUser = await prisma.user.findUniqueOrThrow({
+  const salesUser = await prisma.user.findFirstOrThrow({
     where: { email: 'sales@example.com' },
     select: { id: true },
   });
   const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@example.com';
-  const adminUser = await prisma.user.findUniqueOrThrow({
+  const adminUser = await prisma.user.findFirstOrThrow({
     where: { email: adminEmail },
     select: { id: true },
   });
@@ -220,7 +220,7 @@ async function main(): Promise<void> {
   // We also need a User (CLIENT role) to hang the lead off — use a stable phone.
   const broker1LeadPhone = '+966500000777';
   const broker1ClientUser =
-    (await prisma.user.findUnique({ where: { phone: broker1LeadPhone } })) ??
+    (await prisma.user.findFirst({ where: { phone: broker1LeadPhone } })) ??
     (await prisma.user.create({
       data: {
         role: UserRole.CLIENT,
@@ -302,11 +302,11 @@ async function main(): Promise<void> {
   console.log('🌱 [e2e] Step 6/6 — Phase 7C prerequisites (Flow E + F fixtures)…');
 
   const [customer1User, customer2User] = await Promise.all([
-    prisma.user.findUniqueOrThrow({
+    prisma.user.findFirstOrThrow({
       where: { email: E2E_USERS.CUSTOMER_1.email },
       select: { id: true },
     }),
-    prisma.user.findUniqueOrThrow({
+    prisma.user.findFirstOrThrow({
       where: { email: E2E_USERS.CUSTOMER_2.email },
       select: { id: true },
     }),
@@ -487,7 +487,7 @@ async function main(): Promise<void> {
   // be exercised end-to-end without having to admin-assign mid-spec.
   // Idempotent: only flips when the row isn't already in the expected
   // shape, so re-running the seed doesn't keep rewriting timestamps.
-  const supervisorUser = await prisma.user.findUniqueOrThrow({
+  const supervisorUser = await prisma.user.findFirstOrThrow({
     where: { email: 'maintenance@example.com' },
     select: { id: true },
   });

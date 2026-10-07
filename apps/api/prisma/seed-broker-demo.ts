@@ -38,6 +38,7 @@ import {
   UserRole,
 } from '@prisma/client';
 import * as argon2 from 'argon2';
+import { upsertUserByEmail } from './seed-user-upsert';
 
 const prisma = new PrismaClient();
 
@@ -89,7 +90,7 @@ async function ensureDemoClient(
   phone: string,
   fullName: string,
 ): Promise<{ id: string }> {
-  const existing = await prisma.user.findUnique({ where: { phone } });
+  const existing = await prisma.user.findFirst({ where: { phone } });
   if (existing) return { id: existing.id };
   return prisma.user.create({
     data: { role: UserRole.CLIENT, fullName, phone, locale: 'ar' },
@@ -104,8 +105,7 @@ async function ensureDemoBrokerUser(
   fullName: string,
 ): Promise<{ id: string }> {
   const hash = await argon2.hash('DemoPass123!');
-  return prisma.user.upsert({
-    where: { email },
+  return upsertUserByEmail(prisma, email, {
     create: { email, passwordHash: hash, fullName, role: UserRole.BROKER, locale: 'ar' },
     update: {},
     select: { id: true },

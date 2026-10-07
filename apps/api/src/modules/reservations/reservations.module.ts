@@ -74,7 +74,7 @@ import {
 import { ContractsModule, ContractsService } from '../contracts/contracts.module';
 import { CronLockService } from '../../common/cron/cron-lock.service';
 import { captureExceptionSafe } from '../../common/observability/sentry';
-import { runTenantContext } from '../../common/tenant/tenant-context';
+import { getTenantContext, runTenantContext } from '../../common/tenant/tenant-context';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 // BrokerCommissionsModule/Service no longer imported here. Commission
 // materialisation runs from ContractsService.sign() — the only path that
@@ -979,14 +979,17 @@ export class ReservationsService {
    *  - Lead contact:     Reservation.lead.phone (normalized) = user.phone (normalized)
    *                  OR  Reservation.lead.email (lowercased)  = user.email (lowercased)
    *
-   * `User.phone` and `User.email` are unique columns, so peer-by-contact
-   * lookup is bounded to at most ONE row per contact field — the match can
-   * never accidentally surface another user's reservations.
+   * `User.phone` and `User.email` are unique per company, and peers are
+   * looked up inside the caller's company only, so the match is bounded to
+   * at most ONE row per contact field and can never surface another
+   * company's account (Option B: the same person holds a separate account
+   * per developer).
    */
   private async buildUserOwnershipFilter(
     userId: string,
   ): Promise<Prisma.ReservationWhereInput[]> {
     const contact = await findTenantUser(this.prisma, userId, { phone: true, email: true });
+    const companyId = getTenantContext()?.companyId ?? null;
     const phoneDigits = normalizePhone(contact?.phone ?? null);
     const emailKey = normalizeEmail(contact?.email ?? null);
 
@@ -1001,7 +1004,7 @@ export class ReservationsService {
       // code while bounding the scan via the `phone` index.
       const suffix = phoneDigits.slice(-8);
       const candidates = await this.prisma.user.findMany({
-        where: { phone: { contains: suffix } },
+        where: { phone: { contains: suffix }, companyId },
         select: { id: true, phone: true },
       });
       for (const u of candidates) {
@@ -1009,8 +1012,8 @@ export class ReservationsService {
       }
     }
     if (emailKey) {
-      const byEmail = await this.prisma.user.findUnique({
-        where: { email: emailKey },
+      const byEmail = await this.prisma.user.findFirst({
+        where: { email: emailKey, companyId },
         select: { id: true },
       });
       if (byEmail) peerIds.add(byEmail.id);

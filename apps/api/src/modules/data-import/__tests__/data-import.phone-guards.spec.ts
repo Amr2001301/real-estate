@@ -7,9 +7,9 @@
  *   to "01062800394").  The repaired phone matches the stored user once the E.164 map
  *   fix is applied.  Assert: blocking row error, no op queued for that row.
  *
- * PG-2: Cross-tenant detection — E.164 stored phone
- *   Same stored phone "+201062800394" but belonging to a DIFFERENT company.
- *   Assert: blocking row error, crossTenantPhoneConflicts=1.
+ * PG-2: Another company's customer is not a conflict (Option B)
+ *   Phones are unique per company, so the lookup is scoped to the importing
+ *   company. Assert: the query carries companyId and the row plans a create.
  *
  * PG-3: Normal path — auth-created user (E.164) matches on update
  *   Stored "+201062800394" (same company, role CLIENT), import cell "01062800394"
@@ -69,7 +69,7 @@ function buildMockPrisma(clientUsers: typeof AUTH_USER_E164[], globalHits: Globa
       findMany: jest.fn()
         // First call: dbClients (company CLIENTs, role=CLIENT)
         .mockResolvedValueOnce(clientUsers)
-        // Second call: globalPhoneHits (all companies, expanded phone set)
+        // Second call: phone hits within the importing company (expanded phone set)
         .mockResolvedValueOnce(globalHits)
         // Third call: dbSalesUsers (ADMIN/SALES/SALES_MANAGER for sales-rep map)
         .mockResolvedValueOnce([]),
@@ -107,26 +107,29 @@ describe('DataImportService — PG-1: silent-merge guard (E.164 stored phone)', 
   });
 });
 
-// ── PG-2: cross-tenant detection — E.164 stored phone ─────────────────────────
+// ── PG-2: another company's customer is not a conflict (Option B) ─────────────
 
-describe('DataImportService — PG-2: cross-tenant detection (E.164 stored phone)', () => {
-  it('phone "+201062800394" belonging to Company B is blocking for Company A import, crossTenantPhoneConflicts=1', async () => {
-    // The E.164 user belongs to Company B — cross-tenant collision for Company A.
-    const clientInB = { ...AUTH_USER_E164, companyId: COMPANY_B };
-    const globalHit = { id: clientInB.id, phone: clientInB.phone, role: UserRole.CLIENT, companyId: COMPANY_B };
-
-    // dbClients for Company A returns nothing (no existing CLIENT with that phone in A)
-    const prisma = buildMockPrisma([], [globalHit]);
+describe('DataImportService — PG-2: the same phone at another company is a separate customer', () => {
+  it('looks up phones in the importing company only, and plans a create for a phone held elsewhere', async () => {
+    // Before Option B this row was rejected as a "platform limitation". Email and
+    // phone are now unique per company, so a customer of Company B can be
+    // imported into Company A as a separate account. The DB query is scoped to
+    // Company A, so B's user never reaches the importer: the mock returns no hit.
+    const prisma = buildMockPrisma([], []);
     const service = new DataImportService(prisma as never);
 
-    // Import canonical form — no repair needed
     const buf = await buildCustomersXlsx('01062800394');
     const plan = await service.parseAndValidate(buf, COMPANY_A);
 
-    expect(plan.crossTenantPhoneConflicts).toBe(1);
-    expect(plan.customers.errorCount).toBeGreaterThan(0);
-    expect(plan.customers.errors[0]!.message).toMatch(/another company/i);
-    expect(plan.customers.ops).toHaveLength(0);
+    // The phone lookup (second user.findMany) must carry Company A's id.
+    const phoneLookup = (prisma.user.findMany as jest.Mock).mock.calls[1]![0] as {
+      where: { companyId?: string; phone?: unknown };
+    };
+    expect(phoneLookup.where.companyId).toBe(COMPANY_A);
+    expect(phoneLookup.where.phone).toBeDefined();
+
+    expect(plan.customers.errorCount).toBe(0);
+    expect(plan.customers.ops).toHaveLength(1);
   });
 });
 

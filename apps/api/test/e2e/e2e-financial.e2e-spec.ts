@@ -668,7 +668,7 @@ describe('P13 — Info requests admin visibility + notifications (e2e)', () => {
   });
 
   it('P13.2: client inquiry is saved WITH the submitting client userId', async () => {
-    const clientUser = await testApp.rawPrisma.user.findUniqueOrThrow({
+    const clientUser = await testApp.rawPrisma.user.findFirstOrThrow({
       where: { email: fixtures.users.CLIENT_1.email },
       select: { id: true },
     });

@@ -145,7 +145,7 @@ describe('Email verification flow (e2e, real Postgres)', () => {
       });
     expect(reg.status).toBe(201);
     accessToken = reg.body.tokens.accessToken as string;
-    const u = await testApp.rawPrisma.user.findUnique({ where: { email: USER_EMAIL } });
+    const u = await testApp.rawPrisma.user.findFirst({ where: { email: USER_EMAIL } });
     userId = u!.id;
   }, 30_000);
 
@@ -268,7 +268,7 @@ describe('Email verification flow (e2e, real Postgres)', () => {
     const firstRawToken = testApp.email.lastVerifyRawToken!;
     const firstHash = createHash('sha256').update(firstRawToken).digest('hex');
 
-    const newUser = await testApp.rawPrisma.user.findUnique({ where: { email: newEmail } });
+    const newUser = await testApp.rawPrisma.user.findFirst({ where: { email: newEmail } });
     await testApp.rawPrisma.emailVerificationToken.updateMany({
       where: { userId: newUser!.id },
       data: { createdAt: new Date(Date.now() - 61_000) },
@@ -340,7 +340,7 @@ describe('Password reset flow (e2e, real Postgres)', () => {
         acceptTerms: true,
       });
     expect(reg.status).toBe(201);
-    const u = await testApp.rawPrisma.user.findUnique({ where: { email: USER_EMAIL } });
+    const u = await testApp.rawPrisma.user.findFirst({ where: { email: USER_EMAIL } });
     userId = u!.id;
   }, 30_000);
 
@@ -462,7 +462,7 @@ describe('Password reset flow (e2e, real Postgres)', () => {
   });
 
   it('R9a: DB password hash matches argon2 hash of current password', async () => {
-    const user = await testApp.rawPrisma.user.findUnique({
+    const user = await testApp.rawPrisma.user.findFirst({
       where: { email: USER_EMAIL },
       select: { passwordHash: true },
     });

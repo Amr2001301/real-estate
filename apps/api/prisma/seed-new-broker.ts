@@ -21,6 +21,7 @@ import {
   UserRole,
 } from '@prisma/client';
 import * as argon2 from 'argon2';
+import { upsertUserByEmail } from './seed-user-upsert';
 
 if (process.env.NODE_ENV === 'production') {
   console.error('❌ seed-new-broker must NOT run in production.');
@@ -62,8 +63,7 @@ async function main() {
   // ── 1. Broker user ────────────────────────────────────────────────────────
   console.log('1/8  Upserting broker user…');
   const hash = await argon2.hash(PASSWORD);
-  const user = await prisma.user.upsert({
-    where: { email: EMAIL },
+  const user = await upsertUserByEmail(prisma, EMAIL, {
     create: { email: EMAIL, passwordHash: hash, fullName: 'New Broker User', role: UserRole.BROKER, locale: 'ar' },
     update: { passwordHash: hash },
     select: { id: true },
@@ -129,7 +129,7 @@ async function main() {
   // ── 5. Demo clients ───────────────────────────────────────────────────────
   console.log('5/8  Creating demo clients…');
   const ensureClient = async (phone: string, fullName: string) => {
-    const existing = await prisma.user.findUnique({ where: { phone } });
+    const existing = await prisma.user.findFirst({ where: { phone } });
     if (existing) return existing;
     return prisma.user.create({ data: { role: UserRole.CLIENT, fullName, phone, locale: 'ar' } });
   };

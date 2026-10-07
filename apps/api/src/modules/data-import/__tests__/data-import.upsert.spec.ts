@@ -55,7 +55,6 @@ function buildPlanWithOneProjectCreate(): ImportPlan {
     units:     makeEmptySheetPlan(UNITS_SHEET.name),
     customers: makeEmptySheetPlan(CUSTOMERS_SHEET.name),
     leads:     makeEmptySheetPlan(LEADS_SHEET.name),
-    crossTenantPhoneConflicts: 0,
     unresolvedLeadSalesReps: 0,
   };
 }

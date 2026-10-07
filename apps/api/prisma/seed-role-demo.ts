@@ -40,6 +40,7 @@ import {
   UserRole,
 } from '@prisma/client';
 import * as argon2 from 'argon2';
+import { upsertUserByEmail } from './seed-user-upsert';
 
 if (
   process.env.NODE_ENV === 'production' &&
@@ -79,8 +80,7 @@ async function findMaintenanceCategoryByEn(nameEn: string) {
 
 async function ensureDemoCustomer(companyId: string) {
   const hash = await argon2.hash(DEMO_CUSTOMER_PASS);
-  return prisma.user.upsert({
-    where: { email: DEMO_CUSTOMER_EMAIL },
+  return upsertUserByEmail(prisma, DEMO_CUSTOMER_EMAIL, {
     create: {
       email: DEMO_CUSTOMER_EMAIL,
       passwordHash: hash,
@@ -101,7 +101,7 @@ async function seedMaintenanceRequests(companyId: string) {
   console.log('🔧  Seeding maintenance requests…');
 
   // Find the maintenance supervisor
-  const supervisor = await prisma.user.findUnique({
+  const supervisor = await prisma.user.findFirst({
     where: { email: 'maintenance@example.com' },
     select: { id: true },
   });
@@ -249,8 +249,7 @@ async function seedBrokerDemo(companyId: string) {
 
   // Broker agent user
   const hash = await argon2.hash(BROKER_AGENT_PASS);
-  const agentUser = await prisma.user.upsert({
-    where: { email: BROKER_AGENT_EMAIL },
+  const agentUser = await upsertUserByEmail(prisma, BROKER_AGENT_EMAIL, {
     create: {
       email: BROKER_AGENT_EMAIL,
       passwordHash: hash,
@@ -341,13 +340,13 @@ async function seedBrokerLeadsAndReservations(companyId: string) {
   }
 
   // Resolve the broker agent user
-  const agentUser = await prisma.user.findUnique({
+  const agentUser = await prisma.user.findFirst({
     where: { email: BROKER_AGENT_EMAIL },
     select: { id: true },
   });
 
   // Use the demo customer as the lead client
-  const customer = await prisma.user.findUnique({
+  const customer = await prisma.user.findFirst({
     where: { email: DEMO_CUSTOMER_EMAIL },
     select: { id: true },
   });
@@ -411,7 +410,7 @@ async function seedBrokerLeadsAndReservations(companyId: string) {
     }
 
     // Ensure a client user for this phone
-    let clientUser = await prisma.user.findUnique({ where: { phone: l.phone }, select: { id: true } });
+    let clientUser = await prisma.user.findFirst({ where: { phone: l.phone }, select: { id: true } });
     if (!clientUser) {
       clientUser = await prisma.user.create({
         data: {

@@ -42,6 +42,8 @@ function makeService(overrides: {
   const prisma = {
     user: {
       findUnique: jest.fn().mockResolvedValue(userRow),
+      // Option B — forgotPassword matches one account per company.
+      findMany: jest.fn().mockResolvedValue(userRow ? [userRow] : []),
       update: jest.fn().mockResolvedValue(userRow),
     },
     refreshToken: {
@@ -101,9 +103,26 @@ describe('AuthService · forgotPassword', () => {
   it('normalises the email to lowercase before lookup', async () => {
     const { service, prisma } = makeService();
     await service.forgotPassword('Alice@Example.com');
-    expect(prisma.user.findUnique).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { email: 'alice@example.com' } }),
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ email: 'alice@example.com' }) }),
     );
+  });
+
+  it('issues one reset per account when the email exists in several companies', async () => {
+    // Option B — email is unique per company, so this tenant-less route can
+    // match one account per developer. Each gets its own token and email; the
+    // token names the account, so reset-password needs no tenant.
+    const { service, prisma, email } = makeService();
+    (prisma.user.findMany as jest.Mock).mockResolvedValueOnce([
+      { id: 'user-a', email: 'alice@example.com', passwordHash: 'h', active: true },
+      { id: 'user-b', email: 'alice@example.com', passwordHash: 'h', active: true },
+    ]);
+    await expect(service.forgotPassword('alice@example.com')).resolves.toEqual({ ok: true });
+    const userIds = (prisma.passwordResetToken.create as jest.Mock).mock.calls.map(
+      (c) => (c[0] as { data: { userId: string } }).data.userId,
+    );
+    expect(userIds).toEqual(['user-a', 'user-b']);
+    expect(email.sendPasswordReset).toHaveBeenCalledTimes(2);
   });
 
   it('creates a reset token record for an existing account', async () => {
