@@ -34,6 +34,7 @@ import { OptionalAuth } from '../../common/decorators/optional-auth.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { getTenantContext } from '../../common/tenant/tenant-context';
+import { phoneForWrite } from '../../common/utils/phone-for-write';
 import {
   NotificationsModule,
   NotificationsService,
@@ -180,7 +181,10 @@ export class RequestsService {
     const utm = pickUtm(dto);
     let leadId: string | null = null;
     if (!actor.userId && dto.phone && dto.name) {
-      const existing = await this.prisma.lead.findFirst({ where: { phone: dto.phone } });
+      // FG-21 — one canonical form for the lead lookup and the client write,
+      // so `01…` and `+201…` from the same visitor land on the same records.
+      const phone = (await phoneForWrite(this.prisma, dto.phone, getTenantContext()?.companyId))!;
+      const existing = await this.prisma.lead.findFirst({ where: { phone } });
       if (existing) {
         leadId = existing.id;
         // Back-fill UTM on first touch if the lead has none yet.
@@ -188,12 +192,12 @@ export class RequestsService {
           await this.prisma.lead.update({ where: { id: existing.id }, data: utm });
         }
       } else {
-        const client = await this.findOrCreateClient(dto.name, dto.phone, dto.email ?? null);
+        const client = await this.findOrCreateClient(dto.name, phone, dto.email ?? null);
         const lead = await this.prisma.lead.create({
           data: {
             clientId: client.id,
             fullName: client.fullName,
-            phone: client.phone ?? dto.phone,
+            phone: client.phone ?? phone,
             email: client.email ?? dto.email ?? null,
             projectInterestId: dto.projectId ?? null,
             unitInterestId: dto.unitId ?? null,
@@ -338,19 +342,22 @@ export class RequestsService {
     const utm = pickUtm(dto);
     let leadId: string | null = null;
     if (!actor.userId && dto.phone && dto.name) {
-      const existing = await this.prisma.lead.findFirst({ where: { phone: dto.phone } });
+      // FG-21 — one canonical form for the lead lookup and the client write,
+      // so `01…` and `+201…` from the same visitor land on the same records.
+      const phone = (await phoneForWrite(this.prisma, dto.phone, getTenantContext()?.companyId))!;
+      const existing = await this.prisma.lead.findFirst({ where: { phone } });
       if (existing) {
         leadId = existing.id;
         if (utm && !existing.utmSource && !existing.fbclid) {
           await this.prisma.lead.update({ where: { id: existing.id }, data: utm });
         }
       } else {
-        const client = await this.findOrCreateClient(dto.name, dto.phone, null);
+        const client = await this.findOrCreateClient(dto.name, phone, null);
         const lead = await this.prisma.lead.create({
           data: {
             clientId: client.id,
             fullName: client.fullName,
-            phone: client.phone ?? dto.phone,
+            phone: client.phone ?? phone,
             projectInterestId: dto.projectId,
             unitInterestId: dto.unitId ?? null,
             sourceId: await this.websiteLeadSourceId(),

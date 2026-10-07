@@ -7,6 +7,8 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { paginate, takeSkip } from '../../common/utils/pagination';
+import { getTenantContext } from '../../common/tenant/tenant-context';
+import { phoneForWrite } from '../../common/utils/phone-for-write';
 import type { BrokerScopeContext } from '../../common/guards/broker-scope.guard';
 import { CreatePortalLeadDto, PortalLeadsQueryDto } from './dto/portal-lead.dto';
 
@@ -109,14 +111,17 @@ export class BrokerPortalLeadsService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      // FG-21 — normalise once, so the client lookup, the client write and
+      // the duplicate check below all compare the same canonical string.
+      const phone = (await phoneForWrite(tx, dto.phone, getTenantContext()?.companyId))!;
+
       // 2) Find or create the underlying Client (User).
-      const client = await this.resolveClient(tx, dto);
+      const client = await this.resolveClient(tx, dto, phone);
 
       // 3) Duplicate detection by phone. Phone is the canonical contact
       //    identifier in this CRM; if any prior Lead shares it the new one
       //    is marked DUPLICATE for admin review (we don't reject — broker
       //    still gets attribution and admin can promote to APPROVED).
-      const phone = dto.phone.trim();
       const duplicateOf = await tx.lead.findFirst({
         where: { phone },
         orderBy: { createdAt: 'desc' },
@@ -244,8 +249,8 @@ export class BrokerPortalLeadsService {
   private async resolveClient(
     tx: Prisma.TransactionClient,
     dto: CreatePortalLeadDto,
+    phone: string,
   ): Promise<{ id: string; fullName: string; phone: string | null; email: string | null }> {
-    const phone = dto.phone.trim();
     const email = dto.email?.trim() ?? null;
 
     const byPhone = await tx.user.findUnique({

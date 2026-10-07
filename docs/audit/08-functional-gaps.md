@@ -362,8 +362,9 @@ Ranked by: customer-facing severity, whether failure is silent, and whether it b
 | 14 | FG-14 | Customer not notified of role promotion on convert | Low | Yes | No — customer re-logs in naturally |
 | 15 | FG-15 | Phase and Building have no `updatedAt` column | Low | No | No — operational gap only |
 | 20 | FG-20 | `User.phone` is stored in two incompatible formats (E.164 `+201…` and local `01…`) across different write paths | High | **Fixed 2026-09-27** — importer now writes E.164; dev DB backfilled; DI-E2E-4 proves OTP round-trip | Residual: pre-existing write paths listed in FG-21 |
-| 21 | FG-21 | Three non-importer write paths store phone as-is from the DTO with no normalisation (`findOrCreateClient`, `createCompanyUser`, broker user creation) | Medium | Yes — same OTP split-account defect applies to customers created via leads or by admin | Not fixed in Phase 2 — scope to a dedicated phone-normalisation pass |
+| 21 | FG-21 | Eleven non-auth write paths stored `User.phone` as typed (the original count of three was wrong) | Medium | Yes — same OTP split-account defect applies to customers created via leads or by admin | **Fixed 2026-10-07** — every path goes through `phoneForWrite()`; B-FG21 proves lead → OTP lands on one account |
 | 22 | FG-22 | argon2 called at library defaults everywhere — no config, no recorded rationale; 382 ms/login uncontended on CI, 11–19× degradation at 3 concurrent; production not measured | Medium | No — defaults are safe; risk is throughput, not security | No — login works; concurrent sign-in capacity is unknown |
+| 24 | FG-24 | Three user-create paths (broker-portal lead client, broker-portal team, admin broker users) write no `companyId` on the TENANT_CONTROLLED `User` model | High | Partly — users vanish from tenant-scoped lists | Yes — tenancy defect; decision + backfill needed |
 
 ---
 
@@ -578,31 +579,90 @@ WHERE u1."companyId" = u2."companyId";
 
 **Severity:** Medium  
 **Discovered:** 2026-09-27, as a side-effect of FG-20 investigation  
-**Status:** Not fixed — scope to a dedicated phone-normalisation pass
+**Status:** Fixed 2026-10-07
 
-#### What exists
+#### What was there — eleven paths, not three
 
-Three code paths outside the importer write `User.phone` directly from the incoming DTO without calling `canonicalPhone()`:
+The original entry named three paths, two of them in the wrong file. A sweep
+of every `user.create` / `user.update` that sets `phone` found eleven outside
+the auth service, all storing the phone exactly as typed:
 
-| Path | File | Behaviour |
-|---|---|---|
-| `findOrCreateClient` | `apps/api/src/modules/leads/leads.service.ts` | Creates a CLIENT user from the lead DTO `phone` field; no normalisation. Caller may send `01...` or `+201...`. |
-| `createCompanyUser` | `apps/api/src/modules/super-admin/super-admin.service.ts` | Creates any role user from admin DTO. Phone stored verbatim. |
-| Broker user creation | `apps/api/src/modules/brokers/broker-users.service.ts` | Creates BROKER_STAFF users from broker DTO. Phone stored verbatim. |
+| Path | File |
+|---|---|
+| Lead → find-or-create client | `leads/leads.service.ts` (`findOrCreateClient`) |
+| Public info / visit request → client | `requests/requests.module.ts` (`findOrCreateClient`, ×2 callers) |
+| Broker portal lead → client | `broker-portal/broker-portal-leads.service.ts` (`resolveClient`) |
+| Broker portal visit → client | `broker-portal/broker-portal-visits.service.ts` (`findOrCreateBrokerLead`) |
+| Broker portal team member create / update | `broker-portal/broker-portal-team.service.ts` |
+| Admin broker user create / update | `broker-users/broker-users.service.ts` |
+| Super-admin company user create | `super-admin/super-admin.service.ts` (`createCompanyUser`) |
+| Admin user create | `users/users.service.ts` (`create`) |
+| Admin user edit **and `PATCH /users/me`** | `users/users.service.ts` (`update`) |
 
-#### Why it matters
+`PATCH /users/me` is the one that matters most: it is how a customer adds a
+phone to their own profile, so a customer who typed `01…` there could never
+log in by OTP afterwards. The auth service's three paths already used
+`canonicalPhone()`; the data importer was fixed under FG-20.
 
-The same OTP split-account defect described in FG-20 applies to these paths. A customer created via `findOrCreateClient` (e.g., when a sales agent adds a lead with a local phone) and who then tries to log in via OTP will get a second empty account.
+Several paths also looked up an existing user or lead **by the raw phone**
+before creating one — so `01…` missed a client stored as `+201…`, created a
+second one, or (with `User.phone @unique`) failed. Normalising only the write
+would have left those lookups splitting records.
 
-#### Not fixed in Phase 2
+#### Fix
 
-These are pre-existing gaps — they existed before the data importer was built. The importer write-side fix (FG-20) was the immediate fix because the importer was the cause of the 40 `local-0` rows. Normalising the remaining paths requires:
+One helper, `common/utils/phone-for-write.ts`, applies the auth service's rule:
+E.164 first, then the company's country, falling back to EG exactly as
+`TenantResolverService` does. Every path above calls it once, at the top, and
+uses that one value for its lookup, its duplicate check and its write.
 
-1. Ensuring every caller already sends strings that `canonicalPhone` can parse (all three paths use `IsString` validators with no phone format constraint — callers may send any string).
-2. Deciding what to do when `canonicalPhone` returns null (i.e., the caller sent a non-normalizable phone). Currently those rows would just be stored verbatim; after the fix, they would need to be rejected with a 400.
-3. Auditing seeds and test data that may hard-code local-format phones into these paths.
+The three decisions the original entry said were needed:
 
-Scope this as part of the MT-020 normalisation pass or a separate "phone hygiene" ticket.
+1. **Callers sending arbitrary strings** — an unparseable phone is now a
+   **400**, not a row. Storing it verbatim is what caused the split, and a
+   phone that cannot be parsed cannot be an identity key.
+2. **What null means** — `undefined` leaves an update's phone untouched; `null`
+   or blank clears it.
+3. **Existing data** — an update that resends the phone **unchanged** is not
+   validated. Edit forms resend every field, and phones stored before this fix
+   may not parse (the seeds hold some, e.g. `+96650010001`, too short for SA);
+   without this, every edit of such a user would 400.
+
+No backfill is included. FG-20 backfilled the importer's rows in dev; any
+production `01…` rows written by these paths before the fix still need the
+FG-20 SQL run against production, with the duplicate check first.
+
+**Gate:** `e2e-catalog-auth` **B-FG21** walks the original defect: a lead
+created with `01…` stores its client as `+201…`; the same number in E.164
+reuses that client; OTP login with the local form signs in **as that client**
+and the account count stays one; garbage is a 400; and an unchanged legacy
+phone survives an edit. With the leads change reverted, the first four fail —
+the OTP test fails because login creates the second account. The helper has
+its own unit spec.
+
+---
+
+### FG-24: Three user-create paths write no `companyId`
+
+**Severity:** High (tenancy) · **Discovered:** 2026-10-07, during the FG-21 sweep · **Status:** open — not fixed, decision needed
+
+`User` is `TENANT_CONTROLLED`: the Prisma middleware does not inject
+`companyId`, so every create must set it. Three do not:
+
+| Path | Creates |
+|---|---|
+| `broker-portal/broker-portal-leads.service.ts` `resolveClient` | CLIENT from a broker-submitted lead |
+| `broker-portal/broker-portal-team.service.ts` `create` | BROKER team member |
+| `broker-users/broker-users.service.ts` `create` | BROKER user (admin side) |
+
+The sibling path `broker-portal-visits.service.ts` sets
+`companyId: getTenantContext()?.companyId`, which is what makes these look like
+omissions rather than a design choice. A user with `companyId = null` is
+invisible to every tenant-scoped user query (the users directory, seat counts,
+reports), and the CLAUDE.md rule treats a missing tenant scope as a security
+defect. Not fixed in the FG-21 change to keep it to one concern; it needs a
+decision on whether broker users belong to the developer company in context
+and a backfill for rows already written.
 
 ---
 

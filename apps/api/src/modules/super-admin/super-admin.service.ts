@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { Prisma, SubscriptionStatus } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { phoneForWrite } from '../../common/utils/phone-for-write';
 import { CapabilityService, type CompanyCapabilities } from '../../common/capabilities/capability.service';
 import { buildEffectiveView, STAFF_SEAT_ROLES } from '../../common/capabilities/capability-schema';
 import { DomainResolverService } from '../../common/domain/domain-resolver.service';
@@ -457,13 +458,16 @@ export class SuperAdminService {
     await this.assertExists(companyId);
     const existing = await this.prisma.user.findFirst({ where: { email: dto.email, companyId } });
     if (existing) throw new ConflictException('A user with this email already exists in this company');
+    // FG-21 — the target company's country, not the caller's: this runs in
+    // the platform context on behalf of `companyId`.
+    const phone = await phoneForWrite(this.prisma, dto.phone, companyId);
     const passwordHash = await argon2.hash(dto.password);
     return this.prisma.user.create({
       data: {
         role: dto.role,
         fullName: dto.fullName,
         email: dto.email,
-        phone: dto.phone ?? null,
+        phone: phone ?? null,
         passwordHash,
         locale: 'ar',
         companyId,

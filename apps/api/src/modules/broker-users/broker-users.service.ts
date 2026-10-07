@@ -7,6 +7,8 @@ import {
 import * as argon2 from 'argon2';
 import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { getTenantContext } from '../../common/tenant/tenant-context';
+import { phoneForWrite } from '../../common/utils/phone-for-write';
 import {
   CreateBrokerUserDto,
   UpdateBrokerUserDto,
@@ -51,11 +53,15 @@ export class BrokerUsersService {
     }
 
     // Find an existing user by email or phone (each is @unique on User).
+    // FG-21 — normalise before the clash lookup and the write, so the lookup
+    // sees `01…` and `+201…` as the same person.
+    const phone = await phoneForWrite(this.prisma, dto.phone, getTenantContext()?.companyId);
+
     const existingUser = await this.prisma.user.findFirst({
       where: {
         OR: [
           ...(dto.email ? [{ email: dto.email }] : []),
-          ...(dto.phone ? [{ phone: dto.phone }] : []),
+          ...(phone ? [{ phone }] : []),
         ],
       },
     });
@@ -99,7 +105,7 @@ export class BrokerUsersService {
             role: UserRole.BROKER,
             fullName: dto.fullName,
             email: dto.email ?? null,
-            phone: dto.phone ?? null,
+            phone: phone ?? null,
             passwordHash,
             locale: dto.locale ?? 'ar',
           },
@@ -136,14 +142,20 @@ export class BrokerUsersService {
         }
       }
     }
-    if (dto.phone !== undefined && dto.phone !== link.user.phone) {
-      if (dto.phone) {
+    // An unchanged phone is not a write: edit forms resend every field, and a
+    // phone stored before FG-21 may not parse. Only a changed value is checked.
+    const phone =
+      dto.phone === link.user.phone
+        ? dto.phone
+        : await phoneForWrite(this.prisma, dto.phone, getTenantContext()?.companyId);
+    if (phone !== undefined && phone !== link.user.phone) {
+      if (phone) {
         const clash = await this.prisma.user.findUnique({
-          where: { phone: dto.phone },
+          where: { phone },
           select: { id: true },
         });
         if (clash && clash.id !== link.userId) {
-          throw new ConflictException(`Phone "${dto.phone}" is already in use`);
+          throw new ConflictException(`Phone "${phone}" is already in use`);
         }
       }
     }
@@ -151,7 +163,7 @@ export class BrokerUsersService {
     const userData: Prisma.UserUpdateInput = {};
     if (dto.fullName !== undefined) userData.fullName = dto.fullName;
     if (dto.email !== undefined) userData.email = dto.email;
-    if (dto.phone !== undefined) userData.phone = dto.phone;
+    if (phone !== undefined) userData.phone = phone;
     if (dto.locale !== undefined) userData.locale = dto.locale;
 
     const linkData: Prisma.BrokerUserUpdateInput = {};
