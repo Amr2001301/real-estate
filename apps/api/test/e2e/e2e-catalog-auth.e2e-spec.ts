@@ -834,6 +834,137 @@ describe('Flow B — Lead journey (e2e)', () => {
 // Flow C — Visit journey (e2e)
 // ═════════════════════════════════════════════════════════════════════════════
 
+// ═════════════════════════════════════════════════════════════════════════════
+// FG-21 — a client created from a lead can log in by OTP
+// ═════════════════════════════════════════════════════════════════════════════
+//
+// OTP login looks the user up by the E.164 form of the phone. Lead creation
+// used to store the phone exactly as the sales rep typed it, so a client
+// created as `01…` was invisible to OTP: logging in made a second, empty
+// account and the first one kept the lead. This walks that exact path.
+describe('B-FG21 — phone normalisation on the lead → client → OTP path (e2e)', () => {
+  // Unique per run so a re-run against a dirty DB cannot collide.
+  const suffix = String(Date.now()).slice(-7);
+  const LOCAL = `0109${suffix}`;
+  const E164 = `+20109${suffix}`;
+  const OTP_CODE = '123456';
+  let companyId: string;
+  let slug: string;
+  let clientId: string;
+
+  beforeAll(async () => {
+    const admin = await testApp.rawPrisma.user.findUniqueOrThrow({
+      where: { id: fixtures.userIds.adminId },
+      select: { company: { select: { id: true, slug: true } } },
+    });
+    companyId = admin.company!.id;
+    slug = admin.company!.slug;
+  });
+
+  afterAll(async () => {
+    const users = await testApp.rawPrisma.user.findMany({
+      where: { phone: { in: [LOCAL, E164] } },
+      select: { id: true },
+    });
+    const ids = users.map((u) => u.id);
+    const leads = await testApp.rawPrisma.lead.findMany({ where: { clientId: { in: ids } }, select: { id: true } });
+    const leadIds = leads.map((l) => l.id);
+    await testApp.rawPrisma.leadActivity.deleteMany({ where: { leadId: { in: leadIds } } });
+    await testApp.rawPrisma.leadNote.deleteMany({ where: { leadId: { in: leadIds } } });
+    await testApp.rawPrisma.lead.deleteMany({ where: { id: { in: leadIds } } });
+    await testApp.rawPrisma.refreshToken.deleteMany({ where: { userId: { in: ids } } });
+    await testApp.rawPrisma.otpCode.deleteMany({ where: { phone: E164 } });
+    await testApp.rawPrisma.user.deleteMany({ where: { id: { in: ids } } });
+  });
+
+  it('a lead created with a local phone stores its client in E.164', async () => {
+    const res = await http()
+      .post('/v1/leads')
+      .set('Authorization', bearer(adminToken))
+      .send({ fullName: 'FG21 Client', phone: LOCAL });
+    expect(res.status).toBe(201);
+
+    const stored = await testApp.rawPrisma.user.findMany({
+      where: { phone: { in: [LOCAL, E164] } },
+      select: { id: true, phone: true },
+    });
+    expect(stored).toEqual([{ id: res.body.clientId, phone: E164 }]);
+    clientId = res.body.clientId;
+  });
+
+  it('the same number in the other format reuses that client', async () => {
+    const res = await http()
+      .post('/v1/leads')
+      .set('Authorization', bearer(adminToken))
+      .send({ fullName: 'FG21 Client', phone: E164 });
+    expect(res.status).toBe(201);
+    expect(res.body.clientId).toBe(clientId);
+  });
+
+  it('OTP login with the local form signs in as that client — no second account', async () => {
+    const { createHash } = await import('crypto');
+    await testApp.rawPrisma.otpCode.create({
+      data: {
+        phone: E164,
+        codeHash: createHash('sha256').update(OTP_CODE).digest('hex'),
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        companyId,
+      },
+    });
+    await testApp.flushCapabilities(companyId);
+
+    const res = await http()
+      .post('/v1/auth/tenant/otp/verify')
+      .send({ slug, phone: LOCAL, code: OTP_CODE });
+    expect(res.status).toBe(201);
+    expect(res.body.user.id).toBe(clientId);
+
+    const accounts = await testApp.rawPrisma.user.count({ where: { phone: { in: [LOCAL, E164] } } });
+    expect(accounts).toBe(1);
+  });
+
+  it('an unparseable phone is a 400, not a row that can never log in', async () => {
+    const res = await http()
+      .post('/v1/leads')
+      .set('Authorization', bearer(adminToken))
+      .send({ fullName: 'FG21 Garbage', phone: 'call me maybe' });
+    expect(res.status).toBe(400);
+  });
+
+  it('editing a user who already holds an unparseable phone still works if it is resent unchanged', async () => {
+    // Phones stored before this fix may not parse (the seeds hold some). Edit
+    // forms resend every field, so an unchanged phone must not turn every edit
+    // of that user into a 400. A changed one is still validated.
+    const legacy = `+9665${suffix}`; // too short to be a valid SA mobile
+    const user = await testApp.rawPrisma.user.create({
+      data: { role: 'CLIENT', fullName: 'FG21 Legacy', phone: legacy, companyId },
+      select: { id: true },
+    });
+    try {
+      const same = await http()
+        .patch(`/v1/users/${user.id}`)
+        .set('Authorization', bearer(adminToken))
+        .send({ fullName: 'FG21 Legacy Renamed', phone: legacy });
+      expect(same.status).toBe(200);
+
+      const changed = await http()
+        .patch(`/v1/users/${user.id}`)
+        .set('Authorization', bearer(adminToken))
+        .send({ phone: 'not a phone' });
+      expect(changed.status).toBe(400);
+
+      const local = await http()
+        .patch(`/v1/users/${user.id}`)
+        .set('Authorization', bearer(adminToken))
+        .send({ phone: `0108${suffix}` });
+      expect(local.status).toBe(200);
+      expect(local.body.phone).toBe(`+20108${suffix}`);
+    } finally {
+      await testApp.rawPrisma.user.delete({ where: { id: user.id } });
+    }
+  });
+});
+
 describe('Flow C — Visit journey (e2e)', () => {
   describe('C1–C3: customer creates VisitRequest, sees only own', () => {
     let customer1RequestId: string;

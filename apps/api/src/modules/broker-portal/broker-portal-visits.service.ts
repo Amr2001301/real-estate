@@ -12,6 +12,7 @@ import {
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { getTenantContext } from '../../common/tenant/tenant-context';
+import { phoneForWrite } from '../../common/utils/phone-for-write';
 import type { BrokerScopeContext } from '../../common/guards/broker-scope.guard';
 import {
   CreatePortalVisitRequestDto,
@@ -176,9 +177,13 @@ export class BrokerPortalVisitsService {
       unitId: string | null;
     },
   ): Promise<string> {
+    // FG-21 — normalise once; the lead reuse check, the client write and the
+    // duplicate check all compare the same canonical string.
+    const phone = (await phoneForWrite(this.prisma, info.phone, getTenantContext()?.companyId))!;
+
     // Reuse the same broker's existing lead for this phone if one exists.
     const existing = await this.prisma.lead.findFirst({
-      where: { phone: info.phone, brokerId: scope.brokerId },
+      where: { phone, brokerId: scope.brokerId },
       orderBy: { createdAt: 'desc' },
       select: { id: true },
     });
@@ -187,7 +192,7 @@ export class BrokerPortalVisitsService {
     return this.prisma.$transaction(async (tx) => {
       // Find or create the canonical Client User by phone.
       const byPhone = await tx.user.findUnique({
-        where: { phone: info.phone },
+        where: { phone },
         select: { id: true, fullName: true, phone: true, email: true },
       });
       const client =
@@ -196,7 +201,7 @@ export class BrokerPortalVisitsService {
           data: {
             role: 'CLIENT',
             fullName: info.fullName,
-            phone: info.phone,
+            phone,
             email: info.email,
             locale: 'ar',
             companyId: getTenantContext()?.companyId ?? null,
@@ -208,7 +213,7 @@ export class BrokerPortalVisitsService {
       // portal-leads service: if any prior lead with this phone exists, mark
       // the new one as DUPLICATE for admin review.
       const anyExisting = await tx.lead.findFirst({
-        where: { phone: info.phone },
+        where: { phone },
         select: { id: true },
       });
 
@@ -216,7 +221,7 @@ export class BrokerPortalVisitsService {
         data: {
           clientId: client.id,
           fullName: client.fullName,
-          phone: client.phone ?? info.phone,
+          phone: client.phone ?? phone,
           email: client.email ?? info.email,
           projectInterestId: info.projectId,
           unitInterestId: info.unitId,

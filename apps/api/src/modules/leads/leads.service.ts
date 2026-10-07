@@ -19,6 +19,7 @@ import {
 import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { enumFilter } from '../../common/utils/query-filters';
 import { getTenantContext } from '../../common/tenant/tenant-context';
+import { phoneForWrite } from '../../common/utils/phone-for-write';
 
 @Injectable()
 export class LeadsService {
@@ -124,7 +125,9 @@ export class LeadsService {
       return found;
     }
 
-    const phone = dto.phone?.trim() || null;
+    // FG-21 — normalise before both the lookup and the create, so `01…` finds
+    // and reuses a client already stored as `+201…` instead of splitting them.
+    const phone = (await phoneForWrite(tx, dto.phone, getTenantContext()?.companyId)) ?? null;
     const email = dto.email?.trim() || null;
     const fullName = dto.fullName?.trim() || '';
 

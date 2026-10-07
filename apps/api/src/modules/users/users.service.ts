@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { phoneForWrite } from '../../common/utils/phone-for-write';
 import { claimSyntheticPeers } from '../../common/utils/identity-claim';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
@@ -64,13 +65,14 @@ export class UsersService {
     await this.planLimits.checkUserLimit(dto.role);
 
     if (dto.managerId) await this.assertIsManager(dto.managerId, companyId);
+    const phone = await phoneForWrite(this.prisma, dto.phone, companyId); // FG-21
     const passwordHash = dto.password ? await argon2.hash(dto.password) : null;
     return this.prisma.user.create({
       data: {
         role: dto.role,
         fullName: dto.fullName,
         email: dto.email ?? null,
-        phone: dto.phone ?? null,
+        phone: phone ?? null,
         passwordHash,
         locale: dto.locale ?? 'ar',
         managerId: dto.managerId ?? null,
@@ -173,6 +175,19 @@ export class UsersService {
   async update(id: string, dto: UpdateUserDto) {
     const companyId = getRequiredCompanyId(); // MT-006
     await this.assertExists(id, companyId);
+    // FG-21 — PATCH /users/me is how a customer adds a phone; storing it as
+    // typed is what left them unreachable by OTP. Normalise before the
+    // synthetic-peer claim so it matches on the stored form too.
+    // An unchanged phone is not a write: edit forms resend every field, and a
+    // phone stored before FG-21 may not parse. Only a changed value is checked.
+    const stored =
+      dto.phone === undefined
+        ? undefined
+        : (await this.prisma.user.findFirst({ where: { id, companyId }, select: { phone: true } }))?.phone;
+    const phone =
+      dto.phone !== undefined && dto.phone === stored
+        ? dto.phone
+        : await phoneForWrite(this.prisma, dto.phone, companyId);
     // P9 — when a user (typically self via PATCH /v1/users/me) adds a phone
     // that overlaps with a synthetic peer (a CRM-only CLIENT row carrying
     // their pre-registration Leads / Reservations), sweep the peer into the
@@ -181,10 +196,10 @@ export class UsersService {
     // Idempotent: re-runs after a successful merge are no-ops. Safe inside
     // an admin-driven edit too — only CLIENT rows with passwordHash=null
     // are eligible.
-    if (dto.phone !== undefined && dto.phone !== null) {
+    if (phone) {
       try {
         const result = await claimSyntheticPeers(this.prisma, id, {
-          phone: dto.phone,
+          phone,
         });
         if (result.claimedCount > 0) {
           this.logger.log(
@@ -204,7 +219,7 @@ export class UsersService {
     }
     return this.prisma.user.update({
       where: { id },
-      data: { ...dto },
+      data: { ...dto, ...(phone !== undefined ? { phone } : {}) },
       select: this.publicSelect(),
     });
   }
