@@ -94,6 +94,11 @@ export class BrokerPortalTeamService {
     if (!dto.email && !dto.phone) {
       throw new BadRequestException('Either email or phone is required');
     }
+    const broker = await this.prisma.broker.findUnique({
+      where: { id: scope.brokerId },
+      select: { companyId: true },
+    });
+    const companyId = broker?.companyId ?? null;
 
     // FG-21 — normalise before the clash lookup and the write, so the lookup
     // sees `01…` and `+201…` as the same person.
@@ -113,6 +118,13 @@ export class BrokerPortalTeamService {
         `A user with this ${existingUser.email === dto.email ? 'email' : 'phone'} ` +
           `already exists with role ${existingUser.role}. Refusing to silently convert to BROKER.`,
       );
+    }
+
+    // FG-24 — a broker's users belong to the broker's company. User email and
+    // phone are still globally unique, so the lookup above can return another
+    // company's user; attaching it would hand this company a foreign account.
+    if (existingUser?.companyId && existingUser.companyId !== companyId) {
+      throw new ConflictException('This user belongs to another company');
     }
 
     if (existingUser) {
@@ -140,18 +152,25 @@ export class BrokerPortalTeamService {
         });
       }
 
-      const user =
-        existingUser ??
-        (await tx.user.create({
-          data: {
-            role: UserRole.BROKER,
-            fullName: dto.fullName,
-            email: dto.email ?? null,
-            phone: phone ?? null,
-            passwordHash,
-            locale: dto.locale ?? 'ar',
-          },
-        }));
+      // FG-24 — User is TENANT_CONTROLLED: nothing injects companyId, so it is
+      // set here. Without it the account is invisible to every tenant-scoped
+      // query, cannot use the tenant staff login, and escapes the company
+      // lifecycle check on token refresh.
+      const user = existingUser
+        ? existingUser.companyId
+          ? existingUser
+          : await tx.user.update({ where: { id: existingUser.id }, data: { companyId } })
+        : await tx.user.create({
+            data: {
+              role: UserRole.BROKER,
+              fullName: dto.fullName,
+              email: dto.email ?? null,
+              phone: phone ?? null,
+              passwordHash,
+              locale: dto.locale ?? 'ar',
+              companyId,
+            },
+          });
 
       return tx.brokerUser.create({
         data: {

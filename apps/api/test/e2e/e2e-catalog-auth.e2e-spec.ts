@@ -965,6 +965,111 @@ describe('B-FG21 — phone normalisation on the lead → client → OTP path (e2
   });
 });
 
+// ═════════════════════════════════════════════════════════════════════════════
+// FG-24 — users the broker paths create belong to the broker's company
+// ═════════════════════════════════════════════════════════════════════════════
+//
+// User is TENANT_CONTROLLED: nothing injects companyId. Three create paths
+// never set it, so their users were invisible to tenant-scoped queries, could
+// not use the tenant staff login, and escaped the company lifecycle check on
+// token refresh.
+describe('B-FG24 — broker-created users carry the broker company (e2e)', () => {
+  const RUN = Date.now().toString(36);
+  const PASSWORD = 'Fg24Pass!!123';
+  let brokerId: string;
+  let brokerCompanyId: string;
+  let slug: string;
+  const createdEmails: string[] = [];
+  let otherCompanyId: string | undefined;
+
+  beforeAll(async () => {
+    const firm = await testApp.rawPrisma.broker.findFirstOrThrow({
+      where: { code: fixtures.brokerCodes.BROKER_1 },
+      select: { id: true, companyId: true, company: { select: { slug: true } } },
+    });
+    brokerId = firm.id;
+    brokerCompanyId = firm.companyId!;
+    slug = firm.company!.slug;
+  });
+
+  afterAll(async () => {
+    const users = await testApp.rawPrisma.user.findMany({
+      where: { email: { in: createdEmails } },
+      select: { id: true },
+    });
+    const ids = users.map((u) => u.id);
+    await testApp.rawPrisma.refreshToken.deleteMany({ where: { userId: { in: ids } } });
+    await testApp.rawPrisma.brokerUser.deleteMany({ where: { userId: { in: ids } } });
+    await testApp.rawPrisma.user.deleteMany({ where: { id: { in: ids } } });
+    if (otherCompanyId) await testApp.rawPrisma.company.delete({ where: { id: otherCompanyId } });
+  });
+
+  it('a client created from a broker-portal lead belongs to the broker company', async () => {
+    const res = await http()
+      .post('/v1/portal/leads')
+      .set('Authorization', bearer(broker1Token))
+      .send({ fullName: 'FG24 Portal Client', phone: phoneFor(`F24${RUN}`), projectInterestId: fixtures.projects.p1Id });
+    expect(res.status).toBe(201);
+    const client = await testApp.rawPrisma.user.findUniqueOrThrow({
+      where: { id: res.body.clientId },
+      select: { companyId: true },
+    });
+    expect(client.companyId).toBe(brokerCompanyId);
+  });
+
+  it('a team member a broker adds belongs to the broker company — and can use the tenant staff login', async () => {
+    const email = `fg24-team-${RUN}@example.com`;
+    createdEmails.push(email);
+    const res = await http()
+      .post('/v1/portal/team')
+      .set('Authorization', bearer(broker1Token))
+      .send({ fullName: 'FG24 Team Member', email, password: PASSWORD });
+    expect(res.status).toBe(201);
+
+    const user = await testApp.rawPrisma.user.findUniqueOrThrow({ where: { email }, select: { companyId: true } });
+    expect(user.companyId).toBe(brokerCompanyId);
+
+    // The visible consequence: the tenant staff login finds users by
+    // (email, companyId), so a null-company broker user got "Invalid
+    // credentials" with the right password.
+    const login = await http().post('/v1/auth/login-staff').send({ slug, email, password: PASSWORD });
+    expect([200, 201]).toContain(login.status);
+  });
+
+  it('a broker user an admin adds belongs to the broker company', async () => {
+    const email = `fg24-admin-${RUN}@example.com`;
+    createdEmails.push(email);
+    const res = await http()
+      .post(`/v1/brokers/${brokerId}/users`)
+      .set('Authorization', bearer(adminToken))
+      .send({ fullName: 'FG24 Admin-Added', email });
+    expect(res.status).toBe(201);
+    const user = await testApp.rawPrisma.user.findUniqueOrThrow({ where: { email }, select: { companyId: true } });
+    expect(user.companyId).toBe(brokerCompanyId);
+  });
+
+  it("another company's user cannot be attached to this broker", async () => {
+    // Email is still globally unique, so the existing-user lookup can return a
+    // foreign account. Attaching it would hand this company that account.
+    const other = await testApp.rawPrisma.company.create({
+      data: { name: `FG24 Other ${RUN}`, slug: `fg24-other-${RUN}`, isActive: true },
+      select: { id: true },
+    });
+    otherCompanyId = other.id;
+    const email = `fg24-foreign-${RUN}@example.com`;
+    createdEmails.push(email);
+    await testApp.rawPrisma.user.create({
+      data: { role: 'BROKER', fullName: 'FG24 Foreign', email, companyId: other.id },
+    });
+
+    const res = await http()
+      .post(`/v1/brokers/${brokerId}/users`)
+      .set('Authorization', bearer(adminToken))
+      .send({ fullName: 'FG24 Foreign', email });
+    expect(res.status).toBe(409);
+  });
+});
+
 describe('Flow C — Visit journey (e2e)', () => {
   describe('C1–C3: customer creates VisitRequest, sees only own', () => {
     let customer1RequestId: string;

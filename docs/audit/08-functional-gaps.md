@@ -364,7 +364,7 @@ Ranked by: customer-facing severity, whether failure is silent, and whether it b
 | 20 | FG-20 | `User.phone` is stored in two incompatible formats (E.164 `+201…` and local `01…`) across different write paths | High | **Fixed 2026-09-27** — importer now writes E.164; dev DB backfilled; DI-E2E-4 proves OTP round-trip | Residual: pre-existing write paths listed in FG-21 |
 | 21 | FG-21 | Eleven non-auth write paths stored `User.phone` as typed (the original count of three was wrong) | Medium | Yes — same OTP split-account defect applies to customers created via leads or by admin | **Fixed 2026-10-07** — every path goes through `phoneForWrite()`; B-FG21 proves lead → OTP lands on one account |
 | 22 | FG-22 | argon2 called at library defaults everywhere — no config, no recorded rationale; 382 ms/login uncontended on CI, 11–19× degradation at 3 concurrent; production not measured | Medium | No — defaults are safe; risk is throughput, not security | No — login works; concurrent sign-in capacity is unknown |
-| 24 | FG-24 | Three user-create paths (broker-portal lead client, broker-portal team, admin broker users) write no `companyId` on the TENANT_CONTROLLED `User` model | High | Partly — users vanish from tenant-scoped lists | Yes — tenancy defect; decision + backfill needed |
+| 24 | FG-24 | Three user-create paths (broker-portal lead client, broker-portal team, admin broker users) wrote no `companyId` on the TENANT_CONTROLLED `User` model | High | Partly — users vanish from tenant-scoped lists | **Fixed 2026-10-07** — companyId set, foreign-user attach refused, unambiguous rows backfilled |
 
 ---
 
@@ -644,7 +644,7 @@ its own unit spec.
 
 ### FG-24: Three user-create paths write no `companyId`
 
-**Severity:** High (tenancy) · **Discovered:** 2026-10-07, during the FG-21 sweep · **Status:** open — not fixed, decision needed
+**Severity:** High (tenancy) · **Discovered:** 2026-10-07, during the FG-21 sweep · **Status:** fixed 2026-10-07
 
 `User` is `TENANT_CONTROLLED`: the Prisma middleware does not inject
 `companyId`, so every create must set it. Three do not:
@@ -657,12 +657,52 @@ its own unit spec.
 
 The sibling path `broker-portal-visits.service.ts` sets
 `companyId: getTenantContext()?.companyId`, which is what makes these look like
-omissions rather than a design choice. A user with `companyId = null` is
-invisible to every tenant-scoped user query (the users directory, seat counts,
-reports), and the CLAUDE.md rule treats a missing tenant scope as a security
-defect. Not fixed in the FG-21 change to keep it to one concern; it needs a
-decision on whether broker users belong to the developer company in context
-and a backfill for rows already written.
+omissions rather than a design choice.
+
+**What it broke, concretely** (read in `auth.service.ts`, not inferred):
+
+- `loginStaff` looks the user up by `(email, companyId)`, so a null-company
+  broker user got "Invalid credentials" with the right password on the tenant
+  staff login.
+- Token refresh checks company lifecycle only for users that have a company.
+  A broker user with none kept refreshing after their company was
+  **SUSPENDED**.
+- Every tenant-scoped user query (directory, seat counts, reports) skipped them.
+
+**Decision:** a broker's users belong to the developer company the broker
+belongs to. Broker users take `Broker.companyId` (each user has one broker —
+`BrokerUser.userId` is unique — so this is exact, not inferred from the caller);
+clients created from a broker lead take the request's tenant, as the visits
+path already did.
+
+**Fix:**
+
+- The three create paths set `companyId`.
+- Attaching an *existing* user to a broker now refuses a user from another
+  company (409). Email and phone are still globally unique (backlog #3), so the
+  existing-user lookup can return a foreign account; before this, attaching it
+  handed that account to this company. An existing user with no company is
+  given the broker's.
+- Migration `20261007000001_fg24_backfill_user_company` repairs rows already
+  written, **only where unambiguous**: BROKER users from their broker; CLIENT /
+  CUSTOMER users holding a broker-submitted lead, when all their leads sit in
+  one company. A client whose leads span companies is left NULL for a human.
+  Tested on synthetic rows in a rolled-back transaction: broker → set,
+  single-company client → set, split client → still NULL.
+
+**Gate:** `e2e-catalog-auth` **B-FG24** — the portal-lead client, the
+portal team member and the admin-added broker user each carry the broker's
+company; the team member signs in through `login-staff`; a foreign company's
+user cannot be attached. With the service changes reverted, all four fail.
+
+**Before deploying:** count what the migration will leave NULL, so the
+ambiguous rows are known rather than discovered:
+
+```sql
+SELECT role, COUNT(*) FROM "User"
+WHERE "companyId" IS NULL AND role IN ('BROKER','CLIENT','CUSTOMER')
+GROUP BY role;
+```
 
 ---
 
