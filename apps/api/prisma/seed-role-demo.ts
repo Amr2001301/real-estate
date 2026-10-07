@@ -80,7 +80,7 @@ async function findMaintenanceCategoryByEn(nameEn: string) {
 
 async function ensureDemoCustomer(companyId: string) {
   const hash = await argon2.hash(DEMO_CUSTOMER_PASS);
-  return upsertUserByEmail(prisma, DEMO_CUSTOMER_EMAIL, {
+  return upsertUserByEmail(prisma, DEMO_CUSTOMER_EMAIL, companyId, {
     create: {
       email: DEMO_CUSTOMER_EMAIL,
       passwordHash: hash,
@@ -249,7 +249,7 @@ async function seedBrokerDemo(companyId: string) {
 
   // Broker agent user
   const hash = await argon2.hash(BROKER_AGENT_PASS);
-  const agentUser = await upsertUserByEmail(prisma, BROKER_AGENT_EMAIL, {
+  const agentUser = await upsertUserByEmail(prisma, BROKER_AGENT_EMAIL, companyId, {
     create: {
       email: BROKER_AGENT_EMAIL,
       passwordHash: hash,
@@ -410,7 +410,7 @@ async function seedBrokerLeadsAndReservations(companyId: string) {
     }
 
     // Ensure a client user for this phone
-    let clientUser = await prisma.user.findFirst({ where: { phone: l.phone }, select: { id: true } });
+    let clientUser = await prisma.user.findFirst({ where: { phone: l.phone, companyId }, select: { id: true } });
     if (!clientUser) {
       clientUser = await prisma.user.create({
         data: {

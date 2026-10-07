@@ -477,25 +477,27 @@ async function main() {
 
   // ---- Users (idempotent via email upsert) ----
   const adminHash = await argon2.hash(adminPassword);
-  await upsertUserByEmail(prisma, adminEmail, {
+  await upsertUserByEmail(prisma, adminEmail, company.id, {
     create: {
       email: adminEmail,
       passwordHash: adminHash,
       fullName: 'Platform Admin',
       role: UserRole.ADMIN,
       locale: 'ar',
+      companyId: company.id,
     },
     update: { passwordHash: adminHash },
   });
 
   const salesHash = await argon2.hash('SalesPass123!');
-  const sales = await upsertUserByEmail(prisma, 'sales@example.com', {
+  const sales = await upsertUserByEmail(prisma, 'sales@example.com', company.id, {
     create: {
       email: 'sales@example.com',
       passwordHash: salesHash,
       fullName: 'Mohamed Sales',
       role: UserRole.SALES,
       locale: 'ar',
+      companyId: company.id,
     },
     update: { passwordHash: salesHash },
   });
@@ -504,13 +506,14 @@ async function main() {
   // it is keyed on this dedicated demo address). Role foundation only — its
   // route access is intentionally limited until Batch 8.
   const managerHash = await argon2.hash('ManagerPass123!');
-  const manager = await upsertUserByEmail(prisma, 'manager@example.com', {
+  const manager = await upsertUserByEmail(prisma, 'manager@example.com', company.id, {
     create: {
       email: 'manager@example.com',
       passwordHash: managerHash,
       fullName: 'Sara Manager',
       role: UserRole.SALES_MANAGER,
       locale: 'ar',
+      companyId: company.id,
     },
     update: { passwordHash: managerHash },
   });
@@ -518,13 +521,14 @@ async function main() {
   // Demo MAINTENANCE_SUPERVISOR (mobile-only staff role; no web dashboard).
   // Idempotent by its dedicated demo email.
   const supervisorHash = await argon2.hash('MaintenancePass123!');
-  await upsertUserByEmail(prisma, 'maintenance@example.com', {
+  await upsertUserByEmail(prisma, 'maintenance@example.com', company.id, {
     create: {
       email: 'maintenance@example.com',
       passwordHash: supervisorHash,
       fullName: 'Khaled Maintenance',
       role: UserRole.MAINTENANCE_SUPERVISOR,
       locale: 'ar',
+      companyId: company.id,
     },
     update: { passwordHash: supervisorHash },
   });
@@ -1286,9 +1290,9 @@ async function main() {
     const email = 'ahmed@example.com';
     const fullName = 'Ahmed Khaled';
     const client =
-      (await prisma.user.findFirst({ where: { phone } })) ??
+      (await prisma.user.findFirst({ where: { phone, companyId: company.id } })) ??
       (await prisma.user.create({
-        data: { role: 'CLIENT', fullName, phone, email, locale: 'ar' },
+        data: { role: 'CLIENT', fullName, phone, email, locale: 'ar', companyId: company.id },
       }));
     const existingLead = await prisma.lead.findFirst({
       where: { clientId: client.id, projectInterestId: proj1.id },

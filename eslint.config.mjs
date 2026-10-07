@@ -156,9 +156,11 @@ export default [
   //
   // Rule 1: $queryRawUnsafe is always banned (SQL-injection + tenant bypass risk).
   //
-  // Rule 2 (prisma.user.*): User is TENANT_CONTROLLED.  The Prisma middleware
-  // does NOT auto-inject companyId for User, so every read outside the allowlist
-  // below is a potential cross-tenant data leak.
+  // Rule 2 (prisma.user.*): User was TENANT_CONTROLLED when this rule was
+  // written. Since Option B part 2 it is TENANT_OWNED and the middleware scopes
+  // every user query (docs/audit/13-user-tenancy.md); this rule and the helpers
+  // below stay as defence in depth until a follow-up retires them together.
+  // The cross-tenant escape hatch is now runAsPlatform — see its allowlist below.
   //
   // DESIGN: Every non-auth prisma.user read must go through one of the helpers
   // exported from resolve-tenant-entity.ts:
@@ -312,6 +314,44 @@ export default [
         },
         // prisma.user access is intentionally allowed — see justification in
         // the MT-012 allowlist above.
+      ],
+    },
+  },
+
+  // ── Option B part 2: runAsPlatform is allow-listed ─────────────────────────
+  //
+  // User is TENANT_OWNED, so the middleware scopes every user query to the
+  // request's company. runAsPlatform (common/tenant/tenant-context.ts) switches
+  // that off for the identity lookups that are cross-tenant by design: the JWT
+  // sub, refresh / reset / verification tokens, and the tenant-less legacy
+  // login and forgot-password. Anything else that wants every company's users
+  // is a cross-tenant read; adding a file here needs the same written
+  // justification as the MT-012 allowlist above.
+  {
+    files: ['apps/api/src/**/*.ts'],
+    ignores: [
+      'apps/api/src/common/tenant/tenant-context.ts',
+      // Token / JWT / tenant-less legacy routes (see the route comments).
+      'apps/api/src/modules/auth/auth.controller.ts',
+      // Runs before TenantContextInterceptor; the sub is what finds the company.
+      'apps/api/src/modules/auth/jwt.strategy.ts',
+      'apps/api/src/**/*.spec.ts',
+      'apps/api/src/**/__tests__/**/*.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/tenant/tenant-context'],
+              importNames: ['runAsPlatform'],
+              message:
+                'runAsPlatform turns tenant scoping off for every model, User included. ' +
+                'Use runInCompany, or add this file to the Option B allowlist in eslint.config.mjs with a justification.',
+            },
+          ],
+        },
       ],
     },
   },

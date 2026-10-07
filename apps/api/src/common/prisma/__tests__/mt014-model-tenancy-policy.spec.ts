@@ -5,7 +5,8 @@
  *  1. Equivalence: TENANT_SCOPED_MODELS ↔ MODEL_TENANCY TENANT_OWNED
  *  2. getModelTier — runtime fail-closed guard
  *  3. TENANT_OWNED models get companyId injected (findMany, create, upsert)
- *  4. TENANT_CONTROLLED (User) → NO automatic injection
+ *  4. User (TENANT_OWNED since Option B part 2) → injected like any owned model;
+ *     TENANT_CONTROLLED (OtpCode) → NO automatic injection
  *  5. TENANT_VIA_RELATION → NO automatic injection
  *  6. PLATFORM_GLOBAL → NO automatic injection
  *  7. Bypass semantics preserved for TENANT_OWNED
@@ -64,9 +65,9 @@ describe('MT-014 equivalence: TENANT_SCOPED_MODELS ↔ MODEL_TENANCY TENANT_OWNE
     expect(missing).toEqual([]);
   });
 
-  it('both sets have the same cardinality (50 models after Step A + Step C + Step D1 ContractCancellation/Refund)', () => {
-    expect(TENANT_SCOPED_MODELS.size).toBe(50);
-    expect(ownedFromModelTenancy.size).toBe(50);
+  it('both sets have the same cardinality (51 models after Step A + Step C + Step D1 + Option B User)', () => {
+    expect(TENANT_SCOPED_MODELS.size).toBe(51);
+    expect(ownedFromModelTenancy.size).toBe(51);
   });
 
   it('MODEL_TIER_BY_LOWERCASE includes all TENANT_OWNED models with correct tier', () => {
@@ -85,8 +86,12 @@ describe('MT-014 getModelTier — runtime fail-closed', () => {
     expect(getModelTier('project')).toBe('TENANT_OWNED');
   });
 
-  it('returns TENANT_CONTROLLED for user', () => {
-    expect(getModelTier('user')).toBe('TENANT_CONTROLLED');
+  it('returns TENANT_OWNED for user (Option B part 2)', () => {
+    expect(getModelTier('user')).toBe('TENANT_OWNED');
+  });
+
+  it('returns TENANT_CONTROLLED for otpcode', () => {
+    expect(getModelTier('otpcode')).toBe('TENANT_CONTROLLED');
   });
 
   it('returns PLATFORM_GLOBAL for company', () => {
@@ -204,36 +209,53 @@ describe('MT-014 TENANT_OWNED policy — no context → MissingTenantContextErro
 });
 
 // ---------------------------------------------------------------------------
-// 4. TENANT_CONTROLLED — User: middleware must NOT auto-inject companyId
+// 4. User — TENANT_OWNED since Option B part 2: the middleware scopes it
 // ---------------------------------------------------------------------------
 
-describe('MT-014 TENANT_CONTROLLED (User) — no automatic companyId injection', () => {
-  const USER_OPTS = { scopedModels: new Set<string>() }; // user is NOT in the scoped set
+describe('MT-014 User (TENANT_OWNED, Option B part 2) — automatic companyId injection', () => {
+  // Production derives the scoped set from MODEL_TENANCY; mirror that here.
+  const USER_OPTS = {
+    scopedModels: new Set(
+      Object.entries(MODEL_TENANCY)
+        .filter(([, tier]) => tier === 'TENANT_OWNED')
+        .map(([name]) => name.toLowerCase()),
+    ),
+  };
 
-  it('applyReadPolicy passes through unchanged for user (not in scopedModels)', async () => {
+  it('a lookup by email only finds the context company\'s account', async () => {
     await runTenantContext({ companyId: 'company-A', bypass: false, isPublic: false }, async () => {
-      const input = { where: { email: 'test@example.com' } };
-      const result = applyReadPolicy('user', input, USER_OPTS);
-      // No companyId injected — where remains as provided
-      expect(result.where).not.toHaveProperty('companyId');
-      expect(result.where).toEqual({ email: 'test@example.com' });
+      const result = applyReadPolicy('user', { where: { email: 'test@example.com' } }, USER_OPTS);
+      expect(result.where).toEqual({ email: 'test@example.com', companyId: 'company-A' });
     });
   });
 
-  it('applyCreatePolicy passes through unchanged for user (not in scopedModels)', async () => {
+  it('a caller-supplied companyId cannot point a lookup at another company', async () => {
     await runTenantContext({ companyId: 'company-A', bypass: false, isPublic: false }, async () => {
-      const input = { data: { email: 'test@example.com', role: 'SALES' } };
-      const result = applyCreatePolicy('user', input, USER_OPTS);
-      // No companyId auto-injected — service layer is responsible
-      expect(result.data).not.toHaveProperty('companyId');
+      const result = applyReadPolicy('user', { where: { phone: '+201000000000', companyId: 'company-B' } }, USER_OPTS);
+      expect(result.where).toEqual({ phone: '+201000000000', companyId: 'company-A' });
     });
   });
 
-  it('MODEL_TENANCY classifies User as TENANT_CONTROLLED (not TENANT_OWNED)', () => {
-    expect(MODEL_TENANCY['User']).toBe('TENANT_CONTROLLED');
-    expect(getModelTier('user')).toBe('TENANT_CONTROLLED');
-    // Therefore User is NOT in TENANT_OWNED_MODELS and gets no auto-injection
-    expect(MODEL_TIER_BY_LOWERCASE.get('user')).not.toBe('TENANT_OWNED');
+  it('create stamps the context company and rejects a different one', async () => {
+    await runTenantContext({ companyId: 'company-A', bypass: false, isPublic: false }, async () => {
+      const created = applyCreatePolicy('user', { data: { email: 'test@example.com', role: 'SALES' } }, USER_OPTS);
+      expect(created.data).toMatchObject({ companyId: 'company-A' });
+      expect(() =>
+        applyCreatePolicy('user', { data: { email: 'x@example.com', companyId: 'company-B' } }, USER_OPTS),
+      ).toThrow(TenantScopeViolationError);
+    });
+  });
+
+  it('fails closed with no context, and passes through only in bypass', async () => {
+    expect(() => applyReadPolicy('user', { where: { id: 'u1' } }, USER_OPTS)).toThrow(MissingTenantContextError);
+    await runTenantContext({ companyId: null, bypass: true, isPublic: false }, async () => {
+      expect(applyReadPolicy('user', { where: { id: 'u1' } }, USER_OPTS).where).toEqual({ id: 'u1' });
+    });
+  });
+
+  it('MODEL_TENANCY classifies User as TENANT_OWNED', () => {
+    expect(MODEL_TENANCY['User']).toBe('TENANT_OWNED');
+    expect(MODEL_TIER_BY_LOWERCASE.get('user')).toBe('TENANT_OWNED');
   });
 });
 
@@ -331,9 +353,9 @@ describe('MT-014 MODEL_TIER_BY_LOWERCASE derived set', () => {
     }
   });
 
-  it('TENANT_OWNED count matches TENANT_SCOPED_MODELS count (50 after Step A + Step C + Step D1)', () => {
+  it('TENANT_OWNED count matches TENANT_SCOPED_MODELS count (51 after Step A + Step C + Step D1 + Option B User)', () => {
     const ownedCount = [...MODEL_TIER_BY_LOWERCASE.values()].filter((t) => t === 'TENANT_OWNED').length;
-    expect(ownedCount).toBe(50);
+    expect(ownedCount).toBe(51);
   });
 });
 

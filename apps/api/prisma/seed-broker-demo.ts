@@ -86,14 +86,17 @@ async function findUnit(
 
 // ── Helper: ensure a demo CLIENT user by phone ───────────────────────────────
 
+// Option B — users belong to a company (the admin's): the API only ever sees a
+// user inside its own company's tenant scope.
 async function ensureDemoClient(
+  companyId: string | null,
   phone: string,
   fullName: string,
 ): Promise<{ id: string }> {
-  const existing = await prisma.user.findFirst({ where: { phone } });
+  const existing = await prisma.user.findFirst({ where: { phone, companyId } });
   if (existing) return { id: existing.id };
   return prisma.user.create({
-    data: { role: UserRole.CLIENT, fullName, phone, locale: 'ar' },
+    data: { role: UserRole.CLIENT, fullName, phone, locale: 'ar', companyId },
     select: { id: true },
   });
 }
@@ -101,12 +104,13 @@ async function ensureDemoClient(
 // ── Helper: ensure a demo BROKER role user ───────────────────────────────────
 
 async function ensureDemoBrokerUser(
+  companyId: string | null,
   email: string,
   fullName: string,
 ): Promise<{ id: string }> {
   const hash = await argon2.hash('DemoPass123!');
-  return upsertUserByEmail(prisma, email, {
-    create: { email, passwordHash: hash, fullName, role: UserRole.BROKER, locale: 'ar' },
+  return upsertUserByEmail(prisma, email, companyId, {
+    create: { email, passwordHash: hash, fullName, role: UserRole.BROKER, locale: 'ar', companyId },
     update: {},
     select: { id: true },
   });
@@ -205,7 +209,7 @@ async function main(): Promise<void> {
   // ── Resolve prerequisite users ─────────────────────────────────────────────
   const adminUser = await prisma.user.findFirst({
     where: { role: UserRole.ADMIN },
-    select: { id: true },
+    select: { id: true, companyId: true },
   });
   if (!adminUser) throw new Error('No ADMIN user found — run the dev seed first.');
 
@@ -334,15 +338,15 @@ async function main(): Promise<void> {
     bu4Owner,
     bu5Owner,
   ] = await Promise.all([
-    ensureDemoBrokerUser('demo.br1.owner@devora-demo.com', 'نواف المهيدب'),
-    ensureDemoBrokerUser('demo.br1.sales@devora-demo.com', 'عبدالرحمن محمد'),
-    ensureDemoBrokerUser('demo.br1.coord@devora-demo.com', 'سارة العمري'),
-    ensureDemoBrokerUser('demo.br2.owner@devora-demo.com', 'خالد الزهراني'),
-    ensureDemoBrokerUser('demo.br2.sales@devora-demo.com', 'ريم القحطاني'),
-    ensureDemoBrokerUser('demo.br3.owner@devora-demo.com', 'فيصل العثيم'),
-    ensureDemoBrokerUser('demo.br3.sales@devora-demo.com', 'هند المطيري'),
-    ensureDemoBrokerUser('demo.br4.owner@devora-demo.com', 'أحمد الجديدة'),
-    ensureDemoBrokerUser('demo.br5.owner@devora-demo.com', 'محمد النجم'),
+    ensureDemoBrokerUser(adminUser.companyId, 'demo.br1.owner@devora-demo.com', 'نواف المهيدب'),
+    ensureDemoBrokerUser(adminUser.companyId, 'demo.br1.sales@devora-demo.com', 'عبدالرحمن محمد'),
+    ensureDemoBrokerUser(adminUser.companyId, 'demo.br1.coord@devora-demo.com', 'سارة العمري'),
+    ensureDemoBrokerUser(adminUser.companyId, 'demo.br2.owner@devora-demo.com', 'خالد الزهراني'),
+    ensureDemoBrokerUser(adminUser.companyId, 'demo.br2.sales@devora-demo.com', 'ريم القحطاني'),
+    ensureDemoBrokerUser(adminUser.companyId, 'demo.br3.owner@devora-demo.com', 'فيصل العثيم'),
+    ensureDemoBrokerUser(adminUser.companyId, 'demo.br3.sales@devora-demo.com', 'هند المطيري'),
+    ensureDemoBrokerUser(adminUser.companyId, 'demo.br4.owner@devora-demo.com', 'أحمد الجديدة'),
+    ensureDemoBrokerUser(adminUser.companyId, 'demo.br5.owner@devora-demo.com', 'محمد النجم'),
   ]);
 
   // Link users to firms via BrokerUser (unique on userId)
@@ -421,20 +425,20 @@ async function main(): Promise<void> {
   console.log('   Creating demo clients…');
 
   const clients = await Promise.all([
-    ensureDemoClient('+96650010001', 'عبدالله الغامدي'),
-    ensureDemoClient('+96650010002', 'نورة السبيعي'),
-    ensureDemoClient('+96650010003', 'طارق العنزي'),
-    ensureDemoClient('+96650010004', 'منال الشمري'),
-    ensureDemoClient('+96650010005', 'يوسف الحربي'),
-    ensureDemoClient('+96650010006', 'لمياء الدوسري'),
-    ensureDemoClient('+96650010007', 'سلطان المالكي'),
-    ensureDemoClient('+96650010008', 'ديمة الزهراني'),
-    ensureDemoClient('+96650010009', 'راشد القرني'),
-    ensureDemoClient('+96650010010', 'هيا الرشيدي'),
-    ensureDemoClient('+96650010011', 'بندر العتيبي'),
-    ensureDemoClient('+96650010012', 'ريم الجهني'),
-    ensureDemoClient('+96650010013', 'عمر البقمي'),
-    ensureDemoClient('+96650010014', 'فاطمة الحازمي'),
+    ensureDemoClient(adminUser.companyId, '+96650010001', 'عبدالله الغامدي'),
+    ensureDemoClient(adminUser.companyId, '+96650010002', 'نورة السبيعي'),
+    ensureDemoClient(adminUser.companyId, '+96650010003', 'طارق العنزي'),
+    ensureDemoClient(adminUser.companyId, '+96650010004', 'منال الشمري'),
+    ensureDemoClient(adminUser.companyId, '+96650010005', 'يوسف الحربي'),
+    ensureDemoClient(adminUser.companyId, '+96650010006', 'لمياء الدوسري'),
+    ensureDemoClient(adminUser.companyId, '+96650010007', 'سلطان المالكي'),
+    ensureDemoClient(adminUser.companyId, '+96650010008', 'ديمة الزهراني'),
+    ensureDemoClient(adminUser.companyId, '+96650010009', 'راشد القرني'),
+    ensureDemoClient(adminUser.companyId, '+96650010010', 'هيا الرشيدي'),
+    ensureDemoClient(adminUser.companyId, '+96650010011', 'بندر العتيبي'),
+    ensureDemoClient(adminUser.companyId, '+96650010012', 'ريم الجهني'),
+    ensureDemoClient(adminUser.companyId, '+96650010013', 'عمر البقمي'),
+    ensureDemoClient(adminUser.companyId, '+96650010014', 'فاطمة الحازمي'),
   ]);
 
   // ── 5. Broker leads ─────────────────────────────────────────────────────────
