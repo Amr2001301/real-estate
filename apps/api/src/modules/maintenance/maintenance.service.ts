@@ -13,6 +13,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
+import { runInCompany } from '../../common/tenant/tenant-context';
 import { toCsv, type CsvCell } from '../../common/utils/csv';
 import {
   addFooter,
@@ -960,7 +961,7 @@ export class MaintenanceService {
           status: { notIn: [MaintenanceStatus.RESOLVED, MaintenanceStatus.CLOSED] },
           reviewStatus: MaintenanceReviewStatus.APPROVED,
         },
-        select: { id: true },
+        select: { id: true, companyId: true },
       }),
       this.prisma.maintenanceRequest.findMany({
         where: {
@@ -968,7 +969,7 @@ export class MaintenanceService {
           status: { notIn: [MaintenanceStatus.RESOLVED, MaintenanceStatus.CLOSED] },
           reviewStatus: MaintenanceReviewStatus.APPROVED,
         },
-        select: { id: true },
+        select: { id: true, companyId: true },
       }),
     ]);
 
@@ -976,45 +977,11 @@ export class MaintenanceService {
     let breached = 0;
 
     for (const r of warningCandidates) {
-      const exists = await this.prisma.notification.findFirst({
-        where: {
-          templateCode: 'maintenance_sla_warning',
-          payload: { path: ['entityId'], equals: r.id },
-        },
-        select: { id: true },
-      });
-      if (exists) continue;
-      try {
-        await this.notifications.sendToRoles(
-          [UserRole.ADMIN, UserRole.MAINTENANCE_SUPERVISOR],
-          'maintenance_sla_warning',
-          { entityType: 'maintenance', entityId: r.id, requestId: r.id },
-        );
-        warned++;
-      } catch {
-        // best-effort
-      }
+      if (await this.notifySlaOnce(r, 'maintenance_sla_warning')) warned++;
     }
 
     for (const r of breachCandidates) {
-      const exists = await this.prisma.notification.findFirst({
-        where: {
-          templateCode: 'maintenance_sla_breached',
-          payload: { path: ['entityId'], equals: r.id },
-        },
-        select: { id: true },
-      });
-      if (exists) continue;
-      try {
-        await this.notifications.sendToRoles(
-          [UserRole.ADMIN, UserRole.MAINTENANCE_SUPERVISOR],
-          'maintenance_sla_breached',
-          { entityType: 'maintenance', entityId: r.id, requestId: r.id },
-        );
-        breached++;
-      } catch {
-        // best-effort
-      }
+      if (await this.notifySlaOnce(r, 'maintenance_sla_breached')) breached++;
     }
 
     this.logger.log(`SLA check: warned=${warned} breached=${breached}`);
@@ -1027,6 +994,42 @@ export class MaintenanceService {
    * updateMany guard (`unresolvedAt: null`) means a re-run never re-flags or
    * re-notifies a row. Returns aggregate counts for logging/tests.
    */
+  /**
+   * One SLA notification per request, to that request's company's admins and
+   * supervisors. The sweep runs in bypass, where the role fan-out has no
+   * company to resolve against (it used to fail and send nothing) — so each
+   * request is handled inside its own company.
+   */
+  private async notifySlaOnce(
+    r: { id: string; companyId: string | null },
+    templateCode: 'maintenance_sla_warning' | 'maintenance_sla_breached',
+  ): Promise<boolean> {
+    if (!r.companyId) {
+      this.logger.warn(`SLA check: request ${r.id} has no company — ${templateCode} skipped`);
+      return false;
+    }
+    return runInCompany(r.companyId, async () => {
+      const exists = await this.prisma.notification.findFirst({
+        where: {
+          templateCode,
+          payload: { path: ['entityId'], equals: r.id },
+        },
+        select: { id: true },
+      });
+      if (exists) return false;
+      try {
+        await this.notifications.sendToRoles(
+          [UserRole.ADMIN, UserRole.MAINTENANCE_SUPERVISOR],
+          templateCode,
+          { entityType: 'maintenance', entityId: r.id, requestId: r.id },
+        );
+        return true;
+      } catch {
+        return false; // best-effort
+      }
+    });
+  }
+
   async markUnresolved(): Promise<{ scanned: number; marked: number }> {
     const threshold = new Date(Date.now() - UNRESOLVED_AFTER_COMPLAINT_MS);
     const candidates = await this.prisma.maintenanceRequest.findMany({
@@ -1035,23 +1038,31 @@ export class MaintenanceService {
         unresolvedAt: null,
         status: { notIn: [MaintenanceStatus.RESOLVED, MaintenanceStatus.CLOSED] },
       },
-      select: { id: true },
+      select: { id: true, companyId: true },
     });
     let marked = 0;
     for (const c of candidates) {
-      const res = await this.prisma.maintenanceRequest.updateMany({
-        where: { id: c.id, unresolvedAt: null },
-        data: { unresolvedAt: new Date() },
-      });
-      if (res.count > 0) {
-        marked++;
+      if (!c.companyId) {
+        this.logger.warn(`Unresolved sweep: request ${c.id} has no company — skipped`);
+        continue;
+      }
+      // Runs in the request's company, like checkSla: the customer and the
+      // admin fan-out resolve there and the notifications carry its companyId.
+      const didMark = await runInCompany(c.companyId, async () => {
+        const res = await this.prisma.maintenanceRequest.updateMany({
+          where: { id: c.id, unresolvedAt: null },
+          data: { unresolvedAt: new Date() },
+        });
+        if (res.count === 0) return false;
         await this.notifyResolutionEvent(
           c.id,
           'maintenance_request_unresolved',
           'maintenance_unresolved',
           { toCustomer: true },
         );
-      }
+        return true;
+      });
+      if (didMark) marked++;
     }
     this.logger.log(`Maintenance unresolved sweep: scanned=${candidates.length} marked=${marked}`);
     return { scanned: candidates.length, marked };

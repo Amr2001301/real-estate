@@ -3,6 +3,7 @@ import {
   InstallmentRemindersService,
   InstallmentsCron,
 } from '../installments.module';
+import { getTenantContext } from '../../../common/tenant/tenant-context';
 
 /**
  * P11.7 — InstallmentRemindersService.run() + the env gate on
@@ -17,6 +18,7 @@ interface DueOverrides {
   dueDate?: Date;
   amount?: number;
   customerId?: string | null;
+  companyId?: string | null;
 }
 
 function dec(n: number) {
@@ -26,6 +28,7 @@ function dec(n: number) {
 function dueRow(o: DueOverrides = {}) {
   return {
     id: o.id ?? 'inst-1',
+    companyId: o.companyId === undefined ? 'company-1' : o.companyId,
     planId: 'plan-1',
     dueDate: o.dueDate ?? new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
     amount: dec(o.amount ?? 5000),
@@ -120,6 +123,19 @@ describe('InstallmentRemindersService.run', () => {
     const summary = await buildService(prisma, notifications).run({ dryRun: false });
     expect(summary).toMatchObject({ scanned: 1, sent: 0, skipped: 1 });
     expect(notifications.sendToUser).not.toHaveBeenCalled();
+  });
+
+  it('sends inside the installment\'s company, and skips a row with no company', async () => {
+    const prisma = makePrisma([dueRow(), dueRow({ id: 'inst-2', companyId: null })]);
+    const notifications = makeNotifications();
+    let seen: string | null | undefined;
+    notifications.sendToUser.mockImplementation(async () => {
+      seen = getTenantContext()?.companyId;
+    });
+    const summary = await buildService(prisma, notifications).run({ dryRun: false });
+    expect(summary).toMatchObject({ scanned: 2, sent: 1, skipped: 1 });
+    expect(notifications.sendToUser).toHaveBeenCalledTimes(1);
+    expect(seen).toBe('company-1');
   });
 
   it('is idempotent: does not re-send when a reminder already exists for installment+dueDate', async () => {

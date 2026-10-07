@@ -365,6 +365,8 @@ Ranked by: customer-facing severity, whether failure is silent, and whether it b
 | 21 | FG-21 | Eleven non-auth write paths stored `User.phone` as typed (the original count of three was wrong) | Medium | Yes — same OTP split-account defect applies to customers created via leads or by admin | **Fixed 2026-10-07** — every path goes through `phoneForWrite()`; B-FG21 proves lead → OTP lands on one account |
 | 22 | FG-22 | argon2 called at library defaults everywhere — no config, no recorded rationale; 382 ms/login uncontended on CI, 11–19× degradation at 3 concurrent; production not measured | Medium | No — defaults are safe; risk is throughput, not security | No — login works; concurrent sign-in capacity is unknown |
 | 24 | FG-24 | Three user-create paths (broker-portal lead client, broker-portal team, admin broker users) wrote no `companyId` on the TENANT_CONTROLLED `User` model | High | Partly — users vanish from tenant-scoped lists | **Fixed 2026-10-07** — companyId set, foreign-user attach refused, unambiguous rows backfilled |
+| 25 | FG-25 | Scheduled jobs did their per-row work in bypass: every cron notification was stored with `companyId` NULL and never pushed or emailed, role fan-outs (maintenance SLA) sent nothing, reservation-expiry activity lost its company; the two appointment-reminder templates were never seeded | High | Yes — nothing failed visibly; reminders simply never arrived | **Fixed 2026-10-07** — each row is handled in its own company (`runInCompany`); templates seeded; CRON-CTX e2e |
+| 26 | FG-26 | `NotificationTemplate.code` is unique platform-wide but the model is `TENANT_OWNED` and seeded under the default company only — every notification for any other company fails at the template lookup; `cheque_bounced` and `contract_cancelled_customer` are not seeded at all | **Critical** for a second tenant | Yes — sends are best-effort and swallow the error | **Open** — needs a design decision (§FG-26) |
 
 ---
 
@@ -703,6 +705,70 @@ SELECT role, COUNT(*) FROM "User"
 WHERE "companyId" IS NULL AND role IN ('BROKER','CLIENT','CUSTOMER')
 GROUP BY role;
 ```
+
+---
+
+### FG-25: Scheduled jobs did their per-row work in bypass
+
+**Severity:** High · **Status:** Fixed 2026-10-07
+
+Every cron opens `runTenantContext({ bypass: true })` to sweep all companies,
+and then did each row's work in that same bypass context. Found while checking
+whether the option-(a) user helpers could be retired (doc 13 §0.1) — they
+cannot: in bypass the middleware does not scope, and `getRequiredCompanyId()`
+inside the helpers is what failed closed.
+
+What the bypass did, proved on the e2e database before the fix:
+
+| Job | Effect |
+|---|---|
+| Appointment reminders (day-before, hour-before) | Notification row stored with `companyId` NULL — not in the recipient's `/me/notifications`; push and email aborted at `resolveTenantUser` (`getRequiredCompanyId() called in bypass context`). Also: the two template codes were never seeded, so even that row was never written |
+| Installment due-soon reminders | Same NULL-company row, no push or email |
+| Maintenance SLA warning / breach | `sendToRoles` threw inside `scopedUserFindMany`; nobody notified. Swapping in a plain `findMany` would have notified **every company's** admins |
+| Maintenance unresolved sweep | Customer and admin notifications as above |
+| Reservation expiry | `ReservationActivity`, `LeadActivity`, `UnitStatusHistory` rows stored with `companyId` NULL — "Expired automatically" missing from the timeline |
+
+**Fix:** each row is processed inside `runInCompany(row.companyId)`; rows with
+no company are skipped with a warning (reservation expiry keeps its old path
+for them so a due reservation still expires). The appointment-reminder
+templates are seeded.
+
+**Gate:** `e2e-mt-security` **CRON-CTX** runs the real jobs through
+`TestApp.runCronJob`: the day-before reminder lands under the customer's
+company and in their `/me/notifications`; an SLA breach in company A reaches
+A's admin and not company B's; an expired reservation's EXPIRED activity
+carries its company. All three fail with the cron files reverted.
+
+---
+
+### FG-26: Notification templates exist for the default company only
+
+**Severity:** Critical as soon as a second company is live · **Status:** Open
+
+`NotificationTemplate.code` is `@unique` platform-wide, the model is
+`TENANT_OWNED`, and `seed.ts` creates the templates and then backfills them
+to the seed company. Every `send()` looks the template up with
+`findUnique({ where: { code } })`; the middleware adds the caller's
+`companyId`, so for any other company the lookup returns nothing and the send
+throws `Template … not found` — swallowed, because sends are best-effort.
+Proved on the e2e database: an SLA breach in a second company notified no one.
+The admin template editor (`POST /notification-templates`, ADMIN) cannot fix it
+either: an upsert from company B misses A's row and the create collides on the
+global unique `code`.
+
+Also not seeded anywhere: `cheque_bounced` (payment instruments) and
+`contract_cancelled_customer` (contract cancellation) — those sends fail for
+every company.
+
+**Options (decision needed):**
+
+1. *Platform defaults + per-company overrides.* `@@unique([companyId, code])`,
+   platform rows with `companyId` NULL, lookup = the company's row else the
+   platform row. Admins edit only their own override. Most correct; a migration
+   and a lookup change.
+2. *Platform-only templates.* Reclassify as `PLATFORM_GLOBAL`, `companyId`
+   NULL, editing restricted to SUPER_ADMIN. Smallest change; tenants lose
+   per-company wording.
 
 ---
 
