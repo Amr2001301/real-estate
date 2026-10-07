@@ -250,6 +250,7 @@ A `globalSetup` guard now fails loudly if any `zz_test_*` objects are found at s
 | G13 | Low (accepted) | `E2E_TENANT_BYPASS_SLUG` has no deploy-time enforcement — see below |
 | G15 | Critical | A failed path filter skipped every job and the gate reported green — **FIX PUSHED** 2026-10-06, verified by the PR run — see below |
 | G14 | Medium (dated) | `ubuntu-latest` → 26.04 from 2026-10-19; Node 20 action runtimes — **MITIGATED** 2026-10-06: runners pinned to 24.04, actions on Node 24 majors; the 26.04 move itself still open — see below |
+| G16 | High (cost + feedback time) | Security job had no Redis: every capability/branding cache read waited on ioredis reconnects, ~30 min per run instead of ~1–2 — **FIX PUSHED** 2026-10-07, Redis service added — see below |
 
 ---
 
@@ -676,3 +677,39 @@ pointed at the gate (G3), this would have let any PR merge untested.
 
 The PR run after the fix must show `detect changed areas` green, the
 filtered jobs actually running, and the gate green on their results.
+
+---
+
+## G16 — The security suite ran ~30× slower than it needed to
+
+**Found:** 2026-10-07, while looking at Actions minutes (the account's free
+2,000 minutes ran out on Oct 7; the security job was ~31 of every ~60 CI
+minutes per run).
+
+The security job sets `REDIS_URL` but, unlike the e2e jobs, started no Redis
+service. `CapabilityService`, `CompanyBrandingService` and `CronLockService`
+each hold an ioredis client (`maxRetriesPerRequest: 1`, `lazyConnect`). With
+no server, every cache read waits for ioredis to retry the connection before
+the code falls back to the database — and the capability cache is read on
+most authenticated requests. Nothing fails, so the suite stayed green and
+merely took ~30 minutes. The G7 timeout increase (20 → 35 min) treated this
+symptom.
+
+**Reproduced locally:** the full suite takes 37 s with Redis running; with
+Redis stopped, `02-attack-matrix` alone took 440 s before the run was stopped.
+
+### Fix
+
+- `api-security` gets the same `redis:7-alpine` service as `api-e2e-1/2`.
+- `timeout-minutes` 35 → 15, so a regression back to the slow path fails
+  loudly instead of silently costing 30 minutes per run.
+
+### Open (production)
+
+The same path applies in production: if Redis goes down, every request that
+reads the capability cache waits on reconnect attempts before falling back.
+Failing fast (`enableOfflineQueue: false` with an eager connection and an
+`error` listener) would keep the API at database speed during a Redis outage.
+Not changed here — it alters production connection behaviour and needs its
+own test.
+
