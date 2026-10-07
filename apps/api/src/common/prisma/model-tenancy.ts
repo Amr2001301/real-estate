@@ -7,7 +7,7 @@
  *
  *   TENANT_OWNED         — Has companyId column. Middleware auto-injects and
  *                          filters. Throws MissingTenantContextError when no
- *                          context and no bypass. 51 models total (User included).
+ *                          context and no bypass. 50 models total (User included).
  *
  *   TENANT_VIA_RELATION  — No companyId column. Scoped through a parent FK
  *                          (e.g. userId → User, projectId → Project). No
@@ -16,7 +16,8 @@
  *
  *   TENANT_CONTROLLED    — Has companyId but middleware does NOT inject it.
  *                          Every query must carry an explicit companyId at the
- *                          service layer. Members: OtpCode, CompanyDomain.
+ *                          service layer. Members: OtpCode, CompanyDomain,
+ *                          NotificationTemplate (FG-26).
  *                          (User left this tier for TENANT_OWNED in Option B
  *                          part 2 — docs/audit/13-user-tenancy.md.)
  *
@@ -67,6 +68,11 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
 
   // ── TENANT_CONTROLLED ──────────────────────────────────────────────────────
   // Middleware pass-through. Explicit service-level companyId enforcement required.
+  // FG-26: platform defaults (companyId NULL) + per-company overrides. A
+  // tenant-scoped read could never see the platform row, so NotificationsService
+  // resolves templates explicitly (templatesFor) and writes overrides with the
+  // caller's companyId. Nothing else queries this model.
+  NotificationTemplate: 'TENANT_CONTROLLED',
   // MT-030: OtpCode reclassified from PLATFORM_GLOBAL. companyId column added in
   // MT-021. Service layer supplies companyId on every OtpCode read and write.
   // Option-A cutover: new OTPs written with companyId; legacy null-companyId OTPs
@@ -90,7 +96,7 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   PlanTemplateScheduleItem: 'TENANT_VIA_RELATION',  // planId → InstallmentPlanTemplate
 
   // ── TENANT_OWNED ───────────────────────────────────────────────────────────
-  // Has companyId column. Middleware auto-injects and filters. (50 domain models; User above makes 51)
+  // Has companyId column. Middleware auto-injects and filters. (49 domain models; User above makes 50)
 
   // Projects / inventory
   Project: 'TENANT_OWNED',
@@ -143,7 +149,6 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   CmsPage: 'TENANT_OWNED',
   Banner: 'TENANT_OWNED',
   Article: 'TENANT_OWNED',
-  NotificationTemplate: 'TENANT_OWNED',
   Notification: 'TENANT_OWNED',
   AuditLog: 'TENANT_OWNED',
 

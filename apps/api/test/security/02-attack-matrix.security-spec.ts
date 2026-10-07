@@ -792,14 +792,13 @@ describe('SEC — Attack Matrix (STEP 3)', () => {
   // ══════════════════════════════════════════════════════════════════════════
   // [NOTIF] Cross-tenant notification template overwrite — BLOCKED
   //
-  // NotificationTemplate.code has a global @unique constraint; the $queryRaw
-  // guard in upsertTemplate detects cross-tenant ownership and throws 403.
+  // FG-26: templates are unique per (companyId, code) — platform defaults plus
+  // per-company overrides. A company's editor writes only its own override.
   // ══════════════════════════════════════════════════════════════════════════
 
   describe('[NOTIF] Cross-tenant notification template overwrite', () => {
-    it('NOTIF-1: Company A ADMIN cannot overwrite a template owned by Company B (403)', async () => {
-      // Company B's template 'sec-notif-tpl-b' was seeded in the fixture.
-      // Company A ADMIN submits the same code → $queryRaw detects companyId mismatch → 403.
+    it("NOTIF-1: Company A ADMIN posting Company B's code creates A's own override (201)", async () => {
+      // Company B's override 'sec-notif-tpl-b' was seeded in the fixture.
       const res = await http()
         .post('/v1/notification-templates')
         .set('Authorization', bearer(adminAToken))
@@ -812,24 +811,36 @@ describe('SEC — Attack Matrix (STEP 3)', () => {
           en_body: 'Content',
           active: true,
         })
-        .expect(403);
+        .expect(201);
 
-      expect(res.body).toMatchObject({
-        message: expect.stringContaining('belongs to another tenant'),
-      });
+      expect(res.body).toMatchObject({ companyId: fx.companies.aId });
     });
 
-    it('NOTIF-2: Company B template is unchanged after the rejected attack', async () => {
-      const tpl = await testApp.rawPrisma.notificationTemplate.findUnique({
-        where: { code: fx.resources.b.notificationTemplateCode },
-        select: { companyId: true, subject: true },
+    it("NOTIF-2: Company B's template is unchanged, and B's editor still sees B's text", async () => {
+      const tpl = await testApp.rawPrisma.notificationTemplate.findFirst({
+        where: { code: fx.resources.b.notificationTemplateCode, companyId: fx.companies.bId },
+        select: { subject: true },
       });
       expect(tpl).not.toBeNull();
-      expect(tpl!.companyId).toBe(fx.companies.bId);
+      expect(tpl!.subject).toEqual({ ar: 'عنوان ب', en: 'Title B' });
+
+      const list = await http().get('/v1/notification-templates').set('Authorization', bearer(adminBToken)).expect(200);
+      const seen = (list.body as Array<{ code: string; companyId: string | null; subject: unknown }>).filter(
+        (t) => t.code === fx.resources.b.notificationTemplateCode,
+      );
+      expect(seen).toHaveLength(1);
+      expect(seen[0]!.companyId).toBe(fx.companies.bId);
+      // LocaleInterceptor flattens the translatable subject to one language.
+      expect(JSON.stringify(seen[0]!.subject)).toMatch(/عنوان ب|Title B/);
+      expect(JSON.stringify(seen[0]!.subject)).not.toMatch(/هجوم|Attack/);
+
+      // Clean up A's override from NOTIF-1.
+      await testApp.rawPrisma.notificationTemplate.deleteMany({
+        where: { code: fx.resources.b.notificationTemplateCode, companyId: fx.companies.aId },
+      });
     });
 
     it('NOTIF-3: Company A ADMIN CAN create a template with a new code (sanity check)', async () => {
-      // Proves the guard only blocks cross-tenant conflicts, not all creates.
       await http()
         .post('/v1/notification-templates')
         .set('Authorization', bearer(adminAToken))
@@ -844,10 +855,9 @@ describe('SEC — Attack Matrix (STEP 3)', () => {
         })
         .expect(201);
 
-      // Clean up immediately so teardown does not conflict on the global unique code.
-      await testApp.rawPrisma.notificationTemplate.delete({
-        where: { code: 'sec-notif-tpl-a-only' },
-      }).catch(() => void 0);
+      await testApp.rawPrisma.notificationTemplate.deleteMany({
+        where: { code: 'sec-notif-tpl-a-only', companyId: fx.companies.aId },
+      });
     });
   });
 

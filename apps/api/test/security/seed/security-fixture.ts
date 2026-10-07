@@ -488,20 +488,23 @@ export async function seedSecurityFixture(raw: PrismaClient): Promise<SecurityFi
   });
 
   // ── NotificationTemplate — admin_broadcast passthrough (required by broadcastNotification) ──
-  // onModuleInit() fails silently in test environments (no tenant context at startup),
-  // so the template must be seeded here. Owned by Company A for the V-19 sanity test.
-  // teardownCompany() removes it via deleteMany({ where: { companyId: companyA.id } }).
-  await raw.notificationTemplate.deleteMany({ where: { code: 'admin_broadcast' } });
-  await raw.notificationTemplate.create({
-    data: {
-      code: 'admin_broadcast',
-      channel: 'IN_APP',
-      subject: { ar: '{{title_ar}}', en: '{{title_en}}' },
-      body: { ar: '{{body_ar}}', en: '{{body_en}}' },
-      active: true,
-      companyId: companyA.id,
-    },
+  // FG-26: a platform default (companyId NULL). NotificationsService.onModuleInit
+  // creates it on boot; ensure it here too in case the fixture runs first.
+  const broadcastTpl = await raw.notificationTemplate.findFirst({
+    where: { code: 'admin_broadcast', companyId: null },
+    select: { id: true },
   });
+  if (!broadcastTpl) {
+    await raw.notificationTemplate.create({
+      data: {
+        code: 'admin_broadcast',
+        channel: 'IN_APP',
+        subject: { ar: '{{title_ar}}', en: '{{title_en}}' },
+        body: { ar: '{{body_ar}}', en: '{{body_en}}' },
+        active: true,
+      },
+    });
+  }
 
   // ── NotificationTemplate — Company A (used by V-17 best-effort send test) ──
   const SEC_NOTIF_CODE_A = 'sec-notif-tpl-a';
@@ -516,9 +519,9 @@ export async function seedSecurityFixture(raw: PrismaClient): Promise<SecurityFi
     },
   });
 
-  // ── NotificationTemplate — Company B (target for cross-tenant overwrite test) ──
-  // code has a global @unique constraint; this template is owned by Company B.
-  // Company A must not be able to overwrite it via POST /notification-templates.
+  // ── NotificationTemplate — Company B's override (target for the cross-tenant overwrite test) ──
+  // FG-26: unique per (companyId, code). Company A posting the same code must
+  // create A's own override and leave this row untouched.
   const SEC_NOTIF_CODE_B = 'sec-notif-tpl-b';
   await raw.notificationTemplate.create({
     data: {

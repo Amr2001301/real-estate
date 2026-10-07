@@ -2089,7 +2089,11 @@ enum NotificationChannel {
 
 model NotificationTemplate {
   id           String              @id @default(uuid()) @db.Uuid
-  code         String              @unique // "visit_approved", "deposit_recorded"
+  // FG-26: unique per company. companyId NULL is the platform default every
+  // company gets; a company row with the same code is that company's override.
+  // The index is NULLS NOT DISTINCT (migration 20261007000003), so there is
+  // exactly one platform row per code.
+  code         String              // "visit_approved", "deposit_recorded"
   channel      NotificationChannel
   subject      Json // Translatable
   body         Json // Translatable (supports {{var}} placeholders)
@@ -2103,6 +2107,7 @@ model NotificationTemplate {
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  @@unique([companyId, code])
   @@index([companyId])
 }
 

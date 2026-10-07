@@ -212,10 +212,12 @@ function makePrismaMock() {
       create: jest.fn().mockResolvedValue({ id: 'n-1', sentAt: new Date() }),
     },
     notificationTemplate: {
-      findUnique: jest.fn().mockResolvedValue({
-        code: 'tpl', channel: 'IN_APP',
+      findMany: jest.fn(async ({ where }: { where: { code: { in: string[] } } }) =>
+        // Any requested code resolves (the old findUnique mock ignored the code too).
+        where.code.in.map((code) => ({
+        channel: 'IN_APP',
         subject: { ar: 's', en: 's' }, body: { ar: 'b', en: 'b' },
-      }),
+      companyId: null, code }))),
     },
     $transaction: jest.fn(),
   };

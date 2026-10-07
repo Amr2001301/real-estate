@@ -1134,3 +1134,138 @@ describe('CRON-CTX — scheduled jobs act inside each row\'s own company (e2e)',
     expect(activity.companyId).toBe(companyAId);
   });
 });
+
+// ═════════════════════════════════════════════════════════════════════════════
+// FG-26 — notification templates: platform defaults + per-company overrides
+// ═════════════════════════════════════════════════════════════════════════════
+//
+// Before: templates were tenant-scoped rows owned by the seed company and
+// `code` was unique platform-wide, so every other company's template lookup
+// found nothing and its notifications were never created.
+
+describe('FG-26 — every company gets its notifications; overrides stay per company (e2e)', () => {
+  let testApp: TestApp;
+  let fixtures: E2EFixtures;
+  const RUN = Date.now().toString(36);
+  const PASS_B = 'AdminB-fg26-123!';
+  let companyAId: string;
+  let companyBId: string;
+  let adminBId: string;
+  let adminAToken: string;
+  let adminBToken: string;
+  const requestIds: string[] = [];
+
+  beforeAll(async () => {
+    testApp = await createE2ETestApp();
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
+    const raw = testApp.rawPrisma;
+    companyAId = (await raw.user.findUniqueOrThrow({ where: { id: fixtures.userIds.adminId }, select: { companyId: true } }))
+      .companyId!;
+    companyBId = (
+      await raw.company.create({
+        data: { name: `FG-26 B ${RUN}`, slug: `fg26-${RUN}`, isActive: true, country: 'EG' },
+        select: { id: true },
+      })
+    ).id;
+    const emailB = `admin-b-${RUN}@fg26.local`;
+    adminBId = (
+      await raw.user.create({
+        data: {
+          email: emailB,
+          passwordHash: await argon2.hash(PASS_B),
+          fullName: 'Admin B',
+          role: UserRole.ADMIN,
+          active: true,
+          companyId: companyBId,
+        },
+        select: { id: true },
+      })
+    ).id;
+    [adminAToken, adminBToken] = await Promise.all([
+      loginAs(testApp.app, 'admin@example.com', 'ChangeMe123!'),
+      loginAs(testApp.app, emailB, PASS_B),
+    ]);
+  });
+
+  afterAll(async () => {
+    const raw = testApp.rawPrisma;
+    await raw.notification.deleteMany({
+      where: { OR: requestIds.map((id) => ({ payload: { path: ['entityId'], equals: id } })) },
+    });
+    await raw.maintenanceRequest.deleteMany({ where: { id: { in: requestIds } } });
+    await raw.notificationTemplate.deleteMany({ where: { companyId: companyBId } });
+    await raw.refreshToken.deleteMany({ where: { userId: adminBId } });
+    await raw.user.delete({ where: { id: adminBId } });
+    await raw.company.delete({ where: { id: companyBId } });
+  });
+
+  const breachIn = async (companyId: string) => {
+    const raw = testApp.rawPrisma;
+    const category = await raw.maintenanceCategory.findFirstOrThrow({ where: { companyId: companyAId }, select: { id: true } });
+    const req = await raw.maintenanceRequest.create({
+      data: {
+        customerId: fixtures.userIds.customer1UserId,
+        unitId: fixtures.units.sampleUnitInP1Id,
+        categoryId: category.id,
+        description: `fg26 ${RUN}`,
+        dueAt: new Date(Date.now() - 60 * 60_000),
+        companyId,
+      },
+      select: { id: true },
+    });
+    requestIds.push(req.id);
+    await testApp.runCronJob('maintenance-sla');
+    return req.id;
+  };
+
+  const titleFor = async (token: string, requestId: string) => {
+    const res = await request(testApp.app.getHttpServer())
+      .get('/v1/me/notifications?pageSize=100')
+      .set('Authorization', bearer(token));
+    expect(res.status).toBe(200);
+    const row = (res.body.data as Array<{ title: string; payload: { entityId?: string } }>).find(
+      (n) => n.payload?.entityId === requestId,
+    );
+    return row?.title;
+  };
+
+  it("a company other than the seed company gets its notifications (platform default template)", async () => {
+    const id = await breachIn(companyBId);
+    const rows = await testApp.rawPrisma.notification.findMany({
+      where: { templateCode: 'maintenance_sla_breached', payload: { path: ['entityId'], equals: id } },
+      select: { userId: true, companyId: true },
+    });
+    expect(rows.map((r) => r.userId)).toContain(adminBId);
+    for (const r of rows) expect(r.companyId).toBe(companyBId);
+    expect(await titleFor(adminBToken, id)).toBeTruthy();
+  });
+
+  it("company B's override changes B's wording only — never A's, never the platform default", async () => {
+    await request(testApp.app.getHttpServer())
+      .post('/v1/notification-templates')
+      .set('Authorization', bearer(adminBToken))
+      .send({
+        code: 'maintenance_sla_breached',
+        channel: 'PUSH',
+        ar_subject: 'شركة ب: تجاوز المهلة',
+        en_subject: 'Company B: SLA breached',
+        ar_body: 'نص ب',
+        en_body: 'Body B',
+      })
+      .expect(201);
+
+    const idB = await breachIn(companyBId);
+    const idA = await breachIn(companyAId);
+
+    expect(await titleFor(adminBToken, idB)).toMatch(/شركة ب|Company B/);
+    const titleA = await titleFor(adminAToken, idA);
+    expect(titleA).toBeTruthy();
+    expect(titleA).not.toMatch(/شركة ب|Company B/);
+
+    const platform = await testApp.rawPrisma.notificationTemplate.findFirstOrThrow({
+      where: { code: 'maintenance_sla_breached', companyId: null },
+      select: { subject: true },
+    });
+    expect(JSON.stringify(platform.subject)).not.toMatch(/Company B/);
+  });
+});
