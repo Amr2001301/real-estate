@@ -2,7 +2,53 @@
 
 **Date:** 2026-09-14  
 **Author:** security audit  
-**Status:** decision required
+**Status:** decided 2026-10-07 — **Option B**. Part 1 (per-company uniqueness) done; part 2 (`User` → `TENANT_OWNED`, §7 B-1..B-5) next.
+
+---
+
+## 0. Decision and part 1 — 2026-10-07
+
+**Decision:** the same person buying from two developers holds **one account per
+developer** — same email and phone, separate passwords, signed into through each
+developer's own login, each seeing only that developer's records. Chosen over a
+single platform identity with company switching because the product is
+white-label (ADR-17): each developer presents as its own app, and a platform-wide
+identity would link a customer's developers to each other.
+
+**What was broken before it.** `User.email` / `User.phone` were `@unique`
+platform-wide, so:
+
+- the second developer could not register the customer at all
+  (`registerCustomerV2` failed on the DB constraint);
+- lead paths looked the phone up **platform-wide** (`findUnique({ where: { phone } })`),
+  so developer B's lead, reservation and contract were attached to the account
+  developer A created. The customer could not see them — `login` under B looks up
+  `(email, companyId=B)` and found nothing; under A, the tenant middleware hid B's
+  rows. The records existed and nobody could reach them;
+- the importer rejected the phone outright ("platform limitation").
+
+**Part 1 — done:**
+
+| Change | Where |
+|---|---|
+| `@@unique([companyId, email])`, `@@unique([companyId, phone])` replace the global `@unique`s | migration `20261007000002_user_email_phone_unique_per_company` |
+| Every lookup by email/phone is company-scoped. Removing the global `@unique` made Prisma reject every `findUnique({ where: { email \| phone } })`, so the compiler listed them; `findFirst` lookups were swept by script | leads, public requests, broker-portal leads/visits/team, broker users, reservations ownership peers, importer |
+| Importer: a phone held by another developer is a separate customer, not an error; `crossTenantPhoneConflicts` removed | `data-import` |
+| Tenant-less legacy routes: `/auth/forgot-password` (still used by web-admin and the staff app) sends one reset per matching account; `/auth/login` picks the account by password and refuses to guess when two accounts share email **and** password (`TENANT_REQUIRED`) | `auth.service.ts` |
+| SUPER_ADMIN (no company): NULLs are distinct in a unique index, so DB-level email uniqueness no longer covers them. No API path creates one; only the seed does | migration note |
+
+**Gate:** `e2e-catalog-auth` **B-OPTB** — Ahmed registers at developer A and at
+developer B with the same email and phone; two accounts exist; each developer's
+login opens its own account with its own password, and A's password does not open
+B; a lead A's sales team adds lands on Ahmed's A account; registering twice at the
+same developer is still a 409. With the schema change reverted, the first three
+fail. Security **DI-6** rewritten: importing into A a phone B holds creates A's
+own customer and leaves B's untouched.
+
+**Part 2 — next:** §7 below. With per-company uniqueness in place, an unscoped
+`prisma.user` query by email or phone can now return *another company's* account,
+not merely fail to find one — which makes `TENANT_OWNED` enforcement more valuable
+than when this document was written.
 
 ---
 

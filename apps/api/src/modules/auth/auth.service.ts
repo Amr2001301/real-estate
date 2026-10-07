@@ -46,11 +46,29 @@ export class AuthService {
   // ------------- Email + password (Admin / Sales / Broker) -------------
 
   async loginEmail(email: string, password: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
+    // Option B — email is unique per company, not platform-wide, so this
+    // tenant-less legacy route can match several accounts. The password picks
+    // the account: checking it against each candidate means a wrong password
+    // still reads as "Invalid credentials", whether the email exists once,
+    // several times or not at all. Clients use /auth/login-staff, which has a
+    // slug; this route only remains for old builds (see the telemetry below).
+    const candidates = await this.prisma.user.findMany({
+      where: { email, deletedAt: null, passwordHash: { not: null } },
       include: { company: { select: { subscriptionStatus: true, subscriptionEndAt: true, lifecycleStatus: true } } },
     });
-    if (!user || !user.passwordHash) throw new UnauthorizedException('Invalid credentials');
+    const matching = [];
+    for (const c of candidates) {
+      if (await argon2.verify(c.passwordHash!, password)) matching.push(c);
+    }
+    if (matching.length === 0) throw new UnauthorizedException('Invalid credentials');
+    if (matching.length > 1) {
+      // Same email and password in two companies: only the company says which.
+      throw new UnauthorizedException({
+        message: 'This account exists in more than one company — sign in through your company login',
+        code: 'TENANT_REQUIRED',
+      });
+    }
+    const user = matching[0]!;
     if (!user.active) throw new ForbiddenException('Account inactive');
     if (
       user.role !== 'SUPER_ADMIN' &&
@@ -62,9 +80,6 @@ export class AuthService {
     ) {
       throw new ForbiddenException('Email login is for staff and brokers only');
     }
-    const ok = await argon2.verify(user.passwordHash, password);
-    if (!ok) throw new UnauthorizedException('Invalid credentials');
-
     // SUPER_ADMIN has no company and is always allowed.
     if (user.role !== 'SUPER_ADMIN' && user.company) {
       // Subscription enforcement (billing concern — existing behavior preserved)
@@ -269,13 +284,21 @@ export class AuthService {
    */
   async forgotPassword(rawEmail: string): Promise<{ ok: true }> {
     const email = rawEmail.trim().toLowerCase();
-    const user = await this.prisma.user.findUnique({
-      where: { email },
+    // Option B — email is unique per company, so this tenant-less route (still
+    // used by web-admin and the staff app) can match one account per company.
+    // Each gets its own reset link; the token identifies the account, so
+    // reset-password needs no change.
+    const users = await this.prisma.user.findMany({
+      where: { email, deletedAt: null, passwordHash: { not: null } },
       select: { id: true, email: true, passwordHash: true, active: true },
     });
+    for (const user of users) await this.issuePasswordReset(user);
+    return { ok: true };
+  }
 
-    // Silently return if the account doesn't exist or has no password set.
-    if (!user || !user.email || !user.passwordHash) return { ok: true };
+  private async issuePasswordReset(user: { id: string; email: string | null; passwordHash: string | null }) {
+    // Silently skip an account with no email or no password set.
+    if (!user.email || !user.passwordHash) return;
 
     const rawToken = randomBytes(32).toString('hex');
     const tokenHash = createHash('sha256').update(rawToken).digest('hex');
@@ -299,8 +322,6 @@ export class AuthService {
     } catch (err: unknown) {
       this.logger.error(`password-reset email error: ${(err as Error).message}`);
     }
-
-    return { ok: true };
   }
 
   /**
@@ -664,10 +685,10 @@ export class AuthService {
    * Tenant-scoped customer registration. companyId comes from the resolved
    * tenant, never from the request body.
    *
-   * GLOBAL UNIQUE CONSTRAINT NOTE: User.email and User.phone still carry global
-   * @unique constraints during Phase C-Expand. Cross-tenant duplicate registration
-   * will be rejected by the DB constraint. This limitation is documented and will
-   * be resolved in Phase B-Contract when partial indexes replace global uniqueness.
+   * Option B: User.email and User.phone are unique per company
+   * (@@unique([companyId, email]) / ([companyId, phone])). The same person can
+   * register with each developer they buy from; each registration is a separate
+   * account holding only that developer's data.
    *
    * @param companyId  Resolved from slug — never from request body.
    * @param country    ISO 3166-1 alpha-2 from Company.country — used for phone normalization.
@@ -699,8 +720,8 @@ export class AuthService {
 
     const fullName = dto.fullName.trim();
 
-    // Existence checks scoped to this company (application-level enforcement;
-    // the global @unique constraint provides the final DB-level guarantee).
+    // Existence checks scoped to this company; the per-company unique
+    // constraints are the final DB-level guarantee.
     const [byEmail, byPhone] = await Promise.all([
       this.prisma.user.findFirst({
         where: { email, companyId, deletedAt: null },

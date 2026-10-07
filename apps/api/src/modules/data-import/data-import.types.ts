@@ -140,8 +140,6 @@ export interface ImportPlan {
   customers: SheetPlan<CustomerPlan>;
   leads: SheetPlan<LeadPlan>;
   hasErrors: boolean;
-  /** Rows rejected because the phone belongs to a user in another company. */
-  crossTenantPhoneConflicts: number;
   /** Leads rows where the named sales rep could not be resolved (0 or 2+ matches). */
   unresolvedLeadSalesReps: number;
 }
@@ -165,8 +163,6 @@ export interface ImportResult {
   totalCreated: number;
   totalUpdated: number;
   totalUnchanged: number;
-  /** Count of rows rejected for cross-tenant phone collision (separate counter for monitoring). */
-  crossTenantPhoneConflicts: number;
   /** Leads rows where the named sales rep could not be resolved (0 or 2+ matches). */
   unresolvedLeadSalesReps: number;
 }

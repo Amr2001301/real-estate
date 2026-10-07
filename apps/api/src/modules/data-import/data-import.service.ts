@@ -271,7 +271,12 @@ export class DataImportService {
         ? this.prisma.user.findMany({
             // Include both 01XXXXXXXXXX (import canonical) and +201XXXXXXXXXX (E.164,
             // written by the auth service) so the map catches auth-created users.
-            where: { phone: { in: [...scannedCustomerPhones, ...scannedCustomerPhones.map(p => `+20${p.slice(1)}`)] } },
+            // Option B — this company only: the same number at another developer
+            // is a separate account and no longer a conflict.
+            where: {
+              companyId,
+              phone: { in: [...scannedCustomerPhones, ...scannedCustomerPhones.map(p => `+20${p.slice(1)}`)] },
+            },
             select: { id: true, phone: true, role: true, companyId: true },
           })
         : Promise.resolve<Array<{ id: string; phone: string | null; role: UserRole; companyId: string | null }>>([]),
@@ -374,7 +379,7 @@ export class DataImportService {
       clientByPhone.set(key, { id: u.id, phone: u.phone, fullName: u.fullName, email: u.email, locale: u.locale, updatedAt: u.updatedAt });
     }
 
-    // Global phone map — all users (any company) holding the scanned phones.
+    // Phone map — this company's users of any role holding the scanned phones.
     // Keyed on import-canonical form so globalPhoneMap.get("01...") hits both
     // stored "01..." and stored "+201..." users.
     const globalPhoneMap = new Map<string, { id: string; role: UserRole; companyId: string | null }>();
@@ -443,10 +448,9 @@ export class DataImportService {
     const buildings = this.parseBuildingsSheet(wb, projectByCode, phaseByKey, buildingByKey, projects, phases);
     const units = this.parseUnitsSheet(wb, phaseByKey, buildingByKey, unitByKey, activeUnitIds, projects, phases, buildings);
 
-    const crossTenantTracker = { count: 0 };
     const unresolvedSalesTracker = { count: 0 };
     const customers = this.parseCustomersSheet(
-      wb, companyId, clientByPhone, globalPhoneMap, duplicatePhones, crossTenantTracker,
+      wb, companyId, clientByPhone, globalPhoneMap, duplicatePhones,
     );
     const leads = this.parseLeadsSheet(
       wb, companyId, leadById, leadByPhone,
@@ -465,7 +469,6 @@ export class DataImportService {
       units,
       customers,
       leads,
-      crossTenantPhoneConflicts: crossTenantTracker.count,
       unresolvedLeadSalesReps: unresolvedSalesTracker.count,
       hasErrors:
         projects.errorCount > 0 || phases.errorCount > 0 ||
@@ -1051,8 +1054,9 @@ export class DataImportService {
   // Create-only: email (could be a future auth credential; overwriting would break login),
   //              role (always CLIENT), companyId, passwordHash, active.
   //
-  // Cross-tenant collision: User.phone is globally @unique. A phone that belongs to a
-  // user in another company is a blocking row error with a distinct counter for monitoring.
+  // Another company's customer is not a collision: User.phone is unique per company
+  // (Option B), so the phone lookup is scoped to the importing company and a person
+  // known to another developer is imported as a separate account here.
   //
   // Repair escalation: if the phone was repaired (leading 0 added / country code stripped)
   // AND the repaired number matches an existing user, the row is blocked to prevent a
@@ -1064,7 +1068,6 @@ export class DataImportService {
     clientByPhone: Map<string, DbClient>,
     globalPhoneMap: Map<string, { id: string; role: UserRole; companyId: string | null }>,
     duplicatePhones: Set<string>,
-    crossTenantTracker: { count: number },
   ): SheetPlan<CustomerPlan> {
     const plan = makeSheetPlan<CustomerPlan>(CUSTOMERS_SHEET.name);
     const ws = wb.getWorksheet(CUSTOMERS_SHEET.name);
@@ -1123,18 +1126,6 @@ export class DataImportService {
       // ── Global phone collision checks ────────────────────────────────────────
 
       const existingAny = globalPhoneMap.get(phone);
-
-      // Cross-tenant collision: phone belongs to a user in another company
-      if (existingAny && existingAny.companyId !== companyId) {
-        crossTenantTracker.count++;
-        plan._addError({
-          sheet: CUSTOMERS_SHEET.name,
-          rowNumber,
-          column: CUSTOMERS_SHEET.fields.phone,
-          message: `Phone "${phone}" is already registered to a customer in another company. This is a platform limitation — the same mobile number cannot be used across two companies. Please contact support if you believe this is an error.`,
-        });
-        return;
-      }
 
       // Staff account protection: phone belongs to a non-CLIENT user in this company
       if (existingAny && existingAny.companyId === companyId && existingAny.role !== UserRole.CLIENT) {
@@ -1845,7 +1836,6 @@ export class DataImportService {
           unitsCreated:     unitResult.created,
           customersCreated: customerResult.created,
           leadsCreated:     leadResult.created,
-          crossTenantPhoneConflicts: plan.crossTenantPhoneConflicts,
         } as object,
         companyId: plan.companyId,
       },
@@ -1871,7 +1861,6 @@ export class DataImportService {
       totalCreated,
       totalUpdated,
       totalUnchanged,
-      crossTenantPhoneConflicts: plan.crossTenantPhoneConflicts,
       unresolvedLeadSalesReps: plan.unresolvedLeadSalesReps,
     };
   }

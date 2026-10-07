@@ -560,7 +560,7 @@ describe('P7 — /me/reservations (e2e)', () => {
     const company = await testApp.rawPrisma.company.findFirstOrThrow({ where: { isActive: true }, select: { id: true } });
     testCompanyId = company.id;
 
-    const client1 = await testApp.rawPrisma.user.findUniqueOrThrow({
+    const client1 = await testApp.rawPrisma.user.findFirstOrThrow({
       where: { email: fixtures.users.CLIENT_1.email },
       select: { id: true },
     });
@@ -1143,7 +1143,7 @@ describe('P7 — /me/reservations (e2e)', () => {
         .send({ slug: process.env.SEED_COMPANY_SLUG ?? 'default', fullName: 'P9 Real Identity', phone, email, password: 'StrongPass1!', acceptTerms: true });
       expect(reg.status).toBe(201);
 
-      const claimed = await testApp.rawPrisma.user.findUniqueOrThrow({
+      const claimed = await testApp.rawPrisma.user.findFirstOrThrow({
         where: { email },
         select: { id: true },
       });

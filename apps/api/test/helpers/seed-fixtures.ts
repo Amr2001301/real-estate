@@ -104,12 +104,12 @@ export async function loadE2EFixtures(prisma: PrismaClient): Promise<E2EFixtures
   }
 
   const [admin, sales, manager, broker1User, broker2User, customer1] = await Promise.all([
-    prisma.user.findUniqueOrThrow({ where: { email: process.env.SEED_ADMIN_EMAIL ?? 'admin@example.com' }, select: { id: true } }),
-    prisma.user.findUniqueOrThrow({ where: { email: 'sales@example.com' }, select: { id: true } }),
-    prisma.user.findUniqueOrThrow({ where: { email: 'manager@example.com' }, select: { id: true } }),
-    prisma.user.findUniqueOrThrow({ where: { email: E2E_USERS.BROKER_1.email }, select: { id: true } }),
-    prisma.user.findUniqueOrThrow({ where: { email: E2E_USERS.BROKER_2.email }, select: { id: true } }),
-    prisma.user.findUniqueOrThrow({ where: { email: E2E_USERS.CUSTOMER_1.email }, select: { id: true } }),
+    prisma.user.findFirstOrThrow({ where: { email: process.env.SEED_ADMIN_EMAIL ?? 'admin@example.com' }, select: { id: true } }),
+    prisma.user.findFirstOrThrow({ where: { email: 'sales@example.com' }, select: { id: true } }),
+    prisma.user.findFirstOrThrow({ where: { email: 'manager@example.com' }, select: { id: true } }),
+    prisma.user.findFirstOrThrow({ where: { email: E2E_USERS.BROKER_1.email }, select: { id: true } }),
+    prisma.user.findFirstOrThrow({ where: { email: E2E_USERS.BROKER_2.email }, select: { id: true } }),
+    prisma.user.findFirstOrThrow({ where: { email: E2E_USERS.CUSTOMER_1.email }, select: { id: true } }),
   ]);
 
   // Phase 7B Flow D prerequisites — seeded once by seed-e2e.ts. We look them
@@ -140,7 +140,7 @@ export async function loadE2EFixtures(prisma: PrismaClient): Promise<E2EFixtures
   // Phase 7C — Flow E + F fixtures. Look up by the same stable markers the
   // seed writes (the title field on Document; customerId on Contract /
   // MaintenanceRequest).
-  const customer2 = await prisma.user.findUniqueOrThrow({
+  const customer2 = await prisma.user.findFirstOrThrow({
     where: { email: E2E_USERS.CUSTOMER_2.email },
     select: { id: true },
   });

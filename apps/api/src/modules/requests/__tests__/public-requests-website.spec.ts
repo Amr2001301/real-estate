@@ -77,6 +77,8 @@ function makePrismaMock() {
     },
     user: {
       findUnique: jest.fn().mockResolvedValue(null),
+      // Option B — find-or-create looks the client up within the company.
+      findFirst: jest.fn().mockResolvedValue(null),
       // P3 — NotificationsService.sendToRoles calls findMany; default to
       // no recipients so the notification is a silent no-op in these
       // tests (the lead-intake assertions don't care about it).

@@ -10,6 +10,7 @@ import { randomBytes } from 'node:crypto';
 import * as argon2 from 'argon2';
 import { seedCancellationSettingsForCompany } from '../src/modules/contracts/cancellation-settings.constants';
 import { normalizeHostname } from '../src/common/utils/hostname-normalize';
+import { upsertUserByEmail } from './seed-user-upsert';
 
 const prisma = new PrismaClient();
 
@@ -476,8 +477,7 @@ async function main() {
 
   // ---- Users (idempotent via email upsert) ----
   const adminHash = await argon2.hash(adminPassword);
-  await prisma.user.upsert({
-    where: { email: adminEmail },
+  await upsertUserByEmail(prisma, adminEmail, {
     create: {
       email: adminEmail,
       passwordHash: adminHash,
@@ -489,8 +489,7 @@ async function main() {
   });
 
   const salesHash = await argon2.hash('SalesPass123!');
-  const sales = await prisma.user.upsert({
-    where: { email: 'sales@example.com' },
+  const sales = await upsertUserByEmail(prisma, 'sales@example.com', {
     create: {
       email: 'sales@example.com',
       passwordHash: salesHash,
@@ -505,8 +504,7 @@ async function main() {
   // it is keyed on this dedicated demo address). Role foundation only — its
   // route access is intentionally limited until Batch 8.
   const managerHash = await argon2.hash('ManagerPass123!');
-  const manager = await prisma.user.upsert({
-    where: { email: 'manager@example.com' },
+  const manager = await upsertUserByEmail(prisma, 'manager@example.com', {
     create: {
       email: 'manager@example.com',
       passwordHash: managerHash,
@@ -520,8 +518,7 @@ async function main() {
   // Demo MAINTENANCE_SUPERVISOR (mobile-only staff role; no web dashboard).
   // Idempotent by its dedicated demo email.
   const supervisorHash = await argon2.hash('MaintenancePass123!');
-  await prisma.user.upsert({
-    where: { email: 'maintenance@example.com' },
+  await upsertUserByEmail(prisma, 'maintenance@example.com', {
     create: {
       email: 'maintenance@example.com',
       passwordHash: supervisorHash,
@@ -1289,7 +1286,7 @@ async function main() {
     const email = 'ahmed@example.com';
     const fullName = 'Ahmed Khaled';
     const client =
-      (await prisma.user.findUnique({ where: { phone } })) ??
+      (await prisma.user.findFirst({ where: { phone } })) ??
       (await prisma.user.create({
         data: { role: 'CLIENT', fullName, phone, email, locale: 'ar' },
       }));
@@ -1456,7 +1453,7 @@ async function main() {
   // Keeps the admin UI consistent (no "missing codes" rows) and means the
   // bootstrap admin can exercise PermissionsStrict() actions out of the box.
   // Skipped silently if the admin row doesn't exist for any reason.
-  const bootstrapAdmin = await prisma.user.findUnique({
+  const bootstrapAdmin = await prisma.user.findFirst({
     where: { email: adminEmail },
     select: { id: true },
   });

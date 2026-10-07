@@ -127,7 +127,11 @@ export class LeadsService {
 
     // FG-21 — normalise before both the lookup and the create, so `01…` finds
     // and reuses a client already stored as `+201…` instead of splitting them.
-    const phone = (await phoneForWrite(tx, dto.phone, getTenantContext()?.companyId)) ?? null;
+    // Option B — email and phone are unique per company, so every lookup below
+    // is scoped: the same person can be a client of two developers, as two
+    // separate accounts, each holding only that developer's records.
+    const companyId = getTenantContext()?.companyId ?? null;
+    const phone = (await phoneForWrite(tx, dto.phone, companyId)) ?? null;
     const email = dto.email?.trim() || null;
     const fullName = dto.fullName?.trim() || '';
 
@@ -141,15 +145,15 @@ export class LeadsService {
     }
 
     if (phone) {
-      const byPhone = await tx.user.findUnique({
-        where: { phone },
+      const byPhone = await tx.user.findFirst({
+        where: { phone, companyId },
         select: { id: true, fullName: true, phone: true, email: true },
       });
       if (byPhone) return byPhone;
     }
     if (email) {
-      const byEmail = await tx.user.findUnique({
-        where: { email },
+      const byEmail = await tx.user.findFirst({
+        where: { email, companyId },
         select: { id: true, fullName: true, phone: true, email: true },
       });
       if (byEmail) return byEmail;
@@ -167,7 +171,7 @@ export class LeadsService {
           phone,
           email,
           locale: 'ar',
-          companyId: getTenantContext()?.companyId ?? null,
+          companyId,
         },
         select: { id: true, fullName: true, phone: true, email: true },
       });
@@ -179,13 +183,13 @@ export class LeadsService {
         e.code === 'P2002'
       ) {
         const target = phone
-          ? await tx.user.findUnique({
-              where: { phone },
+          ? await tx.user.findFirst({
+              where: { phone, companyId },
               select: { id: true, fullName: true, phone: true, email: true },
             })
           : email
-            ? await tx.user.findUnique({
-                where: { email },
+            ? await tx.user.findFirst({
+                where: { email, companyId },
                 select: { id: true, fullName: true, phone: true, email: true },
               })
             : null;

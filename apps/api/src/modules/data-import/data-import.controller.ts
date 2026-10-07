@@ -81,7 +81,6 @@ export class DataImportController {
 
     return {
       hasErrors: plan.hasErrors,
-      crossTenantPhoneConflicts: plan.crossTenantPhoneConflicts,
       unresolvedLeadSalesReps: plan.unresolvedLeadSalesReps,
       projects:  summariseSheet(plan.projects),
       phases:    summariseSheet(plan.phases),
@@ -119,7 +118,6 @@ export class DataImportController {
       return {
         success: false,
         hasErrors: true,
-        crossTenantPhoneConflicts: plan.crossTenantPhoneConflicts,
         unresolvedLeadSalesReps: plan.unresolvedLeadSalesReps,
         projects:  summariseSheet(plan.projects),
         phases:    summariseSheet(plan.phases),

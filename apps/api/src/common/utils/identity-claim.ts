@@ -100,8 +100,8 @@ export async function claimSyntheticPeers(
   const seen = new Set<string>([targetUserId]);
 
   if (targetEmail) {
-    // MT-011: scope to the same company. findFirst instead of findUnique
-    // because the compound (email, companyId) has no unique constraint yet.
+    // MT-011: scope to the same company. (email, companyId) is unique, so
+    // this returns at most one row.
     const byEmail = await prisma.user.findFirst({
       where: { email: targetEmail, companyId: target.companyId },
       select: { id: true, email: true, phone: true, role: true, passwordHash: true },

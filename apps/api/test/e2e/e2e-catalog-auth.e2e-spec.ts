@@ -138,7 +138,7 @@ describe('me/* scope audit (e2e)', () => {
   });
 
   it("PATCH /v1/me/notifications/:id/read — cross-user denial: c1 cannot mark c2's notification", async () => {
-    const customer2User = await testApp.rawPrisma.user.findUniqueOrThrow({
+    const customer2User = await testApp.rawPrisma.user.findFirstOrThrow({
       where: { email: fixtures.users.CUSTOMER_2.email },
       select: { id: true },
     });
@@ -160,7 +160,7 @@ describe('me/* scope audit (e2e)', () => {
   });
 
   it("PATCH /v1/me/notifications/read-all — only marks the caller's own rows", async () => {
-    const customer2User = await testApp.rawPrisma.user.findUniqueOrThrow({
+    const customer2User = await testApp.rawPrisma.user.findFirstOrThrow({
       where: { email: fixtures.users.CUSTOMER_2.email },
       select: { id: true },
     });
@@ -626,7 +626,7 @@ describe('Flow B — Lead journey (e2e)', () => {
     });
     expect(res.status).toBe(201);
 
-    const client = await testApp.rawPrisma.user.findUnique({
+    const client = await testApp.rawPrisma.user.findFirst({
       where: { phone },
       select: { id: true, role: true, fullName: true },
     });
@@ -653,7 +653,7 @@ describe('Flow B — Lead journey (e2e)', () => {
     });
     expect(res.status).toBe(201);
 
-    const client = await testApp.rawPrisma.user.findUniqueOrThrow({
+    const client = await testApp.rawPrisma.user.findFirstOrThrow({
       where: { phone },
       select: { id: true },
     });
@@ -1026,7 +1026,7 @@ describe('B-FG24 — broker-created users carry the broker company (e2e)', () =>
       .send({ fullName: 'FG24 Team Member', email, password: PASSWORD });
     expect(res.status).toBe(201);
 
-    const user = await testApp.rawPrisma.user.findUniqueOrThrow({ where: { email }, select: { companyId: true } });
+    const user = await testApp.rawPrisma.user.findFirstOrThrow({ where: { email }, select: { companyId: true } });
     expect(user.companyId).toBe(brokerCompanyId);
 
     // The visible consequence: the tenant staff login finds users by
@@ -1044,13 +1044,15 @@ describe('B-FG24 — broker-created users carry the broker company (e2e)', () =>
       .set('Authorization', bearer(adminToken))
       .send({ fullName: 'FG24 Admin-Added', email });
     expect(res.status).toBe(201);
-    const user = await testApp.rawPrisma.user.findUniqueOrThrow({ where: { email }, select: { companyId: true } });
+    const user = await testApp.rawPrisma.user.findFirstOrThrow({ where: { email }, select: { companyId: true } });
     expect(user.companyId).toBe(brokerCompanyId);
   });
 
-  it("another company's user cannot be attached to this broker", async () => {
-    // Email is still globally unique, so the existing-user lookup can return a
-    // foreign account. Attaching it would hand this company that account.
+  it("the same email at another company becomes a separate account here — the foreign one is untouched", async () => {
+    // Option B — email is unique per company. Before it, the existing-user
+    // lookup was platform-wide and could hand this company another company's
+    // account (FG-24 closed that with a 409). Now the lookup is company-scoped,
+    // so the person simply gets a second account that belongs to this company.
     const other = await testApp.rawPrisma.company.create({
       data: { name: `FG24 Other ${RUN}`, slug: `fg24-other-${RUN}`, isActive: true },
       select: { id: true },
@@ -1058,15 +1060,135 @@ describe('B-FG24 — broker-created users carry the broker company (e2e)', () =>
     otherCompanyId = other.id;
     const email = `fg24-foreign-${RUN}@example.com`;
     createdEmails.push(email);
-    await testApp.rawPrisma.user.create({
+    const foreign = await testApp.rawPrisma.user.create({
       data: { role: 'BROKER', fullName: 'FG24 Foreign', email, companyId: other.id },
+      select: { id: true },
     });
 
     const res = await http()
       .post(`/v1/brokers/${brokerId}/users`)
       .set('Authorization', bearer(adminToken))
       .send({ fullName: 'FG24 Foreign', email });
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(201);
+
+    const accounts = await testApp.rawPrisma.user.findMany({
+      where: { email },
+      select: { id: true, companyId: true, brokerProfile: { select: { brokerId: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+    expect(accounts).toHaveLength(2);
+    const [theirs, ours] = accounts;
+    expect(theirs).toEqual({ id: foreign.id, companyId: other.id, brokerProfile: null });
+    expect(ours!.companyId).toBe(brokerCompanyId);
+    expect(ours!.brokerProfile?.brokerId).toBe(brokerId);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Option B — one person, two developers
+// ═════════════════════════════════════════════════════════════════════════════
+//
+// Email and phone are unique per company, not platform-wide. The same person
+// buying from two developers holds two accounts — same email and phone, each
+// with its own password — signs in to each through that developer's login, and
+// sees only that developer's records. Before Option B the second registration
+// failed on the global unique constraint, and lead paths that looked the phone
+// up platform-wide attached the second developer's lead to the first
+// developer's account. docs/audit/13-user-tenancy.md.
+describe('B-OPTB — the same customer at two developers (e2e)', () => {
+  const RUN = Date.now().toString(36);
+  const suffix = String(Date.now()).slice(-7);
+  const PHONE = `+20106${suffix}`;
+  const EMAIL = `ahmed-${RUN}@example.com`;
+  const PASS_A = 'AhmedAtA!!123';
+  const PASS_B = 'AhmedAtB!!456';
+  let slugA: string;
+  let companyA: string;
+  let companyB: string;
+  const slugB = `optb-${RUN}`;
+  let ahmedA: string;
+  let ahmedB: string;
+
+  beforeAll(async () => {
+    const admin = await testApp.rawPrisma.user.findUniqueOrThrow({
+      where: { id: fixtures.userIds.adminId },
+      select: { company: { select: { id: true, slug: true } } },
+    });
+    companyA = admin.company!.id;
+    slugA = admin.company!.slug;
+    const b = await testApp.rawPrisma.company.create({
+      data: { name: `Option B Developer ${RUN}`, slug: slugB, isActive: true, country: 'EG' },
+      select: { id: true },
+    });
+    companyB = b.id;
+  });
+
+  afterAll(async () => {
+    const users = await testApp.rawPrisma.user.findMany({
+      where: { OR: [{ email: EMAIL }, { phone: PHONE }] },
+      select: { id: true },
+    });
+    const ids = users.map((u) => u.id);
+    const leads = await testApp.rawPrisma.lead.findMany({ where: { clientId: { in: ids } }, select: { id: true } });
+    const leadIds = leads.map((l) => l.id);
+    await testApp.rawPrisma.leadActivity.deleteMany({ where: { leadId: { in: leadIds } } });
+    await testApp.rawPrisma.lead.deleteMany({ where: { id: { in: leadIds } } });
+    await testApp.rawPrisma.refreshToken.deleteMany({ where: { userId: { in: ids } } });
+    await testApp.rawPrisma.emailVerificationToken.deleteMany({ where: { userId: { in: ids } } });
+    await testApp.rawPrisma.user.deleteMany({ where: { id: { in: ids } } });
+    await testApp.rawPrisma.company.delete({ where: { id: companyB } });
+  });
+
+  const register = (slug: string, password: string) =>
+    http()
+      .post('/v1/auth/tenant/customer/register')
+      .send({ slug, fullName: 'Ahmed Khaled', phone: PHONE, email: EMAIL, password, acceptTerms: true });
+  const login = (slug: string, password: string) =>
+    http().post('/v1/auth/tenant/customer/login').send({ slug, email: EMAIL, password });
+
+  it('registers at developer A, then at developer B with the same email and phone', async () => {
+    const a = await register(slugA, PASS_A);
+    expect(a.status).toBe(201);
+    const b = await register(slugB, PASS_B);
+    expect(b.status).toBe(201);
+
+    const accounts = await testApp.rawPrisma.user.findMany({
+      where: { email: EMAIL },
+      select: { id: true, companyId: true, phone: true },
+    });
+    expect(accounts).toHaveLength(2);
+    expect(new Set(accounts.map((u) => u.companyId))).toEqual(new Set([companyA, companyB]));
+    for (const u of accounts) expect(u.phone).toBe(PHONE);
+    ahmedA = accounts.find((u) => u.companyId === companyA)!.id;
+    ahmedB = accounts.find((u) => u.companyId === companyB)!.id;
+  });
+
+  it("each developer's login opens that developer's account, with that account's password", async () => {
+    const inA = await login(slugA, PASS_A);
+    expect([200, 201]).toContain(inA.status);
+    expect(inA.body.user.id).toBe(ahmedA);
+
+    const inB = await login(slugB, PASS_B);
+    expect([200, 201]).toContain(inB.status);
+    expect(inB.body.user.id).toBe(ahmedB);
+
+    // The passwords are per account: A's password does not open B.
+    const crossed = await login(slugB, PASS_A);
+    expect(crossed.status).toBe(401);
+  });
+
+  it("a lead developer A's sales team adds for that phone lands on Ahmed's A account, never B's", async () => {
+    const res = await http()
+      .post('/v1/leads')
+      .set('Authorization', bearer(adminToken))
+      .send({ fullName: 'Ahmed Khaled', phone: PHONE });
+    expect(res.status).toBe(201);
+    expect(res.body.clientId).toBe(ahmedA);
+  });
+
+  it('registering twice at the same developer is still refused', async () => {
+    const again = await register(slugA, 'Another!!789');
+    expect(again.status).toBe(409);
   });
 });
 

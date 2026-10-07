@@ -253,15 +253,15 @@ export class BrokerPortalLeadsService {
   ): Promise<{ id: string; fullName: string; phone: string | null; email: string | null }> {
     const email = dto.email?.trim() ?? null;
 
-    const byPhone = await tx.user.findUnique({
-      where: { phone },
+    const byPhone = await tx.user.findFirst({
+      where: { phone, companyId: getTenantContext()?.companyId ?? null },
       select: { id: true, fullName: true, phone: true, email: true },
     });
     if (byPhone) return byPhone;
 
     if (email) {
-      const byEmail = await tx.user.findUnique({
-        where: { email },
+      const byEmail = await tx.user.findFirst({
+        where: { email, companyId: getTenantContext()?.companyId ?? null },
         select: { id: true, fullName: true, phone: true, email: true },
       });
       if (byEmail) return byEmail;
@@ -287,8 +287,8 @@ export class BrokerPortalLeadsService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2002'
       ) {
-        const retry = await tx.user.findUnique({
-          where: { phone },
+        const retry = await tx.user.findFirst({
+          where: { phone, companyId: getTenantContext()?.companyId ?? null },
           select: { id: true, fullName: true, phone: true, email: true },
         });
         if (retry) return retry;

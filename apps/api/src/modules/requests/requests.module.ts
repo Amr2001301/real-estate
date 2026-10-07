@@ -155,10 +155,10 @@ export class RequestsService {
     phone: string,
     email: string | null,
   ): Promise<{ id: string; fullName: string; phone: string | null; email: string | null }> {
-    const byPhone = await this.prisma.user.findUnique({ where: { phone } });
+    const byPhone = await this.prisma.user.findFirst({ where: { phone, companyId: getTenantContext()?.companyId ?? null } });
     if (byPhone) return byPhone;
     if (email) {
-      const byEmail = await this.prisma.user.findUnique({ where: { email } });
+      const byEmail = await this.prisma.user.findFirst({ where: { email, companyId: getTenantContext()?.companyId ?? null } });
       if (byEmail) return byEmail;
     }
     return this.prisma.user.create({

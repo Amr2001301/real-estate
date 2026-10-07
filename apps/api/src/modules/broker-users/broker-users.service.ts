@@ -57,8 +57,12 @@ export class BrokerUsersService {
     // sees `01…` and `+201…` as the same person.
     const phone = await phoneForWrite(this.prisma, dto.phone, getTenantContext()?.companyId);
 
+    // Option B — email and phone are unique per company, so only this
+    // company's users are candidates. A person who is a broker user at another
+    // developer gets a separate account here, holding only this company's data.
     const existingUser = await this.prisma.user.findFirst({
       where: {
+        companyId,
         OR: [
           ...(dto.email ? [{ email: dto.email }] : []),
           ...(phone ? [{ phone }] : []),
@@ -71,13 +75,6 @@ export class BrokerUsersService {
         `A user with this ${existingUser.email === dto.email ? 'email' : 'phone'} ` +
           `already exists with role ${existingUser.role}. Refusing to silently convert to BROKER.`,
       );
-    }
-
-    // FG-24 — a broker's users belong to the broker's company. User email and
-    // phone are still globally unique, so the lookup above can return another
-    // company's user; attaching it would hand this company a foreign account.
-    if (existingUser?.companyId && existingUser.companyId !== companyId) {
-      throw new ConflictException('This user belongs to another company');
     }
 
     if (existingUser) {
@@ -109,11 +106,9 @@ export class BrokerUsersService {
       // set here. Without it the account is invisible to every tenant-scoped
       // query, cannot use the tenant staff login, and escapes the company
       // lifecycle check on token refresh.
-      const user = existingUser
-        ? existingUser.companyId
-          ? existingUser
-          : await tx.user.update({ where: { id: existingUser.id }, data: { companyId } })
-        : await tx.user.create({
+      const user =
+        existingUser ??
+        (await tx.user.create({
             data: {
               role: UserRole.BROKER,
               fullName: dto.fullName,
@@ -123,7 +118,7 @@ export class BrokerUsersService {
               locale: dto.locale ?? 'ar',
               companyId,
             },
-          });
+          }));
 
       return tx.brokerUser.create({
         data: {
@@ -147,8 +142,8 @@ export class BrokerUsersService {
     // If email/phone changes, ensure they don't collide with another user.
     if (dto.email !== undefined && dto.email !== link.user.email) {
       if (dto.email) {
-        const clash = await this.prisma.user.findUnique({
-          where: { email: dto.email },
+        const clash = await this.prisma.user.findFirst({
+          where: { email: dto.email, companyId: getTenantContext()?.companyId ?? null },
           select: { id: true },
         });
         if (clash && clash.id !== link.userId) {
@@ -164,8 +159,8 @@ export class BrokerUsersService {
         : await phoneForWrite(this.prisma, dto.phone, getTenantContext()?.companyId);
     if (phone !== undefined && phone !== link.user.phone) {
       if (phone) {
-        const clash = await this.prisma.user.findUnique({
-          where: { phone },
+        const clash = await this.prisma.user.findFirst({
+          where: { phone, companyId: getTenantContext()?.companyId ?? null },
           select: { id: true },
         });
         if (clash && clash.id !== link.userId) {

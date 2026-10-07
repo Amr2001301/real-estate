@@ -191,8 +191,8 @@ export class BrokerPortalVisitsService {
 
     return this.prisma.$transaction(async (tx) => {
       // Find or create the canonical Client User by phone.
-      const byPhone = await tx.user.findUnique({
-        where: { phone },
+      const byPhone = await tx.user.findFirst({
+        where: { phone, companyId: getTenantContext()?.companyId ?? null },
         select: { id: true, fullName: true, phone: true, email: true },
       });
       const client =
