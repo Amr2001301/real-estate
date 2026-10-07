@@ -1240,6 +1240,25 @@ async function main() {
         ar_body: 'تجاوز طلب الصيانة للوحدة {{unitCode}} المهلة المقررة. يرجى التصرف الفوري.',
         en_body: 'Maintenance request for unit {{unitCode}} has breached SLA. Immediate action required.',
       },
+      // ─── Visit appointment reminders (AppointmentReminderCron) ───────────
+      // The cron always sent these codes; without the rows every reminder
+      // failed with "Template not found".
+      {
+        code: 'appointment_day_before_reminder',
+        channel: NotificationChannel.PUSH,
+        ar_subject: 'تذكير: معاينتك غداً',
+        en_subject: 'Reminder: your visit is tomorrow',
+        ar_body: 'لديك معاينة رقم {{visitNumber}} في {{projectName}} غداً.',
+        en_body: 'You have visit {{visitNumber}} at {{projectName}} tomorrow.',
+      },
+      {
+        code: 'appointment_hour_before_reminder',
+        channel: NotificationChannel.PUSH,
+        ar_subject: 'تذكير: معاينتك بعد ساعة',
+        en_subject: 'Reminder: your visit is in an hour',
+        ar_body: 'معاينتك رقم {{visitNumber}} في {{projectName}} تبدأ خلال ساعة.',
+        en_body: 'Your visit {{visitNumber}} at {{projectName}} starts in about an hour.',
+      },
       // ─── User account lifecycle ───────────────────────────────────────────
       {
         code: 'user_account_approved',

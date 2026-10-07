@@ -104,7 +104,7 @@ function makePrismaMock() {
           r.complaintAt.getTime() <= Date.now() - DAY_MS &&
           r.status !== MaintenanceStatus.RESOLVED &&
           r.status !== MaintenanceStatus.CLOSED;
-        return qualifies ? [{ id: r.id }] : [];
+        return qualifies ? [{ id: r.id, companyId: 'company-1' }] : [];
       }),
       updateMany: jest.fn().mockImplementation(async () => {
         if (fixture.req.unresolvedAt == null) {

@@ -971,3 +971,166 @@ describe('TEST-002 — @PermissionsStrict two-person rule (e2e)', () => {
     }
   });
 });
+
+// ═════════════════════════════════════════════════════════════════════════════
+// CRON-CTX — scheduled jobs act inside each row's own company
+// ═════════════════════════════════════════════════════════════════════════════
+//
+// The crons sweep in bypass. Before this, everything they sent or wrote per row
+// ran in bypass too: notifications were stored with companyId NULL (invisible to
+// the recipient) and never pushed or emailed, role fan-outs (SLA warnings) sent
+// nothing, and expiry activity rows lost their company.
+
+describe('CRON-CTX — scheduled jobs act inside each row\'s own company (e2e)', () => {
+  let testApp: TestApp;
+  let fixtures: E2EFixtures;
+  const RUN = Date.now().toString(36);
+  const SLUG_B = `cron-ctx-${RUN}`;
+  let companyAId: string;
+  let companyBId: string;
+  let adminBId: string;
+  let customer1Token: string;
+  const created = { appointmentId: '', maintenanceId: '', reservationId: '' };
+
+  beforeAll(async () => {
+    testApp = await createE2ETestApp();
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
+    const raw = testApp.rawPrisma;
+    const admin = await raw.user.findUniqueOrThrow({
+      where: { id: fixtures.userIds.adminId },
+      select: { companyId: true },
+    });
+    companyAId = admin.companyId!;
+    const b = await raw.company.create({
+      data: { name: `Cron Ctx B ${RUN}`, slug: SLUG_B, isActive: true, country: 'EG' },
+      select: { id: true },
+    });
+    companyBId = b.id;
+    const adminB = await raw.user.create({
+      data: { email: `admin-b-${RUN}@cron-ctx.local`, fullName: 'Admin B', role: UserRole.ADMIN, active: true, companyId: companyBId },
+      select: { id: true },
+    });
+    adminBId = adminB.id;
+    customer1Token = await loginAs(
+      testApp.app,
+      fixtures.users.CUSTOMER_1.email,
+      fixtures.users.CUSTOMER_1.password,
+      'customer',
+    );
+  });
+
+  afterAll(async () => {
+    const raw = testApp.rawPrisma;
+    const ids = Object.values(created).filter(Boolean);
+    await raw.notification.deleteMany({
+      where: { OR: ids.map((id) => ({ payload: { path: ['entityId'], equals: id } })) },
+    });
+    await raw.notification.deleteMany({ where: { templateCode: 'appointment_day_before_reminder', payload: { path: ['visitNumber'], equals: `CRON-${RUN}` } } });
+    if (created.appointmentId) await raw.visitAppointment.delete({ where: { id: created.appointmentId } });
+    if (created.maintenanceId) await raw.maintenanceRequest.delete({ where: { id: created.maintenanceId } });
+    if (created.reservationId) {
+      await raw.reservationActivity.deleteMany({ where: { reservationId: created.reservationId } });
+      await raw.reservation.delete({ where: { id: created.reservationId } });
+    }
+    await raw.notification.deleteMany({ where: { userId: adminBId } });
+    await raw.user.delete({ where: { id: adminBId } });
+    await raw.company.delete({ where: { id: companyBId } });
+  });
+
+  it('the day-before reminder reaches the customer: stored under their company and listed for them', async () => {
+    const raw = testApp.rawPrisma;
+    const tomorrowNoon = new Date();
+    tomorrowNoon.setDate(tomorrowNoon.getDate() + 1);
+    tomorrowNoon.setHours(12, 0, 0, 0);
+    const appt = await raw.visitAppointment.create({
+      data: {
+        visitNumber: `CRON-${RUN}`,
+        scheduledAt: tomorrowNoon,
+        clientId: fixtures.userIds.customer1UserId,
+        assignedSalesId: fixtures.userIds.salesId,
+        projectId: fixtures.projects.p1Id,
+        companyId: companyAId,
+      },
+      select: { id: true },
+    });
+    created.appointmentId = appt.id;
+
+    await testApp.runCronJob('appointment-day-before');
+
+    const rows = await raw.notification.findMany({
+      where: { templateCode: 'appointment_day_before_reminder', payload: { path: ['visitNumber'], equals: `CRON-${RUN}` } },
+      select: { id: true, userId: true, companyId: true, pushError: true },
+    });
+    expect(new Set(rows.map((r) => r.userId))).toEqual(
+      new Set([fixtures.userIds.customer1UserId, fixtures.userIds.salesId]),
+    );
+    for (const r of rows) {
+      expect(r.companyId).toBe(companyAId);
+      // Delivery was attempted (FCM is off in tests), not aborted at setup.
+      expect(r.pushError ?? '').not.toMatch(/^Delivery error/);
+    }
+
+    const mine = await request(testApp.app.getHttpServer())
+      .get('/v1/me/notifications')
+      .set('Authorization', bearer(customer1Token));
+    expect(mine.status).toBe(200);
+    const customerRow = rows.find((r) => r.userId === fixtures.userIds.customer1UserId)!;
+    expect(collectIds(mine.body)).toContain(customerRow.id);
+  });
+
+  it("an SLA breach notifies that company's admins — and never another company's", async () => {
+    const raw = testApp.rawPrisma;
+    const category = await raw.maintenanceCategory.findFirstOrThrow({
+      where: { companyId: companyAId },
+      select: { id: true },
+    });
+    const req = await raw.maintenanceRequest.create({
+      data: {
+        customerId: fixtures.userIds.customer1UserId,
+        unitId: fixtures.units.sampleUnitInP1Id,
+        categoryId: category.id,
+        description: `cron-ctx ${RUN}`,
+        dueAt: new Date(Date.now() - 60 * 60_000),
+        companyId: companyAId,
+      },
+      select: { id: true },
+    });
+    created.maintenanceId = req.id;
+
+    await testApp.runCronJob('maintenance-sla');
+
+    const rows = await raw.notification.findMany({
+      where: { templateCode: 'maintenance_sla_breached', payload: { path: ['entityId'], equals: req.id } },
+      select: { userId: true, companyId: true },
+    });
+    const recipients = rows.map((r) => r.userId);
+    expect(recipients).toContain(fixtures.userIds.adminId);
+    expect(recipients).not.toContain(adminBId);
+    for (const r of rows) expect(r.companyId).toBe(companyAId);
+  });
+
+  it('an expired reservation writes its EXPIRED activity under its company', async () => {
+    const raw = testApp.rawPrisma;
+    const r = await raw.reservation.create({
+      data: {
+        unitId: fixtures.units.sampleUnitInP1Id,
+        salesId: fixtures.userIds.salesId,
+        expiresAt: new Date(Date.now() - 60_000),
+        reservationNumber: `CRON-${RUN}`,
+        companyId: companyAId,
+      },
+      select: { id: true },
+    });
+    created.reservationId = r.id;
+
+    await testApp.runCronJob('reservation-expiry');
+
+    const after = await raw.reservation.findUniqueOrThrow({ where: { id: r.id }, select: { status: true } });
+    expect(after.status).toBe('EXPIRED');
+    const activity = await raw.reservationActivity.findFirstOrThrow({
+      where: { reservationId: r.id, type: 'EXPIRED' },
+      select: { companyId: true },
+    });
+    expect(activity.companyId).toBe(companyAId);
+  });
+});

@@ -5,7 +5,7 @@ import { AppointmentStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.module';
 import { CronLockService } from '../../common/cron/cron-lock.service';
-import { runTenantContext } from '../../common/tenant/tenant-context';
+import { runInCompany, runTenantContext } from '../../common/tenant/tenant-context';
 
 const TZ = process.env.APPOINTMENT_REMINDER_TIMEZONE || undefined;
 
@@ -77,6 +77,7 @@ export class AppointmentReminderCron {
       },
       select: {
         id: true,
+        companyId: true,
         visitNumber: true,
         scheduledAt: true,
         clientId: true,
@@ -89,6 +90,10 @@ export class AppointmentReminderCron {
     this.logger.log(`[day-before] Sending ${appointments.length} reminders`);
 
     for (const appt of appointments) {
+      if (!appt.companyId) {
+        this.logger.warn(`[day-before] appointment ${appt.id} has no company — reminder skipped`);
+        continue;
+      }
       const projectName = this.extractAr(appt.project?.name);
       const payload = {
         visitNumber: appt.visitNumber,
@@ -96,15 +101,19 @@ export class AppointmentReminderCron {
         projectName,
       };
 
-      await this.notifications.sendToUsers(
-        [appt.clientId, appt.assignedSalesId],
-        'appointment_day_before_reminder',
-        payload,
-      );
+      // The sweep runs in bypass; each reminder is sent in the appointment's
+      // own company so the recipients resolve and the rows carry companyId.
+      await runInCompany(appt.companyId, async () => {
+        await this.notifications.sendToUsers(
+          [appt.clientId, appt.assignedSalesId],
+          'appointment_day_before_reminder',
+          payload,
+        );
 
-      await this.prisma.visitAppointment.update({
-        where: { id: appt.id },
-        data: { dayBeforeReminderSentAt: new Date() },
+        await this.prisma.visitAppointment.update({
+          where: { id: appt.id },
+          data: { dayBeforeReminderSentAt: new Date() },
+        });
       });
     }
   }
@@ -122,6 +131,7 @@ export class AppointmentReminderCron {
       },
       select: {
         id: true,
+        companyId: true,
         visitNumber: true,
         scheduledAt: true,
         clientId: true,
@@ -134,6 +144,10 @@ export class AppointmentReminderCron {
     this.logger.log(`[hour-before] Sending ${appointments.length} reminders`);
 
     for (const appt of appointments) {
+      if (!appt.companyId) {
+        this.logger.warn(`[hour-before] appointment ${appt.id} has no company — reminder skipped`);
+        continue;
+      }
       const projectName = this.extractAr(appt.project?.name);
       const payload = {
         visitNumber: appt.visitNumber,
@@ -141,15 +155,19 @@ export class AppointmentReminderCron {
         projectName,
       };
 
-      await this.notifications.sendToUsers(
-        [appt.clientId, appt.assignedSalesId],
-        'appointment_hour_before_reminder',
-        payload,
-      );
+      // The sweep runs in bypass; each reminder is sent in the appointment's
+      // own company so the recipients resolve and the rows carry companyId.
+      await runInCompany(appt.companyId, async () => {
+        await this.notifications.sendToUsers(
+          [appt.clientId, appt.assignedSalesId],
+          'appointment_hour_before_reminder',
+          payload,
+        );
 
-      await this.prisma.visitAppointment.update({
-        where: { id: appt.id },
-        data: { hourBeforeReminderSentAt: new Date() },
+        await this.prisma.visitAppointment.update({
+          where: { id: appt.id },
+          data: { hourBeforeReminderSentAt: new Date() },
+        });
       });
     }
   }

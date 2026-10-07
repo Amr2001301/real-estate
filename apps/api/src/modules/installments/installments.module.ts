@@ -58,7 +58,7 @@ import { RequireCapability } from '../../common/decorators/require-capability.de
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { CronLockService } from '../../common/cron/cron-lock.service';
 import { captureExceptionSafe } from '../../common/observability/sentry';
-import { runTenantContext } from '../../common/tenant/tenant-context';
+import { runInCompany, runTenantContext } from '../../common/tenant/tenant-context';
 import { computeDurationOption } from './duration-calc';
 import {
   addTitledTable,
@@ -969,6 +969,7 @@ export class InstallmentRemindersService {
       orderBy: { dueDate: 'asc' },
       select: {
         id: true,
+        companyId: true,
         planId: true,
         dueDate: true,
         amount: true,
@@ -1005,33 +1006,38 @@ export class InstallmentRemindersService {
         skipped++; // no linked customer — nothing safe to notify
         continue;
       }
+      if (!inst.companyId) {
+        skipped++; // no company — the recipient cannot be resolved
+        continue;
+      }
+      const companyId = inst.companyId;
       const dueDateStr = this.dateKey(inst.dueDate);
       try {
-        const already = await this.prisma.notification.findFirst({
-          where: {
-            userId: customerId,
-            templateCode: INSTALLMENT_DUE_SOON_TEMPLATE,
-            AND: [
-              { payload: { path: ['installmentId'], equals: inst.id } },
-              { payload: { path: ['dueDate'], equals: dueDateStr } },
-            ],
-          },
-          select: { id: true },
+        // The cron sweeps in bypass; each reminder runs in the installment's
+        // own company so the customer resolves and the row carries companyId.
+        const outcome = await runInCompany(companyId, async () => {
+          const already = await this.prisma.notification.findFirst({
+            where: {
+              userId: customerId,
+              templateCode: INSTALLMENT_DUE_SOON_TEMPLATE,
+              AND: [
+                { payload: { path: ['installmentId'], equals: inst.id } },
+                { payload: { path: ['dueDate'], equals: dueDateStr } },
+              ],
+            },
+            select: { id: true },
+          });
+          if (already) return 'skipped'; // reminder for this installment+dueDate already sent
+          if (opts.dryRun) return 'sent'; // would send
+          await this.notifications.sendToUser(
+            customerId,
+            INSTALLMENT_DUE_SOON_TEMPLATE,
+            await this.buildPayload(inst, contract, inst.dueDate, dueDateStr),
+          );
+          return 'sent';
         });
-        if (already) {
-          skipped++; // reminder for this installment+dueDate already sent
-          continue;
-        }
-        if (opts.dryRun) {
-          sent++; // would send
-          continue;
-        }
-        await this.notifications.sendToUser(
-          customerId,
-          INSTALLMENT_DUE_SOON_TEMPLATE,
-          await this.buildPayload(inst, contract, inst.dueDate, dueDateStr),
-        );
-        sent++;
+        if (outcome === 'sent') sent++;
+        else skipped++;
       } catch (e) {
         // A single failure (lookup or send) must never abort the whole run.
         failed++;

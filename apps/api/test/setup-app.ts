@@ -57,6 +57,11 @@ import { CapabilityService } from '../src/common/capabilities/capability.service
 import { DateSerializerInterceptor } from '../src/common/interceptors/date-serializer.interceptor';
 import { requestIdMiddleware } from '../src/common/logging/request-id.middleware';
 import { PrismaService } from '../src/common/prisma/prisma.service';
+import { runTenantContext } from '../src/common/tenant/tenant-context';
+import { InstallmentRemindersService } from '../src/modules/installments/installments.module';
+import { MaintenanceSlaCheckCron, MaintenanceUnresolvedCron } from '../src/modules/maintenance/maintenance.module';
+import { ReservationExpiryCron } from '../src/modules/reservations/reservations.module';
+import { AppointmentReminderCron } from '../src/modules/visits/appointment-reminder.cron';
 
 export interface TestApp {
   app: INestApplication;
@@ -87,6 +92,46 @@ export interface TestApp {
    * when called from a different Jest vm context (e.g. from a singleton spec).
    */
   signAccessToken: (userId: string, role: string, expiresIn?: string) => Promise<string>;
+  /**
+   * Run one scheduled job now, exactly as its @Cron handler does (bypass
+   * context, same service call). Same vm-context safety as flushCapabilities.
+   * The env-gated jobs (appointment and installment reminders) skip their
+   * enable flag and run the work their handler would run.
+   */
+  runCronJob: (job: CronJob) => Promise<void>;
+}
+
+export type CronJob =
+  | 'appointment-day-before'
+  | 'installment-due-soon'
+  | 'maintenance-sla'
+  | 'maintenance-unresolved'
+  | 'reservation-expiry';
+
+function cronRunner(app: INestApplication): (job: CronJob) => Promise<void> {
+  const appointments = app.get(AppointmentReminderCron);
+  const installments = app.get(InstallmentRemindersService);
+  const sla = app.get(MaintenanceSlaCheckCron);
+  const unresolved = app.get(MaintenanceUnresolvedCron);
+  const reservations = app.get(ReservationExpiryCron);
+  const asCron = (fn: () => Promise<unknown>) =>
+    runTenantContext({ companyId: null, bypass: true, isPublic: false }, async () => {
+      await fn();
+    });
+  return async (job) => {
+    switch (job) {
+      case 'appointment-day-before':
+        return asCron(() => appointments['sendDayBeforeReminders']());
+      case 'installment-due-soon':
+        return asCron(() => installments.run({ dryRun: false }));
+      case 'maintenance-sla':
+        return sla.run();
+      case 'maintenance-unresolved':
+        return unresolved.run();
+      case 'reservation-expiry':
+        return reservations.run();
+    }
+  };
 }
 
 export interface CreateTestAppOptions {
@@ -149,6 +194,7 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
     flushCapabilities: (companyId) => capabilitySvc.invalidateCache(companyId),
     signAccessToken: (userId, role, expiresIn) =>
       jwtService.signAsync({ sub: userId, role }, { secret: jwtSecret, expiresIn: expiresIn ?? jwtDefaultExpiry }),
+    runCronJob: cronRunner(app),
     close: async () => {
       await rawPrisma.$disconnect();
       await app.close();
@@ -268,6 +314,7 @@ export async function createE2ETestApp(): Promise<TestApp> {
     flushCapabilities: (companyId) => capabilitySvc.invalidateCache(companyId),
     signAccessToken: (userId, role, expiresIn) =>
       jwtService.signAsync({ sub: userId, role }, { secret: jwtSecret, expiresIn: expiresIn ?? jwtDefaultExpiry }),
+    runCronJob: cronRunner(app),
     close: async () => {},
   };
 
@@ -355,6 +402,7 @@ export async function createSecurityTestApp(): Promise<TestApp> {
     flushCapabilities: (companyId) => capabilitySvc.invalidateCache(companyId),
     signAccessToken: (userId, role, expiresIn) =>
       jwtService.signAsync({ sub: userId, role }, { secret: jwtSecret, expiresIn: expiresIn ?? jwtDefaultExpiry }),
+    runCronJob: cronRunner(app),
     close: async () => {},
   };
 

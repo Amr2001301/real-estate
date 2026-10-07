@@ -74,7 +74,7 @@ import {
 import { ContractsModule, ContractsService } from '../contracts/contracts.module';
 import { CronLockService } from '../../common/cron/cron-lock.service';
 import { captureExceptionSafe } from '../../common/observability/sentry';
-import { getTenantContext, runTenantContext } from '../../common/tenant/tenant-context';
+import { getTenantContext, runInCompany, runTenantContext } from '../../common/tenant/tenant-context';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 // BrokerCommissionsModule/Service no longer imported here. Commission
 // materialisation runs from ContractsService.sign() — the only path that
@@ -2083,6 +2083,7 @@ export class ReservationsService {
       },
       select: {
         id: true,
+        companyId: true,
         unitId: true,
         salesId: true,
         leadId: true,
@@ -2091,7 +2092,12 @@ export class ReservationsService {
       },
     });
     for (const r of due) {
-      await this.prisma.$transaction(async (tx) => {
+      // The sweep finds due rows in bypass; each expiry is written in the
+      // reservation's own company, so the activity, lead-activity and
+      // unit-history rows carry its companyId (in bypass they were NULL and
+      // never showed on the timeline). A row with no company keeps the old path.
+      const write = (fn: () => Promise<void>) => (r.companyId ? runInCompany(r.companyId, fn) : fn());
+      await write(() => this.prisma.$transaction(async (tx) => {
         await tx.reservation.update({
           where: { id: r.id, status: ReservationStatus.PENDING },
           data: { status: ReservationStatus.EXPIRED },
@@ -2146,7 +2152,7 @@ export class ReservationsService {
             });
           }
         }
-      });
+      }));
     }
     return { expired: due.length };
   }

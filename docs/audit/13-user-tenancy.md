@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-14  
 **Author:** security audit  
-**Status:** decided 2026-10-07 — **Option B**. Part 1 (per-company uniqueness) done; part 2 (`User` → `TENANT_OWNED`) done — see §0.1. Remaining: retire the option-(a) helpers and the `prisma.user` lint rule (§0.1, follow-up).
+**Status:** decided 2026-10-07 — **Option B**. Part 1 (per-company uniqueness) done; part 2 (`User` → `TENANT_OWNED`) done — see §0.1. The option-(a) helpers stay (§0.1).
 
 ---
 
@@ -85,10 +85,14 @@ because PR 1's sweep had already put an explicit `companyId` on the lookups.
   now on. FG-24's backfill covered the unambiguous rows; the current data is test
   data and is reset and re-seeded after this merges.
 
-**Follow-up:** `scopedUserFindMany`, `scopedUserCount`, `findTenantUser`,
-`resolveTenantUser` and the MT-012 `prisma.user` lint rule are now redundant with
-the middleware (harmless: the explicit `companyId` equals the injected one).
-Retire them together in one PR.
+**Not a follow-up after all:** `scopedUserFindMany`, `scopedUserCount`,
+`findTenantUser` and `resolveTenantUser` look redundant with the middleware in a
+request, but in a bypass context (crons, SUPER_ADMIN) the middleware does not
+scope and these helpers — through `getRequiredCompanyId()` — are what fails
+closed. Replacing the one in `sendToRoles` with a plain `findMany` would have
+sent each maintenance SLA alert to every company's admins. They stay. Checking
+this found that the crons did all their per-row work in bypass: see
+`08-functional-gaps.md` FG-25 (fixed) and FG-26 (notification templates).
 
 ---
 
