@@ -22,6 +22,7 @@ detail in `docs/audit/08-functional-gaps.md` §7.
 | 10 | Dropdowns fetched 100–500 full rows | Create-form pickers search the API (PRs #11–#14); filters and assignee dropdowns use `/options` endpoints (PR #15) |
 | 11, 12 | Ubuntu 24.04 pin, Node 24 actions | PR #1 (CI gap G14/G15) |
 | FG-28 | Client ownership: reps saw no clients (GET /users ADMIN-only) and the server accepted any client or lead id | Decided 2026-10-08: rep → own, manager → team, admin → all, unowned → admin assigns. Enforced server-side; scoped `GET /users/clients` |
+| FG-27 | Signed contracts read `UNSIGNED` | `sign()` sets ACTIVE; backfill migration |
 | 15 | Split the security suite (31 min) | Not needed: the job lacked Redis; with it the suite runs in ~1.5 min (PR #9, G16). A Redis outage no longer stalls the API either (PR #10) |
 
 ## Open — can be done in the repo
@@ -30,7 +31,6 @@ detail in `docs/audit/08-functional-gaps.md` §7.
 |---|---|---|
 | FG-23 remainder | `/dashboard/maintenance` renders the first 100 requests with no paging — request 101 is invisible | S |
 | FG-01 link | `Deposit.paymentInstrumentId` is never set, so clearing or bouncing a cheque touches no deposit and a bounce cannot reopen an installment | M |
-| FG-27 | `sign()` never sets `status: ACTIVE`; signed contracts read `UNSIGNED` | S |
 | FG-05 residuals | Reverse only works on APPROVED deposits; no double-reversal guard; soft-delete leaves the installment PAID | M |
 | FG-13 residual | Admin confirm deletes a rejected customer proof's deposit and orphans its document | S |
 | FG-04 | InfoRequest RESPONDED/CLOSED have no write path; contract number unreachable for direct contracts | M |

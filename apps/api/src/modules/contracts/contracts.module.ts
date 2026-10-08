@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Body,
   Controller,
   Delete,
@@ -29,6 +30,7 @@ import {
   MinLength,
 } from 'class-validator';
 import {
+  ContractStatus,
   DocumentCategory,
   DocumentOwnerType,
   DocumentVisibility,
@@ -632,6 +634,7 @@ export class ContractsService {
         id: true,
         contractNumber: true,
         signedAt: true,
+        status: true,
         createdAt: true,
         unitId: true,
         customerId: true,
@@ -654,11 +657,18 @@ export class ContractsService {
     if (before.signedAt !== null) {
       return this.prisma.contract.findUnique({ where: { id } });
     }
+    // A cancelled deal is not signed back to life.
+    if (before.status === ContractStatus.CANCELLED) {
+      throw new ConflictException('Cannot sign a cancelled contract');
+    }
 
+    // FG-27 — signing sets the status too. It used to set only signedAt, so
+    // every signed contract stayed UNSIGNED and anything reading `status`
+    // (reports, exports, filters) saw signed contracts as unsigned.
     const signedAtDate = new Date(dto.signedAt);
     const updated = await this.prisma.contract.update({
       where: { id },
-      data: { signedAt: signedAtDate },
+      data: { signedAt: signedAtDate, status: ContractStatus.ACTIVE },
     });
 
     // Start warranties for the unit's selected maintenance items. Best-effort:
