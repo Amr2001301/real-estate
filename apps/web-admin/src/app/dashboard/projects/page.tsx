@@ -9,6 +9,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { projectOptions } from '@/lib/options';
 import { getSession } from '@/lib/session';
 import type { Paged, Project } from '@/lib/types';
 import { tx, formatDate } from '@/lib/format';
@@ -66,7 +67,7 @@ export default async function ProjectsPage({
   // For the city dropdown + KPI strip we also pull a wider snapshot.
   const [pagedRes, snapshotRes] = await Promise.all([
     safe(api.get<Paged<Project>>(`/projects?${qs.toString()}`)),
-    safe(api.get<Paged<Project>>('/projects?pageSize=200')),
+    safe(projectOptions()),
   ]);
 
   const paged = pagedRes.data;

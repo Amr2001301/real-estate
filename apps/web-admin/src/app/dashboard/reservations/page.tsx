@@ -4,6 +4,7 @@ import {
   XCircle, CalendarX2, AlertCircle, SlidersHorizontal,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { projectOptions, staffOptions } from '@/lib/options';
 import { getLocale } from '@/lib/locale';
 import type { Paged, Reservation } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
@@ -43,7 +44,7 @@ interface ProjectOption {
 interface SalesUser {
   id: string;
   fullName: string;
-  role?: 'SALES' | 'SALES_MANAGER';
+  role?: string;
 }
 
 export default async function ReservationsPage({
@@ -95,8 +96,8 @@ export default async function ReservationsPage({
   const [statsRes, reservationsRes, projectsRes, salesRes, currency, locale] = await Promise.all([
     safe(api.get<Stats>('/reservations/stats')),
     safe(api.get<Paged<Reservation>>(`/reservations?${qs}`)),
-    safe(api.get<{ data: ProjectOption[] }>('/projects?pageSize=100')),
-    safe(api.get<{ data: SalesUser[] }>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
+    safe(projectOptions()),
+    safe(staffOptions(['SALES', 'SALES_MANAGER'])),
     getReportsCurrency(),
     getLocale(),
   ]);

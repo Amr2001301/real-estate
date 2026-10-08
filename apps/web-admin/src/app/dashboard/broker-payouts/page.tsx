@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { Wallet, Plus, Eye, Briefcase, AlertCircle, SlidersHorizontal } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { AdminBrokerPayout, Broker, Paged } from '@/lib/types';
+import { brokerOptions } from '@/lib/options';
+import type { AdminBrokerPayout, Paged } from '@/lib/types';
 import { formatDate, formatCurrency } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
@@ -56,7 +57,7 @@ export default async function AdminBrokerPayoutsPage({
 
   const [payoutsRes, brokersRes] = await Promise.all([
     safe(api.get<Paged<AdminBrokerPayout>>(`/broker-payouts?${qs.toString()}`)),
-    safe(api.get<Paged<Broker>>('/brokers?pageSize=200')),
+    safe(brokerOptions()),
   ]);
 
   const paged = payoutsRes.data;

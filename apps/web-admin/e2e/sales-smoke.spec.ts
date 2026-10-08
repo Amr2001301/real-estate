@@ -55,6 +55,19 @@ test.describe('SALES smoke', () => {
     await assertNavLinksHidden(page, ['الدفعات', 'الوسطاء', 'العمولات']);
   });
 
+  // GET /users is ADMIN-only, so every staff dropdown filled from it came back
+  // empty for a sales rep. They now come from /users/options.
+  test('staff and project dropdowns are filled for a sales rep', async ({ page }) => {
+    await page.goto('/dashboard/leads/new', { waitUntil: 'networkidle' });
+    // Beyond the empty "— unset —" option.
+    await expect
+      .poll(() => page.locator('select[name="assignedSalesId"] option').count())
+      .toBeGreaterThan(1);
+    await expect
+      .poll(() => page.locator('select[name="projectInterestId"] option').count())
+      .toBeGreaterThan(1);
+  });
+
   test('admin-only actions are not visible on catalog pages', async ({ page }) => {
     await page.goto('/dashboard/projects');
     await expect(page.getByText(/إضافة مشروع/)).toHaveCount(0);

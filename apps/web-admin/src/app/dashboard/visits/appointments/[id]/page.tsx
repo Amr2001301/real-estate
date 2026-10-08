@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { Phone, Mail, Building2, User, ExternalLink, AlertCircle, CalendarClock, Star } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { Paged, VisitAppointment, User as UserType, VisitActivity } from '@/lib/types';
+import { staffOptions } from '@/lib/options';
+import type { VisitAppointment, VisitActivity } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { PageHeader } from '@/components/ui/page-header';
@@ -42,7 +43,7 @@ export default async function AppointmentDetailPage({
 
   const [apptRes, salesRes] = await Promise.all([
     safe(api.get<AppointmentDetail>(`/visits/appointments/${id}`)),
-    safe(api.get<Paged<UserType>>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
+    safe(staffOptions(['SALES', 'SALES_MANAGER'])),
   ]);
 
   if (apptRes.error || !apptRes.data) {

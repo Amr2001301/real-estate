@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ShieldCheck, Building2, Home } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { Broker, BrokerAccessBundle, Paged, Project } from '@/lib/types';
+import { projectOptions } from '@/lib/options';
+import type { Broker, BrokerAccessBundle } from '@/lib/types';
 import { tx, formatDate } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
@@ -66,7 +67,7 @@ export default async function BrokerAccessPage({
   const [brokerRes, accessRes, projectsRes] = await Promise.all([
     safe(api.get<Broker>(`/brokers/${id}`)),
     safe(api.get<BrokerAccessBundle>(`/brokers/${id}/access`)),
-    safe(api.get<Paged<Project>>('/projects?pageSize=200')),
+    safe(projectOptions()),
   ]);
   if (brokerRes.error || !brokerRes.data) notFound();
 

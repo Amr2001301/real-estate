@@ -13,9 +13,10 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { projectOptions } from '@/lib/options';
 import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
-import type { Paged, Unit, Project } from '@/lib/types';
+import type { Paged, Unit } from '@/lib/types';
 import { tx, formatCurrency, formatDate } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
@@ -87,7 +88,7 @@ export default async function UnitsPage({
     // follow the table's filters would change what the numbers mean, which is
     // a separate decision from making them correct.
     safe(api.get<Paged<Unit>>('/units?pageSize=1')),
-    safe(api.get<Paged<Project>>('/projects?pageSize=200')),
+    safe(projectOptions()),
     getLocale(),
   ]);
 

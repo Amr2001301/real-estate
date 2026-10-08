@@ -12,14 +12,8 @@ import { BrokerTrendChart } from './_components/broker-trend-chart';
 import { BrokerFunnelChart, type FunnelStage } from './_components/broker-funnel-chart';
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
-import type {
-  Broker,
-  BrokerReportProjectRow,
-  BrokerReportsSummary,
-  Paged,
-  Project,
-  TopBrokersResponse,
-} from '@/lib/types';
+import { projectOptions, brokerOptions } from '@/lib/options';
+import type { BrokerReportProjectRow, BrokerReportsSummary, TopBrokersResponse } from '@/lib/types';
 import { tx, formatCurrency } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
@@ -66,7 +60,6 @@ function shortMonth(label: string, locale: string): string {
   return (months[mm] ?? label).slice(0, 3);
 }
 
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default async function AdminBrokerReportsPage({
   searchParams,
@@ -98,8 +91,8 @@ export default async function AdminBrokerReportsPage({
     safe(api.get<TopBrokersResponse>(`/broker-reports/top-brokers?${topQs}`)),
     safe(api.get<{ data: BrokerReportProjectRow[] }>(`/broker-reports/projects?${projQs}`)),
     safe(api.get<MonthlyTrendBucket[]>(`/broker-reports/monthly-trend?${summaryQs}`)),
-    safe(api.get<Paged<Broker>>('/brokers?pageSize=200')),
-    safe(api.get<Paged<Project>>('/projects?pageSize=200')),
+    safe(brokerOptions()),
+    safe(projectOptions()),
   ]);
 
   const s         = summaryRes.data;

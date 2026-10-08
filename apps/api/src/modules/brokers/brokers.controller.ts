@@ -18,6 +18,7 @@ import {
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { BrokersService } from './brokers.service';
 import {
+  BrokerOptionsQueryDto,
   BrokerStatusReasonDto,
   CreateBrokerDto,
   UpdateBrokerDto,
@@ -54,6 +55,15 @@ export class BrokersController {
       page: Number(page),
       pageSize: Number(pageSize),
     });
+  }
+
+  // Dropdowns and filters: every broker, id + display fields only. Declared
+  // before `:id`, which would otherwise take "options" as an id.
+  @Roles(UserRole.ADMIN)
+  @Permissions('brokers:read')
+  @Get('options')
+  options(@Query() query: BrokerOptionsQueryDto) {
+    return this.brokers.options(query.status);
   }
 
   @Roles(UserRole.ADMIN)

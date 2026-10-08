@@ -145,6 +145,33 @@ describe('MT-Test-02 — multi-tenant data isolation (e2e)', () => {
     const ids = ((res.body?.data ?? res.body) as Array<{ id: string }>).map((p) => p.id);
     expect(ids).not.toContain(projectBId);
   });
+
+  // Options endpoints (dropdowns) return every row unpaged — they must still
+  // stop at the company boundary.
+  it('ISO-OPT-1: /projects/options lists only the caller company projects', async () => {
+    const ids = async (token: string) => {
+      const res = await http().get('/v1/projects/options').set('Authorization', bearer(token));
+      expect(res.status).toBe(200);
+      return (res.body.data as Array<{ id: string }>).map((p) => p.id);
+    };
+    const [a, b] = await Promise.all([ids(adminAToken), ids(adminBToken)]);
+    expect(a).toContain(projectAId);
+    expect(a).not.toContain(projectBId);
+    expect(b).toEqual([projectBId]);
+  });
+
+  it('ISO-OPT-2: /users/options lists only the caller company staff', async () => {
+    const names = async (token: string) => {
+      const res = await http()
+        .get('/v1/users/options?role=ADMIN')
+        .set('Authorization', bearer(token));
+      expect(res.status).toBe(200);
+      return (res.body.data as Array<{ fullName: string }>).map((u) => u.fullName);
+    };
+    const [a, b] = await Promise.all([names(adminAToken), names(adminBToken)]);
+    expect(b).toEqual(['Admin B']);
+    expect(a).not.toContain('Admin B');
+  });
 });
 
 // ═════════════════════════════════════════════════════════════════════════════

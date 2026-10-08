@@ -14,8 +14,15 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { projectOptions } from '@/lib/options';
 import { getSession } from '@/lib/session';
-import type { Paged, Project, UnitStatus, InventoryMatrixResult, InventoryMatrixProject, InventoryMatrixPhase, InventoryMatrixBuilding } from '@/lib/types';
+import type {
+  UnitStatus,
+  InventoryMatrixResult,
+  InventoryMatrixProject,
+  InventoryMatrixPhase,
+  InventoryMatrixBuilding,
+} from '@/lib/types';
 import { formatCurrency } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { Badge } from '@/components/ui/badge';
@@ -73,7 +80,7 @@ export default async function InventoryPage({
 
   const [matrixRes, projectsRes] = await Promise.all([
     safe(api.get<InventoryMatrixResult>(`/units/inventory-matrix${matrixQsStr ? `?${matrixQsStr}` : ''}`)),
-    safe(api.get<Paged<Project>>('/projects?pageSize=200')),
+    safe(projectOptions()),
   ]);
 
   const loadError      = matrixRes.error;

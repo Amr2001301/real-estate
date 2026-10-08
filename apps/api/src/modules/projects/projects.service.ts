@@ -3,6 +3,8 @@ import { Prisma, ProjectStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateProjectDto, ProjectQueryDto, ProjectSort, UpdateProjectDto } from './dto/project.dto';
 import { paginate, takeSkip } from '../../common/utils/pagination';
+import { OPTIONS_LIMIT, optionsResult } from '../../common/utils/options';
+import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { PlanLimitService } from '../../common/capabilities/plan-limit.service';
 import {
   serializePublicProjectDetail,
@@ -34,6 +36,17 @@ export class ProjectsService {
       },
       include: { media: true },
     });
+  }
+
+  /** Every project of the company, id + display fields — see common/utils/options.ts. */
+  async options() {
+    const rows = await this.prisma.project.findMany({
+      where: { companyId: getRequiredCompanyId() },
+      select: { id: true, name: true, city: true, status: true, featured: true },
+      orderBy: [{ featured: 'desc' }, { createdAt: 'desc' }],
+      take: OPTIONS_LIMIT + 1,
+    });
+    return optionsResult(rows);
   }
 
   async findAll(query: ProjectQueryDto, publicOnly = false) {

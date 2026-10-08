@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { AlertCircle } from 'lucide-react';
-import { api, safe } from '@/lib/api';
-import type { Paged, User } from '@/lib/types';
+import { safe } from '@/lib/api';
+import { staffOptions } from '@/lib/options';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { NewMaintenanceForm } from './new-maintenance-form';
@@ -20,7 +20,7 @@ export default async function NewMaintenancePage({
 
   // Customers are searched from the form itself (SearchSelect).
   const adminsRes = await safe(
-    api.get<Paged<User>>('/users?role=ADMIN,MAINTENANCE_SUPERVISOR&pageSize=100'),
+    staffOptions(['ADMIN', 'MAINTENANCE_SUPERVISOR']),
   );
   const admins = adminsRes.data?.data ?? [];
 

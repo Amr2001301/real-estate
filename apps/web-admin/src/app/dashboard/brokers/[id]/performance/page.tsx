@@ -13,7 +13,8 @@ import {
   Banknote,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { BrokerDetailReport, Paged, Project } from '@/lib/types';
+import { projectOptions } from '@/lib/options';
+import type { BrokerDetailReport } from '@/lib/types';
 import { tx, formatCurrency, formatDate } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
@@ -71,7 +72,7 @@ export default async function BrokerPerformancePage({
 
   const [reportRes, projectListRes] = await Promise.all([
     safe(api.get<BrokerDetailReport>(`/broker-reports/broker/${id}?${qs.toString()}`)),
-    safe(api.get<Paged<Project>>('/projects?pageSize=200')),
+    safe(projectOptions()),
   ]);
   if (reportRes.error || !reportRes.data) notFound();
   const report = reportRes.data;

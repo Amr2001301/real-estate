@@ -1,12 +1,8 @@
 import Link from 'next/link';
 import { BadgePercent, Eye, Briefcase, AlertCircle, SlidersHorizontal } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type {
-  AdminBrokerCommission,
-  Broker,
-  Paged,
-  Project,
-} from '@/lib/types';
+import { projectOptions, brokerOptions } from '@/lib/options';
+import type { AdminBrokerCommission, Paged } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
@@ -64,8 +60,8 @@ export default async function AdminBrokerCommissionsPage({
 
   const [commRes, brokersRes, projectsRes] = await Promise.all([
     safe(api.get<Paged<AdminBrokerCommission>>(`/broker-commissions?${qs.toString()}`)),
-    safe(api.get<Paged<Broker>>('/brokers?pageSize=200')),
-    safe(api.get<Paged<Project>>('/projects?pageSize=200')),
+    safe(brokerOptions()),
+    safe(projectOptions()),
   ]);
 
   const paged = commRes.data;

@@ -1,14 +1,9 @@
 import { BookmarkCheck } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { projectOptions, brokerOptions } from '@/lib/options';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
-import type {
-  AdminBrokerLead,
-  Broker,
-  BrokerUser,
-  Paged,
-  Project,
-} from '@/lib/types';
+import type { AdminBrokerLead, BrokerUser, Paged } from '@/lib/types';
 import { tx } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { PremiumPageHero } from '@/components/premium';
@@ -31,8 +26,8 @@ export default async function NewAdminBrokerReservationPage({
   const sp = await searchParams;
 
   const [brokersRes, projectsRes, currency, locale] = await Promise.all([
-    safe(api.get<Paged<Broker>>('/brokers?pageSize=200&status=ACTIVE')),
-    safe(api.get<Paged<Project>>('/projects?pageSize=200')),
+    safe(brokerOptions('ACTIVE')),
+    safe(projectOptions()),
     getReportsCurrency(),
     getLocale(),
   ]);

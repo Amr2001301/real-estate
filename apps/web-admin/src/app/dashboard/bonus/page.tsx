@@ -6,6 +6,7 @@ import {
   AlertCircle, Info, Plus, Undo2, RotateCcw,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { staffOptions } from '@/lib/options';
 import type { Paged } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
@@ -54,7 +55,7 @@ interface BonusEntry {
 interface SalesUser {
   id: string;
   fullName: string;
-  role?: 'SALES' | 'SALES_MANAGER';
+  role?: string;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -166,7 +167,7 @@ export default async function BonusPage({
   const [rulesRes, entriesRes, salesRes] = await Promise.all([
     safe(api.get<BonusRule[]>('/bonus-rules')),
     safe(api.get<BonusEntry[] | Paged<BonusEntry>>(buildEntriesUrl(sp))),
-    safe(api.get<{ data: SalesUser[] }>('/users?role=SALES,SALES_MANAGER&pageSize=200')),
+    safe(staffOptions(['SALES', 'SALES_MANAGER'])),
   ]);
 
   const rules = rulesRes.data ?? [];

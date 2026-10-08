@@ -4,13 +4,13 @@ import { redirect } from 'next/navigation';
 import { Wrench, Plus, AlertCircle, Eye, Settings2, Clock, Shield } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
+import { staffOptions } from '@/lib/options';
 import type {
   Paged,
   MaintenanceRequest,
   MaintenanceCategory,
   MaintenanceStatus,
   MaintenanceReviewStatus,
-  User,
 } from '@/lib/types';
 import { formatDate, tx, maintenanceSlaLabel, warrantyMonthsLabel } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
@@ -131,7 +131,7 @@ export default async function MaintenancePage({
   const [reqsRes, catsRes, adminsRes] = await Promise.all([
     safe(api.get<Paged<MaintenanceRequest>>(`/maintenance-requests?${listQs}`)),
     safe(api.get<MaintenanceCategory[]>('/maintenance-categories')),
-    safe(api.get<Paged<User>>('/users?role=ADMIN&pageSize=100')),
+    safe(staffOptions(['ADMIN'])),
   ]);
 
   const rows = reqsRes.data?.data ?? [];

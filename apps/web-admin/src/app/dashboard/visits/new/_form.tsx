@@ -48,7 +48,8 @@ interface SalesUser {
 
 interface Props {
   currentRole: 'ADMIN' | 'SALES';
-  projects: Project[];
+  // Dropdown rows (/projects/options): only these fields are read.
+  projects: Pick<Project, 'id' | 'name' | 'city'>[];
   salesOptions: SalesUser[];
   locale?: Locale;
 }
@@ -87,7 +88,7 @@ export default function NewVisitForm({
     const phone = c.phone ?? m.noPhone;
     return `${c.fullName} — ${role} — ${phone}`;
   }
-  function getProjectName(p: Project): string {
+  function getProjectName(p: Pick<Project, 'name'>): string {
     return p.name?.ar ?? p.name?.en ?? '—';
   }
 

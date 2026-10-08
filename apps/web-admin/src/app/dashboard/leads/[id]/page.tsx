@@ -21,15 +21,8 @@ import {
   BarChart2,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type {
-  Lead,
-  Paged,
-  Reservation,
-  User as UserType,
-  LeadStage,
-  VisitRequest,
-  VisitAppointment,
-} from '@/lib/types';
+import { staffOptions } from '@/lib/options';
+import type { Lead, Paged, Reservation, LeadStage, VisitRequest, VisitAppointment } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
@@ -136,7 +129,7 @@ export default async function LeadDetailPage({
   const [leadRes, salesRes, visitRequestsRes, appointmentsRes, reservationsRes] =
     await Promise.all([
       safe(api.get<LeadDetail>(`/leads/${id}`)),
-      safe(api.get<Paged<UserType>>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
+      safe(staffOptions(['SALES', 'SALES_MANAGER'])),
       safe(api.get<Paged<VisitRequest>>(`/visits/requests?leadId=${id}&pageSize=10`)),
       safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?leadId=${id}&pageSize=10`)),
       safe(api.get<Paged<Reservation>>(`/reservations?leadId=${id}&pageSize=10`)),

@@ -1,12 +1,8 @@
 import Link from 'next/link';
 import { Users, Eye, Phone, Briefcase, AlertCircle, Search, SlidersHorizontal } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type {
-  AdminBrokerLead,
-  Broker,
-  Paged,
-  Project,
-} from '@/lib/types';
+import { projectOptions, brokerOptions } from '@/lib/options';
+import type { AdminBrokerLead, Paged } from '@/lib/types';
 import { tx, formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
@@ -70,8 +66,8 @@ export default async function AdminBrokerLeadsPage({
 
   const [leadsRes, brokersRes, projectsRes] = await Promise.all([
     safe(api.get<Paged<AdminBrokerLead>>(`/broker-leads?${qs.toString()}`)),
-    safe(api.get<Paged<Broker>>('/brokers?pageSize=200')),
-    safe(api.get<Paged<Project>>('/projects?pageSize=200')),
+    safe(brokerOptions()),
+    safe(projectOptions()),
   ]);
 
   const paged = leadsRes.data;

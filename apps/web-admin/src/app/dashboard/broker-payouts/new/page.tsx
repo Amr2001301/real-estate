@@ -1,6 +1,7 @@
 import { Banknote, AlertCircle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { AdminEligibleCommission, Broker, Paged } from '@/lib/types';
+import { brokerOptions } from '@/lib/options';
+import type { AdminEligibleCommission, Paged } from '@/lib/types';
 import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
@@ -21,7 +22,7 @@ export default async function NewBrokerPayoutPage({
 }) {
   const sp = await searchParams;
   const [brokersRes, currency, locale] = await Promise.all([
-    safe(api.get<Paged<Broker>>('/brokers?pageSize=200')),
+    safe(brokerOptions()),
     getReportsCurrency(),
     getLocale(),
   ]);

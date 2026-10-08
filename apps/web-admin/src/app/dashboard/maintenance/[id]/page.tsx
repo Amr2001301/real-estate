@@ -2,15 +2,31 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import {
-  Wrench, User as UserIcon, Home, AlertCircle, UserCog, ArrowLeft,
-  CheckCircle2, XCircle, ClipboardList, Star, ShieldCheck, Phone, Mail,
+  Wrench,
+  User as UserIcon,
+  Home,
+  AlertCircle,
+  UserCog,
+  ArrowLeft,
+  CheckCircle2,
+  XCircle,
+  ClipboardList,
+  Star,
+  ShieldCheck,
+  Phone,
+  Mail,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { staffOptions } from '@/lib/options';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import type {
-  MaintenancePriority, MaintenanceResolutionConfirmedBy, MaintenanceReviewStatus,
-  MaintenanceStatus, MaintenanceRequestItem, Paged, User,
+  MaintenancePriority,
+  MaintenanceResolutionConfirmedBy,
+  MaintenanceReviewStatus,
+  MaintenanceStatus,
+  MaintenanceRequestItem,
+  User,
 } from '@/lib/types';
 import { formatDateTime, tx, maintenanceSlaLabel, formatDate } from '@/lib/format';
 import { cn } from '@/lib/cn';
@@ -131,7 +147,7 @@ export default async function MaintenanceDetailPage({
 
   const [detailRes, adminsRes] = await Promise.all([
     safe(api.get<MaintenanceDetail>(`/maintenance-requests/${id}`)),
-    safe(api.get<Paged<User>>('/users?role=ADMIN,MAINTENANCE_SUPERVISOR&pageSize=100')),
+    safe(staffOptions(['ADMIN', 'MAINTENANCE_SUPERVISOR'])),
   ]);
 
   if (detailRes.error?.includes('404') || detailRes.error?.toLowerCase().includes('not found')) {

@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { Phone, Mail, Building2, User, ExternalLink, AlertCircle, Activity } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { Paged, VisitRequest, VisitActivity, User as UserType } from '@/lib/types';
+import { staffOptions } from '@/lib/options';
+import type { VisitRequest, VisitActivity } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { DataTable } from '@/components/table';
 import { VisitRequestStatusBadge, AppointmentStatusBadge } from '@/components/badges';
@@ -31,7 +32,7 @@ export default async function VisitRequestDetailPage({
 
   const [reqRes, salesRes] = await Promise.all([
     safe(api.get<VisitRequestDetail>(`/visits/requests/${id}`)),
-    safe(api.get<Paged<UserType>>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
+    safe(staffOptions(['SALES', 'SALES_MANAGER'])),
   ]);
 
   if (reqRes.error || !reqRes.data) {

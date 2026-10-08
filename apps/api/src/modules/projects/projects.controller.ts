@@ -49,6 +49,15 @@ export class ProjectsController {
     return this.projects.findAll(query, false);
   }
 
+  // Dropdowns and filters: every project, id + display fields only. Declared
+  // before `projects/:id`, which would otherwise take "options" as an id.
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
+  @Permissions('projects:read')
+  @Get('projects/options')
+  options() {
+    return this.projects.options();
+  }
+
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('projects:read')
   @Get('projects/:id')

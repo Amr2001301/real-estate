@@ -34,7 +34,10 @@ export async function login(
   slug = COMPANY_SLUG,
   landing: '/dashboard' | '/portal' = '/dashboard',
 ): Promise<void> {
-  await page.goto('/login');
+  // Wait for the page's scripts: fields filled before React hydrates the form
+  // are reset by hydration, and the submit then posts an empty slug — the
+  // action answers 200 with an error and the login "did not redirect".
+  await page.goto('/login', { waitUntil: 'networkidle' });
 
   const slugField = page.locator('input[name="slug"]');
   const emailField = page.locator('input[name="email"]');

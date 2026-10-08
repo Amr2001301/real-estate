@@ -9,7 +9,8 @@ import { uiT } from '@/messages/ui';
 import { getProjectPhasesAction } from './actions';
 
 interface Props {
-  projects: Project[];
+  // Dropdown rows (/projects/options): only these fields are read.
+  projects: Pick<Project, 'id' | 'name' | 'city'>[];
   /** Prepopulate for the edit case — pass from unit.building.phase.projectId */
   initialProjectId?: string;
   /** Prepopulate for the edit case — pass from unit.building.phaseId */
