@@ -362,7 +362,7 @@ Ranked by: customer-facing severity, whether failure is silent, and whether it b
 | 12 | FG-12 | Unit status has no reverse path from SOLD | Low | No | Consequence of FG-02 | **Fixed** via FG-02 (cancellation with AUTO release, or `release-unit`). No direct admin override. |
 | 13 | FG-13 | Booking-payment dual-path collision (admin confirm + customer proof) | Low | Partly | Rare race condition | **Fixed 2026-10-08.** Confirm returns 409 while a proof is PENDING, and also when an APPROVED proof already settled the booking. Confirm deletes only admin-created booking deposits — a rejected proof's deposit and its document are kept (it used to delete every booking deposit). Unconfirm keeps the booking PENDING only for a proof still under review (a rejected one left it PENDING and blocked the next confirm), and rejects an approved proof with the reason. Security spec 11 FG-1..FG-6. |
 | 14 | FG-14 | Customer not notified of role promotion on convert | Low | Yes | No — customer re-logs in naturally | **Fixed 2026-10-08.** When a contract (direct create or conversion) promotes a CLIENT to CUSTOMER — and revokes their sessions — they now get `account_promoted_customer` (push + email): their account is a customer account, sign in again to see contracts and installments. Template seeded and inserted by migration `20261008100000` for existing databases. Unit (conversion) + e2e A4m. |
-| 15 | FG-15 | Phase and Building have no `updatedAt` column | Low | No | No — operational gap only | **Open.** |
+| 15 | FG-15 | Phase and Building have no `updatedAt` column | Low | No | No — operational gap only | **Fixed 2026-10-08.** `updatedAt DateTime @updatedAt` on both; migration `20261008110000` backfills `createdAt`. e2e A4n. |
 | 20 | FG-20 | `User.phone` is stored in two incompatible formats (E.164 `+201…` and local `01…`) across different write paths | High | **Fixed 2026-09-27** — importer now writes E.164; dev DB backfilled; DI-E2E-4 proves OTP round-trip | Residual: pre-existing write paths listed in FG-21 | Fixed |
 | 21 | FG-21 | Eleven non-auth write paths stored `User.phone` as typed (the original count of three was wrong) | Medium | Yes — same OTP split-account defect applies to customers created via leads or by admin | **Fixed 2026-10-07** — every path goes through `phoneForWrite()`; B-FG21 proves lead → OTP lands on one account | Fixed (PR #3) |
 | 22 | FG-22 | argon2 called at library defaults everywhere — no config, no recorded rationale; 382 ms/login uncontended on CI, 11–19× degradation at 3 concurrent; production not measured | Medium | No — defaults are safe; risk is throughput, not security | No — login works; concurrent sign-in capacity is unknown | **Open — needs a decision** (parameters) and a production measurement |
@@ -454,7 +454,9 @@ Every other entity in the property tree (`Project`, `Unit`, `Contract`, `Lead`, 
 
 **Test implication:** because Phase and Building lack `updatedAt`, the import idempotency test (DI-E2E-1) cannot use timestamp comparison to prove a no-op UPDATE did not run on those rows. The test uses Postgres `xmin` (the system column holding the transaction ID of the last write, bumped by any UPDATE regardless of value changes) as the primary write-detection mechanism for all four tables.
 
-**Required fix (not in scope for this session):**
+**Fixed 2026-10-08** as proposed below (migration `20261008110000_phase_building_updated_at`). DI-E2E-1 keeps using `xmin`, which also catches a no-op write.
+
+**Original proposal:**
 - Add `updatedAt DateTime @updatedAt` to the `Phase` model.
 - Add `updatedAt DateTime @updatedAt` to the `Building` model.
 - Migration: backfill `updatedAt = createdAt` for all existing rows.

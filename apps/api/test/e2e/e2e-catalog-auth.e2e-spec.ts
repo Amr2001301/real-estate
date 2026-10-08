@@ -1124,6 +1124,41 @@ describe('Flow A — Catalog sync (e2e)', () => {
     });
   });
 
+  describe('A4n — FG-15 Phase and Building record their last change', () => {
+    it('PATCH /phases/:id and /buildings/:id move updatedAt forward', async () => {
+      const raw = testApp.rawPrisma;
+      const sample = await raw.unit.findUniqueOrThrow({
+        where: { id: fixtures.units.sampleUnitInP1Id },
+        select: { companyId: true, building: { select: { phase: { select: { projectId: true } } } } },
+      });
+      const tag = Date.now().toString().slice(-6);
+      const old = new Date('2020-01-01T00:00:00Z');
+      const phase = await raw.phase.create({
+        data: { projectId: sample.building.phase.projectId, companyId: sample.companyId, code: `A4N-${tag}`, name: { ar: 'م', en: 'P' }, updatedAt: old },
+      });
+      const building = await raw.building.create({
+        data: { phaseId: phase.id, companyId: sample.companyId, code: `A4N-${tag}`, name: 'A4N', updatedAt: old },
+      });
+      try {
+        // Starts at the old value, so the bump below is the PATCH's.
+        expect(phase.updatedAt.getTime()).toBe(old.getTime());
+
+        const p = await http().patch(`/v1/phases/${phase.id}`).set('Authorization', bearer(adminToken)).send({ order: 3 });
+        expect(p.status).toBe(200);
+        const b = await http().patch(`/v1/buildings/${building.id}`).set('Authorization', bearer(adminToken)).send({ order: 3 });
+        expect(b.status).toBe(200);
+
+        const after = await raw.phase.findUniqueOrThrow({ where: { id: phase.id }, select: { updatedAt: true } });
+        const afterB = await raw.building.findUniqueOrThrow({ where: { id: building.id }, select: { updatedAt: true } });
+        expect(after.updatedAt.getTime()).toBeGreaterThan(old.getTime());
+        expect(afterB.updatedAt.getTime()).toBeGreaterThan(old.getTime());
+      } finally {
+        await raw.building.deleteMany({ where: { id: building.id } });
+        await raw.phase.deleteMany({ where: { id: phase.id } });
+      }
+    });
+  });
+
   // ── Broker portal: the same filter, inside the broker's own scope ─────────
   //
   // The portal reservation form searches leads instead of preloading 200, and
