@@ -5,6 +5,7 @@ import { useActionState, useState, useEffect } from 'react';
 import { AlertCircle, X } from 'lucide-react';
 import { Field, inputClass } from '@/components/form/field';
 import { SubmitButton } from '@/components/form/submit-button';
+import { SearchSelect, type SearchOption } from '@/components/form/search-select';
 import { Button } from '@/components/ui/button';
 import { FormFooter } from '@/components/ui/form-footer';
 import { MediaUploader } from '@/components/media-uploader';
@@ -16,20 +17,28 @@ import { uiT } from '@/messages/ui';
 import { recordDepositAction, type DepositFormState } from '../actions';
 
 interface Props {
-  contracts:          Contract[];
-  initialContractId?: string;
+  /** Pre-selected when the page is opened from a contract (?contractId=). */
+  initialContract?:   Contract | null;
   currency?:          string;
   locale?:            Locale;
 }
 
-export default function RecordDepositForm({ contracts, initialContractId, currency = 'SAR', locale = 'ar' }: Props) {
+// Contracts are searched on the server (SearchSelect): this form used to
+// preload ?pageSize=200, so a deposit could not be recorded on contract 201.
+export default function RecordDepositForm({ initialContract, currency = 'SAR', locale = 'ar' }: Props) {
   const m = uiT(locale).pages.depositsForm;
   const [state, formAction] = useActionState<DepositFormState, FormData>(
     recordDepositAction,
     {},
   );
   const [receiptUrl, setReceiptUrl] = useState('');
-  const [contractId, setContractId] = useState(initialContractId ?? '');
+  const c = uiT(locale).common;
+  const toContractOption = (k: Contract): SearchOption<Contract> => ({
+    id: k.id,
+    label: `${k.contractNumber ?? `#${k.id.slice(0, 8)}`} · ${k.customer?.fullName ?? '—'} · ${formatCurrency(k.totalAmount, currency)}`,
+    raw: k,
+  });
+  const [contractId, setContractId] = useState(initialContract?.id ?? '');
   const [installments, setInstallments] = useState<ContractInstallment[]>([]);
   const [loadingInst, setLoadingInst] = useState(false);
   const [selectedInstallmentId, setSelectedInstallmentId] = useState('');
@@ -91,25 +100,19 @@ export default function RecordDepositForm({ contracts, initialContractId, curren
         >
           <div className="flex flex-col gap-5">
             <Field label={m.labelContract} name="contractId">
-              <select
-                id="contractId"
+              <SearchSelect<Contract>
                 name="contractId"
                 required
-                value={contractId}
-                onChange={(e) => {
-                  setContractId(e.target.value);
+                endpoint="/api-proxy/contracts"
+                toOption={toContractOption}
+                initial={initialContract ? toContractOption(initialContract) : null}
+                onChange={(k) => {
+                  setContractId(k?.id ?? '');
                   setSelectedInstallmentId('');
                 }}
-                className={inputClass}
-              >
-                <option value="" disabled>{m.optionChoose}</option>
-                {contracts.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.contractNumber ?? `#${c.id.slice(0, 8)}`} · {c.customer?.fullName ?? '—'} ·{' '}
-                    {formatCurrency(c.totalAmount, currency)}
-                  </option>
-                ))}
-              </select>
+                placeholder={c.searchContractPlaceholder}
+                locale={locale}
+              />
             </Field>
 
             {contractId && (

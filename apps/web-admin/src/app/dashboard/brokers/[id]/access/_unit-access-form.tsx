@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { SearchSelect } from '@/components/form/search-select';
 import type { Project, Unit } from '@/lib/types';
 import type { Locale } from '@/lib/locale';
 import { tx } from '@/lib/format';
@@ -29,31 +30,21 @@ function FormField({
 
 interface Props {
   action: (formData: FormData) => void | Promise<void>;
-  allUnits: Unit[];
   projects: Project[];
   locale?: Locale;
 }
 
-export function UnitAccessGrantForm({ action, allUnits, projects, locale = 'ar' }: Props) {
+// Units are searched on the server, inside the chosen project. This form used
+// to filter one ?pageSize=500 fetch of every unit in the company, so in a
+// large company whole projects had no units to grant.
+export function UnitAccessGrantForm({ action, projects, locale = 'ar' }: Props) {
   const m = uiT(locale).pages.brokerAccessPage;
   const [projectId, setProjectId] = useState('');
   const [showAll, setShowAll] = useState(false);
 
-  const unitsForProject = useMemo(() => {
-    if (!projectId) return [];
-    return allUnits.filter((u) => u.building?.phase?.projectId === projectId);
-  }, [projectId, allUnits]);
-
-  const selectable = useMemo(
-    () => unitsForProject.filter((u) => u.status === 'AVAILABLE'),
-    [unitsForProject],
-  );
-  const blocked = useMemo(
-    () => unitsForProject.filter((u) => u.status !== 'AVAILABLE'),
-    [unitsForProject],
-  );
-
-  const shownUnits = showAll ? unitsForProject : selectable;
+  const endpoint = `/api-proxy/units?projectId=${encodeURIComponent(projectId)}${
+    showAll ? '' : '&status=AVAILABLE'
+  }`;
 
   return (
     <form action={action} className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -74,22 +65,25 @@ export function UnitAccessGrantForm({ action, allUnits, projects, locale = 'ar' 
       </FormField>
 
       <FormField label={m.unitLabel}>
-        <Select id="unitId" name="unitId" required defaultValue="" disabled={!projectId}>
-          <option value="" disabled>
-            {projectId
-              ? selectable.length > 0
-                ? m.unitAvailablePlaceholder
-                : m.unitNoAvailable
-              : m.unitSelectProjectFirst}
-          </option>
-          {shownUnits.map((u) => (
-            <option key={u.id} value={u.id} disabled={u.status !== 'AVAILABLE'}>
-              {u.code} — {u.type}
-              {u.building?.name ? ` (${u.building.name})` : ''}
-              {u.status !== 'AVAILABLE' ? ` — ${u.status}` : ''}
-            </option>
-          ))}
-        </Select>
+        {/* Keyed by project and filter: either change clears the unit. */}
+        <SearchSelect<Unit>
+          key={`${projectId}:${showAll}`}
+          name="unitId"
+          required
+          disabled={!projectId}
+          endpoint={endpoint}
+          toOption={(u) => ({
+            id: u.id,
+            label: `${u.code} — ${u.type}${u.building?.name ? ` (${u.building.name})` : ''}${
+              u.status !== 'AVAILABLE' ? ` — ${u.status}` : ''
+            }`,
+            raw: u,
+            // Unavailable units are listed for reference only.
+            disabled: u.status !== 'AVAILABLE',
+          })}
+          placeholder={projectId ? uiT(locale).common.searchUnitPlaceholder : m.unitSelectProjectFirst}
+          locale={locale}
+        />
       </FormField>
 
       {/* Checkboxes + submit on the same row */}
@@ -106,11 +100,6 @@ export function UnitAccessGrantForm({ action, allUnits, projects, locale = 'ar' 
             />
             <span>{m.showUnavailableLabel}</span>
           </label>
-          {blocked.length > 0 && !showAll && (
-            <span className="text-[11px] text-slate-400">
-              {m.hiddenUnitsNote(blocked.length)}
-            </span>
-          )}
         </div>
         <Button type="submit" variant="primary" size="md">{m.btnGrantUnit}</Button>
       </div>

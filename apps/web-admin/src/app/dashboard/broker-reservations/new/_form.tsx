@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { PremiumFormPanel } from '@/components/premium';
+import { SearchSelect } from '@/components/form/search-select';
+import type { AdminBrokerLead, Unit } from '@/lib/types';
+import { tx } from '@/lib/format';
 import type { Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import {
@@ -25,24 +28,10 @@ interface AgentOption {
   fullName: string;
   email: string | null;
 }
-interface LeadOption {
-  id: string;
-  fullName: string;
-  phone: string;
-  projectInterestId: string | null;
-  projectInterestName: string | null;
-}
 interface ProjectOption {
   id: string;
   name: string;
   city: string | null;
-}
-interface UnitOption {
-  id: string;
-  code: string;
-  type: string;
-  price: string | number;
-  buildingName: string | null;
 }
 
 interface Props {
@@ -50,10 +39,10 @@ interface Props {
   selectedBrokerId: string;
   brokerAgents: AgentOption[];
   selectedBrokerAgentId: string;
-  approvedLeads: LeadOption[];
+  /** The broker has at least one approved lead with a sales rep. */
+  hasApprovedLeads: boolean;
   projects: ProjectOption[];
   selectedProjectId: string;
-  units: UnitOption[];
   symbol?: string;
   locale?: Locale;
 }
@@ -92,14 +81,14 @@ export function AdminBrokerReservationForm({
   selectedBrokerId,
   brokerAgents,
   selectedBrokerAgentId,
-  approvedLeads,
+  hasApprovedLeads,
   projects,
   selectedProjectId,
-  units,
   symbol = 'ج.م',
   locale = 'ar',
 }: Props) {
   const m = uiT(locale).pages.brokerReservationsForm;
+  const c = uiT(locale).common;
   const router = useRouter();
   const [state, formAction] = useActionState<AdminBrokerReservationFormState, FormData>(
     createAdminBrokerReservationAction,
@@ -195,7 +184,7 @@ export function AdminBrokerReservationForm({
           <p className="text-sm text-slate-400 py-1">
             {m.noBrokerMsg}
           </p>
-        ) : approvedLeads.length === 0 ? (
+        ) : !hasApprovedLeads ? (
           <div className="flex items-start gap-2.5 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3.5 text-sm">
             <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
             <p>{m.noLeadsMsg}</p>
@@ -206,15 +195,25 @@ export function AdminBrokerReservationForm({
             required
             hint={m.hintLead}
           >
-            <Select name="leadId" required defaultValue="">
-              <option value="" disabled>{m.optionChooseLead}</option>
-              {approvedLeads.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.fullName} — {l.phone}
-                  {l.projectInterestName ? ` • ${l.projectInterestName}` : ''}
-                </option>
-              ))}
-            </Select>
+            {/* Searched on the server: this used to preload ?pageSize=100
+                of the broker's approved leads. */}
+            <SearchSelect<AdminBrokerLead>
+              key={selectedBrokerId}
+              name="leadId"
+              required
+              endpoint={`/api-proxy/broker-leads?brokerId=${encodeURIComponent(
+                selectedBrokerId,
+              )}&brokerApprovalStatus=APPROVED&assigned=true`}
+              toOption={(l) => ({
+                id: l.id,
+                label: `${l.fullName} — ${l.phone}${
+                  l.projectInterest ? ` • ${tx(l.projectInterest.name)}` : ''
+                }`,
+                raw: l,
+              })}
+              placeholder={c.searchBrokerLeadPlaceholder}
+              locale={locale}
+            />
           </FormField>
         )}
       </PremiumFormPanel>
@@ -251,25 +250,28 @@ export function AdminBrokerReservationForm({
           <FormField
             label={m.labelUnit}
             required
-            hint={
-              selectedProjectId && units.length === 0
-                ? m.hintUnitNoUnits
-                : m.hintUnitAccess
-            }
-            hintTone={selectedProjectId && units.length === 0 ? 'warning' : 'default'}
+            hint={m.hintUnitAccess}
           >
-            <Select name="unitId" required defaultValue="" disabled={!selectedProjectId}>
-              <option value="" disabled>
-                {selectedProjectId ? m.optionChooseUnit : m.optionChooseProjectFirst}
-              </option>
-              {units.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.code} — {u.type}
-                  {u.buildingName ? ` (${u.buildingName})` : ''} —{' '}
-                  {Number(u.price).toLocaleString()} {symbol}
-                </option>
-              ))}
-            </Select>
+            {/* Searched on the server: this used to preload ?pageSize=200
+                available units of the project. */}
+            <SearchSelect<Unit>
+              key={selectedProjectId}
+              name="unitId"
+              required
+              disabled={!selectedProjectId}
+              endpoint={`/api-proxy/units?projectId=${encodeURIComponent(
+                selectedProjectId,
+              )}&status=AVAILABLE`}
+              toOption={(u) => ({
+                id: u.id,
+                label: `${u.code} — ${u.type}${u.building?.name ? ` (${u.building.name})` : ''} — ${Number(
+                  u.price,
+                ).toLocaleString()} ${symbol}`,
+                raw: u,
+              })}
+              placeholder={selectedProjectId ? c.searchUnitPlaceholder : m.optionChooseProjectFirst}
+              locale={locale}
+            />
           </FormField>
         </div>
       </PremiumFormPanel>
