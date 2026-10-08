@@ -1,55 +1,25 @@
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
-import type { Paged, User, LeadStage, InstallmentPlanTemplate } from '@/lib/types';
+import type { Paged, User, InstallmentPlanTemplate } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import NewReservationForm from './_form';
 
 export const dynamic = 'force-dynamic';
 
-interface AvailableUnit {
-  id: string;
-  code: string;
-  type: string;
-  price?: string | number;
-  building?: {
-    phase?: { projectId?: string; project?: { id: string; name: { ar: string; en: string } } };
-  };
-}
-
-interface LeadOption {
-  id: string;
-  fullName: string;
-  phone: string;
-  stage: LeadStage;
-  projectInterest?: { id: string; name: { ar: string; en: string } } | null;
-}
-
 export default async function NewReservationPage() {
   const locale = await getLocale();
   const m = uiT(locale);
   const n = m.pages.reservationsNew;
 
-  const [unitsRes, leadsRes, clientsRes, customersRes, salesRes, plansRes] = await Promise.all([
-    safe(api.get<Paged<AvailableUnit>>('/units?status=AVAILABLE&pageSize=200')),
-    safe(api.get<Paged<LeadOption>>('/leads?pageSize=200')),
-    safe(api.get<Paged<User>>('/users?role=CLIENT&pageSize=200')),
-    safe(api.get<Paged<User>>('/users?role=CUSTOMER&pageSize=200')),
+  // Units, leads and clients are searched from the form itself (SearchSelect);
+  // preloading them here capped each list at 200 records.
+  const [salesRes, plansRes] = await Promise.all([
     safe(api.get<Paged<User>>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
     safe(api.get<Paged<InstallmentPlanTemplate>>(
       '/installment-plan-templates?status=ACTIVE&pageSize=200',
     )),
   ]);
-
-  const clients = [
-    ...(clientsRes.data?.data ?? []),
-    ...(customersRes.data?.data ?? []),
-  ].map((u) => ({
-    id: u.id,
-    fullName: u.fullName,
-    phone: u.phone,
-    role: u.role as 'CLIENT' | 'CUSTOMER',
-  }));
 
   return (
     <div className="flex flex-col gap-5 lg:gap-6">
@@ -101,9 +71,6 @@ export default async function NewReservationPage() {
       </div>
 
       <NewReservationForm
-        units={unitsRes.data?.data ?? []}
-        leads={leadsRes.data?.data ?? []}
-        clients={clients}
         salesOptions={salesRes.data?.data ?? []}
         plans={(plansRes.data?.data ?? []).map((p) => ({
           id: p.id,
