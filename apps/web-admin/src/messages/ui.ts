@@ -89,6 +89,13 @@ const UI = {
       allCities: 'كل المدن',
       viewAll: 'عرض الكل',
       noData: 'لا توجد بيانات',
+      // SearchSelect — pickers that search the API instead of preloading a page.
+      searchNoResults: 'لا توجد نتائج مطابقة',
+      searchLoading: 'جارٍ البحث…',
+      searchClear: 'مسح الاختيار',
+      searchUnitPlaceholder: 'ابحث بكود الوحدة…',
+      searchLeadPlaceholder: 'ابحث باسم العميل المحتمل أو رقمه…',
+      searchClientPlaceholder: 'ابحث باسم العميل أو رقمه أو بريده…',
     },
     pages: {
       dashboard: {
@@ -2188,12 +2195,6 @@ const UI = {
         clientFieldLabel: 'العميل المسجل',
         clientFieldHint: 'حساب مسجل في النظام — اسم، نوع الحساب، هاتف',
         clientOptionEmpty: '— اختر عميلاً مسجلاً —',
-        unitSearchPlaceholder: 'ابحث بكود الوحدة…',
-        leadSearchPlaceholder: 'ابحث باسم العميل المحتمل أو رقمه…',
-        clientSearchPlaceholder: 'ابحث باسم العميل أو رقمه أو بريده…',
-        searchNoResults: 'لا توجد نتائج مطابقة',
-        searchLoading: 'جارٍ البحث…',
-        searchClear: 'مسح الاختيار',
         p3Title: 'تفاصيل الحجز',
         p3Desc: 'حدد المندوب المسؤول، مدة صلاحية الحجز، وأي ملاحظات داخلية.',
         salesLabel: 'المندوب المسؤول',
@@ -5069,6 +5070,13 @@ const UI = {
       allCities: 'All Cities',
       viewAll: 'View All',
       noData: 'No data',
+      // SearchSelect — pickers that search the API instead of preloading a page.
+      searchNoResults: 'No matching results',
+      searchLoading: 'Searching…',
+      searchClear: 'Clear selection',
+      searchUnitPlaceholder: 'Search by unit code…',
+      searchLeadPlaceholder: 'Search lead by name or phone…',
+      searchClientPlaceholder: 'Search client by name, phone or email…',
     },
     pages: {
       dashboard: {
@@ -7165,12 +7173,6 @@ const UI = {
         clientFieldLabel: 'Registered Client',
         clientFieldHint: 'System account — name, account type, phone',
         clientOptionEmpty: '— Select a Client —',
-        unitSearchPlaceholder: 'Search by unit code…',
-        leadSearchPlaceholder: 'Search lead by name or phone…',
-        clientSearchPlaceholder: 'Search client by name, phone or email…',
-        searchNoResults: 'No matching results',
-        searchLoading: 'Searching…',
-        searchClear: 'Clear selection',
         p3Title: 'Reservation Details',
         p3Desc: 'Set the responsible sales rep, reservation validity, and any internal notes.',
         salesLabel: 'Responsible Sales Rep',

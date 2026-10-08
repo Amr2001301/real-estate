@@ -3,6 +3,8 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Loader2, Search, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 export interface SearchOption<T = unknown> {
   id: string;
@@ -23,10 +25,10 @@ interface Props<T> {
   toOption: (raw: T) => SearchOption<T>;
   onChange?: (raw: T | null) => void;
   required?: boolean;
+  disabled?: boolean;
   placeholder: string;
-  noResultsText: string;
-  loadingText: string;
-  clearLabel: string;
+  /** Picks the status texts (no results, searching, clear). */
+  locale?: Locale;
   pageSize?: number;
 }
 
@@ -43,12 +45,12 @@ export function SearchSelect<T>({
   toOption,
   onChange,
   required,
+  disabled,
   placeholder,
-  noResultsText,
-  loadingText,
-  clearLabel,
+  locale = 'ar',
   pageSize = 20,
 }: Props<T>) {
+  const t = uiT(locale).common;
   const listId = useId();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -147,6 +149,7 @@ export function SearchSelect<T>({
           ref={inputRef}
           id={name}
           type="text"
+          disabled={disabled}
           role="combobox"
           aria-expanded={open}
           aria-controls={listId}
@@ -165,31 +168,32 @@ export function SearchSelect<T>({
             'block h-10 w-full rounded-xl border border-hairline bg-surface ps-9 pe-9 text-sm text-slate-900 shadow-xs',
             'placeholder:text-slate-400 hover:border-slate-300',
             'focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/15',
+            'disabled:cursor-not-allowed disabled:bg-surface-muted disabled:opacity-60',
           )}
         />
         {loading ? (
           <Loader2 className="absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />
-        ) : selected ? (
+        ) : selected && !disabled ? (
           <button
             type="button"
             onClick={clear}
-            aria-label={clearLabel}
+            aria-label={t.searchClear}
             className="absolute end-2.5 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-slate-400 hover:text-slate-600"
           >
             <X className="h-4 w-4" />
           </button>
         ) : null}
       </div>
-      {open && (
+      {open && !disabled && (
         <ul
           id={listId}
           role="listbox"
           className="absolute z-20 mt-1 max-h-72 w-full overflow-auto rounded-xl border border-hairline bg-surface py-1 shadow-soft"
         >
           {loading && options.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-slate-500">{loadingText}</li>
+            <li className="px-3 py-2 text-sm text-slate-500">{t.searchLoading}</li>
           ) : options.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-slate-500">{noResultsText}</li>
+            <li className="px-3 py-2 text-sm text-slate-500">{t.searchNoResults}</li>
           ) : (
             options.map((option, i) => (
               <li

@@ -1,52 +1,23 @@
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
-import type { Paged, User, LeadStage, Project } from '@/lib/types';
+import type { Paged, User, Project } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import NewVisitForm from './_form';
 
 export const dynamic = 'force-dynamic';
 
-interface UnitOption {
-  id: string;
-  code: string;
-  type: string;
-  building?: { phase?: { project?: { id: string; name: { ar: string; en: string } } } };
-}
-
-interface LeadOption {
-  id: string;
-  fullName: string;
-  phone: string;
-  stage: LeadStage;
-  projectInterest?: { id: string; name: { ar: string; en: string } } | null;
-}
-
 export default async function NewVisitPage() {
   const locale = await getLocale();
   const m = uiT(locale);
   const n = m.pages.visitsNew;
 
-  const [meRes, projectsRes, unitsRes, leadsRes, clientsRes, customersRes, salesRes] =
-    await Promise.all([
-      safe(api.get<User>('/users/me')),
-      safe(api.get<Paged<Project>>('/projects?pageSize=200')),
-      safe(api.get<Paged<UnitOption>>('/units?pageSize=200')),
-      safe(api.get<Paged<LeadOption>>('/leads?pageSize=200')),
-      safe(api.get<Paged<User>>('/users?role=CLIENT&pageSize=200')),
-      safe(api.get<Paged<User>>('/users?role=CUSTOMER&pageSize=200')),
-      safe(api.get<Paged<User>>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
-    ]);
-
-  const clients = [
-    ...(clientsRes.data?.data ?? []),
-    ...(customersRes.data?.data ?? []),
-  ].map((u) => ({
-    id: u.id,
-    fullName: u.fullName,
-    phone: u.phone,
-    role: u.role as 'CLIENT' | 'CUSTOMER',
-  }));
+  // Units, leads and clients are searched from the form itself (SearchSelect).
+  const [meRes, projectsRes, salesRes] = await Promise.all([
+    safe(api.get<User>('/users/me')),
+    safe(api.get<Paged<Project>>('/projects?pageSize=200')),
+    safe(api.get<Paged<User>>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
+  ]);
 
   const currentRole = (meRes.data?.role ?? 'SALES') as 'ADMIN' | 'SALES';
 
@@ -102,9 +73,6 @@ export default async function NewVisitPage() {
       <NewVisitForm
         currentRole={currentRole}
         projects={projectsRes.data?.data ?? []}
-        units={unitsRes.data?.data ?? []}
-        leads={leadsRes.data?.data ?? []}
-        clients={clients}
         salesOptions={salesRes.data?.data ?? []}
         locale={locale}
       />

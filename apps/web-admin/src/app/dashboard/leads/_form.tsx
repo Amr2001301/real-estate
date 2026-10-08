@@ -5,6 +5,7 @@ import { useActionState, useState } from 'react';
 import { AlertCircle, X } from 'lucide-react';
 import { Field } from '@/components/form/field';
 import { SubmitButton } from '@/components/form/submit-button';
+import { SearchSelect } from '@/components/form/search-select';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -18,31 +19,29 @@ import { tx } from '@/lib/format';
 import { createLeadAction, type LeadFormState } from './actions';
 import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 
-interface SlimUnit {
+interface UnitOption {
   id: string;
   code: string;
   type: string;
-  projectId: string;
 }
 
 interface Props {
   projects: Project[];
   sources: LeadSource[];
   sales: User[];
-  units?: SlimUnit[];
   initialClient?: User | null;
   locale?: Locale;
 }
 
-export default function LeadForm({ projects, sources, sales, units = [], initialClient, locale = 'ar' }: Props) {
+export default function LeadForm({ projects, sources, sales, initialClient, locale = 'ar' }: Props) {
   const m = uiT(locale).pages.leadsForm;
+  const c = uiT(locale).common;
   const [state, formAction] = useActionState<LeadFormState, FormData>(
     createLeadAction,
     {},
   );
 
   const [selectedProjectId, setSelectedProjectId] = useState('');
-  const filteredUnits = units.filter((u) => u.projectId === selectedProjectId);
 
   const navSections = [
     { id: 'section-client',     num: '01', label: m.navClient.label,     sub: m.navClient.sub },
@@ -113,18 +112,21 @@ export default function LeadForm({ projects, sources, sales, units = [], initial
               name="unitInterestId"
               hint={m.hintUnit}
             >
-              <Select id="unitInterestId" name="unitInterestId" defaultValue="">
-                <option value="">{m.optionUnset}</option>
-                {filteredUnits.length === 0 ? (
-                  <option disabled value="">{m.noUnits}</option>
-                ) : (
-                  filteredUnits.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.code}{u.type ? ` · ${u.type}` : ''}
-                    </option>
-                  ))
-                )}
-              </Select>
+              {/* Searched on the server: this used to be one ?pageSize=500
+                  fetch of every unit, filtered here by project. Keyed by
+                  project so changing it clears the unit. */}
+              <SearchSelect<UnitOption>
+                key={selectedProjectId}
+                name="unitInterestId"
+                endpoint={`/api-proxy/units?projectId=${encodeURIComponent(selectedProjectId)}`}
+                toOption={(u) => ({
+                  id: u.id,
+                  label: `${u.code}${u.type ? ` · ${u.type}` : ''}`,
+                  raw: u,
+                })}
+                placeholder={c.searchUnitPlaceholder}
+                locale={locale}
+              />
             </Field>
           )}
         </PremiumFormPanel>

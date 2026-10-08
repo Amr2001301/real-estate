@@ -5,6 +5,7 @@ import { useActionState } from 'react';
 import { AlertCircle, X } from 'lucide-react';
 import { Field, inputClass } from '@/components/form/field';
 import { SubmitButton } from '@/components/form/submit-button';
+import { SearchSelect } from '@/components/form/search-select';
 import { Button } from '@/components/ui/button';
 import { FormFooter } from '@/components/ui/form-footer';
 import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
@@ -15,14 +16,16 @@ import { uiT } from '@/messages/ui';
 import { createContractAction, type ContractFormState } from '../actions';
 
 interface Props {
-  units:     Unit[];
-  customers: User[];
   currency?: string;
   locale?:   Locale;
 }
 
-export default function ContractForm({ units, customers, currency = 'SAR', locale = 'ar' }: Props) {
+// Customers and units are searched on the server (SearchSelect): this form
+// used to preload ?pageSize=100 of each, so customer or unit 101 could not be
+// put on a contract.
+export default function ContractForm({ currency = 'SAR', locale = 'ar' }: Props) {
   const m = uiT(locale).pages.contractsForm;
+  const c = uiT(locale).common;
   const [state, formAction] = useActionState<ContractFormState, FormData>(
     createContractAction,
     {},
@@ -55,25 +58,33 @@ export default function ContractForm({ units, customers, currency = 'SAR', local
         >
           <div className="flex flex-col gap-5">
             <Field label={m.labelCustomer} name="customerId">
-              <select id="customerId" name="customerId" required defaultValue="" className={inputClass}>
-                <option value="" disabled>{m.optionChoose}</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.fullName} ({c.role}) {c.phone ? `· ${c.phone}` : ''}
-                  </option>
-                ))}
-              </select>
+              <SearchSelect<User>
+                name="customerId"
+                required
+                endpoint="/api-proxy/users?role=CLIENT,CUSTOMER"
+                toOption={(u) => ({
+                  id: u.id,
+                  label: `${u.fullName} (${u.role})${u.phone ? ` · ${u.phone}` : ''}`,
+                  raw: u,
+                })}
+                placeholder={c.searchClientPlaceholder}
+                locale={locale}
+              />
             </Field>
 
             <Field label={m.labelUnit} name="unitId" hint={m.hintUnit}>
-              <select id="unitId" name="unitId" required defaultValue="" className={inputClass}>
-                <option value="" disabled>{m.optionChoose}</option>
-                {units.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.code} · {tx(u.building?.phase?.project?.name)} · {formatCurrency(u.price, currency)}
-                  </option>
-                ))}
-              </select>
+              <SearchSelect<Unit>
+                name="unitId"
+                required
+                endpoint="/api-proxy/units?status=AVAILABLE"
+                toOption={(u) => ({
+                  id: u.id,
+                  label: `${u.code} · ${tx(u.building?.phase?.project?.name)} · ${formatCurrency(u.price, currency)}`,
+                  raw: u,
+                })}
+                placeholder={c.searchUnitPlaceholder}
+                locale={locale}
+              />
             </Field>
           </div>
         </PremiumFormPanel>
