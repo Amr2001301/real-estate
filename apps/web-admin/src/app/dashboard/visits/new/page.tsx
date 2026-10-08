@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
-import type { Paged, User, Project } from '@/lib/types';
+import { projectOptions, staffOptions } from '@/lib/options';
+import type { User } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import NewVisitForm from './_form';
@@ -15,8 +16,8 @@ export default async function NewVisitPage() {
   // Units, leads and clients are searched from the form itself (SearchSelect).
   const [meRes, projectsRes, salesRes] = await Promise.all([
     safe(api.get<User>('/users/me')),
-    safe(api.get<Paged<Project>>('/projects?pageSize=200')),
-    safe(api.get<Paged<User>>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
+    safe(projectOptions()),
+    safe(staffOptions(['SALES', 'SALES_MANAGER'])),
   ]);
 
   const currentRole = (meRes.data?.role ?? 'SALES') as 'ADMIN' | 'SALES';

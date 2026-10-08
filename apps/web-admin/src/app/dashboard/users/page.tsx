@@ -2,6 +2,7 @@ import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import { Plus, Users, UserCheck, UserX, Shield, Search } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { staffOptions } from '@/lib/options';
 import type { Paged, User, UserRole } from '@/lib/types';
 import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/cn';
@@ -160,7 +161,7 @@ export default async function UsersPage({
   const [usersRes, kpiRes, managersRes] = await Promise.all([
     safe(api.get<Paged<User>>(`/users?${listQs}`)),
     safe(api.get<Paged<User>>(`/users?${kpiQs}`)),
-    safe(api.get<Paged<User>>('/users?role=SALES_MANAGER&pageSize=100')),
+    safe(staffOptions(['SALES_MANAGER'])),
   ]);
 
   const paged    = usersRes.data;

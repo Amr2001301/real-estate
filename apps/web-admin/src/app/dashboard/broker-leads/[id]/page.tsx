@@ -16,7 +16,8 @@ import {
   Copy,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { AdminBrokerLead, Paged, User } from '@/lib/types';
+import { staffOptions } from '@/lib/options';
+import type { AdminBrokerLead } from '@/lib/types';
 import { tx, formatDate, formatDateTime } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
@@ -82,7 +83,7 @@ export default async function AdminBrokerLeadDetailPage({
 
   const [leadRes, salesRes] = await Promise.all([
     safe(api.get<AdminBrokerLead>(`/broker-leads/${id}`)),
-    safe(api.get<Paged<User>>('/users?role=SALES,SALES_MANAGER&pageSize=200')),
+    safe(staffOptions(['SALES', 'SALES_MANAGER'])),
   ]);
   if (leadRes.error || !leadRes.data) notFound();
   const lead = leadRes.data;

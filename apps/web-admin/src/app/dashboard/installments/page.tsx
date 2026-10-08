@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Plus, Wallet, CheckCircle2, FileText, AlertCircle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { projectOptions } from '@/lib/options';
 import { getSession } from '@/lib/session';
 import type { Paged, InstallmentPlanTemplate } from '@/lib/types';
 import { formatDate, formatCurrency, tx } from '@/lib/format';
@@ -73,7 +74,7 @@ export default async function InstallmentPlansPage({
       ? safe(api.get<Stats>('/installment-plan-templates/stats'))
       : Promise.resolve({ data: null, error: null }),
     safe(api.get<Paged<InstallmentPlanTemplate>>(`/installment-plan-templates?${qs}`)),
-    safe(api.get<{ data: ProjectOption[] }>('/projects?pageSize=100')),
+    safe(projectOptions()),
   ]);
 
   const stats = statsRes.data;

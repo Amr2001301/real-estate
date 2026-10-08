@@ -34,7 +34,8 @@ function PanelHeader({ number, title, description }: { number: string; title: st
 
 interface Props {
   unit?: Unit;
-  projects: Project[];
+  // Dropdown rows (/projects/options): only these fields are read.
+  projects: Pick<Project, 'id' | 'name' | 'city'>[];
   locale?: Locale;
 }
 

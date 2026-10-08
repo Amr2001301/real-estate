@@ -1,18 +1,14 @@
-import { api, safe } from '@/lib/api';
+import { safe } from '@/lib/api';
+import { projectOptions } from '@/lib/options';
 import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { PageHeader } from '@/components/ui/page-header';
 import PlanForm from '../_form';
 
-interface ProjectOption {
-  id: string;
-  name: { ar: string; en: string };
-}
-
 export default async function NewInstallmentPlanPage() {
   const [projectsRes, currency, locale] = await Promise.all([
-    safe(api.get<{ data: ProjectOption[] }>('/projects?pageSize=100')),
+    safe(projectOptions()),
     getReportsCurrency(),
     getLocale(),
   ]);

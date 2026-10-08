@@ -12,8 +12,9 @@ import {
   Banknote,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { staffOptions } from '@/lib/options';
 import { getSession } from '@/lib/session';
-import type { Paged, Reservation, User as UserType } from '@/lib/types';
+import type { Reservation } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { cn } from '@/lib/cn';
@@ -72,7 +73,7 @@ export default async function ReservationDetailPage({
     reservation.status === 'PENDING'
       ? (
           await safe(
-            api.get<Paged<UserType>>('/users?role=SALES,SALES_MANAGER&active=true&pageSize=100'),
+            staffOptions(['SALES', 'SALES_MANAGER'], { active: true }),
           )
         ).data?.data ?? []
       : [];
@@ -123,6 +124,8 @@ export default async function ReservationDetailPage({
               salesOptions={salesOptions.map((s) => ({
                 id: s.id,
                 fullName: s.fullName,
+                // salesActorLabel needs it: without it managers read "مبيعات".
+                role: s.role,
               }))}
               canManage={isAdmin}
               locale={locale}

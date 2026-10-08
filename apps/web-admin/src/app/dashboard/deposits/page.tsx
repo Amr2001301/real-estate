@@ -5,9 +5,10 @@ import {
   ExternalLink, Plus, AlertCircle,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { projectOptions } from '@/lib/options';
 import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
-import type { PagedDeposits, Deposit, DepositType, Paged } from '@/lib/types';
+import type { PagedDeposits, Deposit, DepositType } from '@/lib/types';
 import { formatCurrency, formatDate, tx } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { cn } from '@/lib/cn';
@@ -138,7 +139,7 @@ export default async function DepositsPage({
 
   const [depositsRes, projectsRes] = await Promise.all([
     safe(api.get<PagedDeposits>(buildApiUrl(sp, page, pageSize))),
-    safe(api.get<Paged<ProjectOption>>('/projects?pageSize=100')),
+    safe(projectOptions()),
   ]);
 
   const deposits = depositsRes.data;

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
-import type { Paged, User, InstallmentPlanTemplate } from '@/lib/types';
+import { staffOptions } from '@/lib/options';
+import type { Paged, InstallmentPlanTemplate } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import NewReservationForm from './_form';
@@ -15,7 +16,7 @@ export default async function NewReservationPage() {
   // Units, leads and clients are searched from the form itself (SearchSelect);
   // preloading them here capped each list at 200 records.
   const [salesRes, plansRes] = await Promise.all([
-    safe(api.get<Paged<User>>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
+    safe(staffOptions(['SALES', 'SALES_MANAGER'])),
     safe(api.get<Paged<InstallmentPlanTemplate>>(
       '/installment-plan-templates?status=ACTIVE&pageSize=200',
     )),

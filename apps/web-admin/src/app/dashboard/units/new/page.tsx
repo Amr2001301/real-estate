@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { api, safe } from '@/lib/api';
-import type { Paged, Project } from '@/lib/types';
+import { safe } from '@/lib/api';
+import { projectOptions } from '@/lib/options';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import UnitForm from '../_form';
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function NewUnitPage() {
   const [r, locale] = await Promise.all([
-    safe(api.get<Paged<Project>>('/projects?pageSize=200')),
+    safe(projectOptions()),
     getLocale(),
   ]);
   const m = uiT(locale);

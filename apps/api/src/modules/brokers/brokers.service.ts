@@ -77,6 +77,7 @@ export class BrokersService {
         companyName: true,
         commercialName: true,
         code: true,
+        city: true,
         status: true,
         defaultCommissionPct: true,
       },

@@ -1,13 +1,8 @@
 import Link from 'next/link';
 import { BookmarkCheck, Eye, Briefcase, Phone, Plus, AlertCircle, SlidersHorizontal } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type {
-  AdminBrokerReservation,
-  Broker,
-  Paged,
-  Project,
-  User,
-} from '@/lib/types';
+import { projectOptions, brokerOptions, staffOptions } from '@/lib/options';
+import type { AdminBrokerReservation, Paged } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
@@ -62,9 +57,9 @@ export default async function AdminBrokerReservationsPage({
 
   const [resRes, brokersRes, projectsRes, salesRes] = await Promise.all([
     safe(api.get<Paged<AdminBrokerReservation>>(`/broker-reservations?${qs.toString()}`)),
-    safe(api.get<Paged<Broker>>('/brokers?pageSize=200')),
-    safe(api.get<Paged<Project>>('/projects?pageSize=200')),
-    safe(api.get<Paged<User>>('/users?role=SALES,SALES_MANAGER&pageSize=200')),
+    safe(brokerOptions()),
+    safe(projectOptions()),
+    safe(staffOptions(['SALES', 'SALES_MANAGER'])),
   ]);
 
   const paged = resRes.data;

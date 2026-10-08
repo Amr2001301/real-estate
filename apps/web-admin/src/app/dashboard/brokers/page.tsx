@@ -17,6 +17,7 @@ import {
   Search,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { brokerOptions } from '@/lib/options';
 import type { Broker, BrokerStatus, Paged } from '@/lib/types';
 import { formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
@@ -67,28 +68,27 @@ export default async function BrokersPage({
   if (sp.city) qs.set('city', sp.city);
   if (sp.q) qs.set('q', sp.q);
 
-  const [pagedRes, snapshotRes] = await Promise.all([
+  // FG-23 — the KPI strip and the city dropdown used to come from a
+  // ?pageSize=200 snapshot of full rows: counts wrong past 200 brokers, cities
+  // capped at 200. The counts now come from meta.facets of an unfiltered
+  // one-row page (computed in SQL over the whole set), the cities from
+  // /brokers/options (every broker, a few columns).
+  const [pagedRes, snapshotRes, optionsRes] = await Promise.all([
     safe(api.get<Paged<Broker>>(`/brokers?${qs.toString()}`)),
-    safe(api.get<Paged<Broker>>('/brokers?pageSize=200')),
+    safe(api.get<Paged<Broker>>('/brokers?pageSize=1')),
+    safe(brokerOptions()),
   ]);
 
   const paged = pagedRes.data;
   const snapshot = snapshotRes.data;
   const rows = paged?.data ?? [];
-  const allBrokers = snapshot?.data ?? [];
 
   const cities = Array.from(
-    new Set(allBrokers.map((b) => b.city).filter((c): c is string => Boolean(c))),
+    new Set(
+      (optionsRes.data?.data ?? []).map((b) => b.city).filter((c): c is string => Boolean(c)),
+    ),
   );
 
-  // FG-23 — these were counted client-side from the ?pageSize=200 snapshot,
-  // so they were wrong for any company with more brokers than that. The server
-  // now returns them in meta.facets, computed in SQL over the whole set.
-  //
-  // The snapshot fetch stays because the city dropdown below is built from the
-  // rows themselves, and that is the other half of FG-23 (filter options need a
-  // lightweight endpoint of their own). The counts are correct now; the city
-  // list is still capped at 200.
   const byStatus = snapshot?.meta.facets?.counts?.status ?? {};
   const total = snapshot?.meta.total ?? paged?.meta.total ?? 0;
   const active = byStatus.ACTIVE ?? 0;

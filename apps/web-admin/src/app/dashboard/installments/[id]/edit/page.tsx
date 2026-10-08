@@ -1,16 +1,12 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
+import { projectOptions } from '@/lib/options';
 import type { InstallmentPlanTemplate } from '@/lib/types';
 import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import PlanForm from '../../_form';
-
-interface ProjectOption {
-  id: string;
-  name: { ar: string; en: string };
-}
 
 export default async function EditInstallmentPlanPage({
   params,
@@ -21,7 +17,7 @@ export default async function EditInstallmentPlanPage({
 
   const [planRes, projectsRes, currency, locale] = await Promise.all([
     safe(api.get<InstallmentPlanTemplate>(`/installment-plan-templates/${id}`)),
-    safe(api.get<{ data: ProjectOption[] }>('/projects?pageSize=100')),
+    safe(projectOptions()),
     getReportsCurrency(),
     getLocale(),
   ]);

@@ -42,7 +42,7 @@ export class ProjectsService {
   async options() {
     const rows = await this.prisma.project.findMany({
       where: { companyId: getRequiredCompanyId() },
-      select: { id: true, name: true, city: true, status: true },
+      select: { id: true, name: true, city: true, status: true, featured: true },
       orderBy: [{ featured: 'desc' }, { createdAt: 'desc' }],
       take: OPTIONS_LIMIT + 1,
     });

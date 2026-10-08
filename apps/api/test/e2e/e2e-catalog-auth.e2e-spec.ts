@@ -545,7 +545,13 @@ describe('Flow A — Catalog sync (e2e)', () => {
       expect(options.status).toBe(200);
       expect(options.body.truncated).toBe(false);
       expect(options.body.data).toHaveLength(list.body.meta.total);
-      expect(Object.keys(options.body.data[0]).sort()).toEqual(['city', 'id', 'name', 'status']);
+      expect(Object.keys(options.body.data[0]).sort()).toEqual([
+        'city',
+        'featured',
+        'id',
+        'name',
+        'status',
+      ]);
     });
 
     it('/brokers/options: filters by status, admin only', async () => {
@@ -556,6 +562,7 @@ describe('Flow A — Catalog sync (e2e)', () => {
       expect(res.body.data.length).toBeGreaterThan(0);
       for (const b of res.body.data as { status: string }[]) expect(b.status).toBe('ACTIVE');
       expect(Object.keys(res.body.data[0]).sort()).toEqual([
+        'city',
         'code',
         'commercialName',
         'companyName',

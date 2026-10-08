@@ -26,9 +26,10 @@ interface UnitOption {
 }
 
 interface Props {
-  projects: Project[];
+  // Dropdown rows (/projects/options): only these fields are read.
+  projects: Pick<Project, 'id' | 'name' | 'city'>[];
   sources: LeadSource[];
-  sales: User[];
+  sales: Pick<User, 'id' | 'fullName' | 'role'>[];
   initialClient?: User | null;
   locale?: Locale;
 }

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
-import type { Paged, Project, Unit } from '@/lib/types';
+import { projectOptions } from '@/lib/options';
+import type { Unit } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import UnitForm from '../../_form';
@@ -15,7 +16,7 @@ export default async function EditUnitPage({
   const { id } = await params;
   const [unitRes, projectsRes, locale] = await Promise.all([
     safe(api.get<Unit>(`/units/${id}`)),
-    safe(api.get<Paged<Project>>('/projects?pageSize=200')),
+    safe(projectOptions()),
     getLocale(),
   ]);
   const m = uiT(locale);

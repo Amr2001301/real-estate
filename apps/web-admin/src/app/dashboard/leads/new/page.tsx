@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
-import type { Paged, Project, LeadSource, User } from '@/lib/types';
+import { projectOptions, staffOptions } from '@/lib/options';
+import type { LeadSource, User } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import LeadForm from '../_form';
@@ -20,9 +21,9 @@ export default async function NewLeadPage({
 
   // Units are searched from the form itself (SearchSelect).
   const [projectsRes, sourcesRes, salesRes, clientRes] = await Promise.all([
-    safe(api.get<Paged<Project>>('/projects?pageSize=100')),
+    safe(projectOptions()),
     safe(api.get<LeadSource[]>('/lead-sources')),
-    safe(api.get<Paged<User>>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
+    safe(staffOptions(['SALES', 'SALES_MANAGER'])),
     sp.clientId
       ? safe(api.get<User>(`/users/${sp.clientId}`))
       : Promise.resolve({ data: null, error: null } as { data: User | null; error: null }),

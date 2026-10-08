@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
+import { projectOptions } from '@/lib/options';
 import { formatCurrency, tx } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import {
@@ -64,8 +65,6 @@ interface BrokerEntry {
   commissionAmount: number;
   count: number;
 }
-interface ProjectOption { id: string; name: { ar: string; en: string } }
-interface PagedProjects { data: ProjectOption[] }
 
 // ── Status maps ────────────────────────────────────────────────────────────────
 const RESERVATION_STATUS_TONE: Record<string, BadgeTone> = {
@@ -139,7 +138,7 @@ export default async function ReportsPage({
     safe(api.get<Financial>(`/reports/financial?${qs}`)),
     safe(api.get<Record<string, number>>(`/reports/reservations?${qs}`)),
     safe(api.get<SalesTrendPoint[]>(`/reports/sales-trend?year=${year}`)),
-    safe(api.get<PagedProjects>('/projects?pageSize=100')),
+    safe(projectOptions()),
     safe(api.get<SalesFunnel>(`/reports/sales-funnel?${qs}`)),
     safe(api.get<BrokerEntry[]>(`/reports/broker-leaderboard?${qs}`)),
     cmpRange

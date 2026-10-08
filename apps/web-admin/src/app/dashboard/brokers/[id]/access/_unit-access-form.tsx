@@ -30,7 +30,8 @@ function FormField({
 
 interface Props {
   action: (formData: FormData) => void | Promise<void>;
-  projects: Project[];
+  // Dropdown rows (/projects/options): only these fields are read.
+  projects: Pick<Project, 'id' | 'name' | 'city'>[];
   locale?: Locale;
 }
 

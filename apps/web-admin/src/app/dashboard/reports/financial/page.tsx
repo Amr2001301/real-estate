@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
+import { projectOptions as fetchProjectOptions } from '@/lib/options';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import type {
@@ -27,7 +28,6 @@ import type {
   FinancialDepositRow,
   DepositType,
   PlanPaymentType,
-  Paged,
 } from '@/lib/types';
 import { formatCurrency, formatDate, tx } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
@@ -53,7 +53,6 @@ interface Search {
   dateFrom?: string; dateTo?: string; compare?: string;
   projectId?: string; q?: string; type?: string; showFilters?: string;
 }
-interface ProjectOption { id: string; name: { ar: string; en: string } }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function num(v: string | number | null | undefined): number {
@@ -117,7 +116,7 @@ export default async function FinancialReportsPage({
     cmpRange
       ? safe(api.get<FinancialDashboard>(apiUrl({ dateFrom: cmpRange.dateFrom, dateTo: cmpRange.dateTo, projectId: sp.projectId })))
       : Promise.resolve({ data: null, error: null }),
-    safe(api.get<Paged<ProjectOption>>('/projects?pageSize=100')),
+    safe(fetchProjectOptions()),
   ]);
 
   const dash     = dashRes.data;

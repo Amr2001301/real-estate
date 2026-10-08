@@ -10,6 +10,7 @@ import {
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { api, safe } from '@/lib/api';
+import { staffOptions } from '@/lib/options';
 import { getLocale } from '@/lib/locale';
 import type { Paged, VisitRequest, VisitAppointment } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
@@ -62,7 +63,7 @@ export default async function VisitsPage({
 
   const [statsRes, salesRes, locale] = await Promise.all([
     safe(api.get<Stats>('/visits/stats')),
-    safe(api.get<{ data: SalesUser[] }>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
+    safe(staffOptions(['SALES', 'SALES_MANAGER'])),
     getLocale(),
   ]);
   const m = uiT(locale).pages.visits;
