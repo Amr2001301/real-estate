@@ -20,6 +20,7 @@ export function AdminNotificationRow({
   unread,
   basePath,
   className,
+  markReadLabel = 'تعليم كمقروء',
   children,
 }: {
   id: string;
@@ -27,6 +28,8 @@ export function AdminNotificationRow({
   unread: boolean;
   basePath: '/dashboard' | '/portal';
   className: string;
+  /** aria-label of the mark-as-read button (localized by the caller). */
+  markReadLabel?: string;
   children: React.ReactNode;
 }) {
   const [, startTransition] = useTransition();
@@ -48,7 +51,7 @@ export function AdminNotificationRow({
   }
   if (unread) {
     return (
-      <button type="button" onClick={markRead} aria-label="تعليم كمقروء" className={className}>
+      <button type="button" onClick={markRead} aria-label={markReadLabel} className={className}>
         {children}
       </button>
     );

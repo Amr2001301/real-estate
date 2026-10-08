@@ -3,6 +3,8 @@
 import { useFormStatus } from 'react-dom';
 import { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
+import type { Locale } from '@/lib/locale';
+import { portalSharedT } from '@/messages/portal/shared';
 
 interface Props {
   children: ReactNode;
@@ -11,14 +13,16 @@ interface Props {
   className?: string;
   /** Disable the button independently of the form's pending state. */
   disabled?: boolean;
+  locale?: Locale;
 }
 
 export function SubmitButton({
   children,
-  pendingLabel = 'جاري الحفظ…',
+  pendingLabel,
   variant = 'primary',
   className,
   disabled = false,
+  locale = 'ar',
 }: Props) {
   const { pending } = useFormStatus();
   return (
@@ -30,7 +34,7 @@ export function SubmitButton({
       disabled={pending || disabled}
       className={className}
     >
-      {pending ? pendingLabel : children}
+      {pending ? (pendingLabel ?? portalSharedT(locale).submitButton.saving) : children}
     </Button>
   );
 }

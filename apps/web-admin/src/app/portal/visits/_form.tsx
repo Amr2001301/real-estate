@@ -15,6 +15,8 @@ import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import { tx } from '@/lib/format';
 import { findPortalUnit, getUnitProjectId } from '@/lib/portal-units';
 import type { PortalLead, PortalProject, PortalUnit } from '@/lib/types';
+import type { Locale } from '@/lib/locale';
+import { portalLeadsVisitsT } from '@/messages/portal/leads-visits';
 import {
   createPortalVisitRequestAction,
   type PortalVisitFormState,
@@ -22,18 +24,19 @@ import {
 
 interface Props {
   projects: PortalProject[];
+  locale?: Locale;
 }
-
-const NAV_SECTIONS = [
-  { id: 'section-lead',     num: '01', label: 'الفرصة',          sub: 'ربط بفرصة موجودة' },
-  { id: 'section-visit',    num: '02', label: 'بيانات الزيارة',  sub: 'المشروع والموعد المقترح' },
-  { id: 'section-customer', num: '03', label: 'بيانات العميل',   sub: 'لعميل جديد غير مسجل' },
-  { id: 'section-notes',    num: '04', label: 'ملاحظات',         sub: 'تفاصيل إضافية' },
-];
 
 // Leads and units are searched on the server (SearchSelect): this form used
 // to preload ?pageSize=200 of each.
-export default function PortalVisitForm({ projects }: Props) {
+export default function PortalVisitForm({ projects, locale = 'ar' }: Props) {
+  const m = portalLeadsVisitsT(locale).visits.form;
+  const NAV_SECTIONS = [
+    { id: 'section-lead', num: '01', label: m.nav.lead.label, sub: m.nav.lead.sub },
+    { id: 'section-visit', num: '02', label: m.nav.visit.label, sub: m.nav.visit.sub },
+    { id: 'section-customer', num: '03', label: m.nav.customer.label, sub: m.nav.customer.sub },
+    { id: 'section-notes', num: '04', label: m.nav.notes.label, sub: m.nav.notes.sub },
+  ];
   const [state, formAction] = useActionState<PortalVisitFormState, FormData>(
     createPortalVisitRequestAction,
     {},
@@ -45,7 +48,7 @@ export default function PortalVisitForm({ projects }: Props) {
   const leadRequest = useRef(0);
 
   function toUnitOption(u: PortalUnit): SearchOption<PortalUnit> {
-    return { id: u.id, label: `${u.code} • ${tx(u.building.phase.project.name)}`, raw: u };
+    return { id: u.id, label: `${u.code} • ${tx(u.building.phase.project.name, locale)}`, raw: u };
   }
 
   function onLeadChange(lead: PortalLead | null) {
@@ -80,31 +83,32 @@ export default function PortalVisitForm({ projects }: Props) {
       )}
 
       <PremiumFormLayout
+        locale={locale}
         navSections={NAV_SECTIONS}
-        sidebarBadge="جديد"
-        sidebarInfo="ستراجع الإدارة الطلب وتجدول موعد الزيارة المناسب."
+        sidebarBadge={m.sidebarBadge}
+        sidebarInfo={m.sidebarInfo}
       >
         <PremiumFormPanel
           id="section-lead"
           number="01"
-          title="الفرصة"
-          description="إن كانت الزيارة لعميل موجود اختر فرصته لتعبئة بياناته تلقائياً. خلاف ذلك اترك الحقل فارغاً وأدخل بيانات العميل أدناه."
+          title={m.leadTitle}
+          description={m.leadDescription}
         >
-        <Field label="فرصة موجودة" name="leadId">
+        <Field label={m.existingLead} name="leadId">
           {/* Empty = a new customer, entered below. */}
           <SearchSelect<PortalLead>
             name="leadId"
             endpoint="/api-proxy/portal/leads"
             toOption={(l) => ({ id: l.id, label: `${l.fullName} • ${l.phone}`, raw: l })}
             onChange={onLeadChange}
-            placeholder="ابحث باسم العميل أو رقمه… (اتركه فارغاً لعميل جديد)"
+            placeholder={m.leadPlaceholder}
           />
         </Field>
 
         {hasLead && (
           <div className="mt-3 rounded-2xl border border-brand-100 bg-brand-50/40 p-4">
             <p className="text-xs font-semibold text-brand-700 mb-2">
-              بيانات العميل من الفرصة المختارة
+              {m.leadCustomerData}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
               <span className="inline-flex items-center gap-2 text-slate-700">
@@ -135,11 +139,11 @@ export default function PortalVisitForm({ projects }: Props) {
         <PremiumFormPanel
           id="section-visit"
           number="02"
-          title="بيانات الزيارة"
-          description="حدد المشروع والوحدة والتاريخ المقترح."
+          title={m.visitTitle}
+          description={m.visitDescription}
         >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="المشروع" name="projectId" required>
+          <Field label={m.project} name="projectId" required>
             <Select
               id="projectId"
               name="projectId"
@@ -148,16 +152,16 @@ export default function PortalVisitForm({ projects }: Props) {
               onChange={(e) => onProjectChange(e.target.value)}
             >
               <option value="" disabled>
-                اختر مشروعاً
+                {m.chooseProject}
               </option>
               {projects.map((p) => (
                 <option key={p.project.id} value={p.project.id}>
-                  {tx(p.project.name)} — {p.project.city}
+                  {tx(p.project.name, locale)} — {p.project.city}
                 </option>
               ))}
             </Select>
           </Field>
-          <Field label="الوحدة" name="unitId" hint="اختياري">
+          <Field label={m.unit} name="unitId" hint={m.optional}>
             {/* Scoped to the project; until one is chosen every
                 broker-visible unit is searchable. */}
             <SearchSelect<PortalUnit>
@@ -168,10 +172,10 @@ export default function PortalVisitForm({ projects }: Props) {
               }`}
               toOption={toUnitOption}
               initial={autoUnit ? toUnitOption(autoUnit) : null}
-              placeholder="ابحث بكود الوحدة…"
+              placeholder={m.unitPlaceholder}
             />
           </Field>
-          <Field label="التاريخ المقترح" name="preferredDate" required hint="يوم/شهر/سنة">
+          <Field label={m.preferredDate} name="preferredDate" required hint={m.preferredDateHint}>
             <Input id="preferredDate" name="preferredDate" type="date" required dir="ltr" />
           </Field>
         </div>
@@ -181,14 +185,14 @@ export default function PortalVisitForm({ projects }: Props) {
         <PremiumFormPanel
           id="section-customer"
           number="03"
-          title="بيانات العميل"
-          description="مطلوبة لأنك لم تختر فرصة موجودة في الأعلى."
+          title={m.customerTitle}
+          description={m.customerDescription}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="الاسم الكامل" name="customerName" required>
+            <Field label={m.fullName} name="customerName" required>
               <Input id="customerName" name="customerName" required minLength={2} />
             </Field>
-            <Field label="رقم الجوال" name="customerPhone" required>
+            <Field label={m.phone} name="customerPhone" required>
               <Input
                 id="customerPhone"
                 name="customerPhone"
@@ -197,7 +201,7 @@ export default function PortalVisitForm({ projects }: Props) {
                 placeholder="+9665…"
               />
             </Field>
-            <Field label="البريد الإلكتروني" name="customerEmail" hint="اختياري">
+            <Field label={m.email} name="customerEmail" hint={m.optional}>
               <Input id="customerEmail" name="customerEmail" type="email" dir="ltr" />
             </Field>
           </div>
@@ -208,8 +212,7 @@ export default function PortalVisitForm({ projects }: Props) {
           <div className="flex items-start gap-2 rounded-xl bg-info-50/60 border border-info-100 text-info-700 p-3 text-xs">
             <Info className="h-4 w-4 shrink-0 mt-0.5" />
             <p>
-              سيتم استخدام بيانات العميل من الفرصة المختارة تلقائياً — لا حاجة
-              لإعادة إدخالها.
+              {m.leadDataNotice}
             </p>
           </div>
         )}
@@ -217,10 +220,10 @@ export default function PortalVisitForm({ projects }: Props) {
         <PremiumFormPanel
           id="section-notes"
           number="04"
-          title="ملاحظات"
-          description="أي تفاصيل إضافية تساعد في تنظيم الزيارة."
+          title={m.notesTitle}
+          description={m.notesDescription}
         >
-          <Field label="ملاحظة" name="notes">
+          <Field label={m.note} name="notes">
             <Textarea id="notes" name="notes" rows={3} />
           </Field>
         </PremiumFormPanel>
@@ -232,13 +235,13 @@ export default function PortalVisitForm({ projects }: Props) {
           <>
             <Link href="/portal/visits">
               <Button type="button" variant="ghost" leftIcon={<X className="h-4 w-4" />}>
-                إلغاء
+                {m.cancel}
               </Button>
             </Link>
-            <SubmitButton>طلب الزيارة</SubmitButton>
+            <SubmitButton locale={locale}>{m.submit}</SubmitButton>
           </>
         }
-        helper="ستراجع الإدارة الطلب وتجدول موعد الزيارة."
+        helper={m.footerHelper}
       />
     </form>
   );

@@ -16,6 +16,8 @@ import { api, safe } from '@/lib/api';
 import type { Paged, PortalVisitRequest } from '@/lib/types';
 import { tx, formatDate, formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/cn';
+import { getLocale } from '@/lib/locale';
+import { portalLeadsVisitsT } from '@/messages/portal/leads-visits';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -62,7 +64,8 @@ function avatarColor(name: string): string {
 
 function appointmentUrgency(
   iso: string | null | undefined,
-): { label: string; className: string } | null {
+  labels: { today: string; tomorrow: string; past: string },
+): { key: 'today' | 'tomorrow' | 'past'; label: string; className: string } | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
@@ -70,11 +73,11 @@ function appointmentUrgency(
   const tom = new Date(now);
   tom.setDate(now.getDate() + 1);
   if (d.toDateString() === now.toDateString())
-    return { label: 'اليوم', className: 'bg-amber-100 text-amber-700 border border-amber-200' };
+    return { key: 'today', label: labels.today, className: 'bg-amber-100 text-amber-700 border border-amber-200' };
   if (d.toDateString() === tom.toDateString())
-    return { label: 'غداً', className: 'bg-blue-50 text-blue-700 border border-blue-100' };
+    return { key: 'tomorrow', label: labels.tomorrow, className: 'bg-blue-50 text-blue-700 border border-blue-100' };
   if (d < now)
-    return { label: 'مضى', className: 'bg-slate-100 text-slate-500 border border-slate-200' };
+    return { key: 'past', label: labels.past, className: 'bg-slate-100 text-slate-500 border border-slate-200' };
   return null;
 }
 
@@ -84,6 +87,9 @@ export default async function PortalVisitsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const locale = await getLocale();
+  const m = portalLeadsVisitsT(locale);
+  const t = m.visits.list;
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
@@ -108,16 +114,16 @@ export default async function PortalVisitsPage({
     <div className="space-y-5">
 
       <PremiumPageHero
-        title="الزيارات"
-        description="طلبات الزيارات لعملائك — تابع حالة كل طلب والموعد المجدول مع العميل."
+        title={t.title}
+        description={t.description}
         breadcrumbs={[
-          { label: 'البوابة', href: '/portal' },
-          { label: 'الزيارات' },
+          { label: m.breadcrumbs.portal, href: '/portal' },
+          { label: m.breadcrumbs.visits },
         ]}
         actions={
           <Link href="/portal/visits/new">
             <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-              طلب زيارة جديدة
+              {t.newRequest}
             </Button>
           </Link>
         }
@@ -126,17 +132,17 @@ export default async function PortalVisitsPage({
       {r.error && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          تعذر تحميل الزيارات: {r.error}
+          {t.loadErrorPrefix} {r.error}
         </div>
       )}
 
       <PremiumMetricStrip
         variant="compact"
         metrics={[
-          { label: 'إجمالي الطلبات',  value: paged?.meta.total ?? 0, icon: <CalendarClock />, tone: 'brand'   },
-          { label: 'بانتظار الجدولة', value: pendingCount,            icon: <Clock />,          tone: 'warning' },
-          { label: 'موعد مجدول',      value: scheduledCount,          icon: <CalendarCheck2 />, tone: 'success' },
-          { label: 'مرفوض / ملغى',    value: rejectedCount,           icon: <XCircle />,        tone: 'danger'  },
+          { label: t.metrics.total, value: paged?.meta.total ?? 0, icon: <CalendarClock />, tone: 'brand'   },
+          { label: t.metrics.pending, value: pendingCount,            icon: <Clock />,          tone: 'warning' },
+          { label: t.metrics.scheduled, value: scheduledCount,          icon: <CalendarCheck2 />, tone: 'success' },
+          { label: t.metrics.rejected, value: rejectedCount,           icon: <XCircle />,        tone: 'danger'  },
         ]}
       />
 
@@ -145,51 +151,51 @@ export default async function PortalVisitsPage({
         action="/portal/visits"
         trailing={
           <div className="flex items-center gap-1.5 ms-auto shrink-0">
-            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            <Button type="submit" variant="primary" size="sm">{t.filter}</Button>
             {(sp.requestStatus || sp.q) && (
               <Link href="/portal/visits">
-                <Button type="button" variant="ghost" size="sm">مسح التصفية</Button>
+                <Button type="button" variant="ghost" size="sm">{t.clearFilter}</Button>
               </Link>
             )}
           </div>
         }
       >
-        <PremiumFilterField label="بحث">
+        <PremiumFilterField label={t.searchLabel}>
           <Input
             inputSize="sm"
             name="q"
             leftAddon={<Search />}
-            placeholder="ابحث باسم العميل أو رقم الجوال…"
+            placeholder={t.searchPlaceholder}
             defaultValue={sp.q ?? ''}
             className="flex-1 min-w-[180px]"
           />
         </PremiumFilterField>
-        <PremiumFilterField label="الحالة">
+        <PremiumFilterField label={t.statusLabel}>
           <Select
             name="requestStatus"
             inputSize="sm"
             defaultValue={sp.requestStatus ?? ''}
             className="w-52"
           >
-            <option value="">كل الحالات</option>
-            <option value="NEW">جديد — لم يُراجع بعد</option>
-            <option value="UNDER_REVIEW">قيد المراجعة</option>
-            <option value="CONVERTED">تم الجدولة</option>
-            <option value="REJECTED">مرفوض</option>
-            <option value="CANCELLED">ملغى</option>
+            <option value="">{t.statusOptions.all}</option>
+            <option value="NEW">{t.statusOptions.NEW}</option>
+            <option value="UNDER_REVIEW">{t.statusOptions.UNDER_REVIEW}</option>
+            <option value="CONVERTED">{t.statusOptions.CONVERTED}</option>
+            <option value="REJECTED">{t.statusOptions.REJECTED}</option>
+            <option value="CANCELLED">{t.statusOptions.CANCELLED}</option>
           </Select>
         </PremiumFilterField>
       </PremiumFilterBar>
 
       <PremiumSectionCard
         icon={<CalendarClock />}
-        title="قائمة الزيارات"
+        title={t.tableTitle}
         padded={false}
       >
         {rows.length > 0 && (
           <div className="flex items-center gap-2 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
             <span className="font-bold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
-            <span>طلب زيارة</span>
+            <span>{t.countNoun}</span>
           </div>
         )}
 
@@ -197,11 +203,11 @@ export default async function PortalVisitsPage({
           <table className="w-full text-sm">
             <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">العميل</th>
-                <th className="text-start font-semibold py-3 px-4">المشروع / الوحدة</th>
-                <th className="text-start font-semibold py-3 px-4">الموعد المجدول</th>
-                <th className="text-start font-semibold py-3 px-4">حالة الطلب</th>
-                <th className="text-start font-semibold py-3 px-4">التاريخ المقترح</th>
+                <th className="text-start font-semibold py-3 ps-5 pe-4">{t.cols.client}</th>
+                <th className="text-start font-semibold py-3 px-4">{t.cols.projectUnit}</th>
+                <th className="text-start font-semibold py-3 px-4">{t.cols.scheduledAppointment}</th>
+                <th className="text-start font-semibold py-3 px-4">{t.cols.requestStatus}</th>
+                <th className="text-start font-semibold py-3 px-4">{t.cols.preferredDate}</th>
               </tr>
             </thead>
             <tbody>
@@ -210,8 +216,8 @@ export default async function PortalVisitsPage({
                   <td colSpan={5} className="p-0">
                     <EmptyState
                       icon={<CalendarClock />}
-                      title="لا توجد زيارات بعد"
-                      description="ابدأ بطلب أول زيارة لعميل مهتم بأحد مشاريعك."
+                      title={t.emptyTitle}
+                      description={t.emptyDescription}
                       action={
                         <Link href="/portal/visits/new">
                           <Button
@@ -219,7 +225,7 @@ export default async function PortalVisitsPage({
                             size="sm"
                             leftIcon={<Plus className="h-4 w-4" />}
                           >
-                            طلب زيارة جديدة
+                            {t.newRequest}
                           </Button>
                         </Link>
                       }
@@ -231,8 +237,8 @@ export default async function PortalVisitsPage({
                 const clientName  = v.lead?.fullName ?? v.customerName;
                 const clientPhone = v.lead?.phone ?? v.customerPhone;
                 const appt        = v.appointments?.[0];
-                const urgency     = appointmentUrgency(appt?.scheduledAt);
-                const isToday     = urgency?.label === 'اليوم';
+                const urgency     = appointmentUrgency(appt?.scheduledAt, t.urgency);
+                const isToday     = urgency?.key === 'today';
 
                 return (
                   <tr
@@ -279,7 +285,7 @@ export default async function PortalVisitsPage({
                         <Building2 className="h-3.5 w-3.5 text-brand-500 shrink-0 mt-px" />
                         <div>
                           <p className="text-xs font-semibold text-slate-800">
-                            {v.project ? tx(v.project.name) : '—'}
+                            {v.project ? tx(v.project.name, locale) : '—'}
                           </p>
                           {v.unit?.code && (
                             <p className="text-2xs text-slate-500 mt-0.5 inline-flex items-center gap-1">
@@ -309,19 +315,19 @@ export default async function PortalVisitsPage({
                               {formatDateTime(appt.scheduledAt)}
                             </CodeText>
                           </div>
-                          <AppointmentStatusBadge status={appt.status} />
+                          <AppointmentStatusBadge status={appt.status} locale={locale} />
                         </div>
                       ) : (
                         <span className="text-slate-400 text-xs inline-flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          بانتظار الجدولة
+                          {t.awaitingScheduling}
                         </span>
                       )}
                     </td>
 
                     <td className="py-3 px-4">
                       {v.requestStatus ? (
-                        <VisitRequestStatusBadge status={v.requestStatus} />
+                        <VisitRequestStatusBadge status={v.requestStatus} locale={locale} />
                       ) : (
                         '—'
                       )}
@@ -343,6 +349,7 @@ export default async function PortalVisitsPage({
             pageSize={paged.meta.pageSize}
             total={paged.meta.total}
             basePath="/portal/visits"
+            locale={locale}
             params={{ requestStatus: sp.requestStatus, q: sp.q }}
           />
         )}

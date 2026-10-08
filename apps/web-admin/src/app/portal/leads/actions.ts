@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { api } from '@/lib/api';
+import { getLocale } from '@/lib/locale';
+import { portalLeadsVisitsT } from '@/messages/portal/leads-visits';
 import type { PortalLead } from '@/lib/types';
 
 export interface PortalLeadFormState {
@@ -24,7 +26,8 @@ export async function createPortalLeadAction(
   const fullName = str(formData, 'fullName');
   const phone = str(formData, 'phone');
   if (!fullName || !phone) {
-    return { error: 'الاسم الكامل ورقم الجوال مطلوبان' };
+    const m = portalLeadsVisitsT(await getLocale()).leads.errors;
+    return { error: m.nameAndPhoneRequired };
   }
   const payload = {
     fullName,

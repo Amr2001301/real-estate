@@ -17,6 +17,8 @@ import { api, safe } from '@/lib/api';
 import type { PortalCommission } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
+import { getLocale } from '@/lib/locale';
+import { portalMoneyTeamT } from '@/messages/portal/money-team';
 import { cn } from '@/lib/cn';
 import {
   PremiumPageHero,
@@ -61,6 +63,9 @@ export default async function PortalCommissionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const locale = await getLocale();
+  const m = portalMoneyTeamT(locale);
+  const t = m.commissions.detail;
   const currency = await getReportsCurrency();
   const r = await safe(api.get<PortalCommission>(`/portal/commissions/${id}`));
   if (r.error || !r.data) notFound();
@@ -74,15 +79,15 @@ export default async function PortalCommissionDetailPage({
       {/* Hero */}
       <PremiumPageHero
         title={c.commissionNumber}
-        description="تفاصيل حساب العمولة — الأرقام مثبتة عند توقيع العقد ولا تتغير."
+        description={t.description}
         breadcrumbs={[
-          { label: 'البوابة',   href: '/portal' },
-          { label: 'العمولات', href: '/portal/commissions' },
+          { label: m.common.breadcrumbPortal, href: '/portal' },
+          { label: t.breadcrumb, href: '/portal/commissions' },
           { label: c.commissionNumber },
         ]}
         meta={
           <>
-            <BrokerCommissionStatusBadge status={c.status} />
+            <BrokerCommissionStatusBadge status={c.status} locale={locale} />
             {c.contract?.contractNumber && (
               <Link
                 href={`/portal/contracts/${c.contract.id}` as never}
@@ -101,7 +106,7 @@ export default async function PortalCommissionDetailPage({
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold">سبب الرفض</p>
+            <p className="font-semibold">{t.rejectionReason}</p>
             <p className="mt-1 leading-relaxed">{c.rejectionReason}</p>
           </div>
         </div>
@@ -113,7 +118,7 @@ export default async function PortalCommissionDetailPage({
           <div className="space-y-5">
 
             {/* ── Client & deal ────────────────────────────────────────── */}
-            <PremiumSectionCard title="الصفقة والعميل" icon={<UserCircle className="h-4 w-4" />}>
+            <PremiumSectionCard title={t.dealTitle} icon={<UserCircle className="h-4 w-4" />}>
               <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-5">
                 {/* Avatar */}
                 <div className={cn(
@@ -135,7 +140,7 @@ export default async function PortalCommissionDetailPage({
                         className="inline-flex items-center gap-1.5 text-2xs text-brand-600 hover:text-brand-700 bg-brand-50 border border-brand-100 rounded-lg px-2.5 py-1 font-medium transition-colors"
                       >
                         <FileText className="h-3 w-3 shrink-0" />
-                        العقد: {c.contract.contractNumber ?? '—'}
+                        {t.contractChip(c.contract.contractNumber ?? '—')}
                       </Link>
                     )}
                     {c.reservation && (
@@ -144,7 +149,7 @@ export default async function PortalCommissionDetailPage({
                         className="inline-flex items-center gap-1.5 text-2xs text-slate-600 hover:text-brand-700 bg-slate-50 border border-hairline rounded-lg px-2.5 py-1 font-medium transition-colors"
                       >
                         <BookmarkCheck className="h-3 w-3 shrink-0" />
-                        الحجز: {c.reservation.reservationNumber ?? '—'}
+                        {t.reservationChip(c.reservation.reservationNumber ?? '—')}
                       </Link>
                     )}
                   </div>
@@ -154,7 +159,7 @@ export default async function PortalCommissionDetailPage({
 
             {/* ── Unit & project ───────────────────────────────────────── */}
             {(c.project || c.unit) && (
-              <PremiumSectionCard title="الوحدة والمشروع" icon={<Building2 className="h-4 w-4" />}>
+              <PremiumSectionCard title={t.unitProjectTitle} icon={<Building2 className="h-4 w-4" />}>
                 <div className="flex flex-col gap-4">
                   {c.project && (
                     <div className="flex items-start gap-3">
@@ -162,7 +167,7 @@ export default async function PortalCommissionDetailPage({
                         <Building2 className="h-4 w-4" />
                       </span>
                       <div>
-                        <p className="text-[16px] font-extrabold text-slate-900 leading-snug">{tx(c.project.name)}</p>
+                        <p className="text-[16px] font-extrabold text-slate-900 leading-snug">{tx(c.project.name, locale)}</p>
                         {c.project.city && (
                           <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                             <MapPin className="h-3 w-3 shrink-0 text-slate-400" />
@@ -175,14 +180,14 @@ export default async function PortalCommissionDetailPage({
                   {c.unit && (
                     <div className="flex items-center justify-between rounded-xl bg-canvas/60 ring-1 ring-inset ring-hairline px-4 py-3">
                       <div>
-                        <p className="text-2xs font-medium uppercase tracking-wide text-slate-500">الوحدة</p>
+                        <p className="text-2xs font-medium uppercase tracking-wide text-slate-500">{t.unit}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <CodeText className="text-sm font-bold text-slate-800">{c.unit.code}</CodeText>
                           {c.unit.type && <CodeText className="text-2xs text-slate-500">{c.unit.type}</CodeText>}
                         </div>
                       </div>
                       <div className="text-end">
-                        <p className="text-2xs font-medium uppercase tracking-wide text-slate-500">سعر الوحدة</p>
+                        <p className="text-2xs font-medium uppercase tracking-wide text-slate-500">{t.unitPrice}</p>
                         <p className="text-sm font-bold text-slate-900 tabular-nums mt-0.5">{formatCurrency(c.unit.price, currency)}</p>
                       </div>
                     </div>
@@ -192,33 +197,33 @@ export default async function PortalCommissionDetailPage({
             )}
 
             {/* ── Financial breakdown ──────────────────────────────────── */}
-            <PremiumSectionCard title="تفاصيل الحساب" icon={<Banknote className="h-4 w-4" />}>
+            <PremiumSectionCard title={t.calcTitle} icon={<Banknote className="h-4 w-4" />}>
               <div className="space-y-3">
                 {/* Row 1: basis → rate → gross */}
                 <MetricGrid cols={3}>
-                  <MetricTile label="وعاء العمولة"  value={formatCurrency(c.basisAmount, currency)} />
+                  <MetricTile label={t.basis}  value={formatCurrency(c.basisAmount, currency)} />
                   <MetricTile
-                    label="نسبة العمولة"
+                    label={t.rate}
                     value={c.commissionPct !== null && c.commissionPct !== undefined ? `${Number(c.commissionPct).toFixed(2)}%` : '—'}
                     variant="accent"
                   />
-                  <MetricTile label="الإجمالي" value={formatCurrency(c.grossAmount, currency)} />
+                  <MetricTile label={t.gross} value={formatCurrency(c.grossAmount, currency)} />
                 </MetricGrid>
 
                 {/* Row 2: deductions → net */}
                 <MetricGrid cols={3}>
                   <MetricTile
-                    label="ضريبة القيمة المضافة"
+                    label={t.vat}
                     value={`${Number(c.taxPct).toFixed(2)}%`}
                     sub={formatCurrency(c.taxAmount, currency)}
                   />
                   <MetricTile
-                    label="الحجز الضريبي"
+                    label={t.withholding}
                     value={`${Number(c.withholdingPct).toFixed(2)}%`}
                     sub={formatCurrency(c.withholdingAmount, currency)}
                   />
                   <MetricTile
-                    label="الصافي المستحق"
+                    label={t.netDue}
                     value={formatCurrency(c.netAmount, currency)}
                     variant="highlight"
                   />
@@ -231,40 +236,40 @@ export default async function PortalCommissionDetailPage({
           <div className="space-y-4">
 
             {/* ── Quick actions ────────────────────────────────────────── */}
-            <PremiumCommandPanel title="إجراءات سريعة">
+            <PremiumCommandPanel title={m.common.quickActions}>
               {c.contract && (
                 <Link href={`/portal/contracts/${c.contract.id}` as never} className={CMD_LINK}>
                   <span className={CMD_ICON}><FileText /></span>
-                  عرض العقد
+                  {t.viewContract}
                 </Link>
               )}
               {c.reservation && (
                 <Link href={`/portal/reservations/${c.reservation.id}` as never} className={CMD_LINK}>
                   <span className={CMD_ICON}><BookmarkCheck /></span>
-                  عرض الحجز
+                  {t.viewReservation}
                 </Link>
               )}
               <Link href={'/portal/commissions' as never} className={CMD_LINK}>
                 <span className={CMD_ICON}><ArrowLeft /></span>
-                قائمة العمولات
+                {t.backToList}
               </Link>
             </PremiumCommandPanel>
 
             {/* ── Commission info ──────────────────────────────────────── */}
-            <PremiumSectionCard title="معلومات العمولة">
+            <PremiumSectionCard title={t.infoTitle}>
               <dl className="flex flex-col gap-3">
-                <InfoRow label="الحالة" icon={<ShieldCheck className="h-3.5 w-3.5" />}>
-                  <BrokerCommissionStatusBadge status={c.status} />
+                <InfoRow label={m.common.status} icon={<ShieldCheck className="h-3.5 w-3.5" />}>
+                  <BrokerCommissionStatusBadge status={c.status} locale={locale} />
                 </InfoRow>
-                <InfoRow label="تاريخ الاستحقاق" icon={<CalendarRange className="h-3.5 w-3.5" />}>
+                <InfoRow label={t.earnedAt} icon={<CalendarRange className="h-3.5 w-3.5" />}>
                   <span className="text-slate-700 text-xs tabular-nums">{formatDate(c.earnedAt)}</span>
                 </InfoRow>
                 {c.approvedAt && (
-                  <InfoRow label="تاريخ الاعتماد" icon={<CheckCircle2 className="h-3.5 w-3.5" />}>
+                  <InfoRow label={t.approvedAt} icon={<CheckCircle2 className="h-3.5 w-3.5" />}>
                     <span className="text-emerald-700 text-xs font-semibold tabular-nums">{formatDate(c.approvedAt)}</span>
                   </InfoRow>
                 )}
-                <InfoRow label="تاريخ الإنشاء" icon={<CalendarRange className="h-3.5 w-3.5" />}>
+                <InfoRow label={t.createdAt} icon={<CalendarRange className="h-3.5 w-3.5" />}>
                   <span className="text-slate-700 text-xs tabular-nums">{formatDate(c.createdAt)}</span>
                 </InfoRow>
 
@@ -275,13 +280,13 @@ export default async function PortalCommissionDetailPage({
                     isApproved ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100',
                   )}>
                     <p className={cn('text-2xs font-semibold uppercase tracking-wide', isApproved ? 'text-emerald-500' : 'text-amber-500')}>
-                      الصافي المستحق
+                      {t.netDue}
                     </p>
                     <p className={cn('text-2xl font-black tabular-nums mt-1 leading-none', isApproved ? 'text-emerald-700' : 'text-amber-700')}>
                       {formatCurrency(c.netAmount, currency)}
                     </p>
                     <p className={cn('text-2xs mt-1', isApproved ? 'text-emerald-400' : 'text-amber-400')}>
-                      إجمالي: {formatCurrency(c.grossAmount, currency)}
+                      {t.grossFn(formatCurrency(c.grossAmount, currency))}
                     </p>
                   </div>
                 </div>

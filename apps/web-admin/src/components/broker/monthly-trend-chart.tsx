@@ -15,6 +15,8 @@ import {
 } from 'recharts';
 import type { BrokerMonthlyTrendPoint } from '@/lib/types';
 import { cn } from '@/lib/cn';
+import type { Locale } from '@/lib/locale';
+import { portalSharedT } from '@/messages/portal/shared';
 
 // ── Brand-aligned colors ──────────────────────────────────────────────────────
 const C = {
@@ -25,9 +27,9 @@ const C = {
 };
 
 // ── Formatters ────────────────────────────────────────────────────────────────
-function fmtAxisMoney(v: number): string {
-  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}م`;
-  if (v >= 1_000)     return `${(v / 1_000).toFixed(0)}ك`;
+function fmtAxisMoney(v: number, million: string, thousand: string): string {
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}${million}`;
+  if (v >= 1_000)     return `${(v / 1_000).toFixed(0)}${thousand}`;
   return String(v);
 }
 
@@ -39,15 +41,17 @@ function FinancialTooltip({
   payload,
   label,
   fmtCurrency,
+  dir,
 }: {
   active?:      boolean;
   payload?:     TooltipPayloadItem[];
   label?:       string;
   fmtCurrency:  (v: number) => string;
+  dir:          'rtl' | 'ltr';
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={TT_STYLE}>
+    <div style={{ ...TT_STYLE, direction: dir }}>
       <p style={TT_LABEL}>{label}</p>
       {payload.map((item) => (
         <div key={item.name} style={TT_ROW}>
@@ -64,20 +68,24 @@ function ActivityTooltip({
   active,
   payload,
   label,
+  dir,
+  numberLocale,
 }: {
   active?: boolean;
   payload?: TooltipPayloadItem[];
   label?: string;
+  dir: 'rtl' | 'ltr';
+  numberLocale: string;
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={TT_STYLE}>
+    <div style={{ ...TT_STYLE, direction: dir }}>
       <p style={TT_LABEL}>{label}</p>
       {payload.map((item) => (
         <div key={item.name} style={TT_ROW}>
           <span style={{ ...TT_DOT, background: item.color }} />
           <span style={TT_NAME}>{item.name}</span>
-          <span style={TT_VALUE}>{item.value.toLocaleString('ar-EG')}</span>
+          <span style={TT_VALUE}>{item.value.toLocaleString(numberLocale)}</span>
         </div>
       ))}
     </div>
@@ -102,20 +110,16 @@ const TT_VALUE: React.CSSProperties = { fontWeight: 600, color: '#0f172a', fontV
 
 // ── Shared axis / grid config ─────────────────────────────────────────────────
 const TICK_STYLE = { fontSize: 11, fill: '#94a3b8', fontFamily: 'inherit' } as const;
-const LEGEND_STYLE = { fontSize: 11, paddingTop: 10, direction: 'rtl' } as const;
+const LEGEND_STYLE = { fontSize: 11, paddingTop: 10 } as const;
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 type Mode = 'financial' | 'activity';
-
-const TABS: { key: Mode; label: string }[] = [
-  { key: 'financial', label: 'المالية' },
-  { key: 'activity',  label: 'النشاط'  },
-];
 
 // ── Component ─────────────────────────────────────────────────────────────────
 interface Props {
   data:      BrokerMonthlyTrendPoint[];
   currency?: string;
+  locale?:   Locale;
 }
 
 function mapPoint(p: BrokerMonthlyTrendPoint) {
@@ -128,9 +132,16 @@ function mapPoint(p: BrokerMonthlyTrendPoint) {
   };
 }
 
-export function MonthlyTrendChart({ data, currency = 'SAR' }: Props) {
+export function MonthlyTrendChart({ data, currency = 'SAR', locale = 'ar' }: Props) {
+  const t = portalSharedT(locale).trend;
+  const dir = locale === 'en' ? 'ltr' : 'rtl';
+  const legendStyle = { ...LEGEND_STYLE, direction: dir } as const;
+  const tabs: { key: Mode; label: string }[] = [
+    { key: 'financial', label: t.tabFinancial },
+    { key: 'activity',  label: t.tabActivity  },
+  ];
   function fmtCurrency(v: number): string {
-    return new Intl.NumberFormat('ar-SA', {
+    return new Intl.NumberFormat(t.currencyLocale, {
       style: 'currency',
       currency,
       minimumFractionDigits: 0,
@@ -142,8 +153,8 @@ export function MonthlyTrendChart({ data, currency = 'SAR' }: Props) {
   if (data.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
-        <p className="text-sm text-slate-500">لا توجد بيانات شهرية في هذا النطاق.</p>
-        <p className="text-2xs text-slate-400">جرّب توسيع نطاق التاريخ.</p>
+        <p className="text-sm text-slate-500">{t.emptyTitle}</p>
+        <p className="text-2xs text-slate-400">{t.emptyHint}</p>
       </div>
     );
   }
@@ -155,7 +166,7 @@ export function MonthlyTrendChart({ data, currency = 'SAR' }: Props) {
 
       {/* Tab toggle */}
       <div className="flex items-center gap-1 self-start">
-        {TABS.map(({ key, label }) => (
+        {tabs.map(({ key, label }) => (
           <button
             key={key}
             type="button"
@@ -199,21 +210,21 @@ export function MonthlyTrendChart({ data, currency = 'SAR' }: Props) {
               tick={TICK_STYLE}
               axisLine={false}
               tickLine={false}
-              tickFormatter={fmtAxisMoney}
+              tickFormatter={(v: number) => fmtAxisMoney(v, t.axisMillion, t.axisThousand)}
               width={40}
             />
 
             <Tooltip
-              content={<FinancialTooltip fmtCurrency={fmtCurrency} />}
+              content={<FinancialTooltip fmtCurrency={fmtCurrency} dir={dir} />}
               cursor={{ stroke: '#e7dfd3', strokeWidth: 1.5, strokeDasharray: '3 3' }}
             />
 
-            <Legend wrapperStyle={LEGEND_STYLE} iconType="circle" iconSize={8} />
+            <Legend wrapperStyle={legendStyle} iconType="circle" iconSize={8} />
 
             <Area
               type="monotone"
               dataKey="commissionsNet"
-              name="صافي العمولات"
+              name={t.commissionsNet}
               stroke={C.commissions}
               strokeWidth={2.5}
               fill="url(#gradComm)"
@@ -223,7 +234,7 @@ export function MonthlyTrendChart({ data, currency = 'SAR' }: Props) {
             <Area
               type="monotone"
               dataKey="payoutsNet"
-              name="صافي المدفوعات"
+              name={t.payoutsNet}
               stroke={C.payouts}
               strokeWidth={2.5}
               fill="url(#gradPay)"
@@ -260,22 +271,22 @@ export function MonthlyTrendChart({ data, currency = 'SAR' }: Props) {
             />
 
             <Tooltip
-              content={<ActivityTooltip />}
+              content={<ActivityTooltip dir={dir} numberLocale={t.numberLocale} />}
               cursor={{ fill: '#f8fafc', radius: 4 } as React.SVGProps<SVGRectElement>}
             />
 
-            <Legend wrapperStyle={LEGEND_STYLE} iconType="circle" iconSize={8} />
+            <Legend wrapperStyle={legendStyle} iconType="circle" iconSize={8} />
 
             <Bar
               dataKey="reservations"
-              name="حجوزات"
+              name={t.reservations}
               fill={C.reservations}
               radius={[5, 5, 0, 0]}
               maxBarSize={36}
             />
             <Bar
               dataKey="contractsSigned"
-              name="عقود موقّعة"
+              name={t.contractsSigned}
               fill={C.contracts}
               radius={[5, 5, 0, 0]}
               maxBarSize={36}

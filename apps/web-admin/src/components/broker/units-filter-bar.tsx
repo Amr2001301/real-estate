@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/cn';
+import type { Locale } from '@/lib/locale';
+import { portalSharedT } from '@/messages/portal/shared';
 
 export interface UnitSearchParams {
   q?:         string;
@@ -25,9 +27,13 @@ interface Props {
   projects:    PortalProject[];
   typeOptions: string[];
   sp:          UnitSearchParams;
+  locale?:     Locale;
 }
 
-export function UnitsFilterBar({ projects, typeOptions, sp }: Props) {
+export function UnitsFilterBar({ projects, typeOptions, sp, locale = 'ar' }: Props) {
+  const t = portalSharedT(locale);
+  const f = t.filters;
+  const u = t.unitsFilter;
   // Advanced = secondary filters (price + specs)
   const advancedValues = [sp.minPrice, sp.maxPrice, sp.bedrooms, sp.bathrooms];
   const advancedCount  = advancedValues.filter(Boolean).length;
@@ -52,7 +58,7 @@ export function UnitsFilterBar({ projects, typeOptions, sp }: Props) {
           inputSize="sm"
           name="q"
           leftAddon={<Search />}
-          placeholder="ابحث برمز الوحدة أو المشروع…"
+          placeholder={u.searchPlaceholder}
           defaultValue={sp.q ?? ''}
           className="min-w-[180px] flex-1"
         />
@@ -64,10 +70,10 @@ export function UnitsFilterBar({ projects, typeOptions, sp }: Props) {
           defaultValue={sp.projectId ?? ''}
           className="w-36 shrink-0"
         >
-          <option value="">كل المشاريع</option>
+          <option value="">{f.allProjects}</option>
           {projects.map((p) => (
             <option key={p.project.id} value={p.project.id}>
-              {tx(p.project.name)}
+              {tx(p.project.name, locale)}
             </option>
           ))}
         </Select>
@@ -79,10 +85,10 @@ export function UnitsFilterBar({ projects, typeOptions, sp }: Props) {
           defaultValue={sp.status ?? ''}
           className="w-32 shrink-0"
         >
-          <option value="">كل الحالات</option>
-          <option value="AVAILABLE">متاحة</option>
-          <option value="RESERVED">محجوزة</option>
-          <option value="SOLD">مباعة</option>
+          <option value="">{f.allStatuses}</option>
+          <option value="AVAILABLE">{u.status.AVAILABLE}</option>
+          <option value="RESERVED">{u.status.RESERVED}</option>
+          <option value="SOLD">{u.status.SOLD}</option>
         </Select>
 
         {/* Unit type */}
@@ -92,7 +98,7 @@ export function UnitsFilterBar({ projects, typeOptions, sp }: Props) {
           defaultValue={sp.type ?? ''}
           className="w-28 shrink-0"
         >
-          <option value="">كل الأنواع</option>
+          <option value="">{u.allTypes}</option>
           {typeOptions.map((t) => (
             <option key={t} value={t}>{t}</option>
           ))}
@@ -110,7 +116,7 @@ export function UnitsFilterBar({ projects, typeOptions, sp }: Props) {
           )}
         >
           <SlidersHorizontal className="h-3 w-3" />
-          فلاتر متقدمة
+          {u.advanced}
           {advancedActive && (
             <span className="inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full bg-brand-600 text-white text-[9px] font-bold leading-none px-1">
               {advancedCount}
@@ -120,10 +126,10 @@ export function UnitsFilterBar({ projects, typeOptions, sp }: Props) {
 
         {/* Apply + Reset */}
         <div className="flex items-center gap-1.5 ms-auto">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
+          <Button type="submit" variant="primary" size="sm">{f.apply}</Button>
           {anyFilter && (
             <Link href="/portal/units">
-              <Button type="button" variant="ghost" size="sm">مسح التصفية</Button>
+              <Button type="button" variant="ghost" size="sm">{f.clear}</Button>
             </Link>
           )}
         </div>
@@ -139,14 +145,14 @@ export function UnitsFilterBar({ projects, typeOptions, sp }: Props) {
       >
         <div className="overflow-hidden">
           <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 border-t border-hairline bg-slate-50/50">
-            <span className="text-2xs font-medium text-slate-400 shrink-0">السعر والمواصفات:</span>
+            <span className="text-2xs font-medium text-slate-400 shrink-0">{u.priceAndSpecs}</span>
 
             <Input
               inputSize="sm"
               name="minPrice"
               type="number"
               min={0}
-              placeholder="سعر من"
+              placeholder={u.minPrice}
               defaultValue={sp.minPrice ?? ''}
               className="w-28 shrink-0"
             />
@@ -156,7 +162,7 @@ export function UnitsFilterBar({ projects, typeOptions, sp }: Props) {
               name="maxPrice"
               type="number"
               min={0}
-              placeholder="سعر إلى"
+              placeholder={u.maxPrice}
               defaultValue={sp.maxPrice ?? ''}
               className="w-28 shrink-0"
             />
@@ -167,9 +173,9 @@ export function UnitsFilterBar({ projects, typeOptions, sp }: Props) {
               defaultValue={sp.bedrooms ?? ''}
               className="w-28 shrink-0"
             >
-              <option value="">عدد الغرف</option>
+              <option value="">{u.bedrooms}</option>
               {[1, 2, 3, 4, 5].map((n) => (
-                <option key={n} value={String(n)}>{n} غرف</option>
+                <option key={n} value={String(n)}>{u.bedroomsOption(n)}</option>
               ))}
             </Select>
 
@@ -179,9 +185,9 @@ export function UnitsFilterBar({ projects, typeOptions, sp }: Props) {
               defaultValue={sp.bathrooms ?? ''}
               className="w-32 shrink-0"
             >
-              <option value="">عدد الحمامات</option>
+              <option value="">{u.bathrooms}</option>
               {[1, 2, 3, 4].map((n) => (
-                <option key={n} value={String(n)}>{n} حمام</option>
+                <option key={n} value={String(n)}>{u.bathroomsOption(n)}</option>
               ))}
             </Select>
           </div>

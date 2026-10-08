@@ -10,98 +10,15 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/cn';
 import { markAllNotificationsReadAction } from '@/app/_actions/notifications';
 import { AdminNotificationRow } from './notification-row';
+import type { Locale } from '@/lib/locale';
+import { portalSharedT } from '@/messages/portal/shared';
 
 interface Props {
   items: NotificationItem[];
   /** Either '/dashboard' or '/portal' — used to build links to entities. */
   basePath: '/dashboard' | '/portal';
+  locale?: Locale;
 }
-
-// Arabic fallback titles by template code. Prefer these so old rows whose API
-// `title` is still a raw code remain readable. New codes added for the
-// maintenance/payment-proof/visit-feedback events.
-const TEMPLATE_LABEL: Record<string, string> = {
-  // Broker
-  broker_lead_submitted: 'فرصة جديدة مرسلة',
-  broker_lead_approved: 'تم اعتماد فرصة',
-  broker_lead_rejected: 'تم رفض فرصة',
-  broker_lead_marked_duplicate: 'تصنيف فرصة مكررة',
-  broker_visit_requested: 'طلب زيارة جديد',
-  broker_reservation_created: 'حجز جديد',
-  broker_contract_created: 'تم إنشاء عقد',
-  broker_contract_signed: 'تم توقيع عقد',
-  broker_commission_earned: 'عمولة جديدة',
-  broker_commission_approved: 'اعتماد عمولة',
-  broker_commission_rejected: 'رفض عمولة',
-  broker_commission_cancelled: 'إلغاء عمولة',
-  broker_commission_paid: 'صرف عمولة',
-  broker_payout_created: 'دفعة جديدة',
-  broker_payout_approved: 'اعتماد دفعة',
-  broker_payout_processing: 'دفعة قيد المعالجة',
-  broker_payout_paid: 'دفعة مدفوعة',
-  broker_payout_cancelled: 'إلغاء دفعة',
-  // Visits
-  visit_request_created: 'طلب زيارة جديد',
-  visit_scheduled: 'تم جدولة زيارة',
-  visit_sales_assigned: 'تم إسناد زيارة إليك',
-  visit_customer_confirmed: 'العميل أكد الزيارة',
-  visit_confirmed: 'تم تأكيد الزيارة',
-  visit_customer_reschedule_requested: 'طلب العميل إعادة الجدولة',
-  visit_rescheduled: 'تم إعادة جدولة الزيارة',
-  visit_completed: 'اكتملت الزيارة',
-  visit_cancelled: 'تم إلغاء الزيارة',
-  visit_no_show: 'تسجيل عدم حضور',
-  visit_day_reminder: 'تذكير بزيارة اليوم',
-  visit_feedback_requested: 'مطلوب تقييم الزيارة',
-  visit_feedback_received: 'تقييم زيارة جديد',
-  // Inquiries
-  info_request_created: 'استفسار جديد',
-  // Reservations
-  reservation_submitted_admin: 'حجز جديد بانتظار الموافقة',
-  reservation_status_changed: 'تحديث حالة حجز',
-  reservation_booking_paid: 'تم تأكيد دفعة حجز',
-  reservation_payment_requested: 'مطلوب دفع مبلغ الحجز',
-  // Contracts
-  contract_created_customer: 'تم إنشاء عقد',
-  contract_signed_customer: 'تم توقيع عقد',
-  // Deposits / payment proofs
-  deposit_recorded: 'تم تسجيل دفعة',
-  deposit_verified: 'تم اعتماد دفعة',
-  payment_proof_submitted: 'إثبات دفع جديد',
-  booking_payment_proof_submitted: 'إثبات دفع حجز جديد',
-  payment_proof_resubmitted: 'إعادة إرسال إثبات الدفع',
-  payment_proof_approved: 'تم قبول إثبات الدفع',
-  payment_proof_rejected: 'تم رفض إثبات الدفع',
-  // Installments
-  installment_plan_created: 'خطة تقسيط جديدة',
-  installment_due_soon: 'قسط مستحق قريبًا',
-  // Maintenance
-  maintenance_request_created: 'طلب صيانة جديد',
-  maintenance_request_assigned: 'تم تعيين طلب صيانة',
-  maintenance_request_status_changed: 'تحديث حالة طلب الصيانة',
-  maintenance_request_resolved: 'تم حل طلب الصيانة',
-  maintenance_request_closed: 'تم إغلاق طلب الصيانة',
-  maintenance_request_complaint_submitted: 'شكوى صيانة جديدة',
-  maintenance_request_unresolved: 'طلب صيانة لم يُحل',
-  maintenance_request_resolution_confirmed: 'تأكيد حل طلب الصيانة',
-  maintenance_sla_warning: 'تحذير: اقتراب موعد الصيانة',
-  maintenance_sla_breached: 'تجاوز موعد الصيانة',
-  // Leads / CRM
-  lead_created: 'فرصة جديدة في CRM',
-  lead_assigned_sales: 'تم إسناد فرصة',
-  lead_stage_changed: 'تحديث مرحلة الفرصة',
-  lead_note_added: 'ملاحظة جديدة على الفرصة',
-  // Broker status
-  broker_approved: 'تم تفعيل حساب الوسيط',
-  broker_suspended: 'تم تعليق حساب الوسيط',
-  // Broker unit access
-  broker_unit_access_requested: 'طلب وصول وسيط للوحدة',
-  broker_unit_access_approved: 'تم اعتماد وصول الوسيط',
-  broker_unit_access_rejected: 'تم رفض وصول الوسيط',
-  // User account lifecycle
-  user_account_approved: 'تم تفعيل الحساب',
-  user_account_suspended: 'تم تعليق الحساب',
-};
 
 interface RelatedLink {
   href: string;
@@ -116,6 +33,7 @@ function relatedLink(
   payload: NotificationItem['payload'],
   base: '/dashboard' | '/portal',
   templateCode: string,
+  rl: ReturnType<typeof portalSharedT>['notifications']['related'],
 ): RelatedLink | null {
   if (!payload || typeof payload !== 'object') return null;
   const p = payload as Record<string, unknown>;
@@ -139,60 +57,60 @@ function relatedLink(
   if (base === '/dashboard') {
     // New entityType payloads first (maintenance/visit must beat legacy requestId).
     if (entityType === 'maintenance' && entityId) {
-      return { href: `/dashboard/maintenance/${entityId}`, icon: Wrench, label: 'طلب الصيانة' };
+      return { href: `/dashboard/maintenance/${entityId}`, icon: Wrench, label: rl.maintenance };
     }
     if (entityType === 'visit' && entityId) {
-      return { href: `/dashboard/visits/appointments/${entityId}`, icon: CalendarClock, label: 'الزيارة' };
+      return { href: `/dashboard/visits/appointments/${entityId}`, icon: CalendarClock, label: rl.visit };
     }
     if (entityType === 'lead' && entityId) {
       return isBroker
-        ? { href: `/dashboard/broker-leads/${entityId}`, icon: Users, label: 'الفرصة' }
-        : { href: `/dashboard/leads/${entityId}`, icon: Users, label: 'الفرصة' };
+        ? { href: `/dashboard/broker-leads/${entityId}`, icon: Users, label: rl.lead }
+        : { href: `/dashboard/leads/${entityId}`, icon: Users, label: rl.lead };
     }
     if (entityType === 'broker' && entityId) {
-      return { href: `/dashboard/brokers/${entityId}`, icon: Users, label: 'الوسيط' };
+      return { href: `/dashboard/brokers/${entityId}`, icon: Users, label: rl.broker };
     }
     if (entityType === 'user' && entityId) {
-      return { href: `/dashboard/users/${entityId}`, icon: Users, label: 'المستخدم' };
+      return { href: `/dashboard/users/${entityId}`, icon: Users, label: rl.user };
     }
     if (maintenanceRequestId) {
-      return { href: `/dashboard/maintenance/${maintenanceRequestId}`, icon: Wrench, label: 'طلب الصيانة' };
+      return { href: `/dashboard/maintenance/${maintenanceRequestId}`, icon: Wrench, label: rl.maintenance };
     }
     // Any deposit notification (submitted/approved/rejected/review) → deposit detail.
     if (depositId) {
-      return { href: `/dashboard/deposits/${depositId}`, icon: Wallet, label: 'الدفعة' };
+      return { href: `/dashboard/deposits/${depositId}`, icon: Wallet, label: rl.payment };
     }
     // Visit appointment (legacy visitId/appointmentId) before requestId.
     if (visitId || appointmentId) {
-      return { href: `/dashboard/visits/appointments/${visitId ?? appointmentId}`, icon: CalendarClock, label: 'الزيارة' };
+      return { href: `/dashboard/visits/appointments/${visitId ?? appointmentId}`, icon: CalendarClock, label: rl.visit };
     }
-    if (payoutId) return { href: `/dashboard/broker-payouts/${payoutId}`, icon: Wallet, label: 'الدفعة' };
-    if (commissionId) return { href: `/dashboard/broker-commissions/${commissionId}`, icon: BadgePercent, label: 'العمولة' };
+    if (payoutId) return { href: `/dashboard/broker-payouts/${payoutId}`, icon: Wallet, label: rl.payment };
+    if (commissionId) return { href: `/dashboard/broker-commissions/${commissionId}`, icon: BadgePercent, label: rl.commission };
     if (contractId) {
       return isBroker
-        ? { href: `/dashboard/broker-contracts/${contractId}`, icon: FileText, label: 'العقد' }
-        : { href: `/dashboard/contracts/${contractId}`, icon: FileText, label: 'العقد' };
+        ? { href: `/dashboard/broker-contracts/${contractId}`, icon: FileText, label: rl.contract }
+        : { href: `/dashboard/contracts/${contractId}`, icon: FileText, label: rl.contract };
     }
     if (reservationId) {
       return isBroker
-        ? { href: `/dashboard/broker-reservations/${reservationId}`, icon: BookmarkCheck, label: 'الحجز' }
-        : { href: `/dashboard/reservations/${reservationId}`, icon: BookmarkCheck, label: 'الحجز' };
+        ? { href: `/dashboard/broker-reservations/${reservationId}`, icon: BookmarkCheck, label: rl.reservation }
+        : { href: `/dashboard/reservations/${reservationId}`, icon: BookmarkCheck, label: rl.reservation };
     }
     // Inquiries (info/visit request intake — no per-row detail page).
     if (requestId || infoRequestId) {
-      return { href: `/dashboard/requests`, icon: MessageSquareText, label: 'الاستفسار' };
+      return { href: `/dashboard/requests`, icon: MessageSquareText, label: rl.inquiry };
     }
     if (leadId) {
       return isBroker
-        ? { href: `/dashboard/broker-leads/${leadId}`, icon: Users, label: 'الفرصة' }
-        : { href: `/dashboard/leads/${leadId}`, icon: Users, label: 'الفرصة' };
+        ? { href: `/dashboard/broker-leads/${leadId}`, icon: Users, label: rl.lead }
+        : { href: `/dashboard/leads/${leadId}`, icon: Users, label: rl.lead };
     }
   } else {
-    if (payoutId) return { href: `/portal/payouts/${payoutId}`, icon: Wallet, label: 'الدفعة' };
-    if (commissionId) return { href: `/portal/commissions/${commissionId}`, icon: BadgePercent, label: 'العمولة' };
-    if (contractId) return { href: `/portal/contracts/${contractId}`, icon: FileText, label: 'العقد' };
-    if (reservationId) return { href: `/portal/reservations/${reservationId}`, icon: BookmarkCheck, label: 'الحجز' };
-    if (leadId) return { href: `/portal/leads/${leadId}`, icon: Users, label: 'الفرصة' };
+    if (payoutId) return { href: `/portal/payouts/${payoutId}`, icon: Wallet, label: rl.payment };
+    if (commissionId) return { href: `/portal/commissions/${commissionId}`, icon: BadgePercent, label: rl.commission };
+    if (contractId) return { href: `/portal/contracts/${contractId}`, icon: FileText, label: rl.contract };
+    if (reservationId) return { href: `/portal/reservations/${reservationId}`, icon: BookmarkCheck, label: rl.reservation };
+    if (leadId) return { href: `/portal/leads/${leadId}`, icon: Users, label: rl.lead };
   }
   return null;
 }
@@ -214,12 +132,12 @@ function categoryVisual(code: string, related: RelatedLink | null): { Icon: Luci
 }
 
 /** Never returns the raw template code. */
-function resolveTitle(n: NotificationItem): string {
-  const mapped = TEMPLATE_LABEL[n.templateCode];
+function resolveTitle(n: NotificationItem, nt: ReturnType<typeof portalSharedT>['notifications']): string {
+  const mapped = nt.templates[n.templateCode];
   if (mapped) return mapped;
   const t = n.title?.trim();
   if (t && t !== n.templateCode) return t;
-  return 'إشعار جديد';
+  return nt.fallbackTitle;
 }
 
 function summarisePayload(payload: NotificationItem['payload']): string | null {
@@ -239,14 +157,6 @@ function resolveBody(n: NotificationItem): string | null {
   return summarisePayload(n.payload);
 }
 
-// Short Arabic channel labels for the compact row badge.
-const CHANNEL_LABEL: Record<NotificationChannel, string> = {
-  IN_APP: 'تطبيق',
-  PUSH:   'فوري',
-  EMAIL:  'بريد',
-  SMS:    'رسالة',
-};
-
 const CHANNEL_TONE: Record<NotificationChannel, BadgeTone> = {
   IN_APP: 'success',
   PUSH:   'info',
@@ -255,19 +165,20 @@ const CHANNEL_TONE: Record<NotificationChannel, BadgeTone> = {
 };
 
 /** Shows time-only for today, short date for older notifications. */
-function formatCompact(value: string): string {
+function formatCompact(value: string, dateLocale: string): string {
   if (!value) return '';
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return '';
   const now = new Date();
   const isToday = d.toDateString() === now.toDateString();
   if (isToday) {
-    return new Intl.DateTimeFormat('ar-EG', { timeStyle: 'short' }).format(d);
+    return new Intl.DateTimeFormat(dateLocale, { timeStyle: 'short' }).format(d);
   }
-  return new Intl.DateTimeFormat('ar-EG', { dateStyle: 'short' }).format(d);
+  return new Intl.DateTimeFormat(dateLocale, { dateStyle: 'short' }).format(d);
 }
 
-export function NotificationList({ items, basePath }: Props) {
+export function NotificationList({ items, basePath, locale = 'ar' }: Props) {
+  const nt = portalSharedT(locale).notifications;
   const safeItems = Array.isArray(items) ? items : [];
   const unreadCount = safeItems.filter((n) => !n.read).length;
 
@@ -276,8 +187,8 @@ export function NotificationList({ items, basePath }: Props) {
       <Card className="overflow-hidden">
         <EmptyState
           icon={<Bell />}
-          title="لا توجد إشعارات"
-          description="عند وصول إشعارات جديدة ستظهر هنا."
+          title={nt.emptyTitle}
+          description={nt.emptyDescription}
         />
       </Card>
     );
@@ -290,12 +201,12 @@ export function NotificationList({ items, basePath }: Props) {
         <div className="flex items-center justify-between border-b border-hairline bg-brand-50/50 px-4 py-2.5">
           <p className="text-xs text-slate-600">
             <span className="font-semibold tabular-nums text-brand-700">{unreadCount}</span>
-            {' '}غير مقروء
+            {' '}{nt.unread}
           </p>
           <form action={markAllNotificationsReadAction}>
             <input type="hidden" name="basePath" value={basePath} />
             <Button type="submit" variant="ghost" size="sm" leftIcon={<CheckCheck className="h-3.5 w-3.5" />}>
-              تعليم الكل كمقروء
+              {nt.markAllRead}
             </Button>
           </form>
         </div>
@@ -303,8 +214,8 @@ export function NotificationList({ items, basePath }: Props) {
 
       <ul className="divide-y divide-hairline">
         {safeItems.map((n) => {
-          const related = relatedLink(n.payload, basePath, n.templateCode);
-          const title = resolveTitle(n);
+          const related = relatedLink(n.payload, basePath, n.templateCode, nt.related);
+          const title = resolveTitle(n, nt);
           const body = resolveBody(n);
           const { Icon, chip } = categoryVisual(n.templateCode, related);
           const unread = !n.read;
@@ -321,6 +232,7 @@ export function NotificationList({ items, basePath }: Props) {
                 unread={unread}
                 basePath={basePath}
                 className={rowClass}
+                markReadLabel={nt.markRead}
               >
                 {/* Category icon chip */}
                 <span className={cn('mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', chip)}>
@@ -335,14 +247,14 @@ export function NotificationList({ items, basePath }: Props) {
                       {title}
                     </p>
                     <span className="shrink-0 text-xs text-slate-400 whitespace-nowrap tabular-nums leading-snug" dir="ltr">
-                      {formatCompact(n.createdAt)}
+                      {formatCompact(n.createdAt, nt.dateLocale)}
                     </span>
                   </div>
 
                   {/* Row 2: channel badge + body preview */}
                   <div className="mt-0.5 flex items-center gap-1.5 min-w-0">
                     <Badge tone={CHANNEL_TONE[n.channel]} size="sm" className="shrink-0">
-                      {CHANNEL_LABEL[n.channel]}
+                      {nt.channel[n.channel]}
                     </Badge>
                     {body && (
                       <span className="truncate text-xs text-slate-500">{body}</span>
@@ -353,7 +265,7 @@ export function NotificationList({ items, basePath }: Props) {
                   {related && (
                     <span className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
                       <related.icon className="h-3 w-3 shrink-0" />
-                      فتح {related.label}
+                      {nt.openFn(related.label)}
                     </span>
                   )}
                 </div>

@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/cn';
+import type { Locale } from '@/lib/locale';
+import { portalSharedT } from '@/messages/portal/shared';
 
 export interface ReservationSearchParams {
   q?: string;
@@ -21,9 +23,13 @@ export interface ReservationSearchParams {
 interface Props {
   projects: PortalProject[];
   sp: ReservationSearchParams;
+  locale?: Locale;
 }
 
-export function ReservationsFilterBar({ projects, sp }: Props) {
+export function ReservationsFilterBar({ projects, sp, locale = 'ar' }: Props) {
+  const t = portalSharedT(locale);
+  const f = t.filters;
+  const r = t.reservationsFilter;
   const advancedValues = [sp.from, sp.to];
   const advancedCount = advancedValues.filter(Boolean).length;
   const advancedActive = advancedCount > 0;
@@ -43,24 +49,24 @@ export function ReservationsFilterBar({ projects, sp }: Props) {
           inputSize="sm"
           name="q"
           leftAddon={<Search />}
-          placeholder="ابحث باسم العميل أو رقم الجوال أو الوحدة…"
+          placeholder={r.searchPlaceholder}
           defaultValue={sp.q ?? ''}
           className="flex-1 min-w-[200px]"
         />
         <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-44 shrink-0">
-          <option value="">كل الحالات</option>
-          <option value="PENDING">قيد المراجعة</option>
-          <option value="APPROVED">تمت الموافقة</option>
-          <option value="REJECTED">مرفوض</option>
-          <option value="CANCELLED">ملغى</option>
-          <option value="EXPIRED">منتهي</option>
-          <option value="CONVERTED">محوّل إلى عقد</option>
+          <option value="">{f.allStatuses}</option>
+          <option value="PENDING">{r.status.PENDING}</option>
+          <option value="APPROVED">{r.status.APPROVED}</option>
+          <option value="REJECTED">{r.status.REJECTED}</option>
+          <option value="CANCELLED">{r.status.CANCELLED}</option>
+          <option value="EXPIRED">{r.status.EXPIRED}</option>
+          <option value="CONVERTED">{r.status.CONVERTED}</option>
         </Select>
         <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-48 shrink-0">
-          <option value="">كل المشاريع</option>
+          <option value="">{f.allProjects}</option>
           {projects.map((p) => (
             <option key={p.project.id} value={p.project.id}>
-              {tx(p.project.name)}
+              {tx(p.project.name, locale)}
             </option>
           ))}
         </Select>
@@ -76,7 +82,7 @@ export function ReservationsFilterBar({ projects, sp }: Props) {
           )}
         >
           <SlidersHorizontal className="h-3 w-3" />
-          فلاتر متقدمة
+          {r.advanced}
           {advancedActive && (
             <span className="inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full bg-brand-600 text-white text-[9px] font-bold leading-none px-1">
               {advancedCount}
@@ -85,12 +91,12 @@ export function ReservationsFilterBar({ projects, sp }: Props) {
         </button>
         <div className="flex items-center gap-1.5 ms-auto">
           <Button type="submit" variant="primary" size="sm">
-            تصفية
+            {f.apply}
           </Button>
           {anyFilter && (
             <Link href="/portal/reservations">
               <Button type="button" variant="ghost" size="sm">
-                مسح التصفية
+                {f.clear}
               </Button>
             </Link>
           )}
@@ -106,7 +112,7 @@ export function ReservationsFilterBar({ projects, sp }: Props) {
       >
         <div className="overflow-hidden">
           <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 border-t border-hairline bg-slate-50/50">
-            <span className="text-2xs font-medium text-slate-400 shrink-0">تاريخ الحجز:</span>
+            <span className="text-2xs font-medium text-slate-400 shrink-0">{r.reservationDate}</span>
             <Input
               name="from"
               inputSize="sm"

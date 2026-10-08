@@ -18,6 +18,8 @@ import {
 import { api, safe } from '@/lib/api';
 import type { BrokerUser, BrokerUserStatus, Paged } from '@/lib/types';
 import { formatDate } from '@/lib/format';
+import { getLocale } from '@/lib/locale';
+import { portalMoneyTeamT } from '@/messages/portal/money-team';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -97,6 +99,9 @@ export default async function PortalTeamPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const locale = await getLocale();
+  const mt = portalMoneyTeamT(locale);
+  const t = mt.team.list;
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
@@ -121,16 +126,16 @@ export default async function PortalTeamPage({
     <div className="space-y-5">
 
       <PremiumPageHero
-        title="فريق العمل"
-        description="إدارة الموظفين المنضمين لشركة الوساطة — التحكم بالصلاحيات والحالة."
+        title={t.title}
+        description={t.description}
         breadcrumbs={[
-          { label: 'البوابة', href: '/portal' },
-          { label: 'فريق العمل' },
+          { label: mt.common.breadcrumbPortal, href: '/portal' },
+          { label: mt.team.breadcrumb },
         ]}
         actions={
           <Link href="/portal/team/new">
             <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-              إضافة عضو
+              {t.addMember}
             </Button>
           </Link>
         }
@@ -145,17 +150,17 @@ export default async function PortalTeamPage({
       {res.error && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          تعذر تحميل الفريق: {res.error}
+          {t.loadError(res.error)}
         </div>
       )}
 
       <PremiumMetricStrip
         variant="compact"
         metrics={[
-          { label: 'إجمالي الأعضاء', value: totalAll,       icon: <Users />,       tone: 'brand'   },
-          { label: 'نشط',             value: activeCount,    icon: <UserCheck />,   tone: 'success' },
-          { label: 'دعوة معلقة',      value: invitedCount,   icon: <UserPlus />,    tone: 'warning' },
-          { label: 'موقوف',           value: suspendedCount, icon: <PauseCircle />, tone: 'danger'  },
+          { label: t.metrics.total, value: totalAll,       icon: <Users />,       tone: 'brand'   },
+          { label: t.metrics.active, value: activeCount,    icon: <UserCheck />,   tone: 'success' },
+          { label: t.metrics.invited, value: invitedCount,   icon: <UserPlus />,    tone: 'warning' },
+          { label: t.metrics.suspended, value: suspendedCount, icon: <PauseCircle />, tone: 'danger'  },
         ]}
       />
 
@@ -164,63 +169,63 @@ export default async function PortalTeamPage({
         action="/portal/team"
         trailing={
           <div className="flex items-center gap-1.5 ms-auto shrink-0">
-            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            <Button type="submit" variant="primary" size="sm">{t.filterBtn}</Button>
             {(sp.q || sp.status) && (
               <Link href="/portal/team">
-                <Button type="button" variant="ghost" size="sm">مسح</Button>
+                <Button type="button" variant="ghost" size="sm">{t.clearBtn}</Button>
               </Link>
             )}
           </div>
         }
       >
-        <PremiumFilterField label="بحث">
+        <PremiumFilterField label={t.searchLabel}>
           <Input
             name="q"
             inputSize="sm"
-            placeholder="بحث بالاسم أو البريد أو الجوال"
+            placeholder={t.searchPlaceholder}
             defaultValue={sp.q ?? ''}
             className="w-64"
           />
         </PremiumFilterField>
-        <PremiumFilterField label="الحالة">
+        <PremiumFilterField label={t.statusLabel}>
           <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-44">
-            <option value="">كل الحالات</option>
-            <option value="ACTIVE">نشط</option>
-            <option value="INVITED">دعوة</option>
-            <option value="SUSPENDED">موقوف</option>
-            <option value="REMOVED">مُزال</option>
+            <option value="">{t.statusOptions.all}</option>
+            <option value="ACTIVE">{t.statusOptions.ACTIVE}</option>
+            <option value="INVITED">{t.statusOptions.INVITED}</option>
+            <option value="SUSPENDED">{t.statusOptions.SUSPENDED}</option>
+            <option value="REMOVED">{t.statusOptions.REMOVED}</option>
           </Select>
         </PremiumFilterField>
       </PremiumFilterBar>
 
       <PremiumSectionCard
         icon={<Users />}
-        title="أعضاء الفريق"
+        title={t.tableTitle}
         padded={false}
       >
         {items.length === 0 ? (
           <EmptyState
             icon={<Users />}
-            title="لا يوجد أعضاء فريق بعد"
-            description="ابدأ بإضافة أول عضو من زر «إضافة عضو» أعلى الصفحة."
+            title={t.emptyTitle}
+            description={t.emptyDescription}
           />
         ) : (
           <>
             {meta && (
               <div className="flex items-center gap-2 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
                 <span className="font-bold text-slate-700">{meta.total}</span>
-                <span>عضو في الفريق</span>
+                <span>{t.countUnit}</span>
               </div>
             )}
             <div className="overflow-x-auto scrollbar-thin">
               <table className="w-full text-sm">
                 <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
                   <tr>
-                    <th className="text-start font-semibold py-3 ps-5 pe-4">العضو</th>
-                    <th className="text-start font-semibold py-3 px-4">الحالة</th>
-                    <th className="text-start font-semibold py-3 px-4">الصلاحيات</th>
-                    <th className="text-start font-semibold py-3 px-4">انضم</th>
-                    <th className="text-end font-semibold py-3 ps-4 pe-5">إجراءات</th>
+                    <th className="text-start font-semibold py-3 ps-5 pe-4">{t.cols.member}</th>
+                    <th className="text-start font-semibold py-3 px-4">{t.cols.status}</th>
+                    <th className="text-start font-semibold py-3 px-4">{t.cols.permissions}</th>
+                    <th className="text-start font-semibold py-3 px-4">{t.cols.joined}</th>
+                    <th className="text-end font-semibold py-3 ps-4 pe-5">{t.cols.actions}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -266,16 +271,16 @@ export default async function PortalTeamPage({
                       </td>
 
                       <td className="py-3 px-4">
-                        <BrokerUserStatusBadge status={m.status} />
+                        <BrokerUserStatusBadge status={m.status} locale={locale} />
                       </td>
 
                       <td className="py-3 px-4">
                         <div className="flex flex-wrap items-center gap-1">
-                          <PermissionPill icon={Crown}        label="جهة اتصال رئيسية" on={m.isPrimaryContact} />
-                          <PermissionPill icon={ShieldCheck}  label="إدارة الفريق"      on={m.canManageBrokerUsers} />
-                          <PermissionPill icon={BadgePercent} label="عرض العمولات"      on={m.canViewCommissions} />
+                          <PermissionPill icon={Crown}        label={t.perms.primaryContact} on={m.isPrimaryContact} />
+                          <PermissionPill icon={ShieldCheck}  label={t.perms.manageTeam} on={m.canManageBrokerUsers} />
+                          <PermissionPill icon={BadgePercent} label={t.perms.viewCommissions} on={m.canViewCommissions} />
                           {!m.isPrimaryContact && !m.canManageBrokerUsers && !m.canViewCommissions && (
-                            <span className="text-2xs text-slate-400">لا توجد صلاحيات إضافية</span>
+                            <span className="text-2xs text-slate-400">{t.perms.none}</span>
                           )}
                         </div>
                       </td>
@@ -286,7 +291,7 @@ export default async function PortalTeamPage({
                         ) : (
                           <span className="inline-flex items-center gap-1 text-amber-600 text-2xs">
                             <Mail className="h-3 w-3" />
-                            دعوة معلقة
+                            {t.pendingInvite}
                           </span>
                         )}
                       </td>
@@ -295,7 +300,7 @@ export default async function PortalTeamPage({
                         <div className="flex items-center justify-end gap-1.5">
                           <Link href={`/portal/team/${m.id}/edit`}>
                             <Button variant="ghost" size="sm" leftIcon={<Pencil className="h-3.5 w-3.5" />}>
-                              تعديل
+                              {t.edit}
                             </Button>
                           </Link>
 
@@ -304,7 +309,7 @@ export default async function PortalTeamPage({
                               <input type="hidden" name="id"     value={m.id} />
                               <input type="hidden" name="status" value="ACTIVE" />
                               <Button type="submit" variant="ghost" size="sm" leftIcon={<UserCheck className="h-3.5 w-3.5" />}>
-                                تفعيل
+                                {t.activate}
                               </Button>
                             </form>
                           )}
@@ -314,7 +319,7 @@ export default async function PortalTeamPage({
                               <input type="hidden" name="id"     value={m.id} />
                               <input type="hidden" name="status" value="SUSPENDED" />
                               <Button type="submit" variant="ghost" size="sm" leftIcon={<UserMinus className="h-3.5 w-3.5" />}>
-                                إيقاف
+                                {t.suspend}
                               </Button>
                             </form>
                           )}
@@ -322,7 +327,7 @@ export default async function PortalTeamPage({
                           {m.status !== 'REMOVED' && (
                             <ConfirmingForm
                               action={setTeamMemberStatusAction}
-                              confirmMessage={`سيتم إزالة «${m.user.fullName}» من فريق العمل. هل أنت متأكد؟`}
+                              confirmMessage={t.removeConfirm(m.user.fullName)}
                             >
                               <input type="hidden" name="id"     value={m.id} />
                               <input type="hidden" name="status" value="REMOVED" />
@@ -333,7 +338,7 @@ export default async function PortalTeamPage({
                                 leftIcon={<UserX className="h-3.5 w-3.5" />}
                                 className="text-danger-700 hover:text-danger-800 hover:bg-danger-50"
                               >
-                                إزالة
+                                {t.remove}
                               </Button>
                             </ConfirmingForm>
                           )}
@@ -350,6 +355,7 @@ export default async function PortalTeamPage({
         {meta && meta.total > meta.pageSize && (
           <Pagination
             basePath="/portal/team"
+            locale={locale}
             page={meta.page}
             pageSize={meta.pageSize}
             total={meta.total}

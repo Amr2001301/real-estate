@@ -17,6 +17,8 @@ import { api, safe } from '@/lib/api';
 import type { PortalPayout } from '@/lib/types';
 import { tx, formatDate, formatDateTime, formatCurrency } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
+import { getLocale } from '@/lib/locale';
+import { portalMoneyTeamT } from '@/messages/portal/money-team';
 import { cn } from '@/lib/cn';
 import {
   PremiumPageHero,
@@ -29,13 +31,6 @@ import { BrokerPayoutStatusBadge } from '@/components/badges';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
-
-const METHOD_LABEL: Record<string, string> = {
-  BANK_TRANSFER: 'تحويل بنكي',
-  CHEQUE:        'شيك',
-  CASH:          'نقدي',
-  OTHER:         'أخرى',
-};
 
 const CMD_LINK = 'group flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 hover:bg-canvas/40 transition-colors duration-150';
 const CMD_ICON = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[15px] [&_svg]:w-[15px]';
@@ -66,6 +61,9 @@ export default async function PortalPayoutDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const locale = await getLocale();
+  const m = portalMoneyTeamT(locale);
+  const t = m.payouts.detail;
   const currency = await getReportsCurrency();
   const r = await safe(api.get<PortalPayout>(`/portal/payouts/${id}`));
   if (r.error || !r.data) notFound();
@@ -74,10 +72,10 @@ export default async function PortalPayoutDetailPage({
   const isPaid = payout.status === 'PAID';
 
   const timelineSteps = [
-    { label: 'إنشاء الدفعة', at: payout.createdAt,    done: true,               isFinal: false },
-    { label: 'الاعتماد',     at: payout.approvedAt,   done: !!payout.approvedAt,  isFinal: false },
-    { label: 'بدء التنفيذ', at: payout.processedAt,  done: !!payout.processedAt, isFinal: false },
-    { label: 'تاريخ الدفع',  at: payout.paidAt,       done: !!payout.paidAt,      isFinal: true  },
+    { label: t.timeline.created, at: payout.createdAt,    done: true,               isFinal: false },
+    { label: t.timeline.approved, at: payout.approvedAt,   done: !!payout.approvedAt,  isFinal: false },
+    { label: t.timeline.processing, at: payout.processedAt,  done: !!payout.processedAt, isFinal: false },
+    { label: t.timeline.paid, at: payout.paidAt,       done: !!payout.paidAt,      isFinal: true  },
   ];
 
   return (
@@ -86,11 +84,11 @@ export default async function PortalPayoutDetailPage({
       <PremiumPageHero
         title={payout.payoutNumber}
         breadcrumbs={[
-          { label: 'البوابة',   href: '/portal' },
-          { label: 'المدفوعات', href: '/portal/payouts' },
+          { label: m.common.breadcrumbPortal, href: '/portal' },
+          { label: t.breadcrumb, href: '/portal/payouts' },
           { label: payout.payoutNumber },
         ]}
-        meta={<BrokerPayoutStatusBadge status={payout.status} />}
+        meta={<BrokerPayoutStatusBadge status={payout.status} locale={locale} />}
       />
 
       {/* Cancellation banner */}
@@ -98,7 +96,7 @@ export default async function PortalPayoutDetailPage({
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold">تم إلغاء الدفعة</p>
+            <p className="font-semibold">{t.cancelled}</p>
             <p className="mt-1 leading-relaxed">{payout.cancelReason}</p>
           </div>
         </div>
@@ -110,7 +108,7 @@ export default async function PortalPayoutDetailPage({
           <div className="space-y-5">
 
             {/* ── Net amount ───────────────────────────────────────────── */}
-            <PremiumSectionCard title="الصافي المستحق" icon={<Banknote className="h-4 w-4" />}>
+            <PremiumSectionCard title={t.netDue} icon={<Banknote className="h-4 w-4" />}>
               <div className="flex flex-col sm:flex-row sm:items-start gap-6">
                 {/* Big amount */}
                 <div className="flex-1">
@@ -122,7 +120,7 @@ export default async function PortalPayoutDetailPage({
                   </p>
                   {payout.period && (
                     <span className="mt-3 inline-flex items-center rounded-lg bg-slate-100 text-slate-600 text-xs font-semibold px-3 py-1">
-                      الفترة: {payout.period}
+                      {t.periodFn(payout.period)}
                     </span>
                   )}
                 </div>
@@ -130,19 +128,19 @@ export default async function PortalPayoutDetailPage({
                 {/* Breakdown */}
                 <div className="sm:w-64 rounded-xl bg-canvas/60 ring-1 ring-inset ring-hairline divide-y divide-hairline overflow-hidden">
                   <div className="flex items-center justify-between gap-2 px-4 py-2.5">
-                    <span className="text-2xs text-slate-400">الإجمالي</span>
+                    <span className="text-2xs text-slate-400">{t.gross}</span>
                     <span className="text-2xs font-semibold text-slate-700 tabular-nums">{formatCurrency(payout.totalGross, currency)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-2 px-4 py-2.5">
-                    <span className="text-2xs text-slate-400">ضريبة القيمة المضافة</span>
+                    <span className="text-2xs text-slate-400">{t.vat}</span>
                     <span className="text-2xs text-red-500 tabular-nums">− {formatCurrency(payout.totalTax, currency)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-2 px-4 py-2.5">
-                    <span className="text-2xs text-slate-400">الحجز الضريبي</span>
+                    <span className="text-2xs text-slate-400">{t.withholding}</span>
                     <span className="text-2xs text-red-500 tabular-nums">− {formatCurrency(payout.totalWithholding, currency)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-2 px-4 py-3 bg-slate-50">
-                    <span className="text-xs font-bold text-slate-700">الصافي</span>
+                    <span className="text-xs font-bold text-slate-700">{t.net}</span>
                     <span className={cn('text-sm font-black tabular-nums', isPaid ? 'text-emerald-700' : 'text-slate-900')}>
                       {formatCurrency(payout.totalNet, currency)}
                     </span>
@@ -152,7 +150,7 @@ export default async function PortalPayoutDetailPage({
             </PremiumSectionCard>
 
             {/* ── Payment method ───────────────────────────────────────── */}
-            <PremiumSectionCard title="طريقة الصرف" icon={<Wallet className="h-4 w-4" />}>
+            <PremiumSectionCard title={t.methodTitle} icon={<Wallet className="h-4 w-4" />}>
               <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3">
                   <span className="h-10 w-10 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0 text-brand-600">
@@ -160,15 +158,15 @@ export default async function PortalPayoutDetailPage({
                   </span>
                   <div>
                     <p className="text-base font-bold text-slate-900">
-                      {payout.paymentMethod ? (METHOD_LABEL[payout.paymentMethod] ?? payout.paymentMethod) : '—'}
+                      {payout.paymentMethod ? (m.payouts.method[payout.paymentMethod] ?? payout.paymentMethod) : '—'}
                     </p>
-                    <p className="text-2xs text-slate-400 mt-0.5">طريقة الدفع</p>
+                    <p className="text-2xs text-slate-400 mt-0.5">{t.paymentMethod}</p>
                   </div>
                 </div>
 
                 {payout.paymentReference && (
                   <div className="rounded-xl bg-canvas/60 ring-1 ring-inset ring-hairline px-4 py-3">
-                    <p className="text-2xs font-medium uppercase tracking-wide text-slate-500 mb-1.5">مرجع الدفع</p>
+                    <p className="text-2xs font-medium uppercase tracking-wide text-slate-500 mb-1.5">{t.paymentReference}</p>
                     <CodeText className="text-sm font-bold text-slate-800">{payout.paymentReference}</CodeText>
                   </div>
                 )}
@@ -182,19 +180,19 @@ export default async function PortalPayoutDetailPage({
                     dir="ltr"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
-                    إيصال الدفع
+                    {t.receipt}
                   </a>
                 )}
 
                 {!payout.paymentMethod && !payout.paymentReference && (
-                  <p className="text-sm text-slate-400 italic">لم تُحدد طريقة الدفع بعد</p>
+                  <p className="text-sm text-slate-400 italic">{t.noMethod}</p>
                 )}
               </div>
             </PremiumSectionCard>
 
             {/* ── Commissions table ────────────────────────────────────── */}
             <PremiumSectionCard
-              title="العمولات المُدرجة"
+              title={t.commissionsTitle}
               icon={<BadgePercent className="h-4 w-4" />}
               trailing={
                 commissions.length > 0
@@ -207,18 +205,18 @@ export default async function PortalPayoutDetailPage({
                 <table className="w-full text-sm">
                   <thead className="bg-canvas/40 border-b border-hairline text-2xs font-semibold uppercase tracking-wide text-slate-500">
                     <tr>
-                      <th className="text-start font-semibold py-3 ps-6 pe-4">العمولة</th>
-                      <th className="text-start font-semibold py-3 px-4">العقد</th>
-                      <th className="text-start font-semibold py-3 px-4">الوحدة / المشروع</th>
-                      <th className="text-end font-semibold py-3 px-4">إجمالي</th>
-                      <th className="text-end font-semibold py-3 px-4 pe-6">صافي</th>
+                      <th className="text-start font-semibold py-3 ps-6 pe-4">{t.cols.commission}</th>
+                      <th className="text-start font-semibold py-3 px-4">{t.cols.contract}</th>
+                      <th className="text-start font-semibold py-3 px-4">{t.cols.unitProject}</th>
+                      <th className="text-end font-semibold py-3 px-4">{t.cols.gross}</th>
+                      <th className="text-end font-semibold py-3 px-4 pe-6">{t.cols.net}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {commissions.length === 0 && (
                       <tr>
                         <td colSpan={5} className="text-center text-sm text-slate-400 py-10">
-                          لا توجد عمولات في هذه الدفعة.
+                          {t.noCommissions}
                         </td>
                       </tr>
                     )}
@@ -239,7 +237,7 @@ export default async function PortalPayoutDetailPage({
                         <td className="py-3.5 px-4">
                           <CodeText className="text-xs text-slate-700">{c.unit.code}</CodeText>
                           <p className="text-2xs text-slate-400 mt-0.5">
-                            {c.unit.building?.phase?.project ? tx(c.unit.building.phase.project.name) : '—'}
+                            {c.unit.building?.phase?.project ? tx(c.unit.building.phase.project.name, locale) : '—'}
                           </p>
                         </td>
                         <td className="py-3.5 px-4 text-end tabular-nums text-slate-600 text-xs">
@@ -260,40 +258,40 @@ export default async function PortalPayoutDetailPage({
           <div className="space-y-4">
 
             {/* ── Quick actions ────────────────────────────────────────── */}
-            <PremiumCommandPanel title="إجراءات سريعة">
+            <PremiumCommandPanel title={m.common.quickActions}>
               {payout.receiptUrl && (
                 <a href={payout.receiptUrl} target="_blank" rel="noopener noreferrer" className={CMD_LINK}>
                   <span className={CMD_ICON}><ExternalLink /></span>
-                  إيصال الدفع
+                  {t.receipt}
                 </a>
               )}
               <Link href={'/portal/payouts' as never} className={CMD_LINK}>
                 <span className={CMD_ICON}><ArrowLeft /></span>
-                قائمة المدفوعات
+                {t.backToList}
               </Link>
             </PremiumCommandPanel>
 
             {/* ── Payout info ──────────────────────────────────────────── */}
-            <PremiumSectionCard title="معلومات الدفعة">
+            <PremiumSectionCard title={t.infoTitle}>
               <dl className="flex flex-col gap-3">
-                <InfoRow label="الحالة" icon={<ShieldCheck className="h-3.5 w-3.5" />}>
-                  <BrokerPayoutStatusBadge status={payout.status} />
+                <InfoRow label={m.common.status} icon={<ShieldCheck className="h-3.5 w-3.5" />}>
+                  <BrokerPayoutStatusBadge status={payout.status} locale={locale} />
                 </InfoRow>
-                <InfoRow label="الإنشاء" icon={<Clock className="h-3.5 w-3.5" />}>
+                <InfoRow label={t.createdAt} icon={<Clock className="h-3.5 w-3.5" />}>
                   <span className="text-slate-700 text-xs tabular-nums">{formatDate(payout.createdAt)}</span>
                 </InfoRow>
                 {payout.approvedAt && (
-                  <InfoRow label="الاعتماد" icon={<CheckCircle2 className="h-3.5 w-3.5" />}>
+                  <InfoRow label={t.approvedAt} icon={<CheckCircle2 className="h-3.5 w-3.5" />}>
                     <span className="text-slate-700 text-xs tabular-nums">{formatDate(payout.approvedAt)}</span>
                   </InfoRow>
                 )}
                 {payout.processedAt && (
-                  <InfoRow label="بدء التنفيذ" icon={<CalendarRange className="h-3.5 w-3.5" />}>
+                  <InfoRow label={t.processedAt} icon={<CalendarRange className="h-3.5 w-3.5" />}>
                     <span className="text-slate-700 text-xs tabular-nums">{formatDate(payout.processedAt)}</span>
                   </InfoRow>
                 )}
                 {payout.paidAt && (
-                  <InfoRow label="تاريخ الدفع" icon={<Banknote className="h-3.5 w-3.5" />}>
+                  <InfoRow label={t.paidAt} icon={<Banknote className="h-3.5 w-3.5" />}>
                     <span className="text-emerald-700 text-xs font-semibold tabular-nums">{formatDate(payout.paidAt)}</span>
                   </InfoRow>
                 )}
@@ -305,14 +303,14 @@ export default async function PortalPayoutDetailPage({
                     isPaid ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100',
                   )}>
                     <p className={cn('text-2xs font-semibold uppercase tracking-wide', isPaid ? 'text-emerald-500' : 'text-amber-500')}>
-                      الصافي المستحق
+                      {t.netDue}
                     </p>
                     <p className={cn('text-2xl font-black tabular-nums mt-1 leading-none', isPaid ? 'text-emerald-700' : 'text-amber-700')}>
                       {formatCurrency(payout.totalNet, currency)}
                     </p>
                     {payout.period && (
                       <p className={cn('text-2xs mt-1', isPaid ? 'text-emerald-500' : 'text-amber-500')}>
-                        الفترة: {payout.period}
+                        {t.periodFn(payout.period)}
                       </p>
                     )}
                   </div>
@@ -321,7 +319,7 @@ export default async function PortalPayoutDetailPage({
             </PremiumSectionCard>
 
             {/* ── Timeline ─────────────────────────────────────────────── */}
-            <PremiumSectionCard title="مسار الدفعة">
+            <PremiumSectionCard title={t.timelineTitle}>
               <ol className="relative border-s border-hairline ms-2 space-y-0">
                 {timelineSteps.map((step, i) => {
                   const isLast = i === timelineSteps.length - 1;

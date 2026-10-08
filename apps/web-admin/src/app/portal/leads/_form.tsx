@@ -14,19 +14,22 @@ import { FormFooter } from '@/components/ui/form-footer';
 import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import { tx } from '@/lib/format';
 import type { PortalProject, PortalUnit } from '@/lib/types';
+import type { Locale } from '@/lib/locale';
+import { portalLeadsVisitsT } from '@/messages/portal/leads-visits';
 import { createPortalLeadAction, type PortalLeadFormState } from './actions';
 
 interface Props {
   projects: PortalProject[];
+  locale?: Locale;
 }
 
-const NAV_SECTIONS = [
-  { id: 'section-client',   num: '01', label: 'بيانات العميل', sub: 'الاسم وبيانات التواصل' },
-  { id: 'section-interest', num: '02', label: 'الاهتمام',      sub: 'المشروع والوحدة المستهدفة' },
-  { id: 'section-notes',    num: '03', label: 'ملاحظات',       sub: 'معلومات لفريق المبيعات' },
-];
-
-export default function PortalLeadForm({ projects }: Props) {
+export default function PortalLeadForm({ projects, locale = 'ar' }: Props) {
+  const m = portalLeadsVisitsT(locale).leads.form;
+  const NAV_SECTIONS = [
+    { id: 'section-client', num: '01', label: m.nav.client.label, sub: m.nav.client.sub },
+    { id: 'section-interest', num: '02', label: m.nav.interest.label, sub: m.nav.interest.sub },
+    { id: 'section-notes', num: '03', label: m.nav.notes.label, sub: m.nav.notes.sub },
+  ];
   const [state, formAction] = useActionState<PortalLeadFormState, FormData>(
     createPortalLeadAction,
     {},
@@ -51,15 +54,15 @@ export default function PortalLeadForm({ projects }: Props) {
           <Info className="h-5 w-5 shrink-0 mt-0.5" />
           <div className="space-y-1">
             <p className="font-semibold">
-              تم تسجيل العميل بحالة &quot;مكرر&quot; — رقم الجوال موجود بالفعل في النظام.
+              {m.duplicateTitle}
             </p>
             <p className="text-xs">
-              ستراجع الإدارة الحالة وقد تعتمدها أو تبقيها مكررة.{' '}
+              {m.duplicateBody}{' '}
               <Link
                 href={`/portal/leads/${state.duplicate.id}` as never}
                 className="font-semibold underline"
               >
-                عرض العميل
+                {m.viewClient}
               </Link>
             </p>
           </div>
@@ -67,21 +70,22 @@ export default function PortalLeadForm({ projects }: Props) {
       )}
 
       <PremiumFormLayout
+        locale={locale}
         navSections={NAV_SECTIONS}
-        sidebarBadge="جديد"
-        sidebarInfo="سيتم إخطار الإدارة بعد الإرسال للمراجعة والاعتماد."
+        sidebarBadge={m.sidebarBadge}
+        sidebarInfo={m.sidebarInfo}
       >
         <PremiumFormPanel
           id="section-client"
           number="01"
-          title="بيانات العميل"
-          description="معلومات التواصل الأساسية للعميل المحتمل."
+          title={m.clientTitle}
+          description={m.clientDescription}
         >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="الاسم الكامل" name="fullName" required>
+          <Field label={m.fullName} name="fullName" required>
             <Input id="fullName" name="fullName" required minLength={2} />
           </Field>
-          <Field label="رقم الجوال" name="phone" required hint="مثال: +966500000000">
+          <Field label={m.phone} name="phone" required hint={m.phoneHint}>
             <Input
               id="phone"
               name="phone"
@@ -90,7 +94,7 @@ export default function PortalLeadForm({ projects }: Props) {
               placeholder="+9665…"
             />
           </Field>
-          <Field label="البريد الإلكتروني" name="email" hint="اختياري">
+          <Field label={m.email} name="email" hint={m.optional}>
             <Input id="email" name="email" type="email" dir="ltr" />
           </Field>
         </div>
@@ -99,26 +103,26 @@ export default function PortalLeadForm({ projects }: Props) {
         <PremiumFormPanel
           id="section-interest"
           number="02"
-          title="الاهتمام"
-          description="حدد المشروع والوحدة التي يهتم بها العميل."
+          title={m.interestTitle}
+          description={m.interestDescription}
         >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="المشروع" name="projectInterestId" hint="من المشاريع المتاحة لك">
+          <Field label={m.project} name="projectInterestId" hint={m.projectHint}>
             <Select
               id="projectInterestId"
               name="projectInterestId"
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
             >
-              <option value="">— لاحقاً —</option>
+              <option value="">{m.projectLater}</option>
               {projects.map((p) => (
                 <option key={p.project.id} value={p.project.id}>
-                  {tx(p.project.name)} — {p.project.city}
+                  {tx(p.project.name, locale)} — {p.project.city}
                 </option>
               ))}
             </Select>
           </Field>
-          <Field label="الوحدة" name="unitInterestId" hint="اختياري">
+          <Field label={m.unit} name="unitInterestId" hint={m.optional}>
             {/* Keyed by project: changing it clears the unit, so a stale unit
                 from another project can't be submitted. */}
             <SearchSelect<PortalUnit>
@@ -129,10 +133,10 @@ export default function PortalLeadForm({ projects }: Props) {
               }`}
               toOption={(u) => ({
                 id: u.id,
-                label: `${u.code} • ${tx(u.building.phase.project.name)} (${u.type})`,
+                label: `${u.code} • ${tx(u.building.phase.project.name, locale)} (${u.type})`,
                 raw: u,
               })}
-              placeholder="ابحث بكود الوحدة…"
+              placeholder={m.unitPlaceholder}
             />
           </Field>
         </div>
@@ -141,10 +145,10 @@ export default function PortalLeadForm({ projects }: Props) {
         <PremiumFormPanel
           id="section-notes"
           number="03"
-          title="ملاحظات"
-          description="أي معلومات قد تساعد فريق المبيعات."
+          title={m.notesTitle}
+          description={m.notesDescription}
         >
-          <Field label="ملاحظة" name="note">
+          <Field label={m.note} name="note">
             <Textarea id="note" name="note" rows={4} />
           </Field>
         </PremiumFormPanel>
@@ -156,13 +160,13 @@ export default function PortalLeadForm({ projects }: Props) {
           <>
             <Link href="/portal/leads">
               <Button type="button" variant="ghost" leftIcon={<X className="h-4 w-4" />}>
-                إلغاء
+                {m.cancel}
               </Button>
             </Link>
-            <SubmitButton>إرسال الفرصة</SubmitButton>
+            <SubmitButton locale={locale}>{m.submit}</SubmitButton>
           </>
         }
-        helper="سيتم إخطار الإدارة بعد الإرسال للمراجعة."
+        helper={m.footerHelper}
       />
     </form>
   );

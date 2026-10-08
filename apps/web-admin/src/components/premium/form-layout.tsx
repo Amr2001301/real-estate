@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { Info } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import type { Locale } from '@/lib/locale';
+import { portalSharedT } from '@/messages/portal/shared';
 
 export interface FormNavSection {
   /** Must match the `id` prop on the corresponding PremiumFormPanel */
@@ -15,32 +17,38 @@ export interface FormNavSection {
 export interface PremiumFormLayoutProps {
   /** Section list used to render both mobile chips and the desktop sidebar nav */
   navSections: FormNavSection[];
-  /** Sidebar card title. Default: "ملخص الإنشاء" */
+  /** Sidebar card title. Defaults to the localized "Creation summary". */
   sidebarTitle?: string;
-  /** Small pill beside the sidebar title. Default: "جديد" */
+  /** Small pill beside the sidebar title. Defaults to the localized "New". */
   sidebarBadge?: string;
   /** Info box text at the bottom of the sidebar card */
   sidebarInfo?: string;
   /** The stacked PremiumFormPanel children */
   children: ReactNode;
   className?: string;
+  /** UI language for the built-in strings. Default: 'ar'. */
+  locale?: Locale;
 }
 
 export function PremiumFormLayout({
   navSections,
-  sidebarTitle = 'ملخص الإنشاء',
-  sidebarBadge = 'جديد',
+  sidebarTitle,
+  sidebarBadge,
   sidebarInfo,
   children,
   className,
+  locale = 'ar',
 }: PremiumFormLayoutProps) {
+  const t = portalSharedT(locale).formLayout;
+  const title = sidebarTitle ?? t.sidebarTitle;
+  const badge = sidebarBadge ?? t.sidebarBadge;
   return (
     <div className={cn('flex flex-col gap-4 lg:gap-5', className)}>
 
       {/* ── Mobile: horizontal scrollable section chips ── */}
       <nav
         className="lg:hidden flex gap-2 overflow-x-auto pb-0.5 scrollbar-thin"
-        aria-label="أقسام النموذج"
+        aria-label={t.sectionsAria}
       >
         {navSections.map((s) => (
           <a
@@ -67,11 +75,11 @@ export function PremiumFormLayout({
 
             {/* Sidebar header */}
             <div className="px-5 py-4 border-b border-hairline flex items-center justify-between gap-3">
-              <p className="text-sm font-bold text-navy">{sidebarTitle}</p>
-              {sidebarBadge && (
+              <p className="text-sm font-bold text-navy">{title}</p>
+              {badge && (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-1 text-[11px] font-bold text-brand-700 select-none leading-none">
                   <span className="h-1 w-1 rounded-full bg-brand-400 shrink-0" />
-                  {sidebarBadge}
+                  {badge}
                 </span>
               )}
             </div>
@@ -79,9 +87,9 @@ export function PremiumFormLayout({
             {/* Steps nav */}
             <div className="p-3">
               <p className="text-[9.5px] font-bold uppercase tracking-widest text-slate-400 px-2 pb-2 select-none">
-                خطوات الإعداد
+                {t.stepsHeading}
               </p>
-              <nav className="flex flex-col gap-0.5" aria-label="أقسام النموذج">
+              <nav className="flex flex-col gap-0.5" aria-label={t.sectionsAria}>
                 {navSections.map((s) => (
                   <a
                     key={s.id}

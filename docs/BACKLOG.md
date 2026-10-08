@@ -24,6 +24,7 @@ detail in `docs/audit/08-functional-gaps.md` §7.
 | FG-28 | Client ownership: reps saw no clients (GET /users ADMIN-only) and the server accepted any client or lead id | Decided 2026-10-08: rep → own, manager → team, admin → all, unowned → admin assigns. Enforced server-side; scoped `GET /users/clients` |
 | FG-27 | Signed contracts read `UNSIGNED` | `sign()` sets ACTIVE; backfill migration (PR #17) |
 | Server actions hang | On routes under a `loading.tsx`, a server action's result was sometimes never shown (button stuck busy, form never redirected). Root cause: a lost Suspense ping in the React 19.2 canary bundled with Next 15.5 — React held a fulfilled promise but never re-rendered. web-admin upgraded to Next 16.4 (React 19.3 canary): 0/120 hangs vs 39/160 before | PR #20 (web-admin); web-public Next 16 PR |
+| Broker portal i18n (#21) | The broker portal was Arabic-only, hard-coded | Every `/portal` page and the shared components it renders follow the `admin-locale` cookie (ar/en), like the dashboard; strings in `src/messages/portal/*`. Playwright `portal-i18n` opens every portal page in English and fails on Arabic UI text. Dates/amounts: see the open item |
 | Deposit reverse / delete UI | The API reversed and deleted deposits safely (FG-05) but web-admin had no button for either | The deposit page has "Reverse" (with a reason; shown only while the deposit still pays its installment — `reversible` on `GET /deposits/:id`), "Delete" and, on a deleted deposit, "Restore". Playwright `deposits-manage` |
 | FG-15 | Phase and Building had no `updatedAt` | Column on both, backfilled with `createdAt` |
 | FG-14 | A client promoted to customer by their first contract was logged out (sessions revoked) without a word | `account_promoted_customer` notification on both paths (direct create, conversion); template in seed + migration |
@@ -39,7 +40,7 @@ detail in `docs/audit/08-functional-gaps.md` §7.
 | Item | Why | Size |
 |---|---|---|
 | Leaflet map in `next dev` | On the project page under `next dev`, react-leaflet 4 throws "Map container is already initialized" (Strict Mode mounts effects twice) and the map does not render. Dev only — production builds render it; same on Next 15.5. react-leaflet 5 targets React 19 | S |
-| Web-public / portal i18n (#21) | The broker portal is Arabic-only, hard-coded | M |
+| Dates and amounts follow the locale (web-admin) | `formatDate` / `formatDateTime` / `formatCurrency` in `lib/format.ts` always format in `ar-EG`, so the English dashboard and portal show Arabic-Indic digits and `ر.س`. They take no locale; every caller needs it passed | M |
 
 ## Open — needs the owner
 

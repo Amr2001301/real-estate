@@ -1,8 +1,13 @@
 import Link from 'next/link';
+import { getLocale } from '@/lib/locale';
+import { portalMoneyTeamT } from '@/messages/portal/money-team';
 import { TeamMemberForm } from '../_form';
 import { createTeamMemberAction } from '../actions';
 
-export default function NewTeamMemberPage() {
+export default async function NewTeamMemberPage() {
+  const locale = await getLocale();
+  const m = portalMoneyTeamT(locale);
+  const t = m.team.new;
   return (
     <div className="flex flex-col gap-5 lg:gap-6">
 
@@ -17,7 +22,7 @@ export default function NewTeamMemberPage() {
                   href={'/portal' as never}
                   className="font-medium hover:text-brand-600 transition-colors duration-150"
                 >
-                  البوابة
+                  {m.common.breadcrumbPortal}
                 </Link>
                 <span className="text-slate-300 text-sm select-none">›</span>
               </li>
@@ -26,33 +31,33 @@ export default function NewTeamMemberPage() {
                   href={'/portal/team' as never}
                   className="font-medium hover:text-brand-600 transition-colors duration-150"
                 >
-                  فريق العمل
+                  {m.team.breadcrumb}
                 </Link>
                 <span className="text-slate-300 text-sm select-none">›</span>
               </li>
               <li>
-                <span className="font-semibold text-slate-600">إضافة عضو</span>
+                <span className="font-semibold text-slate-600">{t.breadcrumb}</span>
               </li>
             </ol>
           </nav>
           <div className="flex items-start justify-between gap-6">
             <div className="min-w-0">
               <h1 className="text-[28px] sm:text-[34px] font-bold tracking-tight text-navy leading-tight">
-                إضافة عضو جديد
+                {t.title}
               </h1>
               <p className="mt-2 text-sm text-slate-500 leading-relaxed max-w-md">
-                ادعُ عضوًا جديدًا للانضمام لفريق الوسيط. سيستلم بريدًا/إشعارًا للتفعيل.
+                {t.description}
               </p>
             </div>
             <span className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-3 py-1.5 text-xs font-bold text-brand-700 tracking-wide mt-1 select-none">
               <span className="h-1.5 w-1.5 rounded-full bg-brand-400 shrink-0" />
-              عضو جديد
+              {t.badge}
             </span>
           </div>
         </div>
       </div>
 
-      <TeamMemberForm action={createTeamMemberAction} submitLabel="إرسال الدعوة" />
+      <TeamMemberForm action={createTeamMemberAction} submitLabel={t.submit} locale={locale} />
     </div>
   );
 }

@@ -11,6 +11,8 @@ import { api, safe } from '@/lib/api';
 import type { Paged, PortalCommission, PortalProject } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
+import { getLocale } from '@/lib/locale';
+import { portalMoneyTeamT } from '@/messages/portal/money-team';
 import { cn } from '@/lib/cn';
 import { IconButton } from '@/components/ui/icon-button';
 import { CodeText } from '@/components/ui/code-text';
@@ -44,6 +46,9 @@ export default async function PortalCommissionsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const locale = await getLocale();
+  const m = portalMoneyTeamT(locale);
+  const t = m.commissions.list;
   const currency = await getReportsCurrency();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
@@ -75,54 +80,54 @@ export default async function PortalCommissionsPage({
     <div className="space-y-5">
 
       <PremiumPageHero
-        title="عمولاتي"
-        description="العمولات المستحقة من العقود الموقّعة — تتبّع الإجمالي والصافي وحالة كل عمولة."
+        title={t.title}
+        description={t.description}
         breadcrumbs={[
-          { label: 'البوابة', href: '/portal' },
-          { label: 'العمولات' },
+          { label: m.common.breadcrumbPortal, href: '/portal' },
+          { label: t.breadcrumb },
         ]}
       />
 
       {commRes.error && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          تعذر تحميل العمولات: {commRes.error}
+          {t.loadError(commRes.error)}
         </div>
       )}
 
       <PremiumMetricStrip
         variant="compact"
         metrics={[
-          { label: 'إجمالي العمولات', value: paged?.meta.total ?? 0, icon: <BadgePercent />, tone: 'brand'   },
-          { label: 'قيد الاعتماد',   value: pendingCount,           icon: <Clock />,        tone: 'warning' },
-          { label: 'معتمدة',         value: approvedCount,          icon: <CheckCircle2 />, tone: 'success' },
-          { label: 'مرفوضة',         value: rejectedCount,          icon: <XCircle />,      tone: 'danger'  },
+          { label: t.metrics.total, value: paged?.meta.total ?? 0, icon: <BadgePercent />, tone: 'brand'   },
+          { label: t.metrics.pending, value: pendingCount,           icon: <Clock />,        tone: 'warning' },
+          { label: t.metrics.approved, value: approvedCount,          icon: <CheckCircle2 />, tone: 'success' },
+          { label: t.metrics.rejected, value: rejectedCount,          icon: <XCircle />,      tone: 'danger'  },
         ]}
       />
 
-      <CommissionsFilterBar projects={projects} sp={{ q: sp.q, status: sp.status, projectId: sp.projectId, from: sp.from, to: sp.to }} />
+      <CommissionsFilterBar projects={projects} locale={locale} sp={{ q: sp.q, status: sp.status, projectId: sp.projectId, from: sp.from, to: sp.to }} />
 
       <PremiumSectionCard
         icon={<BadgePercent />}
-        title="قائمة العمولات"
+        title={t.tableTitle}
         padded={false}
       >
         {rows.length > 0 && (
           <div className="flex items-center gap-4 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
             <div className="flex items-center gap-1.5">
               <span className="font-bold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
-              <span>عمولة</span>
+              <span>{t.countUnit}</span>
             </div>
             {pageGross > 0 && (
               <>
                 <div className="w-px h-4 bg-hairline" />
                 <span>
-                  إجمالي:{' '}
+                  {t.grossLabel}{' '}
                   <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(pageGross, currency)}</span>
                 </span>
                 <div className="w-px h-4 bg-hairline" />
                 <span>
-                  صافي:{' '}
+                  {t.netLabel}{' '}
                   <span className="font-semibold text-success-700 tabular-nums">{formatCurrency(pageNet, currency)}</span>
                 </span>
               </>
@@ -134,11 +139,11 @@ export default async function PortalCommissionsPage({
           <table className="w-full text-sm">
             <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">الوحدة / المشروع</th>
-                <th className="text-start font-semibold py-3 px-4">الحالة</th>
-                <th className="text-start font-semibold py-3 px-4">الصافي</th>
-                <th className="text-start font-semibold py-3 px-4">المرجع</th>
-                <th className="text-start font-semibold py-3 px-4">تاريخ الاستحقاق</th>
+                <th className="text-start font-semibold py-3 ps-5 pe-4">{t.cols.unitProject}</th>
+                <th className="text-start font-semibold py-3 px-4">{t.cols.status}</th>
+                <th className="text-start font-semibold py-3 px-4">{t.cols.net}</th>
+                <th className="text-start font-semibold py-3 px-4">{t.cols.reference}</th>
+                <th className="text-start font-semibold py-3 px-4">{t.cols.earnedAt}</th>
                 <th className="py-3 ps-4 pe-5 w-px"></th>
               </tr>
             </thead>
@@ -148,8 +153,8 @@ export default async function PortalCommissionsPage({
                   <td colSpan={6} className="p-0">
                     <EmptyState
                       icon={<BadgePercent />}
-                      title="لا توجد عمولات بعد"
-                      description="تظهر هنا فور توقيع أول عقد منبثق من حجوزاتك."
+                      title={t.emptyTitle}
+                      description={t.emptyDescription}
                     />
                   </td>
                 </tr>
@@ -173,12 +178,12 @@ export default async function PortalCommissionsPage({
                     <td className="py-3 ps-5 pe-4">
                       <CodeText className="text-xs font-semibold text-slate-800">{c.unit?.code ?? '—'}</CodeText>
                       <p className="text-2xs text-slate-500 mt-0.5">
-                        {c.project ? tx(c.project.name) : '—'}
+                        {c.project ? tx(c.project.name, locale) : '—'}
                       </p>
                     </td>
 
                     <td className="py-3 px-4">
-                      <BrokerCommissionStatusBadge status={c.status} />
+                      <BrokerCommissionStatusBadge status={c.status} locale={locale} />
                     </td>
 
                     <td className="py-3 px-4">
@@ -186,8 +191,8 @@ export default async function PortalCommissionsPage({
                         {formatCurrency(c.netAmount, currency)}
                       </p>
                       <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">
-                        من {formatCurrency(c.grossAmount, currency)}
-                        {deduction > 0.1 && ` · خصم ${deduction.toFixed(1)}%`}
+                        {t.fromGross(formatCurrency(c.grossAmount, currency))}
+                        {deduction > 0.1 && t.deduction(deduction.toFixed(1))}
                       </p>
                     </td>
 
@@ -209,7 +214,7 @@ export default async function PortalCommissionsPage({
 
                     <td className="py-3 ps-4 pe-5">
                       <Link href={`/portal/commissions/${c.id}` as never}>
-                        <IconButton label="عرض" variant="ghost" size="sm">
+                        <IconButton label={m.common.view} variant="ghost" size="sm">
                           <Eye />
                         </IconButton>
                       </Link>
@@ -227,13 +232,14 @@ export default async function PortalCommissionsPage({
             pageSize={paged.meta.pageSize}
             total={paged.meta.total}
             basePath="/portal/commissions"
+            locale={locale}
             params={{ q: sp.q, status: sp.status, projectId: sp.projectId, from: sp.from, to: sp.to }}
           />
         )}
       </PremiumSectionCard>
 
       <p className="text-2xs text-slate-400 text-center">
-        العمولة «معتمدة» تعني أن الإدارة وافقت عليها وستُدرج في دفعتك القادمة. الأرقام مقفلة عند توقيع العقد.
+        {t.footnote}
       </p>
     </div>
   );

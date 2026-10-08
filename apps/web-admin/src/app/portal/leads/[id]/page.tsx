@@ -23,6 +23,8 @@ import { api, safe } from '@/lib/api';
 import type { PortalLead, AppointmentStatus } from '@/lib/types';
 import { tx, formatDate, formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/cn';
+import { getLocale } from '@/lib/locale';
+import { portalLeadsVisitsT } from '@/messages/portal/leads-visits';
 import {
   PremiumPageHero,
   PremiumDetailLayout,
@@ -38,16 +40,6 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const APPOINTMENT_STATUS_LABEL: Record<AppointmentStatus, string> = {
-  SCHEDULED:          'مجدولة',
-  CONFIRMED:          'مؤكدة',
-  PENDING_RESCHEDULE: 'إعادة جدولة',
-  COMPLETED:          'مكتملة',
-  CANCELLED:          'ملغاة',
-  NO_SHOW:            'لم يحضر',
-  RESCHEDULED:        'أُعيد جدولتها',
-};
-
 const APPOINTMENT_STATUS_STYLE: Record<AppointmentStatus, string> = {
   SCHEDULED:          'bg-amber-50 text-amber-700 border-amber-100',
   CONFIRMED:          'bg-emerald-50 text-emerald-700 border-emerald-100',
@@ -67,26 +59,28 @@ function StatusTimeline({
   submittedAt,
   approvedAt,
   rejectedAt,
+  m,
 }: {
   status: PortalLead['brokerApprovalStatus'];
   submittedAt: string;
   approvedAt: string | null;
   rejectedAt: string | null;
+  m: ReturnType<typeof portalLeadsVisitsT>['leads']['detail']['timeline'];
 }) {
   const resolved = status === 'APPROVED' || status === 'REJECTED' || status === 'DUPLICATE';
 
   const finalStep =
     status === 'APPROVED'
-      ? { icon: <CheckCircle2 />, label: 'تم الاعتماد',     tone: 'success' as const, at: approvedAt }
+      ? { icon: <CheckCircle2 />, label: m.approved, tone: 'success' as const, at: approvedAt }
       : status === 'REJECTED'
-        ? { icon: <XCircle />,      label: 'تم الرفض',        tone: 'danger'  as const, at: rejectedAt }
+        ? { icon: <XCircle />,      label: m.rejected, tone: 'danger'  as const, at: rejectedAt }
         : status === 'DUPLICATE'
-          ? { icon: <Copy />,       label: 'مكررة',            tone: 'warning' as const, at: null }
-          : { icon: <CheckCircle2 />, label: 'بانتظار القرار', tone: 'muted'   as const, at: null };
+          ? { icon: <Copy />,       label: m.duplicate, tone: 'warning' as const, at: null }
+          : { icon: <CheckCircle2 />, label: m.awaitingDecision, tone: 'muted'   as const, at: null };
 
   const steps = [
-    { icon: <Send />,         label: 'أُرسلت للإدارة', tone: 'brand'  as const, at: submittedAt, done: true     },
-    { icon: <Search />,       label: 'قيد المراجعة',   tone: 'brand'  as const, at: null,         done: true     },
+    { icon: <Send />,         label: m.submitted, tone: 'brand'  as const, at: submittedAt, done: true     },
+    { icon: <Search />,       label: m.underReview, tone: 'brand'  as const, at: null,         done: true     },
     { icon: finalStep.icon,   label: finalStep.label,   tone: finalStep.tone,    at: finalStep.at, done: resolved },
   ];
 
@@ -152,12 +146,14 @@ function ContactCell({
   value,
   href,
   tone,
+  ltr,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string | null | undefined;
   href?: string;
   tone: 'brand' | 'info' | 'violet';
+  ltr?: boolean;
 }) {
   const ICON_TONE: Record<typeof tone, string> = {
     brand:  'bg-brand-50 text-brand-600',
@@ -172,7 +168,7 @@ function ContactCell({
       </span>
       <div className="min-w-0">
         <p className="text-2xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-        <p className="text-sm font-medium text-slate-900 truncate" dir={label === 'البريد الإلكتروني' || label === 'رقم الهاتف' ? 'ltr' : undefined}>
+        <p className="text-sm font-medium text-slate-900 truncate" dir={ltr ? 'ltr' : undefined}>
           {value ?? <span className="text-slate-400">—</span>}
         </p>
       </div>
@@ -193,6 +189,9 @@ export default async function PortalLeadDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const locale = await getLocale();
+  const m = portalLeadsVisitsT(locale);
+  const t = m.leads.detail;
   const r = await safe(api.get<PortalLead>(`/portal/leads/${id}`));
   if (r.error || !r.data) notFound();
   const lead = r.data;
@@ -212,14 +211,14 @@ export default async function PortalLeadDetailPage({
       <PremiumPageHero
         title={lead.fullName}
         breadcrumbs={[
-          { label: 'البوابة', href: '/portal' },
-          { label: 'الفرص',  href: '/portal/leads' },
+          { label: m.breadcrumbs.portal, href: '/portal' },
+          { label: m.breadcrumbs.leads, href: '/portal/leads' },
           { label: lead.fullName },
         ]}
         meta={
           <>
-            {lead.brokerApprovalStatus && <BrokerLeadStatusBadge status={lead.brokerApprovalStatus} />}
-            <LeadStageBadge stage={lead.stage} />
+            {lead.brokerApprovalStatus && <BrokerLeadStatusBadge status={lead.brokerApprovalStatus} locale={locale} />}
+            <LeadStageBadge stage={lead.stage} locale={locale} />
           </>
         }
       />
@@ -229,7 +228,7 @@ export default async function PortalLeadDetailPage({
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold">سبب الرفض</p>
+            <p className="font-semibold">{t.rejectionReason}</p>
             <p className="mt-1 leading-relaxed">{lead.brokerRejectionReason}</p>
           </div>
         </div>
@@ -241,7 +240,7 @@ export default async function PortalLeadDetailPage({
           <div className="space-y-5">
 
             {/* ── Client profile ──────────────────────────────────────── */}
-            <PremiumSectionCard title="العميل">
+            <PremiumSectionCard title={t.clientTitle}>
               <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-5">
                 {/* Avatar */}
                 <div
@@ -267,13 +266,14 @@ export default async function PortalLeadDetailPage({
                     )}
                   </div>
                   <p className="mt-1 text-sm text-slate-500">
-                    عميل مُرسَل عبر بوابة الوساطة العقارية
+                    {t.clientSubtitle}
                   </p>
                   <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     <ContactCell
                       icon={<Phone className="h-4 w-4" />}
                       tone="brand"
-                      label="رقم الهاتف"
+                      label={t.phone}
+                      ltr
                       value={lead.phone}
                       href={lead.phone ? `tel:${lead.phone}` : undefined}
                     />
@@ -281,7 +281,8 @@ export default async function PortalLeadDetailPage({
                       <ContactCell
                         icon={<Mail className="h-4 w-4" />}
                         tone="info"
-                        label="البريد الإلكتروني"
+                        label={t.email}
+                        ltr
                         value={lead.email}
                         href={`mailto:${lead.email}`}
                       />
@@ -293,9 +294,9 @@ export default async function PortalLeadDetailPage({
 
             {/* ── Interest ────────────────────────────────────────────── */}
             <PremiumSectionCard
-              title="الاهتمام والمرحلة"
+              title={t.interestTitle}
               icon={<Building2 className="h-4 w-4" />}
-              trailing={<LeadStageBadge stage={lead.stage} />}
+              trailing={<LeadStageBadge stage={lead.stage} locale={locale} />}
             >
               {lead.projectInterest ? (
                 <div className="flex flex-col gap-3">
@@ -305,7 +306,7 @@ export default async function PortalLeadDetailPage({
                     </span>
                     <div>
                       <p className="text-[15px] font-extrabold text-slate-900 leading-snug">
-                        {tx(lead.projectInterest.name)}
+                        {tx(lead.projectInterest.name, locale)}
                       </p>
                       {lead.projectInterest.city && (
                         <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
@@ -318,7 +319,7 @@ export default async function PortalLeadDetailPage({
                   {lead.unitInterest ? (
                     <div className="flex items-center gap-2.5 rounded-xl bg-canvas/60 ring-1 ring-inset ring-hairline px-4 py-3">
                       <div>
-                        <p className="text-2xs font-medium uppercase tracking-wide text-slate-500">الوحدة المطلوبة</p>
+                        <p className="text-2xs font-medium uppercase tracking-wide text-slate-500">{t.requestedUnit}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <CodeText className="text-sm font-bold text-slate-800">{lead.unitInterest.code}</CodeText>
                           <CodeText className="text-2xs text-slate-500">{lead.unitInterest.type}</CodeText>
@@ -326,31 +327,32 @@ export default async function PortalLeadDetailPage({
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs text-slate-400 italic">أي وحدة متاحة في المشروع</p>
+                    <p className="text-xs text-slate-400 italic">{t.anyUnitInProject}</p>
                   )}
                 </div>
               ) : (
                 <PremiumEmptyState
                   icon={<Building2 />}
-                  title="لم يُحدد مشروع بعد"
-                  description="لم يتم تحديد اهتمام بمشروع أو وحدة معينة لهذه الفرصة."
+                  title={t.noProjectTitle}
+                  description={t.noProjectDescription}
                 />
               )}
             </PremiumSectionCard>
 
             {/* ── Timeline ────────────────────────────────────────────── */}
-            <PremiumSectionCard title="مسار الفرصة" icon={<Send className="h-4 w-4" />}>
+            <PremiumSectionCard title={t.timelineTitle} icon={<Send className="h-4 w-4" />}>
               <StatusTimeline
                 status={lead.brokerApprovalStatus}
                 submittedAt={lead.brokerSubmittedAt ?? ''}
                 approvedAt={lead.brokerApprovedAt}
                 rejectedAt={lead.brokerRejectedAt}
+                m={t.timeline}
               />
             </PremiumSectionCard>
 
             {/* ── Linked visits ────────────────────────────────────────── */}
             <PremiumSectionCard
-              title="الزيارات المرتبطة"
+              title={t.visitsTitle}
               icon={<CalendarClock className="h-4 w-4" />}
               trailing={
                 appointments.length > 0 ? (
@@ -362,8 +364,8 @@ export default async function PortalLeadDetailPage({
               {appointments.length === 0 ? (
                 <PremiumEmptyState
                   icon={<CalendarClock />}
-                  title="لا توجد زيارات مرتبطة"
-                  description="سيظهر هنا جدول الزيارات فور تحديد موعد مع العميل."
+                  title={t.noVisitsTitle}
+                  description={t.noVisitsDescription}
                 />
               ) : (
                 <ul className="divide-y divide-hairline">
@@ -392,7 +394,7 @@ export default async function PortalLeadDetailPage({
                           'text-2xs font-medium border rounded-full px-2.5 py-0.5 shrink-0',
                           APPOINTMENT_STATUS_STYLE[a.status],
                         )}>
-                          {APPOINTMENT_STATUS_LABEL[a.status]}
+                          {t.appointmentStatus[a.status]}
                         </span>
                       </li>
                     );
@@ -404,7 +406,7 @@ export default async function PortalLeadDetailPage({
             {/* ── Notes ────────────────────────────────────────────────── */}
             {lead.notes && lead.notes.length > 0 && (
               <PremiumSectionCard
-                title="ملاحظات فريق المبيعات"
+                title={t.notesTitle}
                 icon={<StickyNote className="h-4 w-4" />}
                 trailing={
                   <span className="text-xs text-slate-400 tabular-nums">{lead.notes.length}</span>
@@ -431,51 +433,51 @@ export default async function PortalLeadDetailPage({
           <div className="space-y-4">
 
             {/* ── Quick actions ────────────────────────────────────────── */}
-            <PremiumCommandPanel title="إجراءات سريعة">
+            <PremiumCommandPanel title={t.quickActions}>
               {lead.phone && (
                 <a href={`tel:${lead.phone}`} className={CMD_LINK}>
                   <span className={CMD_ICON}><Phone /></span>
-                  اتصال بالعميل
+                  {t.callClient}
                 </a>
               )}
               {lead.email && (
                 <a href={`mailto:${lead.email}`} className={CMD_LINK}>
                   <span className={CMD_ICON}><Mail /></span>
-                  إرسال بريد إلكتروني
+                  {t.sendEmail}
                 </a>
               )}
               <Link href={'/portal/leads' as never} className={CMD_LINK}>
                 <span className={CMD_ICON}><ArrowLeft /></span>
-                قائمة الفرص
+                {t.leadsList}
               </Link>
             </PremiumCommandPanel>
 
             {/* ── Lead info (meta) ─────────────────────────────────────── */}
-            <PremiumSectionCard title="معلومات الفرصة">
+            <PremiumSectionCard title={t.infoTitle}>
               <dl className="flex flex-col gap-3 text-sm">
-                <InfoRow label="حالة الموافقة" icon={<ShieldCheck className="h-3.5 w-3.5" />}>
+                <InfoRow label={t.approvalStatus} icon={<ShieldCheck className="h-3.5 w-3.5" />}>
                   {lead.brokerApprovalStatus
-                    ? <BrokerLeadStatusBadge status={lead.brokerApprovalStatus} />
+                    ? <BrokerLeadStatusBadge status={lead.brokerApprovalStatus} locale={locale} />
                     : <span className="text-slate-400 text-xs">—</span>
                   }
                 </InfoRow>
-                <InfoRow label="المرحلة" icon={<Search className="h-3.5 w-3.5" />}>
-                  <LeadStageBadge stage={lead.stage} />
+                <InfoRow label={t.stage} icon={<Search className="h-3.5 w-3.5" />}>
+                  <LeadStageBadge stage={lead.stage} locale={locale} />
                 </InfoRow>
-                <InfoRow label="تاريخ الإرسال" icon={<CalendarDays className="h-3.5 w-3.5" />}>
+                <InfoRow label={t.submittedAt} icon={<CalendarDays className="h-3.5 w-3.5" />}>
                   <span className="text-slate-700 text-xs tabular-nums">
                     {lead.brokerSubmittedAt ? formatDate(lead.brokerSubmittedAt) : '—'}
                   </span>
                 </InfoRow>
                 {lead.brokerApprovedAt && (
-                  <InfoRow label="تاريخ الموافقة" icon={<CheckCircle2 className="h-3.5 w-3.5" />}>
+                  <InfoRow label={t.approvedAt} icon={<CheckCircle2 className="h-3.5 w-3.5" />}>
                     <span className="text-emerald-700 text-xs font-semibold tabular-nums">
                       {formatDate(lead.brokerApprovedAt)}
                     </span>
                   </InfoRow>
                 )}
                 {lead.brokerRejectedAt && (
-                  <InfoRow label="تاريخ الرفض" icon={<XCircle className="h-3.5 w-3.5" />}>
+                  <InfoRow label={t.rejectedAt} icon={<XCircle className="h-3.5 w-3.5" />}>
                     <span className="text-red-600 text-xs font-semibold tabular-nums">
                       {formatDate(lead.brokerRejectedAt)}
                     </span>
@@ -483,16 +485,16 @@ export default async function PortalLeadDetailPage({
                 )}
                 <div className="pt-2 mt-1 border-t border-hairline grid grid-cols-2 gap-3">
                   <div className="rounded-xl bg-slate-50 border border-hairline px-3 py-2.5 text-center">
-                    <p className="text-2xs text-slate-400 font-medium">الزيارات</p>
+                    <p className="text-2xs text-slate-400 font-medium">{t.visits}</p>
                     <p className="text-2xl font-black text-slate-800 mt-1 tabular-nums leading-none">
                       {appointments.length}
                     </p>
                     {upcomingCount > 0 && (
-                      <p className="text-2xs text-brand-600 font-semibold mt-1">{upcomingCount} قادمة</p>
+                      <p className="text-2xs text-brand-600 font-semibold mt-1">{t.upcomingFn(upcomingCount)}</p>
                     )}
                   </div>
                   <div className="rounded-xl bg-slate-50 border border-hairline px-3 py-2.5 text-center">
-                    <p className="text-2xs text-slate-400 font-medium">الملاحظات</p>
+                    <p className="text-2xs text-slate-400 font-medium">{t.notes}</p>
                     <p className="text-2xl font-black text-slate-800 mt-1 tabular-nums leading-none">
                       {lead.notes?.length ?? 0}
                     </p>

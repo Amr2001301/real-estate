@@ -15,6 +15,8 @@ import type { Paged, PortalProject, PortalReservation } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { cn } from '@/lib/cn';
+import { getLocale } from '@/lib/locale';
+import { portalReservationsContractsT } from '@/messages/portal/reservations-contracts';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { CodeText } from '@/components/ui/code-text';
@@ -67,6 +69,9 @@ export default async function PortalReservationsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const locale = await getLocale();
+  const m = portalReservationsContractsT(locale);
+  const t = m.reservations.list;
   const currency = await getReportsCurrency();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
@@ -96,16 +101,16 @@ export default async function PortalReservationsPage({
     <div className="space-y-5">
 
       <PremiumPageHero
-        title="حجوزاتي"
-        description="الحجوزات التي أنشأتها عبر البوابة — تابع الحالة والعمولة المُقفلة."
+        title={t.title}
+        description={t.description}
         breadcrumbs={[
-          { label: 'البوابة', href: '/portal' },
-          { label: 'الحجوزات' },
+          { label: m.common.portal, href: '/portal' },
+          { label: m.common.reservations },
         ]}
         actions={
           <Link href="/portal/reservations/new">
             <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-              حجز جديد
+              {t.newReservation}
             </Button>
           </Link>
         }
@@ -114,34 +119,35 @@ export default async function PortalReservationsPage({
       {resRes.error && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          تعذر تحميل الحجوزات: {resRes.error}
+          {t.loadErrorFn(resRes.error)}
         </div>
       )}
 
       <PremiumMetricStrip
         variant="compact"
         metrics={[
-          { label: 'إجمالي الحجوزات', value: paged?.meta.total ?? 0, icon: <BookmarkCheck />,  tone: 'brand'   },
-          { label: 'قيد المراجعة',    value: pendingCount,            icon: <Clock />,          tone: 'warning' },
-          { label: 'تمت الموافقة',    value: approvedCount,           icon: <CheckCircle2 />,   tone: 'success' },
-          { label: 'محوّل إلى عقد',   value: convertedCount,          icon: <ArrowRightLeft />, tone: 'info'    },
+          { label: t.metrics.total, value: paged?.meta.total ?? 0, icon: <BookmarkCheck />,  tone: 'brand'   },
+          { label: t.metrics.pending, value: pendingCount,            icon: <Clock />,          tone: 'warning' },
+          { label: t.metrics.approved, value: approvedCount,           icon: <CheckCircle2 />,   tone: 'success' },
+          { label: t.metrics.converted, value: convertedCount,          icon: <ArrowRightLeft />, tone: 'info'    },
         ]}
       />
 
       <ReservationsFilterBar
         projects={projects}
+        locale={locale}
         sp={{ q: sp.q, status: sp.status, projectId: sp.projectId, from: sp.from, to: sp.to }}
       />
 
       <PremiumSectionCard
         icon={<BookmarkCheck />}
-        title="قائمة الحجوزات"
+        title={t.tableTitle}
         padded={false}
       >
         {rows.length > 0 && (
           <div className="flex items-center gap-2 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
             <span className="font-bold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
-            <span>حجز</span>
+            <span>{t.countUnit}</span>
           </div>
         )}
 
@@ -149,12 +155,12 @@ export default async function PortalReservationsPage({
           <table className="w-full text-sm">
             <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">العميل</th>
-                <th className="text-start font-semibold py-3 px-4">الوحدة / المشروع</th>
-                <th className="text-start font-semibold py-3 px-4">الحالة</th>
-                <th className="text-start font-semibold py-3 px-4">العمولة المُقفلة</th>
-                <th className="text-start font-semibold py-3 px-4">رقم الحجز</th>
-                <th className="text-start font-semibold py-3 px-4">التاريخ</th>
+                <th className="text-start font-semibold py-3 ps-5 pe-4">{m.common.client}</th>
+                <th className="text-start font-semibold py-3 px-4">{m.common.unitProject}</th>
+                <th className="text-start font-semibold py-3 px-4">{m.common.status}</th>
+                <th className="text-start font-semibold py-3 px-4">{m.common.lockedCommission}</th>
+                <th className="text-start font-semibold py-3 px-4">{t.cols.reservationNumber}</th>
+                <th className="text-start font-semibold py-3 px-4">{m.common.date}</th>
                 <th className="py-3 ps-4 pe-5 w-px"></th>
               </tr>
             </thead>
@@ -164,8 +170,8 @@ export default async function PortalReservationsPage({
                   <td colSpan={7} className="p-0">
                     <EmptyState
                       icon={<BookmarkCheck />}
-                      title="لا توجد حجوزات بعد"
-                      description="أنشئ أول حجز من فرصة معتمدة على وحدة متاحة."
+                      title={t.emptyTitle}
+                      description={t.emptyDescription}
                       action={
                         <Link href="/portal/reservations/new">
                           <Button
@@ -173,7 +179,7 @@ export default async function PortalReservationsPage({
                             size="sm"
                             leftIcon={<Plus className="h-4 w-4" />}
                           >
-                            حجز جديد
+                            {t.newReservation}
                           </Button>
                         </Link>
                       }
@@ -232,12 +238,12 @@ export default async function PortalReservationsPage({
                     <td className="py-3 px-4">
                       <CodeText className="text-xs font-semibold text-slate-800">{r.unit?.code ?? '—'}</CodeText>
                       <p className="text-2xs text-slate-500 mt-0.5">
-                        {r.unit?.building ? tx(r.unit.building.phase.project.name) : '—'}
+                        {r.unit?.building ? tx(r.unit.building.phase.project.name, locale) : '—'}
                       </p>
                     </td>
 
                     <td className="py-3 px-4">
-                      <ReservationStatusBadge status={r.status} />
+                      <ReservationStatusBadge status={r.status} locale={locale} />
                     </td>
 
                     <td className="py-3 px-4">
@@ -266,7 +272,7 @@ export default async function PortalReservationsPage({
 
                     <td className="py-3 ps-4 pe-5">
                       <Link href={`/portal/reservations/${r.id}` as never}>
-                        <IconButton label="عرض" variant="ghost" size="sm">
+                        <IconButton label={m.common.view} variant="ghost" size="sm">
                           <Eye />
                         </IconButton>
                       </Link>
@@ -284,6 +290,7 @@ export default async function PortalReservationsPage({
             pageSize={paged.meta.pageSize}
             total={paged.meta.total}
             basePath="/portal/reservations"
+            locale={locale}
             params={{ q: sp.q, status: sp.status, projectId: sp.projectId, from: sp.from, to: sp.to }}
           />
         )}
