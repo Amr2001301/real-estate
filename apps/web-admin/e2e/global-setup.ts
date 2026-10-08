@@ -8,6 +8,8 @@ import {
   SALES_PASSWORD,
   MANAGER_EMAIL,
   MANAGER_PASSWORD,
+  BROKER_EMAIL,
+  BROKER_PASSWORD,
   login,
 } from './helpers/auth';
 
@@ -32,21 +34,24 @@ export const AUTH_DIR = path.resolve(__dirname, '.auth');
 export const ADMIN_STORAGE = path.join(AUTH_DIR, 'admin.json');
 export const SALES_STORAGE = path.join(AUTH_DIR, 'sales.json');
 export const MANAGER_STORAGE = path.join(AUTH_DIR, 'manager.json');
+export const BROKER_STORAGE = path.join(AUTH_DIR, 'broker.json');
 
 export default async function globalSetup(config: FullConfig): Promise<void> {
   await fs.mkdir(AUTH_DIR, { recursive: true });
   const baseURL = config.projects[0]?.use.baseURL ?? 'http://localhost:3001';
   const browser = await chromium.launch();
   try {
-    for (const [email, password, storagePath, label] of [
-      [ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_STORAGE, 'admin'],
-      [SALES_EMAIL, SALES_PASSWORD, SALES_STORAGE, 'sales'],
-      [MANAGER_EMAIL, MANAGER_PASSWORD, MANAGER_STORAGE, 'manager'],
+    // Four logins: still inside the API's 5-per-minute login throttle.
+    for (const [email, password, storagePath, label, landing] of [
+      [ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_STORAGE, 'admin', '/dashboard'],
+      [SALES_EMAIL, SALES_PASSWORD, SALES_STORAGE, 'sales', '/dashboard'],
+      [MANAGER_EMAIL, MANAGER_PASSWORD, MANAGER_STORAGE, 'manager', '/dashboard'],
+      [BROKER_EMAIL, BROKER_PASSWORD, BROKER_STORAGE, 'broker', '/portal'],
     ] as const) {
       const context = await browser.newContext({ baseURL });
       const page = await context.newPage();
       try {
-        await login(page, email, password);
+        await login(page, email, password, undefined, landing);
       } catch (e) {
         throw new Error(
           `[admin globalSetup] failed to log in ${label} (${email}). ` +

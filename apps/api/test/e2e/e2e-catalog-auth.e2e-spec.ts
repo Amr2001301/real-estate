@@ -531,6 +531,70 @@ describe('Flow A — Catalog sync (e2e)', () => {
     });
   });
 
+  // ── Broker portal: the same filter, inside the broker's own scope ─────────
+  //
+  // The portal reservation form searches leads instead of preloading 200, and
+  // warns about approved leads still waiting for a sales rep with
+  // assigned=false&pageSize=5 — so the server must split them, per broker.
+  describe('A4g — portal leads assigned=true|false', () => {
+    const UNASSIGNED_PHONE = '+966500000779';
+    let assignedLeadId: string;
+    let unassignedLeadId: string;
+
+    beforeAll(async () => {
+      const seeded = await testApp.rawPrisma.lead.findFirstOrThrow({
+        where: { phone: '+966500000777', NOT: { brokerId: null } },
+      });
+      assignedLeadId = seeded.id;
+      const unassigned = await testApp.rawPrisma.lead.create({
+        data: {
+          companyId: seeded.companyId,
+          clientId: seeded.clientId,
+          fullName: 'E2E Broker1 Portal Unassigned',
+          phone: UNASSIGNED_PHONE,
+          brokerId: seeded.brokerId,
+          brokerApprovalStatus: 'APPROVED',
+          brokerSubmittedAt: new Date(),
+          brokerApprovedAt: new Date(),
+        },
+      });
+      unassignedLeadId = unassigned.id;
+    });
+
+    afterAll(async () => {
+      await testApp.rawPrisma.lead.deleteMany({ where: { id: unassignedLeadId } });
+    });
+
+    const list = (token: string, qs: string) =>
+      http()
+        .get(`/v1/portal/leads?brokerApprovalStatus=APPROVED&pageSize=200${qs}`)
+        .set('Authorization', bearer(token));
+    const ids = (res: { body: { data: { id: string }[] } }) => res.body.data.map((l) => l.id);
+
+    it('assigned=true keeps only leads with a sales rep', async () => {
+      const res = await list(broker1Token, '&assigned=true');
+      expect(res.status).toBe(200);
+      expect(ids(res)).toContain(assignedLeadId);
+      expect(ids(res)).not.toContain(unassignedLeadId);
+    });
+
+    it('assigned=false keeps only leads still waiting for one', async () => {
+      const res = await list(broker1Token, '&assigned=false');
+      expect(res.status).toBe(200);
+      expect(ids(res)).toContain(unassignedLeadId);
+      expect(ids(res)).not.toContain(assignedLeadId);
+    });
+
+    it("another broker sees neither, with or without the filter", async () => {
+      for (const qs of ['', '&assigned=true', '&assigned=false']) {
+        const res = await list(broker2Token, qs);
+        expect(res.status).toBe(200);
+        expect(ids(res)).not.toContain(assignedLeadId);
+        expect(ids(res)).not.toContain(unassignedLeadId);
+      }
+    });
+  });
+
   // ── FG-23 — the sales dashboards count on the server ──────────────────────
   //
   // The sales, sales-manager and my-compensation homes used to fetch

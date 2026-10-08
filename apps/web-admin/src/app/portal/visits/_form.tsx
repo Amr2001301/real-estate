@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState, useState } from 'react';
+import { useActionState, useRef, useState } from 'react';
 import { AlertCircle, X, User, Phone, Mail, Info } from 'lucide-react';
 import { Field } from '@/components/form/field';
 import { SubmitButton } from '@/components/form/submit-button';
+import { SearchSelect, type SearchOption } from '@/components/form/search-select';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,7 +13,8 @@ import { Button } from '@/components/ui/button';
 import { FormFooter } from '@/components/ui/form-footer';
 import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import { tx } from '@/lib/format';
-import type { Paged, PortalLead, PortalProject, PortalUnit } from '@/lib/types';
+import { findPortalUnit, getUnitProjectId } from '@/lib/portal-units';
+import type { PortalLead, PortalProject, PortalUnit } from '@/lib/types';
 import {
   createPortalVisitRequestAction,
   type PortalVisitFormState,
@@ -20,24 +22,6 @@ import {
 
 interface Props {
   projects: PortalProject[];
-  units: Paged<PortalUnit> | null;
-  leads: Paged<PortalLead> | null;
-}
-
-/**
- * Robust project-id resolver for a portal unit. Portal payloads nest the
- * project under building.phase (exposing both `projectId` and `project.id`);
- * we fall back across the known shapes — including a possible flat
- * `projectId` — so a schema tweak can't silently break the project→unit
- * filter again.
- */
-function getUnitProjectId(u: PortalUnit): string {
-  return (
-    (u as { projectId?: string }).projectId ??
-    u.building?.phase?.projectId ??
-    u.building?.phase?.project?.id ??
-    ''
-  );
 }
 
 const NAV_SECTIONS = [
@@ -47,54 +31,41 @@ const NAV_SECTIONS = [
   { id: 'section-notes',    num: '04', label: 'ملاحظات',         sub: 'تفاصيل إضافية' },
 ];
 
-export default function PortalVisitForm({ projects, units, leads }: Props) {
+// Leads and units are searched on the server (SearchSelect): this form used
+// to preload ?pageSize=200 of each.
+export default function PortalVisitForm({ projects }: Props) {
   const [state, formAction] = useActionState<PortalVisitFormState, FormData>(
     createPortalVisitRequestAction,
     {},
   );
-  const unitRows = units?.data ?? [];
-  const leadRows = leads?.data ?? [];
-
-  const [leadId, setLeadId] = useState('');
+  const [selectedLead, setSelectedLead] = useState<PortalLead | null>(null);
   const [projectId, setProjectId] = useState('');
-  const [unitId, setUnitId] = useState('');
+  // The lead's own unit, pre-selected when this broker can still see it.
+  const [autoUnit, setAutoUnit] = useState<PortalUnit | null>(null);
+  const leadRequest = useRef(0);
 
-  const selectedLead = leadRows.find((l) => l.id === leadId) ?? null;
+  function toUnitOption(u: PortalUnit): SearchOption<PortalUnit> {
+    return { id: u.id, label: `${u.code} • ${tx(u.building.phase.project.name)}`, raw: u };
+  }
 
-  // Units offered are scoped to the selected project; until one is chosen we
-  // show all broker-visible units so the field still works standalone.
-  const visibleUnits = projectId
-    ? unitRows.filter((u) => getUnitProjectId(u) === projectId)
-    : unitRows;
-  const noUnitsForProject = projectId !== '' && visibleUnits.length === 0;
-
-  function onLeadChange(nextLeadId: string) {
-    setLeadId(nextLeadId);
-    const lead = leadRows.find((l) => l.id === nextLeadId) ?? null;
+  function onLeadChange(lead: PortalLead | null) {
+    const request = ++leadRequest.current;
+    setSelectedLead(lead);
     // Prefill project/unit from the lead's interest. Customer name/phone/email
     // are read off `selectedLead` directly at render time.
-    const nextProjectId = lead?.projectInterestId ?? '';
-    setProjectId(nextProjectId);
-    // Only adopt the lead's unit if it belongs to the (now-selected) project
-    // and is visible to this broker; otherwise leave it unset.
-    const leadUnitId = lead?.unitInterestId ?? '';
-    const leadUnitVisible =
-      leadUnitId !== '' &&
-      unitRows.some(
-        (u) => u.id === leadUnitId && getUnitProjectId(u) === nextProjectId,
-      );
-    setUnitId(leadUnitVisible ? leadUnitId : '');
+    setProjectId(lead?.projectInterestId ?? '');
+    setAutoUnit(null);
+    if (!lead) return;
+    void findPortalUnit(lead).then((unit) => {
+      if (request === leadRequest.current) setAutoUnit(unit);
+    });
   }
 
   function onProjectChange(nextProjectId: string) {
     setProjectId(nextProjectId);
-    // Drop the chosen unit if it no longer belongs to the new project.
-    if (unitId) {
-      const stillValid = unitRows.some(
-        (u) => u.id === unitId && getUnitProjectId(u) === nextProjectId,
-      );
-      if (!stillValid) setUnitId('');
-    }
+    // The unit picker is keyed by project, so the chosen unit is dropped; keep
+    // the lead's unit only if it belongs to the new project.
+    if (autoUnit && getUnitProjectId(autoUnit) !== nextProjectId) setAutoUnit(null);
   }
 
   const hasLead = selectedLead !== null;
@@ -120,19 +91,14 @@ export default function PortalVisitForm({ projects, units, leads }: Props) {
           description="إن كانت الزيارة لعميل موجود اختر فرصته لتعبئة بياناته تلقائياً. خلاف ذلك اترك الحقل فارغاً وأدخل بيانات العميل أدناه."
         >
         <Field label="فرصة موجودة" name="leadId">
-          <Select
-            id="leadId"
+          {/* Empty = a new customer, entered below. */}
+          <SearchSelect<PortalLead>
             name="leadId"
-            value={leadId}
-            onChange={(e) => onLeadChange(e.target.value)}
-          >
-            <option value="">— لا، عميل جديد —</option>
-            {leadRows.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.fullName} • {l.phone}
-              </option>
-            ))}
-          </Select>
+            endpoint="/api-proxy/portal/leads"
+            toOption={(l) => ({ id: l.id, label: `${l.fullName} • ${l.phone}`, raw: l })}
+            onChange={onLeadChange}
+            placeholder="ابحث باسم العميل أو رقمه… (اتركه فارغاً لعميل جديد)"
+          />
         </Field>
 
         {hasLead && (
@@ -192,25 +158,18 @@ export default function PortalVisitForm({ projects, units, leads }: Props) {
             </Select>
           </Field>
           <Field label="الوحدة" name="unitId" hint="اختياري">
-            <Select
-              id="unitId"
+            {/* Scoped to the project; until one is chosen every
+                broker-visible unit is searchable. */}
+            <SearchSelect<PortalUnit>
+              key={`${projectId}:${autoUnit?.id ?? ''}`}
               name="unitId"
-              value={unitId}
-              onChange={(e) => setUnitId(e.target.value)}
-            >
-              <option value="">— لا تحدد وحدة —</option>
-              {noUnitsForProject ? (
-                <option value="" disabled>
-                  لا توجد وحدات متاحة لهذا المشروع
-                </option>
-              ) : (
-                visibleUnits.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.code} • {tx(u.building.phase.project.name)}
-                  </option>
-                ))
-              )}
-            </Select>
+              endpoint={`/api-proxy/portal/units${
+                projectId ? `?projectId=${encodeURIComponent(projectId)}` : ''
+              }`}
+              toOption={toUnitOption}
+              initial={autoUnit ? toUnitOption(autoUnit) : null}
+              placeholder="ابحث بكود الوحدة…"
+            />
           </Field>
           <Field label="التاريخ المقترح" name="preferredDate" required hint="يوم/شهر/سنة">
             <Input id="preferredDate" name="preferredDate" type="date" required dir="ltr" />

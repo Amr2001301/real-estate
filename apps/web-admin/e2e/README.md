@@ -65,6 +65,8 @@ backend. Before running you need:
 | `E2E_SALES_PASSWORD` | `SalesPass123!` | SALES smoke password |
 | `E2E_MANAGER_EMAIL` | `manager@example.com` | SALES_MANAGER smoke login (seed demo) |
 | `E2E_MANAGER_PASSWORD` | `ManagerPass123!` | SALES_MANAGER smoke password |
+| `E2E_BROKER_EMAIL` | `broker1@example.com` | BROKER login for the portal pickers (e2e seed) |
+| `E2E_BROKER_PASSWORD` | `BrokerPass1!!` | BROKER password (e2e seed) |
 | `E2E_NO_WEBSERVER` | _(unset)_ | set to `1` to disable Playwright's auto dev server |
 
 Defaults match the dev seed (`apps/api/prisma/seed.ts`): the bootstrap admin and

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
-import type { Paged, PortalLead, PortalUnit } from '@/lib/types';
+import type { Paged, PortalLead } from '@/lib/types';
 import { getReportsCurrency } from '@/lib/currency';
 import PortalReservationForm from '../_form';
 
@@ -8,17 +8,13 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 export default async function NewPortalReservationPage() {
-  const [leadsRes, unitsRes, currency] = await Promise.all([
+  // Leads and units are searched from the form (SearchSelect). Here we only
+  // fetch the first approved leads still waiting for a sales rep, to warn.
+  const [missingSalesRes, currency] = await Promise.all([
     safe(
       api.get<Paged<PortalLead>>(
-        '/portal/leads?brokerApprovalStatus=APPROVED&pageSize=200',
+        '/portal/leads?brokerApprovalStatus=APPROVED&assigned=false&pageSize=5',
       ),
-    ),
-    // pageSize is capped at 200 by PortalUnitsQueryDto (@Max(200)); requesting
-    // more returns a 400 and an empty list — which is why the unit dropdown
-    // showed no units. 200 covers a broker's available units in one page.
-    safe(
-      api.get<Paged<PortalUnit>>('/portal/units?status=AVAILABLE&pageSize=200'),
     ),
     getReportsCurrency(),
   ]);
@@ -73,8 +69,7 @@ export default async function NewPortalReservationPage() {
       </div>
 
       <PortalReservationForm
-        approvedLeads={leadsRes.data?.data ?? []}
-        units={unitsRes.data?.data ?? []}
+        leadsMissingSales={missingSalesRes.data?.data ?? []}
         currency={currency}
       />
     </div>

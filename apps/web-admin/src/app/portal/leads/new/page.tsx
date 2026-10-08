@@ -1,19 +1,14 @@
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
-import type { Paged, PortalProject, PortalUnit } from '@/lib/types';
+import type { PortalProject } from '@/lib/types';
 import PortalLeadForm from '../_form';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 export default async function NewPortalLeadPage() {
-  const [projectsRes, unitsRes] = await Promise.all([
-    safe(api.get<PortalProject[]>('/portal/projects')),
-    // pageSize is capped at 200 by PortalUnitsQueryDto (@Max(200)); requesting
-    // more returns a 400 and an empty list. 200 covers a broker's accessible
-    // units in one page.
-    safe(api.get<Paged<PortalUnit>>('/portal/units?pageSize=200')),
-  ]);
+  // Units are searched from the form (SearchSelect).
+  const projectsRes = await safe(api.get<PortalProject[]>('/portal/projects'));
 
   return (
     <div className="flex flex-col gap-5 lg:gap-6">
@@ -66,7 +61,6 @@ export default async function NewPortalLeadPage() {
 
       <PortalLeadForm
         projects={projectsRes.data ?? []}
-        units={unitsRes.data}
       />
     </div>
   );
