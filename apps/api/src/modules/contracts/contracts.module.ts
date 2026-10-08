@@ -272,12 +272,14 @@ export class ContractsService {
     customerId: string,
     uploadedById: string,
     file?: { fileUrl: string; fileName?: string; mimeType?: string; sizeBytes?: number },
+    customerPromoted = false,
   ): Promise<void> {
     await this.notifications.sendToUser(
       customerId,
       'contract_created_customer',
       await this.buildContractPayload(contractId),
     );
+    if (customerPromoted) await this.notifyCustomerPromoted(customerId, contractId);
     if (file?.fileUrl) {
       await this.tryLinkContractDocument(contractId, file.fileUrl, uploadedById, file);
     }
@@ -421,6 +423,7 @@ export class ContractsService {
     unit: { status: UnitStatus },
     contractNumber: string,
   ) {
+    let customerPromoted = false;
     const contract = await this.prisma.$transaction(async (tx) => {
       const created = await tx.contract.create({
         data: {
@@ -448,6 +451,7 @@ export class ContractsService {
       // new CUSTOMER role — the user is bounced to /login on next page load
       // instead of seeing a stale CLIENT view for up to 15 minutes.
       if (promoted.count > 0) {
+        customerPromoted = true;
         await tx.refreshToken.updateMany({
           where: { userId: dto.customerId, revokedAt: null },
           data: { revokedAt: new Date() },
@@ -481,7 +485,21 @@ export class ContractsService {
       'contract_created_customer',
       await this.buildContractPayload(contract.id),
     );
+    if (customerPromoted) await this.notifyCustomerPromoted(dto.customerId, contract.id);
     return contract;
+  }
+
+  /**
+   * FG-14 — a client who just became a customer (first contract) has had their
+   * sessions revoked so the app picks up the new role. Without a word they were
+   * simply logged out; this tells them why and to sign in again.
+   */
+  async notifyCustomerPromoted(customerId: string, contractId: string): Promise<void> {
+    await this.notifications.sendToUser(
+      customerId,
+      'account_promoted_customer',
+      await this.buildContractPayload(contractId),
+    );
   }
 
   /** Build a safe payload for contract notifications. Whitelist: unit code,

@@ -550,6 +550,25 @@ describe('Reservations · conversion workflow', () => {
     expect(firedCodes).not.toContain('contract_document_available');
   });
 
+  it('FG-14: a client promoted by the conversion is told to sign in again', async () => {
+    // user.updateMany (CLIENT → CUSTOMER) reports 1 row by default.
+    await request(app.getHttpServer()).post(PATH_CONVERT).send({}).expect(201);
+    const firedCodes = mock.notification.create.mock.calls.map(
+      (c) => (c[0] as { data: { templateCode: string } }).data.templateCode,
+    );
+    expect(firedCodes).toContain('account_promoted_customer');
+  });
+
+  it('FG-14: an existing customer (no promotion) gets no promotion notice', async () => {
+    mock.user.updateMany.mockResolvedValueOnce({ count: 0 });
+    await request(app.getHttpServer()).post(PATH_CONVERT).send({}).expect(201);
+    const firedCodes = mock.notification.create.mock.calls.map(
+      (c) => (c[0] as { data: { templateCode: string } }).data.templateCode,
+    );
+    expect(firedCodes).toContain('contract_created_customer');
+    expect(firedCodes).not.toContain('account_promoted_customer');
+  });
+
   // ── Booking-payment confirmation ────────────────────────────────────────
 
   it('confirms booking payment: marks reservation PAID + deletes prior BOOKING_AMOUNT deposit + creates a new one', async () => {

@@ -918,6 +918,17 @@ async function main() {
         ar_body: 'تم إنشاء عقد للوحدة {{unitCode}} في {{projectName}}.',
         en_body: 'A contract for unit {{unitCode}} in {{projectName}} was created.',
       },
+      // FG-14 — first contract: CLIENT → CUSTOMER, sessions revoked. Also in
+      // migration 20261008100000 so existing databases get it.
+      {
+        code: 'account_promoted_customer',
+        channel: NotificationChannel.PUSH,
+        emailEnabled: true,
+        ar_subject: 'تمت ترقية حسابك إلى حساب عميل',
+        en_subject: 'Your account is now a customer account',
+        ar_body: 'بعد إنشاء عقد الوحدة {{unitCode}} أصبح حسابك حساب عميل. سجّل الدخول مرة أخرى لتظهر لك العقود والأقساط.',
+        en_body: 'With the contract for unit {{unitCode}}, your account is now a customer account. Sign in again to see your contracts and installments.',
+      },
       {
         code: 'contract_signed_customer',
         channel: NotificationChannel.PUSH,
