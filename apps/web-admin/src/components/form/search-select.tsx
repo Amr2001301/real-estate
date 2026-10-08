@@ -164,6 +164,9 @@ export function SearchSelect<T>({
           value={selected && !open ? selected.label : query}
           placeholder={selected ? selected.label : placeholder}
           onFocus={() => setOpen(true)}
+          // Focus alone misses a click on the already-focused input (after
+          // Escape closed the list, or a focus that landed before hydration).
+          onClick={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 120)}
           onChange={(e) => {
             setQuery(e.target.value);
