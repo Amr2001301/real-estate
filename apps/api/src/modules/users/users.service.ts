@@ -13,6 +13,8 @@ import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { Prisma, UserRole } from '@prisma/client';
 import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { OPTIONS_LIMIT, optionsResult } from '../../common/utils/options';
+import { clientOwnerScope, ownedClientsWhere } from '../../common/utils/client-ownership';
+import type { AuthUser } from '../../common/decorators/current-user.decorator';
 import { R2Service } from '../media/r2.service';
 import { NotificationsService } from '../notifications/notifications.module';
 import { PlanLimitService } from '../../common/capabilities/plan-limit.service';
@@ -105,6 +107,44 @@ export class UsersService {
     if (!mgr || mgr.role !== UserRole.SALES_MANAGER) {
       throw new BadRequestException('managerId must reference a SALES_MANAGER user');
     }
+  }
+
+  /**
+   * Registered clients (CLIENT / CUSTOMER) the caller may act on — every one
+   * for an ADMIN, owned ones for a rep or manager (client-ownership.ts). Name
+   * and phone only: enough to pick, nothing to export.
+   */
+  async searchClients(user: AuthUser, q: string | undefined, pageSize: number) {
+    const companyId = getRequiredCompanyId();
+    const scope = await clientOwnerScope(this.prisma, user);
+    const trimmed = q?.trim();
+    const where: Prisma.UserWhereInput = {
+      companyId,
+      deletedAt: null,
+      active: true,
+      role: { in: [UserRole.CLIENT, UserRole.CUSTOMER] },
+      ...(scope === null ? {} : ownedClientsWhere(scope)),
+      ...(trimmed
+        ? {
+            AND: [
+              {
+                OR: [
+                  { fullName: { contains: trimmed, mode: 'insensitive' } },
+                  { phone: { contains: trimmed } },
+                  { email: { contains: trimmed, mode: 'insensitive' } },
+                ],
+              },
+            ],
+          }
+        : {}),
+    };
+    const data = await this.prisma.user.findMany({
+      where,
+      select: { id: true, fullName: true, phone: true, role: true },
+      orderBy: { fullName: 'asc' },
+      take: pageSize,
+    });
+    return { data };
   }
 
   /** Staff of the company, id + name + role — see common/utils/options.ts. */

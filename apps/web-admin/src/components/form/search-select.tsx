@@ -19,7 +19,7 @@ interface Props<T> {
   name: string;
   /**
    * List endpoint under /api-proxy, with any fixed filters already in it
-   * (e.g. `/api-proxy/users?role=CLIENT,CUSTOMER`). The typed text is sent as
+   * (e.g. `/api-proxy/users/clients`). The typed text is sent as
    * `q`; the API does the search, so every record is reachable — not only
    * the first page a server-rendered <select> could hold.
    */

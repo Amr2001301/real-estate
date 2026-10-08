@@ -3,6 +3,7 @@ import { api, safe } from '@/lib/api';
 import { projectOptions, staffOptions } from '@/lib/options';
 import type { LeadSource, User } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
+import { getSession } from '@/lib/session';
 import { uiT } from '@/messages/ui';
 import LeadForm from '../_form';
 
@@ -20,14 +21,20 @@ export default async function NewLeadPage({
   const n = m.pages.leadsNew;
 
   // Units are searched from the form itself (SearchSelect).
-  const [projectsRes, sourcesRes, salesRes, clientRes] = await Promise.all([
+  const [projectsRes, sourcesRes, salesRes, clientRes, session] = await Promise.all([
     safe(projectOptions()),
     safe(api.get<LeadSource[]>('/lead-sources')),
     safe(staffOptions(['SALES', 'SALES_MANAGER'])),
     sp.clientId
       ? safe(api.get<User>(`/users/${sp.clientId}`))
       : Promise.resolve({ data: null, error: null } as { data: User | null; error: null }),
+    getSession(),
   ]);
+  // A sales rep may only assign a lead to themselves (the API refuses anyone
+  // else), so they are the only option; managers and admins see every rep.
+  const salesOptions = (salesRes.data?.data ?? []).filter(
+    (s) => session?.role !== 'SALES' || s.id === session.id,
+  );
 
   return (
     <div className="flex flex-col gap-5 lg:gap-6">
@@ -81,7 +88,7 @@ export default async function NewLeadPage({
       <LeadForm
         projects={projectsRes.data?.data ?? []}
         sources={sourcesRes.data ?? []}
-        sales={salesRes.data?.data ?? []}
+        sales={salesOptions}
         initialClient={clientRes.data ?? null}
         locale={locale}
       />

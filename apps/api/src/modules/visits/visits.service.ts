@@ -34,6 +34,11 @@ import {
 } from './dto/visits.dto';
 import { VisitRequestSource } from '@prisma/client';
 import { AuthUser } from '../../common/decorators/current-user.decorator';
+import {
+  assertClientInScope,
+  assertLeadInScope,
+  clientOwnerScope,
+} from '../../common/utils/client-ownership';
 
 // Statuses that are final — no further edits allowed
 const FINAL_STATUSES: AppointmentStatus[] = [
@@ -440,6 +445,10 @@ export class VisitsService {
       );
     }
 
+    // Client ownership (common/utils/client-ownership.ts): a rep schedules
+    // only for their own leads and clients, a manager for their team's.
+    const ownerScope = await clientOwnerScope(this.prisma, user);
+
     let resolvedLeadId: string | null = null;
     let resolvedClientId: string | null = null;
     let clientFullName = '';
@@ -460,6 +469,7 @@ export class VisitsService {
         },
       );
       if (!c.active) throw new BadRequestException('Selected client is inactive');
+      await assertClientInScope(this.prisma, ownerScope, c.id);
       resolvedClientId = c.id;
       clientFullName = c.fullName;
       clientPhone = c.phone;
@@ -469,9 +479,10 @@ export class VisitsService {
     } else if (dto.leadId) {
       const l = await this.prisma.lead.findUnique({
         where: { id: dto.leadId },
-        select: { id: true, clientId: true, fullName: true, phone: true },
+        select: { id: true, clientId: true, fullName: true, phone: true, assignedSalesId: true },
       });
       if (!l) throw new BadRequestException('Lead not found');
+      assertLeadInScope(ownerScope, l.assignedSalesId);
       resolvedLeadId = l.id;
       derivedName = customerName ?? l.fullName;
       derivedPhone = customerPhone ?? l.phone;

@@ -200,7 +200,7 @@ export default function NewVisitForm({
             <SearchSelect<Client>
               name="clientId"
               required
-              endpoint="/api-proxy/users?role=CLIENT,CUSTOMER"
+              endpoint="/api-proxy/users/clients"
               toOption={(u) => ({ id: u.id, label: formatClientLabel(u), raw: u })}
               onChange={setSelectedClient}
               placeholder={c.searchClientPlaceholder}

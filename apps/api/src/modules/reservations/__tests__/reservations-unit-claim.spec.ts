@@ -68,6 +68,8 @@ function makeMock(unitStatus: 'AVAILABLE' | 'RESERVED' = 'AVAILABLE') {
         stage: 'INTERESTED',
         unitInterestId: UNIT_ID,
         projectInterestId: null,
+        // Client ownership: a rep reserves on their own leads.
+        assignedSalesId: SALES_USER.sub,
       }),
       findFirst: jest.fn().mockResolvedValue(null),
       update: jest.fn().mockResolvedValue({}),

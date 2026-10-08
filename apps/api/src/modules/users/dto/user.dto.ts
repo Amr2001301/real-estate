@@ -1,4 +1,18 @@
-import { IsEmail, IsEnum, IsIn, IsOptional, IsString, IsUUID, Matches, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsEmail,
+  IsEnum,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 import { UserRole, Locale } from '@prisma/client';
 
 export class CreateUserDto {
@@ -75,4 +89,20 @@ export class UserOptionsQueryDto {
   @IsOptional()
   @IsIn(['true', 'false'])
   active?: 'true' | 'false';
+}
+
+export class ClientSearchQueryDto {
+  /** Name, phone or email fragment. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  q?: string;
+
+  /** A picker shows a short list; the search narrows it. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  pageSize?: number;
 }

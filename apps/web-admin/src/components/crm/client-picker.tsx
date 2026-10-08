@@ -47,22 +47,14 @@ export function ClientPicker({ initialClient, clientIdName = 'clientId' }: Props
     setLoading(true);
     const t = setTimeout(async () => {
       try {
-        // The clients section deals with both CLIENT and CUSTOMER roles.
-        // We hit /users twice (one per role) and merge — keeps the API simple.
-        const [a, b] = await Promise.all([
-          fetch(
-            `/api-proxy/users?role=CLIENT&pageSize=8&q=${encodeURIComponent(trimmed)}`,
-            { credentials: 'include', signal: ctrl.signal },
-          ).then((r) => (r.ok ? r.json() : { data: [] })),
-          fetch(
-            `/api-proxy/users?role=CUSTOMER&pageSize=4&q=${encodeURIComponent(trimmed)}`,
-            { credentials: 'include', signal: ctrl.signal },
-          ).then((r) => (r.ok ? r.json() : { data: [] })),
-        ]);
-        const merged: User[] = [
-          ...((a as { data?: User[] }).data ?? []),
-          ...((b as { data?: User[] }).data ?? []),
-        ];
+        // CLIENT and CUSTOMER, scoped by client ownership: a rep finds only
+        // their own clients (GET /users is ADMIN-only — reps used to get
+        // nothing here). A walk-in is created below instead.
+        const res = await fetch(
+          `/api-proxy/users/clients?pageSize=10&q=${encodeURIComponent(trimmed)}`,
+          { credentials: 'include', signal: ctrl.signal },
+        );
+        const merged: User[] = res.ok ? ((await res.json()) as { data?: User[] }).data ?? [] : [];
         setResults(merged.slice(0, 10));
       } catch {
         // ignore abort

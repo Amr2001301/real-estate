@@ -91,6 +91,8 @@ function makeLead(overrides: Partial<{
     stage: overrides.stage ?? 'INTERESTED',
     unitInterestId: overrides.unitInterestId ?? null,
     projectInterestId: overrides.projectInterestId ?? null,
+    // Client ownership: a rep reserves on their own leads.
+    assignedSalesId: SALES_USER.sub,
   };
 }
 
@@ -108,6 +110,8 @@ function makePrismaMock(leadOverrides: Parameters<typeof makeLead>[0] = {}) {
     lead: {
       findUnique: jest.fn().mockResolvedValue(lead),
       findFirst: jest.fn().mockResolvedValue(null),
+      // Client ownership: the client's leads are the acting rep's.
+      findMany: jest.fn().mockResolvedValue([{ assignedSalesId: SALES_USER.sub }]),
       update: jest.fn().mockResolvedValue({}),
       create: jest.fn().mockResolvedValue({ id: 'new-lead-id' }),
     },
@@ -118,6 +122,7 @@ function makePrismaMock(leadOverrides: Parameters<typeof makeLead>[0] = {}) {
     },
     reservation: {
       findFirst: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
       count: jest.fn().mockResolvedValue(0),
       create: jest.fn().mockResolvedValue({
         id: 'new-res-id',

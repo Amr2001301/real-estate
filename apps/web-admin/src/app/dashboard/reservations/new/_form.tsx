@@ -303,7 +303,7 @@ export default function NewReservationForm({
                 <SearchSelect<Client>
                   name="clientId"
                   required
-                  endpoint="/api-proxy/users?role=CLIENT,CUSTOMER"
+                  endpoint="/api-proxy/users/clients"
                   toOption={(c) => ({ id: c.id, label: formatClientLabel(c), raw: c })}
                   placeholder={c.searchClientPlaceholder}
                   locale={locale}
