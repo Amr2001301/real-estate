@@ -26,6 +26,7 @@ import { ContractPdfPanel } from './pdf-panel';
 import { OwnerDocumentsCard } from '@/components/documents/owner-documents-card';
 import { createInstallmentPlanAction } from '../actions';
 import { RecordPaymentButton } from './record-payment-button';
+import { AssignContractNumber } from './assign-number';
 import { PrintButton } from '@/components/print/PrintButton';
 import {
   PremiumPageHero,
@@ -123,7 +124,13 @@ export default async function ContractDetailPage({
             <PremiumSectionCard title={m.sectionContractData} icon={<FileText />}>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-5">
                 <Field label={m.fieldContractNumber}>
-                  <span className="font-mono text-[15px] font-bold text-brand-700">{displayNumber}</span>
+                  {contract.contractNumber ? (
+                    <span className="font-mono text-[15px] font-bold text-brand-700">{displayNumber}</span>
+                  ) : isAdmin ? (
+                    <AssignContractNumber id={contract.id} locale={locale} />
+                  ) : (
+                    <span className="font-mono text-[15px] font-bold text-slate-400">{displayNumber}</span>
+                  )}
                 </Field>
                 <Field label={m.fieldTotal}>
                   <span className="text-[15px] font-bold tabular-nums text-slate-900">{formatCurrency(contract.totalAmount, currency)}</span>

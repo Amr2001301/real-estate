@@ -22,6 +22,7 @@ export async function createContractAction(
     totalAmount: Number(formData.get('totalAmount') ?? 0),
     downPayment: Number(formData.get('downPayment') ?? 0),
     pdfUrl: String(formData.get('pdfUrl') ?? '') || undefined,
+    contractNumber: String(formData.get('contractNumber') ?? '').trim() || undefined,
   };
   const signedAt = String(formData.get('signedAt') ?? '') || undefined;
 
@@ -70,6 +71,21 @@ export async function updateContractAction(
   }
 
   revalidatePath(`/dashboard/contracts/${id}`);
+}
+
+// FG-04 — numbers a contract that has none; empty → the API assigns the next one.
+export async function assignContractNumberAction(
+  id: string,
+  contractNumber: string,
+): Promise<ContractFormState> {
+  try {
+    await api.patch(`/contracts/${id}`, contractNumber ? { contractNumber } : { autoNumber: true });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/dashboard/contracts/${id}`);
+  revalidatePath('/dashboard/contracts');
+  return { ok: true };
 }
 
 export async function attachContractPdfAction(id: string, pdfUrl: string) {

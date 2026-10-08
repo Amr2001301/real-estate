@@ -125,6 +125,11 @@ export default function ContractForm({ currency = 'SAR', locale = 'ar' }: Props)
               <input id="signedAt" name="signedAt" type="datetime-local" className={inputClass} />
             </Field>
 
+            {/* FG-04 — empty → the next CON-<year>-<seq> is assigned. */}
+            <Field label={m.labelContractNumber} name="contractNumber" hint={m.hintContractNumber}>
+              <input id="contractNumber" name="contractNumber" dir="ltr" maxLength={50} className={inputClass} />
+            </Field>
+
             <Field label={m.labelPdfUrl} name="pdfUrl">
               <input
                 id="pdfUrl"

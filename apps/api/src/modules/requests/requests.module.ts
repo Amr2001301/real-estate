@@ -1,5 +1,6 @@
 import {
   Body,
+  ConflictException,
   Controller,
   ForbiddenException,
   Get,
@@ -23,7 +24,8 @@ import {
   MinLength,
 } from 'class-validator';
 import type { Prisma } from '@prisma/client';
-import { UserRole, VisitRequestSource, VisitRequestStatus, VisitStatus } from '@prisma/client';
+import { InfoRequestStatus, UserRole, VisitRequestSource, VisitRequestStatus, VisitStatus } from '@prisma/client';
+import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { resolveSalesScope } from '../../common/utils/sales-scope';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -112,6 +114,21 @@ class CreateVisitRequestDto extends UtmDto {
   @IsOptional() @IsString() phone?: string;
   @IsOptional() @IsString() email?: string;
 }
+
+/** FG-04 — advance an info request: OPEN → RESPONDED → CLOSED. */
+class UpdateInfoRequestStatusDto {
+  @IsEnum(InfoRequestStatus) status!: InfoRequestStatus;
+}
+
+/**
+ * FG-04 — allowed info-request transitions. OPEN → CLOSED skips RESPONDED for
+ * spam and duplicates; nothing reopens a closed request.
+ */
+const INFO_REQUEST_TRANSITIONS: Record<InfoRequestStatus, InfoRequestStatus[]> = {
+  [InfoRequestStatus.OPEN]: [InfoRequestStatus.RESPONDED, InfoRequestStatus.CLOSED],
+  [InfoRequestStatus.RESPONDED]: [InfoRequestStatus.CLOSED],
+  [InfoRequestStatus.CLOSED]: [],
+};
 
 class UpdateVisitStatusDto {
   @IsEnum(VisitStatus) status!: VisitStatus;
@@ -284,9 +301,12 @@ export class RequestsService {
    * so the admin can call / WhatsApp / email them — this is an ADMIN-facing
    * surface, so phone/email ARE included here (unlike the notification payload).
    */
-  async listInfoRequests(opts: { page: number; pageSize: number }) {
+  async listInfoRequests(opts: { page: number; pageSize: number; status?: InfoRequestStatus }) {
+    // FG-04 — /dashboard/requests sent ?status= but the list ignored it.
+    const where: Prisma.InfoRequestWhereInput = opts.status ? { status: opts.status } : {};
     const [data, total] = await this.prisma.$transaction([
       this.prisma.infoRequest.findMany({
+        where,
         ...takeSkip(opts),
         orderBy: { createdAt: 'desc' },
         include: {
@@ -296,7 +316,7 @@ export class RequestsService {
           lead: { select: { id: true, fullName: true, phone: true, email: true } },
         },
       }),
-      this.prisma.infoRequest.count(),
+      this.prisma.infoRequest.count({ where }),
     ]);
 
     // FG-23 — /dashboard/requests counted open/responded/closed client-side
@@ -313,6 +333,32 @@ export class RequestsService {
     };
 
     return paginate(data, total, opts, facets);
+  }
+
+  /**
+   * FG-04 — move an info request along OPEN → RESPONDED → CLOSED (or OPEN →
+   * CLOSED). There was no write path at all, so the support queue never
+   * drained. The update is conditional on the status read, so two staff
+   * members acting at once cannot both move it.
+   */
+  async updateInfoRequestStatus(id: string, status: InfoRequestStatus) {
+    const companyId = getRequiredCompanyId();
+    const current = await this.prisma.infoRequest.findFirst({
+      where: { id, companyId },
+      select: { status: true },
+    });
+    if (!current) throw new NotFoundException('Info request not found');
+    if (!INFO_REQUEST_TRANSITIONS[current.status].includes(status)) {
+      throw new ConflictException(`لا يمكن نقل الاستفسار من ${current.status} إلى ${status}`);
+    }
+    const moved = await this.prisma.infoRequest.updateMany({
+      where: { id, companyId, status: current.status },
+      data: { status },
+    });
+    if (moved.count === 0) {
+      throw new ConflictException('تغيّرت حالة الاستفسار للتو — أعد تحميل الصفحة');
+    }
+    return this.prisma.infoRequest.findFirstOrThrow({ where: { id, companyId } });
   }
 
   /**
@@ -600,8 +646,26 @@ class RequestsController {
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('visits:read')
   @Get('info-requests')
-  listInfo(@Query('page') page = 1, @Query('pageSize') pageSize = 20) {
-    return this.svc.listInfoRequests({ page: Number(page), pageSize: Number(pageSize) });
+  listInfo(
+    @Query('page') page = 1,
+    @Query('pageSize') pageSize = 20,
+    @Query('status') status?: string,
+  ) {
+    const known = Object.values(InfoRequestStatus) as string[];
+    return this.svc.listInfoRequests({
+      page: Number(page),
+      pageSize: Number(pageSize),
+      status: status && known.includes(status) ? (status as InfoRequestStatus) : undefined,
+    });
+  }
+
+  // FG-04 — same permission as updating a visit request ("Review or update
+  // visit requests"); both are the customer-requests queue.
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
+  @Permissions('visits:approve')
+  @Patch('info-requests/:id')
+  updateInfo(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateInfoRequestStatusDto) {
+    return this.svc.updateInfoRequestStatus(id, dto.status);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)

@@ -25,6 +25,7 @@ import {
   IsPositive,
   IsString,
   IsUUID,
+  IsNotEmpty,
   MaxLength,
   Min,
   MinLength,
@@ -39,6 +40,7 @@ import {
   UnitStatus,
   UserRole,
 } from '@prisma/client';
+import { isContractNumberConflict, nextContractNumber } from '../../common/utils/contract-number';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { DocumentsModule, DocumentsService } from '../documents/documents.module';
 import {
@@ -116,6 +118,11 @@ class CreateContractDto {
   @IsNumber() @IsPositive() totalAmount!: number;
   @IsOptional() @IsNumber() @Min(0) downPayment?: number;
   @IsOptional() @IsString() pdfUrl?: string;
+  /**
+   * FG-04 — the contract's number when it already has one (a contract signed
+   * before the system). Omitted → the next CON-<year>-<seq> is assigned.
+   */
+  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(50) contractNumber?: string;
 }
 
 class UpdateContractDto {
@@ -126,6 +133,10 @@ class UpdateContractDto {
   // configured with forbidNonWhitelisted=true so an inbound `signedAt` will
   // be rejected with 400 rather than silently signing.
   @IsOptional() @IsString() pdfUrl?: string;
+  /** FG-04 — numbers a contract that has none. An issued number never changes. */
+  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(50) contractNumber?: string;
+  /** FG-04 — with no contractNumber: give a numberless contract the next one. */
+  @IsOptional() @IsBoolean() autoNumber?: boolean;
 }
 
 class SignContractDto {
@@ -366,9 +377,46 @@ export class ContractsService {
       { id: true },
     );
 
+    // FG-04 — a contract created here used to stay numberless (only
+    // conversion numbered contracts), so it could not be referenced on the
+    // PDF, receipts or a re-import. A given number is checked up front; an
+    // assigned one is retried if a concurrent writer took it.
+    const givenNumber = dto.contractNumber?.trim();
+    if (givenNumber) await this.assertContractNumberFree(givenNumber);
+    for (let attempt = 0; ; attempt++) {
+      const contractNumber = givenNumber ?? (await nextContractNumber(this.prisma));
+      try {
+        return await this.createNumbered(dto, actorId, companyId, unit, contractNumber);
+      } catch (e) {
+        if (!isContractNumberConflict(e)) throw e;
+        if (givenNumber || attempt >= 2) throw new ConflictException('رقم العقد مستخدم بالفعل');
+      }
+    }
+  }
+
+  private async assertContractNumberFree(contractNumber: string, exceptId?: string) {
+    const taken = await this.prisma.contract.findFirst({
+      where: {
+        companyId: getRequiredCompanyId(),
+        contractNumber,
+        ...(exceptId ? { id: { not: exceptId } } : {}),
+      },
+      select: { id: true },
+    });
+    if (taken) throw new ConflictException('رقم العقد مستخدم بالفعل');
+  }
+
+  private async createNumbered(
+    dto: CreateContractDto,
+    actorId: string,
+    companyId: string,
+    unit: { status: UnitStatus },
+    contractNumber: string,
+  ) {
     const contract = await this.prisma.$transaction(async (tx) => {
       const created = await tx.contract.create({
         data: {
+          contractNumber,
           customerId: dto.customerId,
           unitId: dto.unitId,
           totalAmount: new Prisma.Decimal(dto.totalAmount),
@@ -598,18 +646,27 @@ export class ContractsService {
   }
 
   async update(id: string, dto: UpdateContractDto, actorId: string) {
-    // Generic update path — pdfUrl only. Signing is performed via sign().
+    // Generic update path — pdfUrl, and a number for a numberless contract.
+    // Signing is performed via sign().
     const exists = await this.prisma.contract.findUnique({
       where: { id },
-      select: { id: true },
+      select: { id: true, contractNumber: true },
     });
     if (!exists) throw new NotFoundException('Contract not found');
 
+    // FG-04 — a contract created before numbering (contractNumber NULL) gets
+    // its number here. An issued number is a legal reference: it never changes.
+    const contractNumber = dto.contractNumber?.trim();
+    if (contractNumber && exists.contractNumber && exists.contractNumber !== contractNumber) {
+      throw new ConflictException('رقم العقد لا يتغير بعد إصداره');
+    }
+    if (!exists.contractNumber && (contractNumber || dto.autoNumber)) {
+      await this.assignContractNumber(id, contractNumber);
+    }
+
     const updated = await this.prisma.contract.update({
       where: { id },
-      data: {
-        pdfUrl: dto.pdfUrl ?? undefined,
-      },
+      data: { pdfUrl: dto.pdfUrl ?? undefined },
     });
     // Mirror the attached PDF as a first-class document (best-effort; pdfUrl is
     // already persisted on the contract for back-compat).
@@ -617,6 +674,26 @@ export class ContractsService {
       await this.tryLinkContractDocument(id, dto.pdfUrl, actorId);
     }
     return updated;
+  }
+
+  /** Numbers a numberless contract: the given number, or the next free one. */
+  private async assignContractNumber(id: string, given: string | undefined) {
+    if (given) await this.assertContractNumberFree(given, id);
+    for (let attempt = 0; ; attempt++) {
+      const contractNumber = given ?? (await nextContractNumber(this.prisma));
+      try {
+        // Only while still numberless: a concurrent assign must not overwrite.
+        const { count } = await this.prisma.contract.updateMany({
+          where: { id, companyId: getRequiredCompanyId(), contractNumber: null },
+          data: { contractNumber },
+        });
+        if (count === 0) throw new ConflictException('رقم العقد لا يتغير بعد إصداره');
+        return;
+      } catch (e) {
+        if (!isContractNumberConflict(e)) throw e;
+        if (given || attempt >= 2) throw new ConflictException('رقم العقد مستخدم بالفعل');
+      }
+    }
   }
 
   /**
