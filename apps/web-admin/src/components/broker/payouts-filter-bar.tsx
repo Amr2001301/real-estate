@@ -3,6 +3,8 @@ import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import type { Locale } from '@/lib/locale';
+import { portalSharedT } from '@/messages/portal/shared';
 
 export interface PayoutSearchParams {
   q?: string;
@@ -14,9 +16,13 @@ export interface PayoutSearchParams {
 
 interface Props {
   sp: PayoutSearchParams;
+  locale?: Locale;
 }
 
-export function PayoutsFilterBar({ sp }: Props) {
+export function PayoutsFilterBar({ sp, locale = 'ar' }: Props) {
+  const t = portalSharedT(locale);
+  const f = t.filters;
+  const p = t.payoutsFilter;
   const anyFilter = !!(sp.q || sp.status || sp.period || sp.from || sp.to);
 
   return (
@@ -29,22 +35,22 @@ export function PayoutsFilterBar({ sp }: Props) {
         inputSize="sm"
         name="q"
         leftAddon={<Search />}
-        placeholder="ابحث برقم الدفعة أو مرجع التحويل…"
+        placeholder={p.searchPlaceholder}
         defaultValue={sp.q ?? ''}
         className="flex-1 min-w-[200px]"
       />
       <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-40 shrink-0">
-        <option value="">كل الحالات</option>
-        <option value="DRAFT">مسودة</option>
-        <option value="APPROVED">موافق عليها</option>
-        <option value="PROCESSING">قيد التنفيذ</option>
-        <option value="PAID">مدفوعة</option>
-        <option value="CANCELLED">ملغاة</option>
+        <option value="">{f.allStatuses}</option>
+        <option value="DRAFT">{p.status.DRAFT}</option>
+        <option value="APPROVED">{p.status.APPROVED}</option>
+        <option value="PROCESSING">{p.status.PROCESSING}</option>
+        <option value="PAID">{p.status.PAID}</option>
+        <option value="CANCELLED">{p.status.CANCELLED}</option>
       </Select>
       <Input
         name="period"
         inputSize="sm"
-        placeholder="الفترة (2026-05)"
+        placeholder={p.periodPlaceholder}
         dir="ltr"
         defaultValue={sp.period ?? ''}
         className="w-28 shrink-0"
@@ -68,12 +74,12 @@ export function PayoutsFilterBar({ sp }: Props) {
       />
       <div className="flex items-center gap-1.5 ms-auto">
         <Button type="submit" variant="primary" size="sm">
-          تصفية
+          {f.apply}
         </Button>
         {anyFilter && (
           <Link href="/portal/payouts">
             <Button type="button" variant="ghost" size="sm">
-              مسح التصفية
+              {f.clear}
             </Button>
           </Link>
         )}

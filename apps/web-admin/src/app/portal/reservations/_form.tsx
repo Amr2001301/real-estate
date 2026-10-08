@@ -24,6 +24,8 @@ import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import { tx, formatCurrency } from '@/lib/format';
 import { findPortalUnit } from '@/lib/portal-units';
 import type { PortalLead, PortalUnit } from '@/lib/types';
+import type { Locale } from '@/lib/locale';
+import { portalReservationsContractsT } from '@/messages/portal/reservations-contracts';
 import {
   createPortalReservationAction,
   type PortalReservationFormState,
@@ -45,16 +47,22 @@ interface Props {
   /** First few approved leads still waiting for a sales rep (warning only). */
   leadsMissingSales: PortalLead[];
   currency?:         string;
+  locale?:           Locale;
 }
-
-const NAV_SECTIONS = [
-  { id: 'section-lead-unit', num: '01', label: 'الفرصة والوحدة', sub: 'الفرصة المعتمدة والوحدة' },
-  { id: 'section-notes',     num: '02', label: 'ملاحظات',        sub: 'معلومات إضافية' },
-];
 
 // Leads and units are searched on the server (SearchSelect): this form used
 // to preload ?pageSize=200 of each, so lead or unit 201 could not be reserved.
-export default function PortalReservationForm({ leadsMissingSales, currency = 'SAR' }: Props) {
+export default function PortalReservationForm({
+  leadsMissingSales,
+  currency = 'SAR',
+  locale = 'ar',
+}: Props) {
+  const m = portalReservationsContractsT(locale);
+  const t = m.reservations.form;
+  const NAV_SECTIONS = [
+    { id: 'section-lead-unit', num: '01', label: t.nav.leadUnit.label, sub: t.nav.leadUnit.sub },
+    { id: 'section-notes',     num: '02', label: t.nav.notes.label,    sub: t.nav.notes.sub },
+  ];
   const [state, formAction] = useActionState<PortalReservationFormState, FormData>(
     createPortalReservationAction,
     {},
@@ -95,7 +103,7 @@ export default function PortalReservationForm({ leadsMissingSales, currency = 'S
         if (body.error) {
           setPlans([]);
           setPlanId('');
-          setPlansError('تعذّر تحميل خطط الدفع. حاول مرة أخرى.');
+          setPlansError(portalReservationsContractsT(locale).reservations.form.plansLoadError);
           return;
         }
         const list = body.data ?? [];
@@ -108,7 +116,7 @@ export default function PortalReservationForm({ leadsMissingSales, currency = 'S
         if (cancelled) return;
         setPlans([]);
         setPlanId('');
-        setPlansError('تعذّر تحميل خطط الدفع. حاول مرة أخرى.');
+        setPlansError(portalReservationsContractsT(locale).reservations.form.plansLoadError);
       })
       .finally(() => {
         if (!cancelled) setPlansLoading(false);
@@ -116,7 +124,7 @@ export default function PortalReservationForm({ leadsMissingSales, currency = 'S
     return () => {
       cancelled = true;
     };
-  }, [unitId]);
+  }, [unitId, locale]);
 
   const selectedPlan = plans.find((p) => p.id === planId) ?? null;
   const needsDuration = (selectedPlan?.durationOptions.length ?? 0) > 0;
@@ -139,7 +147,7 @@ export default function PortalReservationForm({ leadsMissingSales, currency = 'S
   function toUnitOption(u: PortalUnit): SearchOption<PortalUnit> {
     return {
       id: u.id,
-      label: `${u.code} • ${tx(u.building.phase.project.name)} — ${formatCurrency(u.price, currency)}`,
+      label: `${u.code} • ${tx(u.building.phase.project.name, locale)} — ${formatCurrency(u.price, currency)}`,
       raw: u,
     };
   }
@@ -173,7 +181,7 @@ export default function PortalReservationForm({ leadsMissingSales, currency = 'S
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold">
-              بعض الفرص المعتمدة لا يوجد بها مندوب مبيعات داخلي بعد:
+              {t.missingSalesTitle}
             </p>
             <ul className="mt-1 list-disc ps-5 space-y-0.5 text-xs">
               {leadsMissingSales.slice(0, 5).map((l) => (
@@ -183,51 +191,53 @@ export default function PortalReservationForm({ leadsMissingSales, currency = 'S
               ))}
             </ul>
             <p className="mt-1.5 text-xs">
-              تواصل مع الإدارة لتعيين مندوب قبل إنشاء الحجز.
+              {t.missingSalesHint}
             </p>
           </div>
         </div>
       )}
 
       <PremiumFormLayout
+        locale={locale}
         navSections={NAV_SECTIONS}
-        sidebarBadge="جديد"
-        sidebarInfo="الحجز يتطلب فرصة معتمدة ومندوب مبيعات مُعيَّن. سيتم احتساب العمولة كلقطة عند الإنشاء."
+        sidebarBadge={t.sidebarBadge}
+        sidebarInfo={t.sidebarInfo}
       >
         <PremiumFormPanel
           id="section-lead-unit"
           number="01"
-          title="الفرصة والوحدة"
-          description="الحجز يتطلب فرصة معتمدة + وحدة متاحة + مندوب مبيعات داخلي مُعيَّن على الفرصة."
+          title={t.leadUnitTitle}
+          description={t.leadUnitDescription}
         >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="الفرصة" name="leadId" required hint="فرص معتمدة فقط">
+          <Field label={t.leadLabel} name="leadId" required hint={t.leadHint}>
             <SearchSelect<PortalLead>
               name="leadId"
               required
               endpoint="/api-proxy/portal/leads?brokerApprovalStatus=APPROVED"
+              locale={locale}
               toOption={(l) => ({
                 id: l.id,
                 label: `${l.fullName} • ${l.phone}${
                   l.assignedSalesId
                     ? l.assignedSales
-                      ? ` — مندوب: ${l.assignedSales.fullName}`
+                      ? t.leadSalesFn(l.assignedSales.fullName)
                       : ''
-                    : ' — (بدون مندوب)'
+                    : t.leadNoSales
                 }`,
                 raw: l,
                 // A reservation needs an internal sales rep on the lead.
                 disabled: !l.assignedSalesId,
               })}
               onChange={onLeadChange}
-              placeholder="ابحث باسم العميل أو رقمه…"
+              placeholder={t.leadPlaceholder}
             />
           </Field>
           <Field
-            label="الوحدة"
+            label={t.unitLabel}
             name="unitId"
             required
-            hint={leadProjectId ? 'وحدات متاحة لهذا المشروع' : 'وحدات متاحة فقط'}
+            hint={leadProjectId ? t.unitHintProject : t.unitHintAll}
           >
             {/* Keyed by lead and auto-pick: either change resets the unit. */}
             <SearchSelect<PortalUnit>
@@ -235,10 +245,11 @@ export default function PortalReservationForm({ leadsMissingSales, currency = 'S
               name="unitId"
               required
               endpoint={unitsEndpoint}
+              locale={locale}
               toOption={toUnitOption}
               initial={autoUnit ? toUnitOption(autoUnit) : null}
               onChange={(u) => setUnitId(u?.id ?? '')}
-              placeholder="ابحث بكود الوحدة…"
+              placeholder={t.unitPlaceholder}
             />
           </Field>
         </div>
@@ -246,7 +257,7 @@ export default function PortalReservationForm({ leadsMissingSales, currency = 'S
         {selectedLead && (
           <div className="mt-3 rounded-2xl border border-brand-100 bg-brand-50/40 p-4">
             <p className="text-xs font-semibold text-brand-700 mb-2">
-              ملخص الفرصة المختارة
+              {t.summaryTitle}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
               <span className="inline-flex items-center gap-2 text-slate-700">
@@ -259,17 +270,17 @@ export default function PortalReservationForm({ leadsMissingSales, currency = 'S
               </span>
               <span className="inline-flex items-center gap-2 text-slate-700">
                 <UserCog className="h-4 w-4 text-slate-400 shrink-0" />
-                {selectedLead.assignedSales?.fullName ?? '— بدون مندوب —'}
+                {selectedLead.assignedSales?.fullName ?? t.noSales}
               </span>
               <span className="inline-flex items-center gap-2 text-slate-700">
                 <Building2 className="h-4 w-4 text-slate-400 shrink-0" />
                 {selectedLead.projectInterest
-                  ? tx(selectedLead.projectInterest.name)
-                  : '— بدون مشروع —'}
+                  ? tx(selectedLead.projectInterest.name, locale)
+                  : t.noProject}
               </span>
               <span className="inline-flex items-center gap-2 text-slate-700" dir="ltr">
                 <Home className="h-4 w-4 text-slate-400 shrink-0" />
-                {selectedLead.unitInterest?.code ?? '— بدون وحدة —'}
+                {selectedLead.unitInterest?.code ?? t.noUnit}
               </span>
             </div>
           </div>
@@ -281,13 +292,13 @@ export default function PortalReservationForm({ leadsMissingSales, currency = 'S
           <div className="mt-3 rounded-2xl border border-hairline bg-surface-muted/40 p-4">
             <p className="text-xs font-semibold text-slate-700 mb-2 inline-flex items-center gap-2">
               <Wallet className="h-4 w-4 text-brand-600" />
-              خطة الدفع ومبلغ الحجز
+              {t.planTitle}
             </p>
 
             {plansLoading && (
               <p className="inline-flex items-center gap-2 text-sm text-slate-500">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                جارٍ تحميل خطط الدفع…
+                {t.plansLoading}
               </p>
             )}
 
@@ -299,8 +310,7 @@ export default function PortalReservationForm({ leadsMissingSales, currency = 'S
               <div className="flex items-start gap-2 text-sm text-amber-800">
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                 <p>
-                  لا توجد خطة دفع فعّالة لهذه الوحدة. تواصل مع الإدارة قبل إنشاء
-                  الحجز.
+                  {t.noPlans}
                 </p>
               </div>
             )}
@@ -308,7 +318,7 @@ export default function PortalReservationForm({ leadsMissingSales, currency = 'S
             {!plansLoading && !plansError && plans.length > 0 && (
               <div className="flex flex-col gap-3">
                 {plans.length > 1 ? (
-                  <Field label="خطة الدفع" name="planChoice" required hint="اختر خطة">
+                  <Field label={t.planLabel} name="planChoice" required hint={t.planHint}>
                     <Select
                       id="planChoice"
                       value={planId}
@@ -318,24 +328,24 @@ export default function PortalReservationForm({ leadsMissingSales, currency = 'S
                       }}
                     >
                       <option value="" disabled>
-                        اختر خطة دفع
+                        {t.planPlaceholder}
                       </option>
                       {plans.map((p) => (
                         <option key={p.id} value={p.id}>
-                          {p.name} — مبلغ الحجز {formatCurrency(p.reservationAmount, currency)}
+                          {t.planOptionFn(p.name, formatCurrency(p.reservationAmount, currency))}
                         </option>
                       ))}
                     </Select>
                   </Field>
                 ) : (
                   <p className="text-sm text-slate-700">
-                    الخطة: <span className="font-medium">{plans[0]!.name}</span>
+                    {t.planPrefix}{' '}<span className="font-medium">{plans[0]!.name}</span>
                   </p>
                 )}
 
                 {selectedPlan && (
                   <div className="flex items-center justify-between rounded-xl bg-white ring-1 ring-inset ring-hairline px-4 py-3">
-                    <span className="text-sm text-slate-600">مبلغ الحجز المطلوب</span>
+                    <span className="text-sm text-slate-600">{t.bookingAmountRequired}</span>
                     <span className="text-base font-bold text-slate-900 tabular-nums">
                       {formatCurrency(selectedPlan.reservationAmount, currency)}
                     </span>
@@ -344,10 +354,10 @@ export default function PortalReservationForm({ leadsMissingSales, currency = 'S
 
                 {needsDuration && selectedPlan && (
                   <Field
-                    label="مدة التقسيط"
+                    label={t.durationLabel}
                     name="durationChoice"
                     required
-                    hint="مطلوبة لهذه الخطة"
+                    hint={t.durationHint}
                   >
                     <Select
                       id="durationChoice"
@@ -355,11 +365,11 @@ export default function PortalReservationForm({ leadsMissingSales, currency = 'S
                       onChange={(e) => setDurationOptionId(e.target.value)}
                     >
                       <option value="" disabled>
-                        اختر مدة التقسيط
+                        {t.durationPlaceholder}
                       </option>
                       {selectedPlan.durationOptions.map((o) => (
                         <option key={o.id} value={o.id}>
-                          {o.durationMonths} شهر
+                          {m.common.monthsFn(o.durationMonths)}
                           {Number(o.increasePercentage) > 0
                             ? ` (+${o.increasePercentage}%)`
                             : ''}
@@ -386,10 +396,10 @@ export default function PortalReservationForm({ leadsMissingSales, currency = 'S
         <PremiumFormPanel
           id="section-notes"
           number="02"
-          title="ملاحظات"
-          description="معلومات إضافية لمندوب المبيعات الداخلي."
+          title={t.notesTitle}
+          description={t.notesDescription}
         >
-          <Field label="ملاحظة" name="notes">
+          <Field label={t.noteLabel} name="notes">
             <Textarea id="notes" name="notes" rows={3} />
           </Field>
         </PremiumFormPanel>
@@ -401,13 +411,13 @@ export default function PortalReservationForm({ leadsMissingSales, currency = 'S
           <>
             <Link href="/portal/reservations">
               <Button type="button" variant="ghost" leftIcon={<X className="h-4 w-4" />}>
-                إلغاء
+                {t.cancel}
               </Button>
             </Link>
-            <SubmitButton disabled={!canSubmit}>إنشاء الحجز</SubmitButton>
+            <SubmitButton disabled={!canSubmit} locale={locale}>{t.submit}</SubmitButton>
           </>
         }
-        helper="سيتم احتساب نسبة العمولة وحفظها كلقطة (snapshot) عند الإنشاء."
+        helper={t.helper}
       />
     </form>
   );

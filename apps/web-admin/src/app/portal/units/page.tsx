@@ -12,6 +12,8 @@ import { api, safe } from '@/lib/api';
 import type { Paged, PortalProject, PortalUnit } from '@/lib/types';
 import { tx, formatCurrency } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
+import { getLocale } from '@/lib/locale';
+import { portalDashboardT } from '@/messages/portal/dashboard';
 import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -41,17 +43,15 @@ interface Search {
 
 const PAGE_SIZE = 20;
 
-const ACCESS_LABEL: Record<'PROJECT_ACCESS' | 'UNIT_ACCESS', string> = {
-  PROJECT_ACCESS: 'صلاحية مشروع',
-  UNIT_ACCESS:    'صلاحية وحدة',
-};
-
 export default async function PortalUnitsPage({
   searchParams,
 }: {
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const locale = await getLocale();
+  const m = portalDashboardT(locale);
+  const t = m.units;
   const currency = await getReportsCurrency();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
@@ -85,50 +85,50 @@ export default async function PortalUnitsPage({
     <div className="space-y-5">
 
       <PremiumPageHero
-        title="الوحدات المتاحة"
-        description="استعرض الوحدات التي يحق لك العمل عليها — متاحة، محجوزة، أو مباعة."
+        title={t.title}
+        description={t.description}
         breadcrumbs={[
-          { label: 'البوابة', href: '/portal' },
-          { label: 'الوحدات' },
+          { label: m.common.portal, href: '/portal' },
+          { label: t.breadcrumb },
         ]}
       />
 
       {unitsRes.error && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          تعذر تحميل الوحدات: {unitsRes.error}
+          {t.loadErrorFn(unitsRes.error)}
         </div>
       )}
 
       <PremiumMetricStrip
         variant="compact"
         metrics={[
-          { label: 'إجمالي الوحدات', value: paged?.meta.total ?? 0, icon: <Home />,          tone: 'brand'   },
-          { label: 'متاحة للبيع',    value: availableCount,         icon: <CheckCircle2 />,  tone: 'success' },
-          { label: 'محجوزة',         value: reservedCount,          icon: <BookmarkCheck />, tone: 'warning' },
-          { label: 'مباعة',          value: soldCount,              icon: <Tag />,           tone: 'info'    },
+          { label: t.metrics.total, value: paged?.meta.total ?? 0, icon: <Home />,          tone: 'brand'   },
+          { label: t.metrics.available,    value: availableCount,         icon: <CheckCircle2 />,  tone: 'success' },
+          { label: t.metrics.reserved,         value: reservedCount,          icon: <BookmarkCheck />, tone: 'warning' },
+          { label: t.metrics.sold,          value: soldCount,              icon: <Tag />,           tone: 'info'    },
         ]}
       />
 
-      <UnitsFilterBar projects={projects} typeOptions={typeOptions} sp={sp} />
+      <UnitsFilterBar projects={projects} typeOptions={typeOptions} sp={sp} locale={locale} />
 
       <PremiumSectionCard
         icon={<Home />}
-        title="الوحدات المتاحة"
+        title={t.sectionTitle}
         padded={false}
       >
         {rows.length > 0 && (
           <div className="flex items-center gap-2 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
             <span className="font-bold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
-            <span>وحدة مطابقة للتصفية</span>
+            <span>{t.matchingUnits}</span>
           </div>
         )}
 
         {rows.length === 0 ? (
           <EmptyState
             icon={<Home />}
-            title="لا توجد وحدات متاحة بعد"
-            description="جرّب تعديل الفلاتر، أو تواصل مع الإدارة لتوسيع صلاحيتك."
+            title={t.emptyTitle}
+            description={t.emptyDescription}
           />
         ) : (
           <>
@@ -144,19 +144,19 @@ export default async function PortalUnitsPage({
                       <p className="shrink-0">
                         <CodeText className="text-xs text-slate-500 uppercase tracking-wide">{u.type}</CodeText>
                       </p>
-                      <UnitStatusBadge status={u.status} />
+                      <UnitStatusBadge status={u.status} locale={locale} />
                     </div>
                     {u.status === 'AVAILABLE' && (
                       <Link href="/portal/reservations/new" className="shrink-0">
                         <Button variant="primary" size="sm" leftIcon={<BookmarkPlus className="h-3.5 w-3.5" />}>
-                          احجز
+                          {t.reserve}
                         </Button>
                       </Link>
                     )}
                   </div>
 
                   <p className="text-xs font-semibold text-slate-800">
-                    {tx(u.building.phase.project.name)}
+                    {tx(u.building.phase.project.name, locale)}
                   </p>
 
                   <p className="text-2xs text-slate-400">
@@ -167,7 +167,7 @@ export default async function PortalUnitsPage({
 
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-2xs text-slate-500 tabular-nums">
-                      {u.area} م² · {u.bedrooms} غرف · {u.bathrooms} حمامات · دور {u.floor}
+                      {t.areaFn(u.area)} · {t.roomsFn(u.bedrooms, u.bathrooms, u.floor)}
                     </p>
                     <p className="font-bold text-slate-900 tabular-nums text-sm shrink-0">
                       {formatCurrency(u.price, currency)}
@@ -182,11 +182,11 @@ export default async function PortalUnitsPage({
               <table className="w-full text-sm">
                 <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
                   <tr>
-                    <th className="text-start font-semibold py-3 ps-5 pe-4">الوحدة</th>
-                    <th className="text-start font-semibold py-3 px-4">الموقع والمشروع</th>
-                    <th className="text-start font-semibold py-3 px-4">المواصفات</th>
-                    <th className="text-start font-semibold py-3 px-4 whitespace-nowrap">السعر</th>
-                    <th className="text-start font-semibold py-3 px-4">الحالة</th>
+                    <th className="text-start font-semibold py-3 ps-5 pe-4">{t.cols.unit}</th>
+                    <th className="text-start font-semibold py-3 px-4">{t.cols.location}</th>
+                    <th className="text-start font-semibold py-3 px-4">{t.cols.specs}</th>
+                    <th className="text-start font-semibold py-3 px-4 whitespace-nowrap">{t.cols.price}</th>
+                    <th className="text-start font-semibold py-3 px-4">{t.cols.status}</th>
                     <th className="py-3 ps-4 pe-5 w-px"></th>
                   </tr>
                 </thead>
@@ -207,7 +207,7 @@ export default async function PortalUnitsPage({
 
                       <td className="py-3 px-4">
                         <p className="font-semibold text-slate-800 text-xs">
-                          {tx(u.building.phase.project.name)}
+                          {tx(u.building.phase.project.name, locale)}
                         </p>
                         <p className="text-2xs text-slate-500 mt-0.5">
                           {u.building.phase.project.city}
@@ -219,10 +219,10 @@ export default async function PortalUnitsPage({
 
                       <td className="py-3 px-4">
                         <p className="text-xs font-semibold text-slate-700 tabular-nums">
-                          {u.area} م²
+                          {t.areaFn(u.area)}
                         </p>
                         <p className="text-2xs text-slate-500 mt-0.5 whitespace-nowrap">
-                          {u.bedrooms} غرف · {u.bathrooms} حمامات · دور {u.floor}
+                          {t.roomsFn(u.bedrooms, u.bathrooms, u.floor)}
                         </p>
                       </td>
 
@@ -233,10 +233,10 @@ export default async function PortalUnitsPage({
                       </td>
 
                       <td className="py-3 px-4">
-                        <UnitStatusBadge status={u.status} />
+                        <UnitStatusBadge status={u.status} locale={locale} />
                         <p className="text-2xs text-slate-400 mt-1.5 flex items-center gap-1">
                           <ShieldCheck className="h-3 w-3 text-brand-400 shrink-0" />
-                          {ACCESS_LABEL[u.accessSource]}
+                          {t.accessSource[u.accessSource]}
                         </p>
                       </td>
 
@@ -248,7 +248,7 @@ export default async function PortalUnitsPage({
                               size="sm"
                               leftIcon={<BookmarkPlus className="h-3.5 w-3.5" />}
                             >
-                              احجز
+                              {t.reserve}
                             </Button>
                           </Link>
                         )}
@@ -267,6 +267,7 @@ export default async function PortalUnitsPage({
             pageSize={paged.meta.pageSize}
             total={paged.meta.total}
             basePath="/portal/units"
+            locale={locale}
             params={{
               projectId: sp.projectId,
               status:    sp.status,

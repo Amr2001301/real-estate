@@ -2,26 +2,28 @@ import { UserPlus, ShieldCheck, BookmarkCheck, FileText, FilePen, Wallet, Chevro
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/cn';
 import type { BrokerReportsSummary } from '@/lib/types';
+import type { Locale } from '@/lib/locale';
+import { portalSharedT } from '@/messages/portal/shared';
 
 interface Props {
   summary: BrokerReportsSummary;
   title?: string;
+  locale?: Locale;
 }
 
 const STAGE_DEFS: Array<{
   key:    keyof BrokerReportsSummary;
-  label:  string;
   icon:   React.ComponentType<{ className?: string }>;
   color:  string;
   bg:     string;
   bar:    string;
 }> = [
-  { key: 'leadsSubmitted',    label: 'فرص مُرسلة',    icon: UserPlus,     color: 'text-brand-700',   bg: 'bg-brand-50',   bar: 'from-brand-400 to-brand-600'   },
-  { key: 'leadsApproved',     label: 'فرص معتمدة',    icon: ShieldCheck,  color: 'text-blue-700',    bg: 'bg-blue-50',    bar: 'from-blue-400 to-blue-600'     },
-  { key: 'reservationsCreated', label: 'حجوزات',      icon: BookmarkCheck,color: 'text-violet-700',  bg: 'bg-violet-50',  bar: 'from-violet-400 to-violet-600' },
-  { key: 'contractsCreated',  label: 'عقود',          icon: FilePen,      color: 'text-amber-700',   bg: 'bg-amber-50',   bar: 'from-amber-400 to-amber-600'   },
-  { key: 'contractsSigned',   label: 'عقود موقّعة',   icon: FileText,     color: 'text-emerald-700', bg: 'bg-emerald-50', bar: 'from-emerald-400 to-emerald-600'},
-  { key: 'payoutsPaid',       label: 'دفعات مدفوعة',  icon: Wallet,       color: 'text-teal-700',    bg: 'bg-teal-50',    bar: 'from-teal-400 to-teal-600'     },
+  { key: 'leadsSubmitted',    icon: UserPlus,     color: 'text-brand-700',   bg: 'bg-brand-50',   bar: 'from-brand-400 to-brand-600'   },
+  { key: 'leadsApproved',     icon: ShieldCheck,  color: 'text-blue-700',    bg: 'bg-blue-50',    bar: 'from-blue-400 to-blue-600'     },
+  { key: 'reservationsCreated', icon: BookmarkCheck,color: 'text-violet-700',  bg: 'bg-violet-50',  bar: 'from-violet-400 to-violet-600' },
+  { key: 'contractsCreated',  icon: FilePen,      color: 'text-amber-700',   bg: 'bg-amber-50',   bar: 'from-amber-400 to-amber-600'   },
+  { key: 'contractsSigned',   icon: FileText,     color: 'text-emerald-700', bg: 'bg-emerald-50', bar: 'from-emerald-400 to-emerald-600'},
+  { key: 'payoutsPaid',       icon: Wallet,       color: 'text-teal-700',    bg: 'bg-teal-50',    bar: 'from-teal-400 to-teal-600'     },
 ];
 
 function pct(num: number, denom: number): string | null {
@@ -29,9 +31,11 @@ function pct(num: number, denom: number): string | null {
   return `${((num / denom) * 100).toFixed(1)}%`;
 }
 
-export function FunnelCard({ summary, title = 'قمع التحويل' }: Props) {
+export function FunnelCard({ summary, title, locale = 'ar' }: Props) {
+  const t = portalSharedT(locale).funnel;
   const stages = STAGE_DEFS.map((s) => ({
     ...s,
+    label: t.stages[s.key] ?? String(s.key),
     value: Number(summary[s.key] ?? 0),
   }));
   const top = Math.max(stages[0]?.value ?? 0, 1);
@@ -40,9 +44,9 @@ export function FunnelCard({ summary, title = 'قمع التحويل' }: Props) 
     <Card className="p-5 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
-        <h2 className="text-sm font-bold text-slate-900">{title}</h2>
+        <h2 className="text-sm font-bold text-slate-900">{title ?? t.defaultTitle}</h2>
         <span className="text-2xs text-slate-500 bg-slate-100 rounded-full px-2 py-0.5 font-medium">
-          {stages.length} مراحل
+          {t.stagesCount(stages.length)}
         </span>
       </div>
 
@@ -82,7 +86,7 @@ export function FunnelCard({ summary, title = 'قمع التحويل' }: Props) 
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs text-slate-700 font-semibold">{s.label}</span>
                     <span className="text-xs font-bold tabular-nums text-slate-900 ms-2">
-                      {s.value.toLocaleString('ar-EG')}
+                      {s.value.toLocaleString(t.numberLocale)}
                     </span>
                   </div>
                   <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
@@ -100,7 +104,7 @@ export function FunnelCard({ summary, title = 'قمع التحويل' }: Props) 
 
       {/* Footer note */}
       <p className="text-2xs text-slate-500 mt-4 pt-3 border-t border-hairline">
-        نسبة التحويل محسوبة بالنسبة للمرحلة السابقة مباشرة.
+        {t.footnote}
       </p>
     </Card>
   );

@@ -1,4 +1,6 @@
 import { api, safe } from '@/lib/api';
+import { getLocale } from '@/lib/locale';
+import { portalDashboardT } from '@/messages/portal/dashboard';
 import type { NotificationItem } from '@/lib/types';
 import { PremiumPageHero } from '@/components/premium';
 import { NotificationList } from '@/components/notifications/notification-list';
@@ -20,27 +22,30 @@ function normalizeNotifications(input: unknown): NotificationItem[] {
 }
 
 export default async function PortalNotificationsPage() {
+  const locale = await getLocale();
+  const m = portalDashboardT(locale);
+  const t = m.notifications;
   const res = await safe(api.get<{ data: NotificationItem[]; meta: Record<string, unknown> }>('/me/notifications'));
   const items = normalizeNotifications(res.data);
 
   return (
     <div className="space-y-5">
       <PremiumPageHero
-        title="الإشعارات"
-        description="تنبيهات بشأن فرصك، حجوزاتك، عقودك، وعمولاتك."
+        title={t.title}
+        description={t.description}
         breadcrumbs={[
-          { label: 'البوابة', href: '/portal' },
-          { label: 'الإشعارات' },
+          { label: m.common.portal, href: '/portal' },
+          { label: t.title },
         ]}
       />
 
       {res.error && (
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
-          تعذر تحميل الإشعارات: {res.error}
+          {t.loadErrorFn(res.error)}
         </div>
       )}
 
-      <NotificationList items={items} basePath="/portal" />
+      <NotificationList items={items} basePath="/portal" locale={locale} />
     </div>
   );
 }

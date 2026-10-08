@@ -8,13 +8,17 @@ import {
   Clock,
 } from 'lucide-react';
 import type { PortalProject } from '@/lib/types';
+import type { Locale } from '@/lib/locale';
+import { portalSharedT } from '@/messages/portal/shared';
 import { tx, formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { ProjectStatusBadge } from '@/components/badges';
 import { ProjectImageLightbox } from '@/components/broker/project-image-lightbox';
 import { cn } from '@/lib/cn';
 
-export function ProjectCard({ p, symbol = 'ج.م' }: { p: PortalProject; symbol?: string }) {
+export function ProjectCard({ p, symbol, locale = 'ar' }: { p: PortalProject; symbol?: string; locale?: Locale }) {
+  const t = portalSharedT(locale).projectCard;
+  const currency = symbol ?? portalSharedT(locale).projectsPanel.currencySymbol;
   const commissionPct =
     p.access.commissionPct !== null && p.access.commissionPct !== undefined
       ? Number(p.access.commissionPct) : null;
@@ -25,11 +29,11 @@ export function ProjectCard({ p, symbol = 'ج.م' }: { p: PortalProject; symbol?
   const commissionLabel = commissionPct !== null
     ? `${commissionPct.toFixed(2)}%`
     : fixedAmount !== null
-      ? `${fixedAmount.toLocaleString('ar-EG')} ${symbol}`
+      ? `${fixedAmount.toLocaleString('ar-EG')} ${currency}`
       : null;
 
-  const description  = tx(p.project.description);
-  const services     = (p.project.services ?? []).map((s) => tx(s)).filter(Boolean);
+  const description  = tx(p.project.description, locale);
+  const services     = (p.project.services ?? []).map((s) => tx(s, locale)).filter(Boolean);
   const hasDateRange = p.access.startsAt || p.access.endsAt;
   const isPublished  = p.project.status === 'PUBLISHED';
 
@@ -48,15 +52,15 @@ export function ProjectCard({ p, symbol = 'ج.م' }: { p: PortalProject; symbol?
       <div className="relative sm:w-52 lg:w-60 shrink-0 h-44 sm:h-auto self-stretch overflow-hidden bg-gradient-to-br from-brand-50 to-amber-50/60">
         <ProjectImageLightbox
           media={p.project.media ?? []}
-          projectName={tx(p.project.name)}
+          projectName={tx(p.project.name, locale)}
         />
         {/* Badges */}
         <div className="absolute top-3 start-3 z-20 flex flex-col gap-1.5 items-start pointer-events-none">
-          <ProjectStatusBadge status={p.project.status} />
+          <ProjectStatusBadge status={p.project.status} locale={locale} />
           {p.project.featured && (
             <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/90 text-white px-2 py-0.5 text-2xs font-bold backdrop-blur-sm shadow-sm">
               <Star className="h-2.5 w-2.5 fill-current" />
-              مميز
+              {t.featured}
             </span>
           )}
         </div>
@@ -74,7 +78,7 @@ export function ProjectCard({ p, symbol = 'ج.م' }: { p: PortalProject; symbol?
         {/* Title + meta */}
         <div>
           <h3 className="text-[16px] font-extrabold text-navy leading-snug">
-            {tx(p.project.name)}
+            {tx(p.project.name, locale)}
           </h3>
           {description && (
             <p className="mt-1.5 text-[12px] text-slate-500 line-clamp-2 leading-relaxed">
@@ -131,21 +135,21 @@ export function ProjectCard({ p, symbol = 'ج.م' }: { p: PortalProject; symbol?
         {/* Commission box */}
         <div className="w-full rounded-[14px] bg-amber-50 border border-amber-100 px-3 py-3 text-center">
           <p className="text-[10px] font-semibold text-amber-500 uppercase tracking-wide leading-none mb-1.5">
-            عمولة الوسيط
+            {t.brokerCommission}
           </p>
           {commissionLabel ? (
             <p className="text-[24px] font-black text-amber-700 tabular-nums leading-none">
               {commissionLabel}
             </p>
           ) : (
-            <p className="text-xs text-slate-400 font-medium">الافتراضية</p>
+            <p className="text-xs text-slate-400 font-medium">{t.defaultLabel}</p>
           )}
         </div>
 
         {/* CTA */}
         <Link href={`/portal/units?projectId=${p.project.id}` as never} className="w-full">
           <Button variant="primary" size="sm" className="w-full">
-            تصفح الوحدات
+            {t.browseUnits}
           </Button>
         </Link>
 
@@ -158,7 +162,7 @@ export function ProjectCard({ p, symbol = 'ج.م' }: { p: PortalProject; symbol?
             ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
             : <Clock className="h-3.5 w-3.5 shrink-0" />
           }
-          {p.access.active ? 'جاهز للتسويق' : 'موقوف'}
+          {p.access.active ? t.active : t.paused}
         </span>
       </div>
 

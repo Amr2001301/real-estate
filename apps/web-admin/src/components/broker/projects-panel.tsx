@@ -11,6 +11,8 @@ import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/cn';
 import { ProjectCard } from '@/components/broker/project-card';
+import type { Locale } from '@/lib/locale';
+import { portalSharedT } from '@/messages/portal/shared';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Filters {
@@ -30,22 +32,22 @@ const DEFAULT: Filters = {
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function getUniqueCities(projects: PortalProject[]): string[] {
+function getUniqueCities(projects: PortalProject[], sortLocale: string): string[] {
   const seen = new Set<string>();
   return projects
     .map((p) => p.project.city)
     .filter((c) => c && !seen.has(c) && seen.add(c))
-    .sort((a, b) => a.localeCompare(b, 'ar'));
+    .sort((a, b) => a.localeCompare(b, sortLocale));
 }
 
-function applyFilters(projects: PortalProject[], f: Filters): PortalProject[] {
+function applyFilters(projects: PortalProject[], f: Filters, locale: Locale): PortalProject[] {
   return projects.filter((p) => {
     if (f.query) {
       const q = f.query.toLowerCase();
       const hit =
-        tx(p.project.name).toLowerCase().includes(q) ||
+        tx(p.project.name, locale).toLowerCase().includes(q) ||
         p.project.city.toLowerCase().includes(q) ||
-        tx(p.project.description).toLowerCase().includes(q);
+        tx(p.project.description, locale).toLowerCase().includes(q);
       if (!hit) return false;
     }
     if (f.status === 'PUBLISHED' && p.project.status !== 'PUBLISHED') return false;
@@ -109,12 +111,22 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export function ProjectsPanel({ projects, symbol = 'ج.م' }: { projects: PortalProject[]; symbol?: string }) {
+export function ProjectsPanel({
+  projects,
+  symbol,
+  locale = 'ar',
+}: {
+  projects: PortalProject[];
+  symbol?: string;
+  locale?: Locale;
+}) {
+  const t = portalSharedT(locale).projectsPanel;
+  const currencySymbol = symbol ?? t.currencySymbol;
   const [pending,  setPending]  = useState<Filters>(DEFAULT);
   const [applied,  setApplied]  = useState<Filters>(DEFAULT);
 
-  const cities      = useMemo(() => getUniqueCities(projects), [projects]);
-  const filtered    = useMemo(() => applyFilters(projects, applied), [projects, applied]);
+  const cities      = useMemo(() => getUniqueCities(projects, t.sortLocale), [projects, t.sortLocale]);
+  const filtered    = useMemo(() => applyFilters(projects, applied, locale), [projects, applied, locale]);
   const anyApplied  = !isDefault(applied);
   const hasFeatured = projects.some((p) => p.project.featured);
 
@@ -139,8 +151,8 @@ export function ProjectsPanel({ projects, symbol = 'ج.م' }: { projects: Portal
       <Card className="p-0">
         <EmptyState
           icon={<Building2 />}
-          title="لا توجد مشاريع متاحة بعد"
-          description="بمجرد منحك صلاحيات على أي مشروع، ستظهر تفاصيله هنا."
+          title={t.emptyTitle}
+          description={t.emptyDescription}
         />
       </Card>
     );
@@ -152,7 +164,7 @@ export function ProjectsPanel({ projects, symbol = 'ج.م' }: { projects: Portal
       {/* ── KPI strip ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <KpiTile
-          label="إجمالي المشاريع"
+          label={t.kpiTotal}
           value={totalCount}
           icon={<Building2 />}
           topBar="from-brand-300 via-brand-500 to-brand-300"
@@ -160,7 +172,7 @@ export function ProjectsPanel({ projects, symbol = 'ج.م' }: { projects: Portal
           valueCls="text-brand-700"
         />
         <KpiTile
-          label="منشور"
+          label={t.kpiPublished}
           value={publishedCount}
           icon={<CheckCircle2 />}
           topBar="from-emerald-300 via-emerald-500 to-emerald-300"
@@ -168,7 +180,7 @@ export function ProjectsPanel({ projects, symbol = 'ج.م' }: { projects: Portal
           valueCls="text-emerald-700"
         />
         <KpiTile
-          label="جاهز للتسويق"
+          label={t.kpiReady}
           value={readyCount}
           icon={<LayoutGrid />}
           topBar="from-sky-300 via-sky-500 to-sky-300"
@@ -176,7 +188,7 @@ export function ProjectsPanel({ projects, symbol = 'ج.م' }: { projects: Portal
           valueCls="text-sky-700"
         />
         <KpiTile
-          label="مميز"
+          label={t.kpiFeatured}
           value={featuredCount}
           icon={<Sparkles />}
           topBar="from-amber-300 via-amber-500 to-amber-300"
@@ -192,7 +204,7 @@ export function ProjectsPanel({ projects, symbol = 'ج.م' }: { projects: Portal
         <Input
           inputSize="sm"
           leftAddon={<Search />}
-          placeholder="ابحث باسم المشروع أو المدينة…"
+          placeholder={t.searchPlaceholder}
           value={pending.query}
           onChange={(e) => set('query', e.target.value)}
           className="min-w-[180px] flex-1"
@@ -205,9 +217,9 @@ export function ProjectsPanel({ projects, symbol = 'ج.م' }: { projects: Portal
           onChange={(e) => set('status', e.target.value as Filters['status'])}
           className="w-36 shrink-0"
         >
-          <option value="all">كل الحالات</option>
-          <option value="PUBLISHED">منشور</option>
-          <option value="other">غير منشور</option>
+          <option value="all">{t.allStatuses}</option>
+          <option value="PUBLISHED">{t.published}</option>
+          <option value="other">{t.unpublished}</option>
         </Select>
 
         {/* City — only when there are multiple cities */}
@@ -218,7 +230,7 @@ export function ProjectsPanel({ projects, symbol = 'ج.م' }: { projects: Portal
             onChange={(e) => set('city', e.target.value)}
             className="w-32 shrink-0"
           >
-            <option value="">كل المدن</option>
+            <option value="">{t.allCities}</option>
             {cities.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
@@ -232,11 +244,11 @@ export function ProjectsPanel({ projects, symbol = 'ج.م' }: { projects: Portal
           onChange={(e) => set('active', e.target.value as Filters['active'])}
           className="w-40 shrink-0"
         >
-          <option value="all">كل المشاريع</option>
-          <option value="yes">جاهز للتسويق</option>
+          <option value="all">{t.allProjects}</option>
+          <option value="yes">{t.readyForMarketing}</option>
         </Select>
 
-        {/* "مميز" toggle — only when at least one project is featured */}
+        {/* "Featured" toggle — only when at least one project is featured */}
         {hasFeatured && (
           <button
             type="button"
@@ -249,18 +261,18 @@ export function ProjectsPanel({ projects, symbol = 'ج.م' }: { projects: Portal
             )}
           >
             <Star className={cn('h-3 w-3', pending.featured ? 'fill-amber-400 text-amber-400' : 'text-slate-400')} />
-            مميز
+            {t.featured}
           </button>
         )}
 
         {/* Actions */}
         <div className="flex items-center gap-1.5 ms-auto">
           <Button type="button" variant="primary" size="sm" onClick={handleApply}>
-            تصفية
+            {t.apply}
           </Button>
           {anyApplied && (
             <Button type="button" variant="ghost" size="sm" onClick={handleReset}>
-              مسح
+              {t.clear}
             </Button>
           )}
         </div>
@@ -271,17 +283,17 @@ export function ProjectsPanel({ projects, symbol = 'ج.م' }: { projects: Portal
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <SectionLabel>
-              {anyApplied ? 'نتائج البحث' : 'المشاريع المتاحة'}
+              {anyApplied ? t.searchResults : t.availableProjects}
             </SectionLabel>
             {anyApplied && (
               <span className="text-2xs text-slate-400 tabular-nums shrink-0">
-                {filtered.length} من {totalCount}
+                {t.countOfTotal(filtered.length, totalCount)}
               </span>
             )}
           </div>
           <div className="flex flex-col gap-4">
             {filtered.map((p) => (
-              <ProjectCard key={p.project.id} p={p} symbol={symbol} />
+              <ProjectCard key={p.project.id} p={p} symbol={currencySymbol} locale={locale} />
             ))}
           </div>
         </div>
@@ -292,11 +304,11 @@ export function ProjectsPanel({ projects, symbol = 'ج.م' }: { projects: Portal
         <Card className="p-0">
           <EmptyState
             icon={<Search />}
-            title="لا توجد مشاريع تطابق البحث"
-            description="جرّب تعديل كلمة البحث أو مسح الفلاتر النشطة."
+            title={t.noMatchTitle}
+            description={t.noMatchDescription}
             action={
               <Button variant="outline" size="sm" onClick={handleReset}>
-                مسح التصفية
+                {t.clearFilters}
               </Button>
             }
           />

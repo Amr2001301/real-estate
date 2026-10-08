@@ -15,6 +15,8 @@ import type { Paged, PortalContract, PortalProject } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { cn } from '@/lib/cn';
+import { getLocale } from '@/lib/locale';
+import { portalReservationsContractsT } from '@/messages/portal/reservations-contracts';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { CodeText } from '@/components/ui/code-text';
@@ -67,6 +69,9 @@ export default async function PortalContractsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const locale = await getLocale();
+  const m = portalReservationsContractsT(locale);
+  const t = m.contracts.list;
   const currency = await getReportsCurrency();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
@@ -98,27 +103,27 @@ export default async function PortalContractsPage({
     <div className="space-y-5">
 
       <PremiumPageHero
-        title="عقودي"
-        description="العقود المنبثقة من حجوزاتك — موقّعة أو قيد التوقيع."
+        title={t.title}
+        description={t.description}
         breadcrumbs={[
-          { label: 'البوابة', href: '/portal' },
-          { label: 'العقود' },
+          { label: m.common.portal, href: '/portal' },
+          { label: m.common.contracts },
         ]}
       />
 
       {contractsRes.error && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          تعذر تحميل العقود: {contractsRes.error}
+          {t.loadErrorFn(contractsRes.error)}
         </div>
       )}
 
       <PremiumMetricStrip
         variant="compact"
         metrics={[
-          { label: 'إجمالي العقود', value: totalAll,     icon: <FileText />,     tone: 'brand'   },
-          { label: 'موقّعة',        value: signedCount,  icon: <CheckCircle2 />, tone: 'success' },
-          { label: 'قيد التوقيع',   value: pendingCount, icon: <Clock />,        tone: 'warning' },
+          { label: t.metrics.total, value: totalAll,     icon: <FileText />,     tone: 'brand'   },
+          { label: t.metrics.signed, value: signedCount,  icon: <CheckCircle2 />, tone: 'success' },
+          { label: t.metrics.pending, value: pendingCount, icon: <Clock />,        tone: 'warning' },
         ]}
       />
 
@@ -127,60 +132,60 @@ export default async function PortalContractsPage({
         action="/portal/contracts"
         trailing={
           <div className="flex items-center gap-1.5 ms-auto shrink-0">
-            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            <Button type="submit" variant="primary" size="sm">{t.filter}</Button>
             {isFiltered && (
               <Link href="/portal/contracts">
-                <Button type="button" variant="ghost" size="sm">مسح التصفية</Button>
+                <Button type="button" variant="ghost" size="sm">{t.clearFilter}</Button>
               </Link>
             )}
           </div>
         }
       >
-        <PremiumFilterField label="بحث">
+        <PremiumFilterField label={t.search}>
           <Input
             inputSize="sm"
             name="q"
             leftAddon={<Search />}
-            placeholder="ابحث برقم العقد أو اسم العميل…"
+            placeholder={t.searchPlaceholder}
             defaultValue={sp.q ?? ''}
             className="flex-1 min-w-[180px]"
           />
         </PremiumFilterField>
-        <PremiumFilterField label="المشروع">
+        <PremiumFilterField label={t.project}>
           <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-56">
-            <option value="">كل المشاريع</option>
+            <option value="">{t.allProjects}</option>
             {projects.map((p) => (
               <option key={p.project.id} value={p.project.id}>
-                {tx(p.project.name)}
+                {tx(p.project.name, locale)}
               </option>
             ))}
           </Select>
         </PremiumFilterField>
-        <PremiumFilterField label="الحالة">
+        <PremiumFilterField label={m.common.status}>
           <Select name="signed" inputSize="sm" defaultValue={sp.signed ?? ''} className="w-44">
-            <option value="">كل العقود</option>
-            <option value="yes">موقّعة فقط</option>
-            <option value="no">قيد التوقيع فقط</option>
+            <option value="">{t.allContracts}</option>
+            <option value="yes">{t.signedOnly}</option>
+            <option value="no">{t.pendingOnly}</option>
           </Select>
         </PremiumFilterField>
       </PremiumFilterBar>
 
       <PremiumSectionCard
         icon={<FileText />}
-        title="قائمة العقود"
+        title={t.tableTitle}
         padded={false}
       >
         {rows.length > 0 && (
           <div className="flex items-center gap-4 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
             <div className="flex items-center gap-1.5">
               <span className="font-bold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
-              <span>عقد</span>
+              <span>{t.countUnit}</span>
             </div>
             {pageValue > 0 && (
               <>
                 <div className="w-px h-4 bg-hairline" />
                 <span>
-                  قيمة الصفحة:{' '}
+                  {t.pageValue}{' '}
                   <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(pageValue, currency)}</span>
                 </span>
               </>
@@ -192,13 +197,13 @@ export default async function PortalContractsPage({
           <table className="w-full text-sm">
             <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">العميل</th>
-                <th className="text-start font-semibold py-3 px-4">الوحدة / المشروع</th>
-                <th className="text-start font-semibold py-3 px-4">الحالة</th>
-                <th className="text-start font-semibold py-3 px-4">العمولة المُقفلة</th>
-                <th className="text-start font-semibold py-3 px-4">القيمة الإجمالية</th>
-                <th className="text-start font-semibold py-3 px-4">رقم العقد</th>
-                <th className="text-start font-semibold py-3 px-4">التاريخ</th>
+                <th className="text-start font-semibold py-3 ps-5 pe-4">{m.common.client}</th>
+                <th className="text-start font-semibold py-3 px-4">{m.common.unitProject}</th>
+                <th className="text-start font-semibold py-3 px-4">{m.common.status}</th>
+                <th className="text-start font-semibold py-3 px-4">{m.common.lockedCommission}</th>
+                <th className="text-start font-semibold py-3 px-4">{t.cols.totalValue}</th>
+                <th className="text-start font-semibold py-3 px-4">{t.cols.contractNumber}</th>
+                <th className="text-start font-semibold py-3 px-4">{m.common.date}</th>
                 <th className="py-3 ps-4 pe-5 w-px"></th>
               </tr>
             </thead>
@@ -208,8 +213,8 @@ export default async function PortalContractsPage({
                   <td colSpan={8} className="p-0">
                     <EmptyState
                       icon={<FileText />}
-                      title="لا توجد عقود بعد"
-                      description="ستظهر هنا فور تحويل أحد الحجوزات إلى عقد."
+                      title={t.emptyTitle}
+                      description={t.emptyDescription}
                     />
                   </td>
                 </tr>
@@ -263,7 +268,7 @@ export default async function PortalContractsPage({
                     <td className="py-3 px-4">
                       <CodeText className="text-xs font-semibold text-slate-800">{c.unit?.code ?? '—'}</CodeText>
                       <p className="text-2xs text-slate-500 mt-0.5">
-                        {c.unit?.building ? tx(c.unit.building.phase.project.name) : '—'}
+                        {c.unit?.building ? tx(c.unit.building.phase.project.name, locale) : '—'}
                       </p>
                     </td>
 
@@ -271,12 +276,12 @@ export default async function PortalContractsPage({
                       {isSigned ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-semibold">
                           <CheckCircle2 className="h-3 w-3" />
-                          موقّع
+                          {t.signed}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-xs font-semibold">
                           <FilePen className="h-3 w-3" />
-                          قيد التوقيع
+                          {t.pending}
                         </span>
                       )}
                     </td>
@@ -309,7 +314,7 @@ export default async function PortalContractsPage({
                             <>
                               <div className="inline-flex items-center gap-1 rounded-full bg-teal-50 text-teal-700 px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ring-teal-100">
                                 <BadgePercent className="h-3 w-3" />
-                                مبلغ ثابت
+                                {t.fixedAmount}
                               </div>
                               <p className="text-2xs text-slate-500 mt-1 tabular-nums">
                                 {formatCurrency(amt, currency)}
@@ -317,7 +322,7 @@ export default async function PortalContractsPage({
                             </>
                           );
                         }
-                        return <span className="text-slate-400 text-xs">غير محدد</span>;
+                        return <span className="text-slate-400 text-xs">{t.notSet}</span>;
                       })()}
                     </td>
 
@@ -335,7 +340,7 @@ export default async function PortalContractsPage({
 
                     <td className="py-3 ps-4 pe-5">
                       <Link href={`/portal/contracts/${c.id}` as never}>
-                        <IconButton label="عرض" variant="ghost" size="sm">
+                        <IconButton label={m.common.view} variant="ghost" size="sm">
                           <Eye />
                         </IconButton>
                       </Link>
@@ -353,6 +358,7 @@ export default async function PortalContractsPage({
             pageSize={paged.meta.pageSize}
             total={paged.meta.total}
             basePath="/portal/contracts"
+            locale={locale}
             params={{ projectId: sp.projectId, signed: sp.signed, q: sp.q }}
           />
         )}

@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { api } from '@/lib/api';
 import type { BrokerUser, BrokerUserStatus } from '@/lib/types';
+import { getLocale } from '@/lib/locale';
+import { portalMoneyTeamT } from '@/messages/portal/money-team';
 
 function str(formData: FormData, key: string): string | undefined {
   const v = formData.get(key);
@@ -24,11 +26,12 @@ export async function createTeamMemberAction(
   _prev: TeamFormState,
   formData: FormData,
 ): Promise<TeamFormState> {
+  const errors = portalMoneyTeamT(await getLocale()).team.errors;
   const fullName = str(formData, 'fullName');
-  if (!fullName) return { error: 'الاسم الكامل مطلوب' };
+  if (!fullName) return { error: errors.fullNameRequired };
   const email = str(formData, 'email');
   const phone = str(formData, 'phone');
-  if (!email && !phone) return { error: 'يرجى إدخال بريد إلكتروني أو رقم جوال' };
+  if (!email && !phone) return { error: errors.contactRequired };
 
   const payload = {
     fullName,

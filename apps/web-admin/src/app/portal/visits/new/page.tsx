@@ -1,12 +1,16 @@
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
 import type { PortalProject } from '@/lib/types';
+import { getLocale } from '@/lib/locale';
+import { portalLeadsVisitsT } from '@/messages/portal/leads-visits';
 import PortalVisitForm from '../_form';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 export default async function NewPortalVisitPage() {
+  const locale = await getLocale();
+  const m = portalLeadsVisitsT(locale);
   // Leads and units are searched from the form (SearchSelect).
   const projectsRes = await safe(api.get<PortalProject[]>('/portal/projects'));
 
@@ -24,7 +28,7 @@ export default async function NewPortalVisitPage() {
                   href={'/portal' as never}
                   className="font-medium hover:text-brand-600 transition-colors duration-150"
                 >
-                  البوابة
+                  {m.breadcrumbs.portal}
                 </Link>
                 <span className="text-slate-300 text-sm select-none">›</span>
               </li>
@@ -33,27 +37,27 @@ export default async function NewPortalVisitPage() {
                   href={'/portal/visits' as never}
                   className="font-medium hover:text-brand-600 transition-colors duration-150"
                 >
-                  الزيارات
+                  {m.breadcrumbs.visits}
                 </Link>
                 <span className="text-slate-300 text-sm select-none">›</span>
               </li>
               <li>
-                <span className="font-semibold text-slate-600">زيارة جديدة</span>
+                <span className="font-semibold text-slate-600">{m.visits.new.breadcrumb}</span>
               </li>
             </ol>
           </nav>
           <div className="flex items-start justify-between gap-6">
             <div className="min-w-0">
               <h1 className="text-[28px] sm:text-[34px] font-bold tracking-tight text-navy leading-tight">
-                طلب زيارة جديدة
+                {m.visits.new.title}
               </h1>
               <p className="mt-2 text-sm text-slate-500 leading-relaxed max-w-md">
-                اقترح موعد زيارة لأحد عملائك في أحد المشاريع المتاحة.
+                {m.visits.new.description}
               </p>
             </div>
             <span className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-3 py-1.5 text-xs font-bold text-brand-700 tracking-wide mt-1 select-none">
               <span className="h-1.5 w-1.5 rounded-full bg-brand-400 shrink-0" />
-              زيارة جديدة
+              {m.visits.new.badge}
             </span>
           </div>
         </div>
@@ -61,6 +65,7 @@ export default async function NewPortalVisitPage() {
 
       <PortalVisitForm
         projects={projectsRes.data ?? []}
+        locale={locale}
       />
     </div>
   );

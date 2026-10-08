@@ -22,6 +22,8 @@ import type {
   PortalActivityType,
 } from '@/lib/types';
 import { tx, formatDateTime } from '@/lib/format';
+import { getLocale } from '@/lib/locale';
+import { portalDashboardT } from '@/messages/portal/dashboard';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
@@ -43,26 +45,6 @@ interface Search {
 }
 
 const PAGE_SIZE = 30;
-
-const LABEL: Record<PortalActivityType, string> = {
-  LEAD_SUBMITTED: 'إرسال فرصة',
-  VISIT_REQUESTED: 'طلب زيارة',
-  LEAD_APPROVED: 'اعتماد فرصة',
-  LEAD_REJECTED: 'رفض فرصة',
-  LEAD_MARKED_DUPLICATE: 'فرصة مكررة',
-  RESERVATION_CREATED: 'إنشاء حجز',
-  CONTRACT_CREATED: 'إنشاء عقد',
-  CONTRACT_SIGNED: 'توقيع عقد',
-  COMMISSION_EARNED: 'استحقاق عمولة',
-  COMMISSION_APPROVED: 'اعتماد عمولة',
-  COMMISSION_REJECTED: 'رفض عمولة',
-  COMMISSION_CANCELLED: 'إلغاء عمولة',
-  PAYOUT_CREATED: 'إنشاء دفعة',
-  PAYOUT_APPROVED: 'اعتماد دفعة',
-  PAYOUT_PROCESSING: 'دفعة قيد التنفيذ',
-  PAYOUT_PAID: 'صرف دفعة',
-  PAYOUT_CANCELLED: 'إلغاء دفعة',
-};
 
 const TONE: Record<PortalActivityType, string> = {
   LEAD_SUBMITTED: 'bg-blue-100 text-blue-700',
@@ -122,19 +104,20 @@ function ActivityIcon({ type }: { type: PortalActivityType }) {
   }
 }
 
-function payloadSummary(item: PortalActivityItem): string | null {
+function payloadSummary(item: PortalActivityItem, m: ReturnType<typeof portalDashboardT>): string | null {
   const p = item.payload;
+  const pl = m.activity.payload;
   if (item.type === 'LEAD_REJECTED' && typeof p.reason === 'string') {
-    return `السبب: ${p.reason}`;
+    return pl.reasonFn(p.reason);
   }
   if (item.type === 'LEAD_MARKED_DUPLICATE' && typeof p.reason === 'string') {
-    return `ملاحظة: ${p.reason}`;
+    return pl.noteFn(p.reason);
   }
   if (item.type === 'LEAD_SUBMITTED' && p.isDuplicate === true) {
-    return 'تم تسجيل العميل بحالة "مكرر"';
+    return pl.duplicate;
   }
   if (item.type === 'VISIT_REQUESTED' && typeof p.preferredDate === 'string') {
-    return `التاريخ المقترح: ${p.preferredDate.slice(0, 10)}`;
+    return pl.preferredDateFn(p.preferredDate.slice(0, 10));
   }
   return null;
 }
@@ -145,6 +128,9 @@ export default async function PortalActivityPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const locale = await getLocale();
+  const m = portalDashboardT(locale);
+  const t = m.activity;
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({
@@ -163,17 +149,17 @@ export default async function PortalActivityPage({
   return (
     <div className="space-y-5">
       <PremiumPageHero
-        title="النشاط"
-        description="سجل أحداث الفرص والزيارات الخاصة بشركة الوساطة."
+        title={t.title}
+        description={t.description}
         breadcrumbs={[
-          { label: 'البوابة', href: '/portal' },
-          { label: 'النشاط' },
+          { label: m.common.portal, href: '/portal' },
+          { label: t.title },
         ]}
       />
 
       {r.error && (
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
-          تعذر تحميل النشاط: {r.error}
+          {t.loadErrorFn(r.error)}
         </div>
       )}
 
@@ -182,70 +168,58 @@ export default async function PortalActivityPage({
         action="/portal/activity"
         trailing={
           <div className="flex items-center gap-1.5 ms-auto shrink-0">
-            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            <Button type="submit" variant="primary" size="sm">{t.filter}</Button>
             {(sp.type || sp.entityType) && (
               <Link href="/portal/activity">
-                <Button type="button" variant="ghost" size="sm">مسح</Button>
+                <Button type="button" variant="ghost" size="sm">{m.common.clear}</Button>
               </Link>
             )}
           </div>
         }
       >
-        <PremiumFilterField label="نوع الحدث">
+        <PremiumFilterField label={t.eventType}>
           <Select
             name="type"
             inputSize="sm"
             defaultValue={sp.type ?? ''}
             className="w-52"
           >
-            <option value="">كل الأحداث</option>
-            <option value="LEAD_SUBMITTED">إرسال فرصة</option>
-            <option value="VISIT_REQUESTED">طلب زيارة</option>
-            <option value="LEAD_APPROVED">اعتماد فرصة</option>
-            <option value="LEAD_REJECTED">رفض فرصة</option>
-            <option value="LEAD_MARKED_DUPLICATE">فرصة مكررة</option>
-            <option value="RESERVATION_CREATED">إنشاء حجز</option>
-            <option value="CONTRACT_CREATED">إنشاء عقد</option>
-            <option value="CONTRACT_SIGNED">توقيع عقد</option>
-            <option value="COMMISSION_EARNED">استحقاق عمولة</option>
-            <option value="COMMISSION_APPROVED">اعتماد عمولة</option>
-            <option value="COMMISSION_REJECTED">رفض عمولة</option>
-            <option value="COMMISSION_CANCELLED">إلغاء عمولة</option>
-            <option value="PAYOUT_CREATED">إنشاء دفعة</option>
-            <option value="PAYOUT_APPROVED">اعتماد دفعة</option>
-            <option value="PAYOUT_PROCESSING">دفعة قيد التنفيذ</option>
-            <option value="PAYOUT_PAID">صرف دفعة</option>
-            <option value="PAYOUT_CANCELLED">إلغاء دفعة</option>
+            <option value="">{t.allEvents}</option>
+            {(Object.keys(m.activityType) as PortalActivityType[]).map((type) => (
+              <option key={type} value={type}>
+                {m.activityType[type]}
+              </option>
+            ))}
           </Select>
         </PremiumFilterField>
-        <PremiumFilterField label="نوع الكيان">
+        <PremiumFilterField label={t.entityType}>
           <Select
             name="entityType"
             inputSize="sm"
             defaultValue={sp.entityType ?? ''}
             className="w-44"
           >
-            <option value="">كل الكيانات</option>
-            <option value="Lead">الفرص</option>
-            <option value="VisitRequest">الزيارات</option>
-            <option value="Reservation">الحجوزات</option>
-            <option value="Contract">العقود</option>
-            <option value="Commission">العمولات</option>
-            <option value="Payout">المدفوعات</option>
+            <option value="">{t.allEntities}</option>
+            <option value="Lead">{t.entities.Lead}</option>
+            <option value="VisitRequest">{t.entities.VisitRequest}</option>
+            <option value="Reservation">{t.entities.Reservation}</option>
+            <option value="Contract">{t.entities.Contract}</option>
+            <option value="Commission">{t.entities.Commission}</option>
+            <option value="Payout">{t.entities.Payout}</option>
           </Select>
         </PremiumFilterField>
       </PremiumFilterBar>
 
       <PremiumSectionCard
         icon={<Activity />}
-        title="سجل النشاط"
+        title={t.logTitle}
         padded={false}
       >
         {rows.length === 0 ? (
           <EmptyState
             icon={<Activity />}
-            title="لا يوجد نشاط بعد"
-            description="ستظهر هنا أحداث الفرص والزيارات فور حدوثها."
+            title={t.emptyTitle}
+            description={t.emptyDescription}
           />
         ) : (
           <ol className="divide-y divide-hairline">
@@ -278,7 +252,7 @@ export default async function PortalActivityPage({
                           href={linkHref as never}
                           className="font-bold text-slate-900 hover:text-brand-700 text-sm"
                         >
-                          {LABEL[item.type]}
+                          {m.activityType[item.type]}
                         </Link>
                         <time className="text-2xs text-slate-500 tabular-nums whitespace-nowrap shrink-0" dir="ltr">
                           {formatDateTime(item.createdAt)}
@@ -294,8 +268,8 @@ export default async function PortalActivityPage({
                           </p>
                           <p className="text-2xs text-slate-500 mt-0.5">
                             {item.lead.projectInterest
-                              ? tx(item.lead.projectInterest.name)
-                              : 'بدون مشروع'}
+                              ? tx(item.lead.projectInterest.name, locale)
+                              : t.noProject}
                             {item.lead.unitInterest && (
                               <>
                                 {' • '}
@@ -308,12 +282,12 @@ export default async function PortalActivityPage({
                         </>
                       ) : (
                         <p className="mt-0.5 text-2xs text-slate-500">
-                          حدث على مستوى شركة الوساطة
+                          {t.companyLevel}
                         </p>
                       )}
-                      {payloadSummary(item) && (
+                      {payloadSummary(item, m) && (
                         <p className="mt-1.5 text-xs text-slate-700 rounded-lg bg-surface-muted border border-hairline px-2.5 py-1.5">
-                          {payloadSummary(item)}
+                          {payloadSummary(item, m)}
                         </p>
                       )}
                     </div>
@@ -329,6 +303,7 @@ export default async function PortalActivityPage({
             pageSize={paged.meta.pageSize}
             total={paged.meta.total}
             basePath="/portal/activity"
+            locale={locale}
             params={{ type: sp.type, entityType: sp.entityType }}
           />
         )}

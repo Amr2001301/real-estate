@@ -5,6 +5,8 @@ import { tx } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import type { Locale } from '@/lib/locale';
+import { portalSharedT } from '@/messages/portal/shared';
 
 export interface CommissionSearchParams {
   q?: string;
@@ -17,9 +19,13 @@ export interface CommissionSearchParams {
 interface Props {
   projects: PortalProject[];
   sp: CommissionSearchParams;
+  locale?: Locale;
 }
 
-export function CommissionsFilterBar({ projects, sp }: Props) {
+export function CommissionsFilterBar({ projects, sp, locale = 'ar' }: Props) {
+  const t = portalSharedT(locale);
+  const f = t.filters;
+  const c = t.commissionsFilter;
   const anyFilter = !!(sp.q || sp.status || sp.projectId || sp.from || sp.to);
 
   return (
@@ -32,22 +38,22 @@ export function CommissionsFilterBar({ projects, sp }: Props) {
         inputSize="sm"
         name="q"
         leftAddon={<Search />}
-        placeholder="ابحث برقم العمولة أو العقد أو الوحدة…"
+        placeholder={c.searchPlaceholder}
         defaultValue={sp.q ?? ''}
         className="flex-1 min-w-[200px]"
       />
       <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-40 shrink-0">
-        <option value="">كل الحالات</option>
-        <option value="PENDING">قيد الاعتماد</option>
-        <option value="APPROVED">معتمدة</option>
-        <option value="REJECTED">مرفوضة</option>
-        <option value="CANCELLED">ملغاة</option>
+        <option value="">{f.allStatuses}</option>
+        <option value="PENDING">{c.status.PENDING}</option>
+        <option value="APPROVED">{c.status.APPROVED}</option>
+        <option value="REJECTED">{c.status.REJECTED}</option>
+        <option value="CANCELLED">{c.status.CANCELLED}</option>
       </Select>
       <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-44 shrink-0">
-        <option value="">كل المشاريع</option>
+        <option value="">{f.allProjects}</option>
         {projects.map((p) => (
           <option key={p.project.id} value={p.project.id}>
-            {tx(p.project.name)}
+            {tx(p.project.name, locale)}
           </option>
         ))}
       </Select>
@@ -70,12 +76,12 @@ export function CommissionsFilterBar({ projects, sp }: Props) {
       />
       <div className="flex items-center gap-1.5 ms-auto">
         <Button type="submit" variant="primary" size="sm">
-          تصفية
+          {f.apply}
         </Button>
         {anyFilter && (
           <Link href="/portal/commissions">
             <Button type="button" variant="ghost" size="sm">
-              مسح التصفية
+              {f.clear}
             </Button>
           </Link>
         )}

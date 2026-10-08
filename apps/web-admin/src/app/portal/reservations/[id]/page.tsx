@@ -16,10 +16,12 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { PortalReservation, ReservationActivityType } from '@/lib/types';
+import type { PortalReservation } from '@/lib/types';
 import { tx, formatDate, formatDateTime, formatCurrency } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { cn } from '@/lib/cn';
+import { getLocale } from '@/lib/locale';
+import { portalReservationsContractsT } from '@/messages/portal/reservations-contracts';
 import {
   PremiumPageHero,
   PremiumDetailLayout,
@@ -33,18 +35,6 @@ import { MetricGrid, MetricTile } from '@/components/portal/metric-grid';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
-
-const ACTIVITY_LABEL: Record<ReservationActivityType, string> = {
-  CREATED:                    'تم إنشاء الحجز',
-  APPROVED:                   'تمت الموافقة على الحجز',
-  REJECTED:                   'تم رفض الحجز',
-  CANCELLED:                  'تم إلغاء الحجز',
-  EXPIRED:                    'انتهت صلاحية الحجز',
-  NOTE_ADDED:                 'إضافة ملاحظة',
-  BOOKING_PAYMENT_CONFIRMED:  'تأكيد دفع مبلغ الحجز',
-  BOOKING_PAYMENT_UNCONFIRMED:'إلغاء تأكيد دفع الحجز',
-  CONVERTED:                  'تحويل إلى عقد',
-};
 
 const CMD_LINK = 'group flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 hover:bg-canvas/40 transition-colors duration-150';
 const CMD_ICON = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[15px] [&_svg]:w-[15px]';
@@ -107,6 +97,9 @@ export default async function PortalReservationDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const locale = await getLocale();
+  const m = portalReservationsContractsT(locale);
+  const t = m.reservations.detail;
   const currency = await getReportsCurrency();
   const r = await safe(api.get<PortalReservation>(`/portal/reservations/${id}`));
   if (r.error || !r.data) notFound();
@@ -131,16 +124,16 @@ export default async function PortalReservationDetailPage({
     <div className="space-y-5">
       {/* Hero */}
       <PremiumPageHero
-        title={res.reservationNumber ?? 'حجز'}
+        title={res.reservationNumber ?? t.fallbackTitle}
         breadcrumbs={[
-          { label: 'البوابة',   href: '/portal' },
-          { label: 'الحجوزات', href: '/portal/reservations' },
+          { label: m.common.portal,   href: '/portal' },
+          { label: m.common.reservations, href: '/portal/reservations' },
           { label: res.reservationNumber ?? id },
         ]}
         meta={
           <>
-            <ReservationStatusBadge status={res.status} />
-            {project && <span className="text-xs text-slate-500">{tx(project.name)}</span>}
+            <ReservationStatusBadge status={res.status} locale={locale} />
+            {project && <span className="text-xs text-slate-500">{tx(project.name, locale)}</span>}
           </>
         }
       />
@@ -150,9 +143,9 @@ export default async function PortalReservationDetailPage({
         <div className="flex items-start gap-3 rounded-2xl bg-amber-50 border border-amber-100 text-amber-800 p-4 text-sm">
           <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold">انتهت مدة الحجز</p>
+            <p className="font-semibold">{t.expiredTitle}</p>
             <p className="mt-0.5 text-xs leading-relaxed">
-              انقضى تاريخ انتهاء صلاحية هذا الحجز. تواصل مع الإدارة لتجديده إن كان العميل لا يزال مهتماً.
+              {t.expiredBody}
             </p>
           </div>
         </div>
@@ -164,7 +157,7 @@ export default async function PortalReservationDetailPage({
           <div className="space-y-5">
 
             {/* ── Client profile ──────────────────────────────────────── */}
-            <PremiumSectionCard title="العميل">
+            <PremiumSectionCard title={m.common.client}>
               <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-5">
                 <div className={cn(
                   'h-20 w-20 rounded-2xl flex items-center justify-center shrink-0 text-2xl font-bold ring-2 ring-white shadow-sm uppercase',
@@ -181,15 +174,15 @@ export default async function PortalReservationDetailPage({
                       href={`/portal/leads/${res.lead.id}` as never}
                       className="mt-1 inline-flex items-center gap-1.5 text-2xs text-brand-600 hover:text-brand-700 bg-brand-50 border border-brand-100 rounded-lg px-2 py-1 font-medium transition-colors"
                     >
-                      الفرصة: {res.lead.fullName}
+                      {t.leadLinkFn(res.lead.fullName)}
                     </Link>
                   )}
                   <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {clientPhone && (
-                      <ContactCell icon={<Phone className="h-4 w-4" />} tone="brand" label="رقم الهاتف" value={clientPhone} href={`tel:${clientPhone}`} />
+                      <ContactCell icon={<Phone className="h-4 w-4" />} tone="brand" label={m.common.phone} value={clientPhone} href={`tel:${clientPhone}`} />
                     )}
                     {clientEmail && (
-                      <ContactCell icon={<Mail className="h-4 w-4" />} tone="info" label="البريد الإلكتروني" value={clientEmail} href={`mailto:${clientEmail}`} />
+                      <ContactCell icon={<Mail className="h-4 w-4" />} tone="info" label={m.common.email} value={clientEmail} href={`mailto:${clientEmail}`} />
                     )}
                   </div>
                 </div>
@@ -198,7 +191,7 @@ export default async function PortalReservationDetailPage({
 
             {/* ── Unit & Project ───────────────────────────────────────── */}
             <PremiumSectionCard
-              title="الوحدة والمشروع"
+              title={m.common.unitAndProject}
               icon={<Building2 className="h-4 w-4" />}
             >
               {project ? (
@@ -208,7 +201,7 @@ export default async function PortalReservationDetailPage({
                       <Building2 className="h-4 w-4" />
                     </span>
                     <div>
-                      <p className="text-[16px] font-extrabold text-slate-900 leading-snug">{tx(project.name)}</p>
+                      <p className="text-[16px] font-extrabold text-slate-900 leading-snug">{tx(project.name, locale)}</p>
                       {project.city && (
                         <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                           <MapPin className="h-3 w-3 shrink-0 text-slate-400" />{project.city}
@@ -219,7 +212,7 @@ export default async function PortalReservationDetailPage({
                   {res.unit && (
                     <div className="flex items-center justify-between rounded-xl bg-canvas/60 ring-1 ring-inset ring-hairline px-4 py-3">
                       <div>
-                        <p className="text-2xs font-medium uppercase tracking-wide text-slate-500">الوحدة</p>
+                        <p className="text-2xs font-medium uppercase tracking-wide text-slate-500">{m.common.unit}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <CodeText className="text-sm font-bold text-slate-800">{res.unit.code}</CodeText>
                           <CodeText className="text-2xs text-slate-500">{res.unit.type}</CodeText>
@@ -227,7 +220,7 @@ export default async function PortalReservationDetailPage({
                       </div>
                       {res.unit.price != null && (
                         <div className="text-end">
-                          <p className="text-2xs font-medium uppercase tracking-wide text-slate-500">سعر الوحدة</p>
+                          <p className="text-2xs font-medium uppercase tracking-wide text-slate-500">{t.unitPrice}</p>
                           <p className="text-sm font-bold text-slate-900 tabular-nums mt-0.5">{formatCurrency(res.unit.price, currency)}</p>
                         </div>
                       )}
@@ -235,32 +228,32 @@ export default async function PortalReservationDetailPage({
                   )}
                 </div>
               ) : (
-                <p className="text-sm text-slate-400 italic">لا توجد وحدة مرتبطة</p>
+                <p className="text-sm text-slate-400 italic">{m.common.noLinkedUnit}</p>
               )}
             </PremiumSectionCard>
 
             {/* ── Locked commission ────────────────────────────────────── */}
             {hasCommission && (
               <PremiumSectionCard
-                title="العمولة المُقفلة"
+                title={m.common.lockedCommission}
                 icon={<BadgePercent className="h-4 w-4" />}
-                description="مثبتة عند إنشاء الحجز — لن تتغير بعد توقيع العقد"
+                description={t.commissionDescription}
               >
                 <MetricGrid cols={4}>
                   <MetricTile
-                    label="النسبة"
+                    label={t.pct}
                     value={<>{Number(res.commissionLockedPct).toFixed(2)}<span className="text-xl ms-0.5">%</span></>}
                     variant="accent"
                     size="lg"
                   />
                   <MetricTile
-                    label="المبلغ المُقفل"
+                    label={m.common.lockedAmount}
                     value={res.commissionLockedAmount != null ? formatCurrency(res.commissionLockedAmount, currency) : '—'}
                     size="md"
                   />
-                  <MetricTile label="قيمة الحجز" value={formatCurrency(res.bookingAmount, currency)} size="md" />
+                  <MetricTile label={t.bookingAmount} value={formatCurrency(res.bookingAmount, currency)} size="md" />
                   <MetricTile
-                    label="إجمالي الخطة"
+                    label={t.planTotal}
                     value={res.snapshotTotalPayable ? formatCurrency(res.snapshotTotalPayable, currency) : '—'}
                     size="md"
                   />
@@ -270,14 +263,14 @@ export default async function PortalReservationDetailPage({
 
             {/* ── Notes ─────────────────────────────────────────────────── */}
             {res.notes && (
-              <PremiumSectionCard title="ملاحظات">
+              <PremiumSectionCard title={m.common.notes}>
                 <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{res.notes}</p>
               </PremiumSectionCard>
             )}
 
             {/* ── Activity timeline ─────────────────────────────────────── */}
             {res.activities && res.activities.length > 0 && (
-              <PremiumSectionCard title="سجل الأحداث" icon={<Clock className="h-4 w-4" />}>
+              <PremiumSectionCard title={t.activityTitle} icon={<Clock className="h-4 w-4" />}>
                 <ol className="relative border-s border-hairline ms-2 space-y-0">
                   {res.activities.map((a, i) => {
                     const isLast = i === res.activities!.length - 1;
@@ -295,7 +288,7 @@ export default async function PortalReservationDetailPage({
                         </span>
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="text-xs font-semibold text-slate-800 leading-snug">{ACTIVITY_LABEL[a.type] ?? a.type}</p>
+                            <p className="text-xs font-semibold text-slate-800 leading-snug">{t.activity[a.type] ?? a.type}</p>
                             {a.note && <p className="text-2xs text-slate-500 mt-0.5 leading-relaxed">{a.note}</p>}
                             {a.actor?.fullName && <p className="text-2xs text-slate-400 mt-0.5">{a.actor.fullName}</p>}
                           </div>
@@ -313,54 +306,54 @@ export default async function PortalReservationDetailPage({
           <div className="space-y-4">
 
             {/* ── Quick actions ────────────────────────────────────────── */}
-            <PremiumCommandPanel title="إجراءات سريعة">
+            <PremiumCommandPanel title={m.common.quickActions}>
               {clientPhone && (
                 <a href={`tel:${clientPhone}`} className={CMD_LINK}>
                   <span className={CMD_ICON}><Phone /></span>
-                  اتصال بالعميل
+                  {m.common.callClient}
                 </a>
               )}
               {clientEmail && (
                 <a href={`mailto:${clientEmail}`} className={CMD_LINK}>
                   <span className={CMD_ICON}><Mail /></span>
-                  إرسال بريد إلكتروني
+                  {m.common.sendEmail}
                 </a>
               )}
               <Link href={'/portal/reservations' as never} className={CMD_LINK}>
                 <span className={CMD_ICON}><ArrowLeft /></span>
-                قائمة الحجوزات
+                {t.backToList}
               </Link>
             </PremiumCommandPanel>
 
             {/* ── Reservation info ─────────────────────────────────────── */}
-            <PremiumSectionCard title="معلومات الحجز">
+            <PremiumSectionCard title={t.infoTitle}>
               <dl className="flex flex-col gap-3 text-sm">
-                <InfoRow label="الحالة" icon={<ShieldCheck className="h-3.5 w-3.5" />}>
-                  <ReservationStatusBadge status={res.status} />
+                <InfoRow label={m.common.status} icon={<ShieldCheck className="h-3.5 w-3.5" />}>
+                  <ReservationStatusBadge status={res.status} locale={locale} />
                 </InfoRow>
                 {res.sales?.fullName && (
-                  <InfoRow label="المندوب" icon={<UserCog className="h-3.5 w-3.5" />}>
+                  <InfoRow label={m.common.salesRep} icon={<UserCog className="h-3.5 w-3.5" />}>
                     <span className="text-slate-700 text-xs font-medium">{res.sales.fullName}</span>
                   </InfoRow>
                 )}
-                <InfoRow label="تاريخ الإنشاء" icon={<CalendarRange className="h-3.5 w-3.5" />}>
+                <InfoRow label={m.common.createdAt} icon={<CalendarRange className="h-3.5 w-3.5" />}>
                   <span className="text-slate-700 text-xs tabular-nums">{formatDate(res.createdAt)}</span>
                 </InfoRow>
                 {res.expiresAt && (
-                  <InfoRow label="تاريخ الانتهاء" icon={<CalendarX2 className="h-3.5 w-3.5" />}>
+                  <InfoRow label={t.expiresAt} icon={<CalendarX2 className="h-3.5 w-3.5" />}>
                     <span className={cn('text-xs tabular-nums font-medium', isExpired ? 'text-amber-700' : 'text-slate-700')}>
                       {formatDate(res.expiresAt)}
-                      {isExpired && <span className="ms-1 text-2xs bg-amber-100 text-amber-700 rounded px-1.5 py-0.5">منتهي</span>}
+                      {isExpired && <span className="ms-1 text-2xs bg-amber-100 text-amber-700 rounded px-1.5 py-0.5">{t.expiredBadge}</span>}
                     </span>
                   </InfoRow>
                 )}
                 {res.status === 'CONVERTED' && (
-                  <InfoRow label="تحويل لعقد" icon={<CheckCircle2 className="h-3.5 w-3.5" />}>
-                    <span className="text-emerald-700 text-xs font-semibold">نعم</span>
+                  <InfoRow label={t.convertedToContract} icon={<CheckCircle2 className="h-3.5 w-3.5" />}>
+                    <span className="text-emerald-700 text-xs font-semibold">{t.yes}</span>
                   </InfoRow>
                 )}
                 {res.lead && (
-                  <InfoRow label="الفرصة" icon={<BadgePercent className="h-3.5 w-3.5" />}>
+                  <InfoRow label={m.common.lead} icon={<BadgePercent className="h-3.5 w-3.5" />}>
                     <Link
                       href={`/portal/leads/${res.lead.id}` as never}
                       className="text-xs text-brand-600 hover:text-brand-700 font-medium"
@@ -372,7 +365,7 @@ export default async function PortalReservationDetailPage({
                 {hasCommission && (
                   <div className="pt-2 mt-1 border-t border-hairline">
                     <div className="rounded-xl bg-amber-50 border border-amber-100 px-3 py-2.5 text-center">
-                      <p className="text-2xs text-amber-500 font-semibold uppercase tracking-wide">العمولة المُقفلة</p>
+                      <p className="text-2xs text-amber-500 font-semibold uppercase tracking-wide">{m.common.lockedCommission}</p>
                       <p className="text-2xl font-black text-amber-700 tabular-nums mt-1 leading-none">
                         {Number(res.commissionLockedPct).toFixed(2)}%
                       </p>

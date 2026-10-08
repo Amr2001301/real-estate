@@ -21,6 +21,8 @@ import type { PortalContract } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { cn } from '@/lib/cn';
+import { getLocale } from '@/lib/locale';
+import { portalReservationsContractsT } from '@/messages/portal/reservations-contracts';
 import {
   PremiumPageHero,
   PremiumDetailLayout,
@@ -93,6 +95,9 @@ export default async function PortalContractDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const locale = await getLocale();
+  const m = portalReservationsContractsT(locale);
+  const t = m.contracts.detail;
   const currency = await getReportsCurrency();
   const r = await safe(api.get<PortalContract>(`/portal/contracts/${id}`));
   if (r.error || !r.data) notFound();
@@ -116,10 +121,10 @@ export default async function PortalContractDetailPage({
     <div className="space-y-5">
       {/* Hero */}
       <PremiumPageHero
-        title={contract.contractNumber ?? 'عقد'}
+        title={contract.contractNumber ?? t.fallbackTitle}
         breadcrumbs={[
-          { label: 'البوابة', href: '/portal' },
-          { label: 'العقود', href: '/portal/contracts' },
+          { label: m.common.portal, href: '/portal' },
+          { label: m.common.contracts, href: '/portal/contracts' },
           { label: contract.contractNumber ?? id },
         ]}
         meta={
@@ -127,12 +132,12 @@ export default async function PortalContractDetailPage({
             {isSigned ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2.5 py-0.5 text-xs font-semibold">
                 <CheckCircle2 className="h-3 w-3" />
-                موقع
+                {t.signed}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 px-2.5 py-0.5 text-xs font-semibold">
                 <CalendarRange className="h-3 w-3" />
-                قيد التوقيع
+                {t.pending}
               </span>
             )}
             {contract.reservation?.reservationNumber && (
@@ -154,7 +159,7 @@ export default async function PortalContractDetailPage({
           <div className="space-y-5">
 
             {/* ── Client profile ──────────────────────────────────────── */}
-            <PremiumSectionCard title="العميل">
+            <PremiumSectionCard title={m.common.client}>
               <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-5">
                 <div className={cn(
                   'h-20 w-20 rounded-2xl flex items-center justify-center shrink-0 text-2xl font-bold ring-2 ring-white shadow-sm uppercase',
@@ -165,14 +170,14 @@ export default async function PortalContractDetailPage({
                 <div className="min-w-0">
                   <h2 className="text-xl font-semibold text-navy tracking-tight truncate">{clientName || '—'}</h2>
                   <p className="mt-1 text-sm text-slate-500">
-                    {isSigned ? 'عميل موقّع — مالك وحدة داخل المحفظة' : 'عميل في مرحلة التوقيع'}
+                    {isSigned ? t.clientSigned : t.clientSigning}
                   </p>
                   <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {clientPhone && (
-                      <ContactCell icon={<Phone className="h-4 w-4" />} tone="brand" label="رقم الهاتف" value={clientPhone} href={`tel:${clientPhone}`} />
+                      <ContactCell icon={<Phone className="h-4 w-4" />} tone="brand" label={m.common.phone} value={clientPhone} href={`tel:${clientPhone}`} />
                     )}
                     {clientEmail && (
-                      <ContactCell icon={<Mail className="h-4 w-4" />} tone="info" label="البريد الإلكتروني" value={clientEmail} href={`mailto:${clientEmail}`} />
+                      <ContactCell icon={<Mail className="h-4 w-4" />} tone="info" label={m.common.email} value={clientEmail} href={`mailto:${clientEmail}`} />
                     )}
                   </div>
                 </div>
@@ -181,7 +186,7 @@ export default async function PortalContractDetailPage({
 
             {/* ── Unit & Project ───────────────────────────────────────── */}
             <PremiumSectionCard
-              title="الوحدة والمشروع"
+              title={m.common.unitAndProject}
               icon={<Building2 className="h-4 w-4" />}
             >
               {project ? (
@@ -191,7 +196,7 @@ export default async function PortalContractDetailPage({
                       <Building2 className="h-4 w-4" />
                     </span>
                     <div>
-                      <p className="text-[16px] font-extrabold text-slate-900 leading-snug">{tx(project.name)}</p>
+                      <p className="text-[16px] font-extrabold text-slate-900 leading-snug">{tx(project.name, locale)}</p>
                       {project.city && (
                         <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                           <MapPin className="h-3 w-3 shrink-0 text-slate-400" />{project.city}
@@ -202,7 +207,7 @@ export default async function PortalContractDetailPage({
                   {contract.unit && (
                     <div className="flex items-center justify-between rounded-xl bg-canvas/60 ring-1 ring-inset ring-hairline px-4 py-3">
                       <div>
-                        <p className="text-2xs font-medium uppercase tracking-wide text-slate-500">الوحدة</p>
+                        <p className="text-2xs font-medium uppercase tracking-wide text-slate-500">{m.common.unit}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <CodeText className="text-sm font-bold text-slate-800">{contract.unit.code}</CodeText>
                           <CodeText className="text-2xs text-slate-500">{contract.unit.type}</CodeText>
@@ -212,22 +217,22 @@ export default async function PortalContractDetailPage({
                   )}
                 </div>
               ) : (
-                <p className="text-sm text-slate-400 italic">لا توجد وحدة مرتبطة</p>
+                <p className="text-sm text-slate-400 italic">{m.common.noLinkedUnit}</p>
               )}
             </PremiumSectionCard>
 
             {/* ── Financial summary ────────────────────────────────────── */}
-            <PremiumSectionCard title="الملخص المالي" icon={<Banknote className="h-4 w-4" />}>
+            <PremiumSectionCard title={t.financialTitle} icon={<Banknote className="h-4 w-4" />}>
               <MetricGrid cols={3}>
                 <MetricTile
-                  label="إجمالي العقد"
+                  label={t.contractTotal}
                   value={formatCurrency(contract.totalAmount, currency)}
                   variant="accent"
                   size="lg"
                 />
-                <MetricTile label="الدفعة المقدمة" value={formatCurrency(contract.downPayment, currency)} size="md" />
+                <MetricTile label={t.downPayment} value={formatCurrency(contract.downPayment, currency)} size="md" />
                 <MetricTile
-                  label="المبلغ المتبقي"
+                  label={t.balance}
                   value={formatCurrency(balance, currency)}
                   variant={balance > 0 ? 'default' : 'highlight'}
                   size="md"
@@ -237,35 +242,35 @@ export default async function PortalContractDetailPage({
 
             {/* ── Commission snapshot ──────────────────────────────────── */}
             <PremiumSectionCard
-              title="لقطة العمولة المُقفلة"
+              title={t.commissionTitle}
               icon={<BadgePercent className="h-4 w-4" />}
-              description={hasReservation ? 'تم تثبيت هذه القيم عند إنشاء الحجز المصدر ولن تتغير بعد توقيع العقد.' : undefined}
+              description={hasReservation ? t.commissionDescription : undefined}
             >
               {hasCommission ? (
                 <MetricGrid cols={4}>
                   <MetricTile
-                    label="النسبة المُقفلة"
+                    label={t.lockedPct}
                     value={`${Number(contract.reservation!.commissionLockedPct).toFixed(2)}%`}
                     variant="accent"
                   />
                   <MetricTile
-                    label="المبلغ المُقفل"
+                    label={m.common.lockedAmount}
                     value={
                       contract.reservation!.commissionLockedAmount != null
                         ? formatCurrency(contract.reservation!.commissionLockedAmount, currency)
                         : '—'
                     }
                   />
-                  <MetricTile label="المندوب الداخلي" value={contract.reservation!.sales?.fullName ?? '—'} />
-                  <MetricTile label="الفرصة" value={contract.reservation!.lead?.fullName ?? '—'} />
+                  <MetricTile label={t.internalSales} value={contract.reservation!.sales?.fullName ?? '—'} />
+                  <MetricTile label={m.common.lead} value={contract.reservation!.lead?.fullName ?? '—'} />
                 </MetricGrid>
               ) : (
                 <div className="flex items-start gap-3 py-2 text-slate-400">
                   <BadgePercent className="h-5 w-5 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm text-slate-500 font-medium">لا يوجد حجز مصدر مرتبط</p>
+                    <p className="text-sm text-slate-500 font-medium">{t.noReservation}</p>
                     <p className="text-2xs text-slate-400 mt-0.5 leading-relaxed">
-                      ستُعرض قيم العمولة المُقفلة هنا تلقائياً بعد ربط الحجز بهذا العقد.
+                      {t.noReservationHint}
                     </p>
                   </div>
                 </div>
@@ -274,18 +279,18 @@ export default async function PortalContractDetailPage({
 
             {/* ── Installment plan ─────────────────────────────────────── */}
             {contract.installmentPlan && (
-              <PremiumSectionCard title="خطة التقسيط" icon={<CalendarRange className="h-4 w-4" />}>
+              <PremiumSectionCard title={t.installmentTitle} icon={<CalendarRange className="h-4 w-4" />}>
                 <MetricGrid cols={3}>
-                  <MetricTile label="مدة التقسيط" value={`${contract.installmentPlan.totalMonths} شهر`} />
-                  <MetricTile label="القسط الشهري" value={formatCurrency(contract.installmentPlan.monthlyAmount, currency)} size="md" />
-                  <MetricTile label="تاريخ أول قسط" value={formatDate(contract.installmentPlan.startsAt)} />
+                  <MetricTile label={t.duration} value={m.common.monthsFn(contract.installmentPlan.totalMonths)} />
+                  <MetricTile label={t.monthly} value={formatCurrency(contract.installmentPlan.monthlyAmount, currency)} size="md" />
+                  <MetricTile label={t.firstInstallment} value={formatDate(contract.installmentPlan.startsAt)} />
                 </MetricGrid>
               </PremiumSectionCard>
             )}
 
             {/* ── Contract PDF ─────────────────────────────────────────── */}
             {contract.pdfUrl && (
-              <PremiumSectionCard title="ملف العقد" icon={<FileText className="h-4 w-4" />}>
+              <PremiumSectionCard title={t.pdfTitle} icon={<FileText className="h-4 w-4" />}>
                 <a
                   href={contract.pdfUrl}
                   target="_blank"
@@ -294,7 +299,7 @@ export default async function PortalContractDetailPage({
                   dir="ltr"
                 >
                   <ExternalLink className="h-4 w-4" />
-                  فتح الملف (PDF)
+                  {t.openPdf}
                 </a>
               </PremiumSectionCard>
             )}
@@ -304,55 +309,55 @@ export default async function PortalContractDetailPage({
           <div className="space-y-4">
 
             {/* ── Quick actions ────────────────────────────────────────── */}
-            <PremiumCommandPanel title="إجراءات سريعة">
+            <PremiumCommandPanel title={m.common.quickActions}>
               {clientPhone && (
                 <a href={`tel:${clientPhone}`} className={CMD_LINK}>
                   <span className={CMD_ICON}><Phone /></span>
-                  اتصال بالعميل
+                  {m.common.callClient}
                 </a>
               )}
               {clientEmail && (
                 <a href={`mailto:${clientEmail}`} className={CMD_LINK}>
                   <span className={CMD_ICON}><Mail /></span>
-                  إرسال بريد إلكتروني
+                  {m.common.sendEmail}
                 </a>
               )}
               {contract.pdfUrl && (
                 <a href={contract.pdfUrl} target="_blank" rel="noopener noreferrer" className={CMD_LINK}>
                   <span className={CMD_ICON}><ExternalLink /></span>
-                  فتح ملف العقد
+                  {t.openContractFile}
                 </a>
               )}
               <Link href={'/portal/contracts' as never} className={CMD_LINK}>
                 <span className={CMD_ICON}><ArrowLeft /></span>
-                قائمة العقود
+                {t.backToList}
               </Link>
             </PremiumCommandPanel>
 
             {/* ── Contract info ─────────────────────────────────────────── */}
-            <PremiumSectionCard title="معلومات العقد">
+            <PremiumSectionCard title={t.infoTitle}>
               <dl className="flex flex-col gap-3 text-sm">
-                <InfoRow label="الحالة" icon={<ShieldCheck className="h-3.5 w-3.5" />}>
+                <InfoRow label={m.common.status} icon={<ShieldCheck className="h-3.5 w-3.5" />}>
                   {isSigned ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-2xs font-semibold">
-                      <CheckCircle2 className="h-2.5 w-2.5" />موقع
+                      <CheckCircle2 className="h-2.5 w-2.5" />{t.signed}
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-2xs font-semibold">
-                      <CalendarRange className="h-2.5 w-2.5" />قيد التوقيع
+                      <CalendarRange className="h-2.5 w-2.5" />{t.pending}
                     </span>
                   )}
                 </InfoRow>
-                <InfoRow label="تاريخ الإنشاء" icon={<CalendarRange className="h-3.5 w-3.5" />}>
+                <InfoRow label={m.common.createdAt} icon={<CalendarRange className="h-3.5 w-3.5" />}>
                   <span className="text-slate-700 text-xs tabular-nums">{formatDate(contract.createdAt)}</span>
                 </InfoRow>
                 {isSigned && (
-                  <InfoRow label="تاريخ التوقيع" icon={<CheckCircle2 className="h-3.5 w-3.5" />}>
+                  <InfoRow label={t.signedAt} icon={<CheckCircle2 className="h-3.5 w-3.5" />}>
                     <span className="text-emerald-700 text-xs font-semibold tabular-nums">{formatDate(contract.signedAt!)}</span>
                   </InfoRow>
                 )}
                 {contract.reservation && (
-                  <InfoRow label="رقم الحجز" icon={<BookmarkCheck className="h-3.5 w-3.5" />}>
+                  <InfoRow label={t.reservationNumber} icon={<BookmarkCheck className="h-3.5 w-3.5" />}>
                     <Link
                       href={`/portal/reservations/${contract.reservation.id}` as never}
                       className="text-xs text-brand-600 hover:text-brand-700 font-medium"
@@ -362,7 +367,7 @@ export default async function PortalContractDetailPage({
                   </InfoRow>
                 )}
                 {contract.reservation?.sales?.fullName && (
-                  <InfoRow label="المندوب" icon={<UserCog className="h-3.5 w-3.5" />}>
+                  <InfoRow label={m.common.salesRep} icon={<UserCog className="h-3.5 w-3.5" />}>
                     <span className="text-slate-700 text-xs font-medium">{contract.reservation.sales.fullName}</span>
                   </InfoRow>
                 )}
@@ -371,7 +376,7 @@ export default async function PortalContractDetailPage({
                 {hasCommission && (
                   <div className="pt-2 mt-1 border-t border-hairline">
                     <div className="rounded-xl bg-amber-50 border border-amber-100 px-3 py-2.5 text-center">
-                      <p className="text-2xs text-amber-500 font-semibold uppercase tracking-wide">العمولة المُقفلة</p>
+                      <p className="text-2xs text-amber-500 font-semibold uppercase tracking-wide">{m.common.lockedCommission}</p>
                       <p className="text-2xl font-black text-amber-700 tabular-nums mt-1 leading-none">
                         {Number(contract.reservation!.commissionLockedPct).toFixed(2)}%
                       </p>

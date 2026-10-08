@@ -19,18 +19,14 @@ import {
 import { api, safe } from '@/lib/api';
 import type { PortalMe } from '@/lib/types';
 import { formatDate } from '@/lib/format';
+import { getLocale } from '@/lib/locale';
+import { portalMoneyTeamT } from '@/messages/portal/money-team';
 import { cn } from '@/lib/cn';
 import { CodeText } from '@/components/ui/code-text';
 import { BrokerStatusBadge, BrokerUserStatusBadge } from '@/components/badges';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
-
-const COMMISSION_MODEL_LABEL: Record<string, string> = {
-  PERCENT_OF_SALE: 'نسبة مئوية من قيمة البيع',
-  FIXED_PER_UNIT:  'مبلغ ثابت لكل وحدة',
-  TIERED:          'شرائح متعددة',
-};
 
 const AVATAR_PALETTE = [
   'bg-emerald-100 text-emerald-800',
@@ -58,7 +54,7 @@ function contractDaysLeft(endAt: string | null | undefined): number | null {
 }
 
 /** Muted empty-state placeholder for missing values */
-function Empty({ text = 'غير متوفر' }: { text?: string }) {
+function Empty({ text }: { text: string }) {
   return <span className="text-slate-300 text-xs font-normal">{text}</span>;
 }
 
@@ -117,10 +113,14 @@ function PermissionRow({
   icon,
   label,
   allowed,
+  allowedText,
+  deniedText,
 }: {
   icon: ReactNode;
   label: string;
   allowed: boolean;
+  allowedText: string;
+  deniedText: string;
 }) {
   return (
     <li className="flex items-center gap-3 py-2.5 border-b border-hairline last:border-0">
@@ -139,26 +139,28 @@ function PermissionRow({
           allowed ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-50 text-slate-400',
         )}
       >
-        {allowed ? 'مسموح' : 'محظور'}
+        {allowed ? allowedText : deniedText}
       </span>
     </li>
   );
 }
 
 export default async function PortalProfilePage() {
+  const locale = await getLocale();
+  const t = portalMoneyTeamT(locale).profile;
   const r = await safe(api.get<PortalMe>('/portal/profile'));
 
   if (r.error || !r.data) {
     return (
       <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-6 text-sm">
         <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-        تعذر تحميل بيانات الملف الشخصي: {r.error ?? 'غير متاحة'}
+        {t.loadError(r.error ?? t.loadErrorFallback)}
       </div>
     );
   }
 
   const me              = r.data;
-  const commissionModel = COMMISSION_MODEL_LABEL[me.broker.commissionModel] ?? me.broker.commissionModel;
+  const commissionModel = t.commissionModel[me.broker.commissionModel] ?? me.broker.commissionModel;
   const daysLeft        = contractDaysLeft(me.broker.contractEndAt);
   const contractExpiringSoon = daysLeft !== null && daysLeft >= 0 && daysLeft <= 30;
   const contractExpired      = daysLeft !== null && daysLeft < 0;
@@ -173,8 +175,8 @@ export default async function PortalProfilePage() {
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
           <div>
-            <p className="font-bold">انتهى عقد الوساطة</p>
-            <p className="text-2xs mt-0.5 text-danger-600">تواصل مع إدارة المنصة لتجديد العقد والحفاظ على وصولك الكامل.</p>
+            <p className="font-bold">{t.contractExpiredTitle}</p>
+            <p className="text-2xs mt-0.5 text-danger-600">{t.contractExpiredBody}</p>
           </div>
         </div>
       )}
@@ -182,8 +184,8 @@ export default async function PortalProfilePage() {
         <div className="flex items-start gap-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 p-4 text-sm">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
           <div>
-            <p className="font-bold">عقد الوساطة ينتهي خلال {daysLeft} يوم</p>
-            <p className="text-2xs mt-0.5 text-amber-700">تواصل مع إدارة المنصة لتجديد العقد في أقرب وقت.</p>
+            <p className="font-bold">{t.contractExpiringTitle(daysLeft!)}</p>
+            <p className="text-2xs mt-0.5 text-amber-700">{t.contractExpiringBody}</p>
           </div>
         </div>
       )}
@@ -208,13 +210,13 @@ export default async function PortalProfilePage() {
             <div className="min-w-0 flex-1 pt-0.5">
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 <h1 className="text-xl sm:text-2xl font-bold text-slate-900 truncate">
-                  {me.user.fullName ?? <Empty text="بدون اسم" />}
+                  {me.user.fullName ?? <Empty text={t.noName} />}
                 </h1>
-                <BrokerUserStatusBadge status={me.brokerUser.status} />
+                <BrokerUserStatusBadge status={me.brokerUser.status} locale={locale} />
                 {me.brokerUser.isPrimaryContact && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-xs font-semibold">
                     <Star className="h-3 w-3 fill-current" />
-                    جهة اتصال رئيسية
+                    {t.primaryContact}
                   </span>
                 )}
               </div>
@@ -232,39 +234,39 @@ export default async function PortalProfilePage() {
 
           {/* Info strip — user account fields only */}
           <div className="mt-4 pt-4 border-t border-hairline">
-            <p className="text-2xs font-semibold uppercase tracking-wide text-slate-300 mb-3">بيانات حساب المستخدم</p>
+            <p className="text-2xs font-semibold uppercase tracking-wide text-slate-300 mb-3">{t.accountSection}</p>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
               <IdentityCell
                 icon={<Mail />}
-                label="البريد الإلكتروني للحساب"
+                label={t.accountEmail}
                 value={me.user.email ? (
                   <a href={`mailto:${me.user.email}`} className="hover:text-brand-700 transition-colors" dir="ltr">
                     {me.user.email}
                   </a>
-                ) : <Empty />}
+                ) : <Empty text={t.notAvailable} />}
               />
               <IdentityCell
                 icon={<Phone />}
-                label="رقم جوال المستخدم"
+                label={t.userPhone}
                 value={me.user.phone
                   ? <a href={`tel:${me.user.phone}`} className="hover:text-brand-700 transition-colors" dir="ltr">{me.user.phone}</a>
-                  : <Empty text="غير محدد" />
+                  : <Empty text={t.notSet} />
                 }
               />
               <IdentityCell
                 icon={<CalendarRange />}
-                label="تاريخ الانضمام"
+                label={t.joinedAt}
                 value={me.brokerUser.joinedAt ?? me.brokerUser.invitedAt
                   ? formatDate(me.brokerUser.joinedAt ?? me.brokerUser.invitedAt)
-                  : <Empty />
+                  : <Empty text={t.notAvailable} />
                 }
               />
               <IdentityCell
                 icon={<CalendarDays />}
-                label="آخر دخول"
+                label={t.lastLogin}
                 value={me.user.lastLoginAt
                   ? formatDate(me.user.lastLoginAt)
-                  : <span className="text-slate-400 text-xs font-normal">لم يسجل دخولاً بعد</span>
+                  : <span className="text-slate-400 text-xs font-normal">{t.neverLoggedIn}</span>
                 }
               />
             </div>
@@ -294,7 +296,7 @@ export default async function PortalProfilePage() {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2 mb-0.5">
                 <h2 className="text-base font-bold text-slate-900">{me.broker.companyName}</h2>
-                <BrokerStatusBadge status={me.broker.status} />
+                <BrokerStatusBadge status={me.broker.status} locale={locale} />
               </div>
               <p className="flex items-center gap-1.5 text-2xs text-slate-400">
                 <CodeText className="text-2xs font-medium text-slate-500">{me.broker.code}</CodeText>
@@ -311,32 +313,32 @@ export default async function PortalProfilePage() {
           <div className="p-5 space-y-0">
             {/* Contact + location */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
-              <CompanyRow icon={<Mail />}   label="البريد الإلكتروني للشركة" dir="ltr"
+              <CompanyRow icon={<Mail />}   label={t.companyEmail} dir="ltr"
                 value={me.broker.email
                   ? <a href={`mailto:${me.broker.email}`} className="hover:text-brand-700 transition-colors">{me.broker.email}</a>
-                  : <Empty />}
+                  : <Empty text={t.notAvailable} />}
               />
-              <CompanyRow icon={<Phone />}  label="هاتف الشركة" dir="ltr"
+              <CompanyRow icon={<Phone />}  label={t.companyPhone} dir="ltr"
                 value={me.broker.phone
                   ? <a href={`tel:${me.broker.phone}`} className="hover:text-brand-700 transition-colors">{me.broker.phone}</a>
-                  : <Empty />}
+                  : <Empty text={t.notAvailable} />}
               />
-              <CompanyRow icon={<MapPin />} label="المدينة"
-                value={me.broker.city ?? <Empty text="غير محددة" />}
+              <CompanyRow icon={<MapPin />} label={t.city}
+                value={me.broker.city ?? <Empty text={t.notSetFem} />}
               />
-              <CompanyRow icon={<MapPin />} label="العنوان"
-                value={me.broker.address ?? <Empty text="غير محدد" />}
+              <CompanyRow icon={<MapPin />} label={t.address}
+                value={me.broker.address ?? <Empty text={t.notSet} />}
               />
             </div>
 
             {/* Commission highlight */}
             <div className="mt-4 pt-4 border-t border-hairline grid grid-cols-2 gap-3">
               <div className="rounded-xl bg-brand-50/50 border border-brand-100/60 px-4 py-3">
-                <p className="text-2xs font-semibold text-brand-600/80 mb-1.5">نموذج العمولة</p>
+                <p className="text-2xs font-semibold text-brand-600/80 mb-1.5">{t.commissionModelLabel}</p>
                 <p className="text-sm font-bold text-brand-800 leading-snug">{commissionModel}</p>
               </div>
               <div className="rounded-xl bg-brand-50/50 border border-brand-100/60 px-4 py-3">
-                <p className="text-2xs font-semibold text-brand-600/80 mb-1.5">النسبة الافتراضية</p>
+                <p className="text-2xs font-semibold text-brand-600/80 mb-1.5">{t.defaultRate}</p>
                 <p className="text-2xl font-black text-brand-700 tabular-nums leading-none">
                   {Number(me.broker.defaultCommissionPct ?? 0).toFixed(2)}
                   <span className="text-base font-bold ms-0.5">%</span>
@@ -346,30 +348,30 @@ export default async function PortalProfilePage() {
 
             {/* Contract dates */}
             <div className="mt-4 pt-4 border-t border-hairline">
-              <p className="text-2xs font-semibold uppercase tracking-wide text-slate-400 mb-3">مدة الاتفاقية</p>
+              <p className="text-2xs font-semibold uppercase tracking-wide text-slate-400 mb-3">{t.agreementTerm}</p>
               {hasContractDates ? (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-2xs text-slate-400 mb-1">بداية العقد</p>
+                    <p className="text-2xs text-slate-400 mb-1">{t.contractStart}</p>
                     <p className="text-sm font-medium text-slate-800">
-                      {me.broker.contractStartAt ? formatDate(me.broker.contractStartAt) : <Empty />}
+                      {me.broker.contractStartAt ? formatDate(me.broker.contractStartAt) : <Empty text={t.notAvailable} />}
                     </p>
                   </div>
                   <div>
-                    <p className="text-2xs text-slate-400 mb-1">نهاية العقد</p>
+                    <p className="text-2xs text-slate-400 mb-1">{t.contractEnd}</p>
                     <p className={cn(
                       'text-sm font-medium flex items-center gap-2 flex-wrap',
                       contractExpired ? 'text-red-600' : contractExpiringSoon ? 'text-amber-700' : 'text-slate-800',
                     )}>
                       {me.broker.contractEndAt
                         ? formatDate(me.broker.contractEndAt)
-                        : <Empty />
+                        : <Empty text={t.notAvailable} />
                       }
                       {contractExpired && (
-                        <span className="text-2xs font-bold bg-red-100 text-red-700 rounded-full px-2 py-0.5">منتهي</span>
+                        <span className="text-2xs font-bold bg-red-100 text-red-700 rounded-full px-2 py-0.5">{t.expired}</span>
                       )}
                       {contractExpiringSoon && !contractExpired && (
-                        <span className="text-2xs font-bold bg-amber-100 text-amber-700 rounded-full px-2 py-0.5">{daysLeft} يوم متبقٍ</span>
+                        <span className="text-2xs font-bold bg-amber-100 text-amber-700 rounded-full px-2 py-0.5">{t.daysLeft(daysLeft!)}</span>
                       )}
                     </p>
                   </div>
@@ -377,7 +379,7 @@ export default async function PortalProfilePage() {
               ) : (
                 <div className="flex items-center gap-2 text-slate-300">
                   <CalendarRange className="h-4 w-4 shrink-0" />
-                  <p className="text-sm">تواريخ العقد غير مُحددة — تواصل مع إدارة المنصة</p>
+                  <p className="text-sm">{t.noContractDates}</p>
                 </div>
               )}
               {me.broker.contractPdfUrl && (
@@ -389,7 +391,7 @@ export default async function PortalProfilePage() {
                   dir="ltr"
                 >
                   <FileText className="h-3.5 w-3.5" />
-                  فتح ملف العقد
+                  {t.openContract}
                   <ExternalLink className="h-3 w-3 opacity-60" />
                 </a>
               )}
@@ -401,33 +403,39 @@ export default async function PortalProfilePage() {
         <div className="bg-surface border border-hairline rounded-[20px] shadow-soft p-5">
           <div className="flex items-center gap-2 mb-1">
             <ShieldCheck className="h-4 w-4 text-brand-600 shrink-0" />
-            <h2 className="text-sm font-bold text-slate-900">صلاحياتك</h2>
+            <h2 className="text-sm font-bold text-slate-900">{t.permissionsTitle}</h2>
           </div>
           <p className="text-2xs text-slate-400 mb-4 leading-relaxed">
-            الصلاحيات الممنوحة لحسابك داخل بوابة الوسيط.
+            {t.permissionsDescription}
           </p>
 
           <ul>
             <PermissionRow
               icon={<Star />}
-              label="جهة اتصال رئيسية"
+              label={t.perms.primaryContact}
               allowed={me.permissions.isPrimaryContact}
+              allowedText={t.allowed}
+              deniedText={t.denied}
             />
             <PermissionRow
               icon={<Users />}
-              label="إدارة أعضاء الفريق"
+              label={t.perms.manageTeam}
               allowed={me.permissions.canManageBrokerUsers}
+              allowedText={t.allowed}
+              deniedText={t.denied}
             />
             <PermissionRow
               icon={<BadgePercent />}
-              label="عرض العمولات"
+              label={t.perms.viewCommissions}
               allowed={me.permissions.canViewCommissions}
+              allowedText={t.allowed}
+              deniedText={t.denied}
             />
           </ul>
 
           <div className="mt-4 pt-4 border-t border-hairline flex items-start gap-2 text-2xs text-slate-400 leading-relaxed">
             <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-slate-300" />
-            <p>لتعديل أي بيانات أو صلاحيات، تواصل مع مدير الحساب أو إدارة المنصة.</p>
+            <p>{t.footer}</p>
           </div>
         </div>
 

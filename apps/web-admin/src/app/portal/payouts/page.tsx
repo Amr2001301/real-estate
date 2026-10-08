@@ -13,6 +13,8 @@ import { api, safe } from '@/lib/api';
 import type { Paged, PortalPayout } from '@/lib/types';
 import { formatDate, formatCurrency } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
+import { getLocale } from '@/lib/locale';
+import { portalMoneyTeamT } from '@/messages/portal/money-team';
 import { cn } from '@/lib/cn';
 import { IconButton } from '@/components/ui/icon-button';
 import { Pagination } from '@/components/ui/pagination';
@@ -27,13 +29,6 @@ import {
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
-
-const METHOD_LABEL: Record<string, string> = {
-  BANK_TRANSFER: 'تحويل بنكي',
-  CHEQUE:        'شيك',
-  CASH:          'نقدي',
-  OTHER:         'أخرى',
-};
 
 interface Search {
   page?: string;
@@ -52,6 +47,9 @@ export default async function PortalPayoutsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const locale = await getLocale();
+  const m = portalMoneyTeamT(locale);
+  const t = m.payouts.list;
   const currency = await getReportsCurrency();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
@@ -83,49 +81,49 @@ export default async function PortalPayoutsPage({
     <div className="space-y-5">
 
       <PremiumPageHero
-        title="مدفوعاتي"
-        description="الدفعات المالية المرتبطة بعمولاتك — دفعة «مدفوعة» تعني أن الإدارة صرفتها وسجّلتها."
+        title={t.title}
+        description={t.description}
         breadcrumbs={[
-          { label: 'البوابة', href: '/portal' },
-          { label: 'المدفوعات' },
+          { label: m.common.breadcrumbPortal, href: '/portal' },
+          { label: t.breadcrumb },
         ]}
       />
 
       {r.error && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          تعذر تحميل المدفوعات: {r.error}
+          {t.loadError(r.error)}
         </div>
       )}
 
       <PremiumMetricStrip
         variant="compact"
         metrics={[
-          { label: 'إجمالي الدفعات',       value: paged?.meta.total ?? 0, icon: <Wallet />,          tone: 'brand'   },
-          { label: 'مدفوعة',               value: paidCount,              icon: <CircleDollarSign />, tone: 'success' },
-          { label: 'قيد التنفيذ',           value: processingCount,        icon: <Loader2 />,          tone: 'warning' },
-          { label: 'معتمدة — بانتظار صرف', value: approvedCount,           icon: <Clock />,            tone: 'info'    },
+          { label: t.metrics.total, value: paged?.meta.total ?? 0, icon: <Wallet />,          tone: 'brand'   },
+          { label: t.metrics.paid, value: paidCount,              icon: <CircleDollarSign />, tone: 'success' },
+          { label: t.metrics.processing, value: processingCount,        icon: <Loader2 />,          tone: 'warning' },
+          { label: t.metrics.approved, value: approvedCount,           icon: <Clock />,            tone: 'info'    },
         ]}
       />
 
-      <PayoutsFilterBar sp={{ q: sp.q, status: sp.status, period: sp.period, from: sp.from, to: sp.to }} />
+      <PayoutsFilterBar locale={locale} sp={{ q: sp.q, status: sp.status, period: sp.period, from: sp.from, to: sp.to }} />
 
       <PremiumSectionCard
         icon={<Wallet />}
-        title="قائمة المدفوعات"
+        title={t.tableTitle}
         padded={false}
       >
         {rows.length > 0 && (
           <div className="flex items-center gap-4 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
             <div className="flex items-center gap-1.5">
               <span className="font-bold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
-              <span>دفعة</span>
+              <span>{t.countUnit}</span>
             </div>
             {pageNet > 0 && (
               <>
                 <div className="w-px h-4 bg-hairline" />
                 <span>
-                  صافي الصفحة:{' '}
+                  {t.pageNet}{' '}
                   <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(pageNet, currency)}</span>
                 </span>
               </>
@@ -134,7 +132,7 @@ export default async function PortalPayoutsPage({
               <>
                 <div className="w-px h-4 bg-hairline" />
                 <span>
-                  مدفوع منها:{' '}
+                  {t.paidOf}{' '}
                   <span className="font-semibold text-success-700 tabular-nums">{formatCurrency(paidNet, currency)}</span>
                 </span>
               </>
@@ -146,11 +144,11 @@ export default async function PortalPayoutsPage({
           <table className="w-full text-sm">
             <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">الدفعة / الفترة</th>
-                <th className="text-start font-semibold py-3 px-4">الصافي</th>
-                <th className="text-start font-semibold py-3 px-4">الحالة</th>
-                <th className="text-start font-semibold py-3 px-4">طريقة الصرف</th>
-                <th className="text-start font-semibold py-3 px-4">المرجع</th>
+                <th className="text-start font-semibold py-3 ps-5 pe-4">{t.cols.payoutPeriod}</th>
+                <th className="text-start font-semibold py-3 px-4">{t.cols.net}</th>
+                <th className="text-start font-semibold py-3 px-4">{t.cols.status}</th>
+                <th className="text-start font-semibold py-3 px-4">{t.cols.method}</th>
+                <th className="text-start font-semibold py-3 px-4">{t.cols.reference}</th>
                 <th className="py-3 ps-4 pe-5 w-px"></th>
               </tr>
             </thead>
@@ -160,8 +158,8 @@ export default async function PortalPayoutsPage({
                   <td colSpan={6} className="p-0">
                     <EmptyState
                       icon={<Wallet />}
-                      title="لا توجد مدفوعات بعد"
-                      description="تظهر هنا عندما تجمّع الإدارة عمولاتك في دفعة وتعتمدها."
+                      title={t.emptyTitle}
+                      description={t.emptyDescription}
                     />
                   </td>
                 </tr>
@@ -211,25 +209,25 @@ export default async function PortalPayoutsPage({
                       {isPaid && (
                         <p className="text-2xs text-success-600 mt-0.5 flex items-center gap-0.5 font-medium">
                           <CheckCircle2 className="h-3 w-3 shrink-0" />
-                          تم الصرف
+                          {t.paidOut}
                         </p>
                       )}
                       {isProcessing && (
                         <p className="text-2xs text-amber-600 mt-0.5 flex items-center gap-0.5 font-medium">
                           <Loader2 className="h-3 w-3 shrink-0" />
-                          قيد التنفيذ
+                          {t.processing}
                         </p>
                       )}
                     </td>
 
                     <td className="py-3 px-4">
-                      <BrokerPayoutStatusBadge status={p.status} />
+                      <BrokerPayoutStatusBadge status={p.status} locale={locale} />
                     </td>
 
                     <td className="py-3 px-4">
                       <p className="text-xs text-slate-700">
                         {p.paymentMethod ? (
-                          METHOD_LABEL[p.paymentMethod] ?? p.paymentMethod
+                          m.payouts.method[p.paymentMethod] ?? p.paymentMethod
                         ) : (
                           <span className="text-slate-400">—</span>
                         )}
@@ -240,7 +238,7 @@ export default async function PortalPayoutsPage({
                         ) : (
                           <span className="text-slate-400 inline-flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            لم يُصرف بعد
+                            {t.notPaidYet}
                           </span>
                         )}
                       </p>
@@ -256,7 +254,7 @@ export default async function PortalPayoutsPage({
 
                     <td className="py-3 ps-4 pe-5">
                       <Link href={`/portal/payouts/${p.id}` as never}>
-                        <IconButton label="عرض" variant="ghost" size="sm">
+                        <IconButton label={m.common.view} variant="ghost" size="sm">
                           <Eye />
                         </IconButton>
                       </Link>
@@ -274,13 +272,14 @@ export default async function PortalPayoutsPage({
             pageSize={paged.meta.pageSize}
             total={paged.meta.total}
             basePath="/portal/payouts"
+            locale={locale}
             params={{ q: sp.q, status: sp.status, period: sp.period, from: sp.from, to: sp.to }}
           />
         )}
       </PremiumSectionCard>
 
       <p className="text-2xs text-slate-400 text-center">
-        الدفعة «مدفوعة» تعني أن الإدارة صرفتها خارجياً (تحويل بنكي / شيك) وسجّلتها في النظام. تواصل مع إدارتك للاستفسار.
+        {t.footnote}
       </p>
     </div>
   );

@@ -36,6 +36,8 @@ import type {
 import { tx, formatDate, formatDateTime, formatCompact } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { cn } from '@/lib/cn';
+import { getLocale } from '@/lib/locale';
+import { portalDashboardT } from '@/messages/portal/dashboard';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { BrokerStatusBadge, BrokerLeadStatusBadge } from '@/components/badges';
@@ -46,6 +48,7 @@ export const fetchCache = 'force-no-store';
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 type PerfSummary = PortalPerformanceResponse['summary'];
+type Messages = ReturnType<typeof portalDashboardT>;
 
 function convPct(num: number, denom: number): string | null {
   if (denom <= 0) return null;
@@ -85,24 +88,24 @@ function SectionLabel({ children, icon }: { children: ReactNode; icon?: ReactNod
 
 // ── Activity meta ─────────────────────────────────────────────────────────────
 
-const ACTIVITY_META: Record<PortalActivityType, { label: string; color: string }> = {
-  LEAD_SUBMITTED:        { label: 'إرسال فرصة',       color: 'bg-blue-50 text-blue-600'       },
-  VISIT_REQUESTED:       { label: 'طلب زيارة',         color: 'bg-purple-50 text-purple-600'   },
-  LEAD_APPROVED:         { label: 'اعتماد فرصة',       color: 'bg-green-50 text-green-600'     },
-  LEAD_REJECTED:         { label: 'رفض فرصة',          color: 'bg-red-50 text-red-500'         },
-  LEAD_MARKED_DUPLICATE: { label: 'فرصة مكررة',        color: 'bg-amber-50 text-amber-600'     },
-  RESERVATION_CREATED:   { label: 'إنشاء حجز',         color: 'bg-indigo-50 text-indigo-600'   },
-  CONTRACT_CREATED:      { label: 'إنشاء عقد',         color: 'bg-cyan-50 text-cyan-600'       },
-  CONTRACT_SIGNED:       { label: 'توقيع عقد',         color: 'bg-emerald-50 text-emerald-600' },
-  COMMISSION_EARNED:     { label: 'استحقاق عمولة',     color: 'bg-teal-50 text-teal-600'       },
-  COMMISSION_APPROVED:   { label: 'اعتماد عمولة',      color: 'bg-green-50 text-green-600'     },
-  COMMISSION_REJECTED:   { label: 'رفض عمولة',         color: 'bg-red-50 text-red-500'         },
-  COMMISSION_CANCELLED:  { label: 'إلغاء عمولة',       color: 'bg-slate-100 text-slate-500'    },
-  PAYOUT_CREATED:        { label: 'إنشاء دفعة',        color: 'bg-blue-50 text-blue-600'       },
-  PAYOUT_APPROVED:       { label: 'اعتماد دفعة',       color: 'bg-cyan-50 text-cyan-600'       },
-  PAYOUT_PROCESSING:     { label: 'دفعة قيد التنفيذ',  color: 'bg-amber-50 text-amber-600'     },
-  PAYOUT_PAID:           { label: 'صرف دفعة',          color: 'bg-emerald-50 text-emerald-600' },
-  PAYOUT_CANCELLED:      { label: 'إلغاء دفعة',        color: 'bg-slate-100 text-slate-500'    },
+const ACTIVITY_META: Record<PortalActivityType, { color: string }> = {
+  LEAD_SUBMITTED:        { color: 'bg-blue-50 text-blue-600'       },
+  VISIT_REQUESTED:       { color: 'bg-purple-50 text-purple-600'   },
+  LEAD_APPROVED:         { color: 'bg-green-50 text-green-600'     },
+  LEAD_REJECTED:         { color: 'bg-red-50 text-red-500'         },
+  LEAD_MARKED_DUPLICATE: { color: 'bg-amber-50 text-amber-600'     },
+  RESERVATION_CREATED:   { color: 'bg-indigo-50 text-indigo-600'   },
+  CONTRACT_CREATED:      { color: 'bg-cyan-50 text-cyan-600'       },
+  CONTRACT_SIGNED:       { color: 'bg-emerald-50 text-emerald-600' },
+  COMMISSION_EARNED:     { color: 'bg-teal-50 text-teal-600'       },
+  COMMISSION_APPROVED:   { color: 'bg-green-50 text-green-600'     },
+  COMMISSION_REJECTED:   { color: 'bg-red-50 text-red-500'         },
+  COMMISSION_CANCELLED:  { color: 'bg-slate-100 text-slate-500'    },
+  PAYOUT_CREATED:        { color: 'bg-blue-50 text-blue-600'       },
+  PAYOUT_APPROVED:       { color: 'bg-cyan-50 text-cyan-600'       },
+  PAYOUT_PROCESSING:     { color: 'bg-amber-50 text-amber-600'     },
+  PAYOUT_PAID:           { color: 'bg-emerald-50 text-emerald-600' },
+  PAYOUT_CANCELLED:      { color: 'bg-slate-100 text-slate-500'    },
 };
 
 function ActivityIcon({ type }: { type: PortalActivityType }) {
@@ -130,7 +133,8 @@ function ActivityIcon({ type }: { type: PortalActivityType }) {
 
 // ── Broker KPI Strip ──────────────────────────────────────────────────────────
 
-function BrokerKpiStrip({ perf, symbol }: { perf: PerfSummary | undefined; symbol?: string }) {
+function BrokerKpiStrip({ perf, symbol, m }: { perf: PerfSummary | undefined; symbol?: string; m: Messages }) {
+  const k = m.home.kpi;
   const submitted      = perf?.leadsSubmitted      ?? 0;
   const approved       = perf?.leadsApproved       ?? 0;
   const reservations   = perf?.reservationsCreated ?? 0;
@@ -145,42 +149,42 @@ function BrokerKpiStrip({ perf, symbol }: { perf: PerfSummary | undefined; symbo
 
   const tiles = [
     {
-      label:    'فرص مُرسلة',
+      label:    k.leadsSubmitted,
       value:    perf ? String(submitted) : '—',
       sub:      approvalRate !== null
-                  ? `${approved} معتمدة · ${approvalRate}% قبول`
-                  : 'لا فرص مُرسلة بعد',
+                  ? k.leadsSubFn(approved, approvalRate)
+                  : k.noLeads,
       valueCls: 'text-brand-700',
       topBar:   'from-brand-300 via-brand-500 to-brand-300',
       icon:     <UserPlus />,
       iconCls:  'bg-brand-50 text-brand-600 ring-1 ring-brand-100',
     },
     {
-      label:    'عقود موقّعة',
+      label:    k.contractsSigned,
       value:    perf ? String(contracts) : '—',
       sub:      closingRate !== null
-                  ? `${reservations} حجوزات · ${closingRate}% إغلاق`
-                  : 'لا عقود بعد',
+                  ? k.contractsSubFn(reservations, closingRate)
+                  : k.noContracts,
       valueCls: 'text-emerald-700',
       topBar:   'from-emerald-300 via-emerald-500 to-emerald-300',
       icon:     <FilePen />,
       iconCls:  'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100',
     },
     {
-      label:    'حجم المبيعات',
+      label:    k.salesVolume,
       value:    perf ? formatCompact(salesGross, symbol) : '—',
-      sub:      'إجمالي قيمة العقود',
+      sub:      k.salesSub,
       valueCls: 'text-slate-900',
       topBar:   'from-slate-200 via-slate-400 to-slate-200',
       icon:     <TrendingUp />,
       iconCls:  'bg-slate-100 text-slate-600 ring-1 ring-slate-200',
     },
     {
-      label:    'عمولاتي',
+      label:    k.myCommissions,
       value:    perf ? formatCompact(commissionsNet, symbol) : '—',
       sub:      payoutRate !== null
-                  ? `${formatCompact(payoutsNet, symbol)} مُصرَف · ${payoutRate}%`
-                  : 'لا عمولات بعد',
+                  ? k.commissionsSubFn(formatCompact(payoutsNet, symbol), payoutRate)
+                  : k.noCommissions,
       valueCls: 'text-amber-700',
       topBar:   'from-amber-300 via-amber-500 to-amber-300',
       icon:     <BadgePercent />,
@@ -188,12 +192,12 @@ function BrokerKpiStrip({ perf, symbol }: { perf: PerfSummary | undefined; symbo
       featured: true,
     },
     {
-      label:    'نسبة الصرف',
+      label:    k.payoutRate,
       value:    payoutRate !== null ? `${payoutRate}%` : '—',
       sub:      payoutRate === null   ? '—'                    :
-                payoutRate >= 80      ? 'مُصرَف بالكامل تقريباً' :
-                payoutRate >= 50      ? 'جزئياً مُصرَف'          :
-                                        'قيد المعالجة',
+                payoutRate >= 80      ? k.payoutAlmostFull :
+                payoutRate >= 50      ? k.payoutPartial          :
+                                        k.payoutProcessing,
       valueCls: payoutRate === null   ? 'text-slate-400'   :
                 payoutRate >= 80      ? 'text-success-700'  :
                 payoutRate >= 50      ? 'text-brand-600'    :
@@ -273,16 +277,19 @@ interface FunnelStage {
 function SalesFunnelCard({
   pipeline,
   perf,
+  m,
 }: {
   pipeline: FunnelStage[];
   perf:     PerfSummary | undefined;
+  m:        Messages;
 }) {
+  const f = m.home.funnel;
   if (pipeline.length === 0) {
     return (
       <div className="bg-surface border border-hairline rounded-[20px] p-10 shadow-soft flex flex-col items-center gap-3">
         <TrendingUp className="h-10 w-10 text-slate-200" />
-        <p className="text-sm text-slate-400">لا توجد بيانات أداء بعد.</p>
-        <p className="text-xs text-slate-300">ابدأ بإرسال فرصتك الأولى لتظهر هنا.</p>
+        <p className="text-sm text-slate-400">{f.emptyTitle}</p>
+        <p className="text-xs text-slate-300">{f.emptyHint}</p>
       </div>
     );
   }
@@ -297,15 +304,15 @@ function SalesFunnelCard({
             <TrendingUp className="h-4 w-4 text-brand-600" />
           </div>
           <div>
-            <h2 className="text-[14px] font-bold text-navy leading-none">مسار التحويل البيعي</h2>
-            <p className="text-[11px] text-slate-400 mt-0.5">من الفرصة إلى المدفوعات</p>
+            <h2 className="text-[14px] font-bold text-navy leading-none">{f.title}</h2>
+            <p className="text-[11px] text-slate-400 mt-0.5">{f.subtitle}</p>
           </div>
         </div>
         <Link
           href="/portal/performance"
           className="flex items-center gap-1 text-xs text-brand-700 hover:text-brand-800 font-bold transition-colors"
         >
-          تفاصيل الأداء
+          {f.detailsLink}
           <ArrowUpRight className="h-3.5 w-3.5" />
         </Link>
       </div>
@@ -350,9 +357,9 @@ function SalesFunnelCard({
         {perf && (
           <div className="mt-4 grid grid-cols-3 gap-3">
             {([
-              { label: 'معدل القبول',       value: convPct(perf.leadsApproved, perf.leadsSubmitted)        ?? '—', cls: 'text-blue-700'    },
-              { label: 'معدل التعاقد',       value: convPct(perf.contractsSigned, perf.reservationsCreated) ?? '—', cls: 'text-emerald-700' },
-              { label: 'معدل صرف العمولات', value: convPct(perf.payoutsPaid, perf.contractsSigned)         ?? '—', cls: 'text-teal-700'    },
+              { label: f.approvalRate, value: convPct(perf.leadsApproved, perf.leadsSubmitted)        ?? '—', cls: 'text-blue-700'    },
+              { label: f.contractRate, value: convPct(perf.contractsSigned, perf.reservationsCreated) ?? '—', cls: 'text-emerald-700' },
+              { label: f.payoutRate, value: convPct(perf.payoutsPaid, perf.contractsSigned)         ?? '—', cls: 'text-teal-700'    },
             ] as const).map((s) => (
               <div key={s.label} className="text-center bg-canvas/60 border border-hairline rounded-xl py-3.5">
                 <p className={cn('text-[22px] font-black tabular-nums leading-none', s.cls)}>{s.value}</p>
@@ -369,6 +376,8 @@ function SalesFunnelCard({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function PortalDashboard() {
+  const locale = await getLocale();
+  const m = portalDashboardT(locale);
   const currency = await getReportsCurrency();
   const symbol = currencySymbol(currency);
   const [
@@ -385,7 +394,7 @@ export default async function PortalDashboard() {
   if (meRes.error || !meRes.data) {
     return (
       <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-6 text-sm">
-        تعذر تحميل بيانات البوابة.
+        {m.home.loadError}
       </div>
     );
   }
@@ -400,11 +409,11 @@ export default async function PortalDashboard() {
 
   const pipeline: FunnelStage[] = perf
     ? [
-        { Icon: UserPlus,         label: 'فرص مُرسلة',  value: perf.leadsSubmitted,       iconBg: 'bg-brand-50',   iconText: 'text-brand-600',   valueCls: 'text-brand-700',   convRate: null },
-        { Icon: ShieldCheck,      label: 'فرص معتمدة',  value: perf.leadsApproved,        iconBg: 'bg-blue-50',    iconText: 'text-blue-600',    valueCls: 'text-blue-700',    convRate: convPct(perf.leadsApproved, perf.leadsSubmitted) },
-        { Icon: BookmarkCheck,    label: 'حجوزات',       value: perf.reservationsCreated,  iconBg: 'bg-violet-50',  iconText: 'text-violet-600',  valueCls: 'text-violet-700',  convRate: convPct(perf.reservationsCreated, perf.leadsApproved) },
-        { Icon: FilePen,          label: 'عقود موقّعة', value: perf.contractsSigned,      iconBg: 'bg-emerald-50', iconText: 'text-emerald-600', valueCls: 'text-emerald-700', convRate: convPct(perf.contractsSigned, perf.reservationsCreated) },
-        { Icon: CircleDollarSign, label: 'مدفوعات',      value: perf.payoutsPaid,          iconBg: 'bg-teal-50',    iconText: 'text-teal-600',    valueCls: 'text-teal-700',    convRate: convPct(perf.payoutsPaid, perf.contractsSigned) },
+        { Icon: UserPlus,         label: m.home.funnel.stages.submitted,  value: perf.leadsSubmitted,       iconBg: 'bg-brand-50',   iconText: 'text-brand-600',   valueCls: 'text-brand-700',   convRate: null },
+        { Icon: ShieldCheck,      label: m.home.funnel.stages.approved,  value: perf.leadsApproved,        iconBg: 'bg-blue-50',    iconText: 'text-blue-600',    valueCls: 'text-blue-700',    convRate: convPct(perf.leadsApproved, perf.leadsSubmitted) },
+        { Icon: BookmarkCheck,    label: m.home.funnel.stages.reservations,       value: perf.reservationsCreated,  iconBg: 'bg-violet-50',  iconText: 'text-violet-600',  valueCls: 'text-violet-700',  convRate: convPct(perf.reservationsCreated, perf.leadsApproved) },
+        { Icon: FilePen,          label: m.home.funnel.stages.contracts, value: perf.contractsSigned,      iconBg: 'bg-emerald-50', iconText: 'text-emerald-600', valueCls: 'text-emerald-700', convRate: convPct(perf.contractsSigned, perf.reservationsCreated) },
+        { Icon: CircleDollarSign, label: m.home.funnel.stages.payouts,      value: perf.payoutsPaid,          iconBg: 'bg-teal-50',    iconText: 'text-teal-600',    valueCls: 'text-teal-700',    convRate: convPct(perf.payoutsPaid, perf.contractsSigned) },
       ]
     : [];
 
@@ -428,9 +437,9 @@ export default async function PortalDashboard() {
                 {/* Name + status row */}
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-lg font-extrabold text-navy leading-tight">
-                    أهلاً، {me.user.fullName}
+                    {m.home.greetingFn(me.user.fullName)}
                   </h1>
-                  <BrokerStatusBadge status={me.broker.status} />
+                  <BrokerStatusBadge status={me.broker.status} locale={locale} />
                   <span
                     className="font-mono text-2xs text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-hairline"
                     dir="ltr"
@@ -448,7 +457,7 @@ export default async function PortalDashboard() {
                     <span className="text-sm font-extrabold text-amber-700 tabular-nums">
                       {Number(me.broker.defaultCommissionPct ?? 0).toFixed(2)}%
                     </span>
-                    <span className="text-xs text-slate-400">عمولة</span>
+                    <span className="text-xs text-slate-400">{m.home.commission}</span>
                   </span>
                   {hasContract && (
                     <>
@@ -464,7 +473,7 @@ export default async function PortalDashboard() {
                   {me.permissions.isPrimaryContact && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 text-brand-700 px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ring-brand-100">
                       <CheckCircle2 className="h-3 w-3" />
-                      جهة الاتصال الرئيسية
+                      {m.home.primaryContact}
                     </span>
                   )}
                 </div>
@@ -474,7 +483,7 @@ export default async function PortalDashboard() {
             {/* CTA */}
             <Link href="/portal/leads/new" className="shrink-0">
               <Button variant="primary" size="md" leftIcon={<UserPlus className="h-4 w-4" />}>
-                + فرصة جديدة
+                {m.home.newLeadCta}
               </Button>
             </Link>
           </div>
@@ -482,7 +491,7 @@ export default async function PortalDashboard() {
       </div>
 
       {/* ── 2. KPI Strip ─────────────────────────────────────────────────────── */}
-      <BrokerKpiStrip perf={perf} symbol={symbol} />
+      <BrokerKpiStrip perf={perf} symbol={symbol} m={m} />
 
       {/* ── 3. Leads table + Sidebar ─────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 items-stretch gap-5">
@@ -495,9 +504,9 @@ export default async function PortalDashboard() {
                 <UserPlus className="h-4 w-4 text-brand-600" />
               </div>
               <div>
-                <h2 className="text-[14px] font-bold text-navy leading-none">آخر الفرص المُرسلة</h2>
+                <h2 className="text-[14px] font-bold text-navy leading-none">{m.home.leads.title}</h2>
                 {leadsRes.data?.meta.total != null && (
-                  <p className="text-[11px] text-slate-400 mt-0.5">{leadsRes.data.meta.total} فرصة إجمالاً</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">{m.home.leads.totalFn(leadsRes.data.meta.total)}</p>
                 )}
               </div>
             </div>
@@ -505,7 +514,7 @@ export default async function PortalDashboard() {
               href="/portal/leads"
               className="flex items-center gap-1 text-xs text-brand-700 hover:text-brand-800 font-bold transition-colors"
             >
-              عرض الكل
+              {m.common.viewAll}
               <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -513,12 +522,12 @@ export default async function PortalDashboard() {
           {recentLeads.length === 0 ? (
             <EmptyState
               icon={<UserPlus />}
-              title="لا توجد فرص بعد"
-              description="ابدأ بإضافة أول فرصة من زر «فرصة جديدة» أعلى الصفحة."
+              title={m.home.leads.emptyTitle}
+              description={m.home.leads.emptyDescription}
               action={
                 <Link href="/portal/leads/new">
                   <Button variant="primary" size="sm" leftIcon={<UserPlus className="h-4 w-4" />}>
-                    فرصة جديدة
+                    {m.home.leads.newLead}
                   </Button>
                 </Link>
               }
@@ -528,10 +537,10 @@ export default async function PortalDashboard() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-hairline bg-canvas/40">
-                    <th className="text-start py-2.5 ps-5 pe-3 text-[11px] font-bold text-slate-500 whitespace-nowrap">العميل</th>
-                    <th className="text-start py-2.5 px-3 text-[11px] font-bold text-slate-500 whitespace-nowrap">المشروع</th>
-                    <th className="text-start py-2.5 px-3 text-[11px] font-bold text-slate-500 whitespace-nowrap">الحالة</th>
-                    <th className="text-start py-2.5 px-3 text-[11px] font-bold text-slate-500 whitespace-nowrap hidden md:table-cell">الإرسال</th>
+                    <th className="text-start py-2.5 ps-5 pe-3 text-[11px] font-bold text-slate-500 whitespace-nowrap">{m.home.leads.cols.client}</th>
+                    <th className="text-start py-2.5 px-3 text-[11px] font-bold text-slate-500 whitespace-nowrap">{m.home.leads.cols.project}</th>
+                    <th className="text-start py-2.5 px-3 text-[11px] font-bold text-slate-500 whitespace-nowrap">{m.home.leads.cols.status}</th>
+                    <th className="text-start py-2.5 px-3 text-[11px] font-bold text-slate-500 whitespace-nowrap hidden md:table-cell">{m.home.leads.cols.submitted}</th>
                     <th className="py-2.5 ps-3 pe-5 w-px" />
                   </tr>
                 </thead>
@@ -560,7 +569,7 @@ export default async function PortalDashboard() {
                         {lead.projectInterest ? (
                           <div>
                             <p className="text-xs font-semibold text-slate-700 truncate">
-                              {tx(lead.projectInterest.name)}
+                              {tx(lead.projectInterest.name, locale)}
                             </p>
                             <p className="text-2xs text-slate-400 mt-0.5 flex items-center gap-1">
                               <MapPin className="h-2.5 w-2.5 shrink-0" />
@@ -573,10 +582,10 @@ export default async function PortalDashboard() {
                       </td>
                       <td className="py-3.5 px-3">
                         {lead.brokerApprovalStatus ? (
-                          <BrokerLeadStatusBadge status={lead.brokerApprovalStatus} />
+                          <BrokerLeadStatusBadge status={lead.brokerApprovalStatus} locale={locale} />
                         ) : (
                           <span className="inline-flex items-center text-2xs font-semibold text-slate-600 bg-slate-100 rounded-full px-2 py-0.5">
-                            جديد
+                            {m.home.leads.statusNew}
                           </span>
                         )}
                       </td>
@@ -585,7 +594,7 @@ export default async function PortalDashboard() {
                       </td>
                       <td className="py-3.5 ps-3 pe-5">
                         <Link href={`/portal/leads/${lead.id}` as never}>
-                          <Button variant="ghost" size="sm">عرض</Button>
+                          <Button variant="ghost" size="sm">{m.home.leads.view}</Button>
                         </Link>
                       </td>
                     </tr>
@@ -604,9 +613,9 @@ export default async function PortalDashboard() {
                 <Building2 className="h-3.5 w-3.5 text-brand-600" />
               </div>
               <div>
-                <h2 className="text-[13px] font-bold text-navy leading-none">المشاريع المتاحة</h2>
+                <h2 className="text-[13px] font-bold text-navy leading-none">{m.home.projects.title}</h2>
                 {availableCount > 0 && (
-                  <p className="text-2xs text-emerald-600 font-semibold mt-0.5">{availableCount} وحدة متاحة</p>
+                  <p className="text-2xs text-emerald-600 font-semibold mt-0.5">{m.home.projects.availableUnitsFn(availableCount)}</p>
                 )}
               </div>
             </div>
@@ -615,12 +624,12 @@ export default async function PortalDashboard() {
                 {projects.length}
               </span>
               <Link href="/portal/projects" className="text-2xs text-brand-700 hover:text-brand-800 font-bold">
-                الكل
+                {m.home.projects.all}
               </Link>
             </div>
           </div>
           {projects.length === 0 ? (
-            <p className="px-5 py-6 text-xs text-slate-400 text-center">لا توجد مشاريع مسموح بها بعد.</p>
+            <p className="px-5 py-6 text-xs text-slate-400 text-center">{m.home.projects.empty}</p>
           ) : (
             <div className="divide-y divide-hairline flex-1">
               {projects.map((p) => {
@@ -632,14 +641,14 @@ export default async function PortalDashboard() {
                   >
                     {cover ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={cover} alt={tx(p.project.name)} className="h-10 w-14 rounded-lg object-cover shrink-0" />
+                      <img src={cover} alt={tx(p.project.name, locale)} className="h-10 w-14 rounded-lg object-cover shrink-0" />
                     ) : (
                       <div className="h-10 w-14 rounded-lg bg-gradient-to-br from-amber-50 to-brand-50 border border-hairline flex items-center justify-center shrink-0">
                         <Building2 className="h-4 w-4 text-amber-300" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-slate-900 truncate">{tx(p.project.name)}</p>
+                      <p className="text-xs font-bold text-slate-900 truncate">{tx(p.project.name, locale)}</p>
                       <p className="text-2xs text-slate-400 mt-0.5 flex items-center gap-1 truncate">
                         <MapPin className="h-2.5 w-2.5 shrink-0" />
                         {p.project.city}
@@ -651,7 +660,7 @@ export default async function PortalDashboard() {
                       </p>
                     </div>
                     <Link href={`/portal/units?projectId=${p.project.id}` as never} className="shrink-0">
-                      <Button variant="ghost" size="sm">وحدات</Button>
+                      <Button variant="ghost" size="sm">{m.home.projects.units}</Button>
                     </Link>
                   </div>
                 );
@@ -664,15 +673,15 @@ export default async function PortalDashboard() {
       {/* ── 4. Sales Funnel ──────────────────────────────────────────────────── */}
       {pipeline.length > 0 && (
         <div className="space-y-3">
-          <SectionLabel>تحليل الأداء</SectionLabel>
-          <SalesFunnelCard pipeline={pipeline} perf={perf} />
+          <SectionLabel>{m.home.performanceSection}</SectionLabel>
+          <SalesFunnelCard pipeline={pipeline} perf={perf} m={m} />
         </div>
       )}
 
       {/* ── 5. Activity feed ─────────────────────────────────────────────────── */}
       {activity.length > 0 && (
         <div className="space-y-3">
-          <SectionLabel>آخر النشاطات</SectionLabel>
+          <SectionLabel>{m.home.activity.section}</SectionLabel>
           <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
             <div className="flex items-center justify-between gap-2 px-6 py-4 border-b border-hairline bg-canvas/30">
               <div className="flex items-center gap-3">
@@ -680,15 +689,15 @@ export default async function PortalDashboard() {
                   <Activity className="h-4 w-4 text-brand-600" />
                 </div>
                 <div>
-                  <h2 className="text-[14px] font-bold text-navy leading-none">أحدث النشاط</h2>
-                  <p className="text-[11px] text-slate-400 mt-0.5">{activity.length} نشاط مسجّل</p>
+                  <h2 className="text-[14px] font-bold text-navy leading-none">{m.home.activity.title}</h2>
+                  <p className="text-[11px] text-slate-400 mt-0.5">{m.home.activity.countFn(activity.length)}</p>
                 </div>
               </div>
               <Link
                 href="/portal/activity"
                 className="flex items-center gap-1 text-xs text-brand-700 hover:text-brand-800 font-bold transition-colors"
               >
-                عرض الكل
+                {m.common.viewAll}
                 <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
             </div>
@@ -705,9 +714,9 @@ export default async function PortalDashboard() {
                   : '/portal/activity';
 
                 const subtitle = item.lead
-                  ? [item.lead.fullName, item.lead.projectInterest ? tx(item.lead.projectInterest.name) : null]
+                  ? [item.lead.fullName, item.lead.projectInterest ? tx(item.lead.projectInterest.name, locale) : null]
                       .filter(Boolean).join(' · ')
-                  : 'على مستوى شركة الوساطة';
+                  : m.home.activity.companyLevel;
 
                 return (
                   <Link
@@ -720,7 +729,7 @@ export default async function PortalDashboard() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-3">
-                        <p className="text-xs font-bold text-slate-900 leading-snug truncate">{meta.label}</p>
+                        <p className="text-xs font-bold text-slate-900 leading-snug truncate">{m.activityType[item.type]}</p>
                         <time className="text-2xs text-slate-400 tabular-nums whitespace-nowrap shrink-0" dir="ltr">
                           {formatDateTime(item.createdAt)}
                         </time>

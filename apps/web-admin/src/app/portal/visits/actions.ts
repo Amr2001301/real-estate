@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { api } from '@/lib/api';
+import { getLocale } from '@/lib/locale';
+import { portalLeadsVisitsT } from '@/messages/portal/leads-visits';
 import type { PortalVisitRequest } from '@/lib/types';
 
 export interface PortalVisitFormState {
@@ -20,10 +22,11 @@ export async function createPortalVisitRequestAction(
   _prev: PortalVisitFormState,
   formData: FormData,
 ): Promise<PortalVisitFormState> {
+  const m = portalLeadsVisitsT(await getLocale()).visits.errors;
   const projectId = str(formData, 'projectId');
   const preferredDate = str(formData, 'preferredDate');
-  if (!projectId) return { error: 'المشروع مطلوب' };
-  if (!preferredDate) return { error: 'تاريخ الزيارة المقترح مطلوب' };
+  if (!projectId) return { error: m.projectRequired };
+  if (!preferredDate) return { error: m.preferredDateRequired };
 
   // <input type="date"> returns YYYY-MM-DD; promote to ISO datetime at UTC midnight.
   const preferredDateIso = /^\d{4}-\d{2}-\d{2}$/.test(preferredDate)
@@ -44,7 +47,7 @@ export async function createPortalVisitRequestAction(
 
   if (!leadId && (!payload.customerName || !payload.customerPhone)) {
     return {
-      error: 'اسم العميل ورقم الجوال مطلوبان عند عدم اختيار فرصة موجودة',
+      error: m.customerRequired,
     };
   }
 

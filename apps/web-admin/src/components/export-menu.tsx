@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { FileSpreadsheet, FileText, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import type { Locale } from '@/lib/locale';
+import { portalSharedT } from '@/messages/portal/shared';
 
 /**
  * P15.2 — shared export control. Styled XLSX is the default (single click on the
@@ -24,6 +26,7 @@ interface ExportMenuProps {
   params?: Record<string, string | undefined>;
   /** Main button label. */
   label?: string;
+  locale?: Locale;
 }
 
 export function ExportMenu({
@@ -32,8 +35,10 @@ export function ExportMenu({
   pdfPath,
   csvPath,
   params,
-  label = 'تصدير',
+  label,
+  locale = 'ar',
 }: ExportMenuProps) {
+  const t = portalSharedT(locale).exportMenu;
   const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -112,7 +117,7 @@ export function ExportMenu({
           leftIcon={primaryIcon}
           onClick={() => download('export', primaryPath, primaryExt)}
         >
-          {label}
+          {label ?? t.label}
         </Button>
 
         {hasSecondary && (
@@ -123,7 +128,7 @@ export function ExportMenu({
               size="md"
               aria-haspopup="menu"
               aria-expanded={open}
-              aria-label="خيارات التصدير"
+              aria-label={t.optionsAria}
               disabled={loading}
               onClick={() => setOpen((v) => !v)}
             >
@@ -138,24 +143,24 @@ export function ExportMenu({
                 {xlsxPath && (
                   <MenuItem
                     icon={<FileSpreadsheet className="h-4 w-4" />}
-                    label="ملف Excel ‏(.xlsx)"
-                    hint="منسّق"
+                    label={t.xlsx}
+                    hint={t.xlsxHint}
                     onClick={() => download('export', xlsxPath, 'xlsx')}
                   />
                 )}
                 {pdfPath && (
                   <MenuItem
                     icon={<FileText className="h-4 w-4" />}
-                    label="ملف PDF"
-                    hint="مُبرمَج"
+                    label={t.pdf}
+                    hint={t.pdfHint}
                     onClick={() => download('export', pdfPath, 'pdf')}
                   />
                 )}
                 {csvPath && (
                   <MenuItem
                     icon={<FileText className="h-4 w-4" />}
-                    label="ملف CSV"
-                    hint="بيانات خام"
+                    label={t.csv}
+                    hint={t.csvHint}
                     onClick={() => download('csv', csvPath, 'csv')}
                   />
                 )}
@@ -166,7 +171,7 @@ export function ExportMenu({
       </div>
 
       {state === 'error' && (
-        <span className="text-2xs text-danger-600">تعذّر توليد التقرير، حاول مرة أخرى.</span>
+        <span className="text-2xs text-danger-600">{t.error}</span>
       )}
     </div>
   );

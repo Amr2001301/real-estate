@@ -20,6 +20,8 @@ import type {
 import { tx, formatCurrency, formatCompact } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { cn } from '@/lib/cn';
+import { getLocale } from '@/lib/locale';
+import { portalDashboardT } from '@/messages/portal/dashboard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -117,6 +119,9 @@ export default async function PortalPerformancePage({
   searchParams: Promise<Search>;
 }) {
   const sp       = await searchParams;
+  const locale   = await getLocale();
+  const m        = portalDashboardT(locale);
+  const t        = m.performance;
   const currency = await getReportsCurrency();
   const symbol   = currencySymbol(currency);
   const qs       = new URLSearchParams();
@@ -133,7 +138,7 @@ export default async function PortalPerformancePage({
   if (perfRes.error || !perfRes.data) {
     return (
       <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-6 text-sm">
-        تعذر تحميل الأداء: {perfRes.error ?? 'غير متاح'}
+        {t.loadErrorFn(perfRes.error ?? t.unavailable)}
       </div>
     );
   }
@@ -150,12 +155,12 @@ export default async function PortalPerformancePage({
   const isFiltered = !!(sp.from || sp.to || sp.projectId);
 
   const kpiTiles: KpiTile[] = [
-    { label: 'فرص مُرسلة',     value: String(summary.leadsSubmitted),                       icon: <UserPlus />,      iconCls: 'bg-brand-50 text-brand-600 ring-1 ring-brand-100',     topBar: 'from-brand-300 via-brand-500 to-brand-300',   valueCls: 'text-brand-700'   },
-    { label: 'حجوزات',          value: String(summary.reservationsCreated),                  icon: <BookmarkCheck />, iconCls: 'bg-sky-50 text-sky-600 ring-1 ring-sky-100',           topBar: 'from-sky-300 via-sky-500 to-sky-300',         valueCls: 'text-sky-700'     },
-    { label: 'عقود موقّعة',     value: String(summary.contractsSigned),                      icon: <FilePen />,       iconCls: 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100', topBar: 'from-emerald-300 via-emerald-500 to-emerald-300', valueCls: 'text-emerald-700' },
-    { label: 'إجمالي المبيعات', value: formatCompact(Number(summary.salesGross), symbol),     icon: <Banknote />,      iconCls: 'bg-slate-100 text-slate-600 ring-1 ring-slate-200',    topBar: 'from-slate-300 via-slate-400 to-slate-300',   valueCls: 'text-slate-900'   },
-    { label: 'صافي العمولات',   value: formatCompact(Number(summary.commissionsNet), symbol), icon: <BadgePercent />,  iconCls: 'bg-amber-50 text-amber-600 ring-1 ring-amber-100',     topBar: 'from-amber-300 via-amber-500 to-amber-300',   valueCls: 'text-amber-700'   },
-    { label: 'مدفوع',           value: formatCompact(Number(summary.payoutsTotalNet), symbol),icon: <CircleDollarSign />,iconCls: 'bg-teal-50 text-teal-600 ring-1 ring-teal-100',       topBar: 'from-teal-300 via-teal-500 to-teal-300',     valueCls: 'text-teal-700'    },
+    { label: t.kpi.leadsSubmitted,     value: String(summary.leadsSubmitted),                       icon: <UserPlus />,      iconCls: 'bg-brand-50 text-brand-600 ring-1 ring-brand-100',     topBar: 'from-brand-300 via-brand-500 to-brand-300',   valueCls: 'text-brand-700'   },
+    { label: t.kpi.reservations,          value: String(summary.reservationsCreated),                  icon: <BookmarkCheck />, iconCls: 'bg-sky-50 text-sky-600 ring-1 ring-sky-100',           topBar: 'from-sky-300 via-sky-500 to-sky-300',         valueCls: 'text-sky-700'     },
+    { label: t.kpi.contractsSigned,     value: String(summary.contractsSigned),                      icon: <FilePen />,       iconCls: 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100', topBar: 'from-emerald-300 via-emerald-500 to-emerald-300', valueCls: 'text-emerald-700' },
+    { label: t.kpi.salesGross, value: formatCompact(Number(summary.salesGross), symbol),     icon: <Banknote />,      iconCls: 'bg-slate-100 text-slate-600 ring-1 ring-slate-200',    topBar: 'from-slate-300 via-slate-400 to-slate-300',   valueCls: 'text-slate-900'   },
+    { label: t.kpi.commissionsNet,   value: formatCompact(Number(summary.commissionsNet), symbol), icon: <BadgePercent />,  iconCls: 'bg-amber-50 text-amber-600 ring-1 ring-amber-100',     topBar: 'from-amber-300 via-amber-500 to-amber-300',   valueCls: 'text-amber-700'   },
+    { label: t.kpi.paid,           value: formatCompact(Number(summary.payoutsTotalNet), symbol),icon: <CircleDollarSign />,iconCls: 'bg-teal-50 text-teal-600 ring-1 ring-teal-100',       topBar: 'from-teal-300 via-teal-500 to-teal-300',     valueCls: 'text-teal-700'    },
   ];
 
   return (
@@ -163,17 +168,18 @@ export default async function PortalPerformancePage({
 
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="أدائي"
-        description="مؤشرات أداء شركة الوساطة الخاصة بك — الأرقام مأخوذة من نشاطك الفعلي."
+        title={t.title}
+        description={t.description}
         breadcrumbs={[
-          { label: 'البوابة', href: '/portal' },
-          { label: 'الأداء' },
+          { label: m.common.portal, href: '/portal' },
+          { label: t.breadcrumb },
         ]}
         actions={
           <ExportMenu
             xlsxPath="/portal/performance/export.xlsx"
             csvPath="/portal/performance/export.csv"
             filenameBase="my-performance"
+            locale={locale}
             params={{ from: sp.from, to: sp.to, projectId: sp.projectId, brokerAgentId: sp.brokerAgentId }}
           />
         }
@@ -185,29 +191,29 @@ export default async function PortalPerformancePage({
         action="/portal/performance"
         trailing={
           <div className="flex items-center gap-1.5 ms-auto shrink-0">
-            <Button type="submit" variant="primary" size="sm">تطبيق</Button>
+            <Button type="submit" variant="primary" size="sm">{t.filters.apply}</Button>
             {isFiltered && (
               <Link href="/portal/performance">
-                <Button type="button" variant="ghost" size="sm">مسح</Button>
+                <Button type="button" variant="ghost" size="sm">{m.common.clear}</Button>
               </Link>
             )}
           </div>
         }
       >
-        <PremiumFilterField label="المشروع">
+        <PremiumFilterField label={t.filters.project}>
           <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-56">
-            <option value="">كل المشاريع</option>
+            <option value="">{t.filters.allProjects}</option>
             {projects.map((p) => (
               <option key={p.project.id} value={p.project.id}>
-                {tx(p.project.name)}
+                {tx(p.project.name, locale)}
               </option>
             ))}
           </Select>
         </PremiumFilterField>
-        <PremiumFilterField label="من تاريخ">
+        <PremiumFilterField label={t.filters.from}>
           <Input name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} className="w-40" />
         </PremiumFilterField>
-        <PremiumFilterField label="إلى تاريخ">
+        <PremiumFilterField label={t.filters.to}>
           <Input name="to" inputSize="sm" type="date" defaultValue={sp.to ?? ''} className="w-40" />
         </PremiumFilterField>
       </PremiumFilterBar>
@@ -218,9 +224,9 @@ export default async function PortalPerformancePage({
 
       {/* ── Funnel + Monthly trend ──────────────────────────────────────────── */}
       <div className="space-y-3">
-        <SectionLabel>قمع التحويل والاتجاه الشهري</SectionLabel>
+        <SectionLabel>{t.funnelSection}</SectionLabel>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <FunnelCard summary={summary} title="قمع تحويل نشاطك" />
+          <FunnelCard summary={summary} title={t.funnelTitle} locale={locale} />
 
           <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden flex flex-col">
             <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline bg-canvas/30 shrink-0">
@@ -229,13 +235,13 @@ export default async function PortalPerformancePage({
                   <TrendingUp className="h-4 w-4 text-brand-600" />
                 </div>
                 <div>
-                  <h2 className="text-[14px] font-bold text-navy leading-none">الاتجاه الشهري</h2>
-                  <p className="text-[11px] text-slate-400 mt-0.5">آخر 6 أشهر أو حسب نطاق التاريخ</p>
+                  <h2 className="text-[14px] font-bold text-navy leading-none">{t.trendTitle}</h2>
+                  <p className="text-[11px] text-slate-400 mt-0.5">{t.trendSubtitle}</p>
                 </div>
               </div>
             </div>
             <div className="flex-1 p-5">
-              <MonthlyTrendChart data={perf.monthlyTrend} currency={currency} />
+              <MonthlyTrendChart data={perf.monthlyTrend} currency={currency} locale={locale} />
             </div>
           </div>
         </div>
@@ -243,30 +249,30 @@ export default async function PortalPerformancePage({
 
       {/* ── Project breakdown ───────────────────────────────────────────────── */}
       <div className="space-y-3">
-        <SectionLabel>تفصيل المشاريع</SectionLabel>
+        <SectionLabel>{t.projects.title}</SectionLabel>
         <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
           <div className="flex items-center gap-3 px-6 py-4 border-b border-hairline bg-canvas/30">
             <div className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
               <Building2 className="h-4 w-4 text-brand-600" />
             </div>
             <div>
-              <h2 className="text-[14px] font-bold text-navy leading-none">تفصيل المشاريع</h2>
-              <p className="text-[11px] text-slate-400 mt-0.5">{perf.projectBreakdown.length} مشروع</p>
+              <h2 className="text-[14px] font-bold text-navy leading-none">{t.projects.title}</h2>
+              <p className="text-[11px] text-slate-400 mt-0.5">{t.projects.countFn(perf.projectBreakdown.length)}</p>
             </div>
           </div>
 
           {perf.projectBreakdown.length === 0 ? (
-            <EmptyState icon={<Building2 />} title="لا توجد بيانات لمشاريع" description="—" />
+            <EmptyState icon={<Building2 />} title={t.projects.empty} description="—" />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-hairline bg-canvas/40">
-                    <th className="text-start py-3 ps-6 pe-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">المشروع</th>
-                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">عقود</th>
-                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">المبيعات</th>
-                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">صافي العمولات</th>
-                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">مدفوع</th>
+                    <th className="text-start py-3 ps-6 pe-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.projects.cols.project}</th>
+                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.projects.cols.contracts}</th>
+                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.projects.cols.sales}</th>
+                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.projects.cols.commissionsNet}</th>
+                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.projects.cols.paid}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
@@ -275,15 +281,15 @@ export default async function PortalPerformancePage({
                     return (
                       <tr key={p.projectId} className="hover:bg-canvas/40 transition-colors">
                         <td className="py-4 ps-6 pe-4">
-                          <p className="text-[13px] font-bold text-slate-900">{p.projectName ? tx(p.projectName) : '—'}</p>
+                          <p className="text-[13px] font-bold text-slate-900">{p.projectName ? tx(p.projectName, locale) : '—'}</p>
                           {p.city && <p className="text-[11px] text-slate-400 mt-0.5">{p.city}</p>}
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex items-baseline gap-1 tabular-nums">
                             <span className="text-[15px] font-bold text-slate-900">{p.contractsSigned}</span>
-                            <span className="text-[11px] text-slate-400">/ {p.contracts} إجمالي</span>
+                            <span className="text-[11px] text-slate-400">{t.projects.ofTotalFn(p.contracts)}</span>
                           </div>
-                          <p className="text-[10px] text-slate-400 mt-0.5">موقّع / إجمالي</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">{t.projects.signedOverTotal}</p>
                         </td>
                         <td className="py-4 px-4">
                           <p className="text-[13px] font-bold text-slate-900 tabular-nums">
@@ -316,7 +322,7 @@ export default async function PortalPerformancePage({
       {/* ── Agent breakdown ─────────────────────────────────────────────────── */}
       {perf.canSeeAllAgents && perf.agentBreakdown.length > 0 && (
         <div className="space-y-3">
-          <SectionLabel>أداء الوكلاء</SectionLabel>
+          <SectionLabel>{t.agents.title}</SectionLabel>
           <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
             <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline bg-canvas/30">
               <div className="flex items-center gap-3">
@@ -324,8 +330,8 @@ export default async function PortalPerformancePage({
                   <UsersIcon className="h-4 w-4 text-violet-600" />
                 </div>
                 <div>
-                  <h2 className="text-[14px] font-bold text-navy leading-none">أداء الوكلاء</h2>
-                  <p className="text-[11px] text-slate-400 mt-0.5">{perf.agentBreakdown.length} وكيل · يظهر لمستخدمي إدارة الموظفين فقط</p>
+                  <h2 className="text-[14px] font-bold text-navy leading-none">{t.agents.title}</h2>
+                  <p className="text-[11px] text-slate-400 mt-0.5">{t.agents.countFn(perf.agentBreakdown.length)}</p>
                 </div>
               </div>
             </div>
@@ -333,12 +339,12 @@ export default async function PortalPerformancePage({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-hairline bg-canvas/40">
-                    <th className="text-start py-3 ps-6 pe-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">الوكيل</th>
-                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">فرص</th>
-                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">حجوزات</th>
-                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">عقود موقّعة</th>
-                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">مبيعات</th>
-                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">صافي عمولات</th>
+                    <th className="text-start py-3 ps-6 pe-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.agents.cols.agent}</th>
+                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.agents.cols.leads}</th>
+                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.agents.cols.reservations}</th>
+                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.agents.cols.contractsSigned}</th>
+                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.agents.cols.sales}</th>
+                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.agents.cols.commissionsNet}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
@@ -373,7 +379,7 @@ export default async function PortalPerformancePage({
 
       {!perf.canSeeAllAgents && (
         <p className="text-2xs text-slate-400 text-center">
-          تفصيل الوكلاء يظهر فقط لمستخدمي الوسيط بصلاحية «إدارة الموظفين» أو لجهة الاتصال الرئيسية.
+          {t.agents.restrictedNote}
         </p>
       )}
 

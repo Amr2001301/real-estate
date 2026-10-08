@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { api } from '@/lib/api';
+import { getLocale } from '@/lib/locale';
+import { portalReservationsContractsT } from '@/messages/portal/reservations-contracts';
 import type { PortalReservation } from '@/lib/types';
 
 export interface PortalReservationFormState {
@@ -20,10 +22,11 @@ export async function createPortalReservationAction(
   _prev: PortalReservationFormState,
   formData: FormData,
 ): Promise<PortalReservationFormState> {
+  const m = portalReservationsContractsT(await getLocale()).reservations.actions;
   const leadId = str(formData, 'leadId');
   const unitId = str(formData, 'unitId');
-  if (!leadId) return { error: 'يجب اختيار فرصة (Lead) معتمدة' };
-  if (!unitId) return { error: 'يجب اختيار وحدة' };
+  if (!leadId) return { error: m.leadRequired };
+  if (!unitId) return { error: m.unitRequired };
 
   const payload = {
     leadId,

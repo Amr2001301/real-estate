@@ -16,6 +16,8 @@ import { api, safe } from '@/lib/api';
 import type { Paged, PortalLead } from '@/lib/types';
 import { tx, formatDate } from '@/lib/format';
 import { cn } from '@/lib/cn';
+import { getLocale } from '@/lib/locale';
+import { portalLeadsVisitsT } from '@/messages/portal/leads-visits';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { CodeText } from '@/components/ui/code-text';
@@ -75,6 +77,9 @@ export default async function PortalLeadsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const locale = await getLocale();
+  const m = portalLeadsVisitsT(locale);
+  const t = m.leads.list;
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
@@ -101,16 +106,16 @@ export default async function PortalLeadsPage({
     <div className="space-y-5">
 
       <PremiumPageHero
-        title="فرصي"
-        description="الفرص التي قمتَ بإرسالها للإدارة — تابع حالة كل فرصة ومرحلتها."
+        title={t.title}
+        description={t.description}
         breadcrumbs={[
-          { label: 'البوابة', href: '/portal' },
-          { label: 'الفرص' },
+          { label: m.breadcrumbs.portal, href: '/portal' },
+          { label: m.breadcrumbs.leads },
         ]}
         actions={
           <Link href="/portal/leads/new">
             <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-              فرصة جديدة
+              {t.newLead}
             </Button>
           </Link>
         }
@@ -119,17 +124,17 @@ export default async function PortalLeadsPage({
       {r.error && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          تعذر تحميل الفرص: {r.error}
+          {t.loadErrorPrefix} {r.error}
         </div>
       )}
 
       <PremiumMetricStrip
         variant="compact"
         metrics={[
-          { label: 'إجمالي الفرص', value: totalLeads,    icon: <Users />,     tone: 'brand'   },
-          { label: 'قيد المراجعة', value: pendingCount,  icon: <Clock />,     tone: 'warning' },
-          { label: 'موافق عليها',  value: approvedCount, icon: <UserCheck />, tone: 'success' },
-          { label: 'مرفوضة',       value: rejectedCount, icon: <UserX />,     tone: 'danger'  },
+          { label: t.metrics.total, value: totalLeads,    icon: <Users />,     tone: 'brand'   },
+          { label: t.metrics.pending, value: pendingCount,  icon: <Clock />,     tone: 'warning' },
+          { label: t.metrics.approved,  value: approvedCount, icon: <UserCheck />, tone: 'success' },
+          { label: t.metrics.rejected, value: rejectedCount, icon: <UserX />,     tone: 'danger'  },
         ]}
       />
 
@@ -138,66 +143,66 @@ export default async function PortalLeadsPage({
         action="/portal/leads"
         trailing={
           <div className="flex items-center gap-1.5 ms-auto shrink-0">
-            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            <Button type="submit" variant="primary" size="sm">{t.filter}</Button>
             {(sp.q || sp.brokerApprovalStatus || sp.stage) && (
               <Link href="/portal/leads">
-                <Button type="button" variant="ghost" size="sm">مسح التصفية</Button>
+                <Button type="button" variant="ghost" size="sm">{t.clearFilter}</Button>
               </Link>
             )}
           </div>
         }
       >
-        <PremiumFilterField label="بحث">
+        <PremiumFilterField label={t.searchLabel}>
           <Input
             name="q"
             inputSize="sm"
             leftAddon={<Search />}
-            placeholder="بحث: اسم / هاتف / بريد"
+            placeholder={t.searchPlaceholder}
             defaultValue={sp.q ?? ''}
             className="flex-1 min-w-[160px]"
           />
         </PremiumFilterField>
-        <PremiumFilterField label="حالة المراجعة">
+        <PremiumFilterField label={t.approvalStatusLabel}>
           <Select
             name="brokerApprovalStatus"
             inputSize="sm"
             defaultValue={sp.brokerApprovalStatus ?? ''}
             className="w-44"
           >
-            <option value="">كل حالات المراجعة</option>
-            <option value="PENDING">قيد المراجعة</option>
-            <option value="APPROVED">موافق عليه</option>
-            <option value="REJECTED">مرفوض</option>
-            <option value="DUPLICATE">مكرر</option>
+            <option value="">{t.approvalStatusOptions.all}</option>
+            <option value="PENDING">{t.approvalStatusOptions.PENDING}</option>
+            <option value="APPROVED">{t.approvalStatusOptions.APPROVED}</option>
+            <option value="REJECTED">{t.approvalStatusOptions.REJECTED}</option>
+            <option value="DUPLICATE">{t.approvalStatusOptions.DUPLICATE}</option>
           </Select>
         </PremiumFilterField>
-        <PremiumFilterField label="المرحلة">
+        <PremiumFilterField label={t.stageLabel}>
           <Select
             name="stage"
             inputSize="sm"
             defaultValue={sp.stage ?? ''}
             className="w-40"
           >
-            <option value="">كل المراحل</option>
-            <option value="NEW">جديد</option>
-            <option value="INTERESTED">مهتم</option>
-            <option value="VISIT">زيارة</option>
-            <option value="NEGOTIATION">تفاوض</option>
-            <option value="WON">فوز</option>
-            <option value="LOST">خسارة</option>
+            <option value="">{t.stageOptions.all}</option>
+            <option value="NEW">{t.stageOptions.NEW}</option>
+            <option value="INTERESTED">{t.stageOptions.INTERESTED}</option>
+            <option value="VISIT">{t.stageOptions.VISIT}</option>
+            <option value="NEGOTIATION">{t.stageOptions.NEGOTIATION}</option>
+            <option value="WON">{t.stageOptions.WON}</option>
+            <option value="LOST">{t.stageOptions.LOST}</option>
           </Select>
         </PremiumFilterField>
       </PremiumFilterBar>
 
       <PremiumSectionCard
         icon={<Users />}
-        title="قائمة الفرص"
+        title={t.tableTitle}
         padded={false}
       >
         {rows.length > 0 && (
           <div className="flex items-center gap-2 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
             <span className="font-bold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
-            <span>فرصة</span>
+            <span>{t.countNoun}</span>
           </div>
         )}
 
@@ -205,11 +210,11 @@ export default async function PortalLeadsPage({
           <table className="w-full text-sm">
             <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">العميل</th>
-                <th className="text-start font-semibold py-3 px-4">اهتمام بمشروع</th>
-                <th className="text-start font-semibold py-3 px-4">المرحلة</th>
-                <th className="text-start font-semibold py-3 px-4">حالة المراجعة</th>
-                <th className="text-start font-semibold py-3 px-4">التاريخ</th>
+                <th className="text-start font-semibold py-3 ps-5 pe-4">{t.cols.client}</th>
+                <th className="text-start font-semibold py-3 px-4">{t.cols.projectInterest}</th>
+                <th className="text-start font-semibold py-3 px-4">{t.cols.stage}</th>
+                <th className="text-start font-semibold py-3 px-4">{t.cols.approvalStatus}</th>
+                <th className="text-start font-semibold py-3 px-4">{t.cols.date}</th>
                 <th className="py-3 ps-4 pe-5 w-px"></th>
               </tr>
             </thead>
@@ -219,8 +224,8 @@ export default async function PortalLeadsPage({
                   <td colSpan={6} className="p-0">
                     <EmptyState
                       icon={<Users />}
-                      title="لا توجد فرص بعد"
-                      description="ابدأ بإرسال أول فرصة للإدارة."
+                      title={t.emptyTitle}
+                      description={t.emptyDescription}
                       action={
                         <Link href="/portal/leads/new">
                           <Button
@@ -228,7 +233,7 @@ export default async function PortalLeadsPage({
                             size="sm"
                             leftIcon={<Plus className="h-4 w-4" />}
                           >
-                            فرصة جديدة
+                            {t.newLead}
                           </Button>
                         </Link>
                       }
@@ -281,28 +286,28 @@ export default async function PortalLeadsPage({
                       {l.projectInterest ? (
                         <>
                           <p className="text-xs font-semibold text-slate-800 truncate max-w-[160px]">
-                            {tx(l.projectInterest.name)}
+                            {tx(l.projectInterest.name, locale)}
                           </p>
                           {l.unitInterest ? (
                             <p className="mt-0.5">
                               <CodeText className="text-2xs text-slate-500">{l.unitInterest.code}</CodeText>
                             </p>
                           ) : (
-                            <p className="text-2xs text-slate-400 mt-0.5">أي وحدة متاحة</p>
+                            <p className="text-2xs text-slate-400 mt-0.5">{t.anyUnit}</p>
                           )}
                         </>
                       ) : (
-                        <span className="text-slate-400 text-xs">لم يحدد</span>
+                        <span className="text-slate-400 text-xs">{t.notSpecified}</span>
                       )}
                     </td>
 
                     <td className="py-3 px-4">
-                      <LeadStageBadge stage={l.stage} />
+                      <LeadStageBadge stage={l.stage} locale={locale} />
                     </td>
 
                     <td className="py-3 px-4">
                       {l.brokerApprovalStatus ? (
-                        <BrokerLeadStatusBadge status={l.brokerApprovalStatus} />
+                        <BrokerLeadStatusBadge status={l.brokerApprovalStatus} locale={locale} />
                       ) : (
                         <span className="text-slate-400 text-xs">—</span>
                       )}
@@ -314,7 +319,7 @@ export default async function PortalLeadsPage({
 
                     <td className="py-3 ps-4 pe-5">
                       <Link href={`/portal/leads/${l.id}` as never}>
-                        <IconButton label="عرض" variant="ghost" size="sm">
+                        <IconButton label={t.view} variant="ghost" size="sm">
                           <Eye />
                         </IconButton>
                       </Link>
@@ -332,6 +337,7 @@ export default async function PortalLeadsPage({
             pageSize={paged.meta.pageSize}
             total={paged.meta.total}
             basePath="/portal/leads"
+            locale={locale}
             params={{
               q: sp.q,
               brokerApprovalStatus: sp.brokerApprovalStatus,
