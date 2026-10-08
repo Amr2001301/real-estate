@@ -13,6 +13,8 @@ import {
   DocumentOwnerType,
   DocumentVisibility,
   InstallmentStatus,
+  PaymentInstrumentStatus,
+  PaymentInstrumentType,
   PaymentMethod,
   PlanPaymentType,
   Prisma,
@@ -770,5 +772,335 @@ describe('P13 — Info requests admin visibility + notifications (e2e)', () => {
       where: { userId: fixtures.userIds.salesId, templateCode: 'info_request_created' },
     });
     expect(salesNotifs).toBe(0);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// FG-01 — Deposits paid by cheque / bank transfer (e2e)
+//
+// Decided 2026-10-08: a cheque leaves the installment unpaid until it clears;
+// a bank transfer counts as collected at once; one cheque per installment.
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe('FG-01 — cheque and transfer deposits (e2e)', () => {
+  let testApp: TestApp;
+  let adminToken: string;
+  let salesToken: string;
+
+  let contractId: string;
+  let customerName: string;
+  const AMOUNT = 50_000;
+  // One installment per scenario, so the scenarios do not depend on each other.
+  const inst: Record<'clear' | 'race' | 'bounce' | 'cancel' | 'transfer' | 'cash', string> = {
+    clear: '',
+    race: '',
+    bounce: '',
+    cancel: '',
+    transfer: '',
+    cash: '',
+  };
+
+  const http = () => request(testApp.app.getHttpServer());
+  const record = (body: Record<string, unknown>) =>
+    http().post('/v1/deposits').set('Authorization', bearer(adminToken)).send({
+      contractId,
+      amount: AMOUNT,
+      ...body,
+    });
+  const cheque = (n: string) => ({
+    paymentMethod: PaymentMethod.CHEQUE,
+    cheque: { chequeNumber: n, drawerBankName: 'FG01 Bank', chequeDueDate: '2026-11-15' },
+  });
+  const piAction = (id: string, action: string, body: Record<string, unknown> = {}) =>
+    http()
+      .post(`/v1/payment-instruments/${id}/${action}`)
+      .set('Authorization', bearer(adminToken))
+      .send(body);
+  const depositRow = (id: string) =>
+    testApp.rawPrisma.deposit.findUniqueOrThrow({
+      where: { id },
+      select: { reviewStatus: true, paymentInstrumentId: true, paymentMethod: true },
+    });
+  const installmentStatus = async (id: string) =>
+    (
+      await testApp.rawPrisma.installment.findUniqueOrThrow({
+        where: { id },
+        select: { status: true },
+      })
+    ).status;
+
+  beforeAll(async () => {
+    testApp = await createE2ETestApp();
+    [adminToken, salesToken] = await Promise.all([
+      loginAs(testApp.app, 'admin@example.com', 'ChangeMe123!'),
+      loginAs(testApp.app, 'sales@example.com', 'SalesPass123!'),
+    ]);
+
+    const company = await testApp.rawPrisma.company.findFirstOrThrow({
+      where: { isActive: true },
+      select: { id: true },
+    });
+    const companyId = company.id;
+    const tag = process.hrtime.bigint().toString().slice(-8);
+    customerName = `FG01 Customer ${tag}`;
+    const customer = await testApp.rawPrisma.user.create({
+      data: {
+        companyId,
+        role: UserRole.CUSTOMER,
+        fullName: customerName,
+        email: `fg01-${tag}@example.com`,
+        phone: `+2010${tag}`,
+        passwordHash: await argon2.hash('StrongPass1!'),
+        locale: 'ar',
+      },
+      select: { id: true },
+    });
+    const unit = await testApp.rawPrisma.unit.findFirstOrThrow({
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      select: { id: true },
+    });
+    const contract = await testApp.rawPrisma.contract.create({
+      data: {
+        companyId,
+        contractNumber: `FG01-CON-${tag}`,
+        customerId: customer.id,
+        unitId: unit.id,
+        totalAmount: new Prisma.Decimal(1_000_000),
+        downPayment: new Prisma.Decimal(100_000),
+      },
+      select: { id: true },
+    });
+    contractId = contract.id;
+    const plan = await testApp.rawPrisma.installmentPlan.create({
+      data: {
+        companyId,
+        contractId,
+        totalMonths: 12,
+        monthlyAmount: new Prisma.Decimal(AMOUNT),
+        startsAt: new Date('2026-10-01T00:00:00Z'),
+      },
+      select: { id: true },
+    });
+    const keys = Object.keys(inst) as (keyof typeof inst)[];
+    for (const [i, key] of keys.entries()) {
+      const row = await testApp.rawPrisma.installment.create({
+        data: {
+          companyId,
+          planId: plan.id,
+          type: PlanPaymentType.INSTALLMENT,
+          amount: new Prisma.Decimal(AMOUNT),
+          dueDate: new Date(Date.UTC(2026, 10 + i, 1)),
+          status: InstallmentStatus.PENDING,
+        },
+        select: { id: true },
+      });
+      inst[key] = row.id;
+    }
+  });
+
+  describe('validation', () => {
+    it('FG01-1: paymentMethod CHEQUE without cheque details → 400', async () => {
+      const res = await record({ installmentId: inst.clear, paymentMethod: PaymentMethod.CHEQUE });
+      expect(res.status).toBe(400);
+      expect(await installmentStatus(inst.clear)).toBe(InstallmentStatus.PENDING);
+    });
+
+    it('FG01-2: cheque details with another payment method → 400', async () => {
+      const res = await record({
+        installmentId: inst.clear,
+        ...cheque('X-1'),
+        paymentMethod: PaymentMethod.CASH,
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('FG01-3: a cheque without a due date → 400 (nested validation)', async () => {
+      const res = await record({
+        installmentId: inst.clear,
+        paymentMethod: PaymentMethod.CHEQUE,
+        cheque: { chequeNumber: 'X-2' },
+      });
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe('a cheque that clears', () => {
+    let depositId: string;
+    let instrumentId: string;
+
+    it('FG01-4: recording it leaves the installment unpaid and opens a PENDING_CLEARANCE cheque', async () => {
+      const res = await record({ installmentId: inst.clear, ...cheque('FG01-CLR') });
+      expect(res.status).toBe(201);
+      depositId = res.body.id;
+
+      const deposit = await depositRow(depositId);
+      expect(deposit.reviewStatus).toBe(DepositReviewStatus.PENDING_REVIEW);
+      expect(deposit.paymentMethod).toBe(PaymentMethod.CHEQUE);
+      expect(deposit.paymentInstrumentId).toBeTruthy();
+      instrumentId = deposit.paymentInstrumentId as string;
+
+      const pi = await testApp.rawPrisma.paymentInstrument.findUniqueOrThrow({
+        where: { id: instrumentId },
+        select: { status: true, type: true, chequeNumber: true, drawerBankName: true },
+      });
+      expect(pi).toEqual({
+        status: PaymentInstrumentStatus.PENDING_CLEARANCE,
+        type: PaymentInstrumentType.CHEQUE,
+        chequeNumber: 'FG01-CLR',
+        drawerBankName: 'FG01 Bank',
+      });
+      expect(await installmentStatus(inst.clear)).toBe(InstallmentStatus.PENDING);
+    });
+
+    it('FG01-5: a second cheque on the same installment → 409', async () => {
+      const res = await record({ installmentId: inst.clear, ...cheque('FG01-CLR-2') });
+      expect(res.status).toBe(409);
+    });
+
+    it('FG01-6: the deposit is not in the review queue — it waits on the bank', async () => {
+      const res = await http()
+        .get('/v1/deposits/review-queue?pageSize=100')
+        .set('Authorization', bearer(adminToken));
+      expect(res.status).toBe(200);
+      expect(collectIds(res.body)).not.toContain(depositId);
+    });
+
+    it('FG01-7: a reviewer cannot approve or verify it before the cheque clears', async () => {
+      const approve = await http()
+        .post(`/v1/deposits/${depositId}/approve`)
+        .set('Authorization', bearer(adminToken))
+        .send({});
+      expect(approve.status).toBe(400);
+      const verify = await http()
+        .patch(`/v1/deposits/${depositId}/verify`)
+        .set('Authorization', bearer(adminToken))
+        .send({ verified: true });
+      expect(verify.status).toBe(400);
+      expect(await installmentStatus(inst.clear)).toBe(InstallmentStatus.PENDING);
+    });
+
+    it('FG01-8: GET /payment-instruments lists it with its deposit, filtered by status, due date and customer', async () => {
+      const list = (qs: string) =>
+        http().get(`/v1/payment-instruments?${qs}`).set('Authorization', bearer(adminToken));
+
+      const byName = await list(
+        `status=PENDING_CLEARANCE&q=${encodeURIComponent(customerName)}&dueFrom=2026-11-01&dueTo=2026-11-30`,
+      );
+      expect(byName.status).toBe(200);
+      const row = (byName.body.data as Array<{ id: string; deposits: unknown[] }>).find(
+        (r) => r.id === instrumentId,
+      );
+      expect(row).toBeDefined();
+      expect(row?.deposits).toEqual([
+        expect.objectContaining({
+          id: depositId,
+          installment: expect.objectContaining({ id: inst.clear }),
+          contract: expect.objectContaining({
+            id: contractId,
+            customer: expect.objectContaining({ fullName: customerName }),
+          }),
+        }),
+      ]);
+      expect(byName.body.meta).toEqual(expect.objectContaining({ total: expect.any(Number) }));
+
+      expect(collectIds((await list('status=CLEARED&pageSize=100')).body)).not.toContain(instrumentId);
+      expect(collectIds((await list('dueFrom=2026-12-01&pageSize=100')).body)).not.toContain(instrumentId);
+      expect(collectIds((await list('q=FG01-CLR')).body)).toContain(instrumentId);
+    });
+
+    it('FG01-9: deposit → clear marks the installment PAID and approves the deposit', async () => {
+      expect((await piAction(instrumentId, 'deposit')).status).toBe(200);
+      const cleared = await piAction(instrumentId, 'clear', { clearingDate: '2026-11-16' });
+      expect(cleared.status).toBe(200);
+
+      const deposit = await depositRow(depositId);
+      expect(deposit.reviewStatus).toBe(DepositReviewStatus.APPROVED);
+      const installment = await testApp.rawPrisma.installment.findUniqueOrThrow({
+        where: { id: inst.clear },
+        select: { status: true, paidAt: true },
+      });
+      expect(installment.status).toBe(InstallmentStatus.PAID);
+      expect(installment.paidAt?.toISOString().slice(0, 10)).toBe('2026-11-16');
+    });
+  });
+
+  it('FG01-15: two cheques recorded at the same moment on one installment → one 201, one 409', async () => {
+    const results = await Promise.all([
+      record({ installmentId: inst.race, ...cheque('FG01-RACE-A') }),
+      record({ installmentId: inst.race, ...cheque('FG01-RACE-B') }),
+    ]);
+    expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+    const linked = await testApp.rawPrisma.deposit.count({
+      where: { installmentId: inst.race, paymentInstrumentId: { not: null } },
+    });
+    expect(linked).toBe(1);
+  });
+
+  describe('a cheque that bounces or is cancelled', () => {
+    it('FG01-10: bounce rejects the deposit and leaves the installment open for a new cheque', async () => {
+      const res = await record({ installmentId: inst.bounce, ...cheque('FG01-BNC') });
+      expect(res.status).toBe(201);
+      const { paymentInstrumentId } = await depositRow(res.body.id);
+
+      expect((await piAction(paymentInstrumentId as string, 'deposit')).status).toBe(200);
+      const bounced = await piAction(paymentInstrumentId as string, 'bounce', {
+        bounceReason: 'Insufficient funds',
+        bounceDate: '2026-11-20',
+        penaltyAmount: 0,
+      });
+      expect(bounced.status).toBe(200);
+
+      expect((await depositRow(res.body.id)).reviewStatus).toBe(DepositReviewStatus.REJECTED);
+      expect(await installmentStatus(inst.bounce)).toBe(InstallmentStatus.PENDING);
+
+      // The bounced cheque no longer blocks the installment.
+      const again = await record({ installmentId: inst.bounce, ...cheque('FG01-BNC-2') });
+      expect(again.status).toBe(201);
+    });
+
+    it('FG01-11: cancelling a cheque before it is deposited rejects its deposit', async () => {
+      const res = await record({ installmentId: inst.cancel, ...cheque('FG01-CNL') });
+      expect(res.status).toBe(201);
+      const { paymentInstrumentId } = await depositRow(res.body.id);
+
+      expect((await piAction(paymentInstrumentId as string, 'cancel')).status).toBe(200);
+
+      expect((await depositRow(res.body.id)).reviewStatus).toBe(DepositReviewStatus.REJECTED);
+      expect(await installmentStatus(inst.cancel)).toBe(InstallmentStatus.PENDING);
+    });
+  });
+
+  describe('transfer and cash', () => {
+    it('FG01-12: a bank transfer is collected at once and kept as a CLEARED instrument', async () => {
+      const res = await record({
+        installmentId: inst.transfer,
+        paymentMethod: PaymentMethod.BANK_TRANSFER,
+        transfer: { bankName: 'FG01 Bank', referenceNumber: 'TRX-FG01' },
+      });
+      expect(res.status).toBe(201);
+      expect(await installmentStatus(inst.transfer)).toBe(InstallmentStatus.PAID);
+
+      const { paymentInstrumentId } = await depositRow(res.body.id);
+      const pi = await testApp.rawPrisma.paymentInstrument.findUniqueOrThrow({
+        where: { id: paymentInstrumentId as string },
+        select: { status: true, type: true, referenceNumber: true, clearingDate: true },
+      });
+      expect(pi.status).toBe(PaymentInstrumentStatus.CLEARED);
+      expect(pi.type).toBe(PaymentInstrumentType.BANK_TRANSFER);
+      expect(pi.referenceNumber).toBe('TRX-FG01');
+      expect(pi.clearingDate).toBeTruthy();
+    });
+
+    it('FG01-13: cash is collected at once with no instrument', async () => {
+      const res = await record({ installmentId: inst.cash, paymentMethod: PaymentMethod.CASH });
+      expect(res.status).toBe(201);
+      expect(await installmentStatus(inst.cash)).toBe(InstallmentStatus.PAID);
+      expect((await depositRow(res.body.id)).paymentInstrumentId).toBeNull();
+    });
+  });
+
+  it('FG01-14: SALES cannot list payment instruments → 403', async () => {
+    const res = await http().get('/v1/payment-instruments').set('Authorization', bearer(salesToken));
+    expect(res.status).toBe(403);
   });
 });

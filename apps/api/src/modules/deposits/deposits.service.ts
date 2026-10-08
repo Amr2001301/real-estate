@@ -13,6 +13,8 @@ import {
   DocumentVisibility,
   InstallmentStatus,
   PaymentCorrectionType,
+  PaymentInstrumentStatus,
+  PaymentInstrumentType,
   PaymentMethod,
   PlanPaymentType,
   Prisma,
@@ -20,6 +22,7 @@ import {
   UserRole,
 } from '@prisma/client';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
+import { UNCLEARED_INSTRUMENT_STATUSES, notAwaitingChequeWhere } from './review-queue';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { scopedUserFindMany } from '../../common/tenant/resolve-tenant-entity';
 import { DocumentsService } from '../documents/documents.module';
@@ -206,7 +209,76 @@ export class DepositsService {
 
     const paidAt = dto.paidAt ? new Date(dto.paidAt) : new Date();
 
+    // FG-01 — the payment method decides when the installment counts as paid
+    // (decided 2026-10-08): cash and bank transfers at once; a cheque only
+    // when it clears (payment-instruments: clear / bounce). Cheque or transfer
+    // details become a PaymentInstrument linked to the deposit — before, none
+    // was ever linked, so clearing or bouncing a cheque reached no payment.
+    const paymentMethod =
+      dto.paymentMethod ?? (dto.cheque ? PaymentMethod.CHEQUE : dto.transfer ? PaymentMethod.BANK_TRANSFER : null);
+    if (paymentMethod === PaymentMethod.CHEQUE && !dto.cheque) {
+      throw new BadRequestException('بيانات الشيك مطلوبة (الرقم وتاريخ الاستحقاق)');
+    }
+    if (dto.cheque && paymentMethod !== PaymentMethod.CHEQUE) {
+      throw new BadRequestException('بيانات الشيك تُرسل فقط مع طريقة الدفع شيك');
+    }
+    if (dto.transfer && paymentMethod !== PaymentMethod.BANK_TRANSFER) {
+      throw new BadRequestException('بيانات التحويل تُرسل فقط مع طريقة الدفع تحويل بنكي');
+    }
+
     const deposit = await this.prisma.$transaction(async (tx) => {
+      if (dto.cheque) {
+        // The installment stays unpaid until the cheque clears; it must still
+        // be payable, and not already waiting on another cheque. FOR UPDATE
+        // holds the row until commit, so two cheques recorded at the same
+        // moment cannot both pass the check below.
+        const open = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+          SELECT "id" FROM "Installment"
+          WHERE "id" = ${dto.installmentId}::uuid
+            AND "companyId" = ${getRequiredCompanyId()}::uuid
+            AND "status" IN ('PENDING', 'OVERDUE')
+          FOR UPDATE`);
+        if (open.length === 0) throw new ConflictException('هذا القسط مدفوع بالفعل أو ملغى');
+        const waiting = await tx.deposit.count({
+          where: {
+            installmentId: dto.installmentId,
+            deletedAt: null,
+            paymentInstrument: {
+              status: { in: UNCLEARED_INSTRUMENT_STATUSES },
+            },
+          },
+        });
+        if (waiting > 0) {
+          throw new ConflictException('هذا القسط عليه شيك لم يُصرف بعد');
+        }
+        const instrument = await tx.paymentInstrument.create({
+          data: {
+            type: PaymentInstrumentType.CHEQUE,
+            chequeNumber: dto.cheque.chequeNumber,
+            drawerBankName: dto.cheque.drawerBankName ?? null,
+            chequeDueDate: new Date(dto.cheque.chequeDueDate),
+            status: PaymentInstrumentStatus.PENDING_CLEARANCE,
+            recordedById,
+            companyId: getRequiredCompanyId(),
+          },
+        });
+        return tx.deposit.create({
+          data: {
+            type: depositType,
+            contractId: dto.contractId,
+            installmentId: dto.installmentId,
+            amount: new Prisma.Decimal(dto.amount),
+            paidAt,
+            receiptUrl: dto.receiptUrl ?? null,
+            paymentMethod,
+            // Waiting on the bank, not on a reviewer: approved by the clearing.
+            reviewStatus: DepositReviewStatus.PENDING_REVIEW,
+            paymentInstrumentId: instrument.id,
+            recordedById,
+          },
+        });
+      }
+
       // Atomic claim: mark PAID only if PENDING or OVERDUE.
       // Explicit IN excludes both PAID and CANCELLED (Step D1) — a cancelled
       // installment must not be re-activated by recording a new deposit.
@@ -217,6 +289,20 @@ export class DepositsService {
       if (claimed.count === 0) {
         throw new ConflictException('هذا القسط مدفوع بالفعل أو ملغى');
       }
+      const transfer = dto.transfer
+        ? await tx.paymentInstrument.create({
+            data: {
+              type: PaymentInstrumentType.BANK_TRANSFER,
+              bankName: dto.transfer.bankName ?? null,
+              referenceNumber: dto.transfer.referenceNumber ?? null,
+              // A transfer is collected when recorded (decided 2026-10-08).
+              status: PaymentInstrumentStatus.CLEARED,
+              clearingDate: paidAt,
+              recordedById,
+              companyId: getRequiredCompanyId(),
+            },
+          })
+        : null;
       return tx.deposit.create({
         data: {
           type: depositType,
@@ -225,7 +311,8 @@ export class DepositsService {
           amount: new Prisma.Decimal(dto.amount),
           paidAt,
           receiptUrl: dto.receiptUrl ?? null,
-          paymentMethod: dto.paymentMethod ?? null,
+          paymentMethod,
+          paymentInstrumentId: transfer?.id ?? null,
           recordedById,
         },
       });
@@ -279,6 +366,8 @@ export class DepositsService {
 
     // P11 — review status filter for the admin review queue.
     if (opts.reviewStatus) and.push({ reviewStatus: opts.reviewStatus });
+    // FG-01 — "under review" means waiting on a reviewer, not on the bank.
+    if (opts.reviewStatus === DepositReviewStatus.PENDING_REVIEW) and.push(notAwaitingChequeWhere);
 
     // Unit filter (contract unit OR reservation unit)
     if (opts.unitId) {
@@ -415,7 +504,27 @@ export class DepositsService {
     };
   }
 
+  /**
+   * FG-01 — a deposit paid by a cheque that has not cleared is settled by the
+   * cheque (clear → approved and installment paid; bounce → rejected), never
+   * by a reviewer: approving it here would mark the installment paid before
+   * the bank had paid anything.
+   */
+  private async assertNotAwaitingCheque(depositId: string): Promise<void> {
+    const d = await this.prisma.deposit.findUnique({
+      where: { id: depositId },
+      select: { paymentInstrument: { select: { status: true } } },
+    });
+    const status = d?.paymentInstrument?.status;
+    if (status && UNCLEARED_INSTRUMENT_STATUSES.includes(status)) {
+      throw new BadRequestException(
+        'هذه الدفعة بشيك لم يُصرف بعد — تُعتمد بصرف الشيك أو ترفض بارتداده من صفحة الشيكات',
+      );
+    }
+  }
+
   async verify(id: string, dto: VerifyDepositDto, actor: AuthUser) {
+    await this.assertNotAwaitingCheque(id);
     // P11 — keep `verified` in lockstep with `reviewStatus`. Toggling
     // verified=true is equivalent to a manual approve action; verified=false
     // resets the row to the pre-review state (NO_PROOF if no receipt exists,
@@ -894,6 +1003,7 @@ export class DepositsService {
   /** Admin approves a customer-submitted payment proof. Mirrors verified=true
    *  and marks the linked Installment as PAID with paidAt. */
   async approveProof(id: string, actor: AuthUser, dto: ApproveDepositDto) {
+    await this.assertNotAwaitingCheque(id);
     const target = await this.prisma.deposit.findUnique({
       where: { id },
       include: {
@@ -978,6 +1088,7 @@ export class DepositsService {
    *  reason. Customer notification carries only a short snippet of the
    *  reason (first 140 chars) — internal notes stay server-side. */
   async rejectProof(id: string, actor: AuthUser, dto: RejectDepositDto) {
+    await this.assertNotAwaitingCheque(id);
     const target = await this.prisma.deposit.findUnique({
       where: { id },
       include: {

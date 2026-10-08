@@ -17,10 +17,12 @@ import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { NotificationsService } from '../notifications/notifications.module';
 import {
   CreatePaymentInstrumentDto,
+  ListPaymentInstrumentsQueryDto,
   RecordBounceDto,
   RecordClearingDto,
   ReplaceInstrumentDto,
 } from './payment-instruments.dto';
+import { paginate, takeSkip } from '../../common/utils/pagination';
 
 // Compute the status an installment should be re-opened to after a Sub-case B
 // bounce, per the operator-submitted installmentAction (§4.4).
@@ -135,6 +137,70 @@ export class ChequeLifecycleService {
     return pi;
   }
 
+  // ── List (FG-01 — the cheques page) ─────────────────────────────────────────
+
+  async list(query: ListPaymentInstrumentsQueryDto) {
+    const companyId = getRequiredCompanyId();
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    const q = query.q?.trim();
+    const where: Prisma.PaymentInstrumentWhereInput = {
+      companyId,
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.type ? { type: query.type } : {}),
+      ...(query.dueFrom || query.dueTo
+        ? {
+            chequeDueDate: {
+              ...(query.dueFrom ? { gte: new Date(query.dueFrom) } : {}),
+              ...(query.dueTo ? { lte: new Date(query.dueTo) } : {}),
+            },
+          }
+        : {}),
+      ...(q
+        ? {
+            OR: [
+              { chequeNumber: { contains: q, mode: 'insensitive' } },
+              { referenceNumber: { contains: q, mode: 'insensitive' } },
+              { drawerBankName: { contains: q, mode: 'insensitive' } },
+              { bankName: { contains: q, mode: 'insensitive' } },
+              {
+                deposits: {
+                  some: { contract: { customer: { fullName: { contains: q, mode: 'insensitive' } } } },
+                },
+              },
+            ],
+          }
+        : {}),
+    };
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.paymentInstrument.findMany({
+        where,
+        // Soonest cheque first: what the treasurer presents next.
+        orderBy: [{ chequeDueDate: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }],
+        ...takeSkip({ page, pageSize }),
+        include: {
+          deposits: {
+            select: {
+              id: true,
+              amount: true,
+              reviewStatus: true,
+              installment: { select: { id: true, dueDate: true, status: true } },
+              contract: {
+                select: {
+                  id: true,
+                  contractNumber: true,
+                  customer: { select: { id: true, fullName: true } },
+                },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.paymentInstrument.count({ where }),
+    ]);
+    return paginate(data, total, { page, pageSize });
+  }
+
   // ── PENDING_CLEARANCE → DEPOSITED ──────────────────────────────────────────
 
   async transitionToDeposited(id: string) {
@@ -151,9 +217,25 @@ export class ChequeLifecycleService {
   async transitionToCancelled(id: string) {
     const pi = await this.loadOwned(id);
     this.assertTransition(pi.status, PaymentInstrumentStatus.CANCELLED);
-    return this.prisma.paymentInstrument.update({
-      where: { id },
-      data: { status: PaymentInstrumentStatus.CANCELLED },
+    // FG-01 — a voided cheque pays nothing: its waiting deposits are rejected,
+    // so they leave the installment open instead of hanging under review.
+    const pendingDepositIds = pi.deposits
+      .filter((d) => d.reviewStatus === DepositReviewStatus.PENDING_REVIEW)
+      .map((d) => d.id);
+    return this.prisma.$transaction(async (tx) => {
+      if (pendingDepositIds.length > 0) {
+        await tx.deposit.updateMany({
+          where: { id: { in: pendingDepositIds } },
+          data: {
+            reviewStatus: DepositReviewStatus.REJECTED,
+            rejectionReason: `Instrument cancelled — ${pi.chequeNumber ?? pi.referenceNumber ?? pi.id.slice(0, 8)}`,
+          },
+        });
+      }
+      return tx.paymentInstrument.update({
+        where: { id },
+        data: { status: PaymentInstrumentStatus.CANCELLED },
+      });
     });
   }
 
@@ -188,8 +270,10 @@ export class ChequeLifecycleService {
         });
       }
       if (installmentIds.length > 0) {
+        // Only an installment still open is paid — never one cancelled with
+        // its contract while the cheque was out.
         await tx.installment.updateMany({
-          where: { id: { in: installmentIds } },
+          where: { id: { in: installmentIds }, status: { in: ['PENDING', 'OVERDUE'] } },
           data: { status: 'PAID', paidAt: clearingDate },
         });
       }

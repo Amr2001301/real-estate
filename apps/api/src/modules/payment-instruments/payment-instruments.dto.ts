@@ -1,14 +1,17 @@
+import { Type } from 'class-transformer';
 import {
   IsDateString,
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
   Min,
 } from 'class-validator';
-import { PaymentInstrumentType } from '@prisma/client';
+import { PaymentInstrumentStatus, PaymentInstrumentType } from '@prisma/client';
 
 export class CreatePaymentInstrumentDto {
   @IsEnum(PaymentInstrumentType)
@@ -67,4 +70,18 @@ export class ReplaceInstrumentDto {
 
 export class RecordClearingDto {
   @IsOptional() @IsDateString() clearingDate?: string;
+}
+
+/** FG-01 — the cheques page: filter by state, type and due date. */
+export class ListPaymentInstrumentsQueryDto {
+  @IsOptional() @IsEnum(PaymentInstrumentStatus) status?: PaymentInstrumentStatus;
+  @IsOptional() @IsEnum(PaymentInstrumentType) type?: PaymentInstrumentType;
+  /** Cheque due on or after this date. */
+  @IsOptional() @IsDateString() dueFrom?: string;
+  /** Cheque due on or before this date. */
+  @IsOptional() @IsDateString() dueTo?: string;
+  /** Cheque / reference number, drawer bank, or the customer's name. */
+  @IsOptional() @IsString() @MaxLength(100) q?: string;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) pageSize?: number;
 }

@@ -12,9 +12,23 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { DepositReviewStatus, DepositType, PaymentMethod } from '@prisma/client';
+
+/** FG-01 — the cheque a payment was made with (one cheque per installment). */
+export class DepositChequeDto {
+  @IsString() @IsNotEmpty() @MaxLength(100) chequeNumber!: string;
+  @IsOptional() @IsString() @MaxLength(200) drawerBankName?: string;
+  @IsDateString() chequeDueDate!: string;
+}
+
+/** FG-01 — optional details of a bank transfer (counted as collected at once). */
+export class DepositTransferDto {
+  @IsOptional() @IsString() @MaxLength(200) bankName?: string;
+  @IsOptional() @IsString() @MaxLength(100) referenceNumber?: string;
+}
 
 export class RecordDepositDto {
   @IsUUID() contractId!: string;
@@ -23,6 +37,14 @@ export class RecordDepositDto {
   @IsOptional() @IsDateString() paidAt?: string;
   @IsOptional() @IsString() receiptUrl?: string;
   @IsOptional() @IsEnum(PaymentMethod) paymentMethod?: PaymentMethod;
+  /**
+   * Required when paymentMethod is CHEQUE. The installment is NOT marked paid:
+   * the deposit waits (PENDING_REVIEW) until the cheque clears or bounces on
+   * /payment-instruments.
+   */
+  @IsOptional() @ValidateNested() @Type(() => DepositChequeDto) cheque?: DepositChequeDto;
+  /** Optional with BANK_TRANSFER; stored as a CLEARED payment instrument. */
+  @IsOptional() @ValidateNested() @Type(() => DepositTransferDto) transfer?: DepositTransferDto;
 }
 
 export class VerifyDepositDto {

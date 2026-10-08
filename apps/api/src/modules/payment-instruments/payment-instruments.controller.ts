@@ -7,6 +7,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
@@ -16,6 +17,7 @@ import { CurrentUser, AuthUser } from '../../common/decorators/current-user.deco
 import { ChequeLifecycleService } from './payment-instruments.service';
 import {
   CreatePaymentInstrumentDto,
+  ListPaymentInstrumentsQueryDto,
   RecordBounceDto,
   RecordClearingDto,
   ReplaceInstrumentDto,
@@ -38,6 +40,14 @@ export class PaymentInstrumentsController {
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreatePaymentInstrumentDto) {
     return this.svc.create(dto, user.sub);
+  }
+
+  // ── List (FG-01 — the cheques page) ──────────────────────────────────────────
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @Permissions('payment-instruments:manage')
+  @Get()
+  list(@Query() query: ListPaymentInstrumentsQueryDto) {
+    return this.svc.list(query);
   }
 
   // ── Read ─────────────────────────────────────────────────────────────────────
