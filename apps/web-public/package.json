@@ -23,7 +23,7 @@
     "qrcode-generator": "^2.0.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-leaflet": "^4.2.1",
+    "react-leaflet": "^5.0.0",
     "tailwind-merge": "^2.5.5"
   },
   "devDependencies": {
