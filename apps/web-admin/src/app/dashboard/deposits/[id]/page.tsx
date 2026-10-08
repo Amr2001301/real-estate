@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { OwnerDocumentsCard } from '@/components/documents/owner-documents-card';
 import { VerifyToggle } from '../verify-toggle';
+import { DepositManage } from './manage';
 import { PrintButton } from '@/components/print/PrintButton';
 import {
   ApproveDepositButton,
@@ -169,7 +170,18 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
                 )}
               </div>
             )}
-            {isAdmin && (!d.reviewStatus || d.reviewStatus === 'NO_PROOF') && (
+            {isAdmin && (
+              <div className="pt-2 border-t border-hairline">
+                <DepositManage
+                  id={d.id}
+                  contractId={d.contractId ?? null}
+                  reversible={!!d.reversible}
+                  deleted={!!d.deletedAt}
+                  locale={locale}
+                />
+              </div>
+            )}
+            {isAdmin && !d.deletedAt && (!d.reviewStatus || d.reviewStatus === 'NO_PROOF') && (
               <div className="pt-2 border-t border-hairline flex items-center gap-2">
                 <span className="text-[11px] font-medium text-slate-400">{m.verifyStatusLabel}</span>
                 <VerifyToggle id={d.id} contractId={d.contractId ?? null} verified={d.verified} locale={locale} />

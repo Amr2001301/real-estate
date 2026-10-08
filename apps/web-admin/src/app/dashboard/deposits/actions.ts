@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { api } from '@/lib/api';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 export interface DepositFormState {
   error?: string;
@@ -93,6 +95,51 @@ export async function rejectDepositAction(
   revalidatePath(`/dashboard/deposits/${id}`);
   revalidatePath('/dashboard/payments/review');
   if (contractId) revalidatePath(`/dashboard/contracts/${contractId}`);
+  return { ok: true };
+}
+
+// FG-05 — reverse / delete / restore from the deposit page. The API reverses a
+// deposit that still pays its installment before deleting it.
+function revalidateDeposit(id: string, contractId: string | null) {
+  revalidatePath('/dashboard/deposits');
+  revalidatePath(`/dashboard/deposits/${id}`);
+  if (contractId) revalidatePath(`/dashboard/contracts/${contractId}`);
+}
+
+export async function reverseDepositAction(
+  _prev: DepositFormState,
+  formData: FormData,
+): Promise<DepositFormState> {
+  const id = String(formData.get('depositId') ?? '');
+  const contractId = String(formData.get('contractId') ?? '') || null;
+  const reason = String(formData.get('reason') ?? '').trim();
+  if (!reason) return { error: uiT(await getLocale()).pages.depositsDetail.manage.reasonRequired };
+  try {
+    await api.post(`/deposits/${id}/reverse`, { reason });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidateDeposit(id, contractId);
+  return { ok: true };
+}
+
+export async function deleteDepositAction(id: string, contractId: string | null): Promise<DepositFormState> {
+  try {
+    await api.delete(`/deposits/${id}`);
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidateDeposit(id, contractId);
+  return { ok: true };
+}
+
+export async function restoreDepositAction(id: string, contractId: string | null): Promise<DepositFormState> {
+  try {
+    await api.post(`/deposits/${id}/restore`, {});
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidateDeposit(id, contractId);
   return { ok: true };
 }
 

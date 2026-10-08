@@ -165,7 +165,20 @@ export class DepositsService {
   async findOne(id: string) {
     const deposit = await this.prisma.deposit.findUnique({ where: { id }, include: DEPOSIT_INCLUDE });
     if (!deposit) throw new NotFoundException('Deposit not found');
-    return deposit;
+    // Lets the admin page offer "reverse" only when POST /reverse would succeed.
+    const d = await this.prisma.deposit.findUnique({ where: { id }, select: REVERSAL_SELECT });
+    const reversible = !!d && !d.deletedAt && (await this.stillPays(d));
+    return { ...deposit, reversible };
+  }
+
+  /** The deposit is what keeps its installment PAID (FG-05). */
+  private async stillPays(d: ReversalDeposit): Promise<boolean> {
+    return (
+      !!d.installmentId &&
+      d.installment?.status === InstallmentStatus.PAID &&
+      PAYING_REVIEW_STATUSES.includes(d.reviewStatus) &&
+      !(await this.reversedSinceReview(d))
+    );
   }
 
   /**
@@ -178,12 +191,7 @@ export class DepositsService {
     const d = await this.prisma.deposit.findUnique({ where: { id }, select: REVERSAL_SELECT });
     if (!d) throw new NotFoundException('Deposit not found');
     if (d.deletedAt) throw new NotFoundException('Deposit already deleted');
-    const stillPays =
-      !!d.installmentId &&
-      d.installment?.status === InstallmentStatus.PAID &&
-      PAYING_REVIEW_STATUSES.includes(d.reviewStatus) &&
-      !(await this.reversedSinceReview(d));
-    if (!stillPays) {
+    if (!(await this.stillPays(d))) {
       await this.prisma.deposit.update({ where: { id }, data: { deletedAt: new Date() } });
       return;
     }

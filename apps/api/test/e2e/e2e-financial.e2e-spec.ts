@@ -1286,10 +1286,14 @@ describe('FG-05 — deposit reversal (e2e)', () => {
     expect(paid.status).toBe(201);
     expect(paid.body.reviewStatus).toBe(DepositReviewStatus.NO_PROOF);
     expect(await installmentStatus(inst.once)).toBe(InstallmentStatus.PAID);
+    // The detail tells the admin page whether to offer "reverse".
+    const detail = () => http().get(`/v1/deposits/${paid.body.id}`).set('Authorization', bearer(adminToken));
+    expect((await detail()).body.reversible).toBe(true);
 
     const first = await reverse(paid.body.id);
     expect(first.status).toBe(201);
     expect(await installmentStatus(inst.once)).toBe(InstallmentStatus.PENDING);
+    expect((await detail()).body.reversible).toBe(false);
 
     const second = await reverse(paid.body.id);
     expect(second.status).toBe(409);

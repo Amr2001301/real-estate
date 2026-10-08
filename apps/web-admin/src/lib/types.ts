@@ -449,6 +449,9 @@ export interface Deposit {
     sizeBytes: number | null;
     createdAt: string;
   } | null;
+  deletedAt?: string | null;
+  /** Deposit detail only — it still pays its installment, so it can be reversed (FG-05). */
+  reversible?: boolean;
 }
 
 export interface VisitRequest {
