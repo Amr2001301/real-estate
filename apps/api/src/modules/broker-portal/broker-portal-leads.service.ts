@@ -41,6 +41,11 @@ export class BrokerPortalLeadsService {
       ...(query.stage ? { stage: query.stage } : {}),
       ...(query.projectId ? { projectInterestId: query.projectId } : {}),
       ...(query.unitId ? { unitInterestId: query.unitId } : {}),
+      ...(query.assigned === 'true'
+        ? { assignedSalesId: { not: null } }
+        : query.assigned === 'false'
+          ? { assignedSalesId: null }
+          : {}),
       ...(trimmed
         ? {
             OR: [

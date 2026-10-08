@@ -11,6 +11,11 @@ export const SALES_PASSWORD = process.env.E2E_SALES_PASSWORD ?? 'SalesPass123!';
 export const MANAGER_EMAIL = process.env.E2E_MANAGER_EMAIL ?? 'manager@example.com';
 export const MANAGER_PASSWORD = process.env.E2E_MANAGER_PASSWORD ?? 'ManagerPass123!';
 
+// Defaults match the e2e seed (apps/api/prisma/seed-e2e.ts). A BROKER lands on
+// /portal, not /dashboard.
+export const BROKER_EMAIL = process.env.E2E_BROKER_EMAIL ?? 'broker1@example.com';
+export const BROKER_PASSWORD = process.env.E2E_BROKER_PASSWORD ?? 'BrokerPass1!!';
+
 // Company slug for tenant-aware login. Defaults to the dev-seed default company slug.
 export const COMPANY_SLUG = process.env.E2E_COMPANY_SLUG ?? 'default';
 
@@ -22,7 +27,13 @@ export const COMPANY_SLUG = process.env.E2E_COMPANY_SLUG ?? 'default';
  * backend endpoint is POST /auth/login-staff (tenant-aware). The legacy
  * POST /auth/login endpoint is NOT used by this helper.
  */
-export async function login(page: Page, email: string, password: string, slug = COMPANY_SLUG): Promise<void> {
+export async function login(
+  page: Page,
+  email: string,
+  password: string,
+  slug = COMPANY_SLUG,
+  landing: '/dashboard' | '/portal' = '/dashboard',
+): Promise<void> {
   await page.goto('/login');
 
   const slugField = page.locator('input[name="slug"]');
@@ -44,10 +55,10 @@ export async function login(page: Page, email: string, password: string, slug = 
   await page.getByRole('button', { name: 'تسجيل الدخول' }).click();
 
   await page
-    .waitForURL((url) => url.pathname.startsWith('/dashboard'), { timeout: 15_000 })
+    .waitForURL((url) => url.pathname.startsWith(landing), { timeout: 15_000 })
     .catch(() => {
       throw new Error(
-        `Login did not redirect to /dashboard for ${email} (slug: ${slug}). ` +
+        `Login did not redirect to ${landing} for ${email} (slug: ${slug}). ` +
           'Check E2E_*_EMAIL / E2E_*_PASSWORD / E2E_COMPANY_SLUG and that the ' +
           'API is seeded with this user.',
       );

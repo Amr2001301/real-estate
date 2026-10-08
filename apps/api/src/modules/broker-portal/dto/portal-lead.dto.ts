@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   IsEmail,
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -66,6 +67,15 @@ export class PortalLeadsQueryDto {
   @IsOptional()
   @IsUUID()
   unitId?: string;
+
+  /**
+   * `true` → only leads with an internal sales rep (a reservation needs one);
+   * `false` → only leads still waiting for one. A string, not a boolean:
+   * implicit conversion turns "false" into true.
+   */
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  assigned?: 'true' | 'false';
 
   @IsOptional()
   @Type(() => Number)

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
   X,
@@ -15,13 +15,14 @@ import {
 } from 'lucide-react';
 import { Field } from '@/components/form/field';
 import { SubmitButton } from '@/components/form/submit-button';
+import { SearchSelect, type SearchOption } from '@/components/form/search-select';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { FormFooter } from '@/components/ui/form-footer';
 import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import { tx, formatCurrency } from '@/lib/format';
-import { getUnitProjectId } from '@/lib/portal-units';
+import { findPortalUnit } from '@/lib/portal-units';
 import type { PortalLead, PortalUnit } from '@/lib/types';
 import {
   createPortalReservationAction,
@@ -41,9 +42,9 @@ interface PlanOption {
 }
 
 interface Props {
-  approvedLeads: PortalLead[];
-  units:         PortalUnit[];
-  currency?:     string;
+  /** First few approved leads still waiting for a sales rep (warning only). */
+  leadsMissingSales: PortalLead[];
+  currency?:         string;
 }
 
 const NAV_SECTIONS = [
@@ -51,14 +52,19 @@ const NAV_SECTIONS = [
   { id: 'section-notes',     num: '02', label: 'ملاحظات',        sub: 'معلومات إضافية' },
 ];
 
-export default function PortalReservationForm({ approvedLeads, units, currency = 'SAR' }: Props) {
+// Leads and units are searched on the server (SearchSelect): this form used
+// to preload ?pageSize=200 of each, so lead or unit 201 could not be reserved.
+export default function PortalReservationForm({ leadsMissingSales, currency = 'SAR' }: Props) {
   const [state, formAction] = useActionState<PortalReservationFormState, FormData>(
     createPortalReservationAction,
     {},
   );
 
-  const [leadId, setLeadId] = useState('');
+  const [selectedLead, setSelectedLead] = useState<PortalLead | null>(null);
   const [unitId, setUnitId] = useState('');
+  // The opportunity's own unit, pre-selected when this broker can still book it.
+  const [autoUnit, setAutoUnit] = useState<PortalUnit | null>(null);
+  const leadRequest = useRef(0);
 
   // Booking plan options for the selected unit (source of the booking amount).
   const [plans, setPlans] = useState<PlanOption[]>([]);
@@ -67,7 +73,7 @@ export default function PortalReservationForm({ approvedLeads, units, currency =
   const [planId, setPlanId] = useState('');
   const [durationOptionId, setDurationOptionId] = useState('');
 
-  const selectedLead = approvedLeads.find((l) => l.id === leadId) ?? null;
+  const leadId = selectedLead?.id ?? '';
   const leadProjectId = selectedLead?.projectInterestId ?? '';
 
   // Fetch applicable booking plans whenever the chosen unit changes.
@@ -124,30 +130,34 @@ export default function PortalReservationForm({ approvedLeads, units, currency =
     planId !== '' &&
     (!needsDuration || durationOptionId !== '');
 
-  // Once an opportunity is chosen, scope the unit list to that opportunity's
-  // project. Before selection we show all available units so the field isn't
-  // empty if the broker explores the list first.
-  const visibleUnits = leadProjectId
-    ? units.filter((u) => getUnitProjectId(u) === leadProjectId)
-    : units;
-  const noUnitsForProject = selectedLead !== null && visibleUnits.length === 0;
+  // Once an opportunity is chosen, scope the units to its project. Before
+  // that every available unit is searchable, so the field works on its own.
+  const unitsEndpoint = `/api-proxy/portal/units?status=AVAILABLE${
+    leadProjectId ? `&projectId=${encodeURIComponent(leadProjectId)}` : ''
+  }`;
 
-  function onLeadChange(nextLeadId: string) {
-    setLeadId(nextLeadId);
-    const lead = approvedLeads.find((l) => l.id === nextLeadId) ?? null;
-    const projId = lead?.projectInterestId ?? '';
-    // Auto-select the opportunity's unit when it's available to this broker
-    // for that project; otherwise leave the unit unselected.
-    const leadUnitId = lead?.unitInterestId ?? '';
-    const leadUnitAvailable =
-      leadUnitId !== '' &&
-      units.some((u) => u.id === leadUnitId && getUnitProjectId(u) === projId);
-    setUnitId(leadUnitAvailable ? leadUnitId : '');
+  function toUnitOption(u: PortalUnit): SearchOption<PortalUnit> {
+    return {
+      id: u.id,
+      label: `${u.code} • ${tx(u.building.phase.project.name)} — ${formatCurrency(u.price, currency)}`,
+      raw: u,
+    };
   }
 
-  // Leads with no assigned sales handler can't proceed — flag them so the
-  // broker doesn't waste effort.
-  const leadsMissingSales = approvedLeads.filter((l) => !l.assignedSalesId);
+  function onLeadChange(lead: PortalLead | null) {
+    const request = ++leadRequest.current;
+    setSelectedLead(lead);
+    setAutoUnit(null);
+    setUnitId('');
+    // Pre-select the opportunity's unit when it is still available to this
+    // broker in that project.
+    if (!lead) return;
+    void findPortalUnit(lead, 'AVAILABLE').then((unit) => {
+      if (request !== leadRequest.current) return; // a newer pick won
+      setAutoUnit(unit);
+      setUnitId(unit?.id ?? '');
+    });
+  }
 
   return (
     <form action={formAction} className="flex flex-col gap-4 lg:gap-5">
@@ -192,31 +202,26 @@ export default function PortalReservationForm({ approvedLeads, units, currency =
         >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="الفرصة" name="leadId" required hint="فرص معتمدة فقط">
-            <Select
-              id="leadId"
+            <SearchSelect<PortalLead>
               name="leadId"
               required
-              value={leadId}
-              onChange={(e) => onLeadChange(e.target.value)}
-            >
-              <option value="" disabled>
-                اختر فرصة
-              </option>
-              {approvedLeads.map((l) => (
-                <option
-                  key={l.id}
-                  value={l.id}
-                  disabled={!l.assignedSalesId}
-                >
-                  {l.fullName} • {l.phone}
-                  {l.assignedSalesId
+              endpoint="/api-proxy/portal/leads?brokerApprovalStatus=APPROVED"
+              toOption={(l) => ({
+                id: l.id,
+                label: `${l.fullName} • ${l.phone}${
+                  l.assignedSalesId
                     ? l.assignedSales
                       ? ` — مندوب: ${l.assignedSales.fullName}`
                       : ''
-                    : ' — (بدون مندوب)'}
-                </option>
-              ))}
-            </Select>
+                    : ' — (بدون مندوب)'
+                }`,
+                raw: l,
+                // A reservation needs an internal sales rep on the lead.
+                disabled: !l.assignedSalesId,
+              })}
+              onChange={onLeadChange}
+              placeholder="ابحث باسم العميل أو رقمه…"
+            />
           </Field>
           <Field
             label="الوحدة"
@@ -224,29 +229,17 @@ export default function PortalReservationForm({ approvedLeads, units, currency =
             required
             hint={leadProjectId ? 'وحدات متاحة لهذا المشروع' : 'وحدات متاحة فقط'}
           >
-            <Select
-              id="unitId"
+            {/* Keyed by lead and auto-pick: either change resets the unit. */}
+            <SearchSelect<PortalUnit>
+              key={`${leadId}:${autoUnit?.id ?? ''}`}
               name="unitId"
               required
-              value={unitId}
-              onChange={(e) => setUnitId(e.target.value)}
-            >
-              <option value="" disabled>
-                اختر وحدة
-              </option>
-              {noUnitsForProject ? (
-                <option value="" disabled>
-                  لا توجد وحدات متاحة لهذا المشروع
-                </option>
-              ) : (
-                visibleUnits.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.code} • {tx(u.building.phase.project.name)} —{' '}
-                    {formatCurrency(u.price, currency)}
-                  </option>
-                ))
-              )}
-            </Select>
+              endpoint={unitsEndpoint}
+              toOption={toUnitOption}
+              initial={autoUnit ? toUnitOption(autoUnit) : null}
+              onChange={(u) => setUnitId(u?.id ?? '')}
+              placeholder="ابحث بكود الوحدة…"
+            />
           </Field>
         </div>
 
