@@ -19,6 +19,7 @@ import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { IconButton } from '@/components/ui/icon-button';
+import { Pagination } from '@/components/ui/pagination';
 import { MaintenanceStatusBadge, MaintenancePriorityBadge, MaintenanceReviewStatusBadge } from '@/components/badges';
 import { ExportMenu } from '@/components/export-menu';
 import { MaintenanceReports } from './maintenance-reports';
@@ -92,6 +93,7 @@ export default async function MaintenancePage({
     categoryId?: string;
     from?: string;
     to?: string;
+    page?: string;
     catErr?: string;
   }>;
 }) {
@@ -120,7 +122,11 @@ export default async function MaintenancePage({
   };
 
   const sp = await searchParams;
-  const listQs = new URLSearchParams({ pageSize: '100' });
+  // FG-23 — paged: the list used to be one `pageSize=100` fetch with no pager,
+  // so request 101 was never shown.
+  const page = Math.max(1, Number(sp.page) || 1);
+  const pageSize = 20;
+  const listQs = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
   if (sp.status) listQs.set('status', sp.status);
   if (sp.assignedAdminId) listQs.set('assignedAdminId', sp.assignedAdminId);
   if (sp.reviewStatus) listQs.set('reviewStatus', sp.reviewStatus);
@@ -395,6 +401,17 @@ export default async function MaintenancePage({
           </div>
         )}
       </PremiumSectionCard>
+
+      {reqsRes.data && reqsRes.data.meta.total > pageSize && (
+        <Pagination
+          basePath="/dashboard/maintenance"
+          page={page}
+          pageSize={pageSize}
+          total={reqsRes.data.meta.total}
+          params={csvParams}
+          locale={locale}
+        />
+      )}
 
       {/* Category management */}
       <PremiumSectionCard

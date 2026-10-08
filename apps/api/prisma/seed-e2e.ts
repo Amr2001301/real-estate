@@ -542,6 +542,27 @@ async function main(): Promise<void> {
       },
     });
   }
+  // 4b. FG-23 — enough requests to need a second page on /dashboard/maintenance
+  // (20 per page). Dated in 2025 so they sort after the Customer1 request
+  // above, which stays on page 1. Idempotent: only the missing ones are added.
+  const PAGING_PREFIX = '[e2e] paging request';
+  const pagingExisting = await prisma.maintenanceRequest.count({
+    where: { description: { startsWith: PAGING_PREFIX } },
+  });
+  for (let i = pagingExisting; i < 24; i++) {
+    await prisma.maintenanceRequest.create({
+      data: {
+        companyId: defaultCompany.id,
+        customerId: customer2User.id,
+        unitId: c2Unit.id,
+        categoryId: anyCategory.id,
+        description: `${PAGING_PREFIX} ${String(i + 1).padStart(2, '0')}`,
+        status: MaintenanceStatus.OPEN,
+        createdAt: new Date(Date.UTC(2025, 0, 1 + i)),
+      },
+    });
+  }
+
   const c1MaintDoc = await ensureCustomerVisibleDocument({
     ownerType: DocumentOwnerType.MAINTENANCE_REQUEST,
     ownerId: c1Maint.id,

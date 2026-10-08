@@ -16,7 +16,7 @@ detail in `docs/audit/08-functional-gaps.md` §7.
 | 2 | `/dashboard/users` did not paginate | `130718f`, e2e A4c |
 | 3 | Option B — one account per company; `User` → `TENANT_OWNED` | PRs #5, #6; follow-ups #7 (cron context), #8 (notification templates per company) |
 | 4–6 | FG-01, FG-02, FG-03 | Already in the code when the backlog was written — but FG-01 was only partly done: the API link is below, the UI is Open |
-| 7 | FG-23 — three sales dashboards counted client-side | PR #2 |
+| 7 | FG-23 — three sales dashboards counted client-side; `/dashboard/maintenance` showed only the first 100 requests | PR #2; maintenance paged (20 per page) |
 | 8 | FG-21 — phone written unnormalised | PR #3 (also FG-24, PR #4) |
 | 9 | `pageSize` unbounded | `c15beaf` (max 500), e2e A4d |
 | 10 | Dropdowns fetched 100–500 full rows | Create-form pickers search the API (PRs #11–#14); filters and assignee dropdowns use `/options` endpoints (PR #15) |
@@ -31,7 +31,6 @@ detail in `docs/audit/08-functional-gaps.md` §7.
 
 | Item | Why | Size |
 |---|---|---|
-| FG-23 remainder | `/dashboard/maintenance` renders the first 100 requests with no paging — request 101 is invisible | S |
 | Leaflet map in `next dev` | On the project page under `next dev`, react-leaflet 4 throws "Map container is already initialized" (Strict Mode mounts effects twice) and the map does not render. Dev only — production builds render it; same on Next 15.5. react-leaflet 5 targets React 19 | S |
 | FG-05 residuals | Reverse only works on APPROVED deposits; no double-reversal guard; soft-delete leaves the installment PAID | M |
 | FG-13 residual | Admin confirm deletes a rejected customer proof's deposit and orphans its document | S |
