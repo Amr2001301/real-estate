@@ -15,6 +15,14 @@
  *          bookingPaymentStatus reverts to PENDING (not UNPAID).
  *   FG-3: unconfirmBookingPayment() with only an admin-created deposit (no
  *          customer proof) → deposit deleted; bookingPaymentStatus = UNPAID.
+ *   FG-4: confirmBookingPayment() after a REJECTED customer proof → the proof
+ *          deposit AND its Document survive (confirm used to delete every
+ *          booking deposit); a new admin deposit is created.
+ *   FG-5: unconfirmBookingPayment() with only a REJECTED proof → UNPAID (only
+ *          a proof under review keeps the booking PENDING).
+ *   FG-6: an APPROVED customer proof settles the booking: confirm → 409;
+ *          unconfirm rejects that proof (with a reason) → UNPAID; then a
+ *          manual confirm is allowed again.
  */
 
 import request from 'supertest';
@@ -344,6 +352,145 @@ describe('SEC — Steps F + G: booking-payment guards (FG-08, FG-13)', () => {
         select: { bookingPaymentStatus: true },
       });
       expect(res.bookingPaymentStatus).toBe(ReservationBookingPaymentStatus.UNPAID);
+    });
+  });
+  // ── FG-4..6 helpers ──────────────────────────────────────────────────────
+
+  /** A reservation of company A with a customer-proof booking deposit. */
+  async function seedWithProof(
+    code: string,
+    proofReviewStatus: 'REJECTED' | 'APPROVED',
+    bookingPaymentStatus: ReservationBookingPaymentStatus,
+  ) {
+    const unit = await testApp.rawPrisma.unit.create({
+      data: {
+        buildingId: fx.resources.a.buildingId,
+        code,
+        type: '2BR',
+        area: 100,
+        price: 700_000,
+        companyId: fx.companies.aId,
+      },
+    });
+    const reservation = await testApp.rawPrisma.reservation.create({
+      data: {
+        unitId: unit.id,
+        salesId: fx.users.adminA.id,
+        expiresAt: new Date(Date.now() + 72 * 3_600_000),
+        bookingAmount: 60_000,
+        bookingPaymentStatus,
+        bookingPaidAt: bookingPaymentStatus === ReservationBookingPaymentStatus.PAID ? new Date() : null,
+        companyId: fx.companies.aId,
+      },
+    });
+    const doc = await testApp.rawPrisma.document.create({
+      data: {
+        ownerType: DocumentOwnerType.DEPOSIT,
+        ownerId: reservation.id,
+        category: DocumentCategory.RECEIPT,
+        title: `${code} customer proof`,
+        fileUrl: `https://example.com/${code}.pdf`,
+        visibility: DocumentVisibility.ADMIN_ONLY,
+        uploadedById: fx.users.adminA.id,
+        companyId: fx.companies.aId,
+      },
+    });
+    const proof = await testApp.rawPrisma.deposit.create({
+      data: {
+        type: 'BOOKING_AMOUNT',
+        reservationId: reservation.id,
+        amount: 60_000,
+        paidAt: new Date(),
+        recordedById: fx.users.adminA.id,
+        reviewStatus: proofReviewStatus,
+        verified: proofReviewStatus === 'APPROVED',
+        rejectionReason: proofReviewStatus === 'REJECTED' ? 'Blurry receipt' : null,
+        proofDocumentId: doc.id,
+        companyId: fx.companies.aId,
+      },
+    });
+    return { reservationId: reservation.id, proofId: proof.id, docId: doc.id };
+  }
+
+  const post = (path: string) =>
+    request(testApp.app.getHttpServer())
+      .post(path)
+      .set('Authorization', bearer(adminAToken))
+      .set('X-Tenant-Slug', SEC_SLUG_A)
+      .send({});
+
+  // ── FG-4: confirm after a rejected proof keeps the proof ─────────────────
+
+  describe('FG-4: confirmBookingPayment() after a REJECTED proof keeps the proof and its document', () => {
+    it('FG-4: proof deposit + document survive; admin deposit created; booking PAID', async () => {
+      const seeded = await seedWithProof('FG4-UNIT', 'REJECTED', ReservationBookingPaymentStatus.UNPAID);
+
+      const res = await post(`/v1/reservations/${seeded.reservationId}/booking-payment/confirm`);
+      expect([200, 201]).toContain(res.status);
+
+      const proof = await testApp.rawPrisma.deposit.findUnique({ where: { id: seeded.proofId } });
+      if (!proof) throw new Error('Rejected proof deposit was deleted by confirm — FG-13 residual');
+      expect(proof.reviewStatus).toBe('REJECTED');
+      expect(proof.proofDocumentId).toBe(seeded.docId);
+      const doc = await testApp.rawPrisma.document.findUnique({ where: { id: seeded.docId } });
+      if (!doc) throw new Error('Proof document missing');
+
+      const adminDeposits = await testApp.rawPrisma.deposit.count({
+        where: { reservationId: seeded.reservationId, type: 'BOOKING_AMOUNT', proofDocumentId: null },
+      });
+      expect(adminDeposits).toBe(1);
+      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
+        where: { id: seeded.reservationId },
+        select: { bookingPaymentStatus: true },
+      });
+      expect(row.bookingPaymentStatus).toBe(ReservationBookingPaymentStatus.PAID);
+
+      // FG-5 on the same reservation: unconfirm with only a rejected proof
+      // left → UNPAID, not PENDING (nothing is under review).
+      const un = await post(`/v1/reservations/${seeded.reservationId}/booking-payment/unconfirm`);
+      expect([200, 201]).toContain(un.status);
+      const after = await testApp.rawPrisma.reservation.findUniqueOrThrow({
+        where: { id: seeded.reservationId },
+        select: { bookingPaymentStatus: true },
+      });
+      expect(after.bookingPaymentStatus).toBe(ReservationBookingPaymentStatus.UNPAID);
+      expect(await testApp.rawPrisma.deposit.findUnique({ where: { id: seeded.proofId } })).not.toBeNull();
+
+      // …so a second manual confirm is not blocked.
+      expect([200, 201]).toContain(
+        (await post(`/v1/reservations/${seeded.reservationId}/booking-payment/confirm`)).status,
+      );
+    });
+  });
+
+  // ── FG-6: approved proof settles the booking ────────────────────────────
+
+  describe('FG-6: an APPROVED customer proof settles the booking', () => {
+    it('FG-6: confirm → 409; unconfirm rejects the proof → UNPAID; confirm allowed again', async () => {
+      const seeded = await seedWithProof('FG6-UNIT', 'APPROVED', ReservationBookingPaymentStatus.PAID);
+
+      const blocked = await post(`/v1/reservations/${seeded.reservationId}/booking-payment/confirm`);
+      expect(blocked.status).toBe(409);
+      expect(
+        await testApp.rawPrisma.deposit.count({
+          where: { reservationId: seeded.reservationId, proofDocumentId: null },
+        }),
+      ).toBe(0);
+
+      const un = await post(`/v1/reservations/${seeded.reservationId}/booking-payment/unconfirm`);
+      expect([200, 201]).toContain(un.status);
+      const proof = await testApp.rawPrisma.deposit.findUniqueOrThrow({ where: { id: seeded.proofId } });
+      expect(proof.reviewStatus).toBe('REJECTED');
+      expect(proof.rejectionReason).toBe('Booking payment unconfirmed by admin');
+      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
+        where: { id: seeded.reservationId },
+        select: { bookingPaymentStatus: true },
+      });
+      expect(row.bookingPaymentStatus).toBe(ReservationBookingPaymentStatus.UNPAID);
+
+      expect([200, 201]).toContain(
+        (await post(`/v1/reservations/${seeded.reservationId}/booking-payment/confirm`)).status,
+      );
     });
   });
 });

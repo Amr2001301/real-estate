@@ -199,6 +199,9 @@ function makePrismaMock() {
     deposit: {
       create: jest.fn().mockResolvedValue({}),
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      // FG-13 — approved-proof guard (confirm) / proof bookkeeping (unconfirm).
+      count: jest.fn().mockResolvedValue(0),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     lead: { update: jest.fn().mockResolvedValue({}) },
     brokerUser: { findMany: jest.fn().mockResolvedValue([]) },
@@ -566,9 +569,13 @@ describe('Reservations · conversion workflow', () => {
     expect(updateArgs.data.bookingPaymentStatus).toBe('PAID');
     expect(updateArgs.data.bookingPaidAt).toBeInstanceOf(Date);
 
-    // Old deposit (if any) removed before creating the new one — guarantees
-    // idempotence under repeated confirm calls.
+    // Old admin-created deposit (if any) removed before creating the new one —
+    // guarantees idempotence under repeated confirm calls. FG-13: a customer
+    // proof deposit (proofDocumentId set) is never deleted.
     expect(mock.deposit.deleteMany).toHaveBeenCalledTimes(1);
+    expect(
+      (mock.deposit.deleteMany.mock.calls[0]![0] as { where: Record<string, unknown> }).where,
+    ).toMatchObject({ type: 'BOOKING_AMOUNT', proofDocumentId: null });
     expect(mock.deposit.create).toHaveBeenCalledTimes(1);
     const depositArgs = mock.deposit.create.mock.calls[0]![0] as {
       data: { type: string; reservationId: string; verified: boolean; contractId: null };

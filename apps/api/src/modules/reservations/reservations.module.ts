@@ -1308,6 +1308,21 @@ export class ReservationsService {
       throw new BadRequestException('يجب تحديد مبلغ الحجز قبل تأكيد الاستلام');
     }
 
+    // FG-13 — the booking amount was already settled by an approved customer
+    // proof; a manual confirm would add a second booking deposit next to it.
+    const approvedProofs = await this.prisma.deposit.count({
+      where: {
+        reservationId: id,
+        type: DepositType.BOOKING_AMOUNT,
+        proofDocumentId: { not: null },
+        reviewStatus: DepositReviewStatus.APPROVED,
+        deletedAt: null,
+      },
+    });
+    if (approvedProofs > 0) {
+      throw new ConflictException('تم اعتماد إثبات دفع العميل لمبلغ الحجز بالفعل');
+    }
+
     const paidAt = dto.paidAt ? new Date(dto.paidAt) : new Date();
 
     return this.prisma.$transaction(async (tx) => {
@@ -1328,9 +1343,13 @@ export class ReservationsService {
             `تم تأكيد استلام مبلغ الحجز (${updated.bookingAmount.toString()})`,
         },
       });
-      // Idempotent: remove any previous BOOKING_AMOUNT deposit, then re-create.
+      // Idempotent: remove a previous admin-created BOOKING_AMOUNT deposit,
+      // then re-create. FG-13: only admin-created ones (no proofDocumentId) —
+      // a customer's (rejected) proof deposit is kept: deleting it orphaned
+      // its document and destroyed the evidence (Hard Rule 2), as unconfirm
+      // already avoids.
       await tx.deposit.deleteMany({
-        where: { reservationId: id, type: DepositType.BOOKING_AMOUNT },
+        where: { reservationId: id, type: DepositType.BOOKING_AMOUNT, proofDocumentId: null },
       });
       await tx.deposit.create({
         data: {
@@ -1386,14 +1405,35 @@ export class ReservationsService {
         where: { reservationId: id, type: DepositType.BOOKING_AMOUNT, proofDocumentId: null },
       });
 
-      // If a customer-proof deposit remains (PENDING_REVIEW), revert to PENDING
-      // so the proof can still be reviewed. Setting UNPAID here would block the
-      // customer from resubmitting (FG-13 collision scenario).
+      // FG-13 — an approved customer proof settled this payment; unconfirming
+      // says it was not received, so the proof stops counting (rejected, with
+      // the reason) instead of staying APPROVED next to an UNPAID booking.
+      await tx.deposit.updateMany({
+        where: {
+          reservationId: id,
+          type: DepositType.BOOKING_AMOUNT,
+          proofDocumentId: { not: null },
+          reviewStatus: DepositReviewStatus.APPROVED,
+        },
+        data: {
+          reviewStatus: DepositReviewStatus.REJECTED,
+          verified: false,
+          rejectionReason: 'Booking payment unconfirmed by admin',
+        },
+      });
+
+      // If a customer proof is still under review, revert to PENDING so it can
+      // be reviewed. Setting UNPAID here would block the customer from
+      // resubmitting (FG-13 collision scenario). Only PENDING_REVIEW proofs
+      // count — a rejected one used to leave the booking PENDING, which then
+      // blocked the next manual confirm (409).
       const proofDepositCount = await tx.deposit.count({
         where: {
           reservationId: id,
           type: DepositType.BOOKING_AMOUNT,
           proofDocumentId: { not: null },
+          reviewStatus: DepositReviewStatus.PENDING_REVIEW,
+          deletedAt: null,
         },
       });
       const effectiveStatus =

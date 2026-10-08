@@ -190,6 +190,9 @@ function makePrismaMock() {
     deposit: {
       create: jest.fn().mockResolvedValue({}),
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      // FG-13 — approved-proof guard (confirm) / proof bookkeeping (unconfirm).
+      count: jest.fn().mockResolvedValue(0),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     lead: { update: jest.fn().mockResolvedValue({}) },
     $transaction: jest.fn(),
