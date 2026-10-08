@@ -538,6 +538,8 @@ model Phase {
   name      Json // Translatable
   order     Int        @default(0)
   createdAt DateTime   @default(now())
+  // FG-15 — existing rows were backfilled with createdAt.
+  updatedAt DateTime   @updatedAt
   buildings Building[]
 
   companyId String?  @db.Uuid
@@ -557,6 +559,8 @@ model Building {
   totalFloors Int      @default(1)
   order       Int      @default(0)
   createdAt   DateTime @default(now())
+  // FG-15 — existing rows were backfilled with createdAt.
+  updatedAt   DateTime @updatedAt
   units       Unit[]
 
   companyId String?  @db.Uuid
