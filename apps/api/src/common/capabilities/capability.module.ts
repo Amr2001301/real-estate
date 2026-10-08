@@ -1,6 +1,6 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import Redis from 'ioredis';
+import { createCacheRedis } from '../redis/cache-redis';
 import { CAPABILITY_CACHE_REDIS, CapabilityService } from './capability.service';
 import { PlanLimitService } from './plan-limit.service';
 import { CapabilityGuard } from '../guards/capability.guard';
@@ -17,11 +17,7 @@ import { CapabilityGuard } from '../guards/capability.guard';
       provide: CAPABILITY_CACHE_REDIS,
       inject: [ConfigService],
       useFactory: (config: ConfigService) =>
-        new Redis(config.getOrThrow<string>('REDIS_URL'), {
-          maxRetriesPerRequest: 1,
-          enableReadyCheck: false,
-          lazyConnect: true,
-        }),
+        createCacheRedis(config.getOrThrow<string>('REDIS_URL'), 'capabilities'),
     },
     CapabilityService,
     PlanLimitService,

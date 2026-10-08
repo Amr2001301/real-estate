@@ -8,7 +8,7 @@
 
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import Redis from 'ioredis';
+import { createCacheRedis } from '../../common/redis/cache-redis';
 import { BRANDING_CACHE_REDIS, CompanyBrandingService } from './company-branding.service';
 import { PublicBrandingController } from './public-branding.controller';
 import { AdminBrandingController } from './admin-branding.controller';
@@ -20,11 +20,7 @@ import { AdminBrandingController } from './admin-branding.controller';
       provide: BRANDING_CACHE_REDIS,
       inject: [ConfigService],
       useFactory: (config: ConfigService) =>
-        new Redis(config.getOrThrow<string>('REDIS_URL'), {
-          maxRetriesPerRequest: 1,
-          enableReadyCheck: false,
-          lazyConnect: true,
-        }),
+        createCacheRedis(config.getOrThrow<string>('REDIS_URL'), 'branding'),
     },
     CompanyBrandingService,
   ],

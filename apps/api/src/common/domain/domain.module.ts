@@ -11,7 +11,7 @@
 
 import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import Redis from 'ioredis';
+import { createCacheRedis } from '../redis/cache-redis';
 import { DOMAIN_CACHE_REDIS, DomainResolverService } from './domain-resolver.service';
 
 @Global()
@@ -21,11 +21,7 @@ import { DOMAIN_CACHE_REDIS, DomainResolverService } from './domain-resolver.ser
       provide: DOMAIN_CACHE_REDIS,
       inject: [ConfigService],
       useFactory: (config: ConfigService) =>
-        new Redis(config.getOrThrow<string>('REDIS_URL'), {
-          maxRetriesPerRequest: 1,
-          enableReadyCheck: false,
-          lazyConnect: true,
-        }),
+        createCacheRedis(config.getOrThrow<string>('REDIS_URL'), 'domain'),
     },
     DomainResolverService,
   ],
