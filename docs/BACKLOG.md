@@ -24,6 +24,7 @@ detail in `docs/audit/08-functional-gaps.md` §7.
 | FG-28 | Client ownership: reps saw no clients (GET /users ADMIN-only) and the server accepted any client or lead id | Decided 2026-10-08: rep → own, manager → team, admin → all, unowned → admin assigns. Enforced server-side; scoped `GET /users/clients` |
 | FG-27 | Signed contracts read `UNSIGNED` | `sign()` sets ACTIVE; backfill migration (PR #17) |
 | Server actions hang | On routes under a `loading.tsx`, a server action's result was sometimes never shown (button stuck busy, form never redirected). Root cause: a lost Suspense ping in the React 19.2 canary bundled with Next 15.5 — React held a fulfilled promise but never re-rendered. web-admin upgraded to Next 16.4 (React 19.3 canary): 0/120 hangs vs 39/160 before | PR #20 (web-admin); web-public Next 16 PR |
+| FG-14 | A client promoted to customer by their first contract was logged out (sessions revoked) without a word | `account_promoted_customer` notification on both paths (direct create, conversion); template in seed + migration |
 | FG-10 | A failure starting warranties or creating the broker/sales commission on sign was only a log line — the data was silently missing | Failures are returned, audited (`contract.sign_followup_failed`) and shown on the contract page with a retry (`POST /contracts/:id/sign-followups`, idempotent) |
 | FG-04 | Info requests could not leave OPEN; directly-created contracts had no number | `PATCH /info-requests/:id` + buttons on `/dashboard/requests`. `POST /contracts` numbers the contract (or keeps a given legacy number); a numberless contract can be numbered once from its page |
 | FG-13 | Admin confirm deleted a rejected customer proof's deposit (orphaning its document); unconfirm left the booking PENDING after a rejected proof; confirm could double an approved proof | Confirm keeps proof deposits and refuses (409) an already-approved proof; unconfirm counts only proofs under review and rejects an approved one |
@@ -37,7 +38,7 @@ detail in `docs/audit/08-functional-gaps.md` §7.
 |---|---|---|
 | Leaflet map in `next dev` | On the project page under `next dev`, react-leaflet 4 throws "Map container is already initialized" (Strict Mode mounts effects twice) and the map does not render. Dev only — production builds render it; same on Next 15.5. react-leaflet 5 targets React 19 | S |
 | Deposit reverse / delete UI | The API reverses and deletes deposits safely (FG-05, see Done); web-admin has no button for either — an admin needs an API client | S |
-| FG-14, FG-15 | No promotion notice; no `updatedAt` on Phase/Building | S each |
+| FG-15 | No `updatedAt` on Phase/Building | S |
 | Web-public / portal i18n (#21) | The broker portal is Arabic-only, hard-coded | M |
 
 ## Open — needs the owner

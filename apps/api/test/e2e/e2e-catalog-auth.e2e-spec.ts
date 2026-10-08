@@ -1064,6 +1064,66 @@ describe('Flow A — Catalog sync (e2e)', () => {
     });
   });
 
+  describe('A4m — FG-14 a client promoted by their first contract is told to sign in again', () => {
+    const tag = Date.now().toString().slice(-6);
+    const units: string[] = [];
+    let clientId: string;
+
+    const freshUnit = async (n: number) => {
+      const raw = testApp.rawPrisma;
+      const sample = await raw.unit.findUniqueOrThrow({
+        where: { id: fixtures.units.sampleUnitInP1Id },
+        select: { buildingId: true, companyId: true },
+      });
+      const u = await raw.unit.create({
+        data: { buildingId: sample.buildingId, companyId: sample.companyId, code: `A4M-${tag}-${n}`, type: '2BR', area: 100, price: 900_000 },
+        select: { id: true },
+      });
+      units.push(u.id);
+      return u.id;
+    };
+    const contractFor = async (n: number) =>
+      http()
+        .post('/v1/contracts')
+        .set('Authorization', bearer(adminToken))
+        .send({ customerId: clientId, unitId: await freshUnit(n), totalAmount: 900_000 });
+    const notices = () =>
+      testApp.rawPrisma.notification.count({
+        where: { userId: clientId, templateCode: 'account_promoted_customer' },
+      });
+
+    beforeAll(async () => {
+      const sample = await testApp.rawPrisma.unit.findUniqueOrThrow({
+        where: { id: fixtures.units.sampleUnitInP1Id },
+        select: { companyId: true },
+      });
+      const client = await testApp.rawPrisma.user.create({
+        data: { role: 'CLIENT', fullName: 'FG14 Client', phone: `+20109${tag}1`, companyId: sample.companyId, active: true },
+        select: { id: true },
+      });
+      clientId = client.id;
+    });
+
+    afterAll(async () => {
+      const raw = testApp.rawPrisma;
+      await raw.notification.deleteMany({ where: { userId: clientId } });
+      await raw.contract.deleteMany({ where: { customerId: clientId } });
+      await raw.unitStatusHistory.deleteMany({ where: { unitId: { in: units } } });
+      await raw.unit.deleteMany({ where: { id: { in: units } } });
+      await raw.user.deleteMany({ where: { id: clientId } });
+    });
+
+    it('first contract: CLIENT → CUSTOMER and one account_promoted_customer notice; a second contract sends none', async () => {
+      expect((await contractFor(1)).status).toBe(201);
+      const user = await testApp.rawPrisma.user.findUniqueOrThrow({ where: { id: clientId }, select: { role: true } });
+      expect(user.role).toBe('CUSTOMER');
+      expect(await notices()).toBe(1);
+
+      expect((await contractFor(2)).status).toBe(201);
+      expect(await notices()).toBe(1);
+    });
+  });
+
   // ── Broker portal: the same filter, inside the broker's own scope ─────────
   //
   // The portal reservation form searches leads instead of preloading 200, and

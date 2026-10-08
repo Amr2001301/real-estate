@@ -1786,7 +1786,8 @@ export class ReservationsService {
       // Invalidate active refresh tokens so the portal immediately reflects the
       // new CUSTOMER role — the user is bounced to /login on next page load
       // instead of seeing a stale CLIENT view for up to 15 minutes.
-      if (promoted.count > 0) {
+      const customerPromoted = promoted.count > 0;
+      if (customerPromoted) {
         await tx.refreshToken.updateMany({
           where: { userId: customerId, revokedAt: null },
           data: { revokedAt: new Date() },
@@ -2030,7 +2031,7 @@ export class ReservationsService {
         }
       }
 
-          return { contractId: contract.id, contractNumber };
+          return { contractId: contract.id, contractNumber, customerPromoted };
         });
 
         // P4 — Broker fan-out via NotificationsService. Recipient list +
@@ -2086,6 +2087,7 @@ export class ReservationsService {
                 sizeBytes: dto.sizeBytes,
               }
             : undefined,
+          result.customerPromoted,
         );
 
         // Broker commission materialization is performed by
