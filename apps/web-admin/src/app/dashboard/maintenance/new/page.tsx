@@ -18,12 +18,10 @@ export default async function NewMaintenancePage({
   const m = uiT(locale);
   const n = m.pages.maintenanceNew;
 
-  const [customersRes, adminsRes] = await Promise.all([
-    safe(api.get<Paged<User>>('/users?role=CUSTOMER&pageSize=200')),
-    safe(api.get<Paged<User>>('/users?role=ADMIN,MAINTENANCE_SUPERVISOR&pageSize=100')),
-  ]);
-
-  const customers = customersRes.data?.data ?? [];
+  // Customers are searched from the form itself (SearchSelect).
+  const adminsRes = await safe(
+    api.get<Paged<User>>('/users?role=ADMIN,MAINTENANCE_SUPERVISOR&pageSize=100'),
+  );
   const admins = adminsRes.data?.data ?? [];
 
   return (
@@ -85,7 +83,7 @@ export default async function NewMaintenancePage({
         </div>
       )}
 
-      <NewMaintenanceForm customers={customers} admins={admins} locale={locale} />
+      <NewMaintenanceForm admins={admins} locale={locale} />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Plus, Loader2, Check, ShieldCheck, ShieldOff, Clock, HelpCircle, X } from 'lucide-react';
 import { Select } from '@/components/ui/select';
+import { SearchSelect } from '@/components/form/search-select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { FormFooter } from '@/components/ui/form-footer';
@@ -23,6 +24,7 @@ import {
 interface Option {
   id: string;
   fullName: string;
+  phone?: string | null;
 }
 interface AdminOption extends Option {
   role: string;
@@ -53,15 +55,14 @@ function ItemWarranty({
 }
 
 export function NewMaintenanceForm({
-  customers,
   admins,
   locale = 'ar',
 }: {
-  customers: Option[];
   admins: AdminOption[];
   locale?: Locale;
 }) {
   const m = uiT(locale).pages.maintenanceForm;
+  const c = uiT(locale).common;
 
   const NAV_SECTIONS = [
     { id: 'section-customer-unit', num: '01', label: m.nav01Label, sub: m.nav01Sub },
@@ -146,18 +147,21 @@ export function NewMaintenanceForm({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="flex flex-col gap-1.5">
               <label htmlFor="customerId" className="text-xs font-medium text-slate-500">{m.customerLabel}</label>
-              <Select
-                id="customerId"
+              {/* Searched on the server: this used to preload ?pageSize=200
+                  customers, so customer 201 could not open a request. */}
+              <SearchSelect<Option>
                 name="customerId"
                 required
-                value={customerId}
-                onChange={(e) => onCustomerChange(e.target.value)}
-              >
-                <option value="" disabled>{m.customerOptionEmpty}</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>{c.fullName}</option>
-                ))}
-              </Select>
+                endpoint="/api-proxy/users?role=CUSTOMER"
+                toOption={(u) => ({
+                  id: u.id,
+                  label: u.phone ? `${u.fullName} · ${u.phone}` : u.fullName,
+                  raw: u,
+                })}
+                onChange={(u) => onCustomerChange(u?.id ?? '')}
+                placeholder={c.searchClientPlaceholder}
+                locale={locale}
+              />
             </div>
 
             <div className="flex flex-col gap-1.5">

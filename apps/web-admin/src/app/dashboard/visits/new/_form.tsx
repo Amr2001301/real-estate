@@ -1,10 +1,11 @@
 'use client';
 
-import { useActionState, useMemo, useState } from 'react';
+import { useActionState, useState } from 'react';
 import Link from 'next/link';
 import { AlertCircle } from 'lucide-react';
 import { Field } from '@/components/form/field';
 import { SubmitButton } from '@/components/form/submit-button';
+import { SearchSelect } from '@/components/form/search-select';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -48,9 +49,6 @@ interface SalesUser {
 interface Props {
   currentRole: 'ADMIN' | 'SALES';
   projects: Project[];
-  units: Unit[];
-  leads: Lead[];
-  clients: Client[];
   salesOptions: SalesUser[];
   locale?: Locale;
 }
@@ -66,13 +64,11 @@ function nowLocalInputValue(): string {
 export default function NewVisitForm({
   currentRole,
   projects,
-  units,
-  leads,
-  clients,
   salesOptions,
   locale = 'ar',
 }: Props) {
   const m = uiT(locale).pages.visitsForm;
+  const c = uiT(locale).common;
 
   const STAGE_LABELS: Record<LeadStage, string> = {
     NEW: m.stageNew, INTERESTED: m.stageInterested, VISIT: m.stageVisit,
@@ -97,18 +93,12 @@ export default function NewVisitForm({
 
   const [state, formAction] = useActionState<VisitFormState, FormData>(createVisitAction, {});
   const [ownerType, setOwnerType] = useState<OwnerType>('lead');
-  const [leadId, setLeadId] = useState('');
-  const [clientId, setClientId] = useState('');
+  // Leads, clients and units are searched on the server (SearchSelect): this
+  // form used to preload ?pageSize=200 of each, so record 201 was unreachable.
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [projectId, setProjectId] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
-
-  const selectedLead = useMemo(() => leads.find((l) => l.id === leadId), [leads, leadId]);
-  const selectedClient = useMemo(() => clients.find((c) => c.id === clientId), [clients, clientId]);
-
-  const filteredUnits = useMemo(
-    () => (projectId ? units.filter((u) => u.building?.phase?.project?.id === projectId) : units),
-    [units, projectId],
-  );
 
   const isAdmin = currentRole === 'ADMIN';
   const minScheduledAt = isAdmin ? undefined : nowLocalInputValue();
@@ -171,7 +161,12 @@ export default function NewVisitForm({
                   name="ownerType"
                   value={opt.value}
                   checked={ownerType === opt.value}
-                  onChange={() => setOwnerType(opt.value)}
+                  onChange={() => {
+                    // The pickers remount empty, so drop what they had chosen.
+                    setOwnerType(opt.value);
+                    setSelectedLead(null);
+                    setSelectedClient(null);
+                  }}
                   className="accent-brand-500"
                 />
                 <span>{opt.label}</span>
@@ -182,43 +177,34 @@ export default function NewVisitForm({
 
         {ownerType === 'lead' && (
           <Field label={m.leadFieldLabel} name="leadId" required>
-            <Select
+            <SearchSelect<Lead>
               name="leadId"
               required
-              value={leadId}
-              onChange={(e) => {
-                setLeadId(e.target.value);
-                const lead = leads.find((l) => l.id === e.target.value);
+              endpoint="/api-proxy/leads"
+              toOption={(l) => ({ id: l.id, label: formatLeadLabel(l), raw: l })}
+              onChange={(lead) => {
+                setSelectedLead(lead);
                 if (lead?.projectInterest?.id && !projectId) {
                   setProjectId(lead.projectInterest.id);
                 }
               }}
-            >
-              <option value="">{m.leadOptionEmpty}</option>
-              {leads.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {formatLeadLabel(l)}
-                </option>
-              ))}
-            </Select>
+              placeholder={c.searchLeadPlaceholder}
+              locale={locale}
+            />
           </Field>
         )}
 
         {ownerType === 'client' && (
           <Field label={m.clientFieldLabel} name="clientId" required>
-            <Select
+            <SearchSelect<Client>
               name="clientId"
               required
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-            >
-              <option value="">{m.clientOptionEmpty}</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {formatClientLabel(c)}
-                </option>
-              ))}
-            </Select>
+              endpoint="/api-proxy/users?role=CLIENT,CUSTOMER"
+              toOption={(u) => ({ id: u.id, label: formatClientLabel(u), raw: u })}
+              onChange={setSelectedClient}
+              placeholder={c.searchClientPlaceholder}
+              locale={locale}
+            />
           </Field>
         )}
 
@@ -275,14 +261,16 @@ export default function NewVisitForm({
         </Field>
 
         <Field label={m.unitLabel} name="unitId" hint={m.unitHint}>
-          <Select name="unitId" disabled={!projectId}>
-            <option value="">{m.unitOptionNone}</option>
-            {filteredUnits.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.code} — {u.type}
-              </option>
-            ))}
-          </Select>
+          {/* Keyed by project: changing the project clears the unit. */}
+          <SearchSelect<Unit>
+            key={projectId}
+            name="unitId"
+            disabled={!projectId}
+            endpoint={`/api-proxy/units?projectId=${encodeURIComponent(projectId)}`}
+            toOption={(u) => ({ id: u.id, label: `${u.code} — ${u.type}`, raw: u })}
+            placeholder={c.searchUnitPlaceholder}
+            locale={locale}
+          />
         </Field>
         </PremiumFormPanel>
 

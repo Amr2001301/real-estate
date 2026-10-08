@@ -84,6 +84,7 @@ export default function NewReservationForm({
   locale = 'ar',
 }: Props) {
   const m = uiT(locale).pages.reservationsForm;
+  const c = uiT(locale).common;
 
   const STAGE_LABELS: Record<LeadStage, string> = {
     NEW: m.stageNew, INTERESTED: m.stageInterested, VISIT: m.stageVisit,
@@ -222,10 +223,8 @@ export default function NewReservationForm({
                 raw: u,
               })}
               onChange={handleUnitChange}
-              placeholder={m.unitSearchPlaceholder}
-              noResultsText={m.searchNoResults}
-              loadingText={m.searchLoading}
-              clearLabel={m.searchClear}
+              placeholder={c.searchUnitPlaceholder}
+              locale={locale}
             />
           </Field>
         </PremiumFormPanel>
@@ -290,10 +289,8 @@ export default function NewReservationForm({
                   required
                   endpoint="/api-proxy/leads"
                   toOption={(l) => ({ id: l.id, label: formatLeadLabel(l), raw: l })}
-                  placeholder={m.leadSearchPlaceholder}
-                  noResultsText={m.searchNoResults}
-                  loadingText={m.searchLoading}
-                  clearLabel={m.searchClear}
+                  placeholder={c.searchLeadPlaceholder}
+                  locale={locale}
                 />
               </Field>
             ) : (
@@ -308,10 +305,8 @@ export default function NewReservationForm({
                   required
                   endpoint="/api-proxy/users?role=CLIENT,CUSTOMER"
                   toOption={(c) => ({ id: c.id, label: formatClientLabel(c), raw: c })}
-                  placeholder={m.clientSearchPlaceholder}
-                  noResultsText={m.searchNoResults}
-                  loadingText={m.searchLoading}
-                  clearLabel={m.searchClear}
+                  placeholder={c.searchClientPlaceholder}
+                  locale={locale}
                 />
               </Field>
             )}
