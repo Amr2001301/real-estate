@@ -11,7 +11,7 @@ import { IconButton } from '@/components/ui/icon-button';
  *   - refetch on window focus / tab becoming visible
  *   - poll every 60s, but ONLY while the tab is visible (no background hammer)
  * Fetches the dedicated GET /v1/me/notifications/unread-count via the
- * authenticated /api-proxy rewrite (middleware injects the bearer). Any failure
+ * authenticated /api-proxy rewrite (the proxy, src/proxy.ts, injects the bearer). Any failure
  * keeps the last known count — the badge never breaks the topbar.
  */
 const POLL_MS = 60_000;

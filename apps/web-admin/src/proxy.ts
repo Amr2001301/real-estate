@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * Edge middleware. Three responsibilities, in priority order:
+ * Request proxy (Next 16 renamed the `middleware` convention to `proxy`; it
+ * runs on the Node.js runtime). Three responsibilities, in priority order:
  *
  *   1. /api-proxy/*          → inject Authorization: Bearer from the access_token cookie.
  *
@@ -14,7 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
  *      - authenticated other       → redirect to their workspace (not this page)
  *
  * Transparent token refresh: when access_token is missing but refresh_token is
- * present, the middleware calls POST /v1/auth/refresh, sets new cookies on the
+ * present, the proxy calls POST /v1/auth/refresh, sets new cookies on the
  * response, and continues the navigation — the user never sees the login page.
  */
 
@@ -84,7 +85,7 @@ function roleFromCookies(req: NextRequest): string | null {
   }
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
   // ── 1. /api-proxy/*  — preserve original behavior verbatim ──────────────

@@ -23,6 +23,7 @@ detail in `docs/audit/08-functional-gaps.md` §7.
 | 11, 12 | Ubuntu 24.04 pin, Node 24 actions | PR #1 (CI gap G14/G15) |
 | FG-28 | Client ownership: reps saw no clients (GET /users ADMIN-only) and the server accepted any client or lead id | Decided 2026-10-08: rep → own, manager → team, admin → all, unowned → admin assigns. Enforced server-side; scoped `GET /users/clients` |
 | FG-27 | Signed contracts read `UNSIGNED` | `sign()` sets ACTIVE; backfill migration (PR #17) |
+| Server actions hang | On routes under a `loading.tsx`, a server action's result was sometimes never shown (button stuck busy, form never redirected). Root cause: a lost Suspense ping in the React 19.2 canary bundled with Next 15.5 — React held a fulfilled promise but never re-rendered. web-admin upgraded to Next 16.4 (React 19.3 canary): 0/120 hangs vs 39/160 before | web-admin Next 16 PR |
 | FG-01 | `Deposit.paymentInstrumentId` was never set, so clearing or bouncing a cheque touched no deposit | Decided 2026-10-08: cheque → unpaid until it clears; transfer → collected at once; one cheque per installment. API: PR #18. UI: payment method on the deposit form, `/dashboard/cheques` (deposit, clear, bounce, cancel) |
 | 15 | Split the security suite (31 min) | Not needed: the job lacked Redis; with it the suite runs in ~1.5 min (PR #9, G16). A Redis outage no longer stalls the API either (PR #10) |
 
@@ -31,7 +32,7 @@ detail in `docs/audit/08-functional-gaps.md` §7.
 | Item | Why | Size |
 |---|---|---|
 | FG-23 remainder | `/dashboard/maintenance` renders the first 100 requests with no paging — request 101 is invisible | S |
-| Server actions hang | On a route under a `loading.tsx` (most of `/dashboard`), a server action or `router.refresh()` sometimes never shows its result: the action is saved, but the button stays busy or the form never redirects until the page is reloaded. Reproduced locally (~2–5 in 10 clicks, headless Chromium, Next 15.5.18 and 15.5.27); never with the `loading.tsx` removed. The server answers in full — the browser never commits the new page. Next: check Next 16, or narrow it to a minimal repro and report upstream | M |
+| web-public → Next 16 | The server-action hang fixed in web-admin (see Done) can hit web-public too: it is still on Next 15.5 (React 19.2 canary) and has 3 server-action modules and 5 `loading.tsx`. Upgrade it the same way (Next 16.4, Sentry 11, `middleware` → `proxy`), checking next-intl compatibility | M |
 | FG-05 residuals | Reverse only works on APPROVED deposits; no double-reversal guard; soft-delete leaves the installment PAID | M |
 | FG-13 residual | Admin confirm deletes a rejected customer proof's deposit and orphans its document | S |
 | FG-04 | InfoRequest RESPONDED/CLOSED have no write path; contract number unreachable for direct contracts | M |
