@@ -12,6 +12,7 @@ import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { Prisma, UserRole } from '@prisma/client';
 import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
+import { OPTIONS_LIMIT, optionsResult } from '../../common/utils/options';
 import { R2Service } from '../media/r2.service';
 import { NotificationsService } from '../notifications/notifications.module';
 import { PlanLimitService } from '../../common/capabilities/plan-limit.service';
@@ -104,6 +105,22 @@ export class UsersService {
     if (!mgr || mgr.role !== UserRole.SALES_MANAGER) {
       throw new BadRequestException('managerId must reference a SALES_MANAGER user');
     }
+  }
+
+  /** Staff of the company, id + name + role — see common/utils/options.ts. */
+  async options(roles: UserRole[], active?: boolean) {
+    const rows = await this.prisma.user.findMany({
+      where: {
+        companyId: getRequiredCompanyId(),
+        deletedAt: null,
+        role: { in: roles },
+        ...(active !== undefined ? { active } : {}),
+      },
+      select: { id: true, fullName: true, role: true, active: true },
+      orderBy: { fullName: 'asc' },
+      take: OPTIONS_LIMIT + 1,
+    });
+    return optionsResult(rows);
   }
 
   async findAll(role?: string, page = 1, pageSize = 20, q?: string, active?: boolean) {

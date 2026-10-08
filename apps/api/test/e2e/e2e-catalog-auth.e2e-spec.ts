@@ -531,6 +531,81 @@ describe('Flow A — Catalog sync (e2e)', () => {
     });
   });
 
+  // ── Options endpoints for dropdowns and filters ───────────────────────────
+  //
+  // Pages filled <select>s from ?pageSize=100–500 full rows. These return
+  // every row, a few columns each. /users/options also fixes empty sales-rep
+  // dropdowns for SALES / SALES_MANAGER, who get 403 from GET /users.
+  describe('A4h — options endpoints', () => {
+    it('/projects/options: every project, id + display fields only', async () => {
+      const [options, list] = await Promise.all([
+        http().get('/v1/projects/options').set('Authorization', bearer(salesToken)),
+        http().get('/v1/projects?pageSize=1').set('Authorization', bearer(adminToken)),
+      ]);
+      expect(options.status).toBe(200);
+      expect(options.body.truncated).toBe(false);
+      expect(options.body.data).toHaveLength(list.body.meta.total);
+      expect(Object.keys(options.body.data[0]).sort()).toEqual(['city', 'id', 'name', 'status']);
+    });
+
+    it('/brokers/options: filters by status, admin only', async () => {
+      const res = await http()
+        .get('/v1/brokers/options?status=ACTIVE')
+        .set('Authorization', bearer(adminToken));
+      expect(res.status).toBe(200);
+      expect(res.body.data.length).toBeGreaterThan(0);
+      for (const b of res.body.data as { status: string }[]) expect(b.status).toBe('ACTIVE');
+      expect(Object.keys(res.body.data[0]).sort()).toEqual([
+        'code',
+        'commercialName',
+        'companyName',
+        'defaultCommissionPct',
+        'id',
+        'status',
+      ]);
+
+      const asSales = await http().get('/v1/brokers/options').set('Authorization', bearer(salesToken));
+      expect(asSales.status).toBe(403);
+    });
+
+    it('/users/options: a sales rep gets the staff list GET /users refuses', async () => {
+      const full = await http()
+        .get('/v1/users?role=SALES,SALES_MANAGER')
+        .set('Authorization', bearer(salesToken));
+      expect(full.status).toBe(403);
+
+      const res = await http()
+        .get('/v1/users/options?role=SALES,SALES_MANAGER&active=true')
+        .set('Authorization', bearer(salesToken));
+      expect(res.status).toBe(200);
+      expect(res.body.data.length).toBeGreaterThan(0);
+      for (const u of res.body.data as { role: string; active: boolean }[]) {
+        expect(['SALES', 'SALES_MANAGER']).toContain(u.role);
+        expect(u.active).toBe(true);
+      }
+      // No contact details: a name for the dropdown, nothing else.
+      expect(Object.keys(res.body.data[0]).sort()).toEqual(['active', 'fullName', 'id', 'role']);
+    });
+
+    it('/users/options never lists clients or customers', async () => {
+      for (const role of ['CLIENT', 'CUSTOMER', 'SALES,CLIENT', '']) {
+        const res = await http()
+          .get(`/v1/users/options?role=${role}`)
+          .set('Authorization', bearer(adminToken));
+        expect(res.status).toBe(400);
+      }
+    });
+
+    it('/users/options is closed to customers and brokers', async () => {
+      for (const token of [customer1Token, broker1Token]) {
+        const res = await http()
+          .get('/v1/users/options?role=SALES')
+          .set('Authorization', bearer(token));
+        expect(res.status).toBe(403);
+      }
+    });
+  });
+
   // ── Broker portal: the same filter, inside the broker's own scope ─────────
   //
   // The portal reservation form searches leads instead of preloading 200, and

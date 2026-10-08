@@ -240,3 +240,9 @@ export class BrokerStatusReasonDto {
   @MaxLength(2000)
   reason?: string;
 }
+
+export class BrokerOptionsQueryDto {
+  @IsOptional()
+  @IsEnum(BrokerStatus)
+  status?: BrokerStatus;
+}

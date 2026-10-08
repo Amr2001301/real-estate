@@ -8,6 +8,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { NotificationsService } from '../notifications/notifications.module';
 import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
+import { OPTIONS_LIMIT, optionsResult } from '../../common/utils/options';
 import {
   CreateBrokerDto,
   UpdateBrokerDto,
@@ -65,6 +66,24 @@ export class BrokersService {
       },
       include: COUNTS_SELECT,
     });
+  }
+
+  /** Every broker of the company, id + display fields — see common/utils/options.ts. */
+  async options(status?: BrokerStatus) {
+    const rows = await this.prisma.broker.findMany({
+      where: { companyId: getRequiredCompanyId(), ...(status ? { status } : {}) },
+      select: {
+        id: true,
+        companyName: true,
+        commercialName: true,
+        code: true,
+        status: true,
+        defaultCommissionPct: true,
+      },
+      orderBy: { companyName: 'asc' },
+      take: OPTIONS_LIMIT + 1,
+    });
+    return optionsResult(rows);
   }
 
   async findAll(params: {

@@ -14,7 +14,12 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags } from '@nestjs/swagger';
 import { UsersService, type UploadedImage } from './users.service';
-import { AssignManagerDto, CreateUserDto, UpdateUserDto } from './dto/user.dto';
+import {
+  AssignManagerDto,
+  CreateUserDto,
+  UpdateUserDto,
+  UserOptionsQueryDto,
+} from './dto/user.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -51,6 +56,24 @@ export class UsersController {
     const activeFilter =
       active === 'true' ? true : active === 'false' ? false : undefined;
     return this.users.findAll(role, Number(page), Number(pageSize), q, activeFilter);
+  }
+
+  // Staff dropdowns (assign a sales rep, filter by rep, pick an assignee).
+  // GET /users is ADMIN-only, so a SALES_MANAGER's or rep's dropdowns came
+  // back empty; this lists staff only (never clients), id + name + role, to
+  // every role that assigns work. Declared before `:id`.
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.SALES,
+    UserRole.SALES_MANAGER,
+    UserRole.MAINTENANCE_SUPERVISOR,
+  )
+  @Get('options')
+  options(@Query() query: UserOptionsQueryDto) {
+    return this.users.options(
+      query.role.split(',') as UserRole[],
+      query.active === 'true' ? true : query.active === 'false' ? false : undefined,
+    );
   }
 
   // Self-profile routes — no role gate, no permission gate. Any authenticated

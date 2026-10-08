@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import { IsEmail, IsEnum, IsIn, IsOptional, IsString, IsUUID, Matches, MinLength } from 'class-validator';
 import { UserRole, Locale } from '@prisma/client';
 
 export class CreateUserDto {
@@ -53,4 +53,26 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   phone?: string;
+}
+
+/** Roles a staff dropdown may list. Clients and customers are never options. */
+export const STAFF_OPTION_ROLES = [
+  UserRole.ADMIN,
+  UserRole.SALES,
+  UserRole.SALES_MANAGER,
+  UserRole.MAINTENANCE_SUPERVISOR,
+] as const;
+
+export class UserOptionsQueryDto {
+  /** Comma-separated staff roles, e.g. "SALES,SALES_MANAGER". */
+  @Matches(
+    new RegExp(`^(${STAFF_OPTION_ROLES.join('|')})(,(${STAFF_OPTION_ROLES.join('|')}))*$`),
+    { message: `role must be a comma-separated list of: ${STAFF_OPTION_ROLES.join(', ')}` },
+  )
+  role!: string;
+
+  /** "true" → active users only. A string: implicit conversion reads "false" as true. */
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  active?: 'true' | 'false';
 }
