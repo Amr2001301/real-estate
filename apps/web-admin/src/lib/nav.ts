@@ -11,6 +11,7 @@ import {
   Globe,
   Wallet,
   Receipt,
+  Landmark,
   Wrench,
   BadgePercent,
   Briefcase,
@@ -58,6 +59,7 @@ export const NAV_ICONS = {
   FileText,
   Wallet,
   Receipt,
+  Landmark,
   Wrench,
   BadgePercent,
   Briefcase,
@@ -144,6 +146,8 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/dashboard/installments', label: 'خطط التقسيط', labelKey: 'installments', iconKey: 'Wallet' },
       { href: '/dashboard/deposits', label: 'الدفعات', labelKey: 'deposits', iconKey: 'Receipt', admin: true },
+      // FG-01 — GET /payment-instruments is ADMIN + SALES_MANAGER.
+      { href: '/dashboard/cheques', label: 'الشيكات', labelKey: 'cheques', iconKey: 'Landmark', admin: true, manager: true },
       { href: '/dashboard/maintenance', label: 'الصيانة', labelKey: 'maintenance', iconKey: 'Wrench', admin: true },
       { href: '/dashboard/bonus', label: 'العمولات', labelKey: 'bonus', iconKey: 'BadgePercent', admin: true },
       { href: '/dashboard/sales/performance', label: 'أداء فريق المبيعات', labelKey: 'salesPerformance', iconKey: 'Target', admin: true, manager: true },

@@ -224,6 +224,8 @@ export interface ContractInstallment {
   amount: string | number;
   status: InstallmentStatus;
   paidAt: string | null;
+  /** FG-01 — open, but paid by a cheque that has not cleared yet. */
+  awaitingCheque?: boolean;
 }
 
 export interface ContractInstallmentPlan {
@@ -363,6 +365,41 @@ export interface DepositTotals {
   installment: string;
   finalPayment: string;
   count: number;
+}
+
+// FG-01 — a cheque or bank transfer a deposit was paid with (GET /payment-instruments).
+export type PaymentInstrumentStatus =
+  | 'PENDING_CLEARANCE'
+  | 'DEPOSITED'
+  | 'CLEARED'
+  | 'BOUNCED'
+  | 'REPLACED'
+  | 'CANCELLED';
+
+export interface PaymentInstrument {
+  id: string;
+  type: 'CHEQUE' | 'BANK_TRANSFER';
+  status: PaymentInstrumentStatus;
+  chequeNumber: string | null;
+  drawerBankName: string | null;
+  chequeDueDate: string | null;
+  bankName: string | null;
+  referenceNumber: string | null;
+  clearingDate: string | null;
+  bounceDate: string | null;
+  bounceReason: string | null;
+  createdAt: string;
+  deposits: Array<{
+    id: string;
+    amount: string | number;
+    reviewStatus: string;
+    installment: { id: string; dueDate: string; status: string } | null;
+    contract: {
+      id: string;
+      contractNumber: string | null;
+      customer: { id: string; fullName: string } | null;
+    } | null;
+  }>;
 }
 
 export interface PagedDeposits extends Paged<Deposit> {

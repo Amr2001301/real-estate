@@ -47,6 +47,7 @@ import {
   PlanTemplateStatus,
   PlanPaymentType,
 } from '@prisma/client';
+import { UNCLEARED_INSTRUMENT_STATUSES } from '../deposits/review-queue';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   NotificationsModule,
@@ -191,10 +192,35 @@ class InstallmentsService {
   }
 
   async findByContract(contractId: string) {
-    return this.prisma.installmentPlan.findUnique({
+    const plan = await this.prisma.installmentPlan.findUnique({
       where: { contractId },
-      include: { installments: { orderBy: { dueDate: 'asc' } } },
+      include: {
+        installments: {
+          orderBy: { dueDate: 'asc' },
+          include: {
+            // FG-01 — a cheque the bank has not paid or returned yet.
+            deposits: {
+              where: {
+                deletedAt: null,
+                paymentInstrument: { status: { in: UNCLEARED_INSTRUMENT_STATUSES } },
+              },
+              select: { id: true },
+              take: 1,
+            },
+          },
+        },
+      },
     });
+    if (!plan) return plan;
+    // `awaitingCheque`: still PENDING/OVERDUE, but paid by a cheque that has not
+    // cleared — not payable again (one cheque per installment).
+    return {
+      ...plan,
+      installments: plan.installments.map(({ deposits, ...i }) => ({
+        ...i,
+        awaitingCheque: deposits.length > 0,
+      })),
+    };
   }
 
   /**

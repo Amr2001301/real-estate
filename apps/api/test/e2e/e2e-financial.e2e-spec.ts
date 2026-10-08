@@ -957,6 +957,18 @@ describe('FG-01 — cheque and transfer deposits (e2e)', () => {
       expect(res.status).toBe(409);
     });
 
+    it('FG01-16: the contract installment plan marks the installment as awaiting its cheque', async () => {
+      const res = await http()
+        .get(`/v1/contracts/${contractId}/installment-plan`)
+        .set('Authorization', bearer(adminToken));
+      expect(res.status).toBe(200);
+      const rows = res.body.installments as Array<{ id: string; awaitingCheque: boolean; status: string }>;
+      expect(rows.find((r) => r.id === inst.clear)).toMatchObject({ status: 'PENDING', awaitingCheque: true });
+      expect(rows.find((r) => r.id === inst.cash)).toMatchObject({ awaitingCheque: false });
+      // The deposit relation is used to compute the flag only — never returned.
+      expect(rows[0]).not.toHaveProperty('deposits');
+    });
+
     it('FG01-6: the deposit is not in the review queue — it waits on the bank', async () => {
       const res = await http()
         .get('/v1/deposits/review-queue?pageSize=100')
