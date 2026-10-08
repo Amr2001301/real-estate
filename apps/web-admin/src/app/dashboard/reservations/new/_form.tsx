@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { AlertCircle } from 'lucide-react';
 import { Field } from '@/components/form/field';
 import { SubmitButton } from '@/components/form/submit-button';
+import { SearchSelect } from '@/components/form/search-select';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -66,9 +67,6 @@ interface SalesUser {
 }
 
 interface Props {
-  units: Unit[];
-  leads: Lead[];
-  clients: Client[];
   salesOptions: SalesUser[];
   plans: PlanOption[];
   locale?: Locale;
@@ -81,9 +79,6 @@ function toFiniteOrEmpty(v: unknown): string {
 }
 
 export default function NewReservationForm({
-  units,
-  leads,
-  clients,
   salesOptions,
   plans,
   locale = 'ar',
@@ -113,17 +108,17 @@ export default function NewReservationForm({
     {},
   );
   const [ownerType, setOwnerType] = useState<'lead' | 'client'>('lead');
-  const [selectedUnitId, setSelectedUnitId] = useState('');
+  // Units, leads and clients are searched on the server (SearchSelect) — a
+  // company can have thousands, and the old ?pageSize=200 <select>s could not
+  // reach record 201.
+  const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
+  const selectedUnitId = selectedUnit?.id ?? '';
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [selectedDurationOptionId, setSelectedDurationOptionId] = useState('');
   const [bookingAmountMode, setBookingAmountMode] = useState<'PLAN' | 'FIXED' | 'PERCENTAGE'>('PLAN');
   const [fixedAmountInput, setFixedAmountInput] = useState('');
   const [percentInput, setPercentInput] = useState('');
 
-  const selectedUnit = useMemo(
-    () => units.find((u) => u.id === selectedUnitId) ?? null,
-    [selectedUnitId, units],
-  );
   const selectedProjectId =
     selectedUnit?.building?.phase?.projectId ?? selectedUnit?.building?.phase?.project?.id ?? '';
 
@@ -136,8 +131,8 @@ export default function NewReservationForm({
     );
   }, [plans, selectedUnitId, selectedProjectId]);
 
-  function handleUnitChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    setSelectedUnitId(e.target.value);
+  function handleUnitChange(unit: Unit | null) {
+    setSelectedUnit(unit);
     setSelectedPlanId('');
     setSelectedDurationOptionId('');
   }
@@ -215,17 +210,23 @@ export default function NewReservationForm({
           description={m.p1Desc}
         >
           <Field label={m.unitLabel} name="unitId" required>
-            <Select name="unitId" required value={selectedUnitId} onChange={handleUnitChange}>
-              <option value="">{m.unitOptionEmpty}</option>
-              {units.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.code} — {u.type}
-                  {u.building?.phase?.project?.name.ar
-                    ? ` (${u.building.phase.project.name.ar})`
-                    : ''}
-                </option>
-              ))}
-            </Select>
+            <SearchSelect<Unit>
+              name="unitId"
+              required
+              endpoint="/api-proxy/units?status=AVAILABLE"
+              toOption={(u) => ({
+                id: u.id,
+                label: `${u.code} — ${u.type}${
+                  u.building?.phase?.project?.name.ar ? ` (${u.building.phase.project.name.ar})` : ''
+                }`,
+                raw: u,
+              })}
+              onChange={handleUnitChange}
+              placeholder={m.unitSearchPlaceholder}
+              noResultsText={m.searchNoResults}
+              loadingText={m.searchLoading}
+              clearLabel={m.searchClear}
+            />
           </Field>
         </PremiumFormPanel>
 
@@ -284,14 +285,16 @@ export default function NewReservationForm({
                 hint={m.leadFieldHint}
                 required
               >
-                <Select name="leadId" required>
-                  <option value="">{m.leadOptionEmpty}</option>
-                  {leads.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {formatLeadLabel(l)}
-                    </option>
-                  ))}
-                </Select>
+                <SearchSelect<Lead>
+                  name="leadId"
+                  required
+                  endpoint="/api-proxy/leads"
+                  toOption={(l) => ({ id: l.id, label: formatLeadLabel(l), raw: l })}
+                  placeholder={m.leadSearchPlaceholder}
+                  noResultsText={m.searchNoResults}
+                  loadingText={m.searchLoading}
+                  clearLabel={m.searchClear}
+                />
               </Field>
             ) : (
               <Field
@@ -300,14 +303,16 @@ export default function NewReservationForm({
                 hint={m.clientFieldHint}
                 required
               >
-                <Select name="clientId" required>
-                  <option value="">{m.clientOptionEmpty}</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {formatClientLabel(c)}
-                    </option>
-                  ))}
-                </Select>
+                <SearchSelect<Client>
+                  name="clientId"
+                  required
+                  endpoint="/api-proxy/users?role=CLIENT,CUSTOMER"
+                  toOption={(c) => ({ id: c.id, label: formatClientLabel(c), raw: c })}
+                  placeholder={m.clientSearchPlaceholder}
+                  noResultsText={m.searchNoResults}
+                  loadingText={m.searchLoading}
+                  clearLabel={m.searchClear}
+                />
               </Field>
             )}
           </div>

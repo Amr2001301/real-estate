@@ -419,6 +419,49 @@ describe('Flow A — Catalog sync (e2e)', () => {
     });
   });
 
+  // ── Units are searched by code, not preloaded ─────────────────────────────
+  //
+  // The new-reservation form used to fill its unit <select> from a single
+  // ?pageSize=200 fetch, so the 201st available unit could not be reserved.
+  // It now searches as the user types; these pin the server side of that.
+  describe('A4e — unit list search by code', () => {
+    it('q matches the unit code case-insensitively, on any part of it', async () => {
+      const first = await http()
+        .get('/v1/units?pageSize=1')
+        .set('Authorization', bearer(adminToken));
+      expect(first.status).toBe(200);
+      const code: string = first.body.data[0].code;
+      const needle = code.slice(1).toLowerCase();
+
+      const res = await http()
+        .get(`/v1/units?pageSize=100&q=${encodeURIComponent(needle)}`)
+        .set('Authorization', bearer(adminToken));
+      expect(res.status).toBe(200);
+      expect(res.body.data.map((u: { code: string }) => u.code)).toContain(code);
+      for (const u of res.body.data as { code: string }[]) {
+        expect(u.code.toLowerCase()).toContain(needle);
+      }
+      // Facets and total follow the search too — same `where`.
+      expect(res.body.meta.total).toBe(res.body.data.length);
+    });
+
+    it('a code that matches nothing returns an empty page', async () => {
+      const res = await http()
+        .get('/v1/units?q=zz-no-such-unit-code')
+        .set('Authorization', bearer(adminToken));
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual([]);
+      expect(res.body.meta.total).toBe(0);
+    });
+
+    it('rejects an over-long q', async () => {
+      const res = await http()
+        .get(`/v1/units?q=${'x'.repeat(101)}`)
+        .set('Authorization', bearer(adminToken));
+      expect(res.status).toBe(400);
+    });
+  });
+
   // ── FG-23 — the sales dashboards count on the server ──────────────────────
   //
   // The sales, sales-manager and my-compensation homes used to fetch

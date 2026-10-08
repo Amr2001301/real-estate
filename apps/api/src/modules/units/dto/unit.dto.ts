@@ -10,6 +10,7 @@ import {
   Min,
   IsPositive,
   Max,
+  MaxLength,
 } from 'class-validator';
 import { UnitStatus } from '@prisma/client';
 import { MAX_PAGE_SIZE } from '../../../common/utils/pagination';
@@ -72,6 +73,8 @@ export enum UnitSort {
 }
 
 export class UnitQueryDto {
+  /** Case-insensitive match on the unit code (staff pickers search by it). */
+  @IsOptional() @IsString() @MaxLength(100) q?: string;
   @IsOptional() @IsEnum(UnitSort) sort?: UnitSort;
   @IsOptional() @IsUUID() projectId?: string;
   @IsOptional() @IsUUID() buildingId?: string;

@@ -123,6 +123,7 @@ export class UnitsService {
         : {}),
       ...(query.bedrooms !== undefined ? { bedrooms: query.bedrooms } : {}),
       ...(query.withoutPlan ? { planTemplates: { none: {} } } : {}),
+      ...(query.q?.trim() ? { code: { contains: query.q.trim(), mode: 'insensitive' } } : {}),
     };
 
     const [data, total] = await this.prisma.$transaction([
