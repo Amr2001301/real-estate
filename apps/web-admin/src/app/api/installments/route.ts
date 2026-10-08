@@ -11,9 +11,10 @@ export async function GET(req: NextRequest) {
   );
   if (r.error) return NextResponse.json({ error: r.error }, { status: 502 });
 
-  // Return only PENDING and OVERDUE installments
+  // Return only payable installments: PENDING or OVERDUE, and not already
+  // paid by a cheque waiting to clear (FG-01 — one cheque per installment).
   const installments = (r.data?.installments ?? []).filter(
-    (i) => i.status === 'PENDING' || i.status === 'OVERDUE',
+    (i) => (i.status === 'PENDING' || i.status === 'OVERDUE') && !i.awaitingCheque,
   );
   return NextResponse.json({ data: installments });
 }

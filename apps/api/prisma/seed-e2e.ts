@@ -461,6 +461,37 @@ async function main(): Promise<void> {
     uploadedById: adminUser.id,
   });
 
+  // 3b. FG-01 — the web-admin cheque flow (e2e/cheques.spec.ts) records a
+  // cheque on this contract's first open installment, then deposits and
+  // clears it. 48 monthly installments so repeated local runs on one DB still
+  // find an open one; the number makes the contract searchable.
+  await prisma.contract.update({
+    where: { id: c2Contract.id },
+    data: { contractNumber: 'E2E-CHQ-0001', companyId: defaultCompany.id },
+  });
+  const chequePlan =
+    (await prisma.installmentPlan.findUnique({
+      where: { contractId: c2Contract.id },
+      select: { id: true },
+    })) ??
+    (await prisma.installmentPlan.create({
+      data: {
+        companyId: defaultCompany.id,
+        contractId: c2Contract.id,
+        totalMonths: 48,
+        monthlyAmount: 20_000,
+        startsAt: new Date('2027-01-01T00:00:00Z'),
+        installments: {
+          create: Array.from({ length: 48 }, (_, i) => ({
+            companyId: defaultCompany.id,
+            amount: 20_000,
+            dueDate: new Date(Date.UTC(2027, i, 1)),
+          })),
+        },
+      },
+      select: { id: true },
+    }));
+
   // 4. Customer1 maintenance request + CUSTOMER_VISIBLE photo
   // MaintenanceRequest has no natural unique key — probe by (customerId, description).
   // It requires a categoryId; the dev seed creates several categories, so we
@@ -569,6 +600,7 @@ async function main(): Promise<void> {
   console.log(`     (no grant)             → project  [${p4.id}]`);
   console.log(`   Broker1 APPROVED lead → client ${broker1ClientUser.id}, sales ${salesUser.id}`);
   console.log(`   InstallmentPlanTemplate "${PLAN_NAME}" on project ${p1.id}`);
+  console.log(`   Cheque contract E2E-CHQ-0001 (plan ${chequePlan.id})`);
   console.log(`   Customer1 contract ${c1Contract.id} + doc ${c1ContractDoc.id} + deposit ${c1Deposit.id}`);
   console.log(`   Customer2 contract ${c2Contract.id} + doc ${c2ContractDoc.id}`);
   console.log(`   Customer1 maintenance ${c1Maint.id} + photo ${c1MaintDoc.id}`);
