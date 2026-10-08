@@ -89,3 +89,4 @@ apps/api/scripts/gen-test-xlsx.ts
 
 # Written by `next dev` (Next 16) on every run — not project content.
 apps/web-admin/AGENTS.md
+apps/web-public/AGENTS.md

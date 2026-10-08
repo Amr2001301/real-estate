@@ -19,14 +19,14 @@ Surfaces: NestJS API, Next.js admin dashboard, Next.js public website, Flutter c
 | Push | Firebase Admin SDK (FCM) |
 | Validation | class-validator on DTOs (API); Zod in shared-types |
 | Web Admin | Next.js 16 (App Router; `src/proxy.ts`, not middleware), React 19, Tailwind CSS 3.4 |
-| Web Public | Next.js 15, next-intl (ar/en, RTL), Tailwind CSS 3.4 |
+| Web Public | Next.js 16 (`src/proxy.ts`), in-house i18n in `src/messages` (ar/en, RTL), Tailwind CSS 3.4 |
 | Mobile | Flutter 3, Riverpod (state), GoRouter (routing), Dio (HTTP, OpenAPI-generated) |
 | Monorepo | pnpm 9 workspaces + Turbo 2.3 |
 | Mobile workspace | Melos 7 (Dart pub workspace) |
 | Testing | Jest 29 (API unit/e2e), Playwright 1.60 (web e2e) |
 | Linting | ESLint 9 (flat config), Prettier 3.3 |
 | CI/CD | GitHub Actions → Railway (API) + Vercel (web apps) |
-| Observability | Sentry (API and web-public 8, web-admin 11), prom-client (Prometheus) |
+| Observability | Sentry (API 8, web apps 11), prom-client (Prometheus) |
 
 ---
 

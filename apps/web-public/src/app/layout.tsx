@@ -74,15 +74,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       suppressHydrationWarning
     >
       <head>
-        {cssOverrides && (
+        {/* A ternary, not `&&`: an empty cssOverrides would render an empty
+            text node in <head>, which React 19.3 rejects as a hydration error. */}
+        {cssOverrides ? (
           // SSR-rendered so there is no flash: variables are present before
           // any paint. dangerouslySetInnerHTML is safe here — cssOverrides is
           // built from validated hex values parsed server-side.
           <style dangerouslySetInnerHTML={{ __html: `:root{${cssOverrides}}` }} />
-        )}
+        ) : null}
       </head>
       <body className="min-h-full">
-        {GA_ID && (
+        {GA_ID ? (
           <>
             <Script
               src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
@@ -92,7 +94,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${GA_ID}',{send_page_view:false});`}
             </Script>
           </>
-        )}
+        ) : null}
         <PageViewTracker />
         <ThemeProvider>
           <FavoritesProvider>

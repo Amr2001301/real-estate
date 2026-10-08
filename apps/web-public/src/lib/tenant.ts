@@ -6,7 +6,7 @@ export interface ResolvedTenant {
 }
 
 /**
- * Read the tenant resolved by the edge middleware for this request.
+ * Read the tenant resolved by the proxy (src/proxy.ts) for this request.
  *
  * Returns the tenant when the request hostname maps to an ACTIVE company
  * whose website is enabled, or null in all other cases (platform base domain,
