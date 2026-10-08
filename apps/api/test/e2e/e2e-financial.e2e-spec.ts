@@ -1116,3 +1116,191 @@ describe('FG-01 — cheque and transfer deposits (e2e)', () => {
     expect(res.status).toBe(403);
   });
 });
+
+// ═════════════════════════════════════════════════════════════════════════════
+// FG-05 — Reversing deposits (e2e)
+//
+// Reversal used to accept APPROVED deposits only (admin-recorded ones are
+// NO_PROOF), had no guard against reversing twice, and deleting a deposit left
+// its installment PAID.
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe('FG-05 — deposit reversal (e2e)', () => {
+  let testApp: TestApp;
+  let adminToken: string;
+  let contractId: string;
+  const AMOUNT = 30_000;
+  const inst: Record<'once' | 'race' | 'del' | 'repaid' | 'review', string> = {
+    once: '',
+    race: '',
+    del: '',
+    repaid: '',
+    review: '',
+  };
+
+  const http = () => request(testApp.app.getHttpServer());
+  const pay = (installmentId: string) =>
+    http()
+      .post('/v1/deposits')
+      .set('Authorization', bearer(adminToken))
+      .send({ contractId, installmentId, amount: AMOUNT, paymentMethod: PaymentMethod.CASH });
+  const reverse = (depositId: string, reason = 'FG-05 e2e') =>
+    http()
+      .post(`/v1/deposits/${depositId}/reverse`)
+      .set('Authorization', bearer(adminToken))
+      .send({ reason });
+  const installmentStatus = async (id: string) =>
+    (
+      await testApp.rawPrisma.installment.findUniqueOrThrow({
+        where: { id },
+        select: { status: true },
+      })
+    ).status;
+  const reversals = (depositId: string) =>
+    testApp.rawPrisma.paymentCorrection.count({ where: { depositId, type: 'REVERSAL' } });
+
+  beforeAll(async () => {
+    testApp = await createE2ETestApp();
+    adminToken = await loginAs(testApp.app, 'admin@example.com', 'ChangeMe123!');
+
+    const { id: companyId } = await testApp.rawPrisma.company.findFirstOrThrow({
+      where: { isActive: true },
+      select: { id: true },
+    });
+    const tag = process.hrtime.bigint().toString().slice(-8);
+    const customer = await testApp.rawPrisma.user.create({
+      data: {
+        companyId,
+        role: UserRole.CUSTOMER,
+        fullName: `FG05 Customer ${tag}`,
+        email: `fg05-${tag}@example.com`,
+        phone: `+2011${tag}`,
+        passwordHash: await argon2.hash('StrongPass1!'),
+        locale: 'ar',
+      },
+      select: { id: true },
+    });
+    const unit = await testApp.rawPrisma.unit.findFirstOrThrow({
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      select: { id: true },
+    });
+    const contract = await testApp.rawPrisma.contract.create({
+      data: {
+        companyId,
+        contractNumber: `FG05-CON-${tag}`,
+        customerId: customer.id,
+        unitId: unit.id,
+        totalAmount: new Prisma.Decimal(1_000_000),
+        downPayment: new Prisma.Decimal(100_000),
+      },
+      select: { id: true },
+    });
+    contractId = contract.id;
+    const plan = await testApp.rawPrisma.installmentPlan.create({
+      data: {
+        companyId,
+        contractId,
+        totalMonths: 12,
+        monthlyAmount: new Prisma.Decimal(AMOUNT),
+        startsAt: new Date('2026-10-01T00:00:00Z'),
+      },
+      select: { id: true },
+    });
+    const keys = Object.keys(inst) as (keyof typeof inst)[];
+    for (const [i, key] of keys.entries()) {
+      const row = await testApp.rawPrisma.installment.create({
+        data: {
+          companyId,
+          planId: plan.id,
+          type: PlanPaymentType.INSTALLMENT,
+          amount: new Prisma.Decimal(AMOUNT),
+          dueDate: new Date(Date.UTC(2026, 10 + i, 1)),
+          status: InstallmentStatus.PENDING,
+        },
+        select: { id: true },
+      });
+      inst[key] = row.id;
+    }
+  });
+
+  it('FG05-1: an admin-recorded (NO_PROOF) deposit can be reversed — once', async () => {
+    const paid = await pay(inst.once);
+    expect(paid.status).toBe(201);
+    expect(paid.body.reviewStatus).toBe(DepositReviewStatus.NO_PROOF);
+    expect(await installmentStatus(inst.once)).toBe(InstallmentStatus.PAID);
+
+    const first = await reverse(paid.body.id);
+    expect(first.status).toBe(201);
+    expect(await installmentStatus(inst.once)).toBe(InstallmentStatus.PENDING);
+
+    const second = await reverse(paid.body.id);
+    expect(second.status).toBe(409);
+    expect(await reversals(paid.body.id)).toBe(1);
+  });
+
+  it('FG05-2: two reversals of the same deposit at the same moment → one 201, one 409', async () => {
+    const paid = await pay(inst.race);
+    expect(paid.status).toBe(201);
+    const results = await Promise.all([reverse(paid.body.id), reverse(paid.body.id)]);
+    expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+    expect(await reversals(paid.body.id)).toBe(1);
+    expect(await installmentStatus(inst.race)).toBe(InstallmentStatus.PENDING);
+  });
+
+  it('FG05-3: deleting a deposit that pays its installment reopens it; restoring does not re-pay', async () => {
+    const paid = await pay(inst.del);
+    expect(paid.status).toBe(201);
+
+    const del = await http().delete(`/v1/deposits/${paid.body.id}`).set('Authorization', bearer(adminToken));
+    expect(del.status).toBe(200);
+    expect(await installmentStatus(inst.del)).toBe(InstallmentStatus.PENDING);
+    const correction = await testApp.rawPrisma.paymentCorrection.findFirstOrThrow({
+      where: { depositId: paid.body.id, type: 'REVERSAL' },
+      select: { reason: true },
+    });
+    expect(correction.reason).toBe('Deposit deleted by admin');
+
+    const restored = await http()
+      .post(`/v1/deposits/${paid.body.id}/restore`)
+      .set('Authorization', bearer(adminToken));
+    expect(restored.status).toBe(201);
+    expect(await installmentStatus(inst.del)).toBe(InstallmentStatus.PENDING);
+    // Already reversed: reversing the restored deposit is refused.
+    expect((await reverse(paid.body.id)).status).toBe(409);
+  });
+
+  it('FG05-4: once the reopened installment is paid again, the old deposit cannot reverse the new payment', async () => {
+    const first = await pay(inst.repaid);
+    expect((await reverse(first.body.id)).status).toBe(201);
+
+    const second = await pay(inst.repaid);
+    expect(second.status).toBe(201);
+    expect(await installmentStatus(inst.repaid)).toBe(InstallmentStatus.PAID);
+
+    expect((await reverse(first.body.id)).status).toBe(409);
+    expect(await installmentStatus(inst.repaid)).toBe(InstallmentStatus.PAID);
+    // The new payment itself can still be reversed.
+    expect((await reverse(second.body.id)).status).toBe(201);
+  });
+
+  it('FG05-5: a deposit still under review (customer proof) cannot be reversed', async () => {
+    const admin = await testApp.rawPrisma.user.findFirstOrThrow({
+      where: { email: 'admin@example.com' },
+      select: { id: true, companyId: true },
+    });
+    const dep = await testApp.rawPrisma.deposit.create({
+      data: {
+        companyId: admin.companyId,
+        contractId,
+        installmentId: inst.review,
+        amount: new Prisma.Decimal(AMOUNT),
+        paidAt: new Date(),
+        recordedById: admin.id,
+        reviewStatus: DepositReviewStatus.PENDING_REVIEW,
+      },
+      select: { id: true },
+    });
+    expect((await reverse(dep.id)).status).toBe(400);
+    expect(await reversals(dep.id)).toBe(0);
+  });
+});

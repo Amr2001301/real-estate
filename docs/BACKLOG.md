@@ -24,6 +24,7 @@ detail in `docs/audit/08-functional-gaps.md` §7.
 | FG-28 | Client ownership: reps saw no clients (GET /users ADMIN-only) and the server accepted any client or lead id | Decided 2026-10-08: rep → own, manager → team, admin → all, unowned → admin assigns. Enforced server-side; scoped `GET /users/clients` |
 | FG-27 | Signed contracts read `UNSIGNED` | `sign()` sets ACTIVE; backfill migration (PR #17) |
 | Server actions hang | On routes under a `loading.tsx`, a server action's result was sometimes never shown (button stuck busy, form never redirected). Root cause: a lost Suspense ping in the React 19.2 canary bundled with Next 15.5 — React held a fulfilled promise but never re-rendered. web-admin upgraded to Next 16.4 (React 19.3 canary): 0/120 hangs vs 39/160 before | PR #20 (web-admin); web-public Next 16 PR |
+| FG-05 | Reversal accepted APPROVED deposits only, could run twice, and deleting a deposit left its installment PAID | Any deposit still paying its installment is reversible (incl. admin-recorded NO_PROOF); second reversal 409, atomic claim; delete reverses first. Delete/restore routes given their `deposits/` prefix |
 | FG-01 | `Deposit.paymentInstrumentId` was never set, so clearing or bouncing a cheque touched no deposit | Decided 2026-10-08: cheque → unpaid until it clears; transfer → collected at once; one cheque per installment. API: PR #18. UI: payment method on the deposit form, `/dashboard/cheques` (deposit, clear, bounce, cancel) |
 | 15 | Split the security suite (31 min) | Not needed: the job lacked Redis; with it the suite runs in ~1.5 min (PR #9, G16). A Redis outage no longer stalls the API either (PR #10) |
 
@@ -32,7 +33,7 @@ detail in `docs/audit/08-functional-gaps.md` §7.
 | Item | Why | Size |
 |---|---|---|
 | Leaflet map in `next dev` | On the project page under `next dev`, react-leaflet 4 throws "Map container is already initialized" (Strict Mode mounts effects twice) and the map does not render. Dev only — production builds render it; same on Next 15.5. react-leaflet 5 targets React 19 | S |
-| FG-05 residuals | Reverse only works on APPROVED deposits; no double-reversal guard; soft-delete leaves the installment PAID | M |
+| Deposit reverse / delete UI | The API reverses and deletes deposits safely (FG-05, see Done); web-admin has no button for either — an admin needs an API client | S |
 | FG-13 residual | Admin confirm deletes a rejected customer proof's deposit and orphans its document | S |
 | FG-04 | InfoRequest RESPONDED/CLOSED have no write path; contract number unreachable for direct contracts | M |
 | FG-10, FG-14, FG-15 | Swallowed materialisation on sign; no promotion notice; no `updatedAt` on Phase/Building | S each |

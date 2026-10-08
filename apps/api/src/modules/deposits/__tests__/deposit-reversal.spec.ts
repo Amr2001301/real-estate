@@ -79,6 +79,9 @@ interface DepositFixture {
   installmentId: string | null;
   installment: { id: string; status: string; paidAt: Date | null } | null;
   receiptUrl: string | null;
+  createdAt: Date;
+  reviewedAt: Date | null;
+  deletedAt: Date | null;
 }
 
 let depositFixture: DepositFixture | null = null;
@@ -94,8 +97,14 @@ function makeApprovedDeposit(): DepositFixture {
     installmentId: INST_ID,
     installment: { id: INST_ID, status: 'PAID', paidAt: new Date('2026-09-01') },
     receiptUrl: 'https://r2.example/receipt.pdf',
+    createdAt: new Date('2026-08-01'),
+    reviewedAt: new Date('2026-08-02'),
+    deletedAt: null,
   };
 }
+
+/** FG-05 — a REVERSAL already written for the deposit (null = none). */
+let existingReversal: { id: string } | null = null;
 
 // ── Prisma mock ───────────────────────────────────────────────────────────────
 
@@ -124,6 +133,7 @@ function makePrismaMock() {
       }),
     },
     paymentCorrection: {
+      findFirst: jest.fn().mockImplementation(async () => existingReversal),
       create: jest.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => {
         const row = { id: `corr-${Date.now()}`, ...data };
         createdCorrections.push(row);
@@ -131,6 +141,13 @@ function makePrismaMock() {
       }),
     },
     installment: {
+      // Atomic claim: PAID → PENDING only while the installment is PAID.
+      updateMany: jest.fn().mockImplementation(async ({ data }: { data: { status: string } }) => {
+        const inst = depositFixture?.installment;
+        if (!inst || inst.status !== 'PAID') return { count: 0 };
+        inst.status = data.status;
+        return { count: 1 };
+      }),
       update: jest.fn().mockResolvedValue({}),
     },
     auditLog: {
@@ -215,6 +232,10 @@ describe('Deposits · reverseDeposit + FG-06', () => {
     mock.deposit.findFirst.mockClear();
     mock.paymentCorrection.create.mockClear();
     mock.installment.update.mockClear();
+    mock.installment.updateMany.mockClear();
+    mock.paymentCorrection.findFirst.mockClear();
+    mock.deposit.update.mockClear();
+    existingReversal = null;
     mock.auditLog.create.mockClear();
   });
 
@@ -236,11 +257,76 @@ describe('Deposits · reverseDeposit + FG-06', () => {
         .expect(404);
     });
 
-    it('returns 400 when deposit is not APPROVED', async () => {
+    it('returns 400 when deposit is still under review', async () => {
       depositFixture = { ...makeApprovedDeposit(), reviewStatus: DepositReviewStatus.PENDING_REVIEW };
       await request(app.getHttpServer())
         .post(`/deposits/${DEP_ID}/reverse`)
         .send({ reason: 'Not approved yet' })
+        .expect(400);
+    });
+
+    it('returns 400 when deposit was rejected', async () => {
+      depositFixture = { ...makeApprovedDeposit(), reviewStatus: DepositReviewStatus.REJECTED };
+      await request(app.getHttpServer())
+        .post(`/deposits/${DEP_ID}/reverse`)
+        .send({ reason: 'Rejected one' })
+        .expect(400);
+    });
+
+    // FG-05 — an admin-recorded deposit stays NO_PROOF but paid the installment.
+    it('reverses an admin-recorded NO_PROOF deposit that paid the installment', async () => {
+      depositFixture = { ...makeApprovedDeposit(), reviewStatus: DepositReviewStatus.NO_PROOF, reviewedAt: null };
+      await request(app.getHttpServer())
+        .post(`/deposits/${DEP_ID}/reverse`)
+        .send({ reason: 'Wrong entry' })
+        .expect(201);
+      expect(createdCorrections).toHaveLength(1);
+      expect(depositFixture.installment!.status).toBe('PENDING');
+    });
+
+    it('FG-05: returns 409 when the deposit was already reversed since its last review', async () => {
+      existingReversal = { id: 'corr-earlier' };
+      await request(app.getHttpServer())
+        .post(`/deposits/${DEP_ID}/reverse`)
+        .send({ reason: 'Again' })
+        .expect(409);
+      expect(mock.paymentCorrection.create).not.toHaveBeenCalled();
+      // Looked only at reversals since the deposit's last review.
+      const where = (mock.paymentCorrection.findFirst.mock.calls[0]![0] as {
+        where: { depositId: string; type: string; createdAt: { gte: Date } };
+      }).where;
+      expect(where).toEqual({
+        depositId: DEP_ID,
+        type: 'REVERSAL',
+        createdAt: { gte: makeApprovedDeposit().reviewedAt },
+      });
+    });
+
+    it('FG-05: returns 409 when the installment is no longer PAID', async () => {
+      depositFixture = makeApprovedDeposit();
+      depositFixture.installment!.status = 'PENDING';
+      await request(app.getHttpServer())
+        .post(`/deposits/${DEP_ID}/reverse`)
+        .send({ reason: 'Nothing to undo' })
+        .expect(409);
+      expect(mock.paymentCorrection.create).not.toHaveBeenCalled();
+    });
+
+    it('FG-05: returns 409 when a concurrent reversal reopened the installment first', async () => {
+      // Read says PAID, but the atomic claim finds it already reopened.
+      mock.installment.updateMany.mockResolvedValueOnce({ count: 0 });
+      await request(app.getHttpServer())
+        .post(`/deposits/${DEP_ID}/reverse`)
+        .send({ reason: 'Race' })
+        .expect(409);
+      expect(mock.paymentCorrection.create).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 for a deleted deposit', async () => {
+      depositFixture = { ...makeApprovedDeposit(), deletedAt: new Date() };
+      await request(app.getHttpServer())
+        .post(`/deposits/${DEP_ID}/reverse`)
+        .send({ reason: 'Deleted' })
         .expect(400);
     });
 
@@ -284,21 +370,29 @@ describe('Deposits · reverseDeposit + FG-06', () => {
       expect(args.data.companyId).toBe(COMPANY_A);
     });
 
-    it('reopens the installment as PENDING via installment.update', async () => {
+    it('reopens the installment as PENDING (atomic PAID → PENDING claim) and links the correction', async () => {
       await request(app.getHttpServer())
         .post(`/deposits/${DEP_ID}/reverse`)
         .send({ reason: 'Admin correction' })
         .expect(201);
 
-      expect(mock.installment.update).toHaveBeenCalledTimes(1);
-      const args = mock.installment.update.mock.calls[0]![0] as {
-        where: { id: string };
-        data: { status: string; lastCorrectionId: string; paidAt?: unknown };
+      expect(mock.installment.updateMany).toHaveBeenCalledTimes(1);
+      const claim = mock.installment.updateMany.mock.calls[0]![0] as {
+        where: { id: string; status: string };
+        data: { status: string; paidAt?: unknown };
       };
-      expect(args.where.id).toBe(INST_ID);
-      expect(args.data.status).toBe('PENDING');
+      expect(claim.where).toEqual({ id: INST_ID, status: 'PAID' });
+      expect(claim.data.status).toBe('PENDING');
       // Hard Rule 2: paidAt MUST NOT appear in the update data
-      expect(args.data.paidAt).toBeUndefined();
+      expect(claim.data.paidAt).toBeUndefined();
+
+      const link = mock.installment.update.mock.calls[0]![0] as {
+        where: { id: string };
+        data: { lastCorrectionId: string; paidAt?: unknown };
+      };
+      expect(link.where.id).toBe(INST_ID);
+      expect(link.data.lastCorrectionId).toBe(createdCorrections[0]!.id);
+      expect(link.data.paidAt).toBeUndefined();
     });
 
     it('writes an AuditLog entry with action=deposit.reversed and correct payload', async () => {
@@ -363,8 +457,8 @@ describe('Deposits · reverseDeposit + FG-06', () => {
         .send({ verified: false })
         .expect(200);
 
-      expect(mock.installment.update).toHaveBeenCalledTimes(1);
-      const args = mock.installment.update.mock.calls[0]![0] as {
+      expect(mock.installment.updateMany).toHaveBeenCalledTimes(1);
+      const args = mock.installment.updateMany.mock.calls[0]![0] as {
         data: { status: string; paidAt?: unknown };
       };
       expect(args.data.status).toBe('PENDING');
@@ -406,6 +500,46 @@ describe('Deposits · reverseDeposit + FG-06', () => {
         .send({ verified: true })
         .expect(200);
 
+      expect(mock.paymentCorrection.create).not.toHaveBeenCalled();
+    });
+
+    it('FG-05: does not reverse twice — an already-reversed deposit only changes status', async () => {
+      existingReversal = { id: 'corr-earlier' };
+      await request(app.getHttpServer())
+        .patch(`/deposits/${DEP_ID}/verify`)
+        .send({ verified: false })
+        .expect(200);
+      expect(mock.paymentCorrection.create).not.toHaveBeenCalled();
+      expect(mock.installment.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── FG-05 — DELETE /deposits/:id ─────────────────────────────────────────
+
+  describe('FG-05 — soft-deleting a deposit', () => {
+    it('reverses a deposit that still pays its installment, then deletes it', async () => {
+      await request(app.getHttpServer()).delete(`/deposits/${DEP_ID}`).expect(200);
+
+      expect(createdCorrections).toHaveLength(1);
+      expect(createdCorrections[0]!.reason).toBe('Deposit deleted by admin');
+      expect(depositFixture!.installment!.status).toBe('PENDING');
+      const del = mock.deposit.update.mock.calls.at(-1)![0] as { data: { deletedAt?: Date } };
+      expect(del.data.deletedAt).toBeInstanceOf(Date);
+    });
+
+    it('only deletes when the deposit no longer pays (already reversed)', async () => {
+      existingReversal = { id: 'corr-earlier' };
+      await request(app.getHttpServer()).delete(`/deposits/${DEP_ID}`).expect(200);
+
+      expect(mock.paymentCorrection.create).not.toHaveBeenCalled();
+      const del = mock.deposit.update.mock.calls.at(-1)![0] as { data: { deletedAt?: Date } };
+      expect(del.data.deletedAt).toBeInstanceOf(Date);
+    });
+
+    it('only deletes a deposit still under review (it never paid the installment)', async () => {
+      depositFixture = { ...makeApprovedDeposit(), reviewStatus: DepositReviewStatus.PENDING_REVIEW };
+      depositFixture.installment!.status = 'PENDING';
+      await request(app.getHttpServer()).delete(`/deposits/${DEP_ID}`).expect(200);
       expect(mock.paymentCorrection.create).not.toHaveBeenCalled();
     });
   });
