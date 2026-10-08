@@ -635,6 +635,7 @@ async function main(): Promise<void> {
         totalAmount: spec.totalAmount,
         downPayment: spec.downPayment,
         signedAt: spec.signedDaysAgo ? ago(spec.signedDaysAgo) : undefined,
+        status: spec.signedDaysAgo ? 'ACTIVE' : 'UNSIGNED', // FG-27
         createdAt: ago(spec.createdDaysAgo),
       },
       select: { id: true },

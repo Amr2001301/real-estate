@@ -224,6 +224,7 @@ async function main() {
         totalAmount,
         downPayment,
         signedAt: signedDaysAgo ? ago(signedDaysAgo) : undefined,
+        status: signedDaysAgo ? 'ACTIVE' : 'UNSIGNED', // FG-27
         createdAt: ago(createdDaysAgo),
       },
       select: { id: true },

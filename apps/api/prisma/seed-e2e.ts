@@ -360,6 +360,7 @@ async function main(): Promise<void> {
         totalAmount: opts.totalAmount,
         downPayment: opts.downPayment,
         signedAt: new Date(),
+        status: 'ACTIVE', // FG-27 — a signed contract is ACTIVE
       },
       select: { id: true },
     });

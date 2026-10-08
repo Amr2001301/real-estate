@@ -781,6 +781,64 @@ describe('Flow A — Catalog sync (e2e)', () => {
     });
   });
 
+  // ── FG-27 — signing a contract makes it ACTIVE ───────────────────────────
+  //
+  // sign() set signedAt but never status, so every signed contract read
+  // UNSIGNED to anything that filters on status (reports, exports).
+  describe('A4j — FG-27 contract sign sets ACTIVE', () => {
+    const created: string[] = [];
+
+    const makeContract = async (status: 'UNSIGNED' | 'CANCELLED' = 'UNSIGNED') => {
+      const raw = testApp.rawPrisma;
+      const customer = await raw.user.findFirstOrThrow({ where: { email: fixtures.users.CUSTOMER_1.email } });
+      const c = await raw.contract.create({
+        data: {
+          companyId: customer.companyId,
+          customerId: customer.id,
+          unitId: fixtures.units.sampleUnitInP1Id,
+          totalAmount: 1_000_000,
+          downPayment: 0,
+          status,
+        },
+        select: { id: true },
+      });
+      created.push(c.id);
+      return c.id;
+    };
+    const sign = (id: string) =>
+      http()
+        .post(`/v1/contracts/${id}/sign`)
+        .send({ signedAt: new Date().toISOString() })
+        .set('Authorization', bearer(adminToken));
+
+    afterAll(async () => {
+      const raw = testApp.rawPrisma;
+      await raw.contract.deleteMany({ where: { id: { in: created } } });
+    });
+
+    it('sign() sets status ACTIVE along with signedAt', async () => {
+      const id = await makeContract();
+      const res = await sign(id);
+      expect([200, 201]).toContain(res.status);
+      const row = await testApp.rawPrisma.contract.findUniqueOrThrow({ where: { id } });
+      expect(row.signedAt).not.toBeNull();
+      expect(row.status).toBe('ACTIVE');
+
+      // Idempotent: a second sign changes nothing.
+      const again = await sign(id);
+      expect([200, 201]).toContain(again.status);
+    });
+
+    it('a cancelled contract cannot be signed back to life', async () => {
+      const id = await makeContract('CANCELLED');
+      const res = await sign(id);
+      expect(res.status).toBe(409);
+      const row = await testApp.rawPrisma.contract.findUniqueOrThrow({ where: { id } });
+      expect(row.status).toBe('CANCELLED');
+      expect(row.signedAt).toBeNull();
+    });
+  });
+
   // ── Broker portal: the same filter, inside the broker's own scope ─────────
   //
   // The portal reservation form searches leads instead of preloading 200, and
