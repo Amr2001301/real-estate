@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
-import type { Paged, Contract } from '@/lib/types';
+import type { Contract } from '@/lib/types';
 import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
@@ -19,7 +19,11 @@ export default async function NewDepositPage({
   const n = m.pages.depositsNew;
 
   const [r, currency] = await Promise.all([
-    safe(api.get<Paged<Contract>>('/contracts?pageSize=200')),
+    // Contracts are searched from the form (SearchSelect); only the one the
+    // page was opened from is fetched, to pre-select it.
+    sp.contractId
+      ? safe(api.get<Contract>(`/contracts/${encodeURIComponent(sp.contractId)}`))
+      : Promise.resolve({ data: null, error: null } as { data: Contract | null; error: null }),
     getReportsCurrency(),
   ]);
 
@@ -77,7 +81,7 @@ export default async function NewDepositPage({
           <p className="font-medium">{r.error}</p>
         </div>
       ) : (
-        <RecordDepositForm contracts={r.data?.data ?? []} initialContractId={sp.contractId} currency={currency} locale={locale} />
+        <RecordDepositForm initialContract={r.data ?? null} currency={currency} locale={locale} />
       )}
     </div>
   );

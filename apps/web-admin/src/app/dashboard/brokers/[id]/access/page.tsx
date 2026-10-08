@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ShieldCheck, Building2, Home } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { Broker, BrokerAccessBundle, Paged, Project, Unit } from '@/lib/types';
+import type { Broker, BrokerAccessBundle, Paged, Project } from '@/lib/types';
 import { tx, formatDate } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
@@ -63,20 +63,16 @@ export default async function BrokerAccessPage({
   const locale = await getLocale();
   const m = uiT(locale).pages.brokerAccessPage;
 
-  const [brokerRes, accessRes, projectsRes, unitsRes] = await Promise.all([
+  const [brokerRes, accessRes, projectsRes] = await Promise.all([
     safe(api.get<Broker>(`/brokers/${id}`)),
     safe(api.get<BrokerAccessBundle>(`/brokers/${id}/access`)),
     safe(api.get<Paged<Project>>('/projects?pageSize=200')),
-    tab === 'units'
-      ? safe(api.get<Paged<Unit>>('/units?pageSize=500'))
-      : Promise.resolve({ data: null, error: null } as const),
   ]);
   if (brokerRes.error || !brokerRes.data) notFound();
 
   const broker = brokerRes.data;
   const access = accessRes.data ?? { projects: [], units: [] };
   const allProjects = projectsRes.data?.data ?? [];
-  const allUnits = unitsRes.data?.data ?? [];
 
   async function revokeProject(projectId: string) {
     'use server';
@@ -310,7 +306,7 @@ export default async function BrokerAccessPage({
             <p className="text-[12px] text-slate-500 mb-5">
               {m.grantUnitNote}
             </p>
-            <UnitAccessGrantForm action={grantUnit} allUnits={allUnits} projects={allProjects} locale={locale} />
+            <UnitAccessGrantForm action={grantUnit} projects={allProjects} locale={locale} />
           </PremiumSectionCard>
 
           {/* Units list */}

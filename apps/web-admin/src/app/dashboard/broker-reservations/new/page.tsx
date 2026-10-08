@@ -8,8 +8,6 @@ import type {
   BrokerUser,
   Paged,
   Project,
-  Unit,
-  UnitStatus,
 } from '@/lib/types';
 import { tx } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
@@ -50,25 +48,17 @@ export default async function NewAdminBrokerReservationPage({
         .filter((u) => u.status === 'ACTIVE')
     : [];
 
-  const approvedLeads = sp.brokerId
+  // Leads and units are searched from the form (SearchSelect); here we only
+  // need to know whether the broker has any approved, assigned lead at all.
+  const hasApprovedLeads = sp.brokerId
     ? ((
         await safe(
           api.get<Paged<AdminBrokerLead>>(
-            `/broker-leads?brokerId=${sp.brokerId}&brokerApprovalStatus=APPROVED&pageSize=100`,
+            `/broker-leads?brokerId=${sp.brokerId}&brokerApprovalStatus=APPROVED&assigned=true&pageSize=1`,
           ),
         )
-      ).data?.data ?? [])
-        .filter((l) => Boolean(l.assignedSalesId))
-    : [];
-
-  const units = sp.projectId
-    ? ((
-        await safe(
-          api.get<Paged<Unit>>(`/units?projectId=${sp.projectId}&status=AVAILABLE&pageSize=200`),
-        )
-      ).data?.data ?? [])
-        .filter((u) => (u.status as UnitStatus) === 'AVAILABLE')
-    : [];
+      ).data?.meta.total ?? 0) > 0
+    : false;
 
   return (
     <div className="space-y-5">
@@ -102,26 +92,13 @@ export default async function NewAdminBrokerReservationPage({
           email: a.user.email,
         }))}
         selectedBrokerAgentId={sp.brokerAgentId ?? ''}
-        approvedLeads={approvedLeads.map((l) => ({
-          id: l.id,
-          fullName: l.fullName,
-          phone: l.phone,
-          projectInterestId: l.projectInterestId ?? null,
-          projectInterestName: l.projectInterest ? tx(l.projectInterest.name) : null,
-        }))}
+        hasApprovedLeads={hasApprovedLeads}
         projects={projects.map((p) => ({
           id: p.id,
           name: tx(p.name),
           city: p.city,
         }))}
         selectedProjectId={sp.projectId ?? ''}
-        units={units.map((u) => ({
-          id: u.id,
-          code: u.code,
-          type: u.type,
-          price: u.price,
-          buildingName: u.building?.name ?? null,
-        }))}
         symbol={symbol}
         locale={locale}
       />

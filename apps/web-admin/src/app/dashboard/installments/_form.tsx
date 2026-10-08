@@ -1,10 +1,11 @@
 'use client';
 
-import { useActionState, useEffect, useMemo, useState } from 'react';
+import { useActionState, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AlertCircle, Calculator, Plus, Trash2 } from 'lucide-react';
 import { Field } from '@/components/form/field';
 import { SubmitButton } from '@/components/form/submit-button';
+import { SearchSelect, type SearchOption } from '@/components/form/search-select';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -84,10 +85,8 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
   const d = initialData;
 
   const [projectId, setProjectId] = useState(d?.projectId ?? '');
-  const [units, setUnits] = useState<UnitOption[]>([]);
-  const [unitsLoading, setUnitsLoading] = useState(false);
   const [unitId, setUnitId] = useState(d?.unitId ?? '');
-  const [unitPrice, setUnitPrice] = useState<number>(0);
+  const [unitPrice, setUnitPrice] = useState<number>(safeNum(d?.unit?.price));
   const [manualPriceOverride, setManualPriceOverride] = useState(mode === 'edit');
   const [totalPrice, setTotalPrice] = useState(safeStr(d?.totalPrice));
   const [discountType, setDiscountType] = useState<DownPaymentType>(d?.discountType ?? 'FIXED');
@@ -149,59 +148,33 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
 
   const [unitTouched, setUnitTouched] = useState(false);
 
-  useEffect(() => {
-    if (!projectId) {
-      setUnits([]);
-      setUnitId('');
-      setUnitPrice(0);
-      if (!manualPriceOverride) setTotalPrice('');
-      return;
-    }
-    setUnitsLoading(true);
-    const unitsUrl =
-      mode === 'create'
-        ? `/api-proxy/units?projectId=${projectId}&pageSize=200&withoutPlan=true`
-        : `/api-proxy/units?projectId=${projectId}&pageSize=200`;
-    fetch(unitsUrl)
-      .then((r) => r.json())
-      .then((data) => {
-        const list: UnitOption[] = (data?.data ?? []).map((u: UnitOption) => ({
-          id: u.id,
-          code: u.code,
-          type: u.type,
-          price: u.price,
-        }));
-        setUnits(list);
 
-        if (d?.unitId) {
-          const existing = list.find((u) => u.id === d.unitId);
-          if (existing) {
-            setUnitPrice(safeNum(existing.price));
-          }
-        }
-      })
-      .catch(() => setUnits([]))
-      .finally(() => setUnitsLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, mode]);
-
-  function handleUnitChange(id: string) {
-    setUnitId(id);
+  function handleUnitChange(unit: UnitOption | null) {
+    setUnitId(unit?.id ?? '');
     setUnitTouched(true);
-    if (!id) {
+    if (!unit) {
       setUnitPrice(0);
       if (!manualPriceOverride) setTotalPrice('');
       return;
     }
-    const unit = units.find((u) => u.id === id);
-    if (unit) {
-      const price = safeNum(unit.price);
-      setUnitPrice(price);
-      if (!manualPriceOverride) {
-        setTotalPrice(price > 0 ? String(price) : '');
-      }
+    const price = safeNum(unit.price);
+    setUnitPrice(price);
+    if (!manualPriceOverride) {
+      setTotalPrice(price > 0 ? String(price) : '');
     }
   }
+
+  const toUnitOption = (u: UnitOption): SearchOption<UnitOption> => ({
+    id: u.id,
+    label: `${u.code}${u.type ? ` — ${u.type}` : ''} — ${formatCurrency(u.price, currency)}`,
+    raw: u,
+  });
+  // A new plan may only target a unit that has none yet; editing keeps the
+  // project's units open. Searched on the server: this used to load
+  // ?pageSize=200 per project, so unit 201 of a project could not get a plan.
+  const unitsEndpoint = `/api-proxy/units?projectId=${encodeURIComponent(projectId)}${
+    mode === 'create' ? '&withoutPlan=true' : ''
+  }`;
 
   function handleManualOverrideChange(checked: boolean) {
     setManualPriceOverride(checked);
@@ -354,6 +327,8 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
                   setProjectId(e.target.value);
                   setUnitId('');
                   setUnitTouched(false);
+                  setUnitPrice(0);
+                  if (!manualPriceOverride) setTotalPrice('');
                 }}
               >
                 <option value="">{m.optionChooseProject}</option>
@@ -370,35 +345,30 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
               name="unitId"
               required
               error={unitError}
-              hint={
-                !projectId
-                  ? m.unitHintNoProject
-                  : unitsLoading
-                  ? m.unitHintLoading
-                  : units.length === 0 && mode === 'create'
-                  ? m.unitHintNoneCreate
-                  : units.length === 0
-                  ? m.unitHintNoneEdit
-                  : undefined
-              }
+              hint={!projectId ? m.unitHintNoProject : mode === 'create' ? m.unitHintCreate : undefined}
             >
-              <Select
-                id="unitId"
+              {/* Keyed by project: changing the project clears the unit. */}
+              <SearchSelect<UnitOption>
+                key={projectId}
                 name="unitId"
                 required
-                value={unitId}
-                disabled={!projectId || unitsLoading || units.length === 0}
-                onChange={(e) => handleUnitChange(e.target.value)}
-                invalid={!!unitError}
-                onBlur={() => setUnitTouched(true)}
-              >
-                <option value="">{m.optionChooseUnit}</option>
-                {units.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.code} — {u.type} — {formatCurrency(u.price, currency)}
-                  </option>
-                ))}
-              </Select>
+                disabled={!projectId}
+                endpoint={unitsEndpoint}
+                toOption={toUnitOption}
+                initial={
+                  d?.unit && d.unit.id === unitId && d.projectId === projectId
+                    ? toUnitOption({
+                        id: d.unit.id,
+                        code: d.unit.code,
+                        type: d.unit.type ?? '',
+                        price: d.unit.price ?? 0,
+                      })
+                    : null
+                }
+                onChange={handleUnitChange}
+                placeholder={uiT(locale).common.searchUnitPlaceholder}
+                locale={locale}
+              />
             </Field>
 
             <div className="grid grid-cols-2 gap-4">

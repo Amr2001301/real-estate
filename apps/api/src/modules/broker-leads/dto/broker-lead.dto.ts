@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -35,6 +36,14 @@ export class BrokerLeadsQueryDto {
   @IsOptional()
   @IsUUID()
   assignedSalesId?: string;
+
+  /**
+   * `true` → only leads already assigned to a sales rep (a reservation needs
+   * one). A string, not a boolean: implicit conversion turns "false" into true.
+   */
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  assigned?: 'true' | 'false';
 
   @IsOptional()
   @Type(() => Number)

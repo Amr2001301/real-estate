@@ -64,7 +64,9 @@ export class BrokerLeadsService {
       ...(query.projectId ? { projectInterestId: query.projectId } : {}),
       ...(query.assignedSalesId
         ? { assignedSalesId: query.assignedSalesId }
-        : {}),
+        : query.assigned === 'true'
+          ? { assignedSalesId: { not: null } }
+          : {}),
       ...(trimmed
         ? {
             OR: [

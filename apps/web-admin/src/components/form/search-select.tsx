@@ -10,6 +10,8 @@ export interface SearchOption<T = unknown> {
   id: string;
   label: string;
   raw: T;
+  /** Shown but not selectable (e.g. a unit that is no longer available). */
+  disabled?: boolean;
 }
 
 interface Props<T> {
@@ -24,6 +26,8 @@ interface Props<T> {
   endpoint: string;
   toOption: (raw: T) => SearchOption<T>;
   onChange?: (raw: T | null) => void;
+  /** Pre-selected option, e.g. the saved value on an edit form. */
+  initial?: SearchOption<T> | null;
   required?: boolean;
   disabled?: boolean;
   placeholder: string;
@@ -44,6 +48,7 @@ export function SearchSelect<T>({
   endpoint,
   toOption,
   onChange,
+  initial = null,
   required,
   disabled,
   placeholder,
@@ -57,7 +62,7 @@ export function SearchSelect<T>({
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState<SearchOption<T>[]>([]);
   const [active, setActive] = useState(0);
-  const [selected, setSelected] = useState<SearchOption<T> | null>(null);
+  const [selected, setSelected] = useState<SearchOption<T> | null>(initial);
   const inputRef = useRef<HTMLInputElement>(null);
   const toOptionRef = useRef(toOption);
   toOptionRef.current = toOption;
@@ -97,6 +102,7 @@ export function SearchSelect<T>({
   }, [endpoint, open, pageSize, query]);
 
   function choose(option: SearchOption<T>) {
+    if (option.disabled) return;
     setSelected(option);
     setQuery('');
     setOpen(false);
@@ -200,6 +206,7 @@ export function SearchSelect<T>({
                 key={option.id}
                 role="option"
                 aria-selected={selected?.id === option.id}
+                aria-disabled={option.disabled || undefined}
                 onMouseDown={(e) => {
                   e.preventDefault();
                   choose(option);
@@ -208,6 +215,7 @@ export function SearchSelect<T>({
                 className={cn(
                   'cursor-pointer px-3 py-2 text-sm text-slate-800',
                   i === active && 'bg-brand-50 text-brand-700',
+                  option.disabled && 'cursor-not-allowed text-slate-400',
                 )}
               >
                 {option.label}
