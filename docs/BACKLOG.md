@@ -21,6 +21,7 @@ detail in `docs/audit/08-functional-gaps.md` §7.
 | 9 | `pageSize` unbounded | `c15beaf` (max 500), e2e A4d |
 | 10 | Dropdowns fetched 100–500 full rows | Create-form pickers search the API (PRs #11–#14); filters and assignee dropdowns use `/options` endpoints (PR #15) |
 | 11, 12 | Ubuntu 24.04 pin, Node 24 actions | PR #1 (CI gap G14/G15) |
+| FG-28 | Client ownership: reps saw no clients (GET /users ADMIN-only) and the server accepted any client or lead id | Decided 2026-10-08: rep → own, manager → team, admin → all, unowned → admin assigns. Enforced server-side; scoped `GET /users/clients` |
 | 15 | Split the security suite (31 min) | Not needed: the job lacked Redis; with it the suite runs in ~1.5 min (PR #9, G16). A Redis outage no longer stalls the API either (PR #10) |
 
 ## Open — can be done in the repo
@@ -44,7 +45,6 @@ detail in `docs/audit/08-functional-gaps.md` §7.
 | 14 | Branch protection on `main` | Required check: `all checks passed` |
 | — | Actions on a public repository | Settings → Actions: require approval for outside collaborators |
 | — | Database backups | `DATABASE_URL` and `BACKUP_S3_*` secrets — the `db-backup` workflow fails without them |
-| FG-28 | Client search for sales reps | Decide what a rep may see: all company clients (search-only, minimum query length, few fields) or only clients on their own leads |
 | 16 | Performance baseline | Access to production-like hardware; every number so far is from a 2-vCPU CI runner |
 | 17 | FG-22 — argon2 parameters | Choose parameters and record the rationale in config; **do not lower them to fix timing** |
 | 19 | AI chat | Who pays and how it is metered per tenant; the endpoints are public and anonymous today; what the model may see; behaviour when the provider is down |

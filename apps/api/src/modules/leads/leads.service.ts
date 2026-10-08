@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -20,6 +21,8 @@ import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { enumFilter } from '../../common/utils/query-filters';
 import { getTenantContext } from '../../common/tenant/tenant-context';
 import { phoneForWrite } from '../../common/utils/phone-for-write';
+import { assertClientClaimable, clientOwnerScope } from '../../common/utils/client-ownership';
+import type { AuthUser } from '../../common/decorators/current-user.decorator';
 
 @Injectable()
 export class LeadsService {
@@ -55,9 +58,25 @@ export class LeadsService {
    * cover the rare race where another request creates the same client between
    * the lookup and the insert.
    */
-  async create(dto: CreateLeadDto) {
+  async create(dto: CreateLeadDto, actor?: AuthUser) {
+    // Client ownership (common/utils/client-ownership.ts). A rep's lead is
+    // theirs: SALES may only assign themselves, a manager themselves or their
+    // team; left empty it defaults to the creator, so the new lead is never
+    // invisible to the rep who made it.
+    const scope = actor ? await clientOwnerScope(this.prisma, actor) : null;
+    let assignedSalesId = dto.assignedSalesId ?? null;
+    if (actor && scope !== null) {
+      assignedSalesId ??= actor.sub;
+      if (!scope.includes(assignedSalesId)) {
+        throw new ForbiddenException('You can only assign a lead to yourself or your team');
+      }
+    }
+
     const lead = await this.prisma.$transaction(async (tx) => {
       const client = await this.resolveClient(tx, dto);
+      // An existing client belongs to whoever owns it; a rep cannot take it
+      // over by creating a lead for its phone number (admin reassigns).
+      if (!client.created) await assertClientClaimable(tx, scope, client.id);
 
       const created = await tx.lead.create({
         data: {
@@ -68,13 +87,13 @@ export class LeadsService {
           sourceId: dto.sourceId ?? null,
           projectInterestId: dto.projectInterestId ?? null,
           unitInterestId: dto.unitInterestId ?? null,
-          assignedSalesId: dto.assignedSalesId ?? null,
+          assignedSalesId,
         },
       });
 
-      if (dto.notes && dto.assignedSalesId) {
+      if (dto.notes && assignedSalesId) {
         await tx.leadNote.create({
-          data: { leadId: created.id, salesId: dto.assignedSalesId, body: dto.notes },
+          data: { leadId: created.id, salesId: assignedSalesId, body: dto.notes },
         });
       }
 
@@ -115,14 +134,21 @@ export class LeadsService {
   private async resolveClient(
     tx: Prisma.TransactionClient,
     dto: CreateLeadDto,
-  ): Promise<{ id: string; fullName: string; phone: string | null; email: string | null }> {
+  ): Promise<{
+    id: string;
+    fullName: string;
+    phone: string | null;
+    email: string | null;
+    /** True when this call created the client (it had no owner to check). */
+    created: boolean;
+  }> {
     if (dto.clientId) {
       const found = await resolveTenantUser(
         tx,
         dto.clientId,
         { id: true, fullName: true, phone: true, email: true },
       );
-      return found;
+      return { ...found, created: false };
     }
 
     // FG-21 — normalise before both the lookup and the create, so `01…` finds
@@ -149,14 +175,14 @@ export class LeadsService {
         where: { phone, companyId },
         select: { id: true, fullName: true, phone: true, email: true },
       });
-      if (byPhone) return byPhone;
+      if (byPhone) return { ...byPhone, created: false };
     }
     if (email) {
       const byEmail = await tx.user.findFirst({
         where: { email, companyId },
         select: { id: true, fullName: true, phone: true, email: true },
       });
-      if (byEmail) return byEmail;
+      if (byEmail) return { ...byEmail, created: false };
     }
 
     if (!fullName) {
@@ -164,7 +190,7 @@ export class LeadsService {
     }
 
     try {
-      return await tx.user.create({
+      const createdClient = await tx.user.create({
         data: {
           role: 'CLIENT',
           fullName,
@@ -175,6 +201,7 @@ export class LeadsService {
         },
         select: { id: true, fullName: true, phone: true, email: true },
       });
+      return { ...createdClient, created: true };
     } catch (e) {
       // Race: another request inserted the same phone/email between our
       // lookup and create. Re-fetch and use that record.
@@ -193,7 +220,7 @@ export class LeadsService {
                 select: { id: true, fullName: true, phone: true, email: true },
               })
             : null;
-        if (target) return target;
+        if (target) return { ...target, created: false };
       }
       throw e;
     }

@@ -613,6 +613,174 @@ describe('Flow A — Catalog sync (e2e)', () => {
     });
   });
 
+  // ── Client ownership (decided 2026-10-08) ─────────────────────────────────
+  //
+  // A rep acts only on their own clients, a manager on their team's, an admin
+  // on everyone. A client nobody owns is given out by an admin: a rep cannot
+  // take it — or another rep's client — by creating a lead for its phone.
+  // Reservation and visit creation used to accept any lead or client id of
+  // the company. common/utils/client-ownership.ts
+  describe('A4i — client ownership', () => {
+    const PHONES = {
+      own: '+201099000101',
+      others: '+201099000102',
+      unowned: '+201099000103',
+      fresh: '+201099000104',
+    };
+    let companyId: string;
+    let salesId: string;
+    let otherRepId: string;
+    let ownClientId: string;
+    let othersClientId: string;
+    let othersLeadId: string;
+    let unownedClientId: string;
+    let managerToken: string;
+
+    beforeAll(async () => {
+      const raw = testApp.rawPrisma;
+      const sales = await raw.user.findFirstOrThrow({ where: { email: 'sales@example.com' } });
+      salesId = sales.id;
+      companyId = sales.companyId!;
+      const mk = (fullName: string, phone: string, role: 'CLIENT' | 'SALES' = 'CLIENT') =>
+        raw.user.create({ data: { fullName, phone, role, companyId, active: true } });
+      const otherRep = await mk('E2E Ownership Other Rep', '+201099000100', 'SALES');
+      otherRepId = otherRep.id;
+      const own = await mk('E2E Ownership Own', PHONES.own);
+      const others = await mk('E2E Ownership Others', PHONES.others);
+      const unowned = await mk('E2E Ownership Unowned', PHONES.unowned);
+      ownClientId = own.id;
+      othersClientId = others.id;
+      unownedClientId = unowned.id;
+      const lead = (clientId: string, fullName: string, phone: string, assignedSalesId: string) =>
+        raw.lead.create({ data: { companyId, clientId, fullName, phone, assignedSalesId } });
+      await lead(own.id, own.fullName, PHONES.own, salesId);
+      othersLeadId = (await lead(others.id, others.fullName, PHONES.others, otherRepId)).id;
+      managerToken = await loginAs(testApp.app, 'manager@example.com', 'ManagerPass123!');
+    });
+
+    afterAll(async () => {
+      const raw = testApp.rawPrisma;
+      const phones = [...Object.values(PHONES), '+201099000100'];
+      const users = await raw.user.findMany({ where: { phone: { in: phones } }, select: { id: true } });
+      const ids = users.map((u) => u.id);
+      const leads = await raw.lead.findMany({
+        where: { OR: [{ clientId: { in: ids } }, { phone: { in: phones } }] },
+        select: { id: true },
+      });
+      const leadIds = leads.map((l) => l.id);
+      const appts = await raw.visitAppointment.findMany({
+        where: { OR: [{ clientId: { in: ids } }, { leadId: { in: leadIds } }] },
+        select: { id: true, visitRequestId: true },
+      });
+      await raw.visitActivity.deleteMany({ where: { visitId: { in: appts.map((a) => a.id) } } });
+      await raw.visitAppointment.deleteMany({ where: { id: { in: appts.map((a) => a.id) } } });
+      await raw.visitRequest.deleteMany({
+        where: { id: { in: appts.map((a) => a.visitRequestId).filter((x): x is string => !!x) } },
+      });
+      await raw.leadActivity.deleteMany({ where: { leadId: { in: leadIds } } });
+      await raw.leadNote.deleteMany({ where: { leadId: { in: leadIds } } });
+      await raw.lead.deleteMany({ where: { id: { in: leadIds } } });
+      await raw.user.deleteMany({ where: { id: { in: ids } } });
+    });
+
+    const names = (res: { body: { data: { fullName: string }[] } }) =>
+      res.body.data.map((u) => u.fullName).sort();
+
+    it('client search: a rep finds own clients, a manager the team, an admin all', async () => {
+      const search = (token: string) =>
+        http().get('/v1/users/clients?q=E2E Ownership').set('Authorization', bearer(token));
+      const [asSales, asManager, asAdmin] = await Promise.all([
+        search(salesToken),
+        search(managerToken),
+        search(adminToken),
+      ]);
+      expect(asSales.status).toBe(200);
+      expect(names(asSales)).toEqual(['E2E Ownership Own']);
+      expect(names(asManager)).toEqual(['E2E Ownership Own']); // sales@ is on manager@'s team
+      expect(names(asAdmin)).toEqual([
+        'E2E Ownership Others',
+        'E2E Ownership Own',
+        'E2E Ownership Unowned',
+      ]);
+      // Staff are never in a client search, and only name + phone come back.
+      expect(Object.keys(asAdmin.body.data[0]).sort()).toEqual(['fullName', 'id', 'phone', 'role']);
+    });
+
+    it("a rep cannot reserve on another rep's client or lead", async () => {
+      const reserve = (token: string, owner: object) =>
+        http()
+          .post('/v1/reservations')
+          // A unit that does not exist: the owner check runs first, so the
+          // answer says which check refused.
+          .send({ unitId: '00000000-0000-4000-8000-000000000000', ...owner })
+          .set('Authorization', bearer(token));
+
+      const byClient = await reserve(salesToken, { clientId: othersClientId });
+      expect(byClient.status).toBe(400);
+      expect(byClient.body.message).toBe('Client not found');
+      const byLead = await reserve(salesToken, { leadId: othersLeadId });
+      expect(byLead.status).toBe(400);
+      expect(byLead.body.message).toBe('Lead not found');
+
+      // An admin passes the owner check and is stopped by the missing unit.
+      const asAdmin = await reserve(adminToken, { clientId: othersClientId });
+      expect(asAdmin.body.message).not.toBe('Client not found');
+    });
+
+    it("a rep schedules visits for own clients only", async () => {
+      const visit = (clientId: string) =>
+        http()
+          .post('/v1/visits/appointments')
+          .send({
+            clientId,
+            projectId: fixtures.projects.p1Id,
+            scheduledAt: new Date(Date.now() + 3 * 86_400_000).toISOString(),
+          })
+          .set('Authorization', bearer(salesToken));
+      const others = await visit(othersClientId);
+      expect(others.status).toBe(400);
+      expect(others.body.message).toBe('Client not found');
+      const own = await visit(ownClientId);
+      expect(own.status).toBe(201);
+    });
+
+    it('a rep cannot take a client by creating a lead for its phone', async () => {
+      const lead = (token: string, phone: string, extra: object = {}) =>
+        http()
+          .post('/v1/leads')
+          .send({ fullName: 'E2E Ownership Lead', phone, ...extra })
+          .set('Authorization', bearer(token));
+
+      const others = await lead(salesToken, PHONES.others);
+      expect(others.status).toBe(409);
+      expect(others.body.message).toContain('مندوب آخر');
+
+      const unowned = await lead(salesToken, PHONES.unowned);
+      expect(unowned.status).toBe(409);
+      expect(unowned.body.message).toContain('الأدمن');
+
+      // Own client, and a brand-new phone: fine — assigned to the rep by default.
+      const own = await lead(salesToken, PHONES.own);
+      expect(own.status).toBe(201);
+      const fresh = await lead(salesToken, PHONES.fresh);
+      expect(fresh.status).toBe(201);
+      expect(fresh.body.assignedSalesId).toBe(salesId);
+
+      // The admin gives an unowned client out.
+      const byAdmin = await lead(adminToken, PHONES.unowned, { assignedSalesId: salesId });
+      expect(byAdmin.status).toBe(201);
+      void unownedClientId;
+    });
+
+    it('a rep can only assign a lead to themselves', async () => {
+      const res = await http()
+        .post('/v1/leads')
+        .send({ fullName: 'E2E Ownership Lead', phone: '+201099000105', assignedSalesId: otherRepId })
+        .set('Authorization', bearer(salesToken));
+      expect(res.status).toBe(403);
+    });
+  });
+
   // ── Broker portal: the same filter, inside the broker's own scope ─────────
   //
   // The portal reservation form searches leads instead of preloading 200, and

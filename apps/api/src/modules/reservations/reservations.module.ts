@@ -55,6 +55,11 @@ import {
   normalizePhone,
 } from '../../common/utils/identity-match';
 import { resolveSalesScope, assertSalesRecordInScope } from '../../common/utils/sales-scope';
+import {
+  assertClientInScope,
+  assertLeadInScope,
+  clientOwnerScope,
+} from '../../common/utils/client-ownership';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
@@ -386,6 +391,11 @@ export class ReservationsService {
       effectiveSalesId = dto.salesId;
     }
 
+    // Client ownership (common/utils/client-ownership.ts): a rep reserves only
+    // for their own leads and clients, a manager for their team's. Out of
+    // scope reads as "not found", like a wrong id.
+    const ownerScope = await clientOwnerScope(this.prisma, actor);
+
     // XOR ownership: a reservation belongs to EITHER a lead OR a client, never both.
     let resolvedClientId: string | null = null;
     let clientFullName = '';
@@ -406,6 +416,7 @@ export class ReservationsService {
       if (!clientUser.active) {
         throw new BadRequestException('Selected client is inactive');
       }
+      await assertClientInScope(this.prisma, ownerScope, clientUser.id);
       resolvedClientId = clientUser.id;
       clientFullName = clientUser.fullName;
       clientPhone = clientUser.phone;
@@ -413,11 +424,18 @@ export class ReservationsService {
     } else if (dto.leadId) {
       const lead = await this.prisma.lead.findUnique({
         where: { id: dto.leadId },
-        select: { id: true, unitInterestId: true, projectInterestId: true, stage: true },
+        select: {
+          id: true,
+          unitInterestId: true,
+          projectInterestId: true,
+          stage: true,
+          assignedSalesId: true,
+        },
       });
       if (!lead) {
         throw new BadRequestException('Lead not found');
       }
+      assertLeadInScope(ownerScope, lead.assignedSalesId);
       if (lead.stage === LeadStage.WON || lead.stage === LeadStage.LOST) {
         throw new BadRequestException(
           `Cannot create a reservation on a ${lead.stage} lead`,

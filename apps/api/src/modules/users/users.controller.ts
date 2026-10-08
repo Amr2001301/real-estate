@@ -19,6 +19,7 @@ import {
   CreateUserDto,
   UpdateUserDto,
   UserOptionsQueryDto,
+  ClientSearchQueryDto,
 } from './dto/user.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -74,6 +75,16 @@ export class UsersController {
       query.role.split(',') as UserRole[],
       query.active === 'true' ? true : query.active === 'false' ? false : undefined,
     );
+  }
+
+  // Registered-client search for the reservation / visit / lead forms, scoped
+  // by client ownership (common/utils/client-ownership.ts): a rep finds only
+  // their own clients, a manager their team's, an admin everyone. GET /users
+  // stays ADMIN-only. Declared before `:id`.
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
+  @Get('clients')
+  clients(@Query() query: ClientSearchQueryDto, @CurrentUser() user: AuthUser) {
+    return this.users.searchClients(user, query.q, query.pageSize ?? 20);
   }
 
   // Self-profile routes — no role gate, no permission gate. Any authenticated

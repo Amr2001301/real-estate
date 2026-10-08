@@ -130,8 +130,8 @@ export class LeadsController {
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('leads:create')
   @Post('leads')
-  create(@Body() dto: CreateLeadDto) {
-    return this.leads.create(dto);
+  create(@Body() dto: CreateLeadDto, @CurrentUser() user: AuthUser) {
+    return this.leads.create(dto, user);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)

@@ -34,6 +34,32 @@ function collectIds(body: unknown): string[] {
     .filter((id): id is string => typeof id === 'string');
 }
 
+/**
+ * Client ownership (common/utils/client-ownership.ts): a rep reserves only for
+ * a client they own. Give the e2e SALES rep a lead on CUSTOMER_1 — what a real
+ * rep has before reserving for a client. Idempotent, and left in place: the
+ * reservation flow attaches reservations to this lead, and the e2e database
+ * is reset on every run.
+ */
+async function ensureSalesOwnsCustomer1(testApp: TestApp, fixtures: E2EFixtures): Promise<void> {
+  const raw = testApp.rawPrisma;
+  const clientId = fixtures.userIds.customer1UserId;
+  const salesId = fixtures.userIds.salesId;
+  const owned = await raw.lead.findFirst({ where: { clientId, assignedSalesId: salesId } });
+  if (owned) return;
+  const client = await raw.user.findUniqueOrThrow({ where: { id: clientId } });
+  await raw.lead.create({
+    data: {
+      companyId: client.companyId,
+      clientId,
+      fullName: client.fullName,
+      phone: client.phone ?? '',
+      email: client.email,
+      assignedSalesId: salesId,
+    },
+  });
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 // Flow D — Reservations (e2e)
 // ═════════════════════════════════════════════════════════════════════════════
@@ -51,6 +77,7 @@ describe('Flow D — Reservation journey (e2e)', () => {
   beforeAll(async () => {
     testApp = await createE2ETestApp();
     fixtures = await loadE2EFixtures(testApp.rawPrisma);
+    await ensureSalesOwnsCustomer1(testApp, fixtures);
 
     [adminToken, salesToken, broker1Token, broker2Token, customer1Token] = await Promise.all([
       loginAs(testApp.app, 'admin@example.com', 'ChangeMe123!'),
@@ -243,6 +270,7 @@ describe('Phase 7C — Admin reservation approval / lifecycle (e2e)', () => {
   beforeAll(async () => {
     testApp = await createE2ETestApp();
     fixtures = await loadE2EFixtures(testApp.rawPrisma);
+    await ensureSalesOwnsCustomer1(testApp, fixtures);
 
     [adminToken, salesToken, broker1Token] = await Promise.all([
       loginAs(testApp.app, 'admin@example.com', 'ChangeMe123!'),
