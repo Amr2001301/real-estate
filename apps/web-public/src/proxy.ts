@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * Edge middleware for the public website. Three responsibilities:
+ * Request proxy for the public website (Next 16 renamed the `middleware`
+ * convention to `proxy`; it runs on the Node.js runtime). Three responsibilities:
  *
  *   1. Tenant resolution — map the request hostname to a tenant slug by calling
  *      the backend /v1/public/domains/resolve endpoint. The result is forwarded
@@ -141,7 +142,7 @@ function applyRefreshCookies(response: NextResponse, r: RefreshSuccess, req: Nex
 // Main middleware
 // ---------------------------------------------------------------------------
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
   const hostname = req.nextUrl.hostname;
 

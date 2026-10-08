@@ -22,7 +22,7 @@
  * Route Handler — never during a server-component render. When authFetch is
  * called during a render and the token is already expired, the cookie write
  * will fail; we catch that and surface AuthError so the page can redirect to
- * /login. Refresh is deliberately kept OUT of edge middleware.
+ * /login. Refresh is deliberately kept OUT of the proxy.
  */
 import { cookies, headers } from 'next/headers';
 import { setSessionCookies, clearSessionCookies, type AuthSession } from '@/lib/auth-cookies';

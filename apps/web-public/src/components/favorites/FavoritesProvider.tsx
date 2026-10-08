@@ -7,7 +7,7 @@ import { trackEvent } from '@/lib/analytics';
 /**
  * Client-side favorites state for public pages. Calls the authenticated
  * favorites API via the same-origin /api-proxy rewrite — the httpOnly
- * access_token cookie is sent automatically and the edge middleware injects the
+ * access_token cookie is sent automatically and the proxy (src/proxy.ts) injects the
  * Bearer header, so the token is NEVER read by JS. Public HTML stays
  * user-agnostic (cacheable); favorite state hydrates here after mount.
  *

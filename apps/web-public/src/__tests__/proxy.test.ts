@@ -1,5 +1,5 @@
 /**
- * F1 Acceptance — middleware security tests.
+ * F1 Acceptance — proxy (formerly middleware) security tests.
  *
  * Covers:
  *   §1  Derived header spoofing (x-resolved-tenant-*)
@@ -11,7 +11,7 @@
  *   §8  Domain resolver fetch uses cache:'no-store'
  */
 
-import { middleware } from '../middleware';
+import { proxy } from '../proxy';
 
 // ---------------------------------------------------------------------------
 // Minimal edge-compatible request/response mocks
@@ -100,7 +100,7 @@ describe('§1 — Derived header spoofing protection (page requests)', () => {
       'x-resolved-tenant-slug': 'company-b',        // attacker-supplied
       'x-resolved-tenant-website-enabled': 'true',
     });
-    await middleware(req);
+    await proxy(req);
     expect(capturedHeaders?.get('x-resolved-tenant-slug')).toBe('company-a');
   });
 
@@ -109,7 +109,7 @@ describe('§1 — Derived header spoofing protection (page requests)', () => {
     const req = makeRequest('http://evil.example.com/projects', {
       'x-resolved-tenant-slug': 'company-a',        // attacker-supplied
     });
-    await middleware(req);
+    await proxy(req);
     expect(capturedHeaders?.get('x-resolved-tenant-slug')).toBe('');
   });
 
@@ -118,7 +118,7 @@ describe('§1 — Derived header spoofing protection (page requests)', () => {
     const req = makeRequest('http://company-a.platform.com/', {
       'x-resolved-tenant-slug': 'company-a',        // spoofed
     });
-    await middleware(req);
+    await proxy(req);
     expect(capturedHeaders?.get('x-resolved-tenant-slug')).toBe('');
   });
 
@@ -127,7 +127,7 @@ describe('§1 — Derived header spoofing protection (page requests)', () => {
     const req = makeRequest('http://company-a.platform.com/', {
       'x-resolved-tenant-website-enabled': 'true',  // spoofed
     });
-    await middleware(req);
+    await proxy(req);
     expect(capturedHeaders?.get('x-resolved-tenant-website-enabled')).toBe('false');
   });
 });
@@ -142,7 +142,7 @@ describe('§2 — API proxy X-Tenant-Slug authority', () => {
     const req = makeRequest('http://company-a.platform.com/api-proxy/public/projects', {
       'x-tenant-slug': 'company-b',                 // attacker-supplied
     });
-    await middleware(req);
+    await proxy(req);
     expect(capturedHeaders?.get('x-tenant-slug')).toBe('company-a');
   });
 
@@ -151,7 +151,7 @@ describe('§2 — API proxy X-Tenant-Slug authority', () => {
     const req = makeRequest('http://unknown.evil.com/api-proxy/public/info-request', {
       'x-tenant-slug': 'company-a',                 // attacker-supplied
     });
-    await middleware(req);
+    await proxy(req);
     expect(capturedHeaders?.get('x-tenant-slug')).toBeNull();
   });
 
@@ -161,7 +161,7 @@ describe('§2 — API proxy X-Tenant-Slug authority', () => {
       'x-resolved-tenant-slug': 'company-b',        // internal header spoofed
       'x-resolved-tenant-website-enabled': 'false',
     });
-    await middleware(req);
+    await proxy(req);
     expect(capturedHeaders?.get('x-resolved-tenant-slug')).toBeNull();
     expect(capturedHeaders?.get('x-resolved-tenant-website-enabled')).toBeNull();
   });
@@ -169,7 +169,7 @@ describe('§2 — API proxy X-Tenant-Slug authority', () => {
   test('api-proxy: server-resolved slug forwarded even without browser header', async () => {
     mockResolve({ slug: 'company-a', websiteEnabled: true });
     const req = makeRequest('http://company-a.platform.com/api-proxy/public/projects', {});
-    await middleware(req);
+    await proxy(req);
     expect(capturedHeaders?.get('x-tenant-slug')).toBe('company-a');
   });
 });
@@ -194,7 +194,7 @@ describe('§3 — Host trust policy', () => {
     const req = makeRequest('http://company-a.platform.com/projects', {
       'x-forwarded-host': 'company-b.platform.com', // spoofed
     });
-    await middleware(req);
+    await proxy(req);
     // Middleware reads req.nextUrl.hostname = company-a.platform.com, NOT x-forwarded-host
     expect(resolvedHostname).toBe('company-a.platform.com');
     expect(capturedHeaders?.get('x-resolved-tenant-slug')).toBe('company-a');
@@ -212,7 +212,7 @@ describe('§3 — Host trust policy', () => {
     const req = makeRequest('http://company-a.platform.com/', {
       'forwarded': 'host=evil.com',                 // spoofed Forwarded header
     });
-    await middleware(req);
+    await proxy(req);
     expect(resolvedHostname).toBe('company-a.platform.com');
   });
 });
@@ -225,28 +225,28 @@ describe('§4 — Platform / unknown hostname behavior', () => {
   test('platform base domain (resolve returns null) → empty slug (no default tenant)', async () => {
     mockResolve(null);
     const req = makeRequest('http://platform.example.com/');
-    await middleware(req);
+    await proxy(req);
     expect(capturedHeaders?.get('x-resolved-tenant-slug')).toBe('');
   });
 
   test('api subdomain (resolve returns null) → empty slug', async () => {
     mockResolve(null);
     const req = makeRequest('http://api.platform.example.com/');
-    await middleware(req);
+    await proxy(req);
     expect(capturedHeaders?.get('x-resolved-tenant-slug')).toBe('');
   });
 
   test('admin subdomain (resolve returns null) → empty slug', async () => {
     mockResolve(null);
     const req = makeRequest('http://admin.platform.example.com/');
-    await middleware(req);
+    await proxy(req);
     expect(capturedHeaders?.get('x-resolved-tenant-slug')).toBe('');
   });
 
   test('completely unknown host → empty slug, not a default tenant slug', async () => {
     mockResolve(null);
     const req = makeRequest('http://completely.unknown.host.example.com/projects');
-    await middleware(req);
+    await proxy(req);
     expect(capturedHeaders?.get('x-resolved-tenant-slug')).toBe('');
     expect(capturedHeaders?.get('x-resolved-tenant-slug')).not.toBe('default');
   });
@@ -317,7 +317,7 @@ describe('§8 — Domain resolver cache: no-store', () => {
       });
     });
     const req = makeRequest('http://company-a.platform.com/projects');
-    await middleware(req);
+    await proxy(req);
     expect(capturedInit?.cache).toBe('no-store');
   });
 
@@ -327,7 +327,7 @@ describe('§8 — Domain resolver cache: no-store', () => {
     // The resolve call itself uses no-store, so no Next.js ISR caches this null.
     mockResolve(null);
     const req = makeRequest('http://company-a.platform.com/projects');
-    await middleware(req);
+    await proxy(req);
     expect(capturedHeaders?.get('x-resolved-tenant-slug')).toBe('');
   });
 });
@@ -366,7 +366,7 @@ describe('§9 — Vary: Host defense-in-depth', () => {
       return res;
     });
 
-    await middleware(req);
+    await proxy(req);
     // Restore
     NR.next.mockImplementation(origNext);
 
