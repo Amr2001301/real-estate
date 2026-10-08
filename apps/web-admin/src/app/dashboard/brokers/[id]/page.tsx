@@ -287,8 +287,8 @@ export default async function BrokerDetailPage({
             {/* Contract */}
             <PremiumSectionCard title={m.sectionContract} icon={<CalendarRange />} padded={false}>
               <div className="divide-y divide-hairline">
-                <DateRow label={m.labelContractStart} value={formatDate(broker.contractStartAt) ?? '—'} />
-                <DateRow label={m.labelContractEnd} value={formatDate(broker.contractEndAt) ?? '—'} />
+                <DateRow label={m.labelContractStart} value={formatDate(broker.contractStartAt, locale) ?? '—'} />
+                <DateRow label={m.labelContractEnd} value={formatDate(broker.contractEndAt, locale) ?? '—'} />
                 <div className="flex items-center justify-between gap-3 px-5 py-3">
                   <span className="text-[12px] font-medium text-slate-500 shrink-0">{m.labelContractFile}</span>
                   {broker.contractPdfUrl ? (

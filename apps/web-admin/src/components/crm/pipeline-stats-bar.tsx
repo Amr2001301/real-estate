@@ -6,6 +6,8 @@ import { RefreshCw, TrendingUp, Users } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { LeadStage } from '@/lib/types';
 
+import { intlLocale } from '@/lib/format';
+import type { Locale } from '@/lib/locale';
 const STAGE_CONFIG: Array<{
   key: LeadStage;
   label: string;
@@ -25,6 +27,7 @@ interface Props {
   wonCount: number;
   counts: Partial<Record<LeadStage, number>>;
   className?: string;
+  locale?: Locale;
 }
 
 function relativeTime(date: Date): string {
@@ -37,7 +40,7 @@ function relativeTime(date: Date): string {
   return `قبل ${Math.floor(hours / 24)} ي`;
 }
 
-export function PipelineStatsBar({ totalLeads, wonCount, counts, className }: Props) {
+export function PipelineStatsBar({ totalLeads, wonCount, counts, className, locale = 'ar' }: Props) {
   const router = useRouter();
   const [loadedAt, setLoadedAt] = useState(() => new Date());
   const [spinning, setSpinning] = useState(false);
@@ -74,7 +77,7 @@ export function PipelineStatsBar({ totalLeads, wonCount, counts, className }: Pr
             </span>
             <div className="flex items-baseline gap-1">
               <span className="text-[20px] font-black tabular-nums leading-none text-slate-900">
-                {totalLeads.toLocaleString('ar-EG')}
+                {totalLeads.toLocaleString(intlLocale(locale))}
               </span>
               <span className="text-[11px] text-slate-400">إجمالي</span>
             </div>

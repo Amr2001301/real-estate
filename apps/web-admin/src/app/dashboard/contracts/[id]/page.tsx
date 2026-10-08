@@ -106,7 +106,7 @@ export default async function ContractDetailPage({
           contract.signedAt ? (
             <span className="inline-flex items-center gap-1.5 text-xs text-success-700 bg-success-50 px-2.5 py-1 rounded-full border border-success-100">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              {m.metaSigned} · {formatDate(contract.signedAt)}
+              {m.metaSigned} · {formatDate(contract.signedAt, locale)}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
@@ -136,20 +136,20 @@ export default async function ContractDetailPage({
                   )}
                 </Field>
                 <Field label={m.fieldTotal}>
-                  <span className="text-[15px] font-bold tabular-nums text-slate-900">{formatCurrency(contract.totalAmount, currency)}</span>
+                  <span className="text-[15px] font-bold tabular-nums text-slate-900">{formatCurrency(contract.totalAmount, currency, locale)}</span>
                 </Field>
                 <Field label={m.fieldDownPayment}>
-                  <span className="text-[15px] font-bold tabular-nums text-slate-900">{formatCurrency(contract.downPayment, currency)}</span>
+                  <span className="text-[15px] font-bold tabular-nums text-slate-900">{formatCurrency(contract.downPayment, currency, locale)}</span>
                 </Field>
                 <Field label={m.fieldSignedAt}>
                   {contract.signedAt ? (
-                    <span className="text-[13px] font-semibold text-success-700">{formatDateTime(contract.signedAt)}</span>
+                    <span className="text-[13px] font-semibold text-success-700">{formatDateTime(contract.signedAt, locale)}</span>
                   ) : (
                     <span className="text-[13px] text-slate-400">{m.notSigned}</span>
                   )}
                 </Field>
                 <Field label={m.fieldCreatedAt}>
-                  <span className="text-[13px] font-semibold text-slate-800">{formatDateTime(contract.createdAt)}</span>
+                  <span className="text-[13px] font-semibold text-slate-800">{formatDateTime(contract.createdAt, locale)}</span>
                 </Field>
               </div>
             </PremiumSectionCard>
@@ -248,10 +248,10 @@ export default async function ContractDetailPage({
                       <span className="text-[14px] font-bold tabular-nums text-slate-900">{plan.totalMonths} {m.monthSuffix}</span>
                     </Field>
                     <Field label={m.fieldMonthlyAmount}>
-                      <span className="text-[14px] font-bold tabular-nums text-slate-900">{formatCurrency(plan.monthlyAmount, currency)}</span>
+                      <span className="text-[14px] font-bold tabular-nums text-slate-900">{formatCurrency(plan.monthlyAmount, currency, locale)}</span>
                     </Field>
                     <Field label={m.fieldStartsAt}>
-                      <span className="text-[14px] font-bold text-slate-900">{formatDate(plan.startsAt)}</span>
+                      <span className="text-[14px] font-bold text-slate-900">{formatDate(plan.startsAt, locale)}</span>
                     </Field>
                     <Field label={m.fieldFrequency}>
                       <span className="text-[14px] font-bold text-slate-900">{FREQ_LABELS[plan.frequency] ?? plan.frequency}</span>
@@ -300,10 +300,10 @@ export default async function ContractDetailPage({
                                     {PAYMENT_TYPE_LABELS[inst.type] ?? m.payInstallment}
                                   </td>
                                   <td className="px-4 py-3 text-[13px] text-slate-700">
-                                    {formatDate(inst.dueDate)}
+                                    {formatDate(inst.dueDate, locale)}
                                   </td>
                                   <td className="px-4 py-3 text-[13px] font-bold tabular-nums text-slate-900">
-                                    {formatCurrency(inst.amount, currency)}
+                                    {formatCurrency(inst.amount, currency, locale)}
                                   </td>
                                   <td className="px-4 py-3">
                                     <span className={cn('inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold', s.cls)}>
@@ -311,7 +311,7 @@ export default async function ContractDetailPage({
                                     </span>
                                   </td>
                                   <td className="px-4 py-3 text-[12px] text-slate-400">
-                                    {inst.paidAt ? formatDate(inst.paidAt) : '—'}
+                                    {inst.paidAt ? formatDate(inst.paidAt, locale) : '—'}
                                   </td>
                                   <td className="px-4 py-3">
                                     {canPay && (
@@ -415,14 +415,14 @@ export default async function ContractDetailPage({
                             href={`/dashboard/deposits/${d.id}`}
                             className="text-[15px] font-bold tabular-nums text-brand-700 hover:underline"
                           >
-                            {formatCurrency(d.amount, currency)}
+                            {formatCurrency(d.amount, currency, locale)}
                           </Link>
                         ) : (
                           <span className="text-[15px] font-bold tabular-nums text-slate-900">
-                            {formatCurrency(d.amount, currency)}
+                            {formatCurrency(d.amount, currency, locale)}
                           </span>
                         )}
-                        <p className="text-[12px] text-slate-400 mt-0.5">{formatDate(d.paidAt)}</p>
+                        <p className="text-[12px] text-slate-400 mt-0.5">{formatDate(d.paidAt, locale)}</p>
                       </div>
                       <div className="flex items-center gap-2.5 shrink-0">
                         {d.receiptUrl && (
@@ -562,12 +562,12 @@ export default async function ContractDetailPage({
               <div className="divide-y divide-hairline">
                 <SideRow label={m.sideTotal}>
                   <span className="text-[14px] font-bold tabular-nums text-slate-900">
-                    {formatCurrency(contract.totalAmount, currency)}
+                    {formatCurrency(contract.totalAmount, currency, locale)}
                   </span>
                 </SideRow>
                 <SideRow label={m.sideDownPayment}>
                   <span className="text-[13px] font-semibold tabular-nums text-slate-700">
-                    {formatCurrency(contract.downPayment, currency)}
+                    {formatCurrency(contract.downPayment, currency, locale)}
                   </span>
                 </SideRow>
                 {plan && (
@@ -579,7 +579,7 @@ export default async function ContractDetailPage({
                     </SideRow>
                     <SideRow label={m.sideMonthlyAmount}>
                       <span className="text-[13px] font-semibold tabular-nums text-slate-700">
-                        {formatCurrency(plan.monthlyAmount, currency)}
+                        {formatCurrency(plan.monthlyAmount, currency, locale)}
                       </span>
                     </SideRow>
                   </>
@@ -588,7 +588,7 @@ export default async function ContractDetailPage({
                   {contract.signedAt ? (
                     <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-success-700">
                       <CheckCircle2 className="h-3.5 w-3.5" />
-                      {m.sideSignedAt} {formatDate(contract.signedAt)}
+                      {m.sideSignedAt} {formatDate(contract.signedAt, locale)}
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 text-[12px] text-slate-400">

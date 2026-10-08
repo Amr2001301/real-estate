@@ -58,7 +58,7 @@ export default async function TargetsPage({
     getReportsCurrency(),
   ]);
   const m = uiT(locale).targetsPage;
-  const symbol = currencySymbol(currency);
+  const symbol = currencySymbol(currency, locale);
 
   const isAdmin = session?.role === 'ADMIN';
   const isSalesManager = session?.role === 'SALES_MANAGER';

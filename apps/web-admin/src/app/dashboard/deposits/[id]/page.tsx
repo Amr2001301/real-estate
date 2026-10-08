@@ -104,9 +104,9 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
           <CardBody className="space-y-3 text-sm">
             <div className="grid grid-cols-2 gap-3">
               <Field label={m.fieldType}      value={DEPOSIT_TYPE_LABELS[d.type] ?? d.type} />
-              <Field label={m.fieldAmount}    value={formatCurrency(d.amount, currency)} />
-              <Field label={m.fieldPaidAt}    value={formatDate(d.paidAt)} />
-              <Field label={m.fieldCreatedAt} value={formatDateTime(d.createdAt)} />
+              <Field label={m.fieldAmount}    value={formatCurrency(d.amount, currency, locale)} />
+              <Field label={m.fieldPaidAt}    value={formatDate(d.paidAt, locale)} />
+              <Field label={m.fieldCreatedAt} value={formatDateTime(d.createdAt, locale)} />
               <Field label={m.fieldCustomer}  value={customerName} />
               <Field label={m.fieldUnit}      value={unitCode} ltr />
             </div>
@@ -123,7 +123,7 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
               )}
               {d.installment?.dueDate && (
                 <span className="text-xs text-slate-500 inline-flex items-center gap-1">
-                  <CalendarClock className="h-3.5 w-3.5" /> {m.fieldInstallmentDue}{formatDate(d.installment.dueDate)}
+                  <CalendarClock className="h-3.5 w-3.5" /> {m.fieldInstallmentDue}{formatDate(d.installment.dueDate, locale)}
                 </span>
               )}
             </div>
@@ -143,7 +143,7 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
                   )}
                   {d.reviewedAt && d.reviewedBy?.fullName && (
                     <span className="text-xs text-slate-500">
-                      {m.reviewedByLabel}{d.reviewedBy.fullName} — {formatDateTime(d.reviewedAt)}
+                      {m.reviewedByLabel}{d.reviewedBy.fullName} — {formatDateTime(d.reviewedAt, locale)}
                     </span>
                   )}
                 </div>

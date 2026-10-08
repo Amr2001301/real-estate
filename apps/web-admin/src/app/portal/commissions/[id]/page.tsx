@@ -188,7 +188,7 @@ export default async function PortalCommissionDetailPage({
                       </div>
                       <div className="text-end">
                         <p className="text-2xs font-medium uppercase tracking-wide text-slate-500">{t.unitPrice}</p>
-                        <p className="text-sm font-bold text-slate-900 tabular-nums mt-0.5">{formatCurrency(c.unit.price, currency)}</p>
+                        <p className="text-sm font-bold text-slate-900 tabular-nums mt-0.5">{formatCurrency(c.unit.price, currency, locale)}</p>
                       </div>
                     </div>
                   )}
@@ -201,13 +201,13 @@ export default async function PortalCommissionDetailPage({
               <div className="space-y-3">
                 {/* Row 1: basis → rate → gross */}
                 <MetricGrid cols={3}>
-                  <MetricTile label={t.basis}  value={formatCurrency(c.basisAmount, currency)} />
+                  <MetricTile label={t.basis}  value={formatCurrency(c.basisAmount, currency, locale)} />
                   <MetricTile
                     label={t.rate}
                     value={c.commissionPct !== null && c.commissionPct !== undefined ? `${Number(c.commissionPct).toFixed(2)}%` : '—'}
                     variant="accent"
                   />
-                  <MetricTile label={t.gross} value={formatCurrency(c.grossAmount, currency)} />
+                  <MetricTile label={t.gross} value={formatCurrency(c.grossAmount, currency, locale)} />
                 </MetricGrid>
 
                 {/* Row 2: deductions → net */}
@@ -215,16 +215,16 @@ export default async function PortalCommissionDetailPage({
                   <MetricTile
                     label={t.vat}
                     value={`${Number(c.taxPct).toFixed(2)}%`}
-                    sub={formatCurrency(c.taxAmount, currency)}
+                    sub={formatCurrency(c.taxAmount, currency, locale)}
                   />
                   <MetricTile
                     label={t.withholding}
                     value={`${Number(c.withholdingPct).toFixed(2)}%`}
-                    sub={formatCurrency(c.withholdingAmount, currency)}
+                    sub={formatCurrency(c.withholdingAmount, currency, locale)}
                   />
                   <MetricTile
                     label={t.netDue}
-                    value={formatCurrency(c.netAmount, currency)}
+                    value={formatCurrency(c.netAmount, currency, locale)}
                     variant="highlight"
                   />
                 </MetricGrid>
@@ -262,15 +262,15 @@ export default async function PortalCommissionDetailPage({
                   <BrokerCommissionStatusBadge status={c.status} locale={locale} />
                 </InfoRow>
                 <InfoRow label={t.earnedAt} icon={<CalendarRange className="h-3.5 w-3.5" />}>
-                  <span className="text-slate-700 text-xs tabular-nums">{formatDate(c.earnedAt)}</span>
+                  <span className="text-slate-700 text-xs tabular-nums">{formatDate(c.earnedAt, locale)}</span>
                 </InfoRow>
                 {c.approvedAt && (
                   <InfoRow label={t.approvedAt} icon={<CheckCircle2 className="h-3.5 w-3.5" />}>
-                    <span className="text-emerald-700 text-xs font-semibold tabular-nums">{formatDate(c.approvedAt)}</span>
+                    <span className="text-emerald-700 text-xs font-semibold tabular-nums">{formatDate(c.approvedAt, locale)}</span>
                   </InfoRow>
                 )}
                 <InfoRow label={t.createdAt} icon={<CalendarRange className="h-3.5 w-3.5" />}>
-                  <span className="text-slate-700 text-xs tabular-nums">{formatDate(c.createdAt)}</span>
+                  <span className="text-slate-700 text-xs tabular-nums">{formatDate(c.createdAt, locale)}</span>
                 </InfoRow>
 
                 {/* Net amount box */}
@@ -283,10 +283,10 @@ export default async function PortalCommissionDetailPage({
                       {t.netDue}
                     </p>
                     <p className={cn('text-2xl font-black tabular-nums mt-1 leading-none', isApproved ? 'text-emerald-700' : 'text-amber-700')}>
-                      {formatCurrency(c.netAmount, currency)}
+                      {formatCurrency(c.netAmount, currency, locale)}
                     </p>
                     <p className={cn('text-2xs mt-1', isApproved ? 'text-emerald-400' : 'text-amber-400')}>
-                      {t.grossFn(formatCurrency(c.grossAmount, currency))}
+                      {t.grossFn(formatCurrency(c.grossAmount, currency, locale))}
                     </p>
                   </div>
                 </div>

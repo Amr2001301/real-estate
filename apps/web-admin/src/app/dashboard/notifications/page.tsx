@@ -83,7 +83,7 @@ export default async function AdminNotificationsInboxPage() {
           },
           { label: m.kpi.read, value: readCount, icon: <CheckCheck /> },
           ...(lastDate
-            ? [{ label: m.kpi.lastNotif, value: formatDate(lastDate), icon: <Clock />, valueSize: 'compact' as const }]
+            ? [{ label: m.kpi.lastNotif, value: formatDate(lastDate, locale), icon: <Clock />, valueSize: 'compact' as const }]
             : []),
         ]}
       />

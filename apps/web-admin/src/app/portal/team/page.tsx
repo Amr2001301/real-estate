@@ -287,7 +287,7 @@ export default async function PortalTeamPage({
 
                       <td className="py-3 px-4 text-xs text-slate-600 whitespace-nowrap">
                         {m.joinedAt ? (
-                          formatDate(m.joinedAt)
+                          formatDate(m.joinedAt, locale)
                         ) : (
                           <span className="inline-flex items-center gap-1 text-amber-600 text-2xs">
                             <Mail className="h-3 w-3" />

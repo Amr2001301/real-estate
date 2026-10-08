@@ -9,7 +9,7 @@ import { projectOptions } from '@/lib/options';
 import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
 import type { PagedDeposits, Deposit, DepositType } from '@/lib/types';
-import { formatCurrency, formatDate, tx } from '@/lib/format';
+import { formatCurrency, formatDate, tx, intlLocale } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { Input } from '@/components/ui/input';
@@ -175,7 +175,7 @@ export default async function DepositsPage({
         metrics={[
           {
             label: m.kpi.totalCollected,
-            value: totals ? formatCurrency(totals.totalAmount, currency) : '—',
+            value: totals ? formatCurrency(totals.totalAmount, currency, locale) : '—',
             icon: <DollarSign />,
             tone: 'brand',
             primary: true,
@@ -183,13 +183,13 @@ export default async function DepositsPage({
           },
           {
             label: m.kpi.reservationAmounts,
-            value: totals ? formatCurrency(totals.bookingAmount, currency) : '—',
+            value: totals ? formatCurrency(totals.bookingAmount, currency, locale) : '—',
             icon: <Landmark />,
             tone: 'info',
           },
           {
             label: m.kpi.monthlyInstallments,
-            value: totals ? formatCurrency(totals.installment, currency) : '—',
+            value: totals ? formatCurrency(totals.installment, currency, locale) : '—',
             icon: <CreditCard />,
             tone: 'neutral',
           },
@@ -345,7 +345,7 @@ export default async function DepositsPage({
         trailing={
           deposits ? (
             <span className="text-xs text-slate-400 tabular-nums">
-              {deposits.meta.total.toLocaleString('ar-EG')} {m.depositSuffix}
+              {deposits.meta.total.toLocaleString(intlLocale(locale))} {m.depositSuffix}
             </span>
           ) : undefined
         }
@@ -432,7 +432,7 @@ export default async function DepositsPage({
                       <td className="px-4 py-2.5 whitespace-nowrap">
                         {dueDate ? (
                           <span className="text-xs text-slate-500 tabular-nums" title={getDueDateTitle(d, m)}>
-                            {formatDate(dueDate)}
+                            {formatDate(dueDate, locale)}
                           </span>
                         ) : (
                           <span className="text-slate-300 text-xs">—</span>
@@ -440,11 +440,11 @@ export default async function DepositsPage({
                       </td>
 
                       <td className="px-4 py-2.5 font-semibold tabular-nums whitespace-nowrap text-slate-800">
-                        {formatCurrency(d.amount, currency)}
+                        {formatCurrency(d.amount, currency, locale)}
                       </td>
 
                       <td className="px-4 py-2.5 text-xs text-slate-500 whitespace-nowrap tabular-nums">
-                        {formatDate(d.paidAt)}
+                        {formatDate(d.paidAt, locale)}
                       </td>
 
                       <td className="px-4 py-2.5 whitespace-nowrap">

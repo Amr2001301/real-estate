@@ -340,7 +340,7 @@ export default async function AuditLogDetailPage({
             >
               {log.action}
             </span>
-            <span className="text-xs text-slate-500 tabular-nums">{formatDateTime(log.createdAt)}</span>
+            <span className="text-xs text-slate-500 tabular-nums">{formatDateTime(log.createdAt, locale)}</span>
           </>
         }
       />
@@ -398,7 +398,7 @@ export default async function AuditLogDetailPage({
               </span>
 
               <span className="text-xs text-slate-500 tabular-nums">
-                {formatDateTime(log.createdAt)}
+                {formatDateTime(log.createdAt, locale)}
               </span>
 
               {/* IP display */}
@@ -542,7 +542,7 @@ export default async function AuditLogDetailPage({
                     {m.executionTimeLabel}
                   </p>
                   <p className="text-[13px] font-semibold text-slate-900 tabular-nums" dir="ltr">
-                    {formatDateTime(log.createdAt)}
+                    {formatDateTime(log.createdAt, locale)}
                   </p>
                 </div>
 
@@ -903,7 +903,7 @@ export default async function AuditLogDetailPage({
                     {m.eventTimeLabel}
                   </dt>
                   <dd className="text-[12px] text-slate-700 tabular-nums" dir="ltr">
-                    {formatDateTime(log.createdAt)}
+                    {formatDateTime(log.createdAt, locale)}
                   </dd>
                 </div>
                 <div>

@@ -4,7 +4,7 @@ import { api, safe } from '@/lib/api';
 import { projectOptions } from '@/lib/options';
 import { getSession } from '@/lib/session';
 import type { Paged, InstallmentPlanTemplate } from '@/lib/types';
-import { formatDate, formatCurrency, tx } from '@/lib/format';
+import { formatDate, formatCurrency, tx, intlLocale } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
@@ -190,7 +190,7 @@ export default async function InstallmentPlansPage({
         trailing={
           paginationMeta ? (
             <span className="text-xs text-slate-400 tabular-nums">
-              {paginationMeta.total.toLocaleString('ar-EG')} {m.planSuffix}
+              {paginationMeta.total.toLocaleString(intlLocale(locale))} {m.planSuffix}
             </span>
           ) : undefined
         }
@@ -234,7 +234,7 @@ export default async function InstallmentPlansPage({
                       </div>
                     </td>
                     <td className="py-3 px-4 tabular-nums font-medium text-slate-800">
-                      {formatCurrency(r.netPrice, currency)}
+                      {formatCurrency(r.netPrice, currency, locale)}
                     </td>
                     <td className="py-3 px-4">
                       {(() => {
@@ -265,7 +265,7 @@ export default async function InstallmentPlansPage({
                       <PlanTemplateStatusBadge status={r.status} locale={locale} />
                     </td>
                     <td className="py-3 px-4 text-xs text-slate-500 tabular-nums">
-                      {formatDate(r.createdAt)}
+                      {formatDate(r.createdAt, locale)}
                     </td>
                     <td className="py-3 ps-4 pe-5 text-end">
                       <PlanActions plan={r} isAdmin={isAdmin} locale={locale} />

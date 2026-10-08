@@ -488,7 +488,7 @@ export default async function ProjectDetailPage({
                           {u.area} {m.areaSuffix}
                         </td>
                         <td className="py-3.5 px-3 text-[13px] font-semibold text-brand-700 tabular-nums">
-                          {formatCurrency(u.price, currency)}
+                          {formatCurrency(u.price, currency, locale)}
                         </td>
                         <td className="py-3.5 px-3">
                           <UnitStatusBadge status={u.status} />

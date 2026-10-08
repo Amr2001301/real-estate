@@ -3,7 +3,7 @@ import { Wallet, Plus, Eye, Briefcase, AlertCircle, SlidersHorizontal } from 'lu
 import { api, safe } from '@/lib/api';
 import { brokerOptions } from '@/lib/options';
 import type { AdminBrokerPayout, Paged } from '@/lib/types';
-import { formatDate, formatCurrency } from '@/lib/format';
+import { formatDate, formatCurrency, intlLocale } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
@@ -150,14 +150,14 @@ export default async function AdminBrokerPayoutsPage({
           },
           {
             label: m.kpiTotalPaid,
-            value: totalNetPaid > 0 ? formatCurrency(totalNetPaid, currency) : '—',
+            value: totalNetPaid > 0 ? formatCurrency(totalNetPaid, currency, locale) : '—',
             icon: <Wallet />,
             tone: 'neutral',
             sub: m.kpiThisPage,
           },
           {
             label: m.kpiPending,
-            value: totalNetPending > 0 ? formatCurrency(totalNetPending, currency) : '—',
+            value: totalNetPending > 0 ? formatCurrency(totalNetPending, currency, locale) : '—',
             icon: <Wallet />,
             tone: 'warning',
             sub: m.kpiThisPage,
@@ -265,7 +265,7 @@ export default async function AdminBrokerPayoutsPage({
         padded={false}
         trailing={
           <span className="text-xs text-slate-400 tabular-nums">
-            {totalPayouts.toLocaleString('ar-EG')} {m.tableTrailingCount}
+            {totalPayouts.toLocaleString(intlLocale(locale))} {m.tableTrailingCount}
           </span>
         }
       >
@@ -349,14 +349,14 @@ export default async function AdminBrokerPayoutsPage({
                     {/* Gross amount */}
                     <td className="py-3 px-4">
                       <span className="text-xs font-medium text-slate-700 tabular-nums whitespace-nowrap" dir="ltr">
-                        {formatCurrency(p.totalGross, currency)}
+                        {formatCurrency(p.totalGross, currency, locale)}
                       </span>
                     </td>
 
                     {/* Net amount — strongest payout figure */}
                     <td className="py-3 px-4">
                       <span className="text-sm font-semibold text-slate-900 tabular-nums whitespace-nowrap" dir="ltr">
-                        {formatCurrency(p.totalNet, currency)}
+                        {formatCurrency(p.totalNet, currency, locale)}
                       </span>
                     </td>
 
@@ -367,14 +367,14 @@ export default async function AdminBrokerPayoutsPage({
 
                     {/* Creation date */}
                     <td className="py-3 px-4 text-2xs text-slate-400 whitespace-nowrap">
-                      {formatDate(p.createdAt)}
+                      {formatDate(p.createdAt, locale)}
                     </td>
 
                     {/* Paid date */}
                     <td className="py-3 px-4">
                       {p.paidAt ? (
                         <span className="text-2xs text-slate-500 whitespace-nowrap">
-                          {formatDate(p.paidAt)}
+                          {formatDate(p.paidAt, locale)}
                         </span>
                       ) : (
                         <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-2xs font-medium text-slate-400">

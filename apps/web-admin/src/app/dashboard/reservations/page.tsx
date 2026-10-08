@@ -7,7 +7,7 @@ import { api, safe } from '@/lib/api';
 import { projectOptions, staffOptions } from '@/lib/options';
 import { getLocale } from '@/lib/locale';
 import type { Paged, Reservation } from '@/lib/types';
-import { formatDate, formatDateTime, tx } from '@/lib/format';
+import { formatDate, formatDateTime, tx, intlLocale } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -102,7 +102,7 @@ export default async function ReservationsPage({
     getLocale(),
   ]);
   const m = uiT(locale).pages.reservations;
-  const symbol = currencySymbol(currency);
+  const symbol = currencySymbol(currency, locale);
 
   const stats = statsRes.data;
   const reservations = reservationsRes.data?.data ?? [];
@@ -302,7 +302,7 @@ export default async function ReservationsPage({
                 <div className="flex flex-col gap-1">
                   <span className="font-medium text-slate-800" dir="ltr">
                     {Number.isFinite(amount)
-                      ? `${amount.toLocaleString('ar-SA')} ${symbol}`
+                      ? `${amount.toLocaleString(intlLocale(locale))} ${symbol}`
                       : '—'}
                   </span>
                   <ReservationBookingPaymentBadge status={r.bookingPaymentStatus} locale={locale} />
@@ -318,12 +318,12 @@ export default async function ReservationsPage({
           {
             key: 'expires',
             header: m.cols.expiresAt,
-            cell: (r) => <span className="text-xs">{formatDateTime(r.expiresAt)}</span>,
+            cell: (r) => <span className="text-xs">{formatDateTime(r.expiresAt, locale)}</span>,
           },
           {
             key: 'created',
             header: m.cols.created,
-            cell: (r) => formatDate(r.createdAt),
+            cell: (r) => formatDate(r.createdAt, locale),
           },
           {
             key: 'actions',

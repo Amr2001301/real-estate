@@ -1,6 +1,7 @@
 import { TrendingUp, BadgeCheck, AlertTriangle, Coins } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { formatCompact } from '@/lib/format';
+import type { Locale } from '@/lib/locale';
 import { Card } from '@/components/ui/card';
 
 interface Props {
@@ -13,9 +14,10 @@ interface Props {
   };
   className?:      string;
   currencySymbol?: string;
+  locale?:         Locale;
 }
 
-export function FinancialPanel({ financial, className, currencySymbol = 'ر.س' }: Props) {
+export function FinancialPanel({ financial, className, currencySymbol = 'ر.س', locale = 'ar' }: Props) {
   const { totalContractValue, totalCollectedVerified, overdueTotal, pendingBonus, pendingBrokerPayouts } = financial;
 
   const collectionRate = totalContractValue > 0
@@ -27,7 +29,7 @@ export function FinancialPanel({ financial, className, currencySymbol = 'ر.س' 
   const rows = [
     {
       label:   'إجمالي قيمة العقود',
-      value:   formatCompact(totalContractValue, currencySymbol),
+      value:   formatCompact(totalContractValue, currencySymbol, locale),
       sub:     'قيمة العقود المُبرمة',
       icon:    <TrendingUp />,
       iconBg:  'bg-brand-50 text-brand-600',
@@ -35,7 +37,7 @@ export function FinancialPanel({ financial, className, currencySymbol = 'ر.س' 
     },
     {
       label:   'إجمالي المحصّل المؤكد',
-      value:   formatCompact(totalCollectedVerified, currencySymbol),
+      value:   formatCompact(totalCollectedVerified, currencySymbol, locale),
       sub:     collectionRate !== null ? `${collectionRate}% معدل التحصيل` : 'مدفوعات محققة',
       icon:    <BadgeCheck />,
       iconBg:  'bg-success-50 text-success-600',
@@ -43,7 +45,7 @@ export function FinancialPanel({ financial, className, currencySymbol = 'ر.س' 
     },
     {
       label:   'مبالغ متأخرة',
-      value:   formatCompact(overdueTotal, currencySymbol),
+      value:   formatCompact(overdueTotal, currencySymbol, locale),
       sub:     overdueTotal > 0 ? 'تجاوزت تاريخ الاستحقاق' : 'لا مبالغ متأخرة',
       icon:    <AlertTriangle />,
       iconBg:  overdueTotal > 0 ? 'bg-danger-50 text-danger-600'  : 'bg-slate-50 text-slate-400',
@@ -51,7 +53,7 @@ export function FinancialPanel({ financial, className, currencySymbol = 'ر.س' 
     },
     {
       label:   'التزامات معلقة',
-      value:   formatCompact(pendingLiabilities, currencySymbol),
+      value:   formatCompact(pendingLiabilities, currencySymbol, locale),
       sub:     'عمولات وسطاء + مكافآت',
       icon:    <Coins />,
       iconBg:  pendingLiabilities > 0 ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-400',

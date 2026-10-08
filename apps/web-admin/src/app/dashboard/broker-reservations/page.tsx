@@ -3,7 +3,7 @@ import { BookmarkCheck, Eye, Briefcase, Phone, Plus, AlertCircle, SlidersHorizon
 import { api, safe } from '@/lib/api';
 import { projectOptions, brokerOptions, staffOptions } from '@/lib/options';
 import type { AdminBrokerReservation, Paged } from '@/lib/types';
-import { tx, formatDate, formatCurrency } from '@/lib/format';
+import { tx, formatDate, formatCurrency, intlLocale } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
@@ -265,11 +265,11 @@ export default async function AdminBrokerReservationsPage({
         trailing={
           totalCommission > 0 ? (
             <span className="text-xs text-slate-500 tabular-nums whitespace-nowrap" dir="ltr">
-              {m.tableTrailingCommission}{formatCurrency(totalCommission, currency)}
+              {m.tableTrailingCommission}{formatCurrency(totalCommission, currency, locale)}
             </span>
           ) : (
             <span className="text-xs text-slate-400 tabular-nums">
-              {totalReservations.toLocaleString('ar-EG')} {m.tableTrailingCount}
+              {totalReservations.toLocaleString(intlLocale(locale))} {m.tableTrailingCount}
             </span>
           )
         }
@@ -404,7 +404,7 @@ export default async function AdminBrokerReservationsPage({
                           </p>
                           {r.commissionLockedAmount != null && (
                             <p className="text-2xs text-slate-400 tabular-nums mt-0.5">
-                              {formatCurrency(r.commissionLockedAmount, currency)}
+                              {formatCurrency(r.commissionLockedAmount, currency, locale)}
                             </p>
                           )}
                         </>
@@ -414,7 +414,7 @@ export default async function AdminBrokerReservationsPage({
                             {m.commissionFixed}
                           </span>
                           <p className="text-2xs text-slate-400 tabular-nums mt-0.5">
-                            {formatCurrency(r.commissionLockedAmount, currency)}
+                            {formatCurrency(r.commissionLockedAmount, currency, locale)}
                           </p>
                         </>
                       ) : (
@@ -424,7 +424,7 @@ export default async function AdminBrokerReservationsPage({
 
                     {/* Date */}
                     <td className="py-3.5 px-4 text-2xs text-slate-400 whitespace-nowrap">
-                      {formatDate(r.createdAt)}
+                      {formatDate(r.createdAt, locale)}
                     </td>
 
                     {/* Action */}

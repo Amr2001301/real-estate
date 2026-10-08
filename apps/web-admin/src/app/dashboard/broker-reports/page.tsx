@@ -14,7 +14,8 @@ import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
 import { projectOptions, brokerOptions } from '@/lib/options';
 import type { BrokerReportProjectRow, BrokerReportsSummary, TopBrokersResponse } from '@/lib/types';
-import { tx, formatCurrency } from '@/lib/format';
+import { tx, formatCurrency, intlLocale } from '@/lib/format';
+import type { Locale } from '@/lib/locale';
 import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
@@ -232,7 +233,7 @@ export default async function AdminBrokerReportsPage({
           metrics={[
             {
               label:     m.metricTotalSales,
-              value:     formatCurrency(s.salesGross, currency),
+              value:     formatCurrency(s.salesGross, currency, locale),
               icon:      <Wallet />,
               tone:      'brand',
               primary:   true,
@@ -241,7 +242,7 @@ export default async function AdminBrokerReportsPage({
             },
             {
               label:     m.metricCommissionsNet,
-              value:     formatCurrency(s.commissionsNet, currency),
+              value:     formatCurrency(s.commissionsNet, currency, locale),
               icon:      <BadgePercent />,
               tone:      'success',
               sub:       m.metricCommissionsNetSub(s.commissionsApproved),
@@ -249,7 +250,7 @@ export default async function AdminBrokerReportsPage({
             },
             {
               label:     m.metricPayoutsPaid,
-              value:     formatCurrency(s.payoutsTotalNet, currency),
+              value:     formatCurrency(s.payoutsTotalNet, currency, locale),
               icon:      <CircleDollarSign />,
               tone:      'purple',
               sub:       m.metricPayoutsPaidSub(s.payoutsPaid),
@@ -257,7 +258,7 @@ export default async function AdminBrokerReportsPage({
             },
             {
               label:     m.metricPendingPayout,
-              value:     pendingPayout > 0 ? formatCurrency(pendingPayout, currency) : '—',
+              value:     pendingPayout > 0 ? formatCurrency(pendingPayout, currency, locale) : '—',
               icon:      <TrendingUp />,
               tone:      pendingPayout > 0 ? 'warning' : 'neutral',
               sub:       m.metricPendingPayoutSub((realizationRate * 100).toFixed(0)),
@@ -268,7 +269,7 @@ export default async function AdminBrokerReportsPage({
               value:     topBroker?.companyName ?? '—',
               icon:      <Trophy />,
               tone:      'neutral',
-              sub:       topBroker ? formatCurrency(Number(topBroker.salesGross), currency) : undefined,
+              sub:       topBroker ? formatCurrency(Number(topBroker.salesGross), currency, locale) : undefined,
             },
           ]}
         />
@@ -290,10 +291,10 @@ export default async function AdminBrokerReportsPage({
               trailing={
                 <div className="text-end">
                   <p className="text-[13px] font-black tabular-nums text-slate-900 leading-none">
-                    {totalTrendContracts.toLocaleString('ar-EG')} {m.chartTrendContractSuffix}
+                    {totalTrendContracts.toLocaleString(intlLocale(locale))} {m.chartTrendContractSuffix}
                   </p>
                   <p className="text-[11px] text-slate-400 mt-0.5" dir="ltr">
-                    {formatCurrency(trend.reduce((acc, b) => acc + Number(b.commissionsNet), 0), currency)}
+                    {formatCurrency(trend.reduce((acc, b) => acc + Number(b.commissionsNet), 0), currency, locale)}
                   </p>
                 </div>
               }
@@ -334,6 +335,7 @@ export default async function AdminBrokerReportsPage({
               icon={<TrendingUp />}
             >
               <BrokerFunnelChart
+                locale={locale}
                 stages={funnelStages}
                 overallConv={overallConv}
                 overallLabel={m.funnelOverallLabel}
@@ -396,10 +398,10 @@ export default async function AdminBrokerReportsPage({
                       </div>
                       <div className="text-end shrink-0">
                         <p className="text-[13px] font-black tabular-nums text-slate-900" dir="ltr">
-                          {formatCurrency(r.salesGross, currency)}
+                          {formatCurrency(r.salesGross, currency, locale)}
                         </p>
                         <p className="text-[10px] text-slate-400 mt-0.5" dir="ltr">
-                          {m.brokerCommissionLabel}{formatCurrency(r.commissionNet, currency)}
+                          {m.brokerCommissionLabel}{formatCurrency(r.commissionNet, currency, locale)}
                         </p>
                       </div>
                     </div>
@@ -458,10 +460,10 @@ export default async function AdminBrokerReportsPage({
                       </div>
                       <div className="text-end shrink-0">
                         <p className="text-[13px] font-black tabular-nums text-slate-900" dir="ltr">
-                          {formatCurrency(p.salesGross, currency)}
+                          {formatCurrency(p.salesGross, currency, locale)}
                         </p>
                         <p className="text-[10px] text-slate-400 mt-0.5" dir="ltr">
-                          {m.projectCommissionLabel}{formatCurrency(p.commissionNet, currency)}
+                          {m.projectCommissionLabel}{formatCurrency(p.commissionNet, currency, locale)}
                         </p>
                       </div>
                     </div>

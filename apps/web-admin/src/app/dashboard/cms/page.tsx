@@ -230,7 +230,7 @@ export default async function CmsPage() {
                       <PublishedBadge published={p.published} publishedLabel={m.badgePublished} draftLabel={m.badgeDraft} />
                     </td>
                     <td className="py-3 px-4 text-2xs text-slate-400 whitespace-nowrap">
-                      {formatDate(p.updatedAt)}
+                      {formatDate(p.updatedAt, locale)}
                     </td>
                   </tr>
                 ))}
@@ -411,7 +411,7 @@ export default async function CmsPage() {
                       <PublishedBadge published={a.published} publishedLabel={m.badgePublished} draftLabel={m.badgeDraft} />
                     </td>
                     <td className="py-3 px-4 text-2xs text-slate-400 whitespace-nowrap">
-                      {formatDate(a.createdAt)}
+                      {formatDate(a.createdAt, locale)}
                     </td>
                     <td className="py-3 px-4">
                       <Link

@@ -80,9 +80,9 @@ export default async function LeadsPage({
         </div>
       )}
 
-      <PipelineStatsBar totalLeads={totalLeads} wonCount={wonCount} counts={counts} />
+      <PipelineStatsBar totalLeads={totalLeads} wonCount={wonCount} counts={counts} locale={locale} />
 
-      <LeadPipeline leads={leads} counts={counts} />
+      <LeadPipeline leads={leads} counts={counts} locale={locale} />
     </div>
   );
 }

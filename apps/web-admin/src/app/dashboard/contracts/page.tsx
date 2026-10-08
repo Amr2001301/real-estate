@@ -239,9 +239,9 @@ export default async function ContractsPage({
             header: m.cols.total,
             cell: (c) => (
               <div className="tabular-nums text-sm">
-                <p className="font-semibold">{formatCurrency(c.totalAmount, currency)}</p>
+                <p className="font-semibold">{formatCurrency(c.totalAmount, currency, locale)}</p>
                 {Number(c.downPayment) > 0 && (
-                  <p className="text-xs text-slate-400">{m.downPaymentPrefix} {formatCurrency(c.downPayment, currency)}</p>
+                  <p className="text-xs text-slate-400">{m.downPaymentPrefix} {formatCurrency(c.downPayment, currency, locale)}</p>
                 )}
               </div>
             ),
@@ -283,7 +283,7 @@ export default async function ContractsPage({
             header: m.cols.signed,
             cell: (c) =>
               c.signedAt ? (
-                <span className="text-xs text-success-700">{formatDate(c.signedAt)}</span>
+                <span className="text-xs text-success-700">{formatDate(c.signedAt, locale)}</span>
               ) : (
                 <span className="text-xs text-slate-400">{m.unsignedLabel}</span>
               ),
@@ -291,7 +291,7 @@ export default async function ContractsPage({
           {
             key: 'created',
             header: m.cols.created,
-            cell: (c) => <span className="text-xs text-slate-500">{formatDate(c.createdAt)}</span>,
+            cell: (c) => <span className="text-xs text-slate-500">{formatDate(c.createdAt, locale)}</span>,
           },
           {
             key: 'actions',

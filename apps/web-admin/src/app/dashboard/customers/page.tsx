@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, User } from '@/lib/types';
-import { formatDate } from '@/lib/format';
+import { formatDate, intlLocale } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
@@ -217,7 +217,7 @@ export default async function CustomersPage({
         padded={false}
         trailing={
           <span className="text-xs text-slate-400 tabular-nums">
-            {totalCustomers.toLocaleString('ar-EG')} {m.customerSuffix}
+            {totalCustomers.toLocaleString(intlLocale(locale))} {m.customerSuffix}
           </span>
         }
       >
@@ -315,10 +315,10 @@ export default async function CustomersPage({
                       )}
                     </td>
                     <td className="py-3 px-4 text-slate-500 text-xs whitespace-nowrap">
-                      {formatDate(u.createdAt)}
+                      {formatDate(u.createdAt, locale)}
                     </td>
                     <td className="py-3 px-4 text-slate-500 text-xs whitespace-nowrap">
-                      {u.lastLoginAt ? formatDate(u.lastLoginAt) : '—'}
+                      {u.lastLoginAt ? formatDate(u.lastLoginAt, locale) : '—'}
                     </td>
                     <td className="py-3 ps-4 pe-5">
                       <div className="flex items-center gap-1">

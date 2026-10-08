@@ -54,7 +54,7 @@ export function ReservationTimeline({ activities, locale = 'ar' }: Props) {
                 {!a.actor && a.actorId === null && (
                   <span className="text-xs text-slate-400">{m.timelineSystemActor}</span>
                 )}
-                <span className="text-xs text-slate-400">{formatDateTime(a.createdAt)}</span>
+                <span className="text-xs text-slate-400">{formatDateTime(a.createdAt, locale)}</span>
               </div>
             </div>
           </div>

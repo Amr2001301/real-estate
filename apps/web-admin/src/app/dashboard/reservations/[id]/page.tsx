@@ -15,7 +15,7 @@ import { api, safe } from '@/lib/api';
 import { staffOptions } from '@/lib/options';
 import { getSession } from '@/lib/session';
 import type { Reservation } from '@/lib/types';
-import { formatDate, formatDateTime, tx } from '@/lib/format';
+import { formatDate, formatDateTime, tx, intlLocale } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { getLocale } from '@/lib/locale';
@@ -67,7 +67,7 @@ export default async function ReservationDetailPage({
 
   const reservation = res.data;
   const [session, currency] = await Promise.all([getSession(), getReportsCurrency()]);
-  const symbol = currencySymbol(currency);
+  const symbol = currencySymbol(currency, locale);
   const isAdmin = session?.role === 'ADMIN';
   const salesOptions =
     reservation.status === 'PENDING'
@@ -150,12 +150,12 @@ export default async function ReservationDetailPage({
                 </Field>
                 <Field label={m.fieldCreatedAt}>
                   <span className="text-[13px] font-semibold text-slate-800">
-                    {formatDateTime(reservation.createdAt)}
+                    {formatDateTime(reservation.createdAt, locale)}
                   </span>
                 </Field>
                 <Field label={m.fieldExpiresAt}>
                   <span className={cn('text-[13px] font-semibold', isExpired ? 'text-danger-600' : 'text-slate-800')}>
-                    {formatDateTime(reservation.expiresAt)}
+                    {formatDateTime(reservation.expiresAt, locale)}
                   </span>
                 </Field>
                 {reservation.approvedAt && (
@@ -164,7 +164,7 @@ export default async function ReservationDetailPage({
                     className={!reservation.rejectedAt ? 'col-span-2' : undefined}
                   >
                     <span className="text-[13px] font-semibold text-success-700">
-                      {formatDateTime(reservation.approvedAt)}
+                      {formatDateTime(reservation.approvedAt, locale)}
                     </span>
                   </Field>
                 )}
@@ -174,7 +174,7 @@ export default async function ReservationDetailPage({
                     className={!reservation.approvedAt ? 'col-span-2' : undefined}
                   >
                     <span className="text-[13px] font-semibold text-danger-600">
-                      {formatDateTime(reservation.rejectedAt)}
+                      {formatDateTime(reservation.rejectedAt, locale)}
                     </span>
                   </Field>
                 )}
@@ -184,7 +184,7 @@ export default async function ReservationDetailPage({
                     className={!reservation.convertedAt ? 'col-span-2' : undefined}
                   >
                     <span className="text-[13px] font-semibold text-danger-600">
-                      {formatDateTime(reservation.cancelledAt)}
+                      {formatDateTime(reservation.cancelledAt, locale)}
                     </span>
                   </Field>
                 )}
@@ -194,7 +194,7 @@ export default async function ReservationDetailPage({
                     className={!reservation.cancelledAt ? 'col-span-2' : undefined}
                   >
                     <span className="text-[13px] font-semibold text-success-700">
-                      {formatDateTime(reservation.convertedAt)}
+                      {formatDateTime(reservation.convertedAt, locale)}
                     </span>
                   </Field>
                 )}
@@ -255,10 +255,10 @@ export default async function ReservationDetailPage({
                           {/* Amount + date */}
                           <div className="min-w-0 flex-1">
                             <p className="text-[17px] font-bold tabular-nums text-slate-900 leading-snug">
-                              {Number(dep.amount).toLocaleString('ar-SA')}{' '}
+                              {Number(dep.amount).toLocaleString(intlLocale(locale))}{' '}
                               <span className="text-[13px] font-medium text-slate-400">{symbol}</span>
                             </p>
-                            <p className="text-[12px] text-slate-400 mt-0.5">{formatDate(dep.paidAt)}</p>
+                            <p className="text-[12px] text-slate-400 mt-0.5">{formatDate(dep.paidAt, locale)}</p>
                           </div>
                           {/* Status + links on the same line */}
                           <div className="flex items-center gap-3 shrink-0">
@@ -326,28 +326,28 @@ export default async function ReservationDetailPage({
                     {reservation.snapshotDownPaymentAmount != null && (
                       <Field label={m.fieldDownPayment}>
                         <span className="text-[14px] font-bold text-slate-900 tabular-nums" dir="ltr">
-                          {Number(reservation.snapshotDownPaymentAmount).toLocaleString('ar-SA')} {symbol}
+                          {Number(reservation.snapshotDownPaymentAmount).toLocaleString(intlLocale(locale))} {symbol}
                         </span>
                       </Field>
                     )}
                     {reservation.snapshotRemainingAmount != null && (
                       <Field label={m.fieldRemaining}>
                         <span className="text-[14px] font-bold text-slate-900 tabular-nums" dir="ltr">
-                          {Number(reservation.snapshotRemainingAmount).toLocaleString('ar-SA')} {symbol}
+                          {Number(reservation.snapshotRemainingAmount).toLocaleString(intlLocale(locale))} {symbol}
                         </span>
                       </Field>
                     )}
                     {reservation.snapshotFinancedAmount != null && (
                       <Field label={m.fieldFinanced}>
                         <span className="text-[14px] font-bold text-slate-900 tabular-nums" dir="ltr">
-                          {Number(reservation.snapshotFinancedAmount).toLocaleString('ar-SA')} {symbol}
+                          {Number(reservation.snapshotFinancedAmount).toLocaleString(intlLocale(locale))} {symbol}
                         </span>
                       </Field>
                     )}
                     {reservation.snapshotMonthlyInstallment != null && (
                       <Field label={m.fieldMonthly}>
                         <span className="text-[14px] font-bold text-brand-700 tabular-nums" dir="ltr">
-                          {Number(reservation.snapshotMonthlyInstallment).toLocaleString('ar-SA', {
+                          {Number(reservation.snapshotMonthlyInstallment).toLocaleString(intlLocale(locale), {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           })}{' '}
@@ -365,7 +365,7 @@ export default async function ReservationDetailPage({
                       <div className="flex items-end justify-between gap-4">
                         <Field label={m.fieldTotalPayable}>
                           <span className="text-[28px] font-black tabular-nums leading-none text-slate-900" dir="ltr">
-                            {Number(reservation.snapshotTotalPayable).toLocaleString('ar-SA')}
+                            {Number(reservation.snapshotTotalPayable).toLocaleString(intlLocale(locale))}
                             <span className="text-[15px] font-semibold text-slate-400 ms-1.5">{symbol}</span>
                           </span>
                         </Field>
@@ -394,7 +394,7 @@ export default async function ReservationDetailPage({
                             {note.author?.fullName ?? m.noteAuthorSystem}
                           </span>
                           <span className="text-slate-300">·</span>
-                          <span>{formatDateTime(note.createdAt)}</span>
+                          <span>{formatDateTime(note.createdAt, locale)}</span>
                         </p>
                       </li>
                     ))}
@@ -462,7 +462,7 @@ export default async function ReservationDetailPage({
                     </Link>
                     {reservation.convertedAt && (
                       <p className="text-2xs text-slate-400 mt-0.5">
-                        {m.contractConvertedAtPrefix}{formatDateTime(reservation.convertedAt)}
+                        {m.contractConvertedAtPrefix}{formatDateTime(reservation.convertedAt, locale)}
                       </p>
                     )}
                   </div>
@@ -574,7 +574,7 @@ export default async function ReservationDetailPage({
                     </Field>
                     <Field label={m.fieldPrice}>
                       <span className="text-[14px] font-bold text-slate-800 tabular-nums" dir="ltr">
-                        {Number(reservation.unit.price).toLocaleString('ar-SA')} {symbol}
+                        {Number(reservation.unit.price).toLocaleString(intlLocale(locale))} {symbol}
                       </span>
                     </Field>
                   </div>
@@ -612,7 +612,7 @@ export default async function ReservationDetailPage({
                   <div className="min-w-0">
                     <p className="text-[13.5px] font-bold text-slate-900">{reservation.sales.fullName}</p>
                     <p className="text-2xs text-slate-400 mt-0.5">
-                      {m.salesCreatedPrefix} {formatDate(reservation.createdAt)}
+                      {m.salesCreatedPrefix} {formatDate(reservation.createdAt, locale)}
                     </p>
                   </div>
                 </div>

@@ -113,7 +113,7 @@ export default async function DocumentDetailPage({
                 </div>
                 <div>
                   <dt className="text-2xs text-slate-500">{m.fieldCreatedAt}</dt>
-                  <dd className="text-xs">{formatDateTime(doc.createdAt)}</dd>
+                  <dd className="text-xs">{formatDateTime(doc.createdAt, locale)}</dd>
                 </div>
               </dl>
             </PremiumSectionCard>

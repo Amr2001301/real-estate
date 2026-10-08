@@ -24,6 +24,7 @@ detail in `docs/audit/08-functional-gaps.md` §7.
 | FG-28 | Client ownership: reps saw no clients (GET /users ADMIN-only) and the server accepted any client or lead id | Decided 2026-10-08: rep → own, manager → team, admin → all, unowned → admin assigns. Enforced server-side; scoped `GET /users/clients` |
 | FG-27 | Signed contracts read `UNSIGNED` | `sign()` sets ACTIVE; backfill migration (PR #17) |
 | Server actions hang | On routes under a `loading.tsx`, a server action's result was sometimes never shown (button stuck busy, form never redirected). Root cause: a lost Suspense ping in the React 19.2 canary bundled with Next 15.5 — React held a fulfilled promise but never re-rendered. web-admin upgraded to Next 16.4 (React 19.3 canary): 0/120 hangs vs 39/160 before | PR #20 (web-admin); web-public Next 16 PR |
+| Dates and amounts follow the locale (web-admin) | The format helpers always used `ar-EG`, so the English dashboard and portal showed Arabic-Indic digits and `ر.س` | `formatDate`/`formatDateTime`/`formatCurrency`/`formatCompact`, the SLA/warranty labels and `currencySymbol` take the locale (en → `en-EG`, Latin digits, currency code); every caller passes it, and direct `toLocaleString('ar-…')` calls use `intlLocale(locale)`. Print pages stay Arabic. Playwright `locale-formatting`; `portal-i18n` no longer excludes dates/amounts |
 | Leaflet map in `next dev` | Under `next dev`, react-leaflet 4 threw "Map container is already initialized" (Strict Mode mounts effects twice) and the project map did not render | react-leaflet 5 (React 19) in web-public and web-admin; the map renders in dev on both |
 | Broker portal i18n (#21) | The broker portal was Arabic-only, hard-coded | Every `/portal` page and the shared components it renders follow the `admin-locale` cookie (ar/en), like the dashboard; strings in `src/messages/portal/*`. Playwright `portal-i18n` opens every portal page in English and fails on Arabic UI text. Dates/amounts: see the open item |
 | Deposit reverse / delete UI | The API reversed and deleted deposits safely (FG-05) but web-admin had no button for either | The deposit page has "Reverse" (with a reason; shown only while the deposit still pays its installment — `reversible` on `GET /deposits/:id`), "Delete" and, on a deleted deposit, "Restore". Playwright `deposits-manage` |
@@ -40,7 +41,6 @@ detail in `docs/audit/08-functional-gaps.md` §7.
 
 | Item | Why | Size |
 |---|---|---|
-| Dates and amounts follow the locale (web-admin) | `formatDate` / `formatDateTime` / `formatCurrency` in `lib/format.ts` always format in `ar-EG`, so the English dashboard and portal show Arabic-Indic digits and `ر.س`. They take no locale; every caller needs it passed | M |
 
 ## Open — needs the owner
 

@@ -3,6 +3,7 @@ import { ExternalLink, FileText, Plus } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { DocumentItem, DocumentOwnerType, Paged } from '@/lib/types';
 import { formatDateTime } from '@/lib/format';
+import { getLocale } from '@/lib/locale';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CATEGORY_LABEL, formatFileSize } from './labels';
@@ -29,6 +30,7 @@ interface Props {
  * and offers an "add document" button prefilled with the owner.
  */
 export async function OwnerDocumentsCard({ ownerType, ownerId, legacy, title = 'المستندات', limit = 5 }: Props) {
+  const locale = await getLocale();
   const qs = new URLSearchParams({
     ownerType,
     ownerId,
@@ -82,7 +84,7 @@ export async function OwnerDocumentsCard({ ownerType, ownerId, legacy, title = '
                   {d.title}
                 </p>
                 <p className="text-2xs text-slate-500 mt-0.5">
-                  {CATEGORY_LABEL[d.category]} • {formatFileSize(d.sizeBytes)} • {formatDateTime(d.createdAt)}
+                  {CATEGORY_LABEL[d.category]} • {formatFileSize(d.sizeBytes)} • {formatDateTime(d.createdAt, locale)}
                 </p>
               </div>
               <a href={d.fileUrl} target="_blank" rel="noopener noreferrer">

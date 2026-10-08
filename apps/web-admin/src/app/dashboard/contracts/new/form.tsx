@@ -79,7 +79,7 @@ export default function ContractForm({ currency = 'SAR', locale = 'ar' }: Props)
                 endpoint="/api-proxy/units?status=AVAILABLE"
                 toOption={(u) => ({
                   id: u.id,
-                  label: `${u.code} · ${tx(u.building?.phase?.project?.name)} · ${formatCurrency(u.price, currency)}`,
+                  label: `${u.code} · ${tx(u.building?.phase?.project?.name)} · ${formatCurrency(u.price, currency, locale)}`,
                   raw: u,
                 })}
                 placeholder={c.searchUnitPlaceholder}

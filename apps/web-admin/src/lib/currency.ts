@@ -9,18 +9,4 @@ export const getReportsCurrency = cache(async (): Promise<string> => {
   return typeof setting?.value === 'string' ? setting.value : 'SAR';
 });
 
-const SYMBOL_MAP: Record<string, string> = {
-  SAR: 'ر.س',
-  EGP: 'ج.م',
-  USD: '$',
-  AED: 'د.إ',
-  KWD: 'د.ك',
-  QAR: 'ر.ق',
-  BHD: 'د.ب',
-  OMR: 'ر.ع',
-  JOD: 'د.أ',
-};
-
-export function currencySymbol(code: string): string {
-  return SYMBOL_MAP[code] ?? code;
-}
+export { currencySymbol } from './currency-format';

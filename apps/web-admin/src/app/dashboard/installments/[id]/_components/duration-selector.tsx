@@ -30,7 +30,7 @@ export function DurationSelector({
   const m = uiT(locale).pages.installments.detail.durationSelector;
 
   function fmt(n: number): string {
-    return formatCurrency(n.toFixed(2), currency);
+    return formatCurrency(n.toFixed(2), currency, locale);
   }
   const sorted = useMemo(
     () =>

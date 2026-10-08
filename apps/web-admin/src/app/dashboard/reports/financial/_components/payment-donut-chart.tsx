@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import type { Locale } from '@/lib/locale';
+import { intlLocale } from '@/lib/format';
 import { uiT } from '@/messages/ui';
 
 interface Props {
@@ -12,8 +13,9 @@ interface Props {
   locale?: Locale;
 }
 
-function DooltipContent({ active, payload }: {
+function DooltipContent({ active, payload, locale = 'ar' }: {
   active?: boolean;
+  locale?: Locale;
   payload?: { payload: { label: string; value: number; color: string } }[];
 }) {
   if (!active || !payload?.length || !payload[0]) return null;
@@ -22,7 +24,7 @@ function DooltipContent({ active, payload }: {
     <div dir="rtl" className="bg-white rounded-xl border border-slate-200 shadow-md px-3 py-2 text-xs">
       <span style={{ color }} className="font-semibold">{label}</span>
       <span className="ms-2 text-slate-700 tabular-nums">
-        {new Intl.NumberFormat('ar-EG', { maximumFractionDigits: 0 }).format(value)}
+        {new Intl.NumberFormat(intlLocale(locale), { maximumFractionDigits: 0 }).format(value)}
       </span>
     </div>
   );
@@ -73,7 +75,7 @@ export function PaymentDonutChart({ collected, overdue, remaining, contractValue
               <Cell key={entry.key} fill={entry.color} />
             ))}
           </Pie>
-          <Tooltip content={<DooltipContent />} />
+          <Tooltip content={<DooltipContent locale={locale} />} />
         </PieChart>
       </ResponsiveContainer>
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">

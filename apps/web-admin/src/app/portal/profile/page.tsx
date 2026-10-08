@@ -257,7 +257,7 @@ export default async function PortalProfilePage() {
                 icon={<CalendarRange />}
                 label={t.joinedAt}
                 value={me.brokerUser.joinedAt ?? me.brokerUser.invitedAt
-                  ? formatDate(me.brokerUser.joinedAt ?? me.brokerUser.invitedAt)
+                  ? formatDate(me.brokerUser.joinedAt ?? me.brokerUser.invitedAt, locale)
                   : <Empty text={t.notAvailable} />
                 }
               />
@@ -265,7 +265,7 @@ export default async function PortalProfilePage() {
                 icon={<CalendarDays />}
                 label={t.lastLogin}
                 value={me.user.lastLoginAt
-                  ? formatDate(me.user.lastLoginAt)
+                  ? formatDate(me.user.lastLoginAt, locale)
                   : <span className="text-slate-400 text-xs font-normal">{t.neverLoggedIn}</span>
                 }
               />
@@ -354,7 +354,7 @@ export default async function PortalProfilePage() {
                   <div>
                     <p className="text-2xs text-slate-400 mb-1">{t.contractStart}</p>
                     <p className="text-sm font-medium text-slate-800">
-                      {me.broker.contractStartAt ? formatDate(me.broker.contractStartAt) : <Empty text={t.notAvailable} />}
+                      {me.broker.contractStartAt ? formatDate(me.broker.contractStartAt, locale) : <Empty text={t.notAvailable} />}
                     </p>
                   </div>
                   <div>
@@ -364,7 +364,7 @@ export default async function PortalProfilePage() {
                       contractExpired ? 'text-red-600' : contractExpiringSoon ? 'text-amber-700' : 'text-slate-800',
                     )}>
                       {me.broker.contractEndAt
-                        ? formatDate(me.broker.contractEndAt)
+                        ? formatDate(me.broker.contractEndAt, locale)
                         : <Empty text={t.notAvailable} />
                       }
                       {contractExpired && (

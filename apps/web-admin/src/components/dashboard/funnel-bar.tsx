@@ -1,6 +1,8 @@
 import { Users, CalendarCheck2, BookmarkCheck, FileText } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
+import { intlLocale } from '@/lib/format';
+import type { Locale } from '@/lib/locale';
 interface FunnelStage {
   key:    string;
   label:  string;
@@ -16,6 +18,7 @@ interface Props {
   visits:       number;
   reservations: number;
   contracts:    number;
+  locale?:      Locale;
 }
 
 function convRate(from: number, to: number): string | null {
@@ -23,7 +26,7 @@ function convRate(from: number, to: number): string | null {
   return `${Math.round((to / from) * 100)}%`;
 }
 
-export function FunnelBar({ leads, visits, reservations, contracts }: Props) {
+export function FunnelBar({ leads, visits, reservations, contracts, locale = 'ar' }: Props) {
   const stages: FunnelStage[] = [
     {
       key:    'leads',
@@ -97,7 +100,7 @@ export function FunnelBar({ leads, visits, reservations, contracts }: Props) {
 
             {/* Count */}
             <span className="text-2xl font-bold text-slate-900 tabular-nums leading-none">
-              {stage.value.toLocaleString('ar-SA')}
+              {stage.value.toLocaleString(intlLocale(locale))}
             </span>
 
             {/* Label */}

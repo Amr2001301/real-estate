@@ -17,7 +17,7 @@ import {
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
 import { projectOptions } from '@/lib/options';
-import { formatCurrency, tx } from '@/lib/format';
+import { formatCurrency, tx, intlLocale } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import {
   resolveReportDateRange,
@@ -247,7 +247,7 @@ export default async function ReportsPage({
           {
             label:     m.kpi.totalSales,
             icon:      <Wallet />,
-            value:     formatCurrency(salesTotal, currency),
+            value:     formatCurrency(salesTotal, currency, locale),
             tone:      'neutral',
             valueSize: 'compact',
             sub:       `${contractsCount} ${m.salesTrend.contractSuffix}`,
@@ -257,16 +257,16 @@ export default async function ReportsPage({
           {
             label:    m.kpi.contractsSigned,
             icon:     <FileText />,
-            value:    contractsCount.toLocaleString('ar-EG'),
+            value:    contractsCount.toLocaleString(intlLocale(locale)),
             tone:     'neutral',
-            sub:      `${m.kpi.avgPrefix} ${formatCurrency(avgContract, currency)}`,
+            sub:      `${m.kpi.avgPrefix} ${formatCurrency(avgContract, currency, locale)}`,
             trend:    contractsDelta ? `${contractsDelta.direction === 'up' ? '▲' : contractsDelta.direction === 'down' ? '▼' : '•'} ${contractsDelta.value}` : undefined,
             trendCls: contractsDelta?.direction === 'up' ? 'text-success-600' : contractsDelta?.direction === 'down' ? 'text-danger-600' : undefined,
           },
           {
             label:     m.kpi.collected,
             icon:      <CircleDollarSign />,
-            value:     formatCurrency(financialTotal, currency),
+            value:     formatCurrency(financialTotal, currency, locale),
             tone:      'success',
             valueSize: 'compact',
             sub:       `${depositsCount} ${m.kpi.depositSuffix} · ${verifiedCount} ${m.kpi.verifiedSuffix}`,
@@ -285,7 +285,7 @@ export default async function ReportsPage({
             icon:  <Trophy />,
             value: topProject?.name ?? '—',
             tone:  'neutral',
-            sub:   topProject ? `${topProject.count} ${m.salesTrend.contractSuffix} · ${formatCurrency(topProject.total, currency)}` : undefined,
+            sub:   topProject ? `${topProject.count} ${m.salesTrend.contractSuffix} · ${formatCurrency(topProject.total, currency, locale)}` : undefined,
           },
         ]}
       />
@@ -304,7 +304,7 @@ export default async function ReportsPage({
           trailing={
             <div className="text-end">
               <p className="text-base font-black tabular-nums text-slate-900 leading-none">
-                {trendData.reduce((s, d) => s + d.contracts, 0).toLocaleString('ar-EG')} {m.salesTrend.contractSuffix}
+                {trendData.reduce((s, d) => s + d.contracts, 0).toLocaleString(intlLocale(locale))} {m.salesTrend.contractSuffix}
               </p>
               {bestTrendMonth && bestTrendMonth.contracts > 0 && (
                 <p className="text-[11px] text-slate-400 mt-0.5 whitespace-nowrap">
@@ -363,7 +363,7 @@ export default async function ReportsPage({
                       {/* Count */}
                       <div className="w-12 shrink-0 text-end">
                         <span className={cn('text-lg font-black tabular-nums leading-none', stage.labelColor)}>
-                          {stage.value.toLocaleString('ar-EG')}
+                          {stage.value.toLocaleString(intlLocale(locale))}
                         </span>
                       </div>
                       {/* Bar */}
@@ -419,7 +419,7 @@ export default async function ReportsPage({
           description={m.reservationStatus.description}
           trailing={
             <span className="text-sm font-black tabular-nums text-slate-900 shrink-0">
-              {reservationTotal.toLocaleString('ar-EG')} {m.reservationStatus.reservationSuffix}
+              {reservationTotal.toLocaleString(intlLocale(locale))} {m.reservationStatus.reservationSuffix}
             </span>
           }
           padded={false}
@@ -448,7 +448,7 @@ export default async function ReportsPage({
                     {RESERVATION_STATUS_LABEL[status] ?? status}
                   </Badge>
                   <span className="text-sm font-bold tabular-nums text-slate-900">
-                    {Number(count).toLocaleString('ar-EG')}
+                    {Number(count).toLocaleString(intlLocale(locale))}
                   </span>
                   <span className="text-[10px] text-slate-400">
                     {reservationTotal > 0 ? `${Math.round((Number(count) / reservationTotal) * 100)}%` : '—'}
@@ -503,7 +503,7 @@ export default async function ReportsPage({
                     </div>
                     <div className="text-end shrink-0">
                       <p className="text-sm font-black tabular-nums text-slate-900 whitespace-nowrap" dir="ltr">
-                        {formatCurrency(p.total, currency)}
+                        {formatCurrency(p.total, currency, locale)}
                       </p>
                     </div>
                   </div>
@@ -549,7 +549,7 @@ export default async function ReportsPage({
                     </div>
                     <div className="text-end shrink-0">
                       <p className="text-sm font-black tabular-nums text-slate-900 whitespace-nowrap" dir="ltr">
-                        {formatCurrency(b.commissionAmount, currency)}
+                        {formatCurrency(b.commissionAmount, currency, locale)}
                       </p>
                     </div>
                   </div>
@@ -585,7 +585,7 @@ export default async function ReportsPage({
             icon: <Star className="h-3.5 w-3.5" />,
             iconBg: 'bg-violet-50 text-violet-600',
             value: brokers[0]?.brokerName ?? '—',
-            sub:   brokers[0] ? formatCurrency(brokers[0].commissionAmount, currency) : m.insights.noData,
+            sub:   brokers[0] ? formatCurrency(brokers[0].commissionAmount, currency, locale) : m.insights.noData,
             subDir: 'ltr' as const,
           },
           {

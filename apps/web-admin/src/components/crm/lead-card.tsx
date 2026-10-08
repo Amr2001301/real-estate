@@ -12,6 +12,7 @@ import {
 import type { Lead, LeadStage } from '@/lib/types';
 import { formatDateTime, tx } from '@/lib/format';
 import { cn } from '@/lib/cn';
+import type { Locale } from '@/lib/locale';
 import Link from 'next/link';
 
 // Thin start-border per stage — matches the column dot colour
@@ -51,9 +52,10 @@ interface InnerProps {
   lead: Lead;
   dragging?: boolean;
   showGrip?: boolean;
+  locale?: Locale;
 }
 
-function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
+function LeadCardBody({ lead, dragging, showGrip, locale = 'ar' }: InnerProps) {
   const rawName     = (lead.client?.fullName ?? lead.fullName)?.trim() ?? '';
   const displayName = rawName || 'عميل غير مُعرَّف';
   const isNameless  = !rawName;
@@ -142,7 +144,7 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
           <div className="flex items-center gap-2">
             <CalendarClock className="h-3.5 w-3.5 text-violet-400 shrink-0" />
             <span className="text-[11px] text-slate-600 truncate flex-1">
-              {formatDateTime(lead.upcomingVisit.scheduledAt)}
+              {formatDateTime(lead.upcomingVisit.scheduledAt, locale)}
             </span>
             <span
               className={cn(
@@ -225,26 +227,26 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
 }
 
 /** Static link card — used outside the DnD board. */
-export function LeadCard({ lead }: { lead: Lead }) {
+export function LeadCard({ lead, locale = 'ar' }: { lead: Lead; locale?: Locale }) {
   return (
     <Link
       href={`/dashboard/leads/${lead.id}` as never}
       prefetch={false}
       className="block hover:-translate-y-0.5 hover:shadow-card transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 rounded-[18px]"
     >
-      <LeadCardBody lead={lead} />
+      <LeadCardBody lead={lead} locale={locale} />
     </Link>
   );
 }
 
 /** Body-only variant for DragOverlay (no link wrapping). */
-export function LeadCardOverlay({ lead }: { lead: Lead }) {
-  return <LeadCardBody lead={lead} dragging />;
+export function LeadCardOverlay({ lead, locale = 'ar' }: { lead: Lead; locale?: Locale }) {
+  return <LeadCardBody lead={lead} dragging locale={locale} />;
 }
 
 /** Body variant for in-column draggable card (grip indicator visible). */
-export function LeadCardDraggableBody({ lead }: { lead: Lead }) {
-  return <LeadCardBody lead={lead} showGrip />;
+export function LeadCardDraggableBody({ lead, locale = 'ar' }: { lead: Lead; locale?: Locale }) {
+  return <LeadCardBody lead={lead} showGrip locale={locale} />;
 }
 
 export type { LeadStage };

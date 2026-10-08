@@ -53,7 +53,7 @@ export function VisitTimeline({ activities, locale = 'ar' }: Props) {
                 {a.actor && (
                   <span className="text-xs text-slate-500">{a.actor.fullName}</span>
                 )}
-                <span className="text-xs text-slate-400">{formatDateTime(a.createdAt)}</span>
+                <span className="text-xs text-slate-400">{formatDateTime(a.createdAt, locale)}</span>
               </div>
             </div>
           </div>

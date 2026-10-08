@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, User } from '@/lib/types';
-import { formatDate } from '@/lib/format';
+import { formatDate, intlLocale } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { Badge } from '@/components/ui/badge';
@@ -219,7 +219,7 @@ export default async function ClientsPage({
         padded={false}
         trailing={
           <span className="text-xs text-slate-400 tabular-nums">
-            {total.toLocaleString('ar-EG')} {m.clientSuffix}
+            {total.toLocaleString(intlLocale(locale))} {m.clientSuffix}
           </span>
         }
       >
@@ -344,10 +344,10 @@ export default async function ClientsPage({
                       )}
                     </td>
                     <td className="py-3 px-4 text-slate-500 text-xs whitespace-nowrap">
-                      {formatDate(u.createdAt)}
+                      {formatDate(u.createdAt, locale)}
                     </td>
                     <td className="py-3 px-4 text-slate-500 text-xs whitespace-nowrap">
-                      {u.lastLoginAt ? formatDate(u.lastLoginAt) : '—'}
+                      {u.lastLoginAt ? formatDate(u.lastLoginAt, locale) : '—'}
                     </td>
                     <td className="py-3 ps-4 pe-5">
                       <Link href={`/dashboard/clients/${u.id}` as never}>

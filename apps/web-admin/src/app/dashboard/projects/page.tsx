@@ -269,7 +269,7 @@ export default async function ProjectsPage({
                       )}
                     </td>
                     <td className="py-3.5 px-4 text-slate-500 text-xs">
-                      {formatDate(p.updatedAt)}
+                      {formatDate(p.updatedAt, locale)}
                     </td>
                     <td className="py-3.5 ps-4 pe-5">
                       <Link href={`/dashboard/projects/${p.id}` as never}>

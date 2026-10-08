@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { cn } from '@/lib/cn';
 import { formatCompact } from '@/lib/format';
+import type { Locale } from '@/lib/locale';
 
 export interface ProjectHealthRow {
   id:              string;
@@ -37,9 +38,10 @@ interface Props {
   projects:        ProjectHealthRow[];
   className?:      string;
   currencySymbol?: string;
+  locale?:         Locale;
 }
 
-export function ProjectHealthMatrix({ projects, className, currencySymbol = 'ر.س' }: Props) {
+export function ProjectHealthMatrix({ projects, className, currencySymbol = 'ر.س', locale = 'ar' }: Props) {
   if (projects.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
@@ -68,7 +70,7 @@ export function ProjectHealthMatrix({ projects, className, currencySymbol = 'ر.
                   {p.name}
                 </p>
                 <p className="text-[12.5px] font-bold text-brand-700 tabular-nums shrink-0 leading-none mt-0.5">
-                  {formatCompact(p.contractValue, currencySymbol)}
+                  {formatCompact(p.contractValue, currencySymbol, locale)}
                 </p>
               </div>
 

@@ -36,7 +36,7 @@ import type {
 import { tx, formatDate, formatDateTime, formatCompact } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { cn } from '@/lib/cn';
-import { getLocale } from '@/lib/locale';
+import { getLocale, type Locale } from '@/lib/locale';
 import { portalDashboardT } from '@/messages/portal/dashboard';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -133,7 +133,7 @@ function ActivityIcon({ type }: { type: PortalActivityType }) {
 
 // ── Broker KPI Strip ──────────────────────────────────────────────────────────
 
-function BrokerKpiStrip({ perf, symbol, m }: { perf: PerfSummary | undefined; symbol?: string; m: Messages }) {
+function BrokerKpiStrip({ perf, symbol, m, locale = 'ar' }: { perf: PerfSummary | undefined; symbol?: string; m: Messages; locale?: Locale }) {
   const k = m.home.kpi;
   const submitted      = perf?.leadsSubmitted      ?? 0;
   const approved       = perf?.leadsApproved       ?? 0;
@@ -172,7 +172,7 @@ function BrokerKpiStrip({ perf, symbol, m }: { perf: PerfSummary | undefined; sy
     },
     {
       label:    k.salesVolume,
-      value:    perf ? formatCompact(salesGross, symbol) : '—',
+      value:    perf ? formatCompact(salesGross, symbol, locale) : '—',
       sub:      k.salesSub,
       valueCls: 'text-slate-900',
       topBar:   'from-slate-200 via-slate-400 to-slate-200',
@@ -181,9 +181,9 @@ function BrokerKpiStrip({ perf, symbol, m }: { perf: PerfSummary | undefined; sy
     },
     {
       label:    k.myCommissions,
-      value:    perf ? formatCompact(commissionsNet, symbol) : '—',
+      value:    perf ? formatCompact(commissionsNet, symbol, locale) : '—',
       sub:      payoutRate !== null
-                  ? k.commissionsSubFn(formatCompact(payoutsNet, symbol), payoutRate)
+                  ? k.commissionsSubFn(formatCompact(payoutsNet, symbol, locale), payoutRate)
                   : k.noCommissions,
       valueCls: 'text-amber-700',
       topBar:   'from-amber-300 via-amber-500 to-amber-300',
@@ -379,7 +379,7 @@ export default async function PortalDashboard() {
   const locale = await getLocale();
   const m = portalDashboardT(locale);
   const currency = await getReportsCurrency();
-  const symbol = currencySymbol(currency);
+  const symbol = currencySymbol(currency, locale);
   const [
     meRes, projectsRes, unitsRes, activityRes, perfRes, leadsRes,
   ] = await Promise.all([
@@ -465,7 +465,7 @@ export default async function PortalDashboard() {
                       <span className="inline-flex items-center gap-1 text-xs text-slate-500" dir="ltr">
                         <FileText className="h-3 w-3 text-slate-400 shrink-0" />
                         <span className="tabular-nums">
-                          {formatDate(me.broker.contractStartAt)} – {formatDate(me.broker.contractEndAt)}
+                          {formatDate(me.broker.contractStartAt, locale)} – {formatDate(me.broker.contractEndAt, locale)}
                         </span>
                       </span>
                     </>
@@ -491,7 +491,7 @@ export default async function PortalDashboard() {
       </div>
 
       {/* ── 2. KPI Strip ─────────────────────────────────────────────────────── */}
-      <BrokerKpiStrip perf={perf} symbol={symbol} m={m} />
+      <BrokerKpiStrip perf={perf} symbol={symbol} m={m} locale={locale} />
 
       {/* ── 3. Leads table + Sidebar ─────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 items-stretch gap-5">
@@ -590,7 +590,7 @@ export default async function PortalDashboard() {
                         )}
                       </td>
                       <td className="py-3.5 px-3 text-2xs text-slate-400 whitespace-nowrap hidden md:table-cell tabular-nums">
-                        {formatDate(lead.createdAt)}
+                        {formatDate(lead.createdAt, locale)}
                       </td>
                       <td className="py-3.5 ps-3 pe-5">
                         <Link href={`/portal/leads/${lead.id}` as never}>
@@ -731,7 +731,7 @@ export default async function PortalDashboard() {
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-xs font-bold text-slate-900 leading-snug truncate">{m.activityType[item.type]}</p>
                         <time className="text-2xs text-slate-400 tabular-nums whitespace-nowrap shrink-0" dir="ltr">
-                          {formatDateTime(item.createdAt)}
+                          {formatDateTime(item.createdAt, locale)}
                         </time>
                       </div>
                       <p className="text-2xs text-slate-500 mt-0.5 truncate">{subtitle}</p>

@@ -167,7 +167,7 @@ export default async function UnitsPage({
         metrics={[
           {
             label:   m.kpi.totalValue,
-            value:   formatCurrency(totalValue, currency),
+            value:   formatCurrency(totalValue, currency, locale),
             icon:    <CircleDollarSign />,
             tone:    'brand',
             primary: true,
@@ -376,13 +376,13 @@ export default async function UnitsPage({
                       </span>
                     </td>
                     <td className="py-3.5 px-4 font-semibold text-brand-700 tabular-nums whitespace-nowrap">
-                      {formatCurrency(u.price, currency)}
+                      {formatCurrency(u.price, currency, locale)}
                     </td>
                     <td className="py-3.5 px-4">
                       <UnitStatusBadge status={u.status} locale={locale} />
                     </td>
                     <td className="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">
-                      {formatDate(u.updatedAt)}
+                      {formatDate(u.updatedAt, locale)}
                     </td>
                     <td className="py-3.5 ps-4 pe-5">
                       <Link href={`/dashboard/units/${u.id}` as never}>

@@ -321,7 +321,7 @@ export default async function LeadDetailPage({
                           <UserCog className="h-3 w-3 shrink-0" />
                           <span className="font-medium text-slate-500">{n.sales?.fullName ?? m.unknownNoteAuthor}</span>
                           <span className="text-slate-300">·</span>
-                          <span dir="ltr">{formatDateTime(n.createdAt)}</span>
+                          <span dir="ltr">{formatDateTime(n.createdAt, locale)}</span>
                         </p>
                       </li>
                     ))}
@@ -362,7 +362,7 @@ export default async function LeadDetailPage({
                               {r.requestNumber ?? r.id.slice(0, 8)}
                             </Link>
                             <span className="text-[11px] text-slate-500 flex-1" dir="ltr">
-                              {formatDate(r.preferredDate)}
+                              {formatDate(r.preferredDate, locale)}
                             </span>
                             {r.requestStatus && <VisitRequestStatusBadge status={r.requestStatus} />}
                           </li>
@@ -388,7 +388,7 @@ export default async function LeadDetailPage({
                               {a.visitNumber}
                             </Link>
                             <span className="text-[11px] text-slate-500 flex-1" dir="ltr">
-                              {formatDateTime(a.scheduledAt)}
+                              {formatDateTime(a.scheduledAt, locale)}
                             </span>
                             <AppointmentStatusBadge status={a.status} />
                           </li>
@@ -432,7 +432,7 @@ export default async function LeadDetailPage({
                           {projectName ? `${projectName} · ` : ''}{r.unit?.code ?? '—'}
                         </span>
                         <span className="text-[10px] text-slate-400 shrink-0 whitespace-nowrap tabular-nums" dir="ltr">
-                          {formatDate(r.expiresAt)}
+                          {formatDate(r.expiresAt, locale)}
                         </span>
                         <ReservationStatusBadge status={r.status} />
                       </div>
@@ -488,7 +488,7 @@ export default async function LeadDetailPage({
                             )}
                           </div>
                           <p className="text-[10px] text-slate-400 mt-0.5 tabular-nums" dir="ltr">
-                            {formatDateTime(a.createdAt)}
+                            {formatDateTime(a.createdAt, locale)}
                           </p>
                         </div>
                       </li>
@@ -736,7 +736,7 @@ export default async function LeadDetailPage({
                 {/* Created */}
                 <InfoRow label={m.fieldCreatedAt} icon={<Calendar className="h-3.5 w-3.5" />}>
                   <span className="text-[12px] font-semibold text-slate-700 tabular-nums" dir="ltr">
-                    {formatDateTime(lead.createdAt)}
+                    {formatDateTime(lead.createdAt, locale)}
                   </span>
                 </InfoRow>
 

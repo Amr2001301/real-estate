@@ -141,7 +141,7 @@ export default async function AdminBrokerCommissionDetailPage({
             <p className="mt-1 text-sm leading-relaxed">{c.rejectionReason}</p>
             {c.rejectedBy && (
               <p className="text-[11px] text-danger-500 mt-1.5">
-                {m.rejectedBy} {c.rejectedBy.fullName} · {formatDateTime(c.rejectedAt)}
+                {m.rejectedBy} {c.rejectedBy.fullName} · {formatDateTime(c.rejectedAt, locale)}
               </p>
             )}
           </div>
@@ -155,7 +155,7 @@ export default async function AdminBrokerCommissionDetailPage({
           <div>
             <p className="font-semibold text-sm">{m.approvedTitle}</p>
             <p className="text-[11px] text-success-600 mt-1">
-              {m.approvedBy} {c.approvedBy.fullName} · {formatDateTime(c.approvedAt)}
+              {m.approvedBy} {c.approvedBy.fullName} · {formatDateTime(c.approvedAt, locale)}
             </p>
           </div>
         </div>
@@ -217,13 +217,13 @@ export default async function AdminBrokerCommissionDetailPage({
                   ) : '—'
                 }
               />
-              <SideRow label={m.labelDueDate} value={formatDate(c.earnedAt)} />
+              <SideRow label={m.labelDueDate} value={formatDate(c.earnedAt, locale)} />
             </PremiumSectionCard>
 
             {/* Financials */}
             <PremiumSectionCard title={m.sectionFinancials} icon={<Banknote />} padded={false}>
               <div className="grid grid-cols-2 sm:grid-cols-3 divide-y sm:divide-y-0 divide-x-0 sm:divide-x sm:divide-x-reverse divide-hairline border-b border-hairline">
-                <MetricCell label={m.labelBasis} value={formatCurrency(c.basisAmount, currency)} />
+                <MetricCell label={m.labelBasis} value={formatCurrency(c.basisAmount, currency, locale)} />
                 <MetricCell
                   label={m.labelRate}
                   value={
@@ -232,22 +232,22 @@ export default async function AdminBrokerCommissionDetailPage({
                       : '—'
                   }
                 />
-                <MetricCell label={m.labelGross} value={formatCurrency(c.grossAmount, currency)} />
+                <MetricCell label={m.labelGross} value={formatCurrency(c.grossAmount, currency, locale)} />
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 divide-y sm:divide-y-0 divide-x-0 sm:divide-x sm:divide-x-reverse divide-hairline">
                 <MetricCell
                   label={m.labelTax}
                   value={`${Number(c.taxPct).toFixed(2)}%`}
-                  sub={formatCurrency(c.taxAmount, currency)}
+                  sub={formatCurrency(c.taxAmount, currency, locale)}
                 />
                 <MetricCell
                   label={m.labelWithholding}
                   value={`${Number(c.withholdingPct).toFixed(2)}%`}
-                  sub={formatCurrency(c.withholdingAmount, currency)}
+                  sub={formatCurrency(c.withholdingAmount, currency, locale)}
                 />
                 <MetricCell
                   label={m.labelNet}
-                  value={formatCurrency(c.netAmount, currency)}
+                  value={formatCurrency(c.netAmount, currency, locale)}
                   highlight
                 />
               </div>

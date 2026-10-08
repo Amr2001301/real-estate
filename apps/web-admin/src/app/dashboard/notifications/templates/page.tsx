@@ -140,7 +140,7 @@ export default async function NotificationTemplatesPage() {
                       </Badge>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-400" dir="ltr">
-                      {formatDate(t.updatedAt)}
+                      {formatDate(t.updatedAt, locale)}
                     </td>
                   </tr>
                 ))}

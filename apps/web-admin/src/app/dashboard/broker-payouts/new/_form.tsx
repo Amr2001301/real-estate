@@ -206,7 +206,7 @@ export default function CreatePayoutForm({
                             {c.commissionNumber}
                           </span>
                           <span className="text-[11px] text-slate-400">
-                            {formatDate(c.earnedAt)}
+                            {formatDate(c.earnedAt, locale)}
                           </span>
                         </div>
                         <p className="text-[12px] text-slate-600 mt-0.5">
@@ -223,10 +223,10 @@ export default function CreatePayoutForm({
                           {c.project && <> · {tx(c.project.name)}</>}
                         </p>
                         <p className="text-[11px] text-slate-500 mt-1 tabular-nums">
-                          {m.totalGross.split(' ')[0]} {formatCurrency(c.grossAmount, currency)}
+                          {m.totalGross.split(' ')[0]} {formatCurrency(c.grossAmount, currency, locale)}
                           {' · '}{m.totalNet.split(' ')[0]}{' '}
                           <span className="font-bold text-success-700">
-                            {formatCurrency(c.netAmount, currency)}
+                            {formatCurrency(c.netAmount, currency, locale)}
                           </span>
                         </p>
                       </div>
@@ -244,7 +244,7 @@ export default function CreatePayoutForm({
                     {m.totalGross}
                   </p>
                   <p className="text-[14px] font-bold tabular-nums text-slate-900">
-                    {formatCurrency(totals.gross, currency)}
+                    {formatCurrency(totals.gross, currency, locale)}
                   </p>
                 </div>
                 <div className="flex flex-col gap-0.5 px-4 py-3.5">
@@ -252,7 +252,7 @@ export default function CreatePayoutForm({
                     {m.totalTax}
                   </p>
                   <p className="text-[14px] font-bold tabular-nums text-slate-900">
-                    {formatCurrency(totals.tax, currency)}
+                    {formatCurrency(totals.tax, currency, locale)}
                   </p>
                 </div>
                 <div className="flex flex-col gap-0.5 px-4 py-3.5">
@@ -260,7 +260,7 @@ export default function CreatePayoutForm({
                     {m.totalWithholding}
                   </p>
                   <p className="text-[14px] font-bold tabular-nums text-slate-900">
-                    {formatCurrency(totals.withholding, currency)}
+                    {formatCurrency(totals.withholding, currency, locale)}
                   </p>
                 </div>
                 <div className="flex flex-col gap-0.5 px-4 py-3.5 bg-success-50/40">
@@ -268,7 +268,7 @@ export default function CreatePayoutForm({
                     {m.totalNet}
                   </p>
                   <p className="text-[14px] font-bold tabular-nums text-success-700">
-                    {formatCurrency(totals.net, currency)}
+                    {formatCurrency(totals.net, currency, locale)}
                   </p>
                 </div>
               </div>

@@ -257,7 +257,7 @@ export default async function PortalReservationsPage({
                       )}
                       {r.commissionLockedAmount != null && (
                         <p className="text-2xs text-slate-500 mt-1 tabular-nums">
-                          {formatCurrency(r.commissionLockedAmount, currency)}
+                          {formatCurrency(r.commissionLockedAmount, currency, locale)}
                         </p>
                       )}
                     </td>
@@ -267,7 +267,7 @@ export default async function PortalReservationsPage({
                     </td>
 
                     <td className="py-3 px-4 text-2xs text-slate-500 whitespace-nowrap">
-                      {formatDate(r.createdAt)}
+                      {formatDate(r.createdAt, locale)}
                     </td>
 
                     <td className="py-3 ps-4 pe-5">

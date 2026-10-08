@@ -153,7 +153,7 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
                         {pi.chequeNumber ?? pi.referenceNumber ?? '—'}
                       </td>
                       <td className="px-4 py-3 text-slate-600">{pi.drawerBankName ?? pi.bankName ?? '—'}</td>
-                      <td className="px-4 py-3 text-slate-600">{pi.chequeDueDate ? formatDate(pi.chequeDueDate) : '—'}</td>
+                      <td className="px-4 py-3 text-slate-600">{pi.chequeDueDate ? formatDate(pi.chequeDueDate, locale) : '—'}</td>
                       <td className="px-4 py-3 text-slate-800">{d?.contract?.customer?.fullName ?? '—'}</td>
                       <td className="px-4 py-3">
                         {d?.contract ? (
@@ -165,7 +165,7 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
                         )}
                       </td>
                       <td className="px-4 py-3 tabular-nums font-semibold text-slate-800">
-                        {pi.deposits.length > 0 ? formatCurrency(amount, currency) : '—'}
+                        {pi.deposits.length > 0 ? formatCurrency(amount, currency, locale) : '—'}
                       </td>
                       <td className="px-4 py-3">
                         <Badge tone={STATUS_TONE[pi.status]} size="sm">{m.statusLabels[pi.status]}</Badge>

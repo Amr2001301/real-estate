@@ -74,7 +74,7 @@ function safeStr(val: unknown, fallback = ''): string {
 
 export default function PlanForm({ projects, initialData, mode, currency = 'SAR', locale = 'ar' }: Props) {
   const m = uiT(locale).pages.installmentsForm;
-  const symbol = currencySymbol(currency);
+  const symbol = currencySymbol(currency, locale);
   const action =
     mode === 'edit' && initialData
       ? updatePlanAction.bind(null, initialData.id)
@@ -166,7 +166,7 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
 
   const toUnitOption = (u: UnitOption): SearchOption<UnitOption> => ({
     id: u.id,
-    label: `${u.code}${u.type ? ` — ${u.type}` : ''} — ${formatCurrency(u.price, currency)}`,
+    label: `${u.code}${u.type ? ` — ${u.type}` : ''} — ${formatCurrency(u.price, currency, locale)}`,
     raw: u,
   });
   // A new plan may only target a unit that has none yet; editing keeps the
@@ -471,7 +471,7 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
                 <p className="text-slate-600 font-medium">
                   {discountType === 'PERCENTAGE' ? m.discountDisplayPct : m.discountDisplayFixed}
                 </p>
-                <p className="text-slate-900 text-lg font-bold mt-0.5">{formatCurrency(disc, currency)}</p>
+                <p className="text-slate-900 text-lg font-bold mt-0.5">{formatCurrency(disc, currency, locale)}</p>
               </div>
             )}
 
@@ -520,7 +520,7 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
                 <p className="text-brand-700 font-medium">
                   {reservationAmountType === 'PERCENTAGE' ? m.reservationDisplayPct : m.reservationDisplayFixed}
                 </p>
-                <p className="text-brand-900 text-lg font-bold mt-0.5">{formatCurrency(reservation, currency)}</p>
+                <p className="text-brand-900 text-lg font-bold mt-0.5">{formatCurrency(reservation, currency, locale)}</p>
                 {reservationAmountType === 'PERCENTAGE' && (
                   <p className="text-brand-700/80 text-xs mt-1">{m.reservationPctNote}</p>
                 )}
@@ -530,7 +530,7 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
             {netPrice > 0 && (
               <div className="rounded-xl bg-brand-50 border border-brand-100 p-3 text-sm">
                 <p className="text-brand-700 font-medium">{m.netPriceLabel}</p>
-                <p className="text-brand-900 text-lg font-bold mt-0.5">{formatCurrency(netPrice, currency)}</p>
+                <p className="text-brand-900 text-lg font-bold mt-0.5">{formatCurrency(netPrice, currency, locale)}</p>
               </div>
             )}
           </div>
@@ -586,7 +586,7 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
             {dpAmount > 0 && (
               <div className="rounded-xl bg-amber-50 border border-amber-100 p-3 text-sm">
                 <p className="text-amber-700 font-medium">{m.downPaymentDisplay}</p>
-                <p className="text-amber-900 text-lg font-bold mt-0.5">{formatCurrency(dpAmount, currency)}</p>
+                <p className="text-amber-900 text-lg font-bold mt-0.5">{formatCurrency(dpAmount, currency, locale)}</p>
               </div>
             )}
           </div>
@@ -684,17 +684,17 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
                         </td>
                         <td className="px-3 py-2 text-end tabular-nums text-slate-700">
                           {row.months > 0 && netPrice > 0
-                            ? formatCurrency(row.financedAmount, currency)
+                            ? formatCurrency(row.financedAmount, currency, locale)
                             : '—'}
                         </td>
                         <td className="px-3 py-2 text-end tabular-nums font-medium">
                           {row.months > 0 && netPrice > 0
-                            ? formatCurrency(row.monthlyInstallment, currency)
+                            ? formatCurrency(row.monthlyInstallment, currency, locale)
                             : '—'}
                         </td>
                         <td className="px-3 py-2 text-end tabular-nums text-slate-700">
                           {row.months > 0 && netPrice > 0
-                            ? formatCurrency(row.totalPayable, currency)
+                            ? formatCurrency(row.totalPayable, currency, locale)
                             : '—'}
                         </td>
                         <td className="px-3 py-2 text-end">
@@ -844,11 +844,11 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
         <section className="flex items-center gap-2 rounded-2xl border border-hairline bg-surface px-4 py-3 text-sm">
           <Calculator className="h-4 w-4 text-brand-600" />
           <span className="text-slate-500">{m.summaryNetPrice}</span>
-          <span className="font-bold text-slate-900">{formatCurrency(netPrice, currency)}</span>
+          <span className="font-bold text-slate-900">{formatCurrency(netPrice, currency, locale)}</span>
           <span className="text-slate-300 mx-1">|</span>
           <span className="text-slate-500">{m.summaryRemaining}</span>
           <span className="font-bold text-slate-900">
-            {formatCurrency(Math.max(0, netPrice - reservation - dpAmount), currency)}
+            {formatCurrency(Math.max(0, netPrice - reservation - dpAmount), currency, locale)}
           </span>
         </section>
       )}

@@ -1,6 +1,8 @@
 'use client';
 import { cn } from '@/lib/cn';
 
+import { intlLocale } from '@/lib/format';
+import type { Locale } from '@/lib/locale';
 export interface FunnelStage {
   label: string;
   value: number;
@@ -40,11 +42,13 @@ export function BrokerFunnelChart({
   overallConv,
   overallLabel = 'فرصة → دفعة مُنجزة',
   noDataLabel = 'لا توجد بيانات',
+  locale = 'ar',
 }: {
   stages: FunnelStage[];
   overallConv: number | null;
   overallLabel?: string;
   noDataLabel?: string;
+  locale?: Locale;
 }) {
   if (!stages.length) {
     return (
@@ -78,7 +82,7 @@ export function BrokerFunnelChart({
                 className="text-[20px] font-black tabular-nums leading-none shrink-0 ps-1"
                 style={{ color: hex }}
               >
-                {stage.value.toLocaleString('ar-EG')}
+                {stage.value.toLocaleString(intlLocale(locale))}
               </span>
 
               {/* Label + progress */}

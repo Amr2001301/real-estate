@@ -182,7 +182,7 @@ export default async function MyCompensationPage() {
         : Promise.resolve({ data: undefined, error: m.noSession as string }),
       getReportsCurrency(),
     ]);
-  const symbol = currencySymbol(currency);
+  const symbol = currencySymbol(currency, locale);
 
   function periodLabel(period: string): string {
     const [y, mo] = period.split('-');
@@ -296,7 +296,7 @@ export default async function MyCompensationPage() {
         variant="compact"
         metrics={[
           { label: m.kpiOwed,     value: fmtAmt(owedTotal, symbol),    icon: <Hash />,         tone: 'brand',   sub: owedTotal === 0 ? m.kpiOwedSubNone : m.kpiOwedSubHas    },
-          { label: m.kpiPaid,     value: fmtAmt(paidTotal, symbol),    icon: <Banknote />,     tone: 'success', sub: lastPaidAt ? m.kpiPaidSubLast(formatDate(lastPaidAt)) : (paidTotal === 0 ? m.kpiPaidSubNone : undefined) },
+          { label: m.kpiPaid,     value: fmtAmt(paidTotal, symbol),    icon: <Banknote />,     tone: 'success', sub: lastPaidAt ? m.kpiPaidSubLast(formatDate(lastPaidAt, locale)) : (paidTotal === 0 ? m.kpiPaidSubNone : undefined) },
           { label: m.kpiApproved, value: fmtAmt(approvedTotal, symbol), icon: <CheckCircle2 />, tone: 'info',    sub: approvedTotal === 0 ? m.kpiApprovedSubNone : m.kpiApprovedSubHas },
           { label: m.kpiPending,  value: fmtAmt(pendingTotal, symbol),  icon: <Clock />,        tone: 'warning', sub: pendingTotal === 0 ? m.kpiPendingSubNone : m.kpiPendingSubHas },
         ]}
@@ -356,11 +356,11 @@ export default async function MyCompensationPage() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className="text-xs text-slate-500 tabular-nums">
-                        {e.paidAt ? formatDate(e.paidAt) : <span className="text-slate-300">—</span>}
+                        {e.paidAt ? formatDate(e.paidAt, locale) : <span className="text-slate-300">—</span>}
                       </span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-xs text-slate-400 tabular-nums">{formatDate(e.createdAt)}</span>
+                      <span className="text-xs text-slate-400 tabular-nums">{formatDate(e.createdAt, locale)}</span>
                     </td>
                   </tr>
                 ))}

@@ -124,7 +124,7 @@ export default async function PortalPayoutsPage({
                 <div className="w-px h-4 bg-hairline" />
                 <span>
                   {t.pageNet}{' '}
-                  <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(pageNet, currency)}</span>
+                  <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(pageNet, currency, locale)}</span>
                 </span>
               </>
             )}
@@ -133,7 +133,7 @@ export default async function PortalPayoutsPage({
                 <div className="w-px h-4 bg-hairline" />
                 <span>
                   {t.paidOf}{' '}
-                  <span className="font-semibold text-success-700 tabular-nums">{formatCurrency(paidNet, currency)}</span>
+                  <span className="font-semibold text-success-700 tabular-nums">{formatCurrency(paidNet, currency, locale)}</span>
                 </span>
               </>
             )}
@@ -204,7 +204,7 @@ export default async function PortalPayoutsPage({
                               : 'text-slate-900',
                         )}
                       >
-                        {formatCurrency(p.totalNet, currency)}
+                        {formatCurrency(p.totalNet, currency, locale)}
                       </p>
                       {isPaid && (
                         <p className="text-2xs text-success-600 mt-0.5 flex items-center gap-0.5 font-medium">
@@ -234,7 +234,7 @@ export default async function PortalPayoutsPage({
                       </p>
                       <p className="text-2xs text-slate-500 mt-0.5 whitespace-nowrap">
                         {p.paidAt ? (
-                          formatDate(p.paidAt)
+                          formatDate(p.paidAt, locale)
                         ) : (
                           <span className="text-slate-400 inline-flex items-center gap-1">
                             <Clock className="h-3 w-3" />

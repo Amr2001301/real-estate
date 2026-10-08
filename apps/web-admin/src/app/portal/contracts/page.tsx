@@ -186,7 +186,7 @@ export default async function PortalContractsPage({
                 <div className="w-px h-4 bg-hairline" />
                 <span>
                   {t.pageValue}{' '}
-                  <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(pageValue, currency)}</span>
+                  <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(pageValue, currency, locale)}</span>
                 </span>
               </>
             )}
@@ -303,7 +303,7 @@ export default async function PortalContractsPage({
                               </div>
                               {amt != null && (
                                 <p className="text-2xs text-slate-500 mt-1 tabular-nums">
-                                  {formatCurrency(amt, currency)}
+                                  {formatCurrency(amt, currency, locale)}
                                 </p>
                               )}
                             </>
@@ -317,7 +317,7 @@ export default async function PortalContractsPage({
                                 {t.fixedAmount}
                               </div>
                               <p className="text-2xs text-slate-500 mt-1 tabular-nums">
-                                {formatCurrency(amt, currency)}
+                                {formatCurrency(amt, currency, locale)}
                               </p>
                             </>
                           );
@@ -327,7 +327,7 @@ export default async function PortalContractsPage({
                     </td>
 
                     <td className="py-3 px-4 tabular-nums font-semibold text-slate-900 text-xs">
-                      {formatCurrency(c.totalAmount, currency)}
+                      {formatCurrency(c.totalAmount, currency, locale)}
                     </td>
 
                     <td className="py-3 px-4">
@@ -335,7 +335,7 @@ export default async function PortalContractsPage({
                     </td>
 
                     <td className="py-3 px-4 text-2xs text-slate-500 whitespace-nowrap">
-                      {formatDate(c.createdAt)}
+                      {formatDate(c.createdAt, locale)}
                     </td>
 
                     <td className="py-3 ps-4 pe-5">

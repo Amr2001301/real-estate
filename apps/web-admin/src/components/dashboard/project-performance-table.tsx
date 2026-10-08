@@ -1,6 +1,7 @@
 import { Building2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { formatCompact } from '@/lib/format';
+import type { Locale } from '@/lib/locale';
 
 export interface ProjectRow {
   id:              string;
@@ -17,9 +18,10 @@ interface Props {
   projects:        ProjectRow[];
   className?:      string;
   currencySymbol?: string;
+  locale?:         Locale;
 }
 
-export function ProjectPerformanceTable({ projects, className, currencySymbol = 'ر.س' }: Props) {
+export function ProjectPerformanceTable({ projects, className, currencySymbol = 'ر.س', locale = 'ar' }: Props) {
   if (projects.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
@@ -50,7 +52,7 @@ export function ProjectPerformanceTable({ projects, className, currencySymbol = 
               <div className="flex items-center justify-between gap-2 mb-1">
                 <p className="text-xs font-bold text-slate-900 truncate leading-none">{p.name}</p>
                 <span className="text-xs font-extrabold text-brand-700 tabular-nums shrink-0 leading-none">
-                  {formatCompact(p.contractValue, currencySymbol)}
+                  {formatCompact(p.contractValue, currencySymbol, locale)}
                 </span>
               </div>
 

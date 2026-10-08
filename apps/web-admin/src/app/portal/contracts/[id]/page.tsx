@@ -226,14 +226,14 @@ export default async function PortalContractDetailPage({
               <MetricGrid cols={3}>
                 <MetricTile
                   label={t.contractTotal}
-                  value={formatCurrency(contract.totalAmount, currency)}
+                  value={formatCurrency(contract.totalAmount, currency, locale)}
                   variant="accent"
                   size="lg"
                 />
-                <MetricTile label={t.downPayment} value={formatCurrency(contract.downPayment, currency)} size="md" />
+                <MetricTile label={t.downPayment} value={formatCurrency(contract.downPayment, currency, locale)} size="md" />
                 <MetricTile
                   label={t.balance}
-                  value={formatCurrency(balance, currency)}
+                  value={formatCurrency(balance, currency, locale)}
                   variant={balance > 0 ? 'default' : 'highlight'}
                   size="md"
                 />
@@ -257,7 +257,7 @@ export default async function PortalContractDetailPage({
                     label={m.common.lockedAmount}
                     value={
                       contract.reservation!.commissionLockedAmount != null
-                        ? formatCurrency(contract.reservation!.commissionLockedAmount, currency)
+                        ? formatCurrency(contract.reservation!.commissionLockedAmount, currency, locale)
                         : '—'
                     }
                   />
@@ -282,8 +282,8 @@ export default async function PortalContractDetailPage({
               <PremiumSectionCard title={t.installmentTitle} icon={<CalendarRange className="h-4 w-4" />}>
                 <MetricGrid cols={3}>
                   <MetricTile label={t.duration} value={m.common.monthsFn(contract.installmentPlan.totalMonths)} />
-                  <MetricTile label={t.monthly} value={formatCurrency(contract.installmentPlan.monthlyAmount, currency)} size="md" />
-                  <MetricTile label={t.firstInstallment} value={formatDate(contract.installmentPlan.startsAt)} />
+                  <MetricTile label={t.monthly} value={formatCurrency(contract.installmentPlan.monthlyAmount, currency, locale)} size="md" />
+                  <MetricTile label={t.firstInstallment} value={formatDate(contract.installmentPlan.startsAt, locale)} />
                 </MetricGrid>
               </PremiumSectionCard>
             )}
@@ -349,11 +349,11 @@ export default async function PortalContractDetailPage({
                   )}
                 </InfoRow>
                 <InfoRow label={m.common.createdAt} icon={<CalendarRange className="h-3.5 w-3.5" />}>
-                  <span className="text-slate-700 text-xs tabular-nums">{formatDate(contract.createdAt)}</span>
+                  <span className="text-slate-700 text-xs tabular-nums">{formatDate(contract.createdAt, locale)}</span>
                 </InfoRow>
                 {isSigned && (
                   <InfoRow label={t.signedAt} icon={<CheckCircle2 className="h-3.5 w-3.5" />}>
-                    <span className="text-emerald-700 text-xs font-semibold tabular-nums">{formatDate(contract.signedAt!)}</span>
+                    <span className="text-emerald-700 text-xs font-semibold tabular-nums">{formatDate(contract.signedAt!, locale)}</span>
                   </InfoRow>
                 )}
                 {contract.reservation && (

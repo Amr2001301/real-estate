@@ -143,9 +143,9 @@ export default async function BrokerPerformancePage({
           { label: m.kpiLeads,            value: summary.leadsSubmitted,                  icon: <UserPlus />,     tone: 'brand'   },
           { label: m.kpiReservations,     value: summary.reservationsCreated,             icon: <BookmarkCheck />, tone: 'info'    },
           { label: m.kpiContractsSigned,  value: summary.contractsSigned,                 icon: <FileText />,     tone: 'purple'  },
-          { label: m.kpiSalesGross,       value: formatCurrency(summary.salesGross, currency),     icon: <Banknote />,     tone: 'success', valueSize: 'compact' },
-          { label: m.kpiCommissionsNet,   value: formatCurrency(summary.commissionsNet, currency),  icon: <BadgePercent />, tone: 'warning', valueSize: 'compact' },
-          { label: m.kpiPaid,             value: formatCurrency(summary.payoutsTotalNet, currency), icon: <Wallet />,       tone: 'success', valueSize: 'compact' },
+          { label: m.kpiSalesGross,       value: formatCurrency(summary.salesGross, currency, locale),     icon: <Banknote />,     tone: 'success', valueSize: 'compact' },
+          { label: m.kpiCommissionsNet,   value: formatCurrency(summary.commissionsNet, currency, locale),  icon: <BadgePercent />, tone: 'warning', valueSize: 'compact' },
+          { label: m.kpiPaid,             value: formatCurrency(summary.payoutsTotalNet, currency, locale), icon: <Wallet />,       tone: 'success', valueSize: 'compact' },
         ]}
       />
 
@@ -223,8 +223,8 @@ export default async function BrokerPerformancePage({
                       {p.city && <p className="text-2xs text-slate-500 mt-0.5">{p.city}</p>}
                     </td>
                     <td className="py-3 px-4 tabular-nums">{p.contractsSigned} / {p.contracts}</td>
-                    <td className="py-3 px-4 tabular-nums">{formatCurrency(p.salesGross, currency)}</td>
-                    <td className="py-3 px-4 tabular-nums font-semibold">{formatCurrency(p.commissionNet, currency)}</td>
+                    <td className="py-3 px-4 tabular-nums">{formatCurrency(p.salesGross, currency, locale)}</td>
+                    <td className="py-3 px-4 tabular-nums font-semibold">{formatCurrency(p.commissionNet, currency, locale)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -263,7 +263,7 @@ export default async function BrokerPerformancePage({
                     </td>
                     <td className="py-3 px-4 tabular-nums">{a.leadsSubmitted}</td>
                     <td className="py-3 px-4 tabular-nums">{a.reservations}</td>
-                    <td className="py-3 px-4 tabular-nums font-semibold">{formatCurrency(a.commissionNet, currency)}</td>
+                    <td className="py-3 px-4 tabular-nums font-semibold">{formatCurrency(a.commissionNet, currency, locale)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -291,7 +291,7 @@ export default async function BrokerPerformancePage({
                     {l.fullName}
                   </Link>
                   <p className="text-2xs text-slate-500 mt-0.5">
-                    {l.projectInterest ? tx(l.projectInterest.name) : '—'} • {formatDate(l.createdAt)}
+                    {l.projectInterest ? tx(l.projectInterest.name) : '—'} • {formatDate(l.createdAt, locale)}
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
@@ -345,12 +345,12 @@ export default async function BrokerPerformancePage({
                   </Link>
                   <p className="text-2xs text-slate-500 mt-0.5">
                     {c.signedAt
-                      ? m.contractSigned(formatDate(c.signedAt) ?? '—')
-                      : m.contractPending(formatDate(c.createdAt) ?? '—')}
+                      ? m.contractSigned(formatDate(c.signedAt, locale) ?? '—')
+                      : m.contractPending(formatDate(c.createdAt, locale) ?? '—')}
                   </p>
                 </div>
                 <span className="text-xs font-semibold tabular-nums">
-                  {formatCurrency(c.totalAmount, currency)}
+                  {formatCurrency(c.totalAmount, currency, locale)}
                 </span>
               </li>
             ))}
@@ -376,11 +376,11 @@ export default async function BrokerPerformancePage({
                   <Link href={`/dashboard/broker-commissions/${c.id}` as never} className="text-xs font-mono hover:text-brand-700" dir="ltr">
                     {c.commissionNumber}
                   </Link>
-                  <p className="text-2xs text-slate-500 mt-0.5">{formatDate(c.earnedAt)}</p>
+                  <p className="text-2xs text-slate-500 mt-0.5">{formatDate(c.earnedAt, locale)}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <BrokerCommissionStatusBadge status={c.status} />
-                  <span className="text-xs font-semibold tabular-nums">{formatCurrency(c.netAmount, currency)}</span>
+                  <span className="text-xs font-semibold tabular-nums">{formatCurrency(c.netAmount, currency, locale)}</span>
                 </div>
               </li>
             ))}
@@ -390,11 +390,11 @@ export default async function BrokerPerformancePage({
                   <Link href={`/dashboard/broker-payouts/${p.id}` as never} className="text-xs font-mono hover:text-brand-700" dir="ltr">
                     {p.payoutNumber}
                   </Link>
-                  <p className="text-2xs text-slate-500 mt-0.5">{p.period ?? formatDate(p.createdAt)}</p>
+                  <p className="text-2xs text-slate-500 mt-0.5">{p.period ?? formatDate(p.createdAt, locale)}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <BrokerPayoutStatusBadge status={p.status} />
-                  <span className="text-xs font-semibold tabular-nums">{formatCurrency(p.totalNet, currency)}</span>
+                  <span className="text-xs font-semibold tabular-nums">{formatCurrency(p.totalNet, currency, locale)}</span>
                 </div>
               </li>
             ))}

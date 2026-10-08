@@ -39,7 +39,7 @@ import {
   PremiumSectionCard,
   PremiumEmptyState,
 } from '@/components/premium';
-import { getLocale } from '@/lib/locale';
+import { getLocale, type Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
@@ -148,7 +148,7 @@ export default async function InventoryPage({
         metrics={[
           {
             label: m.kpi.totalValue,
-            value: formatCurrency(inventoryValue, currency),
+            value: formatCurrency(inventoryValue, currency, locale),
             icon: <CircleDollarSign />,
             tone: 'brand',
             primary: true,
@@ -167,7 +167,7 @@ export default async function InventoryPage({
           },
           {
             label: m.kpi.avgPrice,
-            value: avgPrice > 0 ? formatCurrency(avgPrice, currency) : '—',
+            value: avgPrice > 0 ? formatCurrency(avgPrice, currency, locale) : '—',
             icon: <Calculator />,
             tone: 'success',
           },
@@ -302,7 +302,7 @@ export default async function InventoryPage({
       ) : (
         <div className="flex flex-col gap-4">
           {projectBuckets.map((proj) => (
-            <ProjectMatrixCard key={proj.id} proj={proj} unitsHref={unitsHref} currency={currency} matrixLabels={m.matrix} />
+            <ProjectMatrixCard key={proj.id} proj={proj} unitsHref={unitsHref} currency={currency} matrixLabels={m.matrix} locale={locale} />
           ))}
         </div>
       )}
@@ -409,11 +409,13 @@ function ProjectMatrixCard({
   unitsHref,
   currency,
   matrixLabels,
+  locale = 'ar',
 }: {
   proj: InventoryMatrixProject;
   unitsHref: (overrides: Record<string, string | undefined>) => string;
   currency: string;
   matrixLabels: MatrixLabels;
+  locale?: Locale;
 }) {
   const phases = [...proj.phases].sort((a, b) => a.name.localeCompare(b.name, 'ar'));
   const av = proj.total > 0 ? (proj.available / proj.total) * 100 : 0;
@@ -445,7 +447,7 @@ function ProjectMatrixCard({
         <div className="shrink-0 flex flex-col items-end gap-1.5">
           {proj.totalValue > 0 && (
             <p dir="rtl" className="text-[14px] font-bold text-slate-800 tabular-nums leading-none">
-              {formatCurrency(proj.totalValue, currency)}
+              {formatCurrency(proj.totalValue, currency, locale)}
             </p>
           )}
           <div className="flex items-center gap-3">
@@ -515,7 +517,7 @@ function ProjectMatrixCard({
           <tbody>
             {phases.map((ph) => {
               const buildings = [...ph.buildings].sort((a, b) => a.name.localeCompare(b.name, 'ar'));
-              return <PhaseRows key={ph.id} ph={ph} buildings={buildings} currency={currency} phaseBadgeLabel={matrixLabels.phaseBadge} />;
+              return <PhaseRows key={ph.id} ph={ph} buildings={buildings} currency={currency} phaseBadgeLabel={matrixLabels.phaseBadge} locale={locale} />;
             })}
           </tbody>
         </table>
@@ -526,7 +528,7 @@ function ProjectMatrixCard({
 
 // ── PhaseRows ─────────────────────────────────────────────────────────────────
 
-function PhaseRows({ ph, buildings, currency, phaseBadgeLabel }: { ph: InventoryMatrixPhase; buildings: InventoryMatrixBuilding[]; currency: string; phaseBadgeLabel: string }) {
+function PhaseRows({ ph, buildings, currency, phaseBadgeLabel, locale = 'ar' }: { ph: InventoryMatrixPhase; buildings: InventoryMatrixBuilding[]; currency: string; phaseBadgeLabel: string; locale?: Locale }) {
   return (
     <>
       <tr className="border-t border-hairline bg-canvas/60">
@@ -549,7 +551,7 @@ function PhaseRows({ ph, buildings, currency, phaseBadgeLabel }: { ph: Inventory
         <td className="py-3 px-3 text-center tabular-nums text-[13px] font-semibold text-slate-500">
           {ph.sold > 0 ? ph.sold : <span className="text-slate-300 font-normal">—</span>}
         </td>
-        <td className="py-3 px-3 tabular-nums text-[12px] text-slate-600 whitespace-nowrap">{formatCurrency(ph.totalValue, currency)}</td>
+        <td className="py-3 px-3 tabular-nums text-[12px] text-slate-600 whitespace-nowrap">{formatCurrency(ph.totalValue, currency, locale)}</td>
         <td className="py-3 ps-3 pe-6">
           <RowAvailBar available={ph.available} reserved={ph.reserved} sold={ph.sold} total={ph.total} />
         </td>
@@ -583,7 +585,7 @@ function PhaseRows({ ph, buildings, currency, phaseBadgeLabel }: { ph: Inventory
               )
               : <span className="text-slate-300 text-[12px]">—</span>}
           </td>
-          <td className="py-2.5 px-3 tabular-nums text-[11px] text-slate-400 whitespace-nowrap">{formatCurrency(b.totalValue, currency)}</td>
+          <td className="py-2.5 px-3 tabular-nums text-[11px] text-slate-400 whitespace-nowrap">{formatCurrency(b.totalValue, currency, locale)}</td>
           <td className="py-2.5 ps-3 pe-6 min-w-[140px]">
             <RowAvailBar available={b.available} reserved={b.reserved} sold={b.sold} total={b.total} />
           </td>

@@ -8,7 +8,7 @@ import {
 import { api, safe } from '@/lib/api';
 import { staffOptions } from '@/lib/options';
 import type { Paged } from '@/lib/types';
-import { formatCurrency, formatDate } from '@/lib/format';
+import { formatCurrency, formatDate, intlLocale } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { Badge } from '@/components/ui/badge';
@@ -143,7 +143,7 @@ export default async function BonusPage({
     getReportsCurrency(),
   ]);
   const m = uiT(locale).bonusPage;
-  const symbol = currencySymbol(currency);
+  const symbol = currencySymbol(currency, locale);
 
   const STATUS_LABEL: Record<EntryStatus, string> = {
     PENDING: m.statusPending,
@@ -193,7 +193,7 @@ export default async function BonusPage({
   })();
 
   const hasFilters = !!(sp.salesId || sp.status || sp.period);
-  const entryCount = entries.length === 0 ? '0' : entries.length.toLocaleString('ar-EG');
+  const entryCount = entries.length === 0 ? '0' : entries.length.toLocaleString(intlLocale(locale));
 
   return (
     <div className="space-y-5">
@@ -229,9 +229,9 @@ export default async function BonusPage({
         variant="compact"
         cols={4}
         metrics={[
-          { label: m.metricPending,  value: pendingTotal === 0 ? `0 ${symbol}` : formatCurrency(pendingTotal, currency),   icon: <Clock />,        tone: 'warning', valueSize: 'compact' },
-          { label: m.metricApproved, value: approvedTotal === 0 ? `0 ${symbol}` : formatCurrency(approvedTotal, currency), icon: <CheckCircle2 />, tone: 'info',    valueSize: 'compact' },
-          { label: m.metricPaid,     value: paidTotal === 0 ? `0 ${symbol}` : formatCurrency(paidTotal, currency),         icon: <Banknote />,     tone: 'success', valueSize: 'compact' },
+          { label: m.metricPending,  value: pendingTotal === 0 ? `0 ${symbol}` : formatCurrency(pendingTotal, currency, locale),   icon: <Clock />,        tone: 'warning', valueSize: 'compact' },
+          { label: m.metricApproved, value: approvedTotal === 0 ? `0 ${symbol}` : formatCurrency(approvedTotal, currency, locale), icon: <CheckCircle2 />, tone: 'info',    valueSize: 'compact' },
+          { label: m.metricPaid,     value: paidTotal === 0 ? `0 ${symbol}` : formatCurrency(paidTotal, currency, locale),         icon: <Banknote />,     tone: 'success', valueSize: 'compact' },
           { label: m.metricCount,    value: entryCount,                                                                    icon: <Hash />,         tone: 'brand'   },
         ]}
       />
@@ -489,7 +489,7 @@ export default async function BonusPage({
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap">
                       <span className="text-[13px] font-bold tabular-nums text-slate-900">
-                        {formatCurrency(e.amount, currency)}
+                        {formatCurrency(e.amount, currency, locale)}
                       </span>
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap">
@@ -499,7 +499,7 @@ export default async function BonusPage({
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap">
                       <span className="text-[12px] text-slate-400 tabular-nums">
-                        {e.paidAt ? formatDate(e.paidAt) : '—'}
+                        {e.paidAt ? formatDate(e.paidAt, locale) : '—'}
                       </span>
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap">

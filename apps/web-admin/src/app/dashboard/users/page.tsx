@@ -233,7 +233,7 @@ export default async function UsersPage({
           {
             label: m.kpi.adminRoles,
             value: adminRoles,
-            sub: lastLogin ? `${m.kpi.lastLoginPrefix} ${formatDate(lastLogin)}` : undefined,
+            sub: lastLogin ? `${m.kpi.lastLoginPrefix} ${formatDate(lastLogin, locale)}` : undefined,
             icon: <Shield />,
             tone: 'brand',
           },
@@ -486,12 +486,12 @@ export default async function UsersPage({
 
                     {/* ── Joined ──────────────────────────────────── */}
                     <td className="py-3 px-4 text-xs text-slate-500 whitespace-nowrap tabular-nums">
-                      {formatDate(u.createdAt)}
+                      {formatDate(u.createdAt, locale)}
                     </td>
 
                     {/* ── Last login ──────────────────────────────── */}
                     <td className="py-3 px-4 text-xs text-slate-500 whitespace-nowrap tabular-nums">
-                      {u.lastLoginAt ? formatDate(u.lastLoginAt) : <span className="text-slate-300">—</span>}
+                      {u.lastLoginAt ? formatDate(u.lastLoginAt, locale) : <span className="text-slate-300">—</span>}
                     </td>
 
                     {/* ── Status badge ────────────────────────────── */}

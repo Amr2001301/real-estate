@@ -33,7 +33,7 @@ export default async function NewAdminBrokerReservationPage({
   ]);
   const m = uiT(locale);
   const n = m.pages.brokerReservationsNew;
-  const symbol = currencySymbol(currency);
+  const symbol = currencySymbol(currency, locale);
 
   const brokers = (brokersRes.data?.data ?? []).filter((b) => b.status === 'ACTIVE');
   const projects = projectsRes.data?.data ?? [];

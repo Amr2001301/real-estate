@@ -3,7 +3,7 @@ import { FileText, Eye, Briefcase, CheckCircle2, ArrowRightLeft, Phone, AlertCir
 import { api, safe } from '@/lib/api';
 import { projectOptions, brokerOptions, staffOptions } from '@/lib/options';
 import type { AdminBrokerContract, Paged } from '@/lib/types';
-import { tx, formatDate, formatCurrency } from '@/lib/format';
+import { tx, formatDate, formatCurrency, intlLocale } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
@@ -164,7 +164,7 @@ export default async function AdminBrokerContractsPage({
           },
           {
             label: m.kpiTotalValue,
-            value: totalValue > 0 ? formatCurrency(totalValue, currency) : '—',
+            value: totalValue > 0 ? formatCurrency(totalValue, currency, locale) : '—',
             icon: <FileText />,
             tone: 'neutral',
             sub: m.kpiThisPage,
@@ -278,11 +278,11 @@ export default async function AdminBrokerContractsPage({
         trailing={
           totalCommission > 0 ? (
             <span className="text-xs text-slate-500 tabular-nums whitespace-nowrap" dir="ltr">
-              {m.tableTrailingCommission}{formatCurrency(totalCommission, currency)}
+              {m.tableTrailingCommission}{formatCurrency(totalCommission, currency, locale)}
             </span>
           ) : (
             <span className="text-xs text-slate-400 tabular-nums">
-              {totalContracts.toLocaleString('ar-EG')} {m.tableTrailingCount}
+              {totalContracts.toLocaleString(intlLocale(locale))} {m.tableTrailingCount}
             </span>
           )
         }
@@ -400,7 +400,7 @@ export default async function AdminBrokerContractsPage({
                     {/* Contract value */}
                     <td className="py-3.5 px-4">
                       <p className="text-sm font-semibold text-slate-900 tabular-nums whitespace-nowrap" dir="ltr">
-                        {formatCurrency(c.totalAmount, currency)}
+                        {formatCurrency(c.totalAmount, currency, locale)}
                       </p>
                     </td>
 
@@ -445,7 +445,7 @@ export default async function AdminBrokerContractsPage({
                               </p>
                               {amt != null && (
                                 <p className="text-2xs text-slate-400 tabular-nums mt-0.5 whitespace-nowrap" dir="ltr">
-                                  {formatCurrency(amt, currency)}
+                                  {formatCurrency(amt, currency, locale)}
                                 </p>
                               )}
                             </>
@@ -458,7 +458,7 @@ export default async function AdminBrokerContractsPage({
                                 {m.commissionFixed}
                               </span>
                               <p className="text-2xs text-slate-400 tabular-nums mt-0.5 whitespace-nowrap" dir="ltr">
-                                {formatCurrency(amt, currency)}
+                                {formatCurrency(amt, currency, locale)}
                               </p>
                             </>
                           );
@@ -473,7 +473,7 @@ export default async function AdminBrokerContractsPage({
 
                     {/* Date */}
                     <td className="py-3.5 px-4 text-2xs text-slate-400 whitespace-nowrap">
-                      {formatDate(c.createdAt)}
+                      {formatDate(c.createdAt, locale)}
                     </td>
 
                     {/* Action */}

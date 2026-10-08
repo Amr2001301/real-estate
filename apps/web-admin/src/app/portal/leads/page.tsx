@@ -314,7 +314,7 @@ export default async function PortalLeadsPage({
                     </td>
 
                     <td className="py-3 px-4 text-2xs text-slate-500 whitespace-nowrap">
-                      {formatDate(l.brokerSubmittedAt ?? l.createdAt)}
+                      {formatDate(l.brokerSubmittedAt ?? l.createdAt, locale)}
                     </td>
 
                     <td className="py-3 ps-4 pe-5">

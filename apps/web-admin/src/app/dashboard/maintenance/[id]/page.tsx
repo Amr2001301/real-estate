@@ -263,7 +263,7 @@ export default async function MaintenanceDetailPage({
                         'text-[12px] font-semibold tabular-nums inline-flex items-center gap-1',
                         overdue ? 'text-danger-600' : 'text-slate-900',
                       )}>
-                        {formatDate(req.dueAt)}
+                        {formatDate(req.dueAt, locale)}
                         {overdue && (
                           <span className="rounded-full bg-danger-50 text-danger-700 text-[10px] font-semibold px-1.5 py-0.5">
                             {m.overdueLabel}
@@ -306,19 +306,19 @@ export default async function MaintenanceDetailPage({
 
                 {/* Dates — full-width rows, no orphan grid issues */}
                 <div className="rounded-xl border border-hairline overflow-hidden divide-y divide-hairline">
-                  <DateRow label={m.fields.createdAt} value={formatDateTime(req.createdAt)} />
-                  <DateRow label={m.fields.updatedAt} value={formatDateTime(req.updatedAt)} />
+                  <DateRow label={m.fields.createdAt} value={formatDateTime(req.createdAt, locale)} />
+                  <DateRow label={m.fields.updatedAt} value={formatDateTime(req.updatedAt, locale)} />
                   {req.approvedAt && (
-                    <DateRow label={m.fields.approvedAt} value={formatDateTime(req.approvedAt)} valueCls="text-success-700" />
+                    <DateRow label={m.fields.approvedAt} value={formatDateTime(req.approvedAt, locale)} valueCls="text-success-700" />
                   )}
                   {req.rejectedAt && (
-                    <DateRow label={m.fields.rejectedAt} value={formatDateTime(req.rejectedAt)} valueCls="text-danger-700" />
+                    <DateRow label={m.fields.rejectedAt} value={formatDateTime(req.rejectedAt, locale)} valueCls="text-danger-700" />
                   )}
                   {req.resolvedAt && (
-                    <DateRow label={m.fields.resolvedAt} value={formatDateTime(req.resolvedAt)} valueCls="text-success-700" />
+                    <DateRow label={m.fields.resolvedAt} value={formatDateTime(req.resolvedAt, locale)} valueCls="text-success-700" />
                   )}
                   {req.closedAt && (
-                    <DateRow label={m.fields.closedAt} value={formatDateTime(req.closedAt)} />
+                    <DateRow label={m.fields.closedAt} value={formatDateTime(req.closedAt, locale)} />
                   )}
                 </div>
               </div>
@@ -361,7 +361,7 @@ export default async function MaintenanceDetailPage({
                   <p className="text-[12px] text-slate-500">
                     {m.review.approvedMsg(
                       req.maxHandlingSlaMinutesSnapshot != null
-                        ? maintenanceSlaLabel(req.maxHandlingSlaMinutesSnapshot) ?? undefined
+                        ? maintenanceSlaLabel(req.maxHandlingSlaMinutesSnapshot, locale) ?? undefined
                         : undefined
                     )}
                   </p>
@@ -401,7 +401,7 @@ export default async function MaintenanceDetailPage({
                       'text-[12px] font-medium tabular-nums',
                       req.customerConfirmedResolutionAt ? 'text-success-700' : 'text-slate-400',
                     )}>
-                      {req.customerConfirmedResolutionAt ? formatDateTime(req.customerConfirmedResolutionAt) : m.fields.notConfirmedYet}
+                      {req.customerConfirmedResolutionAt ? formatDateTime(req.customerConfirmedResolutionAt, locale) : m.fields.notConfirmedYet}
                     </span>
                   </Field>
                   <Field label={m.fields.supervisorConfirmation}>
@@ -409,7 +409,7 @@ export default async function MaintenanceDetailPage({
                       'text-[12px] font-medium tabular-nums',
                       req.supervisorConfirmedResolutionAt ? 'text-success-700' : 'text-slate-400',
                     )}>
-                      {req.supervisorConfirmedResolutionAt ? formatDateTime(req.supervisorConfirmedResolutionAt) : m.fields.notConfirmedYet}
+                      {req.supervisorConfirmedResolutionAt ? formatDateTime(req.supervisorConfirmedResolutionAt, locale) : m.fields.notConfirmedYet}
                     </span>
                   </Field>
                   <Field label={m.fields.complaintAt}>
@@ -417,7 +417,7 @@ export default async function MaintenanceDetailPage({
                       'text-[12px] font-medium tabular-nums',
                       req.complaintAt ? 'text-warning-700' : 'text-slate-400',
                     )}>
-                      {req.complaintAt ? formatDateTime(req.complaintAt) : '—'}
+                      {req.complaintAt ? formatDateTime(req.complaintAt, locale) : '—'}
                     </span>
                   </Field>
                   <Field label={m.fields.unresolvedAt}>
@@ -425,7 +425,7 @@ export default async function MaintenanceDetailPage({
                       'text-[12px] font-medium tabular-nums',
                       req.unresolvedAt ? 'text-danger-700' : 'text-slate-400',
                     )}>
-                      {req.unresolvedAt ? formatDateTime(req.unresolvedAt) : '—'}
+                      {req.unresolvedAt ? formatDateTime(req.unresolvedAt, locale) : '—'}
                     </span>
                   </Field>
                 </div>
@@ -441,7 +441,7 @@ export default async function MaintenanceDetailPage({
                         )}
                         {req.customerRatingSubmittedAt && (
                           <p className="text-[11px] text-slate-400">
-                            {m.fields.ratedAt(formatDateTime(req.customerRatingSubmittedAt))}
+                            {m.fields.ratedAt(formatDateTime(req.customerRatingSubmittedAt, locale))}
                           </p>
                         )}
                       </div>
@@ -477,13 +477,13 @@ export default async function MaintenanceDetailPage({
                             <MaintenancePriorityBadge priority={it.categoryPrioritySnapshot} />
                           </td>
                           <td className="px-5 py-3 text-[12px] text-slate-600">
-                            {maintenanceSlaLabel(it.handlingSlaMinutesSnapshot) ?? '—'}
+                            {maintenanceSlaLabel(it.handlingSlaMinutesSnapshot, locale) ?? '—'}
                           </td>
                           <td className="px-5 py-3">
                             <WarrantyStatusBadge status={it.warrantyStatusSnapshot} />
                           </td>
                           <td className="px-5 py-3 text-[12px] text-slate-600 tabular-nums">
-                            {it.warrantyEndSnapshot ? formatDate(it.warrantyEndSnapshot) : '—'}
+                            {it.warrantyEndSnapshot ? formatDate(it.warrantyEndSnapshot, locale) : '—'}
                           </td>
                         </tr>
                       ))}

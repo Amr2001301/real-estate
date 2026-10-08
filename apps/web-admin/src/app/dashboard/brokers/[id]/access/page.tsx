@@ -264,13 +264,13 @@ export default async function BrokerAccessPage({
                           <td className="px-5 py-3.5">
                             <span className="text-[11px] text-slate-500 tabular-nums" dir="ltr">
                               {pa.startsAt || pa.endsAt
-                                ? `${formatDate(pa.startsAt) ?? '—'} → ${formatDate(pa.endsAt) ?? '—'}`
+                                ? `${formatDate(pa.startsAt, locale) ?? '—'} → ${formatDate(pa.endsAt, locale) ?? '—'}`
                                 : '—'}
                             </span>
                           </td>
                           <td className="px-5 py-3.5">
                             <span className="text-[11px] text-slate-400 tabular-nums">
-                              {formatDate(pa.createdAt)}
+                              {formatDate(pa.createdAt, locale)}
                             </span>
                           </td>
                           <td className="px-5 py-3.5">
@@ -371,7 +371,7 @@ export default async function BrokerAccessPage({
                         </td>
                         <td className="px-5 py-3.5">
                           <span className="text-[11px] text-slate-400 tabular-nums">
-                            {formatDate(ua.createdAt)}
+                            {formatDate(ua.createdAt, locale)}
                           </span>
                         </td>
                         <td className="px-5 py-3.5">

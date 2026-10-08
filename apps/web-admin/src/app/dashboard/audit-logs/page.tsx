@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Eye, ScrollText, Clock, Activity, ShieldAlert } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { AuditLogItem, Paged, UserRole } from '@/lib/types';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, intlLocale } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
@@ -267,14 +267,14 @@ export default async function AuditLogsPage({
           {
             label: m.kpi.total,
             value: meta
-              ? meta.total.toLocaleString('ar-EG')
-              : rows.length.toLocaleString('ar-EG'),
+              ? meta.total.toLocaleString(intlLocale(locale))
+              : rows.length.toLocaleString(intlLocale(locale)),
             icon: <ScrollText />,
             tone: 'brand',
           },
           {
             label: m.kpi.lastActivity,
-            value: rows[0] ? formatDateTime(rows[0].createdAt) : '—',
+            value: rows[0] ? formatDateTime(rows[0].createdAt, locale) : '—',
             icon: <Clock />,
             tone: 'neutral',
             valueSize: 'compact',
@@ -287,7 +287,7 @@ export default async function AuditLogsPage({
           },
           {
             label: m.kpi.sensitiveEvents,
-            value: sensitiveCount.toLocaleString('ar-EG'),
+            value: sensitiveCount.toLocaleString(intlLocale(locale)),
             icon: <ShieldAlert />,
             tone: sensitiveCount > 0 ? 'warning' : 'neutral',
           },
@@ -312,7 +312,7 @@ export default async function AuditLogsPage({
         trailing={
           meta ? (
             <span className="text-[11px] font-semibold tabular-nums text-slate-400">
-              {meta.total.toLocaleString('ar-EG')} {m.recordSuffix}
+              {meta.total.toLocaleString(intlLocale(locale))} {m.recordSuffix}
             </span>
           ) : undefined
         }
@@ -375,7 +375,7 @@ export default async function AuditLogsPage({
                         rowStartBorderCls(row.action),
                       )}>
                         <span className="text-[12px] text-slate-700 font-medium tabular-nums" dir="ltr">
-                          {formatDateTime(row.createdAt)}
+                          {formatDateTime(row.createdAt, locale)}
                         </span>
                       </td>
 

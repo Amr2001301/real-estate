@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, AdminInfoRequest } from '@/lib/types';
-import { formatDateTime, tx } from '@/lib/format';
+import { formatDateTime, tx, intlLocale } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
@@ -178,7 +178,7 @@ export default async function InfoRequestsPage({
         padded={false}
         trailing={
           <span className="text-xs text-slate-400 tabular-nums">
-            {total.toLocaleString('ar-EG')} {m.inquirySuffix}
+            {total.toLocaleString(intlLocale(locale))} {m.inquirySuffix}
           </span>
         }
       >
@@ -315,7 +315,7 @@ export default async function InfoRequestsPage({
 
                       {/* Date */}
                       <td className="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">
-                        {formatDateTime(req.createdAt)}
+                        {formatDateTime(req.createdAt, locale)}
                       </td>
 
                       {/* FG-04 — next step */}

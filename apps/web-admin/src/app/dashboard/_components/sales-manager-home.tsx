@@ -31,7 +31,7 @@ import {
   ReservationStatusBadge,
   AppointmentStatusBadge,
 } from '@/components/badges';
-import { getLocale } from '@/lib/locale';
+import { getLocale, type Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 
 interface PerformanceRow {
@@ -164,7 +164,7 @@ export async function SalesManagerDashboard() {
   const nowIso = new Date().toISOString();
   const period = nowIso.slice(0, 7);
   const currency = await getReportsCurrency();
-  const symbol = currencySymbol(currency);
+  const symbol = currencySymbol(currency, locale);
 
   const in7DaysIso = new Date(Date.now() + 7 * 86400000).toISOString();
 
@@ -367,7 +367,7 @@ export async function SalesManagerDashboard() {
         />
         <KpiTile
           label={m.kpiRealizedValue}
-          value={perfRes.error ? '—' : formatCompact(teamRealized, symbol)}
+          value={perfRes.error ? '—' : formatCompact(teamRealized, symbol, locale)}
           sub={m.kpiRealizedValueSub(periodLabel)}
           icon={<Banknote />}
           topBar="from-brand-300 via-brand-500 to-brand-300"
@@ -418,6 +418,7 @@ export async function SalesManagerDashboard() {
         symbol={symbol}
         topPerformerId={topPerformer?.salesId ?? null}
         m={m}
+        locale={locale}
       />
 
       {/* ── Team Conversion Funnel ────────────────────────────────────────── */}
@@ -431,6 +432,7 @@ export async function SalesManagerDashboard() {
           currency={currency}
           symbol={symbol}
           m={m}
+          locale={locale}
         />
       )}
 
@@ -512,7 +514,7 @@ export async function SalesManagerDashboard() {
                             )}
                           </div>
                           <p className="text-2xs text-slate-400 mt-0.5 leading-tight">
-                            <span className="tabular-nums">{formatDateTime(v.scheduledAt)}</span>
+                            <span className="tabular-nums">{formatDateTime(v.scheduledAt, locale)}</span>
                             {v.assignedSales ? ` · ${v.assignedSales.fullName}` : ''}
                           </p>
                         </div>
@@ -620,7 +622,7 @@ export async function SalesManagerDashboard() {
                           {v.lead?.fullName ?? v.client?.fullName ?? v.visitNumber}
                         </p>
                         <p className="text-2xs text-slate-400 mt-0.5">
-                          <span className="tabular-nums">{formatDateTime(v.scheduledAt)}</span>
+                          <span className="tabular-nums">{formatDateTime(v.scheduledAt, locale)}</span>
                           {v.assignedSales ? ` · ${v.assignedSales.fullName}` : ''}
                         </p>
                       </div>
@@ -684,7 +686,7 @@ export async function SalesManagerDashboard() {
 
 // ── Team Conversion Funnel ────────────────────────────────────────────────────
 function TeamFunnel({
-  teamLeads, teamVisits, teamReservations, teamContracts, topPerformer, currency, symbol, m,
+  teamLeads, teamVisits, teamReservations, teamContracts, topPerformer, currency, symbol, m, locale = 'ar',
 }: {
   teamLeads:        number;
   teamVisits:       number;
@@ -694,6 +696,7 @@ function TeamFunnel({
   currency:         string;
   symbol:           string;
   m: ReturnType<typeof uiT>['pages']['salesManagerHome'];
+  locale?:          Locale;
 }) {
   const stages = [
     { label: m.funnelStageOpenLeads,         value: teamLeads,        icon: <Zap />,           bg: 'bg-brand-50   text-brand-600   ring-brand-100'   },
@@ -766,7 +769,7 @@ function TeamFunnel({
                 {topPerformer.achievedAmount > 0 && (
                   <div className="text-end">
                     <p className="text-[10px] text-slate-400 uppercase tracking-wide">{m.topPerformerAchieved}</p>
-                    <p className="text-sm font-black text-brand-700 tabular-nums leading-tight">{formatCompact(topPerformer.achievedAmount, symbol)}</p>
+                    <p className="text-sm font-black text-brand-700 tabular-nums leading-tight">{formatCompact(topPerformer.achievedAmount, symbol, locale)}</p>
                   </div>
                 )}
                 {topPerformer.targetAmountPercent !== null && (
@@ -793,7 +796,7 @@ function TeamFunnel({
 
 // ── Team Performance Table ────────────────────────────────────────────────────
 function TeamPerformanceTable({
-  perfError, repRows, period, periodLabel, symbol, topPerformerId, m,
+  perfError, repRows, period, periodLabel, symbol, topPerformerId, m, locale = 'ar',
 }: {
   perfError?:       string | null;
   repRows:          PerformanceRow[];
@@ -802,6 +805,7 @@ function TeamPerformanceTable({
   symbol?:          string;
   topPerformerId:   string | null;
   m: ReturnType<typeof uiT>['pages']['salesManagerHome'];
+  locale?:          Locale;
 }) {
   return (
     <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
@@ -895,7 +899,7 @@ function TeamPerformanceTable({
                     <td className="px-3 py-3 tabular-nums text-emerald-700 text-end font-bold">{r.signedContractsCount}</td>
                     <td className="px-4 py-3 tabular-nums font-bold text-slate-900 whitespace-nowrap text-end text-[13px]">
                       {r.achievedAmount > 0 ? (
-                        formatCompact(r.achievedAmount, symbol)
+                        formatCompact(r.achievedAmount, symbol, locale)
                       ) : (
                         <span className="text-slate-400 font-normal">—</span>
                       )}

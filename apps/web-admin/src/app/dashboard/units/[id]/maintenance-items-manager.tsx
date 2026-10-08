@@ -107,7 +107,7 @@ export function MaintenanceItemsManager({
                 ) : item!.warrantyStatus === 'IN_WARRANTY' ? (
                   <span className="inline-flex items-center gap-1 text-success-700">
                     <ShieldCheck className="h-3 w-3" />
-                    {item!.warrantyEnd ? m.statusUnderWarrantyUntil(formatDate(item!.warrantyEnd)) : m.statusUnderWarranty}
+                    {item!.warrantyEnd ? m.statusUnderWarrantyUntil(formatDate(item!.warrantyEnd, locale)) : m.statusUnderWarranty}
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 text-danger-600">

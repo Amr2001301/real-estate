@@ -312,7 +312,7 @@ export default async function PortalVisitsPage({
                               </span>
                             )}
                             <CodeText className="text-xs text-slate-800 font-semibold tabular-nums">
-                              {formatDateTime(appt.scheduledAt)}
+                              {formatDateTime(appt.scheduledAt, locale)}
                             </CodeText>
                           </div>
                           <AppointmentStatusBadge status={appt.status} locale={locale} />
@@ -334,7 +334,7 @@ export default async function PortalVisitsPage({
                     </td>
 
                     <td className="py-3 px-4 text-xs text-slate-500 whitespace-nowrap">
-                      {formatDate(v.preferredDate)}
+                      {formatDate(v.preferredDate, locale)}
                     </td>
                   </tr>
                 );

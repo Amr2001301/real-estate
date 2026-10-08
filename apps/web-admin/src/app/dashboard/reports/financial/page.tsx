@@ -29,7 +29,7 @@ import type {
   DepositType,
   PlanPaymentType,
 } from '@/lib/types';
-import { formatCurrency, formatDate, tx } from '@/lib/format';
+import { formatCurrency, formatDate, tx, intlLocale } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import {
   resolveReportDateRange,
@@ -211,7 +211,7 @@ export default async function FinancialReportsPage({
           {
             label:     m.kpi.contractValue,
             icon:      <FileText />,
-            value:     formatCurrency(contractVal, currency),
+            value:     formatCurrency(contractVal, currency, locale),
             tone:      'neutral',
             valueSize: 'compact',
             sub:       m.kpi.contractValueSub(contractCount, depositCount),
@@ -221,27 +221,27 @@ export default async function FinancialReportsPage({
           {
             label:     m.kpi.collected,
             icon:      <DollarSign />,
-            value:     formatCurrency(collectedVerif, currency),
+            value:     formatCurrency(collectedVerif, currency, locale),
             tone:      'success',
             valueSize: 'compact',
-            sub:       m.kpi.collectedSub(collectionRate, formatCurrency(collectedAll, currency)),
+            sub:       m.kpi.collectedSub(collectionRate, formatCurrency(collectedAll, currency, locale)),
             trend:     collectedDelta ? `${collectedDelta.direction === 'up' ? '▲' : collectedDelta.direction === 'down' ? '▼' : '•'} ${collectedDelta.value}` : undefined,
             trendCls:  collectedDelta?.direction === 'up' ? 'text-success-600' : collectedDelta?.direction === 'down' ? 'text-danger-600' : undefined,
           },
           {
             label:     m.kpi.outstanding,
             icon:      <Clock />,
-            value:     formatCurrency(outstanding, currency),
+            value:     formatCurrency(outstanding, currency, locale),
             tone:      'neutral',
             valueSize: 'compact',
-            sub:       m.kpi.outstandingSub(formatCurrency(dueSoon, currency)),
+            sub:       m.kpi.outstandingSub(formatCurrency(dueSoon, currency, locale)),
             trend:     outstandDelta ? `${outstandDelta.direction === 'up' ? '▲' : outstandDelta.direction === 'down' ? '▼' : '•'} ${outstandDelta.value}` : undefined,
             trendCls:  outstandDelta?.direction === 'up' ? 'text-danger-600' : outstandDelta?.direction === 'down' ? 'text-success-600' : undefined,
           },
           {
             label:     m.kpi.overdue,
             icon:      <AlertTriangle />,
-            value:     formatCurrency(overdueAmt, currency),
+            value:     formatCurrency(overdueAmt, currency, locale),
             tone:      overdueAmt > 0 ? 'danger' : 'neutral',
             valueSize: 'compact',
             sub:       m.kpi.overdueSub(overdueCount, overdueRate),
@@ -255,11 +255,11 @@ export default async function FinancialReportsPage({
         variant="compact"
         cols={5}
         metrics={[
-          { label: m.kpi.collectedMonth, icon: <TrendingUp />,    value: formatCurrency(collectedMonth, currency),                  tone: 'success' },
-          { label: m.kpi.dueMonth,       icon: <CalendarDays />,  value: formatCurrency(dueMonth, currency),                        tone: 'warning' },
-          { label: m.kpi.contractCount,  icon: <FileText />,      value: contractCount.toLocaleString('ar-EG'),           tone: 'neutral' },
-          { label: m.kpi.depositCount,   icon: <Receipt />,       value: depositCount.toLocaleString('ar-EG'),            tone: 'neutral' },
-          { label: m.kpi.overdueCount,   icon: <AlertTriangle />, value: overdueCount.toLocaleString('ar-EG'), tone: overdueCount > 0 ? 'danger' : 'neutral' },
+          { label: m.kpi.collectedMonth, icon: <TrendingUp />,    value: formatCurrency(collectedMonth, currency, locale),                  tone: 'success' },
+          { label: m.kpi.dueMonth,       icon: <CalendarDays />,  value: formatCurrency(dueMonth, currency, locale),                        tone: 'warning' },
+          { label: m.kpi.contractCount,  icon: <FileText />,      value: contractCount.toLocaleString(intlLocale(locale)),           tone: 'neutral' },
+          { label: m.kpi.depositCount,   icon: <Receipt />,       value: depositCount.toLocaleString(intlLocale(locale)),            tone: 'neutral' },
+          { label: m.kpi.overdueCount,   icon: <AlertTriangle />, value: overdueCount.toLocaleString(intlLocale(locale)), tone: overdueCount > 0 ? 'danger' : 'neutral' },
         ]}
       />
 
@@ -367,7 +367,7 @@ export default async function FinancialReportsPage({
                 <span className="flex-1 text-[13px] text-slate-600">{r.label}</span>
                 <span className="text-[11px] font-semibold tabular-nums text-slate-400 w-14 text-right shrink-0" dir="ltr">{r.pct}</span>
                 <span className={cn('text-[13px] font-bold tabular-nums whitespace-nowrap shrink-0', r.valCls)} dir="ltr">
-                  {formatCurrency(r.amount, currency)}
+                  {formatCurrency(r.amount, currency, locale)}
                 </span>
               </div>
             ))}
@@ -377,11 +377,11 @@ export default async function FinancialReportsPage({
           <div className="grid grid-cols-2 gap-px bg-hairline border-t border-hairline mt-1">
             <div className="bg-surface px-5 py-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">{m.distribution.collectedMonthLabel}</p>
-              <p className="text-[15px] font-black tabular-nums text-success-700 whitespace-nowrap" dir="ltr">{formatCurrency(collectedMonth, currency)}</p>
+              <p className="text-[15px] font-black tabular-nums text-success-700 whitespace-nowrap" dir="ltr">{formatCurrency(collectedMonth, currency, locale)}</p>
             </div>
             <div className="bg-surface px-5 py-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">{m.distribution.dueMonthLabel}</p>
-              <p className="text-[15px] font-black tabular-nums text-amber-600 whitespace-nowrap" dir="ltr">{formatCurrency(dueMonth, currency)}</p>
+              <p className="text-[15px] font-black tabular-nums text-amber-600 whitespace-nowrap" dir="ltr">{formatCurrency(dueMonth, currency, locale)}</p>
             </div>
           </div>
         </PremiumSectionCard>
@@ -409,7 +409,7 @@ export default async function FinancialReportsPage({
                 <div key={b.label} className={cn('px-5 py-5', b.bg)}>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">{b.label}</p>
                   <p className={cn('text-[24px] font-black tabular-nums leading-none tracking-tight whitespace-nowrap', b.valCls)} dir="ltr">
-                    {formatCurrency(b.amount, currency)}
+                    {formatCurrency(b.amount, currency, locale)}
                   </p>
                   <div className="mt-3 h-1.5 rounded-full bg-white/70 overflow-hidden">
                     <div className={cn('h-full rounded-full', b.pctCls)} style={{ width: `${pct}%` }} />
@@ -433,7 +433,7 @@ export default async function FinancialReportsPage({
           description={m.aging.description}
           trailing={
             <span className="text-xs font-bold tabular-nums text-slate-700 whitespace-nowrap" dir="ltr">
-              {formatCurrency(aging.reduce((s, b) => s + num(b.amount), 0), currency)} {m.aging.totalSuffix}
+              {formatCurrency(aging.reduce((s, b) => s + num(b.amount), 0), currency, locale)} {m.aging.totalSuffix}
             </span>
           }
           padded={false}
@@ -463,7 +463,7 @@ export default async function FinancialReportsPage({
                     active && !isHigh ? 'text-amber-700'  :
                     'text-slate-300',
                   )} dir="ltr">
-                    {formatCurrency(amt, currency)}
+                    {formatCurrency(amt, currency, locale)}
                   </p>
                   <div className="mt-3 h-1.5 rounded-full bg-slate-100 overflow-hidden">
                     <div
@@ -534,8 +534,8 @@ export default async function FinancialReportsPage({
                           {PAYMENT_TYPE_LABELS[row.type] ?? row.type}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-xs text-slate-400 whitespace-nowrap tabular-nums">{formatDate(row.dueDate)}</td>
-                      <td className="py-3 px-4 whitespace-nowrap font-bold tabular-nums text-slate-900 text-right" dir="ltr">{formatCurrency(row.amount, currency)}</td>
+                      <td className="py-3 px-4 text-xs text-slate-400 whitespace-nowrap tabular-nums">{formatDate(row.dueDate, locale)}</td>
+                      <td className="py-3 px-4 whitespace-nowrap font-bold tabular-nums text-slate-900 text-right" dir="ltr">{formatCurrency(row.amount, currency, locale)}</td>
                       <td className="py-3 ps-4 pe-5 whitespace-nowrap">
                         <span className={cn(
                           'inline-block px-2 py-0.5 rounded-full text-[11px] font-bold',
@@ -571,7 +571,7 @@ export default async function FinancialReportsPage({
             trailing={
               panel.rows.length > 0
                 ? <span className="text-xs font-bold tabular-nums text-slate-700 whitespace-nowrap" dir="ltr">
-                    {formatCurrency(panel.rows.reduce((s, r) => s + num(r.amount), 0), currency)}
+                    {formatCurrency(panel.rows.reduce((s, r) => s + num(r.amount), 0), currency, locale)}
                   </span>
                 : undefined
             }
@@ -587,11 +587,11 @@ export default async function FinancialReportsPage({
                 {panel.rows.map((row) => (
                   <div key={row.id} className="flex items-center justify-between gap-3 px-5 py-3">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="text-[11px] text-slate-400 tabular-nums whitespace-nowrap shrink-0">{formatDate(row.dueDate)}</span>
+                      <span className="text-[11px] text-slate-400 tabular-nums whitespace-nowrap shrink-0">{formatDate(row.dueDate, locale)}</span>
                       <span className="text-sm font-medium text-slate-700 truncate">{row.plan.contract.customer.fullName}</span>
                     </div>
                     <span className="text-sm font-bold tabular-nums whitespace-nowrap text-slate-900 shrink-0" dir="ltr">
-                      {formatCurrency(row.amount, currency)}
+                      {formatCurrency(row.amount, currency, locale)}
                     </span>
                   </div>
                 ))}
@@ -625,11 +625,11 @@ export default async function FinancialReportsPage({
                   <span className={cn('inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold shrink-0', DEPOSIT_TYPE_CLS[c.type] ?? 'bg-slate-100 text-slate-600')}>
                     {DEPOSIT_TYPE_LABELS[c.type] ?? c.type}
                   </span>
-                  <span className="text-[11px] text-slate-400 tabular-nums">{c.count.toLocaleString('ar-EG')} {m.collectionByType.depositSuffix}</span>
+                  <span className="text-[11px] text-slate-400 tabular-nums">{c.count.toLocaleString(intlLocale(locale))} {m.collectionByType.depositSuffix}</span>
                 </div>
-                <p className="w-36 text-right text-[13px] font-bold tabular-nums text-slate-900 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalAll, currency)}</p>
-                <p className="w-32 text-right text-[13px] tabular-nums text-success-700 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalVerified, currency)}</p>
-                <p className="w-32 text-right text-[13px] tabular-nums text-amber-600 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalUnverified, currency)}</p>
+                <p className="w-36 text-right text-[13px] font-bold tabular-nums text-slate-900 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalAll, currency, locale)}</p>
+                <p className="w-32 text-right text-[13px] tabular-nums text-success-700 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalVerified, currency, locale)}</p>
+                <p className="w-32 text-right text-[13px] tabular-nums text-amber-600 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalUnverified, currency, locale)}</p>
               </div>
             ))}
           </div>
@@ -651,10 +651,10 @@ export default async function FinancialReportsPage({
           >
             <div className="divide-y divide-hairline">
               {[
-                { label: m.booking.pendingReservations,  value: `${dash.booking.pendingReservationsCount} · ${formatCurrency(dash.booking.pendingReservationsBookingAmount, currency)}`, cls: 'text-amber-700' },
-                { label: m.booking.approvedReservations, value: `${dash.booking.approvedReservationsCount} · ${formatCurrency(dash.booking.approvedReservationsBookingAmount, currency)}`, cls: 'text-slate-900' },
-                { label: m.booking.bookingCollected,     value: formatCurrency(dash.booking.bookingCollectedVerified, currency), cls: 'text-success-700' },
-                { label: m.booking.bookingUncollected,   value: formatCurrency(dash.booking.bookingUncollectedEstimate, currency), cls: 'text-slate-600' },
+                { label: m.booking.pendingReservations,  value: `${dash.booking.pendingReservationsCount} · ${formatCurrency(dash.booking.pendingReservationsBookingAmount, currency, locale)}`, cls: 'text-amber-700' },
+                { label: m.booking.approvedReservations, value: `${dash.booking.approvedReservationsCount} · ${formatCurrency(dash.booking.approvedReservationsBookingAmount, currency, locale)}`, cls: 'text-slate-900' },
+                { label: m.booking.bookingCollected,     value: formatCurrency(dash.booking.bookingCollectedVerified, currency, locale), cls: 'text-success-700' },
+                { label: m.booking.bookingUncollected,   value: formatCurrency(dash.booking.bookingUncollectedEstimate, currency, locale), cls: 'text-slate-600' },
               ].map((row) => (
                 <div key={row.label} className="flex items-center justify-between gap-3 px-5 py-3">
                   <span className="text-sm text-slate-500">{row.label}</span>
@@ -675,10 +675,10 @@ export default async function FinancialReportsPage({
           >
             <div className="divide-y divide-hairline">
               {[
-                { label: m.liabilities.total,            value: formatCurrency(dash.liabilities.totalUnpaidLiabilities, currency),                      cls: 'text-danger-700 font-black' },
-                { label: m.liabilities.salesBonus,       value: formatCurrency(dash.liabilities.salesBonus.unpaidAmount, currency),                     cls: 'text-amber-700' },
-                { label: m.liabilities.brokerCommissions, value: formatCurrency(dash.liabilities.brokerCommissions.unpaidAmount, currency),              cls: 'text-amber-700' },
-                { label: m.liabilities.paid,             value: formatCurrency(num(dash.liabilities.salesBonus.paidAmount) + num(dash.liabilities.brokerCommissions.paidAmount), currency), cls: 'text-success-700' },
+                { label: m.liabilities.total,            value: formatCurrency(dash.liabilities.totalUnpaidLiabilities, currency, locale),                      cls: 'text-danger-700 font-black' },
+                { label: m.liabilities.salesBonus,       value: formatCurrency(dash.liabilities.salesBonus.unpaidAmount, currency, locale),                     cls: 'text-amber-700' },
+                { label: m.liabilities.brokerCommissions, value: formatCurrency(dash.liabilities.brokerCommissions.unpaidAmount, currency, locale),              cls: 'text-amber-700' },
+                { label: m.liabilities.paid,             value: formatCurrency(num(dash.liabilities.salesBonus.paidAmount) + num(dash.liabilities.brokerCommissions.paidAmount), currency, locale), cls: 'text-success-700' },
               ].map((row) => (
                 <div key={row.label} className="flex items-center justify-between gap-3 px-5 py-3">
                   <span className="text-sm text-slate-500">{row.label}</span>
@@ -746,8 +746,8 @@ export default async function FinancialReportsPage({
                         <span className="text-slate-300 text-xs">—</span>
                       )}
                     </td>
-                    <td className="py-2.5 px-4 text-xs text-slate-400 whitespace-nowrap tabular-nums">{formatDate(d.paidAt)}</td>
-                    <td className="py-2.5 px-4 font-bold tabular-nums text-slate-900 whitespace-nowrap" dir="ltr">{formatCurrency(d.amount, currency)}</td>
+                    <td className="py-2.5 px-4 text-xs text-slate-400 whitespace-nowrap tabular-nums">{formatDate(d.paidAt, locale)}</td>
+                    <td className="py-2.5 px-4 font-bold tabular-nums text-slate-900 whitespace-nowrap" dir="ltr">{formatCurrency(d.amount, currency, locale)}</td>
                     <td className="py-2.5 ps-4 pe-5 whitespace-nowrap">
                       {d.verified ? (
                         <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success-700">

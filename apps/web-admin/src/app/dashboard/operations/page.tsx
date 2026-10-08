@@ -20,7 +20,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import { getLocale } from '@/lib/locale';
+import { getLocale, type Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import type { AuditLogItem, OperationsSummary, Paged } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ import { PremiumMetricStrip, PremiumPageHero, PremiumSectionCard } from '@/compo
 import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/cn';
 
+import { intlLocale } from '@/lib/format';
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
@@ -194,7 +195,11 @@ function methodIcon(action: string): LucideIcon {
   }
 }
 
-function relativeTime(date: string, rt: ReturnType<typeof uiT>['operationsPage']['relativeTime']): string {
+function relativeTime(
+  date: string,
+  rt: ReturnType<typeof uiT>['operationsPage']['relativeTime'],
+  locale: Locale,
+): string {
   const diff = Date.now() - new Date(date).getTime();
   const mins = Math.floor(diff / 60_000);
   if (mins < 1)  return rt.now;
@@ -203,7 +208,7 @@ function relativeTime(date: string, rt: ReturnType<typeof uiT>['operationsPage']
   if (hrs < 24)  return rt.hours(hrs);
   const days = Math.floor(hrs / 24);
   if (days < 7)  return rt.days(days);
-  return new Date(date).toLocaleDateString('ar-SA', { day: 'numeric', month: 'short' });
+  return new Date(date).toLocaleDateString(locale === 'en' ? 'en-EG' : 'ar-SA', { day: 'numeric', month: 'short' });
 }
 
 // ── Event grouping ────────────────────────────────────────────────────────────
@@ -315,14 +320,14 @@ export default async function OperationsCenterPage() {
             metrics={[
               {
                 label: m.kpi.todayEvents,
-                value: summary.totals.today.toLocaleString('ar-EG'),
+                value: summary.totals.today.toLocaleString(intlLocale(locale)),
                 icon: <Activity />,
                 tone: 'brand',
                 sub: m.kpi.todayEventsSub,
               },
               {
                 label: m.kpi.weekEvents,
-                value: summary.totals.last7Days.toLocaleString('ar-EG'),
+                value: summary.totals.last7Days.toLocaleString(intlLocale(locale)),
                 icon: <TrendingUp />,
                 tone: 'info',
                 sub: m.kpi.weekEventsSub,
@@ -362,19 +367,19 @@ export default async function OperationsCenterPage() {
               },
               {
                 label: m.kpi.lastActivity,
-                value: recent[0] ? relativeTime(recent[0].createdAt, m.relativeTime) : '—',
+                value: recent[0] ? relativeTime(recent[0].createdAt, m.relativeTime, locale) : '—',
                 icon: <Clock />,
                 tone: 'brand',
               },
               {
                 label: m.kpi.total30,
-                value: summary.totals.last30Days.toLocaleString('ar-EG'),
+                value: summary.totals.last30Days.toLocaleString(intlLocale(locale)),
                 icon: <TrendingUp />,
                 tone: 'success',
               },
               {
                 label: m.kpi.deletions,
-                value: deleteCount === 0 ? m.kpi.deletionsNone : deleteCount.toLocaleString('ar-EG'),
+                value: deleteCount === 0 ? m.kpi.deletionsNone : deleteCount.toLocaleString(intlLocale(locale)),
                 icon: <Shield />,
                 tone: deleteCount > 0 ? 'danger' : 'neutral',
               },
@@ -459,7 +464,7 @@ export default async function OperationsCenterPage() {
                                     {' · '}
                                     {areaLabel(g.entityType, m.areaLabels)}
                                     {' · '}
-                                    {relativeTime(g.latestAt, m.relativeTime)}
+                                    {relativeTime(g.latestAt, m.relativeTime, locale)}
                                   </p>
                                 </div>
 
