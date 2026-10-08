@@ -86,3 +86,6 @@ apps/mobile/**/GoogleService-Info.plist
 
 # Local dev utilities that write to ~/Desktop — useful locally, not for CI
 apps/api/scripts/gen-test-xlsx.ts
+
+# Written by `next dev` (Next 16) on every run — not project content.
+apps/web-admin/AGENTS.md

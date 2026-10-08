@@ -54,7 +54,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
 }
 
 /**
- * Pick a post-login destination that honors the `from` query the middleware
+ * Pick a post-login destination that honors the `from` query the proxy
  * recorded — but only when it points to an allow-listed internal path that is
  * compatible with the user's role. Anything else falls back to the role's
  * default workspace.

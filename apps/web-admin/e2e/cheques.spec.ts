@@ -9,11 +9,10 @@ test.use({ storageState: ADMIN_STORAGE });
  * cheque clears. The cheque is recorded on the deposit form, then followed on
  * /dashboard/cheques: deposited at the bank, then cleared or bounced.
  *
- * Each step waits for its server action's response (the change is saved once
- * it arrives) and reloads the page, instead of waiting for the page to update
- * in place: on a route under a loading.tsx, Next 15.5 sometimes never applies
- * a server action's re-rendered page in the browser (docs/BACKLOG.md, "Server
- * actions hang"). That is not what these tests are about.
+ * Every step waits for the page to update in place after its server action —
+ * no reloads. Under Next 15.5 (React 19.2 canary) that update was sometimes
+ * never committed on routes with a loading.tsx: the button stayed busy and the
+ * form never redirected. These tests are the regression check for it.
  *
  * Seed: prisma:seed:e2e — contract E2E-CHQ-0001 with 48 open installments
  * (a cleared cheque uses one up; a bounced one leaves it open).
@@ -21,15 +20,6 @@ test.use({ storageState: ADMIN_STORAGE });
 
 // Both tests take the contract's first open installment.
 test.describe.configure({ mode: 'serial' });
-
-/** Click and wait until the server action posted to `path` has answered. */
-async function submitAction(page: Page, path: string, click: () => Promise<void>): Promise<void> {
-  const answered = page.waitForResponse(
-    (r) => r.request().method() === 'POST' && new URL(r.url()).pathname === path,
-  );
-  await click();
-  expect((await answered).status()).toBeLessThan(400);
-}
 
 async function recordCheque(page: Page, chequeNumber: string): Promise<void> {
   await gotoReady(page, '/dashboard/deposits/new');
@@ -40,9 +30,9 @@ async function recordCheque(page: Page, chequeNumber: string): Promise<void> {
   await page.locator('#chequeNumber').fill(chequeNumber);
   await page.locator('#drawerBankName').fill('E2E Bank');
   await page.locator('#chequeDueDate').fill('2027-01-15');
-  await submitAction(page, '/dashboard/deposits/new', () =>
-    page.getByRole('button', { name: 'تسجيل الدفعة' }).click(),
-  );
+  await page.getByRole('button', { name: 'تسجيل الدفعة' }).click();
+  // Saved: the form redirects to the contract.
+  await page.waitForURL(/\/dashboard\/contracts\/[0-9a-f-]{36}$/);
 }
 
 /** The cheque's row on the cheques page, found by searching its number. */
@@ -53,14 +43,9 @@ async function chequeRow(page: Page, chequeNumber: string): Promise<Locator> {
   return row;
 }
 
-async function depositAtBank(page: Page, chequeNumber: string): Promise<Locator> {
-  const row = await chequeRow(page, chequeNumber);
-  await submitAction(page, '/dashboard/cheques', () =>
-    row.getByRole('button', { name: 'إيداع بالبنك' }).click(),
-  );
-  const after = await chequeRow(page, chequeNumber);
-  await expect(after).toContainText('مودَع بالبنك');
-  return after;
+async function depositAtBank(row: Locator): Promise<void> {
+  await row.getByRole('button', { name: 'إيداع بالبنك' }).click();
+  await expect(row).toContainText('مودَع بالبنك');
 }
 
 test('a cheque is recorded unpaid, deposited at the bank, then cleared', async ({ page }) => {
@@ -71,31 +56,27 @@ test('a cheque is recorded unpaid, deposited at the bank, then cleared', async (
   await expect(row).toContainText('لم يُودَع');
   await expect(row).toContainText('E2E-CHQ-0001');
 
-  const deposited = await depositAtBank(page, chequeNumber);
-  await deposited.getByRole('button', { name: 'تم الصرف' }).click();
-  await submitAction(page, '/dashboard/cheques', () =>
-    page.getByRole('dialog').getByRole('button', { name: 'تأكيد الصرف' }).click(),
-  );
-
-  const cleared = await chequeRow(page, chequeNumber);
-  await expect(cleared.getByText('تم الصرف')).toBeVisible();
+  await depositAtBank(row);
+  await row.getByRole('button', { name: 'تم الصرف' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: 'تأكيد الصرف' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(row.getByText('تم الصرف')).toBeVisible();
   // A cleared cheque is final: no further actions.
-  await expect(cleared.getByRole('button')).toHaveCount(0);
+  await expect(row.getByRole('button')).toHaveCount(0);
 });
 
 test('a deposited cheque that bounces is recorded with its reason', async ({ page }) => {
   const chequeNumber = `PW-BNC-${Date.now()}`;
   await recordCheque(page, chequeNumber);
 
-  const deposited = await depositAtBank(page, chequeNumber);
-  await deposited.getByRole('button', { name: 'ارتد' }).click();
+  const row = await chequeRow(page, chequeNumber);
+  await depositAtBank(row);
+  await row.getByRole('button', { name: 'ارتد' }).click();
   const dialog = page.getByRole('dialog');
   await dialog.locator('input[name="bounceReason"]').fill('رصيد غير كافٍ');
-  await submitAction(page, '/dashboard/cheques', () =>
-    dialog.getByRole('button', { name: 'تأكيد الارتداد' }).click(),
-  );
-
-  const bounced = await chequeRow(page, chequeNumber);
-  await expect(bounced).toContainText('مرتد');
-  await expect(bounced).toContainText('رصيد غير كافٍ');
+  await dialog.getByRole('button', { name: 'تأكيد الارتداد' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(row).toContainText('مرتد');
+  await expect(row).toContainText('رصيد غير كافٍ');
 });
