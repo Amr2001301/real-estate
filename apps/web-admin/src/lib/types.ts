@@ -240,6 +240,8 @@ export interface ContractInstallmentPlan {
 export interface Contract {
   id: string;
   contractNumber: string | null;
+  /** FG-10 — the latest run of the sign follow-ups (warranties, commissions) had a failure. */
+  signFollowupFailed?: boolean;
   customerId: string;
   customer?: { id: string; fullName: string; phone: string | null; email?: string | null };
   unitId: string;

@@ -88,6 +88,19 @@ export async function assignContractNumberAction(
   return { ok: true };
 }
 
+// FG-10 — re-runs warranties + commissions of a signed contract after a failure.
+export async function retrySignFollowupsAction(id: string): Promise<ContractFormState> {
+  let res: { failures: { step: string; error: string }[] };
+  try {
+    res = await api.post<{ failures: { step: string; error: string }[] }>(`/contracts/${id}/sign-followups`, {});
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/dashboard/contracts/${id}`);
+  if (res.failures.length) return { error: res.failures.map((f) => `${f.step}: ${f.error}`).join(' · ') };
+  return { ok: true };
+}
+
 export async function attachContractPdfAction(id: string, pdfUrl: string) {
   await api.patch(`/contracts/${id}`, { pdfUrl });
   revalidatePath(`/dashboard/contracts/${id}`);

@@ -990,6 +990,80 @@ describe('Flow A — Catalog sync (e2e)', () => {
     });
   });
 
+  describe('A4l — FG-10 sign follow-ups are recorded and can be re-run', () => {
+    const tag = Date.now().toString().slice(-6);
+    let contractId: string;
+    let unitId: string;
+
+    beforeAll(async () => {
+      const raw = testApp.rawPrisma;
+      const sample = await raw.unit.findUniqueOrThrow({
+        where: { id: fixtures.units.sampleUnitInP1Id },
+        select: { buildingId: true, companyId: true },
+      });
+      const unit = await raw.unit.create({
+        data: { buildingId: sample.buildingId, companyId: sample.companyId, code: `A4L-${tag}`, type: '2BR', area: 100, price: 900_000 },
+        select: { id: true },
+      });
+      unitId = unit.id;
+      const customer = await raw.user.findFirstOrThrow({
+        where: { email: fixtures.users.CUSTOMER_1.email },
+        select: { id: true },
+      });
+      const res = await http()
+        .post('/v1/contracts')
+        .set('Authorization', bearer(adminToken))
+        .send({ customerId: customer.id, unitId, totalAmount: 900_000 });
+      expect(res.status).toBe(201);
+      contractId = res.body.id;
+    });
+
+    afterAll(async () => {
+      const raw = testApp.rawPrisma;
+      await raw.auditLog.deleteMany({ where: { entityType: 'Contract', entityId: contractId } });
+      await raw.contract.deleteMany({ where: { id: contractId } });
+      await raw.unitStatusHistory.deleteMany({ where: { unitId } });
+      await raw.unit.deleteMany({ where: { id: unitId } });
+    });
+
+    const get = () => http().get(`/v1/contracts/${contractId}`).set('Authorization', bearer(adminToken));
+    const retry = () =>
+      http().post(`/v1/contracts/${contractId}/sign-followups`).set('Authorization', bearer(adminToken));
+
+    it('re-running before signing → 409', async () => {
+      expect((await retry()).status).toBe(409);
+    });
+
+    it('signing records the follow-ups; a recorded failure shows on the contract until a re-run succeeds', async () => {
+      const signed = await http()
+        .post(`/v1/contracts/${contractId}/sign`)
+        .set('Authorization', bearer(adminToken))
+        .send({ signedAt: new Date().toISOString() });
+      expect(signed.status).toBe(201);
+      expect(signed.body.signFollowupFailures).toEqual([]);
+      expect((await get()).body.signFollowupFailed).toBe(false);
+
+      // A failed run (as if the commission write had thrown during the sign).
+      const raw = testApp.rawPrisma;
+      const contract = await raw.contract.findUniqueOrThrow({ where: { id: contractId }, select: { companyId: true } });
+      await raw.auditLog.create({
+        data: {
+          companyId: contract.companyId,
+          action: 'contract.sign_followup_failed',
+          entityType: 'Contract',
+          entityId: contractId,
+          after: { failures: [{ step: 'sales_commission', error: 'e2e' }] },
+        },
+      });
+      expect((await get()).body.signFollowupFailed).toBe(true);
+
+      const res = await retry();
+      expect(res.status).toBe(201);
+      expect(res.body.failures).toEqual([]);
+      expect((await get()).body.signFollowupFailed).toBe(false);
+    });
+  });
+
   // ── Broker portal: the same filter, inside the broker's own scope ─────────
   //
   // The portal reservation form searches leads instead of preloading 200, and

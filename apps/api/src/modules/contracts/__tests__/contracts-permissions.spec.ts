@@ -139,6 +139,7 @@ function makePrismaMock() {
     // CUSTOMER_VISIBLE doc is registered (via the overridden DocumentsService)
     // and `contract_document_available` is fired.
     document: { findFirst: jest.fn().mockResolvedValue(null) },
+    auditLog: { create: jest.fn().mockResolvedValue({}) },
     leadActivity: { create: jest.fn().mockResolvedValue({}) },
     brokerUser: { findMany: jest.fn().mockResolvedValue([{ userId: 'broker-user-1' }]) },
     notification: {
