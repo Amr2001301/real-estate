@@ -138,6 +138,7 @@ function makePrismaMock() {
     document: {
       findFirst: jest.fn().mockResolvedValue(null),
     },
+    auditLog: { create: jest.fn().mockResolvedValue({}) },
     $transaction: jest.fn().mockImplementation(async (ops: unknown) => {
       if (Array.isArray(ops)) return Promise.all(ops);
       if (typeof ops === 'function') return (ops as (tx: unknown) => Promise<unknown>)(m);
@@ -224,6 +225,7 @@ describe('Contracts · signing workflow', () => {
     resetFixture();
     mock.contract.findUnique.mockClear();
     mock.contract.update.mockClear();
+    mock.auditLog.create.mockClear();
     mock.unitMaintenanceItem.findMany.mockClear();
     mock.unitMaintenanceItem.update.mockClear();
     mock.document.findFirst.mockClear();
@@ -295,6 +297,39 @@ describe('Contracts · signing workflow', () => {
 
     // Sign still succeeded and persisted signedAt.
     expect(mock.contract.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('FG-10: a failed follow-up is returned and recorded, not only logged', async () => {
+    bonusServiceMock.materializeFromSignedContract.mockRejectedValueOnce(
+      new Error('bonus downstream blew up'),
+    );
+
+    const res = await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2030-05-19T00:00:00Z' })
+      .expect(201);
+
+    expect(res.body.signFollowupFailures).toEqual([
+      { step: 'sales_commission', error: 'bonus downstream blew up' },
+    ]);
+    expect(mock.auditLog.create).toHaveBeenCalledTimes(1);
+    const audit = mock.auditLog.create.mock.calls[0]![0] as {
+      data: { action: string; entityId: string; after: { failures: unknown[] } };
+    };
+    expect(audit.data.action).toBe('contract.sign_followup_failed');
+    expect(audit.data.entityId).toBe(CONTRACT_ID);
+    expect(audit.data.after.failures).toHaveLength(1);
+  });
+
+  it('FG-10: a clean sign records the follow-ups as done', async () => {
+    const res = await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2030-05-19T00:00:00Z' })
+      .expect(201);
+
+    expect(res.body.signFollowupFailures).toEqual([]);
+    const audit = mock.auditLog.create.mock.calls[0]![0] as { data: { action: string } };
+    expect(audit.data.action).toBe('contract.sign_followup_ok');
   });
 
   // ── Warranty start on sign (Batch 13C) ─────────────────────────────────

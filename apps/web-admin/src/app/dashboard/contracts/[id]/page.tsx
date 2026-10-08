@@ -27,6 +27,7 @@ import { OwnerDocumentsCard } from '@/components/documents/owner-documents-card'
 import { createInstallmentPlanAction } from '../actions';
 import { RecordPaymentButton } from './record-payment-button';
 import { AssignContractNumber } from './assign-number';
+import { SignFollowupsAlert } from './sign-followups-alert';
 import { PrintButton } from '@/components/print/PrintButton';
 import {
   PremiumPageHero,
@@ -116,6 +117,8 @@ export default async function ContractDetailPage({
         }
         actions={<PrintButton path="contracts" id={contract.id} />}
       />
+
+      {isAdmin && contract.signFollowupFailed && <SignFollowupsAlert id={contract.id} locale={locale} />}
 
       <PremiumDetailLayout
         main={

@@ -139,6 +139,14 @@ class UpdateContractDto {
   @IsOptional() @IsBoolean() autoNumber?: boolean;
 }
 
+type SignFollowupStep = 'warranties' | 'broker_commission' | 'sales_commission';
+interface SignFollowupFailure {
+  step: SignFollowupStep;
+  error: string;
+}
+const SIGN_FOLLOWUP_FAILED = 'contract.sign_followup_failed';
+const SIGN_FOLLOWUP_OK = 'contract.sign_followup_ok';
+
 class SignContractDto {
   @IsDateString() signedAt!: string;
 }
@@ -629,7 +637,7 @@ export class ContractsService {
       },
     });
     if (!contract) throw new NotFoundException('Contract not found');
-    return contract;
+    return { ...contract, signFollowupFailed: await this.signFollowupFailed(id) };
   }
 
   async softDelete(id: string) {
@@ -748,19 +756,6 @@ export class ContractsService {
       data: { signedAt: signedAtDate, status: ContractStatus.ACTIVE },
     });
 
-    // Start warranties for the unit's selected maintenance items. Best-effort:
-    // a failure here must never fail the sign. Idempotent — only items with no
-    // warrantyStart yet are touched, and the per-item duration is snapshotted so
-    // later category edits never change an already-started warranty.
-    //
-    // Warranty START anchors to the contract's CREATION date (not the signed
-    // date) per product requirement — the warranty clock begins when the deal
-    // is created. Triggered here at sign time (the moment items first qualify);
-    // only affects future warranty starts, never already-started items.
-    await this.startUnitWarranties(before.unitId, before.createdAt).catch((e) =>
-      this.logger.warn(`startUnitWarranties(${id}) failed on sign: ${(e as Error).message}`),
-    );
-
     // Ensure the existing contract PDF (if any) is linked as a document. No PDF
     // is generated on signing; this only mirrors an already-uploaded pdfUrl.
     // Best-effort + idempotent.
@@ -816,31 +811,89 @@ export class ContractsService {
         'contract_signed_customer',
         await this.buildContractPayload(before.id),
       );
+    }
 
-      // Materialize the broker commission. Idempotent: a contract that
-      // already has a BrokerCommission returns `already_exists`.
+    const signFollowupFailures = await this.runSignFollowups(before, actorId);
+    return { ...updated, signFollowupFailures };
+  }
+
+  /**
+   * FG-10 — what signing creates besides the signature: the unit's warranties,
+   * the broker commission (broker deals) and the automatic sales commission.
+   * The contract is already signed, so a failure must not fail the request —
+   * but it used to be only a log line, and the warranties or commissions were
+   * silently missing. Each failure is now recorded (audit
+   * `contract.sign_followup_failed`, shown on the contract page) and an admin
+   * re-runs the steps with retrySignFollowups(). Every step is idempotent.
+   */
+  private async runSignFollowups(
+    contract: { id: string; unitId: string; createdAt: Date; brokerId: string | null },
+    actorId: string,
+  ): Promise<SignFollowupFailure[]> {
+    const steps: Array<[SignFollowupStep, () => Promise<unknown>]> = [
+      // Warranty START anchors to the contract's CREATION date (not the signed
+      // date) per product requirement. Only items with no warrantyStart yet are
+      // touched, and the per-item duration is snapshotted.
+      ['warranties', () => this.startUnitWarranties(contract.unitId, contract.createdAt)],
+      // A contract that already has a BrokerCommission returns `already_exists`.
+      ...(contract.brokerId
+        ? [['broker_commission', () => this.brokerCommissions.materializeFromContract(contract.id)] as [SignFollowupStep, () => Promise<unknown>]]
+        : []),
+      // Self-skips when no eligible rule / sales rep exists; idempotent via
+      // BonusEntry.contractId.
+      ['sales_commission', () => this.bonus.materializeFromSignedContract(contract.id)],
+    ];
+    const failures: SignFollowupFailure[] = [];
+    for (const [step, run] of steps) {
       try {
-        await this.brokerCommissions.materializeFromContract(id);
+        await run();
       } catch (e) {
-        this.logger.warn(
-          `materializeFromContract(${id}) failed on sign: ${(e as Error).message}`,
-        );
+        const error = (e as Error).message;
+        this.logger.error(`sign follow-up ${step} failed for contract ${contract.id}: ${error}`);
+        failures.push({ step, error });
       }
     }
-
-    // Materialize the automatic SALES commission for every newly-signed
-    // contract (broker or not). Best-effort: a failure here must never fail the
-    // sign request, and the generator self-skips when no eligible rule / sales
-    // rep exists. Idempotent via BonusEntry.contractId.
-    try {
-      await this.bonus.materializeFromSignedContract(id);
-    } catch (e) {
-      this.logger.warn(
-        `sales commission materialize(${id}) failed on sign: ${(e as Error).message}`,
+    await this.prisma.auditLog
+      .create({
+        data: {
+          actorId,
+          action: failures.length ? SIGN_FOLLOWUP_FAILED : SIGN_FOLLOWUP_OK,
+          entityType: 'Contract',
+          entityId: contract.id,
+          after: { steps: steps.map(([s]) => s), failures } as unknown as Prisma.InputJsonValue,
+        },
+      })
+      .catch((e) =>
+        this.logger.error(`sign follow-up audit failed for contract ${contract.id}: ${(e as Error).message}`),
       );
-    }
+    return failures;
+  }
 
-    return updated;
+  /** FG-10 — re-runs the sign follow-ups of a signed contract (all idempotent). */
+  async retrySignFollowups(id: string, actorId: string) {
+    const contract = await this.prisma.contract.findFirst({
+      where: { id, companyId: getRequiredCompanyId() },
+      select: { id: true, unitId: true, createdAt: true, brokerId: true, signedAt: true },
+    });
+    if (!contract) throw new NotFoundException('Contract not found');
+    if (!contract.signedAt) throw new ConflictException('العقد غير موقّع');
+    const failures = await this.runSignFollowups(contract, actorId);
+    return { failures };
+  }
+
+  /** True when the latest sign follow-up run of this contract had a failure. */
+  private async signFollowupFailed(contractId: string): Promise<boolean> {
+    const last = await this.prisma.auditLog.findFirst({
+      where: {
+        companyId: getRequiredCompanyId(),
+        entityType: 'Contract',
+        entityId: contractId,
+        action: { in: [SIGN_FOLLOWUP_FAILED, SIGN_FOLLOWUP_OK] },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { action: true },
+    });
+    return last?.action === SIGN_FOLLOWUP_FAILED;
   }
 
   /**
@@ -1022,6 +1075,15 @@ class ContractsController {
     @Body() dto: SignContractDto,
   ) {
     return this.svc.sign(id, dto, user.sub);
+  }
+
+  // FG-10 — re-run what signing creates (warranties, commissions) after a
+  // failure. Same strict permission as signing.
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('contracts:sign')
+  @Post(':id/sign-followups')
+  retrySignFollowups(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.retrySignFollowups(id, user.sub);
   }
 
   // P11 — register a presigned-uploaded file as the contract's canonical PDF.
