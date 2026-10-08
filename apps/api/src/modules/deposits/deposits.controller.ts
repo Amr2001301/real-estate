@@ -241,14 +241,16 @@ export class DepositsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('deposits:delete')
-  @Delete(':id')
-  softDelete(@Param('id', ParseUUIDPipe) id: string) {
-    return this.svc.softDelete(id);
+  // Was `@Delete(':id')` / `@Post(':id/restore')` on this prefix-less
+  // controller, i.e. DELETE /v1/:id — nothing called it under that path.
+  @Delete('deposits/:id')
+  softDelete(@CurrentUser() actor: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.softDelete(id, actor);
   }
 
   @Roles(UserRole.ADMIN)
   @Permissions('deposits:delete')
-  @Post(':id/restore')
+  @Post('deposits/:id/restore')
   restore(@Param('id', ParseUUIDPipe) id: string) {
     return this.svc.restore(id);
   }

@@ -90,6 +90,27 @@ const DEPOSIT_INCLUDE = {
   reviewedBy: { select: { id: true, fullName: true } },
 } as const;
 
+/** FG-05 — the fields a reversal decision and its audit entry read. */
+const REVERSAL_SELECT = {
+  id: true,
+  reviewStatus: true,
+  verified: true,
+  amount: true,
+  createdAt: true,
+  reviewedAt: true,
+  deletedAt: true,
+  installmentId: true,
+  installment: { select: { id: true, status: true, paidAt: true } },
+} satisfies Prisma.DepositSelect;
+type ReversalDeposit = Prisma.DepositGetPayload<{ select: typeof REVERSAL_SELECT }>;
+
+/** Review states in which a deposit counts towards its installment. */
+const PAYING_REVIEW_STATUSES: DepositReviewStatus[] = [
+  DepositReviewStatus.APPROVED,
+  // Admin-recorded deposits stay NO_PROOF but mark the installment paid.
+  DepositReviewStatus.NO_PROOF,
+];
+
 @Injectable()
 export class DepositsService {
   private readonly logger = new Logger(DepositsService.name);
@@ -147,11 +168,30 @@ export class DepositsService {
     return deposit;
   }
 
-  async softDelete(id: string) {
-    const exists = await this.prisma.deposit.findUnique({ where: { id }, select: { id: true, deletedAt: true } });
-    if (!exists) throw new NotFoundException('Deposit not found');
-    if (exists.deletedAt) throw new NotFoundException('Deposit already deleted');
-    await this.prisma.deposit.update({ where: { id }, data: { deletedAt: new Date() } });
+  /**
+   * FG-05 — deleting a deposit that still pays its installment reverses it
+   * first (PaymentCorrection + installment reopened), in the same
+   * transaction; it used to leave the installment PAID with no payment behind
+   * it. Restoring the deposit later does not re-pay the installment.
+   */
+  async softDelete(id: string, actor: AuthUser) {
+    const d = await this.prisma.deposit.findUnique({ where: { id }, select: REVERSAL_SELECT });
+    if (!d) throw new NotFoundException('Deposit not found');
+    if (d.deletedAt) throw new NotFoundException('Deposit already deleted');
+    const stillPays =
+      !!d.installmentId &&
+      d.installment?.status === InstallmentStatus.PAID &&
+      PAYING_REVIEW_STATUSES.includes(d.reviewStatus) &&
+      !(await this.reversedSinceReview(d));
+    if (!stillPays) {
+      await this.prisma.deposit.update({ where: { id }, data: { deletedAt: new Date() } });
+      return;
+    }
+    const companyId = getRequiredCompanyId();
+    await this.prisma.$transaction(async (tx) => {
+      await this.writeReversal(tx, d, 'Deposit deleted by admin', actor.sub, companyId);
+      await tx.deposit.update({ where: { id }, data: { deletedAt: new Date() } });
+    });
   }
 
   async restore(id: string) {
@@ -532,14 +572,7 @@ export class DepositsService {
     // the new approve/reject endpoints carry forward.
     const target = await this.prisma.deposit.findUnique({
       where: { id },
-      select: {
-        receiptUrl: true,
-        reviewStatus: true,
-        verified: true,
-        amount: true,
-        installmentId: true,
-        installment: { select: { id: true, status: true, paidAt: true } },
-      },
+      select: { ...REVERSAL_SELECT, receiptUrl: true },
     });
     if (!target) throw new NotFoundException('Deposit not found');
     const nextReviewStatus: DepositReviewStatus = dto.verified
@@ -551,12 +584,14 @@ export class DepositsService {
     // FG-06: un-verifying an APPROVED deposit that already settled an installment
     // must write a PaymentCorrection and reopen the installment. Without this,
     // the deposit status goes back to PENDING_REVIEW but the installment stays
-    // PAID — an inconsistency that was the root of FG-06.
+    // PAID — an inconsistency that was the root of FG-06. FG-05: not twice —
+    // a deposit already reversed since its last review only changes status.
     const needsReversal =
       !dto.verified &&
       target.reviewStatus === DepositReviewStatus.APPROVED &&
       !!target.installmentId &&
-      target.installment?.status === InstallmentStatus.PAID;
+      target.installment?.status === InstallmentStatus.PAID &&
+      !(await this.reversedSinceReview(target));
 
     if (needsReversal) {
       const companyId = getRequiredCompanyId();
@@ -565,51 +600,7 @@ export class DepositsService {
           where: { id },
           data: { verified: false, reviewStatus: nextReviewStatus, rejectionReason: null },
         });
-
-        const correction = await tx.paymentCorrection.create({
-          data: {
-            type: PaymentCorrectionType.REVERSAL,
-            depositId: id,
-            sourceInstallmentId: target.installmentId!,
-            reason: 'Deposit un-verified by admin',
-            performedById: actor.sub,
-            companyId,
-          },
-        });
-
-        // Manual reversal always reopens as PENDING (§5.1)
-        await tx.installment.update({
-          where: { id: target.installmentId! },
-          data: {
-            status: InstallmentStatus.PENDING,
-            lastCorrectionId: correction.id,
-            // paidAt intentionally NOT cleared — Hard Rule 2 / §3.6
-          },
-        });
-
-        await tx.auditLog.create({
-          data: {
-            actorId: actor.sub,
-            action: 'deposit.reversed',
-            entityType: 'Deposit',
-            entityId: id,
-            before: {
-              reviewStatus: target.reviewStatus,
-              verified: target.verified,
-              amount: Number(target.amount),
-            },
-            after: {
-              correctionId: correction.id,
-              correctionType: 'REVERSAL',
-              affectedInstallmentId: target.installmentId,
-              installmentPreviousStatus: target.installment!.status,
-              installmentNewStatus: 'PENDING',
-              installmentPaidAtPreserved: target.installment!.paidAt?.toISOString() ?? null,
-              reason: 'Deposit un-verified by admin',
-            },
-            companyId,
-          },
-        });
+        await this.writeReversal(tx, target, 'Deposit un-verified by admin', actor.sub, companyId);
       });
       return this.findOne(id);
     }
@@ -650,71 +641,118 @@ export class DepositsService {
     const companyId = getRequiredCompanyId();
     const deposit = await this.prisma.deposit.findFirst({
       where: { id, companyId },
-      select: {
-        id: true,
-        reviewStatus: true,
-        verified: true,
-        amount: true,
-        installmentId: true,
-        installment: { select: { id: true, status: true, paidAt: true } },
-      },
+      select: REVERSAL_SELECT,
     });
     if (!deposit) throw new NotFoundException('Deposit not found');
-    if (deposit.reviewStatus !== DepositReviewStatus.APPROVED) {
-      throw new BadRequestException('Only APPROVED deposits can be reversed');
-    }
-    if (!deposit.installmentId || !deposit.installment) {
-      throw new BadRequestException('Deposit is not linked to an installment');
-    }
+    if (deposit.deletedAt) throw new BadRequestException('الدفعة محذوفة');
+    await this.assertReversible(deposit);
 
-    await this.prisma.$transaction(async (tx) => {
-      const correction = await tx.paymentCorrection.create({
-        data: {
-          type: PaymentCorrectionType.REVERSAL,
-          depositId: id,
-          sourceInstallmentId: deposit.installmentId!,
-          reason: dto.reason.trim(),
-          performedById: actor.sub,
-          companyId,
-        },
-      });
-
-      // Manual admin reversal always reopens as PENDING (§5.1)
-      await tx.installment.update({
-        where: { id: deposit.installmentId! },
-        data: {
-          status: InstallmentStatus.PENDING,
-          lastCorrectionId: correction.id,
-          // paidAt intentionally NOT cleared — Hard Rule 2 / §3.6
-        },
-      });
-
-      await tx.auditLog.create({
-        data: {
-          actorId: actor.sub,
-          action: 'deposit.reversed',
-          entityType: 'Deposit',
-          entityId: id,
-          before: {
-            reviewStatus: deposit.reviewStatus,
-            verified: deposit.verified,
-            amount: Number(deposit.amount),
-          },
-          after: {
-            correctionId: correction.id,
-            correctionType: 'REVERSAL',
-            affectedInstallmentId: deposit.installmentId,
-            installmentPreviousStatus: deposit.installment!.status,
-            installmentNewStatus: 'PENDING',
-            installmentPaidAtPreserved: deposit.installment!.paidAt?.toISOString() ?? null,
-            reason: dto.reason.trim(),
-          },
-          companyId,
-        },
-      });
-    });
+    await this.prisma.$transaction((tx) =>
+      this.writeReversal(tx, deposit, dto.reason.trim(), actor.sub, companyId),
+    );
 
     return this.findOne(id);
+  }
+
+  /**
+   * FG-05 — throws unless `d` still pays its installment, i.e. reversing it
+   * would reopen something:
+   *   - it counted towards the installment: APPROVED, or NO_PROOF (an
+   *     admin-recorded deposit marks the installment paid when recorded —
+   *     reversal used to accept APPROVED only, so those could not be undone);
+   *   - it has not been reversed since it was last reviewed (a re-approval
+   *     after a reversal counts again — reviewedAt moves past the correction);
+   *   - the installment is PAID.
+   * writeReversal re-checks the last condition atomically.
+   */
+  private async assertReversible(d: ReversalDeposit): Promise<void> {
+    if (!d.installmentId || !d.installment) {
+      throw new BadRequestException('Deposit is not linked to an installment');
+    }
+    if (!PAYING_REVIEW_STATUSES.includes(d.reviewStatus)) {
+      throw new BadRequestException('لا يمكن عكس دفعة لم تُحتسب على القسط (قيد المراجعة أو مرفوضة)');
+    }
+    if (await this.reversedSinceReview(d)) {
+      throw new ConflictException('تم عكس هذه الدفعة بالفعل');
+    }
+    if (d.installment.status !== InstallmentStatus.PAID) {
+      throw new ConflictException('القسط غير مدفوع — لا يوجد ما يُعكس');
+    }
+  }
+
+  /** A REVERSAL written for `d` after its last review (or creation). */
+  private async reversedSinceReview(d: ReversalDeposit): Promise<boolean> {
+    const found = await this.prisma.paymentCorrection.findFirst({
+      where: {
+        depositId: d.id,
+        type: PaymentCorrectionType.REVERSAL,
+        createdAt: { gte: d.reviewedAt ?? d.createdAt },
+      },
+      select: { id: true },
+    });
+    return !!found;
+  }
+
+  /**
+   * Writes a reversal inside `tx`: reopens the installment (PAID → PENDING,
+   * claimed atomically so two concurrent reversals cannot both pass), records
+   * a PaymentCorrection(REVERSAL), points the installment's lastCorrectionId
+   * at it and writes the §6.3 deposit.reversed audit entry. paidAt is kept
+   * (Hard Rule 2 / §3.6); a manual reversal always reopens as PENDING (§5.1).
+   */
+  private async writeReversal(
+    tx: Prisma.TransactionClient,
+    d: ReversalDeposit,
+    reason: string,
+    actorId: string,
+    companyId: string,
+  ) {
+    const installmentId = d.installmentId as string;
+    const claimed = await tx.installment.updateMany({
+      where: { id: installmentId, status: InstallmentStatus.PAID },
+      data: { status: InstallmentStatus.PENDING },
+    });
+    if (claimed.count === 0) {
+      throw new ConflictException('تم عكس هذه الدفعة بالفعل');
+    }
+    const correction = await tx.paymentCorrection.create({
+      data: {
+        type: PaymentCorrectionType.REVERSAL,
+        depositId: d.id,
+        sourceInstallmentId: installmentId,
+        reason,
+        performedById: actorId,
+        companyId,
+      },
+    });
+    await tx.installment.update({
+      where: { id: installmentId },
+      data: { lastCorrectionId: correction.id },
+    });
+    await tx.auditLog.create({
+      data: {
+        actorId,
+        action: 'deposit.reversed',
+        entityType: 'Deposit',
+        entityId: d.id,
+        before: {
+          reviewStatus: d.reviewStatus,
+          verified: d.verified,
+          amount: Number(d.amount),
+        },
+        after: {
+          correctionId: correction.id,
+          correctionType: 'REVERSAL',
+          affectedInstallmentId: installmentId,
+          installmentPreviousStatus: InstallmentStatus.PAID,
+          installmentNewStatus: 'PENDING',
+          installmentPaidAtPreserved: d.installment?.paidAt?.toISOString() ?? null,
+          reason,
+        },
+        companyId,
+      },
+    });
+    return correction;
   }
 
   // ── P11 — Customer payment-proof submission + admin review ────────────
