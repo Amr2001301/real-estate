@@ -4,7 +4,6 @@ import {
   BonusEntryStatus,
   BrokerCommissionStatus,
   BrokerPayoutStatus,
-  DepositReviewStatus,
   DepositType,
   DocumentCategory,
   DocumentOwnerType,
@@ -16,6 +15,7 @@ import {
   UnitStatus,
   UserRole,
 } from '@prisma/client';
+import { awaitingReviewerWhere } from '../deposits/review-queue';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { scopedUserCount } from '../../common/tenant/resolve-tenant-entity';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
@@ -323,7 +323,8 @@ export class ReportsService {
       this.prisma.unit.count({ where: { status: UnitStatus.AVAILABLE } }),
       this.prisma.unit.count({ where: { status: UnitStatus.RESERVED } }),
       this.prisma.lead.count({ where: { createdAt: { gte: startOfMonth } } }),
-      this.prisma.deposit.count({ where: { reviewStatus: DepositReviewStatus.PENDING_REVIEW } }),
+      // FG-01 — the same rows as the review queue (cheques wait on the bank).
+      this.prisma.deposit.count({ where: awaitingReviewerWhere }),
       this.prisma.maintenanceRequest.count({
         where: {
           status: {

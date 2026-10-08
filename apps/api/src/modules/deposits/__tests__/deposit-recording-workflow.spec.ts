@@ -427,7 +427,29 @@ describe('Deposits · recording + verification workflow', () => {
   // FG-08: admin-recorded deposits must capture the payment method so that
   // cheque-bounce workflows have the correct method on the deposit row.
 
-  it('Step F: record() stores paymentMethod=CHEQUE when provided', async () => {
+  it('Step F: record() stores paymentMethod=BANK_TRANSFER when provided (no details → no instrument)', async () => {
+    await request(app.getHttpServer())
+      .post('/deposits')
+      .send({
+        contractId: CONTRACT_ID,
+        installmentId: INSTALLMENT_ID,
+        amount: 5000,
+        paymentMethod: 'BANK_TRANSFER',
+      })
+      .expect(201);
+
+    expect(mock.deposit.create).toHaveBeenCalledTimes(1);
+    const args = mock.deposit.create.mock.calls[0]![0] as {
+      data: Record<string, unknown>;
+    };
+    expect(args.data.paymentMethod).toBe('BANK_TRANSFER');
+    expect(args.data.paymentInstrumentId).toBeNull();
+  });
+
+  // FG-01: a cheque payment needs the cheque (number + due date) — it becomes
+  // the PaymentInstrument whose clearing pays the installment. The cheque path
+  // itself is covered against Postgres in e2e-financial (FG01-*).
+  it('FG-01: record() rejects paymentMethod=CHEQUE without cheque details (400)', async () => {
     await request(app.getHttpServer())
       .post('/deposits')
       .send({
@@ -436,13 +458,10 @@ describe('Deposits · recording + verification workflow', () => {
         amount: 5000,
         paymentMethod: 'CHEQUE',
       })
-      .expect(201);
+      .expect(400);
 
-    expect(mock.deposit.create).toHaveBeenCalledTimes(1);
-    const args = mock.deposit.create.mock.calls[0]![0] as {
-      data: Record<string, unknown>;
-    };
-    expect(args.data.paymentMethod).toBe('CHEQUE');
+    expect(mock.deposit.create).not.toHaveBeenCalled();
+    expect(mock.installment.updateMany).not.toHaveBeenCalled();
   });
 
   it('Step F: record() stores paymentMethod=null when field is omitted (existing behaviour)', async () => {
