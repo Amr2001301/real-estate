@@ -839,6 +839,157 @@ describe('Flow A — Catalog sync (e2e)', () => {
     });
   });
 
+  describe('A4k — FG-04 contracts created directly get a contract number', () => {
+    const contracts: string[] = [];
+    const units: string[] = [];
+    const tag = Date.now().toString().slice(-6);
+
+    /** A fresh AVAILABLE unit — POST /contracts marks its unit SOLD. */
+    const freshUnit = async (n: number) => {
+      const raw = testApp.rawPrisma;
+      const sample = await raw.unit.findUniqueOrThrow({
+        where: { id: fixtures.units.sampleUnitInP1Id },
+        select: { buildingId: true, companyId: true },
+      });
+      const u = await raw.unit.create({
+        data: {
+          buildingId: sample.buildingId,
+          companyId: sample.companyId,
+          code: `A4K-${tag}-${n}`,
+          type: '2BR',
+          area: 100,
+          price: 900_000,
+        },
+        select: { id: true },
+      });
+      units.push(u.id);
+      return u.id;
+    };
+    const createContract = async (n: number, contractNumber?: string) => {
+      const customer = await testApp.rawPrisma.user.findFirstOrThrow({
+        where: { email: fixtures.users.CUSTOMER_1.email },
+        select: { id: true },
+      });
+      const res = await http()
+        .post('/v1/contracts')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          customerId: customer.id,
+          unitId: await freshUnit(n),
+          totalAmount: 900_000,
+          ...(contractNumber ? { contractNumber } : {}),
+        });
+      if (res.body?.id) contracts.push(res.body.id);
+      return res;
+    };
+    const patch = (id: string, body: Record<string, unknown>) =>
+      http().patch(`/v1/contracts/${id}`).set('Authorization', bearer(adminToken)).send(body);
+
+    afterAll(async () => {
+      const raw = testApp.rawPrisma;
+      await raw.contract.deleteMany({ where: { id: { in: contracts } } });
+      await raw.unitStatusHistory.deleteMany({ where: { unitId: { in: units } } });
+      await raw.unit.deleteMany({ where: { id: { in: units } } });
+    });
+
+    it('POST /contracts without a number assigns the next CON-<year>-<seq>', async () => {
+      const res = await createContract(1);
+      expect(res.status).toBe(201);
+      expect(res.body.contractNumber).toMatch(new RegExp(`^CON-${new Date().getFullYear()}-\\d{4,}$`));
+
+      const next = await createContract(2);
+      expect(next.status).toBe(201);
+      const seq = (n: string) => parseInt(n.split('-')[2]!, 10);
+      expect(seq(next.body.contractNumber)).toBe(seq(res.body.contractNumber) + 1);
+    });
+
+    it('POST /contracts keeps a given number (a contract signed before the system); a taken one → 409', async () => {
+      const legacy = `LEGACY-${tag}`;
+      const res = await createContract(3, legacy);
+      expect(res.status).toBe(201);
+      expect(res.body.contractNumber).toBe(legacy);
+
+      const dup = await createContract(4, legacy);
+      expect(dup.status).toBe(409);
+    });
+
+    it('PATCH numbers a numberless contract once; an issued number never changes', async () => {
+      const raw = testApp.rawPrisma;
+      const customer = await raw.user.findFirstOrThrow({
+        where: { email: fixtures.users.CUSTOMER_1.email },
+        select: { id: true, companyId: true },
+      });
+      const numberless = await raw.contract.create({
+        data: {
+          companyId: customer.companyId,
+          customerId: customer.id,
+          unitId: await freshUnit(5),
+          totalAmount: 500_000,
+          downPayment: 0,
+        },
+        select: { id: true },
+      });
+      contracts.push(numberless.id);
+
+      const assigned = await patch(numberless.id, { contractNumber: `OLD-${tag}` });
+      expect(assigned.status).toBe(200);
+      expect(assigned.body.contractNumber).toBe(`OLD-${tag}`);
+
+      // Same number again is a no-op; a different one is refused.
+      expect((await patch(numberless.id, { contractNumber: `OLD-${tag}` })).status).toBe(200);
+      expect((await patch(numberless.id, { contractNumber: `NEW-${tag}` })).status).toBe(409);
+      const row = await raw.contract.findUniqueOrThrow({ where: { id: numberless.id } });
+      expect(row.contractNumber).toBe(`OLD-${tag}`);
+    });
+
+    it('PATCH with a number another contract holds → 409', async () => {
+      const raw = testApp.rawPrisma;
+      const customer = await raw.user.findFirstOrThrow({
+        where: { email: fixtures.users.CUSTOMER_1.email },
+        select: { id: true, companyId: true },
+      });
+      const numberless = await raw.contract.create({
+        data: {
+          companyId: customer.companyId,
+          customerId: customer.id,
+          unitId: await freshUnit(6),
+          totalAmount: 500_000,
+          downPayment: 0,
+        },
+        select: { id: true },
+      });
+      contracts.push(numberless.id);
+      expect((await patch(numberless.id, { contractNumber: `LEGACY-${tag}` })).status).toBe(409);
+    });
+
+    it('PATCH autoNumber gives a numberless contract the next number; a numbered one keeps its own', async () => {
+      const raw = testApp.rawPrisma;
+      const customer = await raw.user.findFirstOrThrow({
+        where: { email: fixtures.users.CUSTOMER_1.email },
+        select: { id: true, companyId: true },
+      });
+      const numberless = await raw.contract.create({
+        data: {
+          companyId: customer.companyId,
+          customerId: customer.id,
+          unitId: await freshUnit(7),
+          totalAmount: 500_000,
+          downPayment: 0,
+        },
+        select: { id: true },
+      });
+      contracts.push(numberless.id);
+
+      const res = await patch(numberless.id, { autoNumber: true });
+      expect(res.status).toBe(200);
+      expect(res.body.contractNumber).toMatch(new RegExp(`^CON-${new Date().getFullYear()}-\\d{4,}$`));
+
+      const again = await patch(numberless.id, { autoNumber: true });
+      expect(again.status).toBe(200);
+      expect(again.body.contractNumber).toBe(res.body.contractNumber);
+    });
+  });
+
   // ── Broker portal: the same filter, inside the broker's own scope ─────────
   //
   // The portal reservation form searches leads instead of preloading 200, and

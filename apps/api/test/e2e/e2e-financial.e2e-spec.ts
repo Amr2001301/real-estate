@@ -773,6 +773,64 @@ describe('P13 — Info requests admin visibility + notifications (e2e)', () => {
     });
     expect(salesNotifs).toBe(0);
   });
+  // ── FG-04 — staff move an inquiry OPEN → RESPONDED → CLOSED ──────────────
+
+  const patchStatus = (id: string, status: string, token = adminToken) =>
+    http()
+      .patch(`/v1/info-requests/${id}`)
+      .set('Authorization', bearer(token))
+      .send({ status });
+
+  it('P13.7: FG-04 — admin moves an inquiry OPEN → RESPONDED → CLOSED; it never reopens', async () => {
+    const responded = await patchStatus(guestReqId, 'RESPONDED');
+    expect(responded.status).toBe(200);
+    expect(responded.body.status).toBe('RESPONDED');
+
+    const closed = await patchStatus(guestReqId, 'CLOSED');
+    expect(closed.status).toBe(200);
+    expect(closed.body.status).toBe('CLOSED');
+
+    expect((await patchStatus(guestReqId, 'OPEN')).status).toBe(409);
+    expect((await patchStatus(guestReqId, 'RESPONDED')).status).toBe(409);
+    const row = await testApp.rawPrisma.infoRequest.findUniqueOrThrow({
+      where: { id: guestReqId },
+      select: { status: true },
+    });
+    expect(row.status).toBe('CLOSED');
+  });
+
+  it('P13.8: FG-04 — an OPEN inquiry can be closed directly (spam, duplicate)', async () => {
+    const closed = await patchStatus(clientReqId, 'CLOSED');
+    expect(closed.status).toBe(200);
+    expect(closed.body.status).toBe('CLOSED');
+  });
+
+  it('P13.9: FG-04 — GET /info-requests?status= filters (it used to ignore the filter)', async () => {
+    const res = await http()
+      .get('/v1/info-requests?status=CLOSED&pageSize=100')
+      .set('Authorization', bearer(adminToken));
+    expect(res.status).toBe(200);
+    const ids = collectIds(res.body);
+    expect(ids).toEqual(expect.arrayContaining([guestReqId, clientReqId]));
+    expect(ids).not.toContain(customer1ReqId);
+    expect(
+      (res.body.data as Array<{ status: string }>).every((r) => r.status === 'CLOSED'),
+    ).toBe(true);
+  });
+
+  it('P13.10: FG-04 — permissions, unknown id and bad status', async () => {
+    const salesToken = await loginAs(testApp.app, 'sales@example.com', 'SalesPass123!');
+    // SALES' default tier has no visits:approve.
+    expect((await patchStatus(customer1ReqId, 'RESPONDED', salesToken)).status).toBe(403);
+    expect((await patchStatus(customer1ReqId, 'RESPONDED', customer1Token)).status).toBe(403);
+    expect((await patchStatus('00000000-0000-4000-8000-00000000f004', 'RESPONDED')).status).toBe(404);
+    expect((await patchStatus(customer1ReqId, 'ARCHIVED')).status).toBe(400);
+    const row = await testApp.rawPrisma.infoRequest.findUniqueOrThrow({
+      where: { id: customer1ReqId },
+      select: { status: true },
+    });
+    expect(row.status).toBe('OPEN');
+  });
 });
 
 // ═════════════════════════════════════════════════════════════════════════════

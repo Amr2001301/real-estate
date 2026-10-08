@@ -47,6 +47,7 @@ import {
   UnitStatus,
   UserRole,
 } from '@prisma/client';
+import { nextContractNumber } from '../../common/utils/contract-number';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { findTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import {
@@ -303,23 +304,6 @@ export class ReservationsService {
    *
    * Example: CON-2026-0001 deleted, CON-2026-0002 exists → returns CON-2026-0003.
    */
-  private async nextContractNumber(): Promise<string> {
-    const year = new Date().getFullYear();
-    const prefix = `CON-${year}-`;
-    const rows = await this.prisma.contract.findMany({
-      where: { contractNumber: { startsWith: prefix } },
-      select: { contractNumber: true },
-    });
-    let maxSeq = 0;
-    for (const { contractNumber } of rows) {
-      if (contractNumber) {
-        const seq = parseInt(contractNumber.slice(prefix.length), 10);
-        if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
-      }
-    }
-    return `${prefix}${String(maxSeq + 1).padStart(4, '0')}`;
-  }
-
   /**
    * Resolve and validate a booking installment plan. If valid, returns the full plan
    * (including duration options + financial figures needed for snapshot computation).
@@ -1763,7 +1747,7 @@ export class ReservationsService {
     // contract number.  The root fix (max-based generator) makes this unlikely;
     // the retry is purely a safety net.
     for (let attempt = 0; attempt < 3; attempt++) {
-      const contractNumber = await this.nextContractNumber();
+      const contractNumber = await nextContractNumber(this.prisma);
 
       try {
         const result = await this.prisma.$transaction(async (tx) => {

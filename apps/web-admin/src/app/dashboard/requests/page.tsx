@@ -28,6 +28,7 @@ import {
   PremiumEmptyState,
 } from '@/components/premium';
 import { getLocale } from '@/lib/locale';
+import { InquiryActions } from './_actions';
 import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
@@ -199,7 +200,8 @@ export default async function InfoRequestsPage({
                   <th className="text-start py-3 px-4">{m.cols.message}</th>
                   <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.context}</th>
                   <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.status}</th>
-                  <th className="text-start py-3 ps-4 pe-5 whitespace-nowrap">{m.cols.date}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.date}</th>
+                  <th className="text-end py-3 ps-4 pe-5 whitespace-nowrap">{m.cols.actions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
@@ -312,8 +314,13 @@ export default async function InfoRequestsPage({
                       </td>
 
                       {/* Date */}
-                      <td className="py-3.5 ps-4 pe-5 text-xs text-slate-500 whitespace-nowrap">
+                      <td className="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">
                         {formatDateTime(req.createdAt)}
+                      </td>
+
+                      {/* FG-04 — next step */}
+                      <td className="py-3.5 ps-4 pe-5 text-end">
+                        <InquiryActions id={req.id} status={req.status} locale={locale} />
                       </td>
                     </tr>
                   );
