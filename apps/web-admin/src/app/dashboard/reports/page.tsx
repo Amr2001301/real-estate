@@ -218,7 +218,7 @@ export default async function ReportsPage({
               { label: m.exportSales, filenameBase: 'sales-report', xlsxPath: '/reports/sales/export.xlsx', pdfPath: '/reports/sales/export.pdf', csvPath: '/reports/sales/export.csv', params: exportParams },
               { label: m.exportFinancial, filenameBase: 'financial-report', xlsxPath: '/reports/financial/export.xlsx', pdfPath: '/reports/financial/export.pdf', csvPath: '/reports/financial/export.csv', params: exportParams },
               { label: m.exportBrokers, filenameBase: 'broker-report', pdfPath: '/reports/broker-leaderboard/export.pdf', params: exportParams },
-              { label: m.exportOperational, filenameBase: 'operational-report', xlsxPath: '/reports/operational/export.xlsx', csvPath: '/reports/operational/export.csv' },
+              { label: m.exportOperational, filenameBase: 'operational-report', pdfPath: '/reports/operational/export.pdf', xlsxPath: '/reports/operational/export.xlsx', csvPath: '/reports/operational/export.csv' },
             ]}
           />
         }

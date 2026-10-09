@@ -140,4 +140,15 @@ describe('GET /maintenance-requests/reports/summary.xlsx (P15.3)', () => {
       await request(app.getHttpServer()).get('/maintenance-requests/reports/summary.xlsx').expect(403);
     }
   });
+
+  // The presentation PDF (HTML → Chromium). This module has no renderer, so
+  // an allowed caller reaches the report and gets 503; others stop at @Roles.
+  it('summary.pdf: reached by ADMIN (503 without a renderer), forbidden for CUSTOMER / BROKER', async () => {
+    FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+    await request(app.getHttpServer()).get('/maintenance-requests/reports/summary.pdf').expect(503);
+    for (const role of [UserRole.CUSTOMER, UserRole.BROKER]) {
+      FakeAuthGuard.currentUser = { sub: 'x', role, codes: ['maintenance:read'] };
+      await request(app.getHttpServer()).get('/maintenance-requests/reports/summary.pdf').expect(403);
+    }
+  });
 });

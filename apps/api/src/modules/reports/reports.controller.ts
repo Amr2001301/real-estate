@@ -278,6 +278,32 @@ export class ReportsController {
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('reports:operational:read')
+  @Get('operational/export.pdf')
+  @Header('Content-Type', 'application/pdf')
+  @Header('Content-Disposition', 'attachment; filename="operational-report.pdf"')
+  async operationalPdf(): Promise<StreamableFile> {
+    return new StreamableFile(await this.svc.operationalPdf());
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('reports:financial:read')
+  @Get('financial-dashboard/export.pdf')
+  @Header('Content-Type', 'application/pdf')
+  @Header('Content-Disposition', 'attachment; filename="financial-dashboard.pdf"')
+  async financialDashboardPdf(@Query() query: FinancialDashboardQueryDto): Promise<StreamableFile> {
+    return new StreamableFile(
+      await this.svc.financialDashboardPdf({
+        projectId: query.projectId,
+        q: query.q,
+        type: query.type,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+      }),
+    );
+  }
+
+  @Roles(UserRole.ADMIN)
   @Permissions('reports:sales:read')
   @Get('sales/export.pdf')
   @Header('Content-Type', 'application/pdf')

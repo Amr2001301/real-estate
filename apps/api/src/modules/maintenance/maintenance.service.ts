@@ -15,6 +15,10 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import { getTenantContext, runInCompany } from '../../common/tenant/tenant-context';
 import { ReportBrandService } from '../company-branding/report-brand.service';
+import { presentReportPdf, ReportPdfService } from '../../common/report-pdf/report-pdf.service';
+import { fallbackBrand } from '../../common/utils/report-brand';
+import { getCompanyCurrency } from '../../common/currency/currency';
+import { maintenanceReportHtml } from './maintenance-report-template';
 import { csvSections, toCsv, type CsvCell } from '../../common/utils/csv';
 import {
   addFooter,
@@ -166,6 +170,7 @@ export class MaintenanceService {
     private readonly r2: R2Service,
     // Optional so unit tests can build the service without it.
     @Optional() private readonly reportBrand?: ReportBrandService,
+    @Optional() private readonly reportPdf?: ReportPdfService,
   ) {}
 
   /**
@@ -1432,6 +1437,56 @@ export class MaintenanceService {
    * by-category + by-assignee + expiring warranties), one sheet per section,
    * applied filters surfaced on the summary sheet. No demo values.
    */
+  /** The maintenance report as a presentation PDF (HTML → Chromium; 503 when unavailable). */
+  async reportsSummaryPdf(opts: {
+    from?: string;
+    to?: string;
+    assignedAdminId?: string;
+    categoryId?: string;
+    reviewStatus?: MaintenanceReviewStatus;
+    status?: MaintenanceStatus;
+  }): Promise<Buffer> {
+    const companyId = getTenantContext()?.companyId;
+    const [r, brand] = await Promise.all([
+      this.reportsSummary(opts),
+      this.reportBrand?.forCompany(companyId),
+    ]);
+    const report = brand ?? fallbackBrand(await getCompanyCurrency(this.prisma, companyId));
+    const txAr = (v: unknown): string => {
+      if (!v) return '—';
+      if (typeof v === 'string') return v;
+      const t = v as { ar?: string; en?: string };
+      return t.ar || t.en || '—';
+    };
+    const STATUS_AR: Record<string, string> = {
+      OPEN: 'مفتوحة', ASSIGNED: 'مسندة', IN_PROGRESS: 'قيد التنفيذ', RESOLVED: 'تم الحل', CLOSED: 'مغلقة',
+    };
+    const REVIEW_AR: Record<string, string> = { PENDING: 'قيد المراجعة', APPROVED: 'معتمدة', REJECTED: 'مرفوضة' };
+    const filters = [
+      opts.from && `من ${opts.from}`,
+      opts.to && `إلى ${opts.to}`,
+      opts.status && `الحالة: ${STATUS_AR[opts.status] ?? opts.status}`,
+      opts.reviewStatus && `المراجعة: ${REVIEW_AR[opts.reviewStatus] ?? opts.reviewStatus}`,
+      opts.assignedAdminId && 'موظف محدد',
+      opts.categoryId && 'فئة محددة',
+    ].filter((f): f is string => Boolean(f));
+    const html = maintenanceReportHtml(
+      {
+        ...r,
+        byCategory: r.byCategory.map((c) => ({ ...c, name: txAr(c.categoryName) })),
+        byAssignee: r.byAssignee,
+        expiringWarranties: r.expiringWarranties.map((w) => ({
+          unitCode: w.unitCode,
+          category: txAr(w.categoryName),
+          warrantyEnd: w.warrantyEnd ? new Date(w.warrantyEnd).toISOString().slice(0, 10) : '—',
+        })),
+        filters,
+      },
+      report,
+    );
+    return presentReportPdf(this.reportPdf, html, report);
+  }
+
   async reportsSummaryXlsx(opts: {
     from?: string;
     to?: string;

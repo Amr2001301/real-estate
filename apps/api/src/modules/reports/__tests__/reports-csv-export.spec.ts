@@ -426,4 +426,26 @@ describe('Reports module · CSV export', () => {
         .expect(403);
     });
   });
+
+  // Presentation PDFs (HTML → Chromium). This module has no renderer, so an
+  // ADMIN reaches each report and gets 503; other roles stop at @Roles.
+  describe('presentation PDFs (operational, financial dashboard)', () => {
+    const paths = ['/reports/operational/export.pdf', '/reports/financial-dashboard/export.pdf'];
+
+    it('are reached by ADMIN (503 without a renderer)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      for (const path of paths) await request(app.getHttpServer()).get(path).expect(503);
+    });
+
+    it('are forbidden for SALES / CUSTOMER / BROKER', async () => {
+      for (const role of [UserRole.SALES, UserRole.CUSTOMER, UserRole.BROKER]) {
+        FakeAuthGuard.currentUser = {
+          sub: 'x',
+          role,
+          codes: ['reports:operational:read', 'reports:financial:read'],
+        };
+        for (const path of paths) await request(app.getHttpServer()).get(path).expect(403);
+      }
+    });
+  });
 });

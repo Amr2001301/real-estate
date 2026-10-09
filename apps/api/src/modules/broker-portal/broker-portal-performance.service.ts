@@ -76,6 +76,19 @@ export class BrokerPortalPerformanceService {
     );
   }
 
+  /** Presentation PDF twin of exportXlsx — identical scoping. */
+  async exportPdf(scope: BrokerScopeContext, query: PortalPerformanceQueryDto) {
+    const { brokerAgentId, canSeeAllAgents } = await this.resolveAgentScope(
+      scope,
+      query.brokerAgentId,
+    );
+    return this.reports.brokerDetailPdf(
+      scope.brokerId,
+      { from: query.from, to: query.to, projectId: query.projectId, brokerAgentId },
+      { ...this.agentRows(scope, canSeeAllAgents), title: canSeeAllAgents ? 'أداء الشركة' : 'أدائي' },
+    );
+  }
+
   /**
    * The agent breakdown an export may carry: the whole firm for a manager,
    * only the caller's own row otherwise — the same rule as forBroker().

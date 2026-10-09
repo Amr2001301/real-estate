@@ -31,7 +31,10 @@ describe('BrokerReportsService broker-detail exports · agent scope', () => {
       summary: {},
       monthlyTrend: [],
       projectBreakdown: [],
-      agentBreakdown: [agent('u-self', 'Self Agent', 'self@x.test'), agent('u-other', 'Other Agent', 'other@x.test')],
+      agentBreakdown: [
+        agent('u-self', 'Self Agent', 'self@x.test'),
+        agent('u-other', 'Other Agent', 'other@x.test'),
+      ],
       recent: {},
     } as never);
     return svc;
