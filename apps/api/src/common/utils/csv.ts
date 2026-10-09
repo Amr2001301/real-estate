@@ -26,6 +26,16 @@ export function toCsv(headers: string[], rows: CsvCell[][]): string {
   return BOM + lines.join('\r\n');
 }
 
+/**
+ * Several CSV blocks (title lines, `toCsv` tables, blank separators) as one
+ * file: a single BOM at the very start. Each `toCsv` table carries its own,
+ * which mid-file would land as an invisible character inside the first
+ * header cell of every later section.
+ */
+export function csvSections(parts: string[]): string {
+  return BOM + parts.map((p) => p.split(BOM).join('')).join('\r\n');
+}
+
 export function csvFilename(base: string): string {
   const safe = base.replace(/[^\w.-]+/g, '_');
   const stamp = new Date().toISOString().slice(0, 10);

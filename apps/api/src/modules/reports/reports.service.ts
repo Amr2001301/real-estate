@@ -22,7 +22,7 @@ import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { getCompanyCurrency } from '../../common/currency/currency';
 import { fallbackBrand, type ReportBrand } from '../../common/utils/report-brand';
 import { ReportBrandService } from '../company-branding/report-brand.service';
-import { toCsv, type CsvCell } from '../../common/utils/csv';
+import { csvSections, toCsv, type CsvCell } from '../../common/utils/csv';
 import {
   buildBrokerPdf,
   buildFinancialPdf,
@@ -39,7 +39,9 @@ import {
   addTitledTable,
   amountFormat,
   createReportWorkbook,
+  excelLocalDate,
   formatMoneyColumns,
+  formatStamp,
   setupBoardSheet,
   styleTotalsRow,
   workbookToBuffer,
@@ -63,6 +65,9 @@ function translatableAr(v: unknown): string {
   const t = v as { ar?: string; en?: string };
   return t.ar || t.en || '—';
 }
+
+/** The dashboard report's alerts section when nothing is waiting on anyone. */
+const NO_OPEN_ALERTS = 'لا توجد تنبيهات معلقة';
 
 @Injectable()
 export class ReportsService {
@@ -572,6 +577,15 @@ export class ReportsService {
           id: true,
           createdAt: true,
           contract: { select: { contractNumber: true, customer: { select: { fullName: true } } } },
+          // A reservation deposit has no contract yet: name and unit come from the reservation.
+          reservation: {
+            select: {
+              reservationNumber: true,
+              unit: { select: { code: true } },
+              client: { select: { fullName: true } },
+              lead: { select: { fullName: true } },
+            },
+          },
         },
       }),
       this.prisma.infoRequest.findMany({
@@ -637,9 +651,14 @@ export class ReportsService {
       ...deposits.map((d) => ({
         id: `deposit:${d.id}`,
         type: 'deposit',
-        title: d.contract?.customer?.fullName ?? 'عميل',
+        title:
+          d.contract?.customer?.fullName ??
+          d.reservation?.client?.fullName ??
+          d.reservation?.lead?.fullName ??
+          'عميل',
         action: 'دفعة جديدة',
-        context: d.contract?.contractNumber ?? null,
+        context:
+          d.contract?.contractNumber ?? d.reservation?.unit?.code ?? d.reservation?.reservationNumber ?? null,
         createdAt: d.createdAt,
       })),
       ...infos.map((info) => ({
@@ -728,7 +747,7 @@ export class ReportsService {
    * recent activity) as stacked tables. No demo values.
    */
   async adminSummaryCsv(): Promise<string> {
-    const s = await this.adminSummary();
+    const [s, brand] = await Promise.all([this.adminSummary(), this.brand()]);
 
     const kpiRows: CsvCell[][] = [
       ['المشاريع المنشورة', s.kpis.projects],
@@ -736,7 +755,7 @@ export class ReportsService {
       ['وحدات متاحة', s.kpis.availableUnits],
       ['وحدات محجوزة', s.kpis.reservedUnits],
       ['فرص جديدة هذا الشهر', s.kpis.newLeadsThisMonth],
-      ['ودائع بانتظار المراجعة', s.kpis.pendingDeposits],
+      ['دفعات بانتظار المراجعة', s.kpis.pendingDeposits],
       ['طلبات صيانة مفتوحة', s.kpis.openMaintenance],
     ];
     const trendRows: CsvCell[][] = s.reservationTrend.map((t) => [t.month, t.label, t.value]);
@@ -753,15 +772,15 @@ export class ReportsService {
       a.action,
       a.title,
       a.context ?? '',
-      a.createdAt.toISOString(),
+      formatStamp(a.createdAt, brand.timezone),
     ]);
 
-    return [
+    return csvSections([
       'المؤشرات الرئيسية',
       toCsv(['المؤشر', 'القيمة'], kpiRows),
       '',
       'اتجاه الحجوزات (آخر 6 أشهر)',
-      toCsv(['الشهر', 'التسمية', 'عدد الحجوزات'], trendRows),
+      toCsv(['الشهر', 'اسم الشهر', 'عدد الحجوزات'], trendRows),
       '',
       'توزيع مصادر العملاء المحتملين',
       toCsv(['المصدر', 'العدد'], leadRows),
@@ -771,7 +790,7 @@ export class ReportsService {
       '',
       'آخر النشاطات',
       toCsv(['النشاط', 'الجهة', 'السياق', 'التاريخ'], activityRows),
-    ].join('\r\n');
+    ]);
   }
 
   /**
@@ -782,7 +801,7 @@ export class ReportsService {
    * if rendering returns null the tables still ship and the file is never broken.
    */
   async adminSummaryXlsx(): Promise<Buffer> {
-    const s = await this.adminSummary();
+    const [s, brand] = await Promise.all([this.adminSummary(), this.brand()]);
     const wb = createReportWorkbook();
 
     // Real, non-zero alerts only — reused on the cover + the detail sheet.
@@ -798,12 +817,11 @@ export class ReportsService {
     ).filter(([, count]) => count > 0);
 
     // Charts up-front (null on any rendering failure → graceful fallback).
+    // Untitled: each sits under its own section title on the cover.
     const trendChart = await renderBarChartPng({
-      title: 'اتجاه الحجوزات (آخر 6 أشهر)',
       series: s.reservationTrend.map((t) => ({ label: t.label, value: t.value })),
     });
     const sourcesChart = await renderDoughnutChartPng({
-      title: 'توزيع مصادر العملاء',
       series: s.leadSources.map((l) => ({ label: l.source, value: l.count })),
     });
 
@@ -811,7 +829,6 @@ export class ReportsService {
     const SPAN = 6;
     const sum = wb.addWorksheet('الملخص');
     setupBoardSheet(sum, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
-    const brand = await this.brand();
     addBoardBanner(sum, 'تقرير لوحة التحكم', SPAN, { wb, brand });
 
     addSectionTitle(sum, 'الملخص التنفيذي', SPAN);
@@ -833,7 +850,7 @@ export class ReportsService {
     addKpiCards(
       sum,
       alertRows.map(([label, value]) => ({ label, value })),
-      { span: SPAN, perRow: 3, bg: XLSX_ALERT_BG },
+      { span: SPAN, perRow: 3, bg: XLSX_ALERT_BG, emptyText: NO_OPEN_ALERTS },
     );
 
     addChartBlock(wb, sum, 'اتجاه الحجوزات (آخر 6 أشهر)', trendChart, { span: SPAN, width: 720, height: 300 });
@@ -841,44 +858,59 @@ export class ReportsService {
 
     addFooter(sum, brand);
 
-    // ── Sheet 2: اتجاهات الحجوزات ───────────────────────────────────────────
+    // ── Detail sheets: titled like every other report (company, time, footer) ──
     const trend = wb.addWorksheet('اتجاهات الحجوزات');
-    addTable(
-      trend,
-      ['الشهر', 'الشهر (بالعربية)', 'عدد الحجوزات'],
-      s.reservationTrend.map((t) => [t.month, t.label, t.value]),
-      [14, 20, 16],
-    );
+    addTitledTable(trend, {
+      title: 'اتجاه الحجوزات (آخر 6 أشهر)',
+      headers: ['الشهر', 'اسم الشهر', 'عدد الحجوزات'],
+      rows: s.reservationTrend.map((t) => [t.month, t.label, t.value]),
+      widths: [14, 20, 16],
+      brand,
+    });
     const trendTotal = s.reservationTrend.reduce((acc, t) => acc + t.value, 0);
     styleTotalsRow(trend.addRow(['الإجمالي', '', trendTotal]));
+    addFooter(trend, brand);
 
-    // ── Sheet 3: مصادر العملاء ──────────────────────────────────────────────
     const lead = wb.addWorksheet('مصادر العملاء');
     const leadTotal = s.leadSources.reduce((acc, l) => acc + l.count, 0);
-    addTable(
-      lead,
-      ['المصدر', 'العدد', 'النسبة'],
-      s.leadSources.map((l) => [
-        l.source,
-        l.count,
-        leadTotal > 0 ? `${Math.round((l.count / leadTotal) * 100)}%` : '0%',
-      ]),
-      [26, 14, 12],
-    );
+    addTitledTable(lead, {
+      title: 'توزيع مصادر العملاء المحتملين',
+      headers: ['المصدر', 'العدد', 'النسبة'],
+      rows: s.leadSources.map((l) => [l.source, l.count, leadTotal > 0 ? l.count / leadTotal : 0]),
+      widths: [26, 14, 12],
+      brand,
+    });
+    lead.getColumn(3).numFmt = '0%';
+    addFooter(lead, brand);
 
-    // ── Sheet 4: التنبيهات (real, non-zero alerts only — reuses the cover set) ─
+    // Real, non-zero alerts only — the same set as the cover.
     const alertSheet = wb.addWorksheet('التنبيهات');
-    addTable(alertSheet, ['التنبيه', 'العدد'], alertRows, [34, 14]);
+    addTitledTable(alertSheet, {
+      title: 'التنبيهات المعلقة',
+      headers: ['التنبيه', 'العدد'],
+      rows: alertRows,
+      widths: [34, 14],
+      brand,
+      emptyText: NO_OPEN_ALERTS,
+    });
+    addFooter(alertSheet, brand);
 
-    // ── Sheet 5: آخر النشاطات ───────────────────────────────────────────────
+    // Times in the company's zone (the server runs in UTC).
     const activity = wb.addWorksheet('آخر النشاطات');
-    addTable(
-      activity,
-      ['النشاط', 'الجهة', 'السياق', 'التاريخ'],
-      s.recentActivity.map((a) => [a.action, a.title, a.context ?? '—', a.createdAt]),
-      [18, 24, 16, 20],
-    );
+    addTitledTable(activity, {
+      title: 'آخر النشاطات',
+      headers: ['النشاط', 'الجهة', 'السياق', 'التاريخ'],
+      rows: s.recentActivity.map((a) => [
+        a.action,
+        a.title,
+        a.context ?? '—',
+        excelLocalDate(a.createdAt, brand.timezone),
+      ]),
+      widths: [18, 26, 18, 18],
+      brand,
+    });
     activity.getColumn(4).numFmt = 'yyyy-mm-dd hh:mm';
+    addFooter(activity, brand);
 
     return workbookToBuffer(wb);
   }
@@ -1680,11 +1712,11 @@ export class ReportsService {
       Number(p.total).toFixed(2),
     ]);
 
-    return [
+    return csvSections([
       toCsv(['المؤشر', 'القيمة'], summaryRows),
       '',
       toCsv(projectHeaders, projectRows),
-    ].join('\r\n');
+    ]);
   }
 
   /**
@@ -1823,11 +1855,11 @@ export class ReportsService {
       ([status, count]) => [status, count],
     );
 
-    return [
+    return csvSections([
       toCsv(['المؤشر', 'القيمة'], kpiRows),
       '',
       toCsv(['حالة الحجز', 'العدد'], reservationRows),
-    ].join('\r\n');
+    ]);
   }
 
   /**
@@ -2063,7 +2095,7 @@ export class ReportsService {
       'موثّقة',
     ];
 
-    return [
+    return csvSections([
       '# ملخص',
       toCsv(['المؤشر', 'البيان', 'القيمة'], summaryRows),
       '',
@@ -2093,7 +2125,7 @@ export class ReportsService {
       '',
       '# آخر الدفعات',
       toCsv(depHeaders, depositRows),
-    ].join('\r\n');
+    ]);
   }
 
   /**
