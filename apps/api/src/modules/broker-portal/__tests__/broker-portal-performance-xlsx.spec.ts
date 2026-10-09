@@ -62,6 +62,7 @@ describe('BrokerPortalPerformanceService.exportXlsx · scoping', () => {
     expect(reports.brokerDetailXlsx).toHaveBeenCalledWith(
       'broker-A',
       expect.objectContaining({ brokerAgentId: undefined }),
+      {},
     );
   });
 
@@ -74,7 +75,29 @@ describe('BrokerPortalPerformanceService.exportXlsx · scoping', () => {
     expect(reports.brokerDetailXlsx).toHaveBeenCalledWith(
       'broker-A',
       expect.objectContaining({ brokerAgentId: 'u-self' }),
+      // …and the agent sheet carries only their own row, like the screen.
+      { onlyAgent: 'u-self' },
     );
+  });
+
+  it('a non-manager CSV export carries only their own agent row', async () => {
+    prisma.brokerUser.findUnique.mockResolvedValue({
+      userId: 'u-self', brokerId: 'broker-A', isPrimaryContact: false, canManageBrokerUsers: false,
+    });
+    await svc.exportCsv(SCOPE, {});
+    expect(reports.brokerDetailCsv).toHaveBeenCalledWith(
+      'broker-A',
+      expect.objectContaining({ brokerAgentId: 'u-self' }),
+      { onlyAgent: 'u-self' },
+    );
+  });
+
+  it('a manager export keeps the whole firm\'s agent breakdown', async () => {
+    prisma.brokerUser.findUnique.mockResolvedValue({
+      userId: 'u-self', brokerId: 'broker-A', isPrimaryContact: false, canManageBrokerUsers: true,
+    });
+    await svc.exportXlsx(SCOPE, {});
+    expect(reports.brokerDetailXlsx).toHaveBeenCalledWith('broker-A', expect.anything(), {});
   });
 
   it('rejects a manager requesting an agent from ANOTHER firm (no cross-broker leak)', async () => {
