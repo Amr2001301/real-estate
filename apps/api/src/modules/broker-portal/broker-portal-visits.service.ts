@@ -3,13 +3,16 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import {
   Prisma,
   VisitRequestSource,
+  UserRole,
   VisitRequestStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.module';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { getTenantContext } from '../../common/tenant/tenant-context';
 import { phoneForWrite } from '../../common/utils/phone-for-write';
@@ -37,7 +40,10 @@ const VISIT_REQUEST_INCLUDE = {
 
 @Injectable()
 export class BrokerPortalVisitsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly notifications?: NotificationsService,
+  ) {}
 
   async list(scope: BrokerScopeContext, query: PortalVisitsQueryDto) {
     const page = query.page ?? 1;
@@ -162,7 +168,45 @@ export class BrokerPortalVisitsService {
       });
     }
 
+    // 5) Admins / sales managers schedule it; the lead's sales person and the
+    //    firm's managers hear too. Never the agent who asked.
+    await this.notifyVisitRequested(scope, visitRequest.id, leadId, customerName ?? '', dto.preferredDate);
+
     return visitRequest;
+  }
+
+  private async notifyVisitRequested(
+    scope: BrokerScopeContext,
+    visitRequestId: string,
+    leadId: string | null,
+    customerName: string,
+    preferredDate: string,
+  ): Promise<void> {
+    if (!this.notifications) return;
+    try {
+      const [broker, lead] = await Promise.all([
+        this.prisma.broker.findUnique({ where: { id: scope.brokerId }, select: { companyName: true } }),
+        leadId
+          ? this.prisma.lead.findUnique({ where: { id: leadId }, select: { assignedSalesId: true } })
+          : null,
+      ]);
+      const payload = {
+        customerName,
+        brokerName: broker?.companyName ?? '',
+        date: preferredDate.slice(0, 10),
+        visitRequestId,
+        entityType: 'visit_request',
+        entityId: visitRequestId,
+      };
+      const except = { except: scope.brokerAgentUserId };
+      const managers = await this.notifications.brokerRecipients(scope.brokerId);
+      await Promise.all([
+        this.notifications.sendToRoles([UserRole.ADMIN, UserRole.SALES_MANAGER], 'broker_visit_requested', payload, except),
+        this.notifications.sendToUsers([...managers, lead?.assignedSalesId], 'broker_visit_requested', payload, except),
+      ]);
+    } catch {
+      // Best-effort — the request itself has already been recorded.
+    }
   }
 
   // ── Internal helpers ────────────────────────────────────────────────────

@@ -3,9 +3,11 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.module';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { getTenantContext } from '../../common/tenant/tenant-context';
 import { phoneForWrite } from '../../common/utils/phone-for-write';
@@ -24,7 +26,10 @@ const LEAD_INCLUDE = {
 
 @Injectable()
 export class BrokerPortalLeadsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly notifications?: NotificationsService,
+  ) {}
 
   // ── Read ────────────────────────────────────────────────────────────────
 
@@ -115,7 +120,7 @@ export class BrokerPortalLeadsService {
       }
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const created = await this.prisma.$transaction(async (tx) => {
       // FG-21 — normalise once, so the client lookup, the client write and
       // the duplicate check below all compare the same canonical string.
       const phone = (await phoneForWrite(tx, dto.phone, getTenantContext()?.companyId))!;
@@ -191,6 +196,40 @@ export class BrokerPortalLeadsService {
         duplicateOfId: duplicateOf?.id ?? null,
       };
     });
+
+    // Waiting on the company: admins / sales managers review broker leads;
+    // the firm's managers see their agents' submissions. Never the actor.
+    await this.notifyStaffAndFirm(scope, 'broker_lead_submitted', {
+      leadName: created.fullName,
+      duplicate: created.isDuplicate ? 'yes' : 'no',
+      entityType: 'lead',
+      entityId: created.id,
+    });
+    return created;
+  }
+
+  /** Company admins / sales managers + the broker firm's managers, minus the actor. */
+  private async notifyStaffAndFirm(
+    scope: BrokerScopeContext,
+    templateCode: string,
+    payload: Record<string, unknown>,
+  ): Promise<void> {
+    if (!this.notifications) return;
+    try {
+      const broker = await this.prisma.broker.findUnique({
+        where: { id: scope.brokerId },
+        select: { companyName: true },
+      });
+      const full = { ...payload, brokerName: broker?.companyName ?? '' };
+      const except = { except: scope.brokerAgentUserId };
+      const managers = await this.notifications.brokerRecipients(scope.brokerId);
+      await Promise.all([
+        this.notifications.sendToRoles([UserRole.ADMIN, UserRole.SALES_MANAGER], templateCode, full, except),
+        this.notifications.sendToUsers(managers, templateCode, full, except),
+      ]);
+    } catch {
+      // Best-effort — the submission itself has already succeeded.
+    }
   }
 
   // ── Internal helpers ────────────────────────────────────────────────────

@@ -60,8 +60,8 @@ const EnvSchema = z.object({
   INSTALLMENT_REMINDER_CRON: z.string().optional(),
   INSTALLMENT_REMINDER_TIMEZONE: z.string().optional(),
 
-  // Appointment pre-meeting reminders. OFF by default; set APPOINTMENT_REMINDERS_ENABLED=true
-  // in production to activate day-before (9 AM) and hour-before (every 15 min) notifications.
+  // Appointment pre-meeting reminders (day-before 9 AM, hour-before every 15 min).
+  // ON in production unless set to false; elsewhere only when set to true.
   APPOINTMENT_REMINDERS_ENABLED: z.enum(['true', 'false']).optional(),
   APPOINTMENT_REMINDER_TIMEZONE: z.string().optional(),
 

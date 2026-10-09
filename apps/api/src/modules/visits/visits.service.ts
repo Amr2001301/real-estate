@@ -75,6 +75,14 @@ const APPOINTMENT_INCLUDE = {
   createdBy: { select: { id: true, fullName: true } },
 } satisfies Prisma.VisitAppointmentInclude;
 
+
+const VISIT_REQUEST_STATUS_AR: Record<string, string> = {
+  NEW: 'جديد',
+  UNDER_REVIEW: 'قيد المراجعة',
+  CONVERTED: 'تمت جدولة الزيارة',
+  REJECTED: 'مرفوض',
+  CANCELLED: 'ملغى',
+};
 @Injectable()
 export class VisitsService {
   constructor(
@@ -325,6 +333,26 @@ export class VisitsService {
         },
       }),
     ]);
+
+    // The requester, the broker who asked (agent + firm managers) and the
+    // assigned sales person learn the request was reviewed / rejected /
+    // cancelled. Never the reviewer.
+    if (dto.status !== req.requestStatus) {
+      const broker = await this.notifications.brokerRecipients(req.brokerId, { agentUserId: req.brokerAgentId });
+      await this.notifications.sendToUsers(
+        [req.userId, req.assignedSalesId, ...broker],
+        'visit_request_status_changed',
+        {
+          customerName: req.customerName ?? '',
+          status: VISIT_REQUEST_STATUS_AR[dto.status] ?? dto.status,
+          date: req.preferredDate ? new Date(req.preferredDate).toISOString().slice(0, 10) : '',
+          visitRequestId: id,
+          entityType: 'visit_request',
+          entityId: id,
+        },
+        { except: user.sub },
+      );
+    }
 
     return updated;
   }
@@ -644,6 +672,17 @@ export class VisitsService {
 
         return appointment;
       });
+    }).then(async (appointment) => {
+      // The customer and the assigned sales person, unless it is a past
+      // visit being logged as completed — never the user who booked it.
+      if (initialStatus !== AppointmentStatus.COMPLETED) {
+        const customerId = await this.resolveCustomerUserId(appointment.id);
+        const payload = await this.buildAppointmentPayload(appointment.id);
+        await this.notifications.sendToUsers([customerId, effectiveSalesId], 'visit_scheduled', payload, {
+          except: user.sub,
+        });
+      }
+      return appointment;
     });
   }
 
@@ -906,30 +945,32 @@ export class VisitsService {
       return updated;
     }).then(async (updated) => {
       // P3 — events D (CONFIRMED) / G (COMPLETED) / H (CANCELLED) / I (NO_SHOW).
-      // Side-effects after the tx commits; the helpers never throw.
+      // Side-effects after the tx commits; the helpers never throw. Never the
+      // user who changed the status. Outcomes (completed / cancelled / no-show)
+      // also reach the sales managers and, for a broker's customer, the agent
+      // who brought them and the firm's managers.
       const customerId = await this.resolveCustomerUserId(id);
       const payload = await this.buildAppointmentPayload(id);
+      const except = { except: user.sub };
+      const outcome = async (code: string, toCustomer: boolean) => {
+        const broker = await this.brokerRecipientsForAppointment(id);
+        await this.notifications.sendToUsers(
+          [toCustomer ? customerId : null, appt.assignedSalesId, ...broker],
+          code,
+          payload,
+          except,
+        );
+        await this.notifications.sendToRoles([UserRole.SALES_MANAGER], code, payload, except);
+      };
       switch (dto.status) {
         case AppointmentStatus.CONFIRMED:
           // Admin-side confirmation (e.g., customer walked in). Notify
           // admins + assigned sales (not the customer — they confirmed).
-          await this.notifications.sendToRoles(
-            [UserRole.ADMIN],
-            'visit_customer_confirmed',
-            payload,
-          );
-          await this.notifications.sendToUser(
-            appt.assignedSalesId,
-            'visit_customer_confirmed',
-            payload,
-          );
+          await this.notifications.sendToRoles([UserRole.ADMIN], 'visit_customer_confirmed', payload, except);
+          await this.notifications.sendToUser(appt.assignedSalesId, 'visit_customer_confirmed', payload, except);
           break;
         case AppointmentStatus.COMPLETED:
-          await this.notifications.sendToUser(
-            customerId,
-            'visit_completed',
-            payload,
-          );
+          await outcome('visit_completed', true);
           // Gap 7 — ask the customer to rate the visit. Deep-link metadata
           // routes the notification to the visits ticket (entityType 'visit'
           // resolves to /account/visits in the customer notification mapper).
@@ -942,21 +983,24 @@ export class VisitsService {
           });
           break;
         case AppointmentStatus.CANCELLED:
-          await this.notifications.sendToUsers(
-            [customerId, appt.assignedSalesId],
-            'visit_cancelled',
-            payload,
-          );
+          await outcome('visit_cancelled', true);
           break;
         case AppointmentStatus.NO_SHOW:
-          await this.notifications.sendToUsers(
-            [customerId, appt.assignedSalesId],
-            'visit_no_show',
-            payload,
-          );
+          await outcome('visit_no_show', true);
           break;
       }
       return updated;
+    });
+  }
+
+  /** The broker agent + firm managers behind an appointment's request, if any. */
+  private async brokerRecipientsForAppointment(appointmentId: string): Promise<string[]> {
+    const appt = await this.prisma.visitAppointment.findUnique({
+      where: { id: appointmentId },
+      select: { visitRequest: { select: { brokerId: true, brokerAgentId: true } } },
+    });
+    return this.notifications.brokerRecipients(appt?.visitRequest?.brokerId, {
+      agentUserId: appt?.visitRequest?.brokerAgentId,
     });
   }
 

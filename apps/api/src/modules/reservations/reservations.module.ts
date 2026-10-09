@@ -1251,11 +1251,17 @@ export class ReservationsService {
       // P4 — event: reservation status changed. Notify the customer/client
       // and the assigned sales user; ADMINs already saw the submit event so
       // we don't re-broadcast to the role for every transition.
+      // The broker who brought it (agent + firm managers) hears its outcome
+      // too; never the user who changed the status.
       const payload = await this.buildReservationPayload(updated.id);
+      const broker = await this.notifications.brokerRecipients(updated.brokerId, {
+        agentUserId: updated.brokerAgentId,
+      });
       await this.notifications.sendToUsers(
-        [updated.clientId, updated.salesId],
+        [updated.clientId, updated.salesId, ...broker],
         'reservation_status_changed',
         payload,
+        { except: actor.sub },
       );
       return updated;
     });
@@ -1438,6 +1444,20 @@ export class ReservationsService {
         },
       });
       return updated;
+    }).then(async (updated) => {
+      // The customer and the sales person: the booking payment is no longer
+      // counted as received.
+      const owner = await this.prisma.reservation.findUnique({
+        where: { id },
+        select: { clientId: true, salesId: true },
+      });
+      await this.notifications.sendToUsers(
+        [owner?.clientId, owner?.salesId],
+        'reservation_booking_unconfirmed',
+        await this.buildReservationPayload(id),
+        { except: actor.sub },
+      );
+      return updated;
     });
   }
 
@@ -1463,6 +1483,14 @@ export class ReservationsService {
         note: body.substring(0, 100),
       },
     });
+    // An internal note: the reservation's sales person, unless they wrote it.
+    const owner = await this.prisma.reservation.findUnique({ where: { id }, select: { salesId: true } });
+    await this.notifications.sendToUser(
+      owner?.salesId,
+      'reservation_note_added',
+      await this.buildReservationPayload(id),
+      { except: actorId },
+    );
     return note;
   }
 
@@ -1632,6 +1660,19 @@ export class ReservationsService {
         },
       });
       return tx.reservation.findUnique({ where: { id }, include: FULL_INCLUDE });
+    }).then(async (updated) => {
+      // The customer and the sales person see what changed; a new sales person
+      // learns it is now theirs and the previous one that it no longer is.
+      if (updated) {
+        const payload = { ...(await this.buildReservationPayload(id)), changes: changes.join('، ') };
+        const except = { except: actor.sub };
+        await this.notifications.sendToUsers([updated.clientId, updated.salesId], 'reservation_updated', payload, except);
+        if (updated.salesId !== reservation.salesId) {
+          await this.notifications.sendToUser(updated.salesId, 'reservation_assigned_sales', payload, except);
+          await this.notifications.sendToUser(reservation.salesId, 'reservation_unassigned_sales', payload, except);
+        }
+      }
+      return updated;
     });
   }
 
@@ -2131,6 +2172,9 @@ export class ReservationsService {
         unitId: true,
         salesId: true,
         leadId: true,
+        clientId: true,
+        brokerId: true,
+        brokerAgentId: true,
         reservationNumber: true,
         unit: { select: { code: true } },
       },
@@ -2197,6 +2241,21 @@ export class ReservationsService {
           }
         }
       }));
+      // The customer, the sales person, the broker who brought it (agent +
+      // firm managers) and the sales managers learn the hold lapsed and the
+      // unit is back on sale.
+      await write(async () => {
+        const broker = await this.notifications.brokerRecipients(r.brokerId, { agentUserId: r.brokerAgentId });
+        const payload = {
+          unitCode: r.unit.code,
+          reservationNumber: r.reservationNumber ?? '',
+          reservationId: r.id,
+          entityType: 'reservation',
+          entityId: r.id,
+        };
+        await this.notifications.sendToUsers([r.clientId, r.salesId, ...broker], 'reservation_expired', payload);
+        await this.notifications.sendToRoles([UserRole.SALES_MANAGER], 'reservation_expired', payload);
+      });
     }
     return { expired: due.length };
   }

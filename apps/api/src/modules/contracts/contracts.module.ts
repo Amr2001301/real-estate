@@ -688,6 +688,14 @@ export class ContractsService {
     }
     if (!exists.contractNumber && (contractNumber || dto.autoNumber)) {
       await this.assignContractNumber(id, contractNumber);
+      // The customer's contract now has its reference number.
+      const owner = await this.prisma.contract.findUnique({ where: { id }, select: { customerId: true } });
+      await this.notifications.sendToUser(
+        owner?.customerId,
+        'contract_number_assigned',
+        await this.buildContractPayload(id),
+        { except: actorId },
+      );
     }
 
     const updated = await this.prisma.contract.update({
@@ -828,6 +836,17 @@ export class ContractsService {
         before.customerId,
         'contract_signed_customer',
         await this.buildContractPayload(before.id),
+      );
+      // …and the company: the deal's sales person, admins and sales managers
+      // (the broker side was told above). Never whoever signed it off.
+      const staffPayload = await this.buildContractPayload(before.id);
+      const except = { except: actorId };
+      await this.notifications.sendToUser(before.reservation?.salesId, 'contract_signed_staff', staffPayload, except);
+      await this.notifications.sendToRoles(
+        [UserRole.ADMIN, UserRole.SALES_MANAGER],
+        'contract_signed_staff',
+        staffPayload,
+        except,
       );
     }
 

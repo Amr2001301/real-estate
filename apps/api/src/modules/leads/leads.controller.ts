@@ -149,10 +149,11 @@ export class LeadsController {
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: EXCEL_MAX_BYTES } }))
   async import(
     @UploadedFile() file: UploadedExcel,
+    @CurrentUser() user: AuthUser,
     @Query('sourceId') sourceId?: string,
   ) {
     assertExcelFile(file);
-    return this.leads.importLeads(file.buffer, sourceId);
+    return this.leads.importLeads(file.buffer, sourceId, user.sub);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
@@ -162,8 +163,9 @@ export class LeadsController {
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateLeadDto,
+    @CurrentUser() user: AuthUser,
   ) {
-    return this.leads.update(id, dto);
+    return this.leads.update(id, dto, user.sub);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
@@ -173,15 +175,16 @@ export class LeadsController {
   async updateStage(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateLeadStageDto,
+    @CurrentUser() user: AuthUser,
   ) {
-    return this.leads.updateStage(id, dto);
+    return this.leads.updateStage(id, dto, user.sub);
   }
 
   @Roles(UserRole.ADMIN)
   @Permissions('leads:assign')
   @Patch('leads/:id/assign')
-  assign(@Param('id', ParseUUIDPipe) id: string, @Body() dto: AssignLeadDto) {
-    return this.leads.assign(id, dto);
+  assign(@Param('id', ParseUUIDPipe) id: string, @Body() dto: AssignLeadDto, @CurrentUser() user: AuthUser) {
+    return this.leads.assign(id, dto, user.sub);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)

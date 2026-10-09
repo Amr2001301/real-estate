@@ -78,7 +78,7 @@ function makeNotificationsSpy(): NotificationsService & Spy {
   return {
     sendToUser: jest.fn().mockResolvedValue(undefined),
     sendToUsers: jest.fn().mockResolvedValue(undefined),
-    brokerRecipients: jest.fn().mockResolvedValue(['broker-user-1']),
+    brokerRecipients: jest.fn().mockResolvedValue([]),
     sendToRoles: jest.fn().mockResolvedValue(undefined),
   } as unknown as NotificationsService & Spy;
 }
@@ -218,15 +218,17 @@ describe('Visits · lifecycle notifications (P3)', () => {
       [UserRole.ADMIN],
       'visit_customer_confirmed',
       expect.any(Object),
+      { except: ADMIN_USER.sub },
     );
     expect(notifications.sendToUser).toHaveBeenCalledWith(
       SALES_ID,
       'visit_customer_confirmed',
       expect.any(Object),
+      { except: ADMIN_USER.sub },
     );
   });
 
-  it('updateAppointmentStatus COMPLETED → only customer', async () => {
+  it('updateAppointmentStatus COMPLETED → customer, sales and sales managers', async () => {
     const m = prisma as unknown as { _fixtures: { appt: ReturnType<typeof baseAppt> } };
     m._fixtures.appt = baseAppt({ status: AppointmentStatus.CONFIRMED });
     await svc.updateAppointmentStatus(
@@ -234,12 +236,18 @@ describe('Visits · lifecycle notifications (P3)', () => {
       { status: AppointmentStatus.COMPLETED },
       ADMIN_USER,
     );
-    expect(notifications.sendToUser).toHaveBeenCalledWith(
-      CUSTOMER_ID,
+    expect(notifications.sendToUsers).toHaveBeenCalledWith(
+      [CUSTOMER_ID, SALES_ID],
       'visit_completed',
       expect.any(Object),
+      { except: ADMIN_USER.sub },
     );
-    expect(notifications.sendToRoles).not.toHaveBeenCalled();
+    expect(notifications.sendToRoles).toHaveBeenCalledWith(
+      [UserRole.SALES_MANAGER],
+      'visit_completed',
+      expect.any(Object),
+      { except: ADMIN_USER.sub },
+    );
   });
 
   it('updateAppointmentStatus CANCELLED → customer + sales', async () => {
@@ -252,6 +260,13 @@ describe('Visits · lifecycle notifications (P3)', () => {
       [CUSTOMER_ID, SALES_ID],
       'visit_cancelled',
       expect.any(Object),
+      { except: ADMIN_USER.sub },
+    );
+    expect(notifications.sendToRoles).toHaveBeenCalledWith(
+      [UserRole.SALES_MANAGER],
+      'visit_cancelled',
+      expect.any(Object),
+      { except: ADMIN_USER.sub },
     );
   });
 
@@ -270,6 +285,13 @@ describe('Visits · lifecycle notifications (P3)', () => {
       [CUSTOMER_ID, SALES_ID],
       'visit_no_show',
       expect.any(Object),
+      { except: ADMIN_USER.sub },
+    );
+    expect(notifications.sendToRoles).toHaveBeenCalledWith(
+      [UserRole.SALES_MANAGER],
+      'visit_no_show',
+      expect.any(Object),
+      { except: ADMIN_USER.sub },
     );
   });
 
