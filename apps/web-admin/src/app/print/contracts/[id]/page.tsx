@@ -69,17 +69,17 @@ export default async function ContractPrintPage({ params }: { params: Params }) 
               role: m.seller,
               name: company,
               lines: [
-                letterhead.registrationNumber && `${m.fields.registration}: ${letterhead.registrationNumber}`,
-                letterhead.contactPhone && `${m.fields.phone}: ${letterhead.contactPhone}`,
-                letterhead.contactEmail,
+                letterhead.registrationNumber && { label: m.fields.registration, value: letterhead.registrationNumber },
+                letterhead.contactPhone && { label: m.fields.phone, value: letterhead.contactPhone },
+                letterhead.contactEmail && { value: letterhead.contactEmail },
               ],
             },
             {
               role: m.buyer,
               name: customerName,
               lines: [
-                c.customer?.phone && `${m.fields.phone}: ${c.customer.phone}`,
-                c.customer?.email,
+                c.customer?.phone && { label: m.fields.phone, value: c.customer.phone },
+                c.customer?.email && { value: c.customer.email },
               ],
             },
           ]}

@@ -84,7 +84,7 @@ export default async function DepositPrintPage({ params }: { params: Params }) {
           {unitCode && (
             <>
               {' '}
-              {m.forUnit} <strong className="text-slate-900" dir="ltr">{unitCode}</strong>
+              {m.forUnit} <strong className="whitespace-nowrap text-slate-900" dir="ltr">{unitCode}</strong>
             </>
           )}
           .
