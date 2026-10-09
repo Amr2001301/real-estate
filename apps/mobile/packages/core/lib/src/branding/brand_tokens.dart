@@ -11,6 +11,7 @@ class BrandTokens {
     this.accentColor,
     this.logoUrl,
     this.displayName,
+    this.currency,
   });
 
   /// Overrides the brand navy (`AppPalette.navy`). Used as the primary dark
@@ -28,12 +29,16 @@ class BrandTokens {
   /// Tenant display name (prefers `displayName`, falls back to `name`).
   final String? displayName;
 
+  /// Company currency (ISO 4217, e.g. `EGP`) — every price in the app uses it.
+  final String? currency;
+
   factory BrandTokens.fromJson(Map<String, dynamic> json) {
     return BrandTokens(
       primaryColor: _parseHex(json['primaryColor'] as String?),
       accentColor: _parseHex(json['accentColor'] as String?),
       logoUrl: json['logoUrl'] as String?,
       displayName: (json['displayName'] ?? json['name']) as String?,
+      currency: json['currency'] as String?,
     );
   }
 

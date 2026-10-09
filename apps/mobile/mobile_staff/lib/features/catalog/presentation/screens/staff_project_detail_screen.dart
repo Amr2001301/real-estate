@@ -899,7 +899,7 @@ class _StatsBar extends StatelessWidget {
   final double? startingPrice;
 
   String _compactPrice(double price) {
-    final currency = lang == 'ar' ? ' ج.م' : ' EGP';
+    final currency = ' ${PriceFormatter.symbol(lang)}';
     if (price >= 1e6) {
       final v = price / 1e6;
       final suffix = lang == 'ar' ? 'م' : 'M';

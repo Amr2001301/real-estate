@@ -13,14 +13,15 @@ const _navyDeep = Color(0xFF0B1726);
 const _navyCard = Color(0xFF1A3352);
 const _navyLight = Color(0xFF243F62);
 
-// Compact Arabic monetary format for tight spaces: 119000 → "119 ألف ج.م"
+// Compact Arabic monetary format for tight spaces: 119000 → "119 ألف ج.م" (company currency)
 String _compact(String raw, String lang) {
   final n = (int.tryParse(raw) ?? double.tryParse(raw)?.round()) ?? 0;
+  final sym = PriceFormatter.symbol(lang);
   if (n >= 1000000) {
-    return lang == 'ar' ? '${(n / 1000000).round()} مليون ج.م' : '${(n / 1000000).round()}M EGP';
+    return lang == 'ar' ? '${(n / 1000000).round()} مليون $sym' : '${(n / 1000000).round()}M $sym';
   }
   if (n >= 1000) {
-    return lang == 'ar' ? '${(n / 1000).round()} ألف ج.م' : '${(n / 1000).round()}K EGP';
+    return lang == 'ar' ? '${(n / 1000).round()} ألف $sym' : '${(n / 1000).round()}K $sym';
   }
   return PriceFormatter.formatString(raw, languageCode: lang);
 }

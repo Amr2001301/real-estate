@@ -109,7 +109,7 @@ class HomeSummaryRemoteDataSourceImpl implements HomeSummaryRemoteDataSource {
     return HomeSummaryNextDue(
       id: (j['id'] as String?) ?? '',
       amount: (j['amount'] as String?) ?? '0',
-      currency: (j['currency'] as String?) ?? 'EGP',
+      currency: (j['currency'] as String?) ?? PriceFormatter.currencyCode,
       dueDate: DateTime.tryParse((j['dueDate'] as String?) ?? '') ?? DateTime.now(),
       status: (j['status'] as String?) ?? 'PENDING',
     );

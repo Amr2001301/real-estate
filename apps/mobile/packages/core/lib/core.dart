@@ -16,6 +16,7 @@ export 'package:equatable/equatable.dart';
 export 'src/branding/brand_tokens.dart';
 export 'src/branding/branding_cubit.dart';
 export 'src/branding/branding_repository.dart';
+export 'src/branding/company_currency_cubit.dart';
 
 // Environment
 export 'src/env/app_environment.dart';

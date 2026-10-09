@@ -360,9 +360,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get maxLabel => 'Max';
 
   @override
-  String get filterPriceUnit => 'EGP';
-
-  @override
   String get filterAreaUnit => 'm²';
 
   @override

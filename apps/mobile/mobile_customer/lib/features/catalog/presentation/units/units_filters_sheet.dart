@@ -28,7 +28,7 @@ class _UnitsFilterSheetState extends State<_UnitsFilterSheet> {
   // use generous bounds and always allow manual entry beyond them). The text
   // fields remain the source of truth on apply.
   static const double _priceFloor = 0;
-  static const double _priceCeil = 20000000; // 20M ج.م
+  static const double _priceCeil = 20000000; // 20M in the company currency
   static const int _priceDivisions = 40; // 500k steps
 
   late UnitsFilter _f = widget.initial;
@@ -167,7 +167,8 @@ class _UnitsFilterSheetState extends State<_UnitsFilterSheet> {
                 max: _priceMax,
                 minHint: l10n.minLabel,
                 maxHint: l10n.maxLabel,
-                unit: l10n.filterPriceUnit,
+                unit: PriceFormatter.symbol(
+                    Localizations.localeOf(context).languageCode),
                 onChanged: _onPriceText,
               ),
             ],

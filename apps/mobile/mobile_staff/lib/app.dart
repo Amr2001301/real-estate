@@ -223,6 +223,9 @@ class StaffApp extends StatelessWidget {
               ),
             ),
             BlocProvider(create: (_) => ConnectivityCubit()),
+            BlocProvider<CompanyCurrencyCubit>(
+              create: (ctx) => CompanyCurrencyCubit(ctx.read<Dio>()),
+            ),
           ],
           child: const _StaffRoot(),
         ),
@@ -263,6 +266,7 @@ class _StaffRootState extends State<_StaffRoot> {
       if (!mounted) return;
       if (context.read<SessionCubit>().state.isAuthenticated) {
         context.read<PushRegistrationService>().registerIfPossible();
+        context.read<CompanyCurrencyCubit>().load();
       }
     });
   }
@@ -385,6 +389,8 @@ class _StaffRootState extends State<_StaffRoot> {
     final themeMode = context.watch<ThemeCubit>().state;
     final locale = context.watch<LocaleCubit>().state;
     final isArabic = locale.languageCode == 'ar';
+    // Rebuild when the company currency arrives — PriceFormatter reads it.
+    context.watch<CompanyCurrencyCubit>();
 
     return BlocListener<SessionCubit, SessionState>(
       listenWhen: (a, b) => a.isAuthenticated != b.isAuthenticated,
@@ -392,8 +398,10 @@ class _StaffRootState extends State<_StaffRoot> {
         if (state.isAuthenticated) {
           context.read<UnreadCountCubit>().load();
           context.read<PushRegistrationService>().registerIfPossible();
+          context.read<CompanyCurrencyCubit>().load();
         } else {
           context.read<UnreadCountCubit>().clear();
+          context.read<CompanyCurrencyCubit>().reset();
         }
       },
       child: MaterialApp.router(

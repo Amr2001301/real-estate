@@ -776,12 +776,6 @@ abstract class AppLocalizations {
   /// **'Max'**
   String get maxLabel;
 
-  /// No description provided for @filterPriceUnit.
-  ///
-  /// In en, this message translates to:
-  /// **'EGP'**
-  String get filterPriceUnit;
-
   /// No description provided for @filterAreaUnit.
   ///
   /// In en, this message translates to:
