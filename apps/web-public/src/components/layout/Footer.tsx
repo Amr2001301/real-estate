@@ -10,7 +10,7 @@ import { Container } from '@/components/ui/Container';
 import type { Locale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
 
-const PLATFORM_LOGO = '/brand/platform-logo.svg';
+const PLATFORM_LOGO = '/brand/devora-logo.png';
 const YEAR = new Date().getFullYear();
 
 type ContactRow = { icon: typeof Phone; text: string; dir: 'ltr' | 'rtl' };

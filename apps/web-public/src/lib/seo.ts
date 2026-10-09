@@ -21,8 +21,8 @@ export function siteUrl(path = '/'): string {
   return `${SITE_URL}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
-/** Brand fallback social image used when a page has no specific cover. */
-export const DEFAULT_OG_IMAGE = '/og-default.svg';
+/** Brand fallback social image used when a page has no specific cover (PNG: WhatsApp, Facebook and X don't render SVG previews). */
+export const DEFAULT_OG_IMAGE = '/og-default.png';
 
 interface BuildMetaInput extends Partial<Metadata> {
   title?: string;
