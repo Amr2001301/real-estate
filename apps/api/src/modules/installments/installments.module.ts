@@ -61,6 +61,7 @@ import { CronLockService } from '../../common/cron/cron-lock.service';
 import { captureExceptionSafe } from '../../common/observability/sentry';
 import { getTenantContext, runInCompany, runTenantContext } from '../../common/tenant/tenant-context';
 import { getCompanyCurrency } from '../../common/currency/currency';
+import { ReportBrandService } from '../company-branding/report-brand.service';
 import { computeDurationOption } from './duration-calc';
 import {
   addTitledTable,
@@ -154,7 +155,11 @@ class CalculateInstallmentDto {
 
 @Injectable()
 class InstallmentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    // Optional so unit tests can build the service without it.
+    @Optional() private readonly reportBrand?: ReportBrandService,
+  ) {}
 
   async createPlan(dto: CreatePlanDto) {
     const contract = await this.prisma.contract.findUnique({
@@ -267,7 +272,9 @@ class InstallmentsService {
       .filter((i) => i.status === InstallmentStatus.PAID)
       .reduce((acc, i) => acc + Number(i.amount), 0);
 
-    const currency = await getCompanyCurrency(this.prisma, plan.companyId ?? getTenantContext()?.companyId);
+    const companyId = plan.companyId ?? getTenantContext()?.companyId;
+    const currency = await getCompanyCurrency(this.prisma, companyId);
+    const brand = await this.reportBrand?.forCompany(companyId);
     const wb = createReportWorkbook();
     const ws = wb.addWorksheet('جدول الأقساط');
     ws.properties.defaultRowHeight = 18;
@@ -279,6 +286,7 @@ class InstallmentsService {
       rows,
       widths: [18, 16, 14, 18, 16],
       currency,
+      brand,
     });
     formatMoneyColumns(ws, [2], currency);
 
@@ -291,7 +299,7 @@ class InstallmentsService {
     ws.getCell(summaryStartRow, 2).numFmt = amountFormat(currency);
     ws.getCell(summaryStartRow + 1, 2).numFmt = amountFormat(currency);
 
-    addFooter(ws);
+    addFooter(ws, brand);
 
     return workbookToBuffer(wb);
   }

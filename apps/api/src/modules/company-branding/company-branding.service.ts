@@ -20,12 +20,13 @@
  * always present.
  */
 
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import type { Redis } from 'ioredis';
 import { getCompanyCurrency, normalizeCurrency, type CurrencyCode } from '../../common/currency/currency';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { normalizeHostname, InvalidHostnameError } from '../../common/utils/hostname-normalize';
 import type { PatchCompanyBrandingDto } from './dto/patch-company-branding.dto';
+import { ReportBrandService } from './report-brand.service';
 
 export const BRANDING_CACHE_REDIS = Symbol('BRANDING_CACHE_REDIS');
 
@@ -120,6 +121,8 @@ export class CompanyBrandingService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(BRANDING_CACHE_REDIS) private readonly redis: Redis,
+    // Optional so unit tests can build the service with prisma + redis only.
+    @Optional() private readonly reportBrand?: ReportBrandService,
   ) {}
 
   async getBySlug(rawSlug: string): Promise<CompanyBrandingResponse | null> {
@@ -223,6 +226,7 @@ export class CompanyBrandingService {
     });
 
     await this.invalidate(companyId);
+    this.reportBrand?.invalidate(companyId);
     return updated;
   }
 

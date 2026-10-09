@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import {
   Prisma,
   MaintenanceStatus,
@@ -13,7 +13,8 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
-import { runInCompany } from '../../common/tenant/tenant-context';
+import { getTenantContext, runInCompany } from '../../common/tenant/tenant-context';
+import { ReportBrandService } from '../company-branding/report-brand.service';
 import { toCsv, type CsvCell } from '../../common/utils/csv';
 import {
   addFooter,
@@ -163,6 +164,8 @@ export class MaintenanceService {
     private readonly documents: DocumentsService,
     private readonly notifications: NotificationsService,
     private readonly r2: R2Service,
+    // Optional so unit tests can build the service without it.
+    @Optional() private readonly reportBrand?: ReportBrandService,
   ) {}
 
   /**
@@ -1453,9 +1456,11 @@ export class MaintenanceService {
       PENDING: 'قيد المراجعة', APPROVED: 'معتمدة', REJECTED: 'مرفوضة',
     };
 
+    const brand = await this.reportBrand?.forCompany(getTenantContext()?.companyId);
     const wb = createReportWorkbook();
     const sum = wb.addWorksheet('الملخص');
     addTitledTable(sum, {
+      brand,
       title: 'تقرير الصيانة',
       filters: [
         ['من', opts.from ?? ''],
@@ -1488,7 +1493,7 @@ export class MaintenanceService {
       ],
       widths: [34, 16],
     });
-    addFooter(sum);
+    addFooter(sum, brand);
 
     const cat = wb.addWorksheet('حسب الفئة');
     addTable(

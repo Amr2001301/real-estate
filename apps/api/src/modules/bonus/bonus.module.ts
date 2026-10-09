@@ -12,6 +12,7 @@ import {
   Post,
   Query,
   StreamableFile,
+  Optional,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import {
@@ -46,6 +47,7 @@ import {
 } from '../../common/utils/xlsx';
 import { getCompanyCurrency } from '../../common/currency/currency';
 import { getTenantContext } from '../../common/tenant/tenant-context';
+import { ReportBrandService } from '../company-branding/report-brand.service';
 import {
   resolveSalesScope,
   salesActorIds,
@@ -156,7 +158,11 @@ export interface SalesCommissionResult {
 
 @Injectable()
 export class BonusService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    // Optional so unit tests can build the service without it.
+    @Optional() private readonly reportBrand?: ReportBrandService,
+  ) {}
 
   // Rules
   listRules() {
@@ -361,7 +367,9 @@ export class BonusService {
       [BonusEntryStatus.PAID]: 'مدفوع',
       [BonusEntryStatus.CANCELLED]: 'ملغي',
     };
-    const currency = await getCompanyCurrency(this.prisma, getTenantContext()?.companyId);
+    const companyId = getTenantContext()?.companyId;
+    const currency = await getCompanyCurrency(this.prisma, companyId);
+    const brand = await this.reportBrand?.forCompany(companyId);
     const wb = createReportWorkbook();
     const ws = wb.addWorksheet('مكافآت المندوبين');
     addTitledTable(ws, {
@@ -382,9 +390,10 @@ export class BonusService {
       ]),
       widths: [22, 12, 22, 16, 12, 16],
       currency,
+      brand,
     });
     formatMoneyColumns(ws, [4], currency);
-    addFooter(ws);
+    addFooter(ws, brand);
     return workbookToBuffer(wb);
   }
 

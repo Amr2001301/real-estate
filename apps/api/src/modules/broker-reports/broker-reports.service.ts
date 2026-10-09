@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import {
   BrokerCommissionStatus,
   BrokerPayoutStatus,
@@ -16,6 +16,8 @@ import {
 } from './dto/broker-report.dto';
 import { toCsv } from '../../common/utils/csv';
 import { getCompanyCurrency } from '../../common/currency/currency';
+import { fallbackBrand, type ReportBrand } from '../../common/utils/report-brand';
+import { ReportBrandService } from '../company-branding/report-brand.service';
 import { getTenantContext } from '../../common/tenant/tenant-context';
 import {
   addBoardBanner,
@@ -32,7 +34,6 @@ import {
   workbookToBuffer,
 } from '../../common/utils/xlsx';
 import { renderBarChartPng } from '../../common/utils/xlsx-chart';
-import { brandLogoPng } from '../../common/utils/brand';
 
 const TOP_METRIC_LABEL: Record<TopMetric, string> = {
   leads: 'الفرص',
@@ -58,7 +59,11 @@ const TOP_METRIC_LABEL: Record<TopMetric, string> = {
  */
 @Injectable()
 export class BrokerReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    // Optional so unit tests can build the service with prisma only.
+    @Optional() private readonly reportBrand?: ReportBrandService,
+  ) {}
 
   // ── Public endpoints ────────────────────────────────────────────────────
 
@@ -564,12 +569,13 @@ export class BrokerReportsService {
       series: top.data.map((r) => ({ label: r.companyName, value: Number(r.salesGross) })),
     });
 
-    const currency = await this.currency();
+    const brand = await this.brand();
+    const currency = brand.currency;
     const SPAN = 6;
     const wb = createReportWorkbook();
     const cover = wb.addWorksheet('الملخص');
     setupBoardSheet(cover, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
-    addBoardBanner(cover, 'تقرير أداء الوسطاء', SPAN, { wb, logo: brandLogoPng(), currency });
+    addBoardBanner(cover, 'تقرير أداء الوسطاء', SPAN, { wb, brand });
     addSectionTitle(cover, 'الملخص التنفيذي', SPAN);
     addKpiCards(
       cover,
@@ -588,7 +594,7 @@ export class BrokerReportsService {
       { span: SPAN, perRow: 3 },
     );
     addChartBlock(wb, cover, 'أعلى الوسطاء حسب المبيعات', topChart, { span: SPAN, width: 720, height: 320 });
-    addFooter(cover);
+    addFooter(cover, brand);
 
     const topSheet = wb.addWorksheet('أعلى الوسطاء');
     addTable(
@@ -749,7 +755,8 @@ export class BrokerReportsService {
    */
   async topBrokersXlsx(query: TopBrokersQueryDto) {
     const { data, metric } = await this.topBrokers(query);
-    const currency = await this.currency();
+    const brand = await this.brand();
+    const currency = brand.currency;
     const wb = createReportWorkbook();
     const ws = wb.addWorksheet('أعلى الوسطاء');
     addTitledTable(ws, {
@@ -772,9 +779,10 @@ export class BrokerReportsService {
       ]),
       widths: [22, 12, 12, 8, 11, 9, 8, 11, 16, 16, 14, 14, 12],
       currency,
+      brand,
     });
     formatMoneyColumns(ws, [9, 10, 11, 12], currency);
-    addFooter(ws);
+    addFooter(ws, brand);
     return workbookToBuffer(wb);
   }
 
@@ -786,7 +794,8 @@ export class BrokerReportsService {
   async brokerDetailXlsx(brokerId: string, query: BrokerDetailReportQueryDto) {
     const detail = await this.brokerDetail(brokerId, query);
     const s = detail.summary;
-    const currency = await this.currency();
+    const brand = await this.brand();
+    const currency = brand.currency;
     const wb = createReportWorkbook();
 
     const sum = wb.addWorksheet('الملخص');
@@ -815,6 +824,7 @@ export class BrokerReportsService {
       ],
       widths: [30, 18],
       currency,
+      brand,
     });
     // Three of the indicators are amounts (sales, commissions, payouts).
     for (const label of ['إجمالي المبيعات', 'صافي العمولات', 'صافي المدفوعات']) {
@@ -822,7 +832,7 @@ export class BrokerReportsService {
         if (row.getCell(1).value === label) row.getCell(2).numFmt = amountFormat(currency, '0.##');
       });
     }
-    addFooter(sum);
+    addFooter(sum, brand);
 
     const trend = wb.addWorksheet('الاتجاه الشهري');
     addTable(
@@ -865,9 +875,10 @@ export class BrokerReportsService {
     return workbookToBuffer(wb);
   }
 
-  /** The company currency every amount in these reports is in. */
-  private currency(): Promise<string> {
-    return getCompanyCurrency(this.prisma, getTenantContext()?.companyId);
+  /** The company identity (name, logo, colours, currency) on report files. */
+  private async brand(): Promise<ReportBrand> {
+    const companyId = getTenantContext()?.companyId;
+    return this.reportBrand?.forCompany(companyId) ?? fallbackBrand(await getCompanyCurrency(this.prisma, companyId));
   }
 
   private localizedName(value: unknown): string {

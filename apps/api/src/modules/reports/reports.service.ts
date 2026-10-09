@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import {
   AppointmentStatus,
   BonusEntryStatus,
@@ -20,6 +20,8 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { scopedUserCount } from '../../common/tenant/resolve-tenant-entity';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { getCompanyCurrency } from '../../common/currency/currency';
+import { fallbackBrand, type ReportBrand } from '../../common/utils/report-brand';
+import { ReportBrandService } from '../company-branding/report-brand.service';
 import { toCsv, type CsvCell } from '../../common/utils/csv';
 import {
   buildBrokerPdf,
@@ -46,7 +48,6 @@ import {
   renderBarChartPng,
   renderDoughnutChartPng,
 } from '../../common/utils/xlsx-chart';
-import { brandLogoPng } from '../../common/utils/brand';
 
 // Arabic month names indexed by JS month (0 = January). Used for the
 // reservation-trend labels on the admin dashboard.
@@ -65,7 +66,11 @@ function translatableAr(v: unknown): string {
 
 @Injectable()
 export class ReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    // Optional so unit tests can build the service with prisma only.
+    @Optional() private readonly reportBrand?: ReportBrandService,
+  ) {}
 
   async kpis() {
     const [
@@ -806,7 +811,8 @@ export class ReportsService {
     const SPAN = 6;
     const sum = wb.addWorksheet('الملخص');
     setupBoardSheet(sum, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
-    addBoardBanner(sum, 'تقرير لوحة التحكم', SPAN, { wb, logo: brandLogoPng() });
+    const brand = await this.brand();
+    addBoardBanner(sum, 'تقرير لوحة التحكم', SPAN, { wb, brand });
 
     addSectionTitle(sum, 'الملخص التنفيذي', SPAN);
     addKpiCards(
@@ -833,7 +839,7 @@ export class ReportsService {
     addChartBlock(wb, sum, 'اتجاه الحجوزات (آخر 6 أشهر)', trendChart, { span: SPAN, width: 720, height: 300 });
     addChartBlock(wb, sum, 'توزيع مصادر العملاء', sourcesChart, { span: SPAN, width: 560, height: 300 });
 
-    addFooter(sum);
+    addFooter(sum, brand);
 
     // ── Sheet 2: اتجاهات الحجوزات ───────────────────────────────────────────
     const trend = wb.addWorksheet('اتجاهات الحجوزات');
@@ -1706,12 +1712,13 @@ export class ReportsService {
       series: byProject.slice(0, 8).map((p) => ({ label: p.name, value: p.total })),
     });
 
-    const currency = await this.currency();
+    const brand = await this.brand();
+    const currency = brand.currency;
     const SPAN = 6;
     const wb = createReportWorkbook();
     const cover = wb.addWorksheet('الملخص');
     setupBoardSheet(cover, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
-    addBoardBanner(cover, 'تقرير المبيعات', SPAN, { wb, logo: brandLogoPng(), currency });
+    addBoardBanner(cover, 'تقرير المبيعات', SPAN, { wb, brand });
     addSectionTitle(cover, 'الملخص التنفيذي', SPAN);
     addKpiCards(
       cover,
@@ -1726,7 +1733,7 @@ export class ReportsService {
       { span: SPAN, perRow: 3 },
     );
     addChartBlock(wb, cover, 'المبيعات حسب المشروع', projectChart, { span: SPAN, width: 720, height: 320 });
-    addFooter(cover);
+    addFooter(cover, brand);
 
     const detail = wb.addWorksheet('المبيعات حسب المشروع');
     addTable(
@@ -1768,12 +1775,13 @@ export class ReportsService {
       ],
     });
 
-    const currency = await this.currency();
+    const brand = await this.brand();
+    const currency = brand.currency;
     const SPAN = 6;
     const wb = createReportWorkbook();
     const cover = wb.addWorksheet('الملخص');
     setupBoardSheet(cover, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
-    addBoardBanner(cover, 'التقرير المالي', SPAN, { wb, logo: brandLogoPng(), currency });
+    addBoardBanner(cover, 'التقرير المالي', SPAN, { wb, brand });
     addSectionTitle(cover, 'الملخص التنفيذي', SPAN);
     addKpiCards(
       cover,
@@ -1787,7 +1795,7 @@ export class ReportsService {
       { span: SPAN, perRow: 3 },
     );
     addChartBlock(wb, cover, 'توزيع الدفعات حسب التوثيق', statusChart, { span: SPAN, width: 560, height: 320 });
-    addFooter(cover);
+    addFooter(cover, brand);
 
     return workbookToBuffer(wb);
   }
@@ -1827,7 +1835,8 @@ export class ReportsService {
    * reservation breakdown), one sheet per table. No demo values.
    */
   async operationalXlsx(): Promise<Buffer> {
-    const [k, r, currency] = await Promise.all([this.kpis(), this.reservations(), this.currency()]);
+    const [k, r, brand] = await Promise.all([this.kpis(), this.reservations(), this.brand()]);
+    const currency = brand.currency;
     const wb = createReportWorkbook();
 
     const kpiSheet = wb.addWorksheet('المؤشرات');
@@ -1848,11 +1857,12 @@ export class ReportsService {
       ],
       widths: [34, 18],
       currency,
+      brand,
     });
     kpiSheet.getColumn(2).numFmt = '#,##0.##';
     // The last row (collected deposits) is the one amount among the counts.
     kpiSheet.getCell(kpiSheet.rowCount, 2).numFmt = amountFormat(currency, '0.##');
-    addFooter(kpiSheet);
+    addFooter(kpiSheet, brand);
 
     const resSheet = wb.addWorksheet('الحجوزات حسب الحالة');
     addTable(
@@ -2120,12 +2130,13 @@ export class ReportsService {
       series: data.collectionByType.map((c) => ({ label: DEP_TYPE_LABEL[c.type] ?? c.type, value: Number(c.totalAll) })),
     });
 
-    const currency = await this.currency();
+    const brand = await this.brand();
+    const currency = brand.currency;
     const SPAN = 6;
     const wb = createReportWorkbook();
     const cover = wb.addWorksheet('الملخص');
     setupBoardSheet(cover, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
-    addBoardBanner(cover, 'لوحة المؤشرات المالية', SPAN, { wb, logo: brandLogoPng(), currency });
+    addBoardBanner(cover, 'لوحة المؤشرات المالية', SPAN, { wb, brand });
 
     addSectionTitle(cover, 'الملخص التنفيذي', SPAN);
     addKpiCards(
@@ -2165,7 +2176,7 @@ export class ReportsService {
 
     addChartBlock(wb, cover, 'أعمار المتأخرات', agingChart, { span: SPAN, width: 720, height: 300 });
     addChartBlock(wb, cover, 'التحصيل حسب نوع الدفعة', typeChart, { span: SPAN, width: 560, height: 300 });
-    addFooter(cover);
+    addFooter(cover, brand);
 
     const byType = wb.addWorksheet('التحصيل حسب النوع');
     addTable(
@@ -2191,9 +2202,10 @@ export class ReportsService {
     return workbookToBuffer(wb);
   }
 
-  /** The company currency every report amount is in. */
-  private currency(): Promise<string> {
-    return getCompanyCurrency(this.prisma, getRequiredCompanyId());
+  /** The company identity (name, logo, colours) on report files. */
+  private async brand(): Promise<ReportBrand> {
+    const companyId = getRequiredCompanyId();
+    return this.reportBrand?.forCompany(companyId) ?? fallbackBrand(await getCompanyCurrency(this.prisma, companyId));
   }
 
   // ── PDF builders ─────────────────────────────────────────────────────────
@@ -2226,8 +2238,7 @@ export class ReportsService {
       period,
       dateFrom,
       dateTo,
-      currency: await this.currency(),
-    });
+    }, await this.brand());
   }
 
   async financialPdf(period?: string, dateFrom?: string, dateTo?: string): Promise<Buffer> {
@@ -2239,8 +2250,7 @@ export class ReportsService {
       period,
       dateFrom,
       dateTo,
-      currency: await this.currency(),
-    });
+    }, await this.brand());
   }
 
   async brokerPdf(dateFrom?: string, dateTo?: string): Promise<Buffer> {
@@ -2253,8 +2263,7 @@ export class ReportsService {
       })),
       dateFrom,
       dateTo,
-      currency: await this.currency(),
-    });
+    }, await this.brand());
   }
 
   private periodWhereContract(period: string): Prisma.ContractWhereInput {

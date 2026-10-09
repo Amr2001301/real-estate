@@ -66,6 +66,7 @@ import { HealthController } from './modules/health/health.controller';
 import { MetricsModule } from './common/observability/metrics.module';
 import { PublicCompaniesModule } from './modules/public-companies/public-companies.module';
 import { CompanyBrandingModule } from './modules/company-branding/company-branding.module';
+import { ReportBrandModule } from './modules/company-branding/report-brand.module';
 import { DataExportModule } from './modules/data-export/data-export.module';
 import { DataImportModule } from './modules/data-import/data-import.module';
 
@@ -127,6 +128,7 @@ import { DataImportModule } from './modules/data-import/data-import.module';
     CompanyDomainsModule,
     PublicCompaniesModule,
     CompanyBrandingModule,
+    ReportBrandModule,
     DataExportModule,
     DataImportModule,
     MetricsModule,
