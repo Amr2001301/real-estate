@@ -57,6 +57,11 @@ const TOP_METRIC_LABEL: Record<TopMetric, string> = {
  * including them would inflate sales numbers for contracts that may never
  * close (admin can revoke or cancel before signing).
  */
+/** Narrows a broker-detail export (see detailForExport). */
+export interface DetailExportScope {
+  onlyAgent?: string;
+}
+
 @Injectable()
 export class BrokerReportsService {
   constructor(
@@ -646,8 +651,22 @@ export class BrokerReportsService {
     return toCsv(headers, rows);
   }
 
-  async brokerDetailCsv(brokerId: string, query: BrokerDetailReportQueryDto) {
+  /**
+   * The broker detail behind an export. `onlyAgent` keeps just that agent's
+   * row in the agent breakdown — the broker portal passes it for a
+   * non-manager, who sees only their own row on screen (forBroker) and must
+   * not get the firm's other agents (names, contacts, sales) in a file.
+   */
+  private async detailForExport(brokerId: string, query: BrokerDetailReportQueryDto, opts: DetailExportScope) {
     const detail = await this.brokerDetail(brokerId, query);
+    if (opts.onlyAgent !== undefined) {
+      detail.agentBreakdown = detail.agentBreakdown.filter((a) => a.brokerAgentId === opts.onlyAgent);
+    }
+    return detail;
+  }
+
+  async brokerDetailCsv(brokerId: string, query: BrokerDetailReportQueryDto, opts: DetailExportScope = {}) {
+    const detail = await this.detailForExport(brokerId, query, opts);
     const s = detail.summary;
     const headerRows: [string, string | number | null][] = [
       ['الوسيط', this.localizedName(detail.broker.companyName) ?? ''],
@@ -792,8 +811,8 @@ export class BrokerReportsService {
    * monthly trend + agent + project breakdowns) across one sheet per section.
    * No demo values.
    */
-  async brokerDetailXlsx(brokerId: string, query: BrokerDetailReportQueryDto) {
-    const detail = await this.brokerDetail(brokerId, query);
+  async brokerDetailXlsx(brokerId: string, query: BrokerDetailReportQueryDto, opts: DetailExportScope = {}) {
+    const detail = await this.detailForExport(brokerId, query, opts);
     const s = detail.summary;
     const brand = await this.brand();
     const currency = brand.currency;

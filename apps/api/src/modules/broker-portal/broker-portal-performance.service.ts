@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type { BrokerScopeContext } from '../../common/guards/broker-scope.guard';
-import { BrokerReportsService } from '../broker-reports/broker-reports.service';
+import { BrokerReportsService, type DetailExportScope } from '../broker-reports/broker-reports.service';
 import { PortalPerformanceQueryDto } from './dto/portal-performance.dto';
 
 /**
@@ -47,16 +47,15 @@ export class BrokerPortalPerformanceService {
 
   async exportCsv(scope: BrokerScopeContext, query: PortalPerformanceQueryDto) {
     // Same scoping as forBroker — never leak firm-wide numbers to non-managers.
-    const { brokerAgentId } = await this.resolveAgentScope(
+    const { brokerAgentId, canSeeAllAgents } = await this.resolveAgentScope(
       scope,
       query.brokerAgentId,
     );
-    return this.reports.brokerDetailCsv(scope.brokerId, {
-      from: query.from,
-      to: query.to,
-      projectId: query.projectId,
-      brokerAgentId,
-    });
+    return this.reports.brokerDetailCsv(
+      scope.brokerId,
+      { from: query.from, to: query.to, projectId: query.projectId, brokerAgentId },
+      this.agentRows(scope, canSeeAllAgents),
+    );
   }
 
   /**
@@ -66,16 +65,23 @@ export class BrokerPortalPerformanceService {
    * export their own firm's slice, with no cross-broker leakage.
    */
   async exportXlsx(scope: BrokerScopeContext, query: PortalPerformanceQueryDto) {
-    const { brokerAgentId } = await this.resolveAgentScope(
+    const { brokerAgentId, canSeeAllAgents } = await this.resolveAgentScope(
       scope,
       query.brokerAgentId,
     );
-    return this.reports.brokerDetailXlsx(scope.brokerId, {
-      from: query.from,
-      to: query.to,
-      projectId: query.projectId,
-      brokerAgentId,
-    });
+    return this.reports.brokerDetailXlsx(
+      scope.brokerId,
+      { from: query.from, to: query.to, projectId: query.projectId, brokerAgentId },
+      this.agentRows(scope, canSeeAllAgents),
+    );
+  }
+
+  /**
+   * The agent breakdown an export may carry: the whole firm for a manager,
+   * only the caller's own row otherwise — the same rule as forBroker().
+   */
+  private agentRows(scope: BrokerScopeContext, canSeeAllAgents: boolean): DetailExportScope {
+    return canSeeAllAgents ? {} : { onlyAgent: scope.brokerAgentUserId };
   }
 
   async agents(scope: BrokerScopeContext, query: PortalPerformanceQueryDto) {
