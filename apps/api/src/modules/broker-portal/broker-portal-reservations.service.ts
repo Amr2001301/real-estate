@@ -7,15 +7,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
-  NotificationChannel,
   PlanTemplateStatus,
   Prisma,
   ReservationActivityType,
   ReservationBookingPaymentStatus,
   ReservationStatus,
   UnitStatus,
+  UserRole,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.module';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import type { BrokerScopeContext } from '../../common/guards/broker-scope.guard';
 import { computeDurationOption } from '../installments/duration-calc';
@@ -102,6 +103,7 @@ export class BrokerPortalReservationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly reservations: ReservationsService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // ── List + Detail ───────────────────────────────────────────────────────
@@ -488,6 +490,7 @@ export class BrokerPortalReservationsService {
     await this.notify(reservation.id, {
       brokerId,
       brokerAgentUserId,
+      actorUserId,
       salesUserId: lead.assignedSalesId,
       reservationNumber: reservation.reservationNumber,
       unitCode: unit.code,
@@ -626,47 +629,52 @@ export class BrokerPortalReservationsService {
     return { lockedPct: pct, lockedAmount: amount };
   }
 
+  /**
+   * A broker reservation: the agent who owns it and the firm's managers, the
+   * lead's sales person, and the company's admins / sales managers who must
+   * act on it — through NotificationsService (in-app + push + e-mail), never
+   * the user who made it.
+   */
   private async notify(
     reservationId: string,
     info: {
       brokerId: string;
       brokerAgentUserId: string | null;
       salesUserId: string | null;
+      actorUserId: string;
       reservationNumber: string | null;
       unitCode: string;
       leadName: string;
     },
   ): Promise<void> {
     try {
-      const recipients = await this.prisma.brokerUser.findMany({
-        where: { brokerId: info.brokerId, status: 'ACTIVE' },
-        select: { userId: true },
-      });
-      const userIds = new Set<string>(recipients.map((r) => r.userId));
-      if (info.salesUserId) userIds.add(info.salesUserId);
-      if (userIds.size === 0) return;
-
       const payload = {
         reservationId,
         reservationNumber: info.reservationNumber,
         unitCode: info.unitCode,
         leadName: info.leadName,
         brokerAgentId: info.brokerAgentUserId,
+        entityType: 'reservation',
+        entityId: reservationId,
       };
-
-      await this.prisma.notification.createMany({
-        data: Array.from(userIds).map((userId) => ({
-          userId,
-          templateCode: 'broker_reservation_created',
-          payload: payload as Prisma.InputJsonValue,
-          channel: NotificationChannel.IN_APP,
-          sentAt: new Date(),
-        })),
+      const broker = await this.notifications.brokerRecipients(info.brokerId, {
+        agentUserId: info.brokerAgentUserId,
       });
+      const except = { except: info.actorUserId };
+      await Promise.all([
+        this.notifications.sendToUsers([...broker, info.salesUserId], 'broker_reservation_created', payload, except),
+        this.notifications.sendToRoles(
+          [UserRole.ADMIN, UserRole.SALES_MANAGER],
+          'broker_reservation_created',
+          payload,
+          except,
+        ),
+      ]);
     } catch (e) {
       this.logger.warn(
         `notify(reservation ${reservationId}) failed: ${(e as Error).message}`,
       );
     }
   }
+
 }

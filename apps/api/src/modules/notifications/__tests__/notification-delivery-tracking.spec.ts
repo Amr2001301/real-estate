@@ -443,7 +443,7 @@ describe('Step 15 — Notification delivery tracking', () => {
   // ── Part C: seed consistency ──────────────────────────────────────────────
 
   describe('Part C: seed consistency', () => {
-    const SEED_PATH = join(__dirname, '../../../../prisma/seed.ts');
+    const SEED_PATH = join(__dirname, '../notification-catalog.ts');
     const seedSrc   = readFileSync(SEED_PATH, 'utf8');
 
     const ELIGIBLE_CODES = [
@@ -486,7 +486,7 @@ describe('Step 15 — Notification delivery tracking', () => {
       const start = seedSrc.indexOf(`code: '${code}'`);
       if (start === -1) return '';
       const next  = seedSrc.indexOf(`code: '`, start + code.length + 8);
-      const arrEnd = seedSrc.indexOf('].map((t)', start);
+      const arrEnd = seedSrc.indexOf('\n];', start);
       const stop  = Math.min(
         ...[next, arrEnd].filter((n) => n > start && n !== -1),
       );

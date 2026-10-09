@@ -42,6 +42,7 @@ import { FirebaseService } from '../../common/firebase/firebase.service';
 import { PushService } from './push.service';
 import { AuthModule } from '../auth/auth.module';
 import { EmailService } from '../auth/email.service';
+import { NOTIFICATION_CATALOG } from './notification-catalog';
 
 class UpsertTemplateDto {
   @IsString() code!: string;
@@ -160,6 +161,15 @@ function resolveText(
 }
 
 
+/** Who must not get a notification — usually the user whose action caused it. */
+export interface NotifyOptions {
+  except?: string | null;
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+}
+
 /** One template per code: a company override beats the platform default. */
 function pickEffective(rows: NotificationTemplate[]): Map<string, NotificationTemplate> {
   const byCode = new Map<string, NotificationTemplate>();
@@ -181,35 +191,35 @@ export class NotificationsService implements OnModuleInit {
   ) {}
 
   /**
-   * Ensures the `admin_broadcast` passthrough template always exists in the
-   * database, independent of whether the seed script has been run.
-   * The template body is intentionally `{{var}}` — content is interpolated at
-   * send-time from the broadcast payload.
+   * Inserts every catalog template (notification-catalog.ts) that has no
+   * platform default yet, so a new event never ships without its text —
+   * independent of whether the seed ran. Existing rows (and companies'
+   * overrides) are never touched.
    */
   async onModuleInit() {
     try {
-      // A platform default (companyId NULL) — every company resolves to it.
-      // Before FG-26 this upsert ran with no tenant context on a tenant-scoped
-      // model and failed on every boot.
-      const existing = await this.prisma.notificationTemplate.findFirst({
-        where: { code: 'admin_broadcast', companyId: null },
-        select: { id: true },
+      const existing = await this.prisma.notificationTemplate.findMany({
+        where: { companyId: null, code: { in: NOTIFICATION_CATALOG.map((t) => t.code) } },
+        select: { code: true },
       });
-      if (!existing) {
+      const have = new Set(existing.map((t) => t.code));
+      const missing = NOTIFICATION_CATALOG.filter((t) => !have.has(t.code));
+      for (const t of missing) {
         await this.prisma.notificationTemplate.create({
           data: {
-            code: 'admin_broadcast',
-            channel: NotificationChannel.IN_APP,
-            subject: { ar: '{{title_ar}}', en: '{{title_en}}' } as Prisma.InputJsonValue,
-            body:    { ar: '{{body_ar}}',  en: '{{body_en}}'  } as Prisma.InputJsonValue,
+            code: t.code,
+            channel: t.channel,
+            emailEnabled: t.emailEnabled ?? false,
+            subject: { ar: t.ar_subject, en: t.en_subject } as Prisma.InputJsonValue,
+            body: { ar: t.ar_body, en: t.en_body } as Prisma.InputJsonValue,
           },
         });
       }
-      this.logger.log('admin_broadcast template verified');
+      this.logger.log(`notification templates verified (${missing.length} added)`);
     } catch (err) {
-      // Non-fatal: log and continue — send() will fail with a clear message if
-      // the template is still missing (e.g. DB not yet migrated).
-      this.logger.error(`admin_broadcast template upsert failed: ${(err as Error).message}`);
+      // Non-fatal: log and continue — a send with a missing template is
+      // skipped with a warning (e.g. DB not yet migrated).
+      this.logger.error(`notification template bootstrap failed: ${(err as Error).message}`);
     }
   }
 
@@ -291,10 +301,12 @@ export class NotificationsService implements OnModuleInit {
     userId: string | null | undefined,
     templateCode: string,
     payload: Record<string, unknown> = {},
+    opts: NotifyOptions = {},
   ): Promise<void> {
     if (!userId) return; // safe skip — recipient missing
+    if (opts.except && userId === opts.except) return; // the actor already knows
     try {
-      await this.send({ userId, templateCode, payload });
+      await this.send({ userId, templateCode, payload, skipInactive: true });
     } catch (err) {
       this.logger.warn(
         `Notification send failed (${templateCode}): ${(err as Error).message}`,
@@ -313,13 +325,14 @@ export class NotificationsService implements OnModuleInit {
     userIds: ReadonlyArray<string | null | undefined>,
     templateCode: string,
     payload: Record<string, unknown> = {},
+    opts: NotifyOptions = {},
   ): Promise<void> {
     const unique = Array.from(
       new Set(userIds.filter((id): id is string => typeof id === 'string' && id.length > 0)),
     );
     if (unique.length === 0) return;
     await Promise.all(
-      unique.map((userId) => this.sendToUser(userId, templateCode, payload)),
+      unique.map((userId) => this.sendToUser(userId, templateCode, payload, opts)),
     );
   }
 
@@ -333,6 +346,7 @@ export class NotificationsService implements OnModuleInit {
     roles: ReadonlyArray<UserRole>,
     templateCode: string,
     payload: Record<string, unknown> = {},
+    opts: NotifyOptions = {},
   ): Promise<void> {
     if (roles.length === 0) return;
     try {
@@ -341,7 +355,7 @@ export class NotificationsService implements OnModuleInit {
         { role: { in: [...roles] }, active: true },
         { id: true },
       );
-      await this.sendToUsers(users.map((u) => u.id), templateCode, payload);
+      await this.sendToUsers(users.map((u) => u.id), templateCode, payload, opts);
     } catch (err) {
       this.logger.warn(
         `Notification fan-out failed (${templateCode}): ${(err as Error).message}`,
@@ -349,9 +363,45 @@ export class NotificationsService implements OnModuleInit {
     }
   }
 
-  async send(dto: SendNotificationDto) {
+  /**
+   * Who on a broker firm hears about a deal: the agent who owns it plus the
+   * firm's managers (primary contact or `canManageBrokerUsers`) — not every
+   * agent of the firm. With no agent (firm-level events such as unit access
+   * or payouts) it is the managers only; `everyone` reaches every active
+   * user (the firm's own approval / suspension). Money events (commissions,
+   * payouts) keep only users allowed to see commissions.
+   */
+  async brokerRecipients(
+    brokerId: string | null | undefined,
+    opts: { agentUserId?: string | null; money?: boolean; everyone?: boolean } = {},
+  ): Promise<string[]> {
+    if (!brokerId) return [];
+    const users = await this.prisma.brokerUser.findMany({
+      where: {
+        brokerId,
+        status: 'ACTIVE',
+        ...(opts.money ? { canViewCommissions: true } : {}),
+        ...(opts.everyone
+          ? {}
+          : {
+              OR: [
+                { isPrimaryContact: true },
+                { canManageBrokerUsers: true },
+                ...(opts.agentUserId ? [{ userId: opts.agentUserId }] : []),
+              ],
+            }),
+      },
+      select: { userId: true },
+    });
+    return users.map((u) => u.userId);
+  }
+
+  async send(dto: SendNotificationDto & { skipInactive?: boolean }) {
     const tpl = await this.templateFor(dto.templateCode);
     if (!tpl) throw new Error(`Template ${dto.templateCode} not found`);
+    // A company that switched an event off (templates page) gets no
+    // automatic notification for it; an admin's manual send still goes out.
+    if (dto.skipInactive && tpl.active === false) return null;
     const channel = dto.channel ?? tpl.channel;
     const payload = (dto.payload ?? {}) as Record<string, unknown>;
 
@@ -423,8 +473,9 @@ export class NotificationsService implements OnModuleInit {
       const emailPromise: Promise<void> =
         user?.email && tpl.emailEnabled
           ? (() => {
-              const subject  = resolveText(tpl.subject, payload, locale, dto.templateCode, currency);
-              const bodyText = resolveText(tpl.body,    payload, locale, '', currency);
+              // Escaped: payload values (names, notes) are user input.
+              const subject  = escapeHtml(resolveText(tpl.subject, payload, locale, dto.templateCode, currency));
+              const bodyText = escapeHtml(resolveText(tpl.body,    payload, locale, '', currency));
               const dir      = locale === 'ar' ? 'rtl' : 'ltr';
               const htmlBody = `<div dir="${dir}" style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px;color:#1a1a2e;"><h2 style="margin:0 0 16px;color:#0F1E33;">${subject}</h2><p style="margin:0 0 24px;line-height:1.7;">${bodyText}</p><hr style="margin:28px 0;border:none;border-top:1px solid #eee;"/><p style="margin:0;font-size:12px;color:#999;">© ديفورا — منصة الإدارة العقارية</p></div>`;
               return this.email

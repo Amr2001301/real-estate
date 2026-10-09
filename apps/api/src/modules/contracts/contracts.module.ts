@@ -803,10 +803,10 @@ export class ContractsService {
           });
         }
 
-        const recipients = await this.prisma.brokerUser.findMany({
-          where: { brokerId: before.brokerId, status: 'ACTIVE' },
-          select: { userId: true },
-        });
+        // The agent who brought the deal and the firm's managers.
+        const recipients = (
+          await this.notifications.brokerRecipients(before.brokerId, { agentUserId: before.brokerAgentId })
+        ).map((userId) => ({ userId }));
         const brokerPayload = await this.buildContractPayload(before.id);
         await this.notifications.sendToUsers(
           [
