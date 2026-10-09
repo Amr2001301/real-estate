@@ -43,6 +43,7 @@ export class ReportBrandService {
         contactPhone: true,
         contactEmail: true,
         currency: true,
+        timezone: true,
       },
     });
     if (!c) return fallbackBrand();
@@ -58,6 +59,7 @@ export class ReportBrandService {
       contactPhone: c.contactPhone ?? undefined,
       contactEmail: c.contactEmail ?? undefined,
       currency: normalizeCurrency(c.currency),
+      timezone: validTimeZone(c.timezone),
     };
     this.cache.set(companyId, { at: Date.now(), brand });
     return brand;
@@ -66,5 +68,16 @@ export class ReportBrandService {
   /** Called when the company's branding changes. */
   invalidate(companyId: string): void {
     this.cache.delete(companyId);
+  }
+}
+
+/** The company's IANA zone if the runtime knows it (a bad value must not break a report). */
+function validTimeZone(tz: string | null | undefined): string | undefined {
+  if (!tz) return undefined;
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: tz });
+    return tz;
+  } catch {
+    return undefined;
   }
 }

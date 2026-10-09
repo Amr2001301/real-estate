@@ -59,7 +59,7 @@ async function renderChartPng(
           title: { display: Boolean(opts.title), text: opts.title ?? '' },
         },
         ...(type === 'bar'
-          ? { scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+          ? { scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 } } } }
           : {}),
       },
     });

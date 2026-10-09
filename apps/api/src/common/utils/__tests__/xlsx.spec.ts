@@ -10,6 +10,7 @@ import {
   amountFormat,
   createReportWorkbook,
   currencyNote,
+  excelLocalDate,
   formatMoneyColumns,
   formatStamp,
   setupBoardSheet,
@@ -282,5 +283,23 @@ describe('company currency in workbooks', () => {
     expect(ws.getCell(1, 1).numFmt).toBe('#,##0.00 "ج.م"');
     formatMoneyColumns(ws, [2, 3], 'KWD');
     expect(ws.getColumn(3).numFmt).toBe('#,##0.## "د.ك"');
+  });
+});
+
+describe('times in the company time zone', () => {
+  // 09:35 UTC on 2026-10-09 is 12:35 in Cairo (EEST, UTC+3).
+  const at = new Date('2026-10-09T09:35:45.244Z');
+
+  it('formats a stamp in the given zone', () => {
+    expect(formatStamp(at, 'Africa/Cairo')).toBe('2026-10-09 12:35');
+    expect(formatStamp(at, 'UTC')).toBe('2026-10-09 09:35');
+  });
+
+  it('crosses midnight with the zone', () => {
+    expect(formatStamp(new Date('2026-10-09T22:30:00Z'), 'Africa/Cairo')).toBe('2026-10-10 01:30');
+  });
+
+  it('shifts a cell date so Excel shows the local wall clock', () => {
+    expect(excelLocalDate(at, 'Africa/Cairo').toISOString()).toBe('2026-10-09T12:35:45.000Z');
   });
 });

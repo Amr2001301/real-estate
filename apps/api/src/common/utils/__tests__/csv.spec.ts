@@ -1,4 +1,4 @@
-import { toCsv, csvFilename, type CsvCell } from '../csv';
+import { toCsv, csvFilename, csvSections, type CsvCell } from '../csv';
 
 const BOM = '﻿';
 
@@ -62,6 +62,15 @@ describe('csv util', () => {
     it('replaces unsafe characters with underscores', () => {
       const name = csvFilename('a/b c:d');
       expect(name).toMatch(/^a_b_c_d-\d{4}-\d{2}-\d{2}\.csv$/);
+    });
+  });
+
+  describe('csvSections', () => {
+    it('stacks tables behind one BOM at the start of the file only', () => {
+      const out = csvSections(['الأول', toCsv(['أ'], [[1]]), '', 'الثاني', toCsv(['ب'], [[2]])]);
+      expect(out.startsWith(BOM)).toBe(true);
+      expect(out.split(BOM)).toHaveLength(2);
+      expect(out).toBe(`${BOM}الأول\r\nأ\r\n1\r\n\r\nالثاني\r\nب\r\n2`);
     });
   });
 });

@@ -18,6 +18,8 @@ export interface ReportBrand {
   contactEmail?: string;
   /** ISO 4217 — every amount in the file is in it. */
   currency: string;
+  /** IANA zone — every date/time in the file is in it (server-local without one). */
+  timezone?: string;
 }
 
 export const DEFAULT_PRIMARY = '#0F1E33';

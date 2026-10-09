@@ -50,9 +50,43 @@ function pad2(n: number): string {
   return String(n).padStart(2, '0');
 }
 
-/** Human-readable local timestamp for the "generated on" line. */
-export function formatStamp(d: Date): string {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+/**
+ * The wall-clock fields of `d` in `timeZone` (the server's own zone without
+ * one). Reports state times in the company's zone, not the server's (UTC in
+ * production).
+ */
+function wallClock(d: Date, timeZone?: string) {
+  if (!timeZone) {
+    return { y: d.getFullYear(), mo: d.getMonth() + 1, d: d.getDate(), h: d.getHours(), mi: d.getMinutes(), s: d.getSeconds() };
+  }
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+  }).formatToParts(d);
+  const n = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  return { y: n('year'), mo: n('month'), d: n('day'), h: n('hour'), mi: n('minute'), s: n('second') };
+}
+
+/** "2026-10-09 12:35" — a timestamp as the company reads it. */
+export function formatStamp(d: Date, timeZone?: string): string {
+  const w = wallClock(d, timeZone);
+  return `${w.y}-${pad2(w.mo)}-${pad2(w.d)} ${pad2(w.h)}:${pad2(w.mi)}`;
+}
+
+/**
+ * A Date to write into an XLSX cell so Excel shows the company's local time:
+ * Excel has no time zones and ExcelJS writes a Date's UTC fields, so shift the
+ * wall clock into them.
+ */
+export function excelLocalDate(d: Date, timeZone?: string): Date {
+  const w = wallClock(d, timeZone);
+  return new Date(Date.UTC(w.y, w.mo - 1, w.d, w.h, w.mi, w.s));
 }
 
 /** A new workbook stamped with the brand as creator. */
@@ -106,6 +140,7 @@ export function addReportTitle(
   spanCols = 2,
   currency?: string,
   company?: string,
+  timeZone?: string,
 ): void {
   ws.mergeCells(1, 1, 1, spanCols);
   const t = ws.getCell(1, 1);
@@ -116,7 +151,7 @@ export function addReportTitle(
 
   ws.mergeCells(2, 1, 2, spanCols);
   const g = ws.getCell(2, 1);
-  g.value = [company, `تاريخ التوليد: ${formatStamp(new Date())}`, currency && currencyNote(currency)]
+  g.value = [company, `تاريخ التوليد: ${formatStamp(new Date(), timeZone)}`, currency && currencyNote(currency)]
     .filter(Boolean)
     .join(' · ');
   g.font = { italic: true, size: 10, color: { argb: XLSX_MUTED } };
@@ -139,13 +174,14 @@ export function appendTable(
   ws: Worksheet,
   headers: string[],
   rows: Array<Array<string | number | Date>>,
+  emptyText = 'لا توجد بيانات',
 ): void {
   const headerRow = ws.addRow(headers);
   headerRow.height = 22;
   headerRow.eachCell(styleHeaderCell);
 
   if (rows.length === 0) {
-    const empty = ws.addRow(['لا توجد بيانات']);
+    const empty = ws.addRow([emptyText]);
     ws.mergeCells(empty.number, 1, empty.number, Math.max(1, headers.length));
     const c = empty.getCell(1);
     c.font = { italic: true, color: { argb: XLSX_MUTED } };
@@ -198,13 +234,15 @@ export function addTitledTable(
     widths: number[];
     /** Company currency — stated under the title. */
     currency?: string;
-    /** Company identity — its name is stated under the title. */
-    brand?: Pick<ReportBrand, 'name'>;
+    /** Company identity — its name is stated under the title, the time in its zone. */
+    brand?: Pick<ReportBrand, 'name' | 'timezone'>;
+    /** Shown in place of rows when there are none. */
+    emptyText?: string;
   },
 ): void {
   const span = opts.headers.length;
   ws.columns = opts.widths.map((w) => ({ width: w }));
-  addReportTitle(ws, opts.title, span, opts.currency, opts.brand?.name);
+  addReportTitle(ws, opts.title, span, opts.currency, opts.brand?.name, opts.brand?.timezone);
 
   const applied = (opts.filters ?? []).filter(([, v]) => v !== '' && v != null);
   if (applied.length > 0) {
@@ -218,7 +256,7 @@ export function addTitledTable(
   ws.addRow([]); // spacer
   const headerRowIndex = ws.rowCount + 1;
   ws.views = [{ state: 'frozen', ySplit: headerRowIndex, rightToLeft: true }];
-  appendTable(ws, opts.headers, opts.rows);
+  appendTable(ws, opts.headers, opts.rows, opts.emptyText);
 }
 
 // ── Board / proposal report helpers (P15.4) ──────────────────────────────────
@@ -298,7 +336,7 @@ export function addBoardBanner(
   t.alignment = { horizontal: 'right', vertical: 'middle' };
 
   const d = ws.getCell(3, 1);
-  d.value = `تاريخ التوليد: ${formatStamp(new Date())}${currency ? ` · ${currencyNote(currency)}` : ''}`;
+  d.value = `تاريخ التوليد: ${formatStamp(new Date(), brand?.timezone)}${currency ? ` · ${currencyNote(currency)}` : ''}`;
   d.font = { italic: true, size: 10, color: { argb: 'FFCBD5E1' } };
   d.alignment = { horizontal: 'right', vertical: 'middle' };
 
@@ -326,13 +364,13 @@ export function addKpiCards(
   ws: Worksheet,
   /** `currency` marks a money card: its value shows the currency symbol. */
   cards: Array<{ label: string; value: string | number; currency?: string }>,
-  opts: { span: number; perRow?: number; bg?: string },
+  opts: { span: number; perRow?: number; bg?: string; emptyText?: string },
 ): void {
   if (cards.length === 0) {
     const row = ws.addRow([]);
     ws.mergeCells(row.number, 1, row.number, opts.span);
     const c = ws.getCell(row.number, 1);
-    c.value = 'لا توجد بيانات';
+    c.value = opts.emptyText ?? 'لا توجد بيانات';
     c.font = { italic: true, color: { argb: XLSX_MUTED } };
     c.alignment = { horizontal: 'center', vertical: 'middle' };
     return;

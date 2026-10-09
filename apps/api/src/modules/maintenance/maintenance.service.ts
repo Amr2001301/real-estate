@@ -15,7 +15,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import { getTenantContext, runInCompany } from '../../common/tenant/tenant-context';
 import { ReportBrandService } from '../company-branding/report-brand.service';
-import { toCsv, type CsvCell } from '../../common/utils/csv';
+import { csvSections, toCsv, type CsvCell } from '../../common/utils/csv';
 import {
   addFooter,
   addTable,
@@ -1416,7 +1416,7 @@ export class MaintenanceService {
       fmtDate(e.warrantyEnd),
     ]);
 
-    return [
+    return csvSections([
       toCsv(['metric', 'label', 'value'], summaryRows),
       '',
       toCsv(['section', 'category', 'count', 'overdueCount', 'outOfWarrantyCount'], categoryRows),
@@ -1424,7 +1424,7 @@ export class MaintenanceService {
       toCsv(['section', 'assignee', 'count', 'overdueCount', 'inProgressCount'], assigneeRows),
       '',
       toCsv(['section', 'unitCode', 'categoryName', 'warrantyEnd'], expiringRows),
-    ].join('\r\n');
+    ]);
   }
 
   /**

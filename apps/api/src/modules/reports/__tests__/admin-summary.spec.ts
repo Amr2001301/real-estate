@@ -104,6 +104,13 @@ function makePrismaMock() {
           createdAt: new Date('2026-05-31T09:00:00Z'),
           contract: { contractNumber: 'CON-1', customer: { fullName: 'علي' } },
         },
+        {
+          // A reservation deposit: no contract yet.
+          id: 'd2',
+          createdAt: new Date('2026-05-20T09:00:00Z'),
+          contract: null,
+          reservation: { reservationNumber: 'RES-9', unit: { code: 'B-7' }, client: { fullName: 'منى' }, lead: null },
+        },
       ]),
     },
     maintenanceRequest: {
@@ -238,7 +245,9 @@ describe('GET /reports/admin-summary (P14)', () => {
     const activity = res.body.recentActivity as Array<{ type: string; title: string; action: string; context: string | null }>;
     // r1 (11:00) > d1 (09:00) > c1 (08:00) > l1 (prev day) — newest first.
     expect(activity[0]).toMatchObject({ type: 'reservation', title: 'خالد', action: 'حجز جديد', context: 'A-1' });
-    expect(activity.map((a) => a.type)).toEqual(['reservation', 'deposit', 'contract', 'lead']);
+    expect(activity.map((a) => a.type)).toEqual(['reservation', 'deposit', 'contract', 'lead', 'deposit']);
+    // A reservation deposit is named from its reservation, not a generic "عميل".
+    expect(activity[4]).toMatchObject({ title: 'منى', action: 'دفعة جديدة', context: 'B-7' });
     // None of the removed hardcoded demo names survive.
     expect(JSON.stringify(activity)).not.toMatch(/أحمد منصور|سارة كمال|محمد علي|برج الجوار/);
   });
@@ -289,6 +298,12 @@ describe('GET /reports/admin-summary (P14)', () => {
     expect(csv).toContain('المشاريع المنشورة,4');
     expect(csv).toContain('مباشر,10');
     expect(csv).toContain('خالد'); // recent-activity actor
+    // One BOM for the whole file — none inside later sections' header cells.
+    expect(csv.split('\uFEFF').length).toBeLessThanOrEqual(2);
+    expect(csv).toContain('\r\nالمؤشر,القيمة\r\n');
+    // Activity times are readable stamps, not raw ISO strings.
+    expect(csv).not.toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+    expect(csv).toMatch(/,2026-05-31 \d{2}:\d{2}/);
     // None of the removed hardcoded demo values survive.
     expect(csv).not.toMatch(/أحمد منصور|بيانات تجريبية|74%/);
   });
