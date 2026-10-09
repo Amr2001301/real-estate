@@ -1,4 +1,6 @@
 import type { Route } from 'next';
+import { getSiteCurrency } from '@/lib/site-currency';
+import { Price } from '@/components/currency/CurrencyProvider';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { MapPin, ArrowLeft, Building2, LayoutPanelTop } from 'lucide-react';
@@ -85,9 +87,10 @@ function SectionHead({
 export async function generateMetadata({ params }: { params: Params }) {
   const { id } = await params;
   const tenant = await getResolvedTenant();
-  const [result, locale] = await Promise.all([
+  const [result, locale, currency] = await Promise.all([
     tenant ? fetchUnit(id, tenant.slug) : Promise.resolve({ ok: false as const, error: { message: '', status: 404 } }),
     getLocale(),
+    getSiteCurrency(),
   ]);
   const m = siteT(locale);
   if (!result.ok) return buildMetadata({ title: m.unitDetail.errorTitle });
@@ -95,7 +98,7 @@ export async function generateMetadata({ params }: { params: Params }) {
   const unit = result.data;
   const project = unit.project ? pickAr(unit.project.name) : '';
   const title = [unitTitle(unit, m.unitDetail.projectFallback), project].filter(Boolean).join(' · ');
-  const description = `${unitTitle(unit, m.unitDetail.projectFallback)}${project ? ` ${m.unitDetail.projectPrefix} ${project}` : ''} — ${formatArea(unit.area)} · ${formatPrice(unit.price)}.`;
+  const description = `${unitTitle(unit, m.unitDetail.projectFallback)}${project ? ` ${m.unitDetail.projectPrefix} ${project}` : ''} — ${formatArea(unit.area)} · ${formatPrice(unit.price, currency)}.`;
   const image = unit.coverImage ?? unit.media?.[0]?.url;
   return buildMetadata({ title, description, path: `/units/${id}`, ...(image ? { image } : {}) });
 }
@@ -104,7 +107,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
   const { id } = await params;
   const tenant = await getResolvedTenant();
   if (!tenant) notFound();
-  const [result, locale] = await Promise.all([fetchUnit(id, tenant.slug), getLocale()]);
+  const [result, locale, currency] = await Promise.all([fetchUnit(id, tenant.slug), getLocale(), getSiteCurrency()]);
   const m = siteT(locale);
 
   if (!result.ok) {
@@ -162,6 +165,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
         data={unitProductLd({
           name: ldName,
           price: unit.price,
+          currency,
           status: unit.status,
           image: unit.coverImage ?? unit.media?.[0]?.url ?? null,
           path: `/units/${unit.id}`,
@@ -218,7 +222,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                 {/* Price — the key fact, prominent gold right under the title */}
                 <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
                   <span className="font-display text-2xl font-bold text-gold-200">
-                    {formatPrice(unit.price)}
+                    <Price value={unit.price} />
                   </span>
                   {unit.code && (
                     <span className="rounded-full bg-black/25 px-2.5 py-0.5 text-[11px] font-medium text-white/75 backdrop-blur-md ring-1 ring-white/10">

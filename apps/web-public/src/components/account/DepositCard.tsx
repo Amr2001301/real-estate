@@ -1,8 +1,9 @@
 import Link from 'next/link';
+import { Price } from '@/components/currency/CurrencyProvider';
 import type { Route } from 'next';
 import { Wallet, CheckCircle2, Clock, AlertCircle, Upload, Landmark } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { formatPrice } from '@/lib/format';
+
 import { routes } from '@/lib/routes';
 import type { MeDeposit, MeDepositReviewStatus, MePaymentMethod } from '@/lib/api-types';
 import { getLocale } from '@/lib/locale';
@@ -65,7 +66,7 @@ export async function DepositCard({ deposit }: { deposit: MeDeposit }) {
         {/* Block 1 (right) — amount + verification */}
         <div className="min-w-0">
           <div className="text-base font-black text-ink-strong" dir="auto">
-            {formatPrice(deposit.amount)}
+            <Price value={deposit.amount} />
           </div>
           <span
             className={cn(

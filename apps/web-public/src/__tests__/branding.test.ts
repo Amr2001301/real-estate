@@ -10,7 +10,7 @@
  *   §6  fetchBranding — 200 response returns parsed body
  *   §7  fetchBranding — non-200 response returns null
  *   §8  fetchBranding — network error returns null
- *   §9  fetchBranding — fetch called with revalidate:300 (data cache TTL)
+ *   §9  fetchBranding — fetch called with revalidate:60 (data cache TTL)
  *   §10 fetchBranding — fetch called with correct URL and slug encoding
  */
 
@@ -122,14 +122,14 @@ describe('fetchBranding', () => {
     await expect(fetchBranding('acme')).resolves.toBeNull();
   });
 
-  test('§9 — fetch called with next.revalidate = 300', async () => {
+  test('§9 — fetch called with next.revalidate = 60', async () => {
     let capturedInit: RequestInit & { next?: { revalidate?: number } } | undefined;
     global.fetch = jest.fn().mockImplementation((_url: string, init: typeof capturedInit) => {
       capturedInit = init;
       return Promise.resolve({ ok: true, json: async () => BRANDING_FIXTURE });
     });
     await fetchBranding('acme');
-    expect((capturedInit as { next?: { revalidate?: number } })?.next?.revalidate).toBe(300);
+    expect((capturedInit as { next?: { revalidate?: number } })?.next?.revalidate).toBe(60);
   });
 
   test('§10 — slug encoded in URL', async () => {

@@ -81,6 +81,8 @@ export function unitProductLd(input: {
   name: string;
   description?: string;
   price: string;
+  /** ISO 4217 — the company's currency (Company.currency). */
+  currency: string;
   status: string;
   image?: string | null;
   path: string;
@@ -98,7 +100,7 @@ export function unitProductLd(input: {
           offers: {
             '@type': 'Offer',
             price: String(priceNum),
-            priceCurrency: 'SAR',
+            priceCurrency: input.currency,
             availability: availabilityFor(input.status),
             url: siteUrl(input.path),
           },

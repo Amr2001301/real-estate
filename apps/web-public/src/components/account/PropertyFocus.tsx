@@ -1,7 +1,8 @@
 import { Home, Building2, Wrench, CheckCircle2 } from 'lucide-react';
+import { Price } from '@/components/currency/CurrencyProvider';
 import { cn } from '@/lib/cn';
 import { routes } from '@/lib/routes';
-import { pickAr, unitTypeLabel, formatPrice, formatNumber } from '@/lib/format';
+import { pickAr, unitTypeLabel, formatNumber } from '@/lib/format';
 import type { MeContract, MeInstallment } from '@/lib/api-types';
 import { ButtonLink } from '@/components/ui/Button';
 import { DocumentDownloadByOwner } from '@/components/account/DocumentDownloadByOwner';
@@ -128,7 +129,7 @@ export function PropertyFocus({
           {nextInstallment ? (
             <>
               <div className="my-1 font-display text-2xl font-black text-ink-strong" dir="auto">
-                {formatPrice(nextInstallment.amount)}
+                <Price value={nextInstallment.amount} />
               </div>
               {overdue ? (
                 <span className="inline-flex items-center rounded-lg bg-error/10 px-2.5 py-1 text-[10px] font-bold text-error shadow-sm">

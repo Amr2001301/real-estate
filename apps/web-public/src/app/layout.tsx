@@ -6,6 +6,8 @@ import './globals.css';
 import { buildMetadata } from '@/lib/seo';
 import { getLocale } from '@/lib/locale';
 import { fetchBranding, hexToRgbVars } from '@/lib/branding';
+import { DEFAULT_CURRENCY } from '@/lib/site-currency';
+import { CurrencyProvider } from '@/components/currency/CurrencyProvider';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
@@ -97,12 +99,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         ) : null}
         <PageViewTracker />
         <ThemeProvider>
+          <CurrencyProvider currency={branding?.currency ?? DEFAULT_CURRENCY}>
           <FavoritesProvider>
             <Navbar locale={locale} branding={branding ?? undefined} />
             <main className="min-h-screen">{children}</main>
             <Footer locale={locale} branding={branding ?? undefined} />
             <ChatWidget />
           </FavoritesProvider>
+          </CurrencyProvider>
         </ThemeProvider>
       </body>
     </html>

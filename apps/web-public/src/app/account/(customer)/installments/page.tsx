@@ -1,4 +1,7 @@
 import { redirect } from 'next/navigation';
+import { getSiteCurrency } from '@/lib/site-currency';
+import { currencySymbol } from '@/lib/format';
+import { Price } from '@/components/currency/CurrencyProvider';
 import type { Route } from 'next';
 import Link from 'next/link';
 import {
@@ -82,7 +85,7 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
   const activeStatus = (['PAID', 'PENDING', 'OVERDUE'] as const).find((s) => s === statusParam);
   const activeContractId = firstStr(sp.contractId) || undefined;
 
-  const locale = await getLocale();
+  const [locale, currency] = await Promise.all([getLocale(), getSiteCurrency()]);
   const m = siteT(locale).accountPages.installments;
 
   const FILTERS = [
@@ -170,7 +173,7 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
         />
       ) : (
         <>
-          {summary && <SummaryStrip summary={summary} m={m} />}
+          {summary && <SummaryStrip summary={summary} m={m} symbol={currencySymbol(currency)} />}
 
           {/* Filter row */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -302,7 +305,7 @@ function SummaryBlock({
 type InstallmentsMessages = ReturnType<typeof siteT>['accountPages']['installments'];
 
 /** Single AccountCard containing all four financial KPIs in one horizontal row. */
-function SummaryStrip({ summary, m }: { summary: NonNullable<MeInstallmentsResponse['summary']>; m: InstallmentsMessages }) {
+function SummaryStrip({ summary, m, symbol }: { summary: NonNullable<MeInstallmentsResponse['summary']>; m: InstallmentsMessages; symbol: string }) {
   const hasOverdue = Number(summary.overdue) > 0;
   return (
     <AccountCard accent="gold" className="p-5 sm:p-7">
@@ -312,7 +315,7 @@ function SummaryStrip({ summary, m }: { summary: NonNullable<MeInstallmentsRespo
           label={m.totalPaid}
           value={fmtAmt(summary.totalPaid)}
           sub={`${summary.counts.paid} ${m.paidCount}`}
-          currency={m.currency}
+          currency={symbol}
         />
         <SummaryBlock
           icon={Wallet}
@@ -320,7 +323,7 @@ function SummaryStrip({ summary, m }: { summary: NonNullable<MeInstallmentsRespo
           value={fmtAmt(summary.remaining)}
           sub={`${summary.counts.pending + summary.counts.overdue} ${m.unpaidCount}`}
           separator
-          currency={m.currency}
+          currency={symbol}
         />
         <SummaryBlock
           icon={AlertCircle}
@@ -329,7 +332,7 @@ function SummaryStrip({ summary, m }: { summary: NonNullable<MeInstallmentsRespo
           sub={`${summary.counts.overdue} ${m.overdueCount}`}
           separator
           overdue={hasOverdue}
-          currency={m.currency}
+          currency={symbol}
         />
         <SummaryBlock
           icon={CalendarClock}
@@ -341,7 +344,7 @@ function SummaryStrip({ summary, m }: { summary: NonNullable<MeInstallmentsRespo
               : m.noDue
           }
           separator
-          currency={m.currency}
+          currency={symbol}
         />
       </div>
     </AccountCard>
@@ -401,7 +404,7 @@ function InstallmentCard({ installment, m }: { installment: MeInstallment; m: In
       <div className="mt-5 grid grid-cols-1 gap-6 border-t border-hairline pt-5 sm:grid-cols-3 sm:items-center sm:gap-0">
         <Block label={m.amountCol}>
           <div className="text-sm font-semibold text-ink-strong" dir="auto">
-            {formatPrice(installment.amount)}
+            <Price value={installment.amount} />
           </div>
         </Block>
         <Block label={m.dateCol} separator>

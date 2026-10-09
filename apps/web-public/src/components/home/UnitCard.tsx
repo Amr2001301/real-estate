@@ -1,8 +1,9 @@
 import Link from 'next/link';
+import { Price } from '@/components/currency/CurrencyProvider';
 import type { Route } from 'next';
 import { BedDouble, Bath, Maximize, Building2, Building, Briefcase, Store, Home, MapPin, ArrowLeft } from 'lucide-react';
 import { routes } from '@/lib/routes';
-import { formatPrice, formatNumber, pickAr, unitTypeLabel, cityLabel } from '@/lib/format';
+import { formatNumber, pickAr, unitTypeLabel, cityLabel } from '@/lib/format';
 import type { PublicUnit } from '@/lib/api-types';
 import { cn } from '@/lib/cn';
 import { PremiumCard } from '@/components/ui/PremiumCard';
@@ -125,7 +126,7 @@ export function UnitCard({ unit, action }: { unit: PublicUnit; action?: React.Re
 
           {/* Price + subtle clickable affordance */}
           <div className="mt-auto flex items-center justify-between pt-4">
-            <div className="font-display text-xl font-bold text-ink-strong">{formatPrice(unit.price)}</div>
+            <div className="font-display text-xl font-bold text-ink-strong"><Price value={unit.price} /></div>
             <span
               className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-surface-soft text-ink-strong transition-colors group-hover:bg-gold-400 group-hover:text-navy"
               aria-hidden

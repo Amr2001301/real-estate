@@ -1,9 +1,10 @@
 'use client';
 
 import type { Route } from 'next';
+import { Price } from '@/components/currency/CurrencyProvider';
 import { MessageCircle, CalendarDays, ShieldCheck, Phone, Users, Building2 } from 'lucide-react';
 import { routes } from '@/lib/routes';
-import { formatPrice } from '@/lib/format';
+
 import { getContactPhone, getWhatsappPhone, telHref, whatsappHref } from '@/lib/contact';
 import { ButtonLink } from '@/components/ui/Button';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
@@ -79,7 +80,7 @@ export function UnitInquiryCard({
               )}
               {/* Price — the primary fact in the sidebar */}
               <p className="mt-0.5 font-display text-2xl font-bold leading-snug text-ink-strong">
-                {formatPrice(price)}
+                <Price value={price} />
               </p>
               {projectName && (
                 <p className="mt-1 truncate text-[11px] text-ink-muted">
