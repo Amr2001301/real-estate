@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, SubscriptionStatus } from '@prisma/client';
 import * as argon2 from 'argon2';
+import { DEFAULT_CURRENCY } from '../../common/currency/currency';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { phoneForWrite } from '../../common/utils/phone-for-write';
 import { CapabilityService, type CompanyCapabilities } from '../../common/capabilities/capability.service';
@@ -135,8 +136,8 @@ export class SuperAdminService {
           name: dto.name,
           slug: dto.slug,
           country: dto.country,
-          currency: dto.currency ?? 'SAR',
-          timezone: dto.timezone ?? 'Asia/Riyadh',
+          currency: dto.currency ?? DEFAULT_CURRENCY,
+          timezone: dto.timezone ?? 'Africa/Cairo',
           subscriptionPlan: dto.subscriptionPlan ?? 'TRIAL',
           subscriptionStatus: 'TRIAL',
           subscriptionStartAt: dto.subscriptionStartAt ? new Date(dto.subscriptionStartAt) : null,

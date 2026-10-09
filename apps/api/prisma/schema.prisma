@@ -38,9 +38,9 @@ model Company {
   registrationNumber  String?   // developer/brokerage license ID (RERA, REGA, etc.)
 
   country             String? // ISO 3166-1 alpha-2 (SA, AE, EG …)
-  currency            String                 @default("SAR") // ISO 4217
+  currency            String                 @default("EGP") // ISO 4217 — every amount on every surface; set from branding
   defaultLocale       Locale                 @default(ar)
-  timezone            String                 @default("Asia/Riyadh") // IANA tz database name
+  timezone            String                 @default("Africa/Cairo") // IANA tz database name
   // ── Legacy operational flag — still used by TenantResolverService and auth.
   // Future: lifecycleStatus will become the canonical control; isActive will be
   // derived or removed once MT-034 lifecycle guard is enforced.

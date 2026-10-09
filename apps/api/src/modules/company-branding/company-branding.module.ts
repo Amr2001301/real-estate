@@ -11,10 +11,10 @@ import { ConfigService } from '@nestjs/config';
 import { createCacheRedis } from '../../common/redis/cache-redis';
 import { BRANDING_CACHE_REDIS, CompanyBrandingService } from './company-branding.service';
 import { PublicBrandingController } from './public-branding.controller';
-import { AdminBrandingController } from './admin-branding.controller';
+import { AdminBrandingController, CompanyCurrencyController } from './admin-branding.controller';
 
 @Module({
-  controllers: [PublicBrandingController, AdminBrandingController],
+  controllers: [PublicBrandingController, AdminBrandingController, CompanyCurrencyController],
   providers: [
     {
       provide: BRANDING_CACHE_REDIS,

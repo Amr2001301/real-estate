@@ -123,6 +123,13 @@ function validateBoolean(key: string, v: unknown): void {
 }
 
 const SETTING_VALIDATORS: Record<string, (key: string, v: unknown) => void> = {
+  // The currency is the company's own (Company.currency), set from the branding
+  // page — one value for the dashboard, portal, site, apps and messages.
+  'reports.currency': (k) => {
+    throw new BadRequestException(
+      `${k}: the currency is set on the company branding page (PATCH /company/branding { currency })`,
+    );
+  },
   'cancellation.bookingAmount.refundPct': (k, v) => validateIntPercent(k, v),
   'cancellation.contract.penaltyPct': (k, v) => validateIntPercent(k, v),
   'cancellation.unit.returnToAvailable': (k, v) =>

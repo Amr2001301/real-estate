@@ -1159,6 +1159,68 @@ describe('Flow A — Catalog sync (e2e)', () => {
     });
   });
 
+  describe('A4p — one company currency for every role, the public site and messages', () => {
+    const tokens = () => ({ admin: adminToken, sales: salesToken, broker: broker1Token, customer: customer1Token });
+    const currencyFor = async (token: string) =>
+      (await http().get('/v1/company/currency').set('Authorization', bearer(token))).body.currency as string;
+    const setCurrency = (currency: string, token = adminToken) =>
+      http().patch('/v1/company/branding').set('Authorization', bearer(token)).send({ currency });
+    let notificationId: string | undefined;
+
+    afterAll(async () => {
+      await setCurrency('EGP');
+      if (notificationId) await testApp.rawPrisma.notification.deleteMany({ where: { id: notificationId } });
+    });
+
+    it('new companies start in EGP; every role reads the same value', async () => {
+      for (const token of Object.values(tokens())) expect(await currencyFor(token)).toBe('EGP');
+    });
+
+    it('the admin changes it on the branding page; every role and the public branding follow', async () => {
+      expect((await setCurrency('SAR')).status).toBe(200);
+      for (const token of Object.values(tokens())) expect(await currencyFor(token)).toBe('SAR');
+      const pub = await http().get('/v1/public/branding?slug=default');
+      expect(pub.status).toBe(200);
+      expect(pub.body.currency).toBe('SAR');
+    });
+
+    it('only supported currencies, only admins, and the old reports.currency setting is refused', async () => {
+      expect((await setCurrency('XYZ')).status).toBe(400);
+      expect((await setCurrency('EGP', salesToken)).status).toBe(403);
+      const legacy = await http()
+        .patch('/v1/settings/reports.currency')
+        .set('Authorization', bearer(adminToken))
+        .send({ value: 'EGP' });
+      expect(legacy.status).toBe(400);
+    });
+
+    it('notification amounts are shown in the company currency, in the reader\'s language', async () => {
+      const customer = await testApp.rawPrisma.user.findFirstOrThrow({
+        where: { email: fixtures.users.CUSTOMER_1.email },
+        select: { id: true, companyId: true },
+      });
+      const row = await testApp.rawPrisma.notification.create({
+        data: {
+          companyId: customer.companyId,
+          userId: customer.id,
+          templateCode: 'deposit_recorded',
+          payload: { amount: '2500000.00' },
+          channel: 'PUSH',
+          sentAt: new Date(),
+        },
+        select: { id: true },
+      });
+      notificationId = row.id;
+      const list = await http()
+        .get('/v1/me/notifications?pageSize=50')
+        .set('Authorization', bearer(customer1Token))
+        .set('Accept-Language', 'en');
+      const n = (list.body.data as { id: string; body: string }[]).find((x) => x.id === row.id);
+      expect(n?.body).toMatch(/SAR\s2,500,000/); // Intl puts a no-break space after the code
+      expect(n?.body).not.toContain('2500000.00');
+    });
+  });
+
   // ── Broker portal: the same filter, inside the broker's own scope ─────────
   //
   // The portal reservation form searches leads instead of preloading 200, and

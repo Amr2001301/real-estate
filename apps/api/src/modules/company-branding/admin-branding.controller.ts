@@ -44,3 +44,30 @@ export class AdminBrandingController {
     return this.service.updateBranding(user.companyId, dto);
   }
 }
+
+/**
+ * The company's currency for anyone signed in to it — every staff role, broker
+ * users and customers. The dashboard and portal format all amounts with it;
+ * /company/branding is ADMIN-only, so it cannot serve them.
+ */
+@ApiTags('company')
+@Controller('company/currency')
+export class CompanyCurrencyController {
+  constructor(private readonly service: CompanyBrandingService) {}
+
+  // Every role that belongs to a company (all but SUPER_ADMIN).
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.SALES,
+    UserRole.SALES_MANAGER,
+    UserRole.MAINTENANCE_SUPERVISOR,
+    UserRole.BROKER,
+    UserRole.CUSTOMER,
+    UserRole.CLIENT,
+  )
+  @Get()
+  async getCurrency(@CurrentUser() user: AuthUser) {
+    if (!user?.companyId) throw new ForbiddenException('No associated company');
+    return { currency: await this.service.getCurrency(user.companyId) };
+  }
+}

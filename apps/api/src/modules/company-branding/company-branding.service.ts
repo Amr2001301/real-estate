@@ -22,6 +22,7 @@
 
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { Redis } from 'ioredis';
+import { getCompanyCurrency, normalizeCurrency, type CurrencyCode } from '../../common/currency/currency';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { normalizeHostname, InvalidHostnameError } from '../../common/utils/hostname-normalize';
 import type { PatchCompanyBrandingDto } from './dto/patch-company-branding.dto';
@@ -48,6 +49,7 @@ const BRANDING_SELECT = {
   officeHours: true,
   socialLinks: true,
   registrationNumber: true,
+  currency: true,
 } as const;
 
 export interface CompanyBrandingResponse {
@@ -67,6 +69,8 @@ export interface CompanyBrandingResponse {
   officeHours?: unknown;
   socialLinks?: unknown;
   registrationNumber?: string;
+  /** ISO 4217 — the currency every amount on the site and app is shown in. */
+  currency: string;
 }
 
 type BrandingRow = {
@@ -87,10 +91,11 @@ type BrandingRow = {
   officeHours: unknown;
   socialLinks: unknown;
   registrationNumber: string | null;
+  currency: string;
 };
 
 function buildResponse(row: BrandingRow): CompanyBrandingResponse {
-  const res: CompanyBrandingResponse = { slug: row.slug, name: row.name };
+  const res: CompanyBrandingResponse = { slug: row.slug, name: row.name, currency: normalizeCurrency(row.currency) };
   if (row.displayName != null)      res.displayName      = row.displayName;
   if (row.logoUrl != null)          res.logoUrl          = row.logoUrl;
   if (row.faviconUrl != null)       res.faviconUrl       = row.faviconUrl;
@@ -178,6 +183,11 @@ export class CompanyBrandingService {
     return row;
   }
 
+  /** The company's currency (normalized; unsupported values read as the default). */
+  async getCurrency(companyId: string): Promise<CurrencyCode> {
+    return getCompanyCurrency(this.prisma, companyId);
+  }
+
   /** Admin write — persists branding fields and invalidates cache. */
   async updateBranding(companyId: string, dto: PatchCompanyBrandingDto): Promise<BrandingRow> {
     const data: Record<string, unknown> = {};
@@ -195,6 +205,7 @@ export class CompanyBrandingService {
     if (dto.officeHours    !== undefined) data.officeHours    = dto.officeHours;
     if (dto.socialLinks    !== undefined) data.socialLinks    = dto.socialLinks;
     if (dto.registrationNumber !== undefined) data.registrationNumber = dto.registrationNumber;
+    if (dto.currency       !== undefined) data.currency       = dto.currency;
 
     const updated = await this.prisma.company.update({
       where: { id: companyId },

@@ -37,7 +37,6 @@ const TEMPLATE_CONFIGS: { key: string; type: FieldType; placeholder?: string }[]
   { key: 'notifications.emailEnabled',   type: 'boolean' },
   { key: 'notifications.smsEnabled',     type: 'boolean' },
   { key: 'notifications.fromEmail',      type: 'text',    placeholder: 'noreply@company.sa' },
-  { key: 'reports.currency',             type: 'text',    placeholder: 'SAR' },
   { key: 'reports.dateFormat',           type: 'text',    placeholder: 'DD/MM/YYYY' },
   { key: 'reports.timezone',             type: 'text',    placeholder: 'Asia/Riyadh' },
   { key: 'security.maxLoginAttempts',    type: 'number',  placeholder: '5' },

@@ -6,11 +6,13 @@ import {
   MaxLength,
   ValidateNested,
   IsObject,
+  IsIn,
   registerDecorator,
   type ValidationOptions,
   type ValidationArguments,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { SUPPORTED_CURRENCIES, type CurrencyCode } from '../../../common/currency/currency';
 
 // ── Contrast helper ─────────────────────────────────────────────────────────
 
@@ -107,4 +109,7 @@ export class PatchCompanyBrandingDto {
   // Social + legal
   @IsOptional() @IsObject() @ValidateNested() @Type(() => SocialLinksDto) socialLinks?: SocialLinksDto;
   @IsOptional() @IsString() @MaxLength(80) registrationNumber?: string;
+
+  /** ISO 4217 — every amount on the dashboard, portal, site and apps uses it. */
+  @IsOptional() @IsIn(SUPPORTED_CURRENCIES) currency?: CurrencyCode;
 }

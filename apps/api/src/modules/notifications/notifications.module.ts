@@ -28,6 +28,7 @@ import {
 } from 'class-validator';
 import { Prisma, NotificationChannel, UserRole, type NotificationTemplate } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { formatMoney, getCompanyCurrency } from '../../common/currency/currency';
 import {
   resolveTenantUser,
   scopedUserFindMany,
@@ -120,11 +121,24 @@ function pickLocale(header?: string): Locale {
   return (header ?? 'ar').toLowerCase().startsWith('en') ? 'en' : 'ar';
 }
 
-/** Fills `{{var}}` placeholders from the notification payload. */
-function interpolate(template: string, payload: Record<string, unknown>): string {
+/** Payload fields that hold an amount of money (raw Decimal strings). */
+const MONEY_KEYS = new Set(['amount', 'bookingAmount', 'penaltyAmount']);
+
+/**
+ * Fills `{{var}}` placeholders from the notification payload. Amounts are
+ * shown in the company's currency, in the reader's language
+ * ("٢٬٥٠٠٬٠٠٠ ج.م." / "EGP 2,500,000") instead of the raw "2500000.00".
+ */
+function interpolate(
+  template: string,
+  payload: Record<string, unknown>,
+  locale: Locale,
+  currency: string,
+): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
     const v = payload[key];
-    return v === null || v === undefined ? '' : String(v);
+    if (v === null || v === undefined) return '';
+    return MONEY_KEYS.has(key) ? formatMoney(v, currency, locale) : String(v);
   });
 }
 
@@ -138,10 +152,11 @@ function resolveText(
   payload: Record<string, unknown>,
   locale: Locale,
   fallback: string,
+  currency: string,
 ): string {
   const t = (text ?? {}) as TranslatableText;
   const raw = t[locale] ?? t.ar ?? t.en ?? fallback;
-  return interpolate(raw, payload);
+  return interpolate(raw, payload, locale, currency);
 }
 
 
@@ -367,6 +382,7 @@ export class NotificationsService implements OnModuleInit {
         { locale: true, email: true },
       );
       const locale = pickLocale(user?.locale ?? 'ar');
+      const currency = await getCompanyCurrency(this.prisma, getTenantContext()?.companyId);
 
       // FCM data values must all be strings. Include entityType/entityId so
       // the mobile app can deep-link directly from the push tap without a
@@ -387,8 +403,8 @@ export class NotificationsService implements OnModuleInit {
       // in `outcome`; neither can reject Promise.all.
       const pushPromise: Promise<void> = this.push
         .sendToUser(dto.userId, {
-          title: resolveText(tpl.subject, payload, locale, dto.templateCode),
-          body:  resolveText(tpl.body,    payload, locale, ''),
+          title: resolveText(tpl.subject, payload, locale, dto.templateCode, currency),
+          body:  resolveText(tpl.body,    payload, locale, '', currency),
           data:  fcmData,
         })
         .then((result) => {
@@ -407,8 +423,8 @@ export class NotificationsService implements OnModuleInit {
       const emailPromise: Promise<void> =
         user?.email && tpl.emailEnabled
           ? (() => {
-              const subject  = resolveText(tpl.subject, payload, locale, dto.templateCode);
-              const bodyText = resolveText(tpl.body,    payload, locale, '');
+              const subject  = resolveText(tpl.subject, payload, locale, dto.templateCode, currency);
+              const bodyText = resolveText(tpl.body,    payload, locale, '', currency);
               const dir      = locale === 'ar' ? 'rtl' : 'ltr';
               const htmlBody = `<div dir="${dir}" style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px;color:#1a1a2e;"><h2 style="margin:0 0 16px;color:#0F1E33;">${subject}</h2><p style="margin:0 0 24px;line-height:1.7;">${bodyText}</p><hr style="margin:28px 0;border:none;border-top:1px solid #eee;"/><p style="margin:0;font-size:12px;color:#999;">© ديفورا — منصة الإدارة العقارية</p></div>`;
               return this.email
@@ -463,7 +479,10 @@ export class NotificationsService implements OnModuleInit {
 
     // Resolve titles/bodies from templates (batched) in the requested locale.
     const codes = [...new Set(rows.map((r) => r.templateCode))];
-    const byCode = await this.templatesFor(codes);
+    const [byCode, currency] = await Promise.all([
+      this.templatesFor(codes),
+      getCompanyCurrency(this.prisma, getTenantContext()?.companyId),
+    ]);
 
     const data = rows.map((r) => {
       const tpl = byCode.get(r.templateCode);
@@ -471,8 +490,8 @@ export class NotificationsService implements OnModuleInit {
       return {
         id: r.id,
         templateCode: r.templateCode,
-        title: resolveText(tpl?.subject, payload, opts.locale, r.templateCode),
-        body: resolveText(tpl?.body, payload, opts.locale, ''),
+        title: resolveText(tpl?.subject, payload, opts.locale, r.templateCode, currency),
+        body: resolveText(tpl?.body, payload, opts.locale, '', currency),
         payload: r.payload,
         channel: r.channel,
         read: r.readAt !== null,

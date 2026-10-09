@@ -454,9 +454,9 @@ async function main() {
       name: process.env.SEED_COMPANY_NAME ?? 'Real Estate Platform',
       slug: process.env.SEED_COMPANY_SLUG ?? 'default',
       country: process.env.SEED_COMPANY_COUNTRY ?? 'EG',
-      currency: process.env.SEED_COMPANY_CURRENCY ?? 'SAR',
+      currency: process.env.SEED_COMPANY_CURRENCY ?? 'EGP',
       defaultLocale: 'ar',
-      timezone: process.env.SEED_COMPANY_TIMEZONE ?? 'Asia/Riyadh',
+      timezone: process.env.SEED_COMPANY_TIMEZONE ?? 'Africa/Cairo',
       isActive: true,
       // MT-040/MT-036/MT-040A: explicit provisioning for seed company.
       type: 'DEVELOPER',
