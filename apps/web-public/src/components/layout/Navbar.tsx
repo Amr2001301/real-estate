@@ -19,7 +19,7 @@ import { LangToggle } from '@/components/theme/LangToggle';
 import { logoutAction } from '@/lib/auth-actions';
 import { readClientUser, type ClientUser } from '@/lib/client-user';
 
-const PLATFORM_LOGO = '/brand/platform-logo.svg';
+const PLATFORM_LOGO = '/brand/devora-logo.png';
 
 function Wordmark({ invert, branding }: { invert: boolean; branding?: BrandingData }) {
   const logo = branding?.logoUrl ?? PLATFORM_LOGO;
