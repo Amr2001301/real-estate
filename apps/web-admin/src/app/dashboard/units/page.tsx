@@ -6,7 +6,6 @@ import {
   Bookmark,
   CircleDollarSign,
   Eye,
-  Download,
   BedDouble,
   Ruler,
   Building2,
@@ -21,6 +20,7 @@ import { tx, formatCurrency, formatDate } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
+import { ExportMenu } from '@/components/export-menu';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
@@ -147,9 +147,16 @@ export default async function UnitsPage({
         actions={
           isAdmin ? (
             <>
-              <IconButton label={m.exportBtn} variant="outline" size="md">
-                <Download />
-              </IconButton>
+              <ExportMenu
+                locale={locale}
+                filenameBase="units"
+                xlsxPath="/units/export.xlsx"
+                csvPath="/units/export.csv"
+                params={{
+                  projectId: sp.projectId, status: sp.status, bedrooms: sp.bedrooms,
+                  priceMin: sp.priceMin, priceMax: sp.priceMax, areaMin: sp.areaMin, areaMax: sp.areaMax,
+                }}
+              />
               <Link href={'/dashboard/units/new' as never}>
                 <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
                   {m.addBtn}

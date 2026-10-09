@@ -1,19 +1,22 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
   Query,
+  StreamableFile,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags } from '@nestjs/swagger';
-import { UsersService, type UploadedImage } from './users.service';
+import { EXPORTABLE_ROLES, UsersService, type ExportableRole, type UploadedImage } from './users.service';
 import {
   AssignManagerDto,
   CreateUserDto,
@@ -108,6 +111,35 @@ export class UsersController {
     return this.users.updateAvatar(user.sub, file);
   }
 
+  // "Export this list" on the admin clients / customers pages — the list
+  // filters (search, active), every page. Prospects and buyers only; staff
+  // are not exported here. Declared before `:id`.
+  @Roles(UserRole.ADMIN)
+  @Permissions('users:read')
+  @Get('export.xlsx')
+  @Header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+  @Header('Content-Disposition', 'attachment; filename="people.xlsx"')
+  async exportXlsx(
+    @Query('role') role?: string,
+    @Query('q') q?: string,
+    @Query('active') active?: string,
+  ): Promise<StreamableFile> {
+    return new StreamableFile(await this.users.exportXlsx(exportRole(role), q, activeParam(active)));
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('users:read')
+  @Get('export.csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="people.csv"')
+  exportCsv(
+    @Query('role') role?: string,
+    @Query('q') q?: string,
+    @Query('active') active?: string,
+  ): Promise<string> {
+    return this.users.exportCsv(exportRole(role), q, activeParam(active));
+  }
+
   @Roles(UserRole.ADMIN)
   @Permissions('users:read')
   @Get(':id')
@@ -157,4 +189,15 @@ export class UsersController {
   restore(@Param('id', ParseUUIDPipe) id: string) {
     return this.users.restore(id);
   }
+}
+
+function exportRole(role?: string): ExportableRole {
+  if (!EXPORTABLE_ROLES.includes(role as ExportableRole)) {
+    throw new BadRequestException(`role must be one of ${EXPORTABLE_ROLES.join(', ')}`);
+  }
+  return role as ExportableRole;
+}
+
+function activeParam(active?: string): boolean | undefined {
+  return active === 'true' ? true : active === 'false' ? false : undefined;
 }

@@ -126,13 +126,15 @@ const ar = {
   exportMenu: {
     label: 'تصدير',
     optionsAria: 'خيارات التصدير',
-    xlsx: 'ملف Excel ‏(.xlsx)',
-    xlsxHint: 'منسّق',
-    pdf: 'ملف PDF',
-    pdfHint: 'مُبرمَج',
-    csv: 'ملف CSV',
-    csvHint: 'بيانات خام',
-    error: 'تعذّر توليد التقرير، حاول مرة أخرى.',
+    preparing: 'جارٍ تجهيز الملف…',
+    single: { xlsx: 'تصدير Excel', pdf: 'تصدير PDF', csv: 'تصدير CSV' },
+    formats: { xlsx: 'Excel', pdf: 'PDF', csv: 'CSV' },
+    hints: {
+      xlsx: 'تقرير منسّق للتحليل والفرز',
+      pdf: 'بهوية الشركة — للطباعة والمشاركة',
+      csv: 'بيانات خام للأنظمة الأخرى',
+    },
+    error: 'تعذّر تجهيز الملف، حاول مرة أخرى.',
   },
 
   submitButton: {
@@ -389,13 +391,15 @@ const en: typeof ar = {
   exportMenu: {
     label: 'Export',
     optionsAria: 'Export options',
-    xlsx: 'Excel file (.xlsx)',
-    xlsxHint: 'Formatted',
-    pdf: 'PDF file',
-    pdfHint: 'Branded',
-    csv: 'CSV file',
-    csvHint: 'Raw data',
-    error: 'Could not generate the report. Please try again.',
+    preparing: 'Preparing file…',
+    single: { xlsx: 'Export Excel', pdf: 'Export PDF', csv: 'Export CSV' },
+    formats: { xlsx: 'Excel', pdf: 'PDF', csv: 'CSV' },
+    hints: {
+      xlsx: 'Formatted report to analyse and sort',
+      pdf: 'Company-branded — to print or share',
+      csv: 'Raw data for other systems',
+    },
+    error: 'Could not prepare the file. Please try again.',
   },
 
   submitButton: {

@@ -3,11 +3,13 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
   Query,
+  StreamableFile,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
@@ -61,6 +63,27 @@ export class UnitsController {
   }
 
   // Must be declared before `units/:id` so the literal segment wins over the param route.
+  // "Export this list" on the admin units / inventory pages — the list
+  // filters, every page. ADMIN only (the full price list of the company).
+  // Declared before `units/:id`.
+  @Roles(UserRole.ADMIN)
+  @Permissions('units:read')
+  @Get('units/export.xlsx')
+  @Header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+  @Header('Content-Disposition', 'attachment; filename="units.xlsx"')
+  async exportXlsx(@Query() query: UnitQueryDto): Promise<StreamableFile> {
+    return new StreamableFile(await this.units.exportXlsx(query));
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('units:read')
+  @Get('units/export.csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="units.csv"')
+  exportCsv(@Query() query: UnitQueryDto): Promise<string> {
+    return this.units.exportCsv(query);
+  }
+
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('units:read')
   @Get('units/inventory-matrix')

@@ -4,7 +4,6 @@ import {
   AlertCircle,
   Phone,
   Mail,
-  Download,
   Search,
   Eye,
   Info,
@@ -19,6 +18,7 @@ import { formatDate, intlLocale } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
+import { ExportMenu } from '@/components/export-menu';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
@@ -126,9 +126,17 @@ export default async function CustomersPage({
           { label: m.breadcrumb },
         ]}
         actions={
-          <IconButton label={m.exportBtn} variant="outline" size="md">
-            <Download />
-          </IconButton>
+          <ExportMenu
+            locale={locale}
+            filenameBase="customers"
+            xlsxPath="/users/export.xlsx"
+            csvPath="/users/export.csv"
+            params={{
+              role: 'CUSTOMER',
+              q: q || undefined,
+              active: statusFilter === 'all' ? undefined : statusFilter === 'active' ? 'true' : 'false',
+            }}
+          />
         }
       />
 

@@ -156,14 +156,14 @@ export default async function AdminBrokerReportsPage({
         ]}
         actions={
           <div className="flex items-center gap-2">
-            <ExportMenu
+            <ExportMenu locale={locale}
               label={m.exportSummaryBtn}
               xlsxPath="/broker-reports/export/summary.xlsx"
               csvPath="/broker-reports/export/summary.csv"
               filenameBase="broker-summary"
               params={{ brokerId: sp.brokerId, projectId: sp.projectId, from: sp.from, to: sp.to }}
             />
-            <ExportMenu
+            <ExportMenu locale={locale}
               label={m.exportTopBrokersBtn}
               xlsxPath="/broker-reports/export/top-brokers.xlsx"
               csvPath="/broker-reports/export/top-brokers.csv"

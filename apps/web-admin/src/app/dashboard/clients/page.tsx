@@ -6,7 +6,6 @@ import {
   Phone,
   Mail,
   Plus,
-  Download,
   Search,
   Eye,
   ShieldCheck,
@@ -20,6 +19,7 @@ import { uiT } from '@/messages/ui';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
+import { ExportMenu } from '@/components/export-menu';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
@@ -125,9 +125,13 @@ export default async function ClientsPage({
         ]}
         actions={
           <div className="flex items-center gap-2">
-            <IconButton label={m.exportBtn} variant="outline" size="md">
-              <Download />
-            </IconButton>
+            <ExportMenu
+              locale={locale}
+              filenameBase={role === 'CUSTOMER' ? 'customers' : 'clients'}
+              xlsxPath="/users/export.xlsx"
+              csvPath="/users/export.csv"
+              params={{ role, q: q || undefined }}
+            />
             <Link href={`/dashboard/clients/new?role=${role}` as never}>
               <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
                 {m.addClient}

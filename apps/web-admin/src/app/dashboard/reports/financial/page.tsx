@@ -167,7 +167,7 @@ export default async function FinancialReportsPage({
         ]}
         actions={
           <div className="flex items-center gap-2">
-            <ExportMenu
+            <ExportMenu locale={locale}
               label={m.exportBtn}
               xlsxPath="/reports/financial-dashboard/export.xlsx"
               csvPath="/reports/financial-dashboard/export.csv"

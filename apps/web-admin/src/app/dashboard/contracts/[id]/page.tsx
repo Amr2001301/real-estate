@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
+import { ExportMenu } from '@/components/export-menu';
 import type { Contract } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
@@ -240,6 +241,16 @@ export default async function ContractDetailPage({
               title={m.sectionInstallmentPlan}
               icon={<CalendarDays />}
               padded={!plan}
+              trailing={
+                // The schedule as a branded workbook — the API allows ADMIN and SALES_MANAGER.
+                plan && (isAdmin || session?.role === 'SALES_MANAGER') ? (
+                  <ExportMenu
+                    locale={locale}
+                    filenameBase={`installments-${contract.contractNumber ?? contract.id.slice(0, 8)}`}
+                    xlsxPath={`/installment-plans/${plan.id}/export.xlsx`}
+                  />
+                ) : undefined
+              }
             >
               {plan ? (
                 <div>

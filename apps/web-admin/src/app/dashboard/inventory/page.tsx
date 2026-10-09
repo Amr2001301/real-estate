@@ -8,7 +8,6 @@ import {
   Building2,
   Layers,
   Home,
-  Download,
   SlidersHorizontal,
   ArrowUpRight,
   BarChart3,
@@ -27,7 +26,7 @@ import { formatCurrency } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { IconButton } from '@/components/ui/icon-button';
+import { ExportMenu } from '@/components/export-menu';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/cn';
@@ -129,9 +128,15 @@ export default async function InventoryPage({
         ]}
         actions={
           <div className="flex items-center gap-2">
-            <IconButton label={m.exportBtn} variant="outline" size="md" type="button">
-              <Download />
-            </IconButton>
+            {isAdmin && (
+              <ExportMenu
+                locale={locale}
+                filenameBase="inventory"
+                xlsxPath="/units/export.xlsx"
+                csvPath="/units/export.csv"
+                params={{ status: status === 'all' ? undefined : status, projectId: projectId || undefined }}
+              />
+            )}
             <Link href={unitsHref({}) as never}>
               <Button variant="primary" size="md" leftIcon={<SlidersHorizontal className="h-4 w-4" />}>
                 {isAdmin ? m.manageUnitsAdmin : m.manageUnitsStaff}

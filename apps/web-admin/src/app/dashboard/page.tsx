@@ -30,7 +30,7 @@ import { ChartPanel } from '@/components/dashboard/chart-panel';
 import { SalesPerformanceChart } from '@/components/dashboard/sales-performance-chart';
 import { LeadSourceDonut } from '@/components/dashboard/lead-source-donut';
 import { ActivityTable } from '@/components/dashboard/activity-table';
-import { GenerateReportButton } from '@/components/dashboard/generate-report-button';
+import { ExportMenu } from '@/components/export-menu';
 import { FinancialHealthCard, SalesFunnelCard } from '@/components/dashboard/platform-summary';
 import { ProjectHealthMatrix } from '@/components/dashboard/project-health-matrix';
 import { PremiumPageHero } from '@/components/premium';
@@ -696,7 +696,13 @@ export default async function DashboardHome() {
         }
         actions={
           <div className="flex items-center gap-2">
-            <GenerateReportButton />
+            <ExportMenu
+              locale={locale}
+              label={m.exportReport}
+              xlsxPath="/reports/admin-summary/export.xlsx"
+              csvPath="/reports/admin-summary/export.csv"
+              filenameBase="dashboard-report"
+            />
             <Link href={'/dashboard/projects/new' as never}>
               <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
                 {m.newProject}

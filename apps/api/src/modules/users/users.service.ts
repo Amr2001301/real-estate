@@ -3,6 +3,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -18,6 +19,21 @@ import type { AuthUser } from '../../common/decorators/current-user.decorator';
 import { R2Service } from '../media/r2.service';
 import { NotificationsService } from '../notifications/notifications.module';
 import { PlanLimitService } from '../../common/capabilities/plan-limit.service';
+import { collectPages, isoDate, listCsv, listXlsx, type ListColumn } from '../../common/utils/list-export';
+import { ReportBrandService } from '../company-branding/report-brand.service';
+
+/** People lists the admin can export: prospects (CLIENT) and buyers (CUSTOMER). */
+export const EXPORTABLE_ROLES = ['CLIENT', 'CUSTOMER'] as const;
+export type ExportableRole = (typeof EXPORTABLE_ROLES)[number];
+
+type UserExportRow = {
+  fullName: string | null;
+  phone: string | null;
+  email: string | null;
+  active: boolean;
+  createdAt: Date;
+  lastLoginAt: Date | null;
+};
 
 /** Avatars: small images only, capped well below the document limit. */
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
@@ -44,7 +60,51 @@ export class UsersService {
     private readonly r2: R2Service,
     private readonly notifications: NotificationsService,
     private readonly planLimits: PlanLimitService,
+    // Optional so unit tests can build the service without it.
+    @Optional() private readonly reportBrand?: ReportBrandService,
   ) {}
+
+  // ── List export (the admin clients / customers pages) ───────────────────
+
+  private static readonly EXPORT_COLUMNS: ListColumn<UserExportRow>[] = [
+    { header: 'الاسم', width: 28, value: (u) => u.fullName },
+    { header: 'الهاتف', width: 18, value: (u) => u.phone },
+    { header: 'البريد الإلكتروني', width: 30, value: (u) => u.email },
+    { header: 'الحالة', width: 10, value: (u) => (u.active ? 'نشط' : 'موقوف') },
+    { header: 'تاريخ التسجيل', width: 14, value: (u) => isoDate(u.createdAt) },
+    { header: 'آخر دخول', width: 14, value: (u) => isoDate(u.lastLoginAt) },
+  ];
+
+  private static readonly EXPORT_TITLE: Record<ExportableRole, string> = {
+    CLIENT: 'قائمة المتصفّحين',
+    CUSTOMER: 'قائمة العملاء',
+  };
+
+  private exportRows(role: ExportableRole, q?: string, active?: boolean): Promise<UserExportRow[]> {
+    return collectPages((page, pageSize) => this.findAll(role, page, pageSize, q, active));
+  }
+
+  async exportXlsx(role: ExportableRole, q?: string, active?: boolean): Promise<Buffer> {
+    const [rows, brand] = await Promise.all([
+      this.exportRows(role, q, active),
+      this.reportBrand?.forCompany(getRequiredCompanyId()),
+    ]);
+    return listXlsx({
+      title: UsersService.EXPORT_TITLE[role],
+      sheet: role === 'CLIENT' ? 'المتصفّحون' : 'العملاء',
+      filters: [
+        ['بحث', q ?? ''],
+        ['الحالة', active === undefined ? '' : active ? 'نشط' : 'موقوف'],
+      ],
+      columns: UsersService.EXPORT_COLUMNS,
+      rows,
+      brand,
+    });
+  }
+
+  async exportCsv(role: ExportableRole, q?: string, active?: boolean): Promise<string> {
+    return listCsv(UsersService.EXPORT_COLUMNS, await this.exportRows(role, q, active));
+  }
 
   async create(dto: CreateUserDto) {
     if (
