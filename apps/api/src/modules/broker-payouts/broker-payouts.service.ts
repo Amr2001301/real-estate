@@ -591,15 +591,9 @@ export class BrokerPayoutsService {
     payload: Record<string, unknown>,
   ): Promise<void> {
     try {
-      const recipients = await this.prisma.brokerUser.findMany({
-        where: { brokerId, status: 'ACTIVE', canViewCommissions: true },
-        select: { userId: true },
-      });
-      await this.notifications.sendToUsers(
-        recipients.map((r) => r.userId),
-        templateCode,
-        payload,
-      );
+      // A payout is the firm's money: its managers who may see commissions.
+      const recipients = await this.notifications.brokerRecipients(brokerId, { money: true });
+      await this.notifications.sendToUsers(recipients, templateCode, payload);
     } catch (e) {
       this.logger.warn(
         `notify(${templateCode}) for broker ${brokerId} failed: ${(e as Error).message}`,

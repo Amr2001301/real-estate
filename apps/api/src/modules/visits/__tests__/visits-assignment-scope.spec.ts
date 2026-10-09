@@ -48,6 +48,7 @@ function makeService() {
   const notifications = {
     sendToUser: jest.fn().mockResolvedValue(undefined),
     sendToUsers: jest.fn().mockResolvedValue(undefined),
+    brokerRecipients: jest.fn().mockResolvedValue(['broker-user-1']),
     sendToRoles: jest.fn().mockResolvedValue(undefined),
   } as unknown as import('../../notifications/notifications.module').NotificationsService;
   const svc = new VisitsService(prisma, notifications);

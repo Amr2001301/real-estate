@@ -279,7 +279,7 @@ export class BrokerCommissionsService {
         commissionId: commission.id,
         reference: commissionNumber,
         contractNumber: contract.contractNumber,
-      });
+      }, commission.brokerAgentId);
 
       return {
         status: 'created',
@@ -393,7 +393,7 @@ export class BrokerCommissionsService {
     await this.notify(updated.brokerId, 'broker_commission_approved', {
       commissionId: id,
       reference: updated.commissionNumber,
-    });
+    }, updated.brokerAgentId);
 
     return updated;
   }
@@ -428,7 +428,7 @@ export class BrokerCommissionsService {
       commissionId: id,
       reference: updated.commissionNumber,
       reason,
-    });
+    }, updated.brokerAgentId);
 
     return updated;
   }
@@ -488,7 +488,7 @@ export class BrokerCommissionsService {
       commissionId: id,
       reference: updated.commissionNumber,
       reason,
-    });
+    }, updated.brokerAgentId);
 
     return updated;
   }
@@ -577,21 +577,16 @@ export class BrokerCommissionsService {
    * shouldn't fan out to broker reps who don't have visibility on them.
    * Routed through NotificationsService so push fires when FCM is on.
    */
+  /** The deal's agent and the firm's managers — only those allowed to see commissions. */
   private async notify(
     brokerId: string,
     templateCode: string,
     payload: Record<string, unknown>,
+    agentUserId?: string | null,
   ): Promise<void> {
     try {
-      const recipients = await this.prisma.brokerUser.findMany({
-        where: { brokerId, status: 'ACTIVE', canViewCommissions: true },
-        select: { userId: true },
-      });
-      await this.notifications.sendToUsers(
-        recipients.map((r) => r.userId),
-        templateCode,
-        payload,
-      );
+      const recipients = await this.notifications.brokerRecipients(brokerId, { agentUserId, money: true });
+      await this.notifications.sendToUsers(recipients, templateCode, payload);
     } catch (e) {
       this.logger.warn(
         `notify(${templateCode}) for broker ${brokerId} failed: ${(e as Error).message}`,

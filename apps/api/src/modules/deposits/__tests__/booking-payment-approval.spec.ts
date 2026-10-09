@@ -50,6 +50,7 @@ const documentsMock = {
 const notificationsMock = {
   sendToUser: jest.fn().mockResolvedValue(undefined),
   sendToUsers: jest.fn().mockResolvedValue(undefined),
+  brokerRecipients: jest.fn().mockResolvedValue(['broker-user-1']),
   sendToRoles: jest.fn().mockResolvedValue(undefined),
 };
 

@@ -115,11 +115,17 @@ function makeService(fixture: Fixture) {
     nextReservationNumber: jest.fn().mockResolvedValue('RSV-0001'),
   };
 
+  const notifications = {
+    brokerRecipients: jest.fn().mockResolvedValue([]),
+    sendToUsers: jest.fn().mockResolvedValue(undefined),
+    sendToRoles: jest.fn().mockResolvedValue(undefined),
+  };
   const svc = new BrokerPortalReservationsService(
     prisma as unknown as PrismaService,
     reservations as unknown as ReservationsService,
+    notifications as never,
   );
-  return { svc, prisma, reservations, createdReservation };
+  return { svc, prisma, reservations, createdReservation, notifications };
 }
 
 const baseInput = {
@@ -147,6 +153,27 @@ describe('BrokerPortalReservationsService · booking amount resolution', () => {
     const amount = createdReservation.data?.bookingAmount as Prisma.Decimal;
     expect(amount.toString()).toBe('25000');
     expect(amount.gt(0)).toBe(true);
+  });
+
+  it('notifies the agent + firm managers, the sales person and the admins — never the actor', async () => {
+    const { svc, notifications } = makeService({
+      plans: [{ id: PLAN_ID, unitId: UNIT_ID, reservationAmount: decimal(25000) }],
+    });
+    notifications.brokerRecipients.mockResolvedValue(['agent-1', 'manager-1']);
+
+    await svc.createForActor({ ...baseInput, brokerAgentUserId: 'agent-1' });
+
+    expect(notifications.brokerRecipients).toHaveBeenCalledWith(BROKER_ID, { agentUserId: 'agent-1' });
+    const [ids, code, , opts] = notifications.sendToUsers.mock.calls[0];
+    expect(ids).toEqual(expect.arrayContaining(['agent-1', 'manager-1']));
+    expect(code).toBe('broker_reservation_created');
+    expect(opts).toEqual({ except: 'actor-1' });
+    expect(notifications.sendToRoles).toHaveBeenCalledWith(
+      ['ADMIN', 'SALES_MANAGER'],
+      'broker_reservation_created',
+      expect.objectContaining({ entityType: 'reservation' }),
+      { except: 'actor-1' },
+    );
   });
 
   it('blocks creation when no active plan applies to the unit', async () => {

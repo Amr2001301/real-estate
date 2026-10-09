@@ -2040,15 +2040,15 @@ export class ReservationsService {
         // setStatus(); convert is admin-driven so it also re-broadcasts the
         // status to the customer + sales.
         if (reservation.brokerId) {
-          const brokerRecipients = await this.prisma.brokerUser.findMany({
-            where: { brokerId: reservation.brokerId, status: 'ACTIVE' },
-            select: { userId: true },
+          const owner = await this.prisma.reservation.findUnique({
+            where: { id },
+            select: { salesId: true, brokerAgentId: true },
           });
-          const salesUserId =
-            (await this.prisma.reservation.findUnique({
-              where: { id },
-              select: { salesId: true },
-            }))?.salesId ?? null;
+          // The agent who brought the deal and the firm's managers.
+          const brokerRecipients = (
+            await this.notifications.brokerRecipients(reservation.brokerId, { agentUserId: owner?.brokerAgentId })
+          ).map((userId) => ({ userId }));
+          const salesUserId = owner?.salesId ?? null;
           const payload = {
             reservationId: id,
             reference: result.contractNumber,

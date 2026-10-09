@@ -13,7 +13,7 @@ import { NotificationChannel } from '@prisma/client';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const SEED_PATH = join(__dirname, '../../../../prisma/seed.ts');
+const SEED_PATH = join(__dirname, '../notification-catalog.ts');
 const REQUIRED_CODES = [
   'visit_request_created',
   'visit_scheduled',
@@ -43,7 +43,7 @@ describe('Seed · visit lifecycle templates (P3)', () => {
     if (start === -1) continue;
     // Find the next "code: '" or array-closing "]" — whichever comes first.
     const after = seedSrc.indexOf(`code: '`, start + code.length + 8);
-    const arrayEnd = seedSrc.indexOf('].map((t)', start);
+    const arrayEnd = seedSrc.indexOf('\n];', start);
     const stop = after === -1
       ? arrayEnd
       : (arrayEnd === -1 ? after : Math.min(after, arrayEnd));
@@ -53,10 +53,10 @@ describe('Seed · visit lifecycle templates (P3)', () => {
   it.each(REQUIRED_CODES)('seeds %s with ar+en subject + body and a channel', (code) => {
     const block = blocks[code];
     expect(block).toBeDefined();
-    expect(block).toMatch(/ar_subject:\s*'/);
-    expect(block).toMatch(/en_subject:\s*'/);
-    expect(block).toMatch(/ar_body:\s*'/);
-    expect(block).toMatch(/en_body:\s*'/);
+    expect(block).toMatch(/ar_subject:\s*['"]/);
+    expect(block).toMatch(/en_subject:\s*['"]/);
+    expect(block).toMatch(/ar_body:\s*['"]/);
+    expect(block).toMatch(/en_body:\s*['"]/);
     expect(block).toMatch(/channel:\s*NotificationChannel\.(PUSH|IN_APP|EMAIL)/);
   });
 

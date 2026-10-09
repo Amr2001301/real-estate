@@ -9,7 +9,7 @@ import { join } from 'node:path';
  * miss, since `send` would throw "Template X not found") out of the codebase.
  */
 
-const SEED_PATH = join(__dirname, '../../../../prisma/seed.ts');
+const SEED_PATH = join(__dirname, '../notification-catalog.ts');
 const REQUIRED_CODES = [
   // Info requests (P13)
   'info_request_created',
@@ -77,7 +77,7 @@ describe('Seed · non-visit P4 templates', () => {
     const start = seedSrc.indexOf(`code: '${code}'`);
     if (start === -1) continue;
     const after = seedSrc.indexOf(`code: '`, start + code.length + 8);
-    const arrayEnd = seedSrc.indexOf('].map((t)', start);
+    const arrayEnd = seedSrc.indexOf('\n];', start);
     const stop =
       after === -1
         ? arrayEnd
@@ -90,10 +90,10 @@ describe('Seed · non-visit P4 templates', () => {
   it.each(REQUIRED_CODES)('seeds %s with ar+en subject + body and channel', (code) => {
     const block = blocks[code];
     expect(block).toBeDefined();
-    expect(block).toMatch(/ar_subject:\s*'/);
-    expect(block).toMatch(/en_subject:\s*'/);
-    expect(block).toMatch(/ar_body:\s*'/);
-    expect(block).toMatch(/en_body:\s*'/);
+    expect(block).toMatch(/ar_subject:\s*['"]/);
+    expect(block).toMatch(/en_subject:\s*['"]/);
+    expect(block).toMatch(/ar_body:\s*['"]/);
+    expect(block).toMatch(/en_body:\s*['"]/);
     expect(block).toMatch(/channel:\s*NotificationChannel\.(PUSH|IN_APP|EMAIL)/);
   });
 

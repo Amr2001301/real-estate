@@ -1,3 +1,4 @@
+import { NotificationsModule } from '../notifications/notifications.module';
 import { Module } from '@nestjs/common';
 import { ReservationsModule } from '../reservations/reservations.module';
 import { BrokerReportsModule } from '../broker-reports/broker-reports.module';
@@ -19,7 +20,7 @@ import { BrokerPortalController } from './broker-portal.controller';
   // broker portal reservations service.
   // BrokerReportsModule re-exports BrokerReportsService so portal performance
   // can reuse the admin report calculations under broker scope.
-  imports: [ReservationsModule, BrokerReportsModule],
+  imports: [ReservationsModule, BrokerReportsModule, NotificationsModule],
   controllers: [BrokerPortalController],
   providers: [
     BrokerPortalService,

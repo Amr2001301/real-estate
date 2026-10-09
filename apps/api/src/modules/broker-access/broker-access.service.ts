@@ -213,15 +213,9 @@ export class BrokerAccessService {
     payload: Record<string, unknown>,
   ): Promise<void> {
     try {
-      const users = await this.prisma.brokerUser.findMany({
-        where: { brokerId, status: 'ACTIVE' },
-        select: { userId: true },
-      });
-      await this.notifications.sendToUsers(
-        users.map((u) => u.userId),
-        templateCode,
-        payload,
-      );
+      // Access decides what every agent can sell: the whole firm hears.
+      const users = await this.notifications.brokerRecipients(brokerId, { everyone: true });
+      await this.notifications.sendToUsers(users, templateCode, payload);
     } catch {
       // Best-effort — access operations must not fail due to notification errors.
     }

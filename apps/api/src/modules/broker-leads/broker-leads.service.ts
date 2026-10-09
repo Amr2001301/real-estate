@@ -290,15 +290,16 @@ export class BrokerLeadsService {
           id: true,
           fullName: true,
           brokerId: true,
+          brokerAgentId: true,
           projectInterest: { select: { name: true } },
         },
       });
       if (!lead?.brokerId) return;
 
-      const brokerUsers = await this.prisma.brokerUser.findMany({
-        where: { brokerId: lead.brokerId, status: 'ACTIVE' },
-        select: { userId: true },
-      });
+      // The agent who submitted the lead and the firm's managers.
+      const brokerUsers = (
+        await this.notifications.brokerRecipients(lead.brokerId, { agentUserId: lead.brokerAgentId })
+      ).map((userId) => ({ userId }));
       if (brokerUsers.length === 0) return;
 
       const projectName =
