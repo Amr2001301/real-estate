@@ -1221,6 +1221,43 @@ describe('Flow A — Catalog sync (e2e)', () => {
     });
   });
 
+  describe('A4q — the print letterhead is readable by every company role', () => {
+    let original: string | null = null;
+    let slug = '';
+
+    afterAll(async () => {
+      // Back through the API (drops the branding cache), then to the exact
+      // original value — the DTO cannot write null.
+      await http().patch('/v1/company/branding').set('Authorization', bearer(adminToken))
+        .send({ registrationNumber: original ?? '' });
+      if (original === null && slug) {
+        await testApp.rawPrisma.company.updateMany({
+          where: { slug, registrationNumber: '' },
+          data: { registrationNumber: null },
+        });
+      }
+    });
+
+    it('every role gets the company identity and currency; anonymous is refused', async () => {
+      const before = await http().get('/v1/company/letterhead').set('Authorization', bearer(adminToken));
+      original = (before.body.registrationNumber as string | undefined) ?? null;
+      slug = before.body.slug as string;
+
+      const patch = await http().patch('/v1/company/branding').set('Authorization', bearer(adminToken))
+        .send({ registrationNumber: 'CR-A4Q-123' });
+      expect(patch.status).toBe(200);
+
+      for (const token of [adminToken, salesToken, broker1Token, customer1Token]) {
+        const res = await http().get('/v1/company/letterhead').set('Authorization', bearer(token));
+        expect(res.status).toBe(200);
+        expect(typeof res.body.name).toBe('string');
+        expect(res.body.registrationNumber).toBe('CR-A4Q-123');
+        expect(res.body.currency).toMatch(/^[A-Z]{3}$/);
+      }
+      expect((await http().get('/v1/company/letterhead')).status).toBe(401);
+    });
+  });
+
   // ── Broker portal: the same filter, inside the broker's own scope ─────────
   //
   // The portal reservation form searches leads instead of preloading 200, and

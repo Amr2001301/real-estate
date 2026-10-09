@@ -1,135 +1,148 @@
 import { notFound } from 'next/navigation';
 import { api, safe } from '@/lib/api';
-import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { formatDate } from '@/lib/format';
-import type { Deposit, SettingItem } from '@/lib/types';
+import { getLetterhead } from '@/lib/letterhead';
+import { getLocale } from '@/lib/locale';
+import type { Deposit } from '@/lib/types';
+import { printT } from '@/messages/print';
 import {
   PrintDocument,
-  PrintRow,
+  PrintFields,
   PrintSection,
+  PrintSignatures,
+  companyNameOf,
+  formatMoney,
+  type PrintTone,
 } from '@/components/print/PrintDocument';
 
 export const dynamic = 'force-dynamic';
 
 type Params = Promise<{ id: string }>;
 
-async function getCompanyName(): Promise<string> {
-  const res = await safe(api.get<SettingItem[]>('/settings?group=company'));
-  const items = res.data ?? [];
-  const name = items.find((i) => i.key === 'company.name')?.value;
-  return typeof name === 'string' && name ? name : 'شركتنا';
-}
+const REVIEW_TONE: Record<string, PrintTone> = {
+  APPROVED: 'success',
+  PENDING_REVIEW: 'warning',
+  REJECTED: 'danger',
+  NO_PROOF: 'success',
+};
 
 export default async function DepositPrintPage({ params }: { params: Params }) {
   const { id } = await params;
 
-  const [depositResult, currency, companyName] = await Promise.all([
+  const [depositResult, letterhead, locale] = await Promise.all([
     safe(api.get<Deposit>(`/deposits/${id}`)),
-    getReportsCurrency(),
-    getCompanyName(),
+    getLetterhead(),
+    getLocale(),
   ]);
 
   if (depositResult.error || !depositResult.data) notFound();
 
   const d = depositResult.data;
-  const sym = currencySymbol(currency);
+  const t = printT(locale);
+  const m = t.deposit;
+  const company = companyNameOf(letterhead, locale);
+  const money = (v: string | number | null | undefined) => formatMoney(v, letterhead.currency, locale);
+  const date = (v: string | null | undefined) => formatDate(v, locale);
 
-  const formatAmount = (v: string | number | null | undefined) =>
-    v != null ? `${Number(v).toLocaleString('ar-SA')} ${sym}` : '—';
-
-  const typeLabel: Record<string, string> = {
-    BOOKING_AMOUNT:   'عربون حجز',
-    DOWN_PAYMENT:     'دفعة أولى',
-    INSTALLMENT:      'قسط',
-    FINAL_PAYMENT:    'دفعة أخيرة',
-    OTHER:            'دفعة أخرى',
-  };
-
-  const methodLabel: Record<string, string> = {
-    CASH:          'نقدي',
-    BANK_TRANSFER: 'تحويل بنكي',
-    CHEQUE:        'شيك',
-    OTHER:         'أخرى',
-  };
-
-  const reviewStatusLabel: Record<string, string> = {
-    NO_PROOF:       'بدون إيصال',
-    PENDING_REVIEW: 'قيد المراجعة',
-    APPROVED:       'مقبول',
-    REJECTED:       'مرفوض',
-  };
-
-  // Determine client name from linked reservation or contract
   const clientName =
     d.reservation?.client?.fullName ??
     d.reservation?.lead?.fullName ??
     d.contract?.customer?.fullName ??
     '—';
+  const unitCode = d.reservation?.unit?.code ?? d.contract?.unit?.code ?? null;
+  const reference = d.id.slice(-8).toUpperCase();
+  const typeLabel = m.type[d.type] ?? d.type;
 
-  const unitCode =
-    d.reservation?.unit?.code ?? d.contract?.unit?.code ?? '—';
-
-  const referenceNumber = d.contract?.contractNumber ?? d.reservation?.reservationNumber ?? d.id.slice(-8).toUpperCase();
+  const watermark = d.deletedAt ? m.voided : d.reviewStatus === 'REJECTED' ? m.rejected : undefined;
+  const status = d.reviewStatus
+    ? { label: m.review[d.reviewStatus] ?? d.reviewStatus, tone: REVIEW_TONE[d.reviewStatus] ?? 'neutral' }
+    : undefined;
 
   return (
     <PrintDocument
-      title={`وصل دفع — ${typeLabel[d.type] ?? d.type}`}
-      companyName={companyName}
-      documentType="وصل استلام دفعة"
-      referenceNumber={referenceNumber}
-      date={formatDate(d.paidAt)}
+      letterhead={letterhead}
+      locale={locale}
+      eyebrow={m.eyebrow}
+      title={m.title}
+      reference={reference}
+      date={date(d.paidAt)}
+      status={status}
+      watermark={watermark}
+      note={m.note(company)}
     >
-      {/* Payment details */}
-      <PrintSection title="تفاصيل الدفعة" />
-      <PrintRow label="نوع الدفعة" value={typeLabel[d.type] ?? d.type} />
-      <PrintRow label="المبلغ" value={formatAmount(d.amount)} highlight />
-      <PrintRow label="تاريخ الدفع" value={formatDate(d.paidAt)} />
-      {d.paymentMethod && (
-        <PrintRow label="طريقة الدفع" value={methodLabel[d.paymentMethod] ?? d.paymentMethod} />
-      )}
-      {d.reviewStatus && (
-        <PrintRow label="حالة الإيصال" value={reviewStatusLabel[d.reviewStatus] ?? d.reviewStatus} />
-      )}
-      {d.reviewedAt && d.reviewedBy && (
-        <PrintRow label="مراجعة بواسطة" value={`${d.reviewedBy.fullName} — ${formatDate(d.reviewedAt)}`} />
-      )}
+      {/* The receipt sentence, as on a printed receipt book. */}
+      <section
+        className="mt-6 rounded-xl border-2 px-5 py-4"
+        style={{ borderColor: 'var(--accent)' }}
+      >
+        <p className="text-sm leading-8 text-slate-700">
+          {m.received} <strong className="text-slate-900">{clientName}</strong> {m.sumOf}{' '}
+          <strong data-testid="print-amount-total" className="text-lg" style={{ color: 'var(--brand)' }}>
+            {money(d.amount)}
+          </strong>{' '}
+          {m.forPayment} <strong className="text-slate-900">{typeLabel}</strong>
+          {unitCode && (
+            <>
+              {' '}
+              {m.forUnit} <strong className="text-slate-900" dir="ltr">{unitCode}</strong>
+            </>
+          )}
+          .
+        </p>
+      </section>
 
-      {/* Client / unit */}
-      <PrintSection title="بيانات العميل والوحدة" />
-      <PrintRow label="العميل" value={clientName} />
-      <PrintRow label="كود الوحدة" value={unitCode} />
-      {d.contract?.contractNumber && (
-        <PrintRow label="رقم العقد" value={d.contract.contractNumber} />
-      )}
-      {d.reservation?.reservationNumber && (
-        <PrintRow label="رقم الحجز" value={d.reservation.reservationNumber} />
-      )}
+      <PrintSection title={m.details}>
+        <PrintFields
+          items={[
+            { label: m.fields.type, value: typeLabel },
+            { label: m.fields.amount, value: money(d.amount) },
+            { label: m.fields.paidAt, value: date(d.paidAt) },
+            d.paymentMethod && { label: m.fields.method, value: m.method[d.paymentMethod] ?? d.paymentMethod },
+            d.reviewedAt && d.reviewedBy && {
+              label: m.fields.reviewedBy,
+              value: `${d.reviewedBy.fullName} — ${date(d.reviewedAt)}`,
+            },
+          ]}
+        />
+      </PrintSection>
+
+      <PrintSection title={m.links}>
+        <PrintFields
+          items={[
+            { label: m.fields.client, value: clientName },
+            unitCode && { label: m.fields.unit, value: unitCode, ltr: true },
+            d.contract?.contractNumber && {
+              label: m.fields.contractNumber,
+              value: d.contract.contractNumber,
+              ltr: true,
+            },
+            d.reservation?.reservationNumber && {
+              label: m.fields.reservationNumber,
+              value: d.reservation.reservationNumber,
+              ltr: true,
+            },
+          ]}
+        />
+      </PrintSection>
+
       {d.installment && (
-        <>
-          <PrintSection title="تفاصيل القسط" />
-          <PrintRow label="تاريخ الاستحقاق" value={formatDate(d.installment.dueDate)} />
-          <PrintRow label="مبلغ القسط" value={formatAmount(d.installment.amount)} />
-        </>
+        <PrintSection title={m.installment}>
+          <PrintFields
+            items={[
+              { label: m.fields.due, value: date(d.installment.dueDate) },
+              { label: m.fields.installmentAmount, value: money(d.installment.amount) },
+            ]}
+          />
+        </PrintSection>
       )}
 
-      {/* Signature block */}
-      <div className="mt-14 grid grid-cols-2 gap-12">
-        <div>
-          <div className="mb-2 text-sm font-semibold" style={{ color: '#0F1E33' }}>توقيع العميل</div>
-          <div className="h-16 border-b border-slate-300" />
-          <div className="mt-1.5 text-xs" style={{ color: '#94A3B8' }}>{clientName}</div>
-        </div>
-        <div>
-          <div className="mb-2 text-sm font-semibold" style={{ color: '#0F1E33' }}>توقيع ممثل الشركة</div>
-          <div className="h-16 border-b border-slate-300" />
-          <div className="mt-1.5 text-xs" style={{ color: '#94A3B8' }}>{companyName}</div>
-        </div>
-      </div>
-
-      <p className="mt-8 text-xs leading-relaxed" style={{ color: '#94A3B8' }}>
-        هذا وصل استلام رسمي يُثبت سداد الدفعة المذكورة أعلاه. يُرجى الاحتفاظ بهذا الوصل للرجوع إليه.
-        لأي استفسار تواصل مع فريق المالية في {companyName}.
-      </p>
+      <PrintSignatures
+        locale={locale}
+        parties={[
+          { role: m.payerSignature, name: clientName },
+          { role: m.receiverSignature, name: company },
+        ]}
+      />
     </PrintDocument>
   );
 }

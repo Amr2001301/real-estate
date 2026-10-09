@@ -20,6 +20,7 @@ import { formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { getLocale } from '@/lib/locale';
+import { printT } from '@/messages/print';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { ContractPdfPanel } from './pdf-panel';
@@ -115,7 +116,7 @@ export default async function ContractDetailPage({
             </span>
           )
         }
-        actions={<PrintButton path="contracts" id={contract.id} />}
+        actions={<PrintButton path="contracts" id={contract.id} label={printT(locale).common.print} />}
       />
 
       {isAdmin && contract.signFollowupFailed && <SignFollowupsAlert id={contract.id} locale={locale} />}

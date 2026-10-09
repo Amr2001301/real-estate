@@ -3,6 +3,7 @@ import { ArrowLeft, ReceiptText, Building2, Bookmark, CalendarClock, AlertCircle
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
+import { printT } from '@/messages/print';
 import { uiT } from '@/messages/ui';
 import type { Deposit, DepositType } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
@@ -81,7 +82,7 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
         ]}
         actions={
           <div className="flex items-center gap-2">
-            <PrintButton path="deposits" id={d.id} />
+            <PrintButton path="deposits" id={d.id} label={printT(locale).common.print} />
             <span
               className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                 d.verified ? 'bg-success-100 text-success-700' : 'bg-amber-100 text-amber-700'
