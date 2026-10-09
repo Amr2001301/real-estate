@@ -59,12 +59,15 @@ import { RequireCapability } from '../../common/decorators/require-capability.de
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { CronLockService } from '../../common/cron/cron-lock.service';
 import { captureExceptionSafe } from '../../common/observability/sentry';
-import { runInCompany, runTenantContext } from '../../common/tenant/tenant-context';
+import { getTenantContext, runInCompany, runTenantContext } from '../../common/tenant/tenant-context';
+import { getCompanyCurrency } from '../../common/currency/currency';
 import { computeDurationOption } from './duration-calc';
 import {
   addTitledTable,
   addFooter,
+  amountFormat,
   createReportWorkbook,
+  formatMoneyColumns,
   workbookToBuffer,
   xlsxFilename,
 } from '../../common/utils/xlsx';
@@ -264,6 +267,7 @@ class InstallmentsService {
       .filter((i) => i.status === InstallmentStatus.PAID)
       .reduce((acc, i) => acc + Number(i.amount), 0);
 
+    const currency = await getCompanyCurrency(this.prisma, plan.companyId ?? getTenantContext()?.companyId);
     const wb = createReportWorkbook();
     const ws = wb.addWorksheet('جدول الأقساط');
     ws.properties.defaultRowHeight = 18;
@@ -274,7 +278,9 @@ class InstallmentsService {
       headers: ['تاريخ الاستحقاق', 'المبلغ', 'الحالة', 'تاريخ الدفع', 'النوع'],
       rows,
       widths: [18, 16, 14, 18, 16],
+      currency,
     });
+    formatMoneyColumns(ws, [2], currency);
 
     // Summary rows below the table — outstanding excludes CANCELLED.
     const summaryStartRow = ws.rowCount + 2;
@@ -282,6 +288,8 @@ class InstallmentsService {
     ws.getCell(summaryStartRow, 2).value = paidTotal;
     ws.getCell(summaryStartRow + 1, 1).value = 'إجمالي المتبقي (معلّق + متأخر)';
     ws.getCell(summaryStartRow + 1, 2).value = outstandingTotal;
+    ws.getCell(summaryStartRow, 2).numFmt = amountFormat(currency);
+    ws.getCell(summaryStartRow + 1, 2).numFmt = amountFormat(currency);
 
     addFooter(ws);
 

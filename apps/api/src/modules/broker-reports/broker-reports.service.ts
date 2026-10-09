@@ -15,6 +15,8 @@ import {
   TopMetric,
 } from './dto/broker-report.dto';
 import { toCsv } from '../../common/utils/csv';
+import { getCompanyCurrency } from '../../common/currency/currency';
+import { getTenantContext } from '../../common/tenant/tenant-context';
 import {
   addBoardBanner,
   addChartBlock,
@@ -23,7 +25,9 @@ import {
   addSectionTitle,
   addTable,
   addTitledTable,
+  amountFormat,
   createReportWorkbook,
+  formatMoneyColumns,
   setupBoardSheet,
   workbookToBuffer,
 } from '../../common/utils/xlsx';
@@ -560,11 +564,12 @@ export class BrokerReportsService {
       series: top.data.map((r) => ({ label: r.companyName, value: Number(r.salesGross) })),
     });
 
+    const currency = await this.currency();
     const SPAN = 6;
     const wb = createReportWorkbook();
     const cover = wb.addWorksheet('الملخص');
     setupBoardSheet(cover, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
-    addBoardBanner(cover, 'تقرير أداء الوسطاء', SPAN, { wb, logo: brandLogoPng() });
+    addBoardBanner(cover, 'تقرير أداء الوسطاء', SPAN, { wb, logo: brandLogoPng(), currency });
     addSectionTitle(cover, 'الملخص التنفيذي', SPAN);
     addKpiCards(
       cover,
@@ -576,9 +581,9 @@ export class BrokerReportsService {
         { label: 'الفرص المعتمدة', value: s.leadsApproved },
         { label: 'الحجوزات المُنشأة', value: s.reservationsCreated },
         { label: 'العقود الموقّعة', value: s.contractsSigned },
-        { label: 'إجمالي المبيعات', value: Number(s.salesGross) },
-        { label: 'صافي العمولات', value: Number(s.commissionsNet) },
-        { label: 'صافي المدفوعات', value: Number(s.payoutsTotalNet) },
+        { label: 'إجمالي المبيعات', value: Number(s.salesGross), currency },
+        { label: 'صافي العمولات', value: Number(s.commissionsNet), currency },
+        { label: 'صافي المدفوعات', value: Number(s.payoutsTotalNet), currency },
       ],
       { span: SPAN, perRow: 3 },
     );
@@ -592,6 +597,7 @@ export class BrokerReportsService {
       top.data.map((r) => [r.companyName, r.code, Number(r.salesGross), Number(r.commissionNet), Number(r.payoutNet)]),
       [24, 12, 18, 16, 16],
     );
+    formatMoneyColumns(topSheet, [3, 4, 5], currency);
 
     return workbookToBuffer(wb);
   }
@@ -743,6 +749,7 @@ export class BrokerReportsService {
    */
   async topBrokersXlsx(query: TopBrokersQueryDto) {
     const { data, metric } = await this.topBrokers(query);
+    const currency = await this.currency();
     const wb = createReportWorkbook();
     const ws = wb.addWorksheet('أعلى الوسطاء');
     addTitledTable(ws, {
@@ -764,8 +771,9 @@ export class BrokerReportsService {
         Number(r.payoutNet), formatRate(r.conversionRate),
       ]),
       widths: [22, 12, 12, 8, 11, 9, 8, 11, 16, 16, 14, 14, 12],
+      currency,
     });
-    [9, 10, 11, 12].forEach((c) => (ws.getColumn(c).numFmt = '#,##0.##'));
+    formatMoneyColumns(ws, [9, 10, 11, 12], currency);
     addFooter(ws);
     return workbookToBuffer(wb);
   }
@@ -778,6 +786,7 @@ export class BrokerReportsService {
   async brokerDetailXlsx(brokerId: string, query: BrokerDetailReportQueryDto) {
     const detail = await this.brokerDetail(brokerId, query);
     const s = detail.summary;
+    const currency = await this.currency();
     const wb = createReportWorkbook();
 
     const sum = wb.addWorksheet('الملخص');
@@ -805,7 +814,14 @@ export class BrokerReportsService {
         ['نسبة العقد → الدفع', formatRate(s.contractToPaidPayoutRate)],
       ],
       widths: [30, 18],
+      currency,
     });
+    // Three of the indicators are amounts (sales, commissions, payouts).
+    for (const label of ['إجمالي المبيعات', 'صافي العمولات', 'صافي المدفوعات']) {
+      sum.eachRow((row) => {
+        if (row.getCell(1).value === label) row.getCell(2).numFmt = amountFormat(currency, '0.##');
+      });
+    }
     addFooter(sum);
 
     const trend = wb.addWorksheet('الاتجاه الشهري');
@@ -818,6 +834,7 @@ export class BrokerReportsService {
       ]),
       [16, 10, 12, 16, 16],
     );
+    formatMoneyColumns(trend, [4, 5], currency);
 
     const agents = wb.addWorksheet('الوكلاء');
     addTable(
@@ -830,6 +847,7 @@ export class BrokerReportsService {
       ]),
       [22, 22, 16, 8, 9, 8, 11, 16, 16, 16],
     );
+    formatMoneyColumns(agents, [8, 9, 10], currency);
 
     const projects = wb.addWorksheet('المشاريع');
     addTable(
@@ -842,8 +860,14 @@ export class BrokerReportsService {
       ]),
       [24, 16, 12, 8, 11, 16, 16, 16],
     );
+    formatMoneyColumns(projects, [6, 7, 8], currency);
 
     return workbookToBuffer(wb);
+  }
+
+  /** The company currency every amount in these reports is in. */
+  private currency(): Promise<string> {
+    return getCompanyCurrency(this.prisma, getTenantContext()?.companyId);
   }
 
   private localizedName(value: unknown): string {
