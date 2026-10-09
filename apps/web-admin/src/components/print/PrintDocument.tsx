@@ -11,6 +11,7 @@ import { PrintToolbar } from './PrintToolbar';
 // below follows the tenant's brand.
 
 const DEFAULT_PRIMARY = '#0F1E33';
+const ARABIC = /[\u0600-\u06FF]/;
 const DEFAULT_ACCENT = '#C8A24B';
 
 export type PrintTone = 'success' | 'warning' | 'danger' | 'neutral';
@@ -111,9 +112,10 @@ export function PrintDocument({
       {watermark && (
         <div
           aria-hidden
-          className="pointer-events-none fixed inset-0 z-0 flex items-center justify-center"
+          // Above the page (the article is opaque white), faint enough to read through.
+          className="pointer-events-none fixed inset-0 z-20 flex items-center justify-center"
         >
-          <span className="-rotate-[30deg] select-none text-[120px] font-black tracking-widest text-red-600/[0.07]">
+          <span className="-rotate-[30deg] select-none whitespace-nowrap text-[110px] font-black tracking-widest text-red-600/[0.09]">
             {watermark}
           </span>
         </div>
@@ -285,7 +287,8 @@ export function PrintFields({ items }: { items: Maybe<PrintField>[] }) {
 export function PrintParties({
   parties,
 }: {
-  parties: { role: string; name: string; lines: (string | null | undefined)[] }[];
+  /** Each line is "label: value"; the value keeps its own direction (phones, e-mails). */
+  parties: { role: string; name: string; lines: Maybe<{ label?: string; value: string }>[] }[];
 }) {
   return (
     <div className="grid grid-cols-2 gap-4">
@@ -299,9 +302,16 @@ export function PrintParties({
           </div>
           <div className="mt-1.5 text-base font-bold text-slate-900">{p.name}</div>
           <div className="mt-1 space-y-0.5 text-xs text-slate-500">
-            {p.lines.filter(Boolean).map((l) => (
-              <div key={l!}>{l}</div>
-            ))}
+            {p.lines
+              .filter((l): l is { label?: string; value: string } => !!l)
+              .map((l) => (
+                <div key={l.value}>
+                  {l.label && `${l.label}: `}
+                  {/* Phones / e-mails / numbers have no strong direction of their
+                      own and would take the RTL order ("5500 2614 2 +20"). */}
+                  <bdi dir={ARABIC.test(l.value) ? undefined : 'ltr'}>{l.value}</bdi>
+                </div>
+              ))}
           </div>
         </div>
       ))}
