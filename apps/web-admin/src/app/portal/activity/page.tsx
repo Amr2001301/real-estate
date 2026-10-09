@@ -255,7 +255,7 @@ export default async function PortalActivityPage({
                           {m.activityType[item.type]}
                         </Link>
                         <time className="text-2xs text-slate-500 tabular-nums whitespace-nowrap shrink-0" dir="ltr">
-                          {formatDateTime(item.createdAt)}
+                          {formatDateTime(item.createdAt, locale)}
                         </time>
                       </div>
                       {item.lead ? (

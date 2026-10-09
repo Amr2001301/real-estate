@@ -22,7 +22,7 @@ import {
 import { api, safe } from '@/lib/api';
 import type { User, Lead, Paged, Reservation, VisitAppointment } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
-import { getLocale } from '@/lib/locale';
+import { getLocale, type Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -288,7 +288,7 @@ export default async function ClientDetailPage({
                               <span className="text-slate-400">{m.unassigned}</span>
                             )}
                             <span className="text-slate-300">·</span>
-                            <span>{formatDate(l.createdAt)}</span>
+                            <span>{formatDate(l.createdAt, locale)}</span>
                           </p>
                         </div>
                         <ArrowLeft className="h-4 w-4 text-slate-300 rtl:rotate-180" />
@@ -354,7 +354,7 @@ export default async function ClientDetailPage({
                                   <span className="text-slate-300">·</span>
                                 </>
                               )}
-                              <span>{m.expiresLabel} {formatDate(r.expiresAt)}</span>
+                              <span>{m.expiresLabel} {formatDate(r.expiresAt, locale)}</span>
                             </p>
                           </div>
                           <ArrowLeft className="h-4 w-4 text-slate-300 rtl:rotate-180" />
@@ -417,7 +417,7 @@ export default async function ClientDetailPage({
                                 <span className="text-slate-300">·</span>
                               </>
                             )}
-                            <span>{formatDateTime(v.scheduledAt)}</span>
+                            <span>{formatDateTime(v.scheduledAt, locale)}</span>
                           </p>
                         </div>
                         <ArrowLeft className="h-4 w-4 text-slate-300 rtl:rotate-180" />
@@ -450,10 +450,10 @@ export default async function ClientDetailPage({
               ) : (
                 <ol className="relative ms-4 border-s-2 border-hairline ps-6 space-y-5">
                   {reservationActivities.map((a) => (
-                    <ReservationActivityItem key={a.id} entry={a} labels={m.reservationActivityLabels} byLabel={m.activityByLabel} systemLabel={m.activitySystem} />
+                    <ReservationActivityItem key={a.id} entry={a} labels={m.reservationActivityLabels} byLabel={m.activityByLabel} systemLabel={m.activitySystem} locale={locale} />
                   ))}
                   {recentActivity.map((a) => (
-                    <ActivityItem key={a.id} entry={a} actionLabels={ACTION_LABEL} byLabel={m.activityByLabel} systemLabel={m.activitySystem} />
+                    <ActivityItem key={a.id} entry={a} actionLabels={ACTION_LABEL} byLabel={m.activityByLabel} systemLabel={m.activitySystem} locale={locale} />
                   ))}
                 </ol>
               )}
@@ -498,11 +498,11 @@ export default async function ClientDetailPage({
                   </Badge>
                 </Row>
                 <Row label={m.labelRegistered} icon={<Calendar className="h-3.5 w-3.5" />}>
-                  <span className="text-slate-700">{formatDate(u.createdAt)}</span>
+                  <span className="text-slate-700">{formatDate(u.createdAt, locale)}</span>
                 </Row>
                 <Row label={m.labelLastLogin} icon={<Clock className="h-3.5 w-3.5" />}>
                   <span className="text-slate-700">
-                    {u.lastLoginAt ? formatDateTime(u.lastLoginAt) : m.noLoginYet}
+                    {u.lastLoginAt ? formatDateTime(u.lastLoginAt, locale) : m.noLoginYet}
                   </span>
                 </Row>
                 <Row label={m.labelClientId} icon={<Hash className="h-3.5 w-3.5" />}>
@@ -533,7 +533,7 @@ export default async function ClientDetailPage({
               {!u.active && (
                 <p className="mt-3 inline-flex items-center gap-1.5 text-2xs text-slate-500">
                   <PowerOff className="h-3 w-3 text-slate-400" />
-                  {m.suspendedSince} {formatDate(u.updatedAt ?? u.createdAt)}
+                  {m.suspendedSince} {formatDate(u.updatedAt ?? u.createdAt, locale)}
                 </p>
               )}
             </PremiumSectionCard>
@@ -626,11 +626,13 @@ function ReservationActivityItem({
   labels,
   byLabel,
   systemLabel,
+  locale = 'ar',
 }: {
   entry: ReservationActivityEntry;
   labels: Record<string, string>;
   byLabel: string;
   systemLabel: string;
+  locale?: Locale;
 }) {
   const RESERVATION_ACTIVITY_TONE: Record<string, 'success' | 'danger' | 'warning' | 'brand'> = {
     CREATED: 'brand',
@@ -679,7 +681,7 @@ function ReservationActivityItem({
           </p>
         </div>
         <time className="shrink-0 text-2xs text-slate-500 tabular-nums">
-          {formatDateTime(entry.createdAt)}
+          {formatDateTime(entry.createdAt, locale)}
         </time>
       </div>
     </li>
@@ -691,11 +693,13 @@ function ActivityItem({
   actionLabels,
   byLabel,
   systemLabel,
+  locale = 'ar',
 }: {
   entry: AuditLog;
   actionLabels: Record<string, string>;
   byLabel: string;
   systemLabel: string;
+  locale?: Locale;
 }) {
   const tone =
     entry.action === 'POST'
@@ -738,7 +742,7 @@ function ActivityItem({
           </p>
         </div>
         <time className="shrink-0 text-2xs text-slate-500 tabular-nums">
-          {formatDateTime(entry.createdAt)}
+          {formatDateTime(entry.createdAt, locale)}
         </time>
       </div>
     </li>

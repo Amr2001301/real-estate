@@ -63,7 +63,7 @@ export function RecordPaymentButton({ contractId, installmentId, amount, dueDate
     <div className="mt-1 rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm space-y-3">
       <div className="flex items-center justify-between">
         <span className="font-medium text-brand-800 text-xs">
-          {m.recordPaymentTitle} — {PAYMENT_TYPE_LABELS[installmentType ?? 'INSTALLMENT'] ?? m.payTypeInstallment} {formatDate(dueDate)}
+          {m.recordPaymentTitle} — {PAYMENT_TYPE_LABELS[installmentType ?? 'INSTALLMENT'] ?? m.payTypeInstallment} {formatDate(dueDate, locale)}
         </span>
         <button type="button" onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600">
           <X className="h-3.5 w-3.5" />
@@ -73,7 +73,7 @@ export function RecordPaymentButton({ contractId, installmentId, amount, dueDate
       <form onSubmit={handleSubmit} className="space-y-3">
         <input type="hidden" name="amount" value={String(amount)} />
         <div className="text-xs text-slate-600">
-          {m.recordPaymentAmountLabel} <span className="font-semibold tabular-nums">{formatCurrency(amount, currency)}</span>
+          {m.recordPaymentAmountLabel} <span className="font-semibold tabular-nums">{formatCurrency(amount, currency, locale)}</span>
           <span className="text-slate-400 mr-1">{m.recordPaymentAmountFixed}</span>
         </div>
 

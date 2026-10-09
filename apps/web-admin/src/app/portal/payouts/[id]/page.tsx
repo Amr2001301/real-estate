@@ -116,7 +116,7 @@ export default async function PortalPayoutDetailPage({
                     'text-5xl font-black tabular-nums leading-none tracking-tight',
                     isPaid ? 'text-emerald-700' : 'text-slate-900',
                   )}>
-                    {formatCurrency(payout.totalNet, currency)}
+                    {formatCurrency(payout.totalNet, currency, locale)}
                   </p>
                   {payout.period && (
                     <span className="mt-3 inline-flex items-center rounded-lg bg-slate-100 text-slate-600 text-xs font-semibold px-3 py-1">
@@ -129,20 +129,20 @@ export default async function PortalPayoutDetailPage({
                 <div className="sm:w-64 rounded-xl bg-canvas/60 ring-1 ring-inset ring-hairline divide-y divide-hairline overflow-hidden">
                   <div className="flex items-center justify-between gap-2 px-4 py-2.5">
                     <span className="text-2xs text-slate-400">{t.gross}</span>
-                    <span className="text-2xs font-semibold text-slate-700 tabular-nums">{formatCurrency(payout.totalGross, currency)}</span>
+                    <span className="text-2xs font-semibold text-slate-700 tabular-nums">{formatCurrency(payout.totalGross, currency, locale)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-2 px-4 py-2.5">
                     <span className="text-2xs text-slate-400">{t.vat}</span>
-                    <span className="text-2xs text-red-500 tabular-nums">− {formatCurrency(payout.totalTax, currency)}</span>
+                    <span className="text-2xs text-red-500 tabular-nums">− {formatCurrency(payout.totalTax, currency, locale)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-2 px-4 py-2.5">
                     <span className="text-2xs text-slate-400">{t.withholding}</span>
-                    <span className="text-2xs text-red-500 tabular-nums">− {formatCurrency(payout.totalWithholding, currency)}</span>
+                    <span className="text-2xs text-red-500 tabular-nums">− {formatCurrency(payout.totalWithholding, currency, locale)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-2 px-4 py-3 bg-slate-50">
                     <span className="text-xs font-bold text-slate-700">{t.net}</span>
                     <span className={cn('text-sm font-black tabular-nums', isPaid ? 'text-emerald-700' : 'text-slate-900')}>
-                      {formatCurrency(payout.totalNet, currency)}
+                      {formatCurrency(payout.totalNet, currency, locale)}
                     </span>
                   </div>
                 </div>
@@ -229,7 +229,7 @@ export default async function PortalPayoutDetailPage({
                           >
                             <CodeText className="text-xs font-semibold">{c.commissionNumber}</CodeText>
                           </Link>
-                          <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">{formatDate(c.earnedAt)}</p>
+                          <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">{formatDate(c.earnedAt, locale)}</p>
                         </td>
                         <td className="py-3.5 px-4">
                           <CodeText className="text-xs text-slate-700">{c.contract.contractNumber ?? '—'}</CodeText>
@@ -241,10 +241,10 @@ export default async function PortalPayoutDetailPage({
                           </p>
                         </td>
                         <td className="py-3.5 px-4 text-end tabular-nums text-slate-600 text-xs">
-                          {formatCurrency(c.grossAmount, currency)}
+                          {formatCurrency(c.grossAmount, currency, locale)}
                         </td>
                         <td className="py-3.5 px-4 pe-6 text-end font-bold text-slate-900 tabular-nums text-xs">
-                          {formatCurrency(c.netAmount, currency)}
+                          {formatCurrency(c.netAmount, currency, locale)}
                         </td>
                       </tr>
                     ))}
@@ -278,21 +278,21 @@ export default async function PortalPayoutDetailPage({
                   <BrokerPayoutStatusBadge status={payout.status} locale={locale} />
                 </InfoRow>
                 <InfoRow label={t.createdAt} icon={<Clock className="h-3.5 w-3.5" />}>
-                  <span className="text-slate-700 text-xs tabular-nums">{formatDate(payout.createdAt)}</span>
+                  <span className="text-slate-700 text-xs tabular-nums">{formatDate(payout.createdAt, locale)}</span>
                 </InfoRow>
                 {payout.approvedAt && (
                   <InfoRow label={t.approvedAt} icon={<CheckCircle2 className="h-3.5 w-3.5" />}>
-                    <span className="text-slate-700 text-xs tabular-nums">{formatDate(payout.approvedAt)}</span>
+                    <span className="text-slate-700 text-xs tabular-nums">{formatDate(payout.approvedAt, locale)}</span>
                   </InfoRow>
                 )}
                 {payout.processedAt && (
                   <InfoRow label={t.processedAt} icon={<CalendarRange className="h-3.5 w-3.5" />}>
-                    <span className="text-slate-700 text-xs tabular-nums">{formatDate(payout.processedAt)}</span>
+                    <span className="text-slate-700 text-xs tabular-nums">{formatDate(payout.processedAt, locale)}</span>
                   </InfoRow>
                 )}
                 {payout.paidAt && (
                   <InfoRow label={t.paidAt} icon={<Banknote className="h-3.5 w-3.5" />}>
-                    <span className="text-emerald-700 text-xs font-semibold tabular-nums">{formatDate(payout.paidAt)}</span>
+                    <span className="text-emerald-700 text-xs font-semibold tabular-nums">{formatDate(payout.paidAt, locale)}</span>
                   </InfoRow>
                 )}
 
@@ -306,7 +306,7 @@ export default async function PortalPayoutDetailPage({
                       {t.netDue}
                     </p>
                     <p className={cn('text-2xl font-black tabular-nums mt-1 leading-none', isPaid ? 'text-emerald-700' : 'text-amber-700')}>
-                      {formatCurrency(payout.totalNet, currency)}
+                      {formatCurrency(payout.totalNet, currency, locale)}
                     </p>
                     {payout.period && (
                       <p className={cn('text-2xs mt-1', isPaid ? 'text-emerald-500' : 'text-amber-500')}>
@@ -347,7 +347,7 @@ export default async function PortalPayoutDetailPage({
                         </p>
                         {step.at && (
                           <p className="text-2xs text-slate-400 whitespace-nowrap tabular-nums">
-                            {formatDateTime(step.at)}
+                            {formatDateTime(step.at, locale)}
                           </p>
                         )}
                       </div>

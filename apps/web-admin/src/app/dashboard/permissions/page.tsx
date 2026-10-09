@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/cn';
+import { intlLocale } from '@/lib/format';
 import {
   getPermissionMeta,
   PERMISSION_CATEGORIES,
@@ -156,25 +157,25 @@ export default async function PermissionsPage({
         metrics={[
           {
             label: m.kpiTotal,
-            value: all.length.toLocaleString('ar-EG'),
+            value: all.length.toLocaleString(intlLocale(locale)),
             icon: <ShieldCheck />,
             tone: 'brand',
           },
           {
             label: m.kpiGroups,
-            value: totalGroups.toLocaleString('ar-EG'),
+            value: totalGroups.toLocaleString(intlLocale(locale)),
             icon: <LayoutGrid />,
             tone: 'neutral',
           },
           {
             label: m.kpiUsers,
-            value: users.length.toLocaleString('ar-EG'),
+            value: users.length.toLocaleString(intlLocale(locale)),
             icon: <UsersIcon />,
             tone: 'info',
           },
           {
             label: m.kpiAdmin,
-            value: adminPerms.toLocaleString('ar-EG'),
+            value: adminPerms.toLocaleString(intlLocale(locale)),
             icon: <Lock />,
             tone: 'warning',
           },

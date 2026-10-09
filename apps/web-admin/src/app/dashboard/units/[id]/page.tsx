@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
-import { getLocale } from '@/lib/locale';
+import { getLocale, type Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import type {
   Paged,
@@ -111,7 +111,7 @@ export default async function UnitDetailPage({
             <UnitStatusBadge status={unit.status} />
             <Badge tone="gray" variant="soft">{unit.type}</Badge>
             <span className="text-sm font-semibold text-navy tabular-nums">
-              {formatCurrency(unit.price, currency)}
+              {formatCurrency(unit.price, currency, locale)}
             </span>
           </>
         }
@@ -135,7 +135,7 @@ export default async function UnitDetailPage({
           <div className="absolute bottom-4 start-5 end-5 flex items-end justify-between gap-3">
             <div>
               <p className="text-[11px] text-white/60">{m.coverPriceLabel}</p>
-              <p className="mt-0.5 text-xl font-bold text-white tabular-nums">{formatCurrency(unit.price, currency)}</p>
+              <p className="mt-0.5 text-xl font-bold text-white tabular-nums">{formatCurrency(unit.price, currency, locale)}</p>
             </div>
             <UnitStatusBadge status={unit.status} />
           </div>
@@ -229,14 +229,14 @@ export default async function UnitDetailPage({
                   label={m.statExpiresAt}
                   value={
                     unit.reservationExpiresAt
-                      ? formatDate(unit.reservationExpiresAt)
+                      ? formatDate(unit.reservationExpiresAt, locale)
                       : '—'
                   }
                 />
                 <Stat
                   icon={<History className="h-4 w-4" />}
                   label={m.statLastUpdated}
-                  value={formatDate(unit.updatedAt)}
+                  value={formatDate(unit.updatedAt, locale)}
                 />
               </div>
 
@@ -292,7 +292,7 @@ export default async function UnitDetailPage({
                     />
                     <KV
                       label={m.fieldExpiresAt}
-                      value={formatDate(activeReservation.expiresAt)}
+                      value={formatDate(activeReservation.expiresAt, locale)}
                     />
                   </dl>
                 </div>
@@ -334,7 +334,7 @@ export default async function UnitDetailPage({
                             <ReservationStatusBadge status={r.status} />
                           </div>
                           <p className="text-2xs text-slate-500 mt-0.5">
-                            {formatDateTime(r.createdAt)}
+                            {formatDateTime(r.createdAt, locale)}
                           </p>
                         </div>
                         <ArrowLeft className="h-4 w-4 text-slate-300 rtl:rotate-180" />
@@ -374,6 +374,7 @@ export default async function UnitDetailPage({
                       statusLabels={m.statusLabels}
                       historyChangeFrom={m.historyChangeFrom}
                       historyChangedBy={m.historyChangedBy}
+                      locale={locale}
                     />
                   ))}
                 </ol>
@@ -477,11 +478,13 @@ function HistoryItem({
   statusLabels,
   historyChangeFrom,
   historyChangedBy,
+  locale = 'ar',
 }: {
   entry: UnitStatusHistoryEntry;
   statusLabels: Record<string, string>;
   historyChangeFrom: string;
   historyChangedBy: string;
+  locale?: Locale;
 }) {
   const tone =
     entry.newStatus === 'SOLD'
@@ -524,7 +527,7 @@ function HistoryItem({
           )}
         </div>
         <time className="shrink-0 text-2xs text-slate-500 tabular-nums">
-          {formatDateTime(entry.changedAt)}
+          {formatDateTime(entry.changedAt, locale)}
         </time>
       </div>
     </li>

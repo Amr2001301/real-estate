@@ -3,7 +3,7 @@ import { Users, Eye, Phone, Briefcase, AlertCircle, Search, SlidersHorizontal } 
 import { api, safe } from '@/lib/api';
 import { projectOptions, brokerOptions } from '@/lib/options';
 import type { AdminBrokerLead, Paged } from '@/lib/types';
-import { tx, formatDate } from '@/lib/format';
+import { tx, formatDate, intlLocale } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
@@ -275,7 +275,7 @@ export default async function AdminBrokerLeadsPage({
         padded={false}
         trailing={
           <span className="text-xs text-slate-400 tabular-nums">
-            {totalLeads.toLocaleString('ar-EG')} {m.tableTrailingCount}
+            {totalLeads.toLocaleString(intlLocale(locale))} {m.tableTrailingCount}
           </span>
         }
       >
@@ -384,7 +384,7 @@ export default async function AdminBrokerLeadsPage({
 
                     {/* Date */}
                     <td className="py-3.5 px-4 text-2xs text-slate-400 whitespace-nowrap">
-                      {formatDate(l.brokerSubmittedAt ?? l.createdAt)}
+                      {formatDate(l.brokerSubmittedAt ?? l.createdAt, locale)}
                     </td>
 
                     {/* Action */}

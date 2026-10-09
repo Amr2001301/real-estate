@@ -35,7 +35,7 @@ export default function RecordDepositForm({ initialContract, currency = 'SAR', l
   const c = uiT(locale).common;
   const toContractOption = (k: Contract): SearchOption<Contract> => ({
     id: k.id,
-    label: `${k.contractNumber ?? `#${k.id.slice(0, 8)}`} · ${k.customer?.fullName ?? '—'} · ${formatCurrency(k.totalAmount, currency)}`,
+    label: `${k.contractNumber ?? `#${k.id.slice(0, 8)}`} · ${k.customer?.fullName ?? '—'} · ${formatCurrency(k.totalAmount, currency, locale)}`,
     raw: k,
   });
   const [contractId, setContractId] = useState(initialContract?.id ?? '');
@@ -139,7 +139,7 @@ export default function RecordDepositForm({ initialContract, currency = 'SAR', l
                     <option value="" disabled>{m.optionChooseInstallment}</option>
                     {installments.map((inst) => (
                       <option key={inst.id} value={inst.id}>
-                        {formatDate(inst.dueDate)} — {formatCurrency(inst.amount, currency)} —{' '}
+                        {formatDate(inst.dueDate, locale)} — {formatCurrency(inst.amount, currency, locale)} —{' '}
                         {inst.status === 'OVERDUE' ? m.statusOverdue : m.statusPending}
                       </option>
                     ))}

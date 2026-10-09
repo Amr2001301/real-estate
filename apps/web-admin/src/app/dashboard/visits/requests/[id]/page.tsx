@@ -77,7 +77,7 @@ export default async function VisitRequestDetailPage({
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-slate-500 mb-0.5">{m.fieldPreferredDate}</p>
-                <p className="font-medium">{formatDate(req.preferredDate)}</p>
+                <p className="font-medium">{formatDate(req.preferredDate, locale)}</p>
               </div>
               {req.preferredTime && (
                 <div>
@@ -99,12 +99,12 @@ export default async function VisitRequestDetailPage({
               )}
               <div>
                 <p className="text-slate-500 mb-0.5">{m.fieldCreatedAt}</p>
-                <p className="font-medium">{formatDateTime(req.createdAt)}</p>
+                <p className="font-medium">{formatDateTime(req.createdAt, locale)}</p>
               </div>
               {req.convertedAt && (
                 <div>
                   <p className="text-slate-500 mb-0.5">{m.fieldConvertedAt}</p>
-                  <p className="font-medium">{formatDateTime(req.convertedAt)}</p>
+                  <p className="font-medium">{formatDateTime(req.convertedAt, locale)}</p>
                 </div>
               )}
               {(req.requestNotes ?? req.notes) && (
@@ -142,7 +142,7 @@ export default async function VisitRequestDetailPage({
                       </Link>
                     ),
                   },
-                  { key: 'date',   header: m.colAppointment, cell: (a) => formatDateTime(a.scheduledAt) },
+                  { key: 'date',   header: m.colAppointment, cell: (a) => formatDateTime(a.scheduledAt, locale) },
                   { key: 'sales',  header: m.colSalesRep,    cell: (a) => a.assignedSales?.fullName ?? '—' },
                   { key: 'status', header: m.colStatus,      cell: (a) => <AppointmentStatusBadge status={a.status} /> },
                 ]}

@@ -203,7 +203,7 @@ export default async function CustomerDetailPage({
                       {u.active ? m.statusBadgeActive : m.statusBadgeSuspended}
                     </Badge>
                     <span className="text-2xs font-mono text-slate-400 ms-1">
-                      {m.memberSince} {formatDate(u.createdAt)}
+                      {m.memberSince} {formatDate(u.createdAt, locale)}
                     </span>
                   </div>
                 </div>
@@ -269,7 +269,7 @@ export default async function CustomerDetailPage({
                                 {projectName ? `${projectName} · ` : ''}{m.unitPrefix} {c.unit?.code ?? '—'}
                               </p>
                               <p className="shrink-0 text-[14px] font-bold text-slate-800 tabular-nums leading-snug">
-                                {formatCurrency(c.totalAmount, currency)}
+                                {formatCurrency(c.totalAmount, currency, locale)}
                               </p>
                             </div>
                             {/* Bottom line: contract# · date  |  signed badge */}
@@ -277,7 +277,7 @@ export default async function CustomerDetailPage({
                               <p className="text-2xs text-slate-400 inline-flex items-center gap-1.5 min-w-0 truncate">
                                 <span className="font-mono">{c.contractNumber ?? `#${c.id.slice(0, 8).toUpperCase()}`}</span>
                                 <span className="text-slate-300">·</span>
-                                <span>{formatDate(c.createdAt)}</span>
+                                <span>{formatDate(c.createdAt, locale)}</span>
                               </p>
                               {c.signedAt ? (
                                 <Badge tone="success" variant="soft" size="sm" dot>{m.contractSignedBadge}</Badge>
@@ -335,7 +335,7 @@ export default async function CustomerDetailPage({
                           <p className="text-2xs text-slate-400 mt-1 inline-flex items-center gap-1.5">
                             <span className="font-mono">#{req.id.slice(0, 8).toUpperCase()}</span>
                             <span className="text-slate-300">·</span>
-                            <span>{formatDate(req.createdAt)}</span>
+                            <span>{formatDate(req.createdAt, locale)}</span>
                           </p>
                         </div>
                       </Link>
@@ -374,7 +374,7 @@ export default async function CustomerDetailPage({
                           <p className="text-2xs text-slate-400 mt-1 inline-flex items-center gap-2 flex-wrap">
                             <Badge tone="info" variant="soft" size="sm">{d.category}</Badge>
                             <span className="text-slate-300">·</span>
-                            <span>{formatDate(d.createdAt)}</span>
+                            <span>{formatDate(d.createdAt, locale)}</span>
                             {d.uploadedBy?.fullName && (
                               <>
                                 <span className="text-slate-300">·</span>
@@ -426,11 +426,11 @@ export default async function CustomerDetailPage({
                   <Badge tone="success" variant="soft" size="sm">{m.ownerBadge}</Badge>
                 </Row>
                 <Row label={m.labelRegistered} icon={<Calendar className="h-3.5 w-3.5" />}>
-                  <span className="text-[13px] font-medium text-slate-700">{formatDate(u.createdAt)}</span>
+                  <span className="text-[13px] font-medium text-slate-700">{formatDate(u.createdAt, locale)}</span>
                 </Row>
                 <Row label={m.labelLastLogin} icon={<Clock className="h-3.5 w-3.5" />}>
                   <span className="text-[13px] font-medium text-slate-700">
-                    {u.lastLoginAt ? formatDateTime(u.lastLoginAt) : <span className="text-slate-400">{m.noLoginYet}</span>}
+                    {u.lastLoginAt ? formatDateTime(u.lastLoginAt, locale) : <span className="text-slate-400">{m.noLoginYet}</span>}
                   </span>
                 </Row>
                 <Row label={m.labelClientId} icon={<Hash className="h-3.5 w-3.5" />}>

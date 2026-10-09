@@ -197,7 +197,7 @@ export default async function BrokerUsersPage({
 
                       <td className="px-5 py-3.5">
                         <span className="text-[12px] text-slate-500 tabular-nums">
-                          {formatDate(u.lastLoginAt) ?? '—'}
+                          {formatDate(u.lastLoginAt, locale) ?? '—'}
                         </span>
                       </td>
 

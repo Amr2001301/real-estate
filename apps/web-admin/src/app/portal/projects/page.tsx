@@ -18,7 +18,7 @@ export default async function PortalProjectsPage() {
     getReportsCurrency(),
   ]);
   const projects = r.data ?? [];
-  const symbol = currencySymbol(currency);
+  const symbol = currencySymbol(currency, locale);
 
   return (
     <div className="space-y-5">

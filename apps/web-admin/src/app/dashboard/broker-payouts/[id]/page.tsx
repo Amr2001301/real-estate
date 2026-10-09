@@ -118,7 +118,7 @@ export default async function AdminBrokerPayoutDetailPage({
             <p className="mt-1 leading-relaxed">{payout.cancelReason}</p>
             {payout.cancelledBy && (
               <p className="text-2xs text-slate-500 mt-1">
-                {m.cancelledBy} {payout.cancelledBy.fullName} • {formatDateTime(payout.cancelledAt)}
+                {m.cancelledBy} {payout.cancelledBy.fullName} • {formatDateTime(payout.cancelledAt, locale)}
               </p>
             )}
           </div>
@@ -158,19 +158,19 @@ export default async function AdminBrokerPayoutDetailPage({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div className="rounded-xl border border-hairline px-3 py-3">
               <p className="text-xs text-slate-500">{m.totalGross}</p>
-              <p className="font-medium mt-1 text-slate-900 tabular-nums">{formatCurrency(payout.totalGross, currency)}</p>
+              <p className="font-medium mt-1 text-slate-900 tabular-nums">{formatCurrency(payout.totalGross, currency, locale)}</p>
             </div>
             <div className="rounded-xl border border-hairline px-3 py-3">
               <p className="text-xs text-slate-500">{m.totalTax}</p>
-              <p className="font-medium mt-1 text-slate-900 tabular-nums">{formatCurrency(payout.totalTax, currency)}</p>
+              <p className="font-medium mt-1 text-slate-900 tabular-nums">{formatCurrency(payout.totalTax, currency, locale)}</p>
             </div>
             <div className="rounded-xl border border-hairline px-3 py-3">
               <p className="text-xs text-slate-500">{m.totalWithholding}</p>
-              <p className="font-medium mt-1 text-slate-900 tabular-nums">{formatCurrency(payout.totalWithholding, currency)}</p>
+              <p className="font-medium mt-1 text-slate-900 tabular-nums">{formatCurrency(payout.totalWithholding, currency, locale)}</p>
             </div>
             <div className="rounded-xl border border-hairline px-3 py-3 bg-emerald-50/30">
               <p className="text-xs text-slate-500">{m.totalNet}</p>
-              <p className="font-semibold mt-1 text-emerald-700 tabular-nums">{formatCurrency(payout.totalNet, currency)}</p>
+              <p className="font-semibold mt-1 text-emerald-700 tabular-nums">{formatCurrency(payout.totalNet, currency, locale)}</p>
             </div>
           </div>
         </Card>
@@ -185,8 +185,8 @@ export default async function AdminBrokerPayoutDetailPage({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 divide-y sm:divide-y-0 divide-hairline">
             <InfoRow icon={<Wallet />} label={m.labelPaymentMethod} value={payout.paymentMethod ? METHOD_LABEL[payout.paymentMethod] : '—'} />
             <InfoRow icon={<Wallet />} label={m.labelPaymentReference} value={payout.paymentReference ?? '—'} dir="ltr" />
-            <InfoRow icon={<Clock />} label={m.labelScheduledAt} value={formatDate(payout.scheduledAt)} />
-            <InfoRow icon={<CheckCircle2 />} label={m.labelPaidAt} value={formatDate(payout.paidAt)} />
+            <InfoRow icon={<Clock />} label={m.labelScheduledAt} value={formatDate(payout.scheduledAt, locale)} />
+            <InfoRow icon={<CheckCircle2 />} label={m.labelPaidAt} value={formatDate(payout.paidAt, locale)} />
           </div>
           {payout.receiptUrl && (
             <p className="mt-2 text-xs">
@@ -240,7 +240,7 @@ export default async function AdminBrokerPayoutDetailPage({
                       {c.commissionNumber}
                     </Link>
                     <p className="text-2xs text-slate-500 mt-0.5">
-                      {formatDate(c.earnedAt)}
+                      {formatDate(c.earnedAt, locale)}
                     </p>
                   </td>
                   <td className="py-3 px-4">
@@ -257,8 +257,8 @@ export default async function AdminBrokerPayoutDetailPage({
                       {c.unit.building?.phase?.project ? tx(c.unit.building.phase.project.name) : '—'}
                     </p>
                   </td>
-                  <td className="py-3 px-4 tabular-nums">{formatCurrency(c.grossAmount, currency)}</td>
-                  <td className="py-3 px-4 font-semibold text-slate-900 tabular-nums">{formatCurrency(c.netAmount, currency)}</td>
+                  <td className="py-3 px-4 tabular-nums">{formatCurrency(c.grossAmount, currency, locale)}</td>
+                  <td className="py-3 px-4 font-semibold text-slate-900 tabular-nums">{formatCurrency(c.netAmount, currency, locale)}</td>
                   <td className="py-3 px-4">
                     <BrokerCommissionStatusBadge status={c.status} />
                   </td>

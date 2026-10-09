@@ -104,10 +104,10 @@ export default async function PaymentReviewQueuePage({ searchParams }: { searchP
                           {contractNum} <span className="text-slate-400">·</span> {unit}
                         </td>
                         <td className="px-3 py-3 tabular-nums font-semibold text-slate-800">
-                          {formatCurrency(Number(d.amount), currency)}
+                          {formatCurrency(Number(d.amount), currency, locale)}
                         </td>
                         <td className="px-3 py-3 text-slate-600">{method}</td>
-                        <td className="px-3 py-3 text-slate-600">{formatDate(d.createdAt ?? d.paidAt)}</td>
+                        <td className="px-3 py-3 text-slate-600">{formatDate(d.createdAt ?? d.paidAt, locale)}</td>
                         <td className="px-3 py-3">
                           {proofDocId ? (
                             <Link

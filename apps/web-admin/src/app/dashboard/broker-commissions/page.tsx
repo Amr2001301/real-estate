@@ -3,7 +3,7 @@ import { BadgePercent, Eye, Briefcase, AlertCircle, SlidersHorizontal } from 'lu
 import { api, safe } from '@/lib/api';
 import { projectOptions, brokerOptions } from '@/lib/options';
 import type { AdminBrokerCommission, Paged } from '@/lib/types';
-import { tx, formatDate, formatCurrency } from '@/lib/format';
+import { tx, formatDate, formatCurrency, intlLocale } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
@@ -150,7 +150,7 @@ export default async function AdminBrokerCommissionsPage({
           },
           {
             label: m.kpiNetTotal,
-            value: totalNet > 0 ? formatCurrency(totalNet, currency) : '—',
+            value: totalNet > 0 ? formatCurrency(totalNet, currency, locale) : '—',
             icon: <BadgePercent />,
             tone: 'neutral',
             sub: m.kpiThisPage,
@@ -256,11 +256,11 @@ export default async function AdminBrokerCommissionsPage({
         trailing={
           totalGross > 0 ? (
             <span className="text-xs text-slate-500 tabular-nums whitespace-nowrap" dir="ltr">
-              {m.tableTrailingNet}{formatCurrency(totalNet, currency)}
+              {m.tableTrailingNet}{formatCurrency(totalNet, currency, locale)}
             </span>
           ) : (
             <span className="text-xs text-slate-400 tabular-nums">
-              {totalCommissions.toLocaleString('ar-EG')} {m.tableTrailingCount}
+              {totalCommissions.toLocaleString(intlLocale(locale))} {m.tableTrailingCount}
             </span>
           )
         }
@@ -373,7 +373,7 @@ export default async function AdminBrokerCommissionsPage({
                     {/* Basis amount */}
                     <td className="py-3 px-4">
                       <span className="text-xs text-slate-500 tabular-nums whitespace-nowrap" dir="ltr">
-                        {formatCurrency(c.basisAmount, currency)}
+                        {formatCurrency(c.basisAmount, currency, locale)}
                       </span>
                     </td>
 
@@ -389,14 +389,14 @@ export default async function AdminBrokerCommissionsPage({
                     {/* Gross amount */}
                     <td className="py-3 px-4">
                       <span className="text-xs font-medium text-slate-700 tabular-nums whitespace-nowrap" dir="ltr">
-                        {formatCurrency(c.grossAmount, currency)}
+                        {formatCurrency(c.grossAmount, currency, locale)}
                       </span>
                     </td>
 
                     {/* Net amount — strongest, the approval-critical payout figure */}
                     <td className="py-3 px-4">
                       <span className="text-sm font-semibold text-slate-900 tabular-nums whitespace-nowrap" dir="ltr">
-                        {formatCurrency(c.netAmount, currency)}
+                        {formatCurrency(c.netAmount, currency, locale)}
                       </span>
                     </td>
 
@@ -407,7 +407,7 @@ export default async function AdminBrokerCommissionsPage({
 
                     {/* Due date */}
                     <td className="py-3.5 px-4 text-2xs text-slate-400 whitespace-nowrap">
-                      {formatDate(c.earnedAt)}
+                      {formatDate(c.earnedAt, locale)}
                     </td>
 
                     {/* Action */}

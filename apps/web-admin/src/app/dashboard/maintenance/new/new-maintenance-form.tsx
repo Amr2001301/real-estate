@@ -33,9 +33,11 @@ interface AdminOption extends Option {
 function ItemWarranty({
   item,
   m,
+  locale = 'ar',
 }: {
   item: MaintenanceItemOption;
   m: ReturnType<typeof uiT>['pages']['maintenanceForm'];
+  locale?: Locale;
 }) {
   if (!item.warrantyStart) {
     return <span className="inline-flex items-center gap-1 text-slate-500"><Clock className="h-3 w-3" /> {m.warrantyNotStarted}</span>;
@@ -44,7 +46,7 @@ function ItemWarranty({
     return (
       <span className="inline-flex items-center gap-1 text-success-700">
         <ShieldCheck className="h-3 w-3" />
-        {item.warrantyEnd ? m.warrantyIn(formatDate(item.warrantyEnd)) : m.warrantyInNoDate}
+        {item.warrantyEnd ? m.warrantyIn(formatDate(item.warrantyEnd, locale)) : m.warrantyInNoDate}
       </span>
     );
   }
@@ -240,7 +242,7 @@ export function NewMaintenanceForm({
                         <Check className="h-3 w-3" />
                       </span>
                     </div>
-                    <div className="mt-1.5 text-[11px]"><ItemWarranty item={it} m={m} /></div>
+                    <div className="mt-1.5 text-[11px]"><ItemWarranty item={it} m={m} locale={locale} /></div>
                   </button>
                 );
               })}

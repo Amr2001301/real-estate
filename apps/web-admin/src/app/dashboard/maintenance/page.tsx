@@ -12,7 +12,7 @@ import type {
   MaintenanceStatus,
   MaintenanceReviewStatus,
 } from '@/lib/types';
-import { formatDate, tx, maintenanceSlaLabel, warrantyMonthsLabel } from '@/lib/format';
+import { formatDate, tx, maintenanceSlaLabel, warrantyMonthsLabel, intlLocale } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { Select } from '@/components/ui/select';
@@ -275,7 +275,7 @@ export default async function MaintenancePage({
         trailing={
           reqsRes.data ? (
             <span className="text-xs text-slate-400 tabular-nums">
-              {reqsRes.data.meta.total.toLocaleString('ar-EG')} {m.requestSuffix}
+              {reqsRes.data.meta.total.toLocaleString(intlLocale(locale))} {m.requestSuffix}
             </span>
           ) : undefined
         }
@@ -377,14 +377,14 @@ export default async function MaintenancePage({
                             'text-[12px] tabular-nums',
                             overdue ? 'text-danger-600 font-semibold' : 'text-slate-500',
                           )}>
-                            {formatDate(row.dueAt)}{overdue ? m.overdue : ''}
+                            {formatDate(row.dueAt, locale)}{overdue ? m.overdue : ''}
                           </span>
                         ) : (
                           <span className="text-slate-300 text-xs">—</span>
                         )}
                       </td>
                       <td className="px-5 py-3.5 text-[12px] text-slate-400 tabular-nums whitespace-nowrap">
-                        {formatDate(row.createdAt)}
+                        {formatDate(row.createdAt, locale)}
                       </td>
                       <td className="px-5 py-3.5 whitespace-nowrap">
                         <Link href={`/dashboard/maintenance/${row.id}`}>
@@ -425,8 +425,8 @@ export default async function MaintenancePage({
         {cats.length > 0 && (
           <div className="px-5 pt-5 pb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {cats.map((c) => {
-              const sla = maintenanceSlaLabel(c.slaDurationMinutes);
-              const warranty = warrantyMonthsLabel(c.warrantyDurationMonths);
+              const sla = maintenanceSlaLabel(c.slaDurationMinutes, locale);
+              const warranty = warrantyMonthsLabel(c.warrantyDurationMonths, locale);
               return (
                 <div
                   key={c.id}

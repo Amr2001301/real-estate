@@ -16,6 +16,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import type { Lead, LeadStage } from '@/lib/types';
+import type { Locale } from '@/lib/locale';
 import { useToast } from '@/components/ui/toast';
 import { updateStageAction } from '@/app/dashboard/leads/actions';
 import { StageColumn } from './stage-column';
@@ -34,6 +35,7 @@ const STAGES: Array<{ stage: LeadStage; label: string; tone: Tone }> = [
 
 interface Props {
   initialLeads: Lead[];
+  locale?: Locale;
   /** Authoritative pipeline counts from /leads/pipeline. */
   counts: Partial<Record<LeadStage, number>>;
 }
@@ -50,7 +52,7 @@ function leadsKey(leads: Lead[]): string {
   return leads.map((l) => `${l.id}:${l.stage}`).join('|');
 }
 
-export function LeadPipelineBoard({ initialLeads, counts }: Props) {
+export function LeadPipelineBoard({ initialLeads, counts, locale = 'ar' }: Props) {
   const router = useRouter();
   const toast = useToast();
 
@@ -168,6 +170,7 @@ export function LeadPipelineBoard({ initialLeads, counts }: Props) {
                     key={lead.id}
                     lead={lead}
                     isPending={pendingIds.has(lead.id)}
+                    locale={locale}
                   />
                 ))}
                 {items.length > 0 && total > items.length && (
@@ -184,7 +187,7 @@ export function LeadPipelineBoard({ initialLeads, counts }: Props) {
       <DragOverlay dropAnimation={null}>
         {activeLead ? (
           <div className="w-[300px] sm:w-[316px] cursor-grabbing">
-            <LeadCardOverlay lead={activeLead} />
+            <LeadCardOverlay lead={activeLead} locale={locale} />
           </div>
         ) : null}
       </DragOverlay>
@@ -229,7 +232,7 @@ function DroppableStageColumn({
  * dnd-kit measures it correctly, but the activator (handle) is the grip.
  */
 
-function DraggableLeadCard({ lead, isPending }: { lead: Lead; isPending: boolean }) {
+function DraggableLeadCard({ lead, isPending, locale = 'ar' }: { lead: Lead; isPending: boolean; locale?: Locale }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging } =
     useDraggable({ id: lead.id });
 
@@ -245,7 +248,7 @@ function DraggableLeadCard({ lead, isPending }: { lead: Lead; isPending: boolean
         prefetch={false}
         className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 hover:-translate-y-px transition-transform duration-150"
       >
-        <LeadCardDraggableBody lead={lead} />
+        <LeadCardDraggableBody lead={lead} locale={locale} />
       </Link>
 
       {/* Drag handle — covers the small grip glyph at the end side of the card footer.

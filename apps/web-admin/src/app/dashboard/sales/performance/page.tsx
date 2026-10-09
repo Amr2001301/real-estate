@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
-import { formatCurrency } from '@/lib/format';
+import { formatCurrency, intlLocale } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
@@ -239,7 +239,7 @@ export default async function SalesPerformancePage({
           },
           {
             label:     m.kpiTotalSales,
-            value:     formatCurrency(totalAchieved, currency),
+            value:     formatCurrency(totalAchieved, currency, locale),
             icon:      <Wallet />,
             tone:      'success',
             sub:       m.kpiTotalSalesSub(rows.length),
@@ -254,7 +254,7 @@ export default async function SalesPerformancePage({
           },
           {
             label:     m.kpiBonus,
-            value:     formatCurrency(totalBonusAmt, currency),
+            value:     formatCurrency(totalBonusAmt, currency, locale),
             icon:      <BadgePercent />,
             tone:      'brand',
             sub:       m.kpiBonusSub(bonus.length),
@@ -370,11 +370,11 @@ export default async function SalesPerformancePage({
                   <div className="hidden lg:block min-w-0 space-y-1">
                     <div className="flex items-baseline gap-1 flex-wrap">
                       <span className="text-[13px] font-black tabular-nums text-slate-900">
-                        {row.achievedAmount > 0 ? formatCurrency(row.achievedAmount, currency) : '—'}
+                        {row.achievedAmount > 0 ? formatCurrency(row.achievedAmount, currency, locale) : '—'}
                       </span>
                       {row.targetAmount !== null ? (
                         <span className="text-[12px] font-medium tabular-nums text-slate-400">
-                          / {formatCurrency(row.targetAmount, currency)}
+                          / {formatCurrency(row.targetAmount, currency, locale)}
                         </span>
                       ) : (
                         <span className="text-[11px] text-slate-300">{m.noTargetLabel}</span>
@@ -396,9 +396,9 @@ export default async function SalesPerformancePage({
                   {/* Mobile: amount + pipeline */}
                   <div className="lg:hidden flex items-center justify-between gap-3 pt-2 mt-2 border-t border-hairline/60">
                     <p className="text-[13px] font-black tabular-nums text-slate-900">
-                      {row.achievedAmount > 0 ? formatCurrency(row.achievedAmount, currency) : '—'}
+                      {row.achievedAmount > 0 ? formatCurrency(row.achievedAmount, currency, locale) : '—'}
                       {row.targetAmount !== null && (
-                        <span className="text-[10px] text-slate-400 font-normal"> / {formatCurrency(row.targetAmount, currency)}</span>
+                        <span className="text-[10px] text-slate-400 font-normal"> / {formatCurrency(row.targetAmount, currency, locale)}</span>
                       )}
                     </p>
                     <div className="flex items-center gap-3">
@@ -424,7 +424,7 @@ export default async function SalesPerformancePage({
             </div>
             <div className="hidden lg:block">
               <span className="text-[13px] font-bold tabular-nums text-slate-800">
-                {totalAchieved > 0 ? formatCurrency(totalAchieved, currency) : '—'}
+                {totalAchieved > 0 ? formatCurrency(totalAchieved, currency, locale) : '—'}
               </span>
             </div>
             <CountCell value={totalLeads}     color="text-sky-600"     bold />
@@ -479,7 +479,7 @@ export default async function SalesPerformancePage({
                       />
                     </div>
                     <span className={cn('text-[18px] font-black tabular-nums leading-none w-8 text-end shrink-0', stage.text)}>
-                      {stage.value.toLocaleString('ar-EG')}
+                      {stage.value.toLocaleString(intlLocale(locale))}
                     </span>
                   </div>
                 </div>
@@ -532,14 +532,14 @@ export default async function SalesPerformancePage({
                           <p className="text-[11px] text-slate-400 mt-0.5">
                             {entry.rule?.name ?? (entry.source === 'CONTRACT_AUTO' ? m.bonusAutoCommission : m.bonusManual)}
                             {entry.commissionPct ? ` · ${entry.commissionPct}%` : ''}
-                            {entry.basisAmount ? ` ${m.bonusBasisPrefix}${formatCurrency(Number(entry.basisAmount), currency)}` : ''}
+                            {entry.basisAmount ? ` ${m.bonusBasisPrefix}${formatCurrency(Number(entry.basisAmount), currency, locale)}` : ''}
                           </p>
                         </div>
                         <span className={cn('text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0', s.cls)}>
                           {s.label}
                         </span>
                         <p dir="ltr" className="text-[13px] font-black tabular-nums text-slate-900 shrink-0 whitespace-nowrap">
-                          {formatCurrency(Number(entry.amount), currency)}
+                          {formatCurrency(Number(entry.amount), currency, locale)}
                         </p>
                       </div>
                     );
@@ -560,7 +560,7 @@ export default async function SalesPerformancePage({
                     })}
                   </div>
                   <p dir="ltr" className="text-[14px] font-black tabular-nums text-slate-900">
-                    {formatCurrency(totalBonusAmt, currency)}
+                    {formatCurrency(totalBonusAmt, currency, locale)}
                   </p>
                 </div>
               </>

@@ -88,7 +88,7 @@ export default async function AppointmentDetailPage({
             <CardBody className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-slate-500 mb-0.5">{m.fieldAppointment}</p>
-                <p className="font-medium">{formatDateTime(appt.scheduledAt)}</p>
+                <p className="font-medium">{formatDateTime(appt.scheduledAt, locale)}</p>
               </div>
               {appt.durationMinutes && (
                 <div>
@@ -111,13 +111,13 @@ export default async function AppointmentDetailPage({
               {appt.confirmedAt && (
                 <div>
                   <p className="text-slate-500 mb-0.5">{m.fieldConfirmedAt}</p>
-                  <p className="font-medium">{formatDateTime(appt.confirmedAt)}</p>
+                  <p className="font-medium">{formatDateTime(appt.confirmedAt, locale)}</p>
                 </div>
               )}
               {appt.completedAt && (
                 <div>
                   <p className="text-slate-500 mb-0.5">{m.fieldCompletedAt}</p>
-                  <p className="font-medium">{formatDateTime(appt.completedAt)}</p>
+                  <p className="font-medium">{formatDateTime(appt.completedAt, locale)}</p>
                 </div>
               )}
               {appt.salesNotes && (
@@ -174,7 +174,7 @@ export default async function AppointmentDetailPage({
                     <p className="text-slate-700 whitespace-pre-wrap">{appt.customerRatingText}</p>
                   )}
                   <p className="text-xs text-slate-400">
-                    {m.customerRatingSubmittedAt(formatDateTime(appt.customerRatingSubmittedAt))}
+                    {m.customerRatingSubmittedAt(formatDateTime(appt.customerRatingSubmittedAt, locale))}
                   </p>
                 </div>
               ) : (
@@ -200,7 +200,7 @@ export default async function AppointmentDetailPage({
                     <p className="text-slate-700 whitespace-pre-wrap">{appt.salesRatingText}</p>
                   )}
                   <p className="text-xs text-slate-400">
-                    {m.salesRatingLastUpdate(formatDateTime(appt.salesRatingSubmittedAt))}
+                    {m.salesRatingLastUpdate(formatDateTime(appt.salesRatingSubmittedAt, locale))}
                   </p>
                 </div>
               )}
@@ -348,7 +348,7 @@ export default async function AppointmentDetailPage({
               </CardHeader>
               <CardBody className="text-sm">
                 <p>{appt.createdBy.fullName}</p>
-                <p className="text-slate-400 text-xs mt-0.5">{formatDate(appt.createdAt)}</p>
+                <p className="text-slate-400 text-xs mt-0.5">{formatDate(appt.createdAt, locale)}</p>
               </CardBody>
             </Card>
           )}

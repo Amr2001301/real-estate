@@ -147,7 +147,7 @@ export default function PortalReservationForm({
   function toUnitOption(u: PortalUnit): SearchOption<PortalUnit> {
     return {
       id: u.id,
-      label: `${u.code} • ${tx(u.building.phase.project.name, locale)} — ${formatCurrency(u.price, currency)}`,
+      label: `${u.code} • ${tx(u.building.phase.project.name, locale)} — ${formatCurrency(u.price, currency, locale)}`,
       raw: u,
     };
   }
@@ -332,7 +332,7 @@ export default function PortalReservationForm({
                       </option>
                       {plans.map((p) => (
                         <option key={p.id} value={p.id}>
-                          {t.planOptionFn(p.name, formatCurrency(p.reservationAmount, currency))}
+                          {t.planOptionFn(p.name, formatCurrency(p.reservationAmount, currency, locale))}
                         </option>
                       ))}
                     </Select>
@@ -347,7 +347,7 @@ export default function PortalReservationForm({
                   <div className="flex items-center justify-between rounded-xl bg-white ring-1 ring-inset ring-hairline px-4 py-3">
                     <span className="text-sm text-slate-600">{t.bookingAmountRequired}</span>
                     <span className="text-base font-bold text-slate-900 tabular-nums">
-                      {formatCurrency(selectedPlan.reservationAmount, currency)}
+                      {formatCurrency(selectedPlan.reservationAmount, currency, locale)}
                     </span>
                   </div>
                 )}

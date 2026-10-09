@@ -23,7 +23,7 @@ import { api, safe } from '@/lib/api';
 import type { PortalLead, AppointmentStatus } from '@/lib/types';
 import { tx, formatDate, formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { getLocale } from '@/lib/locale';
+import { getLocale, type Locale } from '@/lib/locale';
 import { portalLeadsVisitsT } from '@/messages/portal/leads-visits';
 import {
   PremiumPageHero,
@@ -60,12 +60,14 @@ function StatusTimeline({
   approvedAt,
   rejectedAt,
   m,
+  locale = 'ar',
 }: {
   status: PortalLead['brokerApprovalStatus'];
   submittedAt: string;
   approvedAt: string | null;
   rejectedAt: string | null;
   m: ReturnType<typeof portalLeadsVisitsT>['leads']['detail']['timeline'];
+  locale?: Locale;
 }) {
   const resolved = status === 'APPROVED' || status === 'REJECTED' || status === 'DUPLICATE';
 
@@ -110,7 +112,7 @@ function StatusTimeline({
             <p className={cn('text-xs font-semibold', s.done ? 'text-slate-800' : 'text-slate-400')}>
               {s.label}
             </p>
-            {s.at && <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">{formatDate(s.at)}</p>}
+            {s.at && <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">{formatDate(s.at, locale)}</p>}
           </div>
         </li>
       ))}
@@ -347,6 +349,7 @@ export default async function PortalLeadDetailPage({
                 approvedAt={lead.brokerApprovedAt}
                 rejectedAt={lead.brokerRejectedAt}
                 m={t.timeline}
+                locale={locale}
               />
             </PremiumSectionCard>
 
@@ -387,7 +390,7 @@ export default async function PortalLeadDetailPage({
                           }
                           <div className="min-w-0">
                             <CodeText className="text-xs font-semibold text-slate-800">{a.visitNumber}</CodeText>
-                            <p className="text-2xs text-slate-500 mt-0.5" dir="ltr">{formatDateTime(a.scheduledAt)}</p>
+                            <p className="text-2xs text-slate-500 mt-0.5" dir="ltr">{formatDateTime(a.scheduledAt, locale)}</p>
                           </div>
                         </div>
                         <span className={cn(
@@ -420,7 +423,7 @@ export default async function PortalLeadDetailPage({
                         {n.sales?.fullName && (
                           <span className="font-medium text-slate-500">{n.sales.fullName} · </span>
                         )}
-                        {formatDateTime(n.createdAt)}
+                        {formatDateTime(n.createdAt, locale)}
                       </p>
                     </li>
                   ))}
@@ -466,20 +469,20 @@ export default async function PortalLeadDetailPage({
                 </InfoRow>
                 <InfoRow label={t.submittedAt} icon={<CalendarDays className="h-3.5 w-3.5" />}>
                   <span className="text-slate-700 text-xs tabular-nums">
-                    {lead.brokerSubmittedAt ? formatDate(lead.brokerSubmittedAt) : '—'}
+                    {lead.brokerSubmittedAt ? formatDate(lead.brokerSubmittedAt, locale) : '—'}
                   </span>
                 </InfoRow>
                 {lead.brokerApprovedAt && (
                   <InfoRow label={t.approvedAt} icon={<CheckCircle2 className="h-3.5 w-3.5" />}>
                     <span className="text-emerald-700 text-xs font-semibold tabular-nums">
-                      {formatDate(lead.brokerApprovedAt)}
+                      {formatDate(lead.brokerApprovedAt, locale)}
                     </span>
                   </InfoRow>
                 )}
                 {lead.brokerRejectedAt && (
                   <InfoRow label={t.rejectedAt} icon={<XCircle className="h-3.5 w-3.5" />}>
                     <span className="text-red-600 text-xs font-semibold tabular-nums">
-                      {formatDate(lead.brokerRejectedAt)}
+                      {formatDate(lead.brokerRejectedAt, locale)}
                     </span>
                   </InfoRow>
                 )}

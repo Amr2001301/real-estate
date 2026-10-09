@@ -130,13 +130,13 @@ export default async function CompaniesPage() {
                       {c.userCount}{c.maxUsers ? ` / ${c.maxUsers}` : ''}
                     </td>
                     <td className="px-4 py-3.5 text-slate-500 text-[12px]">
-                      {c.subscriptionStartAt ? formatDate(c.subscriptionStartAt) : '—'}
+                      {c.subscriptionStartAt ? formatDate(c.subscriptionStartAt, locale) : '—'}
                     </td>
                     <td className="px-4 py-3.5 text-slate-500 text-[12px]">
-                      {c.subscriptionEndAt ? formatDate(c.subscriptionEndAt) : '—'}
+                      {c.subscriptionEndAt ? formatDate(c.subscriptionEndAt, locale) : '—'}
                     </td>
                     <td className="px-4 py-3.5 text-slate-400 text-[12px]">
-                      {formatDate(c.createdAt)}
+                      {formatDate(c.createdAt, locale)}
                     </td>
                     <td className="px-4 py-3.5">
                       <Link

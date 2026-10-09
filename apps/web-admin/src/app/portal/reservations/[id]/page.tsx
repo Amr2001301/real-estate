@@ -221,7 +221,7 @@ export default async function PortalReservationDetailPage({
                       {res.unit.price != null && (
                         <div className="text-end">
                           <p className="text-2xs font-medium uppercase tracking-wide text-slate-500">{t.unitPrice}</p>
-                          <p className="text-sm font-bold text-slate-900 tabular-nums mt-0.5">{formatCurrency(res.unit.price, currency)}</p>
+                          <p className="text-sm font-bold text-slate-900 tabular-nums mt-0.5">{formatCurrency(res.unit.price, currency, locale)}</p>
                         </div>
                       )}
                     </div>
@@ -248,13 +248,13 @@ export default async function PortalReservationDetailPage({
                   />
                   <MetricTile
                     label={m.common.lockedAmount}
-                    value={res.commissionLockedAmount != null ? formatCurrency(res.commissionLockedAmount, currency) : '—'}
+                    value={res.commissionLockedAmount != null ? formatCurrency(res.commissionLockedAmount, currency, locale) : '—'}
                     size="md"
                   />
-                  <MetricTile label={t.bookingAmount} value={formatCurrency(res.bookingAmount, currency)} size="md" />
+                  <MetricTile label={t.bookingAmount} value={formatCurrency(res.bookingAmount, currency, locale)} size="md" />
                   <MetricTile
                     label={t.planTotal}
-                    value={res.snapshotTotalPayable ? formatCurrency(res.snapshotTotalPayable, currency) : '—'}
+                    value={res.snapshotTotalPayable ? formatCurrency(res.snapshotTotalPayable, currency, locale) : '—'}
                     size="md"
                   />
                 </MetricGrid>
@@ -292,7 +292,7 @@ export default async function PortalReservationDetailPage({
                             {a.note && <p className="text-2xs text-slate-500 mt-0.5 leading-relaxed">{a.note}</p>}
                             {a.actor?.fullName && <p className="text-2xs text-slate-400 mt-0.5">{a.actor.fullName}</p>}
                           </div>
-                          <p className="text-2xs text-slate-400 whitespace-nowrap shrink-0 tabular-nums">{formatDateTime(a.createdAt)}</p>
+                          <p className="text-2xs text-slate-400 whitespace-nowrap shrink-0 tabular-nums">{formatDateTime(a.createdAt, locale)}</p>
                         </div>
                       </li>
                     );
@@ -337,12 +337,12 @@ export default async function PortalReservationDetailPage({
                   </InfoRow>
                 )}
                 <InfoRow label={m.common.createdAt} icon={<CalendarRange className="h-3.5 w-3.5" />}>
-                  <span className="text-slate-700 text-xs tabular-nums">{formatDate(res.createdAt)}</span>
+                  <span className="text-slate-700 text-xs tabular-nums">{formatDate(res.createdAt, locale)}</span>
                 </InfoRow>
                 {res.expiresAt && (
                   <InfoRow label={t.expiresAt} icon={<CalendarX2 className="h-3.5 w-3.5" />}>
                     <span className={cn('text-xs tabular-nums font-medium', isExpired ? 'text-amber-700' : 'text-slate-700')}>
-                      {formatDate(res.expiresAt)}
+                      {formatDate(res.expiresAt, locale)}
                       {isExpired && <span className="ms-1 text-2xs bg-amber-100 text-amber-700 rounded px-1.5 py-0.5">{t.expiredBadge}</span>}
                     </span>
                   </InfoRow>

@@ -7,7 +7,7 @@ import type {
   DocumentOwnerType,
   Paged,
 } from '@/lib/types';
-import { formatDateTime, formatDate } from '@/lib/format';
+import { formatDateTime, formatDate, intlLocale } from '@/lib/format';
 import { Badge, type BadgeTone } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -180,7 +180,7 @@ export default async function DocumentsPage({
           },
           {
             label: m.metricLastUpload,
-            value: lastDate ? formatDate(lastDate) : '—',
+            value: lastDate ? formatDate(lastDate, locale) : '—',
             icon: <Clock className="h-4 w-4" />,
             tone: 'neutral',
             valueSize: 'compact',
@@ -251,7 +251,7 @@ export default async function DocumentsPage({
         trailing={
           meta ? (
             <span className="text-xs text-slate-400 tabular-nums">
-              {meta.total.toLocaleString('ar-EG')} {m.sectionCount}
+              {meta.total.toLocaleString(intlLocale(locale))} {m.sectionCount}
             </span>
           ) : undefined
         }
@@ -346,7 +346,7 @@ export default async function DocumentsPage({
                       </td>
 
                       <td className="py-3 px-4 text-xs text-slate-500 whitespace-nowrap">
-                        {formatDateTime(row.createdAt)}
+                        {formatDateTime(row.createdAt, locale)}
                       </td>
 
                       <td className="py-3 ps-4 pe-5 text-end">

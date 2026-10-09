@@ -170,7 +170,7 @@ export default async function PortalUnitsPage({
                       {t.areaFn(u.area)} · {t.roomsFn(u.bedrooms, u.bathrooms, u.floor)}
                     </p>
                     <p className="font-bold text-slate-900 tabular-nums text-sm shrink-0">
-                      {formatCurrency(u.price, currency)}
+                      {formatCurrency(u.price, currency, locale)}
                     </p>
                   </div>
                 </li>
@@ -228,7 +228,7 @@ export default async function PortalUnitsPage({
 
                       <td className="py-3 px-4 whitespace-nowrap">
                         <p className="font-bold text-slate-900 tabular-nums text-sm">
-                          {formatCurrency(u.price, currency)}
+                          {formatCurrency(u.price, currency, locale)}
                         </p>
                       </td>
 

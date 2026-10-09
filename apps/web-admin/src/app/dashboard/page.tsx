@@ -23,7 +23,7 @@ import { getSession } from '@/lib/session';
 import { cn } from '@/lib/cn';
 import { formatCompact } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
-import { getLocale } from '@/lib/locale';
+import { getLocale, type Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { ChartPanel } from '@/components/dashboard/chart-panel';
@@ -185,11 +185,13 @@ function RevenueCommandStrip({
   financial,
   symbol,
   m,
+  locale = 'ar',
 }: {
   kpis:      AdminSummary['kpis'] | undefined | null;
   financial: AdminSummary['financial'] | undefined | null;
   symbol?:   string;
   m:         ReturnType<typeof uiT>['pages']['dashboard'];
+  locale?:   Locale;
 }) {
   const hasFin     = financial != null;
   const total      = financial?.totalContractValue     ?? 0;
@@ -221,7 +223,7 @@ function RevenueCommandStrip({
   const tiles: CommandTile[] = [
     {
       label:    m.kpi.totalContracts,
-      value:    hasFin ? formatCompact(total, symbol) : '—',
+      value:    hasFin ? formatCompact(total, symbol, locale) : '—',
       sub:      m.kpi.totalContractsSub,
       valueCls: 'text-slate-900',
       iconCls:  'bg-brand-50 text-brand-600 ring-1 ring-brand-100',
@@ -229,7 +231,7 @@ function RevenueCommandStrip({
     },
     {
       label:    m.kpi.totalCollected,
-      value:    hasFin ? formatCompact(collected, symbol) : '—',
+      value:    hasFin ? formatCompact(collected, symbol, locale) : '—',
       sub:      rate !== null ? m.collectedRateSub(rate) : '—',
       valueCls: 'text-success-700',
       iconCls:  'bg-success-50 text-success-600 ring-1 ring-success-100',
@@ -252,7 +254,7 @@ function RevenueCommandStrip({
     },
     {
       label:    m.kpi.overdue,
-      value:    hasFin ? formatCompact(overdue, symbol) : '—',
+      value:    hasFin ? formatCompact(overdue, symbol, locale) : '—',
       sub:      overdue > 0
                   ? overdueRate !== null
                     ? m.overdueRateSub(overdueRate)
@@ -434,10 +436,12 @@ function TopSalesCard({
   rows,
   symbol,
   m,
+  locale = 'ar',
 }: {
   rows: PerformanceRow[];
   symbol?: string;
   m: ReturnType<typeof uiT>['pages']['dashboard'];
+  locale?: Locale;
 }) {
   return (
     <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
@@ -469,7 +473,7 @@ function TopSalesCard({
                 <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">{r.signedContractsCount} {m.topSales.contractSuffix}</p>
               </div>
               <p className="text-xs font-black tabular-nums text-emerald-700 shrink-0">
-                {formatCompact(r.achievedAmount, symbol)}
+                {formatCompact(r.achievedAmount, symbol, locale)}
               </p>
             </div>
           ))}
@@ -489,10 +493,12 @@ function TopBrokersCard({
   rows,
   symbol,
   m,
+  locale = 'ar',
 }: {
   rows: TopBrokerRow[];
   symbol?: string;
   m: ReturnType<typeof uiT>['pages']['dashboard'];
+  locale?: Locale;
 }) {
   return (
     <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
@@ -524,7 +530,7 @@ function TopBrokersCard({
                 <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">{r.contractsSigned} {m.topBrokers.contractSuffix}</p>
               </div>
               <p className="text-xs font-black tabular-nums text-violet-700 shrink-0">
-                {formatCompact(Number(r.salesGross), symbol)}
+                {formatCompact(Number(r.salesGross), symbol, locale)}
               </p>
             </div>
           ))}
@@ -545,11 +551,13 @@ function CashFlowPreviewCard({
   overdueTotal,
   symbol,
   m,
+  locale = 'ar',
 }: {
   forecast:     NonNullable<AdminSummary['cashflowForecast']>;
   overdueTotal: number;
   symbol?:      string;
   m:            ReturnType<typeof uiT>['pages']['dashboard'];
+  locale?:      Locale;
 }) {
   const { next30, next3160, next6190 } = forecast;
   const grandTotal = next30 + next3160 + next6190 + overdueTotal;
@@ -573,7 +581,7 @@ function CashFlowPreviewCard({
             {grandTotal > 0 && (
               <p className="text-[11px] text-slate-400 mt-0.5">
                 {m.cashFlow.totalSub}{' '}
-                <span className="font-semibold text-slate-600">{formatCompact(grandTotal, symbol)}</span>
+                <span className="font-semibold text-slate-600">{formatCompact(grandTotal, symbol, locale)}</span>
               </p>
             )}
           </div>
@@ -593,7 +601,7 @@ function CashFlowPreviewCard({
             <div key={slot.label} className="bg-surface px-6 py-5 flex flex-col gap-2.5">
               <p className="text-[11px] font-medium text-slate-400 leading-none">{slot.label}</p>
               <p className={cn('text-[24px] font-black tabular-nums leading-none tracking-tight', slot.valueCls)}>
-                {formatCompact(slot.amount, symbol)}
+                {formatCompact(slot.amount, symbol, locale)}
               </p>
               <div className="h-1.5 w-full rounded-full bg-surface-muted overflow-hidden">
                 <div className={cn('h-full rounded-full', slot.barCls)} style={{ width: `${pct}%` }} />
@@ -622,7 +630,7 @@ export default async function DashboardHome() {
     getLocale(),
   ]);
   const m      = uiT(locale).pages.dashboard;
-  const symbol = currencySymbol(currency);
+  const symbol = currencySymbol(currency, locale);
   const now    = new Date();
   const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
@@ -711,7 +719,7 @@ export default async function DashboardHome() {
 
       {/* ── KPI Strip — KEEP EXACTLY ──────────────────────────────────────────── */}
       {summary && (
-        <RevenueCommandStrip kpis={kpis} financial={summary.financial} symbol={symbol} m={m} />
+        <RevenueCommandStrip kpis={kpis} financial={summary.financial} symbol={symbol} m={m} locale={locale} />
       )}
 
       {/* ── Compact Action Bar ────────────────────────────────────────────────── */}
@@ -751,8 +759,8 @@ export default async function DashboardHome() {
 
         {/* Top Performers — 1/3 */}
         <div className="space-y-4">
-          <TopSalesCard rows={topSalesRows} symbol={symbol} m={m} />
-          <TopBrokersCard rows={topBrokerRows} symbol={symbol} m={m} />
+          <TopSalesCard rows={topSalesRows} symbol={symbol} m={m} locale={locale} />
+          <TopBrokersCard rows={topBrokerRows} symbol={symbol} m={m} locale={locale} />
         </div>
       </div>
 
@@ -777,7 +785,7 @@ export default async function DashboardHome() {
           </ChartPanel>
           {hasFunnel && summary?.funnel && (
             <div className="lg:col-span-5">
-              <SalesFunnelCard funnel={summary.funnel} />
+              <SalesFunnelCard funnel={summary.funnel} locale={locale} />
             </div>
           )}
         </div>
@@ -807,7 +815,7 @@ export default async function DashboardHome() {
               </Link>
             </div>
             <div className="p-5">
-              <ProjectHealthMatrix projects={topProjects} currencySymbol={symbol} />
+              <ProjectHealthMatrix projects={topProjects} currencySymbol={symbol} locale={locale} />
             </div>
           </div>
         </div>
@@ -820,7 +828,7 @@ export default async function DashboardHome() {
           <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch gap-5">
             {hasFinancial && summary?.financial && (
               <div className={cn('lg:col-span-8', leadSlices.length === 0 && 'lg:col-span-12')}>
-                <FinancialHealthCard financial={summary.financial} />
+                <FinancialHealthCard financial={summary.financial} currencySymbol={symbol} locale={locale} />
               </div>
             )}
             {leadSlices.length > 0 && (
@@ -849,6 +857,7 @@ export default async function DashboardHome() {
             overdueTotal={summary.financial?.overdueTotal ?? 0}
             symbol={symbol}
             m={m}
+            locale={locale}
           />
         </div>
       )}

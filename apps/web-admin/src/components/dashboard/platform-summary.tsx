@@ -1,5 +1,6 @@
 import { cn } from '@/lib/cn';
-import { formatCompact } from '@/lib/format';
+import { formatCompact, intlLocale } from '@/lib/format';
+import type { Locale } from '@/lib/locale';
 
 // ── Interfaces ────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,7 @@ interface Props {
   funnel?:         Funnel;
   topProjects?:    TopProject[];
   currencySymbol?: string;
+  locale?:         Locale;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -45,7 +47,7 @@ function convPct(num: number, denom: number): string | null {
 
 // ── FinancialStackedBar ───────────────────────────────────────────────────────
 
-function FinancialStackedBar({ financial, currencySymbol = 'ر.س' }: { financial: Financial; currencySymbol?: string }) {
+function FinancialStackedBar({ financial, currencySymbol = 'ر.س', locale = 'ar' }: { financial: Financial; currencySymbol?: string; locale?: Locale }) {
   const total       = financial.totalContractValue;
   const collected   = financial.totalCollectedVerified;
   const overdue     = financial.overdueTotal;
@@ -60,7 +62,7 @@ function FinancialStackedBar({ financial, currencySymbol = 'ر.س' }: { financia
   const chips = [
     {
       label:    'محصّل',
-      value:    formatCompact(collected, currencySymbol),
+      value:    formatCompact(collected, currencySymbol, locale),
       pct:      Math.round(collectedPct),
       dotCls:   'bg-navy',
       pctCls:   'text-navy',
@@ -68,7 +70,7 @@ function FinancialStackedBar({ financial, currencySymbol = 'ر.س' }: { financia
     },
     {
       label:    'مستحق',
-      value:    formatCompact(pending, currencySymbol),
+      value:    formatCompact(pending, currencySymbol, locale),
       pct:      Math.round(pendingPct),
       dotCls:   'bg-brand-400',
       pctCls:   'text-brand-600',
@@ -76,7 +78,7 @@ function FinancialStackedBar({ financial, currencySymbol = 'ر.س' }: { financia
     },
     {
       label:    'متأخر',
-      value:    formatCompact(overdue, currencySymbol),
+      value:    formatCompact(overdue, currencySymbol, locale),
       pct:      Math.round(overduePct),
       dotCls:   overdue > 0 ? 'bg-danger-700' : 'bg-slate-200',
       pctCls:   overdue > 0 ? 'text-danger-700' : 'text-slate-300',
@@ -92,7 +94,7 @@ function FinancialStackedBar({ financial, currencySymbol = 'ر.س' }: { financia
         <div className="bg-canvas/70 border border-hairline rounded-[14px] p-3.5">
           <p className="text-[11px] text-slate-400 mb-2">إجمالي التعاقدات</p>
           <p className="text-[22px] font-black text-slate-900 tabular-nums leading-none tracking-tight">
-            {formatCompact(total, currencySymbol)}
+            {formatCompact(total, currencySymbol, locale)}
           </p>
         </div>
         <div className="bg-canvas/70 border border-hairline rounded-[14px] p-3.5">
@@ -150,7 +152,7 @@ function FinancialStackedBar({ financial, currencySymbol = 'ر.س' }: { financia
           <div className="flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" />
             <p className="text-[13px] font-bold text-amber-700 tabular-nums">
-              {formatCompact(liabilities, currencySymbol)}
+              {formatCompact(liabilities, currencySymbol, locale)}
             </p>
             <p className="text-[11px] text-slate-400">عمولات + مكافآت</p>
           </div>
@@ -162,7 +164,7 @@ function FinancialStackedBar({ financial, currencySymbol = 'ر.س' }: { financia
 
 // ── FunnelRows ────────────────────────────────────────────────────────────────
 
-function FunnelRows({ funnel }: { funnel: Funnel }) {
+function FunnelRows({ funnel, locale = 'ar' }: { funnel: Funnel; locale?: Locale }) {
   const maxVal = funnel.leads || 1;
 
   const visitsRate   = convPct(funnel.visits,        funnel.leads);
@@ -208,7 +210,7 @@ function FunnelRows({ funnel }: { funnel: Funnel }) {
             <p className="text-[13px] font-semibold text-slate-700 leading-none">{stage.label}</p>
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-[16px] font-bold text-slate-900 tabular-nums leading-none">
-                {stage.value.toLocaleString('ar-SA')}
+                {stage.value.toLocaleString(intlLocale(locale))}
               </span>
               {stage.badge && (
                 <span className={cn(
@@ -234,19 +236,19 @@ function FunnelRows({ funnel }: { funnel: Funnel }) {
 
 // ── Standalone card exports ───────────────────────────────────────────────────
 
-export function FinancialHealthCard({ financial, currencySymbol = 'ر.س' }: { financial: Financial; currencySymbol?: string }) {
+export function FinancialHealthCard({ financial, currencySymbol = 'ر.س', locale = 'ar' }: { financial: Financial; currencySymbol?: string; locale?: Locale }) {
   return (
     <div className="bg-surface border border-hairline rounded-[20px] p-[22px] flex flex-col gap-4 h-full shadow-soft">
       <div>
         <h3 className="text-[15px] font-bold text-slate-900 leading-none">الصحة المالية</h3>
         <p className="text-[12px] text-slate-400 mt-1">توزيع قيمة التعاقدات حسب حالة التحصيل</p>
       </div>
-      <FinancialStackedBar financial={financial} currencySymbol={currencySymbol} />
+      <FinancialStackedBar financial={financial} currencySymbol={currencySymbol} locale={locale} />
     </div>
   );
 }
 
-export function SalesFunnelCard({ funnel }: { funnel: Funnel }) {
+export function SalesFunnelCard({ funnel, locale = 'ar' }: { funnel: Funnel; locale?: Locale }) {
   if (funnel.leads === 0) return null;
   return (
     <div className="bg-surface border border-hairline rounded-[20px] p-[22px] flex flex-col gap-4 h-full shadow-soft">
@@ -254,14 +256,14 @@ export function SalesFunnelCard({ funnel }: { funnel: Funnel }) {
         <h3 className="text-[15px] font-bold text-slate-900 leading-none">مسار التحويل البيعي</h3>
         <p className="text-[12px] text-slate-400 mt-1">من الفرصة حتى توقيع العقد</p>
       </div>
-      <FunnelRows funnel={funnel} />
+      <FunnelRows funnel={funnel} locale={locale} />
     </div>
   );
 }
 
 // ── Main Export ───────────────────────────────────────────────────────────────
 
-export function PlatformSummaryCard({ financial, funnel, topProjects, currencySymbol = 'ر.س' }: Props) {
+export function PlatformSummaryCard({ financial, funnel, topProjects, currencySymbol = 'ر.س', locale = 'ar' }: Props) {
   const hasFin      = financial != null;
   const hasFunnel   = funnel != null && funnel.leads > 0;
   const hasProjects = (topProjects?.length ?? 0) > 0;
@@ -308,7 +310,7 @@ export function PlatformSummaryCard({ financial, funnel, topProjects, currencySy
                 <h3 className="text-[15px] font-bold text-slate-900 leading-none">الصحة المالية</h3>
                 <p className="text-[12px] text-slate-400 mt-1">توزيع قيمة التعاقدات حسب حالة التحصيل</p>
               </div>
-              <FinancialStackedBar financial={financial} currencySymbol={currencySymbol} />
+              <FinancialStackedBar financial={financial} currencySymbol={currencySymbol} locale={locale} />
             </div>
           )}
 
@@ -322,7 +324,7 @@ export function PlatformSummaryCard({ financial, funnel, topProjects, currencySy
                 <h3 className="text-[15px] font-bold text-slate-900 leading-none">مسار التحويل البيعي</h3>
                 <p className="text-[12px] text-slate-400 mt-1">من الفرصة حتى توقيع العقد</p>
               </div>
-              <FunnelRows funnel={funnel} />
+              <FunnelRows funnel={funnel} locale={locale} />
             </div>
           )}
         </div>
@@ -343,7 +345,7 @@ export function PlatformSummaryCard({ financial, funnel, topProjects, currencySy
                 <p className="text-[11px] font-medium text-slate-400">أفضل مبيعات</p>
                 <p className="text-[14px] font-bold text-slate-900 leading-snug">{bestSales.name}</p>
                 <p className="text-[20px] font-black text-slate-900 tabular-nums leading-none mt-1">
-                  {formatCompact(bestSales.contractValue, currencySymbol)}
+                  {formatCompact(bestSales.contractValue, currencySymbol, locale)}
                 </p>
                 <div className="flex items-center gap-1.5 mt-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-brand-500 shrink-0" />

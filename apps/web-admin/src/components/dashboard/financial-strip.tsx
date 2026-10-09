@@ -1,5 +1,6 @@
 import { TrendingUp, BadgeCheck, AlertTriangle, Coins } from 'lucide-react';
 import { formatCurrency } from '@/lib/format';
+import type { Locale } from '@/lib/locale';
 import { cn } from '@/lib/cn';
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
   pendingBonus:           number;
   pendingBrokerPayouts:   number;
   currency?:              string;
+  locale?:                Locale;
 }
 
 interface FinKpiCard {
@@ -28,6 +30,7 @@ export function FinancialStrip({
   pendingBonus,
   pendingBrokerPayouts,
   currency = 'SAR',
+  locale = 'ar',
 }: Props) {
   const collectionRate =
     totalContractValue > 0
@@ -39,28 +42,28 @@ export function FinancialStrip({
   const cards: FinKpiCard[] = [
     {
       label:   'إجمالي قيمة العقود',
-      value:   formatCurrency(totalContractValue, currency),
+      value:   formatCurrency(totalContractValue, currency, locale),
       sub:     'قيمة جميع العقود المُبرمة',
       icon:    <TrendingUp />,
       valueCn: 'text-slate-900',
     },
     {
       label:   'إجمالي المحصّل المؤكد',
-      value:   formatCurrency(totalCollectedVerified, currency),
+      value:   formatCurrency(totalCollectedVerified, currency, locale),
       sub:     collectionRate !== null ? `معدل التحصيل ${collectionRate}%` : 'مدفوعات محققة',
       icon:    <BadgeCheck />,
       valueCn: 'text-success-700',
     },
     {
       label:   'مبالغ متأخرة',
-      value:   formatCurrency(overdueTotal, currency),
+      value:   formatCurrency(overdueTotal, currency, locale),
       sub:     overdueTotal > 0 ? 'أقساط تجاوزت تاريخ الاستحقاق' : 'لا مبالغ متأخرة',
       icon:    <AlertTriangle />,
       valueCn: overdueTotal > 0 ? 'text-danger-700' : 'text-slate-400',
     },
     {
       label:   'التزامات معلقة',
-      value:   formatCurrency(pendingLiabilities, currency),
+      value:   formatCurrency(pendingLiabilities, currency, locale),
       sub:     'عمولات وسطاء + مكافآت فريق',
       icon:    <Coins />,
       valueCn: pendingLiabilities > 0 ? 'text-amber-700' : 'text-slate-400',

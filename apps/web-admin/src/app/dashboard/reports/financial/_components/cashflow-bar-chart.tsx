@@ -6,14 +6,15 @@ import {
 } from 'recharts';
 import type { CashflowTrendPoint } from '@/lib/types';
 import type { Locale } from '@/lib/locale';
+import { intlLocale } from '@/lib/format';
 import { uiT } from '@/messages/ui';
 
 const COLLECTED_COLOR = '#10b981';
 const DUE_COLOR = '#f59e0b';
 
-function CustomTooltip({ active, payload, label, collectedLabel, dueLabel }: {
+function CustomTooltip({ active, payload, label, collectedLabel, dueLabel, locale = 'ar' }: {
   active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string;
-  collectedLabel: string; dueLabel: string;
+  collectedLabel: string; dueLabel: string; locale?: Locale;
 }) {
   if (!active || !payload?.length) return null;
   return (
@@ -29,7 +30,7 @@ function CustomTooltip({ active, payload, label, collectedLabel, dueLabel }: {
             <span className="text-slate-500">{entry.name === 'collected' ? collectedLabel : dueLabel}</span>
           </div>
           <span className="font-semibold tabular-nums text-slate-800">
-            {new Intl.NumberFormat('ar-EG', { maximumFractionDigits: 0 }).format(entry.value)}
+            {new Intl.NumberFormat(intlLocale(locale), { maximumFractionDigits: 0 }).format(entry.value)}
           </span>
         </div>
       ))}
@@ -98,7 +99,7 @@ export function CashflowBarChart({ data, locale = 'ar' }: { data: CashflowTrendP
             width={38}
           />
           <Tooltip
-            content={<CustomTooltip collectedLabel={m.legendCollected} dueLabel={m.legendDue} />}
+            content={<CustomTooltip collectedLabel={m.legendCollected} dueLabel={m.legendDue} locale={locale} />}
             cursor={{ fill: '#f8fafc', radius: 4 }}
           />
           <Bar dataKey="collected" name="collected" fill={COLLECTED_COLOR} radius={[4, 4, 0, 0]} minPointSize={3} />

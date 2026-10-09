@@ -149,7 +149,7 @@ export default async function AdminBrokerLeadDetailPage({
             )}
             <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-slate-500">
               <CalendarRange className="h-3.5 w-3.5 text-slate-400" />
-              {formatDate(lead.brokerSubmittedAt ?? lead.createdAt)}
+              {formatDate(lead.brokerSubmittedAt ?? lead.createdAt, locale)}
             </span>
           </>
         }
@@ -171,7 +171,7 @@ export default async function AdminBrokerLeadDetailPage({
                 <SideRow label={m.labelName} value={lead.fullName} />
                 <SideRow
                   label={m.labelSubmittedAt}
-                  value={formatDate(lead.brokerSubmittedAt ?? lead.createdAt)}
+                  value={formatDate(lead.brokerSubmittedAt ?? lead.createdAt, locale)}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3 p-5 border-t border-hairline">
@@ -295,7 +295,7 @@ export default async function AdminBrokerLeadDetailPage({
                             <p className="text-[11px] text-slate-400 mt-0.5 truncate">{sub}</p>
                           )}
                           <p className="text-[10px] text-slate-400 mt-0.5 tabular-nums">
-                            {formatDateTime(a.createdAt)}
+                            {formatDateTime(a.createdAt, locale)}
                           </p>
                         </div>
                       </li>
@@ -317,7 +317,7 @@ export default async function AdminBrokerLeadDetailPage({
             <p className="text-[13px] font-semibold text-success-700">{m.bannerApprovedTitle}</p>
             <p className="text-[12px] text-slate-600 mt-0.5">
               {lead.brokerApprovedAt
-                ? m.bannerApprovedDate(formatDate(lead.brokerApprovedAt))
+                ? m.bannerApprovedDate(formatDate(lead.brokerApprovedAt, locale))
                 : m.bannerApprovedDefault}
               {lead.assignedSales?.fullName ? m.bannerApprovedSales(lead.assignedSales.fullName) : ''}
             </p>

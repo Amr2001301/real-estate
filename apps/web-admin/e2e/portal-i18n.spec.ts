@@ -5,8 +5,7 @@ test.use({ storageState: BROKER_STORAGE });
 
 /**
  * The broker portal follows the admin-locale cookie like the dashboard. In
- * English no Arabic UI text may remain. Dates and amounts are excluded: the
- * shared formatDate/formatCurrency helpers format in ar-EG for every locale.
+ * English no Arabic may remain — UI text, digits, dates or currency symbols.
  */
 const ROUTES = [
   '/portal', '/portal/performance', '/portal/projects', '/portal/units',
@@ -16,17 +15,15 @@ const ROUTES = [
   '/portal/notifications', '/portal/team', '/portal/profile',
 ];
 
-// A line is UI text when it still has Arabic letters once Arabic-Indic digits,
-// date/number marks and the currency symbols are removed.
-const AR_LETTERS = /[ء-ي]/;
-const strip = (l: string) => l.replace(/[٠-٩٫٬‏؜]/g, '').replace(/ر\.س\.?|ج\.م\.?/g, '');
+// Arabic letters, Arabic-Indic digits and their separators.
+const ARABIC = /[\u0621-\u064A\u0660-\u066C]/;
 
 for (const route of ROUTES) {
   test(`${route} has no Arabic UI text in English`, async ({ page, context, baseURL }) => {
     await context.addCookies([{ name: 'admin-locale', value: 'en', url: baseURL! }]);
     await page.goto(route, { waitUntil: 'networkidle' });
     const text = await page.locator('main').innerText();
-    const arabic = text.split('\n').filter((l) => AR_LETTERS.test(strip(l)));
+    const arabic = text.split('\n').filter((l) => ARABIC.test(l));
     expect(arabic).toEqual([]);
   });
 }

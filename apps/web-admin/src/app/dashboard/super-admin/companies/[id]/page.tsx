@@ -13,6 +13,7 @@ import { Select } from '@/components/ui/select';
 import { Field } from '@/components/form/field';
 import { formatDate } from '@/lib/format';
 import { getClientLocale } from '@/lib/locale-client';
+import type { Locale } from '@/lib/locale';
 import { saT, type SaStrings } from '@/messages/super-admin';
 import { CompanyPricingPanel } from './_pricing-panel';
 import {
@@ -165,7 +166,7 @@ export default function CompanyDetailPage() {
       {company.subscriptionStatus === 'CANCELLING' && (
         <div className="flex items-center gap-2.5 rounded-xl border border-warning-100 bg-warning-50 px-4 py-3 text-sm text-warning-800">
           <AlertTriangle className="h-4 w-4 shrink-0" />
-          {m.detail.cancellingBanner(company.subscriptionEndAt ? formatDate(company.subscriptionEndAt) : '—')}
+          {m.detail.cancellingBanner(company.subscriptionEndAt ? formatDate(company.subscriptionEndAt, locale) : '—')}
         </div>
       )}
 
@@ -222,12 +223,12 @@ export default function CompanyDetailPage() {
                   </Field>
                   <Field label={m.detail.fields.startAt}>
                     <span className="text-[13px] tabular-nums text-slate-700">
-                      {company.subscriptionStartAt ? formatDate(company.subscriptionStartAt) : '—'}
+                      {company.subscriptionStartAt ? formatDate(company.subscriptionStartAt, locale) : '—'}
                     </span>
                   </Field>
                   <Field label={m.detail.fields.endAt}>
                     <span className="text-[13px] tabular-nums text-slate-700">
-                      {company.subscriptionEndAt ? formatDate(company.subscriptionEndAt) : '—'}
+                      {company.subscriptionEndAt ? formatDate(company.subscriptionEndAt, locale) : '—'}
                     </span>
                   </Field>
                   <Field label={m.detail.fields.usersCount}>
@@ -237,7 +238,7 @@ export default function CompanyDetailPage() {
                     </span>
                   </Field>
                   <Field label={m.detail.fields.createdAt}>
-                    <span className="text-[13px] tabular-nums text-slate-700">{formatDate(company.createdAt)}</span>
+                    <span className="text-[13px] tabular-nums text-slate-700">{formatDate(company.createdAt, locale)}</span>
                   </Field>
                   {company.cancelReason && (
                     <div className="col-span-2">
@@ -306,7 +307,7 @@ export default function CompanyDetailPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-[12px] text-slate-500 tabular-nums">
-                          {u.lastLoginAt ? formatDate(u.lastLoginAt) : '—'}
+                          {u.lastLoginAt ? formatDate(u.lastLoginAt, locale) : '—'}
                         </td>
                         <td className="px-4 py-3">
                           <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${u.active ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' : 'bg-slate-100 text-slate-500'}`}>
@@ -419,6 +420,7 @@ export default function CompanyDetailPage() {
                 onClose={() => setShowCancelForm(false)}
                 pending={pending}
                 subscriptionEndAt={company.subscriptionEndAt}
+                locale={locale}
               />
             )}
           </div>
@@ -495,13 +497,14 @@ function EditForm({ company, m, onSave, pending }: {
   );
 }
 
-function CancelForm({ m, cancelLabel, onSubmit, onClose, pending, subscriptionEndAt }: {
+function CancelForm({ m, cancelLabel, onSubmit, onClose, pending, subscriptionEndAt, locale = 'ar' }: {
   m: SaStrings['detail']['cancelForm'];
   cancelLabel: string;
   onSubmit: (data: { immediate: boolean; reason?: string }) => void;
   onClose: () => void;
   pending: boolean;
   subscriptionEndAt: string | null;
+  locale?: Locale;
 }) {
   const [immediate, setImmediate] = useState(false);
   const [reason, setReason] = useState('');
@@ -512,7 +515,7 @@ function CancelForm({ m, cancelLabel, onSubmit, onClose, pending, subscriptionEn
         <div className="space-y-2.5">
           <label className="flex items-start gap-2.5 text-sm cursor-pointer">
             <input type="radio" className="mt-0.5" checked={!immediate} onChange={() => setImmediate(false)} />
-            <span>{m.endOfPeriodFn(subscriptionEndAt ? formatDate(subscriptionEndAt) : '—')}</span>
+            <span>{m.endOfPeriodFn(subscriptionEndAt ? formatDate(subscriptionEndAt, locale) : '—')}</span>
           </label>
           <label className="flex items-start gap-2.5 text-sm cursor-pointer text-danger-700">
             <input type="radio" className="mt-0.5" checked={immediate} onChange={() => setImmediate(true)} />

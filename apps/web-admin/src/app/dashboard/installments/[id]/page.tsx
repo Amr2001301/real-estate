@@ -89,25 +89,25 @@ export default async function InstallmentPlanDetailPage({
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-5">
                 <Field label={m.fieldNetPrice}>
                   <span className="text-[15px] font-bold tabular-nums text-slate-900">
-                    {formatCurrency(plan.netPrice, currency)}
+                    {formatCurrency(plan.netPrice, currency, locale)}
                   </span>
                 </Field>
                 <Field label={m.fieldTotalPrice}>
                   <span className="text-[14px] font-bold tabular-nums text-slate-900">
-                    {formatCurrency(plan.totalPrice, currency)}
+                    {formatCurrency(plan.totalPrice, currency, locale)}
                   </span>
                 </Field>
                 {Number(plan.discountAmount) > 0 && (
                   <Field label={m.fieldDiscount}>
                     <span className="text-[14px] font-bold tabular-nums text-success-700">
-                      − {formatCurrency(plan.discountAmount, currency)}
+                      − {formatCurrency(plan.discountAmount, currency, locale)}
                     </span>
                   </Field>
                 )}
                 <Field label={m.fieldReservation}>
                   <div>
                     <span className={`text-[14px] font-bold tabular-nums ${Number(plan.reservationAmount) > 0 ? 'text-slate-900' : 'text-warning-600'}`}>
-                      {formatCurrency(plan.reservationAmount, currency)}
+                      {formatCurrency(plan.reservationAmount, currency, locale)}
                     </span>
                     {Number(plan.reservationAmount) <= 0 && (
                       <p className="text-[10px] text-warning-700 mt-0.5">
@@ -118,7 +118,7 @@ export default async function InstallmentPlanDetailPage({
                 </Field>
                 <Field label={m.fieldDownPayment}>
                   <span className="text-[14px] font-bold tabular-nums text-slate-900">
-                    {formatCurrency(plan.downPaymentAmount, currency)}
+                    {formatCurrency(plan.downPaymentAmount, currency, locale)}
                     {plan.downPaymentType === 'PERCENTAGE' && (
                       <span className="text-[12px] font-semibold text-slate-400 ms-1.5">
                         ({Number(plan.downPaymentValue)}%)
@@ -148,14 +148,14 @@ export default async function InstallmentPlanDetailPage({
                 {plan.manualStartDate && (
                   <Field label={m.fieldStartDate}>
                     <span className="text-[14px] font-bold text-slate-900">
-                      {formatDate(plan.manualStartDate)}
+                      {formatDate(plan.manualStartDate, locale)}
                     </span>
                   </Field>
                 )}
                 {plan.finalPaymentAmount && Number(plan.finalPaymentAmount) > 0 && (
                   <Field label={m.fieldFinalPayment}>
                     <span className="text-[14px] font-bold tabular-nums text-slate-900">
-                      {formatCurrency(plan.finalPaymentAmount, currency)}
+                      {formatCurrency(plan.finalPaymentAmount, currency, locale)}
                     </span>
                   </Field>
                 )}
@@ -206,13 +206,13 @@ export default async function InstallmentPlanDetailPage({
                               </span>
                             </td>
                             <td className="px-4 py-3 text-[12px] text-slate-600">
-                              {item.dueDate ? formatDate(item.dueDate) : '—'}
+                              {item.dueDate ? formatDate(item.dueDate, locale) : '—'}
                             </td>
                             <td className="px-4 py-3 text-end text-[13px] font-bold tabular-nums text-slate-900">
-                              {formatCurrency(item.amount, currency)}
+                              {formatCurrency(item.amount, currency, locale)}
                             </td>
                             <td className="px-4 py-3 text-end text-[12px] text-slate-400 tabular-nums">
-                              {formatCurrency(item.remainingBalance, currency)}
+                              {formatCurrency(item.remainingBalance, currency, locale)}
                             </td>
                           </tr>
                         ))}
@@ -225,7 +225,7 @@ export default async function InstallmentPlanDetailPage({
                           <td className="px-4 py-3 text-end text-[13px] font-bold text-slate-900 tabular-nums">
                             {formatCurrency(
                               scheduleItems.reduce((s, i) => s + Number(i.amount), 0),
-                              currency,
+                              currency, locale
                             )}
                           </td>
                           <td />
@@ -324,10 +324,10 @@ export default async function InstallmentPlanDetailPage({
                   </SideRow>
                 )}
                 <SideRow label={m.labelCreatedAt}>
-                  <span className="text-[12px] font-medium text-slate-700">{formatDateTime(plan.createdAt)}</span>
+                  <span className="text-[12px] font-medium text-slate-700">{formatDateTime(plan.createdAt, locale)}</span>
                 </SideRow>
                 <SideRow label={m.labelUpdatedAt}>
-                  <span className="text-[12px] font-medium text-slate-700">{formatDateTime(plan.updatedAt)}</span>
+                  <span className="text-[12px] font-medium text-slate-700">{formatDateTime(plan.updatedAt, locale)}</span>
                 </SideRow>
               </div>
             </PremiumSectionCard>

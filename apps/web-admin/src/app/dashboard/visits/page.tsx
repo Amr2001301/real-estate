@@ -270,7 +270,7 @@ export default async function VisitsPage({
                         </td>
                         <td className="py-3 px-4">
                           <div>
-                            <p className="text-slate-800">{formatDate(r.preferredDate)}</p>
+                            <p className="text-slate-800">{formatDate(r.preferredDate, locale)}</p>
                             {r.preferredTime && (
                               <p className="text-xs text-slate-500">{r.preferredTime}</p>
                             )}
@@ -287,7 +287,7 @@ export default async function VisitsPage({
                           )}
                         </td>
                         <td className="py-3 px-4 text-xs text-slate-500 whitespace-nowrap">
-                          {formatDate(r.createdAt)}
+                          {formatDate(r.createdAt, locale)}
                         </td>
                         <td className="py-3 ps-4 pe-5 text-end">
                           <RequestActions request={r} salesOptions={salesOptions} locale={locale} />
@@ -379,7 +379,7 @@ export default async function VisitsPage({
                           </div>
                         </td>
                         <td className="py-3 px-4 text-xs text-slate-700 whitespace-nowrap">
-                          {formatDateTime(a.scheduledAt)}
+                          {formatDateTime(a.scheduledAt, locale)}
                         </td>
                         <td className="py-3 px-4 text-sm text-slate-700">
                           {a.assignedSales?.fullName ?? '—'}

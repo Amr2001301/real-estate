@@ -6,6 +6,8 @@
  * importing from '@/lib/currency' (which is server-only due to api.ts).
  */
 
+import type { Locale } from './locale';
+
 const SYMBOL_MAP: Record<string, string> = {
   SAR: 'ر.س',
   EGP: 'ج.م',
@@ -18,6 +20,8 @@ const SYMBOL_MAP: Record<string, string> = {
   JOD: 'د.أ',
 };
 
-export function currencySymbol(code: string): string {
+/** The short symbol shown next to amounts; in English the ISO code (except $). */
+export function currencySymbol(code: string, locale: Locale = 'ar'): string {
+  if (locale === 'en') return code === 'USD' ? '$' : code;
   return SYMBOL_MAP[code] ?? code;
 }

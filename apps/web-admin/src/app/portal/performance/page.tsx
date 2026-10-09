@@ -123,7 +123,7 @@ export default async function PortalPerformancePage({
   const m        = portalDashboardT(locale);
   const t        = m.performance;
   const currency = await getReportsCurrency();
-  const symbol   = currencySymbol(currency);
+  const symbol   = currencySymbol(currency, locale);
   const qs       = new URLSearchParams();
   for (const key of ['from', 'to', 'projectId', 'brokerAgentId'] as const) {
     const v = sp[key];
@@ -158,9 +158,9 @@ export default async function PortalPerformancePage({
     { label: t.kpi.leadsSubmitted,     value: String(summary.leadsSubmitted),                       icon: <UserPlus />,      iconCls: 'bg-brand-50 text-brand-600 ring-1 ring-brand-100',     topBar: 'from-brand-300 via-brand-500 to-brand-300',   valueCls: 'text-brand-700'   },
     { label: t.kpi.reservations,          value: String(summary.reservationsCreated),                  icon: <BookmarkCheck />, iconCls: 'bg-sky-50 text-sky-600 ring-1 ring-sky-100',           topBar: 'from-sky-300 via-sky-500 to-sky-300',         valueCls: 'text-sky-700'     },
     { label: t.kpi.contractsSigned,     value: String(summary.contractsSigned),                      icon: <FilePen />,       iconCls: 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100', topBar: 'from-emerald-300 via-emerald-500 to-emerald-300', valueCls: 'text-emerald-700' },
-    { label: t.kpi.salesGross, value: formatCompact(Number(summary.salesGross), symbol),     icon: <Banknote />,      iconCls: 'bg-slate-100 text-slate-600 ring-1 ring-slate-200',    topBar: 'from-slate-300 via-slate-400 to-slate-300',   valueCls: 'text-slate-900'   },
-    { label: t.kpi.commissionsNet,   value: formatCompact(Number(summary.commissionsNet), symbol), icon: <BadgePercent />,  iconCls: 'bg-amber-50 text-amber-600 ring-1 ring-amber-100',     topBar: 'from-amber-300 via-amber-500 to-amber-300',   valueCls: 'text-amber-700'   },
-    { label: t.kpi.paid,           value: formatCompact(Number(summary.payoutsTotalNet), symbol),icon: <CircleDollarSign />,iconCls: 'bg-teal-50 text-teal-600 ring-1 ring-teal-100',       topBar: 'from-teal-300 via-teal-500 to-teal-300',     valueCls: 'text-teal-700'    },
+    { label: t.kpi.salesGross, value: formatCompact(Number(summary.salesGross), symbol, locale),     icon: <Banknote />,      iconCls: 'bg-slate-100 text-slate-600 ring-1 ring-slate-200',    topBar: 'from-slate-300 via-slate-400 to-slate-300',   valueCls: 'text-slate-900'   },
+    { label: t.kpi.commissionsNet,   value: formatCompact(Number(summary.commissionsNet), symbol, locale), icon: <BadgePercent />,  iconCls: 'bg-amber-50 text-amber-600 ring-1 ring-amber-100',     topBar: 'from-amber-300 via-amber-500 to-amber-300',   valueCls: 'text-amber-700'   },
+    { label: t.kpi.paid,           value: formatCompact(Number(summary.payoutsTotalNet), symbol, locale),icon: <CircleDollarSign />,iconCls: 'bg-teal-50 text-teal-600 ring-1 ring-teal-100',       topBar: 'from-teal-300 via-teal-500 to-teal-300',     valueCls: 'text-teal-700'    },
   ];
 
   return (
@@ -293,7 +293,7 @@ export default async function PortalPerformancePage({
                         </td>
                         <td className="py-4 px-4">
                           <p className="text-[13px] font-bold text-slate-900 tabular-nums">
-                            {formatCompact(Number(p.salesGross), symbol)}
+                            {formatCompact(Number(p.salesGross), symbol, locale)}
                           </p>
                           <div className="mt-1.5 h-1.5 w-24 rounded-full bg-slate-100 overflow-hidden">
                             <div className="h-full bg-brand-400 rounded-full" style={{ width: `${barPct}%` }} />
@@ -301,12 +301,12 @@ export default async function PortalPerformancePage({
                         </td>
                         <td className="py-4 px-4 tabular-nums">
                           <span className="text-[13px] font-bold text-amber-700">
-                            {formatCompact(Number(p.commissionNet), symbol)}
+                            {formatCompact(Number(p.commissionNet), symbol, locale)}
                           </span>
                         </td>
                         <td className="py-4 px-4 tabular-nums">
                           <span className="text-[13px] font-semibold text-teal-700">
-                            {formatCompact(Number(p.payoutNet), symbol)}
+                            {formatCompact(Number(p.payoutNet), symbol, locale)}
                           </span>
                         </td>
                       </tr>
@@ -366,8 +366,8 @@ export default async function PortalPerformancePage({
                       <td className="py-4 px-4 tabular-nums text-[13px] font-semibold text-brand-700">{a.leadsSubmitted}</td>
                       <td className="py-4 px-4 tabular-nums text-[13px] font-semibold text-sky-700">{a.reservations}</td>
                       <td className="py-4 px-4 tabular-nums text-[13px] font-semibold text-emerald-700">{a.contractsSigned}</td>
-                      <td className="py-4 px-4 tabular-nums text-[13px] font-semibold text-slate-700">{formatCompact(Number(a.salesGross), symbol)}</td>
-                      <td className="py-4 px-4 tabular-nums text-[13px] font-bold text-amber-700">{formatCompact(Number(a.commissionNet), symbol)}</td>
+                      <td className="py-4 px-4 tabular-nums text-[13px] font-semibold text-slate-700">{formatCompact(Number(a.salesGross), symbol, locale)}</td>
+                      <td className="py-4 px-4 tabular-nums text-[13px] font-bold text-amber-700">{formatCompact(Number(a.commissionNet), symbol, locale)}</td>
                     </tr>
                   ))}
                 </tbody>

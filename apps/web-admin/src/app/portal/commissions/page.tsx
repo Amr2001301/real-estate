@@ -123,12 +123,12 @@ export default async function PortalCommissionsPage({
                 <div className="w-px h-4 bg-hairline" />
                 <span>
                   {t.grossLabel}{' '}
-                  <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(pageGross, currency)}</span>
+                  <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(pageGross, currency, locale)}</span>
                 </span>
                 <div className="w-px h-4 bg-hairline" />
                 <span>
                   {t.netLabel}{' '}
-                  <span className="font-semibold text-success-700 tabular-nums">{formatCurrency(pageNet, currency)}</span>
+                  <span className="font-semibold text-success-700 tabular-nums">{formatCurrency(pageNet, currency, locale)}</span>
                 </span>
               </>
             )}
@@ -188,10 +188,10 @@ export default async function PortalCommissionsPage({
 
                     <td className="py-3 px-4">
                       <p className="text-sm font-bold text-slate-900 tabular-nums">
-                        {formatCurrency(c.netAmount, currency)}
+                        {formatCurrency(c.netAmount, currency, locale)}
                       </p>
                       <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">
-                        {t.fromGross(formatCurrency(c.grossAmount, currency))}
+                        {t.fromGross(formatCurrency(c.grossAmount, currency, locale))}
                         {deduction > 0.1 && t.deduction(deduction.toFixed(1))}
                       </p>
                     </td>
@@ -209,7 +209,7 @@ export default async function PortalCommissionsPage({
                     </td>
 
                     <td className="py-3 px-4 text-2xs text-slate-500 whitespace-nowrap">
-                      {formatDate(c.earnedAt)}
+                      {formatDate(c.earnedAt, locale)}
                     </td>
 
                     <td className="py-3 ps-4 pe-5">

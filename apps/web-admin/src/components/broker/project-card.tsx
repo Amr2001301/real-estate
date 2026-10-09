@@ -10,7 +10,7 @@ import {
 import type { PortalProject } from '@/lib/types';
 import type { Locale } from '@/lib/locale';
 import { portalSharedT } from '@/messages/portal/shared';
-import { tx, formatDate } from '@/lib/format';
+import { tx, formatDate, intlLocale } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { ProjectStatusBadge } from '@/components/badges';
 import { ProjectImageLightbox } from '@/components/broker/project-image-lightbox';
@@ -29,7 +29,7 @@ export function ProjectCard({ p, symbol, locale = 'ar' }: { p: PortalProject; sy
   const commissionLabel = commissionPct !== null
     ? `${commissionPct.toFixed(2)}%`
     : fixedAmount !== null
-      ? `${fixedAmount.toLocaleString('ar-EG')} ${currency}`
+      ? `${fixedAmount.toLocaleString(intlLocale(locale))} ${currency}`
       : null;
 
   const description  = tx(p.project.description, locale);
@@ -97,9 +97,9 @@ export function ProjectCard({ p, symbol, locale = 'ar' }: { p: PortalProject; sy
             <span className="inline-flex items-center gap-1.5 text-2xs text-slate-400" dir="ltr">
               <CalendarRange className="h-3 w-3 shrink-0" />
               <span className="tabular-nums">
-                {p.access.startsAt ? formatDate(p.access.startsAt) : '—'}
+                {p.access.startsAt ? formatDate(p.access.startsAt, locale) : '—'}
                 {' – '}
-                {p.access.endsAt ? formatDate(p.access.endsAt) : '—'}
+                {p.access.endsAt ? formatDate(p.access.endsAt, locale) : '—'}
               </span>
             </span>
           )}

@@ -11,6 +11,7 @@ import type { Reservation } from '@/lib/types';
 import type { Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 
+import { intlLocale } from '@/lib/format';
 interface Props {
   reservation: Pick<
     Reservation,
@@ -134,7 +135,7 @@ export function ConvertReservationForm({ reservation, symbol = 'ج.م', locale =
               <div className="flex justify-between">
                 <dt className="text-slate-500">{m.convertBookingAmountLabel}</dt>
                 <dd className="font-medium tabular-nums" dir="ltr">
-                  {bookingAmount.toLocaleString('ar-SA')} {symbol}
+                  {bookingAmount.toLocaleString(intlLocale(locale))} {symbol}
                   <span className="mr-1 text-slate-400">({reservation.bookingPaymentStatus})</span>
                 </dd>
               </div>
@@ -143,7 +144,7 @@ export function ConvertReservationForm({ reservation, symbol = 'ج.م', locale =
               <div className="flex justify-between">
                 <dt className="text-slate-500">{m.convertDownPaymentLabel}</dt>
                 <dd className="font-medium tabular-nums" dir="ltr">
-                  {Number(reservation.snapshotDownPaymentAmount).toLocaleString('ar-SA')} {symbol}
+                  {Number(reservation.snapshotDownPaymentAmount).toLocaleString(intlLocale(locale))} {symbol}
                 </dd>
               </div>
             )}
@@ -161,7 +162,7 @@ export function ConvertReservationForm({ reservation, symbol = 'ج.م', locale =
               <div className="flex justify-between">
                 <dt className="text-slate-500">{m.convertMonthlyLabel}</dt>
                 <dd className="font-bold tabular-nums text-brand-700" dir="ltr">
-                  {Number(reservation.snapshotMonthlyInstallment).toLocaleString('ar-SA', {
+                  {Number(reservation.snapshotMonthlyInstallment).toLocaleString(intlLocale(locale), {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}{' '}
@@ -173,7 +174,7 @@ export function ConvertReservationForm({ reservation, symbol = 'ج.م', locale =
               <div className="flex justify-between border-t border-hairline pt-2 mt-1">
                 <dt className="text-slate-500">{m.convertTotalLabel}</dt>
                 <dd className="font-bold tabular-nums text-slate-900" dir="ltr">
-                  {Number(reservation.snapshotTotalPayable).toLocaleString('ar-SA')} {symbol}
+                  {Number(reservation.snapshotTotalPayable).toLocaleString(intlLocale(locale))} {symbol}
                 </dd>
               </div>
             )}

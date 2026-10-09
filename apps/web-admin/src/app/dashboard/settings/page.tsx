@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { SettingItem } from '@/lib/types';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, intlLocale } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
@@ -191,25 +191,25 @@ export default async function SettingsPage({
         metrics={[
           {
             label: m.kpi.total,
-            value: items.length.toLocaleString('ar-EG'),
+            value: items.length.toLocaleString(intlLocale(locale)),
             icon: <Database />,
             tone: 'brand',
           },
           {
             label: m.kpi.groups,
-            value: grouped.size.toLocaleString('ar-EG'),
+            value: grouped.size.toLocaleString(intlLocale(locale)),
             icon: <Layers />,
             tone: 'neutral',
           },
           {
             label: m.kpi.sensitive,
-            value: sensitiveCount.toLocaleString('ar-EG'),
+            value: sensitiveCount.toLocaleString(intlLocale(locale)),
             icon: <ShieldAlert />,
             tone: sensitiveCount > 0 ? 'warning' : 'neutral',
           },
           {
             label: m.kpi.lastUpdated,
-            value: lastUpdated ? formatDateTime(lastUpdated) : '—',
+            value: lastUpdated ? formatDateTime(lastUpdated, locale) : '—',
             icon: <Clock />,
             tone: 'neutral',
             valueSize: 'compact',
@@ -317,7 +317,7 @@ export default async function SettingsPage({
                   typeCls={TYPE_CLS[type]}
                   preview={preview}
                   sensitive={row.sensitive}
-                  updatedAt={formatDateTime(row.updatedAt)}
+                  updatedAt={formatDateTime(row.updatedAt, locale)}
                   locale={locale}
                 />
               );

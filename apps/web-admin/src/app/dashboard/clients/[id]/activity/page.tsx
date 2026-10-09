@@ -3,7 +3,7 @@ import { Activity, ArrowLeft, Pencil, Phone, Mail } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { User } from '@/lib/types';
 import { formatDate, formatDateTime } from '@/lib/format';
-import { getLocale } from '@/lib/locale';
+import { getLocale, type Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
@@ -153,6 +153,7 @@ export default async function ClientActivityPage({
                       actionLabels={ACTION_LABEL}
                       byLabel={m.activityByLabel}
                       systemLabel={m.activitySystem}
+                      locale={locale}
                     />
                   ))}
                 </ol>
@@ -245,13 +246,13 @@ export default async function ClientActivityPage({
               <StatRow label={m.summaryTotalOps} value={<span className="tabular-nums font-semibold text-slate-900">{total}</span>} />
               <StatRow
                 label={m.summaryRegistered}
-                value={<span className="text-slate-700">{formatDate(u.createdAt)}</span>}
+                value={<span className="text-slate-700">{formatDate(u.createdAt, locale)}</span>}
               />
               <StatRow
                 label={m.summaryLastLogin}
                 value={
                   <span className="text-slate-700">
-                    {u.lastLoginAt ? formatDate(u.lastLoginAt) : '—'}
+                    {u.lastLoginAt ? formatDate(u.lastLoginAt, locale) : '—'}
                   </span>
                 }
               />
@@ -279,11 +280,13 @@ function ActivityItem({
   actionLabels,
   byLabel,
   systemLabel,
+  locale = 'ar',
 }: {
   entry: AuditLog;
   actionLabels: Record<string, string>;
   byLabel: string;
   systemLabel: string;
+  locale?: Locale;
 }) {
   const tone =
     entry.action === 'POST'
@@ -332,7 +335,7 @@ function ActivityItem({
             </p>
           </div>
           <time className="shrink-0 text-2xs text-slate-500 tabular-nums whitespace-nowrap">
-            {formatDateTime(entry.createdAt)}
+            {formatDateTime(entry.createdAt, locale)}
           </time>
         </div>
       </div>

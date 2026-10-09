@@ -28,7 +28,7 @@ import {
   AppointmentStatusBadge,
 } from '@/components/badges';
 import { PremiumPageHero } from '@/components/premium';
-import { getLocale } from '@/lib/locale';
+import { getLocale, type Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 
 interface PerformanceRow {
@@ -378,7 +378,7 @@ export async function SalesDashboard({ userId }: { userId: string }) {
       {hasPriorities && (
         <div className="space-y-2.5">
           <SectionLabel>{m.sectionTodayPriorities}</SectionLabel>
-          <TodayPriorityPanel todayVisits={todayVisits} expiringUrgent={expiringUrgent} m={m} expiryLabel={expiryLabel} />
+          <TodayPriorityPanel todayVisits={todayVisits} expiringUrgent={expiringUrgent} m={m} expiryLabel={expiryLabel} locale={locale} />
         </div>
       )}
 
@@ -399,7 +399,7 @@ export async function SalesDashboard({ userId }: { userId: string }) {
               loadErrorText={m.cardLoadError}
               className="lg:col-span-2"
             >
-              {recentLeads.map((l) => <LeadRow key={l.id} lead={l} m={m} />)}
+              {recentLeads.map((l) => <LeadRow key={l.id} lead={l} m={m} locale={locale} />)}
             </SectionCard>
             <div className="space-y-4">
               <SectionCard
@@ -413,7 +413,7 @@ export async function SalesDashboard({ userId }: { userId: string }) {
                 emptyText={m.emptyUpcomingVisits}
                 loadErrorText={m.cardLoadError}
               >
-                {upcomingVisitRows.map((v) => <VisitRow key={v.id} visit={v} m={m} />)}
+                {upcomingVisitRows.map((v) => <VisitRow key={v.id} visit={v} m={m} locale={locale} />)}
               </SectionCard>
               <SectionCard
                 title={m.cardActiveReservations}
@@ -443,7 +443,7 @@ export async function SalesDashboard({ userId }: { userId: string }) {
               emptyText={m.emptyRecentLeads}
               loadErrorText={m.cardLoadError}
             >
-              {recentLeads.map((l) => <LeadRow key={l.id} lead={l} m={m} />)}
+              {recentLeads.map((l) => <LeadRow key={l.id} lead={l} m={m} locale={locale} />)}
             </SectionCard>
             {showVisits && (
               <SectionCard
@@ -457,7 +457,7 @@ export async function SalesDashboard({ userId }: { userId: string }) {
                 emptyText={m.emptyUpcomingVisits}
                 loadErrorText={m.cardLoadError}
               >
-                {upcomingVisitRows.map((v) => <VisitRow key={v.id} visit={v} m={m} />)}
+                {upcomingVisitRows.map((v) => <VisitRow key={v.id} visit={v} m={m} locale={locale} />)}
               </SectionCard>
             )}
             {showReservations && (
@@ -489,7 +489,7 @@ export async function SalesDashboard({ userId }: { userId: string }) {
             loadErrorText={m.cardLoadError}
             className="max-w-2xl"
           >
-            {recentLeads.map((l) => <LeadRow key={l.id} lead={l} m={m} />)}
+            {recentLeads.map((l) => <LeadRow key={l.id} lead={l} m={m} locale={locale} />)}
           </SectionCard>
         )}
       </div>
@@ -498,7 +498,7 @@ export async function SalesDashboard({ userId }: { userId: string }) {
 }
 
 // ── Row sub-components ────────────────────────────────────────────────────────
-function LeadRow({ lead: l, m }: { lead: Lead; m: ReturnType<typeof uiT>['pages']['salesHome'] }) {
+function LeadRow({ lead: l, m, locale = 'ar' }: { lead: Lead; m: ReturnType<typeof uiT>['pages']['salesHome']; locale?: Locale }) {
   const age     = leadAgeDays(l);
   const isStale = !l.upcomingVisit && age >= STALE_AFTER_DAYS;
   return (
@@ -520,7 +520,7 @@ function LeadRow({ lead: l, m }: { lead: Lead; m: ReturnType<typeof uiT>['pages'
         <p className="text-2xs text-slate-400 truncate mt-0.5 leading-tight">
           {l.projectInterest ? tx(l.projectInterest.name) : m.noProject}
           {' · '}
-          <span className="tabular-nums">{formatDate(l.createdAt)}</span>
+          <span className="tabular-nums">{formatDate(l.createdAt, locale)}</span>
         </p>
       </div>
       <LeadStageBadge stage={l.stage} />
@@ -528,7 +528,7 @@ function LeadRow({ lead: l, m }: { lead: Lead; m: ReturnType<typeof uiT>['pages'
   );
 }
 
-function VisitRow({ visit: v, m }: { visit: VisitAppointment; m: ReturnType<typeof uiT>['pages']['salesHome'] }) {
+function VisitRow({ visit: v, m, locale = 'ar' }: { visit: VisitAppointment; m: ReturnType<typeof uiT>['pages']['salesHome']; locale?: Locale }) {
   const today = isToday(v.scheduledAt);
   return (
     <Link
@@ -548,7 +548,7 @@ function VisitRow({ visit: v, m }: { visit: VisitAppointment; m: ReturnType<type
         </div>
         <p className="text-2xs text-slate-400 mt-0.5 leading-tight">
           <span className={cn('tabular-nums', today && 'font-semibold text-brand-700')}>
-            {formatDateTime(v.scheduledAt)}
+            {formatDateTime(v.scheduledAt, locale)}
           </span>
           {v.project ? ` · ${tx(v.project.name)}` : ''}
         </p>
@@ -597,12 +597,13 @@ function ReservationRow({
 
 // ── Today priority panel ──────────────────────────────────────────────────────
 function TodayPriorityPanel({
-  todayVisits, expiringUrgent, m, expiryLabel,
+  todayVisits, expiringUrgent, m, expiryLabel, locale = 'ar',
 }: {
   todayVisits:    VisitAppointment[];
   expiringUrgent: Reservation[];
   m: ReturnType<typeof uiT>['pages']['salesHome'];
   expiryLabel: (dateStr: string) => string;
+  locale?: Locale;
 }) {
   const total = todayVisits.length + expiringUrgent.length;
   return (
@@ -636,7 +637,7 @@ function TodayPriorityPanel({
                   {v.lead?.fullName ?? v.client?.fullName ?? v.visitNumber}
                 </p>
                 <p className="text-2xs text-slate-500 mt-0.5">
-                  <span className="font-bold text-sky-700 tabular-nums">{formatDateTime(v.scheduledAt)}</span>
+                  <span className="font-bold text-sky-700 tabular-nums">{formatDateTime(v.scheduledAt, locale)}</span>
                   {v.project ? ` · ${tx(v.project.name)}` : ''}
                   {v.unit ? ` · ${m.unitPrefix} ${v.unit.code}` : ''}
                 </p>

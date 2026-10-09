@@ -19,7 +19,7 @@ import {
 import { api, safe } from '@/lib/api';
 import { brokerOptions } from '@/lib/options';
 import type { Broker, BrokerStatus, Paged } from '@/lib/types';
-import { formatDate } from '@/lib/format';
+import { formatDate, intlLocale } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
@@ -206,7 +206,7 @@ export default async function BrokersPage({
         padded={false}
         trailing={
           <span className="text-xs text-slate-400 tabular-nums">
-            {total.toLocaleString('ar-EG')} {m.brokerSuffix}
+            {total.toLocaleString(intlLocale(locale))} {m.brokerSuffix}
           </span>
         }
       >
@@ -297,7 +297,7 @@ export default async function BrokersPage({
                       </td>
 
                       <td className="py-3.5 px-4 text-2xs text-slate-400 whitespace-nowrap">
-                        {formatDate(b.createdAt)}
+                        {formatDate(b.createdAt, locale)}
                       </td>
 
                       <td className="py-3.5 ps-4 pe-5">
