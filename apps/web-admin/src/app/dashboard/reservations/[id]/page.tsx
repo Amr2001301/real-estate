@@ -19,6 +19,7 @@ import { formatDate, formatDateTime, tx, intlLocale } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { getLocale } from '@/lib/locale';
+import { printT } from '@/messages/print';
 import { uiT } from '@/messages/ui';
 import {
   ReservationStatusBadge,
@@ -115,7 +116,7 @@ export default async function ReservationDetailPage({
         }
         actions={
           <div className="flex items-center gap-2">
-            <PrintButton path="reservations" id={reservation.id} />
+            <PrintButton path="reservations" id={reservation.id} label={printT(locale).common.print} />
             <ReservationDetailActions
               reservationId={reservation.id}
               status={reservation.status}

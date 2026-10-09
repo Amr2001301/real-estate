@@ -183,6 +183,15 @@ export class CompanyBrandingService {
     return row;
   }
 
+  /**
+   * The company identity printed on documents (contracts, receipts, reservation
+   * slips) — the same fields the public branding exposes, for any signed-in
+   * company role. Normalized like the public response (nulls dropped).
+   */
+  async getLetterhead(companyId: string): Promise<CompanyBrandingResponse> {
+    return buildResponse(await this.getOwnBranding(companyId));
+  }
+
   /** The company's currency (normalized; unsupported values read as the default). */
   async getCurrency(companyId: string): Promise<CurrencyCode> {
     return getCompanyCurrency(this.prisma, companyId);

@@ -71,3 +71,30 @@ export class CompanyCurrencyController {
     return { currency: await this.service.getCurrency(user.companyId) };
   }
 }
+
+/**
+ * The company identity for printed documents (name, logo, colours, contact,
+ * commercial registration, currency) for anyone signed in to the company.
+ * Nothing here is private — the public branding exposes the same fields — but
+ * /company/branding is ADMIN-only, so print pages for other roles need this.
+ */
+@ApiTags('company')
+@Controller('company/letterhead')
+export class CompanyLetterheadController {
+  constructor(private readonly service: CompanyBrandingService) {}
+
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.SALES,
+    UserRole.SALES_MANAGER,
+    UserRole.MAINTENANCE_SUPERVISOR,
+    UserRole.BROKER,
+    UserRole.CUSTOMER,
+    UserRole.CLIENT,
+  )
+  @Get()
+  async getLetterhead(@CurrentUser() user: AuthUser) {
+    if (!user?.companyId) throw new ForbiddenException('No associated company');
+    return this.service.getLetterhead(user.companyId);
+  }
+}

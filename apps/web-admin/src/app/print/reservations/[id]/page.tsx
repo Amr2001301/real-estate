@@ -1,127 +1,141 @@
 import { notFound } from 'next/navigation';
 import { api, safe } from '@/lib/api';
-import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { formatDate, tx } from '@/lib/format';
-import type { Reservation, SettingItem } from '@/lib/types';
+import { getLetterhead } from '@/lib/letterhead';
+import { getLocale } from '@/lib/locale';
+import type { Reservation } from '@/lib/types';
+import { printT } from '@/messages/print';
 import {
+  PrintAmounts,
   PrintDocument,
-  PrintRow,
+  PrintFields,
   PrintSection,
+  PrintSignatures,
+  companyNameOf,
+  formatMoney,
+  formatNumber,
+  type PrintTone,
 } from '@/components/print/PrintDocument';
 
 export const dynamic = 'force-dynamic';
 
 type Params = Promise<{ id: string }>;
 
-async function getCompanyName(): Promise<string> {
-  const res = await safe(api.get<SettingItem[]>('/settings?group=company'));
-  const items = res.data ?? [];
-  const name = items.find((i) => i.key === 'company.name')?.value;
-  return typeof name === 'string' && name ? name : 'شركتنا';
-}
+const STATUS_TONE: Record<string, PrintTone> = {
+  PENDING: 'warning',
+  APPROVED: 'success',
+  CONVERTED: 'success',
+  REJECTED: 'danger',
+  CANCELLED: 'danger',
+  EXPIRED: 'neutral',
+};
+
+/** Statuses after which the slip no longer holds the unit. */
+const VOID = new Set(['REJECTED', 'CANCELLED', 'EXPIRED']);
 
 export default async function ReservationPrintPage({ params }: { params: Params }) {
   const { id } = await params;
 
-  const [resResult, currency, companyName] = await Promise.all([
+  const [resResult, letterhead, locale] = await Promise.all([
     safe(api.get<Reservation>(`/reservations/${id}`)),
-    getReportsCurrency(),
-    getCompanyName(),
+    getLetterhead(),
+    getLocale(),
   ]);
 
   if (resResult.error || !resResult.data) notFound();
 
   const r = resResult.data;
-  const sym = currencySymbol(currency);
+  const t = printT(locale);
+  const m = t.reservation;
+  const company = companyNameOf(letterhead, locale);
+  const money = (v: string | number | null | undefined) => formatMoney(v, letterhead.currency, locale);
+  const date = (v: string | null | undefined) => formatDate(v, locale);
 
   const clientName = r.client?.fullName ?? r.lead?.fullName ?? '—';
-  const clientPhone = r.client?.phone ?? r.lead?.phone ?? '—';
-  const clientEmail = r.client?.email ?? r.lead?.email ?? '—';
-
-  const project = r.unit?.building?.phase?.project;
-  const projectName = project ? tx(project.name) : '—';
-  const unitCode = r.unit?.code ?? '—';
-
-  const formatAmount = (v: string | number | null | undefined) =>
-    v != null ? `${Number(v).toLocaleString('ar-SA')} ${sym}` : '—';
-
-  const statusLabel: Record<string, string> = {
-    PENDING: 'معلّق',
-    APPROVED: 'موافق عليه',
-    REJECTED: 'مرفوض',
-    CANCELLED: 'ملغى',
-    EXPIRED: 'منتهي الصلاحية',
-    CONVERTED: 'محوّل إلى عقد',
-  };
+  const building = r.unit?.building;
+  const project = building?.phase?.project;
+  const statusLabel = m.status[r.status] ?? r.status;
 
   return (
     <PrintDocument
-      title={`وصل الحجز ${r.reservationNumber ? '#' + r.reservationNumber : ''}`}
-      companyName={companyName}
-      documentType="وصل حجز وحدة عقارية"
-      referenceNumber={r.reservationNumber}
-      date={formatDate(r.createdAt)}
+      letterhead={letterhead}
+      locale={locale}
+      eyebrow={m.eyebrow}
+      title={m.title}
+      reference={r.reservationNumber}
+      date={date(r.createdAt)}
+      status={{ label: statusLabel, tone: STATUS_TONE[r.status] ?? 'neutral' }}
+      watermark={VOID.has(r.status) ? statusLabel : undefined}
+      note={m.note(company)}
     >
-      {/* Customer info */}
-      <PrintSection title="بيانات العميل" />
-      <PrintRow label="الاسم" value={clientName} />
-      <PrintRow label="الهاتف" value={clientPhone} />
-      {clientEmail && clientEmail !== '—' && <PrintRow label="البريد الإلكتروني" value={clientEmail} />}
+      <PrintSection title={m.client}>
+        <PrintFields
+          items={[
+            { label: m.fields.name, value: clientName },
+            { label: m.fields.phone, value: r.client?.phone ?? r.lead?.phone, ltr: true },
+            { label: m.fields.email, value: r.client?.email ?? r.lead?.email, ltr: true },
+          ]}
+        />
+      </PrintSection>
 
-      {/* Unit info */}
-      <PrintSection title="بيانات الوحدة" />
-      <PrintRow label="المشروع" value={projectName} />
-      <PrintRow label="كود الوحدة" value={unitCode} />
-      {r.unit?.type && <PrintRow label="نوع الوحدة" value={r.unit.type} />}
+      <PrintSection title={m.unit}>
+        <PrintFields
+          items={[
+            { label: m.fields.project, value: project ? tx(project.name, locale) : '—' },
+            building && { label: m.fields.building, value: tx(building.name, locale) },
+            { label: m.fields.unitCode, value: r.unit?.code ?? '—', ltr: true },
+            { label: m.fields.unitType, value: r.unit?.type },
+            r.unit?.area != null && { label: m.fields.area, value: `${formatNumber(r.unit.area, locale)} ${t.common.sqm}` },
+            r.unit?.floor != null && { label: m.fields.floor, value: formatNumber(r.unit.floor, locale) },
+          ]}
+        />
+      </PrintSection>
 
-      {/* Reservation details */}
-      <PrintSection title="تفاصيل الحجز" />
-      <PrintRow label="رقم الحجز" value={r.reservationNumber ?? '—'} />
-      <PrintRow label="تاريخ الحجز" value={formatDate(r.createdAt)} />
-      <PrintRow label="تاريخ الانتهاء" value={formatDate(r.expiresAt)} />
-      <PrintRow label="الحالة" value={statusLabel[r.status] ?? r.status} />
-      {r.contract?.contractNumber && (
-        <PrintRow label="رقم العقد" value={r.contract.contractNumber} />
-      )}
+      <PrintSection title={m.details}>
+        <PrintFields
+          items={[
+            { label: m.fields.reservationNumber, value: r.reservationNumber ?? '—', ltr: true },
+            { label: m.fields.createdAt, value: date(r.createdAt) },
+            { label: m.fields.expiresAt, value: date(r.expiresAt) },
+            r.contract?.contractNumber && {
+              label: m.fields.contractNumber,
+              value: r.contract.contractNumber,
+              ltr: true,
+            },
+            r.notes && { label: m.fields.notes, value: r.notes, wide: true },
+          ]}
+        />
+      </PrintSection>
 
-      {/* Financial */}
-      <PrintSection title="المعلومات المالية" />
-      <PrintRow label="مبلغ الحجز (العربون)" value={formatAmount(r.bookingAmount)} highlight />
-      {r.snapshotDownPaymentAmount != null && (
-        <PrintRow label="الدفعة الأولى" value={formatAmount(r.snapshotDownPaymentAmount)} />
-      )}
-      {r.snapshotFinancedAmount != null && (
-        <PrintRow label="المبلغ المموّل" value={formatAmount(r.snapshotFinancedAmount)} />
-      )}
-      {r.snapshotTotalPayable != null && (
-        <PrintRow label="إجمالي المبلغ" value={formatAmount(r.snapshotTotalPayable)} highlight />
-      )}
-      {r.selectedDurationMonths != null && (
-        <PrintRow label="مدة السداد" value={`${r.selectedDurationMonths} شهر`} />
-      )}
-      {r.snapshotMonthlyInstallment != null && (
-        <PrintRow label="القسط الشهري" value={formatAmount(r.snapshotMonthlyInstallment)} />
-      )}
+      <PrintSection title={m.financial}>
+        <PrintAmounts
+          rows={[
+            { label: m.amounts.booking, value: money(r.bookingAmount), emphasis: true },
+            r.snapshotDownPaymentAmount != null && {
+              label: m.amounts.downPayment,
+              value: money(r.snapshotDownPaymentAmount),
+            },
+            r.snapshotFinancedAmount != null && { label: m.amounts.financed, value: money(r.snapshotFinancedAmount) },
+            r.selectedDurationMonths != null && {
+              label: m.amounts.duration,
+              value: t.common.months(r.selectedDurationMonths),
+            },
+            r.snapshotMonthlyInstallment != null && {
+              label: m.amounts.monthly,
+              value: money(r.snapshotMonthlyInstallment),
+            },
+            r.snapshotTotalPayable != null && { label: m.amounts.total, value: money(r.snapshotTotalPayable) },
+          ]}
+        />
+      </PrintSection>
 
-      {/* Signature block */}
-      <div className="mt-14 grid grid-cols-2 gap-12">
-        <div>
-          <div className="mb-2 text-sm font-semibold" style={{ color: '#0F1E33' }}>توقيع العميل</div>
-          <div className="h-16 border-b border-slate-300" />
-          <div className="mt-1.5 text-xs" style={{ color: '#94A3B8' }}>{clientName}</div>
-        </div>
-        <div>
-          <div className="mb-2 text-sm font-semibold" style={{ color: '#0F1E33' }}>توقيع ممثل الشركة</div>
-          <div className="h-16 border-b border-slate-300" />
-          <div className="mt-1.5 text-xs" style={{ color: '#94A3B8' }}>{companyName}</div>
-        </div>
-      </div>
-
-      {/* Disclaimer */}
-      <p className="mt-8 text-xs leading-relaxed" style={{ color: '#94A3B8' }}>
-        هذا المستند وصل حجز رسمي صادر عن {companyName}. يُرجى الاحتفاظ بنسخة منه للرجوع إليها.
-        لأي استفسار يرجى التواصل مع فريق المبيعات.
-      </p>
+      <PrintSignatures
+        locale={locale}
+        parties={[
+          { role: m.clientSignature, name: clientName },
+          { role: m.companySignature, name: company },
+        ]}
+      />
     </PrintDocument>
   );
 }
