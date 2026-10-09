@@ -11,6 +11,7 @@ import {
   PaymentInstrumentType,
   PlanPaymentType,
   Prisma,
+  UserRole,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
@@ -47,6 +48,15 @@ const VALID_TRANSITIONS: Partial<Record<PaymentInstrumentStatus, PaymentInstrume
   [PaymentInstrumentStatus.BOUNCED]: [
     PaymentInstrumentStatus.REPLACED,
   ],
+};
+
+/** A cheque's state, as the notifications say it. */
+const INSTRUMENT_STATUS_AR: Partial<Record<PaymentInstrumentStatus, string>> = {
+  [PaymentInstrumentStatus.DEPOSITED]: 'أُودع في البنك',
+  [PaymentInstrumentStatus.CLEARED]: 'تم تحصيله',
+  [PaymentInstrumentStatus.BOUNCED]: 'ارتد',
+  [PaymentInstrumentStatus.CANCELLED]: 'أُلغي',
+  [PaymentInstrumentStatus.REPLACED]: 'استُبدل',
 };
 
 @Injectable()
@@ -89,6 +99,69 @@ export class ChequeLifecycleService {
       throw new BadRequestException(
         `Invalid transition: ${current} → ${next}. Allowed: ${allowed.join(', ') || 'none (terminal state)'}`,
       );
+    }
+  }
+
+  /**
+   * A cheque or transfer changed state: the customer whose installments it
+   * pays hears (except on a bounce, which has its own notice), and so do the
+   * deal's sales person, admins and sales managers — never the actor.
+   * Best-effort: a lookup failure never fails the transition.
+   */
+  private async notifyInstrument(
+    id: string,
+    status: PaymentInstrumentStatus,
+    actorId?: string | null,
+    opts: { customer?: boolean } = { customer: true },
+  ) {
+    try {
+      const pi = await this.prisma.paymentInstrument.findFirst({
+        where: { id, companyId: getRequiredCompanyId() },
+        select: {
+          type: true,
+          chequeNumber: true,
+          referenceNumber: true,
+          deposits: {
+            where: { contractId: { not: null } },
+            take: 1,
+            select: {
+              contract: {
+                select: {
+                  id: true,
+                  contractNumber: true,
+                  customerId: true,
+                  customer: { select: { fullName: true } },
+                  reservation: { select: { salesId: true } },
+                },
+              },
+            },
+          },
+        },
+      });
+      if (!pi) return;
+      const contract = pi.deposits[0]?.contract;
+      const payload = {
+        chequeNumber: pi.chequeNumber ?? pi.referenceNumber ?? id.slice(0, 8),
+        kind: pi.type === PaymentInstrumentType.CHEQUE ? 'شيك' : 'تحويل',
+        status: INSTRUMENT_STATUS_AR[status] ?? status,
+        contractNumber: contract?.contractNumber ?? '',
+        customerName: contract?.customer?.fullName ?? '',
+        ...(contract ? { contractId: contract.id, entityType: 'contract', entityId: contract.id } : {}),
+      };
+      if (opts.customer !== false) {
+        await this.notifications.sendToUser(contract?.customerId, 'cheque_status_changed', payload, {
+          except: actorId,
+        });
+      }
+      await this.notifications.sendToUsersAndRoles(
+        [contract?.reservation?.salesId],
+        [UserRole.ADMIN, UserRole.SALES_MANAGER],
+        'cheque_status_staff',
+        payload,
+        { except: actorId },
+      );
+    } catch (e) {
+      this.logger.warn(`instrument notification failed: ${(e as Error).message}`);
     }
   }
 
@@ -203,18 +276,20 @@ export class ChequeLifecycleService {
 
   // ── PENDING_CLEARANCE → DEPOSITED ──────────────────────────────────────────
 
-  async transitionToDeposited(id: string) {
+  async transitionToDeposited(id: string, actorId?: string) {
     const pi = await this.loadOwned(id);
     this.assertTransition(pi.status, PaymentInstrumentStatus.DEPOSITED);
-    return this.prisma.paymentInstrument.update({
+    const updated = await this.prisma.paymentInstrument.update({
       where: { id },
       data: { status: PaymentInstrumentStatus.DEPOSITED },
     });
+    await this.notifyInstrument(id, PaymentInstrumentStatus.DEPOSITED, actorId);
+    return updated;
   }
 
   // ── PENDING_CLEARANCE → CANCELLED ──────────────────────────────────────────
 
-  async transitionToCancelled(id: string) {
+  async transitionToCancelled(id: string, actorId?: string) {
     const pi = await this.loadOwned(id);
     this.assertTransition(pi.status, PaymentInstrumentStatus.CANCELLED);
     // FG-01 — a voided cheque pays nothing: its waiting deposits are rejected,
@@ -222,7 +297,7 @@ export class ChequeLifecycleService {
     const pendingDepositIds = pi.deposits
       .filter((d) => d.reviewStatus === DepositReviewStatus.PENDING_REVIEW)
       .map((d) => d.id);
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       if (pendingDepositIds.length > 0) {
         await tx.deposit.updateMany({
           where: { id: { in: pendingDepositIds } },
@@ -237,6 +312,8 @@ export class ChequeLifecycleService {
         data: { status: PaymentInstrumentStatus.CANCELLED },
       });
     });
+    await this.notifyInstrument(id, PaymentInstrumentStatus.CANCELLED, actorId);
+    return updated;
   }
 
   // ── DEPOSITED → CLEARED ─────────────────────────────────────────────────────
@@ -246,7 +323,7 @@ export class ChequeLifecycleService {
   // 2. Linked PENDING_REVIEW Deposits: reviewStatus = APPROVED, verified = true
   // 3. Their linked Installments: status = PAID, paidAt = clearingDate
 
-  async transitionToCleared(id: string, dto: RecordClearingDto) {
+  async transitionToCleared(id: string, dto: RecordClearingDto, actorId?: string) {
     const pi = await this.loadOwned(id);
     this.assertTransition(pi.status, PaymentInstrumentStatus.CLEARED);
 
@@ -278,6 +355,7 @@ export class ChequeLifecycleService {
         });
       }
     });
+    await this.notifyInstrument(id, PaymentInstrumentStatus.CLEARED, actorId);
 
     return this.findOne(id);
   }
@@ -447,6 +525,7 @@ export class ChequeLifecycleService {
         this.logger.warn(`cheque_bounced notification lookup failed: ${(e as Error).message}`);
       }
     }
+    await this.notifyInstrument(id, PaymentInstrumentStatus.BOUNCED, performedById, { customer: false });
 
     return this.findOne(id);
   }
@@ -486,6 +565,7 @@ export class ChequeLifecycleService {
       });
       return [replacement];
     });
+    await this.notifyInstrument(id, PaymentInstrumentStatus.REPLACED, recordedById);
 
     return newPi;
   }

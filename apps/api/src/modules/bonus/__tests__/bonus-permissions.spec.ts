@@ -1,3 +1,4 @@
+import { ConfigModule } from '@nestjs/config';
 import {
   CallHandler,
   CanActivate,
@@ -119,7 +120,7 @@ describe('Bonus module · permissions enforcement', () => {
     class MockPrismaModule {}
 
     const moduleRef = await Test.createTestingModule({
-      imports: [MockPrismaModule, BonusModule],
+      imports: [ConfigModule.forRoot({ isGlobal: true }), MockPrismaModule, BonusModule],
       providers: [
         Reflector,
         { provide: APP_GUARD, useClass: FakeAuthGuard },

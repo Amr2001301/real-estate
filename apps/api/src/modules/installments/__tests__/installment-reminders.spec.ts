@@ -211,6 +211,25 @@ describe('InstallmentDueSoonCron env gate', () => {
     expect(reminders.run).not.toHaveBeenCalled();
   });
 
+  it('runs in production when the flag is unset, and never when it is false', async () => {
+    const reminders = { run: jest.fn().mockResolvedValue(undefined) };
+    const prodOff = new InstallmentDueSoonCron(
+      reminders as never,
+      makeConfig({ NODE_ENV: 'production', INSTALLMENT_REMINDERS_ENABLED: 'false' }) as never,
+      makePassthroughLock() as never,
+    );
+    await prodOff.daily();
+    expect(reminders.run).not.toHaveBeenCalled();
+
+    const prod = new InstallmentDueSoonCron(
+      reminders as never,
+      makeConfig({ NODE_ENV: 'production' }) as never,
+      makePassthroughLock() as never,
+    );
+    await prod.daily();
+    expect(reminders.run).toHaveBeenCalledWith({ dryRun: false });
+  });
+
   it('runs (execute mode) when INSTALLMENT_REMINDERS_ENABLED=true', async () => {
     const reminders = { run: jest.fn().mockResolvedValue(undefined) };
     const cron = new InstallmentDueSoonCron(

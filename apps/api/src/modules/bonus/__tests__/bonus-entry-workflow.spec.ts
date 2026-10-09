@@ -1,3 +1,4 @@
+import { ConfigModule } from '@nestjs/config';
 import {
   CanActivate,
   ExecutionContext,
@@ -127,7 +128,7 @@ describe('Bonus · entry lifecycle workflow', () => {
     class MockPrismaModule {}
 
     const moduleRef = await Test.createTestingModule({
-      imports: [MockPrismaModule, BonusModule],
+      imports: [ConfigModule.forRoot({ isGlobal: true }), MockPrismaModule, BonusModule],
       providers: [
         { provide: APP_GUARD, useClass: FakeAuthGuard },
         { provide: APP_GUARD, useClass: RolesGuard },
