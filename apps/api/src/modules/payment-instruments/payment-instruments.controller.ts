@@ -65,8 +65,8 @@ export class PaymentInstrumentsController {
   @Permissions('payment-instruments:manage')
   @HttpCode(HttpStatus.OK)
   @Post(':id/deposit')
-  deposit(@Param('id', ParseUUIDPipe) id: string) {
-    return this.svc.transitionToDeposited(id);
+  deposit(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.transitionToDeposited(id, user.sub);
   }
 
   // ── PENDING_CLEARANCE → CANCELLED ─────────────────────────────────────────
@@ -75,8 +75,8 @@ export class PaymentInstrumentsController {
   @Permissions('payment-instruments:manage')
   @HttpCode(HttpStatus.OK)
   @Post(':id/cancel')
-  cancel(@Param('id', ParseUUIDPipe) id: string) {
-    return this.svc.transitionToCancelled(id);
+  cancel(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.transitionToCancelled(id, user.sub);
   }
 
   // ── DEPOSITED → CLEARED ──────────────────────────────────────────────────
@@ -85,8 +85,12 @@ export class PaymentInstrumentsController {
   @Permissions('payment-instruments:manage')
   @HttpCode(HttpStatus.OK)
   @Post(':id/clear')
-  clear(@Param('id', ParseUUIDPipe) id: string, @Body() dto: RecordClearingDto) {
-    return this.svc.transitionToCleared(id, dto);
+  clear(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RecordClearingDto,
+  ) {
+    return this.svc.transitionToCleared(id, dto, user.sub);
   }
 
   // ── DEPOSITED → BOUNCED ──────────────────────────────────────────────────

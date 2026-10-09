@@ -390,8 +390,22 @@ export class ContractCancellationService {
       };
       const except = { except: actorId };
       const broker = await this.notifications.brokerRecipients(deal?.brokerId, { agentUserId: deal?.brokerAgentId });
-      await this.notifications.sendToUsers([deal?.reservation?.salesId, ...broker], 'contract_cancelled_staff', payload, except);
-      await this.notifications.sendToRoles([UserRole.ADMIN, UserRole.SALES_MANAGER], 'contract_cancelled_staff', payload, except);
+      await this.notifications.sendToUsersAndRoles(
+        [deal?.reservation?.salesId, ...broker],
+        [UserRole.ADMIN, UserRole.SALES_MANAGER],
+        'contract_cancelled_staff',
+        payload,
+        except,
+      );
+      // What the customer gets back, when anything.
+      if (input.refundAmount > 0) {
+        await this.notifications.sendToUser(
+          contract.customerId,
+          'contract_refund_due',
+          { ...payload, refundAmount: input.refundAmount, retainedAmount: input.retainedAmount },
+          except,
+        );
+      }
     } catch (e) {
       this.logger.warn(`contract_cancelled_staff notify failed for ${contractId}: ${(e as Error).message}`);
     }

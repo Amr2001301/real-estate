@@ -123,7 +123,14 @@ function pickLocale(header?: string): Locale {
 }
 
 /** Payload fields that hold an amount of money (raw Decimal strings). */
-const MONEY_KEYS = new Set(['amount', 'bookingAmount', 'penaltyAmount']);
+const MONEY_KEYS = new Set([
+  'amount',
+  'bookingAmount',
+  'penaltyAmount',
+  'monthlyAmount',
+  'refundAmount',
+  'retainedAmount',
+]);
 
 /**
  * Fills `{{var}}` placeholders from the notification payload. Amounts are
@@ -356,6 +363,34 @@ export class NotificationsService implements OnModuleInit {
         { id: true },
       );
       await this.sendToUsers(users.map((u) => u.id), templateCode, payload, opts);
+    } catch (err) {
+      this.logger.warn(
+        `Notification fan-out failed (${templateCode}): ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * Specific people plus everyone active in `roles`, as one deduplicated
+   * fan-out: a sales manager who is also the deal's sales person hears once.
+   * Never throws past the caller.
+   */
+  async sendToUsersAndRoles(
+    userIds: ReadonlyArray<string | null | undefined>,
+    roles: ReadonlyArray<UserRole>,
+    templateCode: string,
+    payload: Record<string, unknown> = {},
+    opts: NotifyOptions = {},
+  ): Promise<void> {
+    try {
+      const byRole = roles.length
+        ? await scopedUserFindMany(
+            this.prisma,
+            { role: { in: [...roles] }, active: true },
+            { id: true },
+          )
+        : [];
+      await this.sendToUsers([...userIds, ...byRole.map((u) => u.id)], templateCode, payload, opts);
     } catch (err) {
       this.logger.warn(
         `Notification fan-out failed (${templateCode}): ${(err as Error).message}`,

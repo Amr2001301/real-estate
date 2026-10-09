@@ -163,12 +163,17 @@ export class InstallmentsService {
     // Optional so unit tests can build the service without it.
     @Optional() private readonly reportBrand?: ReportBrandService,
     @Optional() private readonly reportPdf?: ReportPdfService,
+    @Optional() private readonly notifications?: NotificationsService,
   ) {}
 
-  async createPlan(dto: CreatePlanDto) {
+  async createPlan(dto: CreatePlanDto, actorId?: string) {
     const contract = await this.prisma.contract.findUnique({
       where: { id: dto.contractId },
-      include: { installmentPlan: true },
+      include: {
+        installmentPlan: true,
+        unit: { select: { code: true } },
+        reservation: { select: { salesId: true } },
+      },
     });
     if (!contract) throw new NotFoundException('Contract not found');
     if (contract.installmentPlan) throw new ConflictException('Plan already exists');
@@ -176,7 +181,7 @@ export class InstallmentsService {
     const startsAt = new Date(dto.startsAt);
     if (Number.isNaN(startsAt.getTime())) throw new BadRequestException('Invalid startsAt');
 
-    return this.prisma.$transaction(async (tx) => {
+    const created = await this.prisma.$transaction(async (tx) => {
       const plan = await tx.installmentPlan.create({
         data: {
           contractId: dto.contractId,
@@ -201,6 +206,28 @@ export class InstallmentsService {
         include: { installments: { orderBy: { dueDate: 'asc' } } },
       });
     });
+
+    // The customer's schedule is ready; the deal's sales person follows it.
+    const payload = {
+      contractNumber: contract.contractNumber ?? '',
+      unitCode: contract.unit?.code ?? '',
+      totalMonths: dto.totalMonths,
+      monthlyAmount: dto.monthlyAmount,
+      startsAt: startsAt.toISOString().slice(0, 10),
+      contractId: contract.id,
+      entityType: 'contract',
+      entityId: contract.id,
+    };
+    await this.notifications?.sendToUser(contract.customerId, 'installment_schedule_ready', payload, {
+      except: actorId,
+    });
+    await this.notifications?.sendToUser(
+      contract.reservation?.salesId,
+      'installment_schedule_ready_staff',
+      payload,
+      { except: actorId },
+    );
+    return created;
   }
 
   async findByContract(contractId: string) {
@@ -349,14 +376,69 @@ export class InstallmentsService {
     return workbookToBuffer(wb);
   }
 
+  /**
+   * Daily sweep: PENDING installments past due become OVERDUE, and each one
+   * that just turned overdue tells the customer and, on the company side,
+   * the contract's sales person, admins and sales managers (in the
+   * installment's own company — the sweep runs in bypass).
+   */
   async markOverdue() {
-    const result = await this.prisma.installment.updateMany({
-      where: {
-        status: InstallmentStatus.PENDING,
-        dueDate: { lt: new Date() },
+    const due = await this.prisma.installment.findMany({
+      where: { status: InstallmentStatus.PENDING, dueDate: { lt: new Date() } },
+      select: {
+        id: true,
+        amount: true,
+        dueDate: true,
+        companyId: true,
+        plan: {
+          select: {
+            contract: {
+              select: {
+                id: true,
+                contractNumber: true,
+                customerId: true,
+                customer: { select: { fullName: true } },
+                unit: { select: { code: true } },
+                reservation: { select: { salesId: true } },
+              },
+            },
+          },
+        },
       },
+    });
+    if (due.length === 0) return { marked: 0 };
+    const result = await this.prisma.installment.updateMany({
+      where: { id: { in: due.map((d) => d.id) }, status: InstallmentStatus.PENDING },
       data: { status: InstallmentStatus.OVERDUE },
     });
+
+    if (this.notifications) {
+      for (const inst of due) {
+        const contract = inst.plan?.contract;
+        if (!contract) continue;
+        const payload = {
+          amount: Number(inst.amount),
+          dueDate: inst.dueDate.toISOString().slice(0, 10),
+          contractNumber: contract.contractNumber ?? '',
+          unitCode: contract.unit?.code ?? '',
+          customerName: contract.customer?.fullName ?? '',
+          contractId: contract.id,
+          installmentId: inst.id,
+          entityType: 'contract',
+          entityId: contract.id,
+        };
+        const notify = async () => {
+          await this.notifications!.sendToUser(contract.customerId, 'installment_overdue', payload);
+          await this.notifications!.sendToUsersAndRoles(
+            [contract.reservation?.salesId],
+            [UserRole.ADMIN, UserRole.SALES_MANAGER],
+            'installment_overdue_staff',
+            payload,
+          );
+        };
+        await (inst.companyId ? runInCompany(inst.companyId, notify) : notify());
+      }
+    }
     return { marked: result.count };
   }
 }
@@ -1173,7 +1255,8 @@ export class InstallmentRemindersService {
 
 /**
  * P11.7 — daily cron that fires the due-soon reminders. Env-gated: the handler
- * no-ops unless INSTALLMENT_REMINDERS_ENABLED=true, so it is OFF by default in
+ * runs in production unless INSTALLMENT_REMINDERS_ENABLED=false (elsewhere only
+ * when it is true), so it is OFF by default in
  * local/dev/CI. The cron expression is read from INSTALLMENT_REMINDER_CRON
  * (default 09:00 daily) with an optional timezone.
  */
@@ -1192,7 +1275,10 @@ export class InstallmentDueSoonCron {
     timeZone: process.env.INSTALLMENT_REMINDER_TIMEZONE || undefined,
   })
   async daily(): Promise<void> {
-    const enabled = (this.config.get<string>('INSTALLMENT_REMINDERS_ENABLED') ?? '').toLowerCase() === 'true';
+    // On in production unless INSTALLMENT_REMINDERS_ENABLED=false; elsewhere
+    // (dev, tests) only when set to true.
+    const flag = (this.config.get<string>('INSTALLMENT_REMINDERS_ENABLED') ?? '').toLowerCase();
+    const enabled = flag ? flag === 'true' : this.config.get<string>('NODE_ENV') === 'production';
     if (!enabled) return;
     await runTenantContext({ companyId: null, bypass: true, isPublic: false }, async () => {
       try {
@@ -1385,8 +1471,8 @@ class InstallmentsController {
   @Roles(UserRole.ADMIN)
   @Permissions('installments:manage')
   @Post('installment-plans')
-  create(@Body() dto: CreatePlanDto) {
-    return this.svc.createPlan(dto);
+  create(@Body() dto: CreatePlanDto, @Req() req: { user: { sub: string } }) {
+    return this.svc.createPlan(dto, req.user.sub);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)

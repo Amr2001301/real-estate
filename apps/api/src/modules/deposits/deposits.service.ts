@@ -24,7 +24,6 @@ import {
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { UNCLEARED_INSTRUMENT_STATUSES, notAwaitingChequeWhere } from './review-queue';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { scopedUserFindMany } from '../../common/tenant/resolve-tenant-entity';
 import { DocumentsService } from '../documents/documents.module';
 import { R2Service } from '../media/r2.service';
 import { NotificationsService } from '../notifications/notifications.module';
@@ -110,6 +109,15 @@ const PAYING_REVIEW_STATUSES: DepositReviewStatus[] = [
   // Admin-recorded deposits stay NO_PROOF but mark the installment paid.
   DepositReviewStatus.NO_PROOF,
 ];
+
+/** How a deposit's money moved, as the staff notification says it. */
+const DEPOSIT_STATUS_AR = {
+  recorded: 'سُجّلت',
+  approved: 'اعتُمدت',
+  unverified: 'أُلغي اعتمادها',
+  rejected: 'رُفض إثباتها',
+  reversed: 'عُكست وأُعيد فتح القسط',
+} as const;
 
 @Injectable()
 export class DepositsService {
@@ -381,6 +389,7 @@ export class DepositsService {
         amount: deposit.amount.toString(),
       },
     );
+    await this.notifyDepositStaff(deposit.id, DEPOSIT_STATUS_AR.recorded, recordedById);
     return deposit;
   }
 
@@ -610,6 +619,7 @@ export class DepositsService {
         });
         await this.writeReversal(tx, target, 'Deposit un-verified by admin', actor.sub, companyId);
       });
+      await this.notifyReversal(id, actor.sub);
       return this.findOne(id);
     }
 
@@ -635,6 +645,11 @@ export class DepositsService {
         },
       );
     }
+    await this.notifyDepositStaff(
+      id,
+      dto.verified ? DEPOSIT_STATUS_AR.approved : DEPOSIT_STATUS_AR.unverified,
+      actor.sub,
+    );
     return updated;
   }
 
@@ -658,8 +673,28 @@ export class DepositsService {
     await this.prisma.$transaction((tx) =>
       this.writeReversal(tx, deposit, dto.reason.trim(), actor.sub, companyId),
     );
+    await this.notifyReversal(id, actor.sub);
 
     return this.findOne(id);
+  }
+
+  /** A reversal reopens the customer's installment: they and the staff hear. */
+  private async notifyReversal(depositId: string, actorId: string) {
+    const d = await this.depositContext(depositId).catch(() => null);
+    await this.notifications.sendToUser(
+      d?.contract?.customerId,
+      'deposit_reversed',
+      {
+        depositId,
+        amount: d?.amount.toString() ?? '',
+        contractNumber: d?.contract?.contractNumber ?? '',
+        ...(d?.contractId
+          ? { contractId: d.contractId, entityType: 'contract', entityId: d.contractId }
+          : {}),
+      },
+      { except: actorId },
+    );
+    await this.notifyDepositStaff(depositId, DEPOSIT_STATUS_AR.reversed, actorId);
   }
 
   /**
@@ -1124,6 +1159,7 @@ export class DepositsService {
           : {}),
       },
     );
+    await this.notifyDepositStaff(id, DEPOSIT_STATUS_AR.approved, actor.sub);
     if (dto.note) {
       this.logger.log(`Deposit ${id} approved by ${actor.sub} with note: ${dto.note.slice(0, 80)}`);
     }
@@ -1190,6 +1226,7 @@ export class DepositsService {
           : {}),
       },
     );
+    await this.notifyDepositStaff(id, DEPOSIT_STATUS_AR.rejected, actor.sub);
     return updated;
   }
 
@@ -1262,23 +1299,76 @@ export class DepositsService {
     return row?.contract?.unit?.building?.phase?.projectId ?? null;
   }
 
-  /** Fan-out to ADMIN + SALES_MANAGER. Best-effort: failures during the
-   *  recipient lookup log but never throw, mirroring the notifications
-   *  service contract. */
+  /** The deal's sales person: the contract's reservation, or the booking's. */
+  private async depositContext(depositId: string) {
+    return this.prisma.deposit.findFirst({
+      where: { id: depositId, companyId: getRequiredCompanyId() },
+      select: {
+        amount: true,
+        contractId: true,
+        reservationId: true,
+        contract: {
+          select: {
+            contractNumber: true,
+            customerId: true,
+            unit: { select: { code: true } },
+            reservation: { select: { salesId: true } },
+          },
+        },
+        reservation: { select: { salesId: true, clientId: true, unit: { select: { code: true } } } },
+      },
+    });
+  }
+
+  /** Fan-out to ADMIN + SALES_MANAGER and the deal's sales person (once
+   *  each). Best-effort: failures log but never throw, mirroring the
+   *  notifications service contract. */
   private async notifyStaff(templateCode: string, payload: Record<string, unknown>) {
     try {
-      const staff = await scopedUserFindMany(
-        this.prisma,
-        { role: { in: [UserRole.ADMIN, UserRole.SALES_MANAGER] }, active: true },
-        { id: true },
+      const ctx =
+        typeof payload.depositId === 'string' ? await this.depositContext(payload.depositId) : null;
+      await this.notifications.sendToUsersAndRoles(
+        [ctx?.contract?.reservation?.salesId ?? ctx?.reservation?.salesId],
+        [UserRole.ADMIN, UserRole.SALES_MANAGER],
+        templateCode,
+        payload,
       );
-      for (const u of staff) {
-        await this.notifications.sendToUser(u.id, templateCode, payload);
-      }
     } catch (err) {
       this.logger.warn(
         `notifyStaff(${templateCode}) failed: ${(err as Error).message}`,
       );
+    }
+  }
+
+  /**
+   * Every money movement on a deposit (recorded, approved, rejected,
+   * reversed…) reaches the deal's sales person, admins and sales managers —
+   * never the user who made it. Best-effort.
+   */
+  private async notifyDepositStaff(depositId: string, status: string, actorId?: string | null) {
+    try {
+      const d = await this.depositContext(depositId);
+      if (!d) return;
+      await this.notifications.sendToUsersAndRoles(
+        [d.contract?.reservation?.salesId ?? d.reservation?.salesId],
+        [UserRole.ADMIN, UserRole.SALES_MANAGER],
+        'deposit_status_staff',
+        {
+          depositId,
+          amount: d.amount.toString(),
+          status,
+          unitCode: d.contract?.unit?.code ?? d.reservation?.unit?.code ?? '',
+          contractNumber: d.contract?.contractNumber ?? '',
+          ...(d.contractId
+            ? { contractId: d.contractId, entityType: 'contract', entityId: d.contractId }
+            : d.reservationId
+              ? { entityType: 'reservation', entityId: d.reservationId }
+              : {}),
+        },
+        { except: actorId },
+      );
+    } catch (err) {
+      this.logger.warn(`notifyDepositStaff failed: ${(err as Error).message}`);
     }
   }
 }

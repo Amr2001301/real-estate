@@ -1,3 +1,4 @@
+import { ConfigModule } from '@nestjs/config';
 import {
   CallHandler,
   CanActivate,
@@ -141,7 +142,7 @@ describe('Bonus · sales performance report', () => {
     class MockPrismaModule {}
 
     const moduleRef = await Test.createTestingModule({
-      imports: [MockPrismaModule, BonusModule],
+      imports: [ConfigModule.forRoot({ isGlobal: true }), MockPrismaModule, BonusModule],
       providers: [
         { provide: APP_INTERCEPTOR, useClass: FakeTenantInterceptor },
         { provide: APP_GUARD, useClass: FakeAuthGuard },

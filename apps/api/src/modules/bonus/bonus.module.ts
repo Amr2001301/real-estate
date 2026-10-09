@@ -49,6 +49,7 @@ import { getCompanyCurrency } from '../../common/currency/currency';
 import { getTenantContext } from '../../common/tenant/tenant-context';
 import { ReportBrandService } from '../company-branding/report-brand.service';
 import { presentReportPdf, ReportPdfService } from '../../common/report-pdf/report-pdf.service';
+import { NotificationsModule, NotificationsService } from '../notifications/notifications.module';
 import { fallbackBrand } from '../../common/utils/report-brand';
 import { bonusReportHtml } from './bonus-report-template';
 import {
@@ -159,6 +160,13 @@ export interface SalesCommissionResult {
   reason?: 'not_signed' | 'no_reservation' | 'no_sales' | 'no_rule' | 'ambiguous_rules';
 }
 
+const BONUS_STATUS_AR: Record<BonusEntryStatus, string> = {
+  PENDING: 'قيد المراجعة',
+  APPROVED: 'اعتُمدت',
+  PAID: 'صُرفت',
+  CANCELLED: 'أُلغيت',
+};
+
 @Injectable()
 export class BonusService {
   constructor(
@@ -166,7 +174,27 @@ export class BonusService {
     // Optional so unit tests can build the service without it.
     @Optional() private readonly reportBrand?: ReportBrandService,
     @Optional() private readonly reportPdf?: ReportPdfService,
+    @Optional() private readonly notifications?: NotificationsService,
   ) {}
+
+  /** The sales person hears about every bonus of theirs: earned, approved, paid. */
+  private async notifyEntry(
+    entry: { id: string; salesId: string; amount: Prisma.Decimal; period: string },
+    templateCode: 'bonus_entry_created' | 'bonus_status_changed',
+    status?: BonusEntryStatus,
+  ) {
+    try {
+      await this.notifications?.sendToUser(entry.salesId, templateCode, {
+        amount: entry.amount.toString(),
+        period: entry.period,
+        ...(status ? { status: BONUS_STATUS_AR[status] } : {}),
+        entityType: 'bonus',
+        entityId: entry.id,
+      });
+    } catch {
+      // Best-effort: a notification never fails the bonus action.
+    }
+  }
 
   // Rules
   listRules() {
@@ -229,8 +257,8 @@ export class BonusService {
   }
 
   // Entries
-  createEntry(dto: CreateEntryDto) {
-    return this.prisma.bonusEntry.create({
+  async createEntry(dto: CreateEntryDto) {
+    const entry = await this.prisma.bonusEntry.create({
       data: {
         salesId: dto.salesId,
         ruleId: dto.ruleId,
@@ -238,6 +266,8 @@ export class BonusService {
         period: dto.period,
       },
     });
+    await this.notifyEntry(entry, 'bonus_entry_created');
+    return entry;
   }
 
   /**
@@ -300,8 +330,9 @@ export class BonusService {
           commissionPct: rule.percentage,
           paidAt: null,
         },
-        select: { id: true },
+        select: { id: true, salesId: true, amount: true, period: true },
       });
+      await this.notifyEntry(created, 'bonus_entry_created');
       return { status: 'created', entryId: created.id };
     } catch (e) {
       // Race: a parallel sign materialized the same contract first.
@@ -434,14 +465,16 @@ export class BonusService {
     return presentReportPdf(this.reportPdf, html, report);
   }
 
-  setEntryStatus(id: string, dto: UpdateEntryStatusDto) {
-    return this.prisma.bonusEntry.update({
+  async setEntryStatus(id: string, dto: UpdateEntryStatusDto) {
+    const entry = await this.prisma.bonusEntry.update({
       where: { id },
       data: {
         status: dto.status,
         paidAt: dto.status === BonusEntryStatus.PAID ? new Date() : null,
       },
     });
+    await this.notifyEntry(entry, 'bonus_status_changed', dto.status);
+    return entry;
   }
 
   // Targets
@@ -858,6 +891,7 @@ class BonusController {
 }
 
 @Module({
+  imports: [NotificationsModule],
   controllers: [BonusController],
   providers: [BonusService, ClawbackResolutionService],
   exports: [BonusService],

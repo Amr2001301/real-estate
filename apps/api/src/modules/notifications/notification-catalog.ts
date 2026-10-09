@@ -841,6 +841,115 @@ export const NOTIFICATION_CATALOG: NotificationTemplateDef[] = [
     ar_body: 'أصبح رقم عقدك للوحدة {{unitCode}}: {{contractNumber}}.',
     en_body: 'Your contract for unit {{unitCode}} is now number {{contractNumber}}.',
   },
+  // ─── Finance (N3) ─────────────────────────────────────────────────────
+  {
+    code: 'installment_overdue',
+    channel: NotificationChannel.PUSH,
+    emailEnabled: true,
+    ar_subject: 'قسط متأخر',
+    en_subject: 'Installment overdue',
+    ar_body:
+      'قسط بقيمة {{amount}} كان مستحقاً بتاريخ {{dueDate}} للوحدة {{unitCode}} ولم يُسدَّد بعد. يرجى السداد أو التواصل معنا.',
+    en_body:
+      'An installment of {{amount}} for unit {{unitCode}} was due on {{dueDate}} and is still unpaid. Please pay or contact us.',
+  },
+  {
+    code: 'installment_overdue_staff',
+    channel: NotificationChannel.PUSH,
+    ar_subject: 'قسط متأخر على عميل',
+    en_subject: 'Customer installment overdue',
+    ar_body:
+      'قسط {{customerName}} بقيمة {{amount}} على العقد {{contractNumber}} (الوحدة {{unitCode}}) تأخر عن {{dueDate}}.',
+    en_body:
+      '{{customerName}}’s installment of {{amount}} on contract {{contractNumber}} (unit {{unitCode}}) is overdue since {{dueDate}}.',
+  },
+  {
+    code: 'installment_schedule_ready',
+    channel: NotificationChannel.PUSH,
+    emailEnabled: true,
+    ar_subject: 'جدول أقساطك جاهز',
+    en_subject: 'Your installment schedule is ready',
+    ar_body:
+      'تم إعداد جدول أقساط العقد {{contractNumber}}: {{totalMonths}} قسط بقيمة {{monthlyAmount}} يبدأ {{startsAt}}.',
+    en_body:
+      'The installment schedule for contract {{contractNumber}} is ready: {{totalMonths}} installments of {{monthlyAmount}} starting {{startsAt}}.',
+  },
+  {
+    code: 'installment_schedule_ready_staff',
+    channel: NotificationChannel.IN_APP,
+    ar_subject: 'تم إعداد جدول أقساط',
+    en_subject: 'Installment schedule created',
+    ar_body:
+      'تم إعداد جدول أقساط العقد {{contractNumber}} للوحدة {{unitCode}} ({{totalMonths}} قسط).',
+    en_body:
+      'An installment schedule was created for contract {{contractNumber}}, unit {{unitCode}} ({{totalMonths}} installments).',
+  },
+  {
+    code: 'deposit_status_staff',
+    channel: NotificationChannel.IN_APP,
+    ar_subject: 'حركة على دفعة',
+    en_subject: 'Payment update',
+    ar_body: 'دفعة بقيمة {{amount}} للوحدة {{unitCode}}: {{status}}.',
+    en_body: 'A payment of {{amount}} for unit {{unitCode}}: {{status}}.',
+  },
+  {
+    code: 'deposit_reversed',
+    channel: NotificationChannel.PUSH,
+    emailEnabled: true,
+    ar_subject: 'تم عكس دفعة',
+    en_subject: 'A payment was reversed',
+    ar_body:
+      'تم عكس دفعة بقيمة {{amount}} على العقد {{contractNumber}} وأصبح القسط المرتبط بها مستحقاً من جديد. يرجى التواصل معنا لأي استفسار.',
+    en_body:
+      'A payment of {{amount}} on contract {{contractNumber}} was reversed, so its installment is due again. Please contact us with any questions.',
+  },
+  {
+    code: 'cheque_status_changed',
+    channel: NotificationChannel.PUSH,
+    emailEnabled: true,
+    ar_subject: 'تحديث على {{kind}}',
+    en_subject: 'Payment instrument update',
+    ar_body: '{{kind}} رقم {{chequeNumber}} على العقد {{contractNumber}}: {{status}}.',
+    en_body: 'Payment {{chequeNumber}} on contract {{contractNumber}} was updated.',
+  },
+  {
+    code: 'cheque_status_staff',
+    channel: NotificationChannel.PUSH,
+    ar_subject: 'تحديث على {{kind}}',
+    en_subject: 'Payment instrument update',
+    ar_body:
+      '{{kind}} {{chequeNumber}} للعميل {{customerName}} (العقد {{contractNumber}}): {{status}}.',
+    en_body:
+      'Payment {{chequeNumber}} from {{customerName}} (contract {{contractNumber}}) was updated.',
+  },
+  {
+    code: 'contract_refund_due',
+    channel: NotificationChannel.PUSH,
+    emailEnabled: true,
+    ar_subject: 'مبلغ مسترد لك',
+    en_subject: 'Your refund',
+    ar_body:
+      'بعد إلغاء العقد {{contractNumber}} سيُرد لك مبلغ {{refundAmount}}. سيتواصل معك فريقنا لترتيب الاسترداد.',
+    en_body:
+      'Following the cancellation of contract {{contractNumber}}, {{refundAmount}} will be refunded to you. Our team will contact you to arrange it.',
+  },
+  {
+    code: 'bonus_entry_created',
+    channel: NotificationChannel.PUSH,
+    ar_subject: 'مكافأة جديدة',
+    en_subject: 'New bonus',
+    ar_body: 'أُضيفت لك مكافأة بقيمة {{amount}} عن فترة {{period}}.',
+    en_body: 'A bonus of {{amount}} was added for you for {{period}}.',
+  },
+  {
+    code: 'bonus_status_changed',
+    channel: NotificationChannel.PUSH,
+    emailEnabled: true,
+    ar_subject: 'تحديث على مكافأتك',
+    en_subject: 'Bonus update',
+    ar_body: 'مكافأتك بقيمة {{amount}} عن فترة {{period}}: {{status}}.',
+    en_body: 'Your bonus of {{amount}} for {{period}}: {{status}}.',
+  },
   // Admin manual broadcast — content is supplied at send-time via payload vars.
   {
     code: 'admin_broadcast',

@@ -87,7 +87,9 @@ describe('notification catalog', () => {
     for (const f of files) {
       const text = readFileSync(f, 'utf8');
       // The code is the first snake_case literal in a send call.
-      for (const m of text.matchAll(/\.(?:sendToUsers?|sendToRoles)\(([\s\S]{0,400}?)\)/g)) {
+      for (const m of text.matchAll(
+        /\.(?:sendToUsers?|sendToRoles|sendToUsersAndRoles)\(([\s\S]{0,400}?)\)/g,
+      )) {
         const code = /'([a-z]+(?:_[a-z]+)+)'/.exec(m[1]!)?.[1];
         if (code) used.add(code);
       }
@@ -139,6 +141,29 @@ describe('NotificationsService foundation', () => {
     const html = (email.sendNotificationEmail as jest.Mock).mock.calls[0][2] as string;
     expect(html).not.toContain('<img src=x');
     expect(html).toContain('&#60;img');
+  });
+
+  it('people plus roles is one fan-out: a manager who is also the sales person hears once', async () => {
+    const { svc, prisma } = setup();
+    prisma.user.findMany.mockResolvedValueOnce([
+      { id: 'sales-1' },
+      { id: 'admin-1' },
+      { id: 'actor' },
+    ]);
+    await runTenantContext(TENANT, () =>
+      svc.sendToUsersAndRoles(
+        ['sales-1'],
+        ['ADMIN', 'SALES_MANAGER'] as never,
+        'evt',
+        {},
+        { except: 'actor' },
+      ),
+    );
+    expect(prisma.user.findMany.mock.calls[0][0].where).toMatchObject({ companyId: 'co-1' });
+    expect(prisma.notification.create.mock.calls.map((c) => c[0].data.userId).sort()).toEqual([
+      'admin-1',
+      'sales-1',
+    ]);
   });
 
   describe('brokerRecipients', () => {
