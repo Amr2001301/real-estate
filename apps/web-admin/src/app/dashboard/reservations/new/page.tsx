@@ -3,13 +3,14 @@ import { api, safe } from '@/lib/api';
 import { staffOptions } from '@/lib/options';
 import type { Paged, InstallmentPlanTemplate } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
+import { getReportsCurrency } from '@/lib/currency';
 import { uiT } from '@/messages/ui';
 import NewReservationForm from './_form';
 
 export const dynamic = 'force-dynamic';
 
 export default async function NewReservationPage() {
-  const locale = await getLocale();
+  const [locale, currency] = await Promise.all([getLocale(), getReportsCurrency()]);
   const m = uiT(locale);
   const n = m.pages.reservationsNew;
 
@@ -72,6 +73,7 @@ export default async function NewReservationPage() {
       </div>
 
       <NewReservationForm
+        currency={currency}
         salesOptions={salesRes.data?.data ?? []}
         plans={(plansRes.data?.data ?? []).map((p) => ({
           id: p.id,

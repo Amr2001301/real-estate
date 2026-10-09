@@ -37,7 +37,7 @@ interface Props {
   perfRows: PerformanceRow[];
   hasFilters: boolean;
   error?: string;
-  symbol?: string;
+  symbol: string;
   locale?: Locale;
 }
 
@@ -81,7 +81,7 @@ export function TargetsManagementClient({
   perfRows,
   hasFilters,
   error,
-  symbol = 'ج.م',
+  symbol,
   locale = 'ar',
 }: Props) {
   const m = uiT(locale).targetsPage;

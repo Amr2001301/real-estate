@@ -16,14 +16,14 @@ import { uiT } from '@/messages/ui';
 import { createContractAction, type ContractFormState } from '../actions';
 
 interface Props {
-  currency?: string;
+  currency: string;
   locale?:   Locale;
 }
 
 // Customers and units are searched on the server (SearchSelect): this form
 // used to preload ?pageSize=100 of each, so customer or unit 101 could not be
 // put on a contract.
-export default function ContractForm({ currency = 'SAR', locale = 'ar' }: Props) {
+export default function ContractForm({ currency, locale = 'ar' }: Props) {
   const m = uiT(locale).pages.contractsForm;
   const c = uiT(locale).common;
   const [state, formAction] = useActionState<ContractFormState, FormData>(

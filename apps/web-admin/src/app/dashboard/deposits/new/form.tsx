@@ -19,13 +19,13 @@ import { recordDepositAction, type DepositFormState } from '../actions';
 interface Props {
   /** Pre-selected when the page is opened from a contract (?contractId=). */
   initialContract?:   Contract | null;
-  currency?:          string;
+  currency:          string;
   locale?:            Locale;
 }
 
 // Contracts are searched on the server (SearchSelect): this form used to
 // preload ?pageSize=200, so a deposit could not be recorded on contract 201.
-export default function RecordDepositForm({ initialContract, currency = 'SAR', locale = 'ar' }: Props) {
+export default function RecordDepositForm({ initialContract, currency, locale = 'ar' }: Props) {
   const m = uiT(locale).pages.depositsForm;
   const [state, formAction] = useActionState<DepositFormState, FormData>(
     recordDepositAction,

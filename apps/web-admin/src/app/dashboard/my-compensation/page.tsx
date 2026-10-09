@@ -67,7 +67,7 @@ interface PerformanceRow {
 
 // ── Pure helpers ───────────────────────────────────────────────────────────
 
-function fmtAmt(value: number | string | null | undefined, symbol = 'ج.م'): string {
+function fmtAmt(value: number | string | null | undefined, symbol: string): string {
   if (value === null || value === undefined) return '—';
   const n = typeof value === 'string' ? Number(value) : value;
   if (Number.isNaN(n)) return '—';

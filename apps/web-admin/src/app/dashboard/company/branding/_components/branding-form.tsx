@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Palette, Phone, Globe, Building2, Check } from 'lucide-react';
+import { Palette, Phone, Globe, Building2, Check, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MediaUploader } from '@/components/media-uploader';
 import { PremiumSectionCard } from '@/components/premium';
 import { patchBrandingAction, type BrandingPayload } from '../actions';
+import { CURRENCY_OPTIONS, currencySymbol } from '@/lib/currency-format';
 
 // ── Curated palette ─────────────────────────────────────────────────────────
 // All colours satisfy ≥ 3:1 contrast ratio against white — safe to use as
@@ -53,6 +54,7 @@ type RawBranding = {
   officeHours?: { ar?: string; en?: string } | null;
   socialLinks?: Record<string, string> | null;
   registrationNumber?: string | null;
+  currency?: string | null;
 };
 
 // ── Field helpers ───────────────────────────────────────────────────────────
@@ -138,6 +140,7 @@ export function BrandingForm({ initial }: { initial: RawBranding }) {
   const [youtube, setYoutube] = useState(str(socialInit.youtube));
   const [tiktok, setTiktok] = useState(str(socialInit.tiktok));
   const [regNumber, setRegNumber] = useState(str(initial.registrationNumber));
+  const [currency, setCurrency] = useState(str(initial.currency) || 'EGP');
 
   const HEX_RE = /^#[0-9a-fA-F]{6}$/;
   const primaryHexError = primaryHex && !HEX_RE.test(primaryHex)
@@ -178,6 +181,7 @@ export function BrandingForm({ initial }: { initial: RawBranding }) {
     if (tiktok)    social.tiktok    = tiktok;
     if (Object.keys(social).length) payload.socialLinks = social;
     if (regNumber) payload.registrationNumber = regNumber;
+    payload.currency = currency;
 
     startTransition(async () => {
       const r = await patchBrandingAction(payload);
@@ -391,6 +395,31 @@ export function BrandingForm({ initial }: { initial: RawBranding }) {
               <Input value={val} onChange={(e) => setter(e.target.value)} placeholder={ph} dir="ltr" />
             </Field>
           ))}
+        </div>
+      </PremiumSectionCard>
+
+      {/* Currency — one value for the whole platform */}
+      <PremiumSectionCard
+        title="العملة"
+        description="العملة التي تظهر بها كل المبالغ: لوحة التحكم لكل الأدوار، بوابة الوسطاء، الموقع، تطبيق العملاء والموظفين، والإشعارات."
+        icon={<Coins />}
+      >
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="عملة الشركة">
+            <select
+              name="currency"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="h-10 rounded-xl border border-hairline bg-white px-3 text-sm"
+              data-testid="company-currency"
+            >
+              {CURRENCY_OPTIONS.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.ar} ({c.code} · {currencySymbol(c.code)})
+                </option>
+              ))}
+            </select>
+          </Field>
         </div>
       </PremiumSectionCard>
 

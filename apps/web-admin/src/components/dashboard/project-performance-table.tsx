@@ -17,11 +17,11 @@ export interface ProjectRow {
 interface Props {
   projects:        ProjectRow[];
   className?:      string;
-  currencySymbol?: string;
+  currencySymbol: string;
   locale?:         Locale;
 }
 
-export function ProjectPerformanceTable({ projects, className, currencySymbol = 'ر.س', locale = 'ar' }: Props) {
+export function ProjectPerformanceTable({ projects, className, currencySymbol, locale = 'ar' }: Props) {
   if (projects.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">

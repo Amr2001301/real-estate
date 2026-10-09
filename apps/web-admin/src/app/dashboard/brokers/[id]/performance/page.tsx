@@ -189,7 +189,7 @@ export default async function BrokerPerformancePage({
           </h2>
           <p className="text-2xs text-slate-500">{m.trendDesc}</p>
         </div>
-        <MonthlyTrendChart data={report.monthlyTrend} currency={currency} />
+        <MonthlyTrendChart data={report.monthlyTrend} currency={currency} locale={locale} />
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

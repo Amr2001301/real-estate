@@ -43,7 +43,7 @@ interface Props {
   hasApprovedLeads: boolean;
   projects: ProjectOption[];
   selectedProjectId: string;
-  symbol?: string;
+  symbol: string;
   locale?: Locale;
 }
 
@@ -84,7 +84,7 @@ export function AdminBrokerReservationForm({
   hasApprovedLeads,
   projects,
   selectedProjectId,
-  symbol = 'ج.م',
+  symbol,
   locale = 'ar',
 }: Props) {
   const m = uiT(locale).pages.brokerReservationsForm;

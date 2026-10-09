@@ -13,7 +13,7 @@ import { FormFooter } from '@/components/ui/form-footer';
 import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import type { LeadStage } from '@/lib/types';
 import type { Locale } from '@/lib/locale';
-import { intlLocale } from '@/lib/format';
+import { formatCurrency } from '@/lib/format';
 import { uiT } from '@/messages/ui';
 import { computeDurationOption } from '@/lib/installment-calc';
 import { createReservationAction, type ReservationFormState } from '../actions';
@@ -70,6 +70,8 @@ interface SalesUser {
 interface Props {
   salesOptions: SalesUser[];
   plans: PlanOption[];
+  /** The company currency (getReportsCurrency()). */
+  currency: string;
   locale?: Locale;
 }
 
@@ -82,6 +84,7 @@ function toFiniteOrEmpty(v: unknown): string {
 export default function NewReservationForm({
   salesOptions,
   plans,
+  currency,
   locale = 'ar',
 }: Props) {
   const m = uiT(locale).pages.reservationsForm;
@@ -526,14 +529,14 @@ export default function NewReservationForm({
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500">{m.unitPriceLabel}</span>
                       <span className="font-medium tabular-nums">
-                        {selectedUnitPrice > 0 ? selectedUnitPrice.toLocaleString(intlLocale(locale)) : m.unitPriceUnset}
+                        {selectedUnitPrice > 0 ? formatCurrency(selectedUnitPrice, currency, locale) : m.unitPriceUnset}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500">{m.calcAmountLabel}</span>
                       <span className="font-bold tabular-nums text-brand-700">
                         {percentPreviewAmount != null
-                          ? percentPreviewAmount.toLocaleString(intlLocale(locale))
+                          ? formatCurrency(percentPreviewAmount, currency, locale)
                           : '—'}
                       </span>
                     </div>

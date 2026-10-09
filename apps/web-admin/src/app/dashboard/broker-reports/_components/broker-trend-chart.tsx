@@ -58,7 +58,7 @@ function CustomTooltip({ active, payload, label, fmt, tooltipContracts, tooltipC
 export function BrokerTrendChart({
   data,
   height = '100%',
-  currency = 'SAR',
+  currency,
   locale = 'ar',
   tooltipContracts,
   tooltipCommissions,
@@ -67,7 +67,7 @@ export function BrokerTrendChart({
 }: {
   data:               BrokerTrendBucket[];
   height?:            number | `${number}%`;
-  currency?:          string;
+  currency:          string;
   locale?:            string;
   tooltipContracts?:  string;
   tooltipCommissions?: string;

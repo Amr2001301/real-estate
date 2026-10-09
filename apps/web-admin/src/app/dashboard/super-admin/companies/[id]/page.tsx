@@ -1,5 +1,6 @@
 'use client';
 
+import { CURRENCY_OPTIONS } from '@/lib/currency-format';
 import { useEffect, useState, useTransition, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
@@ -466,7 +467,11 @@ function EditForm({ company, m, onSave, pending }: {
           </Select>
         </Field>
         <Field label={m.fields.currency} name="currency">
-          <Input name="currency" defaultValue={company.currency} dir="ltr" />
+          <Select name="currency" defaultValue={company.currency} dir="ltr">
+                  {CURRENCY_OPTIONS.map((c) => (
+                    <option key={c.code} value={c.code}>{c.code} — {c.ar}</option>
+                  ))}
+                </Select>
         </Field>
         <Field label={m.fields.timezone} name="timezone">
           <Input name="timezone" defaultValue={company.timezone} dir="ltr" />

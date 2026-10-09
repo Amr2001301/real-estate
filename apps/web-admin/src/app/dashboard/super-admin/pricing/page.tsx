@@ -336,7 +336,7 @@ function PackageFormModal({ pkg, m, error, pending, onSubmit, onClose }: {
       nameEn: fd.get('nameEn') as string,
       descAr: (fd.get('descAr') as string) || undefined,
       descEn: (fd.get('descEn') as string) || undefined,
-      currency: (fd.get('currency') as string) || 'SAR',
+      currency: (fd.get('currency') as string) || 'EGP',
       monthlyPrice: fd.get('monthlyPrice') ? Number(fd.get('monthlyPrice')) : undefined,
       annualPrice: fd.get('annualPrice') ? Number(fd.get('annualPrice')) : undefined,
       setupFee: fd.get('setupFee') ? Number(fd.get('setupFee')) : undefined,
@@ -380,7 +380,7 @@ function PackageFormModal({ pkg, m, error, pending, onSubmit, onClose }: {
               </Select>
             </Field>
             <Field label={m.form.currency} name="currency">
-              <Input name="currency" defaultValue={pkg?.currency ?? 'SAR'} dir="ltr" />
+              <Input name="currency" defaultValue={pkg?.currency ?? 'EGP'} dir="ltr" />
             </Field>
             <Field label={m.form.nameAr} name="nameAr" required>
               <Input name="nameAr" required defaultValue={pkg?.nameAr ?? ''} />
