@@ -1,6 +1,6 @@
 /**
  * Per-tenant branding fetched from GET /v1/public/branding?slug=<slug>.
- * Called from the root layout on every request; cached 300 s in Next.js Data Cache
+ * Called from the root layout on every request; cached 60 s in Next.js Data Cache
  * (keyed by full URL, so tenant-a and tenant-b always get separate entries).
  *
  * fetchBranding never throws — returns null on network error, timeout, or
@@ -26,6 +26,8 @@ export interface BrandingData {
   officeHours?: { ar: string; en: string };
   socialLinks?: Record<string, string>;
   registrationNumber?: string;
+  /** ISO 4217 — every price on the site is shown in it (Company.currency). */
+  currency?: string;
 }
 
 const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
@@ -49,9 +51,11 @@ export async function fetchBranding(slug: string): Promise<BrandingData | null> 
     const res = await fetch(
       `${API_BASE}/v1/public/branding?slug=${encodeURIComponent(slug)}`,
       {
-        // 300 s matches backend Redis TTL. Cache is keyed by full URL, so each
-        // tenant slug gets its own entry — no cross-tenant data in a shared cache.
-        next: { revalidate: 300 },
+        // 60 s: the API invalidates its own cache when the admin saves the
+        // branding, so a change (logo, colours, currency) shows on the site
+        // within a minute. Cache is keyed by full URL, so each tenant slug gets
+        // its own entry — no cross-tenant data in a shared cache.
+        next: { revalidate: 60 },
         signal: AbortSignal.timeout(3_000),
         headers: { Accept: 'application/json' },
       },

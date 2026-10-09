@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { Price } from '@/components/currency/CurrencyProvider';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { Wallet, CalendarClock } from 'lucide-react';
@@ -27,7 +28,7 @@ function TotalItem({ label, value }: { label: string; value: string | undefined 
     <div className="flex flex-col items-center justify-center rounded-xl border border-hairline bg-surface-soft/60 p-2 text-center">
       <div className="text-[10px] font-medium text-ink-muted">{label}</div>
       <div className="mt-1 text-xs font-bold text-ink" dir="auto">
-        {value ? formatPrice(value) : '—'}
+        {value ? <Price value={value} /> : '—'}
       </div>
     </div>
   );
@@ -110,7 +111,7 @@ export default async function AccountDepositsPage() {
               <div>
                 <div className="text-[11px] font-medium text-ink-muted">{m.totalPayments}</div>
                 <div className="mt-1 font-display text-2xl font-black tracking-tight text-ink-strong" dir="auto">
-                  {formatPrice(totals.totalAmount)}
+                  <Price value={totals.totalAmount} />
                 </div>
                 <span className="mt-1 inline-block rounded-md bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
                   {formatNumber(totals.count)} {m.depositLabel}

@@ -1,8 +1,9 @@
 import type { Route } from 'next';
+import { Price } from '@/components/currency/CurrencyProvider';
 import Link from 'next/link';
 import { Building2, Home, MapPin, BedDouble, Maximize2, Heart, ArrowLeft, type LucideIcon } from 'lucide-react';
 import { routes } from '@/lib/routes';
-import { formatPrice, formatNumber, pickAr, cityLabel, unitTypeLabel } from '@/lib/format';
+import { formatNumber, pickAr, cityLabel, unitTypeLabel } from '@/lib/format';
 import type { FavoriteItem } from '@/lib/api-types';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -109,7 +110,7 @@ export async function FavoriteCard({ favorite }: { favorite: FavoriteItem }) {
           {/* Footer: price (start) · chevron disc (end) */}
           <div className="mt-auto flex items-center justify-between gap-3 pt-1">
             {v.price ? (
-              <div className="font-display text-lg font-extrabold text-ink-strong">{formatPrice(v.price)}</div>
+              <div className="font-display text-lg font-extrabold text-ink-strong"><Price value={v.price} /></div>
             ) : (
               <span className="text-sm font-medium text-gold-600">{m.viewProject}</span>
             )}

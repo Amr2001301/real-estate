@@ -1,5 +1,6 @@
 import { FileText, Building2, Home, Wallet, Calendar, CalendarClock, Clock } from 'lucide-react';
-import { formatPrice, formatNumber, pickAr, unitTypeLabel } from '@/lib/format';
+import { Price } from '@/components/currency/CurrencyProvider';
+import { formatNumber, pickAr, unitTypeLabel } from '@/lib/format';
 import type { MeContract } from '@/lib/api-types';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -89,7 +90,7 @@ export async function ContractCard({ contract }: { contract: MeContract }) {
         <div className="min-w-0">
           <span className="mb-0.5 block text-[11px] font-medium text-ink-muted">{m.totalAmount}</span>
           <div className="font-display text-lg font-bold tracking-tight text-ink-strong" dir="auto">
-            {formatPrice(contract.totalAmount)}
+            <Price value={contract.totalAmount} />
           </div>
         </div>
 
@@ -97,14 +98,14 @@ export async function ContractCard({ contract }: { contract: MeContract }) {
           <div className="min-w-0">
             <span className="mb-0.5 block text-[11px] font-medium text-ink-muted">{m.downPayment}</span>
             <div className="text-sm font-semibold text-ink-strong" dir="auto">
-              {formatPrice(contract.downPayment)}
+              <Price value={contract.downPayment} />
             </div>
           </div>
           {plan && (
             <div className="inline-flex items-center gap-1.5 rounded-xl border border-warning/20 bg-warning/10 px-3 py-1.5 text-xs font-semibold text-warning">
               <Wallet className="h-3.5 w-3.5 shrink-0" aria-hidden />
               <span dir="auto">
-                {formatPrice(plan.monthlyAmount)} / {FREQUENCY_ADVERB[plan.frequency] ?? m.frequencyMonthly}
+                <Price value={plan.monthlyAmount} /> / {FREQUENCY_ADVERB[plan.frequency] ?? m.frequencyMonthly}
               </span>
             </div>
           )}

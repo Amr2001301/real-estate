@@ -1,6 +1,7 @@
 import { BookmarkCheck, Building2, Home, Clock, User2 } from 'lucide-react';
+import { Price } from '@/components/currency/CurrencyProvider';
 import { cn } from '@/lib/cn';
-import { formatPrice, pickAr, unitTypeLabel } from '@/lib/format';
+import { pickAr, unitTypeLabel } from '@/lib/format';
 import type { MeReservation, MeReservationBookingPaymentStatus } from '@/lib/api-types';
 import { getLocale } from '@/lib/locale';
 import { AccountCard, AccountCardIcon, type AccountCardAccent } from '@/components/account/AccountCard';
@@ -125,7 +126,7 @@ export async function ReservationCard({ reservation }: { reservation: MeReservat
       <div className="mt-5 grid grid-cols-1 gap-6 border-t border-hairline pt-5 sm:grid-cols-3 sm:items-center sm:gap-0">
         <Block label="مبلغ الحجز">
           <div className="text-sm font-semibold text-ink-strong" dir="auto">
-            {formatPrice(reservation.bookingAmount)}
+            <Price value={reservation.bookingAmount} />
           </div>
         </Block>
         <Block label="حالة الدفع" separator>

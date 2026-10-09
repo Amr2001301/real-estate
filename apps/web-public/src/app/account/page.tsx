@@ -1,4 +1,7 @@
 import { redirect } from 'next/navigation';
+import { getSiteCurrency } from '@/lib/site-currency';
+import { currencySymbol } from '@/lib/format';
+import { Price } from '@/components/currency/CurrencyProvider';
 import Link from 'next/link';
 import type { Route } from 'next';
 import {
@@ -279,6 +282,7 @@ export default async function AccountPage() {
 
   const locale = await getLocale();
   const m = siteT(locale).accountPages.dashboard;
+  const currency = await getSiteCurrency();
 
   // ── Data fetching ─────────────────────────────────────────────────────────
   // Both groups are STARTED here, concurrently. The customer-only group used
@@ -363,7 +367,7 @@ export default async function AccountPage() {
     const notifications    = extractPaginatedData<MeNotification>(notificationsRaw);
 
     contractsCount     = contracts   ? contracts.meta.total                    : null;
-    depositsTotalText  = deposits    ? formatPrice(deposits.totals.totalAmount) : null;
+    depositsTotalText  = deposits    ? formatPrice(deposits.totals.totalAmount, currency) : null;
     depositsAmountText = deposits    ? formatNumber(deposits.totals.totalAmount): null;
     maintenanceCount   = maintenance ? maintenance.meta.total                   : null;
 
@@ -385,7 +389,7 @@ export default async function AccountPage() {
           icon:     Wallet,
           label:    m.totalPayments,
           value:    depositsAmountText ?? '—',
-          currency: depositsAmountText ? m.currency || undefined : undefined,
+          currency: depositsAmountText ? currencySymbol(currency) : undefined,
           hint:     m.totalCollected,
           href:     routes.accountDeposits,
         },
@@ -453,7 +457,7 @@ export default async function AccountPage() {
         subtitle={`${m.contractPrefix} ${c.contractNumber ?? '—'}`}
         trailing={
           <span className="whitespace-nowrap text-sm font-bold text-ink-strong">
-            {formatPrice(c.totalAmount)}
+            <Price value={c.totalAmount} />
           </span>
         }
       />

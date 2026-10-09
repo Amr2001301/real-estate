@@ -12,6 +12,7 @@ import type { PublicUnit } from '@/lib/api-types';
 import { ButtonLink } from '@/components/ui/Button';
 import { CoverImage } from '@/components/ui/CoverImage';
 import { writeCompareItems, type CompareItem } from './CompareContext';
+import { useCurrency } from '@/components/currency/CurrencyProvider';
 
 const STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'neutral' }> = {
   AVAILABLE: { label: 'متاحة', tone: 'success' },
@@ -22,14 +23,15 @@ const DEFAULT_STATUS = { label: 'متاحة', tone: 'success' as const };
 
 interface Row {
   label: string;
-  value: (u: PublicUnit) => string;
+  /** `currency` is the company's (useCurrency()). */
+  value: (u: PublicUnit, currency: string) => string;
   /** When set, the standout value across the compared units is highlighted. */
   metric?: (u: PublicUnit) => number;
   dir?: 'min' | 'max';
 }
 
 const ROWS: Row[] = [
-  { label: 'السعر', value: (u) => formatPrice(u.price), metric: (u) => Number(u.price), dir: 'min' },
+  { label: 'السعر', value: (u, currency) => formatPrice(u.price, currency), metric: (u) => Number(u.price), dir: 'min' },
   { label: 'المساحة', value: (u) => formatArea(u.area), metric: (u) => u.area, dir: 'max' },
   { label: 'غرف النوم', value: (u) => formatNumber(u.bedrooms), metric: (u) => u.bedrooms, dir: 'max' },
   { label: 'دورات المياه', value: (u) => formatNumber(u.bathrooms), metric: (u) => u.bathrooms, dir: 'max' },
@@ -61,6 +63,7 @@ function toItem(u: PublicUnit): CompareItem {
 }
 
 export function CompareView({ units }: { units: PublicUnit[] }) {
+  const currency = useCurrency();
   const router = useRouter();
 
   // Keep the querystring (source of truth) and localStorage in sync so the
@@ -128,7 +131,7 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
                 <div className="line-clamp-1 text-sm text-ink-muted">
                   {unitTypeLabel(u.type)}{project ? ` · ${project}` : ''}
                 </div>
-                <div className="mt-1 font-display text-xl font-bold text-ink-strong">{formatPrice(u.price)}</div>
+                <div className="mt-1 font-display text-xl font-bold text-ink-strong">{formatPrice(u.price, currency)}</div>
                 <div className="mt-auto flex flex-wrap gap-2 pt-4">
                   <ButtonLink href={routes.unit(u.id) as Route} variant="primary" size="sm">
                     عرض التفاصيل
@@ -202,7 +205,7 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
                       isBest && 'bg-gold-100/70 font-semibold',
                     )}
                   >
-                    {row.value(u)}
+                    {row.value(u, currency)}
                   </div>
                 );
               })}
@@ -233,7 +236,7 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
                   return (
                     <div key={row.label} className="flex items-center justify-between px-5 py-3">
                       <dt className="text-sm text-ink-muted">{row.label}</dt>
-                      <dd className={cn('text-ink-strong', isBest && 'font-semibold text-gold-600')}>{row.value(u)}</dd>
+                      <dd className={cn('text-ink-strong', isBest && 'font-semibold text-gold-600')}>{row.value(u, currency)}</dd>
                     </div>
                   );
                 })}
