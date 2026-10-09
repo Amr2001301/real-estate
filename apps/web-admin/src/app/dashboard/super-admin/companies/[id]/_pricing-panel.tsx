@@ -174,7 +174,7 @@ function CompanyPkgForm({ m, error, pending, onSubmit, onCancel }: {
       planTier: fd.get('planTier') as string,
       nameAr: fd.get('nameAr') as string,
       nameEn: fd.get('nameEn') as string,
-      currency: (fd.get('currency') as string) || 'SAR',
+      currency: (fd.get('currency') as string) || 'EGP',
       monthlyPrice: fd.get('monthlyPrice') ? Number(fd.get('monthlyPrice')) : undefined,
       annualPrice: fd.get('annualPrice') ? Number(fd.get('annualPrice')) : undefined,
       setupFee: fd.get('setupFee') ? Number(fd.get('setupFee')) : undefined,
@@ -193,7 +193,7 @@ function CompanyPkgForm({ m, error, pending, onSubmit, onCancel }: {
           <Select name="planTier"><option value="">— {m.form.planTier}</option>{PLAN_TIERS.map((t) => <option key={t} value={t}>{t}</option>)}</Select>
         </Field>
         <Field label={m.form.currency} name="currency">
-          <Input name="currency" defaultValue="SAR" dir="ltr" />
+          <Input name="currency" defaultValue="EGP" dir="ltr" />
         </Field>
         <Field label={m.form.nameAr} name="nameAr" required>
           <Input name="nameAr" required />

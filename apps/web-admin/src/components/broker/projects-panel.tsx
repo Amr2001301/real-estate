@@ -117,11 +117,12 @@ export function ProjectsPanel({
   locale = 'ar',
 }: {
   projects: PortalProject[];
-  symbol?: string;
+  /** The company currency's symbol (currencySymbol(getReportsCurrency())). */
+  symbol: string;
   locale?: Locale;
 }) {
   const t = portalSharedT(locale).projectsPanel;
-  const currencySymbol = symbol ?? t.currencySymbol;
+  const currencySymbol = symbol;
   const [pending,  setPending]  = useState<Filters>(DEFAULT);
   const [applied,  setApplied]  = useState<Filters>(DEFAULT);
 

@@ -15,11 +15,11 @@ interface Props {
   amount:          string | number;
   dueDate:         string;
   installmentType?: string;
-  currency?:       string;
+  currency:       string;
   locale?:         Locale;
 }
 
-export function RecordPaymentButton({ contractId, installmentId, amount, dueDate, installmentType, currency = 'SAR', locale = 'ar' }: Props) {
+export function RecordPaymentButton({ contractId, installmentId, amount, dueDate, installmentType, currency, locale = 'ar' }: Props) {
   const m = uiT(locale).contractDetailPage;
 
   const PAYMENT_TYPE_LABELS: Record<string, string> = {

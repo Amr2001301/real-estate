@@ -489,6 +489,7 @@ export default async function ReservationDetailPage({
                     unitCode: reservation.unit?.code ?? '—',
                   }}
                   symbol={symbol}
+                  locale={locale}
                 />
               </PremiumSectionCard>
             )}

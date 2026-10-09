@@ -14,11 +14,11 @@ interface Props {
   data:             SalesTrendPoint[];
   highlightMonths?: number[];
   className?:       string;
-  currency?:        string;
+  currency:        string;
   locale?:          Locale;
 }
 
-export function SalesTrendChart({ data, highlightMonths, className, currency = 'SAR', locale = 'ar' }: Props) {
+export function SalesTrendChart({ data, highlightMonths, className, currency, locale = 'ar' }: Props) {
   const m = uiT(locale).pages.reports.salesTrend;
   const maxContracts = Math.max(1, ...data.map((d) => d.contracts));
   const allZero = data.every((d) => d.contracts === 0);

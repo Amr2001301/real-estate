@@ -99,7 +99,6 @@ const ar = {
 
   projectsPanel: {
     sortLocale: 'ar',
-    currencySymbol: 'ج.م',
     emptyTitle: 'لا توجد مشاريع متاحة بعد',
     emptyDescription: 'بمجرد منحك صلاحيات على أي مشروع، ستظهر تفاصيله هنا.',
     kpiTotal: 'إجمالي المشاريع',
@@ -363,7 +362,6 @@ const en: typeof ar = {
 
   projectsPanel: {
     sortLocale: 'en',
-    currencySymbol: 'EGP',
     emptyTitle: 'No projects available yet',
     emptyDescription: 'Once you are granted access to a project, its details will appear here.',
     kpiTotal: 'Total projects',

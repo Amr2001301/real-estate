@@ -29,8 +29,8 @@ export function periodLabel(period: string, locale: 'ar' | 'en' = 'ar'): string 
   return `${names[Number(month) - 1] ?? ''} ${year}`;
 }
 
-// RTL-safe: "700,000 ر.س" — Latin digits + Arabic suffix
-export function fmtAmt(value: number | string | null | undefined, symbol = 'ج.م'): string {
+// RTL-safe: "700,000 ج.م" — Latin digits + the company currency's symbol
+export function fmtAmt(value: number | string | null | undefined, symbol: string): string {
   if (value === null || value === undefined) return '—';
   const n = typeof value === 'string' ? Number(value) : value;
   if (Number.isNaN(n)) return '—';

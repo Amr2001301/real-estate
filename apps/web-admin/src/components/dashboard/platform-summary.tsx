@@ -34,7 +34,7 @@ interface Props {
   financial?:      Financial;
   funnel?:         Funnel;
   topProjects?:    TopProject[];
-  currencySymbol?: string;
+  currencySymbol: string;
   locale?:         Locale;
 }
 
@@ -47,7 +47,7 @@ function convPct(num: number, denom: number): string | null {
 
 // ── FinancialStackedBar ───────────────────────────────────────────────────────
 
-function FinancialStackedBar({ financial, currencySymbol = 'ر.س', locale = 'ar' }: { financial: Financial; currencySymbol?: string; locale?: Locale }) {
+function FinancialStackedBar({ financial, currencySymbol, locale = 'ar' }: { financial: Financial; currencySymbol: string; locale?: Locale }) {
   const total       = financial.totalContractValue;
   const collected   = financial.totalCollectedVerified;
   const overdue     = financial.overdueTotal;
@@ -236,7 +236,7 @@ function FunnelRows({ funnel, locale = 'ar' }: { funnel: Funnel; locale?: Locale
 
 // ── Standalone card exports ───────────────────────────────────────────────────
 
-export function FinancialHealthCard({ financial, currencySymbol = 'ر.س', locale = 'ar' }: { financial: Financial; currencySymbol?: string; locale?: Locale }) {
+export function FinancialHealthCard({ financial, currencySymbol, locale = 'ar' }: { financial: Financial; currencySymbol: string; locale?: Locale }) {
   return (
     <div className="bg-surface border border-hairline rounded-[20px] p-[22px] flex flex-col gap-4 h-full shadow-soft">
       <div>
@@ -263,7 +263,7 @@ export function SalesFunnelCard({ funnel, locale = 'ar' }: { funnel: Funnel; loc
 
 // ── Main Export ───────────────────────────────────────────────────────────────
 
-export function PlatformSummaryCard({ financial, funnel, topProjects, currencySymbol = 'ر.س', locale = 'ar' }: Props) {
+export function PlatformSummaryCard({ financial, funnel, topProjects, currencySymbol, locale = 'ar' }: Props) {
   const hasFin      = financial != null;
   const hasFunnel   = funnel != null && funnel.leads > 0;
   const hasProjects = (topProjects?.length ?? 0) > 0;

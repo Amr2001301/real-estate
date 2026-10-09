@@ -118,7 +118,7 @@ type Mode = 'financial' | 'activity';
 // ── Component ─────────────────────────────────────────────────────────────────
 interface Props {
   data:      BrokerMonthlyTrendPoint[];
-  currency?: string;
+  currency: string;
   locale?:   Locale;
 }
 
@@ -132,7 +132,7 @@ function mapPoint(p: BrokerMonthlyTrendPoint) {
   };
 }
 
-export function MonthlyTrendChart({ data, currency = 'SAR', locale = 'ar' }: Props) {
+export function MonthlyTrendChart({ data, currency, locale = 'ar' }: Props) {
   const t = portalSharedT(locale).trend;
   const dir = locale === 'en' ? 'ltr' : 'rtl';
   const legendStyle = { ...LEGEND_STYLE, direction: dir } as const;

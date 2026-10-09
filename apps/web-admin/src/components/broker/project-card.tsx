@@ -16,9 +16,9 @@ import { ProjectStatusBadge } from '@/components/badges';
 import { ProjectImageLightbox } from '@/components/broker/project-image-lightbox';
 import { cn } from '@/lib/cn';
 
-export function ProjectCard({ p, symbol, locale = 'ar' }: { p: PortalProject; symbol?: string; locale?: Locale }) {
+export function ProjectCard({ p, symbol, locale = 'ar' }: { p: PortalProject; symbol: string; locale?: Locale }) {
   const t = portalSharedT(locale).projectCard;
-  const currency = symbol ?? portalSharedT(locale).projectsPanel.currencySymbol;
+  const currency = symbol;
   const commissionPct =
     p.access.commissionPct !== null && p.access.commissionPct !== undefined
       ? Number(p.access.commissionPct) : null;

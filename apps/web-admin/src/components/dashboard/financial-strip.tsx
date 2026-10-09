@@ -9,7 +9,7 @@ interface Props {
   overdueTotal:           number;
   pendingBonus:           number;
   pendingBrokerPayouts:   number;
-  currency?:              string;
+  currency:              string;
   locale?:                Locale;
 }
 
@@ -29,7 +29,7 @@ export function FinancialStrip({
   overdueTotal,
   pendingBonus,
   pendingBrokerPayouts,
-  currency = 'SAR',
+  currency,
   locale = 'ar',
 }: Props) {
   const collectionRate =

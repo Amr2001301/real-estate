@@ -46,7 +46,7 @@ interface PlanOption {
 interface Props {
   /** First few approved leads still waiting for a sales rep (warning only). */
   leadsMissingSales: PortalLead[];
-  currency?:         string;
+  currency:         string;
   locale?:           Locale;
 }
 
@@ -54,7 +54,7 @@ interface Props {
 // to preload ?pageSize=200 of each, so lead or unit 201 could not be reserved.
 export default function PortalReservationForm({
   leadsMissingSales,
-  currency = 'SAR',
+  currency,
   locale = 'ar',
 }: Props) {
   const m = portalReservationsContractsT(locale);

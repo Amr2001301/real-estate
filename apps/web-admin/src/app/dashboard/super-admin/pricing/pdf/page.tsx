@@ -114,7 +114,7 @@ p{margin:0}
   }, [isRtl, locale, m.pdf.title]);
 
   const offerCount = packages.filter(p => p.specialOffer).length;
-  const currency   = packages[0]?.currency ?? 'SAR';
+  const currency   = packages[0]?.currency ?? 'EGP';
 
   return (
     <div>

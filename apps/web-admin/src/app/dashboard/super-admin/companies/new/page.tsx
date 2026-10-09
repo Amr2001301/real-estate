@@ -1,5 +1,6 @@
 'use client';
 
+import { CURRENCY_OPTIONS } from '@/lib/currency-format';
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, AlertCircle } from 'lucide-react';
@@ -33,8 +34,8 @@ export default function NewCompanyPage() {
       name:                fd.get('name') as string,
       slug:                fd.get('slug') as string,
       country:            fd.get('country') as string,
-      currency:           (fd.get('currency') as string) || 'SAR',
-      timezone:           (fd.get('timezone') as string) || 'Asia/Riyadh',
+      currency:           (fd.get('currency') as string) || 'EGP',
+      timezone:           (fd.get('timezone') as string) || 'Africa/Cairo',
       subscriptionPlan:   (fd.get('subscriptionPlan') as string) || 'TRIAL',
       subscriptionStartAt:(fd.get('subscriptionStartAt') as string) || undefined,
       subscriptionEndAt:  (fd.get('subscriptionEndAt') as string)  || undefined,
@@ -114,11 +115,15 @@ export default function NewCompanyPage() {
                 </Select>
               </Field>
               <Field label={m.fields.currency} name="currency">
-                <Input name="currency" defaultValue="SAR" dir="ltr" />
+                <Select name="currency" defaultValue={'EGP'} dir="ltr">
+                  {CURRENCY_OPTIONS.map((c) => (
+                    <option key={c.code} value={c.code}>{c.code} — {c.ar}</option>
+                  ))}
+                </Select>
               </Field>
               <div className="md:col-span-2">
                 <Field label={m.fields.timezone} name="timezone">
-                  <Input name="timezone" defaultValue="Asia/Riyadh" dir="ltr" />
+                  <Input name="timezone" defaultValue="Africa/Cairo" dir="ltr" />
                 </Field>
               </div>
             </div>

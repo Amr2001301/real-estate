@@ -51,7 +51,7 @@ interface Props {
   projects:     ProjectOption[];
   initialData?: InstallmentPlanTemplate;
   mode:         'create' | 'edit';
-  currency?:    string;
+  currency:    string;
   locale?:      Locale;
 }
 
@@ -72,7 +72,7 @@ function safeStr(val: unknown, fallback = ''): string {
 }
 
 
-export default function PlanForm({ projects, initialData, mode, currency = 'SAR', locale = 'ar' }: Props) {
+export default function PlanForm({ projects, initialData, mode, currency, locale = 'ar' }: Props) {
   const m = uiT(locale).pages.installmentsForm;
   const symbol = currencySymbol(currency, locale);
   const action =

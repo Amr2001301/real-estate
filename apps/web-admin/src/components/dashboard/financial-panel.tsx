@@ -13,11 +13,11 @@ interface Props {
     pendingBrokerPayouts:   number;
   };
   className?:      string;
-  currencySymbol?: string;
+  currencySymbol: string;
   locale?:         Locale;
 }
 
-export function FinancialPanel({ financial, className, currencySymbol = 'ر.س', locale = 'ar' }: Props) {
+export function FinancialPanel({ financial, className, currencySymbol, locale = 'ar' }: Props) {
   const { totalContractValue, totalCollectedVerified, overdueTotal, pendingBonus, pendingBrokerPayouts } = financial;
 
   const collectionRate = totalContractValue > 0

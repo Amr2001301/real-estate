@@ -37,11 +37,11 @@ const HEALTH: Record<HealthStatus, { label: string; dotCls: string; badgeCls: st
 interface Props {
   projects:        ProjectHealthRow[];
   className?:      string;
-  currencySymbol?: string;
+  currencySymbol: string;
   locale?:         Locale;
 }
 
-export function ProjectHealthMatrix({ projects, className, currencySymbol = 'ر.س', locale = 'ar' }: Props) {
+export function ProjectHealthMatrix({ projects, className, currencySymbol, locale = 'ar' }: Props) {
   if (projects.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">

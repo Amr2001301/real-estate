@@ -31,7 +31,7 @@ interface Props {
   mode: 'add' | 'edit';
   prefillTarget?: SalesTarget;
   salesUsers: SalesUser[];
-  symbol?: string;
+  symbol: string;
   locale?: Locale;
   onClose: () => void;
   onSuccess: () => void;
@@ -42,7 +42,7 @@ export function TargetFormDialog({
   mode,
   prefillTarget,
   salesUsers,
-  symbol = 'ج.م',
+  symbol,
   locale = 'ar',
   onClose,
   onSuccess,

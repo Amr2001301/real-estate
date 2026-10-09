@@ -25,3 +25,19 @@ export function currencySymbol(code: string, locale: Locale = 'ar'): string {
   if (locale === 'en') return code === 'USD' ? '$' : code;
   return SYMBOL_MAP[code] ?? code;
 }
+
+/**
+ * The currencies a company can choose (the API accepts exactly these), with
+ * their names for the pickers.
+ */
+export const CURRENCY_OPTIONS: { code: string; ar: string; en: string }[] = [
+  { code: 'EGP', ar: 'جنيه مصري', en: 'Egyptian Pound' },
+  { code: 'SAR', ar: 'ريال سعودي', en: 'Saudi Riyal' },
+  { code: 'AED', ar: 'درهم إماراتي', en: 'UAE Dirham' },
+  { code: 'KWD', ar: 'دينار كويتي', en: 'Kuwaiti Dinar' },
+  { code: 'QAR', ar: 'ريال قطري', en: 'Qatari Riyal' },
+  { code: 'BHD', ar: 'دينار بحريني', en: 'Bahraini Dinar' },
+  { code: 'OMR', ar: 'ريال عماني', en: 'Omani Rial' },
+  { code: 'JOD', ar: 'دينار أردني', en: 'Jordanian Dinar' },
+  { code: 'USD', ar: 'دولار أمريكي', en: 'US Dollar' },
+];

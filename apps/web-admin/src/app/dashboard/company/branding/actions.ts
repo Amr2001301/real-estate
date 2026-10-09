@@ -25,6 +25,8 @@ export interface BrandingPayload {
     tiktok?: string;
   };
   registrationNumber?: string;
+  /** ISO 4217 — every amount on every surface uses it. */
+  currency?: string;
 }
 
 export type BrandingActionResult =
@@ -36,7 +38,8 @@ export async function patchBrandingAction(
 ): Promise<BrandingActionResult> {
   try {
     await api.patch('/company/branding', payload);
-    revalidatePath('/dashboard/company/branding');
+    // The currency shows on every page (dashboard and portal), not just this one.
+    revalidatePath('/', 'layout');
     return { ok: true };
   } catch (e) {
     return { ok: false, error: (e as Error).message ?? 'حدث خطأ غير متوقع.' };

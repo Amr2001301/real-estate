@@ -14,7 +14,7 @@ interface Props {
   reservationAmount: number;
   downPaymentAmount: number;
   totalPrice:        number;
-  currency?:         string;
+  currency:         string;
   locale?:           Locale;
 }
 
@@ -24,7 +24,7 @@ export function DurationSelector({
   reservationAmount,
   downPaymentAmount,
   totalPrice,
-  currency = 'SAR',
+  currency,
   locale = 'ar',
 }: Props) {
   const m = uiT(locale).pages.installments.detail.durationSelector;

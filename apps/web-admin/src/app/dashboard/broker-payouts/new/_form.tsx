@@ -30,7 +30,7 @@ interface Props {
   selectedBrokerId:  string;
   brokerName:        string | null;
   eligible:          AdminEligibleCommission[];
-  currency?:         string;
+  currency:         string;
   locale?:           Locale;
 }
 
@@ -64,7 +64,7 @@ export default function CreatePayoutForm({
   selectedBrokerId,
   brokerName,
   eligible,
-  currency = 'SAR',
+  currency,
   locale = 'ar',
 }: Props) {
   const m = uiT(locale).pages.brokerPayoutsForm;

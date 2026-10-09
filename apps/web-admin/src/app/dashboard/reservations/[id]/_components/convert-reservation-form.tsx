@@ -29,11 +29,11 @@ interface Props {
     clientName: string;
     unitCode: string;
   };
-  symbol?: string;
+  symbol: string;
   locale?: Locale;
 }
 
-export function ConvertReservationForm({ reservation, symbol = 'ج.م', locale = 'ar' }: Props) {
+export function ConvertReservationForm({ reservation, symbol, locale = 'ar' }: Props) {
   const m = uiT(locale).pages.reservationDetailPage;
   const router = useRouter();
   const [open, setOpen] = useState(false);
