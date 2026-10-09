@@ -8,7 +8,7 @@
  *   §C4  slug only, found   → returns branding
  *   §C5  hostname only, unknown → 404 COMPANY_NOT_FOUND
  *   §C6  hostname only, found   → returns branding
- *   §C7  company with zero branding → response has only slug + name
+ *   §C7  company with zero branding → response has only slug + name + currency
  *   §C8  invalid hostname → 400 HOSTNAME_INVALID
  *   §C9  whitespace-only slug → treated as missing → 400
  *   §C10 whitespace-only hostname → treated as missing → 400
@@ -26,11 +26,13 @@ const FULL_BRANDING: CompanyBrandingResponse = {
   logoUrl: 'https://cdn.example.com/logo.png',
   primaryColor: '#1E3A5F',
   contactEmail: 'info@acme.sa',
+  currency: 'EGP',
 };
 
 const BARE_BRANDING: CompanyBrandingResponse = {
   slug: 'bare',
   name: 'Bare Corp',
+  currency: 'EGP',
 };
 
 function makeService(overrides: Partial<{
@@ -103,10 +105,10 @@ describe('PublicBrandingController — slug lookup', () => {
     expect(getBySlug).toHaveBeenCalledWith('acme');
   });
 
-  test('§C7 — company with zero branding returns only slug + name', async () => {
+  test('§C7 — company with zero branding returns only slug + name (+ its currency)', async () => {
     const ctrl = makeController(makeService({ getBySlug: jest.fn().mockResolvedValue(BARE_BRANDING) }));
     const result = await ctrl.getBranding('bare', undefined);
-    expect(result).toEqual({ slug: 'bare', name: 'Bare Corp' });
+    expect(result).toEqual({ slug: 'bare', name: 'Bare Corp', currency: 'EGP' });
     expect(result).not.toHaveProperty('logoUrl');
     expect(result).not.toHaveProperty('primaryColor');
     expect(result).not.toHaveProperty('contactEmail');

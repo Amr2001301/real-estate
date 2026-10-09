@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
+import { getCompanyCurrency } from '../../../../common/currency/currency';
+import { getTenantContext } from '../../../../common/tenant/tenant-context';
 import { UnitsService } from '../../../units/units.service';
 import { ProjectsService } from '../../../projects/projects.service';
 import {
@@ -46,7 +48,9 @@ export class CatalogSearchService extends CatalogSearchTool {
   async searchUnits(slots: Slots): Promise<CatalogSearchResult> {
     const query = buildUnitQuery(slots);
     const res = (await this.units.findAll(query as never, true)) as PaginatedPublic<PublicUnitLike>;
-    return { cards: dedupeById(res.data.map(toUnitCard)), total: res.meta.total };
+    // Prices in the company's currency (Company.currency).
+    const currency = await getCompanyCurrency(this.prisma, getTenantContext()?.companyId);
+    return { cards: dedupeById(res.data.map((u) => toUnitCard(u, currency))), total: res.meta.total };
   }
 
   async searchProjects(slots: Slots): Promise<CatalogSearchResult> {

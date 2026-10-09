@@ -13,6 +13,7 @@ import {
   MinLength,
   Min,
 } from 'class-validator';
+import { SUPPORTED_CURRENCIES, type CurrencyCode } from '../../../common/currency/currency';
 import { CompanyLifecycleStatus, CompanyType, SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
 import { SUPPORTED_COUNTRIES } from '../../../common/utils/identity-normalize';
 // CompanyType imported for CreateCompanyDto.type — intentionally NOT in UpdateCompanyDto
@@ -28,8 +29,8 @@ export class CreateCompanyDto {
   @IsString() @IsNotEmpty() @IsIn(SUPPORTED_COUNTRIES)
   country!: string;
 
-  @IsString() @IsOptional()
-  currency?: string;
+  @IsOptional() @IsIn(SUPPORTED_CURRENCIES)
+  currency?: CurrencyCode;
 
   @IsString() @IsOptional()
   timezone?: string;
@@ -77,8 +78,8 @@ export class UpdateCompanyDto {
   @IsString() @IsIn(SUPPORTED_COUNTRIES) @IsOptional()
   country?: string;
 
-  @IsString() @IsOptional()
-  currency?: string;
+  @IsOptional() @IsIn(SUPPORTED_CURRENCIES)
+  currency?: CurrencyCode;
 
   @IsString() @IsOptional()
   timezone?: string;

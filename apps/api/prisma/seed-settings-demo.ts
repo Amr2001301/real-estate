@@ -64,7 +64,6 @@ const DEMO_SETTINGS: SettingSeed[] = [
   { key: 'notifications.fromEmail',    value: 'noreply@devora.sa' },
 
   // reports
-  { key: 'reports.currency',   value: 'SAR' },
   { key: 'reports.dateFormat', value: 'DD/MM/YYYY' },
   { key: 'reports.timezone',   value: 'Asia/Riyadh' },
 

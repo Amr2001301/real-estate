@@ -3,6 +3,8 @@ import { ApiTags } from '@nestjs/swagger';
 import { InstallmentStatus, MaintenanceStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { findTenantUser } from '../../common/tenant/resolve-tenant-entity';
+import { getTenantContext } from '../../common/tenant/tenant-context';
+import { getCompanyCurrency } from '../../common/currency/currency';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -75,6 +77,7 @@ function buildPrimaryAction(
   } | null,
   openMaintenanceCount: number,
   now: Date,
+  currency: string,
 ): PrimaryAction {
   const noAction: PrimaryAction = {
     type: 'NO_ACTION_REQUIRED',
@@ -98,7 +101,7 @@ function buildPrimaryAction(
         title: { ar: 'قسط متأخر', en: 'Overdue installment' },
         subtitle: { ar: 'لديك قسط متأخر السداد', en: 'You have an overdue payment' },
         amount: nextDue.amount.toString(),
-        currency: 'EGP',
+        currency,
         dueDate: nextDue.dueDate.toISOString(),
         cta: { label: { ar: 'عرض الأقساط', en: 'View installments' }, route: 'installments' },
       };
@@ -111,7 +114,7 @@ function buildPrimaryAction(
         title: { ar: 'قسط قادم قريباً', en: 'Installment due soon' },
         subtitle: { ar: 'يستحق خلال أقل من أسبوعين', en: 'Due in less than two weeks' },
         amount: nextDue.amount.toString(),
-        currency: 'EGP',
+        currency,
         dueDate: nextDue.dueDate.toISOString(),
         cta: { label: { ar: 'عرض الأقساط', en: 'View installments' }, route: 'installments' },
       };
@@ -138,7 +141,7 @@ function buildPrimaryAction(
       title: { ar: 'القسط القادم', en: 'Upcoming installment' },
       subtitle: { ar: 'موعد السداد القادم', en: 'Your next payment is scheduled' },
       amount: nextDue.amount.toString(),
-      currency: 'EGP',
+      currency,
       dueDate: nextDue.dueDate.toISOString(),
       cta: { label: { ar: 'عرض الأقساط', en: 'View installments' }, route: 'installments' },
     };
@@ -155,6 +158,8 @@ class MeHomeSummaryService {
 
   async getSummary(userId: string) {
     const now = new Date();
+    // The company's currency (Company.currency) — the app shows amounts in it.
+    const currency = await getCompanyCurrency(this.prisma, getTenantContext()?.companyId);
 
     const [
       user,
@@ -325,7 +330,7 @@ class MeHomeSummaryService {
         ? {
             id: nextDue.id,
             amount: nextDue.amount.toString(),
-            currency: 'EGP' as const,
+            currency,
             dueDate: nextDue.dueDate.toISOString(),
             status: isEffectivelyOverdue(nextDue.status, nextDue.dueDate, now)
               ? ('OVERDUE' as const)
@@ -370,7 +375,7 @@ class MeHomeSummaryService {
         avatarInitials: toAvatarInitials(displayName),
       },
       notifications: { unreadCount: unreadNotifCount },
-      primaryAction: buildPrimaryAction(nextDue, openMaintenanceCount, now),
+      primaryAction: buildPrimaryAction(nextDue, openMaintenanceCount, now, currency),
       primaryProperty,
       installments,
       maintenance,

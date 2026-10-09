@@ -8,6 +8,7 @@
  * mappers stay trivially unit-testable without a DB.
  */
 
+import { DEFAULT_CURRENCY, arabicCurrencySymbol } from '../../../../common/currency/currency';
 import type { AssistantCard } from '../chat-provider';
 import type { Slots } from './slots';
 import { PROPERTY_TYPE_LABELS } from './responses';
@@ -90,12 +91,15 @@ export function pickAr(value: unknown, fallback = ''): string {
   return fallback;
 }
 
-/** Format a real catalog price (Decimal string/number) for display. Never invents. */
-export function formatPrice(value: string | number | null | undefined): string | undefined {
+/** Format a real catalog price (Decimal string/number) in the company's currency. Never invents. */
+export function formatPrice(
+  value: string | number | null | undefined,
+  currency: string = DEFAULT_CURRENCY,
+): string | undefined {
   if (value === null || value === undefined) return undefined;
   const n = typeof value === 'string' ? Number(value) : value;
   if (!Number.isFinite(n) || n <= 0) return undefined;
-  return `${new Intl.NumberFormat('en-US').format(n)} ج.م`;
+  return `${new Intl.NumberFormat('en-US').format(n)} ${arabicCurrencySymbol(currency)}`;
 }
 
 /** The subset of the public unit serializer the card needs. */
@@ -119,7 +123,7 @@ export interface PublicProjectLike {
   availableUnitsCount?: number;
 }
 
-export function toUnitCard(u: PublicUnitLike): AssistantCard {
+export function toUnitCard(u: PublicUnitLike, currency: string = DEFAULT_CURRENCY): AssistantCard {
   // Resolve the catalog's raw type (e.g. "2BR", "Duplex") to a canonical key so
   // the Arabic label is correct ("شقة"/"دوبلكس") rather than a generic fallback.
   const typeKey = u.type ? typeKeyForCatalog(u.type) : undefined;
@@ -130,7 +134,7 @@ export function toUnitCard(u: PublicUnitLike): AssistantCard {
     id: u.id,
     title: u.code ? `${typeLabel} • ${u.code}` : typeLabel,
     subtitle: projectName || undefined,
-    price: formatPrice(u.price ?? null),
+    price: formatPrice(u.price ?? null, currency),
     area: u.area ?? undefined,
     bedrooms: u.bedrooms ?? undefined,
     bathrooms: u.bathrooms ?? undefined,
