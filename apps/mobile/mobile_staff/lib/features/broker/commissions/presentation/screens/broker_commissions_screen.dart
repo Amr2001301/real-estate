@@ -873,7 +873,7 @@ class _CommissionsSkeleton extends StatelessWidget {
                       Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                         const Icon(Icons.check_circle_rounded, size: 16, color: Colors.white54),
                         const SizedBox(height: 5),
-                        Text('١٢٣٬٤٥٦ ج.م', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                        Text('١٢٣٬٤٥٦ ${PriceFormatter.symbol('ar')}', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
                         const SizedBox(height: 5),
                         Text('معتمد', style: const TextStyle(color: Colors.white54, fontSize: 11)),
                       ])),
@@ -881,7 +881,7 @@ class _CommissionsSkeleton extends StatelessWidget {
                       Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                         const Icon(Icons.schedule_rounded, size: 16, color: Colors.white54),
                         const SizedBox(height: 5),
-                        Text('٦٧٬٨٩٠ ج.م', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                        Text('٦٧٬٨٩٠ ${PriceFormatter.symbol('ar')}', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
                         const SizedBox(height: 5),
                         Text('قيد المراجعة', style: const TextStyle(color: Colors.white54, fontSize: 11)),
                       ])),
@@ -922,7 +922,7 @@ class _CommissionsSkeleton extends StatelessWidget {
                     ),
                     const SizedBox(width: 13),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('١٢٣٬٤٥٦ ج.م', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                      Text('١٢٣٬٤٥٦ ${PriceFormatter.symbol('ar')}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
                       const SizedBox(height: 4),
                       Text('كمبوند الرياض الجديدة', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                       const SizedBox(height: 3),

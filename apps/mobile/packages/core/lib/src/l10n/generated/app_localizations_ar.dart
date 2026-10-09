@@ -357,9 +357,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get maxLabel => 'إلى';
 
   @override
-  String get filterPriceUnit => 'ج.م';
-
-  @override
   String get filterAreaUnit => 'م²';
 
   @override

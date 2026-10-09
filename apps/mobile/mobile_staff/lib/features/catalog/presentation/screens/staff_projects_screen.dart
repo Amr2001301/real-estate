@@ -955,7 +955,7 @@ class _PriceTag extends StatelessWidget {
   final AppLocalizations l10n;
 
   String _compact(double v) {
-    final currency = lang == 'ar' ? ' ج.م' : ' EGP';
+    final currency = ' ${PriceFormatter.symbol(lang)}';
     if (v >= 1e6) {
       final m = v / 1e6;
       final suffix = lang == 'ar' ? 'م' : 'M';
