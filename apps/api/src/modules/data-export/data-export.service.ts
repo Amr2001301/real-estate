@@ -11,6 +11,7 @@ import {
 import {
   applySheetChrome,
   createReportWorkbook,
+  currencyNote,
   HAIRLINE_BORDER,
   styleHeaderCell,
   workbookToBuffer,
@@ -33,6 +34,7 @@ import {
   XLSX_TAB_README,
   XLSX_ZEBRA,
 } from '../../common/utils/xlsx';
+import { DEFAULT_CURRENCY } from '../../common/currency/currency';
 import { storedToImportPhone } from '../../common/utils/phone-normaliser';
 
 // ── Local helpers ─────────────────────────────────────────────────────────────
@@ -90,7 +92,7 @@ export class DataExportService {
     ] = await Promise.all([
       this.prisma.company.findUnique({
         where: { id: companyId },
-        select: { name: true, displayName: true },
+        select: { name: true, displayName: true, currency: true },
       }),
       this.prisma.user.findUnique({
         where: { id: actorId },
@@ -367,7 +369,7 @@ export class DataExportService {
     const companyName = company?.displayName ?? company?.name ?? companyId;
     const actorName = actor?.fullName ?? actorId;
 
-    this.buildReadme(readmeWs, companyName, actorName, sheetCounts, totalRows);
+    this.buildReadme(readmeWs, companyName, actorName, sheetCounts, totalRows, company?.currency ?? DEFAULT_CURRENCY);
 
     const buffer = await workbookToBuffer(wb);
     return { buffer, sheetCounts, totalRows, companyName };
@@ -996,6 +998,7 @@ export class DataExportService {
     actorName: string,
     sheetCounts: Record<string, number>,
     totalRows: number,
+    currency: string,
   ): void {
     // 4 columns: [label/sheet, content, content, count]
     ws.columns = [{ width: 24 }, { width: 28 }, { width: 24 }, { width: 14 }];
@@ -1041,6 +1044,8 @@ export class DataExportService {
       ['تاريخ التصدير', stamp],
       ['صادر بواسطة', actorName],
       ['إصدار التنسيق', 'v1'],
+      // Amount columns hold plain numbers (re-importable); this is their currency.
+      ['العملة (لكل المبالغ)', currencyNote(currency).replace('العملة: ', '')],
     ];
     for (const [lbl, val] of metaRows) {
       const r = ws.addRow([lbl]);

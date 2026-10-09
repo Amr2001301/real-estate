@@ -8,6 +8,7 @@
  * ./csv.ts is the untouched raw-data fallback.
  */
 import { Workbook, type Cell, type Row, type Worksheet } from 'exceljs';
+import { arabicCurrencySymbol, normalizeCurrency } from '../currency/currency';
 
 // ── Brand + palette (ARGB) ───────────────────────────────────────────────────
 export const XLSX_BRAND = 'Devora';
@@ -54,6 +55,21 @@ export function formatStamp(d: Date): string {
 }
 
 /** A new workbook stamped with the brand as creator. */
+/** "العملة: ج.م (EGP)" — stated once in every workbook header. */
+export function currencyNote(currency: string): string {
+  const code = normalizeCurrency(currency);
+  return `العملة: ${arabicCurrencySymbol(code)} (${code})`;
+}
+
+/**
+ * Number format for money cells: the company currency's symbol after the
+ * number, so the value stays a real number (sums, sorting) but reads as money.
+ */
+export function amountFormat(currency?: string, decimals: '0.00' | '0.##' = '0.00'): string {
+  const base = `#,##${decimals}`;
+  return currency ? `${base} "${arabicCurrencySymbol(currency)}"` : base;
+}
+
 export function createReportWorkbook(): Workbook {
   const wb = new Workbook();
   wb.creator = XLSX_BRAND;
@@ -83,7 +99,7 @@ export function styleTotalsRow(row: Row): void {
  * Merged navy title row (row 1) + a muted "generated on" stamp (row 2), spanning
  * `spanCols` columns. The caller owns column widths / frozen views.
  */
-export function addReportTitle(ws: Worksheet, title: string, spanCols = 2): void {
+export function addReportTitle(ws: Worksheet, title: string, spanCols = 2, currency?: string): void {
   ws.mergeCells(1, 1, 1, spanCols);
   const t = ws.getCell(1, 1);
   t.value = title;
@@ -93,7 +109,7 @@ export function addReportTitle(ws: Worksheet, title: string, spanCols = 2): void
 
   ws.mergeCells(2, 1, 2, spanCols);
   const g = ws.getCell(2, 1);
-  g.value = `تاريخ التوليد: ${formatStamp(new Date())}`;
+  g.value = `تاريخ التوليد: ${formatStamp(new Date())}${currency ? ` · ${currencyNote(currency)}` : ''}`;
   g.font = { italic: true, size: 10, color: { argb: XLSX_MUTED } };
   g.alignment = { horizontal: 'right' };
 }
@@ -171,11 +187,13 @@ export function addTitledTable(
     headers: string[];
     rows: Array<Array<string | number | Date>>;
     widths: number[];
+    /** Company currency — stated under the title. */
+    currency?: string;
   },
 ): void {
   const span = opts.headers.length;
   ws.columns = opts.widths.map((w) => ({ width: w }));
-  addReportTitle(ws, opts.title, span);
+  addReportTitle(ws, opts.title, span, opts.currency);
 
   const applied = (opts.filters ?? []).filter(([, v]) => v !== '' && v != null);
   if (applied.length > 0) {
@@ -243,7 +261,7 @@ export function addBoardBanner(
   ws: Worksheet,
   title: string,
   span: number,
-  opts?: { wb?: Workbook; logo?: Buffer | null },
+  opts?: { wb?: Workbook; logo?: Buffer | null; currency?: string },
 ): void {
   ws.mergeCells(1, 1, 1, span);
   ws.mergeCells(2, 1, 2, span);
@@ -265,7 +283,7 @@ export function addBoardBanner(
   t.alignment = { horizontal: 'right', vertical: 'middle' };
 
   const d = ws.getCell(3, 1);
-  d.value = `تاريخ التوليد: ${formatStamp(new Date())}`;
+  d.value = `تاريخ التوليد: ${formatStamp(new Date())}${opts?.currency ? ` · ${currencyNote(opts.currency)}` : ''}`;
   d.font = { italic: true, size: 10, color: { argb: 'FFCBD5E1' } };
   d.alignment = { horizontal: 'right', vertical: 'middle' };
 
@@ -288,7 +306,8 @@ export function addBoardBanner(
  */
 export function addKpiCards(
   ws: Worksheet,
-  cards: Array<{ label: string; value: string | number }>,
+  /** `currency` marks a money card: its value shows the currency symbol. */
+  cards: Array<{ label: string; value: string | number; currency?: string }>,
   opts: { span: number; perRow?: number; bg?: string },
 ): void {
   if (cards.length === 0) {
@@ -331,7 +350,7 @@ export function addKpiCards(
       v.value = card.value;
       v.font = { bold: true, size: 18, color: { argb: XLSX_NAVY } };
       v.alignment = { horizontal: 'center', vertical: 'middle' };
-      if (typeof card.value === 'number') v.numFmt = '#,##0.##';
+      if (typeof card.value === 'number') v.numFmt = amountFormat(card.currency, '0.##');
 
       const l = ws.getCell(labelRow.number, c1);
       l.value = card.label;
@@ -503,7 +522,8 @@ export function writeDateTimeCell(
 }
 
 /**
- * Write `value` as an Excel Number cell with format `#,##0.00`.
+ * Write `value` as an Excel Number cell with format `#,##0.00` (plus the currency
+ * symbol when `currency` is given — see amountFormat).
  *
  * Accepts a JS `number` or any Prisma `Decimal`-like object that implements
  * `toString()`. numFmt is always set so the column format is stable even when
@@ -512,11 +532,17 @@ export function writeDateTimeCell(
 export function writeAmountCell(
   cell: Cell,
   value: number | { toString(): string } | null | undefined,
+  currency?: string,
 ): void {
-  cell.numFmt = '#,##0.00';
+  cell.numFmt = amountFormat(currency);
   if (value == null) { cell.value = null; return; }
   const n = typeof value === 'number' ? value : parseFloat(String(value));
   cell.value = Number.isFinite(n) ? n : null;
+}
+
+/** Money columns (1-based) of a sheet: numbers with the currency symbol. */
+export function formatMoneyColumns(ws: Worksheet, columns: number[], currency: string): void {
+  for (const c of columns) ws.getColumn(c).numFmt = amountFormat(currency, '0.##');
 }
 
 /** Write an integer value with `#,##0` format (no decimal places). */

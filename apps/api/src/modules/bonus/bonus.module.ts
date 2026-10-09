@@ -41,8 +41,11 @@ import {
   addFooter,
   addTitledTable,
   createReportWorkbook,
+  formatMoneyColumns,
   workbookToBuffer,
 } from '../../common/utils/xlsx';
+import { getCompanyCurrency } from '../../common/currency/currency';
+import { getTenantContext } from '../../common/tenant/tenant-context';
 import {
   resolveSalesScope,
   salesActorIds,
@@ -358,6 +361,7 @@ export class BonusService {
       [BonusEntryStatus.PAID]: 'مدفوع',
       [BonusEntryStatus.CANCELLED]: 'ملغي',
     };
+    const currency = await getCompanyCurrency(this.prisma, getTenantContext()?.companyId);
     const wb = createReportWorkbook();
     const ws = wb.addWorksheet('مكافآت المندوبين');
     addTitledTable(ws, {
@@ -377,8 +381,9 @@ export class BonusService {
         e.paidAt ? e.paidAt.toISOString().slice(0, 10) : '',
       ]),
       widths: [22, 12, 22, 16, 12, 16],
+      currency,
     });
-    ws.getColumn(4).numFmt = '#,##0.##';
+    formatMoneyColumns(ws, [4], currency);
     addFooter(ws);
     return workbookToBuffer(wb);
   }

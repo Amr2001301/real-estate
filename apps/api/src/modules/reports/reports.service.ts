@@ -19,6 +19,7 @@ import { awaitingReviewerWhere } from '../deposits/review-queue';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { scopedUserCount } from '../../common/tenant/resolve-tenant-entity';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
+import { getCompanyCurrency } from '../../common/currency/currency';
 import { toCsv, type CsvCell } from '../../common/utils/csv';
 import {
   buildBrokerPdf,
@@ -34,7 +35,9 @@ import {
   addSectionTitle,
   addTable,
   addTitledTable,
+  amountFormat,
   createReportWorkbook,
+  formatMoneyColumns,
   setupBoardSheet,
   styleTotalsRow,
   workbookToBuffer,
@@ -1703,18 +1706,19 @@ export class ReportsService {
       series: byProject.slice(0, 8).map((p) => ({ label: p.name, value: p.total })),
     });
 
+    const currency = await this.currency();
     const SPAN = 6;
     const wb = createReportWorkbook();
     const cover = wb.addWorksheet('الملخص');
     setupBoardSheet(cover, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
-    addBoardBanner(cover, 'تقرير المبيعات', SPAN, { wb, logo: brandLogoPng() });
+    addBoardBanner(cover, 'تقرير المبيعات', SPAN, { wb, logo: brandLogoPng(), currency });
     addSectionTitle(cover, 'الملخص التنفيذي', SPAN);
     addKpiCards(
       cover,
       [
         { label: 'الفترة', value: period ?? 'الكل' },
         { label: 'عدد العقود', value: data.contracts },
-        { label: 'إجمالي قيمة العقود', value: Number(data.total) },
+        { label: 'إجمالي قيمة العقود', value: Number(data.total), currency },
         { label: 'إجمالي الفرص', value: k.leads.total },
         { label: 'فرص جديدة', value: k.leads.new },
         { label: 'زيارات قيد الانتظار', value: k.pendingVisits },
@@ -1731,7 +1735,7 @@ export class ReportsService {
       byProject.map((p) => [p.name, p.count, p.total]),
       [30, 14, 18],
     );
-    detail.getColumn(3).numFmt = '#,##0.##';
+    formatMoneyColumns(detail, [3], currency);
 
     return workbookToBuffer(wb);
   }
@@ -1764,11 +1768,12 @@ export class ReportsService {
       ],
     });
 
+    const currency = await this.currency();
     const SPAN = 6;
     const wb = createReportWorkbook();
     const cover = wb.addWorksheet('الملخص');
     setupBoardSheet(cover, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
-    addBoardBanner(cover, 'التقرير المالي', SPAN, { wb, logo: brandLogoPng() });
+    addBoardBanner(cover, 'التقرير المالي', SPAN, { wb, logo: brandLogoPng(), currency });
     addSectionTitle(cover, 'الملخص التنفيذي', SPAN);
     addKpiCards(
       cover,
@@ -1777,7 +1782,7 @@ export class ReportsService {
         { label: 'عدد الدفعات', value: data.deposits },
         { label: 'الدفعات الموثّقة', value: data.verified },
         { label: 'الدفعات غير الموثّقة', value: unverified },
-        { label: 'إجمالي المبالغ المحصّلة', value: Number(data.total) },
+        { label: 'إجمالي المبالغ المحصّلة', value: Number(data.total), currency },
       ],
       { span: SPAN, perRow: 3 },
     );
@@ -1822,7 +1827,7 @@ export class ReportsService {
    * reservation breakdown), one sheet per table. No demo values.
    */
   async operationalXlsx(): Promise<Buffer> {
-    const [k, r] = await Promise.all([this.kpis(), this.reservations()]);
+    const [k, r, currency] = await Promise.all([this.kpis(), this.reservations(), this.currency()]);
     const wb = createReportWorkbook();
 
     const kpiSheet = wb.addWorksheet('المؤشرات');
@@ -1842,8 +1847,11 @@ export class ReportsService {
         ['إجمالي الدفعات المحصّلة', Number(k.depositsTotal)],
       ],
       widths: [34, 18],
+      currency,
     });
     kpiSheet.getColumn(2).numFmt = '#,##0.##';
+    // The last row (collected deposits) is the one amount among the counts.
+    kpiSheet.getCell(kpiSheet.rowCount, 2).numFmt = amountFormat(currency, '0.##');
     addFooter(kpiSheet);
 
     const resSheet = wb.addWorksheet('الحجوزات حسب الحالة');
@@ -2112,22 +2120,23 @@ export class ReportsService {
       series: data.collectionByType.map((c) => ({ label: DEP_TYPE_LABEL[c.type] ?? c.type, value: Number(c.totalAll) })),
     });
 
+    const currency = await this.currency();
     const SPAN = 6;
     const wb = createReportWorkbook();
     const cover = wb.addWorksheet('الملخص');
     setupBoardSheet(cover, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
-    addBoardBanner(cover, 'لوحة المؤشرات المالية', SPAN, { wb, logo: brandLogoPng() });
+    addBoardBanner(cover, 'لوحة المؤشرات المالية', SPAN, { wb, logo: brandLogoPng(), currency });
 
     addSectionTitle(cover, 'الملخص التنفيذي', SPAN);
     addKpiCards(
       cover,
       [
-        { label: 'إجمالي قيمة العقود', value: Number(s.totalContractValue) },
-        { label: 'المحصّل المؤكد', value: Number(s.totalCollectedVerified) },
-        { label: 'المحصّل غير المؤكد', value: Number(s.totalCollectedUnverified) },
-        { label: 'المتبقي للتحصيل', value: Number(s.totalOutstanding) },
-        { label: 'المحصّل هذا الشهر', value: Number(s.collectedThisMonth) },
-        { label: 'المستحق هذا الشهر', value: Number(s.dueThisMonth) },
+        { label: 'إجمالي قيمة العقود', value: Number(s.totalContractValue), currency },
+        { label: 'المحصّل المؤكد', value: Number(s.totalCollectedVerified), currency },
+        { label: 'المحصّل غير المؤكد', value: Number(s.totalCollectedUnverified), currency },
+        { label: 'المتبقي للتحصيل', value: Number(s.totalOutstanding), currency },
+        { label: 'المحصّل هذا الشهر', value: Number(s.collectedThisMonth), currency },
+        { label: 'المستحق هذا الشهر', value: Number(s.dueThisMonth), currency },
         { label: 'عدد العقود', value: s.contractCount },
         { label: 'عدد الدفعات', value: s.depositCount },
       ],
@@ -2145,7 +2154,12 @@ export class ReportsService {
     ).filter(([, v]) => v > 0);
     addKpiCards(
       cover,
-      alertCards.map(([label, value]) => ({ label, value })),
+      // Every alert is an amount except the overdue installment count.
+      alertCards.map(([label, value]) => ({
+        label,
+        value,
+        currency: label === 'عدد الأقساط المتأخرة' ? undefined : currency,
+      })),
       { span: SPAN, perRow: 3, bg: XLSX_ALERT_BG },
     );
 
@@ -2163,6 +2177,7 @@ export class ReportsService {
       ]),
       [20, 12, 16, 16, 16],
     );
+    formatMoneyColumns(byType, [3, 4, 5], currency);
 
     const aging = wb.addWorksheet('أعمار المتأخرات');
     addTable(
@@ -2171,8 +2186,14 @@ export class ReportsService {
       data.aging.map((a) => [AGING_LABEL[a.label] ?? a.label, a.count, Number(a.amount)]),
       [18, 12, 18],
     );
+    formatMoneyColumns(aging, [3], currency);
 
     return workbookToBuffer(wb);
+  }
+
+  /** The company currency every report amount is in. */
+  private currency(): Promise<string> {
+    return getCompanyCurrency(this.prisma, getRequiredCompanyId());
   }
 
   // ── PDF builders ─────────────────────────────────────────────────────────
@@ -2205,6 +2226,7 @@ export class ReportsService {
       period,
       dateFrom,
       dateTo,
+      currency: await this.currency(),
     });
   }
 
@@ -2217,6 +2239,7 @@ export class ReportsService {
       period,
       dateFrom,
       dateTo,
+      currency: await this.currency(),
     });
   }
 
@@ -2230,6 +2253,7 @@ export class ReportsService {
       })),
       dateFrom,
       dateTo,
+      currency: await this.currency(),
     });
   }
 

@@ -7,7 +7,10 @@ import {
   addReportTitle,
   addSectionTitle,
   addTable,
+  amountFormat,
   createReportWorkbook,
+  currencyNote,
+  formatMoneyColumns,
   formatStamp,
   setupBoardSheet,
   styleHeaderCell,
@@ -236,5 +239,48 @@ describe('cell-type safety helpers — round-trip through xlsx serialization', (
       writeAmountCell(ws.getRow(1).getCell(1), null),
     );
     expect(get(1, 1).value).toBeNull();
+  });
+});
+
+/**
+ * Report amounts carry the company currency: once in every workbook header,
+ * and as a number-format suffix on money cells (the value stays a number).
+ */
+describe('company currency in workbooks', () => {
+  it('amountFormat / currencyNote name the currency', () => {
+    expect(amountFormat()).toBe('#,##0.00');
+    expect(amountFormat('EGP')).toBe('#,##0.00 "ج.م"');
+    expect(amountFormat('SAR', '0.##')).toBe('#,##0.## "ر.س"');
+    expect(currencyNote('sar')).toBe('العملة: ر.س (SAR)');
+    expect(currencyNote('nope')).toBe('العملة: ج.م (EGP)');
+  });
+
+  it('report title, board banner and money KPI cards show the currency', () => {
+    const wb = createReportWorkbook();
+    const ws = wb.addWorksheet('t');
+    addReportTitle(ws, 'تقرير', 3, 'SAR');
+    expect(String(ws.getCell(2, 1).value)).toContain('العملة: ر.س (SAR)');
+
+    const board = wb.addWorksheet('b');
+    addBoardBanner(board, 'تقرير', 6, { currency: 'AED' });
+    expect(String(board.getCell(3, 1).value)).toContain('(AED)');
+
+    addKpiCards(board, [
+      { label: 'العقود', value: 3 },
+      { label: 'الإجمالي', value: 1250, currency: 'AED' },
+    ], { span: 6, perRow: 2 });
+    const valueRow = board.rowCount - 2; // value row, label row, gap row
+    expect(board.getCell(valueRow, 1).numFmt).toBe('#,##0.##');
+    expect(board.getCell(valueRow, 4).numFmt).toBe('#,##0.## "د.إ"');
+  });
+
+  it('money cells and columns keep a numeric value with the symbol format', () => {
+    const wb = createReportWorkbook();
+    const ws = wb.addWorksheet('m');
+    writeAmountCell(ws.getCell(1, 1), 99.5, 'EGP');
+    expect(ws.getCell(1, 1).value).toBe(99.5);
+    expect(ws.getCell(1, 1).numFmt).toBe('#,##0.00 "ج.م"');
+    formatMoneyColumns(ws, [2, 3], 'KWD');
+    expect(ws.getColumn(3).numFmt).toBe('#,##0.## "د.ك"');
   });
 });
