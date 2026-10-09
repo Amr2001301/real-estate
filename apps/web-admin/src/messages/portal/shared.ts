@@ -130,8 +130,8 @@ const ar = {
     single: { xlsx: 'تصدير Excel', pdf: 'تصدير PDF', csv: 'تصدير CSV' },
     formats: { xlsx: 'Excel', pdf: 'PDF', csv: 'CSV' },
     hints: {
-      xlsx: 'تقرير منسّق للتحليل والفرز',
-      pdf: 'بهوية الشركة — للطباعة والمشاركة',
+      xlsx: 'بيانات منسّقة للتحليل والفرز',
+      pdf: 'تقرير عرض بهوية الشركة — للاجتماعات والطباعة',
       csv: 'بيانات خام للأنظمة الأخرى',
     },
     error: 'تعذّر تجهيز الملف، حاول مرة أخرى.',
@@ -395,8 +395,8 @@ const en: typeof ar = {
     single: { xlsx: 'Export Excel', pdf: 'Export PDF', csv: 'Export CSV' },
     formats: { xlsx: 'Excel', pdf: 'PDF', csv: 'CSV' },
     hints: {
-      xlsx: 'Formatted report to analyse and sort',
-      pdf: 'Company-branded — to print or share',
+      xlsx: 'Formatted data to analyse and sort',
+      pdf: 'Company-branded presentation — for meetings and print',
       csv: 'Raw data for other systems',
     },
     error: 'Could not prepare the file. Please try again.',

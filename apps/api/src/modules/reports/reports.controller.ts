@@ -264,8 +264,18 @@ export class ReportsController {
   }
 
   // ── PDF exports ──────────────────────────────────────────────────────────
-  // Branded Arabic A4 PDFs (NotoSansArabic font) for sales, financial, and
-  // broker reports. Same permission gates as the matching JSON read routes.
+  // Presentation PDFs (HTML printed by Chromium; PDFKit fallback) for the
+  // dashboard, sales, financial and broker reports. Same gates as the matching
+  // JSON read routes.
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('reports:operational:read')
+  @Get('admin-summary/export.pdf')
+  @Header('Content-Type', 'application/pdf')
+  @Header('Content-Disposition', 'attachment; filename="dashboard-report.pdf"')
+  async adminSummaryPdf(): Promise<StreamableFile> {
+    return new StreamableFile(await this.svc.adminSummaryPdf());
+  }
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:sales:read')

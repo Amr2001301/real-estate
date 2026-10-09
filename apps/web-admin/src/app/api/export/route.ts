@@ -32,7 +32,8 @@ const ALLOWED = [
   /^\/portal\/performance\/export\.xlsx$/,
   // Data export — full-tenant workbook (ADMIN only)
   /^\/data-export\/export\.xlsx$/,
-  // PDF exports — sales, financial, broker leaderboard
+  // PDF exports — presentation reports (dashboard, sales, financial, brokers)
+  /^\/reports\/admin-summary\/export\.pdf$/,
   /^\/reports\/sales\/export\.pdf$/,
   /^\/reports\/financial\/export\.pdf$/,
   /^\/reports\/broker-leaderboard\/export\.pdf$/,

@@ -27,7 +27,7 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
  */
 jest.mock('../../../common/utils/xlsx-chart', () => ({
   renderBarChartPng: jest.fn().mockResolvedValue(null),
-  renderDoughnutChartPng: jest.fn().mockResolvedValue(null),
+  renderShareChartPng: jest.fn().mockResolvedValue(null),
 }));
 
 class FakeAuthGuard implements CanActivate {
@@ -120,6 +120,6 @@ describe('Board XLSX — graceful chart fallback (P15.4)', () => {
     expect(cover).toBeDefined();
     const flat: string[] = [];
     cover.eachRow((r) => r.eachCell((c) => flat.push(String(c.value ?? ''))));
-    expect(flat.join(' ')).toContain('الرسم البياني غير متاح حالياً');
+    expect(flat.join(' ')).toContain('لا يتوفر رسم بياني لهذه البيانات');
   });
 });

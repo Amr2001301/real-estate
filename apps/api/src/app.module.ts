@@ -67,6 +67,7 @@ import { MetricsModule } from './common/observability/metrics.module';
 import { PublicCompaniesModule } from './modules/public-companies/public-companies.module';
 import { CompanyBrandingModule } from './modules/company-branding/company-branding.module';
 import { ReportBrandModule } from './modules/company-branding/report-brand.module';
+import { ReportPdfModule } from './common/report-pdf/report-pdf.module';
 import { DataExportModule } from './modules/data-export/data-export.module';
 import { DataImportModule } from './modules/data-import/data-import.module';
 
@@ -129,6 +130,7 @@ import { DataImportModule } from './modules/data-import/data-import.module';
     PublicCompaniesModule,
     CompanyBrandingModule,
     ReportBrandModule,
+    ReportPdfModule,
     DataExportModule,
     DataImportModule,
     MetricsModule,

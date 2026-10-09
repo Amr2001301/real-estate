@@ -565,7 +565,8 @@ export class BrokerReportsService {
     ]);
 
     const topChart = await renderBarChartPng({
-      title: 'أعلى الوسطاء حسب المبيعات',
+      width: 720,
+      height: 320,
       series: top.data.map((r) => ({ label: r.companyName, value: Number(r.salesGross) })),
     });
 

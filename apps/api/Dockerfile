@@ -56,7 +56,12 @@ RUN pnpm install --frozen-lockfile --prod --filter @rep/api...
 FROM node:22-alpine AS runtime
 WORKDIR /app
 
-RUN apk add --no-cache libc6-compat openssl tini \
+# chromium + fonts: presentation reports are HTML printed to PDF by headless
+# Chromium (ReportPdfService). font-noto-arabic covers the page footer, which
+# cannot use the report's embedded font. Without chromium the API still runs and
+# falls back to the plain PDFKit layout. The binary is found at
+# /usr/bin/chromium-browser or /usr/bin/chromium (set CHROMIUM_PATH to override).
+RUN apk add --no-cache libc6-compat openssl tini chromium nss freetype harfbuzz ttf-freefont font-noto-arabic \
  && addgroup -S nodejs && adduser -S -G nodejs node-app
 
 ENV NODE_ENV=production \
