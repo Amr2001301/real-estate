@@ -136,6 +136,20 @@ class UpdateVisitStatusDto {
   @IsOptional() @IsUUID() assignedSalesId?: string;
 }
 
+
+const INFO_REQUEST_STATUS_AR: Record<string, string> = {
+  OPEN: 'مفتوح',
+  RESPONDED: 'تم الرد',
+  CLOSED: 'مغلق',
+};
+
+const VISIT_STATUS_AR: Record<string, string> = {
+  PENDING: 'قيد الانتظار',
+  APPROVED: 'تمت الموافقة',
+  SCHEDULED: 'تمت الجدولة',
+  COMPLETED: 'تمت',
+  CANCELLED: 'ملغاة',
+};
 @Injectable()
 export class RequestsService {
   constructor(
@@ -341,11 +355,11 @@ export class RequestsService {
    * drained. The update is conditional on the status read, so two staff
    * members acting at once cannot both move it.
    */
-  async updateInfoRequestStatus(id: string, status: InfoRequestStatus) {
+  async updateInfoRequestStatus(id: string, status: InfoRequestStatus, actorId?: string) {
     const companyId = getRequiredCompanyId();
     const current = await this.prisma.infoRequest.findFirst({
       where: { id, companyId },
-      select: { status: true },
+      select: { status: true, userId: true, project: { select: { name: true } } },
     });
     if (!current) throw new NotFoundException('Info request not found');
     if (!INFO_REQUEST_TRANSITIONS[current.status].includes(status)) {
@@ -358,6 +372,18 @@ export class RequestsService {
     if (moved.count === 0) {
       throw new ConflictException('تغيّرت حالة الاستفسار للتو — أعد تحميل الصفحة');
     }
+    // The customer who asked learns it was answered / closed.
+    await this.notifications.sendToUser(
+      current.userId,
+      'info_request_status_changed',
+      {
+        status: INFO_REQUEST_STATUS_AR[status] ?? status,
+        projectName: (current.project?.name as { ar?: string } | null)?.ar ?? '',
+        entityType: 'info_request',
+        entityId: id,
+      },
+      { except: actorId },
+    );
     return this.prisma.infoRequest.findFirstOrThrow({ where: { id, companyId } });
   }
 
@@ -545,10 +571,10 @@ export class RequestsService {
     return paginate(data, total, opts);
   }
 
-  async updateVisitStatus(id: string, dto: UpdateVisitStatusDto, _actor: AuthUser) {
+  async updateVisitStatus(id: string, dto: UpdateVisitStatusDto, actor: AuthUser) {
     const exists = await this.prisma.visitRequest.findUnique({ where: { id } });
     if (!exists) throw new NotFoundException('Visit request not found');
-    return this.prisma.visitRequest.update({
+    const updated = await this.prisma.visitRequest.update({
       where: { id },
       data: {
         status: dto.status,
@@ -556,6 +582,22 @@ export class RequestsService {
         assignedSalesId: dto.assignedSalesId ?? undefined,
       },
     });
+    const payload = {
+      customerName: updated.customerName ?? '',
+      status: VISIT_STATUS_AR[updated.status] ?? updated.status,
+      date: (updated.scheduledAt ?? updated.preferredDate).toISOString().slice(0, 10),
+      visitRequestId: id,
+      entityType: 'visit_request',
+      entityId: id,
+    };
+    const except = { except: actor.sub };
+    if (dto.status && dto.status !== exists.status) {
+      await this.notifications.sendToUsers([updated.userId, updated.assignedSalesId], 'visit_request_status_changed', payload, except);
+    }
+    if (dto.assignedSalesId && dto.assignedSalesId !== exists.assignedSalesId) {
+      await this.notifications.sendToUser(dto.assignedSalesId, 'visit_request_assigned', payload, except);
+    }
+    return updated;
   }
 }
 
@@ -664,8 +706,12 @@ class RequestsController {
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('visits:approve')
   @Patch('info-requests/:id')
-  updateInfo(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateInfoRequestStatusDto) {
-    return this.svc.updateInfoRequestStatus(id, dto.status);
+  updateInfo(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateInfoRequestStatusDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.svc.updateInfoRequestStatus(id, dto.status, user.sub);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)

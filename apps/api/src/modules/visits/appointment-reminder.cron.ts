@@ -9,8 +9,14 @@ import { runInCompany, runTenantContext } from '../../common/tenant/tenant-conte
 
 const TZ = process.env.APPOINTMENT_REMINDER_TIMEZONE || undefined;
 
+/**
+ * On in production unless APPOINTMENT_REMINDERS_ENABLED=false; elsewhere
+ * (dev, tests) only when set to true, so a cron never fires mid-test.
+ */
 function isEnabled(config: ConfigService): boolean {
-  return (config.get<string>('APPOINTMENT_REMINDERS_ENABLED') ?? '').toLowerCase() === 'true';
+  const flag = (config.get<string>('APPOINTMENT_REMINDERS_ENABLED') ?? '').toLowerCase();
+  if (flag) return flag === 'true';
+  return config.get<string>('NODE_ENV') === 'production';
 }
 
 @Injectable()
@@ -71,7 +77,8 @@ export class AppointmentReminderCron {
 
     const appointments = await this.prisma.visitAppointment.findMany({
       where: {
-        status: AppointmentStatus.SCHEDULED,
+        // A confirmed visit needs its reminder as much as a scheduled one.
+        status: { in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED] },
         scheduledAt: { gte: startOfTomorrow, lt: endOfTomorrow },
         dayBeforeReminderSentAt: null,
       },
@@ -125,7 +132,8 @@ export class AppointmentReminderCron {
 
     const appointments = await this.prisma.visitAppointment.findMany({
       where: {
-        status: AppointmentStatus.SCHEDULED,
+        // A confirmed visit needs its reminder as much as a scheduled one.
+        status: { in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED] },
         scheduledAt: { gte: windowStart, lte: windowEnd },
         hourBeforeReminderSentAt: null,
       },

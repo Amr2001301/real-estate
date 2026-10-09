@@ -27,6 +27,7 @@ import {
   InstallmentStatus,
   Prisma,
   UnitStatus,
+  UserRole,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
@@ -364,6 +365,35 @@ export class ContractCancellationService {
       );
     } catch (e) {
       this.logger.warn(`contract_cancelled_customer notify failed for ${contractId}: ${(e as Error).message}`);
+    }
+    // The sales person, the broker who brought the deal (agent + firm
+    // managers), admins and sales managers — never whoever cancelled it.
+    try {
+      const deal = await this.prisma.contract.findUnique({
+        where: { id: contractId },
+        select: {
+          contractNumber: true,
+          brokerId: true,
+          brokerAgentId: true,
+          unit: { select: { code: true } },
+          customer: { select: { fullName: true } },
+          reservation: { select: { salesId: true } },
+        },
+      });
+      const payload = {
+        contractNumber: deal?.contractNumber ?? '',
+        unitCode: deal?.unit?.code ?? '',
+        customerName: deal?.customer?.fullName ?? '',
+        contractId,
+        entityType: 'contract',
+        entityId: contractId,
+      };
+      const except = { except: actorId };
+      const broker = await this.notifications.brokerRecipients(deal?.brokerId, { agentUserId: deal?.brokerAgentId });
+      await this.notifications.sendToUsers([deal?.reservation?.salesId, ...broker], 'contract_cancelled_staff', payload, except);
+      await this.notifications.sendToRoles([UserRole.ADMIN, UserRole.SALES_MANAGER], 'contract_cancelled_staff', payload, except);
+    } catch (e) {
+      this.logger.warn(`contract_cancelled_staff notify failed for ${contractId}: ${(e as Error).message}`);
     }
 
     return cancellation;

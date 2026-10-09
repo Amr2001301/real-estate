@@ -114,14 +114,17 @@ export class LeadsService {
       customerName: lead.fullName,
       projectName,
     };
+    // Never the user who created it (a rep's own lead is assigned to them).
+    const except = { except: actor?.sub };
     await this.notifications.sendToRoles(
       [UserRole.ADMIN, UserRole.SALES_MANAGER],
       'lead_created',
       notifPayload,
+      except,
     );
     // If already assigned on creation, notify the sales rep.
     if (lead.assignedSalesId) {
-      await this.notifications.sendToUser(lead.assignedSalesId, 'lead_assigned_sales', notifPayload);
+      await this.notifications.sendToUser(lead.assignedSalesId, 'lead_assigned_sales', notifPayload, except);
     }
 
     return lead;
@@ -396,12 +399,20 @@ export class LeadsService {
     return lead;
   }
 
-  async update(id: string, dto: UpdateLeadDto) {
-    await this.assertExists(id);
-    return this.prisma.lead.update({ where: { id }, data: { ...dto } });
+  async update(id: string, dto: UpdateLeadDto, actorId?: string) {
+    const lead = await this.assertExists(id);
+    const updated = await this.prisma.lead.update({ where: { id }, data: { ...dto } });
+    // The lead's sales person hears that someone else edited it.
+    await this.notifications.sendToUser(
+      lead.assignedSalesId,
+      'lead_updated',
+      { entityType: 'lead', entityId: id, customerName: updated.fullName },
+      { except: actorId },
+    );
+    return updated;
   }
 
-  async updateStage(id: string, dto: UpdateLeadStageDto) {
+  async updateStage(id: string, dto: UpdateLeadStageDto, actorId?: string) {
     const lead = await this.assertExists(id);
     if (lead.stage === dto.stage) return lead;
     const updated = await this.prisma.lead.update({
@@ -423,13 +434,16 @@ export class LeadsService {
       fromStage: lead.stage,
       toStage: dto.stage,
     };
-    const recipients = [lead.assignedSalesId].filter((v): v is string => !!v);
-    await this.notifications.sendToUsers(recipients, 'lead_stage_changed', stagePayload);
-    await this.notifications.sendToRoles([UserRole.SALES_MANAGER], 'lead_stage_changed', stagePayload);
+    // The sales person, the sales managers and — for a broker's lead — the
+    // agent who brought it and the firm's managers; never whoever moved it.
+    const except = { except: actorId };
+    const broker = await this.notifications.brokerRecipients(lead.brokerId, { agentUserId: lead.brokerAgentId });
+    await this.notifications.sendToUsers([lead.assignedSalesId, ...broker], 'lead_stage_changed', stagePayload, except);
+    await this.notifications.sendToRoles([UserRole.SALES_MANAGER], 'lead_stage_changed', stagePayload, except);
     return updated;
   }
 
-  async assign(id: string, dto: AssignLeadDto) {
+  async assign(id: string, dto: AssignLeadDto, actorId?: string) {
     const lead = await this.assertExists(id);
     const updated = await this.prisma.lead.update({
       where: { id },
@@ -438,14 +452,13 @@ export class LeadsService {
     await this.prisma.leadActivity.create({
       data: { leadId: id, type: 'assigned', payload: { salesId: dto.assignedSalesId } },
     });
-    // Notify the newly assigned sales rep.
+    // The newly assigned sales rep — and the previous one, who lost it.
+    const payload = { entityType: 'lead', entityId: id, customerName: lead.fullName, projectName: '' };
     if (dto.assignedSalesId) {
-      await this.notifications.sendToUser(dto.assignedSalesId, 'lead_assigned_sales', {
-        entityType: 'lead',
-        entityId: id,
-        customerName: lead.fullName,
-        projectName: '',
-      });
+      await this.notifications.sendToUser(dto.assignedSalesId, 'lead_assigned_sales', payload, { except: actorId });
+    }
+    if (lead.assignedSalesId && lead.assignedSalesId !== dto.assignedSalesId) {
+      await this.notifications.sendToUser(lead.assignedSalesId, 'lead_unassigned', payload, { except: actorId });
     }
     return updated;
   }
@@ -513,7 +526,7 @@ export class LeadsService {
    * - Skips rows where a lead with the same phone already exists.
    * - Returns counts and per-row errors for the caller to surface.
    */
-  async importLeads(buffer: Buffer, sourceId?: string): Promise<ImportResult> {
+  async importLeads(buffer: Buffer, sourceId?: string, actorId?: string): Promise<ImportResult> {
     const rows = await this.parseExcelBuffer(buffer);
     const valid = rows.filter((r) => r.valid && r.phone);
     const invalid = rows.filter((r) => !r.valid || !r.phone);
@@ -551,6 +564,14 @@ export class LeadsService {
       }
     }
 
+    if (imported > 0) {
+      await this.notifications.sendToRoles(
+        [UserRole.ADMIN, UserRole.SALES_MANAGER],
+        'leads_imported',
+        { count: String(imported), skipped: String(skipped) },
+        { except: actorId },
+      );
+    }
     return { imported, skipped, errors, total: rows.length };
   }
 
