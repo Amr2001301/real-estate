@@ -185,6 +185,37 @@ export class R2Service {
   }
 
   /**
+   * Read a small image from OUR public bucket (e.g. the company logo for report
+   * headers). Only a bare key or a URL under the configured public base is
+   * accepted — any other URL returns null rather than being fetched, so a
+   * stored URL can never make the server request an arbitrary host. Returns
+   * null when storage is not configured, the object is missing or too large.
+   */
+  async readPublicImage(
+    storedValue: string | null | undefined,
+    maxBytes = 2 * 1024 * 1024,
+  ): Promise<{ buffer: Buffer; contentType: string } | null> {
+    if (!storedValue) return null;
+    if (/^https?:\/\//.test(storedValue)) {
+      const base = this.publicBaseUrl;
+      if (!base || !storedValue.startsWith(base)) return null;
+    }
+    const key = this.keyFromStoredValue(storedValue);
+    const folder = key.split('/')[0] as StorageFolder;
+    if (this.isPrivateFolder(folder) || !this.publicClient || !this.publicBucket) return null;
+    try {
+      const res = await this.publicClient.send(new GetObjectCommand({ Bucket: this.publicBucket, Key: key }));
+      if (!res.Body || (res.ContentLength ?? 0) > maxBytes) return null;
+      const bytes = await res.Body.transformToByteArray();
+      if (bytes.byteLength > maxBytes) return null;
+      return { buffer: Buffer.from(bytes), contentType: res.ContentType ?? '' };
+    } catch (e) {
+      this.logger.warn(`readPublicImage(${key}) failed: ${(e as Error).message}`);
+      return null;
+    }
+  }
+
+  /**
    * Short-lived signed GET URL for a private object download.
    *
    * The bucket is inferred automatically from the key's folder prefix:

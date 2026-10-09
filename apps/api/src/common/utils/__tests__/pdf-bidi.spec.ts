@@ -26,3 +26,10 @@ describe('PDF Arabic text (bidi)', () => {
     expect(opts.features).toEqual(['rtla']);
   });
 });
+
+describe('PDF Arabic text — phones', () => {
+  it('keeps a leading + with its number', () => {
+    const [text] = bidi('الهاتف +20 2 2614 5500');
+    expect(text).toBe('؜' + 'الهاتف 0055 4162 2 02+');
+  });
+});
