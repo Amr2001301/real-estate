@@ -176,6 +176,7 @@ export default async function PortalPerformancePage({
         ]}
         actions={
           <ExportMenu
+            pdfPath="/portal/performance/export.pdf"
             xlsxPath="/portal/performance/export.xlsx"
             csvPath="/portal/performance/export.csv"
             filenameBase="my-performance"

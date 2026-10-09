@@ -120,4 +120,15 @@ describe('GET /bonus-entries/export.xlsx (P15.3)', () => {
       await request(app.getHttpServer()).get('/bonus-entries/export.xlsx').expect(403);
     }
   });
+
+  // The presentation PDF (HTML → Chromium). This module has no renderer, so
+  // an allowed caller reaches the report and gets 503; others stop at @Roles.
+  it('export.pdf: reached by ADMIN (503 without a renderer), forbidden for SALES / CUSTOMER / BROKER', async () => {
+    FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+    await request(app.getHttpServer()).get('/bonus-entries/export.pdf').expect(503);
+    for (const role of [UserRole.SALES, UserRole.CUSTOMER, UserRole.BROKER]) {
+      FakeAuthGuard.currentUser = { sub: 'x', role, codes: ['bonus:entries:read'] };
+      await request(app.getHttpServer()).get('/bonus-entries/export.pdf').expect(403);
+    }
+  });
 });

@@ -48,6 +48,9 @@ import {
 import { getCompanyCurrency } from '../../common/currency/currency';
 import { getTenantContext } from '../../common/tenant/tenant-context';
 import { ReportBrandService } from '../company-branding/report-brand.service';
+import { presentReportPdf, ReportPdfService } from '../../common/report-pdf/report-pdf.service';
+import { fallbackBrand } from '../../common/utils/report-brand';
+import { bonusReportHtml } from './bonus-report-template';
 import {
   resolveSalesScope,
   salesActorIds,
@@ -162,6 +165,7 @@ export class BonusService {
     private readonly prisma: PrismaService,
     // Optional so unit tests can build the service without it.
     @Optional() private readonly reportBrand?: ReportBrandService,
+    @Optional() private readonly reportPdf?: ReportPdfService,
   ) {}
 
   // Rules
@@ -395,6 +399,39 @@ export class BonusService {
     formatMoneyColumns(ws, [4], currency);
     addFooter(ws, brand);
     return workbookToBuffer(wb);
+  }
+
+  /** The bonus list as a presentation PDF (HTML → Chromium; 503 when unavailable). */
+  async entriesPdf(opts: { salesId?: string; status?: BonusEntryStatus; period?: string }) {
+    const statusLabel: Record<BonusEntryStatus, string> = {
+      [BonusEntryStatus.PENDING]: 'معلق',
+      [BonusEntryStatus.APPROVED]: 'معتمد',
+      [BonusEntryStatus.PAID]: 'مدفوع',
+      [BonusEntryStatus.CANCELLED]: 'ملغي',
+    };
+    const companyId = getTenantContext()?.companyId;
+    const [entries, brand] = await Promise.all([this.listEntries(opts), this.reportBrand?.forCompany(companyId)]);
+    const report = brand ?? fallbackBrand(await getCompanyCurrency(this.prisma, companyId));
+    const html = bonusReportHtml(
+      {
+        entries: entries.map((e) => ({
+          rep: e.sales?.fullName ?? '—',
+          period: e.period,
+          rule: e.rule?.name ?? '—',
+          amount: Number(e.amount),
+          status: e.status,
+          statusLabel: statusLabel[e.status],
+          paidAt: e.paidAt ? e.paidAt.toISOString().slice(0, 10) : '',
+        })),
+        filters: [
+          opts.period && `الفترة: ${opts.period}`,
+          opts.status && `الحالة: ${statusLabel[opts.status]}`,
+          opts.salesId && 'مندوب محدد',
+        ].filter((f): f is string => Boolean(f)),
+      },
+      report,
+    );
+    return presentReportPdf(this.reportPdf, html, report);
   }
 
   setEntryStatus(id: string, dto: UpdateEntryStatusDto) {
@@ -690,6 +727,20 @@ class BonusController {
     @Query('period') period?: string,
   ): Promise<StreamableFile> {
     return new StreamableFile(await this.svc.entriesXlsx({ salesId, status, period }));
+  }
+
+  // Presentation PDF (HTML printed by Chromium); same gate and filters.
+  @Roles(UserRole.ADMIN)
+  @Permissions('bonus:entries:read')
+  @Get('bonus-entries/export.pdf')
+  @Header('Content-Type', 'application/pdf')
+  @Header('Content-Disposition', 'attachment; filename="bonus-entries.pdf"')
+  async entriesPdf(
+    @Query('salesId') salesId?: string,
+    @Query('status') status?: BonusEntryStatus,
+    @Query('period') period?: string,
+  ): Promise<StreamableFile> {
+    return new StreamableFile(await this.svc.entriesPdf({ salesId, status, period }));
   }
 
   // Strict: approval recognises the bonus as payable. Segregation of duties

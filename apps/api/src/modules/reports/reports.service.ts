@@ -1,4 +1,4 @@
-import { Injectable, Logger, Optional, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import {
   AppointmentStatus,
   BonusEntryStatus,
@@ -22,11 +22,14 @@ import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { getCompanyCurrency } from '../../common/currency/currency';
 import { fallbackBrand, type ReportBrand } from '../../common/utils/report-brand';
 import { ReportBrandService } from '../company-branding/report-brand.service';
-import { ReportPdfService } from '../../common/report-pdf/report-pdf.service';
+import { presentReportPdf, ReportPdfService } from '../../common/report-pdf/report-pdf.service';
 import {
   brokerReportHtml,
   dashboardReportHtml,
+  DEPOSIT_TYPE_AR,
+  financialDashboardReportHtml,
   financialReportHtml,
+  operationalReportHtml,
   salesReportHtml,
 } from './report-templates';
 import { csvSections, toCsv, type CsvCell } from '../../common/utils/csv';
@@ -87,8 +90,6 @@ const NO_OPEN_ALERTS = 'لا توجد تنبيهات معلقة';
 
 @Injectable()
 export class ReportsService {
-  private readonly logger = new Logger(ReportsService.name);
-
   constructor(
     private readonly prisma: PrismaService,
     // Optional so unit tests can build the service with prisma only.
@@ -2274,16 +2275,8 @@ export class ReportsService {
   // installed, sales/financial/broker fall back to the plain PDFKit layout.
 
   /** HTML → PDF, or the PDFKit fallback when Chromium is missing or fails. */
-  private async presentPdf(html: string, brand: ReportBrand, fallback?: () => Promise<Buffer>): Promise<Buffer> {
-    if (this.reportPdf?.available()) {
-      try {
-        return await this.reportPdf.render(html, { text: brand.name });
-      } catch (err) {
-        this.logger.warn(`Chromium report render failed, using the fallback: ${(err as Error).message}`);
-      }
-    }
-    if (fallback) return fallback();
-    throw new ServiceUnavailableException('PDF reports are unavailable right now');
+  private presentPdf(html: string, brand: ReportBrand, fallback?: () => Promise<Buffer>): Promise<Buffer> {
+    return presentReportPdf(this.reportPdf, html, brand, fallback);
   }
 
   async adminSummaryPdf(): Promise<Buffer> {
@@ -2299,6 +2292,57 @@ export class ReportsService {
       ] as Array<[string, number]>
     ).filter(([, n]) => n > 0);
     return this.presentPdf(dashboardReportHtml({ ...s, alerts }, brand), brand);
+  }
+
+  async operationalPdf(): Promise<Buffer> {
+    const [k, reservationsByStatus, brand] = await Promise.all([this.kpis(), this.reservations(), this.brand()]);
+    const html = operationalReportHtml(
+      {
+        projects: k.projects,
+        units: k.units,
+        leads: k.leads,
+        pendingVisits: k.pendingVisits,
+        contracts: k.contracts,
+        depositsTotal: Number(k.depositsTotal),
+        reservationsByStatus,
+      },
+      brand,
+    );
+    return this.presentPdf(html, brand);
+  }
+
+  async financialDashboardPdf(opts: {
+    projectId?: string;
+    q?: string;
+    type?: DepositType;
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<Buffer> {
+    const [data, brand] = await Promise.all([this.financialDashboard(opts), this.brand()]);
+    const project = opts.projectId
+      ? await this.prisma.project.findFirst({
+          where: { id: opts.projectId, companyId: getRequiredCompanyId() },
+          select: { name: true },
+        })
+      : null;
+    const filters = [
+      project && `المشروع: ${translatableAr(project.name)}`,
+      opts.type && `النوع: ${DEPOSIT_TYPE_AR[opts.type] ?? opts.type}`,
+      opts.q && `بحث: ${opts.q}`,
+      reportPeriodLabel(undefined, opts.dateFrom, opts.dateTo) !== 'كل الفترات' &&
+        `الفترة: ${reportPeriodLabel(undefined, opts.dateFrom, opts.dateTo)}`,
+    ].filter((f): f is string => Boolean(f));
+    const html = financialDashboardReportHtml(
+      {
+        summary: data.summary,
+        unpaidLiabilities: data.liabilities.totalUnpaidLiabilities,
+        collectionByType: data.collectionByType,
+        aging: data.aging,
+        filters,
+      },
+      brand,
+    );
+    return this.presentPdf(html, brand);
   }
 
   async salesPdf(period?: string, dateFrom?: string, dateTo?: string): Promise<Buffer> {

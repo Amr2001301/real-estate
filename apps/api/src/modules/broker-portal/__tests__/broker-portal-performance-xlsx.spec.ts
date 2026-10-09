@@ -92,6 +92,20 @@ describe('BrokerPortalPerformanceService.exportXlsx · scoping', () => {
     );
   });
 
+  it('the PDF of a non-manager is «أدائي» with only their own agent row', async () => {
+    const pdfReports = { brokerDetailPdf: jest.fn().mockResolvedValue(Buffer.from('%PDF-')) };
+    const pdfSvc = new BrokerPortalPerformanceService(prisma as never, pdfReports as never);
+    prisma.brokerUser.findUnique.mockResolvedValue({
+      userId: 'u-self', brokerId: 'broker-A', isPrimaryContact: false, canManageBrokerUsers: false,
+    });
+    await pdfSvc.exportPdf(SCOPE, { brokerAgentId: 'u-colleague' });
+    expect(pdfReports.brokerDetailPdf).toHaveBeenCalledWith(
+      'broker-A',
+      expect.objectContaining({ brokerAgentId: 'u-self' }),
+      { onlyAgent: 'u-self', title: 'أدائي' },
+    );
+  });
+
   it('a manager export keeps the whole firm\'s agent breakdown', async () => {
     prisma.brokerUser.findUnique.mockResolvedValue({
       userId: 'u-self', brokerId: 'broker-A', isPrimaryContact: false, canManageBrokerUsers: true,

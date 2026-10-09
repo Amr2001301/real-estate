@@ -1,5 +1,5 @@
 import { existsSync } from 'fs';
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, ServiceUnavailableException } from '@nestjs/common';
 import type { Browser } from 'puppeteer-core';
 
 /**
@@ -190,4 +190,28 @@ function footerTemplate(text?: string): string {
   <span>${safe}</span>
   <span>صفحة <span class="pageNumber"></span> من <span class="totalPages"></span></span>
 </div>`;
+}
+
+const presentLogger = new Logger('ReportPdf');
+
+/**
+ * A presentation report as PDF: Chromium when available; otherwise (or when
+ * it fails) the caller's fallback layout; with no fallback, 503. Report
+ * services hold ReportPdfService as @Optional, so `pdf` may be undefined.
+ */
+export async function presentReportPdf(
+  pdf: ReportPdfService | undefined,
+  html: string,
+  brand: { name: string },
+  fallback?: () => Promise<Buffer>,
+): Promise<Buffer> {
+  if (pdf?.available()) {
+    try {
+      return await pdf.render(html, { text: brand.name });
+    } catch (err) {
+      presentLogger.warn(`Chromium report render failed${fallback ? ', using the fallback' : ''}: ${(err as Error).message}`);
+    }
+  }
+  if (fallback) return fallback();
+  throw new ServiceUnavailableException('PDF reports are unavailable right now');
 }

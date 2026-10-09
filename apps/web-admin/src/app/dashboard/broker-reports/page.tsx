@@ -158,6 +158,7 @@ export default async function AdminBrokerReportsPage({
           <div className="flex items-center gap-2">
             <ExportMenu locale={locale}
               label={m.exportSummaryBtn}
+              pdfPath="/broker-reports/export/summary.pdf"
               xlsxPath="/broker-reports/export/summary.xlsx"
               csvPath="/broker-reports/export/summary.csv"
               filenameBase="broker-summary"
@@ -165,6 +166,7 @@ export default async function AdminBrokerReportsPage({
             />
             <ExportMenu locale={locale}
               label={m.exportTopBrokersBtn}
+              pdfPath="/broker-reports/export/top-brokers.pdf"
               xlsxPath="/broker-reports/export/top-brokers.xlsx"
               csvPath="/broker-reports/export/top-brokers.csv"
               filenameBase="top-brokers"

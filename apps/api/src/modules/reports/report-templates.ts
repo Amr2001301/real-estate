@@ -341,3 +341,290 @@ export function brokerReportHtml(d: BrokerReportData, brand: ReportBrand): strin
     ].join('\n'),
   });
 }
+
+// ── Operational ──────────────────────────────────────────────────────────────
+
+const RESERVATION_STATUS_AR: Record<string, string> = {
+  PENDING: 'قيد الانتظار',
+  APPROVED: 'معتمدة',
+  REJECTED: 'مرفوضة',
+  CANCELLED: 'ملغاة',
+  EXPIRED: 'منتهية',
+  CONVERTED: 'تحوّلت إلى عقد',
+};
+
+export interface OperationalReportData {
+  projects: number;
+  units: { total: number; available: number; reserved: number; sold: number };
+  leads: { total: number; new: number };
+  pendingVisits: number;
+  contracts: number;
+  depositsTotal: number;
+  reservationsByStatus: Record<string, number>;
+}
+
+export function operationalReportHtml(d: OperationalReportData, brand: ReportBrand): string {
+  const c = brand.currency;
+  const u = d.units;
+  const reservations = Object.entries(d.reservationsByStatus).map(([status, n]) => ({
+    label: RESERVATION_STATUS_AR[status] ?? status,
+    value: n,
+  }));
+  const reservationsTotal = reservations.reduce((a, r) => a + r.value, 0);
+  return reportDocument({
+    brand,
+    title: 'التقرير التشغيلي',
+    subtitle: 'المخزون والعملاء والحجوزات والتحصيل',
+    body: [
+      section(
+        'المخزون',
+        kpiGrid([
+          { label: 'المشاريع المنشورة', value: countText(d.projects) },
+          { label: 'إجمالي الوحدات', value: countText(u.total) },
+          {
+            label: 'وحدات متاحة',
+            value: countText(u.available),
+            hint: `${percentText(u.available, u.total)} من الوحدات`,
+          },
+          {
+            label: 'وحدات مباعة',
+            value: countText(u.sold),
+            hint: `${percentText(u.sold, u.total)} من الوحدات`,
+          },
+        ]),
+      ),
+      section(
+        'المبيعات والعملاء',
+        kpiGrid([
+          { label: 'وحدات محجوزة', value: countText(u.reserved) },
+          { label: 'عدد العقود', value: countText(d.contracts) },
+          {
+            label: 'العملاء المحتملون',
+            value: countText(d.leads.total),
+            hint: `${countText(d.leads.new)} جديد`,
+          },
+          {
+            label: 'زيارات قيد الانتظار',
+            value: countText(d.pendingVisits),
+            tone: d.pendingVisits ? 'warn' : 'default',
+          },
+        ]),
+      ),
+      section(
+        'التحصيل',
+        kpiGrid([{ label: 'إجمالي الدفعات المحصّلة', value: moneyText(d.depositsTotal, c) }], 2),
+      ),
+      section(
+        'الحجوزات حسب الحالة',
+        panelGrid(
+          chartPanel(
+            'توزيع الحجوزات',
+            shareChartSvg({ series: reservations, color: brand.primary, width: CHART_HALF }),
+          ),
+          dataTable(
+            [
+              { label: 'الحالة', width: 2 },
+              { label: 'العدد', numeric: true },
+              { label: 'الحصة', numeric: true },
+            ],
+            reservations.map((r) => [
+              r.label,
+              countText(r.value),
+              percentText(r.value, reservationsTotal),
+            ]),
+            {
+              totals: ['الإجمالي', countText(reservationsTotal), reservationsTotal ? '100%' : '—'],
+              empty: 'لا توجد حجوزات',
+            },
+          ),
+        ),
+      ),
+    ].join('\n'),
+  });
+}
+
+// ── Financial dashboard ──────────────────────────────────────────────────────
+
+export const DEPOSIT_TYPE_AR: Record<string, string> = {
+  BOOKING_AMOUNT: 'مبلغ الحجز',
+  DOWN_PAYMENT: 'دفعة أولى',
+  INSTALLMENT: 'قسط شهري',
+  FINAL_PAYMENT: 'دفعة أخيرة',
+};
+
+export const AGING_AR: Record<string, string> = {
+  '1-30': '1-30 يوم',
+  '31-60': '31-60 يوم',
+  '61-90': '61-90 يوم',
+  '90+': '90+ يوم',
+};
+
+type Amount = number | string;
+
+export interface FinancialDashboardReportData {
+  summary: {
+    totalContractValue: Amount;
+    totalCollectedVerified: Amount;
+    totalCollectedUnverified: Amount;
+    totalOutstanding: Amount;
+    collectedThisMonth: Amount;
+    dueThisMonth: Amount;
+    contractCount: number;
+    depositCount: number;
+    dueSoonAmount: Amount;
+    overdueAmountComputed: Amount;
+    overdueInstallmentCountComputed: number;
+  };
+  unpaidLiabilities: Amount;
+  collectionByType: Array<{
+    type: string;
+    count: number;
+    totalAll: Amount;
+    totalVerified: Amount;
+    totalUnverified: Amount;
+  }>;
+  aging: Array<{ label: string; count: number; amount: Amount }>;
+  /** Applied filters, already labelled ("المشروع: …"). */
+  filters: string[];
+}
+
+export function financialDashboardReportHtml(
+  d: FinancialDashboardReportData,
+  brand: ReportBrand,
+): string {
+  const c = brand.currency;
+  const s = d.summary;
+  const n = (v: Amount) => Number(v) || 0;
+  const risks = [
+    { label: 'مستحق خلال 7 أيام', value: n(s.dueSoonAmount), money: true },
+    { label: 'المتأخر', value: n(s.overdueAmountComputed), money: true },
+    { label: 'أقساط متأخرة', value: s.overdueInstallmentCountComputed, money: false },
+    { label: 'التزامات غير مدفوعة', value: n(d.unpaidLiabilities), money: true },
+  ].filter((r) => r.value > 0);
+  const byType = d.collectionByType.map((t) => ({
+    ...t,
+    label: DEPOSIT_TYPE_AR[t.type] ?? t.type,
+  }));
+  const typeTotal = byType.reduce((a, t) => a + n(t.totalAll), 0);
+
+  return reportDocument({
+    brand,
+    title: 'لوحة المؤشرات المالية',
+    subtitle: d.filters.length ? d.filters.join(' · ') : 'كل المشاريع وكل الفترات',
+    body: [
+      section(
+        'الملخص التنفيذي',
+        kpiGrid([
+          {
+            label: 'إجمالي قيمة العقود',
+            value: moneyText(n(s.totalContractValue), c),
+            hint: `${countText(s.contractCount)} عقد`,
+          },
+          {
+            label: 'المحصّل المؤكد',
+            value: moneyText(n(s.totalCollectedVerified), c),
+            hint: `${percentText(n(s.totalCollectedVerified), n(s.totalContractValue))} من قيمة العقود`,
+            tone: 'good',
+          },
+          { label: 'المحصّل غير المؤكد', value: moneyText(n(s.totalCollectedUnverified), c) },
+          { label: 'المتبقي للتحصيل', value: moneyText(n(s.totalOutstanding), c) },
+          { label: 'المحصّل هذا الشهر', value: moneyText(n(s.collectedThisMonth), c) },
+          { label: 'المستحق هذا الشهر', value: moneyText(n(s.dueThisMonth), c) },
+          { label: 'عدد الدفعات', value: countText(s.depositCount) },
+          { label: 'عدد العقود', value: countText(s.contractCount) },
+        ]),
+      ),
+      section(
+        'التنبيهات والمخاطر',
+        risks.length
+          ? kpiGrid(
+              risks.map((r) => ({
+                label: r.label,
+                value: r.money ? moneyText(r.value, c) : countText(r.value),
+                tone: 'warn' as const,
+              })),
+            )
+          : notice('لا توجد متأخرات أو مستحقات عاجلة'),
+      ),
+      section(
+        'المؤشرات',
+        panelGrid(
+          chartPanel(
+            'أعمار المتأخرات',
+            d.aging.some((a) => n(a.amount) > 0)
+              ? barChartSvg({
+                  series: d.aging.map((a) => ({
+                    label: AGING_AR[a.label] ?? a.label,
+                    value: n(a.amount),
+                  })),
+                  color: brand.primary,
+                  width: CHART_HALF,
+                  height: 190,
+                })
+              : '',
+            'لا توجد متأخرات',
+          ),
+          chartPanel(
+            'التحصيل حسب نوع الدفعة',
+            shareChartSvg({
+              series: byType.map((t) => ({ label: t.label, value: n(t.totalAll) })),
+              color: brand.primary,
+              width: CHART_HALF,
+            }),
+          ),
+        ),
+      ),
+      section(
+        'التحصيل حسب النوع',
+        dataTable(
+          [
+            { label: 'النوع', width: 1.6 },
+            { label: 'العدد', numeric: true, width: 0.7 },
+            { label: 'الإجمالي', numeric: true, width: 1.4 },
+            { label: 'المؤكد', numeric: true, width: 1.4 },
+            { label: 'غير المؤكد', numeric: true, width: 1.4 },
+          ],
+          byType.map((t) => [
+            t.label,
+            countText(t.count),
+            moneyText(n(t.totalAll), c),
+            moneyText(n(t.totalVerified), c),
+            moneyText(n(t.totalUnverified), c),
+          ]),
+          {
+            totals: [
+              'الإجمالي',
+              countText(byType.reduce((a, t) => a + t.count, 0)),
+              moneyText(typeTotal, c),
+              moneyText(
+                byType.reduce((a, t) => a + n(t.totalVerified), 0),
+                c,
+              ),
+              moneyText(
+                byType.reduce((a, t) => a + n(t.totalUnverified), 0),
+                c,
+              ),
+            ],
+            empty: 'لا توجد دفعات',
+          },
+        ),
+      ),
+      section(
+        'أعمار المتأخرات',
+        dataTable(
+          [
+            { label: 'الفئة', width: 1.6 },
+            { label: 'عدد الأقساط', numeric: true },
+            { label: 'المبلغ', numeric: true, width: 1.4 },
+          ],
+          d.aging.map((a) => [
+            AGING_AR[a.label] ?? a.label,
+            countText(a.count),
+            moneyText(n(a.amount), c),
+          ]),
+          { empty: 'لا توجد متأخرات' },
+        ),
+      ),
+    ].join('\n'),
+  });
+}

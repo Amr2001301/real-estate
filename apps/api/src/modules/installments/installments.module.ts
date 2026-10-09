@@ -59,9 +59,12 @@ import { RequireCapability } from '../../common/decorators/require-capability.de
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { CronLockService } from '../../common/cron/cron-lock.service';
 import { captureExceptionSafe } from '../../common/observability/sentry';
-import { getTenantContext, runInCompany, runTenantContext } from '../../common/tenant/tenant-context';
+import { getRequiredCompanyId, getTenantContext, runInCompany, runTenantContext } from '../../common/tenant/tenant-context';
 import { getCompanyCurrency } from '../../common/currency/currency';
 import { ReportBrandService } from '../company-branding/report-brand.service';
+import { presentReportPdf, ReportPdfService } from '../../common/report-pdf/report-pdf.service';
+import { fallbackBrand } from '../../common/utils/report-brand';
+import { installmentPlanReportHtml } from './installment-plan-template';
 import { computeDurationOption } from './duration-calc';
 import {
   addTitledTable,
@@ -154,11 +157,12 @@ class CalculateInstallmentDto {
 // ─── Existing contract-based plan service ─────────────────────────────────────
 
 @Injectable()
-class InstallmentsService {
+export class InstallmentsService {
   constructor(
     private readonly prisma: PrismaService,
     // Optional so unit tests can build the service without it.
     @Optional() private readonly reportBrand?: ReportBrandService,
+    @Optional() private readonly reportPdf?: ReportPdfService,
   ) {}
 
   async createPlan(dto: CreatePlanDto) {
@@ -229,6 +233,47 @@ class InstallmentsService {
         awaitingCheque: deposits.length > 0,
       })),
     };
+  }
+
+  /**
+   * A contract's installment schedule as a statement PDF (HTML → Chromium;
+   * 503 when unavailable): the plan's progress, the next payment and every
+   * installment with its status, for the customer or the file.
+   */
+  async planPdf(planId: string): Promise<Buffer> {
+    const companyId = getRequiredCompanyId();
+    const plan = await this.prisma.installmentPlan.findFirst({
+      where: { id: planId, companyId },
+      include: {
+        installments: { orderBy: { dueDate: 'asc' } },
+        contract: {
+          select: {
+            contractNumber: true,
+            customer: { select: { fullName: true } },
+            unit: { select: { code: true } },
+          },
+        },
+      },
+    });
+    if (!plan) throw new NotFoundException('Installment plan not found');
+    const brand =
+      (await this.reportBrand?.forCompany(companyId)) ?? fallbackBrand(await getCompanyCurrency(this.prisma, companyId));
+    const html = installmentPlanReportHtml(
+      {
+        contractNumber: plan.contract?.contractNumber ?? planId.slice(0, 8),
+        customer: plan.contract?.customer?.fullName ?? '—',
+        unit: plan.contract?.unit?.code ?? '—',
+        rows: plan.installments.map((inst) => ({
+          dueDate: inst.dueDate.toISOString().slice(0, 10),
+          type: inst.type,
+          amount: Number(inst.amount),
+          status: inst.status,
+          paidAt: inst.paidAt ? inst.paidAt.toISOString().slice(0, 10) : '',
+        })),
+      },
+      brand,
+    );
+    return presentReportPdf(this.reportPdf, html, brand);
   }
 
   /**
@@ -1359,6 +1404,18 @@ class InstallmentsController {
     const buf = await this.svc.planXlsx(planId);
     return new StreamableFile(buf, {
       disposition: `attachment; filename="${xlsxFilename(`installment-plan-${planId}`)}"`,
+    });
+  }
+
+  // The schedule as a statement PDF (HTML printed by Chromium); same gate.
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @Permissions('installments:read')
+  @Get('installment-plans/:planId/export.pdf')
+  @Header('Content-Type', 'application/pdf')
+  async planPdf(@Param('planId', ParseUUIDPipe) planId: string) {
+    const buf = await this.svc.planPdf(planId);
+    return new StreamableFile(buf, {
+      disposition: `attachment; filename="installment-plan-${planId}.pdf"`,
     });
   }
 }

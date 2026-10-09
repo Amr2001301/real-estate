@@ -18,6 +18,12 @@ import { toCsv } from '../../common/utils/csv';
 import { getCompanyCurrency } from '../../common/currency/currency';
 import { fallbackBrand, type ReportBrand } from '../../common/utils/report-brand';
 import { ReportBrandService } from '../company-branding/report-brand.service';
+import { presentReportPdf, ReportPdfService } from '../../common/report-pdf/report-pdf.service';
+import {
+  brokerDetailReportHtml,
+  brokerSummaryReportHtml,
+  topBrokersReportHtml,
+} from './broker-report-templates';
 import { getTenantContext } from '../../common/tenant/tenant-context';
 import {
   addBoardBanner,
@@ -57,6 +63,14 @@ const TOP_METRIC_LABEL: Record<TopMetric, string> = {
  * including them would inflate sales numbers for contracts that may never
  * close (admin can revoke or cancel before signing).
  */
+/** "من 2026-01-01 إلى 2026-03-31" or «كل الفترات». */
+function brokerPeriodLabel(from?: string, to?: string): string {
+  if (from && to) return `من ${from} إلى ${to}`;
+  if (from) return `من ${from}`;
+  if (to) return `حتى ${to}`;
+  return 'كل الفترات';
+}
+
 /** Narrows a broker-detail export (see detailForExport). */
 export interface DetailExportScope {
   onlyAgent?: string;
@@ -68,6 +82,7 @@ export class BrokerReportsService {
     private readonly prisma: PrismaService,
     // Optional so unit tests can build the service with prisma only.
     @Optional() private readonly reportBrand?: ReportBrandService,
+    @Optional() private readonly reportPdf?: ReportPdfService,
   ) {}
 
   // ── Public endpoints ────────────────────────────────────────────────────
@@ -649,6 +664,59 @@ export class BrokerReportsService {
       metric,
     ]);
     return toCsv(headers, rows);
+  }
+
+  // ── Presentation PDFs (HTML → Chromium; 503 when unavailable) ─────────────
+
+  async summaryPdf(query: BrokerReportsSummaryQueryDto): Promise<Buffer> {
+    const [summary, top, brand] = await Promise.all([
+      this.summary(query),
+      this.topBrokers({ from: query.from, to: query.to, projectId: query.projectId, metric: 'salesGross', limit: 10 }),
+      this.brand(),
+    ]);
+    const html = brokerSummaryReportHtml(
+      { summary, top: top.data, periodLabel: brokerPeriodLabel(query.from, query.to) },
+      brand,
+    );
+    return presentReportPdf(this.reportPdf, html, brand);
+  }
+
+  async topBrokersPdf(query: TopBrokersQueryDto): Promise<Buffer> {
+    const [{ data, metric }, brand] = await Promise.all([this.topBrokers(query), this.brand()]);
+    const html = topBrokersReportHtml({ metric, rows: data, periodLabel: brokerPeriodLabel(query.from, query.to) }, brand);
+    return presentReportPdf(this.reportPdf, html, brand);
+  }
+
+  /** One broker's performance; `title` lets the broker portal name it «أدائي». */
+  async brokerDetailPdf(
+    brokerId: string,
+    query: BrokerDetailReportQueryDto,
+    opts: DetailExportScope & { title?: string } = {},
+  ): Promise<Buffer> {
+    const [detail, brand] = await Promise.all([this.detailForExport(brokerId, query, opts), this.brand()]);
+    const html = brokerDetailReportHtml(
+      {
+        broker: {
+          name: this.localizedName(detail.broker.companyName) || detail.broker.code || '',
+          code: detail.broker.code ?? '',
+          status: detail.broker.status,
+        },
+        summary: detail.summary,
+        monthlyTrend: detail.monthlyTrend,
+        agents: detail.agentBreakdown,
+        projects: detail.projectBreakdown.map((p) => ({
+          name: this.localizedName(p.projectName) || '—',
+          city: this.localizedName(p.city) || '',
+          contractsSigned: p.contractsSigned,
+          salesGross: p.salesGross,
+          commissionNet: p.commissionNet,
+        })),
+        periodLabel: brokerPeriodLabel(query.from, query.to),
+        title: opts.title,
+      },
+      brand,
+    );
+    return presentReportPdf(this.reportPdf, html, brand);
   }
 
   /**

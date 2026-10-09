@@ -84,6 +84,14 @@ export class BrokerReportsController {
     return new StreamableFile(await this.svc.summaryBoardXlsx(query));
   }
 
+  // Presentation PDF (HTML printed by Chromium). Same controller-level gate.
+  @Get('export/summary.pdf')
+  @Header('Content-Type', 'application/pdf')
+  @Header('Content-Disposition', 'attachment; filename="broker-summary.pdf"')
+  async summaryPdf(@Query() query: BrokerReportsSummaryQueryDto): Promise<StreamableFile> {
+    return new StreamableFile(await this.svc.summaryPdf(query));
+  }
+
   @Get('export/top-brokers.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="top-brokers.csv"')
@@ -102,6 +110,13 @@ export class BrokerReportsController {
   @Header('Content-Disposition', 'attachment; filename="top-brokers.xlsx"')
   async topBrokersXlsx(@Query() query: TopBrokersQueryDto): Promise<StreamableFile> {
     return new StreamableFile(await this.svc.topBrokersXlsx(query));
+  }
+
+  @Get('export/top-brokers.pdf')
+  @Header('Content-Type', 'application/pdf')
+  @Header('Content-Disposition', 'attachment; filename="top-brokers.pdf"')
+  async topBrokersPdf(@Query() query: TopBrokersQueryDto): Promise<StreamableFile> {
+    return new StreamableFile(await this.svc.topBrokersPdf(query));
   }
 
   // Note: `broker/:brokerId` is declared LAST so the literal segments above
@@ -129,6 +144,16 @@ export class BrokerReportsController {
     @Query() query: BrokerDetailReportQueryDto,
   ): Promise<StreamableFile> {
     return new StreamableFile(await this.svc.brokerDetailXlsx(brokerId, query));
+  }
+
+  @Get('export/broker/:brokerId.pdf')
+  @Header('Content-Type', 'application/pdf')
+  @Header('Content-Disposition', 'attachment; filename="broker-detail.pdf"')
+  async brokerDetailPdf(
+    @Param('brokerId', ParseUUIDPipe) brokerId: string,
+    @Query() query: BrokerDetailReportQueryDto,
+  ): Promise<StreamableFile> {
+    return new StreamableFile(await this.svc.brokerDetailPdf(brokerId, query));
   }
 
   @Get('broker/:brokerId')

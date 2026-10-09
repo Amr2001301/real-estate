@@ -206,6 +206,7 @@ export default async function BonusPage({
         ]}
         actions={
           <ExportMenu locale={locale}
+            pdfPath="/bonus-entries/export.pdf"
             xlsxPath="/bonus-entries/export.xlsx"
             csvPath="/bonus-entries/export.csv"
             filenameBase="bonus-entries"

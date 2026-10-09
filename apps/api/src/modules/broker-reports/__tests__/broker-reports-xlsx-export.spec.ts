@@ -184,4 +184,26 @@ describe('broker-reports XLSX exports (P15.3)', () => {
       }
     });
   });
+
+  // Presentation PDFs (HTML → Chromium). This module has no renderer, so an
+  // ADMIN reaches each report and gets 503; other roles stop at @Roles.
+  describe('presentation PDFs', () => {
+    const paths = () => [
+      '/broker-reports/export/summary.pdf',
+      '/broker-reports/export/top-brokers.pdf',
+      `/broker-reports/export/broker/${BROKER_ID}.pdf`,
+    ];
+
+    it('are reached by ADMIN (503 without a renderer)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      for (const path of paths()) await request(app.getHttpServer()).get(path).expect(503);
+    });
+
+    it('are forbidden for non-admin roles', async () => {
+      for (const role of [UserRole.SALES, UserRole.CUSTOMER, UserRole.BROKER]) {
+        FakeAuthGuard.currentUser = { sub: 'x', role, codes: ['broker_reports:read'] };
+        for (const path of paths()) await request(app.getHttpServer()).get(path).expect(403);
+      }
+    });
+  });
 });

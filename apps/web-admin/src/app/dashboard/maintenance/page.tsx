@@ -173,6 +173,7 @@ export default async function MaintenancePage({
         actions={
           <div className="flex items-center gap-2">
             <ExportMenu locale={locale}
+              pdfPath="/maintenance-requests/reports/summary.pdf"
               xlsxPath="/maintenance-requests/reports/summary.xlsx"
               csvPath="/maintenance-requests/reports/summary.csv"
               filenameBase="maintenance-report"

@@ -247,6 +247,7 @@ export default async function ContractDetailPage({
                   <ExportMenu
                     locale={locale}
                     filenameBase={`installments-${contract.contractNumber ?? contract.id.slice(0, 8)}`}
+                    pdfPath={`/installment-plans/${plan.id}/export.pdf`}
                     xlsxPath={`/installment-plans/${plan.id}/export.xlsx`}
                   />
                 ) : undefined

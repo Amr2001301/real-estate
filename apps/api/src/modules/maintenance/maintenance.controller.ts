@@ -282,6 +282,25 @@ export class MaintenanceController {
     );
   }
 
+  // Presentation PDF (HTML printed by Chromium); same gate as the XLSX.
+  @Roles(UserRole.ADMIN)
+  @Permissions('maintenance:read')
+  @Get('maintenance-requests/reports/summary.pdf')
+  @Header('Content-Type', 'application/pdf')
+  @Header('Content-Disposition', 'attachment; filename="maintenance-report.pdf"')
+  async reportsSummaryPdf(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('assignedAdminId') assignedAdminId?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('reviewStatus') reviewStatus?: MaintenanceReviewStatus,
+    @Query('status') status?: MaintenanceStatus,
+  ): Promise<StreamableFile> {
+    return new StreamableFile(
+      await this.svc.reportsSummaryPdf({ from, to, assignedAdminId, categoryId, reviewStatus, status }),
+    );
+  }
+
   @Roles(UserRole.ADMIN)
   @Permissions('maintenance:read')
   @Get('maintenance-requests/:id')

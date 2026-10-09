@@ -296,6 +296,18 @@ export class BrokerPortalController {
     return new StreamableFile(await this.portalPerformance.exportXlsx(scope, query));
   }
 
+  // Presentation PDF of the same page — same role, scope guard and per-agent
+  // scoping (a non-manager gets only their own agent row).
+  @Get('performance/export.pdf')
+  @Header('Content-Type', 'application/pdf')
+  @Header('Content-Disposition', 'attachment; filename="my-performance.pdf"')
+  async performanceExportPdf(
+    @BrokerScope() scope: BrokerScopeContext,
+    @Query() query: PortalPerformanceQueryDto,
+  ): Promise<StreamableFile> {
+    return new StreamableFile(await this.portalPerformance.exportPdf(scope, query));
+  }
+
   // ── Team management ───────────────────────────────────────────────────
   // Gated by BrokerManagerGuard — only the primary contact or users with
   // `canManageBrokerUsers=true` may reach these routes.
