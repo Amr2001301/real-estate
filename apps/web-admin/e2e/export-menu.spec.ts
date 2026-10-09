@@ -35,6 +35,15 @@ test.describe('admin', () => {
     expect(name).toMatch(/^sales-report-\d{4}-\d{2}-\d{2}\.pdf$/);
   });
 
+  test('dashboard report: the presentation PDF leads the menu', async ({ page }) => {
+    await page.goto('/dashboard', { waitUntil: 'networkidle' });
+    await page.getByTestId('export-menu').first().click();
+    const items = page.getByRole('menu').getByRole('menuitem');
+    await expect(items.first()).toHaveAttribute('data-testid', 'export-dashboard-report:pdf');
+    await expect(page.getByTestId('export-dashboard-report:xlsx')).toBeVisible();
+    await expect(page.getByTestId('export-dashboard-report:csv')).toBeVisible();
+  });
+
   test('units list exports what it shows (Excel)', async ({ page }) => {
     await page.goto('/dashboard/units?status=AVAILABLE', { waitUntil: 'networkidle' });
     const name = await downloadFrom(page, 'export-units:xlsx');

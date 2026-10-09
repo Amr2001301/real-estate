@@ -17,6 +17,7 @@ import { Workbook } from 'exceljs';
 import { ReportsModule } from '../reports.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
+import { ReportPdfService } from '../../../common/report-pdf/report-pdf.service';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { enterTenantContext } from '../../../common/tenant/tenant-context';
 
@@ -414,5 +415,74 @@ describe('GET /reports/admin-summary (P14)', () => {
       FakeAuthGuard.currentUser = { sub: 'u', role, codes: ['reports:operational:read'] };
       await request(app.getHttpServer()).get('/reports/admin-summary/export.xlsx').expect(403);
     }
+  });
+
+  it('export.pdf is forbidden for CUSTOMER / CLIENT / BROKER', async () => {
+    for (const role of [UserRole.CUSTOMER, UserRole.CLIENT, UserRole.BROKER]) {
+      FakeAuthGuard.currentUser = { sub: 'u', role, codes: ['reports:operational:read'] };
+      await request(app.getHttpServer()).get('/reports/admin-summary/export.pdf').expect(403);
+    }
+  });
+
+  it('export.pdf is 503 when no PDF renderer is available (no fallback layout for this report)', async () => {
+    FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+    await request(app.getHttpServer()).get('/reports/admin-summary/export.pdf').expect(503);
+  });
+});
+
+describe('GET /reports/admin-summary/export.pdf (HTML presentation report)', () => {
+  let app: INestApplication;
+  const rendered: Array<{ html: string; footer?: string }> = [];
+
+  beforeAll(async () => {
+    const prismaMock = makePrismaMock();
+    const fakePdf = {
+      available: () => true,
+      render: async (html: string, footer?: { text?: string }) => {
+        rendered.push({ html, footer: footer?.text });
+        return Buffer.from('%PDF-fake');
+      },
+    };
+
+    @Global()
+    @Module({
+      providers: [
+        { provide: PrismaService, useValue: prismaMock },
+        { provide: ReportPdfService, useValue: fakePdf },
+      ],
+      exports: [PrismaService, ReportPdfService],
+    })
+    class MockModule {}
+
+    const moduleRef = await Test.createTestingModule({
+      imports: [MockModule, ReportsModule],
+      providers: [
+        { provide: APP_GUARD, useClass: FakeAuthGuard },
+        { provide: APP_GUARD, useClass: RolesGuard },
+        { provide: APP_GUARD, useClass: PermissionsGuard },
+        { provide: APP_INTERCEPTOR, useClass: FakeTenantInterceptor },
+      ],
+    }).compile();
+
+    app = moduleRef.createNestApplication();
+    await app.init();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('renders the dashboard report from the real summary data', async () => {
+    FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+    const res = await request(app.getHttpServer()).get('/reports/admin-summary/export.pdf').expect(200);
+    expect(res.headers['content-type']).toContain('application/pdf');
+    expect(res.headers['content-disposition']).toContain('dashboard-report.pdf');
+
+    const { html } = rendered.at(-1)!;
+    for (const heading of ['تقرير لوحة التحكم', 'الملخص التنفيذي', 'التحصيل المتوقع', 'التنبيهات المعلقة', 'آخر النشاطات']) {
+      expect(html).toContain(heading);
+    }
+    expect(html).toContain('<svg'); // the trend and lead-source charts
+    expect(html).toContain('خالد'); // a recent-activity actor from the mock rows
   });
 });

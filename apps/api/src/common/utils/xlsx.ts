@@ -436,7 +436,8 @@ export function addChartBlock(
     const row = ws.addRow([]);
     ws.mergeCells(row.number, 1, row.number, opts.span);
     const c = ws.getCell(row.number, 1);
-    c.value = 'الرسم البياني غير متاح حالياً';
+    // No chart: nothing to draw (all zero) or rendering unavailable.
+    c.value = 'لا يتوفر رسم بياني لهذه البيانات';
     c.font = { italic: true, color: { argb: XLSX_MUTED } };
     c.alignment = { horizontal: 'center', vertical: 'middle' };
     return;

@@ -12,8 +12,8 @@ import { portalSharedT } from '@/messages/portal/shared';
  * One button, always the same look ("Export" + download icon):
  *   • a single format → the button downloads it directly ("Export Excel");
  *   • several formats → it opens a menu that says what each file is for
- *     (Excel: formatted report · PDF: company-branded, to print or share ·
- *     CSV: raw data for other systems);
+ *     (PDF: the company-branded presentation report · Excel: formatted data
+ *     to analyse · CSV: raw data for other systems);
  *   • several reports (`groups`) → one menu with a section per report, so a
  *     page never shows a row of export buttons.
  * Downloads are binary-safe (fetch → blob → anchor) through the whitelisting
@@ -65,8 +65,9 @@ function optionsOf(group: ExportGroup): Option[] {
   const out: Option[] = [];
   const add = (format: ExportFormat, path?: string) =>
     path && out.push({ key: `${group.filenameBase}:${format}`, format, path, group });
-  add('xlsx', group.xlsxPath);
+  // Presentation first (PDF), then data (Excel), then raw (CSV).
   add('pdf', group.pdfPath);
+  add('xlsx', group.xlsxPath);
   add('csv', group.csvPath);
   return out;
 }

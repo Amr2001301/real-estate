@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable, Logger, Optional, ServiceUnavailableException } from '@nestjs/common';
 import {
   AppointmentStatus,
   BonusEntryStatus,
@@ -22,6 +22,13 @@ import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { getCompanyCurrency } from '../../common/currency/currency';
 import { fallbackBrand, type ReportBrand } from '../../common/utils/report-brand';
 import { ReportBrandService } from '../company-branding/report-brand.service';
+import { ReportPdfService } from '../../common/report-pdf/report-pdf.service';
+import {
+  brokerReportHtml,
+  dashboardReportHtml,
+  financialReportHtml,
+  salesReportHtml,
+} from './report-templates';
 import { csvSections, toCsv, type CsvCell } from '../../common/utils/csv';
 import {
   buildBrokerPdf,
@@ -48,7 +55,7 @@ import {
 } from '../../common/utils/xlsx';
 import {
   renderBarChartPng,
-  renderDoughnutChartPng,
+  renderShareChartPng,
 } from '../../common/utils/xlsx-chart';
 
 // Arabic month names indexed by JS month (0 = January). Used for the
@@ -66,15 +73,27 @@ function translatableAr(v: unknown): string {
   return t.ar || t.en || '—';
 }
 
+/** "2026-09", "من 2026-01-01 إلى 2026-03-31" or «كل الفترات». */
+function reportPeriodLabel(period?: string, dateFrom?: string, dateTo?: string): string {
+  if (period) return period;
+  if (dateFrom && dateTo) return `من ${dateFrom} إلى ${dateTo}`;
+  if (dateFrom) return `من ${dateFrom}`;
+  if (dateTo) return `حتى ${dateTo}`;
+  return 'كل الفترات';
+}
+
 /** The dashboard report's alerts section when nothing is waiting on anyone. */
 const NO_OPEN_ALERTS = 'لا توجد تنبيهات معلقة';
 
 @Injectable()
 export class ReportsService {
+  private readonly logger = new Logger(ReportsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     // Optional so unit tests can build the service with prisma only.
     @Optional() private readonly reportBrand?: ReportBrandService,
+    @Optional() private readonly reportPdf?: ReportPdfService,
   ) {}
 
   async kpis() {
@@ -819,9 +838,13 @@ export class ReportsService {
     // Charts up-front (null on any rendering failure → graceful fallback).
     // Untitled: each sits under its own section title on the cover.
     const trendChart = await renderBarChartPng({
+      width: 720,
+      height: 300,
       series: s.reservationTrend.map((t) => ({ label: t.label, value: t.value })),
     });
-    const sourcesChart = await renderDoughnutChartPng({
+    const sourcesChart = await renderShareChartPng({
+      width: 560,
+      height: 300,
       series: s.leadSources.map((l) => ({ label: l.source, value: l.count })),
     });
 
@@ -1740,7 +1763,8 @@ export class ReportsService {
     }));
 
     const projectChart = await renderBarChartPng({
-      title: 'المبيعات حسب المشروع',
+      width: 720,
+      height: 320,
       series: byProject.slice(0, 8).map((p) => ({ label: p.name, value: p.total })),
     });
 
@@ -1799,8 +1823,9 @@ export class ReportsService {
     const data = await this.financial(period, dateFrom, dateTo);
     const unverified = Math.max(0, data.deposits - data.verified);
 
-    const statusChart = await renderDoughnutChartPng({
-      title: 'توزيع الدفعات حسب التوثيق',
+    const statusChart = await renderShareChartPng({
+      width: 560,
+      height: 320,
       series: [
         { label: 'موثّقة', value: data.verified },
         { label: 'غير موثّقة', value: unverified },
@@ -2154,11 +2179,13 @@ export class ReportsService {
     };
 
     const agingChart = await renderBarChartPng({
-      title: 'أعمار المتأخرات',
+      width: 720,
+      height: 300,
       series: data.aging.map((a) => ({ label: AGING_LABEL[a.label] ?? a.label, value: Number(a.amount) })),
     });
-    const typeChart = await renderDoughnutChartPng({
-      title: 'التحصيل حسب نوع الدفعة',
+    const typeChart = await renderShareChartPng({
+      width: 560,
+      height: 300,
       series: data.collectionByType.map((c) => ({ label: DEP_TYPE_LABEL[c.type] ?? c.type, value: Number(c.totalAll) })),
     });
 
@@ -2240,16 +2267,44 @@ export class ReportsService {
     return this.reportBrand?.forCompany(companyId) ?? fallbackBrand(await getCompanyCurrency(this.prisma, companyId));
   }
 
-  // ── PDF builders ─────────────────────────────────────────────────────────
-  // Branded A4 Arabic PDFs using PDFKit + NotoSansArabic font. Each builder
-  // fetches the same data as the matching JSON/CSV endpoints so there is no
-  // business-logic duplication. Project names are resolved to Arabic labels
-  // before being handed to the layout utility.
+  // ── PDF exports ──────────────────────────────────────────────────────────
+  // Presentation reports: HTML templates (report-templates.ts) printed by
+  // Chromium (ReportPdfService). Each fetches the same data as the matching
+  // JSON/CSV endpoint — no business logic is duplicated. Where Chromium is not
+  // installed, sales/financial/broker fall back to the plain PDFKit layout.
+
+  /** HTML → PDF, or the PDFKit fallback when Chromium is missing or fails. */
+  private async presentPdf(html: string, brand: ReportBrand, fallback?: () => Promise<Buffer>): Promise<Buffer> {
+    if (this.reportPdf?.available()) {
+      try {
+        return await this.reportPdf.render(html, { text: brand.name });
+      } catch (err) {
+        this.logger.warn(`Chromium report render failed, using the fallback: ${(err as Error).message}`);
+      }
+    }
+    if (fallback) return fallback();
+    throw new ServiceUnavailableException('PDF reports are unavailable right now');
+  }
+
+  async adminSummaryPdf(): Promise<Buffer> {
+    const [s, brand] = await Promise.all([this.adminSummary(), this.brand()]);
+    const alerts = (
+      [
+        ['عقود بانتظار التوقيع', s.alerts.contractsAwaitingSignature],
+        ['دفعات بانتظار المراجعة', s.alerts.depositsPendingReview],
+        ['طلبات صيانة مفتوحة', s.alerts.openMaintenance],
+        ['حجوزات تنتهي قريباً', s.alerts.reservationsExpiringSoon],
+        ['زيارات بانتظار تأكيد العميل', s.alerts.visitsAwaitingConfirmation],
+        ['استفسارات مفتوحة', s.alerts.infoRequestsOpen],
+      ] as Array<[string, number]>
+    ).filter(([, n]) => n > 0);
+    return this.presentPdf(dashboardReportHtml({ ...s, alerts }, brand), brand);
+  }
 
   async salesPdf(period?: string, dateFrom?: string, dateTo?: string): Promise<Buffer> {
     const data = await this.sales(period, dateFrom, dateTo);
 
-    // Resolve Arabic project names for the breakdown table.
+    // Resolve Arabic project names for the breakdown.
     const ids = (data.byProject ?? []).map((p) => p.projectId);
     const projects = ids.length
       ? await this.prisma.project.findMany({
@@ -2258,44 +2313,45 @@ export class ReportsService {
         })
       : [];
     const nameById = new Map(projects.map((p) => [p.id, translatableAr(p.name)]));
-
-    return buildSalesPdf({
-      contracts: data.contracts,
-      total: Number(data.total),
-      byProject: (data.byProject ?? []).map((p) => ({
-        name: nameById.get(p.projectId) ?? p.projectId,
-        count: p.count,
-        total: Number(p.total),
-      })),
-      period,
-      dateFrom,
-      dateTo,
-    }, await this.brand());
+    const byProject = (data.byProject ?? []).map((p) => ({
+      name: nameById.get(p.projectId) ?? p.projectId,
+      count: p.count,
+      total: Number(p.total),
+    }));
+    const brand = await this.brand();
+    const html = salesReportHtml(
+      { contracts: data.contracts, total: Number(data.total), byProject, periodLabel: reportPeriodLabel(period, dateFrom, dateTo) },
+      brand,
+    );
+    return this.presentPdf(html, brand, () =>
+      buildSalesPdf({ contracts: data.contracts, total: Number(data.total), byProject, period, dateFrom, dateTo }, brand),
+    );
   }
 
   async financialPdf(period?: string, dateFrom?: string, dateTo?: string): Promise<Buffer> {
     const data = await this.financial(period, dateFrom, dateTo);
-    return buildFinancialPdf({
-      deposits: data.deposits,
-      verified: data.verified,
-      total: Number(data.total),
-      period,
-      dateFrom,
-      dateTo,
-    }, await this.brand());
+    const brand = await this.brand();
+    const html = financialReportHtml(
+      { deposits: data.deposits, verified: data.verified, total: Number(data.total), periodLabel: reportPeriodLabel(period, dateFrom, dateTo) },
+      brand,
+    );
+    return this.presentPdf(html, brand, () =>
+      buildFinancialPdf(
+        { deposits: data.deposits, verified: data.verified, total: Number(data.total), period, dateFrom, dateTo },
+        brand,
+      ),
+    );
   }
 
   async brokerPdf(dateFrom?: string, dateTo?: string): Promise<Buffer> {
-    const brokers = await this.brokerLeaderboard(dateFrom, dateTo);
-    return buildBrokerPdf({
-      brokers: brokers.map((b) => ({
-        brokerName: b.brokerName,
-        count: b.count,
-        commissionAmount: b.commissionAmount,
-      })),
-      dateFrom,
-      dateTo,
-    }, await this.brand());
+    const brokers = (await this.brokerLeaderboard(dateFrom, dateTo)).map((b) => ({
+      brokerName: b.brokerName,
+      count: b.count,
+      commissionAmount: b.commissionAmount,
+    }));
+    const brand = await this.brand();
+    const html = brokerReportHtml({ brokers, periodLabel: reportPeriodLabel(undefined, dateFrom, dateTo) }, brand);
+    return this.presentPdf(html, brand, () => buildBrokerPdf({ brokers, dateFrom, dateTo }, brand));
   }
 
   private periodWhereContract(period: string): Prisma.ContractWhereInput {

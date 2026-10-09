@@ -240,13 +240,15 @@ describe('Reports module · CSV export', () => {
   });
 
   describe('GET /reports/financial/export.xlsx (board)', () => {
-    it('embeds a doughnut chart on the cover, PK, expected sheet, no fakes', async () => {
+    it('a cover with no deposits has no empty chart, PK, expected sheet, no fakes', async () => {
       const { res, wb, text } = await loadBoard('/reports/financial/export.xlsx');
       expect(res.headers['content-disposition']).toContain('financial-report.xlsx');
       expect((res.body as Buffer).subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
       expect(wb.worksheets.map((w) => w.name)).toEqual(['الملخص']);
-      // Verified/unverified doughnut renders even at zero values → image embedded.
-      expect(wb.getWorksheet('الملخص')!.getImages().length).toBeGreaterThan(0);
+      // Nothing verified or pending: the share chart has nothing to draw, so the
+      // cover says so instead of embedding an empty chart.
+      expect(wb.getWorksheet('الملخص')!.getImages().length).toBe(0);
+      expect(text).toContain('لا يتوفر رسم بياني لهذه البيانات');
       expect(text).toContain('التقرير المالي');
       expect(text).not.toMatch(/أحمد منصور|بيانات تجريبية|74%/);
     });
