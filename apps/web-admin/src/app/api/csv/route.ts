@@ -18,6 +18,8 @@ const ALLOWED = [
   /^\/reports\/admin-summary\/export\.csv$/,
   /^\/bonus-entries\/export\.csv$/,
   /^\/maintenance-requests\/reports\/summary\.csv$/,
+  /^\/units\/export\.csv$/,
+  /^\/users\/export\.csv$/,
 ];
 
 export async function GET(req: NextRequest) {
@@ -42,12 +44,15 @@ export async function GET(req: NextRequest) {
     },
   );
 
+  // Same as /api/export: never pass the upstream error body to the browser.
   if (!upstream.ok) {
-    const text = await upstream.text();
-    return new NextResponse(text || 'Export failed', { status: upstream.status });
+    return new NextResponse('Export failed', { status: upstream.status });
   }
 
-  const body = await upstream.text();
+  // text() decodes UTF-8 and drops the API's BOM — without it Excel opens
+  // Arabic CSV as mojibake, so put it back.
+  const text = await upstream.text();
+  const body = text.startsWith('\uFEFF') ? text : `\uFEFF${text}`;
   const filename = req.nextUrl.searchParams.get('filename') ?? 'export.csv';
   return new NextResponse(body, {
     status: 200,

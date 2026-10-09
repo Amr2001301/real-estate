@@ -98,7 +98,7 @@ export default async function BrokerPerformancePage({
         }
         actions={
           <div className="flex items-center gap-2 flex-wrap">
-            <ExportMenu
+            <ExportMenu locale={locale}
               xlsxPath={`/broker-reports/export/broker/${id}.xlsx`}
               csvPath={`/broker-reports/export/broker/${id}.csv`}
               filenameBase={`broker-${report.broker.code ?? id}`}

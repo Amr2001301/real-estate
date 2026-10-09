@@ -3,6 +3,7 @@ import { Plus, AlertCircle, Kanban, Upload } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, Lead, LeadStage } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
+import { getSession } from '@/lib/session';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { LeadPipeline } from '@/components/crm/lead-pipeline';
@@ -23,6 +24,9 @@ export default async function LeadsPage({
     getLocale(),
   ]);
   const m = uiT(locale).pages.leads;
+  // Import is ADMIN / SALES_MANAGER on the API — a rep would only get a 403.
+  const session = await getSession();
+  const canImport = session?.role === 'ADMIN' || session?.role === 'SALES_MANAGER';
 
   const qs = new URLSearchParams({ pageSize: '200' });
   if (sp.stage) qs.set('stage', sp.stage);
@@ -59,11 +63,13 @@ export default async function LeadsPage({
         actions={
           <div className="flex items-center gap-2">
             <LeadsFilterPopover defaultStage={sp.stage} defaultQ={sp.q} />
-            <Link href={'/dashboard/leads/import' as never}>
-              <Button variant="secondary" size="md" leftIcon={<Upload className="h-4 w-4" />}>
-                {m.importExcel}
-              </Button>
-            </Link>
+            {canImport && (
+              <Link href={'/dashboard/leads/import' as never}>
+                <Button variant="outline" size="md" leftIcon={<Upload className="h-4 w-4" />}>
+                  {m.importExcel}
+                </Button>
+              </Link>
+            )}
             <Link href={'/dashboard/leads/new' as never}>
               <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
                 {m.addLead}

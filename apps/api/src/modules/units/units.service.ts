@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { Prisma, UnitStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -19,6 +20,22 @@ import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { PlanLimitService } from '../../common/capabilities/plan-limit.service';
 import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { serializePublicUnit } from './public-unit.serializer';
+import { arText, collectPages, isoDate, listCsv, listXlsx, type ListColumn } from '../../common/utils/list-export';
+import { ReportBrandService } from '../company-branding/report-brand.service';
+
+/** The fields of a listed unit the export reads (findAll includes the rest). */
+type UnitExportRow = {
+  code: string;
+  type: string;
+  floor: number;
+  area: number | { toString(): string };
+  bedrooms: number;
+  bathrooms: number;
+  price: number | { toString(): string };
+  status: string;
+  createdAt: Date;
+  building?: { name: unknown; phase?: { project?: { name: unknown } } };
+};
 
 /**
  * Map a whitelisted UnitSort to a Prisma orderBy. Each adds a stable `id`
@@ -51,7 +68,60 @@ export class UnitsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly planLimits: PlanLimitService,
+    // Optional so unit tests can build the service without it.
+    @Optional() private readonly reportBrand?: ReportBrandService,
   ) {}
+
+  // ── List export (the admin units / inventory pages) ─────────────────────
+
+  private static readonly STATUS_AR: Record<string, string> = {
+    AVAILABLE: 'متاحة',
+    RESERVED: 'محجوزة',
+    SOLD: 'مباعة',
+  };
+
+  private static readonly EXPORT_COLUMNS: ListColumn<UnitExportRow>[] = [
+    { header: 'المشروع', width: 26, value: (u) => arText(u.building?.phase?.project?.name) },
+    { header: 'المبنى', width: 18, value: (u) => arText(u.building?.name) },
+    { header: 'كود الوحدة', width: 14, value: (u) => u.code },
+    { header: 'النوع', width: 14, value: (u) => u.type },
+    { header: 'الطابق', width: 8, value: (u) => u.floor },
+    { header: 'المساحة (م²)', width: 12, value: (u) => Number(u.area) },
+    { header: 'غرف النوم', width: 10, value: (u) => u.bedrooms },
+    { header: 'الحمامات', width: 10, value: (u) => u.bathrooms },
+    { header: 'السعر', width: 16, value: (u) => Number(u.price), money: true },
+    { header: 'الحالة', width: 12, value: (u) => UnitsService.STATUS_AR[u.status] ?? u.status },
+    { header: 'تاريخ الإضافة', width: 14, value: (u) => isoDate(u.createdAt) },
+  ];
+
+  /** Every unit matching the list filters (no paging). */
+  private async exportRows(query: UnitQueryDto): Promise<UnitExportRow[]> {
+    return collectPages((page, pageSize) =>
+      this.findAll({ ...query, page, pageSize }) as Promise<{ data: UnitExportRow[] }>,
+    );
+  }
+
+  async exportXlsx(query: UnitQueryDto): Promise<Buffer> {
+    const [rows, brand] = await Promise.all([
+      this.exportRows(query),
+      this.reportBrand?.forCompany(getRequiredCompanyId()),
+    ]);
+    return listXlsx({
+      title: 'قائمة الوحدات',
+      sheet: 'الوحدات',
+      filters: [
+        ['الحالة', query.status ? (UnitsService.STATUS_AR[query.status] ?? query.status) : ''],
+        ['بحث', query.q ?? ''],
+      ],
+      columns: UnitsService.EXPORT_COLUMNS,
+      rows,
+      brand,
+    });
+  }
+
+  async exportCsv(query: UnitQueryDto): Promise<string> {
+    return listCsv(UnitsService.EXPORT_COLUMNS, await this.exportRows(query));
+  }
 
   async create(dto: CreateUnitDto) {
     await this.planLimits.checkUnitLimit();

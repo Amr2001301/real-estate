@@ -1258,6 +1258,32 @@ describe('Flow A — Catalog sync (e2e)', () => {
     });
   });
 
+  describe('A4r — "export this list" for units and people (ADMIN only)', () => {
+    it('units: branded XLSX and a CSV with the list columns', async () => {
+      const xlsx = await http().get('/v1/units/export.xlsx').set('Authorization', bearer(adminToken))
+        .buffer(true).parse((res, cb) => { const c: Buffer[] = []; res.on('data', (d: Buffer) => c.push(d)); res.on('end', () => cb(null, Buffer.concat(c))); });
+      expect(xlsx.status).toBe(200);
+      expect(xlsx.headers['content-type']).toContain('spreadsheetml');
+      expect((xlsx.body as Buffer).subarray(0, 2).toString()).toBe('PK');
+
+      const csv = await http().get('/v1/units/export.csv?status=AVAILABLE').set('Authorization', bearer(adminToken));
+      expect(csv.status).toBe(200);
+      expect(csv.text).toContain('كود الوحدة');
+      // the status filter applies: no sold / reserved rows
+      expect(csv.text).not.toContain('مباعة');
+    });
+
+    it('people: CLIENT / CUSTOMER lists only; staff role refused; non-admins refused', async () => {
+      const ok = await http().get('/v1/users/export.csv?role=CUSTOMER').set('Authorization', bearer(adminToken));
+      expect(ok.status).toBe(200);
+      expect(ok.text).toContain('البريد الإلكتروني');
+
+      expect((await http().get('/v1/users/export.csv?role=ADMIN').set('Authorization', bearer(adminToken))).status).toBe(400);
+      expect((await http().get('/v1/users/export.csv?role=CLIENT').set('Authorization', bearer(salesToken))).status).toBe(403);
+      expect((await http().get('/v1/units/export.csv').set('Authorization', bearer(salesToken))).status).toBe(403);
+    });
+  });
+
   // ── Broker portal: the same filter, inside the broker's own scope ─────────
   //
   // The portal reservation form searches leads instead of preloading 200, and

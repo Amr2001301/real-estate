@@ -205,7 +205,7 @@ export default async function BonusPage({
           { label: m.breadcrumbBonus },
         ]}
         actions={
-          <ExportMenu
+          <ExportMenu locale={locale}
             xlsxPath="/bonus-entries/export.xlsx"
             csvPath="/bonus-entries/export.csv"
             filenameBase="bonus-entries"

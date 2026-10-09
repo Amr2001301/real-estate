@@ -1,45 +1,84 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { FileSpreadsheet, FileText, ChevronDown } from 'lucide-react';
+import { ChevronDown, Download, FileSpreadsheet, FileText, Sheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Locale } from '@/lib/locale';
 import { portalSharedT } from '@/messages/portal/shared';
 
 /**
- * P15.2 — shared export control. Styled XLSX is the default (single click on the
- * main button); the caret reveals a menu with PDF and raw-data CSV options.
- * All downloads are binary-safe (fetch → blob → anchor) routed through proxies:
- *   • XLSX/PDF → /api/export  (preserves raw bytes + content-type)
- *   • CSV      → /api/csv     (text fallback)
+ * The one export control used across the dashboard and the broker portal.
+ *
+ * One button, always the same look ("Export" + download icon):
+ *   • a single format → the button downloads it directly ("Export Excel");
+ *   • several formats → it opens a menu that says what each file is for
+ *     (Excel: formatted report · PDF: company-branded, to print or share ·
+ *     CSV: raw data for other systems);
+ *   • several reports (`groups`) → one menu with a section per report, so a
+ *     page never shows a row of export buttons.
+ * Downloads are binary-safe (fetch → blob → anchor) through the whitelisting
+ * proxies: XLSX/PDF → /api/export, CSV → /api/csv.
  */
-interface ExportMenuProps {
-  /** API path (no /v1) for the styled XLSX. When omitted, pdfPath becomes primary. */
-  xlsxPath?: string;
+
+export type ExportFormat = 'xlsx' | 'pdf' | 'csv';
+
+export interface ExportGroup {
+  /** Section title in the menu (e.g. "Sales"). */
+  label?: string;
   /** Base name for the downloaded file (date + extension appended). */
   filenameBase: string;
-  /** Optional branded PDF path — must be whitelisted on /api/export. */
+  xlsxPath?: string;
   pdfPath?: string;
-  /** Optional raw-data CSV fallback path — must be whitelisted on /api/csv. */
   csvPath?: string;
-  /** Extra query params (filters) forwarded to the upstream endpoint. */
+  /** Filters forwarded to the endpoint (empty values dropped). */
   params?: Record<string, string | undefined>;
-  /** Main button label. */
-  label?: string;
-  locale?: Locale;
 }
 
-export function ExportMenu({
-  xlsxPath,
-  filenameBase,
-  pdfPath,
-  csvPath,
-  params,
-  label,
-  locale = 'ar',
-}: ExportMenuProps) {
+interface ExportMenuProps extends Partial<ExportGroup> {
+  /** Several reports in one menu; overrides the single-report props. */
+  groups?: ExportGroup[];
+  /** Button label (defaults to "Export"). */
+  label?: string;
+  locale: Locale;
+}
+
+const ICON: Record<ExportFormat, typeof FileText> = {
+  xlsx: FileSpreadsheet,
+  pdf: FileText,
+  csv: Sheet,
+};
+
+const TINT: Record<ExportFormat, string> = {
+  xlsx: 'bg-emerald-50 text-emerald-700',
+  pdf: 'bg-rose-50 text-rose-700',
+  csv: 'bg-slate-100 text-slate-600',
+};
+
+interface Option {
+  key: string;
+  format: ExportFormat;
+  path: string;
+  group: ExportGroup;
+}
+
+function optionsOf(group: ExportGroup): Option[] {
+  const out: Option[] = [];
+  const add = (format: ExportFormat, path?: string) =>
+    path && out.push({ key: `${group.filenameBase}:${format}`, format, path, group });
+  add('xlsx', group.xlsxPath);
+  add('pdf', group.pdfPath);
+  add('csv', group.csvPath);
+  return out;
+}
+
+export function ExportMenu({ groups, label, locale, ...single }: ExportMenuProps) {
   const t = portalSharedT(locale).exportMenu;
-  const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const sections: ExportGroup[] =
+    groups ?? (single.filenameBase ? [single as ExportGroup] : []);
+  const options = sections.flatMap(optionsOf);
+
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState(false);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -59,32 +98,20 @@ export function ExportMenu({
     };
   }, [open]);
 
-  function buildQuery(path: string, filename: string): string {
-    const qs = new URLSearchParams();
-    qs.set('path', path);
-    qs.set('filename', filename);
-    for (const [k, v] of Object.entries(params ?? {})) {
-      if (v) qs.set(k, v);
-    }
-    return qs.toString();
-  }
-
-  async function download(route: 'export' | 'csv', path: string, ext: string) {
-    if (state === 'loading') return;
+  async function download(o: Option) {
+    if (busy) return;
     setOpen(false);
-    setState('loading');
-    const filename = `${filenameBase}-${new Date().toISOString().slice(0, 10)}.${ext}`;
+    setError(false);
+    setBusy(o.key);
+    const filename = `${o.group.filenameBase}-${new Date().toISOString().slice(0, 10)}.${o.format}`;
+    const qs = new URLSearchParams({ path: o.path, filename });
+    for (const [k, v] of Object.entries(o.group.params ?? {})) if (v) qs.set(k, v);
     try {
-      const res = await fetch(`/api/${route}?${buildQuery(path, filename)}`, {
-        method: 'GET',
+      const res = await fetch(`/api/${o.format === 'csv' ? 'csv' : 'export'}?${qs}`, {
         credentials: 'include',
       });
-      if (!res.ok) {
-        setState('error');
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
+      if (!res.ok) throw new Error(String(res.status));
+      const url = URL.createObjectURL(await res.blob());
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
@@ -92,112 +119,83 @@ export function ExportMenu({
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      setState('idle');
     } catch {
-      setState('error');
+      setError(true);
+    } finally {
+      setBusy(null);
     }
   }
 
-  const loading = state === 'loading';
-  // Primary action: XLSX if available, otherwise PDF.
-  const primaryPath = xlsxPath ?? pdfPath ?? '';
-  const primaryExt  = xlsxPath ? 'xlsx' : 'pdf';
-  const primaryIcon = xlsxPath ? <FileSpreadsheet className="h-4 w-4" /> : <FileText className="h-4 w-4" />;
-  // Show the caret dropdown when there are secondary options beyond the primary.
-  const hasSecondary = (xlsxPath && pdfPath) || pdfPath || csvPath;
+  if (options.length === 0) return null;
+
+  const only = options.length === 1 ? options[0] : null;
+  const text = label ?? (only ? t.single[only.format] : t.label);
 
   return (
-    <div className="flex flex-col items-stretch sm:items-end gap-1">
-      <div className="relative inline-flex items-stretch gap-1" ref={ref}>
-        <Button
-          type="button"
-          variant="outline"
-          size="md"
-          loading={loading}
-          leftIcon={primaryIcon}
-          onClick={() => download('export', primaryPath, primaryExt)}
+    <div className="relative flex flex-col items-stretch gap-1 sm:items-end" ref={ref}>
+      <Button
+        type="button"
+        variant="outline"
+        size="md"
+        loading={busy !== null}
+        leftIcon={<Download className="h-4 w-4" />}
+        rightIcon={only ? undefined : <ChevronDown className="h-4 w-4 opacity-60" />}
+        aria-haspopup={only ? undefined : 'menu'}
+        aria-expanded={only ? undefined : open}
+        data-testid="export-menu"
+        onClick={() => (only ? download(only) : setOpen((v) => !v))}
+      >
+        {busy ? t.preparing : text}
+      </Button>
+
+      {open && (
+        <div
+          role="menu"
+          aria-label={t.optionsAria}
+          className="absolute end-0 top-full z-50 mt-2 w-72 rounded-2xl border border-hairline bg-surface p-1.5 shadow-lg animate-fade-in"
         >
-          {label ?? t.label}
-        </Button>
-
-        {hasSecondary && (
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              aria-haspopup="menu"
-              aria-expanded={open}
-              aria-label={t.optionsAria}
-              disabled={loading}
-              onClick={() => setOpen((v) => !v)}
-            >
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-
-            {open && (
-              <div
-                role="menu"
-                className="absolute end-0 top-full mt-2 w-56 bg-surface border border-hairline rounded-2xl shadow-lg p-1.5 animate-fade-in z-50"
-              >
-                {xlsxPath && (
-                  <MenuItem
-                    icon={<FileSpreadsheet className="h-4 w-4" />}
-                    label={t.xlsx}
-                    hint={t.xlsxHint}
-                    onClick={() => download('export', xlsxPath, 'xlsx')}
-                  />
+          {sections.map((g, gi) => {
+            const opts = optionsOf(g);
+            if (opts.length === 0) return null;
+            return (
+              <div key={g.filenameBase} className={gi > 0 ? 'mt-1 border-t border-hairline pt-1' : ''}>
+                {g.label && (
+                  <div className="px-2.5 pb-1 pt-1.5 text-2xs font-semibold uppercase tracking-wide text-slate-400">
+                    {g.label}
+                  </div>
                 )}
-                {pdfPath && (
-                  <MenuItem
-                    icon={<FileText className="h-4 w-4" />}
-                    label={t.pdf}
-                    hint={t.pdfHint}
-                    onClick={() => download('export', pdfPath, 'pdf')}
-                  />
-                )}
-                {csvPath && (
-                  <MenuItem
-                    icon={<FileText className="h-4 w-4" />}
-                    label={t.csv}
-                    hint={t.csvHint}
-                    onClick={() => download('csv', csvPath, 'csv')}
-                  />
-                )}
+                {opts.map((o) => {
+                  const Icon = ICON[o.format];
+                  return (
+                    <button
+                      key={o.key}
+                      type="button"
+                      role="menuitem"
+                      data-testid={`export-${o.key}`}
+                      onClick={() => download(o)}
+                      className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-start transition-colors hover:bg-surface-muted"
+                    >
+                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${TINT[o.format]}`}>
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium text-slate-800">{t.formats[o.format]}</span>
+                        <span className="block text-2xs text-slate-500">{t.hints[o.format]}</span>
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
-            )}
-          </>
-        )}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
-      {state === 'error' && (
-        <span className="text-2xs text-danger-600">{t.error}</span>
+      {error && (
+        <span role="alert" className="text-2xs text-danger-600">
+          {t.error}
+        </span>
       )}
     </div>
-  );
-}
-
-function MenuItem({
-  icon,
-  label,
-  hint,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  hint?: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      onClick={onClick}
-      className="w-full flex items-center gap-2.5 px-2.5 h-9 rounded-lg text-sm text-slate-700 hover:bg-surface-muted transition-colors"
-    >
-      <span className="text-slate-400">{icon}</span>
-      <span className="flex-1 text-start">{label}</span>
-      {hint && <span className="text-2xs text-slate-400">{hint}</span>}
-    </button>
   );
 }

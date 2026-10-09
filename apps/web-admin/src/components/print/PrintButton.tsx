@@ -1,23 +1,26 @@
 'use client';
 
 import { Printer } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface Props {
   /** The print sub-path, e.g. "reservations", "contracts", "deposits" */
   path: string;
   id: string;
-  label?: string;
+  label: string;
 }
 
-export function PrintButton({ path, id, label = 'طباعة PDF' }: Props) {
+/** Opens the printable company document in a new tab — same look as the export control. */
+export function PrintButton({ path, id, label }: Props) {
   return (
-    <button
+    <Button
       type="button"
+      variant="outline"
+      size="md"
+      leftIcon={<Printer className="h-4 w-4" />}
       onClick={() => window.open(`/print/${path}/${id}`, '_blank')}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800"
     >
-      <Printer className="h-3.5 w-3.5 shrink-0 text-slate-400" />
       {label}
-    </button>
+    </Button>
   );
 }

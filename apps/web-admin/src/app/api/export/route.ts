@@ -36,6 +36,11 @@ const ALLOWED = [
   /^\/reports\/sales\/export\.pdf$/,
   /^\/reports\/financial\/export\.pdf$/,
   /^\/reports\/broker-leaderboard\/export\.pdf$/,
+  // "Export this list" — units / inventory, clients / customers (ADMIN only)
+  /^\/units\/export\.xlsx$/,
+  /^\/users\/export\.xlsx$/,
+  // An installment plan's schedule (contract page)
+  /^\/installment-plans\/[a-f0-9-]{36}\/export\.xlsx$/,
 ];
 
 const XLSX_MIME =
