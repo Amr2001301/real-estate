@@ -431,6 +431,42 @@ export class NotificationsService implements OnModuleInit {
     return users.map((u) => u.userId);
   }
 
+  /**
+   * A member joined a broker firm's team or changed status: the member hears,
+   * and so do the firm's managers — never whoever made the change.
+   */
+  async notifyBrokerTeamChange(
+    brokerId: string,
+    member: { userId: string; name: string },
+    event: 'added' | 'status',
+    extra: Record<string, unknown> = {},
+    opts: NotifyOptions = {},
+  ): Promise<void> {
+    try {
+      const broker = await this.prisma.broker.findFirst({
+        where: { id: brokerId, companyId: getRequiredCompanyId() },
+        select: { companyName: true, commercialName: true },
+      });
+      const payload = {
+        name: member.name,
+        brokerName: broker?.commercialName || broker?.companyName || '',
+        entityType: 'broker',
+        entityId: brokerId,
+        ...extra,
+      };
+      const managers = (await this.brokerRecipients(brokerId)).filter((id) => id !== member.userId);
+      if (event === 'added') {
+        await this.sendToUser(member.userId, 'broker_user_invited', payload, opts);
+        await this.sendToUsers(managers, 'broker_team_member_added', payload, opts);
+      } else {
+        await this.sendToUser(member.userId, 'broker_user_status_changed', payload, opts);
+        await this.sendToUsers(managers, 'broker_team_member_status_changed', payload, opts);
+      }
+    } catch (err) {
+      this.logger.warn(`notifyBrokerTeamChange failed: ${(err as Error).message}`);
+    }
+  }
+
   async send(dto: SendNotificationDto & { skipInactive?: boolean }) {
     const tpl = await this.templateFor(dto.templateCode);
     if (!tpl) throw new Error(`Template ${dto.templateCode} not found`);

@@ -1,5 +1,13 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, SubscriptionStatus } from '@prisma/client';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  Optional,
+} from '@nestjs/common';
+import { Prisma, SubscriptionStatus, UserRole } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { DEFAULT_CURRENCY } from '../../common/currency/currency';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -9,6 +17,9 @@ import { buildEffectiveView, STAFF_SEAT_ROLES } from '../../common/capabilities/
 import { DomainResolverService } from '../../common/domain/domain-resolver.service';
 import { CompanyDomainsService, RESERVED_PLATFORM_SLUGS } from '../company-domains/company-domains.service';
 import { seedCancellationSettingsForCompany } from '../contracts/cancellation-settings.constants';
+import { NotificationsService } from '../notifications/notifications.module';
+import { USER_ROLE_AR } from '../notifications/notification-catalog';
+import { runInCompany } from '../../common/tenant/tenant-context';
 import type {
   CreateCompanyDto,
   UpdateCompanyDto,
@@ -29,7 +40,47 @@ export class SuperAdminService {
     private readonly capabilityService: CapabilityService,
     private readonly domainResolver: DomainResolverService,
     private readonly companyDomainsService: CompanyDomainsService,
+    @Optional() private readonly notifications?: NotificationsService,
   ) {}
+
+  private readonly logger = new Logger(SuperAdminService.name);
+
+  /**
+   * The platform acts on a company from outside it: its own admins hear
+   * about their subscription and account (in that company's context).
+   * Best-effort — never fails the platform action.
+   */
+  private async notifyCompanyAdmins(
+    companyId: string,
+    code: string,
+    payload: Record<string, unknown> = {},
+  ) {
+    if (!this.notifications) return;
+    try {
+      await runInCompany(companyId, () =>
+        this.notifications!.sendToRoles([UserRole.ADMIN], code, payload),
+      );
+    } catch (err) {
+      this.logger.warn(`notifyCompanyAdmins(${code}) failed: ${(err as Error).message}`);
+    }
+  }
+
+  /** A new account created by the platform gets its welcome. */
+  private async welcome(companyId: string, user: { id: string; fullName: string; role: string }) {
+    if (!this.notifications) return;
+    try {
+      await runInCompany(companyId, () =>
+        this.notifications!.sendToUser(user.id, 'user_account_created', {
+          name: user.fullName,
+          roleLabel: USER_ROLE_AR[user.role] ?? user.role,
+          entityType: 'user',
+          entityId: user.id,
+        }),
+      );
+    } catch (err) {
+      this.logger.warn(`welcome failed: ${(err as Error).message}`);
+    }
+  }
 
   async listCompanies() {
     const companies = await this.prisma.company.findMany({
@@ -396,7 +447,7 @@ export class SuperAdminService {
     // immediate=true → CANCELLED right now; false → CANCELLING (access until subscriptionEndAt)
     const newStatus: SubscriptionStatus = dto.immediate ? 'CANCELLED' : 'CANCELLING';
 
-    return this.prisma.company.update({
+    const updated = await this.prisma.company.update({
       where: { id },
       data: {
         subscriptionStatus: newStatus,
@@ -406,19 +457,25 @@ export class SuperAdminService {
         ...(dto.immediate && { subscriptionEndAt: now }),
       },
     });
+    await this.notifyCompanyAdmins(id, 'subscription_cancelled', {
+      endDate: dto.immediate ? isoDay(now) : isoDay(updated.subscriptionEndAt),
+    });
+    return updated;
   }
 
   async suspendCompany(id: string, reason?: string) {
     await this.assertExists(id);
-    return this.prisma.company.update({
+    const updated = await this.prisma.company.update({
       where: { id },
       data: { subscriptionStatus: 'SUSPENDED', cancelReason: reason ?? null },
     });
+    await this.notifyCompanyAdmins(id, 'company_suspended');
+    return updated;
   }
 
   async activateCompany(id: string) {
     const company = await this.assertExists(id);
-    return this.prisma.company.update({
+    const updated = await this.prisma.company.update({
       where: { id },
       data: {
         subscriptionStatus: 'ACTIVE',
@@ -431,6 +488,8 @@ export class SuperAdminService {
           : {}),
       },
     });
+    await this.notifyCompanyAdmins(id, 'company_activated');
+    return updated;
   }
 
   async createCompanyAdmin(companyId: string, dto: CreateCompanyAdminDto) {
@@ -440,7 +499,7 @@ export class SuperAdminService {
     const existing = await this.prisma.user.findFirst({ where: { email: dto.email, companyId } });
     if (existing) throw new ConflictException('A user with this email already exists in this company');
     const passwordHash = await argon2.hash(dto.password);
-    return this.prisma.user.create({
+    const created = await this.prisma.user.create({
       data: {
         role: 'ADMIN',
         fullName: dto.fullName,
@@ -451,6 +510,8 @@ export class SuperAdminService {
       },
       select: { id: true, fullName: true, email: true, role: true, createdAt: true },
     });
+    await this.welcome(companyId, created);
+    return created;
   }
 
   // MT-033 — Create any staff user (role-parameterised) in a target company.
@@ -463,7 +524,7 @@ export class SuperAdminService {
     // the platform context on behalf of `companyId`.
     const phone = await phoneForWrite(this.prisma, dto.phone, companyId);
     const passwordHash = await argon2.hash(dto.password);
-    return this.prisma.user.create({
+    const created = await this.prisma.user.create({
       data: {
         role: dto.role,
         fullName: dto.fullName,
@@ -475,16 +536,25 @@ export class SuperAdminService {
       },
       select: { id: true, fullName: true, email: true, role: true, phone: true, createdAt: true },
     });
+    await this.welcome(companyId, created);
+    return created;
   }
 
   /** Expire CANCELLING → CANCELLED and ACTIVE → EXPIRED based on subscriptionEndAt. */
   async runExpiryCheck(): Promise<{ expired: number; cancelled: number }> {
     const now = new Date();
+    const due = (status: SubscriptionStatus) =>
+      this.prisma.company.findMany({
+        where: { subscriptionStatus: status, subscriptionEndAt: { lt: now } },
+        select: { id: true },
+      });
+    const [toExpire, toCancel] = await Promise.all([due('ACTIVE'), due('CANCELLING')]);
 
     const [expired, cancelled] = await Promise.all([
       // ACTIVE past their end date → EXPIRED
       this.prisma.company.updateMany({
         where: {
+          id: { in: toExpire.map((c) => c.id) },
           subscriptionStatus: 'ACTIVE',
           subscriptionEndAt: { lt: now },
         },
@@ -493,6 +563,7 @@ export class SuperAdminService {
       // CANCELLING past their end date → CANCELLED
       this.prisma.company.updateMany({
         where: {
+          id: { in: toCancel.map((c) => c.id) },
           subscriptionStatus: 'CANCELLING',
           subscriptionEndAt: { lt: now },
         },
@@ -500,7 +571,37 @@ export class SuperAdminService {
       }),
     ]);
 
+    for (const c of toExpire) await this.notifyCompanyAdmins(c.id, 'subscription_expired');
+    for (const c of toCancel) await this.notifyCompanyAdmins(c.id, 'subscription_ended');
+    await this.warnExpiringSoon(now);
+
     return { expired: expired.count, cancelled: cancelled.count };
+  }
+
+  /**
+   * A week and a day before the end date, the company's admins are told.
+   * The check runs once a day, so each one-day window is hit once.
+   */
+  private async warnExpiringSoon(now: Date) {
+    const DAY = 24 * 60 * 60 * 1000;
+    for (const daysLeft of [7, 1]) {
+      const companies = await this.prisma.company.findMany({
+        where: {
+          subscriptionStatus: { in: ['ACTIVE', 'TRIAL', 'CANCELLING'] },
+          subscriptionEndAt: {
+            gt: new Date(now.getTime() + (daysLeft - 1) * DAY),
+            lte: new Date(now.getTime() + daysLeft * DAY),
+          },
+        },
+        select: { id: true, subscriptionEndAt: true },
+      });
+      for (const c of companies) {
+        await this.notifyCompanyAdmins(c.id, 'subscription_expiring_soon', {
+          daysLeft,
+          endDate: isoDay(c.subscriptionEndAt),
+        });
+      }
+    }
   }
 
   // ── Pricing ────────────────────────────────────────────────────────────────
@@ -590,4 +691,8 @@ export class SuperAdminService {
     if (!c) throw new NotFoundException('Company not found');
     return c;
   }
+}
+
+function isoDay(d: Date | null | undefined): string {
+  return d ? d.toISOString().slice(0, 10) : '';
 }

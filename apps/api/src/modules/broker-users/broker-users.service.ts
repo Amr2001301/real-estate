@@ -2,11 +2,13 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Optional,
   NotFoundException,
 } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.module';
 import { getTenantContext } from '../../common/tenant/tenant-context';
 import { phoneForWrite } from '../../common/utils/phone-for-write';
 import {
@@ -32,9 +34,20 @@ const BROKER_USER_INCLUDE = {
   },
 } as const;
 
+/** A broker team member's status, as the notifications say it. */
+const MEMBER_STATUS_AR: Record<string, string> = {
+  INVITED: 'مدعو',
+  ACTIVE: 'نشط',
+  SUSPENDED: 'موقوف',
+  REMOVED: 'أُزيل من الفريق',
+};
+
 @Injectable()
 export class BrokerUsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly notifications?: NotificationsService,
+  ) {}
 
   async listByBroker(brokerId: string) {
     await this.assertBrokerExists(brokerId);
@@ -45,7 +58,7 @@ export class BrokerUsersService {
     });
   }
 
-  async create(brokerId: string, dto: CreateBrokerUserDto) {
+  async create(brokerId: string, dto: CreateBrokerUserDto, actorId?: string) {
     const { companyId } = await this.assertBrokerExists(brokerId);
 
     if (!dto.email && !dto.phone) {
@@ -94,7 +107,7 @@ export class BrokerUsersService {
     const passwordHash = dto.password ? await argon2.hash(dto.password) : null;
     const now = new Date();
 
-    return this.prisma.$transaction(async (tx) => {
+    const created = await this.prisma.$transaction(async (tx) => {
       if (dto.isPrimaryContact) {
         await tx.brokerUser.updateMany({
           where: { brokerId, isPrimaryContact: true },
@@ -134,6 +147,14 @@ export class BrokerUsersService {
         include: BROKER_USER_INCLUDE,
       });
     });
+    await this.notifications?.notifyBrokerTeamChange(
+      brokerId,
+      { userId: created.userId, name: created.user.fullName },
+      'added',
+      {},
+      { except: actorId },
+    );
+    return created;
   }
 
   async update(brokerUserId: string, dto: UpdateBrokerUserDto) {
@@ -212,7 +233,7 @@ export class BrokerUsersService {
     });
   }
 
-  async updateStatus(brokerUserId: string, dto: UpdateBrokerUserStatusDto) {
+  async updateStatus(brokerUserId: string, dto: UpdateBrokerUserStatusDto, actorId?: string) {
     const link = await this.assertBrokerUserExists(brokerUserId);
 
     const data: Prisma.BrokerUserUpdateInput = { status: dto.status };
@@ -220,11 +241,21 @@ export class BrokerUsersService {
       data.joinedAt = new Date();
     }
 
-    return this.prisma.brokerUser.update({
+    const updated = await this.prisma.brokerUser.update({
       where: { id: brokerUserId },
       data,
       include: BROKER_USER_INCLUDE,
     });
+    if (link.status !== dto.status) {
+      await this.notifications?.notifyBrokerTeamChange(
+        updated.brokerId,
+        { userId: updated.userId, name: updated.user.fullName },
+        'status',
+        { statusLabel: MEMBER_STATUS_AR[dto.status] ?? dto.status },
+        { except: actorId },
+      );
+    }
+    return updated;
   }
 
   // ── Internal helpers ──────────────────────────────────────────────────────
