@@ -11,6 +11,7 @@ import { NotificationsService } from '../../notifications/notifications.module';
 function makeService(prisma: Record<string, unknown>) {
   const notifications = {
     sendToRoles: jest.fn().mockResolvedValue(undefined),
+    sendToUsersAndRoles: jest.fn().mockResolvedValue(undefined),
     sendToUser: jest.fn().mockResolvedValue(undefined),
   };
   const svc = new MaintenanceService(

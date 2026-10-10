@@ -183,8 +183,8 @@ export class MaintenanceController {
   @Roles(UserRole.ADMIN)
   @Permissions('maintenance:create')
   @Post('maintenance-requests')
-  adminCreate(@Body() dto: AdminCreateRequestDto) {
-    return this.svc.adminCreateRequest(dto);
+  adminCreate(@CurrentUser() user: AuthUser, @Body() dto: AdminCreateRequestDto) {
+    return this.svc.adminCreateRequest(dto, user.sub);
   }
 
   // Units linked to a customer via contracts — powers the dependent
@@ -313,10 +313,11 @@ export class MaintenanceController {
   @Permissions('maintenance:assign')
   @Post('maintenance-requests/:id/assign')
   assignRequest(
+    @CurrentUser() user: AuthUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AssignMaintenanceDto,
   ) {
-    return this.svc.assign(id, dto.assignedAdminId);
+    return this.svc.assign(id, dto.assignedAdminId, user.sub);
   }
 
   // Status transition route — enforces the allowed transition graph.
@@ -324,10 +325,11 @@ export class MaintenanceController {
   @Permissions('maintenance:resolve')
   @Post('maintenance-requests/:id/status')
   setRequestStatus(
+    @CurrentUser() user: AuthUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: MaintenanceStatusDto,
   ) {
-    return this.svc.setStatus(id, dto.status);
+    return this.svc.setStatus(id, dto.status, user.sub);
   }
 
   // Admin review gate — approve starts the SLA timer, reject closes the request
@@ -335,14 +337,14 @@ export class MaintenanceController {
   @Roles(UserRole.ADMIN)
   @Permissions('maintenance:resolve')
   @Post('maintenance-requests/:id/approve')
-  approveRequest(@Param('id', ParseUUIDPipe) id: string) {
-    return this.svc.approve(id);
+  approveRequest(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.approve(id, user.sub);
   }
 
   @Roles(UserRole.ADMIN)
   @Permissions('maintenance:resolve')
   @Post('maintenance-requests/:id/reject')
-  rejectRequest(@Param('id', ParseUUIDPipe) id: string) {
-    return this.svc.reject(id);
+  rejectRequest(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.reject(id, user.sub);
   }
 }

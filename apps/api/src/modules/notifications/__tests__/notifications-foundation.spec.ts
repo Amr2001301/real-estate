@@ -166,6 +166,53 @@ describe('NotificationsService foundation', () => {
     ]);
   });
 
+  it('a broker team change reaches the member and the firm managers, not the actor', async () => {
+    const { svc, prisma } = setup();
+    Object.assign(prisma, {
+      broker: {
+        findFirst: jest.fn().mockResolvedValue({ companyName: 'النيل', commercialName: null }),
+      },
+    });
+    prisma.brokerUser.findMany.mockResolvedValueOnce([
+      { userId: 'mgr-1' },
+      { userId: 'member-1' },
+      { userId: 'actor' },
+    ]);
+    const toUser = jest.spyOn(svc, 'sendToUser');
+    const toUsers = jest.spyOn(svc, 'sendToUsers');
+    await runTenantContext(TENANT, () =>
+      svc.notifyBrokerTeamChange(
+        'broker-1',
+        { userId: 'member-1', name: 'سامي' },
+        'added',
+        {},
+        { except: 'actor' },
+      ),
+    );
+    expect(toUser).toHaveBeenCalledWith(
+      'member-1',
+      'broker_user_invited',
+      expect.objectContaining({ name: 'سامي', brokerName: 'النيل' }),
+      { except: 'actor' },
+    );
+    // The member is not told twice; the actor is dropped by `except`.
+    expect(toUsers).toHaveBeenCalledWith(
+      ['mgr-1', 'actor'],
+      'broker_team_member_added',
+      expect.anything(),
+      {
+        except: 'actor',
+      },
+    );
+    expect(
+      (prisma as unknown as { broker: { findFirst: jest.Mock } }).broker.findFirst.mock.calls[0][0]
+        .where,
+    ).toEqual({
+      id: 'broker-1',
+      companyId: 'co-1',
+    });
+  });
+
   describe('brokerRecipients', () => {
     const where = (prisma: ReturnType<typeof setup>['prisma']) =>
       prisma.brokerUser.findMany.mock.calls[0][0].where;

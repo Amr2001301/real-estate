@@ -16,6 +16,7 @@ import {
 } from '../../common/decorators/permissions.decorator';
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { BrokerUsersService } from './broker-users.service';
+import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator';
 import {
   CreateBrokerUserDto,
   UpdateBrokerUserDto,
@@ -39,10 +40,11 @@ export class BrokerUsersController {
   @Permissions('broker_users:invite')
   @Post('brokers/:id/users')
   create(
+    @CurrentUser() user: AuthUser,
     @Param('id', ParseUUIDPipe) brokerId: string,
     @Body() dto: CreateBrokerUserDto,
   ) {
-    return this.brokerUsers.create(brokerId, dto);
+    return this.brokerUsers.create(brokerId, dto, user.sub);
   }
 
   @Roles(UserRole.ADMIN)
@@ -63,9 +65,10 @@ export class BrokerUsersController {
   @PermissionsStrict('broker_users:remove')
   @Patch('broker-users/:id/status')
   updateStatus(
+    @CurrentUser() user: AuthUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateBrokerUserStatusDto,
   ) {
-    return this.brokerUsers.updateStatus(id, dto);
+    return this.brokerUsers.updateStatus(id, dto, user.sub);
   }
 }
