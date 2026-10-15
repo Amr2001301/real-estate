@@ -82,6 +82,8 @@ function makePrismaMock() {
     },
     bonusEntry: {
       findMany: jest.fn().mockResolvedValue([]),
+      // Current state for the approve → pay → revert state machine.
+      findUnique: jest.fn().mockResolvedValue({ status: 'PENDING', contract: null }),
       create: jest.fn().mockImplementation(async ({ data }) => ({ id: 'entry-1', ...data })),
       update: jest.fn().mockImplementation(async ({ where, data }) => ({
         id: where.id,
@@ -437,6 +439,7 @@ describe('Bonus module · permissions enforcement', () => {
     });
 
     it('ADMIN WITH bonus:entries:pay → 201; bonus entry updated to PAID with paidAt set', async () => {
+      prismaMock.bonusEntry.findUnique.mockResolvedValueOnce({ status: 'APPROVED', contract: null });
       FakeAuthGuard.currentUser = {
         sub: 'admin-2',
         role: UserRole.ADMIN,
@@ -468,6 +471,7 @@ describe('Bonus module · permissions enforcement', () => {
     const PATH = '/bonus-entries/00000000-0000-0000-0000-000000000001';
 
     it('PATCH with status PENDING → 200 (revert path works)', async () => {
+      prismaMock.bonusEntry.findUnique.mockResolvedValueOnce({ status: 'APPROVED', contract: null });
       FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
       await request(app.getHttpServer())
         .patch(PATH)

@@ -5,6 +5,7 @@ import {
   Header,
   Injectable,
   Module,
+  ConflictException,
   NotFoundException,
   Param,
   ParseUUIDPipe,
@@ -64,6 +65,15 @@ import { Permissions, PermissionsStrict } from '../../common/decorators/permissi
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { ClawbackResolutionService } from '../broker-commissions/clawback-resolution.service';
 import { CollectClawbackDto, WaiveClawbackDto } from '../broker-commissions/dto/broker-commission.dto';
+import { CONTRACT_CANCELLED_MESSAGE, isDeadContract } from '../installments/live-contract';
+
+/** Allowed bonus entry moves through approve / pay / revert. */
+const ENTRY_TRANSITIONS: Record<BonusEntryStatus, BonusEntryStatus[]> = {
+  PENDING: [BonusEntryStatus.APPROVED],
+  APPROVED: [BonusEntryStatus.PAID, BonusEntryStatus.PENDING],
+  PAID: [],
+  CANCELLED: [],
+};
 
 class CreateRuleDto {
   @IsString() name!: string;
@@ -466,6 +476,22 @@ export class BonusService {
   }
 
   async setEntryStatus(id: string, dto: UpdateEntryStatusDto) {
+    const current = await this.prisma.bonusEntry.findUnique({
+      where: { id },
+      select: { status: true, contract: { select: { status: true, deletedAt: true } } },
+    });
+    if (!current) throw new NotFoundException('Bonus entry not found');
+    // PENDING → APPROVED → PAID, APPROVED → PENDING (revert). PAID and
+    // CANCELLED are final: a cancelled bonus is never paid, a paid one is
+    // never reopened (its clawback is resolved on its own path).
+    if (!ENTRY_TRANSITIONS[current.status].includes(dto.status)) {
+      throw new ConflictException(
+        `لا يمكن نقل المكافأة من ${current.status} إلى ${dto.status}`,
+      );
+    }
+    if (dto.status !== BonusEntryStatus.PENDING && isDeadContract(current.contract)) {
+      throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
+    }
     const entry = await this.prisma.bonusEntry.update({
       where: { id },
       data: {

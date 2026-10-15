@@ -62,6 +62,7 @@ import { BonusService } from '../bonus/bonus.module';
 import { CancellationPolicyService } from './cancellation-policy.service';
 import { ContractCancellationService } from './contract-cancellation.service';
 import { reportFailure } from '../../common/observability/report-failure';
+import { CONTRACT_CANCELLED_MESSAGE, isDeadContract } from '../installments/live-contract';
 
 // ── P12 legacy backfill helpers ─────────────────────────────────────────────
 // Pure (exported for unit tests). Derive safe display metadata for a backfilled
@@ -909,10 +910,20 @@ export class ContractsService {
   async retrySignFollowups(id: string, actorId: string) {
     const contract = await this.prisma.contract.findFirst({
       where: { id, companyId: getRequiredCompanyId() },
-      select: { id: true, unitId: true, createdAt: true, brokerId: true, signedAt: true },
+      select: {
+        id: true,
+        unitId: true,
+        createdAt: true,
+        brokerId: true,
+        signedAt: true,
+        status: true,
+        deletedAt: true,
+      },
     });
     if (!contract) throw new NotFoundException('Contract not found');
     if (!contract.signedAt) throw new ConflictException('العقد غير موقّع');
+    // Re-running would create commission, bonus and warranties for a dead deal.
+    if (isDeadContract(contract)) throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
     const failures = await this.runSignFollowups(contract, actorId);
     return { failures };
   }

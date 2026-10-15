@@ -28,6 +28,8 @@
  *             BrokerCommission APPROVED + payout PAID → status unchanged, clawbackStatus OUTSTANDING
  *   D3-11  A cancelled contract's money is frozen: record / reverse / un-verify /
  *           new plan → 409; nothing moves
+ *   D3-12  RETAIN keeps commission / bonus but they cannot be approved, and sign
+ *           follow-ups cannot re-run on a cancelled contract → 409
  *   D3-10  Payout dimension (D3b) — isCommissionEffectivelyPaid() narrowed to PROCESSING|PAID:
  *           D3-10a: APPROVED commission, sole in APPROVED payout → commission CANCELLED + payout CANCELLED
  *           D3-10b: APPROVED commission, one of two in APPROVED payout → payout DRAFT + recomputed totals
@@ -721,6 +723,106 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
       await raw.contractCancellation.deleteMany({ where: { contractId: contract.id } }).catch(() => void 0);
       await raw.installment.deleteMany({ where: { planId: plan.id } }).catch(() => void 0);
       await raw.installmentPlan.deleteMany({ where: { id: plan.id } }).catch(() => void 0);
+      await raw.contract.deleteMany({ where: { id: contract.id } }).catch(() => void 0);
+      await raw.unit.deleteMany({ where: { id: unit.id } }).catch(() => void 0);
+    }
+  });
+
+  // ── D3-12: what a cancel RETAINS is still frozen ──────────────────────────
+  // RETAIN keeps the commission and the bonus as they were, but nobody may
+  // approve them afterwards, batch the commission into a payout, or re-run the
+  // sign follow-ups (which would create commission / bonus / warranties again).
+  it('D3-12: retained commission / bonus cannot be approved; follow-ups cannot re-run → 409', async () => {
+    const raw = testApp.rawPrisma;
+    for (const code of ['broker_commissions:approve', 'bonus:entries:approve', 'contracts:sign']) {
+      const perm = await raw.permission.findFirst({ where: { code } });
+      if (!perm) throw new Error(`D3-12: permission ${code} not seeded`);
+      await raw.userPermission.upsert({
+        where: { userId_permissionId: { userId: fx.users.adminA.id, permissionId: perm.id } },
+        create: { userId: fx.users.adminA.id, permissionId: perm.id },
+        update: {},
+      });
+    }
+    const unit = await raw.unit.create({
+      data: {
+        buildingId: fx.resources.a.buildingId,
+        code: 'D3-RETAIN-UNIT',
+        type: '1BR',
+        area: 80,
+        price: 700_000,
+        status: UnitStatus.SOLD,
+        companyId: fx.companies.aId,
+      },
+    });
+    const contract = await raw.contract.create({
+      data: {
+        customerId: fx.users.customerA.id,
+        unitId: unit.id,
+        totalAmount: 700_000,
+        signedAt: new Date(),
+        status: ContractStatus.ACTIVE,
+        brokerId: fx.resources.a.brokerId,
+        companyId: fx.companies.aId,
+      },
+    });
+    const commission = await raw.brokerCommission.create({
+      data: {
+        commissionNumber: 'BC-D3-12-001',
+        brokerId: fx.resources.a.brokerId,
+        contractId: contract.id,
+        unitId: unit.id,
+        projectId: fx.resources.a.projectId,
+        basisAmount: 700_000,
+        commissionPct: 2,
+        grossAmount: 14_000,
+        netAmount: 14_000,
+        status: BrokerCommissionStatus.PENDING,
+        earnedAt: new Date(),
+        companyId: fx.companies.aId,
+      },
+    });
+    const rule = await raw.bonusRule.create({
+      data: { name: 'D3-12 rule', percentage: 1, companyId: fx.companies.aId },
+    });
+    const bonus = await raw.bonusEntry.create({
+      data: {
+        salesId: fx.users.sales1A.id,
+        ruleId: rule.id,
+        amount: 7_000,
+        period: '2026-10',
+        status: 'PENDING',
+        contractId: contract.id,
+        companyId: fx.companies.aId,
+      },
+    });
+    const http = () => request(testApp.app.getHttpServer());
+    const as = <T extends request.Test>(r: T) =>
+      r.set('Authorization', bearer(adminAToken)).set('X-Tenant-Slug', SEC_SLUG_A);
+
+    try {
+      await as(http().post(`/v1/contracts/${contract.id}/cancel`))
+        .send({
+          reason: 'D3-12',
+          retainedAmount: 0,
+          refundAmount: 0,
+          commissionActionOverride: 'RETAIN',
+          bonusActionOverride: 'RETAIN',
+        })
+        .expect(201);
+
+      await as(http().patch(`/v1/broker-commissions/${commission.id}/approve`)).send({}).expect(409);
+      await as(http().post(`/v1/bonus-entries/${bonus.id}/approve`)).send({}).expect(409);
+      await as(http().post(`/v1/contracts/${contract.id}/sign-followups`)).send({}).expect(409);
+
+      const c = await raw.brokerCommission.findUniqueOrThrow({ where: { id: commission.id } });
+      expect(c.status).toBe(BrokerCommissionStatus.PENDING);
+      const b = await raw.bonusEntry.findUniqueOrThrow({ where: { id: bonus.id } });
+      expect(b.status).toBe(BonusEntryStatus.PENDING);
+    } finally {
+      await raw.bonusEntry.deleteMany({ where: { id: bonus.id } }).catch(() => void 0);
+      await raw.bonusRule.deleteMany({ where: { id: rule.id } }).catch(() => void 0);
+      await raw.brokerCommission.deleteMany({ where: { id: commission.id } }).catch(() => void 0);
+      await raw.contractCancellation.deleteMany({ where: { contractId: contract.id } }).catch(() => void 0);
       await raw.contract.deleteMany({ where: { id: contract.id } }).catch(() => void 0);
       await raw.unit.deleteMany({ where: { id: unit.id } }).catch(() => void 0);
     }
