@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:core/core.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -135,6 +136,8 @@ import '../features/maintenance/presentation/screens/maintenance_detail_screen.d
 import '../features/maintenance/presentation/screens/maintenance_list_screen.dart';
 import '../features/shell/presentation/staff_shell.dart';
 import '../features/splash/splash_screen.dart';
+import '../features/notifications/data/notification_preferences_api.dart';
+import '../features/notifications/presentation/screens/notification_preferences_screen.dart';
 
 /// Pure role-aware redirect. Returns the path to redirect to, or null to stay.
 /// Extracted so it can be unit-tested without a router.
@@ -153,7 +156,7 @@ String? staffRedirect(SessionState session, String loc) {
 
   // `/notifications` is a shared inbox; the backend scopes results to the
   // signed-in user regardless of role.
-  const sharedPaths = {'/notifications'};
+  const sharedPaths = {'/notifications', '/notifications/preferences'};
 
   // Broker workspace: brokers may only navigate within `/broker/*` (+ shared).
   if (role.isBroker) {
@@ -727,6 +730,12 @@ GoRouter createStaffRouter(
 
       // ── Notifications inbox (shared by Sales / Manager / Admin / Broker /
       // Maintenance Supervisor — backend scopes results to the signed-in user)
+      GoRoute(
+        path: '/notifications/preferences',
+        builder: (context, _) => NotificationPreferencesScreen(
+          api: NotificationPreferencesApi(context.read<Dio>()),
+        ),
+      ),
       GoRoute(
         path: '/notifications',
         builder: (context, _) => BlocProvider(

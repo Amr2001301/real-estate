@@ -275,6 +275,13 @@ class _Header extends StatelessWidget {
                       ],
                     ),
                   ),
+                  IconButton(
+                    tooltip: Localizations.localeOf(context).languageCode == 'ar'
+                        ? 'تفضيلات الإشعارات'
+                        : 'Notification preferences',
+                    onPressed: () => context.push('/account/notifications/preferences'),
+                    icon: const Icon(Icons.tune_rounded, color: Colors.white),
+                  ),
                   if (canMarkAll) ...[
                     const SizedBox(width: AppSpacing.sm),
                     GestureDetector(

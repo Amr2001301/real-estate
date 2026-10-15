@@ -37,6 +37,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               onTap: () => context.pop(),
             ),
             actions: [
+              NavHeaderAction(
+                icon: Icons.tune_rounded,
+                tooltip: Localizations.localeOf(context).languageCode == 'ar'
+                    ? 'تفضيلات الإشعارات'
+                    : 'Notification preferences',
+                onTap: () => context.push('/notifications/preferences'),
+              ),
               BlocBuilder<NotificationsCubit, NotificationsState>(
                 builder: (context, state) => state.status == DataStatus.success
                     ? NavHeaderAction(
