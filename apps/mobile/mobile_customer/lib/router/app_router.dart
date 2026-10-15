@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:core/core.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -121,6 +122,8 @@ import '../features/company_discovery/presentation/cubit/company_discovery_cubit
 import '../features/company_discovery/presentation/screens/company_selector_screen.dart';
 import '../feature_flags.dart';
 import '../storage/customer_tenant_storage.dart';
+import '../features/notifications/data/notification_preferences_api.dart';
+import '../features/notifications/presentation/notification_preferences_screen.dart';
 
 const _authRoutes = {'/login', '/register', '/login/otp', '/forgot-password'};
 
@@ -417,6 +420,12 @@ GoRouter createCustomerRouter(
             );
           },
           child: const MyRequestsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/account/notifications/preferences',
+        builder: (context, _) => NotificationPreferencesScreen(
+          api: NotificationPreferencesApi(context.read<Dio>()),
         ),
       ),
       GoRoute(

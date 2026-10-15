@@ -24,6 +24,12 @@ void main() {
       expect(staffRedirect(broker, '/broker/commissions'), isNull);
     });
 
+    test('broker reaches the shared notifications inbox and its preferences', () {
+      expect(staffRedirect(broker, '/notifications'), isNull);
+      expect(staffRedirect(broker, '/notifications/preferences'), isNull);
+      expect(staffRedirect(sales, '/notifications/preferences'), isNull);
+    });
+
     test('broker is bounced out of Sales screens', () {
       expect(staffRedirect(broker, '/home'), '/broker/home');
       expect(staffRedirect(broker, '/leads/1'), '/broker/home');
