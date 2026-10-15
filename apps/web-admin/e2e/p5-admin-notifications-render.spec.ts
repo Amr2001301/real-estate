@@ -16,7 +16,7 @@ test.describe('P5 — admin notifications inbox', () => {
     await page.goto('/dashboard/notifications');
 
     await expect(
-      page.getByRole('heading', { name: 'الإشعارات' }),
+      page.getByRole('heading', { name: 'الإشعارات', exact: true }),
     ).toBeVisible({ timeout: 15_000 });
 
     // The fix point: `items.filter is not a function` must never reach the UI.
