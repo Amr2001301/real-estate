@@ -360,6 +360,15 @@ export class ChequeLifecycleService {
       throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
     }
 
+    // A cheque whose installment was meanwhile paid another way would be a
+    // second payment of it: the other payment is reversed first.
+    if (
+      pi.deposits.some(
+        (d) => d.reviewStatus === DepositReviewStatus.PENDING_REVIEW && d.installment?.status === 'PAID',
+      )
+    ) {
+      throw new ConflictException('قسط هذا الشيك مدفوع بالفعل بدفعة أخرى — اعكس الدفعة الأخرى أولاً');
+    }
     const clearingDate = dto.clearingDate ? new Date(dto.clearingDate) : new Date();
     const pendingDepositIds = pi.deposits
       .filter((d) => d.reviewStatus === DepositReviewStatus.PENDING_REVIEW)

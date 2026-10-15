@@ -276,4 +276,110 @@ describe('SEC — Deposit Correction cross-tenant attack matrix (Step C)', () =>
       }
     });
   });
+
+  // ── DC-7: one installment, one payment ───────────────────────────────────
+  // A customer proof waiting on an installment blocked nothing: staff could
+  // record cash for it, then the proof was approved too — two collected
+  // payments on one installment. And the admin "verified" toggle marked a
+  // proof collected without paying its installment.
+  describe('DC-7: an installment is paid once; verifying a proof pays it', () => {
+    const made: { installmentIds: string[] } = { installmentIds: [] };
+    let contractId: string;
+
+    beforeAll(async () => {
+      const verifyPerm = await testApp.rawPrisma.permission.findFirst({ where: { code: 'deposits:verify' } });
+      if (!verifyPerm) throw new Error('DC-7: deposits:verify not seeded');
+      await testApp.rawPrisma.userPermission.upsert({
+        where: { userId_permissionId: { userId: fx.users.adminA.id, permissionId: verifyPerm.id } },
+        create: { userId: fx.users.adminA.id, permissionId: verifyPerm.id },
+        update: {},
+      });
+      const plan = await testApp.rawPrisma.installmentPlan.findUniqueOrThrow({
+        where: { id: fx.resources.a.installmentPlanId },
+        select: { contractId: true },
+      });
+      contractId = plan.contractId;
+    });
+
+    afterAll(async () => {
+      await testApp.rawPrisma.deposit.deleteMany({ where: { installmentId: { in: made.installmentIds } } }).catch(() => void 0);
+      await testApp.rawPrisma.installment.deleteMany({ where: { id: { in: made.installmentIds } } }).catch(() => void 0);
+    });
+
+    async function openInstallment(due: string) {
+      const inst = await testApp.rawPrisma.installment.create({
+        data: {
+          planId: fx.resources.a.installmentPlanId,
+          dueDate: new Date(due),
+          amount: 7000,
+          status: 'PENDING',
+          companyId: fx.companies.aId,
+        },
+      });
+      made.installmentIds.push(inst.id);
+      return inst.id;
+    }
+    async function proofOn(installmentId: string) {
+      return testApp.rawPrisma.deposit.create({
+        data: {
+          type: 'INSTALLMENT',
+          contractId,
+          installmentId,
+          amount: 7000,
+          paidAt: new Date('2026-09-01'),
+          receiptUrl: 'https://example.com/receipt.jpg',
+          reviewStatus: DepositReviewStatus.PENDING_REVIEW,
+          recordedById: fx.users.customerA.id,
+          companyId: fx.companies.aId,
+        },
+      });
+    }
+    const http = () => request(testApp.app.getHttpServer());
+    const asAdmin = <T extends request.Test>(r: T) =>
+      r.set('Authorization', bearer(adminAToken)).set('X-Tenant-Slug', SEC_SLUG_A);
+    const collected = (installmentId: string) =>
+      testApp.rawPrisma.deposit.count({
+        where: { installmentId, deletedAt: null, reviewStatus: { in: ['APPROVED', 'NO_PROOF'] } },
+      });
+
+    it('DC-7a: cash cannot be recorded while a proof waits; approving the proof pays it once', async () => {
+      const instId = await openInstallment('2026-11-01');
+      const proof = await proofOn(instId);
+
+      await asAdmin(http().post('/v1/deposits'))
+        .send({ contractId, installmentId: instId, amount: 7000, paymentMethod: 'CASH' })
+        .expect(409);
+
+      await asAdmin(http().post(`/v1/deposits/${proof.id}/approve`)).send({}).expect(201);
+      const inst = await testApp.rawPrisma.installment.findUniqueOrThrow({ where: { id: instId } });
+      expect(inst.status).toBe('PAID');
+      expect(await collected(instId)).toBe(1);
+    });
+
+    it('DC-7b: a proof on an installment already paid in cash cannot be approved (409)', async () => {
+      const instId = await openInstallment('2026-12-01');
+      await asAdmin(http().post('/v1/deposits'))
+        .send({ contractId, installmentId: instId, amount: 7000, paymentMethod: 'CASH' })
+        .expect(201);
+      // A proof that slipped in before the guard (or through an old client).
+      const proof = await proofOn(instId);
+
+      await asAdmin(http().post(`/v1/deposits/${proof.id}/approve`)).send({}).expect(409);
+      expect(await collected(instId)).toBe(1);
+      const after = await testApp.rawPrisma.deposit.findUniqueOrThrow({ where: { id: proof.id } });
+      expect(after.reviewStatus).toBe(DepositReviewStatus.PENDING_REVIEW);
+    });
+
+    it('DC-7c: the "verified" toggle on a proof pays the installment', async () => {
+      const instId = await openInstallment('2027-01-01');
+      const proof = await proofOn(instId);
+
+      await asAdmin(http().patch(`/v1/deposits/${proof.id}/verify`)).send({ verified: true }).expect(200);
+      const inst = await testApp.rawPrisma.installment.findUniqueOrThrow({ where: { id: instId } });
+      expect(inst.status).toBe('PAID');
+      const after = await testApp.rawPrisma.deposit.findUniqueOrThrow({ where: { id: proof.id } });
+      expect(after.reviewStatus).toBe(DepositReviewStatus.APPROVED);
+      expect(await collected(instId)).toBe(1);
+    });
+  });
 });

@@ -122,6 +122,8 @@ function makePrismaMock() {
         type: 'INSTALLMENT',
         verified: data.verified,
       })),
+      // No other payment waiting on the installment.
+      count: jest.fn().mockResolvedValue(0),
     },
     document: {
       findFirst: jest.fn().mockResolvedValue(null),

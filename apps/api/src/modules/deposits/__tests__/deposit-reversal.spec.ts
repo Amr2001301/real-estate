@@ -144,6 +144,12 @@ function makePrismaMock() {
       // Atomic claim: PAID → PENDING only while the installment is PAID.
       updateMany: jest.fn().mockImplementation(async ({ data }: { data: { status: string } }) => {
         const inst = depositFixture?.installment;
+        // Approval: pays only an open installment.
+        if (data.status === 'PAID') {
+          if (!inst || !['PENDING', 'OVERDUE'].includes(inst.status)) return { count: 0 };
+          inst.status = 'PAID';
+          return { count: 1 };
+        }
         if (!inst || inst.status !== 'PAID') return { count: 0 };
         inst.status = data.status;
         return { count: 1 };
@@ -494,6 +500,8 @@ describe('Deposits · reverseDeposit + FG-06', () => {
         ...makeApprovedDeposit(),
         reviewStatus: DepositReviewStatus.PENDING_REVIEW,
         verified: false,
+        // A proof under review is on an installment not yet paid.
+        installment: { id: INST_ID, status: 'PENDING', paidAt: null, dueDate: new Date('2026-10-01') } as never,
       };
       await request(app.getHttpServer())
         .patch(`/deposits/${DEP_ID}/verify`)
