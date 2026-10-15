@@ -1,0 +1,32 @@
+name: Railway Status (Read-Only)
+
+# MANUALLY TRIGGERED ONLY — no push, no pull_request, no schedule.
+#
+# Reports what production on Railway is actually running, without logging in to
+# the Railway dashboard: which commit each service is on, whether RUN_MIGRATIONS
+# and the reminder flags are set, which feature variables (FCM, SMTP, ...) are
+# missing, and the startup log lines for migrations / FCM / Chromium / e-mail.
+#
+# Uses the same RAILWAY_TOKEN (project token) as deploy.yml, through the same
+# 'production' environment gate. Queries only — nothing on Railway is changed,
+# and no variable value outside the script's allow-list is printed.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    name: Railway status
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Report
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: ./scripts/railway-status.sh "${{ github.sha }}"
