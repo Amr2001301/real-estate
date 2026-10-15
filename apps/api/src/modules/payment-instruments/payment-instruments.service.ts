@@ -56,6 +56,9 @@ const VALID_TRANSITIONS: Partial<Record<PaymentInstrumentStatus, PaymentInstrume
     PaymentInstrumentStatus.CLEARED,
     PaymentInstrumentStatus.BOUNCED,
   ],
+  // A cheque the bank returns after it was counted as cleared (late return):
+  // its approved deposits go through the reversal path (Sub-case B).
+  [PaymentInstrumentStatus.CLEARED]: [PaymentInstrumentStatus.BOUNCED],
   [PaymentInstrumentStatus.BOUNCED]: [
     PaymentInstrumentStatus.REPLACED,
   ],
@@ -518,7 +521,7 @@ export class ChequeLifecycleService {
           action: 'payment-instrument.bounced',
           entityType: 'PaymentInstrument',
           entityId: id,
-          before: { status: PaymentInstrumentStatus.DEPOSITED },
+          before: { status: pi.status },
           after: {
             status: PaymentInstrumentStatus.BOUNCED,
             bounceDate: bounceDate.toISOString(),
@@ -571,11 +574,34 @@ export class ChequeLifecycleService {
   //
   // 1. Create new PI with status = PENDING_CLEARANCE.
   // 2. Set original.status = REPLACED, original.replacedById = newPI.id.
-  // Old Deposits remain as permanent evidence — not touched.
+  // 3. Each payment the bounced cheque was for gets a new PENDING_REVIEW
+  //    deposit on the replacement, so clearing it pays the installment —
+  //    before, the replacement carried no deposit and its clearing paid
+  //    nothing. Old Deposits remain as permanent evidence — not touched.
 
   async transitionToReplaced(id: string, dto: ReplaceInstrumentDto, recordedById: string) {
     const pi = await this.loadOwned(id);
     this.assertTransition(pi.status, PaymentInstrumentStatus.REPLACED);
+    // A cancelled deal collects nothing more — no replacement cheque.
+    if (pi.deposits.some((d) => isDeadPlan(d.installment?.plan))) {
+      throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
+    }
+    // The payments still owed: rejected by the bounce, installment still open.
+    const carried = await this.prisma.deposit.findMany({
+      where: {
+        paymentInstrumentId: id,
+        deletedAt: null,
+        reviewStatus: DepositReviewStatus.REJECTED,
+        installment: { status: { in: ['PENDING', 'OVERDUE'] } },
+      },
+      select: {
+        type: true,
+        amount: true,
+        contractId: true,
+        installmentId: true,
+        paymentMethod: true,
+      },
+    });
 
     const companyId = getRequiredCompanyId();
 
@@ -600,6 +626,22 @@ export class ChequeLifecycleService {
           replacedById: replacement.id,
         },
       });
+      for (const d of carried) {
+        await tx.deposit.create({
+          data: {
+            type: d.type,
+            amount: d.amount,
+            contractId: d.contractId,
+            installmentId: d.installmentId,
+            paymentMethod: d.paymentMethod,
+            paidAt: new Date(),
+            recordedById,
+            reviewStatus: DepositReviewStatus.PENDING_REVIEW,
+            paymentInstrumentId: replacement.id,
+            companyId,
+          },
+        });
+      }
       return [replacement];
     });
     await this.notifyInstrument(id, PaymentInstrumentStatus.REPLACED, recordedById);

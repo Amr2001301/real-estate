@@ -47,7 +47,7 @@
  */
 
 import request from 'supertest';
-import { BonusEntryStatus, BrokerCommissionStatus, BrokerPayoutStatus, ClawbackStatus, ContractStatus, InstallmentStatus, UnitStatus } from '@prisma/client';
+import { BonusEntryStatus, BrokerCommissionStatus, BrokerPayoutStatus, ClawbackStatus, ContractStatus, InstallmentStatus, PaymentInstrumentStatus, PaymentInstrumentType, UnitStatus } from '@prisma/client';
 import { type TestApp, createSecurityTestApp } from '../setup-app';
 import { bearer, loginAs } from '../helpers/login';
 import {
@@ -939,6 +939,145 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
   // rows (NOT VALID = no table scan at ADD CONSTRAINT time).
   // Asserts full rollback: contract still ACTIVE, installments still PENDING,
   // no CC row.
+
+  // ── D3-14: cheques follow the contract ────────────────────────────────────
+  // A replacement cheque carries the bounced one's payment, so clearing it
+  // pays the installment; a late bank return (CLEARED → BOUNCED) reverses
+  // that payment. Cancelling the contract cancels every cheque not yet
+  // cleared and rejects its waiting deposit; a bounced cheque on a cancelled
+  // contract cannot be replaced.
+  it('D3-14: replacement pays; late bounce reverses; cancel cancels open cheques', async () => {
+    const raw = testApp.rawPrisma;
+    for (const code of ['payment-instruments:manage', 'payment-instruments:bounce']) {
+      const perm = await raw.permission.findFirst({ where: { code } });
+      if (!perm) throw new Error(`D3-14: permission ${code} not seeded`);
+      await raw.userPermission.upsert({
+        where: { userId_permissionId: { userId: fx.users.adminA.id, permissionId: perm.id } },
+        create: { userId: fx.users.adminA.id, permissionId: perm.id },
+        update: {},
+      });
+    }
+    const companyId = fx.companies.aId;
+    const unit = await raw.unit.create({
+      data: {
+        buildingId: fx.resources.a.buildingId,
+        code: 'D3-CHEQUE-UNIT',
+        type: '1BR',
+        area: 80,
+        price: 600_000,
+        status: UnitStatus.SOLD,
+        companyId,
+      },
+    });
+    const contract = await raw.contract.create({
+      data: {
+        customerId: fx.users.customerA.id,
+        unitId: unit.id,
+        totalAmount: 600_000,
+        signedAt: new Date(),
+        status: ContractStatus.ACTIVE,
+        companyId,
+      },
+    });
+    const plan = await raw.installmentPlan.create({
+      data: { contractId: contract.id, totalMonths: 3, monthlyAmount: 1000, startsAt: new Date('2026-01-01'), companyId },
+    });
+    const installmentDue = (d: string) =>
+      raw.installment.create({
+        data: { planId: plan.id, dueDate: new Date(d), amount: 1000, status: InstallmentStatus.PENDING, companyId },
+      });
+    const inst1 = await installmentDue('2026-01-01');
+    const inst2 = await installmentDue('2026-02-01');
+    const inst3 = await installmentDue('2026-03-01');
+    const cheque = (no: string, status: PaymentInstrumentStatus) =>
+      raw.paymentInstrument.create({
+        data: {
+          type: PaymentInstrumentType.CHEQUE,
+          chequeNumber: no,
+          drawerBankName: 'D3 Bank',
+          chequeDueDate: new Date('2026-06-01'),
+          status,
+          recordedById: fx.users.adminA.id,
+          companyId,
+        },
+      });
+    const bounced = await cheque('D3-14-BOUNCED', PaymentInstrumentStatus.BOUNCED);
+    const pending = await cheque('D3-14-PENDING', PaymentInstrumentStatus.PENDING_CLEARANCE);
+    const lateBounced = await cheque('D3-14-LATE', PaymentInstrumentStatus.BOUNCED);
+    const depositOn = (installmentId: string, paymentInstrumentId: string, reviewStatus: 'REJECTED' | 'PENDING_REVIEW') =>
+      raw.deposit.create({
+        data: {
+          contractId: contract.id,
+          installmentId,
+          amount: 1000,
+          paidAt: new Date('2026-01-01'),
+          recordedById: fx.users.adminA.id,
+          paymentMethod: 'CHEQUE',
+          reviewStatus,
+          paymentInstrumentId,
+          companyId,
+        },
+      });
+    await depositOn(inst1.id, bounced.id, 'REJECTED');
+    const pendingDeposit = await depositOn(inst2.id, pending.id, 'PENDING_REVIEW');
+    await depositOn(inst3.id, lateBounced.id, 'REJECTED');
+
+    const http = () => request(testApp.app.getHttpServer());
+    const as = <T extends request.Test>(r: T) =>
+      r.set('Authorization', bearer(adminAToken)).set('X-Tenant-Slug', SEC_SLUG_A);
+    const pi = (id: string, action: string) => as(http().post(`/v1/payment-instruments/${id}/${action}`));
+    const replaceBody = { type: 'CHEQUE', chequeNumber: 'D3-14-NEW', chequeDueDate: '2026-07-01' };
+
+    try {
+      // 1. Replace → the new cheque carries the payment; clearing it pays inst1.
+      const rep = await pi(bounced.id, 'replace').send(replaceBody).expect(201);
+      const replacementId = (rep.body as { replacement?: { id: string }; id?: string }).replacement?.id
+        ?? (await raw.paymentInstrument.findUniqueOrThrow({ where: { id: bounced.id } })).replacedById!;
+      const carried = await raw.deposit.findMany({ where: { paymentInstrumentId: replacementId } });
+      expect(carried).toHaveLength(1);
+      expect(carried[0]!.installmentId).toBe(inst1.id);
+      expect(carried[0]!.reviewStatus).toBe('PENDING_REVIEW');
+      await pi(replacementId, 'deposit').send({}).expect(200);
+      await pi(replacementId, 'clear').send({}).expect(200);
+      expect((await raw.installment.findUniqueOrThrow({ where: { id: inst1.id } })).status).toBe(InstallmentStatus.PAID);
+
+      // 2. Late bank return on the cleared replacement → payment reversed.
+      await pi(replacementId, 'bounce')
+        .send({ bounceReason: 'D3-14 late return', bounceDate: '2026-07-05', penaltyAmount: 0 })
+        .expect(200);
+      expect((await raw.installment.findUniqueOrThrow({ where: { id: inst1.id } })).status).not.toBe(InstallmentStatus.PAID);
+      expect(await raw.paymentCorrection.count({ where: { deposit: { paymentInstrumentId: replacementId }, type: 'REVERSAL' } })).toBe(1);
+
+      // 3. Cancel → the uncleared cheque is cancelled, its deposit rejected.
+      await as(http().post(`/v1/contracts/${contract.id}/cancel`))
+        .send({ reason: 'D3-14', retainedAmount: 0, refundAmount: 0 })
+        .expect(201);
+      expect((await raw.paymentInstrument.findUniqueOrThrow({ where: { id: pending.id } })).status)
+        .toBe(PaymentInstrumentStatus.CANCELLED);
+      expect((await raw.deposit.findUniqueOrThrow({ where: { id: pendingDeposit.id } })).reviewStatus).toBe('REJECTED');
+      await pi(pending.id, 'clear').send({}).expect(400); // CANCELLED is terminal
+
+      // 4. A bounced cheque on the cancelled contract cannot be replaced.
+      await pi(lateBounced.id, 'replace').send({ ...replaceBody, chequeNumber: 'D3-14-NEW-2' }).expect(409);
+      expect((await raw.paymentInstrument.findUniqueOrThrow({ where: { id: lateBounced.id } })).status)
+        .toBe(PaymentInstrumentStatus.BOUNCED);
+    } finally {
+      const pis = await raw.paymentInstrument.findMany({
+        where: { OR: [{ deposits: { some: { contractId: contract.id } } }, { chequeNumber: { startsWith: 'D3-14-' } }], companyId },
+        select: { id: true },
+      }).catch(() => [] as { id: string }[]);
+      await raw.paymentCorrection.deleteMany({ where: { deposit: { contractId: contract.id } } }).catch(() => void 0);
+      await raw.installment.deleteMany({ where: { planId: plan.id, id: { notIn: [inst1.id, inst2.id, inst3.id] } } }).catch(() => void 0);
+      await raw.deposit.deleteMany({ where: { contractId: contract.id } }).catch(() => void 0);
+      await raw.paymentInstrument.updateMany({ where: { id: { in: pis.map((p) => p.id) } }, data: { replacedById: null } }).catch(() => void 0);
+      await raw.paymentInstrument.deleteMany({ where: { id: { in: pis.map((p) => p.id) } } }).catch(() => void 0);
+      await raw.contractCancellation.deleteMany({ where: { contractId: contract.id } }).catch(() => void 0);
+      await raw.installment.deleteMany({ where: { planId: plan.id } }).catch(() => void 0);
+      await raw.installmentPlan.deleteMany({ where: { id: plan.id } }).catch(() => void 0);
+      await raw.contract.deleteMany({ where: { id: contract.id } }).catch(() => void 0);
+      await raw.unit.deleteMany({ where: { id: unit.id } }).catch(() => void 0);
+    }
+  });
 
   describe('D3-6: atomicity — full rollback on ContractCancellation create failure', () => {
     let atomicContractId = '00000000-0000-0000-0000-000000000000';

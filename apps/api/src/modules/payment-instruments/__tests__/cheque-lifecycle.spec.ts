@@ -213,6 +213,8 @@ function makePrismaMock() {
     },
     deposit: {
       updateMany: jest.fn().mockResolvedValue({ count: 2 }),
+      findMany: jest.fn().mockResolvedValue([]),
+      create: jest.fn().mockResolvedValue({}),
     },
     installment: {
       updateMany: jest.fn().mockResolvedValue({ count: 2 }),
