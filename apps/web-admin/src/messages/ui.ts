@@ -1583,6 +1583,10 @@ const UI = {
         bookingPaymentConfirmBtn: 'تأكيد استلام مبلغ الحجز',
         bookingPaymentUnconfirmBtn: 'إلغاء تأكيد الاستلام',
         bookingPaymentAmountRequired: 'يجب تحديد مبلغ الحجز قبل تأكيد الاستلام',
+        bookingPaymentMethodLabel: 'طريقة الدفع',
+        bookingPaymentMethodChoose: 'اختر طريقة الدفع',
+        bookingPaymentMethods: { CASH: 'نقدًا', BANK_TRANSFER: 'تحويل بنكي', CHEQUE: 'شيك', OTHER: 'أخرى' },
+        bookingPaymentChequeHint: 'أكّد الاستلام بشيك بعد صرفه فقط.',
         // Page header / breadcrumb
         titlePrefix: 'حجز — ',
         breadcrumbReservationFallback: 'الحجز',
@@ -6640,6 +6644,10 @@ const UI = {
         bookingPaymentConfirmBtn: 'Confirm Booking Payment Received',
         bookingPaymentUnconfirmBtn: 'Revoke Payment Confirmation',
         bookingPaymentAmountRequired: 'The booking amount must be set before confirming receipt',
+        bookingPaymentMethodLabel: 'Payment method',
+        bookingPaymentMethodChoose: 'Choose the payment method',
+        bookingPaymentMethods: { CASH: 'Cash', BANK_TRANSFER: 'Bank transfer', CHEQUE: 'Cheque', OTHER: 'Other' },
+        bookingPaymentChequeHint: 'Confirm a cheque payment only once the cheque has cleared.',
         // Page header / breadcrumb
         titlePrefix: 'Reservation — ',
         breadcrumbReservationFallback: 'Reservation',
