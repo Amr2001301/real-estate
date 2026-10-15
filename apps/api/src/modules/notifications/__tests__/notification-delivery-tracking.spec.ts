@@ -529,7 +529,9 @@ describe('Step 15 — Notification delivery tracking', () => {
     ): Promise<number> {
       const { values } = await counter.get();
       const hit = values.find((v) =>
-        Object.entries(labels).every(([k, want]) => v.labels[k] === want),
+        Object.entries(labels).every(
+          ([k, want]) => (v.labels as Record<string, unknown>)[k] === want,
+        ),
       );
       return hit?.value ?? 0;
     }
