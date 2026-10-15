@@ -62,6 +62,15 @@ export const NOTIFICATION_CATALOG: NotificationTemplateDef[] = [
     en_body: 'Reservation for unit {{unitCode}} has expired',
   },
   {
+    code: 'reservation_overdue',
+    channel: NotificationChannel.IN_APP,
+    emailEnabled: true,
+    ar_subject: 'حجز متأخر',
+    ar_body: 'حجز الوحدة {{unitCode}} تخطّى موعده ومبلغ الحجز مدفوع — حوّله لعقد أو ألغِه.',
+    en_subject: 'Overdue reservation',
+    en_body: 'The reservation for unit {{unitCode}} is past its expiry with the booking paid — convert it to a contract or cancel it.',
+  },
+  {
     code: 'maintenance_request_created',
     channel: NotificationChannel.IN_APP,
     emailEnabled: true,

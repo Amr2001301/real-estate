@@ -37,6 +37,7 @@ import { NotificationsService } from '../notifications/notifications.module';
 import { CancellationPolicyService } from './cancellation-policy.service';
 import type { CancellationPolicySnapshot } from './cancellation-settings.constants';
 import { reportFailure } from '../../common/observability/report-failure';
+import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 
 // ── Request DTO types (validated by class-validator in the controller) ─────────
 
@@ -68,6 +69,18 @@ function isCommissionEffectivelyPaid(commission: {
   if (!commission.payoutId) return false;
   const s = commission.payout?.status ?? '';
   return s === 'PROCESSING' || s === 'PAID';
+}
+
+/**
+ * A released unit goes back on sale: the cancelled buyer's warranties are
+ * cleared so the next contract's signing starts them afresh (signing only
+ * starts items whose warrantyStart is still empty, and freezes the duration).
+ */
+async function resetUnitWarranties(tx: Prisma.TransactionClient, unitId: string) {
+  await tx.unitMaintenanceItem.updateMany({
+    where: { unitId, warrantyStart: { not: null } },
+    data: { warrantyStart: null, warrantyEnd: null, warrantyDurationMonthsSnapshot: null },
+  });
 }
 
 @Injectable()
@@ -311,20 +324,31 @@ export class ContractCancellationService {
             reason: `Contract ${contractId} cancelled (AUTO release)`,
           },
         });
+        await resetUnitWarranties(tx, contract.unitId);
         unitReleasedAt = now;
       }
 
-      // 7. Customer demotion (inside transaction)
+      // 7. Customer demotion (inside transaction) — only when this was the
+      // customer's last live contract, and only a CUSTOMER account: a buyer
+      // with another unit keeps the app, and staff are never demoted.
       if (effectiveDemote) {
-        await tx.user.update({
-          where: { id: contract.customerId },
-          data: { role: 'CLIENT' },
+        const otherLive = await tx.contract.count({
+          where: { customerId: contract.customerId, companyId, id: { not: contractId }, ...LIVE_CONTRACT_WHERE },
         });
-        await tx.refreshToken.updateMany({
-          where: { userId: contract.customerId, revokedAt: null },
-          data: { revokedAt: now },
-        });
-        customerDemotedAt = now;
+        const demoted =
+          otherLive === 0
+            ? await tx.user.updateMany({
+                where: { id: contract.customerId, companyId, role: 'CUSTOMER' },
+                data: { role: 'CLIENT' },
+              })
+            : { count: 0 };
+        if (demoted.count > 0) {
+          await tx.refreshToken.updateMany({
+            where: { userId: contract.customerId, revokedAt: null },
+            data: { revokedAt: now },
+          });
+          customerDemotedAt = now;
+        }
       }
 
       // 8. Create ContractCancellation row (operator amounts stored as-is)
@@ -494,6 +518,7 @@ export class ContractCancellationService {
           reason: `Contract ${contractId} cancelled — unit released (REQUIRES_APPROVAL path)`,
         },
       });
+      await resetUnitWarranties(tx, contract.unitId);
 
       const updated = await tx.contractCancellation.update({
         where: { id: cc.id },

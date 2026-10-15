@@ -552,6 +552,9 @@ const UI = {
           rejected: 'مرفوضة',
           cancelledExpired: 'منتهية / ملغاة',
         },
+        overdueBanner: (n: number) =>
+          `${n} ${n === 1 ? 'حجز متأخر' : 'حجوزات متأخرة'}: انتهى موعدها ومبلغ الحجز مدفوع — حوّلها لعقد أو ألغِها.`,
+        overdueLink: 'عرض المتأخرة',
         filter: {
           searchPlaceholder: 'اسم العميل أو رقم الحجز…',
           searchLabel: 'بحث',
@@ -562,6 +565,7 @@ const UI = {
           rejected: 'مرفوض',
           cancelled: 'ملغي',
           expired: 'منتهي',
+          overdue: 'متأخرة (الحجز مدفوع)',
           agentLabel: 'المندوب',
           allAgents: 'الكل',
           dateFrom: 'من تاريخ',
@@ -5672,6 +5676,9 @@ const UI = {
           rejected: 'Rejected',
           cancelledExpired: 'Expired / Cancelled',
         },
+        overdueBanner: (n: number) =>
+          `${n} overdue ${n === 1 ? 'reservation' : 'reservations'}: past expiry with the booking paid — convert to a contract or cancel.`,
+        overdueLink: 'Show overdue',
         filter: {
           searchPlaceholder: 'Client name or reservation number…',
           searchLabel: 'Search',
@@ -5682,6 +5689,7 @@ const UI = {
           rejected: 'Rejected',
           cancelled: 'Cancelled',
           expired: 'Expired',
+          overdue: 'Overdue (booking paid)',
           agentLabel: 'Agent',
           allAgents: 'All',
           dateFrom: 'From Date',
