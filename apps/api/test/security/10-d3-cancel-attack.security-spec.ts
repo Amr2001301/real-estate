@@ -1148,6 +1148,112 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
     }
   });
 
+  // ── D3-16: a contract ends through cancellation, not deletion ─────────────
+  // Deleting used to skip the money and leave the unit SOLD; the customer app
+  // kept the deleted/cancelled schedule as overdue; a manual plan did not have
+  // to add up to the contract (no down-payment row at all).
+  it('D3-16: delete only an empty unsigned contract; restore re-claims the unit; plans add up; /me shows live contracts', async () => {
+    const raw = testApp.rawPrisma;
+    const companyId = fx.companies.aId;
+    const perm = await raw.permission.findFirst({ where: { code: 'contracts:delete' } });
+    if (perm) {
+      await raw.userPermission.upsert({
+        where: { userId_permissionId: { userId: fx.users.adminA.id, permissionId: perm.id } },
+        create: { userId: fx.users.adminA.id, permissionId: perm.id },
+        update: {},
+      });
+    }
+    const unitOf = (code: string) =>
+      raw.unit.create({
+        data: { buildingId: fx.resources.a.buildingId, code, type: '1BR', area: 80, price: 1_000_000, status: UnitStatus.SOLD, companyId },
+      });
+    const signedUnit = await unitOf('D3-16-SIGNED');
+    const draftUnit = await unitOf('D3-16-DRAFT');
+    const contractOn = (unitId: string, signed: boolean) =>
+      raw.contract.create({
+        data: {
+          customerId: fx.users.customerA.id,
+          unitId,
+          totalAmount: 1_000_000,
+          downPayment: 100_000,
+          signedAt: signed ? new Date() : null,
+          status: signed ? ContractStatus.ACTIVE : ContractStatus.UNSIGNED,
+          companyId,
+        },
+      });
+    const signed = await contractOn(signedUnit.id, true);
+    const draft = await contractOn(draftUnit.id, false);
+    const http = () => request(testApp.app.getHttpServer());
+    const as = <T extends request.Test>(r: T) =>
+      r.set('Authorization', bearer(adminAToken)).set('X-Tenant-Slug', SEC_SLUG_A);
+    const unitStatus = async (id: string) => (await raw.unit.findUniqueOrThrow({ where: { id } })).status;
+
+    try {
+      // A signed contract is cancelled, never deleted.
+      await as(http().delete(`/v1/contracts/${signed.id}`)).expect(409);
+      expect((await raw.contract.findUniqueOrThrow({ where: { id: signed.id } })).deletedAt).toBeNull();
+
+      // A manual plan must add up: 900,000 over 12 months is 75,000.
+      await as(http().post('/v1/installment-plans'))
+        .send({ contractId: signed.id, totalMonths: 12, monthlyAmount: 50_000, startsAt: '2026-11-01' })
+        .expect(400);
+      await as(http().post('/v1/installment-plans'))
+        .send({ contractId: signed.id, totalMonths: 12, startsAt: '2026-11-01' })
+        .expect(201);
+      const rows = await raw.installment.findMany({ where: { plan: { contractId: signed.id } } });
+      expect(rows).toHaveLength(13);
+      expect(rows.filter((r) => r.type === 'DOWN_PAYMENT').map((r) => Number(r.amount))).toEqual([100_000]);
+      expect(rows.reduce((sum, r) => sum + Number(r.amount), 0)).toBe(1_000_000);
+
+      // An unsigned contract with no payment may be deleted, and frees its unit.
+      await as(http().delete(`/v1/contracts/${draft.id}`)).expect(200);
+      expect(await unitStatus(draftUnit.id)).toBe(UnitStatus.AVAILABLE);
+
+      // Restoring re-claims the unit — refused once it is held by another deal.
+      await as(http().post(`/v1/contracts/${draft.id}/restore`)).expect(201);
+      expect(await unitStatus(draftUnit.id)).toBe(UnitStatus.SOLD);
+      await as(http().delete(`/v1/contracts/${draft.id}`)).expect(200);
+      await raw.unit.update({ where: { id: draftUnit.id }, data: { status: UnitStatus.RESERVED } });
+      const res = await raw.reservation.create({
+        data: {
+          unitId: draftUnit.id,
+          salesId: fx.users.sales1A.id,
+          clientId: fx.users.clientA.id,
+          status: 'PENDING',
+          expiresAt: new Date(Date.now() + 86_400_000),
+          companyId,
+        },
+      });
+      await as(http().post(`/v1/contracts/${draft.id}/restore`)).expect(409);
+      expect((await raw.contract.findUniqueOrThrow({ where: { id: draft.id } })).deletedAt).not.toBeNull();
+      await raw.reservation.delete({ where: { id: res.id } });
+
+      // The customer app shows live contracts only: cancel → the schedule is gone.
+      const customerToken = await loginAs(testApp.app, fx.users.customerA.email, fx.users.customerA.password, 'customer', SEC_SLUG_A);
+      const mine = async () => {
+        const r = await http()
+          .get(`/v1/me/installments?contractId=${signed.id}&pageSize=100`)
+          .set('Authorization', bearer(customerToken))
+          .set('X-Tenant-Slug', SEC_SLUG_A)
+          .expect(200);
+        return (r.body.data as unknown[]).length;
+      };
+      expect(await mine()).toBe(13);
+      await as(http().post(`/v1/contracts/${signed.id}/cancel`))
+        .send({ reason: 'D3-16', retainedAmount: 0, refundAmount: 0 })
+        .expect(201);
+      expect(await mine()).toBe(0);
+    } finally {
+      const ids = [signed.id, draft.id];
+      await raw.contractCancellation.deleteMany({ where: { contractId: { in: ids } } }).catch(() => void 0);
+      await raw.installment.deleteMany({ where: { plan: { contractId: { in: ids } } } }).catch(() => void 0);
+      await raw.installmentPlan.deleteMany({ where: { contractId: { in: ids } } }).catch(() => void 0);
+      await raw.contract.deleteMany({ where: { id: { in: ids } } }).catch(() => void 0);
+      await raw.unitStatusHistory.deleteMany({ where: { unitId: { in: [signedUnit.id, draftUnit.id] } } }).catch(() => void 0);
+      await raw.unit.deleteMany({ where: { id: { in: [signedUnit.id, draftUnit.id] } } }).catch(() => void 0);
+    }
+  });
+
   describe('D3-6: atomicity — full rollback on ContractCancellation create failure', () => {
     let atomicContractId = '00000000-0000-0000-0000-000000000000';
     let atomicUnitId = '00000000-0000-0000-0000-000000000001';
