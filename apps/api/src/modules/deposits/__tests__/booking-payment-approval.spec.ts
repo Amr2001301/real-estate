@@ -182,7 +182,7 @@ describe('Deposits · booking-payment approval propagation + paid totals (Gap 2)
       reviewStatus: 'PENDING_REVIEW',
       contract: null,
       installment: null,
-      reservation: { id: RES_ID, bookingPaymentStatus: 'UNPAID' },
+      reservation: { id: RES_ID, status: 'APPROVED', bookingPaymentStatus: 'UNPAID' },
     };
 
     await request(app.getHttpServer())
@@ -211,7 +211,7 @@ describe('Deposits · booking-payment approval propagation + paid totals (Gap 2)
       reviewStatus: 'APPROVED',
       contract: null,
       installment: null,
-      reservation: { id: RES_ID, bookingPaymentStatus: 'PAID' },
+      reservation: { id: RES_ID, status: 'APPROVED', bookingPaymentStatus: 'PAID' },
     };
 
     await request(app.getHttpServer())

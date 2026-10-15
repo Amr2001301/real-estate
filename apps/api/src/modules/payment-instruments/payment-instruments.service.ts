@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
@@ -25,6 +26,15 @@ import {
 } from './payment-instruments.dto';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { reportFailure } from '../../common/observability/report-failure';
+import { CONTRACT_CANCELLED_MESSAGE } from '../installments/live-contract';
+
+/** The installment's plan belongs to a cancelled or deleted contract. */
+function isDeadPlan(
+  plan: { cancelledAt: Date | null; contract: { status: string; deletedAt: Date | null } | null } | null | undefined,
+): boolean {
+  if (!plan) return false;
+  return !!plan.cancelledAt || plan.contract?.status === 'CANCELLED' || !!plan.contract?.deletedAt;
+}
 
 // Compute the status an installment should be re-opened to after a Sub-case B
 // bounce, per the operator-submitted installmentAction (§4.4).
@@ -77,13 +87,28 @@ export class ChequeLifecycleService {
     const pi = await this.prisma.paymentInstrument.findFirst({
       where: { id, companyId },
       include: {
+        // A deleted deposit no longer pays anything — clearing or bouncing
+        // the cheque must not touch it.
         deposits: {
+          where: { deletedAt: null },
           select: {
             id: true,
             reviewStatus: true,
             installmentId: true,
             installment: {
-              select: { id: true, status: true, dueDate: true, paidAt: true, planId: true },
+              select: {
+                id: true,
+                status: true,
+                dueDate: true,
+                paidAt: true,
+                planId: true,
+                plan: {
+                  select: {
+                    cancelledAt: true,
+                    contract: { select: { status: true, deletedAt: true } },
+                  },
+                },
+              },
             },
           },
         },
@@ -327,6 +352,10 @@ export class ChequeLifecycleService {
   async transitionToCleared(id: string, dto: RecordClearingDto, actorId?: string) {
     const pi = await this.loadOwned(id);
     this.assertTransition(pi.status, PaymentInstrumentStatus.CLEARED);
+    // A cancelled deal collects nothing more: its cheques are not cleared.
+    if (pi.deposits.some((d) => isDeadPlan(d.installment?.plan))) {
+      throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
+    }
 
     const clearingDate = dto.clearingDate ? new Date(dto.clearingDate) : new Date();
     const pendingDepositIds = pi.deposits
@@ -393,8 +422,11 @@ export class ChequeLifecycleService {
     const affectedDepositIds = pendingDeposits.map((d) => d.id);
     const rejectionReason = `Instrument bounced — ${pi.type === PaymentInstrumentType.CHEQUE ? 'cheque' : 'transfer'} ${instrumentLabel} returned ${bounceDateStr}`;
 
-    // Determine the installment plan for a potential penalty installment.
-    const firstInstallmentWithPlan = pi.deposits.find((d) => d.installment?.planId);
+    // Determine the installment plan for a potential penalty installment —
+    // never a cancelled deal's plan.
+    const firstInstallmentWithPlan = pi.deposits.find(
+      (d) => d.installment?.planId && !isDeadPlan(d.installment.plan),
+    );
     const planId = firstInstallmentWithPlan?.installment?.planId ?? null;
 
     let penaltyInstallmentId: string | null = null;
@@ -427,6 +459,9 @@ export class ChequeLifecycleService {
       const companyId = getRequiredCompanyId();
       for (const d of approvedDeposits) {
         if (!d.installmentId || !d.installment) continue;
+        // A cancelled deal's installment stays as cancellation left it, and
+        // only a PAID installment is reopened.
+        if (isDeadPlan(d.installment.plan) || d.installment.status !== 'PAID') continue;
 
         const correction = await tx.paymentCorrection.create({
           data: {
@@ -516,7 +551,8 @@ export class ChequeLifecycleService {
             {
               chequeNumber: instrumentLabel,
               bounceDate: bounceDateStr,
-              penaltyAmount: dto.penaltyAmount.toString(),
+              // Only a penalty that was actually added is announced.
+              penaltyAmount: penaltyInstallmentId ? dto.penaltyAmount.toString() : '0',
             },
           ).catch((e: Error) =>
             this.logger.warn(`cheque_bounced notification failed: ${e.message}`),

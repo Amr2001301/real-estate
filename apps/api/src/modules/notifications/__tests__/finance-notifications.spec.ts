@@ -155,6 +155,13 @@ describe('deposits', () => {
         findFirst: jest.fn(({ select }: { select: Record<string, unknown> }) =>
           Promise.resolve(select.contract ? context : reversal),
         ),
+        // The money-open check: a live contract, no cheque.
+        findUnique: jest.fn().mockResolvedValue({
+          contract: { status: 'ACTIVE', deletedAt: null },
+          installment: null,
+          reservation: null,
+          paymentInstrument: null,
+        }),
       },
       paymentCorrection: { findFirst: jest.fn().mockResolvedValue(null) },
       $transaction: jest.fn((fn: (t: typeof tx) => unknown) => fn(tx)),
