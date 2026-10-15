@@ -10,9 +10,9 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
   final NotificationsRemoteDataSource _remote;
 
   @override
-  Future<Result<List<AppNotification>>> getNotifications() {
+  Future<Result<List<AppNotification>>> getNotifications({int page = 1}) {
     return guardApiCall(() async {
-      final dtos = await _remote.list();
+      final dtos = await _remote.list(page: page);
       return dtos.map((d) => d.toEntity()).toList();
     });
   }

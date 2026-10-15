@@ -5,7 +5,8 @@ import '../dtos/notification_dto.dart';
 
 /// Raw network access to notification endpoints (authenticated). May throw.
 abstract interface class NotificationsRemoteDataSource {
-  Future<List<NotificationDto>> list();
+  /// One page of the user's notifications, newest first (page 1 = newest).
+  Future<List<NotificationDto>> list({int page = 1});
   Future<int> unreadCount();
   Future<void> markRead(String id);
   Future<void> markAllRead();
@@ -18,8 +19,11 @@ class NotificationsRemoteDataSourceImpl implements NotificationsRemoteDataSource
   final Dio _dio;
 
   @override
-  Future<List<NotificationDto>> list() async {
-    final res = await _dio.get<Map<String, dynamic>>('/me/notifications');
+  Future<List<NotificationDto>> list({int page = 1}) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/me/notifications',
+      queryParameters: {'page': page, 'pageSize': 20},
+    );
     final data = (res.data?['data'] as List?) ?? const [];
     return data
         .whereType<Map<String, dynamic>>()

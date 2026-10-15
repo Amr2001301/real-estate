@@ -87,6 +87,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     );
                   case DataStatus.success:
                     final items = state.data!;
+                    final hasMore = context.read<NotificationsCubit>().hasMore;
                     return RefreshIndicator(
                       color: AppPalette.gold400,
                       onRefresh: () =>
@@ -96,11 +97,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           horizontal: AppSpacing.lg,
                           vertical: AppSpacing.md,
                         ),
-                        itemCount: items.length,
+                        itemCount: items.length + (hasMore ? 1 : 0),
                         separatorBuilder: (_, _) =>
                             const SizedBox(height: AppSpacing.sm),
-                        itemBuilder: (context, i) =>
-                            _NotificationTile(items[i]),
+                        itemBuilder: (context, i) => i == items.length
+                            ? const _ShowMore()
+                            : _NotificationTile(items[i]),
                       ),
                     );
                 }
@@ -108,6 +110,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// "Show more" at the end of the list while older notifications remain.
+class _ShowMore extends StatelessWidget {
+  const _ShowMore();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: TextButton(
+        onPressed: () => context.read<NotificationsCubit>().loadMore(),
+        child: Text(context.l10n.showMore),
       ),
     );
   }

@@ -31,7 +31,7 @@ class _FakeRemote implements NotificationsRemoteDataSource {
   int markAllCalls = 0;
 
   @override
-  Future<List<NotificationDto>> list() async {
+  Future<List<NotificationDto>> list({int page = 1}) async {
     if (error != null) throw error!;
     return rows;
   }
@@ -73,7 +73,7 @@ class _FakeRepo implements NotificationsRepository {
   int listCalls = 0;
 
   @override
-  Future<Result<List<AppNotification>>> getNotifications() async {
+  Future<Result<List<AppNotification>>> getNotifications({int page = 1}) async {
     listCalls++;
     return listResult ?? const Ok([]);
   }
@@ -246,6 +246,53 @@ void main() {
       await cubit.load();
       expect(cubit.state.status, DataStatus.failure);
       expect(cubit.state.failure?.type, FailureType.network);
+    });
+
+    test('a full page offers more; loadMore appends the next page', () async {
+      final page = List.generate(
+        NotificationsCubit.pageSize,
+        (i) => AppNotification(
+          id: 'n$i',
+          templateCode: 'visit_scheduled',
+          title: 'Visit $i',
+          body: '',
+          payload: const {},
+          read: false,
+        ),
+      );
+      final repo = _FakeRepo(listResult: Ok(page));
+      final cubit = NotificationsCubit(
+        GetNotifications(repo),
+        MarkNotificationRead(repo),
+        MarkAllNotificationsRead(repo),
+      );
+      await cubit.load();
+      expect(cubit.hasMore, isTrue);
+      await cubit.loadMore();
+      expect(cubit.state.data, hasLength(NotificationsCubit.pageSize * 2));
+      expect(repo.listCalls, 2);
+    });
+
+    test('a short page means nothing older to load', () async {
+      final repo = _FakeRepo(listResult: const Ok([
+        AppNotification(
+          id: 'n1',
+          templateCode: 'visit_scheduled',
+          title: 'Visit scheduled',
+          body: '',
+          payload: {},
+          read: false,
+        ),
+      ]));
+      final cubit = NotificationsCubit(
+        GetNotifications(repo),
+        MarkNotificationRead(repo),
+        MarkAllNotificationsRead(repo),
+      );
+      await cubit.load();
+      expect(cubit.hasMore, isFalse);
+      await cubit.loadMore();
+      expect(repo.listCalls, 1);
     });
 
     test('markRead success → reloads list', () async {
