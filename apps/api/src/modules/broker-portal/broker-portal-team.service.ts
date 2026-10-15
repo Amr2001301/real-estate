@@ -2,11 +2,13 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Optional,
   NotFoundException,
 } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { BrokerUserStatus, Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.module';
 import { getTenantContext } from '../../common/tenant/tenant-context';
 import { phoneForWrite } from '../../common/utils/phone-for-write';
 import { paginate, takeSkip } from '../../common/utils/pagination';
@@ -42,9 +44,20 @@ const TEAM_INCLUDE = {
  * scope-pinning, "last manager" and "self-removal" guards that admin doesn't
  * need.
  */
+/** A broker team member's status, as the notifications say it. */
+const MEMBER_STATUS_AR: Record<string, string> = {
+  INVITED: 'مدعو',
+  ACTIVE: 'نشط',
+  SUSPENDED: 'موقوف',
+  REMOVED: 'أُزيل من الفريق',
+};
+
 @Injectable()
 export class BrokerPortalTeamService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly notifications?: NotificationsService,
+  ) {}
 
   // ── List ────────────────────────────────────────────────────────────────
 
@@ -141,7 +154,7 @@ export class BrokerPortalTeamService {
     const passwordHash = dto.password ? await argon2.hash(dto.password) : null;
     const now = new Date();
 
-    return this.prisma.$transaction(async (tx) => {
+    const created = await this.prisma.$transaction(async (tx) => {
       if (dto.isPrimaryContact) {
         await tx.brokerUser.updateMany({
           where: { brokerId: scope.brokerId, isPrimaryContact: true },
@@ -181,6 +194,14 @@ export class BrokerPortalTeamService {
         include: TEAM_INCLUDE,
       });
     });
+    await this.notifications?.notifyBrokerTeamChange(
+      scope.brokerId,
+      { userId: created.userId, name: created.user.fullName },
+      'added',
+      {},
+      { except: scope.brokerAgentUserId },
+    );
+    return created;
   }
 
   // ── Update fields ───────────────────────────────────────────────────────
@@ -347,11 +368,21 @@ export class BrokerPortalTeamService {
     if (dto.status === BrokerUserStatus.ACTIVE && !link.joinedAt) {
       data.joinedAt = new Date();
     }
-    return this.prisma.brokerUser.update({
+    const updated = await this.prisma.brokerUser.update({
       where: { id: brokerUserId },
       data,
       include: TEAM_INCLUDE,
     });
+    if (link.status !== dto.status) {
+      await this.notifications?.notifyBrokerTeamChange(
+        scope.brokerId,
+        { userId: updated.userId, name: updated.user.fullName },
+        'status',
+        { statusLabel: MEMBER_STATUS_AR[dto.status] ?? dto.status },
+        { except: scope.brokerAgentUserId },
+      );
+    }
+    return updated;
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────

@@ -18,6 +18,7 @@ import { clientOwnerScope, ownedClientsWhere } from '../../common/utils/client-o
 import type { AuthUser } from '../../common/decorators/current-user.decorator';
 import { R2Service } from '../media/r2.service';
 import { NotificationsService } from '../notifications/notifications.module';
+import { USER_ROLE_AR } from '../notifications/notification-catalog';
 import { PlanLimitService } from '../../common/capabilities/plan-limit.service';
 import { collectPages, isoDate, listCsv, listXlsx, type ListColumn } from '../../common/utils/list-export';
 import { ReportBrandService } from '../company-branding/report-brand.service';
@@ -130,7 +131,7 @@ export class UsersService {
     if (dto.managerId) await this.assertIsManager(dto.managerId, companyId);
     const phone = await phoneForWrite(this.prisma, dto.phone, companyId); // FG-21
     const passwordHash = dto.password ? await argon2.hash(dto.password) : null;
-    return this.prisma.user.create({
+    const created = await this.prisma.user.create({
       data: {
         role: dto.role,
         fullName: dto.fullName,
@@ -143,6 +144,56 @@ export class UsersService {
       },
       select: this.publicSelect(),
     });
+    try {
+      // Welcome (in-app, and by e-mail when they have one) …
+      await this.notifications.sendToUser(created.id, 'user_account_created', {
+        name: created.fullName,
+        roleLabel: USER_ROLE_AR[created.role] ?? created.role,
+        entityType: 'user',
+        entityId: created.id,
+      });
+    } catch {
+      // best-effort — creating the account must not fail on a notification
+    }
+    // … and the sales manager they report to meets them.
+    if (created.managerId) await this.notifyTeamChange(created.id, created.fullName, created.managerId, null);
+    return created;
+  }
+
+  /** A sales person moved between managers: they and both managers hear. */
+  private async notifyTeamChange(
+    userId: string,
+    name: string,
+    managerId: string | null,
+    previousManagerId: string | null,
+  ) {
+    const payload = { name, entityType: 'user', entityId: userId };
+    try {
+      await this.sendTeamChange(userId, payload, managerId, previousManagerId);
+    } catch {
+      // best-effort — the assignment must not fail on a notification
+    }
+  }
+
+  private async sendTeamChange(
+    userId: string,
+    payload: Record<string, unknown>,
+    managerId: string | null,
+    previousManagerId: string | null,
+  ) {
+    if (managerId) {
+      const mgr = await this.prisma.user
+        .findFirst({ where: { id: managerId, companyId: getRequiredCompanyId() }, select: { fullName: true } })
+        .catch(() => null);
+      await this.notifications.sendToUser(userId, 'manager_assigned', {
+        ...payload,
+        managerName: mgr?.fullName ?? '',
+      });
+      await this.notifications.sendToUser(managerId, 'team_member_added', payload);
+    }
+    if (previousManagerId && previousManagerId !== managerId) {
+      await this.notifications.sendToUser(previousManagerId, 'team_member_removed', payload);
+    }
   }
 
   // ADMIN-only manager assignment. null clears it. A non-null managerId must
@@ -151,11 +202,19 @@ export class UsersService {
     const companyId = getRequiredCompanyId();
     await this.assertExists(id, companyId);
     if (managerId) await this.assertIsManager(managerId, companyId);
-    return this.prisma.user.update({
+    const before = await this.prisma.user.findFirst({
+      where: { id, companyId },
+      select: { managerId: true },
+    });
+    const updated = await this.prisma.user.update({
       where: { id },
       data: { managerId: managerId ?? null },
       select: this.publicSelect(),
     });
+    if ((before?.managerId ?? null) !== (managerId ?? null)) {
+      await this.notifyTeamChange(id, updated.fullName, managerId, before?.managerId ?? null);
+    }
+    return updated;
   }
 
   // MT-010: companyId scopes the manager lookup to the same tenant.

@@ -208,6 +208,20 @@ export class MaintenanceService {
         visibility: DocumentVisibility.CUSTOMER_VISIBLE,
       });
     }
+    if (files.length) await this.notifyAttachment(requestId, userId);
+  }
+
+  /** New photos or files on a request: the assignee and the admins look. */
+  private async notifyAttachment(id: string, actorId: string, opts: { adminsOnly?: boolean } = {}) {
+    const r = await this.notifyContext(id);
+    if (!r) return;
+    await this.notifications.sendToUsersAndRoles(
+      opts.adminsOnly ? [] : [r.assignedAdminId],
+      [UserRole.ADMIN],
+      'maintenance_attachment_added',
+      this.maintenanceLinkPayload(id, 'view_maintenance_request', { unitCode: r.unitCode }),
+      { except: actorId },
+    );
   }
 
   // ── Notifications (P4: routed through NotificationsService) ──
@@ -230,37 +244,63 @@ export class MaintenanceService {
     return { entityType: 'maintenance', entityId: id, requestId: id, action, ...extra };
   }
 
-  private async notifyCreated(id: string, unitCode: string, assignedAdminId?: string | null) {
+  private async notifyCreated(
+    id: string,
+    unitCode: string,
+    opts: { assignedAdminId?: string | null; customerId?: string; actorId?: string | null } = {},
+  ) {
     const payload = this.maintenanceLinkPayload(id, 'view_maintenance_request', { unitCode });
+    const except = { except: opts.actorId };
     await this.notifications.sendToRoles(
       [UserRole.ADMIN, UserRole.MAINTENANCE_SUPERVISOR],
       'maintenance_request_created',
       payload,
+      except,
     );
-    if (assignedAdminId) {
+    if (opts.assignedAdminId) {
       await this.notifications.sendToUser(
-        assignedAdminId,
+        opts.assignedAdminId,
         'maintenance_request_assigned',
         payload,
+        except,
+      );
+    }
+    // Opened on the customer's behalf: they learn it exists.
+    if (opts.customerId && opts.customerId !== opts.actorId) {
+      await this.notifications.sendToUser(
+        opts.customerId,
+        'maintenance_request_received',
+        payload,
+        except,
       );
     }
   }
 
   // Notify assignee + customer that a request was assigned. Best-effort.
-  private async notifyAssigned(id: string) {
+  private async notifyAssigned(id: string, previousAssigneeId: string | null, actorId?: string | null) {
     const r = await this.notifyContext(id);
     if (!r) return;
     const base = this.maintenanceLinkPayload(id, 'view_maintenance_request', { unitCode: r.unitCode });
-    await this.notifications.sendToUser(r.assignedAdminId, 'maintenance_request_assigned', base);
+    const except = { except: actorId };
+    await this.notifications.sendToUser(r.assignedAdminId, 'maintenance_request_assigned', base, except);
+    if (previousAssigneeId && previousAssigneeId !== r.assignedAdminId) {
+      await this.notifications.sendToUser(
+        previousAssigneeId,
+        'maintenance_request_unassigned',
+        base,
+        except,
+      );
+    }
     await this.notifications.sendToUser(
       r.customerId,
       'maintenance_request_status_changed',
       { ...base, statusLabel: STATUS_LABEL_AR[r.status] },
+      except,
     );
   }
 
   // Notify customer (+ assignee) of a status change. Best-effort.
-  private async notifyStatus(id: string) {
+  private async notifyStatus(id: string, actorId?: string | null) {
     const r = await this.notifyContext(id);
     if (!r) return;
     const code =
@@ -273,14 +313,16 @@ export class MaintenanceService {
       unitCode: r.unitCode,
       statusLabel: STATUS_LABEL_AR[r.status],
     });
-    await this.notifications.sendToUser(r.customerId, code, payload);
-    if (r.assignedAdminId) {
-      await this.notifications.sendToUser(
-        r.assignedAdminId,
-        'maintenance_request_status_changed',
-        payload,
-      );
-    }
+    const except = { except: actorId };
+    await this.notifications.sendToUser(r.customerId, code, payload, except);
+    // The assignee and the admins follow the request; whoever moved it knows.
+    await this.notifications.sendToUsersAndRoles(
+      [r.assignedAdminId],
+      [UserRole.ADMIN],
+      'maintenance_request_status_changed',
+      payload,
+      except,
+    );
   }
 
   private async notifyContext(id: string) {
@@ -503,14 +545,14 @@ export class MaintenanceService {
       },
     });
     await this.createRequestItems(created.id, items);
-    await this.notifyCreated(created.id, unit.code);
+    await this.notifyCreated(created.id, unit.code, { actorId: customerId });
     return created;
   }
 
   // Admin create-on-behalf. Starts APPROVED (admin is the reviewer), so the SLA
   // timer starts immediately: dueAt = now + max handling SLA across categories.
   // An optional assignee (active ADMIN/supervisor) starts the request ASSIGNED.
-  async adminCreateRequest(dto: AdminCreateRequestDto) {
+  async adminCreateRequest(dto: AdminCreateRequestDto, actorId?: string) {
     await resolveTenantUser(
       this.prisma,
       dto.customerId,
@@ -553,7 +595,11 @@ export class MaintenanceService {
       },
     });
     await this.createRequestItems(created.id, items);
-    await this.notifyCreated(created.id, unit.code, assignedAdminId);
+    await this.notifyCreated(created.id, unit.code, {
+      assignedAdminId,
+      customerId: dto.customerId,
+      actorId,
+    });
     return created;
   }
 
@@ -561,7 +607,7 @@ export class MaintenanceService {
 
   // Approve a pending request: start the SLA timer. dueAt = approvedAt + the max
   // handling SLA among the request's selected categories (null if none has one).
-  async approve(id: string) {
+  async approve(id: string, actorId?: string) {
     const req = await this.requireRequest(id);
     if (req.reviewStatus !== MaintenanceReviewStatus.PENDING) {
       throw new BadRequestException('Only a pending request can be approved');
@@ -585,15 +631,26 @@ export class MaintenanceService {
         dueAt: maxSla != null ? new Date(approvedAt.getTime() + maxSla * 60_000) : null,
       },
     });
-    await this.notifications.sendToUser(
-      req.customerId,
-      'maintenance_request_status_changed',
-      { statusLabel: 'تمت الموافقة' },
+    const r = await this.notifyContext(id);
+    const payload = this.maintenanceLinkPayload(id, 'view_maintenance_request', {
+      unitCode: r?.unitCode ?? '',
+      statusLabel: 'تمت الموافقة',
+    });
+    await this.notifications.sendToUser(req.customerId, 'maintenance_request_status_changed', payload, {
+      except: actorId,
+    });
+    // Approved = the field team can start: the assignee and the supervisors.
+    await this.notifications.sendToUsersAndRoles(
+      [req.assignedAdminId],
+      [UserRole.MAINTENANCE_SUPERVISOR],
+      'maintenance_request_approved_staff',
+      payload,
+      { except: actorId },
     );
     return updated;
   }
 
-  async reject(id: string) {
+  async reject(id: string, actorId?: string) {
     const req = await this.requireRequest(id);
     if (req.reviewStatus !== MaintenanceReviewStatus.PENDING) {
       throw new BadRequestException('Only a pending request can be rejected');
@@ -606,10 +663,15 @@ export class MaintenanceService {
         dueAt: null,
       },
     });
+    const r = await this.notifyContext(id);
     await this.notifications.sendToUser(
       req.customerId,
       'maintenance_request_status_changed',
-      { statusLabel: 'مرفوض' },
+      this.maintenanceLinkPayload(id, 'view_maintenance_request', {
+        unitCode: r?.unitCode ?? '',
+        statusLabel: 'مرفوض',
+      }),
+      { except: actorId },
     );
     return updated;
   }
@@ -626,16 +688,17 @@ export class MaintenanceService {
 
   // Assign a request to an active ADMIN. Auto-advances OPEN → ASSIGNED; never
   // downgrades a request already past ASSIGNED.
-  async assign(id: string, assignedAdminId: string) {
+  async assign(id: string, assignedAdminId: string, actorId?: string) {
     await this.assertAssignableAdmin(assignedAdminId);
     const current = await this.requireRequest(id);
+    const previousAssigneeId = current.assignedAdminId;
     const data: Prisma.MaintenanceRequestUncheckedUpdateInput = { assignedAdminId };
     if (current.status === MaintenanceStatus.OPEN) {
       data.status = MaintenanceStatus.ASSIGNED;
     }
     if (current.assignedAt == null) data.assignedAt = new Date();
     const updated = await this.prisma.maintenanceRequest.update({ where: { id }, data });
-    await this.notifyAssigned(id);
+    await this.notifyAssigned(id, previousAssigneeId, actorId);
     return updated;
   }
 
@@ -643,7 +706,7 @@ export class MaintenanceService {
   // lifecycle-timestamp side effects. These track the CURRENT lifecycle (not a
   // historical audit): a RESOLVED→IN_PROGRESS reopen clears resolvedAt, and the
   // next RESOLVED sets a fresh one.
-  async setStatus(id: string, next: MaintenanceStatus) {
+  async setStatus(id: string, next: MaintenanceStatus, actorId?: string) {
     const current = await this.requireRequest(id);
     if (current.status === next) return current; // no-op
     const allowed = STATUS_TRANSITIONS[current.status] ?? [];
@@ -663,7 +726,7 @@ export class MaintenanceService {
       if (current.resolvedAt == null) data.resolvedAt = now;
     }
     const updated = await this.prisma.maintenanceRequest.update({ where: { id }, data });
-    await this.notifyStatus(id);
+    await this.notifyStatus(id, actorId);
     return updated;
   }
 
@@ -751,7 +814,7 @@ export class MaintenanceService {
     }
     // Reuse the canonical setStatus — it re-validates against the (wider)
     // global graph and fires the best-effort notifications.
-    return this.setStatus(id, next);
+    return this.setStatus(id, next, userId);
   }
 
   async supervisorPresign(userId: string, id: string, dto: MaintenanceDocPresignDto) {
@@ -762,7 +825,9 @@ export class MaintenanceService {
   async supervisorCreateDocument(userId: string, id: string, dto: MaintenanceDocDto) {
     await this.assertSupervisorOwns(userId, id);
     // Supervisor work photos are internal by default.
-    return this.attachMaintenancePhoto(userId, id, dto, DocumentVisibility.ADMIN_ONLY);
+    const doc = await this.attachMaintenancePhoto(userId, id, dto, DocumentVisibility.ADMIN_ONLY);
+    await this.notifyAttachment(id, userId, { adminsOnly: true });
+    return doc;
   }
 
   // ── Customer self-service (scoped to request.customerId) ──────────────────
@@ -808,7 +873,9 @@ export class MaintenanceService {
   async customerCreateDocument(userId: string, id: string, dto: MaintenanceDocDto) {
     await this.assertCustomerOwns(userId, id);
     // The customer's own photo stays visible to them (and to staff).
-    return this.attachMaintenancePhoto(userId, id, dto, DocumentVisibility.CUSTOMER_VISIBLE);
+    const doc = await this.attachMaintenancePhoto(userId, id, dto, DocumentVisibility.CUSTOMER_VISIBLE);
+    await this.notifyAttachment(id, userId);
+    return doc;
   }
 
   // ── Resolution loop (Phase A): confirm / complaint / unresolved ───────────
@@ -833,7 +900,7 @@ export class MaintenanceService {
     id: string,
     code: string,
     action: string,
-    opts: { toCustomer?: boolean; extra?: Record<string, unknown> } = {},
+    opts: { toCustomer?: boolean; extra?: Record<string, unknown>; actorId?: string | null } = {},
   ) {
     const r = await this.notifyContext(id);
     if (!r) return;
@@ -845,9 +912,14 @@ export class MaintenanceService {
       action,
       ...(opts.extra ?? {}),
     };
-    await this.notifications.sendToRoles([UserRole.ADMIN], code, payload);
-    if (r.assignedAdminId) await this.notifications.sendToUser(r.assignedAdminId, code, payload);
-    if (opts.toCustomer) await this.notifications.sendToUser(r.customerId, code, payload);
+    const except = { except: opts.actorId };
+    await this.notifications.sendToUsersAndRoles(
+      [r.assignedAdminId, ...(opts.toCustomer ? [r.customerId] : [])],
+      [UserRole.ADMIN],
+      code,
+      payload,
+      except,
+    );
   }
 
   /**
@@ -878,7 +950,7 @@ export class MaintenanceService {
       id,
       'maintenance_request_resolution_confirmed',
       'view_maintenance_resolution',
-      { extra: { by: 'CUSTOMER', rating: dto.rating } },
+      { extra: { by: 'CUSTOMER', rating: dto.rating }, actorId: userId },
     );
     return this.customerFindOne(userId, id);
   }
@@ -913,7 +985,8 @@ export class MaintenanceService {
       id,
       'maintenance_request_resolution_confirmed',
       'view_maintenance_resolution',
-      { extra: { by: 'SUPERVISOR' } },
+      // The customer is asked to confirm and rate it too.
+      { extra: { by: 'SUPERVISOR' }, toCustomer: true, actorId: userId },
     );
     return this.supervisorFindOne(userId, id);
   }
@@ -946,6 +1019,7 @@ export class MaintenanceService {
       id,
       'maintenance_request_complaint_submitted',
       'review_maintenance_complaint',
+      { actorId: userId },
     );
     return this.customerFindOne(userId, id);
   }

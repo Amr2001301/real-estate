@@ -79,6 +79,7 @@ const notificationsMock = {
   sendToUsers: jest.fn().mockResolvedValue(undefined),
   brokerRecipients: jest.fn().mockResolvedValue(['broker-user-1']),
   sendToRoles: jest.fn().mockResolvedValue(undefined),
+  sendToUsersAndRoles: jest.fn().mockResolvedValue(undefined),
 };
 
 function makePrismaMock() {
