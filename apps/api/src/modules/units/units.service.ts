@@ -5,7 +5,8 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import { Prisma, UnitStatus } from '@prisma/client';
+import { Prisma, ReservationStatus, UnitStatus } from '@prisma/client';
+import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   CalcInstallmentDto,
@@ -292,7 +293,6 @@ export class UnitsService {
     if (dto.bathrooms !== undefined) data.bathrooms = dto.bathrooms;
     if (dto.floor !== undefined) data.floor = dto.floor;
     if (dto.price !== undefined) data.price = new Prisma.Decimal(dto.price);
-    if (dto.status !== undefined) data.status = dto.status;
     return this.prisma.unit.update({ where: { id }, data });
   }
 
@@ -302,6 +302,23 @@ export class UnitsService {
     if (unit.status === dto.status) return unit;
 
     return this.prisma.$transaction(async (tx) => {
+      // A unit held by a live deal keeps its status: setting it AVAILABLE
+      // let a second reservation or contract take a unit already sold or
+      // reserved. The deal's own flow (cancel) is what frees it.
+      const liveContract = await tx.contract.count({ where: { unitId: id, ...LIVE_CONTRACT_WHERE } });
+      if (liveContract > 0 && dto.status !== UnitStatus.SOLD) {
+        throw new ConflictException('على الوحدة عقد قائم — ألغِ العقد أولاً لتغيير حالتها');
+      }
+      const liveReservation = await tx.reservation.count({
+        where: {
+          unitId: id,
+          deletedAt: null,
+          status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
+        },
+      });
+      if (liveReservation > 0 && liveContract === 0 && dto.status !== UnitStatus.RESERVED) {
+        throw new ConflictException('على الوحدة حجز قائم — ألغِ الحجز أولاً لتغيير حالتها');
+      }
       const updated = await tx.unit.update({
         where: { id },
         data: {

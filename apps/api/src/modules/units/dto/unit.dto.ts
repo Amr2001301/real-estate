@@ -58,7 +58,8 @@ export class UpdateUnitDto {
   @IsOptional() @IsInt() @Min(0) bathrooms?: number;
   @IsOptional() @IsInt() @Min(0) floor?: number;
   @IsOptional() @IsNumber() @IsPositive() price?: number;
-  @IsOptional() @IsEnum(UnitStatus) status?: UnitStatus;
+  // No `status` here: a status change goes through PATCH /units/:id/status,
+  // which checks for a live reservation/contract and writes the history.
 }
 
 /** Whitelisted public sort options — each maps to a real scalar Unit column. */

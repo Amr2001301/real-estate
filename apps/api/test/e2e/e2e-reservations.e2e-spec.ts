@@ -647,6 +647,91 @@ describe('Phase 7C — Admin reservation approval / lifecycle (e2e)', () => {
       expect(row.deletedAt).toBeNull();
     });
   });
+
+  // ── DA10 — one live sale per unit ───────────────────────────────────────
+  describe('DA10: a reserved or sold unit cannot be sold a second time', () => {
+    let reservationId: string;
+    let unitId: string;
+    let otherCustomerId: string;
+
+    beforeAll(async () => {
+      ({ reservationId, unitId } = await createSalesReservation());
+      const unit = await testApp.rawPrisma.unit.findUniqueOrThrow({ where: { id: unitId }, select: { companyId: true } });
+      const other = await testApp.rawPrisma.user.create({
+        data: {
+          companyId: unit.companyId,
+          role: 'CLIENT',
+          fullName: 'DA10 Other Buyer',
+          phone: `+2010${Date.now().toString().slice(-8)}`,
+          locale: 'ar',
+        },
+        select: { id: true },
+      });
+      otherCustomerId = other.id;
+    });
+
+    afterAll(async () => {
+      await http()
+        .post(`/v1/reservations/${reservationId}/cancel`)
+        .set('Authorization', bearer(adminToken))
+        .send({ reason: 'DA10 cleanup' });
+    });
+
+    it('DA10a: the unit cannot be set AVAILABLE while its reservation is live (409)', async () => {
+      const res = await http()
+        .patch(`/v1/units/${unitId}/status`)
+        .set('Authorization', bearer(adminToken))
+        .send({ status: 'AVAILABLE', reason: 'DA10 attempt' });
+      expect(res.status).toBe(409);
+      const unit = await testApp.rawPrisma.unit.findUniqueOrThrow({ where: { id: unitId }, select: { status: true } });
+      expect(unit.status).toBe(UnitStatus.RESERVED);
+    });
+
+    it('DA10b: PATCH /units/:id no longer accepts a status (400) — status has its own guarded route', async () => {
+      const res = await http()
+        .patch(`/v1/units/${unitId}`)
+        .set('Authorization', bearer(adminToken))
+        .send({ status: 'AVAILABLE' });
+      expect(res.status).toBe(400);
+      const unit = await testApp.rawPrisma.unit.findUniqueOrThrow({ where: { id: unitId }, select: { status: true } });
+      expect(unit.status).toBe(UnitStatus.RESERVED);
+    });
+
+    it('DA10c: a direct contract for another customer on the reserved unit is refused (409)', async () => {
+      const res = await http()
+        .post('/v1/contracts')
+        .set('Authorization', bearer(adminToken))
+        .send({ customerId: otherCustomerId, unitId, totalAmount: 1_000_000 });
+      expect(res.status).toBe(409);
+      expect(await testApp.rawPrisma.contract.count({ where: { unitId } })).toBe(0);
+      const unit = await testApp.rawPrisma.unit.findUniqueOrThrow({ where: { id: unitId }, select: { status: true } });
+      expect(unit.status).toBe(UnitStatus.RESERVED);
+    });
+
+    it('DA10d: two direct contracts racing on one free unit — exactly one wins', async () => {
+      const free = await testApp.rawPrisma.unit.findFirstOrThrow({
+        where: { status: UnitStatus.AVAILABLE, id: { not: unitId } },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        select: { id: true },
+      });
+      const attempt = () =>
+        http()
+          .post('/v1/contracts')
+          .set('Authorization', bearer(adminToken))
+          .send({ customerId: otherCustomerId, unitId: free.id, totalAmount: 1_000_000 });
+      const [a, b] = await Promise.all([attempt(), attempt()]);
+      const statuses = [a.status, b.status].sort();
+      expect(statuses).toEqual([201, 409]);
+      expect(await testApp.rawPrisma.contract.count({ where: { unitId: free.id } })).toBe(1);
+
+      // A sold unit cannot be put back on sale while its contract is live.
+      const back = await http()
+        .patch(`/v1/units/${free.id}/status`)
+        .set('Authorization', bearer(adminToken))
+        .send({ status: 'AVAILABLE', reason: 'DA10 attempt' });
+      expect(back.status).toBe(409);
+    });
+  });
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
