@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../domain/entities/app_notification.dart';
+import 'notification_route.dart';
 import 'notifications_cubit.dart';
 import 'unread_count_cubit.dart';
 
@@ -302,53 +303,10 @@ bool _matches(AppNotification n, List<String> keys) {
   return keys.any(s.contains);
 }
 
-/// Resolves the in-app navigation route for a notification based on
-/// templateCode and payload fields (entityType / entityId). Returns null
-/// when no specific screen is applicable (notification stays as-is).
-String? _resolveRoute(AppNotification n) {
-  final code = n.templateCode;
-  final entityId = n.payload['entityId'] as String?;
-  final entityType = n.payload['entityType'] as String?;
-
-  // Maintenance
-  if (code.startsWith('maintenance_')) {
-    final id = entityId ?? n.payload['requestId'] as String?;
-    if (id != null && id.isNotEmpty) return '/account/maintenance/$id';
-    return '/account/maintenance';
-  }
-  // Contracts
-  if (code.startsWith('contract_') || code == 'broker_contract_signed' || code == 'broker_contract_created') {
-    final id = entityId ?? n.payload['contractId'] as String?;
-    if (id != null && id.isNotEmpty) return '/account/contracts/$id';
-    return '/account/contracts';
-  }
-  // Deposits
-  if (code.startsWith('deposit_') || code == 'payment_proof_approved' || code == 'payment_proof_rejected') {
-    final id = entityId ?? n.payload['depositId'] as String?;
-    if (id != null && id.isNotEmpty) return '/account/deposits/$id';
-    return '/account/deposits';
-  }
-  // Installments / payment proofs
-  if (code.startsWith('installment_') || code.startsWith('payment_proof_') || code == 'booking_payment_proof_submitted') {
-    final id = entityId;
-    if (id != null && id.isNotEmpty) return '/account/installments/$id/proof';
-    return '/account/installments';
-  }
-  // Visits / appointments
-  if (code.startsWith('visit_')) {
-    return '/account/requests';
-  }
-  // Reservations / finance
-  if (code.startsWith('reservation_')) {
-    return '/account/finance';
-  }
-  // Entity type fallback
-  if (entityType == 'maintenance' && entityId != null) return '/account/maintenance/$entityId';
-  if (entityType == 'contract' && entityId != null) return '/account/contracts/$entityId';
-  if (entityType == 'deposit' && entityId != null) return '/account/deposits/$entityId';
-
-  return null;
-}
+/// Resolves the in-app navigation route for a notification (shared with push
+/// taps — see [customerNotificationRoute]). Returns null when no screen applies.
+String? _resolveRoute(AppNotification n) =>
+    customerNotificationRoute(n.templateCode, n.payload);
 
 class _NotificationTile extends StatelessWidget {
   const _NotificationTile({required this.notification, required this.onTap});

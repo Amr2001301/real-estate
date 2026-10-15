@@ -5,6 +5,8 @@ import {
   Controller,
   Get,
   Headers,
+  HttpCode,
+  HttpStatus,
   Injectable,
   Logger,
   Module,
@@ -60,6 +62,10 @@ class SendNotificationDto {
   @IsString() templateCode!: string;
   @IsOptional() @IsObject() payload?: Record<string, unknown>;
   @IsOptional() @IsEnum(NotificationChannel) channel?: NotificationChannel;
+}
+
+class UnregisterDeviceDto {
+  @IsString() @IsNotEmpty() @MaxLength(4096) token!: string;
 }
 
 class RegisterDeviceDto {
@@ -121,6 +127,17 @@ type Locale = 'ar' | 'en';
 function pickLocale(header?: string): Locale {
   return (header ?? 'ar').toLowerCase().startsWith('en') ? 'en' : 'ar';
 }
+
+/** Id keys a push carries for deep links (ids only, never content). */
+const PUSH_ID_KEYS = [
+  'contractId',
+  'reservationId',
+  'leadId',
+  'depositId',
+  'installmentId',
+  'visitId',
+  'requestId',
+] as const;
 
 /** Payload fields that hold an amount of money (raw Decimal strings). */
 const MONEY_KEYS = new Set([
@@ -518,6 +535,12 @@ export class NotificationsService implements OnModuleInit {
       if (payload.entityId && typeof payload.entityId === 'string') {
         fcmData['entityId'] = payload.entityId;
       }
+      // Related ids (never content) so a push tap opens the same screen as
+      // the in-app list does.
+      for (const key of PUSH_ID_KEYS) {
+        const v = payload[key];
+        if (typeof v === 'string' && v) fcmData[key] = v;
+      }
 
       // Push and email run concurrently so SMTP latency does not stack on top
       // of FCM latency. Each promise catches its own errors and records them
@@ -655,8 +678,14 @@ export class NotificationsService implements OnModuleInit {
     return result;
   }
 
-  unregisterDevice(token: string) {
-    return this.prisma.deviceToken.deleteMany({ where: { token } });
+  /**
+   * Sign-out: this device stops receiving the user's pushes. Only the
+   * caller's own registration is removed — a token another account holds is
+   * left alone.
+   */
+  async unregisterDevice(userId: string, token: string): Promise<{ removed: number }> {
+    const { count } = await this.prisma.deviceToken.deleteMany({ where: { token, userId } });
+    return { removed: count };
   }
 
   /**
@@ -1074,6 +1103,13 @@ class NotificationsController {
   @Post('me/devices')
   registerDevice(@CurrentUser() user: AuthUser, @Body() dto: RegisterDeviceDto) {
     return this.svc.registerDevice(user.sub, dto);
+  }
+
+  // Called by the apps on sign-out, before the session is revoked.
+  @Post('me/devices/unregister')
+  @HttpCode(HttpStatus.OK)
+  unregisterDevice(@CurrentUser() user: AuthUser, @Body() dto: UnregisterDeviceDto) {
+    return this.svc.unregisterDevice(user.sub, dto.token);
   }
 }
 

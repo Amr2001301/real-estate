@@ -45,3 +45,11 @@ class RegisterDevice implements UseCase<void, RegisterDeviceParams> {
   Future<Result<void>> call(RegisterDeviceParams params) =>
       _repo.registerDevice(params.token, params.platform);
 }
+
+class UnregisterDevice implements UseCase<void, String> {
+  const UnregisterDevice(this._repo);
+  final NotificationsRepository _repo;
+
+  @override
+  Future<Result<void>> call(String token) => _repo.unregisterDevice(token);
+}

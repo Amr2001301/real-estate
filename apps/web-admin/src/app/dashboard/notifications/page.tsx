@@ -5,6 +5,7 @@ import type { NotificationItem, Paged } from '@/lib/types';
 import { formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { NotificationList } from '@/components/notifications/notification-list';
+import { Pagination } from '@/components/ui/pagination';
 import { PremiumPageHero, PremiumMetricStrip } from '@/components/premium';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
@@ -30,19 +31,37 @@ function extractItems(value: unknown): NotificationItem[] {
   return [];
 }
 
-export default async function AdminNotificationsInboxPage() {
-  const [locale, res] = await Promise.all([
-    getLocale(),
-    safe(api.get<Paged<NotificationItem> | NotificationItem[]>('/me/notifications')),
+const PAGE_SIZE = 20;
+
+export default async function AdminNotificationsInboxPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const page = Math.max(1, Number(Array.isArray(sp.page) ? sp.page[0] : sp.page) || 1);
+  const locale = await getLocale();
+  // The server writes each title and message in the reader's language.
+  const lang = { headers: { 'Accept-Language': locale } };
+  const [res, unreadRes] = await Promise.all([
+    safe(
+      api.get<Paged<NotificationItem> | NotificationItem[]>(
+        `/me/notifications?page=${page}&pageSize=${PAGE_SIZE}`,
+        lang,
+      ),
+    ),
+    safe(api.get<{ count: number }>('/me/notifications/unread-count')),
   ]);
   const m = uiT(locale).pages.notifications;
 
   const items = extractItems(res.data);
-
-  const unreadCount = items.filter((n) => !n.read).length;
-  const readCount = items.length - unreadCount;
+  // Totals across every page, not only the one shown.
+  const total =
+    res.data && !Array.isArray(res.data) && res.data.meta ? res.data.meta.total : items.length;
+  const unreadCount = unreadRes.data?.count ?? items.filter((n) => !n.read).length;
+  const readCount = Math.max(0, total - unreadCount);
   // Backend returns items sorted newest-first; first item is the most recent.
-  const lastDate = items.length > 0 ? (items[0]?.createdAt ?? null) : null;
+  const lastDate = page === 1 && items.length > 0 ? (items[0]?.createdAt ?? null) : null;
 
   return (
     <div className="space-y-5">
@@ -73,7 +92,7 @@ export default async function AdminNotificationsInboxPage() {
       <PremiumMetricStrip
         variant="compact"
         metrics={[
-          { label: m.kpi.total, value: items.length, icon: <Inbox /> },
+          { label: m.kpi.total, value: total, icon: <Inbox /> },
           {
             label: m.kpi.unread,
             value: unreadCount,
@@ -94,7 +113,14 @@ export default async function AdminNotificationsInboxPage() {
         </div>
       )}
 
-      <NotificationList items={items} basePath="/dashboard" />
+      <NotificationList items={items} basePath="/dashboard" locale={locale} />
+      <Pagination
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={total}
+        basePath="/dashboard/notifications"
+        locale={locale}
+      />
     </div>
   );
 }

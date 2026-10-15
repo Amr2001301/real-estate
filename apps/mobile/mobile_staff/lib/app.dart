@@ -200,6 +200,7 @@ class StaffApp extends StatelessWidget {
           create: (ctx) => PushRegistrationService(
             const FirebasePushTokenProvider(),
             RegisterDevice(ctx.read<NotificationsRepository>()),
+            UnregisterDevice(ctx.read<NotificationsRepository>()),
           ),
         ),
       ],
@@ -210,10 +211,12 @@ class StaffApp extends StatelessWidget {
             BlocProvider<StaffAuthCubit>(
               create: (ctx) {
                 final repo = ctx.read<StaffAuthRepository>();
+                final push = ctx.read<PushRegistrationService>();
                 return StaffAuthCubit(
                   sessionCubit: ctx.read<SessionCubit>(),
                   loginStaff: LoginStaff(repo),
                   logoutStaff: LogoutStaff(repo),
+                  beforeLogout: push.unregisterIfPossible,
                 );
               },
             ),
@@ -279,10 +282,14 @@ class _StaffRootState extends State<_StaffRoot> {
     super.dispose();
   }
 
+  /// Broker users open the broker portal's screens from a notification.
+  bool _isBroker() =>
+      mounted && context.read<SessionCubit>().state.role == AppRole.broker;
+
   void _wireFcm() {
     try {
       _fcmOpenSub = FirebaseMessaging.onMessageOpenedApp.listen((msg) {
-        final route = resolveStaffFcmRoute(msg);
+        final route = resolveStaffFcmRoute(msg, isBroker: _isBroker());
         if (route != null) router.push(route);
       });
       // App in foreground → branded in-app banner + refresh unread badge.
@@ -300,7 +307,7 @@ class _StaffRootState extends State<_StaffRoot> {
         if (notifId != null && notifId == _lastBannerId) return;
         _lastBannerId = notifId;
 
-        final route = resolveStaffFcmRoute(msg);
+        final route = resolveStaffFcmRoute(msg, isBroker: _isBroker());
         HapticFeedback.lightImpact();
         _playForegroundSound();
         showAppNotificationBanner(

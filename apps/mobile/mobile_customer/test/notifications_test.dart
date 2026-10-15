@@ -25,6 +25,8 @@ class _FakeNotificationsRepository implements NotificationsRepository {
   @override
   Future<Result<void>> registerDevice(String token, String platform) async =>
       const Ok(null);
+  @override
+  Future<Result<void>> unregisterDevice(String token) async => const Ok(null);
 }
 
 void main() {

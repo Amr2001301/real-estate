@@ -430,13 +430,16 @@ export interface MeMaintenanceRequestDetail extends MeMaintenanceRequest {
 }
 
 /**
- * A user's own notification — item shape of GET /v1/me/notifications (plain
- * array, limit 100). Records carry only templateCode + payload (no title/body),
- * so the UI maps templateCode → Arabic label with a generic fallback.
+ * A user's own notification — item shape of GET /v1/me/notifications
+ * (paginated). `title` / `body` are rendered by the server in the request's
+ * language (Accept-Language), amounts in the company currency; the UI falls
+ * back to a templateCode label only when they are missing.
  */
 export interface MeNotification {
   id: string;
   templateCode: string;
+  title?: string;
+  body?: string;
   payload: Record<string, unknown> | null;
   channel: string;
   /** GET /v1/me/notifications returns a resolved `read` boolean (derived from

@@ -213,6 +213,14 @@ describe('NotificationsService foundation', () => {
     });
   });
 
+  it("sign-out removes only the caller's own device registration", async () => {
+    const { svc, prisma } = setup();
+    const deleteMany = jest.fn().mockResolvedValue({ count: 1 });
+    Object.assign(prisma, { deviceToken: { deleteMany } });
+    await expect(svc.unregisterDevice('u-1', 'fcm-token')).resolves.toEqual({ removed: 1 });
+    expect(deleteMany).toHaveBeenCalledWith({ where: { token: 'fcm-token', userId: 'u-1' } });
+  });
+
   describe('brokerRecipients', () => {
     const where = (prisma: ReturnType<typeof setup>['prisma']) =>
       prisma.brokerUser.findMany.mock.calls[0][0].where;
