@@ -137,3 +137,58 @@ export async function recordInstallmentPaymentAction(
   revalidatePath('/dashboard/deposits');
   return {};
 }
+
+const num = (v: ReturnType<FormData["get"]>) => Number(String(v ?? '').trim() || 0);
+const str = (v: ReturnType<FormData["get"]>) => String(v ?? '').trim() || undefined;
+
+// Cancels the contract with the amounts the admin settled (pre-filled from the
+// company's cancellation policy).
+export async function cancelContractAction(id: string, formData: FormData): Promise<ContractFormState> {
+  try {
+    await api.post(`/contracts/${id}/cancel`, {
+      reason: str(formData.get('reason')),
+      retainedAmount: num(formData.get('retainedAmount')),
+      refundAmount: num(formData.get('refundAmount')),
+      financialNotes: str(formData.get('financialNotes')),
+      unitReleaseOverride: str(formData.get('unitRelease')),
+      commissionActionOverride: str(formData.get('commissionAction')),
+      bonusActionOverride: str(formData.get('bonusAction')),
+      demoteCustomerOverride: formData.get('demoteCustomer') === 'on',
+    });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/dashboard/contracts/${id}`);
+  revalidatePath('/dashboard/contracts');
+  return { ok: true };
+}
+
+// Records money paid back to the customer of a cancelled contract.
+export async function recordRefundAction(id: string, formData: FormData): Promise<ContractFormState> {
+  try {
+    await api.post(`/contracts/${id}/refunds`, {
+      amount: num(formData.get('amount')),
+      paymentMethod: str(formData.get('paymentMethod')),
+      referenceNumber: str(formData.get('referenceNumber')),
+      bankName: str(formData.get('bankName')),
+      paidAt: str(formData.get('paidAt')),
+      notes: str(formData.get('notes')),
+    });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/dashboard/contracts/${id}`);
+  return { ok: true };
+}
+
+// Puts the unit of a cancelled contract back on sale.
+export async function releaseContractUnitAction(id: string): Promise<ContractFormState> {
+  try {
+    await api.post(`/contracts/${id}/release-unit`, {});
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/dashboard/contracts/${id}`);
+  return { ok: true };
+}
+

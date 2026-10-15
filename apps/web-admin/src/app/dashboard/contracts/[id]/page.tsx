@@ -16,7 +16,7 @@ import {
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import { ExportMenu } from '@/components/export-menu';
-import type { Contract } from '@/lib/types';
+import type { CancellationSuggestion, Contract, ContractCancellationView } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { cn } from '@/lib/cn';
@@ -30,6 +30,8 @@ import { createInstallmentPlanAction } from '../actions';
 import { RecordPaymentButton } from './record-payment-button';
 import { AssignContractNumber } from './assign-number';
 import { SignFollowupsAlert } from './sign-followups-alert';
+import { CancelContract } from './cancel-contract';
+import { CancellationPanel } from './cancellation-panel';
 import { PrintButton } from '@/components/print/PrintButton';
 import {
   PremiumPageHero,
@@ -93,6 +95,17 @@ export default async function ContractDetailPage({
     tx(contract.unit?.building?.phase?.project?.name) || '—';
   const displayNumber = contract.contractNumber ?? contract.id.slice(0, 8);
   const customerEmail = (contract.customer as { email?: string | null } | undefined)?.email;
+  // A cancelled contract shows its cancellation and refunds; an admin sees
+  // the cancel form (pre-filled from the cancellation policy) on a live one.
+  const isCancelled = contract.status === 'CANCELLED';
+  const [cancellation, suggestion] = await Promise.all([
+    isCancelled && isAdmin
+      ? safe(api.get<ContractCancellationView>(`/contracts/${id}/cancellation`)).then((x) => x.data)
+      : Promise.resolve(null),
+    !isCancelled && isAdmin
+      ? safe(api.get<CancellationSuggestion>(`/contracts/${id}/cancellation-suggestion`)).then((x) => x.data)
+      : Promise.resolve(null),
+  ]);
 
   return (
     <div className="space-y-5 pb-2">
@@ -105,7 +118,12 @@ export default async function ContractDetailPage({
           { label: displayNumber },
         ]}
         meta={
-          contract.signedAt ? (
+          isCancelled ? (
+            <span className="inline-flex items-center gap-1.5 text-xs text-danger-700 bg-danger-50 px-2.5 py-1 rounded-full border border-danger-100">
+              <AlertCircle className="h-3.5 w-3.5" />
+              {m.cancelledBadge}
+            </span>
+          ) : contract.signedAt ? (
             <span className="inline-flex items-center gap-1.5 text-xs text-success-700 bg-success-50 px-2.5 py-1 rounded-full border border-success-100">
               <CheckCircle2 className="h-3.5 w-3.5" />
               {m.metaSigned} · {formatDate(contract.signedAt, locale)}
@@ -120,11 +138,24 @@ export default async function ContractDetailPage({
         actions={<PrintButton path="contracts" id={contract.id} label={printT(locale).common.print} />}
       />
 
-      {isAdmin && contract.signFollowupFailed && <SignFollowupsAlert id={contract.id} locale={locale} />}
+      {isAdmin && contract.signFollowupFailed && !isCancelled && (
+        <SignFollowupsAlert id={contract.id} locale={locale} />
+      )}
 
       <PremiumDetailLayout
         main={
           <>
+            {cancellation && (
+              <PremiumSectionCard title={m.cancellationTitle} icon={<AlertCircle />}>
+                <CancellationPanel
+                  id={contract.id}
+                  cancellation={cancellation}
+                  currency={currency}
+                  canManage={isAdmin}
+                  locale={locale}
+                />
+              </PremiumSectionCard>
+            )}
             {/* Contract key info */}
             <PremiumSectionCard title={m.sectionContractData} icon={<FileText />}>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-5">
@@ -468,6 +499,12 @@ export default async function ContractDetailPage({
                 </div>
               )}
             </PremiumSectionCard>
+
+            {suggestion && (
+              <PremiumSectionCard title={m.cancelTitle} icon={<AlertCircle />}>
+                <CancelContract id={contract.id} suggestion={suggestion} currency={currency} locale={locale} />
+              </PremiumSectionCard>
+            )}
           </>
         }
         side={
