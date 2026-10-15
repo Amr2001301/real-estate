@@ -14,18 +14,33 @@ void main() {
       );
     });
 
-    test('only list screens: detail screens need the loaded object', () {
+    test('opens the item the payload names, else its list', () {
       expect(
         customerNotificationRoute('maintenance_request_resolved', {
           'entityType': 'maintenance',
           'entityId': 'mr-1',
         }),
-        '/account/maintenance',
+        '/account/maintenance/mr-1',
       );
-      expect(customerNotificationRoute('contract_number_assigned', {'entityId': 'c-1'}),
-          '/account/contracts');
-      expect(customerNotificationRoute('deposit_reversed', {'entityType': 'contract'}),
-          '/account/deposits');
+      expect(
+        customerNotificationRoute('contract_number_assigned', {
+          'entityType': 'contract',
+          'entityId': 'c-1',
+        }),
+        '/account/contracts/c-1',
+      );
+      expect(customerNotificationRoute('payment_proof_approved', {'depositId': 'd-1'}),
+          '/account/deposits/d-1');
+      // A reversal names the contract, not the deposit: the payments list.
+      expect(
+        customerNotificationRoute('deposit_reversed', {
+          'entityType': 'contract',
+          'entityId': 'c-1',
+        }),
+        '/account/deposits',
+      );
+      expect(customerNotificationRoute('maintenance_request_closed', const {}),
+          '/account/maintenance');
     });
 
     test('push data and in-app payloads resolve the same way', () {
