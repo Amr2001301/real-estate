@@ -26,6 +26,7 @@ import {
   ContractStatus,
   DepositReviewStatus,
   InstallmentStatus,
+  LeadStage,
   PaymentInstrumentStatus,
   Prisma,
   UnitStatus,
@@ -112,6 +113,7 @@ export class ContractCancellationService {
         customerId: true,
         signedAt: true,
         totalAmount: true,
+        reservation: { select: { id: true, leadId: true } },
       },
     });
     if (!contract) throw new NotFoundException('Contract not found');
@@ -351,6 +353,36 @@ export class ContractCancellationService {
         }
       }
 
+      // 7b. The lead's sale fell through: WON → LOST, unless the same lead
+      // still has another live contract (it bought another unit too).
+      let leadLostId: string | null = null;
+      const leadId = contract.reservation?.leadId ?? null;
+      if (leadId) {
+        const lead = await tx.lead.findFirst({ where: { id: leadId, companyId }, select: { stage: true } });
+        const otherSale =
+          lead?.stage === LeadStage.WON
+            ? await tx.reservation.count({
+                where: {
+                  leadId,
+                  companyId,
+                  id: { not: contract.reservation!.id },
+                  contract: { ...LIVE_CONTRACT_WHERE, id: { not: contractId } },
+                },
+              })
+            : 1;
+        if (otherSale === 0) {
+          await tx.lead.update({ where: { id: leadId }, data: { stage: LeadStage.LOST } });
+          await tx.leadActivity.create({
+            data: {
+              leadId,
+              type: 'status_change',
+              payload: { from: LeadStage.WON, to: LeadStage.LOST, reason: 'contract_cancelled', contractId },
+            },
+          });
+          leadLostId = leadId;
+        }
+      }
+
       // 8. Create ContractCancellation row (operator amounts stored as-is)
       const cc = await tx.contractCancellation.create({
         data: {
@@ -397,6 +429,7 @@ export class ContractCancellationService {
             refundAmount: input.refundAmount,
             cancelledInstallmentsCount,
             cancelledInstrumentIds,
+            leadLostId,
             commissionAction: effectiveCommissionAction,
             commissionClawbackIds,
             bonusAction: effectiveBonusAction,

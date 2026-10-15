@@ -78,6 +78,12 @@ function buildTx() {
     unit: { update: jest.fn().mockResolvedValue({}) },
     unitStatusHistory: { create: jest.fn().mockResolvedValue({}) },
     unitMaintenanceItem: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    lead: {
+      findFirst: jest.fn().mockResolvedValue({ stage: 'WON' }),
+      update: jest.fn().mockResolvedValue({}),
+    },
+    leadActivity: { create: jest.fn().mockResolvedValue({}) },
+    reservation: { count: jest.fn().mockResolvedValue(0) },
     user: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     refreshToken: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     contractCancellation: {
@@ -393,6 +399,40 @@ describe('ContractCancellationService.cancel()', () => {
     expect(prisma._tx.refreshToken.updateMany).not.toHaveBeenCalled();
     const ccData = (prisma._tx.contractCancellation.create.mock.calls[0]?.[0] as { data: Record<string, unknown> }).data;
     expect(ccData['customerDemotedAt']).toBeNull();
+  });
+
+  it('CC-U-7c: the lead of the cancelled sale goes WON → LOST', async () => {
+    const prisma = buildPrisma({});
+    prisma.contract.findFirst.mockResolvedValue({
+      id: CONTRACT_ID, status: ContractStatus.ACTIVE, unitId: UNIT_ID, customerId: CUSTOMER_ID,
+      signedAt: new Date('2026-09-01'), totalAmount: new Prisma.Decimal(2_500_000),
+      reservation: { id: 'res-1', leadId: 'lead-1' },
+    });
+    const svc = buildSvc(prisma);
+
+    await svc.cancel(CONTRACT_ID, BASE_INPUT, ACTOR_ID);
+
+    expect(prisma._tx.lead.update).toHaveBeenCalledWith({ where: { id: 'lead-1' }, data: { stage: 'LOST' } });
+    expect(prisma._tx.leadActivity.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ leadId: 'lead-1', payload: expect.objectContaining({ to: 'LOST', reason: 'contract_cancelled' }) }),
+      }),
+    );
+  });
+
+  it('CC-U-7d: the lead stays WON while it has another live sale', async () => {
+    const prisma = buildPrisma({});
+    prisma.contract.findFirst.mockResolvedValue({
+      id: CONTRACT_ID, status: ContractStatus.ACTIVE, unitId: UNIT_ID, customerId: CUSTOMER_ID,
+      signedAt: new Date('2026-09-01'), totalAmount: new Prisma.Decimal(2_500_000),
+      reservation: { id: 'res-1', leadId: 'lead-1' },
+    });
+    prisma._tx.reservation.count.mockResolvedValue(1);
+    const svc = buildSvc(prisma);
+
+    await svc.cancel(CONTRACT_ID, BASE_INPUT, ACTOR_ID);
+
+    expect(prisma._tx.lead.update).not.toHaveBeenCalled();
   });
 
   it('CC-U-8: UNSIGNED contract (signedAt=null) — CC row still created with financial amounts', async () => {

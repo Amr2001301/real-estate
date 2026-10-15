@@ -47,7 +47,7 @@
  */
 
 import request from 'supertest';
-import { BonusEntryStatus, BrokerCommissionStatus, BrokerPayoutStatus, ClawbackStatus, ContractStatus, InstallmentStatus, PaymentInstrumentStatus, PaymentInstrumentType, UnitStatus } from '@prisma/client';
+import { BonusEntryStatus, BrokerCommissionStatus, BrokerPayoutStatus, ClawbackStatus, ContractStatus, InstallmentStatus, LeadStage, PaymentInstrumentStatus, PaymentInstrumentType, UnitStatus } from '@prisma/client';
 import { type TestApp, createSecurityTestApp } from '../setup-app';
 import { bearer, loginAs } from '../helpers/login';
 import {
@@ -1076,6 +1076,75 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
       await raw.installmentPlan.deleteMany({ where: { id: plan.id } }).catch(() => void 0);
       await raw.contract.deleteMany({ where: { id: contract.id } }).catch(() => void 0);
       await raw.unit.deleteMany({ where: { id: unit.id } }).catch(() => void 0);
+    }
+  });
+
+  // ── D3-15: the cancelled sale's lead becomes LOST ─────────────────────────
+  // A lead that bought two units keeps WON when only one contract is
+  // cancelled; cancelling the second one makes it LOST.
+  it('D3-15: lead goes WON → LOST only when its last live contract is cancelled', async () => {
+    const raw = testApp.rawPrisma;
+    const companyId = fx.companies.aId;
+    const lead = await raw.lead.create({
+      data: { clientId: fx.users.customerA.id, fullName: 'D3-15 Lead', phone: '+201000000315', stage: LeadStage.WON, companyId },
+    });
+    const made: { unitId: string; reservationId: string; contractId: string }[] = [];
+    for (const code of ['D3-LEAD-UNIT-1', 'D3-LEAD-UNIT-2']) {
+      const unit = await raw.unit.create({
+        data: { buildingId: fx.resources.a.buildingId, code, type: '1BR', area: 80, price: 500_000, status: UnitStatus.SOLD, companyId },
+      });
+      const reservation = await raw.reservation.create({
+        data: {
+          unitId: unit.id,
+          salesId: fx.users.sales1A.id,
+          clientId: fx.users.customerA.id,
+          leadId: lead.id,
+          status: 'CONVERTED',
+          expiresAt: new Date(Date.now() + 86_400_000),
+          companyId,
+        },
+      });
+      const contract = await raw.contract.create({
+        data: {
+          customerId: fx.users.customerA.id,
+          unitId: unit.id,
+          reservationId: reservation.id,
+          totalAmount: 500_000,
+          signedAt: new Date(),
+          status: ContractStatus.ACTIVE,
+          companyId,
+        },
+      });
+      made.push({ unitId: unit.id, reservationId: reservation.id, contractId: contract.id });
+    }
+    const cancel = (contractId: string) =>
+      request(testApp.app.getHttpServer())
+        .post(`/v1/contracts/${contractId}/cancel`)
+        .set('Authorization', bearer(adminAToken))
+        .set('X-Tenant-Slug', SEC_SLUG_A)
+        .send({ reason: 'D3-15', retainedAmount: 0, refundAmount: 0, demoteCustomerOverride: false })
+        .expect(201);
+    const stage = async () => (await raw.lead.findUniqueOrThrow({ where: { id: lead.id } })).stage;
+
+    try {
+      await cancel(made[0]!.contractId);
+      expect(await stage()).toBe(LeadStage.WON);
+
+      await cancel(made[1]!.contractId);
+      expect(await stage()).toBe(LeadStage.LOST);
+      const activity = await raw.leadActivity.findFirst({
+        where: { leadId: lead.id, type: 'status_change' },
+        orderBy: { createdAt: 'desc' },
+      });
+      expect(activity?.payload).toMatchObject({ from: 'WON', to: 'LOST', reason: 'contract_cancelled' });
+    } finally {
+      const contractIds = made.map((m) => m.contractId);
+      await raw.contractCancellation.deleteMany({ where: { contractId: { in: contractIds } } }).catch(() => void 0);
+      await raw.contract.deleteMany({ where: { id: { in: contractIds } } }).catch(() => void 0);
+      await raw.reservation.deleteMany({ where: { id: { in: made.map((m) => m.reservationId) } } }).catch(() => void 0);
+      await raw.unit.deleteMany({ where: { id: { in: made.map((m) => m.unitId) } } }).catch(() => void 0);
+      await raw.leadActivity.deleteMany({ where: { leadId: lead.id } }).catch(() => void 0);
+      await raw.lead.deleteMany({ where: { id: lead.id } }).catch(() => void 0);
     }
   });
 
