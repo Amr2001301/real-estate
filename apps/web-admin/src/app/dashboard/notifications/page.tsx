@@ -6,6 +6,10 @@ import { formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { NotificationList } from '@/components/notifications/notification-list';
 import { Pagination } from '@/components/ui/pagination';
+import {
+  NotificationPreferences,
+  type NotificationPrefs,
+} from '@/components/notifications/notification-preferences';
 import { PremiumPageHero, PremiumMetricStrip } from '@/components/premium';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
@@ -52,6 +56,7 @@ export default async function AdminNotificationsInboxPage({
     ),
     safe(api.get<{ count: number }>('/me/notifications/unread-count')),
   ]);
+  const prefsRes = await safe(api.get<NotificationPrefs>('/users/me/notification-preferences'));
   const m = uiT(locale).pages.notifications;
 
   const items = extractItems(res.data);
@@ -121,6 +126,8 @@ export default async function AdminNotificationsInboxPage({
         basePath="/dashboard/notifications"
         locale={locale}
       />
+
+      {prefsRes.data && <NotificationPreferences initial={prefsRes.data} locale={locale} />}
     </div>
   );
 }

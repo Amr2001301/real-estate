@@ -153,6 +153,26 @@ describe('accounts', () => {
   });
 });
 
+describe('notification preferences', () => {
+  it('saving changes only the groups sent, on the caller\'s own row', async () => {
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const prisma = {
+      user: {
+        findFirst: jest.fn().mockResolvedValue({ notificationPrefs: { email: { sales: false } } }),
+        updateMany,
+      },
+    };
+    const svc = new UsersService(prisma as never, {} as never, {} as never, {} as never);
+    const next = await asTenant(() =>
+      svc.updateNotificationPreferences('u-1', { push: { finance: false } }),
+    );
+    expect(next.email.sales).toBe(false); // kept
+    expect(next.push.finance).toBe(false); // changed
+    expect(next.push.sales).toBe(true);
+    expect(updateMany.mock.calls[0][0].where).toEqual({ id: 'u-1', companyId: 'co-1' });
+  });
+});
+
 describe('subscription', () => {
   it('the daily check tells each company its subscription expired, inside that company', async () => {
     const notifications = makeNotifications();

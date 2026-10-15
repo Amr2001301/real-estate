@@ -5,6 +5,10 @@ import type { NotificationItem } from '@/lib/types';
 import { PremiumPageHero } from '@/components/premium';
 import { NotificationList } from '@/components/notifications/notification-list';
 import { Pagination } from '@/components/ui/pagination';
+import {
+  NotificationPreferences,
+  type NotificationPrefs,
+} from '@/components/notifications/notification-preferences';
 
 const PAGE_SIZE = 20;
 
@@ -41,6 +45,7 @@ export default async function PortalNotificationsPage({
     ),
   );
   const items = normalizeNotifications(res.data);
+  const prefsRes = await safe(api.get<NotificationPrefs>('/users/me/notification-preferences'));
   const total = typeof res.data?.meta?.total === 'number' ? res.data.meta.total : items.length;
 
   return (
@@ -68,6 +73,8 @@ export default async function PortalNotificationsPage({
         basePath="/portal/notifications"
         locale={locale}
       />
+
+      {prefsRes.data && <NotificationPreferences initial={prefsRes.data} locale={locale} />}
     </div>
   );
 }

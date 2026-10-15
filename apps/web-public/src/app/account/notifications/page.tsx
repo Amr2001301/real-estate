@@ -12,6 +12,10 @@ import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { NotificationCard } from '@/components/account/NotificationCard';
 import { Pagination } from '@/components/projects/Pagination';
+import {
+  NotificationPreferencesForm,
+  type NotificationPrefs,
+} from '@/components/account/NotificationPreferencesForm';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { markAllNotificationsReadAction } from '@/lib/account-actions';
@@ -44,6 +48,7 @@ export default async function AccountNotificationsPage({ searchParams }: { searc
 
   let raw: Paginated<MeNotification> | MeNotification[];
   let unreadCount = 0;
+  let prefs: NotificationPrefs | null = null;
   try {
     // The server writes each title and message in the reader's language.
     const lang = { headers: { 'Accept-Language': locale } };
@@ -56,6 +61,7 @@ export default async function AccountNotificationsPage({ searchParams }: { searc
     ]);
     raw = list;
     unreadCount = unread?.count ?? 0;
+    prefs = await authFetch<NotificationPrefs>('/users/me/notification-preferences').catch(() => null);
   } catch (e) {
     if (e instanceof AuthError) redirect('/login');
     return (
@@ -118,6 +124,8 @@ export default async function AccountNotificationsPage({ searchParams }: { searc
           <Pagination page={page} totalPages={totalPages} buildHref={buildHref} />
         </>
       )}
+
+      {prefs && <NotificationPreferencesForm prefs={prefs} m={m} />}
     </div>
   );
 }

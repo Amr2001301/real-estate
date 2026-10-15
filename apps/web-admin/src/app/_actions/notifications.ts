@@ -167,3 +167,18 @@ export async function markAllNotificationsReadAction(formData: FormData) {
   revalidatePath(`${base}/notifications`);
   revalidatePath(base);
 }
+
+// ── The caller's own e-mail / push preferences ───────────────────────────────
+
+export async function updateNotificationPreferencesAction(
+  channel: 'email' | 'push',
+  group: 'sales' | 'finance' | 'maintenance' | 'account',
+  value: boolean,
+): Promise<{ error?: string }> {
+  try {
+    await api.put('/users/me/notification-preferences', { [channel]: { [group]: value } });
+    return {};
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
