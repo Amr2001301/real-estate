@@ -179,6 +179,7 @@ function makePrismaMock() {
     user: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
     contract: {
       findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
       create: jest.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
         id: 'new-contract-id',
         contractNumber: data.contractNumber,

@@ -110,6 +110,7 @@ function makePrismaMock() {
   }));
   const txUserUpdateMany = jest.fn().mockResolvedValue({ count: 0 });
   const txUnitUpdate = jest.fn().mockResolvedValue({});
+  const txUnitUpdateMany = jest.fn().mockResolvedValue({ count: 1 });
   const txUnitStatusHistoryCreate = jest.fn().mockResolvedValue({});
 
   const mock = {
@@ -168,9 +169,10 @@ function makePrismaMock() {
       if (Array.isArray(ops)) return Promise.all(ops);
       if (typeof ops === 'function') {
         const tx: Record<string, unknown> = {
-          contract: { create: txContractCreate },
+          contract: { create: txContractCreate, count: jest.fn().mockResolvedValue(0) },
+          reservation: { count: jest.fn().mockResolvedValue(0) },
           user: { updateMany: txUserUpdateMany },
-          unit: { update: txUnitUpdate },
+          unit: { update: txUnitUpdate, updateMany: txUnitUpdateMany },
           unitStatusHistory: { create: txUnitStatusHistoryCreate },
         };
         return (ops as (tx: unknown) => Promise<unknown>)(tx);

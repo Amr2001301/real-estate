@@ -177,6 +177,7 @@ function makePrismaMock() {
     },
     contract: {
       findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
       // P12 — ContractsService.handleConvertedContract looks the contract up
       // (buildContractPayload, owner-exists check, notify lookup).
       findUnique: jest.fn().mockResolvedValue({

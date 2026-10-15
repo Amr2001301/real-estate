@@ -128,6 +128,8 @@ function makePrismaMock() {
       const tx = {
         unit: m.unit,
         unitStatusHistory: m.unitStatusHistory,
+        reservation: m.reservation,
+        contract: m.contract,
       };
       return (ops as (tx: unknown) => Promise<unknown>)(tx);
     }

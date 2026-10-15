@@ -39,6 +39,7 @@ import {
   Prisma,
   UnitStatus,
   UserRole,
+  ReservationStatus,
 } from '@prisma/client';
 import { isContractNumberConflict, nextContractNumber } from '../../common/utils/contract-number';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -62,7 +63,7 @@ import { BonusService } from '../bonus/bonus.module';
 import { CancellationPolicyService } from './cancellation-policy.service';
 import { ContractCancellationService } from './contract-cancellation.service';
 import { reportFailure } from '../../common/observability/report-failure';
-import { CONTRACT_CANCELLED_MESSAGE, isDeadContract } from '../installments/live-contract';
+import { CONTRACT_CANCELLED_MESSAGE, LIVE_CONTRACT_WHERE, isDeadContract } from '../installments/live-contract';
 import { ContractRefundsService, RecordRefundDto } from './contract-refunds.service';
 
 // ── P12 legacy backfill helpers ─────────────────────────────────────────────
@@ -428,6 +429,26 @@ export class ContractsService {
   ) {
     let customerPromoted = false;
     const contract = await this.prisma.$transaction(async (tx) => {
+      // One live sale per unit. Claim the unit first: the row lock makes a
+      // concurrent create wait and then find it SOLD.
+      const claimed = await tx.unit.updateMany({
+        where: { id: dto.unitId, status: { not: UnitStatus.SOLD } },
+        data: { status: UnitStatus.SOLD, reservationExpiresAt: null },
+      });
+      if (claimed.count === 0) throw new ConflictException('الوحدة مباعة بالفعل');
+      const liveContract = await tx.contract.count({ where: { unitId: dto.unitId, ...LIVE_CONTRACT_WHERE } });
+      if (liveContract > 0) throw new ConflictException('على الوحدة عقد قائم بالفعل');
+      // A unit reserved for someone else is theirs until that reservation is
+      // cancelled or converted.
+      const heldForOther = await tx.reservation.count({
+        where: {
+          unitId: dto.unitId,
+          deletedAt: null,
+          status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
+          NOT: { OR: [{ clientId: dto.customerId }, { lead: { is: { clientId: dto.customerId } } }] },
+        },
+      });
+      if (heldForOther > 0) throw new ConflictException('الوحدة محجوزة لعميل آخر — ألغِ الحجز أولاً');
       const created = await tx.contract.create({
         data: {
           contractNumber,
@@ -460,12 +481,8 @@ export class ContractsService {
           data: { revokedAt: new Date() },
         });
       }
-      // Mark unit SOLD
+      // Unit already marked SOLD by the claim above.
       const previous = unit.status;
-      await tx.unit.update({
-        where: { id: dto.unitId },
-        data: { status: UnitStatus.SOLD, reservationExpiresAt: null },
-      });
       await tx.unitStatusHistory.create({
         data: {
           unitId: dto.unitId,

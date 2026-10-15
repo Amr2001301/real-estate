@@ -48,6 +48,7 @@ import {
   UnitStatus,
   UserRole,
 } from '@prisma/client';
+import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 import { nextContractNumber } from '../../common/utils/contract-number';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { findTenantUser } from '../../common/tenant/resolve-tenant-entity';
@@ -1839,6 +1840,14 @@ export class ReservationsService {
 
       try {
         const result = await this.prisma.$transaction(async (tx) => {
+          // 0. One live sale per unit: a contract made directly on this unit
+          // (or a manual status change) must not be followed by a second one.
+          const liveOnUnit = await tx.contract.count({
+            where: { unitId: reservation.unitId, ...LIVE_CONTRACT_WHERE },
+          });
+          if (liveOnUnit > 0) {
+            throw new ConflictException('على الوحدة عقد قائم بالفعل — لا يمكن تحويل الحجز');
+          }
           // 1. Create the Contract.
           const contract = await tx.contract.create({
             data: {
