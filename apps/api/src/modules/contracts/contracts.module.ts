@@ -63,6 +63,7 @@ import { CancellationPolicyService } from './cancellation-policy.service';
 import { ContractCancellationService } from './contract-cancellation.service';
 import { reportFailure } from '../../common/observability/report-failure';
 import { CONTRACT_CANCELLED_MESSAGE, isDeadContract } from '../installments/live-contract';
+import { ContractRefundsService, RecordRefundDto } from './contract-refunds.service';
 
 // ── P12 legacy backfill helpers ─────────────────────────────────────────────
 // Pure (exported for unit tests). Derive safe display metadata for a backfilled
@@ -987,7 +988,16 @@ class ContractsController {
     private readonly prisma: PrismaService,
     private readonly cancellationPolicy: CancellationPolicyService,
     private readonly cancellationSvc: ContractCancellationService,
+    private readonly refunds: ContractRefundsService,
   ) {}
+
+  // Cancelled contracts whose customer is still owed part of the refund.
+  @Roles(UserRole.ADMIN)
+  @Permissions('contracts:read')
+  @Get('refunds/outstanding')
+  outstandingRefunds() {
+    return this.refunds.outstanding();
+  }
 
   @Roles(UserRole.ADMIN)
   @Permissions('contracts:upload')
@@ -1172,6 +1182,27 @@ class ContractsController {
     return this.cancellationPolicy.getCancellationSuggestion(id);
   }
 
+  // The contract's cancellation: amounts agreed, refunds paid, outstanding.
+  @Roles(UserRole.ADMIN)
+  @Permissions('contracts:read')
+  @Get(':id/cancellation')
+  getCancellation(@Param('id', ParseUUIDPipe) id: string) {
+    return this.refunds.getCancellation(id);
+  }
+
+  // Records money paid back to the customer — capped at what is still owed.
+  // Same strict permission as cancelling.
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('contracts:cancel')
+  @Post(':id/refunds')
+  recordRefund(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: RecordRefundDto,
+  ) {
+    return this.refunds.record(id, dto, user.sub);
+  }
+
   // Step D3 — Cancel contract (ADMIN only; contracts:cancel; reason MANDATORY)
   // Stores the operator-submitted retainedAmount/refundAmount verbatim.
   // @PermissionsStrict: even an ADMIN with 'contracts:cancel' in their assigned
@@ -1204,7 +1235,12 @@ class ContractsController {
 @Module({
   imports: [BrokerCommissionsModule, BonusModule, DocumentsModule, NotificationsModule],
   controllers: [ContractsController],
-  providers: [ContractsService, CancellationPolicyService, ContractCancellationService],
+  providers: [
+    ContractsService,
+    CancellationPolicyService,
+    ContractCancellationService,
+    ContractRefundsService,
+  ],
   exports: [ContractsService, CancellationPolicyService, ContractCancellationService],
 })
 export class ContractsModule {}

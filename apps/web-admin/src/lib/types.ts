@@ -240,6 +240,7 @@ export interface ContractInstallmentPlan {
 export interface Contract {
   id: string;
   contractNumber: string | null;
+  status?: 'UNSIGNED' | 'ACTIVE' | 'CANCELLED';
   /** FG-10 — the latest run of the sign follow-ups (warranties, commissions) had a failure. */
   signFollowupFailed?: boolean;
   customerId: string;
@@ -1686,6 +1687,10 @@ export interface FinancialSummary {
   totalCollectedAll?: string;
   totalCollectedVerified?: string;
   totalCollectedUnverified?: string;
+  /** Refunds on cancelled contracts: paid in the period, still owed, collected net of refunds. */
+  refundsPaid?: string;
+  refundsOwed?: string;
+  netCollected?: string;
   totalOutstanding?: string;
   dueSoonAmount?: string;
   overdueAmountComputed?: string;
@@ -1948,3 +1953,57 @@ export interface NotificationItem {
   body?: string;
   createdAt: string;
 }
+
+/** GET /contracts/:id/cancellation-suggestion — the cancel form's pre-fill. */
+export interface CancellationSuggestion {
+  totalCollected: string;
+  bookingCollected: string;
+  suggestedRetained: string;
+  suggestedRefund: string;
+  policySnapshot: {
+    unitRelease: 'AUTO' | 'REQUIRES_APPROVAL';
+    demoteClient: boolean;
+    commissionAction: 'CLAWBACK' | 'RETAIN' | 'MANUAL';
+    bonusAction: 'CLAWBACK' | 'RETAIN' | 'MANUAL';
+  };
+}
+
+/** GET /contracts/:id/cancellation — what was agreed and what was paid back. */
+export interface ContractCancellationView {
+  cancellationDate: string;
+  reason: string;
+  totalCollectedSnapshot: string;
+  retainedAmount: string;
+  refundAmount: string;
+  financialNotes: string | null;
+  unitReleasedAt: string | null;
+  cancelledBy: { id: string; fullName: string } | null;
+  refunds: Array<{
+    id: string;
+    amount: string;
+    paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'CHEQUE' | 'OTHER';
+    referenceNumber: string | null;
+    bankName: string | null;
+    paidAt: string;
+    notes: string | null;
+    recordedBy: { id: string; fullName: string } | null;
+  }>;
+  refundedTotal: string;
+  refundOutstanding: string;
+}
+
+/** GET /contracts/refunds/outstanding — customers still owed part of a refund. */
+export interface OutstandingRefunds {
+  data: Array<{
+    contractId: string;
+    contractNumber: string | null;
+    customer: { id: string; fullName: string } | null;
+    unitCode: string | null;
+    cancellationDate: string;
+    refundAmount: string;
+    refunded: string;
+    outstanding: string;
+  }>;
+  totalOutstanding: string;
+}
+

@@ -1698,6 +1698,43 @@ export class ReportsService {
       ),
     ]);
 
+    // ── Refunds on cancelled contracts (money going back out) ────────────────
+    // Same project / customer filters, but cancelled contracts are exactly
+    // the ones that matter here, so LIVE_CONTRACT_WHERE is not applied.
+    const refundContractAnd: Prisma.ContractWhereInput[] = contractAnd.filter(
+      (c) => c !== LIVE_CONTRACT_WHERE,
+    );
+    const refundContract: Prisma.ContractWhereInput =
+      refundContractAnd.length > 0 ? { AND: refundContractAnd } : {};
+    const [refundsPaidAgg, refundsPaidAllAgg, refundsAgreedAgg] = await Promise.all([
+      this.prisma.refund.aggregate({
+        where: {
+          cancellation: { contract: refundContract },
+          ...(opts.dateFrom || opts.dateTo
+            ? {
+                paidAt: {
+                  ...(opts.dateFrom ? { gte: new Date(opts.dateFrom) } : {}),
+                  ...(opts.dateTo ? { lte: new Date(opts.dateTo) } : {}),
+                },
+              }
+            : {}),
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.refund.aggregate({
+        where: { cancellation: { contract: refundContract } },
+        _sum: { amount: true },
+      }),
+      this.prisma.contractCancellation.aggregate({
+        where: { contract: refundContract },
+        _sum: { refundAmount: true },
+      }),
+    ]);
+    const refundsPaid = D(refundsPaidAgg._sum.amount);
+    const refundsOwedRaw = D(refundsAgreedAgg._sum.refundAmount).minus(D(refundsPaidAllAgg._sum.amount));
+    const refundsOwed = refundsOwedRaw.lessThan(0) ? zero : refundsOwedRaw;
+    const netCollected = collectedVerified.minus(refundsPaid);
+
     const cashflowTrend = trendSlots.map(({ month, label }, i) => ({
       month,
       label,
@@ -1727,6 +1764,11 @@ export class ReportsService {
         totalCollectedAll: collectedAll.toString(),
         totalCollectedVerified: collectedVerified.toString(),
         totalCollectedUnverified: collectedUnverified.toString(),
+        // Refunds: paid back in the period, still owed, and collected net of
+        // what was paid back.
+        refundsPaid: refundsPaid.toString(),
+        refundsOwed: refundsOwed.toString(),
+        netCollected: netCollected.toString(),
         totalOutstanding: (outstandingAgg._sum.amount ?? zero).toString(),
         dueSoonAmount: (dueSoonAgg._sum.amount ?? zero).toString(),
         overdueAmountComputed: (overdueComputedAgg._sum.amount ?? zero).toString(),
@@ -1993,6 +2035,9 @@ export class ReportsService {
       ['totalRemaining', 'المتبقي (قديم)', s.totalRemaining],
       ['totalOverdue', 'المتأخر (قديم)', s.totalOverdue],
       ['collectedThisMonth', 'المحصّل هذا الشهر', s.collectedThisMonth],
+      ['refundsPaid', 'المستردات المصروفة', s.refundsPaid],
+      ['refundsOwed', 'المستردات المستحقة للعملاء', s.refundsOwed],
+      ['netCollected', 'صافي المحصّل بعد المستردات', s.netCollected],
       ['dueThisMonth', 'المستحق هذا الشهر', s.dueThisMonth],
       ['contractCount', 'عدد العقود', s.contractCount],
       ['depositCount', 'عدد الدفعات', s.depositCount],
@@ -2245,6 +2290,8 @@ export class ReportsService {
         { label: 'المتبقي للتحصيل', value: Number(s.totalOutstanding), currency },
         { label: 'المحصّل هذا الشهر', value: Number(s.collectedThisMonth), currency },
         { label: 'المستحق هذا الشهر', value: Number(s.dueThisMonth), currency },
+        { label: 'صافي المحصّل بعد المستردات', value: Number(s.netCollected), currency },
+        { label: 'المستردات المستحقة للعملاء', value: Number(s.refundsOwed), currency },
         { label: 'عدد العقود', value: s.contractCount },
         { label: 'عدد الدفعات', value: s.depositCount },
       ],

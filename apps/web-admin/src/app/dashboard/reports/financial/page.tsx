@@ -28,6 +28,7 @@ import type {
   FinancialDepositRow,
   DepositType,
   PlanPaymentType,
+  OutstandingRefunds,
 } from '@/lib/types';
 import { formatCurrency, formatDate, tx, intlLocale } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
@@ -111,13 +112,15 @@ export default async function FinancialReportsPage({
     return `/reports/financial-dashboard${qs ? `?${qs}` : ''}`;
   }
 
-  const [dashRes, cmpDashRes, projectsRes] = await Promise.all([
+  const [dashRes, cmpDashRes, projectsRes, refundsRes] = await Promise.all([
     safe(api.get<FinancialDashboard>(apiUrl({ dateFrom, dateTo, projectId: sp.projectId, q: sp.q, type: sp.type }))),
     cmpRange
       ? safe(api.get<FinancialDashboard>(apiUrl({ dateFrom: cmpRange.dateFrom, dateTo: cmpRange.dateTo, projectId: sp.projectId })))
       : Promise.resolve({ data: null, error: null }),
     safe(fetchProjectOptions()),
+    safe(api.get<OutstandingRefunds>('/contracts/refunds/outstanding')),
   ]);
+  const refundsOwedRows = refundsRes.data?.data ?? [];
 
   const dash     = dashRes.data;
   const s        = dash?.summary;
@@ -136,6 +139,9 @@ export default async function FinancialReportsPage({
   const dueMonth       = num(s?.dueThisMonth);
   const contractCount  = s?.contractCount ?? 0;
   const depositCount   = s?.depositCount  ?? 0;
+  const refundsPaid    = num(s?.refundsPaid);
+  const refundsOwed    = num(s?.refundsOwed);
+  const netCollected   = num(s?.netCollected ?? s?.totalCollectedVerified ?? s?.totalCollected);
 
   const collectionRate = contractVal > 0 ? Math.round((collectedVerif / contractVal) * 100) : 0;
   const overdueRate    = contractVal > 0 ? parseFloat(((overdueAmt / contractVal) * 100).toFixed(1)) : 0;
@@ -263,6 +269,49 @@ export default async function FinancialReportsPage({
           { label: m.kpi.overdueCount,   icon: <AlertTriangle />, value: overdueCount.toLocaleString(intlLocale(locale)), tone: overdueCount > 0 ? 'danger' : 'neutral' },
         ]}
       />
+
+      {(refundsPaid > 0 || refundsOwed > 0) && (
+        <PremiumMetricStrip
+          variant="compact"
+          cols={3}
+          metrics={[
+            { label: m.kpi.netCollected, icon: <TrendingUp />,    value: formatCurrency(netCollected, currency, locale), tone: 'success' },
+            { label: m.kpi.refundsPaid,  icon: <Receipt />,       value: formatCurrency(refundsPaid, currency, locale),  tone: 'neutral' },
+            { label: m.kpi.refundsOwed,  icon: <AlertTriangle />, value: formatCurrency(refundsOwed, currency, locale),  tone: refundsOwed > 0 ? 'warning' : 'neutral' },
+          ]}
+        />
+      )}
+
+      {refundsOwedRows.length > 0 && (
+        <PremiumSectionCard icon={<AlertTriangle />} title={m.refundsOwed.title} padded={false}>
+          <table className="w-full text-[13px]" data-testid="refunds-owed">
+            <thead>
+              <tr className="text-[11px] text-slate-400">
+                <th className="px-5 py-2 text-start font-medium">{m.refundsOwed.contract}</th>
+                <th className="px-5 py-2 text-start font-medium">{m.refundsOwed.customer}</th>
+                <th className="px-5 py-2 text-end font-medium">{m.refundsOwed.agreed}</th>
+                <th className="px-5 py-2 text-end font-medium">{m.refundsOwed.paid}</th>
+                <th className="px-5 py-2 text-end font-medium">{m.refundsOwed.owed}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-hairline">
+              {refundsOwedRows.map((r) => (
+                <tr key={r.contractId}>
+                  <td className="px-5 py-2.5">
+                    <Link href={`/dashboard/contracts/${r.contractId}`} className="font-mono font-semibold text-brand-700 hover:underline">
+                      {r.contractNumber ?? r.contractId.slice(0, 8)}
+                    </Link>
+                  </td>
+                  <td className="px-5 py-2.5 text-slate-700">{r.customer?.fullName ?? '—'}</td>
+                  <td className="px-5 py-2.5 text-end tabular-nums">{formatCurrency(r.refundAmount, currency, locale)}</td>
+                  <td className="px-5 py-2.5 text-end tabular-nums">{formatCurrency(r.refunded, currency, locale)}</td>
+                  <td className="px-5 py-2.5 text-end font-bold tabular-nums text-warning-700">{formatCurrency(r.outstanding, currency, locale)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </PremiumSectionCard>
+      )}
 
       {contractVal > 0 && (
         <PremiumSectionCard

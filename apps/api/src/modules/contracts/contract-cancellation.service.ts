@@ -104,12 +104,9 @@ export class ContractCancellationService {
       throw new ConflictException('Contract is already cancelled — CANCELLED is terminal');
     }
 
-    // Compute totalCollectedSnapshot (sum of APPROVED deposits)
-    const depositsAgg = await this.prisma.deposit.aggregate({
-      where: { contractId, reviewStatus: 'APPROVED', deletedAt: null },
-      _sum: { amount: true },
-    });
-    const totalCollected = depositsAgg._sum.amount ?? new Prisma.Decimal(0);
+    // totalCollectedSnapshot — every collected payment of the deal, the
+    // booking amount on its reservation included (see collectedForContract).
+    const totalCollected = (await this.cancellationPolicy.collectedForContract(contractId)).total;
 
     // Read policy settings for policySnapshot (suggestion layer only)
     const suggestion = await this.cancellationPolicy.getCancellationSuggestion(contractId);

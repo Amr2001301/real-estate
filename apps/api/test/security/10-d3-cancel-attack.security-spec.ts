@@ -30,6 +30,8 @@
  *           new plan → 409; nothing moves
  *   D3-12  RETAIN keeps commission / bonus but they cannot be approved, and sign
  *           follow-ups cannot re-run on a cancelled contract → 409
+ *   D3-13  Collected snapshot counts the reservation's booking + staff cash; refunds
+ *           are recorded against the cancellation, capped at what is owed (409)
  *   D3-10  Payout dimension (D3b) — isCommissionEffectivelyPaid() narrowed to PROCESSING|PAID:
  *           D3-10a: APPROVED commission, sole in APPROVED payout → commission CANCELLED + payout CANCELLED
  *           D3-10b: APPROVED commission, one of two in APPROVED payout → payout DRAFT + recomputed totals
@@ -824,6 +826,109 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
       await raw.brokerCommission.deleteMany({ where: { id: commission.id } }).catch(() => void 0);
       await raw.contractCancellation.deleteMany({ where: { contractId: contract.id } }).catch(() => void 0);
       await raw.contract.deleteMany({ where: { id: contract.id } }).catch(() => void 0);
+      await raw.unit.deleteMany({ where: { id: unit.id } }).catch(() => void 0);
+    }
+  });
+
+  // ── D3-13: collected snapshot + refunds ───────────────────────────────────
+  // The booking amount stays linked to the reservation after conversion and
+  // staff-recorded cash is NO_PROOF — both used to be missed, so the snapshot
+  // showed far less than was collected. Refunds are then recorded against the
+  // cancellation and can never pass what the customer is owed.
+  it('D3-13: snapshot counts booking + staff cash; refunds capped at what is owed', async () => {
+    const raw = testApp.rawPrisma;
+    const unit = await raw.unit.create({
+      data: {
+        buildingId: fx.resources.a.buildingId,
+        code: 'D3-REFUND-UNIT',
+        type: '1BR',
+        area: 80,
+        price: 900_000,
+        status: UnitStatus.SOLD,
+        companyId: fx.companies.aId,
+      },
+    });
+    const reservation = await raw.reservation.create({
+      data: {
+        unitId: unit.id,
+        salesId: fx.users.sales1A.id,
+        clientId: fx.users.customerA.id,
+        status: 'CONVERTED',
+        expiresAt: new Date(Date.now() + 86_400_000),
+        companyId: fx.companies.aId,
+      },
+    });
+    const contract = await raw.contract.create({
+      data: {
+        customerId: fx.users.customerA.id,
+        unitId: unit.id,
+        reservationId: reservation.id,
+        totalAmount: 900_000,
+        signedAt: new Date(),
+        status: ContractStatus.ACTIVE,
+        companyId: fx.companies.aId,
+      },
+    });
+    const base = { paidAt: new Date(), recordedById: fx.users.adminA.id, companyId: fx.companies.aId };
+    await raw.deposit.create({
+      data: { ...base, type: 'BOOKING_AMOUNT', reservationId: reservation.id, amount: 10_000, verified: true },
+    });
+    await raw.deposit.create({ data: { ...base, contractId: contract.id, amount: 20_000 } }); // staff cash, NO_PROOF
+    await raw.deposit.create({
+      data: { ...base, contractId: contract.id, amount: 70_000, reviewStatus: 'PENDING_REVIEW' },
+    }); // not collected
+    const http = () => request(testApp.app.getHttpServer());
+    const as = <T extends request.Test>(r: T) =>
+      r.set('Authorization', bearer(adminAToken)).set('X-Tenant-Slug', SEC_SLUG_A);
+
+    try {
+      const suggestion = await as(http().get(`/v1/contracts/${contract.id}/cancellation-suggestion`)).expect(200);
+      expect(suggestion.body.totalCollected).toBe('30000.00');
+      expect(suggestion.body.bookingCollected).toBe('10000.00');
+
+      // A live contract has nothing to refund.
+      await as(http().post(`/v1/contracts/${contract.id}/refunds`))
+        .send({ amount: 100, paymentMethod: 'CASH' })
+        .expect(409);
+
+      await as(http().post(`/v1/contracts/${contract.id}/cancel`))
+        .send({ reason: 'D3-13', retainedAmount: 5_000, refundAmount: 25_000 })
+        .expect(201);
+      const cc = await raw.contractCancellation.findUniqueOrThrow({ where: { contractId: contract.id } });
+      expect(Number(cc.totalCollectedSnapshot)).toBe(30_000);
+
+      await as(http().post(`/v1/contracts/${contract.id}/refunds`))
+        .send({ amount: 15_000, paymentMethod: 'BANK_TRANSFER', referenceNumber: 'TRX-1' })
+        .expect(201);
+      // 15,000 + 15,000 would pass the 25,000 owed.
+      await as(http().post(`/v1/contracts/${contract.id}/refunds`))
+        .send({ amount: 15_000, paymentMethod: 'CASH' })
+        .expect(409);
+      const mid = await as(http().get(`/v1/contracts/${contract.id}/cancellation`)).expect(200);
+      expect(mid.body.refundedTotal).toBe('15000');
+      expect(mid.body.refundOutstanding).toBe('10000');
+      const owed = await as(http().get('/v1/contracts/refunds/outstanding')).expect(200);
+      expect(owed.body.data.find((r: { contractId: string }) => r.contractId === contract.id)?.outstanding).toBe(
+        '10000',
+      );
+
+      await as(http().post(`/v1/contracts/${contract.id}/refunds`))
+        .send({ amount: 10_000, paymentMethod: 'CASH' })
+        .expect(201);
+      const done = await as(http().get(`/v1/contracts/${contract.id}/cancellation`)).expect(200);
+      expect(done.body.refundOutstanding).toBe('0');
+      expect(done.body.refunds).toHaveLength(2);
+      const after = await as(http().get('/v1/contracts/refunds/outstanding')).expect(200);
+      expect(after.body.data.some((r: { contractId: string }) => r.contractId === contract.id)).toBe(false);
+    } finally {
+      const cc = await raw.contractCancellation.findUnique({ where: { contractId: contract.id } });
+      if (cc) await raw.refund.deleteMany({ where: { contractCancellationId: cc.id } }).catch(() => void 0);
+      await raw.contractCancellation.deleteMany({ where: { contractId: contract.id } }).catch(() => void 0);
+      await raw.deposit.deleteMany({
+        where: { OR: [{ contractId: contract.id }, { reservationId: reservation.id }] },
+      }).catch(() => void 0);
+      await raw.contract.deleteMany({ where: { id: contract.id } }).catch(() => void 0);
+      await raw.reservation.deleteMany({ where: { id: reservation.id } }).catch(() => void 0);
       await raw.unit.deleteMany({ where: { id: unit.id } }).catch(() => void 0);
     }
   });
