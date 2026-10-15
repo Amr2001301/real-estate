@@ -422,7 +422,7 @@ describe('Phase 7C — Admin reservation approval / lifecycle (e2e)', () => {
       const res = await http()
         .post(`/v1/reservations/${reservationId}/booking-payment/confirm`)
         .set('Authorization', bearer(adminToken))
-        .send({ note: 'phase 7c — booking payment confirmed' });
+        .send({ note: 'phase 7c — booking payment confirmed', paymentMethod: 'BANK_TRANSFER' });
       expect(res.status).toBe(201);
 
       const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
@@ -434,11 +434,21 @@ describe('Phase 7C — Admin reservation approval / lifecycle (e2e)', () => {
 
       const deposit = await testApp.rawPrisma.deposit.findFirst({
         where: { reservationId },
-        select: { id: true, type: true, amount: true, verified: true },
+        select: { id: true, type: true, amount: true, verified: true, paymentMethod: true },
       });
       expect(deposit).not.toBeNull();
       expect(deposit!.type).toBe('BOOKING_AMOUNT');
       expect(deposit!.verified).toBe(true);
+      // FG-08 — the method the admin picked is kept on the booking deposit.
+      expect(deposit!.paymentMethod).toBe('BANK_TRANSFER');
+    });
+
+    it('an unknown payment method → 400', async () => {
+      const res = await http()
+        .post(`/v1/reservations/${reservationId}/booking-payment/confirm`)
+        .set('Authorization', bearer(adminToken))
+        .send({ paymentMethod: 'BITCOIN' });
+      expect(res.status).toBe(400);
     });
   });
 

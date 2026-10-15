@@ -35,6 +35,7 @@ import { Type } from 'class-transformer';
 import {
   DepositReviewStatus,
   DepositType,
+  PaymentMethod,
   LeadStage,
   NotificationChannel,
   PlanPaymentType,
@@ -168,6 +169,8 @@ class AddNoteDto {
 class ConfirmBookingPaymentDto {
   @IsOptional() @IsDateString() paidAt?: string;
   @IsOptional() @IsString() note?: string;
+  /** FG-08 — how the booking amount was paid; stored on the booking deposit. */
+  @IsOptional() @IsEnum(PaymentMethod) paymentMethod?: PaymentMethod;
 }
 
 class UnconfirmBookingPaymentDto {
@@ -1349,6 +1352,7 @@ export class ReservationsService {
           installmentId: null,
           amount: reservation.bookingAmount,
           paidAt,
+          paymentMethod: dto.paymentMethod ?? null,
           recordedById: actor.sub,
           verified: true,
         },

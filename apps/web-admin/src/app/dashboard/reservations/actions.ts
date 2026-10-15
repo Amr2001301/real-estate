@@ -281,9 +281,11 @@ export async function confirmBookingPaymentAction(
 ): Promise<{ error?: string }> {
   const paidAtRaw = String(formData?.get('paidAt') ?? '').trim();
   const note = String(formData?.get('note') ?? '').trim() || undefined;
+  const paymentMethod = String(formData?.get('paymentMethod') ?? '').trim() || undefined;
   const payload: Record<string, unknown> = {};
   if (paidAtRaw) payload.paidAt = new Date(paidAtRaw).toISOString();
   if (note) payload.note = note;
+  if (paymentMethod) payload.paymentMethod = paymentMethod;
   try {
     await api.post(`/reservations/${id}/booking-payment/confirm`, payload);
   } catch (e: unknown) {
