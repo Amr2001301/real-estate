@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Redis } from 'ioredis';
+import { reportFailure } from '../observability/report-failure';
 
 export const CRON_LOCK_REDIS = Symbol('CRON_LOCK_REDIS');
 
@@ -52,9 +53,7 @@ export class CronLockService implements OnModuleDestroy {
     try {
       acquired = await this.redis.set(lockKey, owner, 'PX', ttlMs, 'NX');
     } catch (err) {
-      this.logger.error(
-        `[cron-lock] Redis unavailable for key "${key}": ${(err as Error).message} — skipping job`,
-      );
+      reportFailure(this.logger, 'cron', `[cron-lock] Redis unavailable for key "${key}" — skipping job`, err, 'error');
       return null;
     }
 

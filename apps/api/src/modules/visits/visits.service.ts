@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -19,6 +20,7 @@ import { managerScopeIds, SALES_ACTOR_ROLES } from '../../common/utils/sales-sco
 import { matchOrCreateLeadForClient } from '../crm/crm-lead-matching';
 import { NotificationsService } from '../notifications/notifications.module';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
+import { reportFailure } from '../../common/observability/report-failure';
 import {
   AssignSalesDto,
   CreateDirectAppointmentDto,
@@ -85,6 +87,8 @@ const VISIT_REQUEST_STATUS_AR: Record<string, string> = {
 };
 @Injectable()
 export class VisitsService {
+  private readonly logger = new Logger(VisitsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -1462,8 +1466,9 @@ export class VisitsService {
         'visit_day_reminder',
         payload,
       );
-    } catch {
-      // Reminder is a best-effort surface; never let it surface failure.
+    } catch (err) {
+      // Best-effort: never fails the caller, but is reported.
+      reportFailure(this.logger, 'notification', `visit_day_reminder for ${appointmentId} failed`, err);
     }
   }
 

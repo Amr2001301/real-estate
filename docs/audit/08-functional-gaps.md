@@ -126,6 +126,16 @@ All items below fail without surfacing an error to the caller. The business acti
 | SF-09 | `visits.service.ts:1382` | `notifyVisitDayReminder()` entire method in try/catch; reminder silently drops | Line 1382 |
 | SF-10 | `reservations.module.ts` (post-convert) | Broker/customer notifications and `handleConvertedContract()` after convert transaction — all best-effort | Lines after 1646 |
 
+**Status 2026-10-15**: e-mail is awaited and every push / e-mail outcome is written to the
+row (`pushSentAt`/`pushError`/`emailSentAt`/`emailError`), so SF-02/SF-03 no longer lose the
+result. Every remaining swallow point (SF-01, SF-04, SF-05, SF-08, SF-09, SF-10 and the other
+best-effort notification, activity-log, cron and auth-e-mail catches) now goes through
+`reportFailure()` (`common/observability/report-failure.ts`): still never fails the caller, but
+is sent to Sentry tagged with its `area` and counted in `swallowed_errors_total{area}`. Push and
+e-mail outcomes are counted in `notification_delivery_total{channel,outcome}`
+(`sent` / `failed` / `unconfigured`); only real provider failures go to Sentry. A retry queue is
+still not built — alert on the metrics first.
+
 **Shared root cause**: `NotificationsService.send()` always writes the `Notification` DB row first, so the in-app notification is never lost. Only push and email are unreliable. The DB row is the audit trail; the push/email are delivery channels. The design is intentional but the absence of any dead-letter queue or retry mechanism means push and email can silently fail indefinitely.
 
 ---

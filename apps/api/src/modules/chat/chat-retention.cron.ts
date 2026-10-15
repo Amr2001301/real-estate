@@ -4,6 +4,7 @@ import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CronLockService } from '../../common/cron/cron-lock.service';
 import { runTenantContext } from '../../common/tenant/tenant-context';
+import { reportFailure } from '../../common/observability/report-failure';
 
 const RETENTION_DAYS = 90;
 const TZ = process.env.CHAT_RETENTION_TIMEZONE || undefined;
@@ -41,7 +42,7 @@ export class ChatRetentionCron {
           await run();
         }
       } catch (err) {
-        this.logger.error(`[chat-retention] failed: ${(err as Error).message}`);
+        reportFailure(this.logger, 'cron', `[chat-retention] failed`, err, 'error');
       }
     });
   }

@@ -16,6 +16,7 @@ import {
   MarkBrokerLeadDuplicateDto,
   RejectBrokerLeadDto,
 } from './dto/broker-lead.dto';
+import { reportFailure } from '../../common/observability/report-failure';
 
 const BROKER_LEAD_INCLUDE = {
   client: {
@@ -321,9 +322,7 @@ export class BrokerLeadsService {
     } catch (e) {
       // The helper already swallows per-recipient errors; this catches
       // failures from resolving the lead / broker-user set.
-      this.logger.warn(
-        `notifyBroker(${templateCode}) for lead ${leadId} failed: ${(e as Error).message}`,
-      );
+      reportFailure(this.logger, 'notification', `notifyBroker(${templateCode}) for lead ${leadId} failed`, e);
     }
   }
 }

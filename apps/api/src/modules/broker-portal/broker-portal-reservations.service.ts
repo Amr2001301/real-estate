@@ -28,6 +28,7 @@ import {
   CreatePortalReservationDto,
   PortalReservationsQueryDto,
 } from './dto/portal-reservation.dto';
+import { reportFailure } from '../../common/observability/report-failure';
 
 // Reservation statuses that consider a unit "actively reserved" — used to
 // block duplicate reservations on the same unit / same lead+unit.
@@ -671,9 +672,7 @@ export class BrokerPortalReservationsService {
         ),
       ]);
     } catch (e) {
-      this.logger.warn(
-        `notify(reservation ${reservationId}) failed: ${(e as Error).message}`,
-      );
+      reportFailure(this.logger, 'notification', `notify(reservation ${reservationId}) failed`, e);
     }
   }
 

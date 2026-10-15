@@ -75,6 +75,7 @@ import {
   workbookToBuffer,
   xlsxFilename,
 } from '../../common/utils/xlsx';
+import { reportFailure } from '../../common/observability/report-failure';
 
 // ─── Existing contract-based plan DTOs ────────────────────────────────────────
 
@@ -1210,7 +1211,7 @@ export class InstallmentRemindersService {
       } catch (e) {
         // A single failure (lookup or send) must never abort the whole run.
         failed++;
-        this.logger.warn(`Installment reminder failed for installment ${inst.id}: ${(e as Error).message}`);
+        reportFailure(this.logger, 'cron', `Installment reminder failed for installment ${inst.id}`, e);
       }
     }
 

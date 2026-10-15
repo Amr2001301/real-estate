@@ -17,7 +17,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Logger } from '@nestjs/common';
 import { NotificationChannel } from '@prisma/client';
-import { NotificationsService } from '../notifications.module';
+import { NotificationsService, notificationDeliveryTotal } from '../notifications.module';
+import { swallowedErrorsTotal } from '../../../common/observability/report-failure';
 import { PushService, PushResult } from '../push.service';
 import { EmailService } from '../../auth/email.service';
 import { PrismaService } from '../../../common/prisma/prisma.service';
@@ -93,7 +94,9 @@ function makePushService(opts: {
   } as unknown as PushService;
 }
 
-function makeEmailService(result: { ok: true; sentAt: Date } | { ok: false; error: string }): EmailService {
+function makeEmailService(
+  result: { ok: true; sentAt: Date } | { ok: false; error: string; unconfigured?: boolean },
+): EmailService {
   return {
     sendNotificationEmail: jest.fn().mockResolvedValue(result),
   } as unknown as EmailService;
@@ -513,6 +516,94 @@ describe('Step 15 — Notification delivery tracking', () => {
         return block !== '' && /emailEnabled:\s*true/.test(block);
       });
       expect(found).toHaveLength(ELIGIBLE_CODES.length);
+    });
+  });
+
+  // Failures used to be recorded on the row only — nobody saw them. Real
+  // provider failures now count on /metrics and go to Sentry; a channel that
+  // is simply not configured is counted but not reported as an error.
+  describe('Delivery metrics and failure reporting', () => {
+    async function value(
+      counter: typeof notificationDeliveryTotal | typeof swallowedErrorsTotal,
+      labels: Record<string, string>,
+    ): Promise<number> {
+      const { values } = await counter.get();
+      const hit = values.find((v) =>
+        Object.entries(labels).every(([k, want]) => v.labels[k] === want),
+      );
+      return hit?.value ?? 0;
+    }
+
+    async function sendWith(push: PushService, email: EmailService) {
+      const svc = makeService(makePrisma('user@example.com'), push, email);
+      await runTenantContext(TEST_TENANT, () =>
+        svc.send({ userId: 'u-1', templateCode: 'deposit_recorded', payload: {} }),
+      );
+    }
+
+    it('an SMTP rejection counts as failed and is reported', async () => {
+      const failed = await value(notificationDeliveryTotal, { channel: 'email', outcome: 'failed' });
+      const reported = await value(swallowedErrorsTotal, { area: 'notification-email' });
+
+      await sendWith(
+        makePushService({ enabled: false }),
+        makeEmailService({ ok: false, error: 'Connection refused' }),
+      );
+
+      expect(await value(notificationDeliveryTotal, { channel: 'email', outcome: 'failed' })).toBe(failed + 1);
+      expect(await value(swallowedErrorsTotal, { area: 'notification-email' })).toBe(reported + 1);
+    });
+
+    it('unconfigured SMTP is counted, not reported', async () => {
+      const unconfigured = await value(notificationDeliveryTotal, { channel: 'email', outcome: 'unconfigured' });
+      const reported = await value(swallowedErrorsTotal, { area: 'notification-email' });
+
+      await sendWith(
+        makePushService({ enabled: false }),
+        makeEmailService({ ok: false, error: 'SMTP not configured', unconfigured: true }),
+      );
+
+      expect(await value(notificationDeliveryTotal, { channel: 'email', outcome: 'unconfigured' })).toBe(unconfigured + 1);
+      expect(await value(swallowedErrorsTotal, { area: 'notification-email' })).toBe(reported);
+    });
+
+    it('a push that throws counts as failed and is reported', async () => {
+      const failed = await value(notificationDeliveryTotal, { channel: 'push', outcome: 'failed' });
+      const reported = await value(swallowedErrorsTotal, { area: 'notification-push' });
+
+      await sendWith(
+        makePushService({ throws: 'FCM quota exceeded' }),
+        makeEmailService({ ok: true, sentAt: new Date() }),
+      );
+
+      expect(await value(notificationDeliveryTotal, { channel: 'push', outcome: 'failed' })).toBe(failed + 1);
+      expect(await value(swallowedErrorsTotal, { area: 'notification-push' })).toBe(reported + 1);
+    });
+
+    it('delivered push and e-mail count as sent', async () => {
+      const push = await value(notificationDeliveryTotal, { channel: 'push', outcome: 'sent' });
+      const mail = await value(notificationDeliveryTotal, { channel: 'email', outcome: 'sent' });
+
+      await sendWith(
+        makePushService({ enabled: true, sent: 1 }),
+        makeEmailService({ ok: true, sentAt: new Date() }),
+      );
+
+      expect(await value(notificationDeliveryTotal, { channel: 'push', outcome: 'sent' })).toBe(push + 1);
+      expect(await value(notificationDeliveryTotal, { channel: 'email', outcome: 'sent' })).toBe(mail + 1);
+    });
+
+    it('a failed send never reaches the caller but is reported', async () => {
+      const reported = await value(swallowedErrorsTotal, { area: 'notification' });
+      const prisma = makePrisma('user@example.com');
+      prisma.notification.create.mockRejectedValueOnce(new Error('db down'));
+      const svc = makeService(prisma, makePushService({ enabled: false }), makeEmailService({ ok: true, sentAt: new Date() }));
+
+      await expect(
+        runTenantContext(TEST_TENANT, () => svc.sendToUser('u-1', 'deposit_recorded', {})),
+      ).resolves.toBeUndefined();
+
+      expect(await value(swallowedErrorsTotal, { area: 'notification' })).toBe(reported + 1);
     });
   });
 });

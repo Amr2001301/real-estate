@@ -46,6 +46,16 @@ import { AuthModule } from '../auth/auth.module';
 import { EmailService } from '../auth/email.service';
 import { NOTIFICATION_CATALOG } from './notification-catalog';
 import { channelAllowed } from './notification-groups';
+import { Counter, register } from 'prom-client';
+import { reportFailure } from '../../common/observability/report-failure';
+
+/** Push / e-mail delivery outcomes; `failed` means the provider refused or threw. */
+export const notificationDeliveryTotal = new Counter({
+  name: 'notification_delivery_total',
+  help: 'Notification push / e-mail deliveries by channel and outcome',
+  labelNames: ['channel', 'outcome'],
+  registers: [register],
+});
 
 class UpsertTemplateDto {
   @IsString() code!: string;
@@ -244,7 +254,7 @@ export class NotificationsService implements OnModuleInit {
     } catch (err) {
       // Non-fatal: log and continue — a send with a missing template is
       // skipped with a warning (e.g. DB not yet migrated).
-      this.logger.error(`notification template bootstrap failed: ${(err as Error).message}`);
+      reportFailure(this.logger, 'notification-templates', `notification template bootstrap failed`, err, 'error');
     }
   }
 
@@ -333,9 +343,7 @@ export class NotificationsService implements OnModuleInit {
     try {
       await this.send({ userId, templateCode, payload, skipInactive: true });
     } catch (err) {
-      this.logger.warn(
-        `Notification send failed (${templateCode}): ${(err as Error).message}`,
-      );
+      reportFailure(this.logger, 'notification', `Notification send failed (${templateCode})`, err);
     }
   }
 
@@ -382,9 +390,7 @@ export class NotificationsService implements OnModuleInit {
       );
       await this.sendToUsers(users.map((u) => u.id), templateCode, payload, opts);
     } catch (err) {
-      this.logger.warn(
-        `Notification fan-out failed (${templateCode}): ${(err as Error).message}`,
-      );
+      reportFailure(this.logger, 'notification', `Notification fan-out failed (${templateCode})`, err);
     }
   }
 
@@ -410,9 +416,7 @@ export class NotificationsService implements OnModuleInit {
         : [];
       await this.sendToUsers([...userIds, ...byRole.map((u) => u.id)], templateCode, payload, opts);
     } catch (err) {
-      this.logger.warn(
-        `Notification fan-out failed (${templateCode}): ${(err as Error).message}`,
-      );
+      reportFailure(this.logger, 'notification', `Notification fan-out failed (${templateCode})`, err);
     }
   }
 
@@ -481,7 +485,7 @@ export class NotificationsService implements OnModuleInit {
         await this.sendToUsers(managers, 'broker_team_member_status_changed', payload, opts);
       }
     } catch (err) {
-      this.logger.warn(`notifyBrokerTeamChange failed: ${(err as Error).message}`);
+      reportFailure(this.logger, 'notification', 'notifyBrokerTeamChange failed', err);
     }
   }
 
@@ -560,14 +564,18 @@ export class NotificationsService implements OnModuleInit {
         .then((result) => {
           if (!result.enabled) {
             outcome.pushError = 'FCM not configured';
+            notificationDeliveryTotal.inc({ channel: 'push', outcome: 'unconfigured' });
           } else if (result.sent > 0) {
             outcome.pushSentAt = new Date();
+            notificationDeliveryTotal.inc({ channel: 'push', outcome: 'sent' });
           }
           // sent === 0 with no failure: user has no registered device.
           // Not an error — no pushError, no pushSentAt.
         })
         .catch((err: unknown) => {
           outcome.pushError = ((err as Error).message ?? 'FCM error').slice(0, 500);
+          notificationDeliveryTotal.inc({ channel: 'push', outcome: 'failed' });
+          reportFailure(this.logger, 'notification-push', `Push failed (${dto.templateCode})`, err);
         });
 
       const emailPromise: Promise<void> =
@@ -583,8 +591,19 @@ export class NotificationsService implements OnModuleInit {
                 .then((result) => {
                   if (result.ok) {
                     outcome.emailSentAt = result.sentAt;
+                    notificationDeliveryTotal.inc({ channel: 'email', outcome: 'sent' });
+                  } else if (result.unconfigured) {
+                    outcome.emailError = result.error;
+                    notificationDeliveryTotal.inc({ channel: 'email', outcome: 'unconfigured' });
                   } else {
                     outcome.emailError = result.error;
+                    notificationDeliveryTotal.inc({ channel: 'email', outcome: 'failed' });
+                    reportFailure(
+                      this.logger,
+                      'notification-email',
+                      `E-mail failed (${dto.templateCode})`,
+                      new Error(result.error),
+                    );
                   }
                 });
             })()
@@ -595,7 +614,7 @@ export class NotificationsService implements OnModuleInit {
       // user lookup failed or another setup error — record on push channel
       // (the most likely recipient of the original intent).
       const msg = ((err as Error).message ?? 'delivery setup error').slice(0, 500);
-      this.logger.warn(`Delivery setup failed for ${dto.templateCode}: ${msg}`);
+      reportFailure(this.logger, 'notification', `Delivery setup failed for ${dto.templateCode}`, err);
       outcome.pushError = outcome.pushError ?? `Delivery error: ${msg}`;
     }
 

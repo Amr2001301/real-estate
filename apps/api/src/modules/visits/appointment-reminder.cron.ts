@@ -6,6 +6,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.module';
 import { CronLockService } from '../../common/cron/cron-lock.service';
 import { runInCompany, runTenantContext } from '../../common/tenant/tenant-context';
+import { reportFailure } from '../../common/observability/report-failure';
 
 const TZ = process.env.APPOINTMENT_REMINDER_TIMEZONE || undefined;
 
@@ -43,7 +44,7 @@ export class AppointmentReminderCron {
           await run();
         }
       } catch (err) {
-        this.logger.error(`[appointment-day-before] failed: ${(err as Error).message}`);
+        reportFailure(this.logger, 'cron', `[appointment-day-before] failed`, err, 'error');
       }
     });
   }
@@ -61,7 +62,7 @@ export class AppointmentReminderCron {
           await run();
         }
       } catch (err) {
-        this.logger.error(`[appointment-hour-before] failed: ${(err as Error).message}`);
+        reportFailure(this.logger, 'cron', `[appointment-hour-before] failed`, err, 'error');
       }
     });
   }
