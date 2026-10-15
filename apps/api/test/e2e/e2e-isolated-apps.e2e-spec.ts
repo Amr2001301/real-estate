@@ -840,6 +840,8 @@ const ALLOW_LIST_FULL_NAMES = new Set<string>([
   'NotificationsController.markRead',
   'NotificationsController.markAllRead',
   'NotificationsController.registerDevice',
+  // Sign-out: removes only the caller's own device token (userId-scoped).
+  'NotificationsController.unregisterDevice',
   'AuthController.changePassword',
   'AuthController.resendVerification',
   'UsersController.uploadAvatar',
