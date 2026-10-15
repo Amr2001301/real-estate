@@ -76,6 +76,7 @@ import {
   xlsxFilename,
 } from '../../common/utils/xlsx';
 import { reportFailure } from '../../common/observability/report-failure';
+import { CONTRACT_CANCELLED_MESSAGE, isDeadContract, LIVE_PLAN_WHERE } from './live-contract';
 
 // ─── Existing contract-based plan DTOs ────────────────────────────────────────
 
@@ -177,6 +178,7 @@ export class InstallmentsService {
       },
     });
     if (!contract) throw new NotFoundException('Contract not found');
+    if (isDeadContract(contract)) throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
     if (contract.installmentPlan) throw new ConflictException('Plan already exists');
 
     const startsAt = new Date(dto.startsAt);
@@ -385,7 +387,8 @@ export class InstallmentsService {
    */
   async markOverdue() {
     const due = await this.prisma.installment.findMany({
-      where: { status: InstallmentStatus.PENDING, dueDate: { lt: new Date() } },
+      // Only live contracts: a cancelled or deleted deal is not chased.
+      where: { status: InstallmentStatus.PENDING, dueDate: { lt: new Date() }, plan: LIVE_PLAN_WHERE },
       select: {
         id: true,
         amount: true,
@@ -1133,8 +1136,8 @@ export class InstallmentRemindersService {
       where: {
         status: InstallmentStatus.PENDING,
         dueDate: { gte: start, lte: end },
-        // Only active customers receive reminders.
-        plan: { contract: { customer: { active: true } } },
+        // Only active customers on live contracts receive reminders.
+        plan: { ...LIVE_PLAN_WHERE, contract: { ...LIVE_PLAN_WHERE.contract, customer: { active: true } } },
       },
       orderBy: { dueDate: 'asc' },
       select: {

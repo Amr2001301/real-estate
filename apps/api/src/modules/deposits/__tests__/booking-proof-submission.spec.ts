@@ -48,6 +48,7 @@ const fixture: { reservation: Reservation; installment: Installment } = {
 function resetFixture() {
   fixture.reservation = {
     id: RES_ID,
+    status: 'APPROVED',
     clientId: CUSTOMER_ID,
     reservationNumber: 'R-2026-1',
     bookingAmount: new Prisma.Decimal(50000),
@@ -204,6 +205,14 @@ describe('Deposits · customer booking-amount proof submission (Gap 3)', () => {
     (fixture.reservation as Record<string, unknown>).lead = { clientId: CUSTOMER_ID };
     await request(app.getHttpServer()).post('/me/deposits').send(bookingBody).expect(201);
     expect(mock.deposit.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses a proof on a reservation that has ended (409)', async () => {
+    for (const status of ['CANCELLED', 'REJECTED', 'EXPIRED', 'CONVERTED']) {
+      (fixture.reservation as Record<string, unknown>).status = status;
+      await request(app.getHttpServer()).post('/me/deposits').send(bookingBody).expect(409);
+    }
+    expect(mock.deposit.create).not.toHaveBeenCalled();
   });
 
   it('rejects when the booking is already PAID (400)', async () => {

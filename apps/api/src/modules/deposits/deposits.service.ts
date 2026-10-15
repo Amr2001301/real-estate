@@ -19,6 +19,7 @@ import {
   PlanPaymentType,
   Prisma,
   ReservationBookingPaymentStatus,
+  ReservationStatus,
   UserRole,
 } from '@prisma/client';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
@@ -40,6 +41,20 @@ import {
   VerifyDepositDto,
 } from './deposits.dto';
 import { reportFailure } from '../../common/observability/report-failure';
+import { CONTRACT_CANCELLED_MESSAGE, isDeadContract } from '../installments/live-contract';
+
+/** Reservations whose booking can still be paid. */
+const LIVE_RESERVATION_STATUSES: ReservationStatus[] = [
+  ReservationStatus.PENDING,
+  ReservationStatus.APPROVED,
+];
+const RESERVATION_ENDED_MESSAGE = 'الحجز منتهٍ أو ملغي — لا يمكن سداد مبلغ الحجز عليه';
+/** A payment on one of these cheques was never collected. */
+const DEAD_INSTRUMENT_STATUSES: PaymentInstrumentStatus[] = [
+  PaymentInstrumentStatus.BOUNCED,
+  PaymentInstrumentStatus.REPLACED,
+  PaymentInstrumentStatus.CANCELLED,
+];
 
 const DEPOSIT_INCLUDE = {
   contract: {
@@ -204,6 +219,8 @@ export class DepositsService {
       await this.prisma.deposit.update({ where: { id }, data: { deletedAt: new Date() } });
       return;
     }
+    // Deleting it would reopen the installment — not on a cancelled deal.
+    await this.assertMoneyOpen(id, { approving: false });
     const companyId = getRequiredCompanyId();
     await this.prisma.$transaction(async (tx) => {
       await this.writeReversal(tx, d, 'Deposit deleted by admin', actor.sub, companyId);
@@ -237,6 +254,7 @@ export class DepositsService {
   async record(dto: RecordDepositDto, recordedById: string) {
     const contract = await this.prisma.contract.findUnique({ where: { id: dto.contractId } });
     if (!contract) throw new NotFoundException('Contract not found');
+    if (isDeadContract(contract)) throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
 
     // Ownership: installment must belong to this contract's plan
     const installment = await this.prisma.installment.findFirst({
@@ -581,8 +599,40 @@ export class DepositsService {
     }
   }
 
+  /**
+   * Money on a dead deal is frozen: no approval, re-verification, reversal or
+   * delete-with-reversal may change a cancelled/deleted contract's
+   * installments, settle a booking on a reservation that has ended, or
+   * approve a payment whose cheque bounced, was replaced or was cancelled.
+   */
+  private async assertMoneyOpen(depositId: string, opts: { approving: boolean }): Promise<void> {
+    const d = await this.prisma.deposit.findUnique({
+      where: { id: depositId },
+      select: {
+        contract: { select: { status: true, deletedAt: true } },
+        installment: {
+          select: { plan: { select: { contract: { select: { status: true, deletedAt: true } } } } },
+        },
+        reservation: { select: { status: true } },
+        paymentInstrument: { select: { status: true } },
+      },
+    });
+    if (!d) return;
+    if (isDeadContract(d.contract) || isDeadContract(d.installment?.plan?.contract)) {
+      throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
+    }
+    if (opts.approving && d.reservation && !LIVE_RESERVATION_STATUSES.includes(d.reservation.status)) {
+      throw new ConflictException(RESERVATION_ENDED_MESSAGE);
+    }
+    const instrument = d.paymentInstrument?.status;
+    if (opts.approving && instrument && DEAD_INSTRUMENT_STATUSES.includes(instrument)) {
+      throw new ConflictException('شيك هذه الدفعة مرتجع أو مستبدل أو ملغي — لا يمكن اعتمادها');
+    }
+  }
+
   async verify(id: string, dto: VerifyDepositDto, actor: AuthUser) {
     await this.assertNotAwaitingCheque(id);
+    await this.assertMoneyOpen(id, { approving: dto.verified });
     // P11 — keep `verified` in lockstep with `reviewStatus`. Toggling
     // verified=true is equivalent to a manual approve action; verified=false
     // resets the row to the pre-review state (NO_PROOF if no receipt exists,
@@ -669,6 +719,7 @@ export class DepositsService {
     });
     if (!deposit) throw new NotFoundException('Deposit not found');
     if (deposit.deletedAt) throw new BadRequestException('الدفعة محذوفة');
+    await this.assertMoneyOpen(id, { approving: false });
     await this.assertReversible(deposit);
 
     await this.prisma.$transaction((tx) =>
@@ -831,7 +882,11 @@ export class DepositsService {
     const installment = await this.prisma.installment.findFirst({
       where: { id: dto.installmentId },
       include: {
-        plan: { include: { contract: { select: { id: true, customerId: true } } } },
+        plan: {
+          include: {
+            contract: { select: { id: true, customerId: true, status: true, deletedAt: true } },
+          },
+        },
       },
     });
     if (!installment || !installment.plan?.contract) {
@@ -843,6 +898,12 @@ export class DepositsService {
     }
     if (installment.status === InstallmentStatus.PAID) {
       throw new BadRequestException('تم تأكيد دفع هذا القسط مسبقاً');
+    }
+    if (
+      installment.status === InstallmentStatus.CANCELLED ||
+      isDeadContract(installment.plan.contract)
+    ) {
+      throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
     }
     // Amount sanity — customer should only submit for the installment's
     // expected amount (manual/offline; partial payments are out of scope).
@@ -931,6 +992,7 @@ export class DepositsService {
       where: { id: dto.reservationId },
       select: {
         id: true,
+        status: true,
         clientId: true,
         reservationNumber: true,
         bookingAmount: true,
@@ -954,6 +1016,9 @@ export class DepositsService {
       (reservation.clientId === userId || reservation.lead?.clientId === userId);
     if (!reservation || !owns) {
       throw new NotFoundException('Reservation not found');
+    }
+    if (!LIVE_RESERVATION_STATUSES.includes(reservation.status)) {
+      throw new ConflictException(RESERVATION_ENDED_MESSAGE);
     }
     if (reservation.bookingAmount.lte(0)) {
       throw new BadRequestException('لا يوجد مبلغ حجز مستحق على هذا الحجز');
@@ -1044,6 +1109,8 @@ export class DepositsService {
         'يمكن إعادة الإرسال فقط بعد رفض الإثبات السابق',
       );
     }
+    // A bounced cheque's payment, or one on a cancelled deal, cannot come back.
+    await this.assertMoneyOpen(depositId, { approving: true });
 
     // Document first (Deposit already exists, so no FK ordering issue).
     const newDoc = await this.documents.create(userId, {
@@ -1086,6 +1153,7 @@ export class DepositsService {
    *  and marks the linked Installment as PAID with paidAt. */
   async approveProof(id: string, actor: AuthUser, dto: ApproveDepositDto) {
     await this.assertNotAwaitingCheque(id);
+    await this.assertMoneyOpen(id, { approving: true });
     const target = await this.prisma.deposit.findUnique({
       where: { id },
       include: {

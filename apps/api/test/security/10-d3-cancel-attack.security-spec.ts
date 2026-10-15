@@ -26,6 +26,8 @@
  *             BrokerCommission PENDING (no payout) → CANCELLED
  *             BrokerCommission APPROVED (no payout) → CANCELLED
  *             BrokerCommission APPROVED + payout PAID → status unchanged, clawbackStatus OUTSTANDING
+ *   D3-11  A cancelled contract's money is frozen: record / reverse / un-verify /
+ *           new plan → 409; nothing moves
  *   D3-10  Payout dimension (D3b) — isCommissionEffectivelyPaid() narrowed to PROCESSING|PAID:
  *           D3-10a: APPROVED commission, sole in APPROVED payout → commission CANCELLED + payout CANCELLED
  *           D3-10b: APPROVED commission, one of two in APPROVED payout → payout DRAFT + recomputed totals
@@ -599,6 +601,128 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
       await testApp.rawPrisma.contractCancellation.deleteMany({ where: { contractId: uContract.id } }).catch(() => void 0);
       await testApp.rawPrisma.contract.deleteMany({ where: { id: uContract.id } }).catch(() => void 0);
       await testApp.rawPrisma.unit.deleteMany({ where: { id: uUnit.id } }).catch(() => void 0);
+    }
+  });
+
+  // ── D3-11: a cancelled contract's money is frozen ─────────────────────────
+  // After cancel nothing may record a payment on it, reverse / un-verify a
+  // payment (which would reopen a PAID installment and bill the customer
+  // again), or give it a new installment plan.
+  it('D3-11: no payment, reversal, un-verify or new plan on a cancelled contract → 409', async () => {
+    const raw = testApp.rawPrisma;
+    for (const code of ['deposits:verify', 'deposits:reverse']) {
+      const perm = await raw.permission.findFirst({ where: { code } });
+      if (!perm) throw new Error(`D3-11: permission ${code} not seeded`);
+      await raw.userPermission.upsert({
+        where: { userId_permissionId: { userId: fx.users.adminA.id, permissionId: perm.id } },
+        create: { userId: fx.users.adminA.id, permissionId: perm.id },
+        update: {},
+      });
+    }
+    const unit = await raw.unit.create({
+      data: {
+        buildingId: fx.resources.a.buildingId,
+        code: 'D3-FROZEN-UNIT',
+        type: '1BR',
+        area: 80,
+        price: 600_000,
+        status: UnitStatus.SOLD,
+        companyId: fx.companies.aId,
+      },
+    });
+    const contract = await raw.contract.create({
+      data: {
+        customerId: fx.users.customerA.id,
+        unitId: unit.id,
+        totalAmount: 600_000,
+        signedAt: new Date(),
+        status: ContractStatus.ACTIVE,
+        companyId: fx.companies.aId,
+      },
+    });
+    const plan = await raw.installmentPlan.create({
+      data: {
+        contractId: contract.id,
+        totalMonths: 2,
+        monthlyAmount: 1000,
+        startsAt: new Date('2026-01-01'),
+        companyId: fx.companies.aId,
+      },
+    });
+    const paid = await raw.installment.create({
+      data: {
+        planId: plan.id,
+        dueDate: new Date('2026-01-01'),
+        amount: 1000,
+        status: InstallmentStatus.PAID,
+        paidAt: new Date('2026-01-01'),
+        companyId: fx.companies.aId,
+      },
+    });
+    const open = await raw.installment.create({
+      data: {
+        planId: plan.id,
+        dueDate: new Date('2026-02-01'),
+        amount: 1000,
+        status: InstallmentStatus.PENDING,
+        companyId: fx.companies.aId,
+      },
+    });
+    const deposit = await raw.deposit.create({
+      data: {
+        contractId: contract.id,
+        installmentId: paid.id,
+        amount: 1000,
+        paidAt: new Date('2026-01-01'),
+        recordedById: fx.users.adminA.id,
+        verified: true,
+        reviewStatus: 'APPROVED',
+        companyId: fx.companies.aId,
+      },
+    });
+    const http = () => request(testApp.app.getHttpServer());
+    const as = <T extends request.Test>(r: T) =>
+      r.set('Authorization', bearer(adminAToken)).set('X-Tenant-Slug', SEC_SLUG_A);
+
+    try {
+      await as(http().post(`/v1/contracts/${contract.id}/cancel`))
+        .send({ reason: 'D3-11', retainedAmount: 0, refundAmount: 0 })
+        .expect(201);
+
+      await as(http().post('/v1/deposits'))
+        .send({ contractId: contract.id, installmentId: open.id, amount: 1000, paymentMethod: 'CASH' })
+        .expect(409);
+      await as(http().post(`/v1/deposits/${deposit.id}/reverse`))
+        .send({ reason: 'D3-11 reverse' })
+        .expect(409);
+      await as(http().patch(`/v1/deposits/${deposit.id}/verify`))
+        .send({ verified: false })
+        .expect(409);
+      await as(http().post('/v1/installment-plans'))
+        .send({ contractId: contract.id, totalMonths: 3, monthlyAmount: 100, startsAt: '2026-03-01' })
+        .expect(409);
+
+      // Nothing moved: the paid installment stays PAID, the open one CANCELLED,
+      // no correction was written and no deposit was added.
+      const rows = await raw.installment.findMany({
+        where: { planId: plan.id },
+        select: { id: true, status: true },
+      });
+      expect(rows.find((r) => r.id === paid.id)?.status).toBe(InstallmentStatus.PAID);
+      expect(rows.find((r) => r.id === open.id)?.status).toBe(InstallmentStatus.CANCELLED);
+      expect(rows).toHaveLength(2);
+      expect(await raw.paymentCorrection.count({ where: { depositId: deposit.id } })).toBe(0);
+      expect(await raw.deposit.count({ where: { contractId: contract.id } })).toBe(1);
+      const d = await raw.deposit.findUniqueOrThrow({ where: { id: deposit.id } });
+      expect(d.reviewStatus).toBe('APPROVED');
+      expect(d.verified).toBe(true);
+    } finally {
+      await raw.deposit.deleteMany({ where: { contractId: contract.id } }).catch(() => void 0);
+      await raw.contractCancellation.deleteMany({ where: { contractId: contract.id } }).catch(() => void 0);
+      await raw.installment.deleteMany({ where: { planId: plan.id } }).catch(() => void 0);
+      await raw.installmentPlan.deleteMany({ where: { id: plan.id } }).catch(() => void 0);
+      await raw.contract.deleteMany({ where: { id: contract.id } }).catch(() => void 0);
+      await raw.unit.deleteMany({ where: { id: unit.id } }).catch(() => void 0);
     }
   });
 
