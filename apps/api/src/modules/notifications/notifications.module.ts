@@ -45,6 +45,7 @@ import { PushService } from './push.service';
 import { AuthModule } from '../auth/auth.module';
 import { EmailService } from '../auth/email.service';
 import { NOTIFICATION_CATALOG } from './notification-catalog';
+import { channelAllowed } from './notification-groups';
 
 class UpsertTemplateDto {
   @IsString() code!: string;
@@ -517,8 +518,11 @@ export class NotificationsService implements OnModuleInit {
       const user = await resolveTenantUser(
         this.prisma,
         dto.userId,
-        { locale: true, email: true },
+        { locale: true, email: true, notificationPrefs: true },
       );
+      // The user's own opt-outs (in-app always stays).
+      const pushWanted = channelAllowed(user?.notificationPrefs, 'push', dto.templateCode);
+      const emailWanted = channelAllowed(user?.notificationPrefs, 'email', dto.templateCode);
       const locale = pickLocale(user?.locale ?? 'ar');
       const currency = await getCompanyCurrency(this.prisma, getTenantContext()?.companyId);
 
@@ -545,7 +549,9 @@ export class NotificationsService implements OnModuleInit {
       // Push and email run concurrently so SMTP latency does not stack on top
       // of FCM latency. Each promise catches its own errors and records them
       // in `outcome`; neither can reject Promise.all.
-      const pushPromise: Promise<void> = this.push
+      const pushPromise: Promise<void> = !pushWanted
+        ? Promise.resolve()
+        : this.push
         .sendToUser(dto.userId, {
           title: resolveText(tpl.subject, payload, locale, dto.templateCode, currency),
           body:  resolveText(tpl.body,    payload, locale, '', currency),
@@ -565,7 +571,7 @@ export class NotificationsService implements OnModuleInit {
         });
 
       const emailPromise: Promise<void> =
-        user?.email && tpl.emailEnabled
+        user?.email && tpl.emailEnabled && emailWanted
           ? (() => {
               // Escaped: payload values (names, notes) are user input.
               const subject  = escapeHtml(resolveText(tpl.subject, payload, locale, dto.templateCode, currency));

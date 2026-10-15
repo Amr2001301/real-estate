@@ -221,6 +221,20 @@ describe('NotificationsService foundation', () => {
     expect(deleteMany).toHaveBeenCalledWith({ where: { token: 'fcm-token', userId: 'u-1' } });
   });
 
+  it('a user who silenced a group gets the in-app notice but no push or e-mail', async () => {
+    const { svc, prisma, email } = setup({ emailEnabled: true });
+    const push = (svc as unknown as { push: { sendToUser: jest.Mock } }).push;
+    prisma.user.findFirst.mockResolvedValue({
+      locale: 'ar',
+      email: 'u@x.test',
+      notificationPrefs: { email: { sales: false }, push: { sales: false } },
+    });
+    await runTenantContext(TENANT, () => svc.sendToUser('u-1', 'evt'));
+    expect(prisma.notification.create).toHaveBeenCalledTimes(1);
+    expect(push.sendToUser).not.toHaveBeenCalled();
+    expect(email.sendNotificationEmail).not.toHaveBeenCalled();
+  });
+
   describe('brokerRecipients', () => {
     const where = (prisma: ReturnType<typeof setup>['prisma']) =>
       prisma.brokerUser.findMany.mock.calls[0][0].where;

@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
   StreamableFile,
   UploadedFile,
@@ -27,6 +28,7 @@ import {
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
+import { NotificationPrefsDto } from './dto/notification-prefs.dto';
 import { UserRole } from '@prisma/client';
 
 /** Avatar upload cap — mirrors UsersService.AVATAR_MAX_BYTES (5 MB). */
@@ -100,6 +102,17 @@ export class UsersController {
   @Patch('me')
   updateMe(@CurrentUser() user: AuthUser, @Body() dto: UpdateUserDto) {
     return this.users.update(user.sub, dto);
+  }
+
+  // The caller's own e-mail / push opt-outs per notification group.
+  @Get('me/notification-preferences')
+  myNotificationPreferences(@CurrentUser() user: AuthUser) {
+    return this.users.getNotificationPreferences(user.sub);
+  }
+
+  @Put('me/notification-preferences')
+  updateMyNotificationPreferences(@CurrentUser() user: AuthUser, @Body() dto: NotificationPrefsDto) {
+    return this.users.updateNotificationPreferences(user.sub, dto);
   }
 
   // Multipart avatar upload for the signed-in user. The image is buffered in

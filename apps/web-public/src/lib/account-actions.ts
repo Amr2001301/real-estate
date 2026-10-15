@@ -337,3 +337,23 @@ export async function requestVisitRescheduleAction(
   revalidatePath('/account/visits');
   return { ok: true };
 }
+
+const PREF_GROUPS = ['sales', 'finance', 'maintenance', 'account'] as const;
+
+/**
+ * Save the e-mail / push preferences → PUT /v1/users/me/notification-preferences.
+ * Every switch is sent: a box left unchecked turns that channel off.
+ */
+export async function saveNotificationPreferencesAction(formData: FormData): Promise<void> {
+  const channel = (name: 'email' | 'push') =>
+    Object.fromEntries(PREF_GROUPS.map((g) => [g, formData.get(`${name}.${g}`) === 'on']));
+  try {
+    await authFetch('/users/me/notification-preferences', {
+      method: 'PUT',
+      body: JSON.stringify({ email: channel('email'), push: channel('push') }),
+    });
+  } catch (e) {
+    if (e instanceof AuthError) redirect('/login');
+  }
+  revalidatePath('/account/notifications');
+}

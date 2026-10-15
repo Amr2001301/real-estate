@@ -278,6 +278,10 @@ model User {
   passwordHash    String?
   fullName        String
   locale          Locale    @default(ar)
+  /// Per-user e-mail / push opt-outs by notification group
+  /// ({ email: { finance: false }, push: { sales: false } }). Null = every
+  /// channel on. In-app notifications are never switched off.
+  notificationPrefs Json?
   active          Boolean   @default(true)
   avatarUrl       String?
   emailVerifiedAt DateTime?

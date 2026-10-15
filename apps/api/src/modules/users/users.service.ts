@@ -19,6 +19,8 @@ import type { AuthUser } from '../../common/decorators/current-user.decorator';
 import { R2Service } from '../media/r2.service';
 import { NotificationsService } from '../notifications/notifications.module';
 import { USER_ROLE_AR } from '../notifications/notification-catalog';
+import { resolvePrefs, type NotificationPrefs } from '../notifications/notification-groups';
+import type { NotificationPrefsDto } from './dto/notification-prefs.dto';
 import { PlanLimitService } from '../../common/capabilities/plan-limit.service';
 import { collectPages, isoDate, listCsv, listXlsx, type ListColumn } from '../../common/utils/list-export';
 import { ReportBrandService } from '../company-branding/report-brand.service';
@@ -194,6 +196,33 @@ export class UsersService {
     if (previousManagerId && previousManagerId !== managerId) {
       await this.notifications.sendToUser(previousManagerId, 'team_member_removed', payload);
     }
+  }
+
+  /** The caller's e-mail / push opt-outs, every group resolved (on unless off). */
+  async getNotificationPreferences(userId: string): Promise<NotificationPrefs> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, companyId: getRequiredCompanyId() },
+      select: { notificationPrefs: true },
+    });
+    return resolvePrefs(user?.notificationPrefs);
+  }
+
+  /** Changes only the groups sent; in-app notifications are never switched off. */
+  async updateNotificationPreferences(
+    userId: string,
+    dto: NotificationPrefsDto,
+  ): Promise<NotificationPrefs> {
+    const companyId = getRequiredCompanyId();
+    const current = await this.getNotificationPreferences(userId);
+    const next = resolvePrefs({
+      email: { ...current.email, ...(dto.email ?? {}) },
+      push: { ...current.push, ...(dto.push ?? {}) },
+    });
+    await this.prisma.user.updateMany({
+      where: { id: userId, companyId },
+      data: { notificationPrefs: next as unknown as Prisma.InputJsonValue },
+    });
+    return next;
   }
 
   // ADMIN-only manager assignment. null clears it. A non-null managerId must
