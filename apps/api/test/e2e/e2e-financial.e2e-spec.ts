@@ -1366,3 +1366,109 @@ describe('FG-05 — deposit reversal (e2e)', () => {
     expect(await reversals(dep.id)).toBe(0);
   });
 });
+
+// ═════════════════════════════════════════════════════════════════════════════
+// One definition of collected money; cancelled contracts are not sales
+// ═════════════════════════════════════════════════════════════════════════════
+//
+// Every report sums deposits through COLLECTED_DEPOSIT_WHERE: APPROVED or
+// NO_PROOF, not deleted, not reversed, cheque cleared (or none). Each deposit
+// below has a distinct power-of-two amount so the totals name exactly which
+// rows were counted. The dashboard's `q` (customer name) isolates our rows.
+
+describe('Reports — one definition of collected; cancelled contracts excluded (e2e)', () => {
+  let testApp: TestApp;
+  let fixtures: E2EFixtures;
+  let adminToken: string;
+  const TAG = `FGRPT-${Date.now().toString(36)}`;
+  const ids = { customer: '', units: [] as string[], contracts: [] as string[], instruments: [] as string[] };
+
+  beforeAll(async () => {
+    testApp = await createE2ETestApp();
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
+    adminToken = await loginAs(testApp.app, 'admin@example.com', process.env.SEED_ADMIN_PASSWORD ?? 'ChangeMe123!');
+    const raw = testApp.rawPrisma;
+    const sample = await raw.unit.findUniqueOrThrow({
+      where: { id: fixtures.units.sampleUnitInP1Id },
+      select: { buildingId: true, companyId: true },
+    });
+    const companyId = sample.companyId!;
+    const customer = await raw.user.create({
+      data: { email: `${TAG.toLowerCase()}@rpt.local`, fullName: TAG, role: 'CUSTOMER', active: true, companyId },
+    });
+    ids.customer = customer.id;
+    const mkUnit = (n: number) =>
+      raw.unit.create({
+        data: { buildingId: sample.buildingId, code: `${TAG}-${n}`, type: '1BR', area: 80, price: 1000, status: 'SOLD', companyId },
+      });
+    const [u1, u2] = [await mkUnit(1), await mkUnit(2)];
+    ids.units.push(u1.id, u2.id);
+    const live = await raw.contract.create({
+      data: { customerId: customer.id, unitId: u1.id, totalAmount: 1000, status: 'ACTIVE', signedAt: new Date(), companyId },
+    });
+    const cancelled = await raw.contract.create({
+      data: { customerId: customer.id, unitId: u2.id, totalAmount: 5000, status: 'CANCELLED', signedAt: new Date(), companyId },
+    });
+    ids.contracts.push(live.id, cancelled.id);
+    const adminId = fixtures.userIds.adminId;
+    const pi = (status: 'DEPOSITED' | 'CLEARED') =>
+      raw.paymentInstrument.create({
+        data: { type: 'CHEQUE', status, recordedById: adminId, companyId, chequeNumber: `${TAG}-${status}` },
+      });
+    const deposited = await pi('DEPOSITED');
+    const cleared = await pi('CLEARED');
+    ids.instruments.push(deposited.id, cleared.id);
+    const dep = (amount: number, extra: Record<string, unknown>) =>
+      raw.deposit.create({
+        data: { contractId: live.id, amount, paidAt: new Date(), recordedById: adminId, companyId, ...extra },
+      });
+    await dep(1, { reviewStatus: 'NO_PROOF' }); // cash recorded by staff → collected
+    await dep(2, { reviewStatus: 'APPROVED', verified: true }); // → collected
+    await dep(4, { reviewStatus: 'PENDING_REVIEW' }); // waiting
+    await dep(8, { reviewStatus: 'REJECTED' }); // bounced / rejected → nothing
+    await dep(16, { reviewStatus: 'APPROVED', verified: true, deletedAt: new Date() }); // deleted → nothing
+    const reversed = await dep(32, { reviewStatus: 'APPROVED', verified: true });
+    await raw.paymentCorrection.create({
+      data: { type: 'REVERSAL', depositId: reversed.id, reason: TAG, performedById: adminId, companyId },
+    });
+    await dep(64, { reviewStatus: 'PENDING_REVIEW', paymentInstrumentId: deposited.id }); // cheque out → waiting
+    await dep(128, { reviewStatus: 'APPROVED', verified: true, paymentInstrumentId: cleared.id }); // cleared → collected
+  });
+
+  afterAll(async () => {
+    const raw = testApp.rawPrisma;
+    await raw.paymentCorrection.deleteMany({ where: { reason: TAG } });
+    await raw.deposit.deleteMany({ where: { contractId: { in: ids.contracts } } });
+    await raw.paymentInstrument.deleteMany({ where: { id: { in: ids.instruments } } });
+    await raw.contract.deleteMany({ where: { id: { in: ids.contracts } } });
+    await raw.unit.deleteMany({ where: { id: { in: ids.units } } });
+    await raw.user.deleteMany({ where: { id: ids.customer } });
+    await testApp.close();
+  });
+
+  it('financial dashboard: collected = 1+2+128, recorded = +4+64; cancelled contract not in sales', async () => {
+    const res = await request(testApp.app.getHttpServer())
+      .get('/v1/reports/financial-dashboard')
+      .query({ q: TAG })
+      .set('Authorization', bearer(adminToken))
+      .expect(200);
+    const s = res.body.summary;
+    expect(s.totalCollected).toBe('131');
+    expect(s.totalCollectedVerified).toBe('131');
+    expect(s.totalCollectedAll).toBe('199');
+    expect(s.totalCollectedUnverified).toBe('68');
+    expect(s.depositCount).toBe(5);
+    expect(s.totalContractValue).toBe('1000');
+    expect(s.contractCount).toBe(1);
+  });
+
+  it("the customer's own paid total counts only collected money", async () => {
+    const res = await request(testApp.app.getHttpServer())
+      .get('/v1/deposits')
+      .query({ contractId: ids.contracts[0], pageSize: 50 })
+      .set('Authorization', bearer(adminToken))
+      .expect(200);
+    expect(res.body.totals.totalAmount).toBe('131');
+  });
+});
+

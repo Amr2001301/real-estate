@@ -60,6 +60,8 @@ import {
   renderBarChartPng,
   renderShareChartPng,
 } from '../../common/utils/xlsx-chart';
+import { COLLECTED_DEPOSIT_WHERE, RECORDED_DEPOSIT_WHERE } from '../../common/finance/collected';
+import { LIVE_CONTRACT_WHERE, LIVE_PLAN_WHERE } from '../installments/live-contract';
 
 // Arabic month names indexed by JS month (0 = January). Used for the
 // reservation-trend labels on the admin dashboard.
@@ -118,8 +120,8 @@ export class ReportsService {
       this.prisma.lead.count(),
       this.prisma.lead.count({ where: { stage: 'NEW' } }),
       this.prisma.visitRequest.count({ where: { status: 'PENDING' } }),
-      this.prisma.contract.count(),
-      this.prisma.deposit.aggregate({ _sum: { amount: true } }),
+      this.prisma.contract.count({ where: LIVE_CONTRACT_WHERE }),
+      this.prisma.deposit.aggregate({ where: COLLECTED_DEPOSIT_WHERE, _sum: { amount: true } }),
     ]);
     return {
       projects,
@@ -133,8 +135,13 @@ export class ReportsService {
 
   async sales(period?: string, dateFrom?: string, dateTo?: string) {
     const companyId = getRequiredCompanyId();
+    // Sales are live contracts: a cancelled or deleted deal is not a sale.
     let where: Prisma.ContractWhereInput = {};
-    const conditions: Prisma.Sql[] = [Prisma.sql`c."companyId" = ${companyId}::uuid`];
+    const conditions: Prisma.Sql[] = [
+      Prisma.sql`c."companyId" = ${companyId}::uuid`,
+      Prisma.sql`c."status" <> 'CANCELLED'`,
+      Prisma.sql`c."deletedAt" IS NULL`,
+    ];
     if (dateFrom || dateTo) {
       where = {
         createdAt: {
@@ -151,6 +158,7 @@ export class ReportsService {
     const whereClause = conditions.length
       ? Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`
       : Prisma.empty;
+    where = { ...where, ...LIVE_CONTRACT_WHERE };
     const [count, totalAmount, byProject] = await this.prisma.$transaction([
       this.prisma.contract.count({ where }),
       this.prisma.contract.aggregate({ where, _sum: { totalAmount: true } }),
@@ -185,10 +193,13 @@ export class ReportsService {
     } else if (period) {
       where = this.periodWhereDeposit(period);
     }
+    // deposits / total: money collected (one definition, see collected.ts);
+    // verified: of those, the ones a reviewer confirmed.
+    const collected: Prisma.DepositWhereInput = { AND: [where, COLLECTED_DEPOSIT_WHERE] };
     const [count, sum, verified] = await this.prisma.$transaction([
-      this.prisma.deposit.count({ where }),
-      this.prisma.deposit.aggregate({ where, _sum: { amount: true } }),
-      this.prisma.deposit.count({ where: { ...where, verified: true } }),
+      this.prisma.deposit.count({ where: collected }),
+      this.prisma.deposit.aggregate({ where: collected, _sum: { amount: true } }),
+      this.prisma.deposit.count({ where: { AND: [collected, { verified: true }] } }),
     ]);
     return {
       deposits: count,
@@ -229,7 +240,9 @@ export class ReportsService {
       this.prisma.lead.count(dateWhere),
       this.prisma.visitRequest.count(dateWhere),
       this.prisma.reservation.count(dateWhere),
-      this.prisma.contract.count(dateWhere),
+      this.prisma.contract.count({
+        where: { ...(hasDate ? { createdAt: dateCond } : {}), ...LIVE_CONTRACT_WHERE },
+      }),
     ]);
     return { leads, visits, reservations, contracts };
   }
@@ -284,6 +297,8 @@ export class ReportsService {
        ${projectJoin}
        WHERE EXTRACT(YEAR FROM c."createdAt") = ${safeYear}
        AND c."companyId" = ${companyId}::uuid
+       AND c."status" <> 'CANCELLED'
+       AND c."deletedAt" IS NULL
        ${projectFilter}
        GROUP BY EXTRACT(MONTH FROM c."createdAt")
     `);
@@ -365,7 +380,7 @@ export class ReportsService {
           },
         },
       }),
-      this.prisma.contract.count({ where: { signedAt: null } }),
+      this.prisma.contract.count({ where: { signedAt: null, ...LIVE_CONTRACT_WHERE } }),
       this.prisma.reservation.count({
         where: { status: ReservationStatus.PENDING, expiresAt: { gte: now, lte: expiringHorizon } },
       }),
@@ -373,7 +388,7 @@ export class ReportsService {
       this.prisma.infoRequest.count({ where: { status: InfoRequestStatus.OPEN } }),
       // ── extended inventory / pipeline ──
       this.prisma.unit.count({ where: { status: UnitStatus.SOLD } }),
-      this.prisma.contract.count({ where: { signedAt: { not: null } } }),
+      this.prisma.contract.count({ where: { signedAt: { not: null }, ...LIVE_CONTRACT_WHERE } }),
       scopedUserCount(this.prisma, { role: UserRole.CUSTOMER }),
       scopedUserCount(this.prisma, {
         role: {
@@ -389,12 +404,12 @@ export class ReportsService {
       this.prisma.lead.count(),
       this.prisma.visitRequest.count(),
       this.prisma.reservation.count(),
-      this.prisma.contract.count({ where: { signedAt: { not: null } } }),
+      this.prisma.contract.count({ where: { signedAt: { not: null }, ...LIVE_CONTRACT_WHERE } }),
       // ── financial aggregates ──
-      this.prisma.contract.aggregate({ _sum: { totalAmount: true } }),
-      this.prisma.deposit.aggregate({ where: { verified: true }, _sum: { amount: true } }),
+      this.prisma.contract.aggregate({ where: LIVE_CONTRACT_WHERE, _sum: { totalAmount: true } }),
+      this.prisma.deposit.aggregate({ where: COLLECTED_DEPOSIT_WHERE, _sum: { amount: true } }),
       this.prisma.installment.aggregate({
-        where: { status: InstallmentStatus.OVERDUE },
+        where: { status: InstallmentStatus.OVERDUE, plan: LIVE_PLAN_WHERE },
         _sum: { amount: true },
       }),
       this.prisma.bonusEntry.aggregate({
@@ -407,27 +422,29 @@ export class ReportsService {
       }),
       // ── MTD vs prior-month ──
       this.prisma.deposit.aggregate({
-        where: { verified: true, paidAt: { gte: prevMonthStart, lt: startOfMonth } },
+        where: { ...COLLECTED_DEPOSIT_WHERE, paidAt: { gte: prevMonthStart, lt: startOfMonth } },
         _sum: { amount: true },
       }),
       this.prisma.deposit.aggregate({
-        where: { verified: true, paidAt: { gte: startOfMonth } },
+        where: { ...COLLECTED_DEPOSIT_WHERE, paidAt: { gte: startOfMonth } },
         _sum: { amount: true },
       }),
-      this.prisma.contract.count({ where: { signedAt: { gte: prevMonthStart, lt: startOfMonth } } }),
-      this.prisma.contract.count({ where: { signedAt: { gte: startOfMonth } } }),
+      this.prisma.contract.count({
+        where: { signedAt: { gte: prevMonthStart, lt: startOfMonth }, ...LIVE_CONTRACT_WHERE },
+      }),
+      this.prisma.contract.count({ where: { signedAt: { gte: startOfMonth }, ...LIVE_CONTRACT_WHERE } }),
       this.prisma.lead.count({ where: { createdAt: { gte: prevMonthStart, lt: startOfMonth } } }),
       // ── Cash flow forecast (next 30 / 31-60 / 61-90 days) ──
       this.prisma.installment.aggregate({
-        where: { status: InstallmentStatus.PENDING, dueDate: { gte: now, lte: in30 } },
+        where: { status: InstallmentStatus.PENDING, dueDate: { gte: now, lte: in30 }, plan: LIVE_PLAN_WHERE },
         _sum: { amount: true },
       }),
       this.prisma.installment.aggregate({
-        where: { status: InstallmentStatus.PENDING, dueDate: { gt: in30, lte: in60 } },
+        where: { status: InstallmentStatus.PENDING, dueDate: { gt: in30, lte: in60 }, plan: LIVE_PLAN_WHERE },
         _sum: { amount: true },
       }),
       this.prisma.installment.aggregate({
-        where: { status: InstallmentStatus.PENDING, dueDate: { gt: in60, lte: in90 } },
+        where: { status: InstallmentStatus.PENDING, dueDate: { gt: in60, lte: in90 }, plan: LIVE_PLAN_WHERE },
         _sum: { amount: true },
       }),
     ]);
@@ -710,7 +727,7 @@ export class ReportsService {
                   select: {
                     status: true,
                     contracts: {
-                      where: { signedAt: { not: null } },
+                      where: { signedAt: { not: null }, ...LIVE_CONTRACT_WHERE },
                       select: { totalAmount: true },
                     },
                   },
@@ -964,7 +981,8 @@ export class ReportsService {
     const in90 = new Date(todayUTC.getTime() + 90 * 24 * 60 * 60 * 1000);
 
     // ── Installment filter blocks ──────────────────────────────────────────
-    const instAnd: Prisma.InstallmentWhereInput[] = [];
+    // Installments of live contracts only (not cancelled, not deleted).
+    const instAnd: Prisma.InstallmentWhereInput[] = [{ plan: LIVE_PLAN_WHERE }];
     if (opts.projectId) {
       instAnd.push({
         plan: {
@@ -991,7 +1009,8 @@ export class ReportsService {
 
     // ── Deposit filter blocks ──────────────────────────────────────────────
     // base: projectId + q + type (no date — used for fixed-period "this month" KPI)
-    const baseDepAnd: Prisma.DepositWhereInput[] = [];
+    // Only payments still standing (not deleted / rejected / reversed).
+    const baseDepAnd: Prisma.DepositWhereInput[] = [RECORDED_DEPOSIT_WHERE];
     if (opts.projectId) {
       baseDepAnd.push({
         OR: [
@@ -1058,7 +1077,8 @@ export class ReportsService {
     }
 
     // ── Contract filter blocks ─────────────────────────────────────────────
-    const contractAnd: Prisma.ContractWhereInput[] = [];
+    // Sales figures count live contracts only.
+    const contractAnd: Prisma.ContractWhereInput[] = [LIVE_CONTRACT_WHERE];
     if (opts.projectId) {
       contractAnd.push({
         unit: { building: { phase: { projectId: opts.projectId } } },
@@ -1142,8 +1162,9 @@ export class ReportsService {
         where: contractWhere,
         _sum: { totalAmount: true },
       }),
+      // Headline: money actually collected (see common/finance/collected.ts).
       this.prisma.deposit.aggregate({
-        where: filteredDepWhere(),
+        where: filteredDepWhere(COLLECTED_DEPOSIT_WHERE),
         _sum: { amount: true },
       }),
       this.prisma.installment.aggregate({
@@ -1158,7 +1179,7 @@ export class ReportsService {
       }),
       // collectedThisMonth uses baseDepWhere (ignores user date range — always current month)
       this.prisma.deposit.aggregate({
-        where: baseDepWhere({ paidAt: { gte: monthStart, lt: monthEnd } }),
+        where: baseDepWhere({ ...COLLECTED_DEPOSIT_WHERE, paidAt: { gte: monthStart, lt: monthEnd } }),
         _sum: { amount: true },
       }),
       this.prisma.installment.aggregate({
@@ -1305,8 +1326,9 @@ export class ReportsService {
       instWhere({ ...unpaid, dueDate: range });
 
     const [
-      collectedVerifiedAgg,
+      recordedAgg,
       byTypeGroups,
+      byTypeCollectedGroups,
       outstandingAgg,
       dueSoonAgg,
       overdueComputedAgg,
@@ -1321,12 +1343,18 @@ export class ReportsService {
       bookingCollectedVerifiedAgg,
       bookingCollectedAllAgg,
     ] = await Promise.all([
-      this.prisma.deposit.aggregate({ where: filteredDepWhere({ verified: true }), _sum: { amount: true } }),
+      // Recorded (collected + waiting) vs collected, overall and per type.
+      this.prisma.deposit.aggregate({ where: filteredDepWhere(), _sum: { amount: true } }),
       this.prisma.deposit.groupBy({
-        by: ['type', 'verified'],
+        by: ['type'],
         where: filteredDepWhere(),
         _sum: { amount: true },
         _count: { _all: true },
+      }),
+      this.prisma.deposit.groupBy({
+        by: ['type'],
+        where: filteredDepWhere(COLLECTED_DEPOSIT_WHERE),
+        _sum: { amount: true },
       }),
       this.prisma.installment.aggregate({ where: instWhere(unpaid), _sum: { amount: true } }),
       this.prisma.installment.aggregate({
@@ -1346,8 +1374,8 @@ export class ReportsService {
       this.prisma.reservation.count({ where: resvWhere(ReservationStatus.APPROVED) }),
       this.prisma.reservation.aggregate({ where: resvWhere(ReservationStatus.PENDING), _sum: { bookingAmount: true } }),
       this.prisma.reservation.aggregate({ where: resvWhere(ReservationStatus.APPROVED), _sum: { bookingAmount: true } }),
-      this.prisma.deposit.aggregate({ where: bookingDepWhere({ verified: true }), _sum: { amount: true } }),
-      this.prisma.deposit.aggregate({ where: bookingDepWhere(), _sum: { amount: true } }),
+      this.prisma.deposit.aggregate({ where: bookingDepWhere(COLLECTED_DEPOSIT_WHERE), _sum: { amount: true } }),
+      this.prisma.deposit.aggregate({ where: bookingDepWhere(RECORDED_DEPOSIT_WHERE), _sum: { amount: true } }),
     ]);
 
     // Decimal-safe coercion for money arithmetic (aggregates are Decimal in
@@ -1356,8 +1384,10 @@ export class ReportsService {
       new Prisma.Decimal(v ?? 0);
 
     // Collection: verified-only is the bankable headline; all/unverified kept too.
-    const collectedAll = D(totalCollectedAgg._sum.amount);
-    const collectedVerified = D(collectedVerifiedAgg._sum.amount);
+    // "verified" = collected; "all" = recorded and still standing; the gap is
+    // money waiting (proof under review, cheque not cleared yet).
+    const collectedAll = D(recordedAgg._sum.amount);
+    const collectedVerified = D(totalCollectedAgg._sum.amount);
     const collectedUnverified = collectedAll.minus(collectedVerified);
 
     // Per-DepositType breakdown (respects active filters, incl. the user type
@@ -1370,12 +1400,14 @@ export class ReportsService {
     for (const g of byTypeGroups) {
       const acc = byType.get(g.type);
       if (!acc) continue;
-      const amt = D(g._sum.amount);
       acc.count += g._count?._all ?? 0;
-      acc.all = acc.all.plus(amt);
-      if (g.verified) acc.verified = acc.verified.plus(amt);
-      else acc.unverified = acc.unverified.plus(amt);
+      acc.all = acc.all.plus(D(g._sum.amount));
     }
+    for (const g of byTypeCollectedGroups) {
+      const acc = byType.get(g.type);
+      if (acc) acc.verified = acc.verified.plus(D(g._sum.amount));
+    }
+    for (const acc of byType.values()) acc.unverified = acc.all.minus(acc.verified);
     const collectionByType = Object.values(DepositType).map((t) => {
       const acc = byType.get(t)!;
       return {
@@ -1646,7 +1678,7 @@ export class ReportsService {
       Promise.all(
         trendSlots.map(({ start, end }) =>
           this.prisma.deposit.aggregate({
-            where: baseDepWhere({ paidAt: { gte: start, lt: end } }),
+            where: baseDepWhere({ ...COLLECTED_DEPOSIT_WHERE, paidAt: { gte: start, lt: end } }),
             _sum: { amount: true },
           }),
         ),
@@ -1654,7 +1686,12 @@ export class ReportsService {
       Promise.all(
         trendSlots.map(({ start, end }) =>
           this.prisma.installment.aggregate({
-            where: instWhere({ dueDate: { gte: start, lt: end } }),
+            // Due = everything that fell due that month, paid or not — but not
+            // what was cancelled.
+            where: instWhere({
+              dueDate: { gte: start, lt: end },
+              status: { not: InstallmentStatus.CANCELLED },
+            }),
             _sum: { amount: true },
           }),
         ),
@@ -1673,8 +1710,8 @@ export class ReportsService {
         totalContractValue: (
           totalContractAgg._sum.totalAmount ?? zero
         ).toString(),
-        // Existing field kept = ALL deposits (verified + unverified) for
-        // back-compat. New verified-only figure is the bankable headline.
+        // Money collected (common/finance/collected.ts) — same as
+        // totalCollectedVerified; totalCollectedAll is everything recorded.
         totalCollected: (totalCollectedAgg._sum.amount ?? zero).toString(),
         totalRemaining: (totalRemainingAgg._sum.amount ?? zero).toString(),
         totalOverdue: (totalOverdueAgg._sum.amount ?? zero).toString(),

@@ -42,6 +42,7 @@ import {
 } from './deposits.dto';
 import { reportFailure } from '../../common/observability/report-failure';
 import { CONTRACT_CANCELLED_MESSAGE, isDeadContract } from '../installments/live-contract';
+import { COLLECTED_DEPOSIT_WHERE } from '../../common/finance/collected';
 
 /** Reservations whose booking can still be paid. */
 const LIVE_RESERVATION_STATUSES: ReservationStatus[] = [
@@ -513,24 +514,12 @@ export class DepositsService {
 
     const where: Prisma.DepositWhereInput = { deletedAt: null, ...(and.length > 0 ? { AND: and } : {}) };
 
-    // "Paid money" totals exclude proofs that are still pending or were
-    // rejected — those are records, not confirmed payments, and must never
-    // inflate the customer's "إجمالي المدفوعات". NO_PROOF and APPROVED both
-    // count as paid: admin-recorded deposits and admin-confirmed booking
-    // amounts legitimately sit at NO_PROOF (with verified=true), while a
-    // customer-submitted proof becomes APPROVED on review. The `data` list
-    // below still returns every row (pending/rejected included) so they remain
-    // visible as records.
-    const paidWhere: Prisma.DepositWhereInput = {
-      AND: [
-        where,
-        {
-          reviewStatus: {
-            notIn: [DepositReviewStatus.PENDING_REVIEW, DepositReviewStatus.REJECTED],
-          },
-        },
-      ],
-    };
+    // "Paid money" totals use the one definition of collected money
+    // (common/finance/collected.ts): APPROVED or NO_PROOF, cheque cleared (or
+    // none), not reversed. Pending proofs, uncleared cheques and rejected or
+    // reversed payments never inflate the customer's "إجمالي المدفوعات". The
+    // `data` list below still returns every row so they remain visible.
+    const paidWhere: Prisma.DepositWhereInput = { AND: [where, COLLECTED_DEPOSIT_WHERE] };
 
     const [data, total, groups] = await Promise.all([
       this.prisma.deposit.findMany({

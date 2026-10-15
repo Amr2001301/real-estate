@@ -46,18 +46,25 @@ function makePrismaMock() {
     deposit: {
       count: jest.fn().mockResolvedValue(0),
       findMany: jest.fn().mockResolvedValue([]),
-      // Vary the sum by verified / booking detection in the where clause.
+      // Vary the sum by collected / booking detection in the where clause:
+      // the collected filter is the only one that accepts NO_PROOF.
       aggregate: jest.fn().mockImplementation(async ({ where }: { where: unknown }) => {
-        const verified = has(where, '"verified":true');
+        const collected = has(where, '"NO_PROOF"');
         const booking = has(where, 'BOOKING_AMOUNT');
-        const amount = booking ? (verified ? 250 : 400) : verified ? 600 : 1000;
+        const amount = booking ? (collected ? 250 : 400) : collected ? 600 : 1000;
         return { _sum: { amount } };
       }),
-      groupBy: jest.fn().mockResolvedValue([
-        { type: 'BOOKING_AMOUNT', verified: true, _sum: { amount: 250 }, _count: { _all: 2 } },
-        { type: 'BOOKING_AMOUNT', verified: false, _sum: { amount: 150 }, _count: { _all: 1 } },
-        { type: 'INSTALLMENT', verified: true, _sum: { amount: 350 }, _count: { _all: 3 } },
-      ]),
+      groupBy: jest.fn().mockImplementation(async ({ where }: { where: unknown }) =>
+        has(where, '"NO_PROOF"')
+          ? [
+              { type: 'BOOKING_AMOUNT', _sum: { amount: 250 } },
+              { type: 'INSTALLMENT', _sum: { amount: 350 } },
+            ]
+          : [
+              { type: 'BOOKING_AMOUNT', _sum: { amount: 400 }, _count: { _all: 3 } },
+              { type: 'INSTALLMENT', _sum: { amount: 350 }, _count: { _all: 3 } },
+            ],
+      ),
     },
     installment: {
       count: jest.fn().mockResolvedValue(1),
@@ -159,12 +166,13 @@ describe('Reports · financial-dashboard summary correctness (F1)', () => {
     body = res.body;
   });
 
-  it('splits collection into verified / all / unverified', () => {
+  it('splits collection into collected ("verified") / recorded ("all") / waiting', () => {
     expect(body.summary.totalCollectedAll).toBe('1000');
     expect(body.summary.totalCollectedVerified).toBe('600');
     expect(body.summary.totalCollectedUnverified).toBe('400');
-    // Existing field kept = ALL (back-compat).
-    expect(body.summary.totalCollected).toBe('1000');
+    // The headline is the collected amount (one definition everywhere), not
+    // everything recorded.
+    expect(body.summary.totalCollected).toBe('600');
   });
 
   it('breaks collection down by deposit type with verified/unverified split', () => {

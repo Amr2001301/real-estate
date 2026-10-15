@@ -294,10 +294,14 @@ describe('Deposits · booking-payment approval propagation + paid totals (Gap 2)
     expect(json).toContain('reservation');
     expect(json).toContain('clientId');
 
-    // Paid totals (groupBy) additionally exclude PENDING_REVIEW + REJECTED.
+    // Paid totals (groupBy) use the collected definition: only APPROVED or
+    // NO_PROOF (so PENDING_REVIEW and REJECTED are out), cheque cleared or
+    // none, and not reversed.
     const groupByArgs = mock.deposit.groupBy.mock.calls[0]![0] as { where: unknown };
     const groupJson = JSON.stringify(groupByArgs.where);
-    expect(groupJson).toContain('PENDING_REVIEW');
-    expect(groupJson).toContain('REJECTED');
+    expect(groupJson).toContain('"reviewStatus":{"in":["APPROVED","NO_PROOF"]}');
+    expect(groupJson).not.toContain('PENDING_REVIEW');
+    expect(groupJson).toContain('"CLEARED"');
+    expect(groupJson).toContain('"REVERSAL"');
   });
 });
