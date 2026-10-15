@@ -14,14 +14,45 @@ class NotificationsCubit extends Cubit<NotificationsState> {
   final MarkNotificationRead _markRead;
   final MarkAllNotificationsRead _markAll;
 
+  /// Matches the API's default page size.
+  static const pageSize = 20;
+
+  int _page = 1;
+  bool _hasMore = false;
+  bool _loadingMore = false;
+
+  /// Older notifications exist beyond those loaded.
+  bool get hasMore => _hasMore;
+
   Future<void> load() async {
     emit(state.toLoading());
     final result = await _get(const NoParams());
     result.when(
-      ok: (items) => emit(items.isEmpty
-          ? const NotificationsState.empty()
-          : NotificationsState.success(items)),
+      ok: (items) {
+        _page = 1;
+        _hasMore = items.length >= pageSize;
+        emit(items.isEmpty
+            ? const NotificationsState.empty()
+            : NotificationsState.success(items));
+      },
       err: (failure) => emit(state.toFailure(failure)),
+    );
+  }
+
+  /// Appends the next (older) page. A failure keeps what is shown.
+  Future<void> loadMore() async {
+    if (!_hasMore || _loadingMore) return;
+    final current = state.data ?? const <AppNotification>[];
+    _loadingMore = true;
+    final result = await _get.page(_page + 1);
+    _loadingMore = false;
+    result.when(
+      ok: (items) {
+        _page += 1;
+        _hasMore = items.length >= pageSize;
+        emit(NotificationsState.success([...current, ...items]));
+      },
+      err: AppLog.failure,
     );
   }
 

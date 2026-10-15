@@ -42,6 +42,7 @@ import '../features/chat/presentation/chat_bloc.dart';
 import '../features/chat/presentation/chat_event.dart';
 import '../features/chat/presentation/chat_screen.dart';
 import '../features/contracts/domain/entities/contract.dart';
+import 'load_by_id.dart';
 import '../features/contracts/domain/repositories/contracts_repository.dart';
 import '../features/contracts/domain/usecases/get_my_contracts.dart';
 import '../features/contracts/presentation/contract_detail_screen.dart';
@@ -445,11 +446,18 @@ GoRouter createCustomerRouter(
       GoRoute(
         path: '/account/contracts/:id',
         builder: (context, state) {
-          final contract = state.extra! as Contract;
-          return _documentsProviders(
-            ownerType: DocumentOwnerType.contract,
-            ownerId: contract.id,
-            child: ContractDetailScreen(contract: contract),
+          Widget detail(Contract contract) => _documentsProviders(
+                ownerType: DocumentOwnerType.contract,
+                ownerId: contract.id,
+                child: ContractDetailScreen(contract: contract),
+              );
+          final contract = state.extra as Contract?;
+          if (contract != null) return detail(contract);
+          final id = state.pathParameters['id']!;
+          return LoadById<Contract>(
+            load: () => GetMyContracts(context.read<ContractsRepository>())(const NoParams()),
+            matches: (c) => c.id == id,
+            builder: detail,
           );
         },
       ),
@@ -466,11 +474,18 @@ GoRouter createCustomerRouter(
       GoRoute(
         path: '/account/deposits/:id',
         builder: (context, state) {
-          final deposit = state.extra! as Deposit;
-          return _documentsProviders(
-            ownerType: DocumentOwnerType.deposit,
-            ownerId: deposit.id,
-            child: DepositDetailScreen(deposit: deposit),
+          Widget detail(Deposit deposit) => _documentsProviders(
+                ownerType: DocumentOwnerType.deposit,
+                ownerId: deposit.id,
+                child: DepositDetailScreen(deposit: deposit),
+              );
+          final deposit = state.extra as Deposit?;
+          if (deposit != null) return detail(deposit);
+          final id = state.pathParameters['id']!;
+          return LoadById<Deposit>(
+            load: () => GetMyDeposits(context.read<DepositsRepository>())(const NoParams()),
+            matches: (d) => d.id == id,
+            builder: detail,
           );
         },
       ),
@@ -504,11 +519,20 @@ GoRouter createCustomerRouter(
       GoRoute(
         path: '/account/installments/:id/proof',
         builder: (context, state) {
-          final installment = state.extra! as Installment;
-          return _documentsProviders(
-            ownerType: DocumentOwnerType.deposit,
-            ownerId: installment.latestProof!.depositId,
-            child: ProofViewScreen(installment: installment),
+          Widget detail(Installment installment) => _documentsProviders(
+                ownerType: DocumentOwnerType.deposit,
+                ownerId: installment.latestProof!.depositId,
+                child: ProofViewScreen(installment: installment),
+              );
+          final installment = state.extra as Installment?;
+          if (installment != null) return detail(installment);
+          final id = state.pathParameters['id']!;
+          return LoadById<Installment>(
+            load: () =>
+                GetMyInstallments(context.read<InstallmentsRepository>())(const NoParams()),
+            // Only an installment with a submitted proof has one to show.
+            matches: (i) => i.id == id && i.latestProof != null,
+            builder: detail,
           );
         },
       ),
@@ -551,8 +575,7 @@ GoRouter createCustomerRouter(
       GoRoute(
         path: '/account/maintenance/:id',
         builder: (context, state) {
-          final request = state.extra! as MaintenanceRequest;
-          return _documentsProviders(
+          Widget detail(MaintenanceRequest request) => _documentsProviders(
             ownerType: DocumentOwnerType.maintenanceRequest,
             ownerId: request.id,
             child: BlocProvider(
@@ -566,6 +589,16 @@ GoRouter createCustomerRouter(
               },
               child: const MaintenanceRequestDetailScreen(),
             ),
+          );
+          final request = state.extra as MaintenanceRequest?;
+          if (request != null) return detail(request);
+          final id = state.pathParameters['id']!;
+          return LoadById<MaintenanceRequest>(
+            load: () => GetMyMaintenanceRequests(
+              context.read<MaintenanceRepository>(),
+            )(const NoParams()),
+            matches: (r) => r.id == id,
+            builder: detail,
           );
         },
       ),

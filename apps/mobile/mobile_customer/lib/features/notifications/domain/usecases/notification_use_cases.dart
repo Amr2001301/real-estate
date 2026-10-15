@@ -9,6 +9,9 @@ class GetNotifications implements UseCase<List<AppNotification>, NoParams> {
   @override
   Future<Result<List<AppNotification>>> call(NoParams params) =>
       _repo.getNotifications();
+
+  /// One page of the newest-first list (page 1 = the newest).
+  Future<Result<List<AppNotification>>> page(int page) => _repo.getNotifications(page: page);
 }
 
 class GetUnreadCount implements UseCase<int, NoParams> {

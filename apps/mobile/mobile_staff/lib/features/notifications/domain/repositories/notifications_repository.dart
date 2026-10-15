@@ -3,7 +3,8 @@ import 'package:core/core_domain.dart';
 import '../entities/app_notification.dart';
 
 abstract interface class NotificationsRepository {
-  Future<Result<List<AppNotification>>> getNotifications();
+  /// One page of notifications, newest first (page 1 = newest).
+  Future<Result<List<AppNotification>>> getNotifications({int page = 1});
   Future<Result<int>> getUnreadCount();
   Future<Result<void>> markRead(String id);
   Future<Result<void>> markAllRead();

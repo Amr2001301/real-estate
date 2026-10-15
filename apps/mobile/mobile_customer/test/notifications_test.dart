@@ -17,7 +17,8 @@ class _FakeNotificationsRepository implements NotificationsRepository {
       countFailure != null ? Result.err(countFailure!) : Result.ok(count);
 
   @override
-  Future<Result<List<AppNotification>>> getNotifications() async => const Ok([]);
+  Future<Result<List<AppNotification>>> getNotifications({int page = 1}) async =>
+      const Ok([]);
   @override
   Future<Result<void>> markRead(String id) async => const Ok(null);
   @override
