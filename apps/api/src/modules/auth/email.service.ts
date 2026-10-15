@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import { reportFailure } from '../../common/observability/report-failure';
 import type { Transporter } from 'nodemailer';
 
 @Injectable()
@@ -50,7 +51,7 @@ export class EmailService {
     try {
       await transporter.sendMail({ from, to, subject, text, html });
     } catch (err) {
-      this.logger.error(`Failed to send password-reset email to ${to}: ${(err as Error).message}`);
+      reportFailure(this.logger, 'auth-email', `Failed to send password-reset email to ${to}`, err, 'error');
     }
   }
 
@@ -93,7 +94,7 @@ export class EmailService {
     try {
       await transporter.sendMail({ from, to, subject, text, html });
     } catch (err) {
-      this.logger.error(`Failed to send verification email to ${to}: ${(err as Error).message}`);
+      reportFailure(this.logger, 'auth-email', `Failed to send verification email to ${to}`, err, 'error');
     }
   }
 
@@ -111,14 +112,16 @@ export class EmailService {
     to: string,
     subject: string,
     htmlBody: string,
-  ): Promise<{ ok: true; sentAt: Date } | { ok: false; error: string }> {
+  ): Promise<
+    { ok: true; sentAt: Date } | { ok: false; error: string; unconfigured?: boolean }
+  > {
     const from = this.config.get<string>('SMTP_FROM') ?? 'noreply@devora.sa';
     const transporter = this.createTransporter();
     if (!transporter) {
       if (this.config.get<string>('NODE_ENV') !== 'production') {
         this.logger.warn(`[email] notification email to ${to} — ${subject}`);
       }
-      return { ok: false, error: 'SMTP not configured' };
+      return { ok: false, error: 'SMTP not configured', unconfigured: true };
     }
     try {
       const text = htmlBody.replace(/<[^>]+>/g, '');

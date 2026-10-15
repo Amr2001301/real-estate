@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { SuperAdminService } from './super-admin.service';
+import { reportFailure } from '../../common/observability/report-failure';
 
 @Injectable()
 export class SubscriptionExpiryCron {
@@ -19,7 +20,7 @@ export class SubscriptionExpiryCron {
         );
       }
     } catch (err) {
-      this.logger.error(`[subscription-expiry] cron failed: ${(err as Error).message}`);
+      reportFailure(this.logger, 'cron', `[subscription-expiry] cron failed`, err, 'error');
     }
   }
 }

@@ -61,6 +61,7 @@ import { BonusModule } from '../bonus/bonus.module';
 import { BonusService } from '../bonus/bonus.module';
 import { CancellationPolicyService } from './cancellation-policy.service';
 import { ContractCancellationService } from './contract-cancellation.service';
+import { reportFailure } from '../../common/observability/report-failure';
 
 // ── P12 legacy backfill helpers ─────────────────────────────────────────────
 // Pure (exported for unit tests). Derive safe display metadata for a backfilled
@@ -240,7 +241,7 @@ export class ContractsService {
       const { created } = await this.linkContractDocument(contractId, pdfUrl, uploadedById, meta);
       if (created) await this.notifyContractDocumentAvailable(contractId);
     } catch (e) {
-      this.logger.warn(`linkContractDocument(${contractId}) failed: ${(e as Error).message}`);
+      reportFailure(this.logger, 'contract-document-link', `linkContractDocument(${contractId}) failed`, e);
     }
   }
 
@@ -827,9 +828,7 @@ export class ContractsService {
       } catch (e) {
         // Defence in depth — the helpers already swallow, but in case the
         // prisma query above throws we log and continue.
-        this.logger.warn(
-          `Broker contract sign notify failed for ${id}: ${(e as Error).message}`,
-        );
+        reportFailure(this.logger, 'notification', `Broker contract sign notify failed for ${id}`, e);
       }
       // P4 — also notify the customer directly that their contract was signed.
       await this.notifications.sendToUser(
@@ -886,7 +885,7 @@ export class ContractsService {
         await run();
       } catch (e) {
         const error = (e as Error).message;
-        this.logger.error(`sign follow-up ${step} failed for contract ${contract.id}: ${error}`);
+        reportFailure(this.logger, 'contract-sign-followup', `sign follow-up ${step} failed for contract ${contract.id}`, e, 'error');
         failures.push({ step, error });
       }
     }

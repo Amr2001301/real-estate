@@ -25,6 +25,7 @@ import {
   MarkPayoutPaidDto,
   ProcessPayoutDto,
 } from './dto/broker-payout.dto';
+import { reportFailure } from '../../common/observability/report-failure';
 
 const PAYOUT_INCLUDE = {
   broker: {
@@ -574,9 +575,7 @@ export class BrokerPayoutsService {
         },
       });
     } catch (e) {
-      this.logger.warn(
-        `writeActivity(${type}) for payout ${payoutId} failed: ${(e as Error).message}`,
-      );
+      reportFailure(this.logger, 'activity-log', `writeActivity(${type}) for payout ${payoutId} failed`, e);
     }
   }
 
@@ -595,9 +594,7 @@ export class BrokerPayoutsService {
       const recipients = await this.notifications.brokerRecipients(brokerId, { money: true });
       await this.notifications.sendToUsers(recipients, templateCode, payload);
     } catch (e) {
-      this.logger.warn(
-        `notify(${templateCode}) for broker ${brokerId} failed: ${(e as Error).message}`,
-      );
+      reportFailure(this.logger, 'notification', `notify(${templateCode}) for broker ${brokerId} failed`, e);
     }
   }
 }

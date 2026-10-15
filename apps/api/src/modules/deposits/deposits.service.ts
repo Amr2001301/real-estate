@@ -39,6 +39,7 @@ import {
   RejectDepositDto,
   VerifyDepositDto,
 } from './deposits.dto';
+import { reportFailure } from '../../common/observability/report-failure';
 
 const DEPOSIT_INCLUDE = {
   contract: {
@@ -166,7 +167,7 @@ export class DepositsService {
     try {
       await this.linkReceiptDocument(depositId, receiptUrl, uploadedById);
     } catch (e) {
-      this.logger.warn(`linkReceiptDocument(${depositId}) failed: ${(e as Error).message}`);
+      reportFailure(this.logger, 'deposit-receipt-link', `linkReceiptDocument(${depositId}) failed`, e);
     }
   }
 
@@ -1334,9 +1335,7 @@ export class DepositsService {
         payload,
       );
     } catch (err) {
-      this.logger.warn(
-        `notifyStaff(${templateCode}) failed: ${(err as Error).message}`,
-      );
+      reportFailure(this.logger, 'notification', `notifyStaff(${templateCode}) failed`, err);
     }
   }
 
@@ -1368,7 +1367,7 @@ export class DepositsService {
         { except: actorId },
       );
     } catch (err) {
-      this.logger.warn(`notifyDepositStaff failed: ${(err as Error).message}`);
+      reportFailure(this.logger, 'notification', `notifyDepositStaff failed`, err);
     }
   }
 }

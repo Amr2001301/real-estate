@@ -20,6 +20,7 @@ import { SmsService } from './sms.service';
 import { EmailService } from './email.service';
 import { CapabilityService } from '../../common/capabilities/capability.service';
 import type { UserRole } from '@prisma/client';
+import { reportFailure } from '../../common/observability/report-failure';
 
 // MT-035: Response header emitted on legacy /auth/login to signal deprecation.
 export const DEPRECATED_ENDPOINT_HEADER = 'Deprecation';
@@ -142,9 +143,7 @@ export class AuthService {
       // Never let a CRM-housekeeping failure block a customer from logging
       // in. The /me/reservations safety-net OR clause still resolves the
       // visibility question for the request that follows.
-      this.logger.warn(
-        `[identity-claim] post-login merge errored for ${userId}: ${(err as Error).message}`,
-      );
+      reportFailure(this.logger, 'identity-claim', `[identity-claim] post-login merge errored for ${userId}`, err);
     }
   }
 
@@ -320,7 +319,7 @@ export class AuthService {
     try {
       await this.email.sendPasswordReset(user.email, rawToken);
     } catch (err: unknown) {
-      this.logger.error(`password-reset email error: ${(err as Error).message}`);
+      reportFailure(this.logger, 'auth-email', `password-reset email error`, err, 'error');
     }
   }
 
@@ -474,7 +473,7 @@ export class AuthService {
 
       await this.email.sendEmailVerification(email, rawToken);
     } catch (err) {
-      this.logger.error(`[email-verify] failed for user ${userId}: ${(err as Error).message}`);
+      reportFailure(this.logger, 'auth-email', `[email-verify] failed for user ${userId}`, err, 'error');
     }
   }
 
@@ -892,7 +891,7 @@ export class AuthService {
     try {
       await this.email.sendPasswordReset(user.email, rawToken);
     } catch (err: unknown) {
-      this.logger.error(`password-reset email error: ${(err as Error).message}`);
+      reportFailure(this.logger, 'auth-email', `password-reset email error`, err, 'error');
     }
     return { ok: true };
   }

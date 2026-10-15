@@ -34,6 +34,7 @@ import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { NotificationsService } from '../notifications/notifications.module';
 import { CancellationPolicyService } from './cancellation-policy.service';
 import type { CancellationPolicySnapshot } from './cancellation-settings.constants';
+import { reportFailure } from '../../common/observability/report-failure';
 
 // ── Request DTO types (validated by class-validator in the controller) ─────────
 
@@ -364,7 +365,7 @@ export class ContractCancellationService {
         { contractId },
       );
     } catch (e) {
-      this.logger.warn(`contract_cancelled_customer notify failed for ${contractId}: ${(e as Error).message}`);
+      reportFailure(this.logger, 'notification', `contract_cancelled_customer notify failed for ${contractId}`, e);
     }
     // The sales person, the broker who brought the deal (agent + firm
     // managers), admins and sales managers — never whoever cancelled it.
@@ -407,7 +408,7 @@ export class ContractCancellationService {
         );
       }
     } catch (e) {
-      this.logger.warn(`contract_cancelled_staff notify failed for ${contractId}: ${(e as Error).message}`);
+      reportFailure(this.logger, 'notification', `contract_cancelled_staff notify failed for ${contractId}`, e);
     }
 
     return cancellation;

@@ -32,6 +32,7 @@ import type {
   UpdatePricingPackageDto,
   UpdateCompanyModulesDto,
 } from './dto/super-admin.dto';
+import { reportFailure } from '../../common/observability/report-failure';
 
 @Injectable()
 export class SuperAdminService {
@@ -61,7 +62,7 @@ export class SuperAdminService {
         this.notifications!.sendToRoles([UserRole.ADMIN], code, payload),
       );
     } catch (err) {
-      this.logger.warn(`notifyCompanyAdmins(${code}) failed: ${(err as Error).message}`);
+      reportFailure(this.logger, 'notification', `notifyCompanyAdmins(${code}) failed`, err);
     }
   }
 
@@ -78,7 +79,7 @@ export class SuperAdminService {
         }),
       );
     } catch (err) {
-      this.logger.warn(`welcome failed: ${(err as Error).message}`);
+      reportFailure(this.logger, 'notification', `welcome failed`, err);
     }
   }
 

@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { app, messaging } from 'firebase-admin';
+import { reportFailure } from '../observability/report-failure';
 
 /**
  * Initializes the Firebase Admin SDK from env credentials. When credentials are
@@ -37,7 +38,7 @@ export class FirebaseService implements OnModuleInit {
       this.logger.log(`FCM enabled for project ${projectId}`);
     } catch (err) {
       // Never crash the app over push setup; log without leaking the key.
-      this.logger.error(`FCM init failed: ${(err as Error).message}`);
+      reportFailure(this.logger, 'fcm-init', `FCM init failed`, err, 'error');
       this._app = null;
     }
   }

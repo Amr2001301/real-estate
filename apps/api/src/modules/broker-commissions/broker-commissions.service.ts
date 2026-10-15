@@ -16,6 +16,7 @@ import {
   CancelBrokerCommissionDto,
   RejectBrokerCommissionDto,
 } from './dto/broker-commission.dto';
+import { reportFailure } from '../../common/observability/report-failure';
 
 const COMMISSION_INCLUDE = {
   broker: {
@@ -565,9 +566,7 @@ export class BrokerCommissionsService {
         },
       });
     } catch (e) {
-      this.logger.warn(
-        `writeActivity(${type}) for commission ${commissionId} failed: ${(e as Error).message}`,
-      );
+      reportFailure(this.logger, 'activity-log', `writeActivity(${type}) for commission ${commissionId} failed`, e);
     }
   }
 
@@ -588,9 +587,7 @@ export class BrokerCommissionsService {
       const recipients = await this.notifications.brokerRecipients(brokerId, { agentUserId, money: true });
       await this.notifications.sendToUsers(recipients, templateCode, payload);
     } catch (e) {
-      this.logger.warn(
-        `notify(${templateCode}) for broker ${brokerId} failed: ${(e as Error).message}`,
-      );
+      reportFailure(this.logger, 'notification', `notify(${templateCode}) for broker ${brokerId} failed`, e);
     }
   }
 }

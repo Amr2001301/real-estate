@@ -24,6 +24,7 @@ import {
   ReplaceInstrumentDto,
 } from './payment-instruments.dto';
 import { paginate, takeSkip } from '../../common/utils/pagination';
+import { reportFailure } from '../../common/observability/report-failure';
 
 // Compute the status an installment should be re-opened to after a Sub-case B
 // bounce, per the operator-submitted installmentAction (§4.4).
@@ -161,7 +162,7 @@ export class ChequeLifecycleService {
         { except: actorId },
       );
     } catch (e) {
-      this.logger.warn(`instrument notification failed: ${(e as Error).message}`);
+      reportFailure(this.logger, 'notification', `instrument notification failed`, e);
     }
   }
 
@@ -522,7 +523,7 @@ export class ChequeLifecycleService {
           );
         }
       } catch (e) {
-        this.logger.warn(`cheque_bounced notification lookup failed: ${(e as Error).message}`);
+        reportFailure(this.logger, 'notification', `cheque_bounced notification lookup failed`, e);
       }
     }
     await this.notifyInstrument(id, PaymentInstrumentStatus.BOUNCED, performedById, { customer: false });
