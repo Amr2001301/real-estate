@@ -78,19 +78,21 @@ export async function claimSyntheticPeers(
   const prisma = prismaArg as PrismaClient;
   const target = await prisma.user.findUnique({
     where: { id: targetUserId },
-    select: { phone: true, email: true, companyId: true },
+    select: { phone: true, email: true, companyId: true, phoneVerifiedAt: true, emailVerifiedAt: true },
   });
   if (!target) return { claimedCount: 0, claimedIds: [] };
   // MT-011: synthetic peer merging is only meaningful within a single tenant.
   // A null companyId means the target is a SUPER_ADMIN or a pre-migration row;
   // cross-tenant merging for these accounts is undefined and would be a bug.
   if (target.companyId === null) return { claimedCount: 0, claimedIds: [] };
-  const targetPhone = normalizePhone(
-    override?.phone !== undefined ? override.phone : target.phone,
-  );
-  const targetEmail = normalizeEmail(
-    override?.email !== undefined ? override.email : target.email,
-  );
+  // Only a contact the user has proven (OTP for the phone, a link for the
+  // email) may pull CRM records into the account — anyone can type a number.
+  const targetPhone = target.phoneVerifiedAt
+    ? normalizePhone(override?.phone !== undefined ? override.phone : target.phone)
+    : null;
+  const targetEmail = target.emailVerifiedAt
+    ? normalizeEmail(override?.email !== undefined ? override.email : target.email)
+    : null;
   if (!targetPhone && !targetEmail) return { claimedCount: 0, claimedIds: [] };
 
   // Pull candidate synthetics. Use the small unique-column-backed lookups

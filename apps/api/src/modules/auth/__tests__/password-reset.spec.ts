@@ -228,7 +228,9 @@ describe('AuthService · resetPassword', () => {
     await service.resetPassword(RAW_TOKEN, 'NewPass123!');
     expect(argon2.hash).toHaveBeenCalledWith('NewPass123!');
     expect(prisma.user.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { passwordHash: 'hashed-new-password' } }),
+      expect.objectContaining({
+        data: { passwordHash: 'hashed-new-password', emailVerifiedAt: expect.any(Date) },
+      }),
     );
   });
 

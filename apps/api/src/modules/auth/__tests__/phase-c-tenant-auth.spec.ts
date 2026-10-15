@@ -409,24 +409,18 @@ describe('AuthService · registerCustomerV2', () => {
     );
   });
 
-  it('claims a synthetic CLIENT (passwordHash=null) rather than rejecting or creating a new account', async () => {
+  it('refuses to take over a synthetic CLIENT on typed contacts alone (409, nothing written)', async () => {
     const { service, prisma } = makeAuthService();
     const synthetic = { id: 'synth-1', role: 'CLIENT', passwordHash: null, email: regDto.email, companyId: COMPANY_A };
     // byEmail returns the synthetic row; byPhone returns null (Promise.all order).
     prisma.user.findFirst
       .mockResolvedValueOnce(synthetic)
       .mockResolvedValueOnce(null);
-    prisma.user.update.mockResolvedValue({ id: 'synth-1', role: 'CLIENT' });
-    const result = await service.registerCustomerV2(COMPANY_A, 'SA', regDto);
-    // Claim path: update the existing row, never create a new one.
+    await expect(service.registerCustomerV2(COMPANY_A, 'SA', regDto)).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'account_exists_verify' }),
+    });
     expect(prisma.user.create).not.toHaveBeenCalled();
-    expect(prisma.user.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: 'synth-1' },
-        data: expect.objectContaining({ passwordHash: '$hashed', companyId: COMPANY_A }),
-      }),
-    );
-    expect(result.tokens.accessToken).toBe('access-token');
+    expect(prisma.user.update).not.toHaveBeenCalled();
   });
 });
 

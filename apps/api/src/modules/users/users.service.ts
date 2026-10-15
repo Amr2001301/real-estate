@@ -8,7 +8,6 @@ import {
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { phoneForWrite } from '../../common/utils/phone-for-write';
-import { claimSyntheticPeers } from '../../common/utils/identity-claim';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { Prisma, UserRole } from '@prisma/client';
@@ -393,38 +392,19 @@ export class UsersService {
       dto.phone !== undefined && dto.phone === stored
         ? dto.phone
         : await phoneForWrite(this.prisma, dto.phone, companyId);
-    // P9 — when a user (typically self via PATCH /v1/users/me) adds a phone
-    // that overlaps with a synthetic peer (a CRM-only CLIENT row carrying
-    // their pre-registration Leads / Reservations), sweep the peer into the
-    // registered account BEFORE the update writes the new value — otherwise
-    // the unique-phone constraint on User.phone would block the write.
-    // Idempotent: re-runs after a successful merge are no-ops. Safe inside
-    // an admin-driven edit too — only CLIENT rows with passwordHash=null
-    // are eligible.
-    if (phone) {
-      try {
-        const result = await claimSyntheticPeers(this.prisma, id, {
-          phone,
-        });
-        if (result.claimedCount > 0) {
-          this.logger.log(
-            `[identity-claim] profile-update pre-claim merged ${result.claimedCount} synthetic peer(s) into ${id}: ${result.claimedIds.join(', ')}`,
-          );
-        }
-      } catch (err) {
-        // Never block the customer's profile edit on a CRM-housekeeping
-        // failure; the next login will try again. If the synthetic survives
-        // and still holds the same phone, the user.update below will surface
-        // the unique-constraint violation — the caller (controller) maps it
-        // to a user-friendly error rather than a 500.
-        this.logger.warn(
-          `[identity-claim] profile-update pre-claim errored for ${id}: ${(err as Error).message}`,
-        );
-      }
-    }
+    // A typed phone proves nothing, so a profile edit never pulls CRM records
+    // in (it did before: adding a lead's number took over its reservations).
+    // A changed phone loses its verification until the next OTP sign-in, which
+    // proves it and links the records. A number held by a CRM record still
+    // hits the unique constraint, which the controller maps to a clear error.
+    const phoneChanged = phone !== undefined && phone !== stored;
     return this.prisma.user.update({
       where: { id },
-      data: { ...dto, ...(phone !== undefined ? { phone } : {}) },
+      data: {
+        ...dto,
+        ...(phone !== undefined ? { phone } : {}),
+        ...(phoneChanged ? { phoneVerifiedAt: null } : {}),
+      },
       select: this.publicSelect(),
     });
   }
