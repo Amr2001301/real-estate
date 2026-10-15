@@ -60,6 +60,8 @@ function mapRegisterError(status: number, code?: string): string {
   if (status === 0) return 'تعذر الاتصال بالخادم حاليًا. حاول مرة أخرى بعد لحظات.';
   if (code === 'email_taken') return 'يوجد حساب مسجل بهذا البريد الإلكتروني بالفعل.';
   if (code === 'phone_taken') return 'يوجد حساب مسجل بهذا الرقم بالفعل.';
+  if (code === 'account_exists_verify')
+    return 'هذا الرقم أو البريد مسجّل لدينا بالفعل. ادخل برمز يصلك على الموبايل، أو أعد تعيين كلمة المرور من بريدك.';
   if (status === 400) return 'برجاء مراجعة البيانات المطلوبة.';
   return 'تعذر إنشاء الحساب حاليًا. حاول مرة أخرى بعد لحظات.';
 }

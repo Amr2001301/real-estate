@@ -285,6 +285,9 @@ model User {
   active          Boolean   @default(true)
   avatarUrl       String?
   emailVerifiedAt DateTime?
+  /// Set when the user proves the phone with an OTP. Only a verified phone
+  /// (or a verified email) may link the account to existing CRM records.
+  phoneVerifiedAt DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   lastLoginAt     DateTime?

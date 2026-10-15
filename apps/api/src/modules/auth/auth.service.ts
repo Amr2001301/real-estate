@@ -339,7 +339,7 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: record.userId },
-      select: { id: true, passwordHash: true, active: true },
+      select: { id: true, passwordHash: true, active: true, emailVerifiedAt: true },
     });
     if (!user || !user.active) throw new BadRequestException('Reset token is invalid or has expired');
 
@@ -349,7 +349,11 @@ export class AuthService {
         where: { id: record.id },
         data: { consumedAt: new Date() },
       }),
-      this.prisma.user.update({ where: { id: user.id }, data: { passwordHash } }),
+      // The link reached the inbox, so the email is proven too.
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash, emailVerifiedAt: user.emailVerifiedAt ?? new Date() },
+      }),
       this.prisma.refreshToken.updateMany({
         where: { userId: user.id, revokedAt: null },
         data: { revokedAt: new Date() },
@@ -378,7 +382,7 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: record.userId },
-      select: { id: true, emailVerifiedAt: true, active: true },
+      select: { id: true, emailVerifiedAt: true, active: true, companyId: true },
     });
     if (!user || !user.active) {
       throw new BadRequestException('Verification link is invalid or has expired');
@@ -409,6 +413,8 @@ export class AuthService {
       }),
     ]);
 
+    // The email is proven now: link the CRM records that carry it.
+    await this.tryClaimSyntheticPeers(record.userId, user.companyId ?? undefined);
     return { ok: true };
   }
 
@@ -739,17 +745,15 @@ export class AuthService {
         if (byEmail) throw new ConflictException({ code: 'email_taken' });
         if (byPhone) throw new ConflictException({ code: 'phone_taken' });
       }
-      if (byEmail && byPhone && byEmail.id !== byPhone.id) {
-        throw new ConflictException({ code: 'identity_split_synthetic' });
-      }
-      const passwordHash = await argon2.hash(dto.password);
-      const claimed = await this.prisma.user.update({
-        where: { id: matchedRow.id },
-        data: { fullName, email, phone, passwordHash, locale: 'ar', emailVerifiedAt: null, companyId },
+      // A CRM record (lead / reservation / contract) already holds this phone
+      // or email. Typing them in proves nothing, so registration never takes
+      // the record over: the owner proves it instead — a code sent to the
+      // phone (OTP sign-in) or a link sent to the email (password reset).
+      throw new ConflictException({
+        code: 'account_exists_verify',
+        message:
+          'هذا الرقم أو البريد مسجّل لدينا بالفعل. ادخل برمز يصلك على الموبايل، أو أعد تعيين كلمة المرور من بريدك.',
       });
-      await this.tryClaimSyntheticPeers(claimed.id, companyId);
-      await this.sendVerificationEmailSafe(claimed.id, email);
-      return this.issueTokens(claimed.id, claimed.role);
     }
 
     const passwordHash = await argon2.hash(dto.password);
@@ -846,13 +850,16 @@ export class AuthService {
     }
     await this.prisma.otpCode.update({ where: { id: otp.id }, data: { consumed: true } });
 
+    // The code proves the phone: record it, so the account may link to the
+    // CRM records that carry this number.
+    const now = new Date();
     let user = await this.prisma.user.findFirst({ where: { phone, companyId, deletedAt: null } });
     if (!user) {
       user = await this.prisma.user.create({
-        data: { phone, fullName: fullName ?? 'New User', role: 'CLIENT', locale: 'ar', companyId },
+        data: { phone, fullName: fullName ?? 'New User', role: 'CLIENT', locale: 'ar', companyId, phoneVerifiedAt: now },
       });
     } else {
-      await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+      await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: now, phoneVerifiedAt: now } });
     }
     await this.tryClaimSyntheticPeers(user.id, companyId);
     return this.issueTokens(user.id, user.role);
@@ -870,9 +877,12 @@ export class AuthService {
 
     const user = await this.prisma.user.findFirst({
       where: { email, companyId, deletedAt: null },
-      select: { id: true, email: true, passwordHash: true, active: true },
+      select: { id: true, email: true, passwordHash: true, active: true, role: true },
     });
-    if (!user || !user.email || !user.passwordHash) return { ok: true };
+    // A CRM-only CLIENT (no password yet) is claimed this way: the reset link
+    // goes to the email on file, so only its owner can set the password.
+    if (!user || !user.email || !user.active) return { ok: true };
+    if (!user.passwordHash && user.role !== 'CLIENT') return { ok: true };
 
     const rawToken = randomBytes(32).toString('hex');
     const tokenHash = createHash('sha256').update(rawToken).digest('hex');

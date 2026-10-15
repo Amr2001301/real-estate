@@ -8,6 +8,7 @@
 
 import request from 'supertest';
 import * as argon2 from 'argon2';
+import { createHash } from 'crypto';
 import {
   LeadStage,
   ReservationBookingPaymentStatus,
@@ -841,8 +842,11 @@ describe('P7 — /me/reservations (e2e)', () => {
     email: string;
     phone: string | null;
     password: string;
+    /** Contacts proven (OTP / email link). Default true — the matching tests assume it. */
+    verified?: boolean;
   }): Promise<{ id: string }> {
     const passwordHash = await argon2.hash(opts.password);
+    const verifiedAt = opts.verified === false ? null : new Date();
     return testApp.rawPrisma.user.create({
       data: {
         companyId: testCompanyId,
@@ -852,13 +856,44 @@ describe('P7 — /me/reservations (e2e)', () => {
         phone: opts.phone,
         passwordHash,
         locale: 'ar',
+        emailVerifiedAt: verifiedAt,
+        phoneVerifiedAt: opts.phone ? verifiedAt : null,
       },
       select: { id: true },
     });
   }
 
+  // Proves a phone the way the app does: a code is issued, then verified.
+  async function signInWithOtp(phone: string): Promise<request.Response> {
+    const code = '246810';
+    await testApp.rawPrisma.otpCode.create({
+      data: {
+        phone,
+        codeHash: createHash('sha256').update(code).digest('hex'),
+        expiresAt: new Date(Date.now() + 5 * 60_000),
+        companyId: testCompanyId,
+      },
+    });
+    return http()
+      .post('/v1/auth/tenant/otp/verify')
+      .send({ slug: process.env.SEED_COMPANY_SLUG ?? 'default', phone, code });
+  }
+
+  // Proves an email the way the app does: the reset link that was mailed is used.
+  async function resetViaEmailLink(userId: string, newPassword: string): Promise<request.Response> {
+    const token = `p8-reset-${userId}`;
+    await testApp.rawPrisma.passwordResetToken.create({
+      data: {
+        userId,
+        tokenHash: createHash('sha256').update(token).digest('hex'),
+        expiresAt: new Date(Date.now() + 30 * 60_000),
+      },
+    });
+    return http().post('/v1/auth/tenant/reset-password').send({ token, newPassword });
+  }
+
   describe('P8 — Synthetic User claim at registration', () => {
-    it('P8.1: registering with phone/email matching a synthetic CLIENT claims that row (existing Lead/Reservation surface)', async () => {
+    it('P8.1: registering with a CRM record\'s phone/email is refused; an OTP on that phone claims it', async () => {
       const suffix = await uniqueSuffix();
       const phone = `+966500${suffix}`;
       const email = `p8-claim-${suffix}@example.com`;
@@ -918,21 +953,27 @@ describe('P7 — /me/reservations (e2e)', () => {
           password: 'StrongPass1!',
           acceptTerms: true,
         });
-      expect(registerRes.status).toBe(201);
+      // Typing someone's phone and email proves nothing: no takeover.
+      expect(registerRes.status).toBe(409);
+      expect(registerRes.body.code).toBe('account_exists_verify');
+      const untouched = await testApp.rawPrisma.user.findUniqueOrThrow({
+        where: { id: synthetic.id },
+        select: { passwordHash: true, fullName: true },
+      });
+      expect(untouched.passwordHash).toBeNull();
+      expect(untouched.fullName).toBe('P8 Walk-in Lead');
 
+      // The phone's owner proves it with a code and lands in that record.
+      const otp = await signInWithOtp(phone);
+      expect(otp.status).toBe(201);
       const claimed = await testApp.rawPrisma.user.findUniqueOrThrow({
         where: { id: synthetic.id },
-        select: { id: true, role: true, email: true, phone: true, passwordHash: true },
+        select: { phoneVerifiedAt: true },
       });
-      expect(claimed.passwordHash).toBeTruthy();
-      expect(claimed.role).toBe(UserRole.CLIENT);
-      expect(claimed.email).toBe(email);
-      expect(claimed.phone).toBe(phone);
-
-      const claimedToken = await mintAccessToken(claimed.id, UserRole.CLIENT);
+      expect(claimed.phoneVerifiedAt).not.toBeNull();
       const meRes = await http()
         .get('/v1/me/reservations')
-        .set('Authorization', bearer(claimedToken));
+        .set('Authorization', bearer(otp.body.accessToken ?? otp.body.tokens?.accessToken));
       expect(meRes.status).toBe(200);
       expect(collectIds(meRes.body)).toContain(reservation.id);
     });
@@ -1138,6 +1179,60 @@ describe('P7 — /me/reservations (e2e)', () => {
     });
   });
 
+  describe('P8 — contact matching needs a proven contact', () => {
+    it('P8.3b: a user whose phone/email are unverified does NOT see a reservation linked only by lead contact', async () => {
+      const suffix = await uniqueSuffix();
+      const phone = `+966500778${suffix}`;
+      const email = `p8-unverified-${suffix}@example.com`;
+      const user = await createRealUser({
+        fullName: 'P8 Typed Someone Else\'s Number',
+        phone,
+        email,
+        password: 'StrongPass1!',
+        verified: false,
+      });
+      const owner = await testApp.rawPrisma.user.create({
+        data: { companyId: testCompanyId, role: UserRole.CLIENT, fullName: 'P8 Real Lead Owner', phone: `${phone}-owner`, locale: 'ar' },
+        select: { id: true },
+      });
+      const lead = await testApp.rawPrisma.lead.create({
+        data: {
+          companyId: testCompanyId,
+          clientId: owner.id,
+          fullName: 'P8 Real Lead Owner',
+          phone,
+          email,
+          stage: LeadStage.NEW,
+          assignedSalesId: salesUserId,
+        },
+        select: { id: true },
+      });
+      const unit = await pickFreshUnit();
+      const reservation = await testApp.rawPrisma.reservation.create({
+        data: {
+          companyId: testCompanyId,
+          unitId: unit.id,
+          salesId: salesUserId,
+          leadId: lead.id,
+          status: ReservationStatus.PENDING,
+          expiresAt: new Date(Date.now() + 72 * 3_600_000),
+          reservationNumber: `P8U-${suffix}`,
+          bookingAmount: 1,
+        },
+        select: { id: true },
+      });
+      await testApp.rawPrisma.unit.update({
+        where: { id: unit.id },
+        data: { status: UnitStatus.RESERVED, reservationExpiresAt: new Date(Date.now() + 72 * 3_600_000) },
+      });
+
+      const tok = await mintAccessToken(user.id, UserRole.CLIENT);
+      const meRes = await http().get('/v1/me/reservations').set('Authorization', bearer(tok));
+      expect(meRes.status).toBe(200);
+      expect(collectIds(meRes.body)).not.toContain(reservation.id);
+    });
+  });
+
   // ── P9 — normalized phone matching + login-time synthetic claim ─────────
 
   describe('P9 — normalized phone matching in ownership filter', () => {
@@ -1213,7 +1308,7 @@ describe('P7 — /me/reservations (e2e)', () => {
       expect(realAfter.role).toBe(UserRole.CLIENT);
     });
 
-    it('P9.2: a reservation whose lead.clientId is a synthetic peer matched only by user.email surfaces too', async () => {
+    it('P9.2: a CRM record holding only an email is claimed through the email link, not by registering', async () => {
       const suffix = await uniqueSuffix();
       const phone = `+966500${suffix}`;
       const email = `p9-peer-${suffix}@example.com`;
@@ -1262,13 +1357,19 @@ describe('P7 — /me/reservations (e2e)', () => {
       const reg = await http()
         .post('/v1/auth/tenant/customer/register')
         .send({ slug: process.env.SEED_COMPANY_SLUG ?? 'default', fullName: 'P9 Real Identity', phone, email, password: 'StrongPass1!', acceptTerms: true });
-      expect(reg.status).toBe(201);
+      expect(reg.status).toBe(409);
 
-      const claimed = await testApp.rawPrisma.user.findFirstOrThrow({
-        where: { email },
-        select: { id: true },
+      // The inbox owner uses the reset link: password set, email proven.
+      const reset = await resetViaEmailLink(synthetic.id, 'StrongPass1!');
+      expect(reset.status).toBe(201);
+      const after = await testApp.rawPrisma.user.findUniqueOrThrow({
+        where: { id: synthetic.id },
+        select: { emailVerifiedAt: true, passwordHash: true },
       });
-      const tok = await mintAccessToken(claimed.id, UserRole.CLIENT);
+      expect(after.emailVerifiedAt).not.toBeNull();
+      expect(after.passwordHash).toBeTruthy();
+
+      const tok = await loginAs(testApp.app, email, 'StrongPass1!', 'customer');
       const meRes = await http()
         .get('/v1/me/reservations')
         .set('Authorization', bearer(tok));
@@ -1350,7 +1451,7 @@ describe('P7 — /me/reservations (e2e)', () => {
       expect(collectIds(meRes.body)).toContain(reservation.id);
     });
 
-    it('P9.4: PATCH /v1/users/me adding a phone triggers the same merge (covers email-only registered + phone-only synthetic)', async () => {
+    it('P9.4: PATCH /v1/users/me adding a CRM record\'s phone does NOT take the record over', async () => {
       const suffix = await uniqueSuffix();
       const phone = `+966500${suffix}`;
       const email = `p9-patch-${suffix}@example.com`;
@@ -1412,23 +1513,23 @@ describe('P7 — /me/reservations (e2e)', () => {
         .patch('/v1/users/me')
         .set('Authorization', bearer(tok))
         .send({ phone });
-      expect(patch.status).toBe(200);
+      expect(patch.status).not.toBe(200);
 
       const syntheticAfter = await testApp.rawPrisma.user.findUnique({
         where: { id: synthetic.id },
         select: { id: true },
       });
-      expect(syntheticAfter).toBeNull();
+      expect(syntheticAfter).not.toBeNull();
       const leadAfter = await testApp.rawPrisma.lead.findUniqueOrThrow({
         where: { id: lead.id },
         select: { clientId: true },
       });
-      expect(leadAfter.clientId).toBe(real.id);
+      expect(leadAfter.clientId).toBe(synthetic.id);
 
       const after = await http()
         .get('/v1/me/reservations')
         .set('Authorization', bearer(tok));
-      expect(collectIds(after.body)).toContain(reservation.id);
+      expect(collectIds(after.body)).not.toContain(reservation.id);
     });
 
     it('P9.5: claim refuses to merge a row with passwordHash set (real account), even on contact match', async () => {

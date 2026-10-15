@@ -1028,10 +1028,17 @@ export class ReservationsService {
   private async buildUserOwnershipFilter(
     userId: string,
   ): Promise<Prisma.ReservationWhereInput[]> {
-    const contact = await findTenantUser(this.prisma, userId, { phone: true, email: true });
+    const contact = await findTenantUser(this.prisma, userId, {
+      phone: true,
+      email: true,
+      phoneVerifiedAt: true,
+      emailVerifiedAt: true,
+    });
     const companyId = getTenantContext()?.companyId ?? null;
-    const phoneDigits = normalizePhone(contact?.phone ?? null);
-    const emailKey = normalizeEmail(contact?.email ?? null);
+    // Matching by contact only for a contact the user has proven (OTP / email
+    // link): otherwise registering with someone's number showed their deals.
+    const phoneDigits = contact?.phoneVerifiedAt ? normalizePhone(contact.phone ?? null) : null;
+    const emailKey = contact?.emailVerifiedAt ? normalizeEmail(contact.email ?? null) : null;
 
     // Resolve identity peers — every User row whose normalized phone or
     // canonical email matches the logged-in user's. Always includes the
