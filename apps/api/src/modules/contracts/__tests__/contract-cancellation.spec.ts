@@ -61,6 +61,11 @@ function buildTx() {
       findFirst: jest.fn().mockResolvedValue(null),
     },
     installment: { updateMany: jest.fn().mockResolvedValue({ count: 54 }) },
+    paymentInstrument: {
+      findMany: jest.fn().mockResolvedValue([]),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+    },
+    deposit: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
     brokerCommission: {
       update: jest.fn().mockResolvedValue({}),
       aggregate: jest.fn().mockResolvedValue({
@@ -222,6 +227,27 @@ describe('ContractCancellationService.cancel()', () => {
     });
 
     expect(result).toBeDefined();
+  });
+
+  it('CC-U-1b: uncleared cheques are cancelled and their waiting deposits rejected', async () => {
+    const prisma = buildPrisma({});
+    prisma._tx.paymentInstrument.findMany.mockResolvedValue([{ id: 'pi-1' }, { id: 'pi-2' }]);
+    const svc = buildSvc(prisma);
+
+    await svc.cancel(CONTRACT_ID, BASE_INPUT, ACTOR_ID);
+
+    expect(prisma._tx.paymentInstrument.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ['pi-1', 'pi-2'] } },
+      data: { status: 'CANCELLED' },
+    });
+    expect(prisma._tx.deposit.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { paymentInstrumentId: { in: ['pi-1', 'pi-2'] }, reviewStatus: 'PENDING_REVIEW' },
+        data: expect.objectContaining({ reviewStatus: 'REJECTED' }),
+      }),
+    );
+    const audit = prisma._tx.auditLog.create.mock.calls[0]![0] as { data: { after: Record<string, unknown> } };
+    expect(audit.data.after['cancelledInstrumentIds']).toEqual(['pi-1', 'pi-2']);
   });
 
   it('CC-U-2: AUTO unit release — unit updated + UnitStatusHistory created + unitReleasedAt set', async () => {

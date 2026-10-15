@@ -24,7 +24,9 @@ import {
   BrokerPayoutStatus,
   ClawbackStatus,
   ContractStatus,
+  DepositReviewStatus,
   InstallmentStatus,
+  PaymentInstrumentStatus,
   Prisma,
   UnitStatus,
   UserRole,
@@ -149,6 +151,7 @@ export class ContractCancellationService {
     const bonusClawbackIds: string[] = [];
     let unitReleasedAt: Date | null = null;
     let customerDemotedAt: Date | null = null;
+    let cancelledInstrumentIds: string[] = [];
 
     const cancellation = await this.prisma.$transaction(async (tx) => {
       // 1. Contract → CANCELLED
@@ -172,6 +175,35 @@ export class ContractCancellationService {
           data: { status: InstallmentStatus.CANCELLED },
         });
         cancelledInstallmentsCount = result.count;
+      }
+
+      // 3b. Uncleared cheques of the deal are cancelled with it (decided
+      // 2026-10-15): a cancelled contract collects nothing more, so they are
+      // not presented or cleared later. Their waiting deposits are rejected;
+      // the rows stay as evidence.
+      const openInstruments = await tx.paymentInstrument.findMany({
+        where: {
+          status: { in: [PaymentInstrumentStatus.PENDING_CLEARANCE, PaymentInstrumentStatus.DEPOSITED] },
+          deposits: { some: { contractId } },
+        },
+        select: { id: true },
+      });
+      cancelledInstrumentIds = openInstruments.map((i) => i.id);
+      if (cancelledInstrumentIds.length > 0) {
+        await tx.paymentInstrument.updateMany({
+          where: { id: { in: cancelledInstrumentIds } },
+          data: { status: PaymentInstrumentStatus.CANCELLED },
+        });
+        await tx.deposit.updateMany({
+          where: {
+            paymentInstrumentId: { in: cancelledInstrumentIds },
+            reviewStatus: DepositReviewStatus.PENDING_REVIEW,
+          },
+          data: {
+            reviewStatus: DepositReviewStatus.REJECTED,
+            rejectionReason: 'Cheque cancelled with the contract',
+          },
+        });
       }
 
       // 4. Commission handling (CLAWBACK action only; RETAIN/MANUAL = no change)
@@ -340,6 +372,7 @@ export class ContractCancellationService {
             retainedAmount: input.retainedAmount,
             refundAmount: input.refundAmount,
             cancelledInstallmentsCount,
+            cancelledInstrumentIds,
             commissionAction: effectiveCommissionAction,
             commissionClawbackIds,
             bonusAction: effectiveBonusAction,
