@@ -62,6 +62,7 @@ import { InstallmentRemindersService } from '../src/modules/installments/install
 import { MaintenanceSlaCheckCron, MaintenanceUnresolvedCron } from '../src/modules/maintenance/maintenance.module';
 import { ReservationExpiryCron } from '../src/modules/reservations/reservations.module';
 import { AppointmentReminderCron } from '../src/modules/visits/appointment-reminder.cron';
+import { NotificationRetryCron } from '../src/modules/notifications/notification-retry.cron';
 
 export interface TestApp {
   app: INestApplication;
@@ -106,6 +107,7 @@ export type CronJob =
   | 'installment-due-soon'
   | 'maintenance-sla'
   | 'maintenance-unresolved'
+  | 'notification-retry'
   | 'reservation-expiry';
 
 function cronRunner(app: INestApplication): (job: CronJob) => Promise<void> {
@@ -114,6 +116,7 @@ function cronRunner(app: INestApplication): (job: CronJob) => Promise<void> {
   const sla = app.get(MaintenanceSlaCheckCron);
   const unresolved = app.get(MaintenanceUnresolvedCron);
   const reservations = app.get(ReservationExpiryCron);
+  const notificationRetry = app.get(NotificationRetryCron);
   const asCron = (fn: () => Promise<unknown>) =>
     runTenantContext({ companyId: null, bypass: true, isPublic: false }, async () => {
       await fn();
@@ -130,6 +133,8 @@ function cronRunner(app: INestApplication): (job: CronJob) => Promise<void> {
         return unresolved.run();
       case 'reservation-expiry':
         return reservations.run();
+      case 'notification-retry':
+        return notificationRetry.retryAll().then(() => undefined);
     }
   };
 }

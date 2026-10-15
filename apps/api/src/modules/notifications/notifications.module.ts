@@ -57,6 +57,18 @@ export const notificationDeliveryTotal = new Counter({
   registers: [register],
 });
 
+const PUSH_UNCONFIGURED = 'FCM not configured';
+const EMAIL_UNCONFIGURED = 'SMTP not configured';
+/** FG-09 — redelivery of failed push / e-mail. */
+export const MAX_DELIVERY_RETRIES = 3;
+const RETRY_WINDOW_MS = 24 * 60 * 60 * 1000;
+const RETRY_BATCH = 200;
+const SETUP_ERROR_PREFIX = 'Delivery error: ';
+/** 5, 15, then 45 minutes after the previous attempt. */
+export function retryDueAt(previousAttempt: Date, retriesSoFar: number): Date {
+  return new Date(previousAttempt.getTime() + 5 * 60_000 * 3 ** retriesSoFar);
+}
+
 class UpsertTemplateDto {
   @IsString() code!: string;
   @IsEnum(NotificationChannel) channel!: NotificationChannel;
@@ -510,23 +522,45 @@ export class NotificationsService implements OnModuleInit {
       },
     });
 
+    await this.deliver(
+      { id: notification.id, userId: dto.userId, templateCode: dto.templateCode },
+      tpl,
+      payload,
+      { push: true, email: true },
+    );
+
+    return notification;
+  }
+
+  /**
+   * Push and e-mail for a stored notification row, outcome written back to the
+   * row. `want` limits the channels (a retry only re-sends what failed); the
+   * user's own opt-outs are checked again every time.
+   */
+  private async deliver(
+    n: { id: string; userId: string; templateCode: string },
+    tpl: NotificationTemplate,
+    payload: Record<string, unknown>,
+    want: { push: boolean; email: boolean },
+    retry = false,
+  ): Promise<void> {
     // Delivery outcome accumulator — written back to the row once at the end.
     const outcome: {
       pushSentAt?: Date;
-      pushError?: string;
+      pushError?: string | null;
       emailSentAt?: Date;
-      emailError?: string;
+      emailError?: string | null;
     } = {};
 
     try {
       const user = await resolveTenantUser(
         this.prisma,
-        dto.userId,
+        n.userId,
         { locale: true, email: true, notificationPrefs: true },
       );
       // The user's own opt-outs (in-app always stays).
-      const pushWanted = channelAllowed(user?.notificationPrefs, 'push', dto.templateCode);
-      const emailWanted = channelAllowed(user?.notificationPrefs, 'email', dto.templateCode);
+      const pushWanted = want.push && channelAllowed(user?.notificationPrefs, 'push', n.templateCode);
+      const emailWanted = want.email && channelAllowed(user?.notificationPrefs, 'email', n.templateCode);
       const locale = pickLocale(user?.locale ?? 'ar');
       const currency = await getCompanyCurrency(this.prisma, getTenantContext()?.companyId);
 
@@ -534,8 +568,8 @@ export class NotificationsService implements OnModuleInit {
       // the mobile app can deep-link directly from the push tap without a
       // separate API call. Never include sensitive fields.
       const fcmData: Record<string, string> = {
-        templateCode: dto.templateCode,
-        notificationId: notification.id,
+        templateCode: n.templateCode,
+        notificationId: n.id,
       };
       if (payload.entityType && typeof payload.entityType === 'string') {
         fcmData['entityType'] = payload.entityType;
@@ -556,17 +590,18 @@ export class NotificationsService implements OnModuleInit {
       const pushPromise: Promise<void> = !pushWanted
         ? Promise.resolve()
         : this.push
-        .sendToUser(dto.userId, {
-          title: resolveText(tpl.subject, payload, locale, dto.templateCode, currency),
+        .sendToUser(n.userId, {
+          title: resolveText(tpl.subject, payload, locale, n.templateCode, currency),
           body:  resolveText(tpl.body,    payload, locale, '', currency),
           data:  fcmData,
         })
         .then((result) => {
           if (!result.enabled) {
-            outcome.pushError = 'FCM not configured';
+            outcome.pushError = PUSH_UNCONFIGURED;
             notificationDeliveryTotal.inc({ channel: 'push', outcome: 'unconfigured' });
           } else if (result.sent > 0) {
             outcome.pushSentAt = new Date();
+            if (retry) outcome.pushError = null;
             notificationDeliveryTotal.inc({ channel: 'push', outcome: 'sent' });
           }
           // sent === 0 with no failure: user has no registered device.
@@ -575,14 +610,14 @@ export class NotificationsService implements OnModuleInit {
         .catch((err: unknown) => {
           outcome.pushError = ((err as Error).message ?? 'FCM error').slice(0, 500);
           notificationDeliveryTotal.inc({ channel: 'push', outcome: 'failed' });
-          reportFailure(this.logger, 'notification-push', `Push failed (${dto.templateCode})`, err);
+          reportFailure(this.logger, 'notification-push', `Push failed (${n.templateCode})`, err);
         });
 
       const emailPromise: Promise<void> =
         user?.email && tpl.emailEnabled && emailWanted
           ? (() => {
               // Escaped: payload values (names, notes) are user input.
-              const subject  = escapeHtml(resolveText(tpl.subject, payload, locale, dto.templateCode, currency));
+              const subject  = escapeHtml(resolveText(tpl.subject, payload, locale, n.templateCode, currency));
               const bodyText = escapeHtml(resolveText(tpl.body,    payload, locale, '', currency));
               const dir      = locale === 'ar' ? 'rtl' : 'ltr';
               const htmlBody = `<div dir="${dir}" style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px;color:#1a1a2e;"><h2 style="margin:0 0 16px;color:#0F1E33;">${subject}</h2><p style="margin:0 0 24px;line-height:1.7;">${bodyText}</p><hr style="margin:28px 0;border:none;border-top:1px solid #eee;"/><p style="margin:0;font-size:12px;color:#999;">© ديفورا — منصة الإدارة العقارية</p></div>`;
@@ -591,6 +626,7 @@ export class NotificationsService implements OnModuleInit {
                 .then((result) => {
                   if (result.ok) {
                     outcome.emailSentAt = result.sentAt;
+                    if (retry) outcome.emailError = null;
                     notificationDeliveryTotal.inc({ channel: 'email', outcome: 'sent' });
                   } else if (result.unconfigured) {
                     outcome.emailError = result.error;
@@ -601,7 +637,7 @@ export class NotificationsService implements OnModuleInit {
                     reportFailure(
                       this.logger,
                       'notification-email',
-                      `E-mail failed (${dto.templateCode})`,
+                      `E-mail failed (${n.templateCode})`,
                       new Error(result.error),
                     );
                   }
@@ -614,20 +650,76 @@ export class NotificationsService implements OnModuleInit {
       // user lookup failed or another setup error — record on push channel
       // (the most likely recipient of the original intent).
       const msg = ((err as Error).message ?? 'delivery setup error').slice(0, 500);
-      reportFailure(this.logger, 'notification', `Delivery setup failed for ${dto.templateCode}`, err);
-      outcome.pushError = outcome.pushError ?? `Delivery error: ${msg}`;
+      reportFailure(this.logger, 'notification', `Delivery setup failed for ${n.templateCode}`, err);
+      outcome.pushError = outcome.pushError ?? `${SETUP_ERROR_PREFIX}${msg}`;
     }
 
     // Write delivery outcome back in a single update. Skip when nothing was
     // attempted (e.g. template has no eligible channels and user has no email).
-    if (Object.keys(outcome).length > 0) {
-      await this.prisma.notification.update({
-        where: { id: notification.id },
-        data:  outcome,
-      });
+    // A retry always records itself, so the job never picks the row up early.
+    const data = retry
+      ? { ...outcome, deliveryRetries: { increment: 1 }, lastRetryAt: new Date() }
+      : outcome;
+    if (Object.keys(data).length > 0) {
+      await this.prisma.notification.update({ where: { id: n.id }, data });
     }
 
-    return notification;
+  }
+
+  /**
+   * FG-09 — re-send the push / e-mail of recent notifications whose delivery
+   * failed. Only real failures are retried (not "FCM / SMTP not configured"),
+   * at most MAX_DELIVERY_RETRIES times with growing gaps, within 24 hours of
+   * the notification. Must run inside the row's company context; the cron
+   * groups rows by company. Returns how many rows were retried.
+   */
+  async retryFailedDeliveries(now = new Date()): Promise<number> {
+    const rows = await this.prisma.notification.findMany({
+      where: {
+        createdAt: { gte: new Date(now.getTime() - RETRY_WINDOW_MS) },
+        deliveryRetries: { lt: MAX_DELIVERY_RETRIES },
+        OR: [
+          { pushError: { not: null }, NOT: { pushError: PUSH_UNCONFIGURED } },
+          { emailError: { not: null }, NOT: { emailError: EMAIL_UNCONFIGURED } },
+        ],
+      },
+      orderBy: { createdAt: 'asc' },
+      take: RETRY_BATCH,
+    });
+    let retried = 0;
+    for (const row of rows) {
+      const due = retryDueAt(row.lastRetryAt ?? row.createdAt, row.deliveryRetries);
+      if (due > now) continue;
+      try {
+        const tpl = await this.templateFor(row.templateCode);
+        if (!tpl) {
+          // Template gone: nothing to re-send — stop picking the row up.
+          await this.prisma.notification.update({
+            where: { id: row.id },
+            data: { deliveryRetries: MAX_DELIVERY_RETRIES, lastRetryAt: now },
+          });
+          continue;
+        }
+        await this.deliver(
+          row,
+          tpl,
+          (row.payload ?? {}) as Record<string, unknown>,
+          {
+            push: !!row.pushError && row.pushError !== PUSH_UNCONFIGURED,
+            // A setup failure ("Delivery error: …", recorded on push) stopped
+            // the e-mail too, so it is re-tried with it.
+            email:
+              (!!row.emailError && row.emailError !== EMAIL_UNCONFIGURED) ||
+              !!row.pushError?.startsWith(SETUP_ERROR_PREFIX),
+          },
+          true,
+        );
+        retried += 1;
+      } catch (err) {
+        reportFailure(this.logger, 'notification-retry', `Retry of notification ${row.id} failed`, err);
+      }
+    }
+    return retried;
   }
 
   async listMine(

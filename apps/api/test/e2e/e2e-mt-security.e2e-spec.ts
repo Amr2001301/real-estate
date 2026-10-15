@@ -1160,6 +1160,53 @@ describe('CRON-CTX — scheduled jobs act inside each row\'s own company (e2e)',
     });
     expect(activity.companyId).toBe(companyAId);
   });
+
+  // FG-09 — the retry job reads tenant-scoped rows, so it must run inside
+  // each company; a sweep in bypass would find (and fix) nothing.
+  it('failed push / e-mail are retried in each company; unconfigured and old ones are not', async () => {
+    const raw = testApp.rawPrisma;
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60_000);
+    const make = (userId: string, companyId: string, extra: Record<string, unknown>) =>
+      raw.notification.create({
+        data: {
+          userId,
+          companyId,
+          templateCode: 'deposit_recorded',
+          channel: 'PUSH',
+          payload: { retryRun: RUN },
+          sentAt: tenMinutesAgo,
+          createdAt: tenMinutesAgo,
+          ...extra,
+        },
+        select: { id: true },
+      });
+    try {
+      const inA = await make(fixtures.userIds.adminId, companyAId, { emailError: 'Connection refused' });
+      const inB = await make(adminBId, companyBId, { pushError: 'FCM quota exceeded' });
+      const unconfigured = await make(fixtures.userIds.adminId, companyAId, {
+        emailError: 'SMTP not configured',
+      });
+      const old = await make(fixtures.userIds.adminId, companyAId, {
+        emailError: 'Connection refused',
+        createdAt: new Date(Date.now() - 25 * 60 * 60_000),
+      });
+
+      await testApp.runCronJob('notification-retry');
+
+      const rows = await raw.notification.findMany({
+        where: { id: { in: [inA.id, inB.id, unconfigured.id, old.id] } },
+        select: { id: true, deliveryRetries: true, lastRetryAt: true },
+      });
+      const byId = new Map(rows.map((r) => [r.id, r]));
+      expect(byId.get(inA.id)).toMatchObject({ deliveryRetries: 1 });
+      expect(byId.get(inA.id)!.lastRetryAt).not.toBeNull();
+      expect(byId.get(inB.id)).toMatchObject({ deliveryRetries: 1 });
+      expect(byId.get(unconfigured.id)).toMatchObject({ deliveryRetries: 0, lastRetryAt: null });
+      expect(byId.get(old.id)).toMatchObject({ deliveryRetries: 0, lastRetryAt: null });
+    } finally {
+      await raw.notification.deleteMany({ where: { payload: { path: ['retryRun'], equals: RUN } } });
+    }
+  });
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
