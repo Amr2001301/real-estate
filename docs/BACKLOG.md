@@ -1,7 +1,7 @@
 # Devora — Prioritised Backlog
 
 Originally written 2026-10-06 against `main` at `447a260`. **Status updated
-2026-10-08** after PRs #1–#17. Item numbers are kept so references in PRs and
+2026-10-15** after PRs #1–#55. Item numbers are kept so references in PRs and
 docs stay valid.
 
 Order: data that is wrong where someone acts on it → launch blockers → dated
@@ -37,6 +37,9 @@ detail in `docs/audit/08-functional-gaps.md` §7.
 | FG-10 | A failure starting warranties or creating the broker/sales commission on sign was only a log line — the data was silently missing | Failures are returned, audited (`contract.sign_followup_failed`) and shown on the contract page with a retry (`POST /contracts/:id/sign-followups`, idempotent) |
 | FG-04 | Info requests could not leave OPEN; directly-created contracts had no number | `PATCH /info-requests/:id` + buttons on `/dashboard/requests`. `POST /contracts` numbers the contract (or keeps a given legacy number); a numberless contract can be numbered once from its page |
 | FG-13 | Admin confirm deleted a rejected customer proof's deposit (orphaning its document); unconfirm left the booking PENDING after a rejected proof; confirm could double an approved proof | Confirm keeps proof deposits and refuses (409) an already-approved proof; unconfirm counts only proofs under review and rejects an approved one |
+| Notifications for every event (#47–#51) | Most actions notified no one, or only an admin; the customer never heard about installments, deposits, cheques, maintenance or their account; push taps and notification links opened lists, not the item | Every staff/customer action notifies the people it concerns (owner after the contract, assigned rep, managers, broker team), in-app + push + e-mail, with the actor never notified of their own action. Sales pipeline, finance (installments due/overdue, deposits, cheques, refunds, bonuses), maintenance and accounts/teams/subscriptions. Titles and bodies come from the server in ar/en; links and push taps open the item on web-admin, web-public and both apps; lists paginate; a device's push token is dropped on logout. A drift test fails when a code is sent without a catalog entry |
+| Apps open an item by id (#52) | The customer app's detail screens needed the item passed in, so a push tap or a deep link crashed | `LoadById` fetches the contract / deposit / maintenance request / installment when only the id is known; notification lists have "show more" |
+| Notification preferences (#53, #54) | No way to stop e-mail or push for a kind of notification | Per user, per group (sales, finance, maintenance, account): e-mail and push can be switched off; in-app always stays on. `GET/PUT /users/me/notification-preferences`; settings on the dashboard, the broker portal, the public account page and both apps |
 | FG-05 | Reversal accepted APPROVED deposits only, could run twice, and deleting a deposit left its installment PAID | Any deposit still paying its installment is reversible (incl. admin-recorded NO_PROOF); second reversal 409, atomic claim; delete reverses first. Delete/restore routes given their `deposits/` prefix |
 | FG-01 | `Deposit.paymentInstrumentId` was never set, so clearing or bouncing a cheque touched no deposit | Decided 2026-10-08: cheque → unpaid until it clears; transfer → collected at once; one cheque per installment. API: PR #18. UI: payment method on the deposit form, `/dashboard/cheques` (deposit, clear, bounce, cancel) |
 | 15 | Split the security suite (31 min) | Not needed: the job lacked Redis; with it the suite runs in ~1.5 min (PR #9, G16). A Redis outage no longer stalls the API either (PR #10) |
@@ -50,6 +53,7 @@ detail in `docs/audit/08-functional-gaps.md` §7.
 
 | # | Item | What is needed |
 |---|---|---|
+| — | **Production hosting** | There is no production deployment today: the Railway account shows 0 projects and an expired trial, the `RAILWAY_TOKEN` secret was never set, and every `deploy.yml` run skipped its deploy jobs. Choose a host (Railway needs a paid plan), then: database, variables (`RUN_MIGRATIONS=true`, JWT, FCM, SMTP, `DEFAULT_COMPANY_ID`), the `RAILWAY_TOKEN` secret, first deploy. `Railway Status (Read-Only)` (#55) reports what is live once the token exists |
 | 13 | Restrict the two Firebase keys | Firebase Console: package name + SHA-256. **The repository is public** — restriction is the only control |
 | 14 | Branch protection on `main` | Required check: `all checks passed` |
 | — | Actions on a public repository | Settings → Actions: require approval for outside collaborators |
