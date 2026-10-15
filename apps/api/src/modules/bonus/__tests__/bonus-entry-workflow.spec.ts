@@ -38,11 +38,14 @@ interface EntryFixture {
   ruleId: string;
   amount: number;
   period: string;
-  status: 'PENDING' | 'APPROVED' | 'PAID';
+  status: 'PENDING' | 'APPROVED' | 'PAID' | 'CANCELLED';
   paidAt: Date | null;
 }
 
-const fixture: { entry: EntryFixture } = { entry: {} as never };
+const fixture: {
+  entry: EntryFixture;
+  contract: { status: string; deletedAt: Date | null } | null;
+} = { entry: {} as never, contract: null };
 
 function resetFixture() {
   fixture.entry = {
@@ -54,6 +57,7 @@ function resetFixture() {
     status: 'PENDING',
     paidAt: null,
   };
+  fixture.contract = null;
 }
 
 class FakeAuthGuard implements CanActivate {
@@ -91,6 +95,10 @@ function makePrismaMock() {
         fixture.entry = { ...fixture.entry, ...data, id: where.id };
         return fixture.entry;
       }),
+      findUnique: jest.fn().mockImplementation(async () => ({
+        status: fixture.entry.status,
+        contract: fixture.contract,
+      })),
       findMany: jest.fn().mockResolvedValue([]),
     },
     bonusRule: {
@@ -349,6 +357,7 @@ describe('Bonus · entry lifecycle workflow', () => {
   // ── payEntry ────────────────────────────────────────────────────────────
 
   it('payEntry: status → PAID, paidAt stamped with a Date', async () => {
+    fixture.entry.status = 'APPROVED';
     await request(app.getHttpServer())
       .post(`/bonus-entries/${ENTRY_ID}/pay`)
       .send({})
@@ -360,6 +369,39 @@ describe('Bonus · entry lifecycle workflow', () => {
     expect(args.where.id).toBe(ENTRY_ID);
     expect(args.data.status).toBe('PAID');
     expect(args.data.paidAt).toBeInstanceOf(Date);
+  });
+
+  // ── State machine: PENDING → APPROVED → PAID; APPROVED → PENDING ────────
+
+  it('payEntry on a PENDING entry is refused (409) — it must be approved first', async () => {
+    await request(app.getHttpServer()).post(`/bonus-entries/${ENTRY_ID}/pay`).send({}).expect(409);
+    expect(mock.bonusEntry.update).not.toHaveBeenCalled();
+  });
+
+  it('a CANCELLED entry can be neither approved, paid nor reverted (409)', async () => {
+    fixture.entry.status = 'CANCELLED';
+    await request(app.getHttpServer()).post(`/bonus-entries/${ENTRY_ID}/approve`).send({}).expect(409);
+    await request(app.getHttpServer()).post(`/bonus-entries/${ENTRY_ID}/pay`).send({}).expect(409);
+    await request(app.getHttpServer())
+      .patch(`/bonus-entries/${ENTRY_ID}`)
+      .send({ status: 'PENDING' })
+      .expect(409);
+    expect(mock.bonusEntry.update).not.toHaveBeenCalled();
+  });
+
+  it('a PAID entry cannot be reverted to PENDING (409)', async () => {
+    fixture.entry.status = 'PAID';
+    await request(app.getHttpServer())
+      .patch(`/bonus-entries/${ENTRY_ID}`)
+      .send({ status: 'PENDING' })
+      .expect(409);
+    expect(mock.bonusEntry.update).not.toHaveBeenCalled();
+  });
+
+  it('an entry of a cancelled contract cannot be approved (409)', async () => {
+    fixture.contract = { status: 'CANCELLED', deletedAt: null };
+    await request(app.getHttpServer()).post(`/bonus-entries/${ENTRY_ID}/approve`).send({}).expect(409);
+    expect(mock.bonusEntry.update).not.toHaveBeenCalled();
   });
 
   // ── PATCH /bonus-entries/:id is restricted to revert-to-PENDING ─────────

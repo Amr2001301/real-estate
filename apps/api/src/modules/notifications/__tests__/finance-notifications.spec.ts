@@ -266,6 +266,7 @@ describe('bonuses', () => {
     const notifications = makeNotifications();
     const prisma = {
       bonusEntry: {
+        findUnique: jest.fn().mockResolvedValue({ status: 'APPROVED', contract: null }),
         update: jest.fn(
           async ({ where, data }: { where: { id: string }; data: { status: string } }) => ({
             id: where.id,

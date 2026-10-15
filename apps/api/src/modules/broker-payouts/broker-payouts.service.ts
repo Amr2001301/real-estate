@@ -26,6 +26,7 @@ import {
   ProcessPayoutDto,
 } from './dto/broker-payout.dto';
 import { reportFailure } from '../../common/observability/report-failure';
+import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 
 const PAYOUT_INCLUDE = {
   broker: {
@@ -141,6 +142,8 @@ export class BrokerPayoutsService {
       brokerId: query.brokerId,
       status: BrokerCommissionStatus.APPROVED,
       payoutId: null,
+      // A cancelled deal's commission is never paid out.
+      contract: LIVE_CONTRACT_WHERE,
       ...(query.projectId ? { projectId: query.projectId } : {}),
       ...(query.from || query.to
         ? {
@@ -234,6 +237,7 @@ export class BrokerPayoutsService {
             brokerId: dto.brokerId,
             status: BrokerCommissionStatus.APPROVED,
             payoutId: null,
+            contract: LIVE_CONTRACT_WHERE,
           },
           data: { payoutId: created.id },
         });
@@ -269,6 +273,7 @@ export class BrokerPayoutsService {
           brokerId: payout.brokerId,
           status: BrokerCommissionStatus.APPROVED,
           payoutId: null,
+          contract: LIVE_CONTRACT_WHERE,
         },
         data: { payoutId: id },
       });

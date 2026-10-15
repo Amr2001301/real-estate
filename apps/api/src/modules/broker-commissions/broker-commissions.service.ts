@@ -17,6 +17,7 @@ import {
   RejectBrokerCommissionDto,
 } from './dto/broker-commission.dto';
 import { reportFailure } from '../../common/observability/report-failure';
+import { CONTRACT_CANCELLED_MESSAGE, isDeadContract } from '../installments/live-contract';
 
 const COMMISSION_INCLUDE = {
   broker: {
@@ -369,6 +370,12 @@ export class BrokerCommissionsService {
         'Cannot approve a cancelled commission; create a new contract or re-materialize',
       );
     }
+    // A commission kept (RETAIN / MANUAL) on a cancelled deal is not approved.
+    const parent = await this.prisma.brokerCommission.findUnique({
+      where: { id },
+      select: { contract: { select: { status: true, deletedAt: true } } },
+    });
+    if (isDeadContract(parent?.contract)) throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
     const updated = await this.prisma.brokerCommission.update({
       where: { id },
       data: {

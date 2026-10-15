@@ -1,5 +1,11 @@
 import { ContractStatus, Prisma } from '@prisma/client';
 
+/** A contract that is neither cancelled nor deleted. */
+export const LIVE_CONTRACT_WHERE = {
+  status: { not: ContractStatus.CANCELLED },
+  deletedAt: null,
+} satisfies Prisma.ContractWhereInput;
+
 /**
  * A plan whose contract is still live: not cancelled, not deleted. Reminders,
  * the overdue sweep and anything that (re)opens an installment must stay
@@ -7,7 +13,7 @@ import { ContractStatus, Prisma } from '@prisma/client';
  */
 export const LIVE_PLAN_WHERE = {
   cancelledAt: null,
-  contract: { status: { not: ContractStatus.CANCELLED }, deletedAt: null },
+  contract: LIVE_CONTRACT_WHERE,
 } satisfies Prisma.InstallmentPlanWhereInput;
 
 export const CONTRACT_CANCELLED_MESSAGE = 'العقد ملغي — لا يمكن تعديل مدفوعاته أو أقساطه';
