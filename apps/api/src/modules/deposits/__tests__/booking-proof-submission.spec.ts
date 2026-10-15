@@ -96,6 +96,8 @@ function makePrismaMock() {
     deposit: {
       // Used by resolveProjectIdForDeposit on the installment path.
       findUnique: jest.fn().mockResolvedValue({ contract: null }),
+      // No other payment waiting on the installment.
+      count: jest.fn().mockResolvedValue(0),
       create: jest.fn().mockImplementation(async ({ data }) => ({
         id: NEW_DEPOSIT_ID,
         ...data,

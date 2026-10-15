@@ -96,6 +96,8 @@ function makePrismaMock() {
     },
     installment: {
       update: jest.fn().mockResolvedValue({}),
+      // Atomic claim of an open installment.
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     reservation: {
       update: jest.fn().mockResolvedValue({}),
@@ -242,12 +244,13 @@ describe('Deposits · booking-payment approval propagation + paid totals (Gap 2)
       .send({})
       .expect(201);
 
-    expect(mock.installment.update).toHaveBeenCalledTimes(1);
-    const args = mock.installment.update.mock.calls[0]![0] as {
-      where: { id: string };
+    expect(mock.installment.updateMany).toHaveBeenCalledTimes(1);
+    const args = mock.installment.updateMany.mock.calls[0]![0] as {
+      where: { id: string; status: { in: string[] } };
       data: { status: string; paidAt: Date };
     };
     expect(args.where.id).toBe(INST_ID);
+    expect(args.where.status.in).toEqual(['PENDING', 'OVERDUE']);
     expect(args.data.status).toBe('PAID');
     expect(mock.reservation.update).not.toHaveBeenCalled();
   });

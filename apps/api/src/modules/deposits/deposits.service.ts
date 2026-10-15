@@ -136,6 +136,9 @@ const DEPOSIT_STATUS_AR = {
   reversed: 'عُكست وأُعيد فتح القسط',
 } as const;
 
+const WAITING_PAYMENT_MESSAGE =
+  'على هذا القسط دفعة قيد المراجعة أو شيك لم يُصرف — اعتمدها أو ارفضها أولاً';
+
 @Injectable()
 export class DepositsService {
   private readonly logger = new Logger(DepositsService.name);
@@ -327,6 +330,9 @@ export class DepositsService {
         if (waiting > 0) {
           throw new ConflictException('هذا القسط عليه شيك لم يُصرف بعد');
         }
+        if ((await this.waitingPayments(tx, dto.installmentId)) > 0) {
+          throw new ConflictException(WAITING_PAYMENT_MESSAGE);
+        }
         const instrument = await tx.paymentInstrument.create({
           data: {
             type: PaymentInstrumentType.CHEQUE,
@@ -364,6 +370,11 @@ export class DepositsService {
       });
       if (claimed.count === 0) {
         throw new ConflictException('هذا القسط مدفوع بالفعل أو ملغى');
+      }
+      // The claim holds the row; a customer proof or cheque already waiting
+      // on this installment would be a second payment of it once approved.
+      if ((await this.waitingPayments(tx, dto.installmentId)) > 0) {
+        throw new ConflictException(WAITING_PAYMENT_MESSAGE);
       }
       const transfer = dto.transfer
         ? await tx.paymentInstrument.create({
@@ -619,6 +630,20 @@ export class DepositsService {
     }
   }
 
+  /**
+   * Payments still waiting on this installment: a customer proof under review
+   * or a cheque not yet cleared (both PENDING_REVIEW, not deleted). While one
+   * waits, no other payment may be recorded for the same installment.
+   */
+  private waitingPayments(
+    db: Prisma.TransactionClient | PrismaService,
+    installmentId: string,
+  ): Promise<number> {
+    return db.deposit.count({
+      where: { installmentId, deletedAt: null, reviewStatus: DepositReviewStatus.PENDING_REVIEW },
+    });
+  }
+
   async verify(id: string, dto: VerifyDepositDto, actor: AuthUser) {
     await this.assertNotAwaitingCheque(id);
     await this.assertMoneyOpen(id, { approving: dto.verified });
@@ -632,6 +657,16 @@ export class DepositsService {
       select: { ...REVERSAL_SELECT, receiptUrl: true },
     });
     if (!target) throw new NotFoundException('Deposit not found');
+    // Verifying a proof under review (or a rejected one) is an approval: it
+    // must pay the installment. It used to mark the money collected while the
+    // installment stayed unpaid, and the customer got overdue notices.
+    if (
+      dto.verified &&
+      (target.reviewStatus === DepositReviewStatus.PENDING_REVIEW ||
+        target.reviewStatus === DepositReviewStatus.REJECTED)
+    ) {
+      return this.approveProof(id, actor, {});
+    }
     const nextReviewStatus: DepositReviewStatus = dto.verified
       ? DepositReviewStatus.APPROVED
       : target.receiptUrl
@@ -887,6 +922,9 @@ export class DepositsService {
     }
     if (installment.status === InstallmentStatus.PAID) {
       throw new BadRequestException('تم تأكيد دفع هذا القسط مسبقاً');
+    }
+    if ((await this.waitingPayments(this.prisma, installment.id)) > 0) {
+      throw new ConflictException('أرسلت إثباتاً لهذا القسط وهو قيد المراجعة بالفعل');
     }
     if (
       installment.status === InstallmentStatus.CANCELLED ||
@@ -1152,6 +1190,7 @@ export class DepositsService {
       },
     });
     if (!target) throw new NotFoundException('Deposit not found');
+    if (target.deletedAt) throw new ConflictException('هذه الدفعة محذوفة — لا يمكن اعتمادها');
     // Idempotent — already-approved deposits whose side effect is already in
     // place return the current row untouched. Two side-effect shapes exist:
     // installment-linked (installment PAID) and BOOKING_AMOUNT (reservation
@@ -1179,10 +1218,20 @@ export class DepositsService {
         },
       });
       if (target.installment) {
-        await tx.installment.update({
-          where: { id: target.installment.id },
+        // Pays the installment only if it is still open: one already paid by
+        // another payment (cash recorded meanwhile) must not be paid twice.
+        const claimed = await tx.installment.updateMany({
+          where: {
+            id: target.installment.id,
+            status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] },
+          },
           data: { status: InstallmentStatus.PAID, paidAt: next.paidAt },
         });
+        if (claimed.count === 0) {
+          throw new ConflictException(
+            'هذا القسط مدفوع بالفعل بدفعة أخرى أو ملغى — ارفض هذا الإثبات أو اعكس الدفعة الأخرى أولاً',
+          );
+        }
       }
       // BOOKING_AMOUNT proofs bind to a Reservation (contractId is null), so
       // approving one must flip the reservation's booking payment to PAID —
