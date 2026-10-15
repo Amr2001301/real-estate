@@ -37,6 +37,7 @@ import { UnitMaintenanceItemsModule } from './modules/maintenance/unit-maintenan
 import { BonusModule } from './modules/bonus/bonus.module';
 import { CmsModule } from './modules/cms/cms.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { NotificationRetryModule } from './modules/notifications/notification-retry.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { SettingsModule } from './modules/settings/settings.module';
@@ -106,6 +107,7 @@ import { DataImportModule } from './modules/data-import/data-import.module';
     BonusModule,
     CmsModule,
     NotificationsModule,
+    NotificationRetryModule,
     ReportsModule,
     AuditModule,
     SettingsModule,

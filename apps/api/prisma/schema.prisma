@@ -2138,6 +2138,9 @@ model Notification {
   emailError   String?    @db.VarChar(500)
   pushSentAt   DateTime?
   pushError    String?    @db.VarChar(500)
+  // FG-09 — redelivery of a failed push / e-mail (NotificationRetryCron).
+  deliveryRetries Int       @default(0)
+  lastRetryAt     DateTime?
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -2145,6 +2148,7 @@ model Notification {
   @@index([userId, createdAt])
   @@index([userId, readAt])
   @@index([companyId])
+  @@index([createdAt])
 }
 
 model AuditLog {

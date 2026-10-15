@@ -133,8 +133,8 @@ best-effort notification, activity-log, cron and auth-e-mail catches) now goes t
 `reportFailure()` (`common/observability/report-failure.ts`): still never fails the caller, but
 is sent to Sentry tagged with its `area` and counted in `swallowed_errors_total{area}`. Push and
 e-mail outcomes are counted in `notification_delivery_total{channel,outcome}`
-(`sent` / `failed` / `unconfigured`); only real provider failures go to Sentry. A retry queue is
-still not built — alert on the metrics first.
+(`sent` / `failed` / `unconfigured`); only real provider failures go to Sentry. A failed push / e-mail
+is re-sent up to 3 times by `NotificationRetryCron` (FG-09).
 
 **Shared root cause**: `NotificationsService.send()` always writes the `Notification` DB row first, so the in-app notification is never lost. Only push and email are unreliable. The DB row is the audit trail; the push/email are delivery channels. The design is intentional but the absence of any dead-letter queue or retry mechanism means push and email can silently fail indefinitely.
 
@@ -366,7 +366,7 @@ Ranked by: customer-facing severity, whether failure is silent, and whether it b
 | 6 | FG-06 | `verify(false)` on approved deposit does not flip installment back | Medium | Partly — admin sees mismatch | Yes — data integrity | **Fixed** — `deposits.service.ts` (correction + installment → PENDING in one transaction); `deposit-reversal.spec.ts`. |
 | 7 | FG-07 | `payment_proof_approved` / `payment_proof_rejected` not email-eligible | Medium | Yes — customer misses decision | No — push still sent | **Fixed** — `emailEnabled` column on templates, both seeded `true`; the send path reads it. |
 | 8 | FG-08 | Admin `RecordDepositDto` has no `paymentMethod` field | Medium | No | No — data is missing, not lost | **Fixed** — optional `paymentMethod` on the DTO, stored. The admin booking confirm takes one too (picked on the reservation page, stored on the booking deposit — 2026-10-15). |
-| 9 | FG-09 | All push and email sends are best-effort (SF-01..SF-03) — no retry, no dead-letter | Medium | Yes | No — DB row always created | **Partly** — outcomes now recorded on the Notification row (`pushError`, `emailError`, `*SentAt`); still no retry or dead-letter. |
+| 9 | FG-09 | All push and email sends are best-effort (SF-01..SF-03) — no retry, no dead-letter | Medium | Yes | No — DB row always created | **Fixed 2026-10-15.** Outcomes recorded on the row; failures reported to Sentry and `/metrics`; `NotificationRetryCron` re-sends a failed push / e-mail (not an unconfigured channel) up to 3 times at 5 / 15 / 45 min within 24 h, per company (`deliveryRetries`, `lastRetryAt`). After that the row keeps its error. |
 | 10 | FG-10 | Sales commission / warranty materialization on contract sign are silently swallowed (SF-06, SF-07) | Medium | Yes | Yes — commissions may not exist | **Fixed 2026-10-08.** `sign()` runs the three follow-ups (warranties, broker commission, sales commission) through `runSignFollowups()`: a failure still does not fail the sign, but it is returned (`signFollowupFailures`), logged at error, and recorded as audit `contract.sign_followup_failed` (`contract.sign_followup_ok` when all pass). `GET /contracts/:id` exposes `signFollowupFailed` (latest run failed); `POST /contracts/:id/sign-followups` (strict `contracts:sign`) re-runs them — all idempotent. web-admin shows a warning with a retry button on the contract page. Unit (signing workflow) + e2e A4l. |
 | 11 | FG-11 | CapabilityGuard wired but `@RequireCapability` used on 0 routes | Low | No | No — capability flags are display-only | **Fixed** — global guard; 29 `@RequireCapability` usages (17 controllers, 12 routes). |
 | 12 | FG-12 | Unit status has no reverse path from SOLD | Low | No | Consequence of FG-02 | **Fixed** via FG-02 (cancellation with AUTO release, or `release-unit`). No direct admin override. |
