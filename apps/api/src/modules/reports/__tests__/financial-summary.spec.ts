@@ -43,6 +43,9 @@ function makePrismaMock() {
       aggregate: jest.fn().mockResolvedValue({ _sum: { totalAmount: 0 } }),
       findMany: jest.fn().mockResolvedValue([]),
     },
+    // Refunds: 50 paid in total, 200 agreed → 150 still owed.
+    refund: { aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 50 } }) },
+    contractCancellation: { aggregate: jest.fn().mockResolvedValue({ _sum: { refundAmount: 200 } }) },
     deposit: {
       count: jest.fn().mockResolvedValue(0),
       findMany: jest.fn().mockResolvedValue([]),
@@ -173,6 +176,10 @@ describe('Reports · financial-dashboard summary correctness (F1)', () => {
     // The headline is the collected amount (one definition everywhere), not
     // everything recorded.
     expect(body.summary.totalCollected).toBe('600');
+    // Refunds: paid back, still owed, and collected net of refunds.
+    expect(body.summary.refundsPaid).toBe('50');
+    expect(body.summary.refundsOwed).toBe('150');
+    expect(body.summary.netCollected).toBe('550');
   });
 
   it('breaks collection down by deposit type with verified/unverified split', () => {

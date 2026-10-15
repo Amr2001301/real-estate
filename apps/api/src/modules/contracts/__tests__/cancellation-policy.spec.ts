@@ -115,8 +115,10 @@ function buildPrismaStub(opts: {
       findFirst: jest.fn().mockResolvedValue(opts.contract ?? null),
     },
     deposit: {
-      aggregate: jest.fn().mockImplementation((args: { where: { type?: string } }) => {
-        const isBooking = args.where.type === 'BOOKING_AMOUNT';
+      // The booking query is the one filtered on type BOOKING_AMOUNT (nested
+      // inside the collected-money filter).
+      aggregate: jest.fn().mockImplementation((args: { where: unknown }) => {
+        const isBooking = JSON.stringify(args.where).includes('"type":"BOOKING_AMOUNT"');
         const amount = isBooking
           ? new Prisma.Decimal(opts.bookingAmount ?? 0)
           : new Prisma.Decimal(opts.totalAmount ?? 0);

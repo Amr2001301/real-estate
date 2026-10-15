@@ -946,6 +946,15 @@ export const NOTIFICATION_CATALOG: NotificationTemplateDef[] = [
       'Following the cancellation of contract {{contractNumber}}, {{refundAmount}} will be refunded to you. Our team will contact you to arrange it.',
   },
   {
+    code: 'contract_refund_paid',
+    channel: NotificationChannel.PUSH,
+    emailEnabled: true,
+    ar_subject: 'تم صرف مبلغ مسترد',
+    en_subject: 'Refund paid',
+    ar_body: 'صرفنا لك {{amount}} من المبلغ المسترد عن العقد {{contractNumber}}.',
+    en_body: 'We paid you {{amount}} of the refund for contract {{contractNumber}}.',
+  },
+  {
     code: 'bonus_entry_created',
     channel: NotificationChannel.PUSH,
     ar_subject: 'مكافأة جديدة',

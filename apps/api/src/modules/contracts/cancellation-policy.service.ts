@@ -10,7 +10,7 @@
  */
 
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, DepositReviewStatus, DepositType } from '@prisma/client';
+import { Prisma, DepositType } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   CANCELLATION_SETTING_DEFAULTS,
@@ -18,6 +18,7 @@ import {
   type CancellationPolicySnapshot,
   type BouncePolicySnapshot,
 } from './cancellation-settings.constants';
+import { COLLECTED_DEPOSIT_WHERE } from '../../common/finance/collected';
 
 // ── Suggestion return types ──────────────────────────────────────────────────
 
@@ -97,6 +98,38 @@ export class CancellationPolicyService {
   // ── getCancellationSuggestion ────────────────────────────────────────────
 
   /**
+   * Money collected on a contract, by the one definition of collected
+   * (common/finance/collected.ts): its own deposits plus the booking amount
+   * paid on the reservation it came from — that deposit stays linked to the
+   * reservation (contractId null) after conversion, so summing by contractId
+   * alone always showed a zero booking. Staff-recorded cash / transfers
+   * (NO_PROOF) count; reversed, deleted and uncleared ones do not.
+   */
+  async collectedForContract(
+    contractId: string,
+  ): Promise<{ total: Prisma.Decimal; booking: Prisma.Decimal }> {
+    const contract = await this.prisma.contract.findFirst({
+      where: { id: contractId },
+      select: { reservationId: true },
+    });
+    const own: Prisma.DepositWhereInput[] = [{ contractId }];
+    if (contract?.reservationId) {
+      own.push({ contractId: null, reservationId: contract.reservationId, type: DepositType.BOOKING_AMOUNT });
+    }
+    const where = (extra?: Prisma.DepositWhereInput): Prisma.DepositWhereInput => ({
+      AND: [COLLECTED_DEPOSIT_WHERE, { OR: own }, ...(extra ? [extra] : [])],
+    });
+    const [totalAgg, bookingAgg] = await Promise.all([
+      this.prisma.deposit.aggregate({ where: where(), _sum: { amount: true } }),
+      this.prisma.deposit.aggregate({
+        where: where({ type: DepositType.BOOKING_AMOUNT }),
+        _sum: { amount: true },
+      }),
+    ]);
+    return { total: dec(totalAgg._sum.amount), booking: dec(bookingAgg._sum.amount) };
+  }
+
+  /**
    * Computes the operator pre-fill for the cancellation modal (§4.4 formula).
    *
    * Tenant-safe: the contract is queried via the middleware-scoped PrismaService
@@ -113,29 +146,9 @@ export class CancellationPolicyService {
     });
     if (!contract) throw new NotFoundException('Contract not found');
 
-    // Sum APPROVED deposits by type (only non-deleted rows)
-    const [bookingAgg, totalAgg] = await Promise.all([
-      this.prisma.deposit.aggregate({
-        where: {
-          contractId,
-          reviewStatus: DepositReviewStatus.APPROVED,
-          type: DepositType.BOOKING_AMOUNT,
-          deletedAt: null,
-        },
-        _sum: { amount: true },
-      }),
-      this.prisma.deposit.aggregate({
-        where: {
-          contractId,
-          reviewStatus: DepositReviewStatus.APPROVED,
-          deletedAt: null,
-        },
-        _sum: { amount: true },
-      }),
-    ]);
-
-    const bookingCollected = dec(bookingAgg._sum.amount);
-    const totalCollected = dec(totalAgg._sum.amount);
+    const collected = await this.collectedForContract(contractId);
+    const bookingCollected = collected.booking;
+    const totalCollected = collected.total;
     const otherCollected = totalCollected.minus(bookingCollected);
 
     const settings = await this.readSettings();
