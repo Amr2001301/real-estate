@@ -40,6 +40,7 @@ import {
   workbookToBuffer,
 } from '../../common/utils/xlsx';
 import { renderBarChartPng } from '../../common/utils/xlsx-chart';
+import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 
 const TOP_METRIC_LABEL: Record<TopMetric, string> = {
   leads: 'الفرص',
@@ -504,13 +505,17 @@ export class BrokerReportsService {
         const [reservations, contracts, commissions, payouts] = await Promise.all([
           c.reservationStats().then((r) => r.reservationsCreated),
           c.contractStats().then((r) => r.contractsSigned),
+          // Same as the summary: cancelled / rejected commissions are not earned.
           this.prisma.brokerCommission.aggregate({
             _sum: { netAmount: true },
-            where: this.commissionWhere({
-              brokerId: query.brokerId,
-              projectId: query.projectId,
-              range: { from: start, to: end, inclusive: false },
-            }),
+            where: {
+              ...this.commissionWhere({
+                brokerId: query.brokerId,
+                projectId: query.projectId,
+                range: { from: start, to: end, inclusive: false },
+              }),
+              status: { notIn: [BrokerCommissionStatus.CANCELLED, BrokerCommissionStatus.REJECTED] },
+            },
           }),
           this.prisma.brokerPayout.aggregate({
             _sum: { totalNet: true },
@@ -1039,6 +1044,8 @@ export class BrokerReportsService {
 
   private contractCreatedWhere(filters: CommonFilters): Prisma.ContractWhereInput {
     return {
+      // A cancelled or deleted contract is not a broker sale.
+      ...LIVE_CONTRACT_WHERE,
       NOT: { brokerId: null },
       ...(filters.brokerId ? { brokerId: filters.brokerId } : {}),
       ...(filters.brokerAgentId ? { brokerAgentId: filters.brokerAgentId } : {}),
@@ -1053,6 +1060,7 @@ export class BrokerReportsService {
 
   private contractSignedWhere(filters: CommonFilters): Prisma.ContractWhereInput {
     return {
+      ...LIVE_CONTRACT_WHERE,
       NOT: { brokerId: null },
       ...(filters.brokerId ? { brokerId: filters.brokerId } : {}),
       ...(filters.brokerAgentId ? { brokerAgentId: filters.brokerAgentId } : {}),
