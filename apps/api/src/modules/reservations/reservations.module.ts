@@ -81,6 +81,7 @@ import {
 import { ContractsModule, ContractsService } from '../contracts/contracts.module';
 import { CronLockService } from '../../common/cron/cron-lock.service';
 import { captureExceptionSafe } from '../../common/observability/sentry';
+import { reportFailure } from '../../common/observability/report-failure';
 import { getTenantContext, runInCompany, runTenantContext } from '../../common/tenant/tenant-context';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 // BrokerCommissionsModule/Service no longer imported here. Commission
@@ -178,6 +179,13 @@ class UnconfirmBookingPaymentDto {
   newStatus?: ReservationBookingPaymentStatus;
   @IsOptional() @IsString() note?: string;
 }
+
+/** Booking money is in hand (or its proof is under review): the expiry sweep leaves the reservation to a person. */
+const BOOKING_MONEY_HELD: ReservationBookingPaymentStatus[] = [
+  ReservationBookingPaymentStatus.PAID,
+  ReservationBookingPaymentStatus.PENDING,
+];
+const RESERVATION_OVERDUE_TEMPLATE = 'reservation_overdue';
 
 const FULL_INCLUDE = {
   unit: {
@@ -834,7 +842,15 @@ export class ReservationsService {
         this.prisma.reservation.count({ where: { status: ReservationStatus.CANCELLED } }),
         this.prisma.reservation.count({ where: { status: ReservationStatus.EXPIRED } }),
       ]);
-    return { total, pending, approved, rejected, cancelled, expired };
+    // Open and past expiry: the booking is paid, so the sweep left it for a person.
+    const overdue = await this.prisma.reservation.count({
+      where: {
+        deletedAt: null,
+        status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
+        expiresAt: { lt: new Date() },
+      },
+    });
+    return { total, pending, approved, rejected, cancelled, expired, overdue };
   }
 
   async list(opts: {
@@ -854,6 +870,8 @@ export class ReservationsService {
     expiresTo?: Date;
     /** `expiresAt` = soonest expiry first, for "what lapses next" lists. Default newest first. */
     sort?: 'createdAt' | 'expiresAt';
+    /** Still open (PENDING / APPROVED) and past its expiry — the booking is paid, so the sweep left it. */
+    overdue?: boolean;
   }) {
     const statusFilter = enumFilter(
       opts.status === undefined ? undefined : Array.isArray(opts.status) ? opts.status : [opts.status],
@@ -897,6 +915,14 @@ export class ReservationsService {
               ...(opts.expiresFrom ? { gte: opts.expiresFrom } : {}),
               ...(opts.expiresTo ? { lte: opts.expiresTo } : {}),
             },
+          }
+        : {}),
+      ...(opts.overdue
+        ? {
+            AND: [
+              { status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] } },
+              { expiresAt: { lt: new Date() } },
+            ],
           }
         : {}),
     };
@@ -949,9 +975,18 @@ export class ReservationsService {
   }
 
   async softDelete(id: string) {
-    const exists = await this.prisma.reservation.findUnique({ where: { id }, select: { id: true, deletedAt: true } });
+    const exists = await this.prisma.reservation.findUnique({
+      where: { id },
+      select: { id: true, deletedAt: true, status: true },
+    });
     if (!exists) throw new NotFoundException('Reservation not found');
     if (exists.deletedAt) throw new NotFoundException('Reservation already deleted');
+    // A live reservation holds its unit (and maybe a booking). Deleting it
+    // would leave the unit RESERVED with nothing behind it — cancel it first,
+    // which releases the unit and keeps the booking record.
+    if (exists.status === ReservationStatus.PENDING || exists.status === ReservationStatus.APPROVED) {
+      throw new ConflictException('ألغِ الحجز أولاً قبل حذفه — الحجز النشط يحجز الوحدة');
+    }
     await this.prisma.reservation.update({ where: { id }, data: { deletedAt: new Date() } });
   }
 
@@ -1230,6 +1265,7 @@ export class ReservationsService {
           where: {
             unitId: reservation.unitId,
             id: { not: id },
+            deletedAt: null,
             status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
           },
         });
@@ -2164,11 +2200,21 @@ export class ReservationsService {
     throw new BadRequestException('تعذّر إنشاء العقد، يرجى المحاولة مرة أخرى.');
   }
 
-  async expireDue() {
+  /**
+   * The expiry sweep. A reservation past its `expiresAt` (PENDING or APPROVED)
+   * is expired and its unit released — unless the customer has paid a booking
+   * (or a booking proof is under review). That money is held, so a person must
+   * decide: convert to a contract or cancel (the booking is retained). Those
+   * stay as they are, show in the overdue list, and sales + managers are
+   * alerted once per expiry date. Each row runs on its own: one failure never
+   * stops the rest of the sweep.
+   */
+  async expireDue(now = new Date()) {
     const due = await this.prisma.reservation.findMany({
       where: {
-        status: ReservationStatus.PENDING,
-        expiresAt: { lt: new Date() },
+        deletedAt: null,
+        status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
+        expiresAt: { lt: now },
       },
       select: {
         id: true,
@@ -2180,88 +2226,153 @@ export class ReservationsService {
         brokerId: true,
         brokerAgentId: true,
         reservationNumber: true,
+        status: true,
+        bookingPaymentStatus: true,
+        expiresAt: true,
         unit: { select: { code: true } },
       },
     });
+    let expired = 0;
+    let overdue = 0;
+    let failed = 0;
     for (const r of due) {
       // The sweep finds due rows in bypass; each expiry is written in the
       // reservation's own company, so the activity, lead-activity and
       // unit-history rows carry its companyId (in bypass they were NULL and
       // never showed on the timeline). A row with no company keeps the old path.
-      const write = (fn: () => Promise<void>) => (r.companyId ? runInCompany(r.companyId, fn) : fn());
-      await write(() => this.prisma.$transaction(async (tx) => {
-        await tx.reservation.update({
-          where: { id: r.id, status: ReservationStatus.PENDING },
-          data: { status: ReservationStatus.EXPIRED },
-        });
-        await tx.reservationActivity.create({
-          data: {
-            reservationId: r.id,
-            type: ReservationActivityType.EXPIRED,
-            actorId: null,
-            note: 'Expired automatically',
-          },
-        });
-
-        if (r.leadId) {
-          await tx.leadActivity.create({
+      const write = <T>(fn: () => Promise<T>) => (r.companyId ? runInCompany(r.companyId, fn) : fn());
+      try {
+        if (BOOKING_MONEY_HELD.includes(r.bookingPaymentStatus)) {
+          if (await write(() => this.alertOverdue(r))) overdue++;
+          continue;
+        }
+        const done = await write(() => this.prisma.$transaction(async (tx) => {
+          // Re-checked inside the write: a booking paid (or the reservation
+          // converted / cancelled) since the scan leaves the row alone.
+          const flipped = await tx.reservation.updateMany({
+            where: {
+              id: r.id,
+              status: r.status,
+              deletedAt: null,
+              bookingPaymentStatus: { notIn: BOOKING_MONEY_HELD },
+            },
+            data: { status: ReservationStatus.EXPIRED },
+          });
+          if (flipped.count === 0) return false;
+          await tx.reservationActivity.create({
             data: {
-              leadId: r.leadId,
-              type: 'reservation',
-              payload: {
-                status: 'EXPIRED',
-                reservationId: r.id,
-                reservationNumber: r.reservationNumber,
-                unitId: r.unitId,
-                unitCode: r.unit.code,
-              },
+              reservationId: r.id,
+              type: ReservationActivityType.EXPIRED,
+              actorId: null,
+              note: 'Expired automatically',
             },
           });
-        }
 
-        const otherActive = await tx.reservation.count({
-          where: {
-            unitId: r.unitId,
-            id: { not: r.id },
-            status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
-          },
-        });
-        if (otherActive === 0) {
-          const unit = await tx.unit.findUnique({ where: { id: r.unitId } });
-          if (unit && unit.status === UnitStatus.RESERVED) {
-            await tx.unit.update({
-              where: { id: r.unitId },
-              data: { status: UnitStatus.AVAILABLE, reservationExpiresAt: null },
-            });
-            await tx.unitStatusHistory.create({
+          if (r.leadId) {
+            await tx.leadActivity.create({
               data: {
-                unitId: r.unitId,
-                oldStatus: UnitStatus.RESERVED,
-                newStatus: UnitStatus.AVAILABLE,
-                changedById: r.salesId,
-                reason: 'Reservation expired',
+                leadId: r.leadId,
+                type: 'reservation',
+                payload: {
+                  status: 'EXPIRED',
+                  reservationId: r.id,
+                  reservationNumber: r.reservationNumber,
+                  unitId: r.unitId,
+                  unitCode: r.unit.code,
+                },
               },
             });
           }
-        }
-      }));
-      // The customer, the sales person, the broker who brought it (agent +
-      // firm managers) and the sales managers learn the hold lapsed and the
-      // unit is back on sale.
-      await write(async () => {
-        const broker = await this.notifications.brokerRecipients(r.brokerId, { agentUserId: r.brokerAgentId });
-        const payload = {
-          unitCode: r.unit.code,
-          reservationNumber: r.reservationNumber ?? '',
-          reservationId: r.id,
-          entityType: 'reservation',
-          entityId: r.id,
-        };
-        await this.notifications.sendToUsers([r.clientId, r.salesId, ...broker], 'reservation_expired', payload);
-        await this.notifications.sendToRoles([UserRole.SALES_MANAGER], 'reservation_expired', payload);
-      });
+
+          const otherActive = await tx.reservation.count({
+            where: {
+              unitId: r.unitId,
+              id: { not: r.id },
+              deletedAt: null,
+              status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
+            },
+          });
+          if (otherActive === 0) {
+            const unit = await tx.unit.findUnique({ where: { id: r.unitId } });
+            if (unit && unit.status === UnitStatus.RESERVED) {
+              await tx.unit.update({
+                where: { id: r.unitId },
+                data: { status: UnitStatus.AVAILABLE, reservationExpiresAt: null },
+              });
+              await tx.unitStatusHistory.create({
+                data: {
+                  unitId: r.unitId,
+                  oldStatus: UnitStatus.RESERVED,
+                  newStatus: UnitStatus.AVAILABLE,
+                  changedById: r.salesId,
+                  reason: 'Reservation expired',
+                },
+              });
+            }
+          }
+          return true;
+        }));
+        if (!done) continue;
+        expired++;
+        // The customer, the sales person, the broker who brought it (agent +
+        // firm managers) and the sales managers learn the hold lapsed and the
+        // unit is back on sale.
+        await write(async () => {
+          const broker = await this.notifications.brokerRecipients(r.brokerId, { agentUserId: r.brokerAgentId });
+          const payload = {
+            unitCode: r.unit.code,
+            reservationNumber: r.reservationNumber ?? '',
+            reservationId: r.id,
+            entityType: 'reservation',
+            entityId: r.id,
+          };
+          await this.notifications.sendToUsers([r.clientId, r.salesId, ...broker], 'reservation_expired', payload);
+          await this.notifications.sendToRoles([UserRole.SALES_MANAGER], 'reservation_expired', payload);
+        });
+      } catch (err) {
+        failed++;
+        reportFailure(this.logger, 'reservation-expiry', `expiry sweep failed for reservation ${r.id}`, err);
+      }
     }
-    return { expired: due.length };
+    return { expired, overdue, failed };
+  }
+
+  /**
+   * Alerts the sales person, sales managers and admins that a reservation
+   * with a paid booking is past its expiry. Sent once per (reservation,
+   * expiresAt): extending the hold and letting it lapse again alerts again.
+   * Returns true when it alerted.
+   */
+  private async alertOverdue(r: {
+    id: string;
+    salesId: string | null;
+    reservationNumber: string | null;
+    expiresAt: Date;
+    unit: { code: string };
+  }): Promise<boolean> {
+    const expiresAt = r.expiresAt.toISOString();
+    const already = await this.prisma.notification.findFirst({
+      where: {
+        templateCode: RESERVATION_OVERDUE_TEMPLATE,
+        AND: [
+          { payload: { path: ['reservationId'], equals: r.id } },
+          { payload: { path: ['expiresAt'], equals: expiresAt } },
+        ],
+      },
+      select: { id: true },
+    });
+    if (already) return false;
+    const payload = {
+      unitCode: r.unit.code,
+      reservationNumber: r.reservationNumber ?? '',
+      reservationId: r.id,
+      expiresAt,
+      entityType: 'reservation',
+      entityId: r.id,
+    };
+    if (r.salesId) await this.notifications.sendToUsers([r.salesId], RESERVATION_OVERDUE_TEMPLATE, payload);
+    await this.notifications.sendToRoles([UserRole.SALES_MANAGER, UserRole.ADMIN], RESERVATION_OVERDUE_TEMPLATE, payload);
+    return true;
   }
 }
 
@@ -2282,7 +2393,9 @@ export class ReservationExpiryCron {
           ? await this.lock.withLock('reservation-expiry', 4 * 60_000, () => this.svc.expireDue())
           : await this.svc.expireDue();
         if (result !== null) {
-          this.logger.log(`Reservation expiry sweep: expired=${result.expired}`);
+          this.logger.log(
+            `Reservation expiry sweep: expired=${result.expired} overdue=${result.overdue} failed=${result.failed}`,
+          );
         }
       } catch (err) {
         this.logger.error(`[reservation-expiry] cron failed: ${(err as Error).message}`);
@@ -2332,6 +2445,7 @@ class ReservationsController {
     @Query('expiresFrom') expiresFrom?: string,
     @Query('expiresTo') expiresTo?: string,
     @Query('sort') sort?: string,
+    @Query('overdue') overdue?: string,
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
   ) {
@@ -2354,6 +2468,7 @@ class ReservationsController {
       expiresFrom: parseIsoInstant(expiresFrom, 'expiresFrom'),
       expiresTo: parseIsoInstant(expiresTo, 'expiresTo'),
       sort,
+      overdue: overdue === 'true' || overdue === '1',
     });
   }
 

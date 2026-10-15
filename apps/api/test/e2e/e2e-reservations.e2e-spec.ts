@@ -563,6 +563,89 @@ describe('Phase 7C — Admin reservation approval / lifecycle (e2e)', () => {
       expect(res.status).toBe(401);
     });
   });
+
+  // ── DA9 — expiry sweep: unpaid lapses, paid booking waits for a person ──
+  describe('DA9: expiry sweep — unpaid APPROVED expires; paid booking stays and alerts', () => {
+    let unpaidId: string;
+    let unpaidUnitId: string;
+    let paidId: string;
+    let paidUnitId: string;
+    const past = new Date(Date.now() - 60 * 60_000);
+
+    beforeAll(async () => {
+      ({ reservationId: unpaidId, unitId: unpaidUnitId } = await createSalesReservation());
+      ({ reservationId: paidId, unitId: paidUnitId } = await createSalesReservation());
+      for (const id of [unpaidId, paidId]) {
+        const approve = await http()
+          .post(`/v1/reservations/${id}/approve`)
+          .set('Authorization', bearer(adminToken))
+          .send({});
+        expect(approve.status).toBe(201);
+      }
+      await testApp.rawPrisma.reservation.update({
+        where: { id: paidId },
+        data: { bookingAmount: 10_000, bookingPaymentStatus: 'PAID', bookingPaidAt: new Date() },
+      });
+      await testApp.rawPrisma.reservation.updateMany({
+        where: { id: { in: [unpaidId, paidId] } },
+        data: { expiresAt: past },
+      });
+    });
+
+    afterAll(async () => {
+      // Free the held unit for later specs.
+      await http()
+        .post(`/v1/reservations/${paidId}/cancel`)
+        .set('Authorization', bearer(adminToken))
+        .send({ reason: 'DA9 cleanup' });
+    });
+
+    it('DA9a: an APPROVED reservation with no booking paid expires and frees its unit', async () => {
+      await testApp.runCronJob('reservation-expiry');
+      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({ where: { id: unpaidId } });
+      expect(row.status).toBe(ReservationStatus.EXPIRED);
+      const unit = await testApp.rawPrisma.unit.findUniqueOrThrow({ where: { id: unpaidUnitId } });
+      expect(unit.status).toBe(UnitStatus.AVAILABLE);
+    });
+
+    it('DA9b: a paid booking keeps the reservation and the unit; one overdue alert per expiry', async () => {
+      await testApp.runCronJob('reservation-expiry');
+      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({ where: { id: paidId } });
+      expect(row.status).toBe(ReservationStatus.APPROVED);
+      const unit = await testApp.rawPrisma.unit.findUniqueOrThrow({ where: { id: paidUnitId } });
+      expect(unit.status).toBe(UnitStatus.RESERVED);
+
+      const alerts = () =>
+        testApp.rawPrisma.notification.count({
+          where: { templateCode: 'reservation_overdue', payload: { path: ['reservationId'], equals: paidId } },
+        });
+      const first = await alerts();
+      expect(first).toBeGreaterThan(0);
+      await testApp.runCronJob('reservation-expiry');
+      expect(await alerts()).toBe(first);
+    });
+
+    it('DA9c: the overdue view and count list it', async () => {
+      const list = await http()
+        .get('/v1/reservations?overdue=true&pageSize=100')
+        .set('Authorization', bearer(adminToken));
+      expect(list.status).toBe(200);
+      const ids = (list.body.data as Array<{ id: string }>).map((r) => r.id);
+      expect(ids).toContain(paidId);
+      expect(ids).not.toContain(unpaidId);
+      const stats = await http().get('/v1/reservations/stats').set('Authorization', bearer(adminToken));
+      expect(stats.body.overdue).toBeGreaterThanOrEqual(1);
+    });
+
+    it('DA9d: a live reservation cannot be deleted — cancel it first (409)', async () => {
+      const res = await http()
+        .delete(`/v1/reservations/${paidId}`)
+        .set('Authorization', bearer(adminToken));
+      expect(res.status).toBe(409);
+      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({ where: { id: paidId } });
+      expect(row.deletedAt).toBeNull();
+    });
+  });
 });
 
 // ═════════════════════════════════════════════════════════════════════════════

@@ -109,10 +109,13 @@ describe('reservation expiry', () => {
       brokerId: 'broker-1',
       brokerAgentId: 'agent-1',
       reservationNumber: 'RSV-1',
+      status: 'APPROVED',
+      bookingPaymentStatus: 'UNPAID',
+      expiresAt: new Date('2026-01-01T00:00:00Z'),
       unit: { code: 'A-102' },
     };
     const tx = {
-      reservation: { update: jest.fn(), count: jest.fn().mockResolvedValue(1) },
+      reservation: { updateMany: jest.fn().mockResolvedValue({ count: 1 }), count: jest.fn().mockResolvedValue(1) },
       reservationActivity: { create: jest.fn() },
       leadActivity: { create: jest.fn() },
       unit: { findUnique: jest.fn(), update: jest.fn() },
@@ -141,5 +144,91 @@ describe('reservation expiry', () => {
       'reservation_expired',
       expect.any(Object),
     );
+  });
+  function sweepFixture(rows: Array<Record<string, unknown>>, existingAlert: unknown = null) {
+    const tx = {
+      reservation: { updateMany: jest.fn().mockResolvedValue({ count: 1 }), count: jest.fn().mockResolvedValue(1) },
+      reservationActivity: { create: jest.fn() },
+      leadActivity: { create: jest.fn() },
+      unit: { findUnique: jest.fn(), update: jest.fn() },
+      unitStatusHistory: { create: jest.fn() },
+    };
+    const prisma = {
+      reservation: { findMany: jest.fn().mockResolvedValue(rows) },
+      notification: { findFirst: jest.fn().mockResolvedValue(existingAlert) },
+      $transaction: jest.fn(async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx)),
+    };
+    const notifications = notificationsMock();
+    const svc = new ReservationsService(
+      prisma as unknown as PrismaService,
+      notifications as unknown as NotificationsService,
+      {} as never,
+    );
+    return { svc, tx, prisma, notifications };
+  }
+  const row = (over: Record<string, unknown>) => ({
+    id: 'res-1',
+    companyId: null,
+    unitId: 'unit-1',
+    salesId: 'sales-1',
+    leadId: null,
+    clientId: 'client-1',
+    brokerId: null,
+    brokerAgentId: null,
+    reservationNumber: 'RSV-1',
+    status: 'APPROVED',
+    bookingPaymentStatus: 'UNPAID',
+    expiresAt: new Date('2026-01-01T00:00:00Z'),
+    unit: { code: 'A-102' },
+    ...over,
+  });
+
+  it('a paid booking is not expired: sales, managers and admins get one overdue alert', async () => {
+    const { svc, tx, notifications } = sweepFixture([row({ bookingPaymentStatus: 'PAID' })]);
+
+    const result = await svc.expireDue();
+
+    expect(result).toEqual({ expired: 0, overdue: 1, failed: 0 });
+    expect(tx.reservation.updateMany).not.toHaveBeenCalled();
+    expect(notifications.sendToUsers).toHaveBeenCalledWith(
+      ['sales-1'],
+      'reservation_overdue',
+      expect.objectContaining({ reservationId: 'res-1', expiresAt: '2026-01-01T00:00:00.000Z' }),
+    );
+    expect(notifications.sendToRoles).toHaveBeenCalledWith(
+      [UserRole.SALES_MANAGER, UserRole.ADMIN],
+      'reservation_overdue',
+      expect.any(Object),
+    );
+  });
+
+  it('the overdue alert is not repeated for the same expiry', async () => {
+    const { svc, notifications } = sweepFixture([row({ bookingPaymentStatus: 'PENDING' })], { id: 'n-1' });
+
+    const result = await svc.expireDue();
+
+    expect(result).toEqual({ expired: 0, overdue: 0, failed: 0 });
+    expect(notifications.sendToUsers).not.toHaveBeenCalled();
+    expect(notifications.sendToRoles).not.toHaveBeenCalled();
+  });
+
+  it('one failing row does not stop the sweep', async () => {
+    const { svc, tx } = sweepFixture([row({ id: 'res-bad' }), row({ id: 'res-ok' })]);
+    tx.reservation.updateMany.mockRejectedValueOnce(new Error('row locked')).mockResolvedValueOnce({ count: 1 });
+
+    const result = await svc.expireDue();
+
+    expect(result).toEqual({ expired: 1, overdue: 0, failed: 1 });
+  });
+
+  it('a row paid since the scan is left alone', async () => {
+    const { svc, tx, notifications } = sweepFixture([row({})]);
+    tx.reservation.updateMany.mockResolvedValueOnce({ count: 0 });
+
+    const result = await svc.expireDue();
+
+    expect(result).toEqual({ expired: 0, overdue: 0, failed: 0 });
+    expect(tx.reservationActivity.create).not.toHaveBeenCalled();
+    expect(notifications.sendToUsers).not.toHaveBeenCalled();
   });
 });

@@ -55,7 +55,7 @@ jest.mock('../../../common/tenant/tenant-context', () => ({
 
 function buildTx() {
   return {
-    contract: { update: jest.fn().mockResolvedValue({}) },
+    contract: { update: jest.fn().mockResolvedValue({}), count: jest.fn().mockResolvedValue(0) },
     installmentPlan: {
       update: jest.fn().mockResolvedValue({}),
       findFirst: jest.fn().mockResolvedValue(null),
@@ -77,7 +77,8 @@ function buildTx() {
     bonusEntry: { update: jest.fn().mockResolvedValue({}) },
     unit: { update: jest.fn().mockResolvedValue({}) },
     unitStatusHistory: { create: jest.fn().mockResolvedValue({}) },
-    user: { update: jest.fn().mockResolvedValue({}) },
+    unitMaintenanceItem: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    user: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     refreshToken: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     contractCancellation: {
       create: jest.fn().mockImplementation((args: { data: Record<string, unknown> }) =>
@@ -366,9 +367,9 @@ describe('ContractCancellationService.cancel()', () => {
 
     await svc.cancel(CONTRACT_ID, { ...BASE_INPUT, demoteCustomerOverride: true }, ACTOR_ID);
 
-    const userUpdate = prisma._tx.user.update.mock.calls[0]?.[0] as { where: Record<string, unknown>; data: Record<string, unknown> };
-    if (!userUpdate) throw new Error('user.update was not called');
-    expect(userUpdate.where['id']).toBe(CUSTOMER_ID);
+    const userUpdate = prisma._tx.user.updateMany.mock.calls[0]?.[0] as { where: Record<string, unknown>; data: Record<string, unknown> };
+    if (!userUpdate) throw new Error('user.updateMany was not called');
+    expect(userUpdate.where).toMatchObject({ id: CUSTOMER_ID, role: 'CUSTOMER' });
     expect(userUpdate.data['role']).toBe('CLIENT');
 
     const rtUpdate = prisma._tx.refreshToken.updateMany.mock.calls[0]?.[0] as { where: Record<string, unknown>; data: Record<string, unknown> };
@@ -379,6 +380,19 @@ describe('ContractCancellationService.cancel()', () => {
     // CC row has customerDemotedAt set
     const ccData = (prisma._tx.contractCancellation.create.mock.calls[0]?.[0] as { data: Record<string, unknown> }).data;
     expect(ccData['customerDemotedAt']).toBeInstanceOf(Date);
+  });
+
+  it('CC-U-7b: no demotion while the customer has another live contract', async () => {
+    const prisma = buildPrisma({});
+    prisma._tx.contract.count.mockResolvedValue(1);
+    const svc = buildSvc(prisma);
+
+    await svc.cancel(CONTRACT_ID, { ...BASE_INPUT, demoteCustomerOverride: true }, ACTOR_ID);
+
+    expect(prisma._tx.user.updateMany).not.toHaveBeenCalled();
+    expect(prisma._tx.refreshToken.updateMany).not.toHaveBeenCalled();
+    const ccData = (prisma._tx.contractCancellation.create.mock.calls[0]?.[0] as { data: Record<string, unknown> }).data;
+    expect(ccData['customerDemotedAt']).toBeNull();
   });
 
   it('CC-U-8: UNSIGNED contract (signedAt=null) — CC row still created with financial amounts', async () => {

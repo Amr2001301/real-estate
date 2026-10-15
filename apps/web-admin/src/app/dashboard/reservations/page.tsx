@@ -34,6 +34,7 @@ interface Stats {
   rejected: number;
   cancelled: number;
   expired: number;
+  overdue?: number;
 }
 
 interface ProjectOption {
@@ -86,7 +87,9 @@ export default async function ReservationsPage({
     : pageUrl({ showFilters: '1' });
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-  if (sp.status) qs.set('status', sp.status);
+  // OVERDUE is a view, not a status: open reservations past expiry (booking paid).
+  if (sp.status === 'OVERDUE') qs.set('overdue', 'true');
+  else if (sp.status) qs.set('status', sp.status);
   if (sp.projectId) qs.set('projectId', sp.projectId);
   if (sp.salesId) qs.set('salesId', sp.salesId);
   if (sp.q) qs.set('q', sp.q);
@@ -143,6 +146,21 @@ export default async function ReservationsPage({
         ]}
       />
 
+      {(stats?.overdue ?? 0) > 0 && sp.status !== 'OVERDUE' && (
+        <div
+          data-testid="overdue-reservations-banner"
+          className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-warning-100 bg-warning-50 px-4 py-3 text-[13px] text-warning-700"
+        >
+          <span className="inline-flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {m.overdueBanner(stats!.overdue!)}
+          </span>
+          <Link href={pageUrl({ status: 'OVERDUE', page: undefined })} className="font-semibold underline">
+            {m.overdueLink}
+          </Link>
+        </div>
+      )}
+
       {/* ── Filter bar ───────────────────────────────────────────────────────── */}
       <PremiumFilterBar method="get" action="/dashboard/reservations">
         {/* Preserve advanced filter values when panel is collapsed */}
@@ -171,6 +189,7 @@ export default async function ReservationsPage({
             <option value="REJECTED">{m.filter.rejected}</option>
             <option value="CANCELLED">{m.filter.cancelled}</option>
             <option value="EXPIRED">{m.filter.expired}</option>
+            <option value="OVERDUE">{m.filter.overdue}</option>
           </Select>
         </PremiumFilterField>
 
