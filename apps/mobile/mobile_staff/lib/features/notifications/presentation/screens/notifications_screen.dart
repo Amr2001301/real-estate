@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../domain/entities/app_notification.dart';
 import '../cubit/notifications_cubit.dart';
 import '../cubit/unread_count_cubit.dart';
+import '../notification_route.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -112,41 +113,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 }
 
-/// Resolves the in-app navigation route for a staff notification.
-String? _resolveStaffRoute(AppNotification n) {
-  final code = n.templateCode;
-  final entityId = n.payload['entityId'] as String?;
-
-  if (code.startsWith('maintenance_')) {
-    final id = entityId ?? n.payload['requestId'] as String?;
-    if (id != null && id.isNotEmpty) return '/maintenance/$id';
-    return '/maintenance';
-  }
-  if (code.startsWith('visit_')) {
-    final id = entityId ?? n.payload['visitId'] as String?;
-    if (id != null && id.isNotEmpty) return '/visits/$id';
-    return '/visits';
-  }
-  if (code.startsWith('reservation_')) {
-    final id = entityId ?? n.payload['reservationId'] as String?;
-    if (id != null && id.isNotEmpty) return '/reservations/$id';
-    return '/reservations';
-  }
-  if (code.startsWith('lead_')) {
-    final id = entityId ?? n.payload['leadId'] as String?;
-    if (id != null && id.isNotEmpty) return '/leads/$id';
-  }
-  if (code.startsWith('broker_lead_') ||
-      code.startsWith('broker_commission_') ||
-      code.startsWith('broker_payout_')) {
-    return '/broker/commissions';
-  }
-  if (code.startsWith('payment_proof_') ||
-      code.startsWith('booking_payment_proof_')) {
-    return '/payments-review';
-  }
-  return null;
-}
+/// Resolves the in-app navigation route for a staff notification (shared with
+/// push taps — see [staffNotificationRoute]).
+String? _resolveStaffRoute(AppNotification n, {bool isBroker = false}) =>
+    staffNotificationRoute(n.templateCode, n.payload, isBroker: isBroker);
 
 /// Maps a notification template code to a category icon and color.
 ({IconData icon, Color color}) _categoryStyle(String code) {
@@ -206,7 +176,9 @@ class _NotificationTile extends StatelessWidget {
           if (isUnread) {
             context.read<NotificationsCubit>().markRead(notification.id);
           }
-          final route = _resolveStaffRoute(notification);
+          final isBroker =
+              context.read<SessionCubit>().state.role == AppRole.broker;
+          final route = _resolveStaffRoute(notification, isBroker: isBroker);
           if (route != null) context.push(route);
         },
         child: ClipRRect(

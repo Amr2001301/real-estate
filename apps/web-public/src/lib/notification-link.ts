@@ -39,9 +39,16 @@ export function notificationHref(payload: Record<string, unknown> | null | undef
     case 'installment':
       return routes.accountInstallments;
     case 'contract':
-      return routes.accountContracts;
+      // Installment notices (overdue, schedule ready, reversal…) are filed
+      // under their contract but belong on the installments page.
+      return str(p.installmentId) || p.installmentDueDate !== undefined
+        ? routes.accountInstallments
+        : routes.accountContracts;
     case 'visit':
+    case 'visit_request':
       return routes.accountVisits;
+    case 'info_request':
+      return routes.accountRequests;
     default:
       break;
   }

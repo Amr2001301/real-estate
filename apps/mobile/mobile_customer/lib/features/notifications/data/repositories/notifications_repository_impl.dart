@@ -32,4 +32,8 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
   @override
   Future<Result<void>> registerDevice(String token, String platform) =>
       guardApiCall(() => _remote.registerDevice(token, platform));
+
+  @override
+  Future<Result<void>> unregisterDevice(String token) =>
+      guardApiCall(() => _remote.unregisterDevice(token));
 }

@@ -11,6 +11,7 @@ import { ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { NotificationCard } from '@/components/account/NotificationCard';
+import { Pagination } from '@/components/projects/Pagination';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { markAllNotificationsReadAction } from '@/lib/account-actions';
@@ -27,15 +28,34 @@ export const metadata = buildMetadata({
 // `{data, meta}` responses, just one source of truth so the dashboard and
 // this page never drift apart again.
 
-export default async function AccountNotificationsPage() {
+const PAGE_SIZE = 20;
+
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+function firstStr(v: string | string[] | undefined): string {
+  return Array.isArray(v) ? (v[0] ?? '') : (v ?? '');
+}
+
+export default async function AccountNotificationsPage({ searchParams }: { searchParams: SearchParams }) {
+  const sp = await searchParams;
+  const page = Math.max(1, Number(firstStr(sp.page)) || 1);
   const locale = await getLocale();
   const m = siteT(locale).accountPages.notifications;
 
   let raw: Paginated<MeNotification> | MeNotification[];
+  let unreadCount = 0;
   try {
-    raw = await authFetch<Paginated<MeNotification> | MeNotification[]>(
-      '/me/notifications',
-    );
+    // The server writes each title and message in the reader's language.
+    const lang = { headers: { 'Accept-Language': locale } };
+    const [list, unread] = await Promise.all([
+      authFetch<Paginated<MeNotification> | MeNotification[]>(
+        `/me/notifications?page=${page}&pageSize=${PAGE_SIZE}`,
+        lang,
+      ),
+      authFetch<{ count: number }>('/me/notifications/unread-count').catch(() => null),
+    ]);
+    raw = list;
+    unreadCount = unread?.count ?? 0;
   } catch (e) {
     if (e instanceof AuthError) redirect('/login');
     return (
@@ -51,7 +71,11 @@ export default async function AccountNotificationsPage() {
   }
 
   const notifications = extractPaginatedData<MeNotification>(raw);
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  // Unread across every page, not only this one.
+  if (!unreadCount) unreadCount = notifications.filter((n) => !n.read).length;
+  const totalPages = Array.isArray(raw) ? 1 : (raw.meta?.totalPages ?? 1);
+  const buildHref = (nextPage: number): string =>
+    nextPage > 1 ? `${routes.accountNotifications}?page=${nextPage}` : routes.accountNotifications;
 
   return (
     <div className="space-y-8">
@@ -85,11 +109,14 @@ export default async function AccountNotificationsPage() {
           }
         />
       ) : (
-        <PremiumCard className="divide-y divide-hairline/60 overflow-hidden">
-          {notifications.map((notification) => (
-            <NotificationCard key={notification.id} notification={notification} />
-          ))}
-        </PremiumCard>
+        <>
+          <PremiumCard className="divide-y divide-hairline/60 overflow-hidden">
+            {notifications.map((notification) => (
+              <NotificationCard key={notification.id} notification={notification} locale={locale} />
+            ))}
+          </PremiumCard>
+          <Pagination page={page} totalPages={totalPages} buildHref={buildHref} />
+        </>
       )}
     </div>
   );

@@ -35,14 +35,20 @@ class StaffAuthCubit extends Cubit<StaffAuthState> {
     required SessionCubit sessionCubit,
     required LoginStaff loginStaff,
     required LogoutStaff logoutStaff,
+    Future<void> Function()? beforeLogout,
   })  : _session = sessionCubit,
         _loginStaff = loginStaff,
         _logoutStaff = logoutStaff,
+        _beforeLogout = beforeLogout,
         super(const StaffAuthState());
 
   final SessionCubit _session;
   final LoginStaff _loginStaff;
   final LogoutStaff _logoutStaff;
+
+  /// Runs while the session is still valid (e.g. unregistering this device
+  /// from push). Best-effort: a failure never blocks signing out.
+  final Future<void> Function()? _beforeLogout;
 
   /// Tenant-aware login. [slug] is the company code entered by the user.
   /// On success, the repository persists tokens + selectedCompanySlug.
@@ -66,6 +72,11 @@ class StaffAuthCubit extends Cubit<StaffAuthState> {
   }
 
   Future<void> logout() async {
+    try {
+      await _beforeLogout?.call();
+    } catch (_) {
+      // Best-effort: signing out never waits on it.
+    }
     await _logoutStaff(const NoParams());
     _session.adoptSignedOut();
   }

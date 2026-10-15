@@ -9,6 +9,7 @@ abstract interface class NotificationsRemoteDataSource {
   Future<void> markRead(String id);
   Future<void> markAllRead();
   Future<void> registerDevice(String token, String platform);
+  Future<void> unregisterDevice(String token);
 }
 
 class NotificationsRemoteDataSourceImpl implements NotificationsRemoteDataSource {
@@ -45,5 +46,10 @@ class NotificationsRemoteDataSourceImpl implements NotificationsRemoteDataSource
   @override
   Future<void> registerDevice(String token, String platform) async {
     await _dio.post<dynamic>('/me/devices', data: {'token': token, 'platform': platform});
+  }
+
+  @override
+  Future<void> unregisterDevice(String token) async {
+    await _dio.post<dynamic>('/me/devices/unregister', data: {'token': token});
   }
 }

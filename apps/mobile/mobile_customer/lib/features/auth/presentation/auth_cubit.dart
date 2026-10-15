@@ -22,6 +22,7 @@ class AuthCubit extends Cubit<AuthState> {
     required RequestOtp requestOtp,
     required VerifyOtp verifyOtp,
     required LogoutUser logoutUser,
+    Future<void> Function()? beforeLogout,
   })  : _session = sessionCubit,
         _tenantStorage = tenantStorage,
         _loginWithEmail = loginWithEmail,
@@ -29,6 +30,7 @@ class AuthCubit extends Cubit<AuthState> {
         _requestOtp = requestOtp,
         _verifyOtp = verifyOtp,
         _logoutUser = logoutUser,
+        _beforeLogout = beforeLogout,
         super(const AuthState());
 
   final SessionCubit _session;
@@ -38,6 +40,18 @@ class AuthCubit extends Cubit<AuthState> {
   final RequestOtp _requestOtp;
   final VerifyOtp _verifyOtp;
   final LogoutUser _logoutUser;
+
+  /// Runs while the session is still valid (e.g. unregistering this device
+  /// from push). Best-effort: a failure never blocks signing out.
+  final Future<void> Function()? _beforeLogout;
+
+  Future<void> _runBeforeLogout() async {
+    try {
+      await _beforeLogout?.call();
+    } catch (_) {
+      // Best-effort: signing out never waits on it.
+    }
+  }
 
   // Returns the stored slug, or emits a failure and returns null if missing.
   String? _slug() {
@@ -93,6 +107,7 @@ class AuthCubit extends Cubit<AuthState> {
   /// Normal logout: revokes tokens and signs out. Preserves the selected company
   /// slug so the returning user lands back on the same company's login screen.
   Future<void> logout() async {
+    await _runBeforeLogout();
     await _logoutUser(const NoParams());
     _session.adoptSignedOut();
   }
@@ -100,6 +115,7 @@ class AuthCubit extends Cubit<AuthState> {
   /// Change-company logout: revokes tokens, clears the selected company, and
   /// signs out. The router redirect then sends the user to /select-company.
   Future<void> changeCompany() async {
+    await _runBeforeLogout();
     await _logoutUser(const NoParams());
     await _tenantStorage.clearSelectedCompany();
     _session.adoptSignedOut();

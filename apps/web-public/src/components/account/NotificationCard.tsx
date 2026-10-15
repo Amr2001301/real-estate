@@ -10,44 +10,10 @@ import {
 import { cn } from '@/lib/cn';
 import type { MeNotification } from '@/lib/api-types';
 import { notificationHref } from '@/lib/notification-link';
+import { notificationTitle } from '@/lib/notification-title';
+
+export { notificationTitle };
 import { NotificationRow } from '@/components/account/NotificationRow';
-
-/**
- * templateCode → Arabic label. Records have no title/body, so this is the
- * source of human-readable titles. Unknown codes fall back to "إشعار جديد".
- */
-const NOTIFICATION_LABELS: Record<string, string> = {
-  visit_approved: 'تمت الموافقة على طلب الزيارة',
-  // P3 — visit lifecycle (customer-facing). Server resolves title/body when
-  // a template row exists; these client-side strings are the fallback for
-  // legacy rows or when title is missing.
-  visit_request_created: 'تم استلام طلب الزيارة',
-  visit_scheduled: 'تم جدولة زيارتك',
-  visit_rescheduled: 'تم تغيير موعد زيارتك',
-  visit_completed: 'اكتملت زيارتك',
-  visit_cancelled: 'تم إلغاء الزيارة',
-  visit_no_show: 'تسجيل عدم الحضور',
-  visit_day_reminder: 'تذكير بزيارتك اليوم',
-  maintenance_request_created: 'تم إنشاء طلب الصيانة',
-  maintenance_request_assigned: 'تم إسناد طلب الصيانة',
-  maintenance_request_status_changed: 'تحديث حالة طلب الصيانة',
-  maintenance_request_resolved: 'تم حل طلب الصيانة',
-  maintenance_request_closed: 'تم إغلاق طلب الصيانة',
-  // P4 — customer-facing labels for the new event codes.
-  reservation_status_changed: 'تحديث حالة الحجز',
-  reservation_booking_paid: 'تم تأكيد دفعة الحجز',
-  contract_created_customer: 'تم إنشاء عقدك',
-  contract_signed_customer: 'تم توقيع عقدك',
-  // P12 — a downloadable contract document is now available.
-  contract_document_available: 'عقدك جاهز للتحميل',
-  deposit_verified: 'تم اعتماد دفعتك',
-  // P11.7 — installment due-soon reminder.
-  installment_due_soon: 'تذكير بقسط مستحق قريباً',
-};
-
-export function notificationTitle(code: string): string {
-  return NOTIFICATION_LABELS[code] ?? 'إشعار جديد';
-}
 
 /**
  * Maps a notification to a semantic icon + tinted chip, keyed off the template
@@ -83,9 +49,9 @@ export function notificationVisual(code: string, title: string): { Icon: LucideI
   return { Icon: Bell, chip: 'bg-gold-100 text-gold-600 ring-1 ring-gold-200/70' };
 }
 
-function formatDateTime(iso: string): string {
+function formatDateTime(iso: string, locale: string): string {
   try {
-    return new Intl.DateTimeFormat('ar', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
+    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
   } catch {
     return '—';
   }
@@ -97,9 +63,16 @@ function formatDateTime(iso: string): string {
  * was unread). Otherwise an UNREAD row stays a click-to-mark-read affordance and
  * a READ row is static. Designed to sit inside a divided list container.
  */
-export function NotificationCard({ notification }: { notification: MeNotification }) {
+export function NotificationCard({
+  notification,
+  locale = 'ar',
+}: {
+  notification: MeNotification;
+  locale?: string;
+}) {
   const unread = !notification.read;
-  const title = notificationTitle(notification.templateCode);
+  const title = notificationTitle(notification.templateCode, notification.title);
+  const body = notification.body?.trim();
   const { Icon, chip } = notificationVisual(notification.templateCode, title);
   const href = notificationHref(notification.payload);
 
@@ -110,12 +83,13 @@ export function NotificationCard({ notification }: { notification: MeNotificatio
         <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
       </span>
 
-      {/* Title + timestamp */}
+      {/* Title + message + timestamp */}
       <div className="min-w-0 flex-1">
         <h3 className={cn('line-clamp-2 text-sm font-semibold', unread ? 'text-ink-strong' : 'text-ink')}>
           {title}
         </h3>
-        <p className="mt-0.5 text-xs text-ink-muted">{formatDateTime(notification.createdAt)}</p>
+        {body && <p className="mt-0.5 line-clamp-3 text-sm text-ink">{body}</p>}
+        <p className="mt-0.5 text-xs text-ink-muted">{formatDateTime(notification.createdAt, locale)}</p>
       </div>
 
       {/* Unread dot — far end (left in RTL). Read rows show nothing. */}

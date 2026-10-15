@@ -52,6 +52,7 @@ export async function createAdminBrokerReservationAction(
     return { error: (e as Error).message };
   }
   revalidatePath('/dashboard/broker-reservations');
-  revalidatePath(`/dashboard/broker-reservations/${created.id}`);
-  redirect(`/dashboard/broker-reservations/${created.id}`);
+  // A broker reservation is an ordinary reservation: it opens on the shared
+  // detail page (broker-reservations has a list, no detail route).
+  redirect(`/dashboard/reservations/${created.id}`);
 }

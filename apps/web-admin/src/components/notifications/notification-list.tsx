@@ -56,6 +56,21 @@ function relatedLink(
 
   if (base === '/dashboard') {
     // New entityType payloads first (maintenance/visit must beat legacy requestId).
+    if (entityType === 'contract' && entityId) {
+      return { href: `/dashboard/contracts/${entityId}`, icon: FileText, label: rl.contract };
+    }
+    if (entityType === 'reservation' && entityId) {
+      return { href: `/dashboard/reservations/${entityId}`, icon: BookmarkCheck, label: rl.reservation };
+    }
+    if (entityType === 'deposit' && entityId) {
+      return { href: `/dashboard/deposits/${entityId}`, icon: Wallet, label: rl.payment };
+    }
+    if (entityType === 'bonus') {
+      return { href: `/dashboard/bonus`, icon: BadgePercent, label: rl.commission };
+    }
+    if (entityType === 'visit_request' || entityType === 'info_request') {
+      return { href: `/dashboard/requests`, icon: MessageSquareText, label: rl.inquiry };
+    }
     if (entityType === 'maintenance' && entityId) {
       return { href: `/dashboard/maintenance/${entityId}`, icon: Wrench, label: rl.maintenance };
     }
@@ -86,15 +101,13 @@ function relatedLink(
     }
     if (payoutId) return { href: `/dashboard/broker-payouts/${payoutId}`, icon: Wallet, label: rl.payment };
     if (commissionId) return { href: `/dashboard/broker-commissions/${commissionId}`, icon: BadgePercent, label: rl.commission };
+    // A broker deal is an ordinary contract / reservation: its detail page is
+    // the shared one (broker-contracts / broker-reservations are lists only).
     if (contractId) {
-      return isBroker
-        ? { href: `/dashboard/broker-contracts/${contractId}`, icon: FileText, label: rl.contract }
-        : { href: `/dashboard/contracts/${contractId}`, icon: FileText, label: rl.contract };
+      return { href: `/dashboard/contracts/${contractId}`, icon: FileText, label: rl.contract };
     }
     if (reservationId) {
-      return isBroker
-        ? { href: `/dashboard/broker-reservations/${reservationId}`, icon: BookmarkCheck, label: rl.reservation }
-        : { href: `/dashboard/reservations/${reservationId}`, icon: BookmarkCheck, label: rl.reservation };
+      return { href: `/dashboard/reservations/${reservationId}`, icon: BookmarkCheck, label: rl.reservation };
     }
     // Inquiries (info/visit request intake — no per-row detail page).
     if (requestId || infoRequestId) {
@@ -131,13 +144,13 @@ function categoryVisual(code: string, related: RelatedLink | null): { Icon: Luci
   return { Icon: Bell, chip: 'bg-slate-100 text-slate-600' };
 }
 
-/** Never returns the raw template code. */
+/** Never returns the raw template code. The server's title (in the reader's
+ *  language, naming the unit / contract / amount) wins; the label map is the
+ *  fallback for rows it could not title. */
 function resolveTitle(n: NotificationItem, nt: ReturnType<typeof portalSharedT>['notifications']): string {
-  const mapped = nt.templates[n.templateCode];
-  if (mapped) return mapped;
   const t = n.title?.trim();
   if (t && t !== n.templateCode) return t;
-  return nt.fallbackTitle;
+  return nt.templates[n.templateCode] ?? nt.fallbackTitle;
 }
 
 function summarisePayload(payload: NotificationItem['payload']): string | null {

@@ -11,4 +11,8 @@ abstract interface class NotificationsRepository {
   /// Registers a device FCM token with the backend so the user receives push
   /// notifications on this device. No-op if [token] is empty.
   Future<Result<void>> registerDevice(String token, String platform);
+
+  /// Signs this device out of push: the backend stops sending the current
+  /// user's notifications to [token]. Called before logout.
+  Future<Result<void>> unregisterDevice(String token);
 }

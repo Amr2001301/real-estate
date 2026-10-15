@@ -302,7 +302,9 @@ export default async function AccountPage() {
         authFetch<Paginated<MeContract>>('/contracts/me/contracts?page=1&pageSize=3'),
         authFetch<MeDepositsResponse>('/me/deposits'),
         authFetch<Paginated<MeMaintenanceRequest>>('/me/maintenance-requests?page=1&pageSize=3'),
-        authFetch<Paginated<MeNotification> | MeNotification[]>('/me/notifications'),
+        authFetch<Paginated<MeNotification> | MeNotification[]>('/me/notifications?page=1&pageSize=3', {
+          headers: { 'Accept-Language': locale },
+        }),
         authFetch<Paginated<MeInstallment>>('/me/installments?page=1&pageSize=200'),
       ])
     : null;
@@ -478,7 +480,7 @@ export default async function AccountPage() {
     ...recentNotifications.map((n) => (
       <TimelineItem
         key={`n-${n.id}`}
-        title={notificationTitle(n.templateCode)}
+        title={notificationTitle(n.templateCode, n.title)}
         subtitle={formatDateTime(n.createdAt)}
         trailing={!n.read ? <Badge tone="gold">{m.newBadge}</Badge> : undefined}
       />

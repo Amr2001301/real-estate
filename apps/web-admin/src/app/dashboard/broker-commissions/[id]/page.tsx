@@ -185,7 +185,7 @@ export default async function AdminBrokerCommissionDetailPage({
                 value={
                   c.reservation ? (
                     <Link
-                      href={`/dashboard/broker-reservations/${c.reservation.id}` as never}
+                      href={`/dashboard/reservations/${c.reservation.id}` as never}
                       className="font-mono text-brand-700 hover:underline"
                       dir="ltr"
                     >

@@ -56,6 +56,9 @@ class _FakeRemote implements NotificationsRemoteDataSource {
 
   @override
   Future<void> registerDevice(String token, String platform) async {}
+
+  @override
+  Future<void> unregisterDevice(String token) async {}
 }
 
 class _FakeRepo implements NotificationsRepository {
@@ -93,6 +96,9 @@ class _FakeRepo implements NotificationsRepository {
   @override
   Future<Result<void>> registerDevice(String token, String platform) async =>
       const Ok(null);
+
+  @override
+  Future<Result<void>> unregisterDevice(String token) async => const Ok(null);
 }
 
 DioException _dio(int status) => DioException(

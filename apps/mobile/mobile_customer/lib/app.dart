@@ -199,6 +199,7 @@ class CustomerApp extends StatelessWidget {
           create: (ctx) => PushRegistrationService(
             const FirebasePushTokenProvider(),
             RegisterDevice(ctx.read<NotificationsRepository>()),
+            UnregisterDevice(ctx.read<NotificationsRepository>()),
           ),
         ),
       ],
@@ -226,6 +227,7 @@ class CustomerApp extends StatelessWidget {
           BlocProvider<AuthCubit>(
             create: (ctx) {
               final repo = ctx.read<AuthRepository>();
+              final push = ctx.read<PushRegistrationService>();
               return AuthCubit(
                 sessionCubit: ctx.read<SessionCubit>(),
                 tenantStorage: ctx.read<CustomerTenantStorage>(),
@@ -234,6 +236,7 @@ class CustomerApp extends StatelessWidget {
                 requestOtp: RequestOtp(repo),
                 verifyOtp: VerifyOtp(repo),
                 logoutUser: LogoutUser(repo),
+                beforeLogout: push.unregisterIfPossible,
               );
             },
           ),
