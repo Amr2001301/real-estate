@@ -2,6 +2,8 @@ import { Controller, Get, Injectable, Module } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { InstallmentStatus, MaintenanceStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+// A cancelled or deleted contract is no longer the customer's unit or debt.
+import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 import { findTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import { getTenantContext } from '../../common/tenant/tenant-context';
 import { getCompanyCurrency } from '../../common/currency/currency';
@@ -179,7 +181,7 @@ class MeHomeSummaryService {
 
       // Q1: most recently signed contract → primary property
       this.prisma.contract.findFirst({
-        where: { customerId: userId, signedAt: { not: null } },
+        where: { customerId: userId, signedAt: { not: null }, ...LIVE_CONTRACT_WHERE },
         orderBy: { signedAt: 'desc' },
         select: {
           id: true,
@@ -209,18 +211,18 @@ class MeHomeSummaryService {
 
       // Q2: count of signed contracts (owned units)
       this.prisma.contract.count({
-        where: { customerId: userId, signedAt: { not: null } },
+        where: { customerId: userId, signedAt: { not: null }, ...LIVE_CONTRACT_WHERE },
       }),
 
       // Q3a: total installments across all contracts
       this.prisma.installment.count({
-        where: { plan: { contract: { customerId: userId } } },
+        where: { plan: { contract: { customerId: userId, ...LIVE_CONTRACT_WHERE } } },
       }),
 
       // Q3b: paid installments
       this.prisma.installment.count({
         where: {
-          plan: { contract: { customerId: userId } },
+          plan: { contract: { customerId: userId, ...LIVE_CONTRACT_WHERE } },
           status: InstallmentStatus.PAID,
         },
       }),
@@ -229,7 +231,7 @@ class MeHomeSummaryService {
       // haven't been promoted to OVERDUE yet.
       this.prisma.installment.count({
         where: {
-          plan: { contract: { customerId: userId } },
+          plan: { contract: { customerId: userId, ...LIVE_CONTRACT_WHERE } },
           OR: [
             { status: InstallmentStatus.OVERDUE },
             { status: InstallmentStatus.PENDING, dueDate: { lt: now } },
@@ -240,7 +242,7 @@ class MeHomeSummaryService {
       // Q4: earliest unpaid installment — explicit IN excludes CANCELLED (Step D1).
       this.prisma.installment.findFirst({
         where: {
-          plan: { contract: { customerId: userId } },
+          plan: { contract: { customerId: userId, ...LIVE_CONTRACT_WHERE } },
           status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] },
         },
         orderBy: { dueDate: 'asc' },
@@ -250,7 +252,7 @@ class MeHomeSummaryService {
       // Q5: most recently paid installment (for lastPaidAt)
       this.prisma.installment.findFirst({
         where: {
-          plan: { contract: { customerId: userId } },
+          plan: { contract: { customerId: userId, ...LIVE_CONTRACT_WHERE } },
           status: InstallmentStatus.PAID,
           paidAt: { not: null },
         },
@@ -298,7 +300,7 @@ class MeHomeSummaryService {
     let customerType: CustomerType = 'OWNER';
     if (ownedUnitsCount === 0) {
       const pendingCount = await this.prisma.contract.count({
-        where: { customerId: userId, signedAt: null },
+        where: { customerId: userId, signedAt: null, ...LIVE_CONTRACT_WHERE },
       });
       customerType = pendingCount > 0 ? 'BUYER' : 'CUSTOMER';
     }

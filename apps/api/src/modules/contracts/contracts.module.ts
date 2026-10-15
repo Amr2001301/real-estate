@@ -678,17 +678,96 @@ export class ContractsService {
     return { ...contract, signFollowupFailed: await this.signFollowupFailed(id) };
   }
 
-  async softDelete(id: string) {
-    const exists = await this.prisma.contract.findUnique({ where: { id }, select: { id: true, deletedAt: true } });
+  /**
+   * Deleting is for a contract entered by mistake: unsigned, no payment
+   * recorded, still live. Anything else is ended through cancellation, which
+   * settles the money (retained / refund), commissions and the unit — a
+   * delete used to skip all of that and leave the unit SOLD with nobody on it.
+   * A deleted contract frees its unit.
+   */
+  async softDelete(id: string, actorId?: string) {
+    const exists = await this.prisma.contract.findUnique({
+      where: { id },
+      select: { id: true, deletedAt: true, signedAt: true, status: true, unitId: true },
+    });
     if (!exists) throw new NotFoundException('Contract not found');
     if (exists.deletedAt) throw new NotFoundException('Contract already deleted');
-    await this.prisma.contract.update({ where: { id }, data: { deletedAt: new Date() } });
+    const payments = await this.prisma.deposit.count({
+      where: {
+        deletedAt: null,
+        OR: [{ contractId: id }, { installment: { plan: { contractId: id } } }],
+      },
+    });
+    if (exists.signedAt || payments > 0) {
+      throw new ConflictException('العقد موقّع أو عليه مدفوعات — استخدم إلغاء العقد بدلاً من الحذف');
+    }
+    await this.prisma.$transaction(async (tx) => {
+      await tx.contract.update({ where: { id }, data: { deletedAt: new Date() } });
+      if (exists.status === ContractStatus.CANCELLED) return; // its unit was handled by the cancel
+      const otherLive = await tx.contract.count({
+        where: { unitId: exists.unitId, id: { not: id }, ...LIVE_CONTRACT_WHERE },
+      });
+      if (otherLive > 0) return;
+      const freed = await tx.unit.updateMany({
+        where: { id: exists.unitId, status: UnitStatus.SOLD },
+        data: { status: UnitStatus.AVAILABLE },
+      });
+      if (freed.count > 0) {
+        await tx.unitStatusHistory.create({
+          data: {
+            unitId: exists.unitId,
+            oldStatus: UnitStatus.SOLD,
+            newStatus: UnitStatus.AVAILABLE,
+            changedById: actorId ?? null,
+            reason: `Contract ${id} deleted`,
+          },
+        });
+      }
+    });
   }
 
-  async restore(id: string) {
-    const exists = await this.prisma.contract.findUnique({ where: { id }, select: { id: true, deletedAt: true } });
+  /**
+   * Restoring brings the sale back, so its unit must still be free: the
+   * unit is claimed again exactly as a new contract would claim it.
+   */
+  async restore(id: string, actorId?: string) {
+    const exists = await this.prisma.contract.findUnique({
+      where: { id },
+      select: { id: true, deletedAt: true, status: true, unitId: true },
+    });
     if (!exists) throw new NotFoundException('Contract not found');
-    await this.prisma.contract.update({ where: { id }, data: { deletedAt: null } });
+    if (!exists.deletedAt) return;
+    await this.prisma.$transaction(async (tx) => {
+      if (exists.status !== ContractStatus.CANCELLED) {
+        const claimed = await tx.unit.updateMany({
+          where: { id: exists.unitId, status: { not: UnitStatus.SOLD } },
+          data: { status: UnitStatus.SOLD, reservationExpiresAt: null },
+        });
+        const otherLive = await tx.contract.count({
+          where: { unitId: exists.unitId, id: { not: id }, ...LIVE_CONTRACT_WHERE },
+        });
+        const heldByReservation = await tx.reservation.count({
+          where: {
+            unitId: exists.unitId,
+            deletedAt: null,
+            status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
+          },
+        });
+        if (otherLive > 0 || heldByReservation > 0 || claimed.count === 0) {
+          throw new ConflictException('الوحدة لم تعد متاحة لهذا العقد — لا يمكن استعادته');
+        }
+        await tx.unitStatusHistory.create({
+          data: {
+            unitId: exists.unitId,
+            oldStatus: UnitStatus.AVAILABLE,
+            newStatus: UnitStatus.SOLD,
+            changedById: actorId ?? null,
+            reason: `Contract ${id} restored`,
+          },
+        });
+      }
+      await tx.contract.update({ where: { id }, data: { deletedAt: null } });
+    });
   }
 
   async update(id: string, dto: UpdateContractDto, actorId: string) {
@@ -1178,15 +1257,15 @@ class ContractsController {
   @Roles(UserRole.ADMIN)
   @Permissions('contracts:delete')
   @Delete(':id')
-  softDelete(@Param('id', ParseUUIDPipe) id: string) {
-    return this.svc.softDelete(id);
+  softDelete(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
+    return this.svc.softDelete(id, user.sub);
   }
 
   @Roles(UserRole.ADMIN)
   @Permissions('contracts:delete')
   @Post(':id/restore')
-  restore(@Param('id', ParseUUIDPipe) id: string) {
-    return this.svc.restore(id);
+  restore(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
+    return this.svc.restore(id, user.sub);
   }
 
   // Step D2 — Cancellation suggestion (READ ONLY; ADMIN only)

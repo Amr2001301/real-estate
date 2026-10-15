@@ -106,14 +106,25 @@ export async function attachContractPdfAction(id: string, pdfUrl: string) {
   revalidatePath(`/dashboard/contracts/${id}`);
 }
 
-export async function createInstallmentPlanAction(contractId: string, formData: FormData) {
-  await api.post('/installment-plans', {
-    contractId,
-    totalMonths: Number(formData.get('totalMonths') ?? 12),
-    monthlyAmount: Number(formData.get('monthlyAmount') ?? 0),
-    startsAt: new Date(String(formData.get('startsAt'))).toISOString(),
-  });
+export async function createInstallmentPlanAction(
+  contractId: string,
+  formData: FormData,
+): Promise<{ error?: string }> {
+  // Left empty, the monthly amount is computed from the contract (total minus
+  // down payment, over the months); a typed one must fit the contract.
+  const monthly = String(formData.get('monthlyAmount') ?? '').trim();
+  try {
+    await api.post('/installment-plans', {
+      contractId,
+      totalMonths: Number(formData.get('totalMonths') ?? 12),
+      ...(monthly ? { monthlyAmount: Number(monthly) } : {}),
+      startsAt: new Date(String(formData.get('startsAt'))).toISOString(),
+    });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
   revalidatePath(`/dashboard/contracts/${contractId}`);
+  return {};
 }
 
 export async function recordInstallmentPaymentAction(

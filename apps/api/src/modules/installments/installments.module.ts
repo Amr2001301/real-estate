@@ -76,14 +76,15 @@ import {
   xlsxFilename,
 } from '../../common/utils/xlsx';
 import { reportFailure } from '../../common/observability/report-failure';
-import { CONTRACT_CANCELLED_MESSAGE, isDeadContract, LIVE_PLAN_WHERE } from './live-contract';
+import { CONTRACT_CANCELLED_MESSAGE, isDeadContract, LIVE_CONTRACT_WHERE, LIVE_PLAN_WHERE } from './live-contract';
 
 // ─── Existing contract-based plan DTOs ────────────────────────────────────────
 
 class CreatePlanDto {
   @IsUUID() contractId!: string;
   @IsInt() @Min(1) @Max(360) totalMonths!: number;
-  @IsNumber() @IsPositive() monthlyAmount!: number;
+  /** Optional: computed from the contract (total − down payment) ÷ months when omitted. */
+  @IsOptional() @IsNumber() @IsPositive() monthlyAmount?: number;
   @IsDateString() startsAt!: string;
 }
 
@@ -184,23 +185,52 @@ export class InstallmentsService {
     const startsAt = new Date(dto.startsAt);
     if (Number.isNaN(startsAt.getTime())) throw new BadRequestException('Invalid startsAt');
 
+    // The schedule must add up to the contract: a down-payment row (so it can
+    // be recorded at all — a payment needs an installment) plus the monthly
+    // rows covering the rest. A typed monthly amount that does not fit is
+    // refused with the right one; the last row absorbs the rounding.
+    const toCents = (v: Prisma.Decimal | number) => Math.round(Number(v) * 100);
+    const downCents = toCents(contract.downPayment ?? 0);
+    const remainingCents = toCents(contract.totalAmount) - downCents;
+    if (remainingCents <= 0) {
+      throw new BadRequestException('لا يتبقى مبلغ للتقسيط بعد المقدّم');
+    }
+    const expectedMonthlyCents = Math.floor(remainingCents / dto.totalMonths);
+    const monthlyCents = dto.monthlyAmount != null ? toCents(dto.monthlyAmount) : expectedMonthlyCents;
+    // Up to one currency unit a month of rounding is fine; the last row settles it.
+    if (Math.abs(monthlyCents * dto.totalMonths - remainingCents) >= dto.totalMonths * 100) {
+      throw new BadRequestException(
+        `القسط الشهري لا يطابق قيمة العقد — المتبقي بعد المقدّم ${(remainingCents / 100).toFixed(2)} على ${dto.totalMonths} شهراً = ${(expectedMonthlyCents / 100).toFixed(2)} شهرياً`,
+      );
+    }
+    const lastCents = remainingCents - monthlyCents * (dto.totalMonths - 1);
+    const money = (cents: number) => new Prisma.Decimal(cents).div(100);
+
     const created = await this.prisma.$transaction(async (tx) => {
       const plan = await tx.installmentPlan.create({
         data: {
           contractId: dto.contractId,
           totalMonths: dto.totalMonths,
-          monthlyAmount: new Prisma.Decimal(dto.monthlyAmount),
+          monthlyAmount: money(monthlyCents),
           startsAt,
         },
       });
       const rows: Prisma.InstallmentCreateManyInput[] = [];
+      if (downCents > 0) {
+        rows.push({
+          planId: plan.id,
+          dueDate: new Date(startsAt),
+          amount: money(downCents),
+          type: PlanPaymentType.DOWN_PAYMENT,
+        });
+      }
       for (let i = 0; i < dto.totalMonths; i++) {
         const due = new Date(startsAt);
         due.setMonth(due.getMonth() + i);
         rows.push({
           planId: plan.id,
           dueDate: due,
-          amount: new Prisma.Decimal(dto.monthlyAmount),
+          amount: money(i === dto.totalMonths - 1 ? lastCents : monthlyCents),
         });
       }
       await tx.installment.createMany({ data: rows });
@@ -215,7 +245,7 @@ export class InstallmentsService {
       contractNumber: contract.contractNumber ?? '',
       unitCode: contract.unit?.code ?? '',
       totalMonths: dto.totalMonths,
-      monthlyAmount: dto.monthlyAmount,
+      monthlyAmount: monthlyCents / 100,
       startsAt: startsAt.toISOString().slice(0, 10),
       contractId: contract.id,
       entityType: 'contract',
@@ -1324,8 +1354,11 @@ class MeInstallmentsService {
     // cross-customer read is impossible. The optional contractId narrows to one
     // contract; status narrows the LIST only (the summary below ignores it so
     // the cards always reflect the whole schedule).
+    // Only live contracts: a cancelled or deleted contract's schedule is not
+    // owed — its open installments used to show as overdue forever.
     const contractScope: Prisma.ContractWhereInput = {
       customerId: userId,
+      ...LIVE_CONTRACT_WHERE,
       ...(opts.contractId ? { id: opts.contractId } : {}),
     };
     const listWhere: Prisma.InstallmentWhereInput = {

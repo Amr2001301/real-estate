@@ -26,7 +26,7 @@ import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { ContractPdfPanel } from './pdf-panel';
 import { OwnerDocumentsCard } from '@/components/documents/owner-documents-card';
-import { createInstallmentPlanAction } from '../actions';
+import { CreatePlanForm } from './create-plan-form';
 import { RecordPaymentButton } from './record-payment-button';
 import { AssignContractNumber } from './assign-number';
 import { SignFollowupsAlert } from './sign-followups-alert';
@@ -392,40 +392,10 @@ export default async function ContractDetailPage({
                     </p>
                   )}
                   {isAdmin && (
-                    <form
-                      action={createInstallmentPlanAction.bind(null, contract.id)}
-                      className="space-y-3"
-                    >
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <input
-                          name="totalMonths"
-                          type="number"
-                          min={1}
-                          max={360}
-                          placeholder={m.formMonthsPlaceholder}
-                          required
-                          className="rounded-xl border border-hairline px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 bg-surface"
-                        />
-                        <input
-                          name="monthlyAmount"
-                          type="number"
-                          step="any"
-                          min={0}
-                          placeholder={m.formMonthlyAmountPlaceholder}
-                          required
-                          className="rounded-xl border border-hairline px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 bg-surface"
-                        />
-                        <input
-                          name="startsAt"
-                          type="date"
-                          required
-                          className="rounded-xl border border-hairline px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 bg-surface"
-                        />
-                      </div>
-                      <Button type="submit" variant="primary" size="sm">
-                        {m.btnCreatePlan}
-                      </Button>
-                    </form>
+                    <CreatePlanForm
+                      contractId={contract.id}
+                      labels={{ months: m.formMonthsPlaceholder, monthly: m.formMonthlyAmountPlaceholder, submit: m.btnCreatePlan }}
+                    />
                   )}
                 </div>
               )}
