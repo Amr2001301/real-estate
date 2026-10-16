@@ -18,6 +18,7 @@ import { DomainResolverService } from '../../common/domain/domain-resolver.servi
 import { CompanyDomainsService, RESERVED_PLATFORM_SLUGS } from '../company-domains/company-domains.service';
 import { seedCancellationSettingsForCompany } from '../contracts/cancellation-settings.constants';
 import { seedLateFeeSettingsForCompany } from '../installments/late-fee';
+import { seedTransferFeeSettingsForCompany } from '../contracts/transfer-fee';
 import { NotificationsService } from '../notifications/notifications.module';
 import { USER_ROLE_AR } from '../notifications/notification-catalog';
 import { runInCompany } from '../../common/tenant/tenant-context';
@@ -220,6 +221,7 @@ export class SuperAdminService {
     // operator-configured values are never overwritten.
     await seedCancellationSettingsForCompany(this.prisma, company.id);
     await seedLateFeeSettingsForCompany(this.prisma, company.id);
+    await seedTransferFeeSettingsForCompany(this.prisma, company.id);
 
     let adminUser = null;
     if (dto.adminEmail && dto.adminPassword && dto.adminFullName) {

@@ -43,7 +43,8 @@ export type PlanPaymentType =
   | 'INSTALLMENT'
   | 'FINAL_PAYMENT'
   | 'BOUNCE_PENALTY'
-  | 'LATE_FEE';
+  | 'LATE_FEE'
+  | 'TRANSFER_FEE';
 export type UnitStatus = 'AVAILABLE' | 'RESERVED' | 'SOLD';
 export type LeadStage = 'NEW' | 'INTERESTED' | 'VISIT' | 'NEGOTIATION' | 'WON' | 'LOST';
 export type VisitStatus = 'PENDING' | 'APPROVED' | 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
@@ -256,6 +257,7 @@ export interface ContractAmendment {
   toUnitCode: string | null;
   fromTotal: string | number | null;
   toTotal: string | number | null;
+  feeAmount: string | number | null;
   performedByName: string | null;
 }
 

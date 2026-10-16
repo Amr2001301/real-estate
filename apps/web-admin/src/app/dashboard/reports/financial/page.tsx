@@ -92,6 +92,7 @@ export default async function FinancialReportsPage({
     RESERVATION: 'bg-indigo-100 text-indigo-700', DOWN_PAYMENT: 'bg-amber-100 text-amber-700',
     INSTALLMENT: 'bg-slate-100 text-slate-600',   FINAL_PAYMENT: 'bg-purple-100 text-purple-700',
     BOUNCE_PENALTY: 'bg-danger-100 text-danger-700', LATE_FEE: 'bg-danger-100 text-danger-700',
+    TRANSFER_FEE: 'bg-slate-100 text-slate-600',
   };
   const DEPOSIT_TYPE_LABELS: Record<DepositType, string> = m.depositTypeLabels;
   const DEPOSIT_TYPE_CLS: Record<DepositType, string> = {

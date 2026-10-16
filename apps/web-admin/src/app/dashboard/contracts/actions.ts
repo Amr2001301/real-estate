@@ -220,6 +220,10 @@ export async function transferContractAction(id: string, formData: FormData): Pr
     await api.post(`/contracts/${id}/transfer`, {
       toCustomerId: String(formData.get('toCustomerId') ?? ''),
       reason: String(formData.get('reason') ?? '').trim(),
+      // Empty → the company's transfer-fee setting applies.
+      ...(String(formData.get('feeAmount') ?? '').trim() !== ''
+        ? { feeAmount: Number(formData.get('feeAmount')) }
+        : {}),
     });
   } catch (e) {
     return { error: (e as Error).message };

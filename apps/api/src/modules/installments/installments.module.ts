@@ -486,7 +486,7 @@ export class InstallmentsService {
   /**
    * Daily, after markOverdue: charge the late-payment fee (company setting
    * lateFee.*, off by default) on overdue installments of live contracts.
-   * Fees are never charged on a fee or a cheque penalty, nor while a payment
+   * Fees are never charged on a fee, a transfer fee or a cheque penalty, nor while a payment
    * for the installment waits for review or for its cheque to clear.
    */
   async applyLateFees(now = new Date()) {
@@ -519,7 +519,7 @@ export class InstallmentsService {
       where: {
         companyId,
         status: InstallmentStatus.OVERDUE,
-        type: { notIn: [PlanPaymentType.LATE_FEE, PlanPaymentType.BOUNCE_PENALTY] },
+        type: { notIn: [PlanPaymentType.LATE_FEE, PlanPaymentType.BOUNCE_PENALTY, PlanPaymentType.TRANSFER_FEE] },
         dueDate: { lte: graceCutoff },
         plan: LIVE_PLAN_WHERE,
         // A payment already on its way stops the clock.

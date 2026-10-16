@@ -19,6 +19,7 @@ import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { LATE_FEE_VALIDATORS } from '../installments/late-fee';
+import { TRANSFER_FEE_VALIDATORS } from '../contracts/transfer-fee';
 
 /**
  * Setting keys whose value should be masked on the wire. Matching is
@@ -144,6 +145,7 @@ const SETTING_VALIDATORS: Record<string, (key: string, v: unknown) => void> = {
     validateEnum(k, v, ['REOPEN_AS_OVERDUE', 'REOPEN_AS_PENDING']),
   'cheque.bounced.penaltyAmount': (k, v) => validateNonNegativeDecimal(k, v),
   ...LATE_FEE_VALIDATORS,
+  ...TRANSFER_FEE_VALIDATORS,
 };
 
 function validateSettingValue(key: string, value: unknown): void {
