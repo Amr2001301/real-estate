@@ -20,6 +20,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { UserRole } from '@prisma/client';
+import { assertInventoryDeletable } from '../projects/inventory-blockers';
 
 class CreateBuildingDto {
   @IsUUID()
@@ -94,7 +95,9 @@ class BuildingsService {
     return this.prisma.building.update({ where: { id }, data: { ...dto } });
   }
 
-  remove(id: string) {
+  async remove(id: string) {
+    await this.get(id);
+    await assertInventoryDeletable(this.prisma, { buildingId: id }, 'المبنى');
     return this.prisma.building.delete({ where: { id } });
   }
 }

@@ -9,6 +9,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { UserRole } from '@prisma/client';
+import { assertInventoryDeletable } from '../projects/inventory-blockers';
 
 class TranslatableDto {
   @IsString() ar!: string;
@@ -93,7 +94,9 @@ class PhasesService {
     return this.prisma.phase.update({ where: { id }, data });
   }
 
-  remove(id: string) {
+  async remove(id: string) {
+    await this.get(id);
+    await assertInventoryDeletable(this.prisma, { building: { phaseId: id } }, 'المرحلة');
     return this.prisma.phase.delete({ where: { id } });
   }
 }

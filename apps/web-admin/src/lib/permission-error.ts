@@ -54,6 +54,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
   'installments:read': 'عرض خطط التقسيط',
   'installments:manage': 'إدارة خطط التقسيط',
   'installments:activate': 'تفعيل خطط التقسيط',
+  'pricing:approve-discount': 'اعتماد خصم أكبر من الحد المسموح',
   // Maintenance
   'maintenance:read': 'عرض طلبات الصيانة',
   'maintenance:assign': 'إسناد الصيانة',

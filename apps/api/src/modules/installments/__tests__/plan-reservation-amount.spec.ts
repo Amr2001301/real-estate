@@ -8,6 +8,7 @@ import { InstallmentsModule } from '../installments.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { runTenantContext } from '../../../common/tenant/tenant-context';
 
 /**
  * Plan template booking/reservation amount — fixed vs percentage (mirrors the
@@ -31,10 +32,15 @@ class FakeAuthGuard implements CanActivate {
 
 function makePrismaMock() {
   const m = {
-    userPermission: { findMany: jest.fn().mockResolvedValue([]) },
+    userPermission: { findMany: jest.fn().mockResolvedValue([]), count: jest.fn().mockResolvedValue(0) },
+    // The plan starts from the unit's price; discounts are checked against
+    // the company cap (no cap set) and recorded.
+    setting: { findFirst: jest.fn().mockResolvedValue(null) },
+    auditLog: { create: jest.fn().mockResolvedValue({}) },
     unit: {
       findUnique: jest.fn().mockResolvedValue({
         id: UNIT_ID,
+        price: 1_000_000,
         building: { phase: { projectId: PROJECT_ID } },
       }),
     },
@@ -142,6 +148,11 @@ describe('Plan template · reservation amount fixed/percentage', () => {
     }).compile();
 
     app = moduleRef.createNestApplication();
+    // Plan pricing reads the company's discount cap — the tenant context the
+    // real interceptor sets on every request.
+    app.use((_req: unknown, _res: unknown, next: () => void) =>
+      runTenantContext({ companyId: 'test-company-id', bypass: false, isPublic: false }, async () => next()),
+    );
     await app.init();
   });
 

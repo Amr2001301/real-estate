@@ -835,6 +835,7 @@ async function main() {
     { code: 'installments:read', description: 'Read installment plans and templates' },
     { code: 'installments:manage', description: 'Create, update, and delete installment plans and templates' },
     { code: 'installments:activate', description: 'Activate or deactivate installment plan templates' },
+    { code: 'pricing:approve-discount', description: 'Give a discount above the company cap (pricing.maxDiscountPct)' },
   ];
 
   const allPermissions = [...brokerPermissions, ...corePermissions];

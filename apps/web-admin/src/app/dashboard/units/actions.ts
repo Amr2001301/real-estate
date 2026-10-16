@@ -56,7 +56,8 @@ export async function updateUnitAction(
     await api.patch(`/units/${id}`, rest);
     const current = await api.get<{ status: string }>(`/units/${id}`);
     if (current.status !== status) {
-      await api.patch(`/units/${id}/status`, { status });
+      const reason = String(formData.get('statusReason') ?? '').trim() || undefined;
+      await api.patch(`/units/${id}/status`, { status, reason });
     }
   } catch (e) {
     return { error: (e as Error).message };

@@ -12,6 +12,7 @@ import {
   PERMISSIONS_KEY,
   type PermissionsMeta,
 } from '../../../common/decorators/permissions.decorator';
+import { runTenantContext } from '../../../common/tenant/tenant-context';
 
 /**
  * Verifies the installments permissions rollout. Two controllers in this
@@ -124,9 +125,12 @@ function makePrismaMock() {
       // nested include shape so create() doesn't trip on undefined access.
       findUnique: jest.fn().mockResolvedValue({
         id: 'u1',
+        price: 100000,
         building: { phase: { projectId: 'a1111111-1111-4111-8111-111111111111' } },
       }),
     },
+    setting: { findFirst: jest.fn().mockResolvedValue(null) },
+    auditLog: { create: jest.fn().mockResolvedValue({}) },
     $transaction: jest.fn(),
   };
 }
@@ -189,6 +193,11 @@ describe('Installments module · permissions enforcement', () => {
 
     reflector = moduleRef.get(Reflector);
     app = moduleRef.createNestApplication();
+    // Plan pricing reads the company's discount cap — the tenant context the
+    // real interceptor sets on every request.
+    app.use((_req: unknown, _res: unknown, next: () => void) =>
+      runTenantContext({ companyId: 'test-company-id', bypass: false, isPublic: false }, async () => next()),
+    );
     await app.init();
   });
 

@@ -152,6 +152,7 @@ const META: Record<string, PermissionMeta> = {
   'installments:read': { label: 'عرض خطط التقسيط', description: 'الاطلاع على خطط وأقساط التقسيط.', category: 'الدفعات', type: 'قراءة' },
   'installments:manage': { label: 'إدارة خطط التقسيط', description: 'إنشاء وتعديل خطط التقسيط.', category: 'الدفعات', type: 'إداري' },
   'installments:activate': { label: 'تفعيل خطط التقسيط', description: 'تفعيل خطة تقسيط للعقد.', category: 'الدفعات', type: 'إداري' },
+  'pricing:approve-discount': { label: 'اعتماد خصم', description: 'إعطاء خصم أكبر من الحد الأقصى المحدد في إعدادات الشركة.', category: 'الدفعات', type: 'إداري' },
 
   // ── الصيانة ──────────────────────────────────────────────────────────────
   'maintenance:read': { label: 'عرض طلبات الصيانة', description: 'الاطلاع على طلبات الصيانة.', category: 'الصيانة', type: 'قراءة' },
