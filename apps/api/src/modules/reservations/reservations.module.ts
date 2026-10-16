@@ -84,6 +84,7 @@ import { CronLockService } from '../../common/cron/cron-lock.service';
 import { captureExceptionSafe } from '../../common/observability/sentry';
 import { reportFailure } from '../../common/observability/report-failure';
 import { getTenantContext, runInCompany, runTenantContext } from '../../common/tenant/tenant-context';
+import { isUniqueConflictOn } from '../../common/utils/contract-number';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 // BrokerCommissionsModule/Service no longer imported here. Commission
 // materialisation runs from ContractsService.sign() — the only path that
@@ -303,10 +304,22 @@ export class ReservationsService {
 
   // Public so the broker portal reservations service can reuse the same
   // numbering scheme without duplicating logic. Behavior unchanged.
+  //
+  // Highest number this company has used this year, plus one. COUNT()+1 gave a
+  // number that already existed once any reservation had been deleted.
   async nextReservationNumber(): Promise<string> {
-    const year = new Date().getFullYear();
-    const count = await this.prisma.reservation.count();
-    return `RES-${year}-${String(count + 1).padStart(4, '0')}`;
+    const companyId = getTenantContext()?.companyId;
+    const prefix = `RES-${new Date().getFullYear()}-`;
+    const rows = await this.prisma.reservation.findMany({
+      where: { ...(companyId ? { companyId } : {}), reservationNumber: { startsWith: prefix } },
+      select: { reservationNumber: true },
+    });
+    let max = 0;
+    for (const { reservationNumber } of rows) {
+      const seq = parseInt((reservationNumber ?? '').slice(prefix.length), 10);
+      if (!Number.isNaN(seq) && seq > max) max = seq;
+    }
+    return `${prefix}${String(max + 1).padStart(4, '0')}`;
   }
 
   /**
@@ -476,7 +489,6 @@ export class ReservationsService {
       throw new ConflictException('Unit is not available');
     }
     const expiresAt = new Date(Date.now() + (dto.expiresInHours ?? 72) * 3_600_000);
-    const reservationNumber = await this.nextReservationNumber();
 
     // ── Booking amount + selected-duration snapshot ────────────────────────
     // Business rules:
@@ -620,7 +632,7 @@ export class ReservationsService {
     const resolvedPaymentStatus = ReservationBookingPaymentStatus.UNPAID;
     const resolvedPaidAt: Date | null = null;
 
-    return this.prisma.$transaction(async (tx) => {
+    const write = (reservationNumber: string) => this.prisma.$transaction(async (tx) => {
       // Atomic unit claim: the WHERE clause on status guarantees that only one
       // concurrent transaction can transition AVAILABLE → RESERVED. A second
       // request that reaches this point after the first has committed will see
@@ -760,7 +772,19 @@ export class ReservationsService {
       }
 
       return reservation;
-    }).then(async (reservation) => {
+    });
+    // Two reservations made at the same moment draw the same next number; the
+    // loser of the unique index retries with a fresh one.
+    let created!: Awaited<ReturnType<typeof write>>;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        created = await write(await this.nextReservationNumber());
+        break;
+      } catch (e) {
+        if (!isUniqueConflictOn(e, 'reservationNumber') || attempt >= 2) throw e;
+      }
+    }
+    return Promise.resolve(created).then(async (reservation) => {
       // P4 — event: sales or broker created a reservation; admins + sales
       // managers get a heads-up. Side-effects after the tx commits, helpers
       // never throw.
@@ -1228,8 +1252,10 @@ export class ReservationsService {
     }
 
     return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.reservation.update({
-        where: { id },
+      // Only from the status we read: a concurrent convert or cancel that got
+      // there first wins, and this one stops instead of overwriting it.
+      const moved = await tx.reservation.updateMany({
+        where: { id, status: reservation.status },
         data: {
           status: dto.status,
           reason: dto.reason ?? null,
@@ -1238,6 +1264,10 @@ export class ReservationsService {
           cancelledAt: dto.status === ReservationStatus.CANCELLED ? now : undefined,
         },
       });
+      if (moved.count === 0) {
+        throw new ConflictException('تغيّرت حالة الحجز أثناء التنفيذ — حدّث الصفحة وأعد المحاولة');
+      }
+      const updated = await tx.reservation.findUniqueOrThrow({ where: { id } });
 
       await tx.reservationActivity.create({
         data: {
@@ -1278,11 +1308,16 @@ export class ReservationsService {
             status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
           },
         });
-        if (otherActive === 0 && reservation.unit.status === UnitStatus.RESERVED) {
-          await tx.unit.update({
-            where: { id: reservation.unitId },
-            data: { status: UnitStatus.AVAILABLE, reservationExpiresAt: null },
-          });
+        // Release only a unit that is still RESERVED now — never one a
+        // contract has just claimed (SOLD).
+        const released =
+          otherActive === 0
+            ? await tx.unit.updateMany({
+                where: { id: reservation.unitId, status: UnitStatus.RESERVED },
+                data: { status: UnitStatus.AVAILABLE, reservationExpiresAt: null },
+              })
+            : { count: 0 };
+        if (released.count > 0) {
           await tx.unitStatusHistory.create({
             data: {
               unitId: reservation.unitId,
@@ -2009,11 +2044,15 @@ export class ReservationsService {
         }
       }
 
-      // 5. Mark Reservation CONVERTED.
-      await tx.reservation.update({
-        where: { id },
+      // 5. Mark Reservation CONVERTED — only if it is still APPROVED: a
+      // cancel that landed meanwhile rolls the whole conversion back.
+      const converted = await tx.reservation.updateMany({
+        where: { id, status: ReservationStatus.APPROVED },
         data: { status: ReservationStatus.CONVERTED, convertedAt: now },
       });
+      if (converted.count === 0) {
+        throw new ConflictException('تغيّرت حالة الحجز أثناء التحويل — حدّث الصفحة وأعد المحاولة');
+      }
       await tx.reservationActivity.create({
         data: {
           reservationId: id,

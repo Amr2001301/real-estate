@@ -7,6 +7,7 @@ import {
   PortalActivityQueryDto,
   PortalActivityType,
 } from './dto/portal-activity.dto';
+import { agentFilter, resolveBrokerViewer, type BrokerViewer } from './broker-viewer';
 
 type RawType = LeadActivityType;
 type EntityType =
@@ -89,8 +90,11 @@ export class BrokerPortalActivityService {
 
     // Filter routing: when the user picks a type or entityType, only one of
     // the two sources may contribute. Reduces query cost in the common case.
+    // Commission and payout events carry money: only for agents allowed to see
+    // it. A non-manager follows their own leads only.
+    const viewer = await resolveBrokerViewer(this.prisma, scope);
     const wantsLeadSource = this.sourceForFilter(query) !== 'broker-only';
-    const wantsBrokerSource = this.sourceForFilter(query) !== 'lead-only';
+    const wantsBrokerSource = this.sourceForFilter(query) !== 'lead-only' && viewer.canViewCommissions;
 
     // Over-fetch (page * pageSize) from each source, merge, slice. Cheap
     // enough at portal scale; correctness > optimality here.
@@ -98,8 +102,8 @@ export class BrokerPortalActivityService {
 
     const [leadActivities, leadCount, brokerActivities, brokerCount] =
       await Promise.all([
-        wantsLeadSource ? this.queryLeadActivities(scope, query, limit) : Promise.resolve([]),
-        wantsLeadSource ? this.countLeadActivities(scope, query) : Promise.resolve(0),
+        wantsLeadSource ? this.queryLeadActivities(scope, query, limit, viewer) : Promise.resolve([]),
+        wantsLeadSource ? this.countLeadActivities(scope, query, viewer) : Promise.resolve(0),
         wantsBrokerSource ? this.queryBrokerActivities(scope, query, limit) : Promise.resolve([]),
         wantsBrokerSource ? this.countBrokerActivities(scope, query) : Promise.resolve(0),
       ]);
@@ -131,6 +135,7 @@ export class BrokerPortalActivityService {
   private leadWhere(
     scope: BrokerScopeContext,
     query: PortalActivityQueryDto,
+    viewer: BrokerViewer,
   ): Prisma.LeadActivityWhereInput {
     let rawTypes = Object.keys(LEAD_TYPE_MAP) as RawType[];
     if (query.type) {
@@ -144,13 +149,16 @@ export class BrokerPortalActivityService {
       const e = query.entityType;
       rawTypes = rawTypes.filter((t) => LEAD_TYPE_MAP[t]?.entity === e);
     }
+    if (!viewer.canViewCommissions) {
+      rawTypes = rawTypes.filter((t) => LEAD_TYPE_MAP[t]?.entity !== 'Commission');
+    }
     if (rawTypes.length === 0) {
       // No matching raw types — short-circuit by filtering on a never-matching id.
       return { id: '__none__' };
     }
     return {
       type: { in: rawTypes },
-      lead: { brokerId: scope.brokerId },
+      lead: { brokerId: scope.brokerId, ...agentFilter(viewer) },
     };
   }
 
@@ -158,9 +166,10 @@ export class BrokerPortalActivityService {
     scope: BrokerScopeContext,
     query: PortalActivityQueryDto,
     limit: number,
+    viewer: BrokerViewer,
   ): Promise<ActivityRow[]> {
     const rows = await this.prisma.leadActivity.findMany({
-      where: this.leadWhere(scope, query),
+      where: this.leadWhere(scope, query, viewer),
       orderBy: { createdAt: 'desc' },
       take: limit,
       include: {
@@ -209,8 +218,9 @@ export class BrokerPortalActivityService {
   private countLeadActivities(
     scope: BrokerScopeContext,
     query: PortalActivityQueryDto,
+    viewer: BrokerViewer,
   ): Promise<number> {
-    return this.prisma.leadActivity.count({ where: this.leadWhere(scope, query) });
+    return this.prisma.leadActivity.count({ where: this.leadWhere(scope, query, viewer) });
   }
 
   // ── BrokerActivityLog branch ───────────────────────────────────────────

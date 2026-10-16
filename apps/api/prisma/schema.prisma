@@ -1119,7 +1119,7 @@ enum DepositType {
 
 model Reservation {
   id                String            @id @default(uuid()) @db.Uuid
-  reservationNumber String?           @unique
+  reservationNumber String?
   unitId            String            @db.Uuid
   unit              Unit              @relation(fields: [unitId], references: [id])
   salesId           String            @db.Uuid
@@ -1185,6 +1185,8 @@ model Reservation {
 
   deletedAt DateTime?
 
+  // Numbers run per company, like contract numbers.
+  @@unique([companyId, reservationNumber])
   @@index([unitId])
   @@index([salesId])
   @@index([clientId])

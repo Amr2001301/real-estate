@@ -88,6 +88,8 @@ function makeMock(unitStatus: 'AVAILABLE' | 'RESERVED' = 'AVAILABLE') {
     },
     reservation: {
       findFirst: jest.fn().mockResolvedValue(null),
+      // nextReservationNumber reads this company's existing numbers.
+      findMany: jest.fn().mockResolvedValue([]),
       count: jest.fn().mockResolvedValue(0),
       create: jest.fn().mockResolvedValue({
         id: 'new-res-id',

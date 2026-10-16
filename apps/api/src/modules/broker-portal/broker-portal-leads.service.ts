@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -13,11 +14,13 @@ import { getTenantContext } from '../../common/tenant/tenant-context';
 import { phoneForWrite } from '../../common/utils/phone-for-write';
 import type { BrokerScopeContext } from '../../common/guards/broker-scope.guard';
 import { CreatePortalLeadDto, PortalLeadsQueryDto } from './dto/portal-lead.dto';
+import { agentFilter, resolveBrokerViewer } from './broker-viewer';
 
+// The broker sees the lead as they submitted it — never the stored profile
+// of whichever account the phone matched (it may be a staff member, another
+// firm's client or an existing customer).
 const LEAD_INCLUDE = {
-  client: {
-    select: { id: true, fullName: true, phone: true, email: true, role: true },
-  },
+  client: { select: { id: true } },
   source: true,
   projectInterest: { select: { id: true, name: true, city: true } },
   unitInterest: { select: { id: true, code: true, type: true } },
@@ -38,8 +41,10 @@ export class BrokerPortalLeadsService {
     const pageSize = query.pageSize ?? 20;
     const trimmed = query.q?.trim();
 
+    const viewer = await resolveBrokerViewer(this.prisma, scope);
     const where: Prisma.LeadWhereInput = {
       brokerId: scope.brokerId,
+      ...agentFilter(viewer),
       ...(query.brokerApprovalStatus
         ? { brokerApprovalStatus: query.brokerApprovalStatus }
         : {}),
@@ -76,14 +81,12 @@ export class BrokerPortalLeadsService {
   }
 
   async findOne(scope: BrokerScopeContext, id: string) {
+    const viewer = await resolveBrokerViewer(this.prisma, scope);
     const lead = await this.prisma.lead.findFirst({
-      where: { id, brokerId: scope.brokerId },
+      where: { id, brokerId: scope.brokerId, ...agentFilter(viewer) },
       include: {
         ...LEAD_INCLUDE,
-        notes: {
-          orderBy: { createdAt: 'desc' },
-          include: { sales: { select: { id: true, fullName: true } } },
-        },
+        // Sales notes are internal to the company — not included.
         appointments: {
           orderBy: { scheduledAt: 'desc' },
           take: 20,
@@ -144,9 +147,9 @@ export class BrokerPortalLeadsService {
       const lead = await tx.lead.create({
         data: {
           clientId: client.id,
-          fullName: client.fullName,
-          phone: client.phone ?? phone,
-          email: client.email ?? dto.email ?? null,
+          fullName: dto.fullName.trim(),
+          phone,
+          email: dto.email?.trim() || null,
           sourceId: dto.sourceId ?? null,
           projectInterestId:
             dto.projectInterestId ?? resolvedUnitProjectId ?? null,
@@ -190,11 +193,9 @@ export class BrokerPortalLeadsService {
         });
       }
 
-      return {
-        ...lead,
-        isDuplicate,
-        duplicateOfId: duplicateOf?.id ?? null,
-      };
+      // The duplicate flag tells the broker the company already knows this
+      // contact; which record it matched stays internal.
+      return { ...lead, isDuplicate };
     });
 
     // Waiting on the company: admins / sales managers review broker leads;
@@ -287,27 +288,34 @@ export class BrokerPortalLeadsService {
   }
 
   /**
-   * Find an existing User by phone (preferred) or email, or create a CLIENT.
-   * Mirrors the resolution order used in apps/api/src/modules/leads/leads.service.ts.
+   * Find the existing client by phone (preferred) or email, or create a
+   * CLIENT. Only client accounts are reused: a phone or email that belongs to
+   * a staff or broker account is refused without saying whose it is.
    */
   private async resolveClient(
     tx: Prisma.TransactionClient,
     dto: CreatePortalLeadDto,
     phone: string,
   ): Promise<{ id: string; fullName: string; phone: string | null; email: string | null }> {
-    const email = dto.email?.trim() ?? null;
+    const email = dto.email?.trim() || null;
+    const companyId = getTenantContext()?.companyId ?? null;
+    const pick = async (where: Prisma.UserWhereInput) => {
+      const u = await tx.user.findFirst({
+        where: { ...where, companyId },
+        select: { id: true, fullName: true, phone: true, email: true, role: true },
+      });
+      if (!u) return null;
+      if (u.role !== UserRole.CLIENT && u.role !== UserRole.CUSTOMER) {
+        throw new ConflictException('هذا الرقم أو البريد مسجّل لحساب غير عميل — تواصل مع الشركة');
+      }
+      return { id: u.id, fullName: u.fullName, phone: u.phone, email: u.email };
+    };
 
-    const byPhone = await tx.user.findFirst({
-      where: { phone, companyId: getTenantContext()?.companyId ?? null },
-      select: { id: true, fullName: true, phone: true, email: true },
-    });
+    const byPhone = await pick({ phone });
     if (byPhone) return byPhone;
 
     if (email) {
-      const byEmail = await tx.user.findFirst({
-        where: { email, companyId: getTenantContext()?.companyId ?? null },
-        select: { id: true, fullName: true, phone: true, email: true },
-      });
+      const byEmail = await pick({ email });
       if (byEmail) return byEmail;
     }
 
@@ -331,10 +339,7 @@ export class BrokerPortalLeadsService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2002'
       ) {
-        const retry = await tx.user.findFirst({
-          where: { phone, companyId: getTenantContext()?.companyId ?? null },
-          select: { id: true, fullName: true, phone: true, email: true },
-        });
+        const retry = await pick({ phone });
         if (retry) return retry;
       }
       throw e;

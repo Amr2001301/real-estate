@@ -106,6 +106,7 @@ function makePrismaMock() {
       findMany: jest.fn().mockResolvedValue([]),
       count: jest.fn().mockResolvedValue(0),
       update: jest.fn().mockImplementation(async ({ data }) => updated(data.status ?? 'PENDING')),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     brokerPayout: {
       findUnique: jest.fn().mockImplementation(async () => payoutStore.current),
@@ -336,6 +337,22 @@ describe('Broker-commissions module · permissions enforcement', () => {
       expect(prismaMock.brokerCommission.update).toHaveBeenCalledTimes(1);
       expect(prismaMock.leadActivity.create).toHaveBeenCalledTimes(1);
       expect(notificationsMock.sendToUsers).toHaveBeenCalled();
+    });
+
+    it('a commission already on a payout cannot be rejected (409) — the money would still go out', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: 'admin-2',
+        role: UserRole.ADMIN,
+        codes: ['broker_commissions:reject'],
+      };
+      const before = commissionStore.current;
+      commissionStore.current = { ...before, status: 'APPROVED', payoutId: 'payout-1' };
+      try {
+        await request(app.getHttpServer()).patch(PATH).send(BODY).expect(409);
+        expect(prismaMock.brokerCommission.update).not.toHaveBeenCalled();
+      } finally {
+        commissionStore.current = before;
+      }
     });
   });
 

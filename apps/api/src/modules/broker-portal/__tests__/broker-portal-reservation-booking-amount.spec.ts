@@ -40,7 +40,7 @@ function makeService(fixture: Fixture) {
         return { id: 'res-new', reservationNumber: 'RSV-0001', ...data };
       }),
     },
-    unit: { update: jest.fn().mockResolvedValue({}) },
+    unit: { update: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     unitStatusHistory: { create: jest.fn().mockResolvedValue({}) },
     reservationActivity: { create: jest.fn().mockResolvedValue({}) },
     leadActivity: { create: jest.fn().mockResolvedValue({}) },
@@ -70,6 +70,7 @@ function makeService(fixture: Fixture) {
       }),
     },
     reservation: { findFirst: jest.fn().mockResolvedValue(null) },
+    contract: { count: jest.fn().mockResolvedValue(0) },
     installmentPlanTemplate: {
       findMany: jest.fn().mockImplementation(async () =>
         fixture.plans.map((p) => ({

@@ -178,7 +178,7 @@ async function main() {
 
   // ── Reservations ──────────────────────────────────────────────────────────
   const ensureReservation = async (num: string, unitId: string, clientId: string, leadId: string, status: ReservationStatus, daysAgo: number, bookingAmount: number, commPct: number) => {
-    const existing = await prisma.reservation.findUnique({ where: { reservationNumber: num }, select: { id: true } });
+    const existing = await prisma.reservation.findFirst({ where: { reservationNumber: num }, select: { id: true } });
     if (existing) return existing;
     return prisma.reservation.create({
       data: {
