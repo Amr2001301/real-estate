@@ -582,6 +582,8 @@ export interface VisitActivity {
 }
 
 export interface Reservation {
+  /** Set when a broker brought the deal (absent once detached). */
+  brokerId?: string | null;
   id: string;
   reservationNumber: string | null;
   unitId: string;
@@ -891,6 +893,8 @@ export interface Broker {
   defaultCommissionPct: string | number;
   commissionModel: BrokerCommissionModel;
   status: BrokerStatus;
+  /** Admin hold on this broker's payouts. */
+  payoutHold?: boolean;
   contractStartAt: string | null;
   contractEndAt: string | null;
   contractPdfUrl: string | null;

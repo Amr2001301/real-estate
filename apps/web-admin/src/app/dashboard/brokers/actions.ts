@@ -132,6 +132,17 @@ export async function updateBrokerStatusAction(
   return { ok: true };
 }
 
+export async function setBrokerPayoutHoldAction(id: string, hold: boolean): Promise<{ error?: string }> {
+  try {
+    await api.post(`/brokers/${id}/payout-hold`, { hold });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/dashboard/brokers/${id}`);
+  revalidatePath(`/dashboard/brokers/${id}/edit`);
+  return {};
+}
+
 // ── broker users ────────────────────────────────────────────────────────────
 
 export interface BrokerUserFormState {

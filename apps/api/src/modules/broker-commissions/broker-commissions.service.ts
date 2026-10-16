@@ -153,6 +153,15 @@ export class BrokerCommissionsService {
     if (!contract.brokerId) {
       return { status: 'skipped', reason: 'contract is not broker-attributed' };
     }
+    // Commission is earned by a broker working with the company: a contract
+    // signed after the broker was suspended or terminated earns nothing new.
+    const brokerNow = await this.prisma.broker.findUnique({
+      where: { id: contract.brokerId },
+      select: { status: true },
+    });
+    if (brokerNow?.status === 'SUSPENDED' || brokerNow?.status === 'TERMINATED') {
+      return { status: 'skipped', reason: `broker is ${brokerNow.status}` };
+    }
     if (!contract.signedAt) {
       return { status: 'skipped', reason: 'contract is not signed' };
     }

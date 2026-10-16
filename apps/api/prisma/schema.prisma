@@ -2260,6 +2260,9 @@ model Broker {
   defaultCommissionPct   Decimal               @default(0) @db.Decimal(5, 2)
   commissionModel        BrokerCommissionModel @default(PERCENT_OF_SALE)
   status                 BrokerStatus          @default(PENDING)
+  /// Admin hold: no payout of this broker may be created, approved, processed
+  /// or paid while set (a dispute, an investigation). Earned commissions stay.
+  payoutHold             Boolean               @default(false)
   contractStartAt        DateTime?
   contractEndAt          DateTime?
   contractPdfUrl         String?

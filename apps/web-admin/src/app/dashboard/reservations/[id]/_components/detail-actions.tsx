@@ -10,6 +10,7 @@ import { StatusDialog } from '../../_components/status-dialog';
 import { uiT } from '@/messages/ui';
 import {
   approveReservationAction,
+  detachReservationBrokerAction,
   rejectReservationAction,
   cancelReservationAction,
   type ReservationActionResult,
@@ -30,6 +31,8 @@ interface Props {
   /** Approve/reject/cancel are admin/finance actions (strict permissions).
    *  When false (e.g. SALES), only the edit action is offered. */
   canManage?: boolean;
+  /** A broker brought this deal: the admin may detach it (no commission). */
+  hasBroker?: boolean;
   locale?: Locale;
 }
 
@@ -40,6 +43,7 @@ export function ReservationDetailActions({
   currentNotes,
   salesOptions,
   canManage = false,
+  hasBroker = false,
   locale = 'ar',
 }: Props) {
   const m = uiT(locale).pages.reservationDetailPage;
@@ -60,6 +64,14 @@ export function ReservationDetailActions({
     if (!window.confirm(m.actionApproveConfirm)) return;
     startApprove(async () => {
       const result = await approveReservationAction(reservationId);
+      setApproveResult(result?.error ? result : null);
+    });
+  }
+
+  function handleDetach() {
+    if (!window.confirm(m.actionDetachBrokerConfirm)) return;
+    startApprove(async () => {
+      const result = await detachReservationBrokerAction(reservationId);
       setApproveResult(result?.error ? result : null);
     });
   }
@@ -92,6 +104,12 @@ export function ReservationDetailActions({
               {m.actionBtnReject}
             </Button>
           </>
+        )}
+
+        {canManage && hasBroker && (
+          <Button variant="outline" size="md" loading={approvePending} onClick={handleDetach} data-testid="detach-broker">
+            {m.actionBtnDetachBroker}
+          </Button>
         )}
 
         {canManage && (

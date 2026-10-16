@@ -6,6 +6,7 @@ import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import BrokerForm from '../../_form';
 import BrokerStatusForm from './_status-form';
+import BrokerPayoutHold from './_payout-hold';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -56,6 +57,7 @@ export default async function EditBrokerPage({
 
       <section id="status" className="scroll-mt-24">
         <BrokerStatusForm broker={broker} locale={locale} />
+        <BrokerPayoutHold broker={broker} locale={locale} />
       </section>
     </div>
   );
