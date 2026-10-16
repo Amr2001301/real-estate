@@ -75,6 +75,7 @@ export default async function ContractDetailPage({
     FINAL_PAYMENT: m.payFinalPayment,
     BOUNCE_PENALTY: m.payBouncePenalty,
     LATE_FEE: m.payLateFee,
+    TRANSFER_FEE: m.payTransferFee,
   };
 
   const CMD_LINK =

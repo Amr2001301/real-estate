@@ -69,6 +69,11 @@ export function AmendmentsPanel({
                     ? `${a.fromCustomerName ?? '—'} ← ${a.toCustomerName ?? '—'}`
                     : `${a.fromUnitCode ?? '—'} ← ${a.toUnitCode ?? '—'}`}
                 </span>
+                {a.type === 'TRANSFER' && a.feeAmount != null && Number(a.feeAmount) > 0 && (
+                  <span className="tabular-nums text-slate-600">
+                    {m.amendFee} {formatCurrency(a.feeAmount, currency, locale)}
+                  </span>
+                )}
                 {a.type === 'UNIT_SWAP' && a.toTotal != null && (
                   <span className="tabular-nums text-slate-600">
                     {formatCurrency(a.fromTotal ?? 0, currency, locale)} ← {formatCurrency(a.toTotal, currency, locale)}
@@ -102,6 +107,15 @@ export function AmendmentsPanel({
               })}
               placeholder={c.searchClientPlaceholder}
               locale={locale}
+            />
+            <input
+              name="feeAmount"
+              type="number"
+              min={0}
+              step="0.01"
+              placeholder={m.transferFeeLabel}
+              aria-label={m.transferFeeLabel}
+              className={INPUT}
             />
             <input name="reason" required minLength={3} maxLength={2000} placeholder={m.amendReason} className={INPUT} />
             <button type="submit" disabled={pending} className={BTN} data-testid="transfer-submit">

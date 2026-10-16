@@ -27,7 +27,7 @@ import {
   UnitStatus,
   UserRole,
 } from '@prisma/client';
-import { IsNumber, IsPositive, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { IsNumber, IsOptional, IsPositive, IsString, IsUUID, MaxLength, Min, MinLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
@@ -38,10 +38,21 @@ import { UNCLEARED_INSTRUMENT_STATUSES } from '../deposits/review-queue';
 import { CONTRACT_CANCELLED_MESSAGE, isDeadContract, LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 import { resetUnitWarranties } from './contract-cancellation.service';
 import { startUnitWarranties } from './unit-warranties';
+import { resolveTransferFeeSettings, TRANSFER_FEE_SETTING_KEYS, transferFeeFor } from './transfer-fee';
 
 export class TransferContractDto {
   @IsUUID()
   toCustomerId!: string;
+
+  /**
+   * The transfer fee to charge this time. Omitted → the company's
+   * transferFee.* setting; 0 → no fee.
+   */
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  feeAmount?: number;
 
   @IsString()
   @MinLength(3)
@@ -66,7 +77,11 @@ export class SwapContractUnitDto {
 }
 
 /** Charges added on top of the price — they do not move with it. */
-const SURCHARGE_TYPES: PlanPaymentType[] = [PlanPaymentType.LATE_FEE, PlanPaymentType.BOUNCE_PENALTY];
+const SURCHARGE_TYPES: PlanPaymentType[] = [
+  PlanPaymentType.LATE_FEE,
+  PlanPaymentType.BOUNCE_PENALTY,
+  PlanPaymentType.TRANSFER_FEE,
+];
 const OPEN_STATUSES: InstallmentStatus[] = [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE];
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -198,6 +213,30 @@ export class ContractAmendmentsService {
     }
     await this.assertNoWaitingPayments(contractId, contract.reservationId);
 
+    // The fee goes on the contract's schedule: the admin's amount, else the
+    // company setting. Without a schedule there is nowhere to put it.
+    const plan = await this.prisma.installmentPlan.findFirst({
+      where: { contractId, companyId, cancelledAt: null },
+      select: { id: true },
+    });
+    let fee = dto.feeAmount;
+    if (fee === undefined) {
+      const settings = resolveTransferFeeSettings(
+        await this.prisma.setting.findMany({
+          where: { companyId, key: { in: TRANSFER_FEE_SETTING_KEYS } },
+          select: { key: true, value: true },
+        }),
+      );
+      fee = transferFeeFor(Number(contract.totalAmount), settings);
+      if (fee > 0 && !plan) {
+        this.logger.warn(`transfer ${contractId}: no installment plan — transfer fee ${fee} not charged`);
+        fee = 0;
+      }
+    } else if (fee > 0 && !plan) {
+      throw new BadRequestException('لا يوجد جدول أقساط على العقد لإضافة رسوم التنازل — أنشئ الجدول أولاً');
+    }
+    const feeAmount = fee;
+
     const fromId = contract.customerId;
     const now = new Date();
     const amendment = await this.prisma.$transaction(async (tx) => {
@@ -236,12 +275,29 @@ export class ContractAmendmentsService {
           data: { revokedAt: now },
         });
       }
+      let feeInstallmentId: string | null = null;
+      if (feeAmount > 0 && plan) {
+        feeInstallmentId = (
+          await tx.installment.create({
+            data: {
+              planId: plan.id,
+              type: PlanPaymentType.TRANSFER_FEE,
+              dueDate: now,
+              amount: new Prisma.Decimal(feeAmount),
+              status: InstallmentStatus.PENDING,
+              companyId,
+            },
+            select: { id: true },
+          })
+        ).id;
+      }
       const row = await tx.contractAmendment.create({
         data: {
           type: 'TRANSFER',
           contractId,
           fromCustomerId: fromId,
           toCustomerId: to.id,
+          feeAmount: feeAmount > 0 ? new Prisma.Decimal(feeAmount) : null,
           reason: dto.reason,
           performedById: actorId,
           companyId,
@@ -254,7 +310,7 @@ export class ContractAmendmentsService {
           entityType: 'Contract',
           entityId: contractId,
           before: { customerId: fromId },
-          after: { customerId: to.id, reason: dto.reason },
+          after: { customerId: to.id, reason: dto.reason, feeAmount, feeInstallmentId },
           companyId,
         },
       });
@@ -280,13 +336,77 @@ export class ContractAmendmentsService {
 
   // ── Unit swap (تبديل) ─────────────────────────────────────────────────────
 
+  /**
+   * Commissions not yet paid out follow the contract to its new price and
+   * unit: the broker commission while it is pending or approved and not on
+   * a payout, the sales bonus until it is paid. Anything already on a payout
+   * or paid keeps its amount — the audit row says which.
+   */
+  private async followNewPrice(
+    tx: Prisma.TransactionClient,
+    contractId: string,
+    companyId: string,
+    unit: { id: string; building: { phase: { projectId: string } } },
+    total: number,
+  ) {
+    const basis = new Prisma.Decimal(total);
+    let brokerCommission: 'recomputed' | 'kept' | null = null;
+    const bc = await tx.brokerCommission.findFirst({
+      where: { contractId, companyId },
+      select: { id: true, status: true, payoutId: true, commissionPct: true, taxPct: true, withholdingPct: true },
+    });
+    if (bc) {
+      const open = (bc.status === 'PENDING' || bc.status === 'APPROVED') && !bc.payoutId;
+      if (open) {
+        const data: Prisma.BrokerCommissionUpdateManyMutationInput & { unitId: string; projectId: string } = {
+          basisAmount: basis,
+          unitId: unit.id,
+          projectId: unit.building.phase.projectId,
+        };
+        // A fixed-per-unit commission keeps its amount; a percentage follows the price.
+        if (bc.commissionPct !== null) {
+          const gross = basis.mul(bc.commissionPct).div(100).toDecimalPlaces(2);
+          const tax = gross.mul(bc.taxPct).div(100).toDecimalPlaces(2);
+          const withholding = gross.mul(bc.withholdingPct).div(100).toDecimalPlaces(2);
+          Object.assign(data, {
+            grossAmount: gross,
+            taxAmount: tax,
+            withholdingAmount: withholding,
+            netAmount: gross.sub(tax).sub(withholding),
+          });
+        }
+        await tx.brokerCommission.updateMany({ where: { id: bc.id, payoutId: null }, data });
+        brokerCommission = 'recomputed';
+      } else {
+        brokerCommission = 'kept';
+      }
+    }
+    let salesBonus: 'recomputed' | 'kept' | null = null;
+    const bonus = await tx.bonusEntry.findFirst({
+      where: { contractId, companyId },
+      select: { id: true, status: true, commissionPct: true },
+    });
+    if (bonus) {
+      if ((bonus.status === 'PENDING' || bonus.status === 'APPROVED') && bonus.commissionPct !== null) {
+        await tx.bonusEntry.updateMany({
+          where: { id: bonus.id, status: { in: ['PENDING', 'APPROVED'] } },
+          data: { basisAmount: basis, amount: basis.mul(bonus.commissionPct).div(100).toDecimalPlaces(2) },
+        });
+        salesBonus = 'recomputed';
+      } else {
+        salesBonus = 'kept';
+      }
+    }
+    return { brokerCommission, salesBonus };
+  }
+
   async swapUnit(contractId: string, dto: SwapContractUnitDto, actorId: string) {
     const companyId = getRequiredCompanyId();
     const contract = await this.liveContract(contractId, companyId);
     if (dto.unitId === contract.unitId) throw new BadRequestException('الوحدة الجديدة هي نفس وحدة العقد');
     const unit = await this.prisma.unit.findFirst({
       where: { id: dto.unitId, companyId },
-      select: { id: true, code: true, status: true },
+      select: { id: true, code: true, status: true, building: { select: { phase: { select: { projectId: true } } } } },
     });
     if (!unit) throw new NotFoundException('Unit not found');
     await this.assertNoWaitingPayments(contractId, contract.reservationId);
@@ -403,6 +523,8 @@ export class ContractAmendmentsService {
         }
       }
 
+      const commissions = await this.followNewPrice(tx, contractId, companyId, unit, dto.totalAmount);
+
       const row = await tx.contractAmendment.create({
         data: {
           type: 'UNIT_SWAP',
@@ -428,6 +550,7 @@ export class ContractAmendmentsService {
             totalAmount: dto.totalAmount,
             rescaledInstallments: rescaled.length,
             addedFinalPayment: extraRow?.amount ?? null,
+            ...commissions,
             reason: dto.reason,
           },
           companyId,

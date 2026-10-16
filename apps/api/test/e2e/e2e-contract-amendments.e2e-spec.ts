@@ -32,6 +32,8 @@ describe('Contract transfer and unit swap (e2e)', () => {
   let soldUnitId: string;
   let contractId: string;
   let openIds: string[];
+  let commissionId: string;
+  let bonusId: string;
   const stamp = Date.now().toString().slice(-8);
 
   const http = () => request(testApp.app.getHttpServer());
@@ -105,10 +107,60 @@ describe('Contract transfer and unit swap (e2e)', () => {
       });
     await row(200_000, InstallmentStatus.PAID, -1);
     openIds = [(await row(400_000, InstallmentStatus.PENDING, 1)).id, (await row(400_000, InstallmentStatus.PENDING, 2)).id];
+
+    // Unpaid commissions on the sale: 2.5% to the broker, 1% to the sales person.
+    const broker = await raw.broker.findFirstOrThrow({ where: { code: fixtures.brokerCodes.BROKER_1 }, select: { id: true } });
+    const unitProject = await raw.unit.findUniqueOrThrow({
+      where: { id: unit1.id },
+      select: { building: { select: { phase: { select: { projectId: true } } } } },
+    });
+    commissionId = (
+      await raw.brokerCommission.create({
+        data: {
+          companyId,
+          commissionNumber: `BC-AMD-${stamp}`,
+          brokerId: broker.id,
+          contractId,
+          unitId: unit1.id,
+          projectId: unitProject.building.phase.projectId,
+          basisAmount: 1_000_000,
+          commissionPct: 2.5,
+          grossAmount: 25_000,
+          netAmount: 25_000,
+          earnedAt: new Date(),
+        },
+        select: { id: true },
+      })
+    ).id;
+    const rule = await raw.bonusRule.findFirstOrThrow({ where: { companyId }, select: { id: true } });
+    bonusId = (
+      await raw.bonusEntry.create({
+        data: {
+          companyId,
+          salesId: fixtures.userIds.salesId,
+          ruleId: rule.id,
+          amount: 10_000,
+          period: new Date().toISOString().slice(0, 7),
+          source: 'CONTRACT_AUTO',
+          contractId,
+          basisAmount: 1_000_000,
+          commissionPct: 1,
+        },
+        select: { id: true },
+      })
+    ).id;
   });
 
   afterAll(async () => {
     const raw = testApp.rawPrisma;
+    for (const { key, value } of [
+      { key: 'transferFee.enabled', value: false },
+      { key: 'transferFee.value', value: 1 },
+    ]) {
+      await raw.setting.updateMany({ where: { companyId, key }, data: { value } });
+    }
+    await raw.brokerCommission.deleteMany({ where: { id: commissionId } });
+    await raw.bonusEntry.deleteMany({ where: { id: bonusId } });
     await raw.contractAmendment.deleteMany({ where: { contractId } });
     await raw.deposit.deleteMany({ where: { installment: { plan: { contractId } } } });
     await raw.installment.deleteMany({ where: { plan: { contractId } } });
@@ -147,9 +199,16 @@ describe('Contract transfer and unit swap (e2e)', () => {
   it('CA-2: transfer moves the contract to the new customer and cuts the old one off', async () => {
     await asAdmin(http().post(`/v1/contracts/${contractId}/transfer`)).send({ toCustomerId: aId, reason: 'same' }).expect(400);
 
-    const res = await asAdmin(http().post(`/v1/contracts/${contractId}/transfer`)).send({ toCustomerId: bId, reason: 'تنازل رسمي' });
+    const res = await asAdmin(http().post(`/v1/contracts/${contractId}/transfer`)).send({
+      toCustomerId: bId,
+      reason: 'تنازل رسمي',
+      feeAmount: 5_000,
+    });
     expect(res.status).toBe(201);
+    expect(Number(res.body.feeAmount)).toBe(5_000);
     const raw = testApp.rawPrisma;
+    const fees = await raw.installment.findMany({ where: { plan: { contractId }, type: PlanPaymentType.TRANSFER_FEE } });
+    expect(fees.map((f) => [Number(f.amount), f.status])).toEqual([[5_000, InstallmentStatus.PENDING]]);
     expect((await raw.contract.findUniqueOrThrow({ where: { id: contractId } })).customerId).toBe(bId);
     // The new owner gets the customer app; the old one, with nothing left, loses it.
     expect((await raw.user.findUniqueOrThrow({ where: { id: bId } })).role).toBe(UserRole.CUSTOMER);
@@ -159,6 +218,23 @@ describe('Contract transfer and unit swap (e2e)', () => {
     const mine = await http().get('/v1/me/installments').set('Authorization', bearer(bToken));
     expect(mine.status).toBe(200);
     expect(JSON.stringify(mine.body)).toContain(contractId);
+  });
+
+  it('CA-2b: switched on, the company transfer fee is charged — 1% of the price', async () => {
+    const setSetting = (key: string, value: unknown) =>
+      asAdmin(http().patch(`/v1/settings/${key}`)).send({ value }).expect(200);
+    await setSetting('transferFee.enabled', true);
+    await setSetting('transferFee.value', 1);
+    const res = await asAdmin(http().post(`/v1/contracts/${contractId}/transfer`)).send({ toCustomerId: aId, reason: 'رجوع' });
+    expect(res.status).toBe(201);
+    expect(Number(res.body.feeAmount)).toBe(10_000);
+    const raw = testApp.rawPrisma;
+    expect((await raw.contract.findUniqueOrThrow({ where: { id: contractId } })).customerId).toBe(aId);
+    const fees = await raw.installment.findMany({
+      where: { plan: { contractId }, type: PlanPaymentType.TRANSFER_FEE },
+      orderBy: { amount: 'asc' },
+    });
+    expect(fees.map((f) => Number(f.amount))).toEqual([5_000, 10_000]);
   });
 
   it('CA-3: a swap onto a sold unit, or below what was paid, is refused', async () => {
@@ -185,7 +261,11 @@ describe('Contract transfer and unit swap (e2e)', () => {
     expect(contract.unitId).toBe(unit2.id);
     expect(Number(contract.totalAmount)).toBe(1_100_000);
 
-    const rows = await raw.installment.findMany({ where: { plan: { contractId } }, orderBy: { dueDate: 'asc' } });
+    // The transfer fees are charges on top — they do not follow the price.
+    const rows = await raw.installment.findMany({
+      where: { plan: { contractId }, type: PlanPaymentType.INSTALLMENT },
+      orderBy: { dueDate: 'asc' },
+    });
     expect(rows.map((r) => [r.status, Number(r.amount)])).toEqual([
       [InstallmentStatus.PAID, 200_000],
       [InstallmentStatus.PENDING, 450_000],
@@ -194,7 +274,15 @@ describe('Contract transfer and unit swap (e2e)', () => {
     expect((await raw.unit.findUniqueOrThrow({ where: { id: unit1.id } })).status).toBe(UnitStatus.AVAILABLE);
     expect((await raw.unit.findUniqueOrThrow({ where: { id: unit2.id } })).status).toBe(UnitStatus.SOLD);
 
+    // Unpaid commissions follow the new price and unit.
+    const bc = await raw.brokerCommission.findUniqueOrThrow({ where: { id: commissionId } });
+    expect([Number(bc.basisAmount), Number(bc.grossAmount), Number(bc.netAmount), bc.unitId]).toEqual([
+      1_100_000, 27_500, 27_500, unit2.id,
+    ]);
+    const bonus = await raw.bonusEntry.findUniqueOrThrow({ where: { id: bonusId } });
+    expect([Number(bonus.basisAmount), Number(bonus.amount)]).toEqual([1_100_000, 11_000]);
+
     const history = await asAdmin(http().get(`/v1/contracts/${contractId}/amendments`)).expect(200);
-    expect(history.body.map((a: { type: string }) => a.type)).toEqual(['UNIT_SWAP', 'TRANSFER']);
+    expect(history.body.map((a: { type: string }) => a.type)).toEqual(['UNIT_SWAP', 'TRANSFER', 'TRANSFER']);
   });
 });

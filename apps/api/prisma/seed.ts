@@ -9,6 +9,7 @@ import { randomBytes } from 'node:crypto';
 import * as argon2 from 'argon2';
 import { seedCancellationSettingsForCompany } from '../src/modules/contracts/cancellation-settings.constants';
 import { seedLateFeeSettingsForCompany } from '../src/modules/installments/late-fee';
+import { seedTransferFeeSettingsForCompany } from '../src/modules/contracts/transfer-fee';
 import { normalizeHostname } from '../src/common/utils/hostname-normalize';
 import { upsertUserByEmail } from './seed-user-upsert';
 import { NOTIFICATION_CATALOG } from '../src/modules/notifications/notification-catalog';
@@ -967,6 +968,7 @@ async function main() {
   for (const c of allCompanies) {
     await seedCancellationSettingsForCompany(prisma, c.id);
     await seedLateFeeSettingsForCompany(prisma, c.id);
+    await seedTransferFeeSettingsForCompany(prisma, c.id);
   }
 
   // ---- Backfill companyId on all rows that were created before this seed run ----

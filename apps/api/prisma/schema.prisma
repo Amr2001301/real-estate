@@ -1522,6 +1522,8 @@ model ContractAmendment {
   toUnitId       String?  @db.Uuid
   fromTotal      Decimal? @db.Decimal(14, 2)
   toTotal        Decimal? @db.Decimal(14, 2)
+  /// TRANSFER: the fee added to the schedule, if any.
+  feeAmount      Decimal? @db.Decimal(14, 2)
 
   reason        String   @db.VarChar(2000)
   performedById String   @db.Uuid
@@ -1692,6 +1694,9 @@ enum PlanPaymentType {
   /// Late-payment fee charged by the daily sweep on an overdue installment
   /// (company setting lateFee.*). Linked to its installment via feeForId.
   LATE_FEE
+  /// Fee charged when the contract is transferred (تنازل) — company setting
+  /// transferFee.* or the amount the admin enters on the transfer.
+  TRANSFER_FEE
 }
 
 model InstallmentPlanTemplate {
