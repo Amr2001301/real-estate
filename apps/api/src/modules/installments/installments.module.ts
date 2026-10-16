@@ -82,11 +82,29 @@ import {
   CONTRACT_CANCELLED_MESSAGE,
   isDeadContract,
   LIVE_CONTRACT_WHERE,
+  BILLABLE_PLAN_WHERE,
   LIVE_PLAN_WHERE,
   SURCHARGE_PAYMENT_TYPES,
 } from './live-contract';
 import { LATE_FEE_SETTING_KEYS, lateFeesDue, resolveLateFeeSettings } from './late-fee';
 import { feeDueDate, feePaymentDays } from './fee-settings';
+import { addMonths } from '../../common/utils/add-months';
+import { COMPANY_TIMEZONE_DEFAULT, companyTimeZones, startOfLocalToday } from '../../common/time/company-timezone';
+
+/**
+ * No payment for the row is waiting — a proof under review or a cheque not
+ * cleared yet. While one is, the customer has paid as far as they can tell:
+ * no "due soon" reminder, no overdue, no late fee.
+ */
+const PAYMENT_NOT_ON_ITS_WAY = {
+  none: {
+    deletedAt: null,
+    OR: [
+      { reviewStatus: DepositReviewStatus.PENDING_REVIEW },
+      { paymentInstrument: { status: { in: UNCLEARED_INSTRUMENT_STATUSES } } },
+    ],
+  },
+} satisfies Prisma.DepositListRelationFilter;
 
 // ─── Existing contract-based plan DTOs ────────────────────────────────────────
 
@@ -165,6 +183,7 @@ class CalculateInstallmentDto {
   @IsNumber() @Min(0) downPaymentAmount!: number;
   @IsInt() @Min(1) @Max(600) durationMonths!: number;
   @IsNumber() @Min(0) increasePercentage!: number;
+  @IsOptional() @IsNumber() @Min(0) finalPaymentAmount?: number;
 }
 
 // ─── Existing contract-based plan service ─────────────────────────────────────
@@ -237,8 +256,7 @@ export class InstallmentsService {
         });
       }
       for (let i = 0; i < dto.totalMonths; i++) {
-        const due = new Date(startsAt);
-        due.setMonth(due.getMonth() + i);
+        const due = addMonths(startsAt, i);
         rows.push({
           planId: plan.id,
           dueDate: due,
@@ -427,10 +445,18 @@ export class InstallmentsService {
    * the contract's sales person, admins and sales managers (in the
    * installment's own company — the sweep runs in bypass).
    */
-  async markOverdue() {
-    const due = await this.prisma.installment.findMany({
-      // Only live contracts: a cancelled or deleted deal is not chased.
-      where: { status: InstallmentStatus.PENDING, dueDate: { lt: new Date() }, plan: LIVE_PLAN_WHERE },
+  async markOverdue(now = new Date()) {
+    const candidates = await this.prisma.installment.findMany({
+      where: {
+        status: InstallmentStatus.PENDING,
+        // A superset — the exact cut is per company, below.
+        dueDate: { lt: new Date(now.getTime() + 24 * 60 * 60 * 1000) },
+        // Signed, live contracts only: a cancelled, deleted or unsigned deal is not chased.
+        plan: BILLABLE_PLAN_WHERE,
+        // A payment already on its way (proof under review, cheque not
+        // cleared) is not overdue — the customer has paid.
+        deposits: PAYMENT_NOT_ON_ITS_WAY,
+      },
       select: {
         id: true,
         type: true,
@@ -452,6 +478,16 @@ export class InstallmentsService {
           },
         },
       },
+    });
+    // Overdue once the whole due day has ended in the company's time zone.
+    const zones = await companyTimeZones(
+      this.prisma,
+      [...new Set(candidates.map((c) => c.companyId).filter((id): id is string => !!id))],
+    );
+    const cutoff = new Map([...zones].map(([id, tz]) => [id, startOfLocalToday(tz, now)]));
+    const due = candidates.filter((c) => {
+      const cut = (c.companyId && cutoff.get(c.companyId)) || startOfLocalToday(COMPANY_TIMEZONE_DEFAULT, now);
+      return c.dueDate < cut;
     });
     if (due.length === 0) return { marked: 0 };
     const result = await this.prisma.installment.updateMany({
@@ -529,17 +565,9 @@ export class InstallmentsService {
         status: InstallmentStatus.OVERDUE,
         type: { notIn: SURCHARGE_PAYMENT_TYPES },
         dueDate: { lte: graceCutoff },
-        plan: LIVE_PLAN_WHERE,
+        plan: BILLABLE_PLAN_WHERE,
         // A payment already on its way stops the clock.
-        deposits: {
-          none: {
-            deletedAt: null,
-            OR: [
-              { reviewStatus: DepositReviewStatus.PENDING_REVIEW },
-              { paymentInstrument: { status: { in: UNCLEARED_INSTRUMENT_STATUSES } } },
-            ],
-          },
-        },
+        deposits: PAYMENT_NOT_ON_ITS_WAY,
       },
       select: {
         id: true,
@@ -742,8 +770,7 @@ function buildScheduleItems(
   for (let i = 0; i < installmentsCount; i++) {
     let dueDate: Date | null = null;
     if (startDate) {
-      dueDate = new Date(startDate);
-      dueDate.setMonth(dueDate.getMonth() + i * monthStep);
+      dueDate = addMonths(startDate, i * monthStep);
     }
     remainingBalance -= perInstallment;
     items.push({
@@ -810,11 +837,17 @@ function buildDurationOptionRows(
  */
 function enrichDurationOptions(
   options: { id: string; durationMonths: number; increasePercentage: Prisma.Decimal; order: number }[],
-  context: { netPrice: Prisma.Decimal | number; reservationAmount: Prisma.Decimal | number; downPaymentAmount: Prisma.Decimal | number },
+  context: {
+    netPrice: Prisma.Decimal | number;
+    reservationAmount: Prisma.Decimal | number;
+    downPaymentAmount: Prisma.Decimal | number;
+    finalPaymentAmount?: Prisma.Decimal | number | null;
+  },
 ) {
   const netPrice = Number(context.netPrice);
   const reservationAmount = Number(context.reservationAmount);
   const downPaymentAmount = Number(context.downPaymentAmount);
+  const finalPaymentAmount = Number(context.finalPaymentAmount ?? 0);
   return options.map((o) => ({
     id: o.id,
     durationMonths: o.durationMonths,
@@ -826,6 +859,7 @@ function enrichDurationOptions(
       downPaymentAmount,
       durationMonths: o.durationMonths,
       increasePercentage: Number(o.increasePercentage),
+      finalPaymentAmount,
     }),
   }));
 }
@@ -925,6 +959,7 @@ class PlanTemplatesService {
         netPrice: plan.netPrice,
         reservationAmount: plan.reservationAmount,
         downPaymentAmount: plan.downPaymentAmount,
+        finalPaymentAmount: plan.finalPaymentAmount,
       }),
     };
   }
@@ -1343,6 +1378,8 @@ export class InstallmentRemindersService {
       where: {
         status: InstallmentStatus.PENDING,
         dueDate: { gte: start, lte: end },
+        // Nothing to remind about once the payment is on its way.
+        deposits: PAYMENT_NOT_ON_ITS_WAY,
         // Only active customers on live contracts receive reminders.
         plan: { ...LIVE_PLAN_WHERE, contract: { ...LIVE_PLAN_WHERE.contract, customer: { active: true } } },
       },
@@ -1786,6 +1823,7 @@ class PlanTemplatesController {
       downPaymentAmount: dto.downPaymentAmount,
       durationMonths: dto.durationMonths,
       increasePercentage: dto.increasePercentage,
+      finalPaymentAmount: dto.finalPaymentAmount,
     });
   }
 

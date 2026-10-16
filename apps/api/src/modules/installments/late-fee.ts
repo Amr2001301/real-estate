@@ -8,6 +8,7 @@
  * still counts as charged for its period, so it is not charged again.
  */
 import { BadRequestException } from '@nestjs/common';
+import { addMonths } from '../../common/utils/add-months';
 
 export type LateFeeMode = 'PERCENT' | 'FIXED';
 export type LateFeeRepeat = 'ONCE' | 'MONTHLY';
@@ -91,15 +92,6 @@ export function resolveLateFeeSettings(rows: Array<{ key: string; value: unknown
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-function addMonths(d: Date, n: number): Date {
-  const r = new Date(d);
-  const day = r.getUTCDate();
-  r.setUTCDate(1);
-  r.setUTCMonth(r.getUTCMonth() + n);
-  const last = new Date(Date.UTC(r.getUTCFullYear(), r.getUTCMonth() + 1, 0)).getUTCDate();
-  r.setUTCDate(Math.min(day, last));
-  return r;
-}
 
 /**
  * The fees (in currency units, 2 dp) to charge now on one installment, given

@@ -120,6 +120,7 @@ function makePrismaMock() {
     reservation: { count: jest.fn().mockImplementation(async () => fixture.blockers.reservations) },
     contract: { count: jest.fn().mockImplementation(async () => fixture.blockers.contracts) },
     maintenanceRequest: { count: jest.fn().mockImplementation(async () => fixture.blockers.maintenance) },
+    installmentPlanTemplate: { count: jest.fn().mockResolvedValue(0) },
     $transaction: jest.fn(),
   };
 

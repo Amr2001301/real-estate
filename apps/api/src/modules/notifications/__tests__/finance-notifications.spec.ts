@@ -38,6 +38,29 @@ beforeEach(() => {
 afterEach(() => jest.restoreAllMocks());
 
 describe('installments', () => {
+  it('a row due today in the company\'s time zone is not overdue yet; the next day it is', async () => {
+    const row = {
+      id: 'inst-2',
+      amount: new Prisma.Decimal(1000),
+      dueDate: new Date('2026-11-01T00:00:00Z'),
+      companyId: 'co-1',
+      plan: { contract: CONTRACT },
+    };
+    const prisma = {
+      installment: {
+        findMany: jest.fn().mockResolvedValue([row]),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      setting: { findMany: jest.fn().mockResolvedValue([{ companyId: 'co-1', value: 'Africa/Cairo' }]) },
+    };
+    const svc = new InstallmentsService(prisma as never);
+    // 01:00 on Nov 1 in Cairo — the sweep's hour on the due day itself.
+    await expect(svc.markOverdue(new Date('2026-10-31T23:00:00Z'))).resolves.toEqual({ marked: 0 });
+    expect(prisma.installment.updateMany).not.toHaveBeenCalled();
+    // 01:00 on Nov 2 in Cairo.
+    await expect(svc.markOverdue(new Date('2026-11-01T23:00:00Z'))).resolves.toEqual({ marked: 1 });
+  });
+
   it('an installment that turns overdue tells the customer, the sales person and the managers', async () => {
     const notifications = makeNotifications();
     const prisma = {
@@ -53,6 +76,7 @@ describe('installments', () => {
         ]),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
+      setting: { findMany: jest.fn().mockResolvedValue([]) },
     };
     const svc = new InstallmentsService(
       prisma as never,

@@ -11,6 +11,7 @@ import { seedCancellationSettingsForCompany } from '../src/modules/contracts/can
 import { seedLateFeeSettingsForCompany } from '../src/modules/installments/late-fee';
 import { seedTransferFeeSettingsForCompany } from '../src/modules/contracts/transfer-fee';
 import { seedFeeSettingsForCompany } from '../src/modules/installments/fee-settings';
+import { seedTimeZoneSettingForCompany } from '../src/common/time/company-timezone';
 import { normalizeHostname } from '../src/common/utils/hostname-normalize';
 import { upsertUserByEmail } from './seed-user-upsert';
 import { NOTIFICATION_CATALOG } from '../src/modules/notifications/notification-catalog';
@@ -971,6 +972,7 @@ async function main() {
     await seedLateFeeSettingsForCompany(prisma, c.id);
     await seedTransferFeeSettingsForCompany(prisma, c.id);
     await seedFeeSettingsForCompany(prisma, c.id);
+    await seedTimeZoneSettingForCompany(prisma, c.id);
   }
 
   // ---- Backfill companyId on all rows that were created before this seed run ----

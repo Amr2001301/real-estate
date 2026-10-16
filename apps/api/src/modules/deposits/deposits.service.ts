@@ -1125,6 +1125,17 @@ export class DepositsService {
     }
     // A bounced cheque's payment, or one on a cancelled deal, cannot come back.
     await this.assertMoneyOpen(depositId, { approving: true });
+    // The same guards as a first submission: the installment may have been
+    // paid meanwhile, or another proof for it may be waiting for review —
+    // resubmitting then put a second payment in the review queue.
+    if (deposit.installment) {
+      if (deposit.installment.status === InstallmentStatus.PAID) {
+        throw new BadRequestException('هذا القسط مدفوع بالفعل');
+      }
+      if ((await this.waitingPayments(this.prisma, deposit.installment.id)) > 0) {
+        throw new ConflictException(WAITING_PAYMENT_MESSAGE);
+      }
+    }
 
     // Document first (Deposit already exists, so no FK ordering issue).
     const newDoc = await this.documents.create(userId, {
