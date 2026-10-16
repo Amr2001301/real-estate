@@ -4,7 +4,8 @@ import { OwnershipService } from '../ownership.service';
 
 function makePrisma() {
   return {
-    contract: { findFirst: jest.fn() },
+    contract: { findFirst: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
+    contractAmendment: { findMany: jest.fn().mockResolvedValue([]) },
     deposit: { findFirst: jest.fn() },
     maintenanceRequest: { findFirst: jest.fn() },
     document: { findFirst: jest.fn() },
@@ -22,16 +23,16 @@ describe('OwnershipService', () => {
 
   describe('assertContractOwner', () => {
     it('passes when the contract belongs to the user', async () => {
-      prisma.contract.findFirst.mockResolvedValue({ id: 'c1' });
+      prisma.contract.findMany.mockResolvedValue([{ id: 'c1' }]);
       await expect(svc.assertContractOwner('u1', 'c1')).resolves.toBeUndefined();
-      expect(prisma.contract.findFirst).toHaveBeenCalledWith({
-        where: { id: 'c1', customerId: 'u1' },
+      expect(prisma.contract.findMany).toHaveBeenCalledWith({
+        where: { customerId: 'u1', deletedAt: null },
         select: { id: true },
       });
     });
 
     it('throws NotFound on cross-account access', async () => {
-      prisma.contract.findFirst.mockResolvedValue(null);
+      prisma.contract.findMany.mockResolvedValue([]);
       await expect(svc.assertContractOwner('u2', 'c1')).rejects.toBeInstanceOf(
         NotFoundException,
       );
@@ -47,8 +48,9 @@ describe('OwnershipService', () => {
         fileUrl: 'https://cdn/x.pdf',
         fileName: 'x.pdf',
         mimeType: 'application/pdf',
+        createdAt: new Date('2026-01-01'),
       });
-      prisma.contract.findFirst.mockResolvedValue({ id: 'c1' });
+      prisma.contract.findMany.mockResolvedValue([{ id: 'c1' }]);
 
       const doc = await svc.getCustomerDocumentOrThrow('u1', 'd1');
       expect(doc.id).toBe('d1');
@@ -79,7 +81,7 @@ describe('OwnershipService', () => {
         fileName: 'x.pdf',
         mimeType: 'application/pdf',
       });
-      prisma.contract.findFirst.mockResolvedValue(null); // not owned
+      prisma.contract.findMany.mockResolvedValue([]); // not owned
       await expect(svc.getCustomerDocumentOrThrow('intruder', 'd1')).rejects.toBeInstanceOf(
         NotFoundException,
       );
@@ -97,6 +99,39 @@ describe('OwnershipService', () => {
       await expect(svc.getCustomerDocumentOrThrow('u1', 'd1')).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+  });
+
+  describe('contract documents after a transfer', () => {
+    const transfer = { contractId: 'c1', fromCustomerId: 'old', toCustomerId: 'new', createdAt: new Date('2026-06-01') };
+    const doc = (createdAt: string) => ({
+      id: 'd1',
+      ownerType: DocumentOwnerType.CONTRACT,
+      ownerId: 'c1',
+      fileUrl: 'https://cdn/x.pdf',
+      fileName: 'x.pdf',
+      mimeType: 'application/pdf',
+      createdAt: new Date(createdAt),
+    });
+
+    it('the new owner gets documents uploaded from the transfer on, not the earlier ones', async () => {
+      prisma.contract.findMany.mockResolvedValue([{ id: 'c1' }]);
+      prisma.contractAmendment.findMany.mockResolvedValue([transfer]);
+      prisma.document.findFirst.mockResolvedValue(doc('2026-03-01'));
+      await expect(svc.getCustomerDocumentOrThrow('new', 'd1')).rejects.toBeInstanceOf(NotFoundException);
+      prisma.document.findFirst.mockResolvedValue(doc('2026-07-01'));
+      await expect(svc.getCustomerDocumentOrThrow('new', 'd1')).resolves.toMatchObject({ id: 'd1' });
+    });
+
+    it('the previous owner keeps the documents uploaded before it', async () => {
+      prisma.contract.findMany.mockImplementation(({ where }: { where: { id?: unknown } }) =>
+        Promise.resolve(where.id ? [{ id: 'c1' }] : []),
+      );
+      prisma.contractAmendment.findMany.mockResolvedValue([transfer]);
+      prisma.document.findFirst.mockResolvedValue(doc('2026-03-01'));
+      await expect(svc.getCustomerDocumentOrThrow('old', 'd1')).resolves.toMatchObject({ id: 'd1' });
+      prisma.document.findFirst.mockResolvedValue(doc('2026-07-01'));
+      await expect(svc.getCustomerDocumentOrThrow('old', 'd1')).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 });

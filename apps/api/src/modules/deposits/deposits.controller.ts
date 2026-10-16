@@ -10,7 +10,8 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { DepositReviewStatus, UserRole } from '@prisma/client';
+import { DepositReviewStatus, UserRole, type Prisma } from '@prisma/client';
+import { OwnershipService } from '../../common/ownership/ownership.service';
 import { DocumentsService } from '../documents/documents.module';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
@@ -30,12 +31,59 @@ import {
   VerifyDepositDto,
 } from './deposits.dto';
 
+/**
+ * A deposit row as its customer sees it: no staff names, no internal
+ * correction reasons or ids, no other party's name, no receipt URL (files go
+ * through the signed-download endpoint).
+ */
+function customerDepositView(row: {
+  id: string; type: string; amount: unknown; paidAt: Date; verified: boolean;
+  reviewStatus: string; rejectionReason: string | null; reviewedAt: Date | null; paymentMethod: string | null;
+  createdAt: Date;
+  contract: { id: string; contractNumber: string | null; unit: { id: string; code: string } | null } | null;
+  installment: { id: string; dueDate: Date; amount: unknown; type: string; status: string; paidAt: Date | null } | null;
+  reservation: { id: string; reservationNumber: string | null; unit: { id: string; code: string } | null } | null;
+  proofDocument: unknown;
+}) {
+  return {
+    id: row.id,
+    type: row.type,
+    amount: row.amount,
+    paidAt: row.paidAt,
+    createdAt: row.createdAt,
+    verified: row.verified,
+    reviewStatus: row.reviewStatus,
+    rejectionReason: row.rejectionReason,
+    reviewedAt: row.reviewedAt,
+    paymentMethod: row.paymentMethod,
+    receiptUrl: null,
+    contract: row.contract
+      ? { id: row.contract.id, contractNumber: row.contract.contractNumber, unit: row.contract.unit }
+      : null,
+    installment: row.installment
+      ? {
+          id: row.installment.id,
+          dueDate: row.installment.dueDate,
+          amount: row.installment.amount,
+          type: row.installment.type,
+          status: row.installment.status,
+          paidAt: row.installment.paidAt,
+        }
+      : null,
+    reservation: row.reservation
+      ? { id: row.reservation.id, reservationNumber: row.reservation.reservationNumber, unit: row.reservation.unit }
+      : null,
+    proofDocument: row.proofDocument,
+  };
+}
+
 @ApiTags('deposits')
 @Controller()
 export class DepositsController {
   constructor(
     private readonly svc: DepositsService,
     private readonly documents: DocumentsService,
+    private readonly ownership: OwnershipService,
   ) {}
 
   // Admin-only recording per scope §5
@@ -197,11 +245,18 @@ export class DepositsController {
   @Roles(UserRole.CUSTOMER)
   @Get('me/deposits')
   async myDeposits(@CurrentUser() user: AuthUser) {
-    const result = await this.svc.list({ page: 1, pageSize: 100, customerId: user.sub });
-    return {
-      ...result,
-      data: result.data.map((row) => ({ ...row, receiptUrl: null })),
+    // Contract payments follow the transfer split (each owner sees the ones
+    // made while the contract was theirs); booking payments bind through the
+    // reservation, as before.
+    const ownerWhere: Prisma.DepositWhereInput = {
+      OR: [
+        await this.ownership.depositOwnershipWhere(user.sub),
+        { contractId: null, reservation: { clientId: user.sub } },
+        { contractId: null, reservation: { lead: { is: { clientId: user.sub } } } },
+      ],
     };
+    const result = await this.svc.list({ page: 1, pageSize: 100, ownerWhere });
+    return { ...result, data: result.data.map(customerDepositView) };
   }
 
   // ── P11 — Customer submits / resubmits a payment proof ─────────────────

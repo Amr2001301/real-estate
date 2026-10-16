@@ -429,7 +429,9 @@ export class DepositsService {
     // customerId` silently dropped them — that's why /me/deposits showed the
     // booking payment as 0. Mirror the reservation ownership paths used by
     // GET /me/reservations (direct clientId + lead.clientId).
-    if (opts.customerId) {
+    if (opts.ownerWhere) {
+      and.push(opts.ownerWhere);
+    } else if (opts.customerId) {
       and.push({
         OR: [
           { contract: { customerId: opts.customerId } },

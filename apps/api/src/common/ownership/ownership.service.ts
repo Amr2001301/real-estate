@@ -21,12 +21,62 @@ export interface CustomerDocument {
 export class OwnershipService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * The contracts whose documents this customer may see, each with the upload
+   * window that is theirs. A transfer (تنازل) splits a contract's documents
+   * like its payments: the new owner gets the ones uploaded from the transfer
+   * on, the previous owner keeps the ones uploaded before it. A deleted
+   * contract shows nothing.
+   */
+  async contractDocumentWindows(userId: string): Promise<Map<string, { from?: Date; to?: Date }>> {
+    const [owned, transfers] = await Promise.all([
+      this.prisma.contract.findMany({ where: { customerId: userId, deletedAt: null }, select: { id: true } }),
+      this.prisma.contractAmendment.findMany({
+        where: { type: 'TRANSFER', OR: [{ toCustomerId: userId }, { fromCustomerId: userId }] },
+        select: { contractId: true, toCustomerId: true, fromCustomerId: true, createdAt: true },
+        orderBy: { createdAt: 'asc' },
+      }),
+    ]);
+    const since = new Map<string, Date>();
+    const until = new Map<string, Date>();
+    for (const t of transfers) {
+      if (t.toCustomerId === userId) since.set(t.contractId, t.createdAt);
+      if (t.fromCustomerId === userId) until.set(t.contractId, t.createdAt);
+    }
+    const windows = new Map<string, { from?: Date; to?: Date }>();
+    for (const { id } of owned) windows.set(id, since.has(id) ? { from: since.get(id) } : {});
+    const formerIds = [...until.keys()].filter((id) => !windows.has(id));
+    if (formerIds.length) {
+      const live = await this.prisma.contract.findMany({
+        where: { id: { in: formerIds }, deletedAt: null },
+        select: { id: true },
+      });
+      for (const { id } of live) windows.set(id, { to: until.get(id) });
+    }
+    return windows;
+  }
+
+  /** The CONTRACT documents that are this customer's, as a document filter. */
+  async contractDocumentWhere(userId: string): Promise<Prisma.DocumentWhereInput[]> {
+    const windows = await this.contractDocumentWindows(userId);
+    return [...windows].map(([contractId, w]) => ({
+      ownerType: DocumentOwnerType.CONTRACT,
+      ownerId: contractId,
+      ...(w.from || w.to
+        ? { createdAt: { ...(w.from ? { gte: w.from } : {}), ...(w.to ? { lt: w.to } : {}) } }
+        : {}),
+    }));
+  }
+
+  /** The upload window of a contract's documents for this customer; 404 when none. */
+  async contractDocumentWindow(userId: string, contractId: string): Promise<{ from?: Date; to?: Date }> {
+    const w = (await this.contractDocumentWindows(userId)).get(contractId);
+    if (!w) throw new NotFoundException('Contract not found');
+    return w;
+  }
+
   async assertContractOwner(userId: string, contractId: string): Promise<void> {
-    const found = await this.prisma.contract.findFirst({
-      where: { id: contractId, customerId: userId },
-      select: { id: true },
-    });
-    if (!found) throw new NotFoundException('Contract not found');
+    await this.contractDocumentWindow(userId, contractId);
   }
 
   /**
@@ -97,10 +147,18 @@ export class OwnershipService {
         fileUrl: true,
         fileName: true,
         mimeType: true,
+        createdAt: true,
       },
     });
     if (!doc) throw new NotFoundException('Document not found');
-    await this.assertOwnsOwner(userId, doc.ownerType, doc.ownerId);
+    if (doc.ownerType === DocumentOwnerType.CONTRACT) {
+      const w = await this.contractDocumentWindow(userId, doc.ownerId);
+      if ((w.from && doc.createdAt < w.from) || (w.to && doc.createdAt >= w.to)) {
+        throw new NotFoundException('Document not found');
+      }
+    } else {
+      await this.assertOwnsOwner(userId, doc.ownerType, doc.ownerId);
+    }
     return doc;
   }
 

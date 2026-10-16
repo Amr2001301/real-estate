@@ -713,28 +713,19 @@ export class AuthService {
 
     // Existence checks scoped to this company; the per-company unique
     // constraints are the final DB-level guarantee.
+    // Deleted rows included: the phone and email stay unique per company.
     const [byEmail, byPhone] = await Promise.all([
-      this.prisma.user.findFirst({
-        where: { email, companyId, deletedAt: null },
-        select: { id: true, role: true, passwordHash: true, phone: true, companyId: true },
-      }),
-      this.prisma.user.findFirst({
-        where: { phone, companyId, deletedAt: null },
-        select: { id: true, role: true, passwordHash: true, email: true, companyId: true },
-      }),
+      this.prisma.user.findFirst({ where: { email, companyId }, select: { id: true } }),
+      this.prisma.user.findFirst({ where: { phone, companyId }, select: { id: true } }),
     ]);
 
-    const matchedRow = byEmail ?? byPhone;
-    if (matchedRow) {
-      const isSynthetic = matchedRow.role === 'CLIENT' && matchedRow.passwordHash === null;
-      if (!isSynthetic) {
-        if (byEmail) throw new ConflictException({ code: 'email_taken' });
-        if (byPhone) throw new ConflictException({ code: 'phone_taken' });
-      }
-      // A CRM record (lead / reservation / contract) already holds this phone
-      // or email. Typing them in proves nothing, so registration never takes
-      // the record over: the owner proves it instead — a code sent to the
-      // phone (OTP sign-in) or a link sent to the email (password reset).
+    if (byEmail || byPhone) {
+      // Someone already holds this phone or email — a registered account or a
+      // CRM record (lead / reservation / contract). One answer for all of them,
+      // so the form can't be used to learn who is a buyer of this company.
+      // Typing them in proves nothing, so registration never takes a record
+      // over: the owner proves it instead — a code sent to the phone (OTP
+      // sign-in) or a link sent to the email (password reset).
       throw new ConflictException({
         code: 'account_exists_verify',
         message:
@@ -850,14 +841,19 @@ export class AuthService {
     // The code proves the phone: record it, so the account may link to the
     // CRM records that carry this number.
     const now = new Date();
-    let user = await this.prisma.user.findFirst({ where: { phone, companyId, deletedAt: null } });
+    // Deleted rows included: the phone stays unique per company, so a removed
+    // customer must get "inactive", not a failed insert.
+    let user = await this.prisma.user.findFirst({ where: { phone, companyId } });
     if (!user) {
       user = await this.prisma.user.create({
         data: { phone, fullName: fullName ?? 'New User', role: 'CLIENT', locale: 'ar', companyId, phoneVerifiedAt: now },
       });
     } else {
+      // This is the customer sign-in: a staff account at this number gets no
+      // session here — a phone code alone must never open the staff side.
+      if (user.role !== 'CLIENT' && user.role !== 'CUSTOMER') throw new UnauthorizedException('Invalid code');
       // A deactivated account gets no session — and no CRM claim — by OTP either.
-      if (user.active === false) throw new ForbiddenException('Account inactive');
+      if (user.deletedAt || user.active === false) throw new ForbiddenException('Account inactive');
       await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: now, phoneVerifiedAt: now } });
     }
     await this.tryClaimSyntheticPeers(user.id, companyId);

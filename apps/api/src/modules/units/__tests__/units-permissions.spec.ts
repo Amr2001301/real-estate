@@ -83,6 +83,7 @@ function makePrismaMock() {
         return (u?.codes ?? []).map((code) => ({ permission: { code } }));
       }),
     },
+    building: { findFirst: jest.fn().mockResolvedValue({ id: 'b-1' }) },
     unit: {
       findMany: jest.fn().mockResolvedValue([]),
       // findOne(publicOnly=true) traverses unit.building.phase.project.status,

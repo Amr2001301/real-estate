@@ -73,6 +73,7 @@ function makePrismaMock() {
     },
     project: {
       findMany: jest.fn().mockResolvedValue([]),
+      findFirst: jest.fn().mockResolvedValue({ id: 'p1' }),
       findUnique: jest.fn().mockResolvedValue({
         id: 'p1',
         name: { ar: 'م', en: 'P' },
@@ -93,19 +94,23 @@ function makePrismaMock() {
     projectMedia: {
       create: jest.fn().mockResolvedValue({ id: 'pm1' }),
       delete: jest.fn().mockResolvedValue({ id: 'pm1' }),
+      deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     unitMedia: {
       create: jest.fn().mockResolvedValue({ id: 'um1' }),
       delete: jest.fn().mockResolvedValue({ id: 'um1' }),
+      deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     phase: {
       findMany: jest.fn().mockResolvedValue([]),
+      findFirst: jest.fn().mockResolvedValue({ id: 'ph1' }),
       findUnique: jest.fn().mockResolvedValue({ id: 'ph1' }),
       create: jest.fn().mockResolvedValue({ id: 'ph-new' }),
       update: jest.fn().mockResolvedValue({ id: 'ph1' }),
       delete: jest.fn().mockResolvedValue({ id: 'ph1' }),
     },
     building: {
+      findFirst: jest.fn().mockResolvedValue({ id: 'b1' }),
       findMany: jest.fn().mockResolvedValue([]),
       findUnique: jest.fn().mockResolvedValue({ id: 'b1' }),
       create: jest.fn().mockResolvedValue({ id: 'b-new' }),
@@ -114,6 +119,7 @@ function makePrismaMock() {
     },
     unit: {
       findUnique: jest.fn().mockResolvedValue({ id: 'u1' }),
+      findFirst: jest.fn().mockResolvedValue({ id: 'u1' }),
       findMany: jest.fn().mockResolvedValue([]),
       count: jest.fn().mockResolvedValue(0),
     },

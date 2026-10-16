@@ -60,7 +60,8 @@ export class ProjectsService {
         : query.city
           ? { city: query.city }
           : {}),
-      ...(query.status ? { status: query.status } : {}),
+      // The public catalogue is PUBLISHED only; a ?status= filter is staff-only.
+      ...(query.status && !publicOnly ? { status: query.status } : {}),
       ...(query.featured !== undefined ? { featured: query.featured } : {}),
       ...(query.q
         ? {

@@ -4,6 +4,8 @@ import { safeFetch } from '@/lib/api';
 import type { PublicUnit } from '@/lib/api-types';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
+import { getResolvedTenant } from '@/lib/tenant';
+import { notFound } from 'next/navigation';
 import { siteT } from '@/messages/site';
 import { Section } from '@/components/ui/Section';
 import { CtaBand } from '@/components/marketing/CtaBand';
@@ -38,9 +40,15 @@ function parseIds(raw: string | string[] | undefined): string[] {
 export default async function ComparePage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
   const ids = parseIds(sp.ids);
+  // Only this site's company's units: without a tenant the API would fall
+  // back to the default company.
+  const tenant = await getResolvedTenant();
+  if (!tenant) notFound();
 
   const [results, locale] = await Promise.all([
-    Promise.all(ids.map((id) => safeFetch<PublicUnit>(`/public/units/${id}`, { revalidate: REVALIDATE }))),
+    Promise.all(
+      ids.map((id) => safeFetch<PublicUnit>(`/public/units/${id}`, { revalidate: REVALIDATE, tenantSlug: tenant.slug })),
+    ),
     getLocale(),
   ]);
   const m = siteT(locale);

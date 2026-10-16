@@ -50,10 +50,9 @@ class MeDocumentsController {
     const userId = user.sub;
 
     // Collect all owned entity IDs in parallel.
-    const [contractIds, depositIds, maintenanceIds] = await Promise.all([
-      this.prisma.contract
-        .findMany({ where: { customerId: userId }, select: { id: true } })
-        .then((rows) => rows.map((r) => r.id)),
+    const [contractDocs, depositIds, maintenanceIds] = await Promise.all([
+      // Live contracts only, each split by transfer date (see OwnershipService).
+      this.ownership.contractDocumentWhere(userId),
       this.ownership
         .depositOwnershipWhere(userId)
         .then((where) => this.prisma.deposit.findMany({ where, select: { id: true } }))
@@ -63,7 +62,7 @@ class MeDocumentsController {
         .then((rows) => rows.map((r) => r.id)),
     ]);
 
-    if (!contractIds.length && !depositIds.length && !maintenanceIds.length) {
+    if (!contractDocs.length && !depositIds.length && !maintenanceIds.length) {
       return [];
     }
 
@@ -72,7 +71,7 @@ class MeDocumentsController {
         deletedAt: null,
         visibility: DocumentVisibility.CUSTOMER_VISIBLE,
         OR: [
-          ...(contractIds.length ? [{ ownerType: DocumentOwnerType.CONTRACT, ownerId: { in: contractIds } }] : []),
+          ...contractDocs,
           ...(depositIds.length ? [{ ownerType: DocumentOwnerType.DEPOSIT, ownerId: { in: depositIds } }] : []),
           ...(maintenanceIds.length ? [{ ownerType: DocumentOwnerType.MAINTENANCE_REQUEST, ownerId: { in: maintenanceIds } }] : []),
         ],
@@ -106,12 +105,17 @@ class MeDocumentsController {
       throw new BadRequestException('Unsupported ownerType');
     }
     await this.ownership.assertOwnsOwner(user.sub, ownerType, ownerId);
-    const docs = await this.documents.listForOwner(
+    let docs = await this.documents.listForOwner(
       ownerType,
       ownerId,
       50,
       DocumentVisibility.CUSTOMER_VISIBLE,
     );
+    if (ownerType === DocumentOwnerType.CONTRACT) {
+      // After a transfer each owner sees the documents uploaded while it was theirs.
+      const w = await this.ownership.contractDocumentWindow(user.sub, ownerId);
+      docs = docs.filter((d) => (!w.from || d.createdAt >= w.from) && (!w.to || d.createdAt < w.to));
+    }
     // Metadata only — never expose the stored permanent fileUrl.
     return docs.map((d) => ({
       id: d.id,
