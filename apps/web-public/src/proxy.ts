@@ -163,15 +163,16 @@ export async function proxy(req: NextRequest) {
     const token = req.cookies.get('access_token')?.value;
     if (token) headers.set('Authorization', `Bearer ${token}`);
 
-    // Always overwrite (or explicitly delete) the X-Tenant-Slug header.
-    // NEVER forward the browser-supplied value: the authoritative slug comes
-    // from the server-resolved tenant only. If resolution failed (unknown host),
-    // delete any header the browser may have sent.
-    if (tenant?.slug) {
-      headers.set('x-tenant-slug', tenant.slug);
-    } else {
-      headers.delete('x-tenant-slug');
+    // Always overwrite the X-Tenant-Slug header. NEVER forward the
+    // browser-supplied value: the authoritative slug comes from the
+    // server-resolved tenant only. A host that resolves to no company (an
+    // unknown or unverified domain, a suspended company) gets no API at all:
+    // forwarded without a slug, the API's public routes would answer with the
+    // default company's data under this host. Its pages are 404 already.
+    if (!tenant?.slug) {
+      return NextResponse.json({ message: 'Not found' }, { status: 404 });
     }
+    headers.set('x-tenant-slug', tenant.slug);
 
     return NextResponse.next({ request: { headers } });
   }

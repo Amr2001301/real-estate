@@ -60,6 +60,7 @@ jest.mock('next/server', () => {
         capturedRedirectUrl = url.toString();
         return { type: 'redirect', url };
       }),
+      json: jest.fn((body: unknown, init?: { status?: number }) => ({ type: 'json', body, status: init?.status ?? 200 })),
     },
   };
 });
@@ -146,13 +147,14 @@ describe('§2 — API proxy X-Tenant-Slug authority', () => {
     expect(capturedHeaders?.get('x-tenant-slug')).toBe('company-a');
   });
 
-  test('api-proxy: null resolution → x-tenant-slug explicitly deleted (not forwarded)', async () => {
+  test('api-proxy: null resolution → 404, nothing forwarded (no default-company fallback)', async () => {
     mockResolve(null);
     const req = makeRequest('http://unknown.evil.com/api-proxy/public/info-request', {
       'x-tenant-slug': 'company-a',                 // attacker-supplied
     });
-    await proxy(req);
-    expect(capturedHeaders?.get('x-tenant-slug')).toBeNull();
+    const res = await proxy(req);
+    expect(res.status).toBe(404);
+    expect(capturedHeaders).toBeUndefined();
   });
 
   test('api-proxy: internal routing headers stripped before backend forward', async () => {
