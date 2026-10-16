@@ -131,6 +131,7 @@ model Company {
   brokerUnitAccesses       BrokerUnitAccess[]
   brokerCommissions        BrokerCommission[]
   brokerPayouts            BrokerPayout[]
+  brokerCommissionAdjustments BrokerCommissionAdjustment[]
   brokerActivityLogs       BrokerActivityLog[]
   settings                 Setting[]
   documents                Document[]
@@ -1811,6 +1812,8 @@ enum BonusEntryStatus {
 enum BonusEntrySource {
   MANUAL
   CONTRACT_AUTO
+  /// The difference after the contract price changed on a paid entry.
+  ADJUSTMENT
 }
 
 model BonusRule {
@@ -1872,9 +1875,16 @@ model BonusEntry {
   clawbackWaivedBy              User?           @relation("BonusClawbackWaivedBy", fields: [clawbackWaivedById], references: [id])
   clawbackWaiveReason           String?         @db.VarChar(2000) // separate from clawbackReason (the cancellation reason)
 
+  /// The contract was cancelled with RETAIN: the bonus stays payable.
+  retainedOnCancellation Boolean @default(false)
+  /// source ADJUSTMENT: the paid entry whose contract price changed. The
+  /// amount is the difference (negative when the price went down).
+  adjustsEntryId         String? @db.Uuid
+
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  @@index([adjustsEntryId])
   @@index([salesId, period])
   @@index([status])
   @@index([clawbackStatus])
@@ -2323,6 +2333,9 @@ model Broker {
   /// Admin hold: no payout of this broker may be created, approved, processed
   /// or paid while set (a dispute, an investigation). Earned commissions stay.
   payoutHold             Boolean               @default(false)
+  /// When the broker was last suspended or terminated (null while active).
+  /// A sale reserved before then still earns its commission at signing.
+  suspendedAt            DateTime?
   contractStartAt        DateTime?
   contractEndAt          DateTime?
   contractPdfUrl         String?
@@ -2342,6 +2355,7 @@ model Broker {
   visitAppointments VisitAppointment[]
   commissions       BrokerCommission[]
   payouts           BrokerPayout[]
+  commissionAdjustments BrokerCommissionAdjustment[]
   activityLogs      BrokerActivityLog[]
 
   companyId String?  @db.Uuid
@@ -2480,6 +2494,10 @@ model BrokerCommission {
   clawbackWaivedBy              User?           @relation("CommissionClawbackWaivedBy", fields: [clawbackWaivedById], references: [id])
   clawbackWaiveReason           String?         @db.VarChar(2000) // separate from clawbackReason (the cancellation reason)
 
+  /// The contract was cancelled with RETAIN: the commission stays payable.
+  retainedOnCancellation Boolean @default(false)
+  adjustments            BrokerCommissionAdjustment[]
+
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
@@ -2529,6 +2547,7 @@ model BrokerPayout {
   updatedAt DateTime @updatedAt
 
   commissions BrokerCommission[]
+  adjustments BrokerCommissionAdjustment[]
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -2538,6 +2557,37 @@ model BrokerPayout {
   @@index([brokerId, period])
   @@index([status, createdAt])
   @@index([companyId])
+}
+
+/// A paid commission whose contract price changed afterwards (decided
+/// 2026-10-16): TOP_UP owes the broker the difference, CLAWBACK takes it back.
+/// Both are netted into the broker's next payout (payoutId set when netted).
+model BrokerCommissionAdjustment {
+  id           String                         @id @default(uuid()) @db.Uuid
+  brokerId     String                         @db.Uuid
+  broker       Broker                         @relation(fields: [brokerId], references: [id])
+  commissionId String                         @db.Uuid
+  commission   BrokerCommission               @relation(fields: [commissionId], references: [id], onDelete: Cascade)
+  kind         BrokerCommissionAdjustmentKind
+  /// Always positive; the kind gives the direction.
+  amount       Decimal                        @db.Decimal(14, 2)
+  reason       String                         @db.VarChar(2000)
+  createdById  String?                        @db.Uuid
+  createdAt    DateTime                       @default(now())
+  payoutId     String?                        @db.Uuid
+  payout       BrokerPayout?                  @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([brokerId, payoutId])
+  @@index([commissionId])
+  @@index([companyId])
+}
+
+enum BrokerCommissionAdjustmentKind {
+  TOP_UP
+  CLAWBACK
 }
 
 model BrokerActivityLog {

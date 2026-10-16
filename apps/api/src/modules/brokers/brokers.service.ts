@@ -12,6 +12,8 @@ import { getRequiredCompanyId, runInCompany, runTenantContext } from '../../comm
 import { reportFailure } from '../../common/observability/report-failure';
 import { CronLockService } from '../../common/cron/cron-lock.service';
 import { NotificationsService } from '../notifications/notifications.module';
+import { BrokerCommissionsService } from '../broker-commissions/broker-commissions.service';
+import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { OPTIONS_LIMIT, optionsResult } from '../../common/utils/options';
 import {
@@ -37,6 +39,7 @@ export class BrokersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    @Optional() private readonly commissions?: BrokerCommissionsService,
   ) {}
 
   async create(dto: CreateBrokerDto) {
@@ -276,6 +279,11 @@ export class BrokersService {
     // Append the reason to notes for auditability (the global AuditInterceptor
     // also captures the request body, so this is just a soft trail.)
     const data: Prisma.BrokerUpdateInput = { status };
+    // When the broker stopped working with the company: a sale reserved
+    // before then still earns its commission when signed later.
+    const stopped = (s: BrokerStatus) => s === BrokerStatus.SUSPENDED || s === BrokerStatus.TERMINATED;
+    if (stopped(status) && !stopped(existing.status)) data.suspendedAt = new Date();
+    if (status === BrokerStatus.ACTIVE) data.suspendedAt = null;
     if (reason && reason.trim().length > 0) {
       const stamp = new Date().toISOString();
       const line = `[${stamp}] ${existing.status} → ${status}: ${reason.trim()}`;
@@ -301,6 +309,7 @@ export class BrokersService {
     };
     if (status === BrokerStatus.ACTIVE) {
       await this.notifications.sendToUsers(userIds, 'broker_approved', notifPayload);
+      if (stopped(existing.status)) await this.materializeHeldCommissions(id);
     } else if (status === BrokerStatus.SUSPENDED || status === BrokerStatus.TERMINATED) {
       await this.notifications.sendToUsers(userIds, 'broker_suspended', notifPayload);
     }
@@ -309,6 +318,32 @@ export class BrokersService {
   }
 
   // ── Internal helpers ──────────────────────────────────────────────────────
+
+  /**
+   * Back from a suspension: the commissions of contracts signed while the
+   * broker was suspended (recorded as failed sign follow-ups) are created
+   * now. One failing contract never stops the rest.
+   */
+  private async materializeHeldCommissions(brokerId: string) {
+    if (!this.commissions) return;
+    const contracts = await this.prisma.contract.findMany({
+      where: {
+        brokerId,
+        companyId: getRequiredCompanyId(),
+        signedAt: { not: null },
+        brokerCommission: null,
+        ...LIVE_CONTRACT_WHERE,
+      },
+      select: { id: true },
+    });
+    for (const c of contracts) {
+      try {
+        await this.commissions.materializeFromContract(c.id);
+      } catch (err) {
+        reportFailure(this.logger, 'broker-commission', `commission for contract ${c.id} after reactivation failed`, err);
+      }
+    }
+  }
 
   private async assertExists(id: string) {
     const broker = await this.prisma.broker.findUnique({ where: { id } });

@@ -23,6 +23,7 @@ export const TENANT_SCOPED_MODELS_LEGACY = new Set([
   'contractcancellation', // Step D1 (09-reversal-design.md §4.2)
   'refund', // Step D1 (09-reversal-design.md §4.2)
   'contractamendment', // contract transfer (تنازل) and unit swap (تبديل)
+  'brokercommissionadjustment', // top-up / clawback of a paid commission after a price change
   // Plan templates
   'installmentplantemplate',
   // Bonus / targets

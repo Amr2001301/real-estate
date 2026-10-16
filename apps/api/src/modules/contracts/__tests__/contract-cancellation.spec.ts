@@ -74,12 +74,17 @@ function buildTx() {
     deposit: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
     brokerCommission: {
       update: jest.fn().mockResolvedValue({}),
+      count: jest.fn().mockResolvedValue(0),
       aggregate: jest.fn().mockResolvedValue({
         _count: { id: 0 },
         _sum: { grossAmount: null, taxAmount: null, withholdingAmount: null, netAmount: null },
       }),
     },
     brokerPayout: { update: jest.fn().mockResolvedValue({}) },
+    brokerCommissionAdjustment: {
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
     bonusEntry: { update: jest.fn().mockResolvedValue({}) },
     unit: { update: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     unitStatusHistory: { create: jest.fn().mockResolvedValue({}) },
@@ -562,22 +567,25 @@ describe('ContractCancellationService.cancel()', () => {
     expect(bcUpdate.data['status']).toBe('CANCELLED');
     expect(bcUpdate.data['payoutId']).toBeNull();
 
-    // Aggregate was called to count remaining commissions
-    expect(prisma._tx.brokerCommission.aggregate).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { payoutId: PAYOUT_ID } }),
-    );
+    // The payout's remaining commissions were counted
+    expect(prisma._tx.brokerCommission.count).toHaveBeenCalledWith({ where: { payoutId: PAYOUT_ID } });
 
-    // Default mock returns _count.id=0 → payout CANCELLED
+    // Default mock counts 0 → payout CANCELLED, its adjustments wait for the next one
     const payoutUpdate = prisma._tx.brokerPayout.update.mock.calls[0]?.[0] as { where: Record<string, unknown>; data: Record<string, unknown> };
     if (!payoutUpdate) throw new Error('brokerPayout.update was not called');
     expect(payoutUpdate.where['id']).toBe(PAYOUT_ID);
     expect(payoutUpdate.data['status']).toBe('CANCELLED');
     expect(payoutUpdate.data['cancelledAt']).toBeInstanceOf(Date);
     expect(payoutUpdate.data['cancelledById']).toBe(ACTOR_ID);
+    expect(prisma._tx.brokerCommissionAdjustment.updateMany).toHaveBeenCalledWith({
+      where: { payoutId: PAYOUT_ID },
+      data: { payoutId: null },
+    });
   });
 
   it('CC-U-19: CLAWBACK + commission APPROVED in APPROVED payout, 1 remaining → payout DRAFT + recomputed totals', async () => {
     const tx = buildTx();
+    tx.brokerCommission.count.mockResolvedValue(1);
     (tx.brokerCommission.aggregate as jest.Mock).mockResolvedValue({
       _count: { id: 1 },
       _sum: {
@@ -607,15 +615,40 @@ describe('ContractCancellationService.cancel()', () => {
     expect(bcUpdate.data['status']).toBe('CANCELLED');
     expect(bcUpdate.data['payoutId']).toBeNull();
 
-    // Payout reverted to DRAFT with recomputed totals
-    const payoutUpdate = tx.brokerPayout.update.mock.calls[0]?.[0] as { where: Record<string, unknown>; data: Record<string, unknown> };
-    if (!payoutUpdate) throw new Error('brokerPayout.update was not called');
-    expect(payoutUpdate.where['id']).toBe(PAYOUT_ID);
-    expect(payoutUpdate.data['status']).toBe('DRAFT');
+    // Payout reverted to DRAFT, then its totals recomputed
+    const draft = tx.brokerPayout.update.mock.calls[0]?.[0] as { where: Record<string, unknown>; data: Record<string, unknown> };
+    if (!draft) throw new Error('brokerPayout.update was not called');
+    expect(draft.where['id']).toBe(PAYOUT_ID);
+    expect(draft.data['status']).toBe('DRAFT');
+    const payoutUpdate = tx.brokerPayout.update.mock.calls[1]?.[0] as { where: Record<string, unknown>; data: Record<string, unknown> };
+    if (!payoutUpdate) throw new Error('payout totals were not recomputed');
     expect(String(payoutUpdate.data['totalGross'])).toBe('30000');
     expect(String(payoutUpdate.data['totalTax'])).toBe('3000');
     expect(String(payoutUpdate.data['totalWithholding'])).toBe('1500');
     expect(String(payoutUpdate.data['totalNet'])).toBe('25500');
+  });
+
+  it('CC-U-20: RETAIN keeps the commission and the bonus payable (flagged, not cancelled)', async () => {
+    const prisma = buildPrisma({
+      commission: { id: COMMISSION_ID, status: 'APPROVED', clawbackStatus: null, payoutId: null, payout: null },
+      bonusEntry: { id: BONUS_ID, status: 'APPROVED', clawbackStatus: null },
+    });
+    const svc = buildSvc(prisma);
+
+    await svc.cancel(
+      CONTRACT_ID,
+      { ...BASE_INPUT, commissionActionOverride: 'RETAIN', bonusActionOverride: 'RETAIN' },
+      ACTOR_ID,
+    );
+
+    expect(prisma._tx.brokerCommission.update).toHaveBeenCalledWith({
+      where: { id: COMMISSION_ID },
+      data: { retainedOnCancellation: true },
+    });
+    expect(prisma._tx.bonusEntry.update).toHaveBeenCalledWith({
+      where: { id: BONUS_ID },
+      data: { retainedOnCancellation: true },
+    });
   });
 
   it('CC-U-12: policySnapshot stores current setting values, not operator overrides', async () => {

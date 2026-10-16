@@ -1306,6 +1306,15 @@ export interface AdminBrokerPayout extends PortalPayout {
   approvedBy?: { id: string; fullName: string } | null;
   processedBy?: { id: string; fullName: string } | null;
   cancelledBy?: { id: string; fullName: string } | null;
+  /** Top-ups / clawbacks of paid commissions whose price changed, netted here. */
+  adjustments?: Array<{
+    id: string;
+    kind: 'TOP_UP' | 'CLAWBACK';
+    amount: string | number;
+    reason: string;
+    createdAt: string;
+    commission: { id: string; commissionNumber: string; contract: { id: string; contractNumber: string | null } };
+  }>;
   commissions?: Array<{
     id: string;
     commissionNumber: string;

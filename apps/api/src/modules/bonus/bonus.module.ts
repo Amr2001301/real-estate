@@ -62,12 +62,13 @@ import {
 } from '../../common/utils/sales-scope';
 import { findTenantUser, resolveTenantUser, scopedUserFindMany } from '../../common/tenant/resolve-tenant-entity';
 import { SALES_ACTOR_ROLES } from '../../common/utils/sales-scope';
+import { commissionBasis, MARKUP_SNAPSHOT_SELECT } from '../../common/finance/commission-basis';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { ClawbackResolutionService } from '../broker-commissions/clawback-resolution.service';
 import { CollectClawbackDto, WaiveClawbackDto } from '../broker-commissions/dto/broker-commission.dto';
-import { CONTRACT_CANCELLED_MESSAGE, isDeadContract } from '../installments/live-contract';
+import { CONTRACT_CANCELLED_MESSAGE, isPayableDeal } from '../installments/live-contract';
 
 /** Allowed bonus entry moves through approve / pay / revert. */
 const ENTRY_TRANSITIONS: Record<BonusEntryStatus, BonusEntryStatus[]> = {
@@ -311,7 +312,7 @@ export class BonusService {
         signedAt: true,
         totalAmount: true,
         reservationId: true,
-        reservation: { select: { salesId: true } },
+        reservation: { select: { salesId: true, ...MARKUP_SNAPSHOT_SELECT } },
         bonusEntry: { select: { id: true } },
       },
     });
@@ -337,7 +338,8 @@ export class BonusService {
     if (rules.length > 1) return { status: 'skipped', reason: 'ambiguous_rules' };
     const rule = rules[0]!;
 
-    const basisAmount = contract.totalAmount;
+    // The sale price after discount, without the instalment markup.
+    const basisAmount = commissionBasis(contract.totalAmount, contract.reservation);
     const amount = basisAmount.mul(rule.percentage).div(100);
     const period = contract.signedAt.toISOString().slice(0, 7);
 
@@ -493,7 +495,7 @@ export class BonusService {
   async setEntryStatus(id: string, dto: UpdateEntryStatusDto) {
     const current = await this.prisma.bonusEntry.findUnique({
       where: { id },
-      select: { status: true, contract: { select: { status: true, deletedAt: true } } },
+      select: { status: true, retainedOnCancellation: true, contract: { select: { status: true, deletedAt: true } } },
     });
     if (!current) throw new NotFoundException('Bonus entry not found');
     // PENDING → APPROVED → PAID, APPROVED → PENDING (revert). PAID and
@@ -504,7 +506,8 @@ export class BonusService {
         `لا يمكن نقل المكافأة من ${current.status} إلى ${dto.status}`,
       );
     }
-    if (dto.status !== BonusEntryStatus.PENDING && isDeadContract(current.contract)) {
+    // On a cancelled deal only a bonus kept with RETAIN moves forward.
+    if (dto.status !== BonusEntryStatus.PENDING && !isPayableDeal(current)) {
       throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
     }
     // Only from the status read above: two admins acting at once (pay twice,

@@ -26,8 +26,9 @@ import {
   ProcessPayoutDto,
 } from './dto/broker-payout.dto';
 import { reportFailure } from '../../common/observability/report-failure';
-import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
+import { PAYABLE_DEAL_WHERE } from '../installments/live-contract';
 import { isUniqueConflictOn } from '../../common/utils/contract-number';
+import { rebalancePayout } from './payout-totals';
 
 const PAYOUT_INCLUDE = {
   broker: {
@@ -79,6 +80,18 @@ const PAYOUT_INCLUDE = {
         },
       },
       project: { select: { id: true, name: true } },
+    },
+  },
+  // Top-ups and clawbacks of paid commissions netted into this payout.
+  adjustments: {
+    orderBy: { createdAt: 'asc' as const },
+    select: {
+      id: true,
+      kind: true,
+      amount: true,
+      reason: true,
+      createdAt: true,
+      commission: { select: { id: true, commissionNumber: true, contract: { select: { id: true, contractNumber: true } } } },
     },
   },
 } as const;
@@ -145,8 +158,8 @@ export class BrokerPayoutsService {
       brokerId: query.brokerId,
       status: BrokerCommissionStatus.APPROVED,
       payoutId: null,
-      // A cancelled deal's commission is never paid out.
-      contract: LIVE_CONTRACT_WHERE,
+      // A cancelled deal's commission is paid out only when it was retained.
+      ...PAYABLE_DEAL_WHERE,
       ...(query.projectId ? { projectId: query.projectId } : {}),
       ...(query.from || query.to
         ? {
@@ -239,15 +252,15 @@ export class BrokerPayoutsService {
             brokerId: dto.brokerId,
             status: BrokerCommissionStatus.APPROVED,
             payoutId: null,
-            contract: LIVE_CONTRACT_WHERE,
+            ...PAYABLE_DEAL_WHERE,
           },
           data: { payoutId: created.id },
         });
         if (linked.count !== new Set(dto.commissionIds).size) {
           throw new ConflictException('بعض العمولات أُضيفت لدفعة أخرى أو تغيّرت — حدّث الصفحة وأعد المحاولة');
         }
-        await this.recomputeTotals(tx, created.id);
       }
+      await rebalancePayout(tx, created.id, dto.brokerId);
 
       return created.id;
     });
@@ -293,22 +306,21 @@ export class BrokerPayoutsService {
           brokerId: payout.brokerId,
           status: BrokerCommissionStatus.APPROVED,
           payoutId: null,
-          contract: LIVE_CONTRACT_WHERE,
+          ...PAYABLE_DEAL_WHERE,
         },
         data: { payoutId: id },
       });
       if (linked.count !== new Set(dto.commissionIds).size) {
         throw new ConflictException('بعض العمولات أُضيفت لدفعة أخرى أو تغيّرت — حدّث الصفحة وأعد المحاولة');
       }
-      await this.recomputeTotals(tx, id);
+      await rebalancePayout(tx, id, payout.brokerId);
     });
 
     return this.findOne(id);
   }
 
   async removeCommissions(id: string, dto: CommissionIdsDto) {
-    // Status guard (throws unless DRAFT); the row itself isn't needed here.
-    await this.assertPayoutInStatus(id, BrokerPayoutStatus.DRAFT);
+    const payout = await this.assertPayoutInStatus(id, BrokerPayoutStatus.DRAFT);
 
     await this.prisma.$transaction(async (tx) => {
       await this.moveStatus(tx, id, [BrokerPayoutStatus.DRAFT], { updatedAt: new Date() });
@@ -321,7 +333,7 @@ export class BrokerPayoutsService {
         },
         data: { payoutId: null },
       });
-      await this.recomputeTotals(tx, id);
+      await rebalancePayout(tx, id, payout.brokerId);
     });
 
     return this.findOne(id);
@@ -346,9 +358,10 @@ export class BrokerPayoutsService {
         notes: dto.notes ? appendNote(payout.notes, `[approve] ${dto.notes.trim()}`) : payout.notes,
       });
       // Counted with the payout locked: commissions removed meanwhile are seen.
-      const count = await tx.brokerCommission.count({
-        where: { payoutId: id, status: 'APPROVED' },
-      });
+      // A payout of top-ups alone (a paid commission's price went up) is fine.
+      const count =
+        (await tx.brokerCommission.count({ where: { payoutId: id, status: 'APPROVED' } })) +
+        (await tx.brokerCommissionAdjustment.count({ where: { payoutId: id, kind: 'TOP_UP' } }));
       if (count === 0) {
         throw new BadRequestException(
           'Cannot approve a payout that has no commissions',
@@ -447,11 +460,13 @@ export class BrokerPayoutsService {
         totalWithholding: new Prisma.Decimal(0),
         totalNet: new Prisma.Decimal(0),
       });
-      // Unlink commissions so they can be paid via a different payout later.
+      // Unlink commissions so they can be paid via a different payout later;
+      // its top-ups and clawbacks wait for the next payout too.
       await tx.brokerCommission.updateMany({
         where: { payoutId: id },
         data: { payoutId: null },
       });
+      await tx.brokerCommissionAdjustment.updateMany({ where: { payoutId: id }, data: { payoutId: null } });
     });
     const updated = await this.findOne(id);
 
@@ -584,31 +599,6 @@ export class BrokerPayoutsService {
    * Recompute payout totals from the currently-linked commissions. Called
    * inside any tx that adds, removes, or otherwise mutates the membership.
    */
-  private async recomputeTotals(
-    tx: Prisma.TransactionClient,
-    payoutId: string,
-  ): Promise<void> {
-    // Only approved commissions are paid out.
-    const agg = await tx.brokerCommission.aggregate({
-      where: { payoutId, status: 'APPROVED' },
-      _sum: {
-        grossAmount: true,
-        taxAmount: true,
-        withholdingAmount: true,
-        netAmount: true,
-      },
-    });
-    await tx.brokerPayout.update({
-      where: { id: payoutId },
-      data: {
-        totalGross: agg._sum.grossAmount ?? new Prisma.Decimal(0),
-        totalTax: agg._sum.taxAmount ?? new Prisma.Decimal(0),
-        totalWithholding: agg._sum.withholdingAmount ?? new Prisma.Decimal(0),
-        totalNet: agg._sum.netAmount ?? new Prisma.Decimal(0),
-      },
-    });
-  }
-
   private async writeActivity(
     brokerId: string,
     type: BrokerActivityType,

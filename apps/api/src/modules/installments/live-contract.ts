@@ -7,6 +7,23 @@ export const LIVE_CONTRACT_WHERE = {
 } satisfies Prisma.ContractWhereInput;
 
 /**
+ * A broker commission or sales bonus that may still be approved and paid:
+ * its deal is live, or the deal was cancelled with RETAIN — the commission
+ * stays payable then (decided 2026-10-16).
+ */
+export const PAYABLE_DEAL_WHERE = {
+  OR: [{ contract: LIVE_CONTRACT_WHERE }, { retainedOnCancellation: true }],
+} satisfies Prisma.BrokerCommissionWhereInput;
+
+/** The same check on a row already read (contract status, the RETAIN flag). */
+export function isPayableDeal(row: {
+  retainedOnCancellation?: boolean | null;
+  contract?: { status: ContractStatus; deletedAt: Date | null } | null;
+}): boolean {
+  return !isDeadContract(row.contract) || row.retainedOnCancellation === true;
+}
+
+/**
  * A plan whose contract is still live: not cancelled, not deleted. Reminders,
  * the overdue sweep and anything that (re)opens an installment must stay
  * inside it — otherwise a cancelled deal keeps billing its customer.

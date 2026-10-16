@@ -116,6 +116,12 @@ function makePrismaMock() {
         _sum: { grossAmount: 0, taxAmount: 0, withholdingAmount: 0, netAmount: 0 },
       }),
     },
+    // Top-ups / clawbacks netted into payouts (none open here).
+    brokerCommissionAdjustment: {
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
+    },
     brokerUser: { findMany: jest.fn().mockResolvedValue([{ userId: 'broker-user-1' }]) },
     brokerActivityLog: { create: jest.fn().mockResolvedValue({}) },
     notification: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
@@ -127,6 +133,7 @@ function makePrismaMock() {
       const tx = {
         brokerPayout: m.brokerPayout,
         brokerCommission: m.brokerCommission,
+        brokerCommissionAdjustment: m.brokerCommissionAdjustment,
       };
       return (ops as (tx: unknown) => Promise<unknown>)(tx);
     }

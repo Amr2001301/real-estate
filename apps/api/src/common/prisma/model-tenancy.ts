@@ -161,6 +161,7 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   BrokerUnitAccess: 'TENANT_OWNED',
   BrokerCommission: 'TENANT_OWNED',
   BrokerPayout: 'TENANT_OWNED',
+  BrokerCommissionAdjustment: 'TENANT_OWNED',
   BrokerActivityLog: 'TENANT_OWNED',
 
   // Platform utilities
