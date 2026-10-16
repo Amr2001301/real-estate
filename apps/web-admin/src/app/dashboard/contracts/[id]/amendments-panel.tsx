@@ -62,19 +62,27 @@ export function AmendmentsPanel({
             <li key={a.id} className="px-4 py-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700">
-                  {a.type === 'TRANSFER' ? m.amendTransfer : m.amendSwap}
-                </span>
-                <span className="font-medium text-slate-900">
                   {a.type === 'TRANSFER'
-                    ? `${a.fromCustomerName ?? '—'} ← ${a.toCustomerName ?? '—'}`
-                    : `${a.fromUnitCode ?? '—'} ← ${a.toUnitCode ?? '—'}`}
+                    ? m.amendTransfer
+                    : a.type === 'UNIT_SWAP'
+                      ? m.amendSwap
+                      : a.type === 'PRICE_CHANGE'
+                        ? m.amendPrice
+                        : m.amendReschedule}
                 </span>
+                {(a.type === 'TRANSFER' || a.type === 'UNIT_SWAP') && (
+                  <span className="font-medium text-slate-900">
+                    {a.type === 'TRANSFER'
+                      ? `${a.fromCustomerName ?? '—'} ← ${a.toCustomerName ?? '—'}`
+                      : `${a.fromUnitCode ?? '—'} ← ${a.toUnitCode ?? '—'}`}
+                  </span>
+                )}
                 {a.type === 'TRANSFER' && a.feeAmount != null && Number(a.feeAmount) > 0 && (
                   <span className="tabular-nums text-slate-600">
                     {m.amendFee} {formatCurrency(a.feeAmount, currency, locale)}
                   </span>
                 )}
-                {a.type === 'UNIT_SWAP' && a.toTotal != null && (
+                {(a.type === 'UNIT_SWAP' || a.type === 'PRICE_CHANGE') && a.toTotal != null && (
                   <span className="tabular-nums text-slate-600">
                     {formatCurrency(a.fromTotal ?? 0, currency, locale)} ← {formatCurrency(a.toTotal, currency, locale)}
                   </span>

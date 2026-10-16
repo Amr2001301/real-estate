@@ -246,3 +246,64 @@ export async function swapContractUnitAction(id: string, formData: FormData): Pr
   revalidatePath(`/dashboard/contracts/${id}`);
   return { ok: true };
 }
+
+function done(id: string): ContractFormState {
+  revalidatePath(`/dashboard/contracts/${id}`);
+  return { ok: true };
+}
+
+// One payment for several installments (cash or transfer).
+export async function payInstallmentsAction(id: string, formData: FormData): Promise<ContractFormState> {
+  try {
+    await api.post(`/deposits/batch`, {
+      contractId: id,
+      installmentIds: String(formData.get('installmentIds') ?? '').split(',').filter(Boolean),
+      amount: Number(formData.get('amount')),
+      paymentMethod: String(formData.get('paymentMethod') ?? 'CASH'),
+    });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  return done(id);
+}
+
+// سداد مبكر — everything still open, for exactly what is left.
+export async function settleContractAction(id: string, formData: FormData): Promise<ContractFormState> {
+  try {
+    await api.post(`/deposits/settle`, {
+      contractId: id,
+      amount: Number(formData.get('amount')),
+      paymentMethod: String(formData.get('paymentMethod') ?? 'CASH'),
+    });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  return done(id);
+}
+
+// A new contract price; the unpaid installments absorb the difference.
+export async function changeContractPriceAction(id: string, formData: FormData): Promise<ContractFormState> {
+  try {
+    await api.post(`/contracts/${id}/price`, {
+      totalAmount: Number(formData.get('totalAmount')),
+      reason: String(formData.get('reason') ?? '').trim(),
+    });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  return done(id);
+}
+
+// The unpaid monthly installments spread over a new number of months.
+export async function rescheduleContractAction(id: string, formData: FormData): Promise<ContractFormState> {
+  try {
+    await api.post(`/contracts/${id}/reschedule`, {
+      months: Number(formData.get('months')),
+      startsAt: String(formData.get('startsAt') ?? ''),
+      reason: String(formData.get('reason') ?? '').trim(),
+    });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  return done(id);
+}

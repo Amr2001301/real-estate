@@ -1,5 +1,10 @@
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
+  IsArray,
   IsBoolean,
+  IsIn,
   IsDateString,
   IsEnum,
   IsInt,
@@ -44,6 +49,36 @@ export class RecordDepositDto {
    */
   @IsOptional() @ValidateNested() @Type(() => DepositChequeDto) cheque?: DepositChequeDto;
   /** Optional with BANK_TRANSFER; stored as a CLEARED payment instrument. */
+  @IsOptional() @ValidateNested() @Type(() => DepositTransferDto) transfer?: DepositTransferDto;
+}
+
+/** Payment methods that count as collected at once (no cheque). */
+export const IMMEDIATE_METHODS = [PaymentMethod.CASH, PaymentMethod.BANK_TRANSFER] as const;
+
+/**
+ * One payment covering several installments of one contract (cash or a bank
+ * transfer). Each installment gets its own deposit; a transfer is one
+ * instrument shared by all of them.
+ */
+export class RecordDepositsBatchDto {
+  @IsUUID() contractId!: string;
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(600) @ArrayUnique() @IsUUID('all', { each: true }) installmentIds!: string[];
+  /** When given, must equal the installments' total — a check against typos. */
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 2 }) @IsPositive() amount?: number;
+  @IsIn(IMMEDIATE_METHODS) paymentMethod!: PaymentMethod;
+  @IsOptional() @IsDateString() paidAt?: string;
+  @IsOptional() @IsString() receiptUrl?: string;
+  @IsOptional() @ValidateNested() @Type(() => DepositTransferDto) transfer?: DepositTransferDto;
+}
+
+/** Early settlement: every unpaid installment of the contract in one payment. */
+export class SettleContractDto {
+  @IsUUID() contractId!: string;
+  /** The amount the customer is paying — must equal what's left. */
+  @IsNumber({ maxDecimalPlaces: 2 }) @IsPositive() amount!: number;
+  @IsIn(IMMEDIATE_METHODS) paymentMethod!: PaymentMethod;
+  @IsOptional() @IsDateString() paidAt?: string;
+  @IsOptional() @IsString() receiptUrl?: string;
   @IsOptional() @ValidateNested() @Type(() => DepositTransferDto) transfer?: DepositTransferDto;
 }
 

@@ -1512,9 +1512,13 @@ enum ContractAmendmentType {
   TRANSFER
   /// تبديل — the contract moves to another unit; unpaid installments absorb the price change.
   UNIT_SWAP
+  /// تعديل السعر — a price amendment (discount, addendum); unpaid installments absorb it.
+  PRICE_CHANGE
+  /// إعادة جدولة — the unpaid monthly installments are spread over a new number of months.
+  RESCHEDULE
 }
 
-/// History of transfers and unit swaps on a live contract.
+/// History of transfers, unit swaps, price changes and reschedules on a live contract.
 model ContractAmendment {
   id         String                @id @default(uuid()) @db.Uuid
   type       ContractAmendmentType
