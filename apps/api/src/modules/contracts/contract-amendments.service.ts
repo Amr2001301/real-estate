@@ -36,8 +36,12 @@ import { reportFailure } from '../../common/observability/report-failure';
 import { NotificationsService } from '../notifications/notifications.module';
 import { UNCLEARED_INSTRUMENT_STATUSES } from '../deposits/review-queue';
 import { CONTRACT_CANCELLED_MESSAGE, isDeadContract, LIVE_CONTRACT_WHERE } from '../installments/live-contract';
-import { resetUnitWarranties } from './contract-cancellation.service';
-import { startUnitWarranties } from './unit-warranties';
+import {
+  closeOpenMaintenance,
+  handOverOpenMaintenance,
+  resetUnitWarranties,
+  startUnitWarranties,
+} from './unit-warranties';
 import { resolveTransferFeeSettings, TRANSFER_FEE_SETTING_KEYS, transferFeeFor } from './transfer-fee';
 
 export class TransferContractDto {
@@ -252,6 +256,7 @@ export class ContractAmendmentsService {
           data: { clientId: to.id },
         });
       }
+      const maintenanceMoved = await handOverOpenMaintenance(tx, contract.unitId, fromId, to.id, companyId);
       // The new owner gets the customer app; the old one keeps it only while
       // they still own another live contract. Both re-authenticate.
       const promoted = await tx.user.updateMany({
@@ -310,7 +315,7 @@ export class ContractAmendmentsService {
           entityType: 'Contract',
           entityId: contractId,
           before: { customerId: fromId },
-          after: { customerId: to.id, reason: dto.reason, feeAmount, feeInstallmentId },
+          after: { customerId: to.id, reason: dto.reason, feeAmount, feeInstallmentId, maintenanceMoved },
           companyId,
         },
       });
@@ -522,6 +527,7 @@ export class ContractAmendmentsService {
           await resetUnitWarranties(tx, fromUnitId);
         }
       }
+      const maintenanceClosed = await closeOpenMaintenance(tx, fromUnitId, contract.customerId, companyId);
 
       const commissions = await this.followNewPrice(tx, contractId, companyId, unit, dto.totalAmount);
 
@@ -550,6 +556,7 @@ export class ContractAmendmentsService {
             totalAmount: dto.totalAmount,
             rescaledInstallments: rescaled.length,
             addedFinalPayment: extraRow?.amount ?? null,
+            maintenanceClosed,
             ...commissions,
             reason: dto.reason,
           },

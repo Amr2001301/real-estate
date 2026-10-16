@@ -1,6 +1,6 @@
 import { Controller, Get, Injectable, Module } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { InstallmentStatus, MaintenanceStatus, UserRole } from '@prisma/client';
+import { InstallmentStatus, MaintenanceReviewStatus, MaintenanceStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 // A cancelled or deleted contract is no longer the customer's unit or debt.
 import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
@@ -260,10 +260,11 @@ class MeHomeSummaryService {
         select: { paidAt: true },
       }),
 
-      // Q6: open maintenance request count
+      // Q6: open maintenance request count (a rejected one is finished)
       this.prisma.maintenanceRequest.count({
         where: {
           customerId: userId,
+          reviewStatus: { not: MaintenanceReviewStatus.REJECTED },
           status: {
             in: [
               MaintenanceStatus.OPEN,

@@ -23,6 +23,7 @@ import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { serializePublicUnit } from './public-unit.serializer';
 import { arText, collectPages, isoDate, listCsv, listXlsx, type ListColumn } from '../../common/utils/list-export';
 import { ReportBrandService } from '../company-branding/report-brand.service';
+import { resetUnitWarranties } from '../contracts/unit-warranties';
 
 /** The fields of a listed unit the export reads (findAll includes the rest). */
 type UnitExportRow = {
@@ -335,6 +336,12 @@ export class UnitsService {
           reason: dto.reason ?? null,
         },
       });
+      // Back on sale after a cancelled sale: the previous buyer's warranties
+      // are cleared, as releaseUnit does — otherwise the next buyer's signing
+      // skips the started items and inherits the old (shorter) dates.
+      if (unit.status === UnitStatus.SOLD && liveContract === 0) {
+        await resetUnitWarranties(tx, id);
+      }
       return updated;
     });
   }

@@ -10,7 +10,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { phoneForWrite } from '../../common/utils/phone-for-write';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
-import { AppointmentStatus, LeadStage, Prisma, ReservationStatus, UserRole, VisitStatus } from '@prisma/client';
+import { MaintenanceStatus, AppointmentStatus, LeadStage, Prisma, ReservationStatus, UserRole, VisitStatus } from '@prisma/client';
 import { assertAssignableSales } from '../../common/utils/assignable-sales';
 import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { OPTIONS_LIMIT, optionsResult } from '../../common/utils/options';
@@ -509,6 +509,16 @@ export class UsersService {
     await tx.refreshToken.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
     await tx.deviceToken.deleteMany({ where: { userId: id } });
     await tx.user.updateMany({ where: { managerId: id, companyId }, data: { managerId: null } });
+    // Maintenance work assigned to them goes back to the queue — it used to
+    // sit on an account nobody can open until the SLA breach fired.
+    await tx.maintenanceRequest.updateMany({
+      where: { assignedAdminId: id, companyId, status: MaintenanceStatus.ASSIGNED },
+      data: { assignedAdminId: null, status: MaintenanceStatus.OPEN },
+    });
+    await tx.maintenanceRequest.updateMany({
+      where: { assignedAdminId: id, companyId, status: MaintenanceStatus.IN_PROGRESS },
+      data: { assignedAdminId: null },
+    });
   }
 
   async activate(id: string) {

@@ -72,17 +72,8 @@ function isCommissionEffectivelyPaid(commission: {
   return s === 'PROCESSING' || s === 'PAID';
 }
 
-/**
- * A released unit goes back on sale: the cancelled buyer's warranties are
- * cleared so the next contract's signing starts them afresh (signing only
- * starts items whose warrantyStart is still empty, and freezes the duration).
- */
-export async function resetUnitWarranties(tx: Prisma.TransactionClient, unitId: string) {
-  await tx.unitMaintenanceItem.updateMany({
-    where: { unitId, warrantyStart: { not: null } },
-    data: { warrantyStart: null, warrantyEnd: null, warrantyDurationMonthsSnapshot: null },
-  });
-}
+export { resetUnitWarranties } from './unit-warranties';
+import { closeOpenMaintenance, resetUnitWarranties } from './unit-warranties';
 
 @Injectable()
 export class ContractCancellationService {
@@ -329,6 +320,10 @@ export class ContractCancellationService {
         await resetUnitWarranties(tx, contract.unitId);
         unitReleasedAt = now;
       }
+
+      // 6b. The buyer no longer holds the unit: their open maintenance
+      // requests on it close (whether or not the unit is released yet).
+      await closeOpenMaintenance(tx, contract.unitId, contract.customerId, companyId);
 
       // 7. Customer demotion (inside transaction) — only when this was the
       // customer's last live contract, and only a CUSTOMER account: a buyer

@@ -73,6 +73,7 @@ export class MaintenanceController {
     @Body() dto: CreateRequestDto,
     @UploadedFiles() attachments?: UploadedFile[],
   ) {
+    if (attachments?.length) this.svc.assertAttachmentsValid(attachments);
     const created = await this.svc.createRequest(user.sub, dto);
     if (attachments?.length) {
       await this.svc.addCustomerAttachments(user.sub, created.id, attachments);

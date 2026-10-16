@@ -27,6 +27,8 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
+import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
+import { startUnitWarranties } from '../contracts/unit-warranties';
 
 class CreateMaintenanceItemDto {
   @IsString() @MinLength(1) ar!: string;
@@ -107,7 +109,28 @@ class UnitMaintenanceItemsService {
       },
       include: { category: { select: CATEGORY_SELECT } },
     });
+    // An item added to an already-sold unit gets its warranty like the others
+    // did at signing (signing is the only other place that starts them).
+    if (await this.startIfSold(unitId, created)) {
+      const fresh = await this.prisma.unitMaintenanceItem.findUniqueOrThrow({
+        where: { id: created.id },
+        include: { category: { select: CATEGORY_SELECT } },
+      });
+      return withWarrantyStatus(fresh);
+    }
     return withWarrantyStatus(created);
+  }
+
+  /** Starts the warranty of an active, not-yet-started item when the unit has a signed live sale. */
+  private async startIfSold(unitId: string, item: { active: boolean; warrantyStart: Date | null }) {
+    if (!item.active || item.warrantyStart) return false;
+    const sale = await this.prisma.contract.findFirst({
+      where: { unitId, signedAt: { not: null }, ...LIVE_CONTRACT_WHERE },
+      select: { createdAt: true },
+    });
+    if (!sale) return false;
+    await startUnitWarranties(this.prisma, unitId, sale.createdAt);
+    return true;
   }
 
   async update(unitId: string, itemId: string, dto: UpdateMaintenanceItemDto) {
@@ -155,6 +178,14 @@ class UnitMaintenanceItemsService {
       data,
       include: { category: { select: CATEGORY_SELECT } },
     });
+    // Re-activated on a sold unit → its warranty starts like the others'.
+    if (!current.active && (await this.startIfSold(unitId, updated))) {
+      const fresh = await this.prisma.unitMaintenanceItem.findUniqueOrThrow({
+        where: { id: itemId },
+        include: { category: { select: CATEGORY_SELECT } },
+      });
+      return withWarrantyStatus(fresh);
+    }
     return withWarrantyStatus(updated);
   }
 
