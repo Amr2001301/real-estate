@@ -81,6 +81,9 @@ function makePrismaMock() {
     },
     leadActivity: { create: jest.fn().mockResolvedValue({}) },
     leadNote: { create: jest.fn().mockResolvedValue({}) },
+    // No live reservation or contract on the lead.
+    reservation: { count: jest.fn().mockResolvedValue(0) },
+    contract: { count: jest.fn().mockResolvedValue(0) },
     brokerUser: { findMany: jest.fn().mockResolvedValue([]) },
     notification: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
     $transaction: jest.fn(),

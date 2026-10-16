@@ -4,6 +4,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import type { BrokerScopeContext } from '../../common/guards/broker-scope.guard';
 import { PortalContractsQueryDto } from './dto/portal-contract.dto';
+import { agentFilter, brokerFacingPerson, resolveBrokerViewer, type BrokerViewer } from './broker-viewer';
 
 const PORTAL_CONTRACT_INCLUDE = {
   customer: {
@@ -44,7 +45,7 @@ const PORTAL_CONTRACT_INCLUDE = {
       commissionLockedPct: true,
       commissionLockedAmount: true,
       sales: { select: { id: true, fullName: true, email: true, phone: true } },
-      lead: { select: { id: true, fullName: true, phone: true } },
+      lead: { select: { id: true, clientId: true, fullName: true, phone: true } },
     },
   },
   // The materialized commission record is the authoritative source for signed
@@ -71,6 +72,36 @@ const PORTAL_CONTRACT_INCLUDE = {
   },
 } as const;
 
+type ContractRow = {
+  customer: { id: string; fullName: string; phone: string | null; email: string | null } | null;
+  reservation: {
+    commissionLockedPct: unknown;
+    commissionLockedAmount: unknown;
+    lead: { clientId: string | null; fullName: string; phone: string } | null;
+  } | null;
+  brokerCommission: unknown;
+};
+
+/**
+ * Commission figures only for agents allowed to see money; after a transfer
+ * the broker sees the lead they brought, not the new owner.
+ */
+function forViewer<C extends ContractRow>(c: C, viewer: BrokerViewer) {
+  const money = viewer.canViewCommissions;
+  return {
+    ...c,
+    customer: brokerFacingPerson(c.customer, c.reservation?.lead),
+    brokerCommission: money ? c.brokerCommission : null,
+    reservation: c.reservation
+      ? {
+          ...c.reservation,
+          commissionLockedPct: money ? c.reservation.commissionLockedPct : null,
+          commissionLockedAmount: money ? c.reservation.commissionLockedAmount : null,
+        }
+      : null,
+  };
+}
+
 @Injectable()
 export class BrokerPortalContractsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -79,8 +110,10 @@ export class BrokerPortalContractsService {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
 
+    const viewer = await resolveBrokerViewer(this.prisma, scope);
     const where: Prisma.ContractWhereInput = {
       brokerId: scope.brokerId,
+      ...agentFilter(viewer),
       ...(query.unitId ? { unitId: query.unitId } : {}),
       ...(query.leadId ? { reservation: { leadId: query.leadId } } : {}),
       ...(query.projectId
@@ -102,12 +135,17 @@ export class BrokerPortalContractsService {
       }),
       this.prisma.contract.count({ where }),
     ]);
-    return paginate(data, total, { page, pageSize });
+    return paginate(
+      data.map((c) => forViewer(c, viewer)),
+      total,
+      { page, pageSize },
+    );
   }
 
   async findOne(scope: BrokerScopeContext, id: string) {
+    const viewer = await resolveBrokerViewer(this.prisma, scope);
     const contract = await this.prisma.contract.findFirst({
-      where: { id, brokerId: scope.brokerId },
+      where: { id, brokerId: scope.brokerId, ...agentFilter(viewer) },
       include: {
         ...PORTAL_CONTRACT_INCLUDE,
         installmentPlan: {
@@ -117,6 +155,6 @@ export class BrokerPortalContractsService {
       },
     });
     if (!contract) throw new NotFoundException('Contract not found');
-    return contract;
+    return forViewer(contract, viewer);
   }
 }

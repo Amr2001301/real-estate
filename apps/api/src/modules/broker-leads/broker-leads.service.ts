@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
@@ -17,6 +18,7 @@ import {
   RejectBrokerLeadDto,
 } from './dto/broker-lead.dto';
 import { reportFailure } from '../../common/observability/report-failure';
+import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 
 const BROKER_LEAD_INCLUDE = {
   client: {
@@ -178,8 +180,29 @@ export class BrokerLeadsService {
     return result;
   }
 
+  /**
+   * A lead with a booking or a sale in progress is a real deal: rejecting it
+   * (or marking it a duplicate) used to leave the reservation, the held unit
+   * and the coming commission in place, and could turn a WON lead LOST.
+   */
+  private async assertNoLiveDeal(id: string) {
+    const [reservations, contracts] = await Promise.all([
+      this.prisma.reservation.count({
+        where: { leadId: id, deletedAt: null, status: { in: ['PENDING', 'APPROVED'] } },
+      }),
+      this.prisma.contract.count({ where: { reservation: { leadId: id }, ...LIVE_CONTRACT_WHERE } }),
+    ]);
+    if (contracts > 0) {
+      throw new ConflictException('للعميل عقد قائم — لا يمكن رفضه أو اعتباره مكرراً');
+    }
+    if (reservations > 0) {
+      throw new ConflictException('للعميل حجز قائم — ألغِ الحجز أولاً');
+    }
+  }
+
   async reject(id: string, dto: RejectBrokerLeadDto, actor: AuthUser) {
     await this.assertBrokerLead(id);
+    await this.assertNoLiveDeal(id);
     const reason = dto.reason.trim();
     if (!reason) throw new BadRequestException('reason is required');
 
@@ -221,6 +244,7 @@ export class BrokerLeadsService {
     actor: AuthUser,
   ) {
     await this.assertBrokerLead(id);
+    await this.assertNoLiveDeal(id);
 
     const result = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.lead.update({

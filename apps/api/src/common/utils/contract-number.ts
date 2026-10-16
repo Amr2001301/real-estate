@@ -37,3 +37,10 @@ export function isContractNumberConflict(e: unknown): boolean {
     ? target.includes('contractNumber')
     : typeof target === 'string' && target.includes('contractNumber');
 }
+
+/** True for a unique-index violation on the given column (P2002). */
+export function isUniqueConflictOn(e: unknown, column: string): boolean {
+  if (!(e instanceof Prisma.PrismaClientKnownRequestError) || e.code !== 'P2002') return false;
+  const target = (e.meta as { target?: unknown } | undefined)?.target;
+  return Array.isArray(target) ? target.includes(column) : typeof target === 'string' && target.includes(column);
+}

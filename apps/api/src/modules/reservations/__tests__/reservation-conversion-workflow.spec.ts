@@ -151,6 +151,9 @@ function makePrismaMock() {
       findMany: jest.fn().mockResolvedValue([]),
       findFirst: jest.fn().mockResolvedValue(null),
       count: jest.fn().mockResolvedValue(0),
+      // Status moves are conditional on the status read (no lost update).
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      findUniqueOrThrow: jest.fn().mockImplementation(async () => ({ ...fixture.reservation })),
       create: jest.fn().mockResolvedValue({ id: 'r-new' }),
       update: jest.fn().mockImplementation(async ({ where, data }) => ({
         ...fixture.reservation,
@@ -334,9 +337,12 @@ describe('Reservations · conversion workflow', () => {
     expect(mock.unitStatusHistory.create).toHaveBeenCalledTimes(1);
 
     // Reservation row is updated to CONVERTED and gets a CONVERTED activity.
-    const reservationUpdate = mock.reservation.update.mock.calls[0]![0] as {
+    const reservationUpdate = mock.reservation.updateMany.mock.calls[0]![0] as {
+      where: { status: string };
       data: { status: string };
     };
+    // Only an APPROVED reservation converts — a cancel that landed first wins.
+    expect(reservationUpdate.where.status).toBe('APPROVED');
     expect(reservationUpdate.data.status).toBe('CONVERTED');
     const activityArgs = mock.reservationActivity.create.mock.calls[0]![0] as {
       data: { type: string };

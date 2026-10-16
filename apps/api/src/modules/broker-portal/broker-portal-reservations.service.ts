@@ -29,13 +29,16 @@ import {
   PortalReservationsQueryDto,
 } from './dto/portal-reservation.dto';
 import { reportFailure } from '../../common/observability/report-failure';
+import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
+import { isUniqueConflictOn } from '../../common/utils/contract-number';
+import { agentFilter, brokerFacingPerson, resolveBrokerViewer, withoutMoney } from './broker-viewer';
 
-// Reservation statuses that consider a unit "actively reserved" — used to
-// block duplicate reservations on the same unit / same lead+unit.
+// Reservation statuses that hold a unit. A CONVERTED reservation is history:
+// the unit is then held by its contract (checked separately), and once that
+// contract is cancelled or swapped away the unit can be reserved again.
 const ACTIVE_RESERVATION_STATUSES: ReservationStatus[] = [
   ReservationStatus.PENDING,
   ReservationStatus.APPROVED,
-  ReservationStatus.CONVERTED,
 ];
 
 const PORTAL_RESERVATION_INCLUDE = {
@@ -70,6 +73,7 @@ const PORTAL_RESERVATION_INCLUDE = {
   lead: {
     select: {
       id: true,
+      clientId: true,
       fullName: true,
       phone: true,
       email: true,
@@ -113,8 +117,10 @@ export class BrokerPortalReservationsService {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
 
+    const viewer = await resolveBrokerViewer(this.prisma, scope);
     const where: Prisma.ReservationWhereInput = {
       brokerId: scope.brokerId,
+      ...agentFilter(viewer),
       ...(query.status ? { status: query.status } : {}),
       ...(query.unitId ? { unitId: query.unitId } : {}),
       ...(query.leadId ? { leadId: query.leadId } : {}),
@@ -132,24 +138,48 @@ export class BrokerPortalReservationsService {
       }),
       this.prisma.reservation.count({ where }),
     ]);
-    return paginate(data, total, { page, pageSize });
+    return paginate(
+      data.map((r) => this.forViewer(r, viewer)),
+      total,
+      { page, pageSize },
+    );
+  }
+
+  /** Money only for commission viewers; the lead's details once the deal was transferred. */
+  private forViewer<
+    R extends {
+      client: { id: string; fullName: string; phone: string | null; email: string | null } | null;
+      lead: { fullName: string; phone: string; clientId?: string | null } | null;
+    },
+  >(r: R, viewer: Awaited<ReturnType<typeof resolveBrokerViewer>>) {
+    return {
+      ...withoutMoney(r as R & Record<string, unknown>, viewer, ['commissionLockedPct', 'commissionLockedAmount']),
+      client: brokerFacingPerson(r.client, r.lead),
+    };
   }
 
   async findOne(scope: BrokerScopeContext, id: string) {
+    const viewer = await resolveBrokerViewer(this.prisma, scope);
     const reservation = await this.prisma.reservation.findFirst({
-      where: { id, brokerId: scope.brokerId },
+      where: { id, brokerId: scope.brokerId, ...agentFilter(viewer) },
       include: {
         ...PORTAL_RESERVATION_INCLUDE,
-        reservationNotes: {
+        // Staff notes stay internal; the timeline shows what happened, and
+        // only a rejection keeps its reason (the broker needs it).
+        activities: {
+          where: { type: { not: ReservationActivityType.NOTE_ADDED } },
           orderBy: { createdAt: 'desc' },
           take: 50,
-          include: { author: { select: { id: true, fullName: true } } },
         },
-        activities: { orderBy: { createdAt: 'desc' }, take: 50 },
       },
     });
     if (!reservation) throw new NotFoundException('Reservation not found');
-    return reservation;
+    return {
+      ...this.forViewer(reservation, viewer),
+      activities: reservation.activities.map((a) =>
+        a.type === ReservationActivityType.REJECTED ? a : { ...a, note: null },
+      ),
+    };
   }
 
   // ── Create ──────────────────────────────────────────────────────────────
@@ -229,6 +259,11 @@ export class BrokerPortalReservationsService {
         'Lead client is missing or inactive — contact admin',
       );
     }
+    // A reservation (and the contract it becomes) is made out to a buyer,
+    // never to a staff or broker account that happens to share the phone.
+    if (lead.client.role !== UserRole.CLIENT && lead.client.role !== UserRole.CUSTOMER) {
+      throw new ConflictException('Lead is not linked to a customer account — contact admin');
+    }
 
     // 2) Unit must exist, be visible to this broker, and be AVAILABLE.
     const unit = await this.prisma.unit.findUnique({
@@ -260,6 +295,10 @@ export class BrokerPortalReservationsService {
         `Unit already has an active reservation (${activeOnUnit.reservationNumber ?? activeOnUnit.id})`,
       );
     }
+    const liveContract = await this.prisma.contract.count({
+      where: { unitId: dto.unitId, ...LIVE_CONTRACT_WHERE },
+    });
+    if (liveContract > 0) throw new ConflictException('Unit is already sold');
 
     // 4) Idempotency: same broker can't have two active reservations for
     //    the same (lead, unit) pair.
@@ -383,9 +422,7 @@ export class BrokerPortalReservationsService {
     );
 
     // 7) Transactional write: reservation + unit status + history + activities.
-    const reservationNumber = await this.reservations.nextReservationNumber();
-
-    const reservation = await this.prisma.$transaction(async (tx) => {
+    const write = (reservationNumber: string) => this.prisma.$transaction(async (tx) => {
       const created = await tx.reservation.create({
         data: {
           reservationNumber,
@@ -419,11 +456,15 @@ export class BrokerPortalReservationsService {
         include: PORTAL_RESERVATION_INCLUDE,
       });
 
-      // Mark the unit RESERVED + history row so internal CRM stays consistent.
-      await tx.unit.update({
-        where: { id: dto.unitId },
+      // Claim the unit: only one of two concurrent reservations (broker or
+      // internal) can move it off AVAILABLE — the loser rolls back here.
+      const claimed = await tx.unit.updateMany({
+        where: { id: dto.unitId, status: UnitStatus.AVAILABLE },
         data: { status: UnitStatus.RESERVED, reservationExpiresAt: expiresAt },
       });
+      if (claimed.count === 0) {
+        throw new ConflictException('Unit is not available for reservation');
+      }
       await tx.unitStatusHistory.create({
         data: {
           unitId: dto.unitId,
@@ -466,7 +507,7 @@ export class BrokerPortalReservationsService {
               commission.lockedPct !== null
                 ? commission.lockedPct.toString()
                 : null,
-            commissionLockedAmount: commission.lockedAmount.toString(),
+            commissionLockedAmount: commission.lockedAmount?.toString() ?? null,
           },
         },
       });
@@ -486,6 +527,18 @@ export class BrokerPortalReservationsService {
 
       return created;
     });
+    // Two reservations made at the same moment draw the same next number; the
+    // one that loses the unique index retries with a fresh one (and, racing
+    // for the same unit, then meets the unit claim above).
+    let reservation: Awaited<ReturnType<typeof write>>;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        reservation = await write(await this.reservations.nextReservationNumber());
+        break;
+      } catch (e) {
+        if (!isUniqueConflictOn(e, 'reservationNumber') || attempt >= 2) throw e;
+      }
+    }
 
     // 8) Notifications — best-effort, never blocks the action.
     await this.notify(reservation.id, {
@@ -595,7 +648,7 @@ export class BrokerPortalReservationsService {
     basisAmount: Prisma.Decimal;
   }): Promise<{
     lockedPct: Prisma.Decimal | null;
-    lockedAmount: Prisma.Decimal;
+    lockedAmount: Prisma.Decimal | null;
   }> {
     const [broker, projectAccess] = await Promise.all([
       this.prisma.broker.findUnique({
@@ -615,17 +668,16 @@ export class BrokerPortalReservationsService {
     const model = broker?.commissionModel ?? 'PERCENT_OF_SALE';
 
     if (model === 'FIXED_PER_UNIT') {
-      // For fixed-per-unit deals we use the project-access override; if not
-      // set, fall back to 0 (admin should configure it explicitly).
-      const fixed = projectAccess?.fixedAmountPerUnit ?? new Prisma.Decimal(0);
+      // For fixed-per-unit deals we use the project-access override. With no
+      // rate configured nothing is locked: locking 0 made the commission zero
+      // for good, while an unlocked one takes the rate in force at signing.
+      const fixed = projectAccess?.fixedAmountPerUnit ?? null;
       return { lockedPct: null, lockedAmount: fixed };
     }
 
     // PERCENT_OF_SALE (and TIERED treated as percent-of-sale for now).
-    const pct =
-      projectAccess?.commissionPct ??
-      broker?.defaultCommissionPct ??
-      new Prisma.Decimal(0);
+    const pct = projectAccess?.commissionPct ?? broker?.defaultCommissionPct ?? null;
+    if (pct === null) return { lockedPct: null, lockedAmount: null };
     const amount = params.basisAmount.mul(pct).div(100);
     return { lockedPct: pct, lockedAmount: amount };
   }

@@ -143,6 +143,9 @@ function makePrismaMock() {
       findMany: jest.fn().mockResolvedValue([]),
       findFirst: jest.fn().mockResolvedValue(null),
       count: jest.fn().mockResolvedValue(0),
+      // Status moves are conditional on the status read (no lost update).
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      findUniqueOrThrow: jest.fn().mockImplementation(async () => ({ ...fixture.reservation })),
       // FG-23 — the list now also issues a groupBy for meta.facets. This spec
       // asserts authorization, not the facet contract (that lives in e2e
       // against real Postgres, where a mock cannot tell counts over the
@@ -275,6 +278,7 @@ describe('Reservations module · permissions enforcement', () => {
     mock.userPermission.findMany.mockClear();
     mock.reservation.findUnique.mockClear();
     mock.reservation.update.mockClear();
+    mock.reservation.updateMany.mockClear();
     mock.reservation.create.mockClear();
     mock.reservation.count.mockClear();
     mock.reservationActivity.create.mockClear();
@@ -441,7 +445,7 @@ describe('Reservations module · permissions enforcement', () => {
         code: 'missing_permission',
         permissions: ['reservations:approve'],
       });
-      expect(mock.reservation.update).not.toHaveBeenCalled();
+      expect(mock.reservation.updateMany).not.toHaveBeenCalled();
       expect(mock.reservationActivity.create).not.toHaveBeenCalled();
       expect(mock.leadActivity.create).not.toHaveBeenCalled();
     });
@@ -453,7 +457,7 @@ describe('Reservations module · permissions enforcement', () => {
         codes: ['reservations:approve'],
       };
       await request(app.getHttpServer()).post(PATH).send({}).expect(201);
-      expect(mock.reservation.update).toHaveBeenCalledTimes(1);
+      expect(mock.reservation.updateMany).toHaveBeenCalledTimes(1);
       expect(mock.reservationActivity.create).toHaveBeenCalledTimes(1);
     });
 
@@ -465,7 +469,7 @@ describe('Reservations module · permissions enforcement', () => {
       };
       await request(app.getHttpServer()).post(PATH).send({}).expect(403);
       expect(mock.userPermission.findMany).not.toHaveBeenCalled();
-      expect(mock.reservation.update).not.toHaveBeenCalled();
+      expect(mock.reservation.updateMany).not.toHaveBeenCalled();
     });
   });
 
@@ -484,7 +488,7 @@ describe('Reservations module · permissions enforcement', () => {
         code: 'missing_permission',
         permissions: ['reservations:reject'],
       });
-      expect(mock.reservation.update).not.toHaveBeenCalled();
+      expect(mock.reservation.updateMany).not.toHaveBeenCalled();
       expect(mock.unit.update).not.toHaveBeenCalled();
     });
 
@@ -495,7 +499,7 @@ describe('Reservations module · permissions enforcement', () => {
         codes: ['reservations:reject'],
       };
       await request(app.getHttpServer()).post(PATH).send({ reason: 'x' }).expect(201);
-      expect(mock.reservation.update).toHaveBeenCalledTimes(1);
+      expect(mock.reservation.updateMany).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -513,7 +517,7 @@ describe('Reservations module · permissions enforcement', () => {
         code: 'missing_permission',
         permissions: ['reservations:cancel'],
       });
-      expect(mock.reservation.update).not.toHaveBeenCalled();
+      expect(mock.reservation.updateMany).not.toHaveBeenCalled();
     });
 
     it('ADMIN WITH reservations:cancel + valid reason → 201', async () => {
@@ -526,7 +530,7 @@ describe('Reservations module · permissions enforcement', () => {
         .post(PATH)
         .send({ reason: 'customer withdrew' })
         .expect(201);
-      expect(mock.reservation.update).toHaveBeenCalledTimes(1);
+      expect(mock.reservation.updateMany).toHaveBeenCalledTimes(1);
     });
 
     it('ADMIN WITH reservations:cancel + empty reason → 400 (business validation survives the gate)', async () => {
@@ -536,7 +540,7 @@ describe('Reservations module · permissions enforcement', () => {
         codes: ['reservations:cancel'],
       };
       await request(app.getHttpServer()).post(PATH).send({ reason: '   ' }).expect(400);
-      expect(mock.reservation.update).not.toHaveBeenCalled();
+      expect(mock.reservation.updateMany).not.toHaveBeenCalled();
     });
   });
 
@@ -555,7 +559,7 @@ describe('Reservations module · permissions enforcement', () => {
       expect(mock.contract.create).not.toHaveBeenCalled();
       expect(mock.unit.update).not.toHaveBeenCalled();
       expect(mock.installmentPlan.create).not.toHaveBeenCalled();
-      expect(mock.reservation.update).not.toHaveBeenCalled();
+      expect(mock.reservation.updateMany).not.toHaveBeenCalled();
     });
 
     it('ADMIN WITH reservations:convert, reservation in APPROVED + no booking required → 201; contract + unit changes fire', async () => {
@@ -613,7 +617,7 @@ describe('Reservations module · permissions enforcement', () => {
       expect(JSON.stringify(res.body)).toContain('signedAt');
       // The contract was NEVER created — bypass is fully closed.
       expect(mock.contract.create).not.toHaveBeenCalled();
-      expect(mock.reservation.update).not.toHaveBeenCalled();
+      expect(mock.reservation.updateMany).not.toHaveBeenCalled();
     });
 
     it('ADMIN with reservations:convert but WITHOUT contracts:sign cannot convert-and-sign in one bypass', async () => {

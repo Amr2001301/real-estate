@@ -318,7 +318,7 @@ export class BrokerPayoutsService {
     const payout = await this.assertPayoutInStatus(id, BrokerPayoutStatus.DRAFT);
     await this.assertNotHeld(payout.brokerId);
     const count = await this.prisma.brokerCommission.count({
-      where: { payoutId: id },
+      where: { payoutId: id, status: 'APPROVED' },
     });
     if (count === 0) {
       throw new BadRequestException(
@@ -555,8 +555,9 @@ export class BrokerPayoutsService {
     tx: Prisma.TransactionClient,
     payoutId: string,
   ): Promise<void> {
+    // Only approved commissions are paid out.
     const agg = await tx.brokerCommission.aggregate({
-      where: { payoutId },
+      where: { payoutId, status: 'APPROVED' },
       _sum: {
         grossAmount: true,
         taxAmount: true,

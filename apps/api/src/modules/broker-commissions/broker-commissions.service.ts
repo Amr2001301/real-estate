@@ -424,6 +424,20 @@ export class BrokerCommissionsService {
         'Cannot reject a cancelled commission',
       );
     }
+    // Same payout guard as cancel: a commission on a payout is about to be (or
+    // was) paid — rejecting it there left the money going out anyway.
+    if (existing.payoutId) {
+      throw new ConflictException(
+        'Cannot reject a commission that is on a payout — remove it from the payout first',
+      );
+    }
+    const claimed = await this.prisma.brokerCommission.updateMany({
+      where: { id, payoutId: null, status: { not: BrokerCommissionStatus.CANCELLED } },
+      data: { status: BrokerCommissionStatus.REJECTED },
+    });
+    if (claimed.count === 0) {
+      throw new ConflictException('The commission changed meanwhile — reload and try again');
+    }
     const updated = await this.prisma.brokerCommission.update({
       where: { id },
       data: {

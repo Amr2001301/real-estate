@@ -550,7 +550,7 @@ async function main(): Promise<void> {
 
   const reservationIds = new Map<string, string>();
   for (const spec of resSpecs) {
-    const existing = await prisma.reservation.findUnique({
+    const existing = await prisma.reservation.findFirst({
       where: { reservationNumber: spec.number },
       select: { id: true },
     });
