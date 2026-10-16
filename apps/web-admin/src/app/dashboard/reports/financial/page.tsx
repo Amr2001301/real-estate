@@ -87,10 +87,11 @@ export default async function FinancialReportsPage({
   const compare  = (sp.compare ?? 'none') as CompareMode;
   const cmpRange = resolveComparisonDateRange(resolved, compare);
 
-  const PAYMENT_TYPE_LABELS: Record<PlanPaymentType, string> = m.paymentTypeLabels;
-  const PAYMENT_TYPE_CLS: Record<PlanPaymentType, string> = {
+  const PAYMENT_TYPE_LABELS: Partial<Record<PlanPaymentType, string>> = m.paymentTypeLabels;
+  const PAYMENT_TYPE_CLS: Partial<Record<PlanPaymentType, string>> = {
     RESERVATION: 'bg-indigo-100 text-indigo-700', DOWN_PAYMENT: 'bg-amber-100 text-amber-700',
     INSTALLMENT: 'bg-slate-100 text-slate-600',   FINAL_PAYMENT: 'bg-purple-100 text-purple-700',
+    BOUNCE_PENALTY: 'bg-danger-100 text-danger-700', LATE_FEE: 'bg-danger-100 text-danger-700',
   };
   const DEPOSIT_TYPE_LABELS: Record<DepositType, string> = m.depositTypeLabels;
   const DEPOSIT_TYPE_CLS: Record<DepositType, string> = {

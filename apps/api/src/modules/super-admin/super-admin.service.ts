@@ -17,6 +17,7 @@ import { buildEffectiveView, STAFF_SEAT_ROLES } from '../../common/capabilities/
 import { DomainResolverService } from '../../common/domain/domain-resolver.service';
 import { CompanyDomainsService, RESERVED_PLATFORM_SLUGS } from '../company-domains/company-domains.service';
 import { seedCancellationSettingsForCompany } from '../contracts/cancellation-settings.constants';
+import { seedLateFeeSettingsForCompany } from '../installments/late-fee';
 import { NotificationsService } from '../notifications/notifications.module';
 import { USER_ROLE_AR } from '../notifications/notification-catalog';
 import { runInCompany } from '../../common/tenant/tenant-context';
@@ -218,6 +219,7 @@ export class SuperAdminService {
     // companyId per row is respected. Idempotent (skipDuplicates); existing
     // operator-configured values are never overwritten.
     await seedCancellationSettingsForCompany(this.prisma, company.id);
+    await seedLateFeeSettingsForCompany(this.prisma, company.id);
 
     let adminUser = null;
     if (dto.adminEmail && dto.adminPassword && dto.adminFullName) {

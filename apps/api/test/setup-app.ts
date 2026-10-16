@@ -58,7 +58,7 @@ import { DateSerializerInterceptor } from '../src/common/interceptors/date-seria
 import { requestIdMiddleware } from '../src/common/logging/request-id.middleware';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { runTenantContext } from '../src/common/tenant/tenant-context';
-import { InstallmentRemindersService } from '../src/modules/installments/installments.module';
+import { InstallmentRemindersService, InstallmentsService } from '../src/modules/installments/installments.module';
 import { MaintenanceSlaCheckCron, MaintenanceUnresolvedCron } from '../src/modules/maintenance/maintenance.module';
 import { ReservationExpiryCron } from '../src/modules/reservations/reservations.module';
 import { AppointmentReminderCron } from '../src/modules/visits/appointment-reminder.cron';
@@ -112,7 +112,8 @@ export type CronJob =
   | 'notification-retry'
   | 'reservation-expiry'
   | 'broker-agreement-end'
-  | 'subscription-expiry';
+  | 'subscription-expiry'
+  | 'late-fee';
 
 function cronRunner(app: INestApplication): (job: CronJob) => Promise<void> {
   const appointments = app.get(AppointmentReminderCron);
@@ -123,6 +124,7 @@ function cronRunner(app: INestApplication): (job: CronJob) => Promise<void> {
   const notificationRetry = app.get(NotificationRetryCron);
   const brokerAgreement = app.get(BrokerAgreementCron);
   const subscriptionExpiry = app.get(SubscriptionExpiryCron);
+  const installmentsSvc = app.get(InstallmentsService);
   const asCron = (fn: () => Promise<unknown>) =>
     runTenantContext({ companyId: null, bypass: true, isPublic: false }, async () => {
       await fn();
@@ -145,6 +147,8 @@ function cronRunner(app: INestApplication): (job: CronJob) => Promise<void> {
         return brokerAgreement.run();
       case 'subscription-expiry':
         return asCron(() => subscriptionExpiry.handleExpiry());
+      case 'late-fee':
+        return asCron(() => installmentsSvc.applyLateFees());
     }
   };
 }

@@ -33,6 +33,7 @@ import {
   IsString,
   IsUUID,
   Max,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -46,6 +47,7 @@ import {
   StartDateRule,
   PlanTemplateStatus,
   PlanPaymentType,
+  DepositReviewStatus,
 } from '@prisma/client';
 import { UNCLEARED_INSTRUMENT_STATUSES } from '../deposits/review-queue';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -77,6 +79,7 @@ import {
 } from '../../common/utils/xlsx';
 import { reportFailure } from '../../common/observability/report-failure';
 import { CONTRACT_CANCELLED_MESSAGE, isDeadContract, LIVE_CONTRACT_WHERE, LIVE_PLAN_WHERE } from './live-contract';
+import { LATE_FEE_SETTING_KEYS, lateFeesDue, resolveLateFeeSettings } from './late-fee';
 
 // ─── Existing contract-based plan DTOs ────────────────────────────────────────
 
@@ -161,6 +164,8 @@ class CalculateInstallmentDto {
 
 @Injectable()
 export class InstallmentsService {
+  private readonly logger = new Logger(InstallmentsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     // Optional so unit tests can build the service without it.
@@ -421,6 +426,7 @@ export class InstallmentsService {
       where: { status: InstallmentStatus.PENDING, dueDate: { lt: new Date() }, plan: LIVE_PLAN_WHERE },
       select: {
         id: true,
+        type: true,
         amount: true,
         dueDate: true,
         companyId: true,
@@ -449,7 +455,8 @@ export class InstallmentsService {
     if (this.notifications) {
       for (const inst of due) {
         const contract = inst.plan?.contract;
-        if (!contract) continue;
+        // A late fee was announced when it was charged.
+        if (!contract || inst.type === PlanPaymentType.LATE_FEE) continue;
         const payload = {
           amount: Number(inst.amount),
           dueDate: inst.dueDate.toISOString().slice(0, 10),
@@ -474,6 +481,159 @@ export class InstallmentsService {
       }
     }
     return { marked: result.count };
+  }
+
+  /**
+   * Daily, after markOverdue: charge the late-payment fee (company setting
+   * lateFee.*, off by default) on overdue installments of live contracts.
+   * Fees are never charged on a fee or a cheque penalty, nor while a payment
+   * for the installment waits for review or for its cheque to clear.
+   */
+  async applyLateFees(now = new Date()) {
+    const enabledRows = await this.prisma.setting.findMany({
+      where: { key: 'lateFee.enabled' },
+      select: { companyId: true, value: true },
+    });
+    const companyIds = enabledRows.filter((r) => r.value === true).map((r) => r.companyId);
+    let charged = 0;
+    for (const companyId of companyIds) {
+      try {
+        charged += await this.applyLateFeesForCompany(companyId, now);
+      } catch (err) {
+        reportFailure(this.logger, 'cron', `[late-fee] company ${companyId} failed`, err);
+      }
+    }
+    return { charged };
+  }
+
+  private async applyLateFeesForCompany(companyId: string, now: Date): Promise<number> {
+    const settings = resolveLateFeeSettings(
+      await this.prisma.setting.findMany({
+        where: { companyId, key: { in: LATE_FEE_SETTING_KEYS } },
+        select: { key: true, value: true },
+      }),
+    );
+    if (!settings.enabled) return 0;
+    const graceCutoff = new Date(now.getTime() - settings.graceDays * 24 * 60 * 60 * 1000);
+    const rows = await this.prisma.installment.findMany({
+      where: {
+        companyId,
+        status: InstallmentStatus.OVERDUE,
+        type: { notIn: [PlanPaymentType.LATE_FEE, PlanPaymentType.BOUNCE_PENALTY] },
+        dueDate: { lte: graceCutoff },
+        plan: LIVE_PLAN_WHERE,
+        // A payment already on its way stops the clock.
+        deposits: {
+          none: {
+            deletedAt: null,
+            OR: [
+              { reviewStatus: DepositReviewStatus.PENDING_REVIEW },
+              { paymentInstrument: { status: { in: UNCLEARED_INSTRUMENT_STATUSES } } },
+            ],
+          },
+        },
+      },
+      select: {
+        id: true,
+        planId: true,
+        amount: true,
+        dueDate: true,
+        lateFees: { select: { amount: true, waivedAt: true } },
+        plan: {
+          select: {
+            contract: {
+              select: { id: true, contractNumber: true, customerId: true, unit: { select: { code: true } } },
+            },
+          },
+        },
+      },
+    });
+
+    let count = 0;
+    for (const inst of rows) {
+      const fees = lateFeesDue(
+        { amount: Number(inst.amount), dueDate: inst.dueDate },
+        settings,
+        inst.lateFees.map((f) => ({ amount: Number(f.amount), waived: f.waivedAt !== null })),
+        now,
+      );
+      if (fees.length === 0) continue;
+      await this.prisma.installment.createMany({
+        data: fees.map((amount) => ({
+          planId: inst.planId,
+          type: PlanPaymentType.LATE_FEE,
+          feeForId: inst.id,
+          dueDate: now,
+          amount: new Prisma.Decimal(amount),
+          status: InstallmentStatus.PENDING,
+          companyId,
+        })),
+      });
+      count += fees.length;
+      const contract = inst.plan?.contract;
+      if (this.notifications && contract) {
+        const total = fees.reduce((a, f) => a + f, 0);
+        await runInCompany(companyId, () =>
+          this.notifications!.sendToUser(contract.customerId, 'installment_late_fee', {
+            amount: Math.round(total * 100) / 100,
+            installmentAmount: Number(inst.amount),
+            dueDate: inst.dueDate.toISOString().slice(0, 10),
+            contractNumber: contract.contractNumber ?? '',
+            unitCode: contract.unit?.code ?? '',
+            contractId: contract.id,
+            installmentId: inst.id,
+            entityType: 'contract',
+            entityId: contract.id,
+          }),
+        );
+      }
+    }
+    return count;
+  }
+
+  /**
+   * Waive an unpaid late fee. It stays on the plan as CANCELLED with
+   * waivedAt, so the sweep does not charge that period again.
+   */
+  async waiveLateFee(id: string, actorId: string, reason?: string) {
+    const companyId = getRequiredCompanyId();
+    const fee = await this.prisma.installment.findFirst({
+      where: { id, companyId, type: PlanPaymentType.LATE_FEE },
+      select: { id: true, status: true, amount: true, feeForId: true },
+    });
+    if (!fee) throw new NotFoundException('Late fee not found');
+    const pending = await this.prisma.deposit.count({
+      where: {
+        installmentId: id,
+        deletedAt: null,
+        OR: [
+          { reviewStatus: DepositReviewStatus.PENDING_REVIEW },
+          { paymentInstrument: { status: { in: UNCLEARED_INSTRUMENT_STATUSES } } },
+        ],
+      },
+    });
+    if (pending > 0) {
+      throw new ConflictException('A payment for this fee is waiting for review — settle it first');
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const res = await tx.installment.updateMany({
+        where: { id, companyId, status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] } },
+        data: { status: InstallmentStatus.CANCELLED, waivedAt: new Date() },
+      });
+      if (res.count === 0) throw new ConflictException('Only an unpaid late fee can be waived');
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: 'installment.late-fee-waived',
+          entityType: 'Installment',
+          entityId: id,
+          before: { status: fee.status, amount: Number(fee.amount) },
+          after: { status: InstallmentStatus.CANCELLED, reason: reason ?? null, feeForId: fee.feeForId },
+          companyId,
+        },
+      });
+      return { id, status: InstallmentStatus.CANCELLED };
+    });
   }
 }
 
@@ -1099,6 +1259,15 @@ export class InstallmentsCron {
       } catch (err) {
         captureExceptionSafe(err, { job: 'installments-mark-overdue' });
       }
+      try {
+        if (this.lock) {
+          await this.lock.withLock('installments-late-fee', 5 * 60_000, () => this.svc.applyLateFees());
+        } else {
+          await this.svc.applyLateFees();
+        }
+      } catch (err) {
+        captureExceptionSafe(err, { job: 'installments-late-fee' });
+      }
     });
   }
 }
@@ -1498,6 +1667,13 @@ class MeInstallmentsController {
   }
 }
 
+class WaiveLateFeeDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  reason?: string;
+}
+
 // ─── Existing contract-based controller ───────────────────────────────────────
 
 @ApiTags('installments')
@@ -1510,6 +1686,17 @@ class InstallmentsController {
   @Post('installment-plans')
   create(@Body() dto: CreatePlanDto, @Req() req: { user: { sub: string } }) {
     return this.svc.createPlan(dto, req.user.sub);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('installments:manage')
+  @Post('installments/:id/waive-late-fee')
+  waiveLateFee(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: WaiveLateFeeDto,
+    @Req() req: { user: { sub: string } },
+  ) {
+    return this.svc.waiveLateFee(id, req.user.sub, dto.reason);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
