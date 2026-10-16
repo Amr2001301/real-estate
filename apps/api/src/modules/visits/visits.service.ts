@@ -15,6 +15,7 @@ import {
 } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { assertAssignableSales } from '../../common/utils/assignable-sales';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { managerScopeIds, SALES_ACTOR_ROLES } from '../../common/utils/sales-scope';
 import { matchOrCreateLeadForClient } from '../crm/crm-lead-matching';
@@ -1107,6 +1108,8 @@ export class VisitsService {
         throwBadRequest: true,
       },
     );
+    // …and still active: an appointment handed to a departed rep reminds nobody.
+    await assertAssignableSales(this.prisma, dto.assignedSalesId, [UserRole.SALES, UserRole.ADMIN]);
 
     // SALES_REASSIGNED captures a change from one sales user to another;
     // SALES_ASSIGNED stays for the initial assignment.

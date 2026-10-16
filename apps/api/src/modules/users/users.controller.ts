@@ -20,6 +20,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { EXPORTABLE_ROLES, UsersService, type ExportableRole, type UploadedImage } from './users.service';
 import {
   AssignManagerDto,
+  OffboardUserDto,
   CreateUserDto,
   UpdateUserDto,
   UserOptionsQueryDto,
@@ -173,6 +174,18 @@ export class UsersController {
   @Patch(':id/manager')
   assignManager(@Param('id', ParseUUIDPipe) id: string, @Body() dto: AssignManagerDto) {
     return this.users.assignManager(id, dto.managerId ?? null);
+  }
+
+  // Hand a departing sales person's open work to a colleague in one step.
+  @Roles(UserRole.ADMIN)
+  @Permissions('users:deactivate')
+  @Post(':id/offboard')
+  offboard(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: OffboardUserDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.users.offboard(id, dto.toUserId, user.sub);
   }
 
   @Roles(UserRole.ADMIN)

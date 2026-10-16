@@ -49,6 +49,11 @@ export class CreateUserDto {
 // ADMIN-only: assign or clear a SALES user's manager. Kept separate from the
 // shared UpdateUserDto so the self-profile route (PATCH /users/me) can never
 // set managerId. null clears the assignment; @IsOptional permits null/undefined.
+export class OffboardUserDto {
+  @IsUUID()
+  toUserId!: string;
+}
+
 export class AssignManagerDto {
   @IsOptional()
   @IsUUID()
