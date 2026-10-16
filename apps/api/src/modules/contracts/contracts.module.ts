@@ -62,6 +62,12 @@ import { BonusModule } from '../bonus/bonus.module';
 import { BonusService } from '../bonus/bonus.module';
 import { CancellationPolicyService } from './cancellation-policy.service';
 import { ContractCancellationService } from './contract-cancellation.service';
+import { startUnitWarranties } from './unit-warranties';
+import {
+  ContractAmendmentsService,
+  SwapContractUnitDto,
+  TransferContractDto,
+} from './contract-amendments.service';
 import { reportFailure } from '../../common/observability/report-failure';
 import { CONTRACT_CANCELLED_MESSAGE, LIVE_CONTRACT_WHERE, isDeadContract } from '../installments/live-contract';
 import { ContractRefundsService, RecordRefundDto } from './contract-refunds.service';
@@ -1049,31 +1055,10 @@ export class ContractsService {
    * Idempotent: items already started are left untouched, so a re-sign (or a
    * later category-duration change) never mutates an existing warranty.
    */
-  private async startUnitWarranties(unitId: string, warrantyStartAt: Date) {
-    const items = await this.prisma.unitMaintenanceItem.findMany({
-      where: { unitId, active: true, warrantyStart: null },
-      include: { category: { select: { warrantyDurationMonths: true } } },
-    });
-    for (const item of items) {
-      const months = item.warrantyDurationMonthsSnapshot ?? item.category?.warrantyDurationMonths ?? null;
-      const warrantyEnd =
-        months != null
-          ? (() => {
-              const d = new Date(warrantyStartAt);
-              d.setMonth(d.getMonth() + months);
-              return d;
-            })()
-          : null;
-      await this.prisma.unitMaintenanceItem.update({
-        where: { id: item.id },
-        data: {
-          warrantyStart: warrantyStartAt,
-          warrantyEnd,
-          warrantyDurationMonthsSnapshot: months,
-        },
-      });
-    }
+  async startUnitWarranties(unitId: string, warrantyStartAt: Date) {
+    await startUnitWarranties(this.prisma, unitId, warrantyStartAt);
   }
+
 }
 
 @ApiTags('contracts')
@@ -1085,7 +1070,41 @@ class ContractsController {
     private readonly cancellationPolicy: CancellationPolicyService,
     private readonly cancellationSvc: ContractCancellationService,
     private readonly refunds: ContractRefundsService,
+    private readonly amendments: ContractAmendmentsService,
   ) {}
+
+  // Transfers and unit swaps recorded on the contract.
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @Permissions('contracts:read')
+  @Get(':id/amendments')
+  listAmendments(@Param('id', ParseUUIDPipe) id: string) {
+    return this.amendments.list(id);
+  }
+
+  // تنازل — the contract passes to another customer. It unwinds the deal for
+  // the old owner, so it takes the same strict permission as cancelling.
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('contracts:cancel')
+  @Post(':id/transfer')
+  transfer(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: TransferContractDto,
+  ) {
+    return this.amendments.transfer(id, dto, user.sub);
+  }
+
+  // تبديل — the contract moves to another unit; same strict permission.
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('contracts:cancel')
+  @Post(':id/swap-unit')
+  swapUnit(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: SwapContractUnitDto,
+  ) {
+    return this.amendments.swapUnit(id, dto, user.sub);
+  }
 
   // Cancelled contracts whose customer is still owed part of the refund.
   @Roles(UserRole.ADMIN)
@@ -1336,6 +1355,7 @@ class ContractsController {
     CancellationPolicyService,
     ContractCancellationService,
     ContractRefundsService,
+    ContractAmendmentsService,
   ],
   exports: [ContractsService, CancellationPolicyService, ContractCancellationService],
 })

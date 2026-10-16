@@ -77,7 +77,7 @@ function isCommissionEffectivelyPaid(commission: {
  * cleared so the next contract's signing starts them afresh (signing only
  * starts items whose warrantyStart is still empty, and freezes the duration).
  */
-async function resetUnitWarranties(tx: Prisma.TransactionClient, unitId: string) {
+export async function resetUnitWarranties(tx: Prisma.TransactionClient, unitId: string) {
   await tx.unitMaintenanceItem.updateMany({
     where: { unitId, warrantyStart: { not: null } },
     data: { warrantyStart: null, warrantyEnd: null, warrantyDurationMonthsSnapshot: null },

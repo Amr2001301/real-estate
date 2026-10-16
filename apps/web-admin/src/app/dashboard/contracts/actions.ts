@@ -213,3 +213,32 @@ export async function waiveLateFeeAction(contractId: string, installmentId: stri
   revalidatePath(`/dashboard/contracts/${contractId}`);
   return { ok: true };
 }
+
+// تنازل — the contract passes to another customer.
+export async function transferContractAction(id: string, formData: FormData): Promise<ContractFormState> {
+  try {
+    await api.post(`/contracts/${id}/transfer`, {
+      toCustomerId: String(formData.get('toCustomerId') ?? ''),
+      reason: String(formData.get('reason') ?? '').trim(),
+    });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/dashboard/contracts/${id}`);
+  return { ok: true };
+}
+
+// تبديل — the contract moves to another unit at a new price.
+export async function swapContractUnitAction(id: string, formData: FormData): Promise<ContractFormState> {
+  try {
+    await api.post(`/contracts/${id}/swap-unit`, {
+      unitId: String(formData.get('unitId') ?? ''),
+      totalAmount: Number(formData.get('totalAmount')),
+      reason: String(formData.get('reason') ?? '').trim(),
+    });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/dashboard/contracts/${id}`);
+  return { ok: true };
+}

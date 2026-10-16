@@ -16,7 +16,7 @@ import {
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import { ExportMenu } from '@/components/export-menu';
-import type { CancellationSuggestion, Contract, ContractCancellationView } from '@/lib/types';
+import type { CancellationSuggestion, Contract, ContractAmendment, ContractCancellationView } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { cn } from '@/lib/cn';
@@ -29,6 +29,7 @@ import { OwnerDocumentsCard } from '@/components/documents/owner-documents-card'
 import { CreatePlanForm } from './create-plan-form';
 import { RecordPaymentButton } from './record-payment-button';
 import { WaiveLateFeeButton } from './waive-late-fee';
+import { AmendmentsPanel } from './amendments-panel';
 import { AssignContractNumber } from './assign-number';
 import { SignFollowupsAlert } from './sign-followups-alert';
 import { CancelContract } from './cancel-contract';
@@ -103,6 +104,9 @@ export default async function ContractDetailPage({
   // A cancelled contract shows its cancellation and refunds; an admin sees
   // the cancel form (pre-filled from the cancellation policy) on a live one.
   const isCancelled = contract.status === 'CANCELLED';
+  const amendments = isAdmin
+    ? ((await safe(api.get<ContractAmendment[]>(`/contracts/${id}/amendments`))).data ?? [])
+    : [];
   const [cancellation, suggestion] = await Promise.all([
     isCancelled && isAdmin
       ? safe(api.get<ContractCancellationView>(`/contracts/${id}/cancellation`)).then((x) => x.data)
@@ -480,6 +484,18 @@ export default async function ContractDetailPage({
                 </div>
               )}
             </PremiumSectionCard>
+
+            {isAdmin && (
+              <PremiumSectionCard title={m.amendmentsTitle} icon={<Link2 />}>
+                <AmendmentsPanel
+                  contractId={contract.id}
+                  live={!isCancelled}
+                  history={amendments}
+                  currency={currency}
+                  locale={locale}
+                />
+              </PremiumSectionCard>
+            )}
 
             {suggestion && (
               <PremiumSectionCard title={m.cancelTitle} icon={<AlertCircle />}>

@@ -64,6 +64,8 @@ const EXPECTED_CLASSIFICATIONS: [string, ModelTenancyTier][] = [
   // Step D1
   ['ContractCancellation', 'TENANT_OWNED'],
   ['Refund', 'TENANT_OWNED'],
+  // Contract transfer / unit swap history
+  ['ContractAmendment', 'TENANT_OWNED'],
 ];
 
 describe('SEC — Middleware Classification (STEP 2)', () => {
@@ -94,9 +96,9 @@ describe('SEC — Middleware Classification (STEP 2)', () => {
   });
 
   // MC-2
-  it('MC-2: TENANT_OWNED count matches audit-documented 50 (48 + ContractCancellation + Refund + User − NotificationTemplate)', () => {
+  it('MC-2: TENANT_OWNED count matches audit-documented 51 (48 + ContractCancellation + Refund + User − NotificationTemplate + ContractAmendment)', () => {
     const owned = Object.entries(MODEL_TENANCY).filter(([, t]) => t === 'TENANT_OWNED');
-    expect(owned.length).toBe(50);
+    expect(owned.length).toBe(51);
   });
 
   // MC-3

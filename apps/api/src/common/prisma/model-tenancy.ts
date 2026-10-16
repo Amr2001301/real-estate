@@ -132,6 +132,8 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   PaymentCorrection: 'TENANT_OWNED',
   // Step D1 (09-reversal-design.md §4.2) — cancellation accounting.
   ContractCancellation: 'TENANT_OWNED',
+  // Transfers (تنازل) and unit swaps (تبديل) on a live contract.
+  ContractAmendment: 'TENANT_OWNED',
   Refund: 'TENANT_OWNED',
   InstallmentPlanTemplate: 'TENANT_OWNED',
 
