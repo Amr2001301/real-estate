@@ -93,9 +93,12 @@ function makePrismaMock() {
     // P3 — Project lookup powers the notification payload's projectName.
     project: {
       findUnique: jest.fn().mockResolvedValue({ name: { ar: 'م', en: 'Project' } }),
+      // The request's project and unit are this company's.
+      findFirst: jest.fn().mockResolvedValue({ id: PROJECT_ID }),
     },
     unit: {
       findUnique: jest.fn().mockResolvedValue(null),
+      findFirst: jest.fn().mockResolvedValue({ building: { phase: { projectId: PROJECT_ID } } }),
     },
     lead: {
       findFirst: jest.fn().mockResolvedValue(null),

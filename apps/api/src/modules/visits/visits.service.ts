@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   BadRequestException,
   ForbiddenException,
   Injectable,
@@ -15,7 +16,6 @@ import {
 } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { assertAssignableSales } from '../../common/utils/assignable-sales';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { managerScopeIds, SALES_ACTOR_ROLES } from '../../common/utils/sales-scope';
 import { matchOrCreateLeadForClient } from '../crm/crm-lead-matching';
@@ -35,7 +35,7 @@ import {
   UpdateAppointmentStatusDto,
   UpdateRequestStatusDto,
 } from './dto/visits.dto';
-import { VisitRequestSource } from '@prisma/client';
+import { UnitStatus, VisitRequestSource } from '@prisma/client';
 import { AuthUser } from '../../common/decorators/current-user.decorator';
 import {
   assertClientInScope,
@@ -367,9 +367,22 @@ export class VisitsService {
   async scheduleVisit(requestId: string, dto: ScheduleVisitDto, user: AuthUser) {
     const req = await this.prisma.visitRequest.findUnique({
       where: { id: requestId },
-      include: { lead: { select: { id: true } } },
+      include: { lead: { select: { id: true, assignedSalesId: true } } },
     });
     if (!req) throw new NotFoundException('Visit request not found');
+    // Scheduling converts the request: once only, and never a closed one.
+    if (req.requestStatus !== VisitRequestStatus.NEW && req.requestStatus !== VisitRequestStatus.UNDER_REVIEW) {
+      throw new BadRequestException(`Cannot schedule a visit request in status: ${req.requestStatus}`);
+    }
+    const assignedSalesId = dto.assignedSalesId
+      ? await this.resolveAssignableSalesId(dto.assignedSalesId, user)
+      : null;
+    await this.assertVisitSlot({
+      assignedSalesId,
+      unitId: dto.unitId ?? req.unitId ?? null,
+      scheduledAt: new Date(dto.scheduledAt),
+      durationMinutes: dto.durationMinutes ?? null,
+    });
 
     const visitNumber = await this.nextVisitNumber();
 
@@ -384,7 +397,7 @@ export class VisitsService {
           clientId: req.leadId ? null : (req.userId ?? null),
           projectId: dto.projectId ?? req.projectId,
           unitId: dto.unitId ?? req.unitId ?? null,
-          assignedSalesId: dto.assignedSalesId ?? null,
+          assignedSalesId,
           scheduledAt: new Date(dto.scheduledAt),
           durationMinutes: dto.durationMinutes ?? null,
           location: dto.location ?? null,
@@ -396,13 +409,21 @@ export class VisitsService {
         include: APPOINTMENT_INCLUDE,
       });
 
-      await tx.visitRequest.update({
-        where: { id: requestId },
+      // Guarded: a second click on "schedule" finds it CONVERTED and stops.
+      const converted = await tx.visitRequest.updateMany({
+        where: { id: requestId, requestStatus: { in: [VisitRequestStatus.NEW, VisitRequestStatus.UNDER_REVIEW] } },
         data: {
           requestStatus: VisitRequestStatus.CONVERTED,
           convertedAt: new Date(),
         },
       });
+      if (converted.count === 0) throw new ConflictException('This visit request was already scheduled');
+
+      // A website lead has no owner yet: the rep who runs the visit takes it,
+      // otherwise they could not open the lead they are meeting.
+      if (req.leadId && !req.lead?.assignedSalesId && assignedSalesId) {
+        await tx.lead.updateMany({ where: { id: req.leadId, assignedSalesId: null }, data: { assignedSalesId } });
+      }
 
       await tx.visitActivity.create({
         data: {
@@ -417,8 +438,8 @@ export class VisitsService {
       });
 
       if (req.leadId) {
-        const salesName = dto.assignedSalesId
-          ? (await resolveTenantUser(tx, dto.assignedSalesId, { fullName: true }, { throwBadRequest: true }).catch(() => null))?.fullName
+        const salesName = assignedSalesId
+          ? (await resolveTenantUser(tx, assignedSalesId, { fullName: true }, { throwBadRequest: true }).catch(() => null))?.fullName
           : null;
 
         // Advance lead to VISIT stage if still in an early stage
@@ -443,6 +464,38 @@ export class VisitsService {
             },
           },
         });
+      } else if (req.userId) {
+        // A signed-in customer's request carries no lead: put the visit in
+        // the pipeline the way a direct appointment does.
+        const client = await tx.user.findFirst({
+          where: { id: req.userId },
+          select: { fullName: true, phone: true, email: true },
+        });
+        if (client) {
+          const { leadId } = await matchOrCreateLeadForClient(tx, {
+            clientId: req.userId,
+            projectId: dto.projectId ?? req.projectId,
+            unitId: dto.unitId ?? req.unitId ?? null,
+            bumpableStages: [LeadStage.NEW, LeadStage.INTERESTED],
+            targetStage: LeadStage.VISIT,
+            clientFullName: client.fullName,
+            clientPhone: client.phone ?? '',
+            clientEmail: client.email,
+            assignedSalesId,
+          });
+          await tx.leadActivity.create({
+            data: {
+              leadId,
+              type: 'visit',
+              payload: {
+                visitId: appointment.id,
+                visitNumber,
+                status: AppointmentStatus.SCHEDULED,
+                scheduledAt: dto.scheduledAt,
+              },
+            },
+          });
+        }
       }
 
       return appointment;
@@ -454,7 +507,7 @@ export class VisitsService {
       const customerId = await this.resolveCustomerUserId(appointment.id);
       const payload = await this.buildAppointmentPayload(appointment.id);
       await this.notifications.sendToUsers(
-        [customerId, dto.assignedSalesId ?? null],
+        [customerId, appointment.assignedSalesId ?? null],
         'visit_scheduled',
         payload,
       );
@@ -557,6 +610,14 @@ export class VisitsService {
       effectiveSalesId = user.sub;
     } else if (dto.assignedSalesId) {
       effectiveSalesId = await this.resolveAssignableSalesId(dto.assignedSalesId, user);
+    }
+    if (dto.status !== AppointmentStatus.COMPLETED) {
+      await this.assertVisitSlot({
+        assignedSalesId: effectiveSalesId,
+        unitId: dto.unitId ?? null,
+        scheduledAt,
+        durationMinutes: dto.durationMinutes ?? null,
+      });
     }
 
     const initialStatus =
@@ -793,6 +854,41 @@ export class VisitsService {
   // Validates an assignment target: must be an active sales actor (SALES or
   // SALES_MANAGER). A SALES_MANAGER may only assign within their own scope
   // (self + team). Returns the validated salesId.
+  /**
+   * A visit needs a unit that is still for sale and a rep who is free then:
+   * no other live appointment of theirs overlaps it (60 minutes when a visit
+   * has no duration).
+   */
+  private async assertVisitSlot(slot: {
+    assignedSalesId: string | null;
+    unitId: string | null;
+    scheduledAt: Date;
+    durationMinutes: number | null;
+    excludeId?: string;
+  }) {
+    if (slot.unitId) {
+      const unit = await this.prisma.unit.findFirst({ where: { id: slot.unitId }, select: { status: true } });
+      if (unit?.status === UnitStatus.SOLD) throw new BadRequestException('هذه الوحدة تم بيعها');
+    }
+    if (!slot.assignedSalesId || Number.isNaN(slot.scheduledAt.getTime())) return;
+    const MIN = 60_000;
+    const start = slot.scheduledAt.getTime();
+    const end = start + (slot.durationMinutes ?? 60) * MIN;
+    const nearby = await this.prisma.visitAppointment.findMany({
+      where: {
+        assignedSalesId: slot.assignedSalesId,
+        status: { in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED, AppointmentStatus.PENDING_RESCHEDULE] },
+        scheduledAt: { gte: new Date(start - 24 * 60 * MIN), lt: new Date(end) },
+        ...(slot.excludeId ? { id: { not: slot.excludeId } } : {}),
+      },
+      select: { scheduledAt: true, durationMinutes: true, visitNumber: true },
+    });
+    const clash = nearby.find((a) => a.scheduledAt.getTime() + (a.durationMinutes ?? 60) * MIN > start);
+    if (clash) {
+      throw new ConflictException(`لدى موظف المبيعات زيارة أخرى في هذا الوقت (${clash.visitNumber ?? ''})`.trim());
+    }
+  }
+
   private async resolveAssignableSalesId(salesId: string, user: AuthUser): Promise<string> {
     const s = await resolveTenantUser(
       this.prisma,
@@ -1016,6 +1112,16 @@ export class VisitsService {
     if (FINAL_STATUSES.includes(appt.status)) {
       throw new BadRequestException(`Cannot reschedule appointment in status: ${appt.status}`);
     }
+    const assignedSalesId = dto.assignedSalesId
+      ? await this.resolveAssignableSalesId(dto.assignedSalesId, user)
+      : appt.assignedSalesId;
+    await this.assertVisitSlot({
+      assignedSalesId,
+      unitId: appt.unitId,
+      scheduledAt: new Date(dto.scheduledAt),
+      durationMinutes: dto.durationMinutes ?? appt.durationMinutes,
+      excludeId: id,
+    });
 
     const visitNumber = await this.nextVisitNumber();
 
@@ -1033,7 +1139,7 @@ export class VisitsService {
           clientId: appt.clientId,
           projectId: appt.projectId,
           unitId: appt.unitId,
-          assignedSalesId: dto.assignedSalesId ?? appt.assignedSalesId,
+          assignedSalesId,
           scheduledAt: new Date(dto.scheduledAt),
           durationMinutes: dto.durationMinutes ?? appt.durationMinutes,
           location: dto.location ?? appt.location,
@@ -1098,18 +1204,22 @@ export class VisitsService {
       throw new BadRequestException(`Cannot reassign appointment in status: ${appt.status}`);
     }
 
+    // An active sales person (a selling manager included), in the caller's
+    // team for a manager, and free at that time.
+    await this.resolveAssignableSalesId(dto.assignedSalesId, user);
     const salesUser = await resolveTenantUser(
       this.prisma,
       dto.assignedSalesId,
       { id: true, fullName: true, role: true },
-      {
-        expectRoles: [UserRole.SALES, UserRole.ADMIN],
-        label: 'Assigned user must be a sales representative',
-        throwBadRequest: true,
-      },
+      { label: 'Assigned user must be a sales representative', throwBadRequest: true },
     );
-    // …and still active: an appointment handed to a departed rep reminds nobody.
-    await assertAssignableSales(this.prisma, dto.assignedSalesId, [UserRole.SALES, UserRole.ADMIN]);
+    await this.assertVisitSlot({
+      assignedSalesId: dto.assignedSalesId,
+      unitId: null,
+      scheduledAt: appt.scheduledAt,
+      durationMinutes: appt.durationMinutes,
+      excludeId: id,
+    });
 
     // SALES_REASSIGNED captures a change from one sales user to another;
     // SALES_ASSIGNED stays for the initial assignment.

@@ -5,9 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
-import { AppointmentStatus, Prisma, LeadStage, UserRole } from '@prisma/client';
+import { AppointmentStatus, Prisma, LeadStage, ReservationStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { assertAssignableSales } from '../../common/utils/assignable-sales';
+import { managerScopeIds } from '../../common/utils/sales-scope';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import { NotificationsService } from '../notifications/notifications.module';
 import {
@@ -74,6 +75,10 @@ export class LeadsService {
       if (!scope.includes(assignedSalesId)) {
         throw new ForbiddenException('You can only assign a lead to yourself or your team');
       }
+    }
+    // An admin may pick anyone — but only an active sales person.
+    if (assignedSalesId && assignedSalesId !== actor?.sub) {
+      await assertAssignableSales(this.prisma, assignedSalesId);
     }
 
     const lead = await this.prisma.$transaction(async (tx) => {
@@ -247,6 +252,8 @@ export class LeadsService {
     dateTo?: string;
     /** Exact instant, exclusive. Day-granular `dateTo` cannot express "older than 72 hours". */
     createdBefore?: Date;
+    /** Only leads nobody owns yet. */
+    unassigned?: boolean;
   }) {
     const page = opts.page ?? 1;
     const pageSize = opts.pageSize ?? 20;
@@ -261,6 +268,7 @@ export class LeadsService {
           ? { assignedSalesId: opts.salesId }
           : {}),
       ...(opts.assignedToMe ? { assignedSalesId: opts.assignedToMe } : {}),
+      ...(opts.unassigned ? { assignedSalesId: null } : {}),
       ...(opts.clientId ? { clientId: opts.clientId } : {}),
       ...(opts.sourceId ? { sourceId: opts.sourceId } : {}),
       ...(opts.dateFrom || opts.dateTo || opts.createdBefore
@@ -393,11 +401,10 @@ export class LeadsService {
     });
     if (!lead) throw new NotFoundException('Lead not found');
     if (lead.client) {
-      const { passwordHash, createdAt: clientCreatedAt, ...clientRest } = lead.client;
-      const hasAccount =
-        !!passwordHash ||
-        (clientCreatedAt != null &&
-          new Date(clientCreatedAt).getTime() < new Date(lead.createdAt).getTime() - 5_000);
+      // An account is a password set on the client (CLAUDE.md: never infer
+      // it from how much older the client row is than the lead).
+      const { passwordHash, createdAt: _clientCreatedAt, ...clientRest } = lead.client;
+      const hasAccount = !!passwordHash;
       return { ...lead, client: { ...clientRest, hasAccount } };
     }
     return lead;
@@ -405,7 +412,14 @@ export class LeadsService {
 
   async update(id: string, dto: UpdateLeadDto, actorId?: string) {
     const lead = await this.assertExists(id);
-    const updated = await this.prisma.lead.update({ where: { id }, data: { ...dto } });
+    const data: Prisma.LeadUncheckedUpdateInput = { ...dto };
+    if (dto.phone !== undefined) {
+      // Stored E.164, like on create — duplicate and OTP lookups match on it.
+      const phone = await phoneForWrite(this.prisma, dto.phone, getTenantContext()?.companyId ?? null);
+      if (!phone) throw new BadRequestException('رقم الهاتف غير صالح');
+      data.phone = phone;
+    }
+    const updated = await this.prisma.lead.update({ where: { id }, data });
     // The lead's sales person hears that someone else edited it.
     await this.notifications.sendToUser(
       lead.assignedSalesId,
@@ -419,6 +433,21 @@ export class LeadsService {
   async updateStage(id: string, dto: UpdateLeadStageDto, actorId?: string) {
     const lead = await this.assertExists(id);
     if (lead.stage === dto.stage) return lead;
+    // WON is what a converted reservation sets — by hand it marks a sale that
+    // never happened (and then blocks the real reservation).
+    if (dto.stage === LeadStage.WON) {
+      throw new BadRequestException('تتحول حالة العميل إلى "تم البيع" تلقائياً عند تحويل الحجز إلى عقد');
+    }
+    // A lead with a deal in progress is not lost — and one that was won stays won.
+    if (lead.stage === LeadStage.WON) {
+      throw new BadRequestException('تم البيع لهذا العميل — لا يمكن تغيير حالته');
+    }
+    if (dto.stage === LeadStage.LOST) {
+      const live = await this.prisma.reservation.count({
+        where: { leadId: id, status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] } },
+      });
+      if (live > 0) throw new BadRequestException('للعميل حجز قائم — ألغِ الحجز أولاً قبل اعتباره مفقوداً');
+    }
     const updated = await this.prisma.lead.update({
       where: { id },
       data: { stage: dto.stage },
@@ -447,13 +476,29 @@ export class LeadsService {
     return updated;
   }
 
-  async assign(id: string, dto: AssignLeadDto, actorId?: string) {
+  async assign(id: string, dto: AssignLeadDto, actor?: AuthUser) {
+    const actorId = actor?.sub;
     const lead = await this.assertExists(id);
+    if (actor?.role === UserRole.SALES_MANAGER) {
+      // A manager routes their unassigned queue and their own team's leads,
+      // to themselves or someone on their team.
+      const team = await managerScopeIds(this.prisma, actor.sub);
+      if (lead.assignedSalesId && !team.includes(lead.assignedSalesId)) {
+        throw new ForbiddenException('Record is outside your team');
+      }
+      if (!team.includes(dto.assignedSalesId)) {
+        throw new ForbiddenException('You can only assign a lead to yourself or your team');
+      }
+    }
     if (dto.assignedSalesId) await assertAssignableSales(this.prisma, dto.assignedSalesId);
     const updated = await this.prisma.lead.update({
       where: { id },
       data: { assignedSalesId: dto.assignedSalesId },
     });
+    // The lead's upcoming visits go with it: the old rep would be reminded of
+    // them and the new one could not see them.
+    const upcoming = { leadId: id, status: { in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED, AppointmentStatus.PENDING_RESCHEDULE] }, scheduledAt: { gte: new Date() } };
+    await this.prisma.visitAppointment.updateMany({ where: upcoming, data: { assignedSalesId: dto.assignedSalesId } });
     await this.prisma.leadActivity.create({
       data: { leadId: id, type: 'assigned', payload: { salesId: dto.assignedSalesId } },
     });
