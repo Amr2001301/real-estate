@@ -241,7 +241,7 @@ async function main() {
   console.log('7/8  Creating commissions and payouts…');
 
   const ensureCommission = async (num: string, contractId: string, unitId: string, projectId: string, reservationId: string | undefined, basisAmount: number, commPct: number, status: BrokerCommissionStatus, earnedDaysAgo: number, approvedDaysAgo?: number) => {
-    const existing = await prisma.brokerCommission.findUnique({
+    const existing = await prisma.brokerCommission.findFirst({
       where: { commissionNumber: num },
       select: { id: true, grossAmount: true, taxAmount: true, withholdingAmount: true, netAmount: true },
     });
@@ -283,7 +283,7 @@ async function main() {
   ]);
 
   // Payout — PAID (covers cm1 + cm2)
-  const existingPayout = await prisma.brokerPayout.findUnique({ where: { payoutNumber: 'BPO-DEMO-NEW-001' }, select: { id: true } });
+  const existingPayout = await prisma.brokerPayout.findFirst({ where: { payoutNumber: 'BPO-DEMO-NEW-001' }, select: { id: true } });
   if (!existingPayout) {
     const totalGross = Number(cm1.grossAmount) + Number(cm2.grossAmount);
     const totalTax   = Number(cm1.taxAmount)   + Number(cm2.taxAmount);

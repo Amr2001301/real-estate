@@ -27,6 +27,7 @@ import {
 } from './dto/broker-payout.dto';
 import { reportFailure } from '../../common/observability/report-failure';
 import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
+import { isUniqueConflictOn } from '../../common/utils/contract-number';
 
 const PAYOUT_INCLUDE = {
   broker: {
@@ -210,7 +211,7 @@ export class BrokerPayoutsService {
   async create(dto: CreateBrokerPayoutDto, actor: AuthUser) {
     const broker = await this.prisma.broker.findUnique({
       where: { id: dto.brokerId },
-      select: { id: true, status: true, payoutHold: true },
+      select: { id: true, companyId: true, status: true, payoutHold: true },
     });
     if (!broker) throw new NotFoundException('Broker not found');
     if (broker.payoutHold) throw new ConflictException(PAYOUT_HOLD_MESSAGE);
@@ -220,9 +221,7 @@ export class BrokerPayoutsService {
       await this.assertCommissionsEligible(dto.brokerId, dto.commissionIds);
     }
 
-    const payoutNumber = await this.nextPayoutNumber();
-
-    const result = await this.prisma.$transaction(async (tx) => {
+    const write = (payoutNumber: string) => this.prisma.$transaction(async (tx) => {
       const created = await tx.brokerPayout.create({
         data: {
           payoutNumber,
@@ -234,7 +233,7 @@ export class BrokerPayoutsService {
       });
 
       if (dto.commissionIds && dto.commissionIds.length > 0) {
-        await tx.brokerCommission.updateMany({
+        const linked = await tx.brokerCommission.updateMany({
           where: {
             id: { in: dto.commissionIds },
             brokerId: dto.brokerId,
@@ -244,11 +243,27 @@ export class BrokerPayoutsService {
           },
           data: { payoutId: created.id },
         });
+        if (linked.count !== new Set(dto.commissionIds).size) {
+          throw new ConflictException('بعض العمولات أُضيفت لدفعة أخرى أو تغيّرت — حدّث الصفحة وأعد المحاولة');
+        }
         await this.recomputeTotals(tx, created.id);
       }
 
       return created.id;
     });
+    // Two payouts created at the same moment draw the same next number; the
+    // loser of the unique index retries with a fresh one.
+    let result!: string;
+    let payoutNumber!: string;
+    for (let attempt = 0; ; attempt++) {
+      payoutNumber = await this.nextPayoutNumber(broker.companyId);
+      try {
+        result = await write(payoutNumber);
+        break;
+      } catch (e) {
+        if (!isUniqueConflictOn(e, 'payoutNumber') || attempt >= 2) throw e;
+      }
+    }
 
     await this.writeActivity(dto.brokerId, BrokerActivityType.PAYOUT_CREATED, result, {
       payoutNumber,
@@ -270,7 +285,9 @@ export class BrokerPayoutsService {
     await this.assertCommissionsEligible(payout.brokerId, dto.commissionIds);
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.brokerCommission.updateMany({
+      // Still a draft at the moment of the write (approval locks it).
+      await this.moveStatus(tx, id, [BrokerPayoutStatus.DRAFT], { updatedAt: new Date() });
+      const linked = await tx.brokerCommission.updateMany({
         where: {
           id: { in: dto.commissionIds },
           brokerId: payout.brokerId,
@@ -280,6 +297,9 @@ export class BrokerPayoutsService {
         },
         data: { payoutId: id },
       });
+      if (linked.count !== new Set(dto.commissionIds).size) {
+        throw new ConflictException('بعض العمولات أُضيفت لدفعة أخرى أو تغيّرت — حدّث الصفحة وأعد المحاولة');
+      }
       await this.recomputeTotals(tx, id);
     });
 
@@ -291,6 +311,7 @@ export class BrokerPayoutsService {
     await this.assertPayoutInStatus(id, BrokerPayoutStatus.DRAFT);
 
     await this.prisma.$transaction(async (tx) => {
+      await this.moveStatus(tx, id, [BrokerPayoutStatus.DRAFT], { updatedAt: new Date() });
       // Only unlink commissions that are actually attached to THIS payout —
       // we never modify rows that belong to a different payout.
       await tx.brokerCommission.updateMany({
@@ -317,24 +338,24 @@ export class BrokerPayoutsService {
   async approve(id: string, dto: ApprovePayoutDto, actor: AuthUser) {
     const payout = await this.assertPayoutInStatus(id, BrokerPayoutStatus.DRAFT);
     await this.assertNotHeld(payout.brokerId);
-    const count = await this.prisma.brokerCommission.count({
-      where: { payoutId: id, status: 'APPROVED' },
-    });
-    if (count === 0) {
-      throw new BadRequestException(
-        'Cannot approve a payout that has no commissions',
-      );
-    }
-    const updated = await this.prisma.brokerPayout.update({
-      where: { id },
-      data: {
+    await this.prisma.$transaction(async (tx) => {
+      await this.moveStatus(tx, id, [BrokerPayoutStatus.DRAFT], {
         status: BrokerPayoutStatus.APPROVED,
         approvedById: actor.sub,
         approvedAt: new Date(),
         notes: dto.notes ? appendNote(payout.notes, `[approve] ${dto.notes.trim()}`) : payout.notes,
-      },
-      include: PAYOUT_INCLUDE,
+      });
+      // Counted with the payout locked: commissions removed meanwhile are seen.
+      const count = await tx.brokerCommission.count({
+        where: { payoutId: id, status: 'APPROVED' },
+      });
+      if (count === 0) {
+        throw new BadRequestException(
+          'Cannot approve a payout that has no commissions',
+        );
+      }
     });
+    const updated = await this.findOne(id);
 
     await this.writeActivity(payout.brokerId, BrokerActivityType.PAYOUT_APPROVED, id, {
       reference: updated.payoutNumber,
@@ -350,18 +371,15 @@ export class BrokerPayoutsService {
   async process(id: string, dto: ProcessPayoutDto, actor: AuthUser) {
     const payout = await this.assertPayoutInStatus(id, BrokerPayoutStatus.APPROVED);
     await this.assertNotHeld(payout.brokerId);
-    const updated = await this.prisma.brokerPayout.update({
-      where: { id },
-      data: {
-        status: BrokerPayoutStatus.PROCESSING,
-        processedById: actor.sub,
-        processedAt: new Date(),
-        ...(dto.paymentMethod ? { paymentMethod: dto.paymentMethod } : {}),
-        ...(dto.scheduledAt ? { scheduledAt: new Date(dto.scheduledAt) } : {}),
-        notes: dto.notes ? appendNote(payout.notes, `[process] ${dto.notes.trim()}`) : payout.notes,
-      },
-      include: PAYOUT_INCLUDE,
+    await this.moveStatus(this.prisma, id, [BrokerPayoutStatus.APPROVED], {
+      status: BrokerPayoutStatus.PROCESSING,
+      processedById: actor.sub,
+      processedAt: new Date(),
+      ...(dto.paymentMethod ? { paymentMethod: dto.paymentMethod } : {}),
+      ...(dto.scheduledAt ? { scheduledAt: new Date(dto.scheduledAt) } : {}),
+      notes: dto.notes ? appendNote(payout.notes, `[process] ${dto.notes.trim()}`) : payout.notes,
     });
+    const updated = await this.findOne(id);
 
     await this.writeActivity(payout.brokerId, BrokerActivityType.PAYOUT_PROCESSING, id, {
       reference: updated.payoutNumber,
@@ -378,18 +396,15 @@ export class BrokerPayoutsService {
     const payout = await this.assertPayoutInStatus(id, BrokerPayoutStatus.PROCESSING);
     await this.assertNotHeld(payout.brokerId);
     const paidAt = dto.paidAt ? new Date(dto.paidAt) : new Date();
-    const updated = await this.prisma.brokerPayout.update({
-      where: { id },
-      data: {
-        status: BrokerPayoutStatus.PAID,
-        paymentMethod: dto.paymentMethod,
-        paymentReference: dto.paymentReference ?? null,
-        receiptUrl: dto.receiptUrl ?? null,
-        paidAt,
-        notes: dto.notes ? appendNote(payout.notes, `[paid] ${dto.notes.trim()}`) : payout.notes,
-      },
-      include: PAYOUT_INCLUDE,
+    await this.moveStatus(this.prisma, id, [BrokerPayoutStatus.PROCESSING], {
+      status: BrokerPayoutStatus.PAID,
+      paymentMethod: dto.paymentMethod,
+      paymentReference: dto.paymentReference ?? null,
+      receiptUrl: dto.receiptUrl ?? null,
+      paidAt,
+      notes: dto.notes ? appendNote(payout.notes, `[paid] ${dto.notes.trim()}`) : payout.notes,
     });
+    const updated = await this.findOne(id);
 
     await this.writeActivity(payout.brokerId, BrokerActivityType.PAYOUT_PAID, id, {
       reference: updated.payoutNumber,
@@ -418,28 +433,27 @@ export class BrokerPayoutsService {
     const reason = dto.reason.trim();
     if (!reason) throw new BadRequestException('reason is required');
 
-    const updated = await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx) => {
+      // Status first: it locks the row, so a payout moved on meanwhile (to
+      // PROCESSING, or cancelled twice) is refused before anything changes.
+      await this.moveStatus(tx, id, [BrokerPayoutStatus.DRAFT, BrokerPayoutStatus.APPROVED], {
+        status: BrokerPayoutStatus.CANCELLED,
+        cancelledById: actor.sub,
+        cancelledAt: new Date(),
+        cancelReason: reason,
+        // Totals zero-out: the payout no longer owns any commissions.
+        totalGross: new Prisma.Decimal(0),
+        totalTax: new Prisma.Decimal(0),
+        totalWithholding: new Prisma.Decimal(0),
+        totalNet: new Prisma.Decimal(0),
+      });
       // Unlink commissions so they can be paid via a different payout later.
       await tx.brokerCommission.updateMany({
         where: { payoutId: id },
         data: { payoutId: null },
       });
-      return tx.brokerPayout.update({
-        where: { id },
-        data: {
-          status: BrokerPayoutStatus.CANCELLED,
-          cancelledById: actor.sub,
-          cancelledAt: new Date(),
-          cancelReason: reason,
-          // Totals zero-out: the payout no longer owns any commissions.
-          totalGross: new Prisma.Decimal(0),
-          totalTax: new Prisma.Decimal(0),
-          totalWithholding: new Prisma.Decimal(0),
-          totalNet: new Prisma.Decimal(0),
-        },
-        include: PAYOUT_INCLUDE,
-      });
     });
+    const updated = await this.findOne(id);
 
     await this.writeActivity(payout.brokerId, BrokerActivityType.PAYOUT_CANCELLED, id, {
       reference: updated.payoutNumber,
@@ -459,13 +473,14 @@ export class BrokerPayoutsService {
 
   /**
    * Year-prefixed, max-based generator so deletions don't cause duplicates.
-   * Format: PAY-YYYY-NNNN.
+   * Format: PAY-YYYY-NNNN, numbered per company
+   * (@@unique([companyId, payoutNumber])). Callers retry on a clash.
    */
-  private async nextPayoutNumber(): Promise<string> {
+  private async nextPayoutNumber(companyId: string | null): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = `PAY-${year}-`;
     const rows = await this.prisma.brokerPayout.findMany({
-      where: { payoutNumber: { startsWith: prefix } },
+      where: { companyId, payoutNumber: { startsWith: prefix } },
       select: { payoutNumber: true },
     });
     let maxSeq = 0;
@@ -489,6 +504,24 @@ export class BrokerPayoutsService {
     });
     if (!p) throw new NotFoundException('Payout not found');
     return p;
+  }
+
+  /**
+   * Move the payout from `from` to the next status — only if it is still in
+   * `from` at the moment of the write. Two admins acting at once (approve vs
+   * cancel, or paying twice) both passed the read-time check; the second
+   * write now finds the status changed and gets 409.
+   */
+  private async moveStatus(
+    db: Prisma.TransactionClient | PrismaService,
+    id: string,
+    from: BrokerPayoutStatus[],
+    data: Prisma.BrokerPayoutUncheckedUpdateManyInput,
+  ) {
+    const moved = await db.brokerPayout.updateMany({ where: { id, status: { in: from } }, data });
+    if (moved.count === 0) {
+      throw new ConflictException('تغيّرت حالة الدفعة أثناء التنفيذ — حدّث الصفحة وأعد المحاولة');
+    }
   }
 
   private async assertPayoutInStatus(

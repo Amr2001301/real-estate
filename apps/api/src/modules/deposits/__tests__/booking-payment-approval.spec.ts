@@ -37,6 +37,12 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
  * push, or the DB.
  */
 
+// Approval locks the installment row of the current company.
+jest.mock('../../../common/tenant/tenant-context', () => ({
+  ...jest.requireActual('../../../common/tenant/tenant-context'),
+  getRequiredCompanyId: () => 'c0000000-0000-4000-8000-000000000001',
+}));
+
 const RES_ID = 'eeeeeeee-1111-4111-8111-111111111111';
 const INST_ID = 'aaaaaaaa-2222-4222-8222-222222222222';
 const BOOKING_DEPOSIT_ID = 'dddddddd-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -108,7 +114,13 @@ function makePrismaMock() {
   m.$transaction.mockImplementation(async (ops: unknown) => {
     if (Array.isArray(ops)) return Promise.all(ops);
     if (typeof ops === 'function') {
-      const tx = { deposit: m.deposit, installment: m.installment, reservation: m.reservation };
+      const tx = {
+        deposit: m.deposit,
+        installment: m.installment,
+        reservation: m.reservation,
+        // The locked installment row: open, at the proof's amount.
+        $queryRaw: jest.fn().mockResolvedValue([{ status: 'PENDING', amount: fixture.target?.amount ?? '5000' }]),
+      };
       return (ops as (tx: unknown) => Promise<unknown>)(tx);
     }
     return ops;
@@ -235,6 +247,7 @@ describe('Deposits · booking-payment approval propagation + paid totals (Gap 2)
       reservationId: null,
       contractId: 'cccccccc-1111-4111-8111-111111111111',
       reviewStatus: 'PENDING_REVIEW',
+      amount: '5000',
       contract: { customerId: CUSTOMER_ID },
       installment: { id: INST_ID, status: 'PENDING', dueDate: PAID_AT },
       reservation: null,

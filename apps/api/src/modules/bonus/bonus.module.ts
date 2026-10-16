@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -47,7 +48,7 @@ import {
   workbookToBuffer,
 } from '../../common/utils/xlsx';
 import { getCompanyCurrency } from '../../common/currency/currency';
-import { getTenantContext } from '../../common/tenant/tenant-context';
+import { getRequiredCompanyId, getTenantContext } from '../../common/tenant/tenant-context';
 import { ReportBrandService } from '../company-branding/report-brand.service';
 import { presentReportPdf, ReportPdfService } from '../../common/report-pdf/report-pdf.service';
 import { NotificationsModule, NotificationsService } from '../notifications/notifications.module';
@@ -59,7 +60,8 @@ import {
   managerScopeIds,
   assertSalesRecordInScope,
 } from '../../common/utils/sales-scope';
-import { resolveTenantUser, scopedUserFindMany } from '../../common/tenant/resolve-tenant-entity';
+import { findTenantUser, resolveTenantUser, scopedUserFindMany } from '../../common/tenant/resolve-tenant-entity';
+import { SALES_ACTOR_ROLES } from '../../common/utils/sales-scope';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -268,6 +270,19 @@ export class BonusService {
 
   // Entries
   async createEntry(dto: CreateEntryDto) {
+    // Both ids come from the request body: they must be this company's, and
+    // the bonus must go to an active sales rep under an active rule.
+    const companyId = getRequiredCompanyId();
+    const [rep, rule] = await Promise.all([
+      findTenantUser(this.prisma, dto.salesId, { role: true, active: true, deletedAt: true }),
+      this.prisma.bonusRule.findFirst({ where: { id: dto.ruleId, companyId }, select: { active: true } }),
+    ]);
+    if (!rep || !SALES_ACTOR_ROLES.includes(rep.role)) throw new NotFoundException('Sales rep not found');
+    if (rep.deletedAt || rep.active === false) {
+      throw new BadRequestException('مندوب المبيعات غير نشط — لا يمكن إضافة مكافأة له');
+    }
+    if (!rule) throw new NotFoundException('Bonus rule not found');
+    if (!rule.active) throw new BadRequestException('قاعدة المكافأة غير مفعّلة');
     const entry = await this.prisma.bonusEntry.create({
       data: {
         salesId: dto.salesId,
@@ -492,13 +507,19 @@ export class BonusService {
     if (dto.status !== BonusEntryStatus.PENDING && isDeadContract(current.contract)) {
       throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
     }
-    const entry = await this.prisma.bonusEntry.update({
-      where: { id },
+    // Only from the status read above: two admins acting at once (pay twice,
+    // or revert while paying) — the second write finds it changed.
+    const moved = await this.prisma.bonusEntry.updateMany({
+      where: { id, status: current.status },
       data: {
         status: dto.status,
         paidAt: dto.status === BonusEntryStatus.PAID ? new Date() : null,
       },
     });
+    if (moved.count === 0) {
+      throw new ConflictException('تغيّرت حالة المكافأة أثناء التنفيذ — حدّث الصفحة وأعد المحاولة');
+    }
+    const entry = await this.prisma.bonusEntry.findUniqueOrThrow({ where: { id } });
     await this.notifyEntry(entry, 'bonus_status_changed', dto.status);
     return entry;
   }

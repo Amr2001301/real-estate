@@ -139,6 +139,12 @@ const DEPOSIT_STATUS_AR = {
 
 const WAITING_PAYMENT_MESSAGE =
   'على هذا القسط دفعة قيد المراجعة أو شيك لم يُصرف — اعتمدها أو ارفضها أولاً';
+/** The row was replaced (a reschedule) while the contract stays live. */
+const INSTALLMENT_CANCELLED_MESSAGE =
+  'هذا القسط أُلغي بعد إعادة جدولة العقد — أرسل الإثبات على القسط الجديد';
+/** The installment's amount changed (a price change) since the proof was sent. */
+const PROOF_AMOUNT_CHANGED_MESSAGE =
+  'مبلغ الإثبات لا يطابق قيمة القسط الحالية بعد تعديل العقد — ارفض الإثبات وأرسل إثباتاً جديداً بالمبلغ الصحيح';
 
 @Injectable()
 export class DepositsService {
@@ -733,6 +739,16 @@ export class DepositsService {
     }
   }
 
+  /** The installment's status and amount, its row locked until commit. */
+  private async lockInstallment(tx: Prisma.TransactionClient, installmentId: string) {
+    const rows = await tx.$queryRaw<Array<{ status: InstallmentStatus; amount: Prisma.Decimal }>>(Prisma.sql`
+      SELECT "status", "amount" FROM "Installment"
+      WHERE "id" = ${installmentId}::uuid AND "companyId" = ${getRequiredCompanyId()}::uuid
+      FOR UPDATE`);
+    if (rows.length === 0) throw new NotFoundException('Installment not found');
+    return { status: rows[0]!.status, amount: new Prisma.Decimal(rows[0]!.amount) };
+  }
+
   /**
    * Payments still waiting on this installment: a customer proof under review
    * or a cheque not yet cleared (both PENDING_REVIEW, not deleted). While one
@@ -1023,24 +1039,10 @@ export class DepositsService {
       // 404 not 403 — don't disclose existence of other customers' rows.
       throw new NotFoundException('Installment not found');
     }
-    if (installment.status === InstallmentStatus.PAID) {
-      throw new BadRequestException('تم تأكيد دفع هذا القسط مسبقاً');
-    }
-    if ((await this.waitingPayments(this.prisma, installment.id)) > 0) {
-      throw new ConflictException('أرسلت إثباتاً لهذا القسط وهو قيد المراجعة بالفعل');
-    }
-    if (
-      installment.status === InstallmentStatus.CANCELLED ||
-      isDeadContract(installment.plan.contract)
-    ) {
+    if (isDeadContract(installment.plan.contract)) {
       throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
     }
-    // Amount sanity — customer should only submit for the installment's
-    // expected amount (manual/offline; partial payments are out of scope).
-    const expected = Number(installment.amount);
-    if (Math.abs(dto.amount - expected) > 0.005) {
-      throw new BadRequestException('يجب أن يطابق المبلغ قيمة القسط بالضبط');
-    }
+    const amount = dto.amount;
 
     const depositType = depositTypeForInstallment(installment.type);
 
@@ -1050,19 +1052,39 @@ export class DepositsService {
     // between them is acceptable (the Deposit lives with NULL
     // proofDocumentId — admin can still see it in the queue and ask the
     // customer to resubmit).
-    const created = await this.prisma.deposit.create({
-      data: {
-        type: depositType,
-        contractId: installment.plan!.contractId,
-        installmentId: dto.installmentId,
-        amount: new Prisma.Decimal(dto.amount),
-        paidAt: new Date(dto.paidAt),
-        receiptUrl: dto.receiptUrl,
-        recordedById: userId,
-        reviewStatus: DepositReviewStatus.PENDING_REVIEW,
-        paymentMethod: dto.paymentMethod,
-        verified: false,
-      },
+    const created = await this.prisma.$transaction(async (tx) => {
+      // Checked on the locked row: a price change or reschedule running at
+      // the same moment either finishes first (and the proof meets the new
+      // schedule) or sees this proof and refuses.
+      const row = await this.lockInstallment(tx, installment.id);
+      if (row.status === InstallmentStatus.PAID) {
+        throw new BadRequestException('تم تأكيد دفع هذا القسط مسبقاً');
+      }
+      if (row.status === InstallmentStatus.CANCELLED) {
+        throw new ConflictException(INSTALLMENT_CANCELLED_MESSAGE);
+      }
+      if ((await this.waitingPayments(tx, installment.id)) > 0) {
+        throw new ConflictException('أرسلت إثباتاً لهذا القسط وهو قيد المراجعة بالفعل');
+      }
+      // Amount sanity — customer should only submit for the installment's
+      // expected amount (manual/offline; partial payments are out of scope).
+      if (Math.abs(amount - Number(row.amount)) > 0.005) {
+        throw new BadRequestException('يجب أن يطابق المبلغ قيمة القسط بالضبط');
+      }
+      return tx.deposit.create({
+        data: {
+          type: depositType,
+          contractId: installment.plan!.contractId,
+          installmentId: dto.installmentId,
+          amount: new Prisma.Decimal(amount),
+          paidAt: new Date(dto.paidAt),
+          receiptUrl: dto.receiptUrl,
+          recordedById: userId,
+          reviewStatus: DepositReviewStatus.PENDING_REVIEW,
+          paymentMethod: dto.paymentMethod,
+          verified: false,
+        },
+      });
     });
     const document = await this.documents.create(userId, {
       ownerType: DocumentOwnerType.DEPOSIT,
@@ -1235,14 +1257,29 @@ export class DepositsService {
     // The same guards as a first submission: the installment may have been
     // paid meanwhile, or another proof for it may be waiting for review —
     // resubmitting then put a second payment in the review queue.
-    if (deposit.installment) {
-      if (deposit.installment.status === InstallmentStatus.PAID) {
+    // The installment may also have been cancelled by a reschedule, or its
+    // amount changed by a price change, since this proof was sent: the old
+    // proof then no longer pays it.
+    const installmentId = deposit.installmentId;
+    const assertStillPayable = async (tx: Prisma.TransactionClient) => {
+      if (!installmentId) return;
+      const row = await this.lockInstallment(tx, installmentId);
+      if (row.status === InstallmentStatus.PAID) {
         throw new BadRequestException('هذا القسط مدفوع بالفعل');
       }
-      if ((await this.waitingPayments(this.prisma, deposit.installment.id)) > 0) {
+      if (row.status === InstallmentStatus.CANCELLED) {
+        throw new ConflictException(INSTALLMENT_CANCELLED_MESSAGE);
+      }
+      if ((await this.waitingPayments(tx, installmentId)) > 0) {
         throw new ConflictException(WAITING_PAYMENT_MESSAGE);
       }
-    }
+      if (!new Prisma.Decimal(deposit.amount).equals(row.amount)) {
+        throw new ConflictException(PROOF_AMOUNT_CHANGED_MESSAGE);
+      }
+    };
+    // Checked before the new receipt is registered, and again on the locked
+    // row when the proof is reopened (a plan change may land in between).
+    await this.prisma.$transaction(assertStillPayable);
 
     // Document first (Deposit already exists, so no FK ordering issue).
     const newDoc = await this.documents.create(userId, {
@@ -1256,19 +1293,22 @@ export class DepositsService {
       sizeBytes: dto.sizeBytes,
       visibility: DocumentVisibility.ADMIN_ONLY,
     });
-    const updated = await this.prisma.deposit.update({
-      where: { id: depositId },
-      data: {
-        receiptUrl: dto.receiptUrl,
-        paymentMethod: dto.paymentMethod,
-        ...(dto.paidAt ? { paidAt: new Date(dto.paidAt) } : {}),
-        reviewStatus: DepositReviewStatus.PENDING_REVIEW,
-        rejectionReason: null,
-        reviewedAt: null,
-        reviewedById: null,
-        proofDocumentId: newDoc.id,
-        verified: false,
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await assertStillPayable(tx);
+      return tx.deposit.update({
+        where: { id: depositId },
+        data: {
+          receiptUrl: dto.receiptUrl,
+          paymentMethod: dto.paymentMethod,
+          ...(dto.paidAt ? { paidAt: new Date(dto.paidAt) } : {}),
+          reviewStatus: DepositReviewStatus.PENDING_REVIEW,
+          rejectionReason: null,
+          reviewedAt: null,
+          reviewedById: null,
+          proofDocumentId: newDoc.id,
+          verified: false,
+        },
+      });
     });
 
     const projectId = await this.resolveProjectIdForDeposit(depositId);
@@ -1323,6 +1363,12 @@ export class DepositsService {
         },
       });
       if (target.installment) {
+        // The proof pays the installment as it is now: a price change since
+        // it was sent leaves it short or over.
+        const row = await this.lockInstallment(tx, target.installment.id);
+        if (!new Prisma.Decimal(target.amount).equals(row.amount)) {
+          throw new ConflictException(PROOF_AMOUNT_CHANGED_MESSAGE);
+        }
         // Pays the installment only if it is still open: one already paid by
         // another payment (cash recorded meanwhile) must not be paid twice.
         const claimed = await tx.installment.updateMany({

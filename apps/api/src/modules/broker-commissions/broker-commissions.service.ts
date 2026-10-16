@@ -17,6 +17,7 @@ import {
   RejectBrokerCommissionDto,
 } from './dto/broker-commission.dto';
 import { reportFailure } from '../../common/observability/report-failure';
+import { isUniqueConflictOn } from '../../common/utils/contract-number';
 import { CONTRACT_CANCELLED_MESSAGE, isDeadContract } from '../installments/live-contract';
 
 const COMMISSION_INCLUDE = {
@@ -113,6 +114,7 @@ export class BrokerCommissionsService {
       where: { id: contractId },
       select: {
         id: true,
+        companyId: true,
         contractNumber: true,
         signedAt: true,
         totalAmount: true,
@@ -234,10 +236,8 @@ export class BrokerCommissionsService {
     const withholdingAmount = new Prisma.Decimal(0);
     const netAmount = grossAmount.sub(taxAmount).sub(withholdingAmount);
 
-    const commissionNumber = await this.nextCommissionNumber();
-
-    try {
-      const commission = await this.prisma.$transaction(async (tx) => {
+    const write = (commissionNumber: string) =>
+      this.prisma.$transaction(async (tx) => {
         const created = await tx.brokerCommission.create({
           data: {
             commissionNumber,
@@ -282,6 +282,20 @@ export class BrokerCommissionsService {
         return created;
       });
 
+    try {
+      // Two commissions materialized at the same moment draw the same next
+      // number; the loser of the unique index retries with a fresh one.
+      let commission!: Awaited<ReturnType<typeof write>>;
+      for (let attempt = 0; ; attempt++) {
+        try {
+          commission = await write(await this.nextCommissionNumber(contract.companyId));
+          break;
+        } catch (e) {
+          if (!isUniqueConflictOn(e, 'commissionNumber') || attempt >= 2) throw e;
+        }
+      }
+      const commissionNumber = commission.commissionNumber;
+
       // P4 — safe payload: reference + commissionId + contractNumber only.
       // Recipients are filtered to canViewCommissions broker users, so the
       // amounts they're authorised to see are surfaced in the dashboard,
@@ -298,10 +312,7 @@ export class BrokerCommissionsService {
         commissionNumber,
       };
     } catch (e) {
-      if (
-        e instanceof Prisma.PrismaClientKnownRequestError &&
-        e.code === 'P2002'
-      ) {
+      if (isUniqueConflictOn(e, 'contractId')) {
         // Race: another path materialized the same contract in parallel.
         const existing = await this.prisma.brokerCommission.findUnique({
           where: { contractId },
@@ -543,13 +554,14 @@ export class BrokerCommissionsService {
 
   /**
    * Max-based generator so deleted rows don't cause duplicate numbers.
-   * Format: COM-YYYY-NNNN.
+   * Format: COM-YYYY-NNNN, numbered per company
+   * (@@unique([companyId, commissionNumber])). Callers retry on a clash.
    */
-  private async nextCommissionNumber(): Promise<string> {
+  private async nextCommissionNumber(companyId: string | null): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = `COM-${year}-`;
     const rows = await this.prisma.brokerCommission.findMany({
-      where: { commissionNumber: { startsWith: prefix } },
+      where: { companyId, commissionNumber: { startsWith: prefix } },
       select: { commissionNumber: true },
     });
     let maxSeq = 0;

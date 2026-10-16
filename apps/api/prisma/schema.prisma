@@ -2417,7 +2417,7 @@ model BrokerUnitAccess {
 
 model BrokerCommission {
   id               String       @id @default(uuid()) @db.Uuid
-  commissionNumber String       @unique
+  commissionNumber String
   brokerId         String       @db.Uuid
   broker           Broker       @relation(fields: [brokerId], references: [id])
   brokerAgentId    String?      @db.Uuid
@@ -2483,6 +2483,7 @@ model BrokerCommission {
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  @@unique([companyId, commissionNumber])
   @@index([brokerId, status])
   @@index([projectId, earnedAt])
   @@index([brokerAgentId])
@@ -2494,7 +2495,7 @@ model BrokerCommission {
 
 model BrokerPayout {
   id           String  @id @default(uuid()) @db.Uuid
-  payoutNumber String  @unique
+  payoutNumber String
   brokerId     String  @db.Uuid
   broker       Broker  @relation(fields: [brokerId], references: [id])
   period       String? // "2026-05" style, optional
@@ -2532,6 +2533,7 @@ model BrokerPayout {
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  @@unique([companyId, payoutNumber])
   @@index([brokerId, status])
   @@index([brokerId, period])
   @@index([status, createdAt])

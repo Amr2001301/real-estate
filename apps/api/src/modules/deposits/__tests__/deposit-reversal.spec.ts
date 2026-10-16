@@ -169,6 +169,10 @@ function makePrismaMock() {
           paymentCorrection: m.paymentCorrection,
           installment: m.installment,
           auditLog: m.auditLog,
+          // The locked installment row (approval compares its amount).
+          $queryRaw: jest.fn().mockImplementation(async () => [
+            { status: depositFixture?.installment?.status ?? 'PENDING', amount: depositFixture?.amount ?? '0' },
+          ]),
         });
       }
       return fn;

@@ -28,7 +28,7 @@
  *  D4-B-5  clawbackStatus null → ConflictException
  */
 
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { BonusEntryStatus, BrokerCommissionStatus, ClawbackStatus, PaymentMethod, Prisma } from '@prisma/client';
 import { ClawbackResolutionService } from '../clawback-resolution.service';
 
@@ -46,8 +46,9 @@ const BONUS_AMOUNT = new Prisma.Decimal(20_000);
 
 function buildPrisma(overrides: Record<string, unknown> = {}) {
   const txMock = {
-    brokerCommission: { update: jest.fn().mockResolvedValue({}) },
-    bonusEntry: { update: jest.fn().mockResolvedValue({}) },
+    // updateMany = the guard on the clawback state that was read.
+    brokerCommission: { update: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    bonusEntry: { update: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     auditLog: { create: jest.fn().mockResolvedValue({}) },
   };
   return {
@@ -240,6 +241,34 @@ describe('ClawbackResolutionService — BrokerCommission', () => {
     await expect(
       svc.waiveCommission('nonexistent', { reason: 'reason' }, ACTOR),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  it('D4-C-12: collecting more than is still owed → 400, nothing written', async () => {
+    prisma.brokerCommission.findFirst.mockResolvedValue(
+      makeCommission(ClawbackStatus.PARTIALLY_COLLECTED, new Prisma.Decimal(70_000)),
+    );
+    await expect(
+      svc.collectCommission(COMMISSION_ID, { amount: 5_000.01, paymentMethod: PaymentMethod.CASH }, ACTOR),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('D4-C-13: two collections at once — the second finds the total changed → 409', async () => {
+    prisma.brokerCommission.findFirst.mockResolvedValue(
+      makeCommission(ClawbackStatus.PARTIALLY_COLLECTED, new Prisma.Decimal(20_000)),
+    );
+    prisma._tx.brokerCommission.updateMany.mockResolvedValueOnce({ count: 0 });
+    await expect(
+      svc.collectCommission(COMMISSION_ID, { amount: 10_000, paymentMethod: PaymentMethod.CASH }, ACTOR),
+    ).rejects.toThrow(ConflictException);
+    // The guard matched the state that was read.
+    const guard = prisma._tx.brokerCommission.updateMany.mock.calls[0][0];
+    expect(guard.where).toMatchObject({
+      id: COMMISSION_ID,
+      clawbackStatus: ClawbackStatus.PARTIALLY_COLLECTED,
+      clawbackCollectedAmount: new Prisma.Decimal(20_000),
+    });
+    expect(prisma._tx.brokerCommission.update).not.toHaveBeenCalled();
   });
 
   it('D4-C-11: Hard Rule 2 — commission.status never set in any path', async () => {

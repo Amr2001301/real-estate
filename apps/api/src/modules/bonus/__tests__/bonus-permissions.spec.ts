@@ -30,7 +30,7 @@ import { enterTenantContext } from '../../../common/tenant/tenant-context';
  *   * Per-route metadata (rules + entries + approve/pay strict + revert + targets).
  *   * Read/create/manage bypass for ADMIN; SALES grants enable list reads.
  *   * Strict 403 from approve/pay when ADMIN lacks the code; side effects
- *     (`bonusEntry.update`) do not run.
+ *     (`bonusEntry.updateMany`) do not run.
  *   * The narrowed PATCH route rejects APPROVED/PAID via ValidationPipe.
  *   * Targets split (`:read` vs `:manage`) preserves SALES self-read access.
  */
@@ -79,17 +79,16 @@ function makePrismaMock() {
     bonusRule: {
       findMany: jest.fn().mockResolvedValue([]),
       create: jest.fn().mockImplementation(async ({ data }) => ({ id: 'rule-1', ...data })),
+      findFirst: jest.fn().mockResolvedValue({ active: true }),
     },
     bonusEntry: {
       findMany: jest.fn().mockResolvedValue([]),
       // Current state for the approve → pay → revert state machine.
       findUnique: jest.fn().mockResolvedValue({ status: 'PENDING', contract: null }),
       create: jest.fn().mockImplementation(async ({ data }) => ({ id: 'entry-1', ...data })),
-      update: jest.fn().mockImplementation(async ({ where, data }) => ({
-        id: where.id,
-        status: data.status,
-        paidAt: data.paidAt,
-      })),
+      // Status moves are guarded on the status read (updateMany), then re-read.
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      findUniqueOrThrow: jest.fn().mockImplementation(async ({ where }) => ({ id: where.id })),
     },
     salesTarget: {
       findMany: jest.fn().mockResolvedValue([]),
@@ -102,6 +101,8 @@ function makePrismaMock() {
     user: {
       // Default: empty team — scope assertions use this to resolve managerId's team.
       findMany: jest.fn().mockResolvedValue([]),
+      // The bonus recipient: an active sales rep of the company.
+      findFirst: jest.fn().mockResolvedValue({ role: 'SALES', active: true, deletedAt: null }),
     },
   };
 }
@@ -153,7 +154,7 @@ describe('Bonus module · permissions enforcement', () => {
   beforeEach(() => {
     FakeAuthGuard.currentUser = null;
     prismaMock.userPermission.findMany.mockClear();
-    prismaMock.bonusEntry.update.mockClear();
+    prismaMock.bonusEntry.updateMany.mockClear();
     prismaMock.bonusEntry.create.mockClear();
     prismaMock.bonusRule.create.mockClear();
     prismaMock.salesTarget.upsert.mockClear();
@@ -392,7 +393,7 @@ describe('Bonus module · permissions enforcement', () => {
         code: 'missing_permission',
         permissions: ['bonus:entries:approve'],
       });
-      expect(prismaMock.bonusEntry.update).not.toHaveBeenCalled();
+      expect(prismaMock.bonusEntry.updateMany).not.toHaveBeenCalled();
     });
 
     it('ADMIN WITH bonus:entries:approve → 201; bonus entry updated to APPROVED', async () => {
@@ -402,8 +403,8 @@ describe('Bonus module · permissions enforcement', () => {
         codes: ['bonus:entries:approve'],
       };
       await request(app.getHttpServer()).post(PATH).send({}).expect(201);
-      expect(prismaMock.bonusEntry.update).toHaveBeenCalledTimes(1);
-      const call = prismaMock.bonusEntry.update.mock.calls[0]![0] as {
+      expect(prismaMock.bonusEntry.updateMany).toHaveBeenCalledTimes(1);
+      const call = prismaMock.bonusEntry.updateMany.mock.calls[0]![0] as {
         data: { status: string; paidAt: Date | null };
       };
       expect(call.data.status).toBe('APPROVED');
@@ -419,7 +420,7 @@ describe('Bonus module · permissions enforcement', () => {
       const res = await request(app.getHttpServer()).post(PATH).send({}).expect(403);
       expect(res.body.message).toBe('Insufficient role');
       expect(prismaMock.userPermission.findMany).not.toHaveBeenCalled();
-      expect(prismaMock.bonusEntry.update).not.toHaveBeenCalled();
+      expect(prismaMock.bonusEntry.updateMany).not.toHaveBeenCalled();
     });
   });
 
@@ -435,7 +436,7 @@ describe('Bonus module · permissions enforcement', () => {
         code: 'missing_permission',
         permissions: ['bonus:entries:pay'],
       });
-      expect(prismaMock.bonusEntry.update).not.toHaveBeenCalled();
+      expect(prismaMock.bonusEntry.updateMany).not.toHaveBeenCalled();
     });
 
     it('ADMIN WITH bonus:entries:pay → 201; bonus entry updated to PAID with paidAt set', async () => {
@@ -446,8 +447,8 @@ describe('Bonus module · permissions enforcement', () => {
         codes: ['bonus:entries:pay'],
       };
       await request(app.getHttpServer()).post(PATH).send({}).expect(201);
-      expect(prismaMock.bonusEntry.update).toHaveBeenCalledTimes(1);
-      const call = prismaMock.bonusEntry.update.mock.calls[0]![0] as {
+      expect(prismaMock.bonusEntry.updateMany).toHaveBeenCalledTimes(1);
+      const call = prismaMock.bonusEntry.updateMany.mock.calls[0]![0] as {
         data: { status: string; paidAt: Date | null };
       };
       expect(call.data.status).toBe('PAID');
@@ -461,7 +462,7 @@ describe('Bonus module · permissions enforcement', () => {
         codes: ['bonus:entries:pay'],
       };
       await request(app.getHttpServer()).post(PATH).send({}).expect(403);
-      expect(prismaMock.bonusEntry.update).not.toHaveBeenCalled();
+      expect(prismaMock.bonusEntry.updateMany).not.toHaveBeenCalled();
     });
   });
 
@@ -477,8 +478,8 @@ describe('Bonus module · permissions enforcement', () => {
         .patch(PATH)
         .send({ status: 'PENDING' })
         .expect(200);
-      expect(prismaMock.bonusEntry.update).toHaveBeenCalledTimes(1);
-      const call = prismaMock.bonusEntry.update.mock.calls[0]![0] as {
+      expect(prismaMock.bonusEntry.updateMany).toHaveBeenCalledTimes(1);
+      const call = prismaMock.bonusEntry.updateMany.mock.calls[0]![0] as {
         data: { status: string };
       };
       expect(call.data.status).toBe('PENDING');
@@ -491,7 +492,7 @@ describe('Bonus module · permissions enforcement', () => {
         .send({ status: 'APPROVED' })
         .expect(400);
       expect(JSON.stringify(res.body)).toContain('status');
-      expect(prismaMock.bonusEntry.update).not.toHaveBeenCalled();
+      expect(prismaMock.bonusEntry.updateMany).not.toHaveBeenCalled();
     });
 
     it('PATCH with status PAID → 400 from ValidationPipe; no update', async () => {
@@ -501,7 +502,7 @@ describe('Bonus module · permissions enforcement', () => {
         .send({ status: 'PAID' })
         .expect(400);
       expect(JSON.stringify(res.body)).toContain('status');
-      expect(prismaMock.bonusEntry.update).not.toHaveBeenCalled();
+      expect(prismaMock.bonusEntry.updateMany).not.toHaveBeenCalled();
     });
   });
 });

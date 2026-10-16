@@ -26,6 +26,12 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
 
 const CUSTOMER_ID = 'cust-1';
 const OTHER_CUSTOMER_ID = 'cust-2';
+// The installment row is locked within the current company.
+jest.mock('../../../common/tenant/tenant-context', () => ({
+  ...jest.requireActual('../../../common/tenant/tenant-context'),
+  getRequiredCompanyId: () => 'c0000000-0000-4000-8000-000000000001',
+}));
+
 const RES_ID = 'eeeeeeee-1111-4111-8111-111111111111';
 const INST_ID = 'aaaaaaaa-2222-4222-8222-222222222222';
 const NEW_DEPOSIT_ID = 'dddddddd-cccc-4ccc-8ccc-cccccccccccc';
@@ -111,7 +117,15 @@ function makePrismaMock() {
       })),
     },
   };
-  return m;
+  // The installment proof is created in a transaction on the locked row.
+  return Object.assign(m, {
+    $transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({
+        ...m,
+        $queryRaw: jest.fn(async () => [{ status: fixture.installment?.status, amount: fixture.installment?.amount }]),
+      }),
+    ),
+  });
 }
 
 let mock = makePrismaMock();

@@ -51,6 +51,8 @@ import { resolveTransferFeeSettings, TRANSFER_FEE_SETTING_KEYS, transferFeeFor }
 import { feeDueDate, feePaymentDays } from '../installments/fee-settings';
 import { assertDiscountAllowed, discountPct } from '../installments/discount-policy';
 import { addMonths } from '../../common/utils/add-months';
+import { companyTimeZone, startOfLocalToday } from '../../common/time/company-timezone';
+import { assertUnitOnSale } from '../projects/inventory-blockers';
 
 export class TransferContractDto {
   @IsUUID()
@@ -202,8 +204,12 @@ export class ContractAmendmentsService {
   }
 
   /** A payment still on its way belongs to the contract as it is now. */
-  private async assertNoWaitingPayments(contractId: string, reservationId: string | null) {
-    const waiting = await this.prisma.deposit.count({
+  private async assertNoWaitingPayments(
+    contractId: string,
+    reservationId: string | null,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const waiting = await db.deposit.count({
       where: {
         deletedAt: null,
         AND: [
@@ -226,6 +232,27 @@ export class ContractAmendmentsService {
     if (waiting > 0) {
       throw new ConflictException('على العقد دفعة قيد المراجعة أو شيك لم يُصرف — سوِّها أولاً');
     }
+  }
+
+  /**
+   * Inside the amendment's transaction: lock the contract's installment rows
+   * and check again that no payment is on its way. A customer proof locks its
+   * installment row before it is created (DepositsService), so a proof sent
+   * while the amendment runs either is seen here or waits for it and then
+   * meets the amended schedule.
+   */
+  private async lockSchedule(
+    tx: Prisma.TransactionClient,
+    contractId: string,
+    reservationId: string | null,
+    companyId: string,
+  ) {
+    await tx.$queryRaw`
+      SELECT i.id FROM "Installment" i
+      JOIN "InstallmentPlan" p ON p.id = i."planId"
+      WHERE p."contractId" = ${contractId}::uuid AND p."companyId" = ${companyId}::uuid
+      FOR UPDATE OF i`;
+    await this.assertNoWaitingPayments(contractId, reservationId, tx);
   }
 
   // ── Transfer (تنازل) ──────────────────────────────────────────────────────
@@ -277,6 +304,7 @@ export class ContractAmendmentsService {
     const fromId = contract.customerId;
     const now = new Date();
     const amendment = await this.prisma.$transaction(async (tx) => {
+      await this.lockSchedule(tx, contractId, contract.reservationId, companyId);
       const moved = await tx.contract.updateMany({
         where: { id: contractId, companyId, customerId: fromId, ...LIVE_CONTRACT_WHERE },
         data: { customerId: to.id },
@@ -495,6 +523,7 @@ export class ContractAmendmentsService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      await this.lockSchedule(tx, contractId, contract.reservationId, companyId);
       const moved = await tx.contract.updateMany({
         where: { id: contractId, companyId, totalAmount: contract.totalAmount, ...LIVE_CONTRACT_WHERE },
         data: { totalAmount: new Prisma.Decimal(dto.totalAmount) },
@@ -582,11 +611,17 @@ export class ContractAmendmentsService {
     if (monthlyCents <= 0) throw new BadRequestException('عدد الشهور أكبر من المبلغ المتبقي');
     const lastCents = totalCents - monthlyCents * (dto.months - 1);
     const startsAt = new Date(`${dto.startsAt.slice(0, 10)}T00:00:00Z`);
+    // A first due date already past would make the new rows overdue — and
+    // charge late fees — the moment they are created.
+    if (startsAt < startOfLocalToday(await companyTimeZone(this.prisma, companyId))) {
+      throw new BadRequestException('تاريخ أول قسط في الجدولة الجديدة لا يمكن أن يكون في الماضي');
+    }
     const paidMonths = await this.prisma.installment.count({
       where: { planId: plan.id, type: PlanPaymentType.INSTALLMENT, status: InstallmentStatus.PAID },
     });
 
     return this.prisma.$transaction(async (tx) => {
+      await this.lockSchedule(tx, contractId, contract.reservationId, companyId);
       const cancelled = await tx.installment.updateMany({
         where: { id: { in: open.map((i) => i.id) }, status: { in: OPEN_STATUSES } },
         data: { status: InstallmentStatus.CANCELLED },
@@ -638,10 +673,28 @@ export class ContractAmendmentsService {
     if (dto.unitId === contract.unitId) throw new BadRequestException('الوحدة الجديدة هي نفس وحدة العقد');
     const unit = await this.prisma.unit.findFirst({
       where: { id: dto.unitId, companyId },
-      select: { id: true, code: true, status: true, building: { select: { phase: { select: { projectId: true } } } } },
+      select: {
+        id: true,
+        code: true,
+        status: true,
+        price: true,
+        building: { select: { phase: { select: { projectId: true } } } },
+      },
     });
     if (!unit) throw new NotFoundException('Unit not found');
     await this.assertNoWaitingPayments(contractId, contract.reservationId);
+    // Moving to another unit is a sale of that unit: the same archived-project
+    // block and discount cap as a new contract or a price change.
+    await assertUnitOnSale(this.prisma, unit.id);
+    await assertDiscountAllowed(this.prisma, {
+      companyId,
+      actorId,
+      pct: discountPct(Number(unit.price), dto.totalAmount),
+      listPrice: Number(unit.price),
+      salePrice: dto.totalAmount,
+      entityType: 'Contract',
+      entityId: contractId,
+    });
 
     const oldTotal = Number(contract.totalAmount);
     const delta = Math.round((dto.totalAmount - oldTotal) * 100) / 100;
@@ -677,6 +730,7 @@ export class ContractAmendmentsService {
 
     const fromUnitId = contract.unitId;
     const amendment = await this.prisma.$transaction(async (tx) => {
+      await this.lockSchedule(tx, contractId, contract.reservationId, companyId);
       // Claim the new unit exactly as a new contract would.
       const claimed = await tx.unit.updateMany({
         where: { id: unit.id, companyId, status: { not: UnitStatus.SOLD } },

@@ -20,6 +20,44 @@ const RESOLVABLE: ClawbackStatus[] = [
   ClawbackStatus.PARTIALLY_COLLECTED,
 ];
 
+/** A collection may not take more than is still owed. */
+function assertWithinOutstanding(
+  fullAmount: Prisma.Decimal,
+  collectedSoFar: Prisma.Decimal | null,
+  amount: number,
+) {
+  const outstanding = fullAmount.sub(collectedSoFar ?? 0);
+  if (new Prisma.Decimal(amount).gt(outstanding)) {
+    throw new BadRequestException(
+      `المبلغ أكبر من المتبقي على الاسترداد (${outstanding.toFixed(2)})`,
+    );
+  }
+}
+
+/**
+ * Lock the row and check it is still in the clawback state that was read:
+ * the same status and the same amount collected so far. A concurrent collect
+ * or waive that got there first leaves this one with nothing to change → 409.
+ */
+async function claimClawback(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  delegate: { updateMany: (args: any) => Promise<{ count: number }> },
+  id: string,
+  seen: { clawbackStatus: ClawbackStatus | null; clawbackCollectedAmount: Prisma.Decimal | null },
+) {
+  const claimed = await delegate.updateMany({
+    where: {
+      id,
+      clawbackStatus: seen.clawbackStatus,
+      clawbackCollectedAmount: seen.clawbackCollectedAmount,
+    },
+    data: { clawbackStatus: seen.clawbackStatus },
+  });
+  if (claimed.count === 0) {
+    throw new ConflictException('تغيّر الاسترداد أثناء التنفيذ — حدّث الصفحة وأعد المحاولة');
+  }
+}
+
 @Injectable()
 export class ClawbackResolutionService {
   constructor(private readonly prisma: PrismaService) {}
@@ -61,6 +99,7 @@ export class ClawbackResolutionService {
       : 0;
     const newTotal = new Prisma.Decimal(previouslyCollected).add(new Prisma.Decimal(collected));
     const fullAmount = commission.netAmount;
+    assertWithinOutstanding(fullAmount, commission.clawbackCollectedAmount, collected);
     const newStatus: ClawbackStatus = newTotal.gte(fullAmount)
       ? ClawbackStatus.COLLECTED
       : ClawbackStatus.PARTIALLY_COLLECTED;
@@ -68,6 +107,9 @@ export class ClawbackResolutionService {
     const now = new Date();
 
     return this.prisma.$transaction(async (tx) => {
+      // Only from the state read above: two collections at the same moment
+      // both added to the same old total, and one was lost.
+      await claimClawback(tx.brokerCommission, id, commission);
       const updated = await tx.brokerCommission.update({
         where: { id },
         data: {
@@ -143,6 +185,7 @@ export class ClawbackResolutionService {
     const now = new Date();
 
     return this.prisma.$transaction(async (tx) => {
+      await claimClawback(tx.brokerCommission, id, commission);
       const updated = await tx.brokerCommission.update({
         where: { id },
         data: {
@@ -216,6 +259,7 @@ export class ClawbackResolutionService {
       : 0;
     const newTotal = new Prisma.Decimal(previouslyCollected).add(new Prisma.Decimal(collected));
     const fullAmount = bonus.amount;
+    assertWithinOutstanding(fullAmount, bonus.clawbackCollectedAmount, collected);
     const newStatus: ClawbackStatus = newTotal.gte(fullAmount)
       ? ClawbackStatus.COLLECTED
       : ClawbackStatus.PARTIALLY_COLLECTED;
@@ -223,6 +267,9 @@ export class ClawbackResolutionService {
     const now = new Date();
 
     return this.prisma.$transaction(async (tx) => {
+      // Only from the state read above: two collections at the same moment
+      // both added to the same old total, and one was lost.
+      await claimClawback(tx.bonusEntry, id, bonus);
       const updated = await tx.bonusEntry.update({
         where: { id },
         data: {
@@ -298,6 +345,7 @@ export class ClawbackResolutionService {
     const now = new Date();
 
     return this.prisma.$transaction(async (tx) => {
+      await claimClawback(tx.bonusEntry, id, bonus);
       const updated = await tx.bonusEntry.update({
         where: { id },
         data: {
