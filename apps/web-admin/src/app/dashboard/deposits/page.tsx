@@ -40,6 +40,7 @@ const DEPOSIT_TYPE_CLS: Record<DepositType, string> = {
   DOWN_PAYMENT:   'bg-brand-50 text-brand-700',
   INSTALLMENT:    'bg-slate-100 text-slate-600',
   FINAL_PAYMENT:  'bg-success-50 text-success-700',
+  FEE:            'bg-danger-50 text-danger-700',
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -106,6 +107,7 @@ export default async function DepositsPage({
     DOWN_PAYMENT:   m.typeLabels.DOWN_PAYMENT,
     INSTALLMENT:    m.typeLabels.INSTALLMENT,
     FINAL_PAYMENT:  m.typeLabels.FINAL_PAYMENT,
+    FEE:            m.typeLabels.FEE,
   };
   // Registering + verifying deposits are admin/finance actions; SALES is read-only.
   const isAdmin = session?.role === 'ADMIN';
@@ -221,6 +223,7 @@ export default async function DepositsPage({
             <option value="DOWN_PAYMENT">{m.typeLabels.DOWN_PAYMENT}</option>
             <option value="INSTALLMENT">{m.typeLabels.INSTALLMENT}</option>
             <option value="FINAL_PAYMENT">{m.typeLabels.FINAL_PAYMENT}</option>
+            <option value="FEE">{m.typeLabels.FEE}</option>
           </Select>
         </PremiumFilterField>
 

@@ -452,6 +452,7 @@ export const DEPOSIT_TYPE_AR: Record<string, string> = {
   DOWN_PAYMENT: 'دفعة أولى',
   INSTALLMENT: 'قسط شهري',
   FINAL_PAYMENT: 'دفعة أخيرة',
+  FEE: 'رسوم وغرامات',
 };
 
 export const AGING_AR: Record<string, string> = {

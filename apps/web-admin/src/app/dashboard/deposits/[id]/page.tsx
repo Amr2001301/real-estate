@@ -36,6 +36,7 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
     DOWN_PAYMENT:   m.typeDOWN_PAYMENT,
     INSTALLMENT:    m.typeINSTALLMENT,
     FINAL_PAYMENT:  m.typeFINAL_PAYMENT,
+    FEE:            m.typeFEE,
   };
 
   const REVIEW_STATUS_LABELS: Record<string, { label: string; cls: string }> = {

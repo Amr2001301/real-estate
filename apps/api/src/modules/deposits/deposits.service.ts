@@ -16,7 +16,6 @@ import {
   PaymentInstrumentStatus,
   PaymentInstrumentType,
   PaymentMethod,
-  PlanPaymentType,
   Prisma,
   ReservationBookingPaymentStatus,
   ReservationStatus,
@@ -41,7 +40,7 @@ import {
   VerifyDepositDto,
 } from './deposits.dto';
 import { reportFailure } from '../../common/observability/report-failure';
-import { CONTRACT_CANCELLED_MESSAGE, isDeadContract } from '../installments/live-contract';
+import { CONTRACT_CANCELLED_MESSAGE, depositTypeForInstallment, isDeadContract } from '../installments/live-contract';
 import { COLLECTED_DEPOSIT_WHERE } from '../../common/finance/collected';
 
 /** Reservations whose booking can still be paid. */
@@ -278,13 +277,7 @@ export class DepositsService {
       throw new BadRequestException('لا يمكن دفع مبلغ أكبر من قيمة القسط');
     }
 
-    // Map installment type → deposit type
-    const depositTypeMap: Partial<Record<PlanPaymentType, DepositType>> = {
-      [PlanPaymentType.DOWN_PAYMENT]: DepositType.DOWN_PAYMENT,
-      [PlanPaymentType.INSTALLMENT]: DepositType.INSTALLMENT,
-      [PlanPaymentType.FINAL_PAYMENT]: DepositType.FINAL_PAYMENT,
-    };
-    const depositType = depositTypeMap[installment.type] ?? DepositType.INSTALLMENT;
+    const depositType = depositTypeForInstallment(installment.type);
 
     const paidAt = dto.paidAt ? new Date(dto.paidAt) : new Date();
 
@@ -575,6 +568,7 @@ export class DepositsService {
         downPayment: (sumMap[DepositType.DOWN_PAYMENT] ?? zero).toString(),
         installment: (sumMap[DepositType.INSTALLMENT] ?? zero).toString(),
         finalPayment: (sumMap[DepositType.FINAL_PAYMENT] ?? zero).toString(),
+        fees: (sumMap[DepositType.FEE] ?? zero).toString(),
         count: totalCount,
       },
     };
@@ -939,16 +933,7 @@ export class DepositsService {
       throw new BadRequestException('يجب أن يطابق المبلغ قيمة القسط بالضبط');
     }
 
-    const depositType: DepositType = (() => {
-      switch (installment.type) {
-        case PlanPaymentType.DOWN_PAYMENT:
-          return DepositType.DOWN_PAYMENT;
-        case PlanPaymentType.FINAL_PAYMENT:
-          return DepositType.FINAL_PAYMENT;
-        default:
-          return DepositType.INSTALLMENT;
-      }
-    })();
+    const depositType = depositTypeForInstallment(installment.type);
 
     // Create the Deposit first (its row needs to exist before
     // DocumentsService validates the DEPOSIT ownerId). Then register the

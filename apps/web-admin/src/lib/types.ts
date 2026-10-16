@@ -222,7 +222,7 @@ export interface LeadNote {
 }
 
 export type InstallmentStatus = 'PENDING' | 'PAID' | 'OVERDUE';
-export type DepositType = 'BOOKING_AMOUNT' | 'DOWN_PAYMENT' | 'INSTALLMENT' | 'FINAL_PAYMENT';
+export type DepositType = 'BOOKING_AMOUNT' | 'DOWN_PAYMENT' | 'INSTALLMENT' | 'FINAL_PAYMENT' | 'FEE';
 
 export interface ContractInstallment {
   id: string;
@@ -391,6 +391,7 @@ export interface DepositTotals {
   downPayment: string;
   installment: string;
   finalPayment: string;
+  fees: string;
   count: number;
 }
 

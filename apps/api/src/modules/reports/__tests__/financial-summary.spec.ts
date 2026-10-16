@@ -189,7 +189,7 @@ describe('Reports · financial-dashboard summary correctness (F1)', () => {
     expect(installment).toMatchObject({ count: 3, totalAll: '350', totalVerified: '350', totalUnverified: '0' });
     // Every enum type is represented (zero-filled when absent).
     expect(body.collectionByType.map((c) => c.type).sort()).toEqual(
-      ['BOOKING_AMOUNT', 'DOWN_PAYMENT', 'FINAL_PAYMENT', 'INSTALLMENT'],
+      ['BOOKING_AMOUNT', 'DOWN_PAYMENT', 'FEE', 'FINAL_PAYMENT', 'INSTALLMENT'],
     );
   });
 

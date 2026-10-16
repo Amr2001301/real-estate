@@ -1115,6 +1115,9 @@ enum DepositType {
   DOWN_PAYMENT
   INSTALLMENT
   FINAL_PAYMENT
+  /// Payment of a fee or penalty row (late fee, bounced-cheque penalty,
+  /// transfer fee) — not part of the contract price.
+  FEE
 }
 
 model Reservation {
