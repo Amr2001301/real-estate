@@ -116,6 +116,7 @@ function buildExportPrisma() {
     deposit:            { findMany: empty },
     paymentInstrument:  { findMany: empty },
     refund:             { findMany: empty },
+    contractAmendment:  { findMany: empty },
     broker:             { findMany: empty },
     brokerCommission:   { findMany: empty },
     maintenanceRequest: { findMany: empty },
