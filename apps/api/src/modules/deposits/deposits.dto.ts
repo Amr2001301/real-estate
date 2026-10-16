@@ -15,7 +15,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { DepositReviewStatus, DepositType, PaymentMethod } from '@prisma/client';
+import { DepositReviewStatus, DepositType, PaymentMethod, type Prisma } from '@prisma/client';
 
 /** FG-01 — the cheque a payment was made with (one cheque per installment). */
 export class DepositChequeDto {
@@ -149,6 +149,8 @@ export interface ListDepositsOpts {
   // legacy
   contractId?: string;
   customerId?: string;
+  /** Replaces the customerId match when set (the customer's own view). */
+  ownerWhere?: Prisma.DepositWhereInput;
   // new filters
   type?: DepositType;
   projectId?: string;

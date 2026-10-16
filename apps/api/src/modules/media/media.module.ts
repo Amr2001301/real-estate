@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Injectable,
+  NotFoundException,
   Module,
   Param,
   ParseUUIDPipe,
@@ -17,6 +18,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { R2Service } from './r2.service';
+import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 
 // 50 MiB — sized to accommodate compressed property marketing videos (video/mp4).
 // Images are typically under 5 MiB; the extra headroom is for video uploads.
@@ -134,7 +136,10 @@ class MediaService {
     });
   }
 
-  attachProject(dto: AttachProjectMediaDto) {
+  async attachProject(dto: AttachProjectMediaDto) {
+    // The id comes from the client: only this company's project takes media.
+    const project = await this.prisma.project.findFirst({ where: { id: dto.projectId }, select: { id: true } });
+    if (!project) throw new NotFoundException('Project not found');
     return this.prisma.projectMedia.create({
       data: {
         projectId: dto.projectId,
@@ -145,7 +150,9 @@ class MediaService {
     });
   }
 
-  attachUnit(dto: AttachUnitMediaDto) {
+  async attachUnit(dto: AttachUnitMediaDto) {
+    const unit = await this.prisma.unit.findFirst({ where: { id: dto.unitId }, select: { id: true } });
+    if (!unit) throw new NotFoundException('Unit not found');
     return this.prisma.unitMedia.create({
       data: {
         unitId: dto.unitId,
@@ -156,12 +163,22 @@ class MediaService {
     });
   }
 
-  removeProjectMedia(id: string) {
-    return this.prisma.projectMedia.delete({ where: { id } });
+  // Media rows carry no companyId of their own (tenant via their parent), so
+  // the middleware does not scope these deletes: match the parent's company.
+  async removeProjectMedia(id: string) {
+    const { count } = await this.prisma.projectMedia.deleteMany({
+      where: { id, project: { companyId: getRequiredCompanyId() } },
+    });
+    if (count === 0) throw new NotFoundException('Media not found');
+    return { id };
   }
 
-  removeUnitMedia(id: string) {
-    return this.prisma.unitMedia.delete({ where: { id } });
+  async removeUnitMedia(id: string) {
+    const { count } = await this.prisma.unitMedia.deleteMany({
+      where: { id, unit: { companyId: getRequiredCompanyId() } },
+    });
+    if (count === 0) throw new NotFoundException('Media not found');
+    return { id };
   }
 }
 

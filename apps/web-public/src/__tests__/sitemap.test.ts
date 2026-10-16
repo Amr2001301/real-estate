@@ -13,13 +13,18 @@
 jest.mock('@/lib/api', () => ({
   safeFetch: jest.fn(),
 }));
+jest.mock('@/lib/tenant', () => ({
+  getResolvedTenant: jest.fn(),
+}));
 
 import { safeFetch } from '@/lib/api';
+import { getResolvedTenant } from '@/lib/tenant';
 import { fetchAll } from '@/app/sitemap';
 import { siteUrl } from '@/lib/seo';
 import type { Paginated, PublicProjectListItem, PublicUnit } from '@/lib/api-types';
 
 const mockFetch = safeFetch as jest.Mock;
+const mockTenant = getResolvedTenant as jest.Mock;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -142,7 +147,23 @@ describe('sitemap URL policy', () => {
   const PRIVATE_PATHS = ['/login', '/register', '/forgot-password', '/reset-password',
     '/verify-email', '/account', '/compare', '/app'];
 
+  beforeEach(() => mockTenant.mockResolvedValue({ slug: 'acme', websiteEnabled: true }));
   afterEach(() => jest.resetAllMocks());
+
+  it('asks the API for this site\'s company only', async () => {
+    await buildSitemap();
+    for (const call of mockFetch.mock.calls) {
+      expect(call[1]).toMatchObject({ tenantSlug: 'acme' });
+    }
+  });
+
+  it('lists the static pages alone when the host resolves to no company', async () => {
+    mockTenant.mockResolvedValue(null);
+    const { default: sitemapFn } = await import('@/app/sitemap');
+    const entries = await sitemapFn();
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(entries.map((e) => e.url)).toEqual(STATIC_PATHS.map((p) => siteUrl(p)));
+  });
 
   async function buildSitemap(): Promise<import('next').MetadataRoute.Sitemap> {
     const proj = makeProject({ id: 'proj-published', updatedAt: '2026-06-01T00:00:00.000Z' });

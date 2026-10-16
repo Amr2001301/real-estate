@@ -81,6 +81,7 @@ function makePrismaMock() {
         return (u?.codes ?? []).map((code) => ({ permission: { code } }));
       }),
     },
+    contractAmendment: { findMany: jest.fn().mockResolvedValue([]) },
     deposit: {
       findUnique: jest.fn().mockImplementation(async () => fixture.target),
       update: jest.fn().mockImplementation(async ({ where, data }) => ({

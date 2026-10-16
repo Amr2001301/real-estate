@@ -75,7 +75,10 @@ class BuildingsService {
     return b;
   }
 
-  create(dto: CreateBuildingDto) {
+  async create(dto: CreateBuildingDto) {
+    // The parent id comes from the client: it must be this company's phase.
+    const phase = await this.prisma.phase.findFirst({ where: { id: dto.phaseId }, select: { id: true } });
+    if (!phase) throw new NotFoundException('Phase not found');
     return this.prisma.building.create({
       data: {
         phaseId: dto.phaseId,

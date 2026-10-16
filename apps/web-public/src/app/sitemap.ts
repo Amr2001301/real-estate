@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { safeFetch } from '@/lib/api';
 import { siteUrl } from '@/lib/seo';
+import { getResolvedTenant } from '@/lib/tenant';
 import type { Paginated, PublicProjectListItem, PublicUnit } from '@/lib/api-types';
 
 /**
@@ -22,13 +23,18 @@ import type { Paginated, PublicProjectListItem, PublicUnit } from '@/lib/api-typ
  *
  * SCALE: Current platform is far below the 50k URL / 50 MB sitemap limit;
  * no sitemap index is needed yet. Structure is clean for future splitting.
+ *
+ * TENANT: each site's sitemap lists that company's records only — the
+ * resolved tenant is sent with every fetch, and a host with no tenant lists
+ * the static pages alone (never the default company's data). Reading the
+ * request headers makes this per-request; the API fetches stay cached.
  */
-export const revalidate = 3600;
+const revalidate = 3600;
 
 const PAGE_SIZE = 200;
 
 /** Fetch every page of a paginated public endpoint and collect all items. */
-export async function fetchAll<T>(path: string): Promise<T[]> {
+export async function fetchAll<T>(path: string, tenantSlug?: string): Promise<T[]> {
   const items: T[] = [];
   let page = 1;
 
@@ -36,7 +42,7 @@ export async function fetchAll<T>(path: string): Promise<T[]> {
     const sep = path.includes('?') ? '&' : '?';
     const result = await safeFetch<Paginated<T>>(
       `${path}${sep}page=${page}&pageSize=${PAGE_SIZE}`,
-      { revalidate },
+      { revalidate, tenantSlug },
     );
     if (!result.ok) {
       // API unavailable on this page — stop gracefully and return what we have.
@@ -62,11 +68,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: siteUrl('/terms'),   changeFrequency: 'yearly',  priority: 0.3 },
   ];
 
+  const tenant = await getResolvedTenant();
+  if (!tenant) return staticEntries;
+
   // Fetch all PUBLISHED projects and AVAILABLE+SOLD units in parallel.
   const [projects, availableUnits, soldUnits] = await Promise.all([
-    fetchAll<PublicProjectListItem>('/public/projects'),
-    fetchAll<PublicUnit>('/public/units?status=AVAILABLE'),
-    fetchAll<PublicUnit>('/public/units?status=SOLD'),
+    fetchAll<PublicProjectListItem>('/public/projects', tenant.slug),
+    fetchAll<PublicUnit>('/public/units?status=AVAILABLE', tenant.slug),
+    fetchAll<PublicUnit>('/public/units?status=SOLD', tenant.slug),
   ]);
 
   const projectEntries: MetadataRoute.Sitemap = projects.map((p) => ({

@@ -127,6 +127,9 @@ export class UnitsService {
 
   async create(dto: CreateUnitDto) {
     await this.planLimits.checkUnitLimit();
+    // The parent id comes from the client: it must be this company's building.
+    const building = await this.prisma.building.findFirst({ where: { id: dto.buildingId }, select: { id: true } });
+    if (!building) throw new NotFoundException('Building not found');
     return this.prisma.unit.create({
       data: {
         buildingId: dto.buildingId,
@@ -211,6 +214,15 @@ export class UnitsService {
       this.prisma.unit.count({ where }),
     ]);
 
+    if (publicOnly) {
+      // No facets here: summed prices and per-status counts would give anyone
+      // the company's sales volume (?status=SOLD) — they are staff KPIs.
+      const serialized = data.map((u) =>
+        serializePublicUnit({ ...u, project: u.building.phase.project }),
+      );
+      return paginate(serialized, total, { page, pageSize });
+    }
+
     // Facets — computed over the whole filtered set, not the returned page, so
     // the admin KPI strip stays correct at any page size. FG-23.
     //
@@ -233,13 +245,6 @@ export class UnitsService {
         price: (priceAgg._sum.price ?? new Prisma.Decimal(0)).toString(),
       },
     };
-
-    if (publicOnly) {
-      const serialized = data.map((u) =>
-        serializePublicUnit({ ...u, project: u.building.phase.project }),
-      );
-      return paginate(serialized, total, { page, pageSize }, facets);
-    }
 
     return paginate(data, total, { page, pageSize }, facets);
   }
@@ -397,7 +402,14 @@ export class UnitsService {
     };
     const companyId = getRequiredCompanyId();
 
-    const conditions: Prisma.Sql[] = [Prisma.sql`p."companyId" = ${companyId}::uuid`];
+    // Units, buildings and phases carry their own companyId: a row hung under
+    // another company's project must not count here.
+    const conditions: Prisma.Sql[] = [
+      Prisma.sql`p."companyId" = ${companyId}::uuid`,
+      Prisma.sql`u."companyId" = ${companyId}::uuid`,
+      Prisma.sql`b."companyId" = ${companyId}::uuid`,
+      Prisma.sql`ph."companyId" = ${companyId}::uuid`,
+    ];
     if (query.projectId) {
       conditions.push(Prisma.sql`ph."projectId" = ${query.projectId}::uuid`);
     }

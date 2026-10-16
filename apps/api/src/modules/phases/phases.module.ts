@@ -71,7 +71,11 @@ class PhasesService {
     return phase;
   }
 
-  create(dto: CreatePhaseDto) {
+  async create(dto: CreatePhaseDto) {
+    // The parent id comes from the client; the tenant-scoped lookup makes sure
+    // it is this company's project (relation ids are not scoped on write).
+    const project = await this.prisma.project.findFirst({ where: { id: dto.projectId }, select: { id: true } });
+    if (!project) throw new NotFoundException('Project not found');
     return this.prisma.phase.create({
       data: {
         projectId: dto.projectId,
