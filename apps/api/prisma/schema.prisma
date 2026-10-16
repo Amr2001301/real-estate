@@ -141,6 +141,7 @@ model Company {
   paymentInstruments       PaymentInstrument[]
   paymentCorrections       PaymentCorrection[]
   contractCancellations    ContractCancellation[]
+  contractAmendments       ContractAmendment[]
   refunds                  Refund[]
 
   // Module flags — controls which dashboard sections are visible for this company
@@ -1273,6 +1274,7 @@ model Contract {
   // At most one auto-generated sales commission entry (Batch B wires creation).
   bonusEntry       BonusEntry?
   cancellation     ContractCancellation?
+  amendments       ContractAmendment[]
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1500,6 +1502,38 @@ model Deposit {
 /// Amounts are entered by the operator; policySnapshot captures Setting values at
 /// cancellation time (Rule 1 — historical record never recomputed from settings).
 /// TENANT_OWNED: middleware auto-scopes on reads; companyId required on every write.
+enum ContractAmendmentType {
+  /// تنازل — the contract passes to another customer; payments stay on it.
+  TRANSFER
+  /// تبديل — the contract moves to another unit; unpaid installments absorb the price change.
+  UNIT_SWAP
+}
+
+/// History of transfers and unit swaps on a live contract.
+model ContractAmendment {
+  id         String                @id @default(uuid()) @db.Uuid
+  type       ContractAmendmentType
+  contractId String                @db.Uuid
+  contract   Contract              @relation(fields: [contractId], references: [id])
+
+  fromCustomerId String?  @db.Uuid
+  toCustomerId   String?  @db.Uuid
+  fromUnitId     String?  @db.Uuid
+  toUnitId       String?  @db.Uuid
+  fromTotal      Decimal? @db.Decimal(14, 2)
+  toTotal        Decimal? @db.Decimal(14, 2)
+
+  reason        String   @db.VarChar(2000)
+  performedById String   @db.Uuid
+  createdAt     DateTime @default(now())
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([contractId])
+  @@index([companyId])
+}
+
 model ContractCancellation {
   id         String   @id @default(uuid()) @db.Uuid
   contractId String   @unique @db.Uuid

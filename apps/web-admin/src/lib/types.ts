@@ -245,6 +245,20 @@ export interface ContractInstallmentPlan {
   installments?: ContractInstallment[];
 }
 
+export interface ContractAmendment {
+  id: string;
+  type: 'TRANSFER' | 'UNIT_SWAP';
+  reason: string;
+  createdAt: string;
+  fromCustomerName: string | null;
+  toCustomerName: string | null;
+  fromUnitCode: string | null;
+  toUnitCode: string | null;
+  fromTotal: string | number | null;
+  toTotal: string | number | null;
+  performedByName: string | null;
+}
+
 export interface Contract {
   id: string;
   contractNumber: string | null;
