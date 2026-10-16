@@ -175,6 +175,7 @@ function makePrismaMock() {
       // P12 — NotificationsService.send reads the recipient locale for push.
       findUnique: jest.fn().mockResolvedValue({ locale: 'ar' }),
     },
+    broker: { findUnique: jest.fn().mockResolvedValue({ status: 'ACTIVE' }) },
     contract: {
       findMany: jest.fn().mockResolvedValue([]),
       count: jest.fn().mockResolvedValue(0),

@@ -1572,6 +1572,8 @@ const UI = {
         actionBtnApprove: 'موافقة',
         actionBtnReject: 'رفض',
         actionBtnCancel: 'إلغاء الحجز',
+        actionBtnDetachBroker: 'فصل عن البروكر',
+        actionDetachBrokerConfirm: 'فصل الحجز عن البروكر؟ لن تُحسب له عمولة على هذه الصفقة.',
         actionBtnEdit: 'تعديل',
         actionApproveConfirm: 'هل أنت متأكد من الموافقة على هذا الحجز؟',
         rejectDialogTitle: 'رفض الحجز',
@@ -3236,6 +3238,11 @@ const UI = {
         fieldReasonHint: 'اختياري — سيُضاف إلى الملاحظات الداخلية مع طابع زمني',
         btnUpdate: 'تحديث الحالة',
         savedOk: 'تم تحديث الحالة',
+        holdTitle: 'تعليق صرف العمولات',
+        holdOn: 'صرف عمولات هذا الوسيط معلّق — لا تُنشأ أو تُعتمد أو تُصرف دفعات حتى رفع التعليق.',
+        holdOff: 'الصرف متاح. علّقه عند وجود خلاف أو مراجعة؛ العمولات المكتسبة تبقى كما هي.',
+        holdBtnOn: 'تعليق الصرف',
+        holdBtnOff: 'رفع التعليق',
       },
       visitComponents: {
         // appointment-actions & appointment-detail-actions
@@ -6692,6 +6699,8 @@ const UI = {
         actionBtnApprove: 'Approve',
         actionBtnReject: 'Reject',
         actionBtnCancel: 'Cancel Reservation',
+        actionBtnDetachBroker: 'Detach from broker',
+        actionDetachBrokerConfirm: 'Detach this reservation from its broker? No commission will be earned on this deal.',
         actionBtnEdit: 'Edit',
         actionApproveConfirm: 'Are you sure you want to approve this reservation?',
         rejectDialogTitle: 'Reject Reservation',
@@ -8356,6 +8365,11 @@ const UI = {
         fieldReasonHint: 'Optional — will be added to internal notes with a timestamp',
         btnUpdate: 'Update Status',
         savedOk: 'Status updated',
+        holdTitle: 'Payout hold',
+        holdOn: 'Payouts for this broker are on hold — none can be created, approved or paid until released.',
+        holdOff: 'Payouts are allowed. Hold them during a dispute or review; earned commissions stay as they are.',
+        holdBtnOn: 'Hold payouts',
+        holdBtnOff: 'Release hold',
       },
       visitComponents: {
         // appointment-actions & appointment-detail-actions

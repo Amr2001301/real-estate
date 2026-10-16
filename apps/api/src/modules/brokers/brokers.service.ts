@@ -1,11 +1,16 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma, BrokerStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
+import { getRequiredCompanyId, runInCompany, runTenantContext } from '../../common/tenant/tenant-context';
+import { reportFailure } from '../../common/observability/report-failure';
+import { CronLockService } from '../../common/cron/cron-lock.service';
 import { NotificationsService } from '../notifications/notifications.module';
 import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { OPTIONS_LIMIT, optionsResult } from '../../common/utils/options';
@@ -27,6 +32,8 @@ const COUNTS_SELECT = {
 
 @Injectable()
 export class BrokersService {
+  private readonly logger = new Logger(BrokersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -211,6 +218,49 @@ export class BrokersService {
   }
 
   /**
+   * Hold (or release) every payout of a broker — for a dispute or an
+   * investigation. Earned commissions stay earned; they just are not paid.
+   */
+  async setPayoutHold(id: string, hold: boolean, reason?: string) {
+    const existing = await this.assertExists(id);
+    const stamp = new Date().toISOString();
+    const line = `[${stamp}] payout ${hold ? 'held' : 'released'}${reason?.trim() ? `: ${reason.trim()}` : ''}`;
+    return this.prisma.broker.update({
+      where: { id },
+      data: { payoutHold: hold, notes: existing.notes ? `${existing.notes}\n${line}` : line },
+      include: COUNTS_SELECT,
+    });
+  }
+
+  /**
+   * A broker whose agreement end date has passed is terminated: the date was
+   * stored but nothing read it, so the firm kept its portal and grants. One
+   * failing broker never stops the rest of the sweep.
+   */
+  async terminateExpiredAgreements(now = new Date()): Promise<{ terminated: number; failed: number }> {
+    const due = await this.prisma.broker.findMany({
+      where: {
+        status: { in: [BrokerStatus.ACTIVE, BrokerStatus.PENDING, BrokerStatus.SUSPENDED] },
+        contractEndAt: { lt: now },
+      },
+      select: { id: true, companyId: true },
+    });
+    let terminated = 0;
+    let failed = 0;
+    for (const b of due) {
+      try {
+        const run = () => this.applyStatus(b.id, BrokerStatus.TERMINATED, 'Agreement ended (contract end date passed)');
+        await (b.companyId ? runInCompany(b.companyId, run) : run());
+        terminated++;
+      } catch (err) {
+        failed++;
+        reportFailure(this.logger, 'broker-agreement', `terminating broker ${b.id} failed`, err);
+      }
+    }
+    return { terminated, failed };
+  }
+
+  /**
    * Shared status-change logic. All status transitions (the generic
    * reactivate/pending route plus the dedicated suspend/terminate routes)
    * funnel through here so business behavior and response shape stay
@@ -302,5 +352,32 @@ export class BrokersService {
       if (!exists) return candidate;
     }
     throw new ConflictException('Could not generate a unique broker code');
+  }
+}
+
+/** Daily: brokers whose agreement end date has passed are terminated. */
+@Injectable()
+export class BrokerAgreementCron {
+  private readonly logger = new Logger(BrokerAgreementCron.name);
+
+  constructor(
+    private readonly brokers: BrokersService,
+    @Optional() private readonly lock?: CronLockService,
+  ) {}
+
+  @Cron(CronExpression.EVERY_DAY_AT_2AM)
+  async run() {
+    await runTenantContext({ companyId: null, bypass: true, isPublic: false }, async () => {
+      try {
+        const result = this.lock
+          ? await this.lock.withLock('broker-agreement-end', 10 * 60_000, () => this.brokers.terminateExpiredAgreements())
+          : await this.brokers.terminateExpiredAgreements();
+        if (result && result.terminated + result.failed > 0) {
+          this.logger.log(`Broker agreement sweep: terminated=${result.terminated} failed=${result.failed}`);
+        }
+      } catch (err) {
+        reportFailure(this.logger, 'broker-agreement', 'broker agreement sweep failed', err);
+      }
+    });
   }
 }

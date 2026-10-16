@@ -142,6 +142,16 @@ export async function approveReservationAction(
   return {};
 }
 
+export async function detachReservationBrokerAction(id: string): Promise<ReservationActionResult> {
+  try {
+    await api.post(`/reservations/${id}/detach-broker`, {});
+  } catch (e) {
+    return toReservationActionError(e, 'فصل الحجز عن البروكر');
+  }
+  revalidatePath(`/dashboard/reservations/${id}`);
+  return {};
+}
+
 export async function rejectReservationAction(
   id: string,
   formData: FormData,

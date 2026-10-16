@@ -82,6 +82,8 @@ const PAYOUT_INCLUDE = {
   },
 } as const;
 
+const PAYOUT_HOLD_MESSAGE = 'صرف عمولات هذا البروكر معلّق من الإدارة — ارفع التعليق أولاً';
+
 @Injectable()
 export class BrokerPayoutsService {
   private readonly logger = new Logger(BrokerPayoutsService.name);
@@ -208,9 +210,10 @@ export class BrokerPayoutsService {
   async create(dto: CreateBrokerPayoutDto, actor: AuthUser) {
     const broker = await this.prisma.broker.findUnique({
       where: { id: dto.brokerId },
-      select: { id: true, status: true },
+      select: { id: true, status: true, payoutHold: true },
     });
     if (!broker) throw new NotFoundException('Broker not found');
+    if (broker.payoutHold) throw new ConflictException(PAYOUT_HOLD_MESSAGE);
 
     // Validate any provided commissions before doing anything else.
     if (dto.commissionIds && dto.commissionIds.length > 0) {
@@ -305,8 +308,15 @@ export class BrokerPayoutsService {
 
   // ── Status transitions ─────────────────────────────────────────────────
 
+  /** A held broker's payouts do not move forward until the hold is lifted. */
+  private async assertNotHeld(brokerId: string) {
+    const broker = await this.prisma.broker.findUnique({ where: { id: brokerId }, select: { payoutHold: true } });
+    if (broker?.payoutHold) throw new ConflictException(PAYOUT_HOLD_MESSAGE);
+  }
+
   async approve(id: string, dto: ApprovePayoutDto, actor: AuthUser) {
     const payout = await this.assertPayoutInStatus(id, BrokerPayoutStatus.DRAFT);
+    await this.assertNotHeld(payout.brokerId);
     const count = await this.prisma.brokerCommission.count({
       where: { payoutId: id },
     });
@@ -339,6 +349,7 @@ export class BrokerPayoutsService {
 
   async process(id: string, dto: ProcessPayoutDto, actor: AuthUser) {
     const payout = await this.assertPayoutInStatus(id, BrokerPayoutStatus.APPROVED);
+    await this.assertNotHeld(payout.brokerId);
     const updated = await this.prisma.brokerPayout.update({
       where: { id },
       data: {
@@ -365,6 +376,7 @@ export class BrokerPayoutsService {
 
   async markPaid(id: string, dto: MarkPayoutPaidDto, actor: AuthUser) {
     const payout = await this.assertPayoutInStatus(id, BrokerPayoutStatus.PROCESSING);
+    await this.assertNotHeld(payout.brokerId);
     const paidAt = dto.paidAt ? new Date(dto.paidAt) : new Date();
     const updated = await this.prisma.brokerPayout.update({
       where: { id },

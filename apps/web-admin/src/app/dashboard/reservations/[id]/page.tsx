@@ -129,6 +129,7 @@ export default async function ReservationDetailPage({
                 role: s.role,
               }))}
               canManage={isAdmin}
+              hasBroker={!!reservation.brokerId}
               locale={locale}
             />
           </div>

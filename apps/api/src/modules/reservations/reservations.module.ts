@@ -1181,6 +1181,7 @@ export class ReservationsService {
         'CONVERTED status is set automatically during contract conversion',
       );
     }
+    if (dto.status === ReservationStatus.APPROVED) await this.assertBrokerActive(reservation.brokerId);
 
     const allowedFromPending: ReservationStatus[] = [
       ReservationStatus.APPROVED,
@@ -1746,6 +1747,47 @@ export class ReservationsService {
     });
   }
 
+  /**
+   * A suspended or terminated broker's reservations do not move forward:
+   * approving or converting one would earn them a new deal. The admin first
+   * detaches the reservation from the broker (it becomes the company's own).
+   */
+  private async assertBrokerActive(brokerId: string | null) {
+    if (!brokerId) return;
+    const broker = await this.prisma.broker.findUnique({ where: { id: brokerId }, select: { status: true } });
+    if (broker?.status === 'SUSPENDED' || broker?.status === 'TERMINATED') {
+      throw new ConflictException('البروكر صاحب الحجز موقوف أو منتهي — افصل الحجز عن البروكر أولاً');
+    }
+  }
+
+  /** Detach a reservation from its broker: no commission, the deal is the company's own. */
+  async detachBroker(id: string, actor: AuthUser) {
+    const reservation = await this.prisma.reservation.findUnique({
+      where: { id },
+      select: { id: true, brokerId: true, status: true },
+    });
+    if (!reservation) throw new NotFoundException('Reservation not found');
+    if (!reservation.brokerId) return this.findOne(id);
+    if (reservation.status !== ReservationStatus.PENDING && reservation.status !== ReservationStatus.APPROVED) {
+      throw new ConflictException('يمكن فصل الحجز عن البروكر فقط وهو قيد المراجعة أو معتمد');
+    }
+    await this.prisma.$transaction(async (tx) => {
+      await tx.reservation.update({
+        where: { id },
+        data: { brokerId: null, brokerAgentId: null, commissionLockedPct: null, commissionLockedAmount: null },
+      });
+      await tx.reservationActivity.create({
+        data: {
+          reservationId: id,
+          type: ReservationActivityType.NOTE_ADDED,
+          actorId: actor.sub,
+          note: `Detached from broker ${reservation.brokerId}`,
+        },
+      });
+    });
+    return this.findOne(id);
+  }
+
   async convertReservation(id: string, dto: ConvertReservationDto, actor: AuthUser) {
     const reservation = await this.prisma.reservation.findUnique({
       where: { id },
@@ -1771,6 +1813,7 @@ export class ReservationsService {
     if (reservation.status !== ReservationStatus.APPROVED) {
       throw new BadRequestException('يجب أن يكون الحجز بحالة "معتمد" قبل التحويل إلى عقد');
     }
+    await this.assertBrokerActive(reservation.brokerId);
     if (reservation.contract) {
       throw new BadRequestException('تم تحويل هذا الحجز مسبقاً إلى عقد');
     }
@@ -2541,6 +2584,14 @@ class ReservationsController {
     await assertSalesRecordInScope(this.prisma, user, reservation?.salesId ?? null, {
       mode: 'forbidden',
     });
+  }
+
+  // A suspended broker's reservation is detached before it can move on.
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('reservations:approve')
+  @Post(':id/detach-broker')
+  detachBroker(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
+    return this.svc.detachBroker(id, user);
   }
 
   // Strict: approval is the gate that lets a reservation proceed to contract

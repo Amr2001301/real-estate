@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsDateString,
   IsEmail,
   IsEnum,
@@ -245,4 +246,14 @@ export class BrokerOptionsQueryDto {
   @IsOptional()
   @IsEnum(BrokerStatus)
   status?: BrokerStatus;
+}
+
+export class BrokerPayoutHoldDto {
+  @IsBoolean()
+  hold!: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  reason?: string;
 }

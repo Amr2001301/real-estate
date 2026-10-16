@@ -20,6 +20,7 @@ import { BrokersService } from './brokers.service';
 import {
   BrokerOptionsQueryDto,
   BrokerStatusReasonDto,
+  BrokerPayoutHoldDto,
   CreateBrokerDto,
   UpdateBrokerDto,
   UpdateBrokerStatusDto,
@@ -106,6 +107,17 @@ export class BrokersController {
     @Body() dto: BrokerStatusReasonDto,
   ) {
     return this.brokers.suspend(id, dto.reason);
+  }
+
+  // Hold or release a broker's payouts (dispute, investigation).
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('brokers:suspend')
+  @Post(':id/payout-hold')
+  setPayoutHold(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: BrokerPayoutHoldDto,
+  ) {
+    return this.brokers.setPayoutHold(id, dto.hold, dto.reason);
   }
 
   @Roles(UserRole.ADMIN)
