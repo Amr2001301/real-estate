@@ -11,6 +11,8 @@
 
 **الجولة الرابعة:** المراجعة خلصت، و**وافقت على كل الاقتراحات** (القسم 4 تحت). التنفيذ **لسه ما بدأش** بطلب منك. الخطة 4 أجزاء: U1 أمان وخصوصية، U2 فلوس، U3 العميل والمهام التلقائية، U4 التقارير. أول حاجة تتعمل: أرقام عمولات البروكرز (واقفة عند كل الشركات بعد الأولى).
 
+**التصميم الجديد (U5):** اعتمدت شكل جديد للوحة التحكم (أدمن، مبيعات، بروكر): خطوط جديدة، شريط أرقام كحلي، رأس صفحة أبسط، فلتر موحّد، جداول بدل الكروت، ووضع داكن. التفاصيل في القسم 3 تحت U5، والتصميم نفسه على [هذا اللينك](https://claude.ai/artifact/UPVXRtVxEBMWpmuRMYqb1Z) (خاص بأكونتك — شاركه من زرار Share لو الأكونت التاني محتاج يفتحه).
+
 **حاجات عليك إنت:** الاستضافة، تقييد مفتاح Firebase، حماية الفرع الرئيسي على GitHub، وتسميات الرسوم في تطبيقات الموبايل (محتاجة جهاز عليه Flutter).
 
 **إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md` وكمّل الجولة الرابعة من U2». كل اللي محتاجه مكتوب هنا.
@@ -95,7 +97,7 @@ Shared helpers worth knowing (API): `common/utils/add-months.ts`, `common/time/c
 
 Found by four read-only scenario audits on 2026-10-16. The top items were re-checked by hand. Paths are under `apps/api/` unless noted. Line numbers are as of `main` @ `bd3e46a`.
 
-**Recommended order: U2 → U1 → U3 → U4** (U2 first because broker commissions are broken for every company after the first).
+**Recommended order: U2 → U1 → U3 → U4 → U5** (U2 first because broker commissions are broken for every company after the first).
 
 ### U2 — Money
 
@@ -151,6 +153,43 @@ Found by four read-only scenario audits on 2026-10-16. The top items were re-che
 9. `netCollected` with a type filter subtracts all refunds (`reports.service.ts:1733-1760`).
 10. **Decision 2:** show "collected towards price" and "fees & penalties" as two separate figures; a sale is counted by **`signedAt`** everywhere (reports page and `salesTrend` currently use `createdAt`).
 - Left as is (not decided otherwise): sales use the current (amended) price; inventory "sold value" uses list price; "number of payments" counts deposit rows.
+
+### U5 — Unified premium design (approved 2026-10-16)
+
+The owner approved a redesign of the whole `apps/web-admin` app — the admin dashboard, the sales screens and the broker portal (`src/app/portal`) all share it. Mockups (light + dark, interactive): **https://claude.ai/artifact/UPVXRtVxEBMWpmuRMYqb1Z** — artboards: Dashboard (light / dark), Projects list, Leads Kanban, Inventory. The link is private to the owner's account; ask the owner to share it if you can't open it. Structure, content and section order of the current pages stay; only the look and how data is presented change. Do U5 **after U4** (U4 fixes the numbers these screens show) unless the owner says otherwise.
+
+**Palette** (keep the existing tailwind CSS-variable setup, `darkMode: 'class'`, and map these values onto it):
+
+| Token | Light | Dark |
+|---|---|---|
+| ground (page) | `#F4F0E6` ivory | `#0B111C` |
+| surface (cards) | `#FFFDF8` | `#111927` |
+| raised (nested rows/cards) | `#FBF7EE` | `#152033` |
+| hairline | `#E6DECB` | `#233046` |
+| track (empty bar) | `#EEE6D3` | `#1E2A3D` |
+| ink (text) | `#141A26` | `#EEE8DA` |
+| muted text | `#6B6658` | `#9AA3B2` |
+| gold text (links, units, small accents) | `#86651F` | `#D8B66A` |
+| gold soft (active chip bg) | `#F6EDD6` | `#2A2618` |
+| success | `#2F6B45` | `#86C9A0` |
+
+Fixed in both themes: sidebar `#0A1120` with gold hairline border; **navy band** `#0E1626` + border `rgba(216,182,106,.28)` + soft shadow (KPI strips, table headers, the dark project card); gold `#C79A3B` / `#D8B66A`; primary button = gold gradient `#D8B66A → #B38B3A`, text `#1A1408`, pill shaped.
+
+**Unit status colours — one set everywhere** (bars, chips, legends): sold = ink (`#141A26` light / `#F4ECD8` dark), reserved = gold `#C79A3B`, available = sage (`#9FBFAB` bar, `#3F6B52` text light; `#5E7F6B` bar, `#86C9A0` text dark). Today the inventory page uses green for available and grey for sold — replace.
+
+**Fonts** (`src/app/layout.tsx`, today Inter + IBM Plex Sans Arabic via `next/font/google`): body **Almarai** (400/700/800), headings **Noto Naskh Arabic** (600/700), large numbers **Cormorant Garamond** (500/600, lining numerals). Western digits everywhere — no Arabic-Indic digits mixed in (the inventory page mixes them today).
+
+**Components to change (one change reaches every page):**
+- `components/premium/page-hero.tsx` (`PremiumPageHero`, ~88 uses): drop the white card + gold top border. Breadcrumb, then a 40px Naskh title + muted description, actions on the same row as pill buttons (secondary = outlined, one gold primary). No duplicate badge repeating the title.
+- `components/premium/metric-strip.tsx` (`PremiumMetricStrip`, ~45 uses): one **navy band** divided by gold hairlines instead of separate white cards with a different colour per number; icon = thin gold line icon in a gold-ring circle; value in Cormorant, single colour; unit in small gold text. A distribution (e.g. units sold/reserved/available) can sit in the band's bottom row as one segmented bar + legend.
+- `components/premium/filter-bar.tsx` (`PremiumFilterBar`, ~31 uses) and the one-off filter bars — `components/broker/{commissions,payouts,reservations,units}-filter-bar.tsx`, `components/reports/report-filter-bar.tsx`, `components/crm/leads-filter-popover.tsx`, `components/ui/toolbar.tsx` — become **one** filter bar: a pill-shaped bar with search (ivory inset), filters as pill selects showing `label · value` (active = gold border + gold-soft bg), status as toggle chips **with counts** (as on inventory today), a "more filters" button, and a view toggle (table / cards / kanban) where the page has one. **No "Apply/بحث" button** — submit on change (keep the GET-params form semantics). Under the bar: result count, active filters as removable chips, "clear all".
+- Tables: navy header row (`#0E1626`, muted `#A9B0BD` labels), hairline rows, Naskh for row titles, Cormorant for numbers, a segmented status bar where units are shown, a round chevron button to open the row. **Lists default to table view** on the dashboard (cards stay available via the toggle; remember the user's choice). On the projects list drop columns that are always empty/identical (phases "—", type "قياسي", last update "—" unless filled) and add units distribution + contract value.
+- Kanban (`components/crm/*`, leads page): fixed 288px columns, stage colour only as a 3px top line, count in Cormorant, empty column shows a dashed "drop here"; the 7 coloured stage pills above the board go away (the band shows total / conversion / unassigned / open). Card: client name prominent, project + source, "days in stage" + "last contact", rep avatar only, code small and muted, call/mail round buttons. "Unassigned" becomes a toggle in the filter bar.
+- Dashboard (`app/dashboard/page.tsx`, `components/dashboard/*`): the hero band holds total contracts (largest), collected, collection rate (thin ring), overdue, contracts this month; "needs action" = 4 hairline-divided tiles; thin gold area line for bookings; slim gradient bars for the funnel; segmented bar + legend for financial health; hairline-divided cash-flow columns; project health as cards.
+- Sidebar (`components/layout/sidebar.tsx`): active item = gold-tinted background + gold dot (not a solid gold pill); user card at the bottom; remove the second "Platform Admin" block from the top bar.
+- **Dark mode:** `components/ui/theme-toggle.tsx` already exists (localStorage `admin-theme`, toggles `.dark` on `<html>`) but is not mounted anywhere — mount it in the top bar and give the CSS variables the dark values above. Avoid a flash: `ui/theme-script.tsx` exists for that.
+
+Check every surface after the change: admin, sales (SALES / SALES_MANAGER), broker portal, both locales (ar RTL / en LTR), light and dark, and phone width. Playwright suites (`pnpm --filter web-admin e2e`) select by text and test ids — keep labels and `data-testid`s.
 
 ---
 
