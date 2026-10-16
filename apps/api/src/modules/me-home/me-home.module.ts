@@ -3,7 +3,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { InstallmentStatus, MaintenanceReviewStatus, MaintenanceStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 // A cancelled or deleted contract is no longer the customer's unit or debt.
-import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
+import { LIVE_CONTRACT_WHERE, SURCHARGE_PAYMENT_TYPES } from '../installments/live-contract';
 import { findTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import { getTenantContext } from '../../common/tenant/tenant-context';
 import { getCompanyCurrency } from '../../common/currency/currency';
@@ -214,16 +214,23 @@ class MeHomeSummaryService {
         where: { customerId: userId, signedAt: { not: null }, ...LIVE_CONTRACT_WHERE },
       }),
 
-      // Q3a: total installments across all contracts
+      // Q3a: total installments across all contracts — the price schedule
+      // only: a cancelled (waived) row is not owed, and fees are not
+      // installments, so neither inflates "remaining".
       this.prisma.installment.count({
-        where: { plan: { contract: { customerId: userId, ...LIVE_CONTRACT_WHERE } } },
+        where: {
+          plan: { contract: { customerId: userId, ...LIVE_CONTRACT_WHERE } },
+          status: { not: InstallmentStatus.CANCELLED },
+          type: { notIn: SURCHARGE_PAYMENT_TYPES },
+        },
       }),
 
-      // Q3b: paid installments
+      // Q3b: paid installments (same set)
       this.prisma.installment.count({
         where: {
           plan: { contract: { customerId: userId, ...LIVE_CONTRACT_WHERE } },
           status: InstallmentStatus.PAID,
+          type: { notIn: SURCHARGE_PAYMENT_TYPES },
         },
       }),
 

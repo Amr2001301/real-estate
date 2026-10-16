@@ -35,7 +35,12 @@ import { findTenantUser, scopedUserFindMany } from '../../common/tenant/resolve-
 import { reportFailure } from '../../common/observability/report-failure';
 import { NotificationsService } from '../notifications/notifications.module';
 import { UNCLEARED_INSTRUMENT_STATUSES } from '../deposits/review-queue';
-import { CONTRACT_CANCELLED_MESSAGE, isDeadContract, LIVE_CONTRACT_WHERE } from '../installments/live-contract';
+import {
+  CONTRACT_CANCELLED_MESSAGE,
+  isDeadContract,
+  LIVE_CONTRACT_WHERE,
+  SURCHARGE_PAYMENT_TYPES,
+} from '../installments/live-contract';
 import {
   closeOpenMaintenance,
   handOverOpenMaintenance,
@@ -43,6 +48,7 @@ import {
   startUnitWarranties,
 } from './unit-warranties';
 import { resolveTransferFeeSettings, TRANSFER_FEE_SETTING_KEYS, transferFeeFor } from './transfer-fee';
+import { feeDueDate, feePaymentDays } from '../installments/fee-settings';
 
 export class TransferContractDto {
   @IsUUID()
@@ -81,11 +87,7 @@ export class SwapContractUnitDto {
 }
 
 /** Charges added on top of the price — they do not move with it. */
-const SURCHARGE_TYPES: PlanPaymentType[] = [
-  PlanPaymentType.LATE_FEE,
-  PlanPaymentType.BOUNCE_PENALTY,
-  PlanPaymentType.TRANSFER_FEE,
-];
+const SURCHARGE_TYPES = SURCHARGE_PAYMENT_TYPES;
 const OPEN_STATUSES: InstallmentStatus[] = [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE];
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -240,6 +242,7 @@ export class ContractAmendmentsService {
       throw new BadRequestException('لا يوجد جدول أقساط على العقد لإضافة رسوم التنازل — أنشئ الجدول أولاً');
     }
     const feeAmount = fee;
+    const feeDue = feeDueDate(new Date(), await feePaymentDays(this.prisma, companyId));
 
     const fromId = contract.customerId;
     const now = new Date();
@@ -287,7 +290,7 @@ export class ContractAmendmentsService {
             data: {
               planId: plan.id,
               type: PlanPaymentType.TRANSFER_FEE,
-              dueDate: now,
+              dueDate: feeDue,
               amount: new Prisma.Decimal(feeAmount),
               status: InstallmentStatus.PENDING,
               companyId,
@@ -483,6 +486,15 @@ export class ContractAmendmentsService {
         data: { unitId: unit.id, totalAmount: new Prisma.Decimal(dto.totalAmount) },
       });
       if (moved.count === 0) throw new ConflictException('تغيّر العقد أثناء التنفيذ — أعد المحاولة');
+      // The booking paid on the source reservation stays linked to it; the
+      // reservation (CONVERTED, history) follows the contract to the new unit
+      // so that money is reported with the project the sale now belongs to.
+      if (contract.reservationId) {
+        await tx.reservation.updateMany({
+          where: { id: contract.reservationId, companyId },
+          data: { unitId: unit.id },
+        });
+      }
 
       for (const r of rescaled) {
         const res = await tx.installment.updateMany({

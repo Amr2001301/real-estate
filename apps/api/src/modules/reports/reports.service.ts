@@ -61,7 +61,7 @@ import {
   renderShareChartPng,
 } from '../../common/utils/xlsx-chart';
 import { COLLECTED_DEPOSIT_WHERE, RECORDED_DEPOSIT_WHERE } from '../../common/finance/collected';
-import { LIVE_CONTRACT_WHERE, LIVE_PLAN_WHERE } from '../installments/live-contract';
+import { LIVE_CONTRACT_WHERE, LIVE_PLAN_WHERE, SURCHARGE_PAYMENT_TYPES } from '../installments/live-contract';
 
 // Arabic month names indexed by JS month (0 = January). Used for the
 // reservation-trend labels on the admin dashboard.
@@ -449,6 +449,28 @@ export class ReportsService {
       }),
     ]);
 
+    // Progress against the price of live contracts: the money and the arrears
+    // that count toward it — not fee payments, not deposits on cancelled
+    // deals, not bookings that never became a contract. Measured against the
+    // all-in collected figure the collection rate could pass 100%.
+    const [collectedTowardsPriceAgg, overdueTowardsPriceAgg] = await Promise.all([
+      this.prisma.deposit.aggregate({
+        where: {
+          ...COLLECTED_DEPOSIT_WHERE,
+          OR: [
+            { installmentId: null, contract: { is: LIVE_CONTRACT_WHERE } },
+            { installment: { is: { type: { notIn: SURCHARGE_PAYMENT_TYPES }, plan: LIVE_PLAN_WHERE } } },
+            { installmentId: null, contractId: null, reservation: { is: { contract: { is: LIVE_CONTRACT_WHERE } } } },
+          ],
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.installment.aggregate({
+        where: { status: InstallmentStatus.OVERDUE, type: { notIn: SURCHARGE_PAYMENT_TYPES }, plan: LIVE_PLAN_WHERE },
+        _sum: { amount: true },
+      }),
+    ]);
+
     const [reservationTrend, leadSources, recentActivity, topProjects] = await Promise.all([
       this.reservationTrend(now),
       this.leadSourceDistribution(),
@@ -480,6 +502,8 @@ export class ReportsService {
         totalContractValue:       Number(totalContractValueAgg._sum.totalAmount     ?? 0),
         totalCollectedVerified:   Number(totalCollectedVerifiedAgg._sum.amount      ?? 0),
         overdueTotal:             Number(overdueAgg._sum.amount                     ?? 0),
+        collectedTowardsPrice:    Number(collectedTowardsPriceAgg._sum.amount       ?? 0),
+        overdueTowardsPrice:      Number(overdueTowardsPriceAgg._sum.amount         ?? 0),
         pendingBonus:             Number(pendingBonusAgg._sum.amount                ?? 0),
         pendingBrokerPayouts:     Number(pendingPayoutsAgg._sum.totalNet            ?? 0),
         collectedThisMonth:       Number(collectedThisMonthAgg._sum.amount          ?? 0),

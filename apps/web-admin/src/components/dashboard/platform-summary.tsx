@@ -7,6 +7,8 @@ import type { Locale } from '@/lib/locale';
 interface Financial {
   totalContractValue:     number;
   totalCollectedVerified: number;
+  collectedTowardsPrice?: number;
+  overdueTowardsPrice?:   number;
   overdueTotal:           number;
   pendingBonus:           number;
   pendingBrokerPayouts:   number;
@@ -49,8 +51,10 @@ function convPct(num: number, denom: number): string | null {
 
 function FinancialStackedBar({ financial, currencySymbol, locale = 'ar' }: { financial: Financial; currencySymbol: string; locale?: Locale }) {
   const total       = financial.totalContractValue;
-  const collected   = financial.totalCollectedVerified;
-  const overdue     = financial.overdueTotal;
+  // The bar splits the contract value: only price money and price arrears
+  // belong in it (fees and cancelled deals made it overflow).
+  const collected   = financial.collectedTowardsPrice ?? financial.totalCollectedVerified;
+  const overdue     = financial.overdueTowardsPrice ?? financial.overdueTotal;
   const pending     = Math.max(0, total - collected - overdue);
   const liabilities = financial.pendingBonus + financial.pendingBrokerPayouts;
 
