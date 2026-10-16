@@ -18,7 +18,8 @@ import {
 } from './dto/broker-commission.dto';
 import { reportFailure } from '../../common/observability/report-failure';
 import { isUniqueConflictOn } from '../../common/utils/contract-number';
-import { CONTRACT_CANCELLED_MESSAGE, isDeadContract } from '../installments/live-contract';
+import { commissionBasis, MARKUP_SNAPSHOT_SELECT } from '../../common/finance/commission-basis';
+import { CONTRACT_CANCELLED_MESSAGE, isPayableDeal } from '../installments/live-contract';
 
 const COMMISSION_INCLUDE = {
   broker: {
@@ -134,8 +135,10 @@ export class BrokerCommissionsService {
             id: true,
             reservationNumber: true,
             brokerId: true,
+            createdAt: true,
             commissionLockedPct: true,
             commissionLockedAmount: true,
+            ...MARKUP_SNAPSHOT_SELECT,
             lead: { select: { id: true, fullName: true } },
           },
         },
@@ -155,14 +158,22 @@ export class BrokerCommissionsService {
     if (!contract.brokerId) {
       return { status: 'skipped', reason: 'contract is not broker-attributed' };
     }
-    // Commission is earned by a broker working with the company: a contract
-    // signed after the broker was suspended or terminated earns nothing new.
+    // A broker suspended or terminated by the time of signing still earns the
+    // commission of a sale reserved while working with the company (decided
+    // 2026-10-16). Otherwise it is held: an error, so the contract shows a
+    // failed sign follow-up, and it is created when the broker is reactivated.
     const brokerNow = await this.prisma.broker.findUnique({
       where: { id: contract.brokerId },
-      select: { status: true },
+      select: { status: true, suspendedAt: true },
     });
     if (brokerNow?.status === 'SUSPENDED' || brokerNow?.status === 'TERMINATED') {
-      return { status: 'skipped', reason: `broker is ${brokerNow.status}` };
+      const reservedAt = contract.reservation?.createdAt;
+      const reservedWhileActive = !!reservedAt && !!brokerNow.suspendedAt && reservedAt < brokerNow.suspendedAt;
+      if (!reservedWhileActive) {
+        throw new ConflictException(
+          `الوسيط موقوف أو منتهٍ وكان كذلك عند الحجز — العمولة معلّقة حتى إعادة تفعيله (broker is ${brokerNow.status})`,
+        );
+      }
     }
     if (!contract.signedAt) {
       return { status: 'skipped', reason: 'contract is not signed' };
@@ -179,7 +190,8 @@ export class BrokerCommissionsService {
 
     let lockedPct = contract.reservation.commissionLockedPct;
     let lockedAmount = contract.reservation.commissionLockedAmount;
-    const basisAmount = contract.totalAmount;
+    // The sale price after discount, without the instalment markup.
+    const basisAmount = commissionBasis(contract.totalAmount, contract.reservation);
     const projectId = contract.unit.building.phase.projectId;
 
     // When the reservation was created through the admin CRM (not the broker
@@ -212,8 +224,8 @@ export class BrokerCommissionsService {
     // snapshot.totalPayable at reservation time, which can differ from
     // contract.totalAmount if the installment plan changed or the contract was
     // created with a different total. We always recompute from the locked RATE
-    // against the final signed contract amount so that commissionNet tracks
-    // salesGross at the correct percentage. For FIXED_PER_UNIT (lockedPct is
+    // against the signed contract's price (basisAmount: after discount, without
+    // the instalment markup). For FIXED_PER_UNIT (lockedPct is
     // null), we use the locked fixed amount since it is not percentage-based.
     let grossAmount: Prisma.Decimal;
     if (lockedPct !== null && lockedPct !== undefined) {
@@ -390,12 +402,13 @@ export class BrokerCommissionsService {
         'Cannot approve a cancelled commission; create a new contract or re-materialize',
       );
     }
-    // A commission kept (RETAIN / MANUAL) on a cancelled deal is not approved.
+    // On a cancelled deal only a commission kept with RETAIN is approved
+    // (MANUAL waits for the admin's own decision).
     const parent = await this.prisma.brokerCommission.findUnique({
       where: { id },
-      select: { contract: { select: { status: true, deletedAt: true } } },
+      select: { retainedOnCancellation: true, contract: { select: { status: true, deletedAt: true } } },
     });
-    if (isDeadContract(parent?.contract)) throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
+    if (parent && !isPayableDeal(parent)) throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
     const updated = await this.prisma.brokerCommission.update({
       where: { id },
       data: {

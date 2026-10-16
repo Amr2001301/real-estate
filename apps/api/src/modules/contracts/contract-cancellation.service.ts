@@ -74,6 +74,7 @@ function isCommissionEffectivelyPaid(commission: {
 
 export { resetUnitWarranties } from './unit-warranties';
 import { closeOpenMaintenance, resetUnitWarranties } from './unit-warranties';
+import { rebalancePayout } from '../broker-payouts/payout-totals';
 
 @Injectable()
 export class ContractCancellationService {
@@ -228,9 +229,15 @@ export class ContractCancellationService {
         });
       }
 
-      // 4. Commission handling (CLAWBACK action only; RETAIN/MANUAL = no change)
+      // 4. Commission handling. CLAWBACK cancels or claws back; RETAIN keeps
+      // it payable (decided 2026-10-16); MANUAL leaves it for the admin.
       if (commission && commission.status !== BrokerCommissionStatus.REJECTED && commission.status !== BrokerCommissionStatus.CANCELLED) {
-        if (effectiveCommissionAction === 'CLAWBACK') {
+        if (effectiveCommissionAction === 'RETAIN') {
+          await tx.brokerCommission.update({
+            where: { id: commission.id },
+            data: { retainedOnCancellation: true },
+          });
+        } else if (effectiveCommissionAction === 'CLAWBACK') {
           if (isCommissionEffectivelyPaid(commission)) {
             // Hard Rule 2: status stays; clawback overlay added
             await tx.brokerCommission.update({
@@ -257,14 +264,11 @@ export class ContractCancellationService {
             // Payout side-effects (only for DRAFT / APPROVED payouts — CANCELLED
             // payouts are already terminal; PROCESSING / PAID go through overlay path).
             if (cancelledPayoutId && (cancelledPayoutStatus === 'DRAFT' || cancelledPayoutStatus === 'APPROVED')) {
-              const remainingAgg = await tx.brokerCommission.aggregate({
-                where: { payoutId: cancelledPayoutId },
-                _sum: { grossAmount: true, taxAmount: true, withholdingAmount: true, netAmount: true },
-                _count: { id: true },
-              });
+              const remaining = await tx.brokerCommission.count({ where: { payoutId: cancelledPayoutId } });
 
-              if (remainingAgg._count.id === 0) {
-                // Nothing left to disburse — cancel the payout
+              if (remaining === 0) {
+                // Nothing left to disburse — cancel the payout; any top-ups
+                // or clawbacks netted into it wait for the next one.
                 await tx.brokerPayout.update({
                   where: { id: cancelledPayoutId },
                   data: {
@@ -274,19 +278,18 @@ export class ContractCancellationService {
                     cancelReason: `Contract ${contractId} cancelled — no remaining commissions`,
                   },
                 });
+                await tx.brokerCommissionAdjustment.updateMany({
+                  where: { payoutId: cancelledPayoutId },
+                  data: { payoutId: null },
+                });
               } else {
                 // Recompute totals and revert to DRAFT: the original approval was
                 // for a different (higher) amount; management must re-approve.
                 await tx.brokerPayout.update({
                   where: { id: cancelledPayoutId },
-                  data: {
-                    status: BrokerPayoutStatus.DRAFT,
-                    totalGross: remainingAgg._sum.grossAmount ?? new Prisma.Decimal(0),
-                    totalTax: remainingAgg._sum.taxAmount ?? new Prisma.Decimal(0),
-                    totalWithholding: remainingAgg._sum.withholdingAmount ?? new Prisma.Decimal(0),
-                    totalNet: remainingAgg._sum.netAmount ?? new Prisma.Decimal(0),
-                  },
+                  data: { status: BrokerPayoutStatus.DRAFT },
                 });
+                await rebalancePayout(tx, cancelledPayoutId, commission.brokerId);
               }
             }
           }
@@ -295,7 +298,12 @@ export class ContractCancellationService {
 
       // 5. Bonus handling (same pattern as commission)
       if (bonusEntry && bonusEntry.status !== BonusEntryStatus.CANCELLED) {
-        if (effectiveBonusAction === 'CLAWBACK') {
+        if (effectiveBonusAction === 'RETAIN') {
+          await tx.bonusEntry.update({
+            where: { id: bonusEntry.id },
+            data: { retainedOnCancellation: true },
+          });
+        } else if (effectiveBonusAction === 'CLAWBACK') {
           if (bonusEntry.status === BonusEntryStatus.PAID) {
             // Hard Rule 2: status stays PAID; clawback overlay added
             await tx.bonusEntry.update({

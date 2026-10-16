@@ -53,6 +53,8 @@ import { assertDiscountAllowed, discountPct } from '../installments/discount-pol
 import { addMonths } from '../../common/utils/add-months';
 import { companyTimeZone, startOfLocalToday } from '../../common/time/company-timezone';
 import { assertUnitOnSale } from '../projects/inventory-blockers';
+import { commissionBasis, MARKUP_SNAPSHOT_SELECT } from '../../common/finance/commission-basis';
+import { rebalancePayout } from '../broker-payouts/payout-totals';
 
 export class TransferContractDto {
   @IsUUID()
@@ -403,10 +405,21 @@ export class ContractAmendmentsService {
   // ── Unit swap (تبديل) ─────────────────────────────────────────────────────
 
   /**
-   * Commissions not yet paid out follow the contract to its new price and
-   * unit: the broker commission while it is pending or approved and not on
-   * a payout, the sales bonus until it is paid. Anything already on a payout
-   * or paid keeps its amount — the audit row says which.
+   * The broker commission and the sales bonus follow the contract to its new
+   * price and unit (decided 2026-10-16). They are computed on the price after
+   * discount, without the instalment markup.
+   *
+   * Broker commission:
+   *  - not yet paid (pending, approved, or on a draft/approved payout): its
+   *    amounts are recomputed; when they change, an approved commission goes
+   *    back to PENDING for re-approval and leaves its payout, which goes back
+   *    to DRAFT with its totals redone.
+   *  - paid (its payout is being sent or was sent): it stays as paid; the
+   *    difference is a TOP_UP (price up) or CLAWBACK (price down) adjustment,
+   *    netted into the broker's next payout.
+   * Sales bonus: the same — recomputed (approved → PENDING) until paid; once
+   * paid, an ADJUSTMENT entry carries the difference.
+   * A fixed-per-unit commission does not depend on the price.
    */
   private async followNewPrice(
     tx: Prisma.TransactionClient,
@@ -414,56 +427,149 @@ export class ContractAmendmentsService {
     companyId: string,
     unit: { id: string; building: { phase: { projectId: string } } },
     total: number,
+    actorId: string,
+    reason: string,
   ) {
-    const basis = new Prisma.Decimal(total);
-    let brokerCommission: 'recomputed' | 'kept' | null = null;
+    const reservation = await tx.contract.findFirst({
+      where: { id: contractId, companyId },
+      select: { reservation: { select: MARKUP_SNAPSHOT_SELECT } },
+    });
+    const basis = commissionBasis(total, reservation?.reservation);
+    const brokerCommission = await this.followNewPriceBroker(tx, contractId, companyId, unit, basis, actorId, reason);
+    const salesBonus = await this.followNewPriceBonus(tx, contractId, companyId, basis);
+    return { brokerCommission, salesBonus };
+  }
+
+  private async followNewPriceBroker(
+    tx: Prisma.TransactionClient,
+    contractId: string,
+    companyId: string,
+    unit: { id: string; building: { phase: { projectId: string } } },
+    basis: Prisma.Decimal,
+    actorId: string,
+    reason: string,
+  ): Promise<'recomputed' | 'returned_for_approval' | 'top_up' | 'clawback' | 'kept' | null> {
     const bc = await tx.brokerCommission.findFirst({
       where: { contractId, companyId },
-      select: { id: true, status: true, payoutId: true, commissionPct: true, taxPct: true, withholdingPct: true },
+      select: {
+        id: true,
+        brokerId: true,
+        status: true,
+        payoutId: true,
+        payout: { select: { status: true } },
+        commissionPct: true,
+        taxPct: true,
+        withholdingPct: true,
+        netAmount: true,
+        adjustments: { select: { kind: true, amount: true } },
+      },
     });
-    if (bc) {
-      const open = (bc.status === 'PENDING' || bc.status === 'APPROVED') && !bc.payoutId;
-      if (open) {
-        const data: Prisma.BrokerCommissionUpdateManyMutationInput & { unitId: string; projectId: string } = {
-          basisAmount: basis,
-          unitId: unit.id,
-          projectId: unit.building.phase.projectId,
-        };
-        // A fixed-per-unit commission keeps its amount; a percentage follows the price.
-        if (bc.commissionPct !== null) {
-          const gross = basis.mul(bc.commissionPct).div(100).toDecimalPlaces(2);
-          const tax = gross.mul(bc.taxPct).div(100).toDecimalPlaces(2);
-          const withholding = gross.mul(bc.withholdingPct).div(100).toDecimalPlaces(2);
-          Object.assign(data, {
-            grossAmount: gross,
-            taxAmount: tax,
-            withholdingAmount: withholding,
-            netAmount: gross.sub(tax).sub(withholding),
-          });
-        }
-        await tx.brokerCommission.updateMany({ where: { id: bc.id, payoutId: null }, data });
-        brokerCommission = 'recomputed';
-      } else {
-        brokerCommission = 'kept';
-      }
+    if (!bc) return null;
+    if (bc.status !== 'PENDING' && bc.status !== 'APPROVED') return 'kept';
+    const fixed = bc.commissionPct === null;
+    const gross = fixed ? null : basis.mul(bc.commissionPct!).div(100).toDecimalPlaces(2);
+    const tax = gross?.mul(bc.taxPct).div(100).toDecimalPlaces(2);
+    const withholding = gross?.mul(bc.withholdingPct).div(100).toDecimalPlaces(2);
+    const net = gross ? gross.sub(tax!).sub(withholding!) : bc.netAmount;
+
+    const paid = bc.payout?.status === 'PROCESSING' || bc.payout?.status === 'PAID';
+    if (paid) {
+      // What the broker has been or will be paid for this sale so far.
+      const owed = bc.adjustments.reduce(
+        (sum, a) => (a.kind === 'TOP_UP' ? sum.add(a.amount) : sum.sub(a.amount)),
+        new Prisma.Decimal(bc.netAmount),
+      );
+      const delta = net.sub(owed);
+      if (delta.isZero()) return 'kept';
+      await tx.brokerCommissionAdjustment.create({
+        data: {
+          brokerId: bc.brokerId,
+          commissionId: bc.id,
+          kind: delta.isPositive() ? 'TOP_UP' : 'CLAWBACK',
+          amount: delta.abs(),
+          reason,
+          createdById: actorId,
+          companyId,
+        },
+      });
+      return delta.isPositive() ? 'top_up' : 'clawback';
     }
-    let salesBonus: 'recomputed' | 'kept' | null = null;
+
+    const data: Prisma.BrokerCommissionUncheckedUpdateManyInput = {
+      basisAmount: basis,
+      unitId: unit.id,
+      projectId: unit.building.phase.projectId,
+    };
+    const changed = !net.equals(bc.netAmount);
+    if (gross) Object.assign(data, { grossAmount: gross, taxAmount: tax, withholdingAmount: withholding, netAmount: net });
+    if (changed && bc.status === 'APPROVED') {
+      // Approved for another amount: approved again, and off its payout.
+      Object.assign(data, { status: 'PENDING', approvedAt: null, approvedById: null, payoutId: null });
+    }
+    const moved = await tx.brokerCommission.updateMany({
+      where: { id: bc.id, status: bc.status, payoutId: bc.payoutId },
+      data,
+    });
+    if (moved.count === 0) throw new ConflictException('تغيّرت عمولة البروكر أثناء التنفيذ — أعد المحاولة');
+    if (changed && bc.payoutId) {
+      const reopened = await tx.brokerPayout.updateMany({
+        where: { id: bc.payoutId, status: { in: ['DRAFT', 'APPROVED'] } },
+        data: { status: 'DRAFT', approvedAt: null, approvedById: null },
+      });
+      if (reopened.count === 0) throw new ConflictException('تغيّرت دفعة البروكر أثناء التنفيذ — أعد المحاولة');
+      await rebalancePayout(tx, bc.payoutId, bc.brokerId);
+    }
+    return changed && bc.status === 'APPROVED' ? 'returned_for_approval' : 'recomputed';
+  }
+
+  private async followNewPriceBonus(
+    tx: Prisma.TransactionClient,
+    contractId: string,
+    companyId: string,
+    basis: Prisma.Decimal,
+  ): Promise<'recomputed' | 'returned_for_approval' | 'adjusted' | 'kept' | null> {
     const bonus = await tx.bonusEntry.findFirst({
       where: { contractId, companyId },
-      select: { id: true, status: true, commissionPct: true },
+      select: { id: true, status: true, commissionPct: true, amount: true, salesId: true, ruleId: true },
     });
-    if (bonus) {
-      if ((bonus.status === 'PENDING' || bonus.status === 'APPROVED') && bonus.commissionPct !== null) {
-        await tx.bonusEntry.updateMany({
-          where: { id: bonus.id, status: { in: ['PENDING', 'APPROVED'] } },
-          data: { basisAmount: basis, amount: basis.mul(bonus.commissionPct).div(100).toDecimalPlaces(2) },
-        });
-        salesBonus = 'recomputed';
-      } else {
-        salesBonus = 'kept';
-      }
+    if (!bonus) return null;
+    if (bonus.commissionPct === null || bonus.status === 'CANCELLED') return 'kept';
+    const amount = basis.mul(bonus.commissionPct).div(100).toDecimalPlaces(2);
+    if (bonus.status === 'PAID') {
+      const earlier = await tx.bonusEntry.aggregate({
+        where: { adjustsEntryId: bonus.id, companyId, status: { not: 'CANCELLED' } },
+        _sum: { amount: true },
+      });
+      const delta = amount.sub(bonus.amount).sub(earlier._sum.amount ?? 0);
+      if (delta.isZero()) return 'kept';
+      await tx.bonusEntry.create({
+        data: {
+          salesId: bonus.salesId,
+          ruleId: bonus.ruleId,
+          amount: delta,
+          period: new Date().toISOString().slice(0, 7),
+          status: 'PENDING',
+          source: 'ADJUSTMENT',
+          adjustsEntryId: bonus.id,
+          basisAmount: basis,
+          commissionPct: bonus.commissionPct,
+          companyId,
+        },
+      });
+      return 'adjusted';
     }
-    return { brokerCommission, salesBonus };
+    const changed = !amount.equals(bonus.amount);
+    const moved = await tx.bonusEntry.updateMany({
+      where: { id: bonus.id, status: bonus.status },
+      data: {
+        basisAmount: basis,
+        amount,
+        // Approved for another amount: approved again.
+        ...(changed && bonus.status === 'APPROVED' ? { status: 'PENDING' as const } : {}),
+      },
+    });
+    if (moved.count === 0) throw new ConflictException('تغيّرت مكافأة المبيعات أثناء التنفيذ — أعد المحاولة');
+    return changed && bonus.status === 'APPROVED' ? 'returned_for_approval' : 'recomputed';
   }
 
   /**
@@ -548,7 +654,7 @@ export class ContractAmendmentsService {
           },
         });
       }
-      const commissions = await this.followNewPrice(tx, contractId, companyId, unit, dto.totalAmount);
+      const commissions = await this.followNewPrice(tx, contractId, companyId, unit, dto.totalAmount, actorId, dto.reason);
       const row = await tx.contractAmendment.create({
         data: {
           type: 'PRICE_CHANGE',
@@ -819,7 +925,7 @@ export class ContractAmendmentsService {
       }
       const maintenanceClosed = await closeOpenMaintenance(tx, fromUnitId, contract.customerId, companyId);
 
-      const commissions = await this.followNewPrice(tx, contractId, companyId, unit, dto.totalAmount);
+      const commissions = await this.followNewPrice(tx, contractId, companyId, unit, dto.totalAmount, actorId, dto.reason);
 
       const row = await tx.contractAmendment.create({
         data: {

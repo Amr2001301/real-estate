@@ -28,8 +28,9 @@
  *             BrokerCommission APPROVED + payout PAID → status unchanged, clawbackStatus OUTSTANDING
  *   D3-11  A cancelled contract's money is frozen: record / reverse / un-verify /
  *           new plan → 409; nothing moves
- *   D3-12  RETAIN keeps commission / bonus but they cannot be approved, and sign
- *           follow-ups cannot re-run on a cancelled contract → 409
+ *   D3-12  MANUAL keeps commission / bonus frozen: they cannot be approved, and
+ *           sign follow-ups cannot re-run on a cancelled contract → 409
+ *           (RETAIN keeps them payable — decided 2026-10-16; e2e-u2b-commissions)
  *   D3-13  Collected snapshot counts the reservation's booking + staff cash; refunds
  *           are recorded against the cancellation, capped at what is owed (409)
  *   D3-10  Payout dimension (D3b) — isCommissionEffectivelyPaid() narrowed to PROCESSING|PAID:
@@ -730,11 +731,13 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
     }
   });
 
-  // ── D3-12: what a cancel RETAINS is still frozen ──────────────────────────
-  // RETAIN keeps the commission and the bonus as they were, but nobody may
-  // approve them afterwards, batch the commission into a payout, or re-run the
-  // sign follow-ups (which would create commission / bonus / warranties again).
-  it('D3-12: retained commission / bonus cannot be approved; follow-ups cannot re-run → 409', async () => {
+  // ── D3-12: what a cancel leaves to MANUAL is frozen ───────────────────────
+  // MANUAL keeps the commission and the bonus as they were for the admin to
+  // settle outside the system: nobody may approve them afterwards, batch the
+  // commission into a payout, or re-run the sign follow-ups (which would
+  // create commission / bonus / warranties again). RETAIN, by contrast, keeps
+  // them payable (decided 2026-10-16) — covered by e2e-u2b-commissions CB-4.
+  it('D3-12: commission / bonus left to MANUAL cannot be approved; follow-ups cannot re-run → 409', async () => {
     const raw = testApp.rawPrisma;
     for (const code of ['broker_commissions:approve', 'bonus:entries:approve', 'contracts:sign']) {
       const perm = await raw.permission.findFirst({ where: { code } });
@@ -807,8 +810,8 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
           reason: 'D3-12',
           retainedAmount: 0,
           refundAmount: 0,
-          commissionActionOverride: 'RETAIN',
-          bonusActionOverride: 'RETAIN',
+          commissionActionOverride: 'MANUAL',
+          bonusActionOverride: 'MANUAL',
         })
         .expect(201);
 

@@ -115,6 +115,11 @@ function makePrismaMock() {
         },
       }),
     },
+    brokerCommissionAdjustment: {
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
+    },
     brokerUser: { findMany: jest.fn().mockResolvedValue([{ userId: 'broker-user-1' }]) },
     brokerActivityLog: { create: jest.fn().mockResolvedValue({}) },
     notification: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
@@ -129,6 +134,11 @@ function makePrismaMock() {
             })),
             update: jest.fn().mockImplementation(async ({ data }) => updated(data.status ?? 'DRAFT')),
             updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+          },
+          brokerCommissionAdjustment: {
+            updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+            findMany: jest.fn().mockResolvedValue([]),
+            count: jest.fn().mockResolvedValue(0),
           },
           brokerCommission: {
             count: jest.fn().mockImplementation(async () => payoutStore.commissionCount),
