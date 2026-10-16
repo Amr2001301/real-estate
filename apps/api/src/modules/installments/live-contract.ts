@@ -16,6 +16,17 @@ export const LIVE_PLAN_WHERE = {
   contract: LIVE_CONTRACT_WHERE,
 } satisfies Prisma.InstallmentPlanWhereInput;
 
+/**
+ * A plan whose contract is signed and live. Only these are chased: an
+ * unsigned contract (converted from a reservation, signing still to come) has
+ * no installment overdue and no late fee yet — its down payment was dated the
+ * day of conversion and turned overdue that night.
+ */
+export const BILLABLE_PLAN_WHERE = {
+  cancelledAt: null,
+  contract: { status: ContractStatus.ACTIVE, deletedAt: null },
+} satisfies Prisma.InstallmentPlanWhereInput;
+
 export const CONTRACT_CANCELLED_MESSAGE = 'العقد ملغي — لا يمكن تعديل مدفوعاته أو أقساطه';
 
 /** True when the contract is cancelled or deleted. */

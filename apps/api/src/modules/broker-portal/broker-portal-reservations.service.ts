@@ -398,6 +398,7 @@ export class BrokerPortalReservationsService {
           downPaymentAmount: Number(plan.downPaymentAmount),
           durationMonths: option.durationMonths,
           increasePercentage: Number(option.increasePercentage),
+          finalPaymentAmount: Number(plan.finalPaymentAmount ?? 0),
         });
         snapshot.remainingAmount = new Prisma.Decimal(calc.remainingAmount);
         snapshot.financedAmount = new Prisma.Decimal(calc.financedAmount);
@@ -450,7 +451,8 @@ export class BrokerPortalReservationsService {
           snapshotRemainingAmount: snapshot.remainingAmount,
           snapshotFinancedAmount: snapshot.financedAmount,
           snapshotMonthlyInstallment: snapshot.monthlyInstallment,
-          snapshotTotalPayable: snapshot.totalPayable,
+          // Without a duration the price is the unit's price today, not on conversion day.
+          snapshotTotalPayable: snapshot.totalPayable ?? new Prisma.Decimal(unit.price),
           snapshotFinalPaymentAmount: snapshot.finalPaymentAmount,
         },
         include: PORTAL_RESERVATION_INCLUDE,

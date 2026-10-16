@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { addMonths } from '../../common/utils/add-months';
 
 /**
  * Start warranties for a sold unit's active maintenance items. For each item
@@ -17,11 +18,7 @@ export async function startUnitWarranties(prisma: PrismaService, unitId: string,
     const months = item.warrantyDurationMonthsSnapshot ?? item.category?.warrantyDurationMonths ?? null;
     const warrantyEnd =
       months != null
-        ? (() => {
-            const d = new Date(warrantyStartAt);
-            d.setMonth(d.getMonth() + months);
-            return d;
-          })()
+        ? addMonths(warrantyStartAt, months)
         : null;
     await prisma.unitMaintenanceItem.update({
       where: { id: item.id },

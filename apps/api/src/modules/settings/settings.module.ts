@@ -21,6 +21,7 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { LATE_FEE_VALIDATORS } from '../installments/late-fee';
 import { TRANSFER_FEE_VALIDATORS } from '../contracts/transfer-fee';
 import { FEE_SETTING_VALIDATORS } from '../installments/fee-settings';
+import { COMPANY_TIMEZONE_VALIDATORS } from '../../common/time/company-timezone';
 
 /**
  * Setting keys whose value should be masked on the wire. Matching is
@@ -148,6 +149,7 @@ const SETTING_VALIDATORS: Record<string, (key: string, v: unknown) => void> = {
   ...LATE_FEE_VALIDATORS,
   ...TRANSFER_FEE_VALIDATORS,
   ...FEE_SETTING_VALIDATORS,
+  ...COMPANY_TIMEZONE_VALIDATORS,
 };
 
 function validateSettingValue(key: string, value: unknown): void {

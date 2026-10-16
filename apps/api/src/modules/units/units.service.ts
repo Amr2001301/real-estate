@@ -358,14 +358,19 @@ export class UnitsService {
       throw new BadRequestException('Cannot delete a SOLD unit');
     }
 
-    const [reservations, contracts, maintenance] = await this.prisma.$transaction([
+    const [reservations, contracts, maintenance, planTemplates] = await this.prisma.$transaction([
       this.prisma.reservation.count({ where: { unitId: id } }),
       this.prisma.contract.count({ where: { unitId: id } }),
       this.prisma.maintenanceRequest.count({ where: { unitId: id } }),
+      // A unit's price plan would survive the delete with no unit (the link is
+      // SET NULL) and turn into a plan for the whole project — at this unit's
+      // price, bookable on any other unit.
+      this.prisma.installmentPlanTemplate.count({ where: { unitId: id } }),
     ]);
 
     const blockers: string[] = [];
     if (reservations > 0) blockers.push(`${reservations} حجز`);
+    if (planTemplates > 0) blockers.push(`${planTemplates} خطة أسعار`);
     if (contracts > 0) blockers.push(`${contracts} عقد`);
     if (maintenance > 0) blockers.push(`${maintenance} طلب صيانة`);
 

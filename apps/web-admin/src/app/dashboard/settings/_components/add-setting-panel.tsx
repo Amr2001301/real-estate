@@ -39,6 +39,7 @@ const TEMPLATE_CONFIGS: { key: string; type: FieldType; placeholder?: string }[]
   { key: 'notifications.fromEmail',      type: 'text',    placeholder: 'noreply@company.sa' },
   { key: 'reports.dateFormat',           type: 'text',    placeholder: 'DD/MM/YYYY' },
   { key: 'reports.timezone',             type: 'text',    placeholder: 'Asia/Riyadh' },
+  { key: 'company.timezone',             type: 'text',    placeholder: 'Africa/Cairo' },
   { key: 'security.maxLoginAttempts',    type: 'number',  placeholder: '5' },
   { key: 'security.sessionTimeoutMins',  type: 'number',  placeholder: '60' },
   { key: 'security.requireMfa',          type: 'boolean' },

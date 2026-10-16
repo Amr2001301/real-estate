@@ -112,6 +112,7 @@ function makePrismaMock() {
     notification: {
       count: jest.fn().mockResolvedValue(3),
     },
+    setting: { findMany: jest.fn().mockResolvedValue([]) },
   };
 }
 

@@ -10,6 +10,7 @@ import { getCompanyCurrency } from '../../common/currency/currency';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
+import { COMPANY_TIMEZONE_DEFAULT, companyTimeZone, startOfLocalToday } from '../../common/time/company-timezone';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -62,11 +63,11 @@ const DUE_SOON_DAYS = 14;
 function isEffectivelyOverdue(
   status: InstallmentStatus,
   dueDate: Date,
-  now: Date,
+  overdueBefore: Date,
 ): boolean {
   return (
     status === InstallmentStatus.OVERDUE ||
-    (status === InstallmentStatus.PENDING && dueDate < now)
+    (status === InstallmentStatus.PENDING && dueDate < overdueBefore)
   );
 }
 
@@ -79,6 +80,7 @@ function buildPrimaryAction(
   } | null,
   openMaintenanceCount: number,
   now: Date,
+  overdueBefore: Date,
   currency: string,
 ): PrimaryAction {
   const noAction: PrimaryAction = {
@@ -90,7 +92,7 @@ function buildPrimaryAction(
   };
 
   if (nextDue) {
-    const overdue = isEffectivelyOverdue(nextDue.status, nextDue.dueDate, now);
+    const overdue = isEffectivelyOverdue(nextDue.status, nextDue.dueDate, overdueBefore);
     const daysUntil = Math.ceil(
       (nextDue.dueDate.getTime() - now.getTime()) / 86_400_000,
     );
@@ -160,8 +162,14 @@ class MeHomeSummaryService {
 
   async getSummary(userId: string) {
     const now = new Date();
+    const companyId = getTenantContext()?.companyId;
     // The company's currency (Company.currency) — the app shows amounts in it.
-    const currency = await getCompanyCurrency(this.prisma, getTenantContext()?.companyId);
+    const currency = await getCompanyCurrency(this.prisma, companyId);
+    // A row is overdue once its due day has ended in the company's time zone.
+    const overdueBefore = startOfLocalToday(
+      companyId ? await companyTimeZone(this.prisma, companyId) : COMPANY_TIMEZONE_DEFAULT,
+      now,
+    );
 
     const [
       user,
@@ -241,7 +249,7 @@ class MeHomeSummaryService {
           plan: { contract: { customerId: userId, ...LIVE_CONTRACT_WHERE } },
           OR: [
             { status: InstallmentStatus.OVERDUE },
-            { status: InstallmentStatus.PENDING, dueDate: { lt: now } },
+            { status: InstallmentStatus.PENDING, dueDate: { lt: overdueBefore } },
           ],
         },
       }),
@@ -342,7 +350,7 @@ class MeHomeSummaryService {
             amount: nextDue.amount.toString(),
             currency,
             dueDate: nextDue.dueDate.toISOString(),
-            status: isEffectivelyOverdue(nextDue.status, nextDue.dueDate, now)
+            status: isEffectivelyOverdue(nextDue.status, nextDue.dueDate, overdueBefore)
               ? ('OVERDUE' as const)
               : ('PENDING' as const),
           }
@@ -385,7 +393,7 @@ class MeHomeSummaryService {
         avatarInitials: toAvatarInitials(displayName),
       },
       notifications: { unreadCount: unreadNotifCount },
-      primaryAction: buildPrimaryAction(nextDue, openMaintenanceCount, now, currency),
+      primaryAction: buildPrimaryAction(nextDue, openMaintenanceCount, now, overdueBefore, currency),
       primaryProperty,
       installments,
       maintenance,

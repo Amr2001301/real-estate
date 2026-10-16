@@ -86,6 +86,7 @@ import { reportFailure } from '../../common/observability/report-failure';
 import { getTenantContext, runInCompany, runTenantContext } from '../../common/tenant/tenant-context';
 import { isUniqueConflictOn } from '../../common/utils/contract-number';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
+import { addMonths } from '../../common/utils/add-months';
 // BrokerCommissionsModule/Service no longer imported here. Commission
 // materialisation runs from ContractsService.sign() — the only path that
 // signs a contract — and convert always produces an unsigned contract.
@@ -569,6 +570,7 @@ export class ReservationsService {
           downPaymentAmount: Number(plan.downPaymentAmount),
           durationMonths: option.durationMonths,
           increasePercentage: Number(option.increasePercentage),
+          finalPaymentAmount: Number(plan.finalPaymentAmount ?? 0),
         });
         selectedDurationOptionId = option.id;
         selectedDurationMonths = option.durationMonths;
@@ -669,7 +671,10 @@ export class ReservationsService {
           snapshotRemainingAmount,
           snapshotFinancedAmount,
           snapshotMonthlyInstallment,
-          snapshotTotalPayable,
+          // Without a plan the price is the unit's price today: conversion
+          // used the price on conversion day, so a later price change
+          // silently rewrote the deal.
+          snapshotTotalPayable: snapshotTotalPayable ?? new Prisma.Decimal(unit.price),
           snapshotFinalPaymentAmount,
         },
       });
@@ -2015,24 +2020,29 @@ export class ReservationsService {
           });
         }
 
-        // 4b. Monthly INSTALLMENT rows.
+        // 4b. Monthly INSTALLMENT rows: equal amounts, the last one carrying
+        // the rounding so the rows add up to the financed amount exactly.
+        const months = reservation.selectedDurationMonths;
+        const monthlyCents = Math.round(Number(reservation.snapshotMonthlyInstallment) * 100);
+        const financedCents =
+          reservation.snapshotFinancedAmount != null
+            ? Math.round(Number(reservation.snapshotFinancedAmount) * 100)
+            : monthlyCents * months;
+        const lastCents = financedCents - monthlyCents * (months - 1);
         const rows: Prisma.InstallmentCreateManyInput[] = [];
-        for (let i = 0; i < reservation.selectedDurationMonths; i++) {
-          const dueDate = new Date(startsAt);
-          dueDate.setMonth(dueDate.getMonth() + i);
+        for (let i = 0; i < months; i++) {
           rows.push({
             planId: plan.id,
             type: PlanPaymentType.INSTALLMENT,
-            dueDate,
-            amount: reservation.snapshotMonthlyInstallment,
+            dueDate: addMonths(startsAt, i),
+            amount: new Prisma.Decimal(i === months - 1 ? lastCents : monthlyCents).div(100),
           });
         }
         await tx.installment.createMany({ data: rows });
 
         // 4c. FINAL_PAYMENT row (one period after the last monthly installment).
         if (reservation.snapshotFinalPaymentAmount?.gt(0)) {
-          const finalDueDate = new Date(startsAt);
-          finalDueDate.setMonth(finalDueDate.getMonth() + reservation.selectedDurationMonths);
+          const finalDueDate = addMonths(startsAt, reservation.selectedDurationMonths);
           await tx.installment.create({
             data: {
               planId: plan.id,
