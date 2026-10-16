@@ -10,7 +10,8 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { phoneForWrite } from '../../common/utils/phone-for-write';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
-import { Prisma, UserRole } from '@prisma/client';
+import { AppointmentStatus, LeadStage, Prisma, ReservationStatus, UserRole, VisitStatus } from '@prisma/client';
+import { assertAssignableSales } from '../../common/utils/assignable-sales';
 import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { OPTIONS_LIMIT, optionsResult } from '../../common/utils/options';
 import { clientOwnerScope, ownedClientsWhere } from '../../common/utils/client-ownership';
@@ -412,11 +413,7 @@ export class UsersService {
   async deactivate(id: string) {
     const companyId = getRequiredCompanyId(); // MT-007
     await this.assertExists(id, companyId);
-    const updated = await this.prisma.user.update({
-      where: { id },
-      data: { active: false },
-      select: this.publicSelect(),
-    });
+    // Told first, while the account can still receive it.
     try {
       await this.notifications.sendToUser(id, 'user_account_suspended', {
         entityType: 'user',
@@ -425,7 +422,93 @@ export class UsersService {
     } catch {
       // best-effort — deactivation must not fail due to notification errors
     }
-    return updated;
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id },
+        data: { active: false },
+        select: this.publicSelect(),
+      });
+      await this.cutAccess(tx, id, companyId);
+      return updated;
+    });
+  }
+
+  /**
+   * Hands everything still open of a departing sales person to a colleague in
+   * one step: open leads, upcoming visits/appointments and live reservations.
+   * Closed work (won/lost leads, contracts, past visits) keeps its history.
+   * Returns how many of each moved.
+   */
+  async offboard(id: string, toUserId: string, actorId: string) {
+    const companyId = getRequiredCompanyId();
+    const from = await this.prisma.user.findFirst({ where: { id, companyId }, select: { id: true } });
+    if (!from) throw new NotFoundException('User not found');
+    if (toUserId === id) throw new BadRequestException('اختر موظفاً آخر لاستلام العمل');
+    const to = await assertAssignableSales(this.prisma, toUserId);
+
+    const moved = await this.prisma.$transaction(async (tx) => {
+      const leads = await tx.lead.updateMany({
+        where: { assignedSalesId: id, companyId, stage: { notIn: [LeadStage.WON, LeadStage.LOST] } },
+        data: { assignedSalesId: to.id },
+      });
+      const visits = await tx.visitRequest.updateMany({
+        where: {
+          assignedSalesId: id,
+          companyId,
+          status: { in: [VisitStatus.PENDING, VisitStatus.APPROVED, VisitStatus.SCHEDULED] },
+        },
+        data: { assignedSalesId: to.id },
+      });
+      const appointments = await tx.visitAppointment.updateMany({
+        where: {
+          assignedSalesId: id,
+          companyId,
+          status: {
+            in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED, AppointmentStatus.PENDING_RESCHEDULE],
+          },
+        },
+        data: { assignedSalesId: to.id },
+      });
+      const reservations = await tx.reservation.updateMany({
+        where: {
+          salesId: id,
+          companyId,
+          deletedAt: null,
+          status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
+        },
+        data: { salesId: to.id },
+      });
+      const counts = {
+        leads: leads.count,
+        visits: visits.count,
+        appointments: appointments.count,
+        reservations: reservations.count,
+      };
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: 'user.offboarded',
+          entityType: 'User',
+          entityId: id,
+          after: { toUserId: to.id, ...counts },
+          companyId,
+        },
+      });
+      return counts;
+    });
+    return { toUserId: to.id, ...moved };
+  }
+
+  /**
+   * Someone who leaves keeps nothing that reaches them or acts for them:
+   * sessions are revoked (a reactivation used to revive every 30-day refresh
+   * token), the phone stops receiving pushes with customer names, and a
+   * manager's team is no longer tied to an account nobody reads.
+   */
+  private async cutAccess(tx: Prisma.TransactionClient, id: string, companyId: string) {
+    await tx.refreshToken.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
+    await tx.deviceToken.deleteMany({ where: { userId: id } });
+    await tx.user.updateMany({ where: { managerId: id, companyId }, data: { managerId: null } });
   }
 
   async activate(id: string) {
@@ -496,10 +579,14 @@ export class UsersService {
   async softDelete(id: string) {
     const companyId = getRequiredCompanyId(); // MT-009
     await this.assertExists(id, companyId);
-    return this.prisma.user.update({
-      where: { id },
-      data: { deletedAt: new Date(), active: false },
-      select: this.publicSelect(),
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id },
+        data: { deletedAt: new Date(), active: false },
+        select: this.publicSelect(),
+      });
+      await this.cutAccess(tx, id, companyId);
+      return updated;
     });
   }
 
@@ -511,9 +598,10 @@ export class UsersService {
     });
     if (!user) throw new NotFoundException('User not found');
     if (user.deletedAt === null) throw new BadRequestException('User is not deleted');
+    // Restored as it was before the delete: able to sign in again.
     return this.prisma.user.update({
       where: { id },
-      data: { deletedAt: null },
+      data: { deletedAt: null, active: true },
       select: this.publicSelect(),
     });
   }

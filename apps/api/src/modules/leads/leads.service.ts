@@ -7,6 +7,7 @@ import {
 import * as ExcelJS from 'exceljs';
 import { AppointmentStatus, Prisma, LeadStage, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { assertAssignableSales } from '../../common/utils/assignable-sales';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import { NotificationsService } from '../notifications/notifications.module';
 import {
@@ -445,6 +446,7 @@ export class LeadsService {
 
   async assign(id: string, dto: AssignLeadDto, actorId?: string) {
     const lead = await this.assertExists(id);
+    if (dto.assignedSalesId) await assertAssignableSales(this.prisma, dto.assignedSalesId);
     const updated = await this.prisma.lead.update({
       where: { id },
       data: { assignedSalesId: dto.assignedSalesId },

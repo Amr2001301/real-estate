@@ -32,6 +32,7 @@ import { Prisma, NotificationChannel, UserRole, type NotificationTemplate } from
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { formatMoney, getCompanyCurrency } from '../../common/currency/currency';
 import {
+  findTenantUser,
   resolveTenantUser,
   scopedUserFindMany,
 } from '../../common/tenant/resolve-tenant-entity';
@@ -501,12 +502,24 @@ export class NotificationsService implements OnModuleInit {
     }
   }
 
+  private async recipientGone(userId: string): Promise<boolean> {
+    try {
+      const u = await findTenantUser(this.prisma, userId, { active: true, deletedAt: true });
+      return !!u && (u.active === false || !!u.deletedAt);
+    } catch {
+      return false; // no tenant context to look in: deliver as before
+    }
+  }
+
   async send(dto: SendNotificationDto & { skipInactive?: boolean }) {
     const tpl = await this.templateFor(dto.templateCode);
     if (!tpl) throw new Error(`Template ${dto.templateCode} not found`);
     // A company that switched an event off (templates page) gets no
     // automatic notification for it; an admin's manual send still goes out.
     if (dto.skipInactive && tpl.active === false) return null;
+    // Automatic events never go to a deactivated or deleted account — a
+    // departed employee kept getting pushes about leads and customers.
+    if (dto.skipInactive && (await this.recipientGone(dto.userId))) return null;
     const channel = dto.channel ?? tpl.channel;
     const payload = (dto.payload ?? {}) as Record<string, unknown>;
 

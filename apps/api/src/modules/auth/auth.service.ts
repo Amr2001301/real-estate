@@ -859,6 +859,8 @@ export class AuthService {
         data: { phone, fullName: fullName ?? 'New User', role: 'CLIENT', locale: 'ar', companyId, phoneVerifiedAt: now },
       });
     } else {
+      // A deactivated account gets no session — and no CRM claim — by OTP either.
+      if (user.active === false) throw new ForbiddenException('Account inactive');
       await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: now, phoneVerifiedAt: now } });
     }
     await this.tryClaimSyntheticPeers(user.id, companyId);
