@@ -71,6 +71,8 @@ import {
 import { reportFailure } from '../../common/observability/report-failure';
 import { CONTRACT_CANCELLED_MESSAGE, LIVE_CONTRACT_WHERE, isDeadContract } from '../installments/live-contract';
 import { ContractRefundsService, RecordRefundDto } from './contract-refunds.service';
+import { assertUnitOnSale } from '../projects/inventory-blockers';
+import { assertDiscountAllowed, discountPct } from '../installments/discount-policy';
 
 // ── P12 legacy backfill helpers ─────────────────────────────────────────────
 // Pure (exported for unit tests). Derive safe display metadata for a backfilled
@@ -390,6 +392,18 @@ export class ContractsService {
     if (unit.status === UnitStatus.SOLD) {
       throw new BadRequestException('Unit already sold');
     }
+    await assertUnitOnSale(this.prisma, unit.id);
+    // A contract below the unit's price is a discount: within the company's
+    // cap, or by someone who may approve it — and on record either way.
+    await assertDiscountAllowed(this.prisma, {
+      companyId,
+      actorId,
+      pct: discountPct(Number(unit.price), dto.totalAmount),
+      listPrice: Number(unit.price),
+      salePrice: dto.totalAmount,
+      entityType: 'Unit',
+      entityId: unit.id,
+    });
 
     await resolveTenantUser(
       this.prisma,

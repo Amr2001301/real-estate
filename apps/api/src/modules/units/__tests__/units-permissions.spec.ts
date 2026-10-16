@@ -336,12 +336,20 @@ describe('Units module · permissions enforcement', () => {
 
     it('ADMIN bypass on PATCH /units/:id/status → 200; UnitStatusHistory written', async () => {
       FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      // SOLD with no contract in the system needs its reason (a sale made
+      // before the system); RESERVED by hand is refused — see below.
       await request(app.getHttpServer())
         .patch(`/units/${fixture.unit.id}/status`)
-        .send({ status: 'RESERVED', reason: 'manual hold' })
+        .send({ status: 'SOLD', reason: 'sold before the system' })
         .expect(200);
       expect(mock.unit.update).toHaveBeenCalled();
       expect(mock.unitStatusHistory.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('a unit is not marked RESERVED by hand, nor SOLD without a reason', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      await request(app.getHttpServer()).patch(`/units/${fixture.unit.id}/status`).send({ status: 'RESERVED' }).expect(400);
+      await request(app.getHttpServer()).patch(`/units/${fixture.unit.id}/status`).send({ status: 'SOLD' }).expect(400);
     });
 
     it('ADMIN bypass on DELETE /units/:id (AVAILABLE, no blockers) → 200', async () => {

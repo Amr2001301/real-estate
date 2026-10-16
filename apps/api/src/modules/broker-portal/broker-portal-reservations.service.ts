@@ -32,6 +32,7 @@ import { reportFailure } from '../../common/observability/report-failure';
 import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 import { isUniqueConflictOn } from '../../common/utils/contract-number';
 import { agentFilter, brokerFacingPerson, resolveBrokerViewer, withoutMoney } from './broker-viewer';
+import { assertUnitOnSale } from '../projects/inventory-blockers';
 
 // Reservation statuses that hold a unit. A CONVERTED reservation is history:
 // the unit is then held by its contract (checked separately), and once that
@@ -284,6 +285,7 @@ export class BrokerPortalReservationsService {
     if (unit.status !== UnitStatus.AVAILABLE) {
       throw new ConflictException('Unit is not available for reservation');
     }
+    await assertUnitOnSale(this.prisma, dto.unitId);
 
     // 3) No active reservation already on this unit.
     const activeOnUnit = await this.prisma.reservation.findFirst({

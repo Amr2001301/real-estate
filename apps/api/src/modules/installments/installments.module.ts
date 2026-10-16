@@ -47,6 +47,7 @@ import {
   StartDateRule,
   PlanTemplateStatus,
   PlanPaymentType,
+  ReservationStatus,
   DepositReviewStatus,
 } from '@prisma/client';
 import { UNCLEARED_INSTRUMENT_STATUSES } from '../deposits/review-queue';
@@ -89,6 +90,7 @@ import {
 import { LATE_FEE_SETTING_KEYS, lateFeesDue, resolveLateFeeSettings } from './late-fee';
 import { feeDueDate, feePaymentDays } from './fee-settings';
 import { addMonths } from '../../common/utils/add-months';
+import { assertDiscountAllowed, discountPct } from './discount-policy';
 import { COMPANY_TIMEZONE_DEFAULT, companyTimeZones, startOfLocalToday } from '../../common/time/company-timezone';
 
 /**
@@ -964,6 +966,39 @@ class PlanTemplatesService {
     };
   }
 
+  /**
+   * A unit's price plan starts from the unit's price — a lower plan price is
+   * a discount, and goes through the discount field and its cap — and any
+   * discount it gives is checked against the company's cap.
+   */
+  private async assertPlanPricing(
+    unitId: string | null,
+    totalPrice: number,
+    netPrice: number,
+    actorId: string,
+    planId?: string,
+  ): Promise<void> {
+    let listPrice = totalPrice;
+    if (unitId) {
+      const unit = await this.prisma.unit.findUnique({ where: { id: unitId }, select: { price: true } });
+      if (unit && Math.round(Number(unit.price) * 100) !== Math.round(totalPrice * 100)) {
+        throw new BadRequestException(
+          `سعر الخطة يجب أن يساوي سعر الوحدة (${Number(unit.price)}) — استخدم الخصم لتخفيضه`,
+        );
+      }
+      if (unit) listPrice = Number(unit.price);
+    }
+    await assertDiscountAllowed(this.prisma, {
+      companyId: getRequiredCompanyId(),
+      actorId,
+      pct: discountPct(listPrice, netPrice),
+      listPrice,
+      salePrice: netPrice,
+      entityType: 'InstallmentPlanTemplate',
+      entityId: planId ?? null,
+    });
+  }
+
   private async validateUnit(unitId: string, projectId: string): Promise<void> {
     const unit = await this.prisma.unit.findUnique({
       where: { id: unitId },
@@ -1030,6 +1065,7 @@ class PlanTemplatesService {
         'دفعة الحجز يجب أن تكون أكبر من صفر للخطط التي تستخدم خيارات المدة',
       );
     }
+    await this.assertPlanPricing(dto.unitId ?? null, totalPrice, netPrice, userId);
 
     const createdId = await this.prisma.$transaction(async (tx) => {
       const plan = await tx.installmentPlanTemplate.create({
@@ -1114,8 +1150,26 @@ class PlanTemplatesService {
     );
   }
 
-  async update(id: string, dto: UpdatePlanTemplateDto) {
+  async update(id: string, dto: UpdatePlanTemplateDto, actorId: string) {
     const existing = await this.findOne(id);
+    // A plan open reservations were priced on keeps its terms: changing them
+    // (or replacing its durations, which unlinks the reservations' choice)
+    // would convert those reservations on numbers nobody agreed to.
+    const termsChange = Object.keys(dto).some(
+      (k) => !['name', 'description', 'status'].includes(k) && (dto as Record<string, unknown>)[k] !== undefined,
+    );
+    if (termsChange) {
+      const inUse = await this.prisma.reservation.count({
+        where: {
+          installmentPlanTemplateId: id,
+          deletedAt: null,
+          status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
+        },
+      });
+      if (inUse > 0) {
+        throw new ConflictException('الخطة مستخدمة في حجوزات قائمة — أنشئ خطة جديدة بدلاً من تعديل شروطها');
+      }
+    }
 
     const resolvedProjectId = dto.projectId ?? existing.projectId;
     const resolvedUnitId = dto.unitId ?? existing.unitId;
@@ -1137,6 +1191,15 @@ class PlanTemplatesService {
     }
     const discountAmount = computeDownPaymentAmount(totalPrice, discType, discValue);
     const netPrice = totalPrice - discountAmount;
+    if (
+      dto.totalPrice !== undefined ||
+      dto.discountType !== undefined ||
+      dto.discountValue !== undefined ||
+      dto.discountAmount !== undefined ||
+      dto.unitId !== undefined
+    ) {
+      await this.assertPlanPricing(resolvedUnitId, totalPrice, netPrice, actorId, id);
+    }
     const dpType = dto.downPaymentType ?? existing.downPaymentType;
     const dpValue = dto.downPaymentValue ?? Number(existing.downPaymentValue);
     const dpAmount = computeDownPaymentAmount(netPrice, dpType, dpValue);
@@ -1844,8 +1907,12 @@ class PlanTemplatesController {
   @Roles(UserRole.ADMIN)
   @Permissions('installments:manage')
   @Patch(':id')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdatePlanTemplateDto) {
-    return this.svc.update(id, dto);
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdatePlanTemplateDto,
+    @Req() req: { user: { sub: string } },
+  ) {
+    return this.svc.update(id, dto, req.user.sub);
   }
 
   @Roles(UserRole.ADMIN)

@@ -130,7 +130,12 @@ export class UnitsService {
     // The parent id comes from the client: it must be this company's building.
     const building = await this.prisma.building.findFirst({ where: { id: dto.buildingId }, select: { id: true } });
     if (!building) throw new NotFoundException('Building not found');
-    return this.prisma.unit.create({
+    // A new unit is for sale, or (a sale made before the system) sold — never
+    // reserved without a reservation.
+    if (dto.status === UnitStatus.RESERVED) {
+      throw new BadRequestException('الحجز يتم من شاشة الحجوزات — لا يمكن إنشاء وحدة محجوزة');
+    }
+    const created = await this.prisma.unit.create({
       data: {
         buildingId: dto.buildingId,
         code: dto.code,
@@ -143,6 +148,23 @@ export class UnitsService {
         status: dto.status ?? UnitStatus.AVAILABLE,
       },
     });
+    if (created.status === UnitStatus.SOLD) {
+      await this.prisma.unitStatusHistory.create({
+        data: { unitId: created.id, oldStatus: UnitStatus.AVAILABLE, newStatus: UnitStatus.SOLD, reason: 'أُنشئت كمباعة' },
+      });
+    }
+    return created;
+  }
+
+  /** Live reservations and contracts on the unit. */
+  private async liveDeals(unitId: string): Promise<number> {
+    const [reservations, contracts] = await Promise.all([
+      this.prisma.reservation.count({
+        where: { unitId, deletedAt: null, status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] } },
+      }),
+      this.prisma.contract.count({ where: { unitId, ...LIVE_CONTRACT_WHERE } }),
+    ]);
+    return reservations + contracts;
   }
 
   async findAll(query: UnitQueryDto, publicOnly = false) {
@@ -290,7 +312,24 @@ export class UnitsService {
   }
 
   async update(id: string, dto: UpdateUnitDto) {
-    await this.assertExists(id);
+    const unit = await this.prisma.unit.findUnique({ where: { id } });
+    if (!unit) throw new NotFoundException('Unit not found');
+    // A unit in a live deal keeps what was sold: its price, area, type, floor
+    // and code are the deal's. Changing them rewrote the customer's contract
+    // and portal with nothing on record. (Unchanged values pass — the edit
+    // form sends every field.)
+    const changed = [
+      dto.code !== undefined && dto.code !== unit.code,
+      dto.type !== undefined && dto.type !== unit.type,
+      dto.area !== undefined && dto.area !== Number(unit.area),
+      dto.bedrooms !== undefined && dto.bedrooms !== unit.bedrooms,
+      dto.bathrooms !== undefined && dto.bathrooms !== unit.bathrooms,
+      dto.floor !== undefined && dto.floor !== unit.floor,
+      dto.price !== undefined && !new Prisma.Decimal(dto.price).equals(unit.price),
+    ].some(Boolean);
+    if (changed && (await this.liveDeals(id)) > 0) {
+      throw new ConflictException('الوحدة عليها حجز أو عقد قائم — لا يمكن تعديل بياناتها أو سعرها');
+    }
     const data: Prisma.UnitUpdateInput = {};
     if (dto.code !== undefined) data.code = dto.code;
     if (dto.type !== undefined) data.type = dto.type;
@@ -324,6 +363,17 @@ export class UnitsService {
       });
       if (liveReservation > 0 && liveContract === 0 && dto.status !== UnitStatus.RESERVED) {
         throw new ConflictException('على الوحدة حجز قائم — ألغِ الحجز أولاً لتغيير حالتها');
+      }
+      // Without a deal: RESERVED belongs to a reservation (which carries the
+      // client and an expiry — a hand-set one never expires), and SOLD with no
+      // contract here (a sale made before the system) needs its reason kept.
+      if (liveContract === 0 && liveReservation === 0) {
+        if (dto.status === UnitStatus.RESERVED) {
+          throw new BadRequestException('الحجز يتم من شاشة الحجوزات — لا يمكن تعليم الوحدة محجوزة يدوياً');
+        }
+        if (dto.status === UnitStatus.SOLD && !dto.reason?.trim()) {
+          throw new BadRequestException('اذكر سبب تعليم الوحدة مباعة بدون عقد في النظام');
+        }
       }
       const updated = await tx.unit.update({
         where: { id },

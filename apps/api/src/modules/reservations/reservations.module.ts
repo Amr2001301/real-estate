@@ -87,6 +87,7 @@ import { getTenantContext, runInCompany, runTenantContext } from '../../common/t
 import { isUniqueConflictOn } from '../../common/utils/contract-number';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import { addMonths } from '../../common/utils/add-months';
+import { assertUnitOnSale } from '../projects/inventory-blockers';
 // BrokerCommissionsModule/Service no longer imported here. Commission
 // materialisation runs from ContractsService.sign() — the only path that
 // signs a contract — and convert always produces an unsigned contract.
@@ -142,6 +143,8 @@ class UpdateReservationDto {
   @IsOptional() @IsString() notes?: string;
   // Booking amount fields — editable by Admin on PENDING or APPROVED reservations
   @IsOptional() @IsUUID() installmentPlanTemplateId?: string | null;
+  // Required with a plan change when the new plan has durations.
+  @IsOptional() @IsUUID() installmentPlanDurationOptionId?: string;
   @IsOptional() @IsNumber() @Min(0) bookingAmount?: number;
   @IsOptional() @IsEnum(ReservationBookingPaymentStatus)
   bookingPaymentStatus?: ReservationBookingPaymentStatus;
@@ -349,6 +352,7 @@ export class ReservationsService {
         status: true,
         projectId: true,
         unitId: true,
+        totalPrice: true,
         netPrice: true,
         reservationAmount: true,
         reservationAmountType: true,
@@ -373,7 +377,64 @@ export class ReservationsService {
     if (plan.projectId !== projectId) {
       throw new BadRequestException('خطة التقسيط لا تنتمي إلى مشروع هذه الوحدة');
     }
+    // A unit's plan is priced at the unit's price; once the unit is repriced
+    // the plan is stale and would sell at the old price.
+    if (plan.unitId) {
+      const unit = await this.prisma.unit.findUnique({ where: { id: plan.unitId }, select: { price: true } });
+      if (unit && !new Prisma.Decimal(unit.price).equals(plan.totalPrice)) {
+        throw new BadRequestException('تغيّر سعر الوحدة بعد إنشاء خطة الأسعار — حدّث الخطة أولاً');
+      }
+    }
     return plan;
+  }
+
+  /**
+   * The reservation's duration and price snapshot for a plan: what
+   * conversion turns into the contract and its schedule. A plan without
+   * durations (or no plan) keeps only the price — the unit's price today.
+   */
+  private planSnapshot(
+    plan: Awaited<ReturnType<ReservationsService['validateBookingPlan']>> | null,
+    optionId: string | undefined,
+    unitPrice: Prisma.Decimal,
+  ): Prisma.ReservationUncheckedUpdateInput {
+    const empty = {
+      selectedDurationOptionId: null,
+      selectedDurationMonths: null,
+      selectedIncreasePercentage: null,
+      snapshotDownPaymentAmount: null,
+      snapshotRemainingAmount: null,
+      snapshotFinancedAmount: null,
+      snapshotMonthlyInstallment: null,
+      snapshotFinalPaymentAmount: null,
+      snapshotTotalPayable: unitPrice,
+    };
+    if (!plan || plan.durationOptions.length === 0) {
+      if (optionId) throw new BadRequestException('خطة التقسيط المختارة لا تحتوي على خيارات مدة');
+      return empty;
+    }
+    if (!optionId) throw new BadRequestException('اختر مدة التقسيط من الخطة الجديدة');
+    const option = plan.durationOptions.find((o) => o.id === optionId);
+    if (!option) throw new BadRequestException('مدة التقسيط المختارة لا تنتمي إلى الخطة');
+    const calc = computeDurationOption({
+      netPrice: Number(plan.netPrice),
+      reservationAmount: Number(plan.reservationAmount),
+      downPaymentAmount: Number(plan.downPaymentAmount),
+      durationMonths: option.durationMonths,
+      increasePercentage: Number(option.increasePercentage),
+      finalPaymentAmount: Number(plan.finalPaymentAmount ?? 0),
+    });
+    return {
+      selectedDurationOptionId: option.id,
+      selectedDurationMonths: option.durationMonths,
+      selectedIncreasePercentage: option.increasePercentage,
+      snapshotDownPaymentAmount: plan.downPaymentAmount,
+      snapshotRemainingAmount: new Prisma.Decimal(calc.remainingAmount),
+      snapshotFinancedAmount: new Prisma.Decimal(calc.financedAmount),
+      snapshotMonthlyInstallment: new Prisma.Decimal(calc.monthlyInstallment),
+      snapshotTotalPayable: new Prisma.Decimal(calc.totalPayable),
+      snapshotFinalPaymentAmount: plan.finalPaymentAmount ?? null,
+    };
   }
 
   async create(actor: AuthUser, dto: CreateReservationDto) {
@@ -500,6 +561,7 @@ export class ReservationsService {
     if (unit.status !== UnitStatus.AVAILABLE) {
       throw new ConflictException('Unit is not available');
     }
+    await assertUnitOnSale(this.prisma, dto.unitId);
     const expiresAt = new Date(Date.now() + (dto.expiresInHours ?? 72) * 3_600_000);
 
     // ── Booking amount + selected-duration snapshot ────────────────────────
@@ -1608,7 +1670,7 @@ export class ReservationsService {
         bookingPaymentStatus: true,
         installmentPlanTemplateId: true,
         sales: { select: { fullName: true } },
-        unit: { select: { building: { select: { phase: { select: { projectId: true } } } } } },
+        unit: { select: { price: true, building: { select: { phase: { select: { projectId: true } } } } } },
       },
     });
     if (!reservation) throw new NotFoundException('Reservation not found');
@@ -1675,6 +1737,7 @@ export class ReservationsService {
       if (dto.installmentPlanTemplateId === null) {
         if (reservation.installmentPlanTemplateId) {
           data.installmentPlanTemplate = { disconnect: true };
+          Object.assign(data, this.planSnapshot(null, undefined, new Prisma.Decimal(reservation.unit.price)));
           changes.push('تم إلغاء ربط خطة التقسيط');
         }
       } else {
@@ -1685,6 +1748,12 @@ export class ReservationsService {
         );
         if (plan.id !== reservation.installmentPlanTemplateId) {
           data.installmentPlanTemplate = { connect: { id: plan.id } };
+          // The duration and prices follow the new plan — conversion used
+          // the old plan's numbers under the new plan's name.
+          Object.assign(
+            data,
+            this.planSnapshot(plan, dto.installmentPlanDurationOptionId, new Prisma.Decimal(reservation.unit.price)),
+          );
           changes.push('تم تحديث خطة التقسيط');
           // If admin did not also send a booking amount, default to plan's reservationAmount
           if (dto.bookingAmount === undefined) {

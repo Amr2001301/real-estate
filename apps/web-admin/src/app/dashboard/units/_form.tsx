@@ -290,6 +290,11 @@ export default function UnitForm({ unit, projects, locale = 'ar' }: Props) {
                     <option value="SOLD">{m.optionSold}</option>
                   </Select>
                 </Field>
+                {unit && (
+                  <Field label={m.labelStatusReason} name="statusReason">
+                    <Input id="statusReason" name="statusReason" placeholder={m.placeholderStatusReason} />
+                  </Field>
+                )}
               </div>
             </div>
           </section>
