@@ -135,7 +135,8 @@ export class DataExportService {
         orderBy: { createdAt: 'asc' },
       }),
       this.prisma.user.findMany({
-        where: { companyId, role: UserRole.CLIENT, phone: { not: null } },
+        // Buyers are CUSTOMERs (promoted on their contract) — they were left out.
+        where: { companyId, role: { in: [UserRole.CLIENT, UserRole.CUSTOMER] }, phone: { not: null } },
         select: { fullName: true, phone: true, email: true, locale: true, createdAt: true },
         orderBy: { createdAt: 'asc' },
       }),
@@ -181,7 +182,7 @@ export class DataExportService {
       this.prisma.installmentPlan.findMany({
         where: { companyId },
         select: {
-          totalMonths: true, monthlyAmount: true, startsAt: true, frequency: true,
+          id: true, totalMonths: true, monthlyAmount: true, startsAt: true, frequency: true,
           createdAt: true,
           contract: { select: { contractNumber: true } },
         },
@@ -190,7 +191,7 @@ export class DataExportService {
       this.prisma.installment.findMany({
         where: { companyId },
         select: {
-          dueDate: true, amount: true, status: true, paidAt: true, type: true,
+          planId: true, dueDate: true, amount: true, status: true, paidAt: true, type: true,
           plan: {
             select: {
               contract: {
@@ -331,13 +332,16 @@ export class DataExportService {
       }),
     ]);
 
-    // Compute installment totals per contract for the InstallmentPlans sheet
+    // Installment totals per plan for the InstallmentPlans sheet. Keyed by
+    // plan (plans without a contract number used to be merged together), and
+    // CANCELLED rows — a waived fee, a cancelled contract's schedule — are not
+    // owed, so they count neither as paid nor as remaining.
     const installmentTotals = new Map<string, { paid: number; total: number }>();
     for (const inst of installments) {
-      const cn = inst.plan.contract.contractNumber ?? '';
-      const prev = installmentTotals.get(cn) ?? { paid: 0, total: 0 };
+      if (inst.status === 'CANCELLED') continue;
+      const prev = installmentTotals.get(inst.planId) ?? { paid: 0, total: 0 };
       const amount = parseFloat(String(inst.amount));
-      installmentTotals.set(cn, {
+      installmentTotals.set(inst.planId, {
         paid: prev.paid + (inst.status === 'PAID' ? amount : 0),
         total: prev.total + amount,
       });
@@ -679,7 +683,7 @@ export class DataExportService {
   private buildInstallmentPlans(
     wb: Workbook,
     rows: Array<{
-      totalMonths: number; monthlyAmount: Prisma.Decimal;
+      id: string; totalMonths: number; monthlyAmount: Prisma.Decimal;
       startsAt: Date; frequency: string; createdAt: Date;
       contract: { contractNumber: string | null };
     }>,
@@ -688,8 +692,7 @@ export class DataExportService {
     const headers = ['رقم العقد', 'عدد الأقساط', 'قيمة القسط الشهري', 'تاريخ البدء', 'التكرار', 'المدفوع', 'الرصيد المتبقي'];
     const ws = this.initSheet(wb, 'InstallmentPlans', headers, [16, 14, 20, 15, 14, 16, 16], XLSX_TAB_FINANCIAL);
     rows.forEach((r, i) => {
-      const cn = r.contract.contractNumber ?? '';
-      const t = totals.get(cn) ?? { paid: 0, total: 0 };
+      const t = totals.get(r.id) ?? { paid: 0, total: 0 };
       this.writeRow(ws, i, [
         { t: 'text',   v: r.contract.contractNumber },
         { t: 'int',    v: r.totalMonths },

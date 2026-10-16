@@ -19,6 +19,7 @@ import { CompanyDomainsService, RESERVED_PLATFORM_SLUGS } from '../company-domai
 import { seedCancellationSettingsForCompany } from '../contracts/cancellation-settings.constants';
 import { seedLateFeeSettingsForCompany } from '../installments/late-fee';
 import { seedTransferFeeSettingsForCompany } from '../contracts/transfer-fee';
+import { seedFeeSettingsForCompany } from '../installments/fee-settings';
 import { NotificationsService } from '../notifications/notifications.module';
 import { USER_ROLE_AR } from '../notifications/notification-catalog';
 import { runInCompany } from '../../common/tenant/tenant-context';
@@ -222,6 +223,7 @@ export class SuperAdminService {
     await seedCancellationSettingsForCompany(this.prisma, company.id);
     await seedLateFeeSettingsForCompany(this.prisma, company.id);
     await seedTransferFeeSettingsForCompany(this.prisma, company.id);
+    await seedFeeSettingsForCompany(this.prisma, company.id);
 
     let adminUser = null;
     if (dto.adminEmail && dto.adminPassword && dto.adminFullName) {

@@ -54,11 +54,9 @@ class MeDocumentsController {
       this.prisma.contract
         .findMany({ where: { customerId: userId }, select: { id: true } })
         .then((rows) => rows.map((r) => r.id)),
-      this.prisma.deposit
-        .findMany({
-          where: { contract: { customerId: userId } },
-          select: { id: true },
-        })
+      this.ownership
+        .depositOwnershipWhere(userId)
+        .then((where) => this.prisma.deposit.findMany({ where, select: { id: true } }))
         .then((rows) => rows.map((r) => r.id)),
       this.prisma.maintenanceRequest
         .findMany({ where: { customerId: userId }, select: { id: true } })

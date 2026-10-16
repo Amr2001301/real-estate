@@ -35,6 +35,7 @@ export interface DashboardReportData {
   financial: {
     totalContractValue: number;
     totalCollectedVerified: number;
+    collectedTowardsPrice?: number;
     overdueTotal: number;
     collectedThisMonth: number;
   };
@@ -67,7 +68,8 @@ export function dashboardReportHtml(s: DashboardReportData, brand: ReportBrand):
     {
       label: 'المحصّل (موثّق)',
       value: moneyText(f.totalCollectedVerified, c),
-      hint: `${percentText(f.totalCollectedVerified, f.totalContractValue)} من قيمة العقود`,
+      // Price collected over contract value — fees and cancelled deals left out.
+      hint: `${percentText(f.collectedTowardsPrice ?? f.totalCollectedVerified, f.totalContractValue)} من قيمة العقود`,
     },
     {
       label: 'المتأخرات',

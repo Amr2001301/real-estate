@@ -11,6 +11,8 @@ interface Props {
     overdueTotal:           number;
     pendingBonus:           number;
     pendingBrokerPayouts:   number;
+    /** Collected toward live contracts' price (no fees, no cancelled deals). */
+    collectedTowardsPrice?: number;
   };
   className?:      string;
   currencySymbol: string;
@@ -20,8 +22,10 @@ interface Props {
 export function FinancialPanel({ financial, className, currencySymbol, locale = 'ar' }: Props) {
   const { totalContractValue, totalCollectedVerified, overdueTotal, pendingBonus, pendingBrokerPayouts } = financial;
 
+  // The rate compares like with like: price collected over contract value.
+  const towardsPrice = financial.collectedTowardsPrice ?? totalCollectedVerified;
   const collectionRate = totalContractValue > 0
-    ? Math.round((totalCollectedVerified / totalContractValue) * 100)
+    ? Math.round((towardsPrice / totalContractValue) * 100)
     : null;
 
   const pendingLiabilities = pendingBonus + pendingBrokerPayouts;

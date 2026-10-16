@@ -27,6 +27,8 @@ export const PLAN_TYPE_AR: Record<string, string> = {
   INSTALLMENT: 'قسط',
   FINAL_PAYMENT: 'دفعة أخيرة',
   BOUNCE_PENALTY: 'غرامة شيك مرتد',
+  LATE_FEE: 'غرامة تأخير',
+  TRANSFER_FEE: 'رسوم تنازل',
 };
 
 export interface InstallmentPlanReportData {

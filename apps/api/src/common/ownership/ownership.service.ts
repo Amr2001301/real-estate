@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { DocumentOwnerType, DocumentVisibility } from '@prisma/client';
+import { DocumentOwnerType, DocumentVisibility, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface CustomerDocument {
@@ -29,9 +29,39 @@ export class OwnershipService {
     if (!found) throw new NotFoundException('Contract not found');
   }
 
+  /**
+   * The deposits (receipts, proofs) that are this customer's. A transfer
+   * (تنازل) splits a contract's payments by who owned it when they were
+   * made: the new owner sees payments from the transfer on, the previous
+   * owner keeps the ones made before it. Following contract.customerId alone
+   * showed the new owner the previous owner's receipts and cut the previous
+   * owner off from their own.
+   */
+  async depositOwnershipWhere(userId: string): Promise<Prisma.DepositWhereInput> {
+    const transfers = await this.prisma.contractAmendment.findMany({
+      where: { type: 'TRANSFER', OR: [{ toCustomerId: userId }, { fromCustomerId: userId }] },
+      select: { contractId: true, toCustomerId: true, fromCustomerId: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    const since = new Map<string, Date>(); // became theirs (latest)
+    const until = new Map<string, Date>(); // stopped being theirs (latest)
+    for (const t of transfers) {
+      if (t.toCustomerId === userId) since.set(t.contractId, t.createdAt);
+      if (t.fromCustomerId === userId) until.set(t.contractId, t.createdAt);
+    }
+    const transferredIn = [...since.keys()];
+    return {
+      OR: [
+        { contract: { customerId: userId }, ...(transferredIn.length ? { contractId: { notIn: transferredIn } } : {}) },
+        ...[...since].map(([contractId, at]) => ({ contractId, paidAt: { gte: at } })),
+        ...[...until].map(([contractId, at]) => ({ contractId, paidAt: { lt: at } })),
+      ],
+    };
+  }
+
   async assertDepositOwner(userId: string, depositId: string): Promise<void> {
     const found = await this.prisma.deposit.findFirst({
-      where: { id: depositId, contract: { customerId: userId } },
+      where: { AND: [{ id: depositId }, await this.depositOwnershipWhere(userId)] },
       select: { id: true },
     });
     if (!found) throw new NotFoundException('Deposit not found');

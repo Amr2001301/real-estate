@@ -66,7 +66,7 @@ import { getCompanyCurrency } from '../../common/currency/currency';
 import { ReportBrandService } from '../company-branding/report-brand.service';
 import { presentReportPdf, ReportPdfService } from '../../common/report-pdf/report-pdf.service';
 import { fallbackBrand } from '../../common/utils/report-brand';
-import { installmentPlanReportHtml } from './installment-plan-template';
+import { installmentPlanReportHtml, PLAN_TYPE_AR } from './installment-plan-template';
 import { computeDurationOption } from './duration-calc';
 import {
   addTitledTable,
@@ -78,8 +78,15 @@ import {
   xlsxFilename,
 } from '../../common/utils/xlsx';
 import { reportFailure } from '../../common/observability/report-failure';
-import { CONTRACT_CANCELLED_MESSAGE, isDeadContract, LIVE_CONTRACT_WHERE, LIVE_PLAN_WHERE } from './live-contract';
+import {
+  CONTRACT_CANCELLED_MESSAGE,
+  isDeadContract,
+  LIVE_CONTRACT_WHERE,
+  LIVE_PLAN_WHERE,
+  SURCHARGE_PAYMENT_TYPES,
+} from './live-contract';
 import { LATE_FEE_SETTING_KEYS, lateFeesDue, resolveLateFeeSettings } from './late-fee';
+import { feeDueDate, feePaymentDays } from './fee-settings';
 
 // ─── Existing contract-based plan DTOs ────────────────────────────────────────
 
@@ -370,7 +377,7 @@ export class InstallmentsService {
       Number(inst.amount),
       STATUS_LABEL[inst.status] ?? inst.status,
       inst.paidAt ? inst.paidAt.toISOString().slice(0, 10) : '',
-      inst.type,
+      PLAN_TYPE_AR[inst.type] ?? inst.type,
     ]);
 
     // Outstanding = PENDING + OVERDUE only — CANCELLED excluded.
@@ -514,12 +521,13 @@ export class InstallmentsService {
       }),
     );
     if (!settings.enabled) return 0;
+    const dueDate = feeDueDate(now, await feePaymentDays(this.prisma, companyId));
     const graceCutoff = new Date(now.getTime() - settings.graceDays * 24 * 60 * 60 * 1000);
     const rows = await this.prisma.installment.findMany({
       where: {
         companyId,
         status: InstallmentStatus.OVERDUE,
-        type: { notIn: [PlanPaymentType.LATE_FEE, PlanPaymentType.BOUNCE_PENALTY, PlanPaymentType.TRANSFER_FEE] },
+        type: { notIn: SURCHARGE_PAYMENT_TYPES },
         dueDate: { lte: graceCutoff },
         plan: LIVE_PLAN_WHERE,
         // A payment already on its way stops the clock.
@@ -563,7 +571,7 @@ export class InstallmentsService {
           planId: inst.planId,
           type: PlanPaymentType.LATE_FEE,
           feeForId: inst.id,
-          dueDate: now,
+          dueDate,
           amount: new Prisma.Decimal(amount),
           status: InstallmentStatus.PENDING,
           companyId,

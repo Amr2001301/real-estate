@@ -1,4 +1,4 @@
-import { ContractStatus, Prisma } from '@prisma/client';
+import { ContractStatus, PlanPaymentType, Prisma } from '@prisma/client';
 
 /** A contract that is neither cancelled nor deleted. */
 export const LIVE_CONTRACT_WHERE = {
@@ -24,3 +24,15 @@ export function isDeadContract(
 ): boolean {
   return !!contract && (contract.status === ContractStatus.CANCELLED || !!contract.deletedAt);
 }
+
+/**
+ * Charges added on top of the price (fees and penalties). They are owed and
+ * collected like installments, but are not part of the contract price — a
+ * unit swap does not rescale them, the late-fee sweep does not charge on
+ * them, and price-progress figures leave them out.
+ */
+export const SURCHARGE_PAYMENT_TYPES: PlanPaymentType[] = [
+  PlanPaymentType.LATE_FEE,
+  PlanPaymentType.BOUNCE_PENALTY,
+  PlanPaymentType.TRANSFER_FEE,
+];
