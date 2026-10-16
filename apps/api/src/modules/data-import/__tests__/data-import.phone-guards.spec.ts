@@ -72,7 +72,9 @@ function buildMockPrisma(clientUsers: typeof AUTH_USER_E164[], globalHits: Globa
         // Second call: phone hits within the importing company (expanded phone set)
         .mockResolvedValueOnce(globalHits)
         // Third call: dbSalesUsers (ADMIN/SALES/SALES_MANAGER for sales-rep map)
-        .mockResolvedValueOnce([]),
+        .mockResolvedValueOnce([])
+        // Then: emails already taken in the company
+        .mockResolvedValue([]),
     },
     lead:        { findMany: empty },
     leadSource:  { findMany: empty },

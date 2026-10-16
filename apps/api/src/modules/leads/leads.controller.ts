@@ -153,7 +153,7 @@ export class LeadsController {
     @Query('sourceId') sourceId?: string,
   ) {
     assertExcelFile(file);
-    return this.leads.importLeads(file.buffer, sourceId, user.sub);
+    return this.leads.importLeads(file.buffer, sourceId, user);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)

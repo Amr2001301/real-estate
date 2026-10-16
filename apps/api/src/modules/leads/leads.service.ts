@@ -25,6 +25,9 @@ import { phoneForWrite } from '../../common/utils/phone-for-write';
 import { assertClientClaimable, clientOwnerScope } from '../../common/utils/client-ownership';
 import type { AuthUser } from '../../common/decorators/current-user.decorator';
 
+/** Row cap for the legacy leads upload (the data import caps sheets at 2000). */
+const LEGACY_IMPORT_MAX_ROWS = 2000;
+
 @Injectable()
 export class LeadsService {
   constructor(
@@ -528,14 +531,24 @@ export class LeadsService {
    * - Skips rows where a lead with the same phone already exists.
    * - Returns counts and per-row errors for the caller to surface.
    */
-  async importLeads(buffer: Buffer, sourceId?: string, actorId?: string): Promise<ImportResult> {
+  async importLeads(buffer: Buffer, sourceId?: string, actor?: AuthUser): Promise<ImportResult> {
+    const actorId = actor?.sub;
     const rows = await this.parseExcelBuffer(buffer);
+    if (rows.length > LEGACY_IMPORT_MAX_ROWS) {
+      throw new BadRequestException(`الملف يتجاوز الحد الأقصى (${LEGACY_IMPORT_MAX_ROWS} صف)`);
+    }
     const valid = rows.filter((r) => r.valid && r.phone);
     const invalid = rows.filter((r) => !r.valid || !r.phone);
 
-    const phones = valid.map((r) => r.phone!);
+    // Compare in the stored (E.164) form: the file's 010… numbers never
+    // matched, so re-uploading a file duplicated every lead.
+    const companyId = getTenantContext()?.companyId ?? null;
+    const canonical = new Map<string, string>();
+    for (const r of valid) {
+      canonical.set(r.phone!, (await phoneForWrite(this.prisma, r.phone!, companyId)) ?? r.phone!);
+    }
     const existingLeads = await this.prisma.lead.findMany({
-      where: { phone: { in: phones } },
+      where: { phone: { in: [...new Set(canonical.values())] } },
       select: { phone: true },
     });
     const existingPhones = new Set(existingLeads.map((l) => l.phone));
@@ -548,18 +561,26 @@ export class LeadsService {
     }));
 
     for (const row of valid) {
-      if (existingPhones.has(row.phone!)) {
+      const phone = canonical.get(row.phone!)!;
+      if (existingPhones.has(phone)) {
         skipped++;
         continue;
       }
       try {
-        await this.create({
-          fullName: row.name!,
-          phone: row.phone!,
-          email: row.email ?? undefined,
-          sourceId: sourceId ?? undefined,
-          notes: row.notes ?? undefined,
-        });
+        // As the importing user — the same ownership rules as creating the
+        // lead by hand (a manager can't attach leads to another team's
+        // clients); left unassigned it goes to the importer, so notes are kept.
+        await this.create(
+          {
+            fullName: row.name!,
+            phone: row.phone!,
+            email: row.email ?? undefined,
+            sourceId: sourceId ?? undefined,
+            notes: row.notes ?? undefined,
+          },
+          actor,
+        );
+        existingPhones.add(phone);
         imported++;
       } catch (e) {
         errors.push({ row: row.rowNumber, message: (e as Error).message ?? 'خطأ غير متوقع' });

@@ -8,9 +8,21 @@ const BOM = '﻿';
 
 export type CsvCell = string | number | boolean | null | undefined;
 
+/**
+ * Text that starts with = + - @ (or a tab/CR) is run as a formula when the
+ * CSV is opened in Excel — a name or note typed by a customer could do that
+ * on an admin's machine. Such cells get a leading apostrophe. Plain numbers
+ * and phone numbers (+2010…, -5) are left as they are.
+ */
+function neutraliseFormula(str: string): string {
+  if (!/^[=+\-@\t\r]/.test(str)) return str;
+  if (/^[+-]?[\d\s().]+$/.test(str)) return str;
+  return `'${str}`;
+}
+
 function escapeCell(value: CsvCell): string {
   if (value === null || value === undefined) return '';
-  const str = String(value);
+  const str = typeof value === 'string' ? neutraliseFormula(value) : String(value);
   // Quote when the cell contains a delimiter, quote, or line break.
   if (/[",\r\n]/.test(str)) {
     return `"${str.replace(/"/g, '""')}"`;

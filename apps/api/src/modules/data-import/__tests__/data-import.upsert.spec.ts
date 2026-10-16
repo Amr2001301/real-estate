@@ -67,15 +67,23 @@ interface MockPrisma {
 
 function buildImportPrisma(upsertReturnId: string): MockPrisma {
   const txCalls: Array<Record<string, Record<string, jest.Mock>>> = [];
+  const auditCreate = jest.fn().mockResolvedValue({});
   return {
-    auditLog: { create: jest.fn().mockResolvedValue({}) },
+    auditLog: { create: auditCreate },
     _txCalls: txCalls,
     $transaction: jest.fn().mockImplementation((fn: (tx: unknown) => Promise<unknown>) => {
       const tx = {
+        // The whole file now runs in one transaction: the audit row and the
+        // unit re-check go through it too.
+        auditLog: { create: auditCreate },
+        unitStatusHistory: { create: jest.fn().mockResolvedValue({}) },
+        leadActivity: { create: jest.fn().mockResolvedValue({}) },
+        contract: { count: jest.fn().mockResolvedValue(0) },
+        reservation: { count: jest.fn().mockResolvedValue(0) },
         project:  { upsert:  jest.fn().mockResolvedValue({ id: upsertReturnId }) },
         phase:    { upsert:  jest.fn().mockResolvedValue({ id: 'p-id' }) },
         building: { upsert:  jest.fn().mockResolvedValue({ id: 'b-id' }) },
-        unit:     { upsert:  jest.fn().mockResolvedValue({ id: 'u-id' }) },
+        unit:     { upsert:  jest.fn().mockResolvedValue({ id: 'u-id' }), findUnique: jest.fn().mockResolvedValue(null) },
         // Customers and leads sheets are empty in the test plan; the transactions
         // will iterate zero ops and never call these, but they must exist to avoid
         // runtime undefined-access if applyPlan ever reads the delegate.
