@@ -13,7 +13,7 @@ import {
 } from '../../common/utils/import-headers';
 import { ENTITY_CODE_PATTERN } from '../../common/utils/entity-code';
 import { normalizePhone, storedToImportPhone } from '../../common/utils/phone-normaliser';
-import { canonicalPhone } from '../../common/utils/identity-normalize';
+import { canonicalEmail, canonicalPhone } from '../../common/utils/identity-normalize';
 import type {
   ImportPlan,
   ImportResult,
@@ -449,8 +449,20 @@ export class DataImportService {
     const units = this.parseUnitsSheet(wb, phaseByKey, buildingByKey, unitByKey, activeUnitIds, projects, phases, buildings);
 
     const unresolvedSalesTracker = { count: 0 };
+    // Emails already taken in this company (any account) — compared in their
+    // canonical form, as the unique index and every other write path do.
+    const takenEmails = new Set(
+      (
+        await this.prisma.user.findMany({
+          where: { companyId, email: { not: null } },
+          select: { email: true },
+        })
+      )
+        .map((u) => canonicalEmail(u.email))
+        .filter((e): e is string => !!e),
+    );
     const customers = this.parseCustomersSheet(
-      wb, companyId, clientByPhone, globalPhoneMap, duplicatePhones,
+      wb, companyId, clientByPhone, globalPhoneMap, duplicatePhones, takenEmails,
     );
     const leads = this.parseLeadsSheet(
       wb, companyId, leadById, leadByPhone,
@@ -975,6 +987,22 @@ export class DataImportService {
       const bedrooms  = readIntCell(row, bedroomsColIdx);
       const bathrooms = readIntCell(row, bathroomsColIdx);
       const price     = readDecimalCell(row, priceColIdx);
+      // Same bounds as the unit form: a zero or negative price/area fed unit
+      // valuations and quotes.
+      const bad = (
+        [
+          ['area', area, (v: number) => v > 0, 'must be greater than 0'],
+          ['price', price, (v: number) => v > 0, 'must be greater than 0'],
+          ['floor', floor, (v: number) => v >= 0, 'must be 0 or more'],
+          ['bedrooms', bedrooms, (v: number) => v >= 0, 'must be 0 or more'],
+          ['bathrooms', bathrooms, (v: number) => v >= 0, 'must be 0 or more'],
+        ] as const
+      ).find(([, v, ok]) => v !== undefined && !ok(v));
+      if (bad) {
+        const column = UNITS_SHEET.fields[bad[0]];
+        plan._addError({ sheet: UNITS_SHEET.name, rowNumber, column, message: `${column} ${bad[3]}` });
+        return;
+      }
 
       let status: UnitStatus | undefined;
       if (statusColIdx !== undefined) {
@@ -1068,6 +1096,7 @@ export class DataImportService {
     clientByPhone: Map<string, DbClient>,
     globalPhoneMap: Map<string, { id: string; role: UserRole; companyId: string | null }>,
     duplicatePhones: Set<string>,
+    takenEmails: Set<string>,
   ): SheetPlan<CustomerPlan> {
     const plan = makeSheetPlan<CustomerPlan>(CUSTOMERS_SHEET.name);
     const ws = wb.getWorksheet(CUSTOMERS_SHEET.name);
@@ -1088,6 +1117,7 @@ export class DataImportService {
     // the second-row duplicate rejection — the first row is already rejected
     // via the pre-scanned duplicatePhones set before we reach it here)
     const seenPhones = new Set<string>();
+    const seenEmails = new Set<string>();
     let dataRows = 0;
 
     ws.eachRow((row, rowNumber) => {
@@ -1138,6 +1168,18 @@ export class DataImportService {
         return;
       }
 
+      // A removed (soft-deleted) client keeps the number: creating another
+      // account on it would hit the unique index and abort the whole import.
+      if (existingAny && existingAny.role === UserRole.CLIENT && !clientByPhone.get(phone)) {
+        plan._addError({
+          sheet: CUSTOMERS_SHEET.name,
+          rowNumber,
+          column: CUSTOMERS_SHEET.fields.phone,
+          message: `Phone "${phone}" belongs to a removed customer account. Restore that customer instead of importing it again.`,
+        });
+        return;
+      }
+
       // Repair escalation: a repaired phone that matches an existing user is blocked.
       // A wrong repair produces a valid-looking number that silently merges two customers' data.
       if (normResult.repaired && existingAny) {
@@ -1153,8 +1195,13 @@ export class DataImportService {
       // ── Data fields ──────────────────────────────────────────────────────────
 
       const fullName = readStringCell(row, fullNameColIdx);
-      const email    = readStringCell(row, emailColIdx);
+      const rawEmail = readStringCell(row, emailColIdx);
+      const email    = rawEmail === undefined ? undefined : (canonicalEmail(rawEmail) ?? undefined);
       const rawLocale = readStringCell(row, localeColIdx);
+      if (email !== undefined && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        plan._addError({ sheet: CUSTOMERS_SHEET.name, rowNumber, column: CUSTOMERS_SHEET.fields.email, message: `Invalid email "${rawEmail}"` });
+        return;
+      }
 
       let locale: Locale | undefined;
       if (rawLocale) {
@@ -1177,6 +1224,19 @@ export class DataImportService {
           plan._addError({ sheet: CUSTOMERS_SHEET.name, rowNumber, column: CUSTOMERS_SHEET.fields.fullName, message: 'Full name is required when creating a new customer' });
           return;
         }
+        // A taken email (in the company or earlier in this file) would hit the
+        // unique index mid-import; report it on the row instead.
+        if (email !== undefined) {
+          if (takenEmails.has(email)) {
+            plan._addError({ sheet: CUSTOMERS_SHEET.name, rowNumber, column: CUSTOMERS_SHEET.fields.email, message: `Email "${email}" is already used by another account` });
+            return;
+          }
+          if (seenEmails.has(email)) {
+            plan._addError({ sheet: CUSTOMERS_SHEET.name, rowNumber, column: CUSTOMERS_SHEET.fields.email, message: `Duplicate email "${email}" within this sheet` });
+            return;
+          }
+          seenEmails.add(email);
+        }
         op = 'create';
       } else {
         id = existing.id;
@@ -1189,7 +1249,7 @@ export class DataImportService {
         // what is stored so the admin knows the import will not change it. Silently
         // discarding a mismatched email is worse than a rejection — the admin would
         // believe the correction landed when it did not.
-        if (email !== undefined && email !== existing.email) {
+        if (email !== undefined && email !== canonicalEmail(existing.email)) {
           plan.warnings.push({
             sheet: CUSTOMERS_SHEET.name,
             rowNumber,
@@ -1347,10 +1407,11 @@ export class DataImportService {
       // ── Resolve existing lead ────────────────────────────────────────────────
 
       let existingLead: DbLead | undefined;
-      if (importId) {
-        existingLead = leadById.get(importId);
-        // Non-existent _ImportId → INSERT (not an error per spec)
-      } else if (phone) {
+      if (importId) existingLead = leadById.get(importId);
+      // An _ImportId this company doesn't know (a file from elsewhere, a typed
+      // id) falls back to the phone like a row without one. It used to insert
+      // a new lead on every run, and a phone shared by two such rows made two.
+      if (!existingLead && phone) {
         if (seenLeadPhones.has(phone)) {
           plan._addError({ sheet: LEADS_SHEET.name, rowNumber, column: LEADS_SHEET.fields.phone, message: `Duplicate phone "${phone}" used as fallback identity — second occurrence rejected` });
           return;
@@ -1544,324 +1605,364 @@ export class DataImportService {
   // ── Apply ─────────────────────────────────────────────────────────────────────
 
   async applyPlan(plan: ImportPlan, actorId: string): Promise<ImportResult> {
-    const resolvedProjectIds  = new Map<string, string>();
-    const resolvedPhaseIds    = new Map<string, string>();
-    const resolvedBuildingIds = new Map<string, string>();
+    // One transaction for the whole file: a row that fails late (a taken
+    // email, say) used to leave the projects/units sheets committed and the
+    // customers and leads not — with no audit row. Now it is all or nothing.
+    return this.prisma.$transaction(async (outer) => {
+      const resolvedProjectIds  = new Map<string, string>();
+      const resolvedPhaseIds    = new Map<string, string>();
+      const resolvedBuildingIds = new Map<string, string>();
 
-    // ── Projects ──────────────────────────────────────────────────────────────
+      // ── Projects ──────────────────────────────────────────────────────────────
 
-    const projectResult = await this.prisma.$transaction(async (tx) => {
-      let created = 0, updated = 0, unchanged = 0;
+      const projectResult = await (async (tx: Prisma.TransactionClient) => {
+        let created = 0, updated = 0, unchanged = 0;
 
-      for (const p of plan.projects.ops) {
-        if (p.op === 'unchanged') {
-          unchanged++;
-          if (p.id) resolvedProjectIds.set(p.code, p.id);
-          continue;
-        }
-
-        const updateData: Prisma.ProjectUpdateInput = {};
-        if (p.nameAr !== undefined || p.nameEn !== undefined) {
-          updateData.name = { ar: p.nameAr ?? null, en: p.nameEn ?? null } as object;
-        }
-        if (p.descAr !== undefined || p.descEn !== undefined) {
-          updateData.description = { ar: p.descAr ?? null, en: p.descEn ?? null } as object;
-        }
-        if (p.city !== undefined) updateData.city = p.city;
-        if (p.status !== undefined) updateData.status = p.status;
-
-        const row = await (tx.project as any).upsert({
-          where: { companyId_code: { companyId: plan.companyId, code: p.code } },
-          create: {
-            companyId: plan.companyId,
-            code: p.code,
-            name: { ar: p.nameAr ?? '', en: p.nameEn ?? '' },
-            description: { ar: p.descAr ?? '', en: p.descEn ?? '' },
-            city: p.city!,
-            status: p.status ?? ProjectStatus.DRAFT,
-            lat: 0,
-            lng: 0,
-          },
-          update: updateData,
-          select: { id: true },
-        });
-        resolvedProjectIds.set(p.code, row.id);
-        if (p.op === 'create') created++; else updated++;
-      }
-
-      return { sheetName: PROJECTS_SHEET.name, created, updated, unchanged, locked: 0, warnings: [...plan.projects.warnings] };
-    });
-
-    // ── Phases ────────────────────────────────────────────────────────────────
-
-    const phaseResult = await this.prisma.$transaction(async (tx) => {
-      let created = 0, updated = 0, unchanged = 0;
-
-      for (const p of plan.phases.ops) {
-        const projectId = p.projectId ?? resolvedProjectIds.get(p.projectCode);
-        if (!projectId) continue;
-
-        if (p.op === 'unchanged') {
-          unchanged++;
-          if (p.id) resolvedPhaseIds.set(`${p.projectCode}:${p.code}`, p.id);
-          continue;
-        }
-
-        const updateData: Prisma.PhaseUpdateInput = {};
-        if (p.nameAr !== undefined || p.nameEn !== undefined) {
-          updateData.name = { ar: p.nameAr ?? null, en: p.nameEn ?? null } as object;
-        }
-        if (p.order !== undefined) updateData.order = p.order;
-
-        const row = await (tx.phase as any).upsert({
-          where: { projectId_code: { projectId, code: p.code } },
-          create: {
-            companyId: plan.companyId,
-            projectId,
-            code: p.code,
-            name: { ar: p.nameAr ?? '', en: p.nameEn ?? '' },
-            order: p.order ?? 0,
-          },
-          update: updateData,
-          select: { id: true },
-        });
-        resolvedPhaseIds.set(`${p.projectCode}:${p.code}`, row.id);
-        if (p.op === 'create') created++; else updated++;
-      }
-
-      return { sheetName: PHASES_SHEET.name, created, updated, unchanged, locked: 0, warnings: [...plan.phases.warnings] };
-    });
-
-    // ── Buildings ─────────────────────────────────────────────────────────────
-
-    const buildingResult = await this.prisma.$transaction(async (tx) => {
-      let created = 0, updated = 0, unchanged = 0;
-
-      for (const b of plan.buildings.ops) {
-        const phaseId = b.phaseId ?? resolvedPhaseIds.get(`${b.projectCode}:${b.phaseCode}`);
-        if (!phaseId) continue;
-
-        if (b.op === 'unchanged') {
-          unchanged++;
-          if (b.id) resolvedBuildingIds.set(`${b.projectCode}:${b.phaseCode}:${b.code}`, b.id);
-          continue;
-        }
-
-        const updateData: Prisma.BuildingUpdateInput = {};
-        if (b.name        !== undefined) updateData.name = b.name;
-        if (b.order       !== undefined) updateData.order = b.order;
-        if (b.totalFloors !== undefined) updateData.totalFloors = b.totalFloors;
-
-        const row = await (tx.building as any).upsert({
-          where: { phaseId_code: { phaseId, code: b.code } },
-          create: {
-            companyId: plan.companyId,
-            phaseId,
-            code: b.code,
-            name: b.name!,
-            order: b.order ?? 0,
-            totalFloors: b.totalFloors ?? 1,
-          },
-          update: updateData,
-          select: { id: true },
-        });
-        resolvedBuildingIds.set(`${b.projectCode}:${b.phaseCode}:${b.code}`, row.id);
-        if (b.op === 'create') created++; else updated++;
-      }
-
-      return { sheetName: BUILDINGS_SHEET.name, created, updated, unchanged, locked: 0, warnings: [...plan.buildings.warnings] };
-    });
-
-    // ── Units ─────────────────────────────────────────────────────────────────
-
-    const unitResult = await this.prisma.$transaction(async (tx) => {
-      let created = 0, updated = 0, unchanged = 0, locked = 0;
-
-      for (const u of plan.units.ops) {
-        if (u.op === 'unchanged') { unchanged++; continue; }
-        if (u.op === 'locked')    { locked++;    continue; }
-
-        const buildingId = u.buildingId ?? resolvedBuildingIds.get(`${u.projectCode}:${u.phaseCode}:${u.buildingCode}`);
-        if (!buildingId) continue;
-
-        const updateData: Prisma.UnitUpdateInput = {};
-        if (u.type      !== undefined) updateData.type = u.type;
-        if (u.floor     !== undefined) updateData.floor = u.floor;
-        if (u.area      !== undefined) updateData.area = u.area;
-        if (u.bedrooms  !== undefined) updateData.bedrooms = u.bedrooms;
-        if (u.bathrooms !== undefined) updateData.bathrooms = u.bathrooms;
-        if (u.price     !== undefined) updateData.price = u.price;
-        if (u.status    !== undefined) updateData.status = u.status;
-
-        await (tx.unit as any).upsert({
-          where: { buildingId_code: { buildingId, code: u.code } },
-          create: {
-            companyId: plan.companyId,
-            buildingId,
-            code: u.code,
-            type: u.type!,
-            floor: u.floor ?? 0,
-            area: u.area!,
-            bedrooms: u.bedrooms ?? 0,
-            bathrooms: u.bathrooms ?? 0,
-            price: u.price!,
-            status: u.status ?? UnitStatus.AVAILABLE,
-          },
-          update: updateData,
-        });
-        if (u.op === 'create') created++; else updated++;
-      }
-
-      return { sheetName: UNITS_SHEET.name, created, updated, unchanged, locked, warnings: [...plan.units.warnings] };
-    });
-
-    // ── Customers ─────────────────────────────────────────────────────────────
-    // resolvedCustomerIds is populated here and consumed by the Leads transaction.
-
-    const resolvedCustomerIds = new Map<string, string>(); // normalizedPhone → User.id
-
-    const customerResult = await this.prisma.$transaction(async (tx) => {
-      let created = 0, updated = 0, unchanged = 0;
-
-      for (const c of plan.customers.ops) {
-        if (c.op === 'unchanged') {
-          unchanged++;
-          if (c.id) resolvedCustomerIds.set(c.phone, c.id);
-          continue;
-        }
-
-        if (c.op === 'create') {
-          const e164 = canonicalPhone(c.phone, 'EG');
-          if (!e164) {
-            // c.phone passed normalizePhone earlier in this run, so canonicalPhone
-            // must succeed — reaching here is a programming error, not user input.
-            throw new Error(
-              `[applyPlan] canonicalPhone("${c.phone}", "EG") returned null after normalizePhone passed — this is a bug, not a user error.`,
-            );
+        for (const p of plan.projects.ops) {
+          if (p.op === 'unchanged') {
+            unchanged++;
+            if (p.id) resolvedProjectIds.set(p.code, p.id);
+            continue;
           }
-          const user = await (tx.user as any).create({
-            data: {
-              fullName: c.fullName!,
-              phone: e164,
-              email: c.email ?? null,
-              locale: c.locale ?? Locale.ar,
-              role: UserRole.CLIENT,
+
+          const updateData: Prisma.ProjectUpdateInput = {};
+          if (p.nameAr !== undefined || p.nameEn !== undefined) {
+            updateData.name = { ar: p.nameAr ?? null, en: p.nameEn ?? null } as object;
+          }
+          if (p.descAr !== undefined || p.descEn !== undefined) {
+            updateData.description = { ar: p.descAr ?? null, en: p.descEn ?? null } as object;
+          }
+          if (p.city !== undefined) updateData.city = p.city;
+          if (p.status !== undefined) updateData.status = p.status;
+
+          const row = await (tx.project as any).upsert({
+            where: { companyId_code: { companyId: plan.companyId, code: p.code } },
+            create: {
               companyId: plan.companyId,
-              active: true,
+              code: p.code,
+              name: { ar: p.nameAr ?? '', en: p.nameEn ?? '' },
+              description: { ar: p.descAr ?? '', en: p.descEn ?? '' },
+              city: p.city!,
+              status: p.status ?? ProjectStatus.DRAFT,
+              lat: 0,
+              lng: 0,
             },
+            update: updateData,
             select: { id: true },
           });
-          resolvedCustomerIds.set(c.phone, user.id);
-          created++;
-        } else {
-          // update — only fullName and locale are updatable
-          const updateData: Record<string, unknown> = {};
-          if (c.fullName !== undefined) updateData.fullName = c.fullName;
-          if (c.locale   !== undefined) updateData.locale   = c.locale;
-
-          await (tx.user as any).update({
-            where: { id: c.id! },
-            data: updateData,
-          });
-          resolvedCustomerIds.set(c.phone, c.id!);
-          updated++;
+          resolvedProjectIds.set(p.code, row.id);
+          if (p.op === 'create') created++; else updated++;
         }
-      }
 
-      return { sheetName: CUSTOMERS_SHEET.name, created, updated, unchanged, locked: 0, warnings: [...plan.customers.warnings] };
-    });
+        return { sheetName: PROJECTS_SHEET.name, created, updated, unchanged, locked: 0, warnings: [...plan.projects.warnings] };
+      })(outer);
 
-    // ── Leads ─────────────────────────────────────────────────────────────────
+      // ── Phases ────────────────────────────────────────────────────────────────
 
-    const leadResult = await this.prisma.$transaction(async (tx) => {
-      let created = 0, updated = 0, unchanged = 0, locked = 0;
+      const phaseResult = await (async (tx: Prisma.TransactionClient) => {
+        let created = 0, updated = 0, unchanged = 0;
 
-      for (const l of plan.leads.ops) {
-        if (l.op === 'unchanged') { unchanged++; continue; }
-        if (l.op === 'locked')    { locked++;    continue; }
+        for (const p of plan.phases.ops) {
+          const projectId = p.projectId ?? resolvedProjectIds.get(p.projectCode);
+          if (!projectId) continue;
 
-        if (l.op === 'create') {
-          // Resolve clientId: either pre-resolved at parse time (existing customer)
-          // or just created in the Customers transaction (new customer this run)
-          const clientId = l.clientId ?? (l.phone ? resolvedCustomerIds.get(l.phone) : undefined);
-          if (!clientId) continue; // should not happen if parseAndValidate validated correctly
+          if (p.op === 'unchanged') {
+            unchanged++;
+            if (p.id) resolvedPhaseIds.set(`${p.projectCode}:${p.code}`, p.id);
+            continue;
+          }
 
-          await (tx.lead as any).create({
-            data: {
+          const updateData: Prisma.PhaseUpdateInput = {};
+          if (p.nameAr !== undefined || p.nameEn !== undefined) {
+            updateData.name = { ar: p.nameAr ?? null, en: p.nameEn ?? null } as object;
+          }
+          if (p.order !== undefined) updateData.order = p.order;
+
+          const row = await (tx.phase as any).upsert({
+            where: { projectId_code: { projectId, code: p.code } },
+            create: {
               companyId: plan.companyId,
-              clientId,
-              fullName: l.fullName!,
-              phone: l.phone!,
-              email: l.email ?? null,
-              stage: l.stage ?? LeadStage.NEW,
-              sourceId: l.sourceId ?? null,
-              assignedSalesId: l.assignedSalesId ?? null,
-              projectInterestId: l.projectInterestId ?? null,
-              unitInterestId: l.unitInterestId ?? null,
+              projectId,
+              code: p.code,
+              name: { ar: p.nameAr ?? '', en: p.nameEn ?? '' },
+              order: p.order ?? 0,
             },
+            update: updateData,
+            select: { id: true },
           });
-          created++;
-        } else {
-          // update — only the updatable fields are written; undefined = column absent = skip
-          const updateData: Record<string, unknown> = {};
-          if (l.fullName          !== undefined) updateData.fullName = l.fullName;
-          if (l.stage             !== undefined) updateData.stage = l.stage;
-          if (l.sourceId          !== undefined) updateData.sourceId = l.sourceId;
-          if (l.assignedSalesId   !== undefined) updateData.assignedSalesId = l.assignedSalesId;
-          if (l.projectInterestId !== undefined) updateData.projectInterestId = l.projectInterestId;
-          if (l.unitInterestId    !== undefined) updateData.unitInterestId = l.unitInterestId;
-
-          await (tx.lead as any).update({
-            where: { id: l.id! },
-            data: updateData,
-          });
-          updated++;
+          resolvedPhaseIds.set(`${p.projectCode}:${p.code}`, row.id);
+          if (p.op === 'create') created++; else updated++;
         }
-      }
 
-      return { sheetName: LEADS_SHEET.name, created, updated, unchanged, locked: 0, warnings: [...plan.leads.warnings] };
-    });
+        return { sheetName: PHASES_SHEET.name, created, updated, unchanged, locked: 0, warnings: [...plan.phases.warnings] };
+      })(outer);
 
-    // Audit log
-    await this.prisma.auditLog.create({
-      data: {
-        actorId,
-        action: 'DATA_IMPORT',
-        entityType: 'data-import',
-        entityId: plan.companyId,
-        after: {
-          projectsCreated:  projectResult.created,
-          phasesCreated:    phaseResult.created,
-          buildingsCreated: buildingResult.created,
-          unitsCreated:     unitResult.created,
-          customersCreated: customerResult.created,
-          leadsCreated:     leadResult.created,
-        } as object,
-        companyId: plan.companyId,
-      },
-    });
+      // ── Buildings ─────────────────────────────────────────────────────────────
 
-    const totalCreated =
-      projectResult.created + phaseResult.created + buildingResult.created + unitResult.created +
-      customerResult.created + leadResult.created;
-    const totalUpdated =
-      projectResult.updated + phaseResult.updated + buildingResult.updated + unitResult.updated +
-      customerResult.updated + leadResult.updated;
-    const totalUnchanged =
-      projectResult.unchanged + phaseResult.unchanged + buildingResult.unchanged + unitResult.unchanged +
-      customerResult.unchanged + leadResult.unchanged;
+      const buildingResult = await (async (tx: Prisma.TransactionClient) => {
+        let created = 0, updated = 0, unchanged = 0;
 
-    return {
-      projects:  projectResult,
-      phases:    phaseResult,
-      buildings: buildingResult,
-      units:     unitResult,
-      customers: customerResult,
-      leads:     leadResult,
-      totalCreated,
-      totalUpdated,
-      totalUnchanged,
-      unresolvedLeadSalesReps: plan.unresolvedLeadSalesReps,
-    };
+        for (const b of plan.buildings.ops) {
+          const phaseId = b.phaseId ?? resolvedPhaseIds.get(`${b.projectCode}:${b.phaseCode}`);
+          if (!phaseId) continue;
+
+          if (b.op === 'unchanged') {
+            unchanged++;
+            if (b.id) resolvedBuildingIds.set(`${b.projectCode}:${b.phaseCode}:${b.code}`, b.id);
+            continue;
+          }
+
+          const updateData: Prisma.BuildingUpdateInput = {};
+          if (b.name        !== undefined) updateData.name = b.name;
+          if (b.order       !== undefined) updateData.order = b.order;
+          if (b.totalFloors !== undefined) updateData.totalFloors = b.totalFloors;
+
+          const row = await (tx.building as any).upsert({
+            where: { phaseId_code: { phaseId, code: b.code } },
+            create: {
+              companyId: plan.companyId,
+              phaseId,
+              code: b.code,
+              name: b.name!,
+              order: b.order ?? 0,
+              totalFloors: b.totalFloors ?? 1,
+            },
+            update: updateData,
+            select: { id: true },
+          });
+          resolvedBuildingIds.set(`${b.projectCode}:${b.phaseCode}:${b.code}`, row.id);
+          if (b.op === 'create') created++; else updated++;
+        }
+
+        return { sheetName: BUILDINGS_SHEET.name, created, updated, unchanged, locked: 0, warnings: [...plan.buildings.warnings] };
+      })(outer);
+
+      // ── Units ─────────────────────────────────────────────────────────────────
+
+      const unitResult = await (async (tx: Prisma.TransactionClient) => {
+        let created = 0, updated = 0, unchanged = 0, locked = 0;
+
+        for (const u of plan.units.ops) {
+          if (u.op === 'unchanged') { unchanged++; continue; }
+          if (u.op === 'locked')    { locked++;    continue; }
+
+          const buildingId = u.buildingId ?? resolvedBuildingIds.get(`${u.projectCode}:${u.phaseCode}:${u.buildingCode}`);
+          if (!buildingId) continue;
+
+          const updateData: Prisma.UnitUpdateInput = {};
+          if (u.type      !== undefined) updateData.type = u.type;
+          if (u.floor     !== undefined) updateData.floor = u.floor;
+          if (u.area      !== undefined) updateData.area = u.area;
+          if (u.bedrooms  !== undefined) updateData.bedrooms = u.bedrooms;
+          if (u.bathrooms !== undefined) updateData.bathrooms = u.bathrooms;
+          if (u.price     !== undefined) updateData.price = u.price;
+          if (u.status    !== undefined) updateData.status = u.status;
+
+          // The deal check ran when the file was read; a reservation or
+          // contract made since then holds the unit — leave it untouched.
+          const current = await tx.unit.findUnique({
+            where: { buildingId_code: { buildingId, code: u.code } },
+            select: { id: true, status: true },
+          });
+          if (current) {
+            const [liveContract, liveReservation] = await Promise.all([
+              tx.contract.count({ where: { unitId: current.id, status: { not: 'CANCELLED' }, deletedAt: null } }),
+              tx.reservation.count({
+                where: { unitId: current.id, deletedAt: null, status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] } },
+              }),
+            ]);
+            if (liveContract + liveReservation > 0) { locked++; continue; }
+          }
+
+          await (tx.unit as any).upsert({
+            where: { buildingId_code: { buildingId, code: u.code } },
+            create: {
+              companyId: plan.companyId,
+              buildingId,
+              code: u.code,
+              type: u.type!,
+              floor: u.floor ?? 0,
+              area: u.area!,
+              bedrooms: u.bedrooms ?? 0,
+              bathrooms: u.bathrooms ?? 0,
+              price: u.price!,
+              status: u.status ?? UnitStatus.AVAILABLE,
+            },
+            update: updateData,
+          });
+          // Status changes leave the same trail as the units page.
+          if (current && u.status !== undefined && u.status !== current.status) {
+            await tx.unitStatusHistory.create({
+              data: {
+                unitId: current.id,
+                oldStatus: current.status,
+                newStatus: u.status,
+                changedById: actorId,
+                reason: 'Data import',
+                companyId: plan.companyId,
+              },
+            });
+          }
+          if (u.op === 'create') created++; else updated++;
+        }
+
+        return { sheetName: UNITS_SHEET.name, created, updated, unchanged, locked, warnings: [...plan.units.warnings] };
+      })(outer);
+
+      // ── Customers ─────────────────────────────────────────────────────────────
+      // resolvedCustomerIds is populated here and consumed by the Leads transaction.
+
+      const resolvedCustomerIds = new Map<string, string>(); // normalizedPhone → User.id
+
+      const customerResult = await (async (tx: Prisma.TransactionClient) => {
+        let created = 0, updated = 0, unchanged = 0;
+
+        for (const c of plan.customers.ops) {
+          if (c.op === 'unchanged') {
+            unchanged++;
+            if (c.id) resolvedCustomerIds.set(c.phone, c.id);
+            continue;
+          }
+
+          if (c.op === 'create') {
+            const e164 = canonicalPhone(c.phone, 'EG');
+            if (!e164) {
+              // c.phone passed normalizePhone earlier in this run, so canonicalPhone
+              // must succeed — reaching here is a programming error, not user input.
+              throw new Error(
+                `[applyPlan] canonicalPhone("${c.phone}", "EG") returned null after normalizePhone passed — this is a bug, not a user error.`,
+              );
+            }
+            const user = await (tx.user as any).create({
+              data: {
+                fullName: c.fullName!,
+                phone: e164,
+                email: c.email ?? null,
+                locale: c.locale ?? Locale.ar,
+                role: UserRole.CLIENT,
+                companyId: plan.companyId,
+                active: true,
+              },
+              select: { id: true },
+            });
+            resolvedCustomerIds.set(c.phone, user.id);
+            created++;
+          } else {
+            // update — only fullName and locale are updatable
+            const updateData: Record<string, unknown> = {};
+            if (c.fullName !== undefined) updateData.fullName = c.fullName;
+            if (c.locale   !== undefined) updateData.locale   = c.locale;
+
+            await (tx.user as any).update({
+              where: { id: c.id! },
+              data: updateData,
+            });
+            resolvedCustomerIds.set(c.phone, c.id!);
+            updated++;
+          }
+        }
+
+        return { sheetName: CUSTOMERS_SHEET.name, created, updated, unchanged, locked: 0, warnings: [...plan.customers.warnings] };
+      })(outer);
+
+      // ── Leads ─────────────────────────────────────────────────────────────────
+
+      const leadResult = await (async (tx: Prisma.TransactionClient) => {
+        let created = 0, updated = 0, unchanged = 0, locked = 0;
+
+        for (const l of plan.leads.ops) {
+          if (l.op === 'unchanged') { unchanged++; continue; }
+          if (l.op === 'locked')    { locked++;    continue; }
+
+          if (l.op === 'create') {
+            // Resolve clientId: either pre-resolved at parse time (existing customer)
+            // or just created in the Customers transaction (new customer this run)
+            const clientId = l.clientId ?? (l.phone ? resolvedCustomerIds.get(l.phone) : undefined);
+            if (!clientId) continue; // should not happen if parseAndValidate validated correctly
+
+            const lead = await (tx.lead as any).create({
+              data: {
+                companyId: plan.companyId,
+                clientId,
+                fullName: l.fullName!,
+                // Stored in E.164 like every other write path — exact-match
+                // lookups (public requests) missed the importer's 01… form
+                // and opened duplicate leads.
+                phone: canonicalPhone(l.phone!, 'EG') ?? l.phone!,
+                email: l.email ?? null,
+                stage: l.stage ?? LeadStage.NEW,
+                sourceId: l.sourceId ?? null,
+                assignedSalesId: l.assignedSalesId ?? null,
+                projectInterestId: l.projectInterestId ?? null,
+                unitInterestId: l.unitInterestId ?? null,
+              },
+            });
+            await tx.leadActivity.create({
+              data: { leadId: lead.id, type: 'created', payload: { by: actorId, via: 'data-import' } },
+            });
+            created++;
+          } else {
+            // update — only the updatable fields are written; undefined = column absent = skip
+            const updateData: Record<string, unknown> = {};
+            if (l.fullName          !== undefined) updateData.fullName = l.fullName;
+            if (l.stage             !== undefined) updateData.stage = l.stage;
+            if (l.sourceId          !== undefined) updateData.sourceId = l.sourceId;
+            if (l.assignedSalesId   !== undefined) updateData.assignedSalesId = l.assignedSalesId;
+            if (l.projectInterestId !== undefined) updateData.projectInterestId = l.projectInterestId;
+            if (l.unitInterestId    !== undefined) updateData.unitInterestId = l.unitInterestId;
+
+            await (tx.lead as any).update({
+              where: { id: l.id! },
+              data: updateData,
+            });
+            updated++;
+          }
+        }
+
+        return { sheetName: LEADS_SHEET.name, created, updated, unchanged, locked: 0, warnings: [...plan.leads.warnings] };
+      })(outer);
+
+      // Audit log
+      await outer.auditLog.create({
+        data: {
+          actorId,
+          action: 'DATA_IMPORT',
+          entityType: 'data-import',
+          entityId: plan.companyId,
+          after: {
+            projectsCreated:  projectResult.created,
+            phasesCreated:    phaseResult.created,
+            buildingsCreated: buildingResult.created,
+            unitsCreated:     unitResult.created,
+            customersCreated: customerResult.created,
+            leadsCreated:     leadResult.created,
+          } as object,
+          companyId: plan.companyId,
+        },
+      });
+
+      const totalCreated =
+        projectResult.created + phaseResult.created + buildingResult.created + unitResult.created +
+        customerResult.created + leadResult.created;
+      const totalUpdated =
+        projectResult.updated + phaseResult.updated + buildingResult.updated + unitResult.updated +
+        customerResult.updated + leadResult.updated;
+      const totalUnchanged =
+        projectResult.unchanged + phaseResult.unchanged + buildingResult.unchanged + unitResult.unchanged +
+        customerResult.unchanged + leadResult.unchanged;
+
+      return {
+        projects:  projectResult,
+        phases:    phaseResult,
+        buildings: buildingResult,
+        units:     unitResult,
+        customers: customerResult,
+        leads:     leadResult,
+        totalCreated,
+        totalUpdated,
+        totalUnchanged,
+        unresolvedLeadSalesReps: plan.unresolvedLeadSalesReps,
+      };
+    }, { timeout: 120_000, maxWait: 10_000 });
   }
 }

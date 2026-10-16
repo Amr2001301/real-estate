@@ -124,6 +124,7 @@ function buildExportPrisma() {
 
 function buildImportPrisma() {
   const empty = jest.fn().mockResolvedValue([]);
+  const auditCreate = jest.fn().mockResolvedValue({});
   return {
     project:     { findMany: jest.fn().mockResolvedValue([dbProject]) },
     phase:       { findMany: jest.fn().mockResolvedValue([dbPhase]) },
@@ -135,13 +136,20 @@ function buildImportPrisma() {
     user:        { findMany: empty },
     lead:        { findMany: empty },
     leadSource:  { findMany: empty },
-    auditLog:    { create: jest.fn().mockResolvedValue({}) },
+    auditLog:    { create: auditCreate },
     $transaction: jest.fn().mockImplementation((fn: (tx: unknown) => Promise<unknown>) => {
       const tx = {
+        // The whole file now runs in one transaction: the audit row and the
+        // unit re-check go through it too.
+        auditLog: { create: auditCreate },
+        unitStatusHistory: { create: jest.fn().mockResolvedValue({}) },
+        leadActivity: { create: jest.fn().mockResolvedValue({}) },
+        contract: { count: jest.fn().mockResolvedValue(0) },
+        reservation: { count: jest.fn().mockResolvedValue(0) },
         project:  { upsert: jest.fn().mockResolvedValue({ id: PROJECT_ID }) },
         phase:    { upsert: jest.fn().mockResolvedValue({ id: PHASE_ID }) },
         building: { upsert: jest.fn().mockResolvedValue({ id: BUILDING_ID }) },
-        unit:     { upsert: jest.fn().mockResolvedValue({ id: UNIT_ID }) },
+        unit:     { upsert: jest.fn().mockResolvedValue({ id: UNIT_ID }), findUnique: jest.fn().mockResolvedValue(null) },
         user:     { create: jest.fn(), update: jest.fn() },
         lead:     { create: jest.fn(), update: jest.fn() },
       };

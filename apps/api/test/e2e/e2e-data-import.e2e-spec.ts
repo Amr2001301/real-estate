@@ -1027,3 +1027,59 @@ describe('DI-E2E-6 — oversized upload → 413 Payload Too Large', () => {
     expect(body.error).toBe('Payload Too Large');
   });
 });
+
+// ── R4 guards ─────────────────────────────────────────────────────────────────
+
+async function importFile(build: (wb: import('exceljs').Workbook) => void, path: 'preview' | 'import' = 'import') {
+  const { Workbook } = await import('exceljs');
+  const { PROJECTS_SHEET: PS } = await import('../../src/common/utils/import-headers');
+  const wb = new Workbook();
+  wb.addWorksheet(PS.name).addRow(PS.headers);
+  build(wb);
+  const buf = Buffer.from((await wb.xlsx.writeBuffer()) as ArrayBuffer);
+  return http()
+    .post(`/v1/data-import/${path}`)
+    .set('Authorization', bearer(adminToken))
+    .attach('file', buf, {
+      filename: 'r4.xlsx',
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+}
+
+describe('DI-E2E-7 — a taken or repeated email is a row error, and nothing is written', () => {
+  it('two new customers sharing one email (in different case) → errors, no user created', async () => {
+    const { CUSTOMERS_SHEET: CS } = await import('../../src/common/utils/import-headers');
+    const before = await testApp.rawPrisma.user.count({ where: { companyId } });
+    const res = await importFile((wb) => {
+      const ws = wb.addWorksheet(CS.name);
+      ws.addRow([CS.fields.fullName, CS.fields.phone, CS.fields.email]);
+      ws.addRow(['R4 One', '01077770001', 'Same@Example.com']);
+      ws.addRow(['R4 Two', '01077770002', 'same@example.com']);
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(false);
+    expect(JSON.stringify(res.body)).toContain('Duplicate email');
+    expect(await testApp.rawPrisma.user.count({ where: { companyId } })).toBe(before);
+  });
+});
+
+describe('DI-E2E-8 — a lead with an unknown _ImportId is not duplicated on re-run; its phone is stored E.164', () => {
+  it('importing the same row twice leaves one lead', async () => {
+    const { CUSTOMERS_SHEET: CS, LEADS_SHEET: LS } = await import('../../src/common/utils/import-headers');
+    const build = (wb: import('exceljs').Workbook) => {
+      const cws = wb.addWorksheet(CS.name);
+      cws.addRow([CS.fields.fullName, CS.fields.phone]);
+      cws.addRow(['R4 Lead Client', '01077770009']);
+      const lws = wb.addWorksheet(LS.name);
+      lws.addRow([LS.fields.importId, LS.fields.fullName, LS.fields.phone]);
+      lws.addRow(['8f0e0c1a-3b5d-4e6f-9a7b-0c1d2e3f4a5b', 'R4 Lead', '01077770009']);
+    };
+    const first = await importFile(build);
+    expect(first.body.success).toBe(true);
+    const second = await importFile(build);
+    expect(second.body.success).toBe(true);
+    const leads = await testApp.rawPrisma.lead.findMany({ where: { companyId, fullName: 'R4 Lead' } });
+    expect(leads).toHaveLength(1);
+    expect(leads[0]!.phone).toBe('+201077770009');
+  });
+});
