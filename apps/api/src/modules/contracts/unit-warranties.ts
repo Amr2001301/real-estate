@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 
 /**
@@ -31,4 +32,56 @@ export async function startUnitWarranties(prisma: PrismaService, unitId: string,
       },
     });
   }
+}
+/**
+ * A released unit goes back on sale: the cancelled buyer's warranties are
+ * cleared so the next contract's signing starts them afresh (signing only
+ * starts items whose warrantyStart is still empty, and freezes the duration).
+ */
+export async function resetUnitWarranties(tx: Prisma.TransactionClient, unitId: string) {
+  await tx.unitMaintenanceItem.updateMany({
+    where: { unitId, warrantyStart: { not: null } },
+    data: { warrantyStart: null, warrantyEnd: null, warrantyDurationMonthsSnapshot: null },
+  });
+}
+
+const OPEN_MAINTENANCE = { notIn: ['RESOLVED', 'CLOSED'] as ('RESOLVED' | 'CLOSED')[] };
+
+/**
+ * Open maintenance requests follow the owner of the unit. On a transfer they
+ * pass to the new owner, who now holds the unit (and its warranty); they used
+ * to stay with the old one, who kept being notified and could confirm the
+ * work. Returns how many moved.
+ */
+export async function handOverOpenMaintenance(
+  tx: Prisma.TransactionClient,
+  unitId: string,
+  fromCustomerId: string,
+  toCustomerId: string,
+  companyId: string,
+): Promise<number> {
+  const moved = await tx.maintenanceRequest.updateMany({
+    where: { unitId, customerId: fromCustomerId, companyId, status: OPEN_MAINTENANCE },
+    data: { customerId: toCustomerId },
+  });
+  return moved.count;
+}
+
+/**
+ * When the customer no longer holds the unit (the sale was cancelled, or the
+ * contract moved to another unit), their open requests on it are closed: no
+ * crew is sent to a unit that may already be resold. Returns how many closed.
+ */
+export async function closeOpenMaintenance(
+  tx: Prisma.TransactionClient,
+  unitId: string,
+  customerId: string,
+  companyId: string,
+): Promise<number> {
+  const now = new Date();
+  const closed = await tx.maintenanceRequest.updateMany({
+    where: { unitId, customerId, companyId, status: OPEN_MAINTENANCE },
+    data: { status: 'CLOSED', closedAt: now, dueAt: null },
+  });
+  return closed.count;
 }

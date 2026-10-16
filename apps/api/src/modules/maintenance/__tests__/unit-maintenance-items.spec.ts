@@ -65,6 +65,8 @@ function makePrismaMock() {
         return null;
       }),
     },
+    // No signed sale on the unit — a new item's warranty is not started.
+    contract: { findFirst: jest.fn().mockResolvedValue(null) },
     unitMaintenanceItem: {
       findMany: jest.fn().mockImplementation(async ({ where }: { where: { active?: boolean } }) =>
         listFixture.rows.filter((r) => where.active === undefined || r.active === where.active),

@@ -274,6 +274,8 @@ function makePrismaMock() {
     },
     contract: {
       findMany: jest.fn().mockImplementation(async () => contractFixture.rows),
+      // The customer owns the unit (a live contract of theirs on it).
+      count: jest.fn().mockResolvedValue(1),
     },
     $transaction: jest.fn().mockImplementation(async (ops: unknown) => {
       if (Array.isArray(ops)) return Promise.all(ops);
@@ -1546,7 +1548,8 @@ describe('Maintenance module · permissions enforcement', () => {
       expect(res.body.rejectedCount).toBe(1);
       expect(res.body.inProgressCount).toBe(1);
       expect(res.body.closedCount).toBe(1);
-      expect(res.body.openCount).toBe(2);
+      // The rejected request stays OPEN in status but is finished — not counted as open.
+      expect(res.body.openCount).toBe(1);
       expect(res.body.avgResolutionHours).toBeNull();
     });
 

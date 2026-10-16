@@ -13,6 +13,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
+import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 import { getTenantContext, runInCompany } from '../../common/tenant/tenant-context';
 import { ReportBrandService } from '../company-branding/report-brand.service';
 import { presentReportPdf, ReportPdfService } from '../../common/report-pdf/report-pdf.service';
@@ -178,8 +179,12 @@ export class MaintenanceService {
    * CUSTOMER_VISIBLE Document on the request — so they surface in the detail
    * view's "المرفقات". Validates type/size up-front (all-or-nothing).
    */
-  async addCustomerAttachments(userId: string, requestId: string, files: UploadedFile[]) {
-    await this.assertCustomerOwns(userId, requestId);
+  /**
+   * Type/size check for customer attachments. The create endpoint runs it
+   * before the request exists — a bad file used to leave the request (and its
+   * staff notifications) behind, and the customer's retry made a duplicate.
+   */
+  assertAttachmentsValid(files: UploadedFile[]) {
     for (const f of files) {
       if (!ATTACH_MIME[f.mimetype]) {
         throw new BadRequestException('Unsupported file type — only JPG, PNG, WEBP, or PDF are allowed');
@@ -188,6 +193,11 @@ export class MaintenanceService {
         throw new BadRequestException('File too large — max 5 MB per attachment');
       }
     }
+  }
+
+  async addCustomerAttachments(userId: string, requestId: string, files: UploadedFile[]) {
+    await this.assertCustomerOwns(userId, requestId);
+    this.assertAttachmentsValid(files);
     for (const f of files) {
       const ext = ATTACH_MIME[f.mimetype];
       const { key } = await this.r2.uploadObject({
@@ -427,7 +437,8 @@ export class MaintenanceService {
       throw new BadRequestException('User is not a customer');
     }
     const contracts = await this.prisma.contract.findMany({
-      where: { customerId },
+      // A cancelled or deleted sale no longer makes the unit theirs.
+      where: { customerId, ...LIVE_CONTRACT_WHERE },
       orderBy: { createdAt: 'desc' },
       select: {
         unit: {
@@ -469,14 +480,22 @@ export class MaintenanceService {
     const resolved: { id: string; priority: MaintenancePriority; slaDurationMinutes: number | null }[] = [];
     for (const id of categoryIds) {
       const c = await this.prisma.maintenanceCategory.findUnique({ where: { id } });
-      if (!c) throw new NotFoundException('Category not found');
+      if (!c || c.active === false) throw new NotFoundException('Category not found');
       resolved.push({ id: c.id, priority: c.priority, slaDurationMinutes: c.slaDurationMinutes });
     }
     const unitItems = await this.prisma.unitMaintenanceItem.findMany({
       where: { unitId, active: true, categoryId: { in: categoryIds } },
     });
+    // A unit can hold two items of one category (two ACs). The verdict comes
+    // from the item that covers longest — it used to be whichever row came
+    // last, so an expired item could deny a claim the other one covers.
     const itemByCat = new Map<string, (typeof unitItems)[number]>();
-    for (const ui of unitItems) if (ui.categoryId) itemByCat.set(ui.categoryId, ui);
+    const endOf = (ui: (typeof unitItems)[number]) => ui.warrantyEnd?.getTime() ?? -Infinity;
+    for (const ui of unitItems) {
+      if (!ui.categoryId) continue;
+      const seen = itemByCat.get(ui.categoryId);
+      if (!seen || endOf(ui) > endOf(seen)) itemByCat.set(ui.categoryId, ui);
+    }
 
     const items = resolved.map((c) => {
       const ui = itemByCat.get(c.id) ?? null;
@@ -520,7 +539,20 @@ export class MaintenanceService {
 
   // Customer self-create. Starts PENDING review — the SLA timer (dueAt) does
   // NOT start until an admin approves.
+  /**
+   * A request is filed on a unit the customer owns now: a live contract of
+   * theirs on it. Without this anyone could file on a neighbour's (or an
+   * unsold) unit and read its warranty.
+   */
+  private async assertOwnsUnit(customerId: string, unitId: string) {
+    const owned = await this.prisma.contract.count({
+      where: { customerId, unitId, ...LIVE_CONTRACT_WHERE },
+    });
+    if (owned === 0) throw new NotFoundException('Unit not found');
+  }
+
   async createRequest(customerId: string, dto: CreateRequestDto) {
+    await this.assertOwnsUnit(customerId, dto.unitId);
     const unit = await this.prisma.unit.findUnique({ where: { id: dto.unitId } });
     if (!unit) throw new NotFoundException('Unit not found');
     const categoryIds = this.resolveCategoryIds(dto);
@@ -559,6 +591,7 @@ export class MaintenanceService {
       { id: true, role: true },
       { expectRoles: [UserRole.CUSTOMER], label: 'customerId must reference a customer', throwBadRequest: true },
     );
+    await this.assertOwnsUnit(dto.customerId, dto.unitId);
     const unit = await this.prisma.unit.findUnique({ where: { id: dto.unitId } });
     if (!unit) throw new NotFoundException('Unit not found');
     const categoryIds = this.resolveCategoryIds(dto);
@@ -691,6 +724,7 @@ export class MaintenanceService {
   async assign(id: string, assignedAdminId: string, actorId?: string) {
     await this.assertAssignableAdmin(assignedAdminId);
     const current = await this.requireRequest(id);
+    this.assertNotRejected(current);
     const previousAssigneeId = current.assignedAdminId;
     const data: Prisma.MaintenanceRequestUncheckedUpdateInput = { assignedAdminId };
     if (current.status === MaintenanceStatus.OPEN) {
@@ -708,6 +742,7 @@ export class MaintenanceService {
   // next RESOLVED sets a fresh one.
   async setStatus(id: string, next: MaintenanceStatus, actorId?: string) {
     const current = await this.requireRequest(id);
+    this.assertNotRejected(current);
     if (current.status === next) return current; // no-op
     const allowed = STATUS_TRANSITIONS[current.status] ?? [];
     if (!allowed.includes(next)) {
@@ -728,6 +763,13 @@ export class MaintenanceService {
     const updated = await this.prisma.maintenanceRequest.update({ where: { id }, data });
     await this.notifyStatus(id, actorId);
     return updated;
+  }
+
+  /** A rejected request is finished — it is not worked on or assigned. */
+  private assertNotRejected(req: { reviewStatus: MaintenanceReviewStatus }) {
+    if (req.reviewStatus === MaintenanceReviewStatus.REJECTED) {
+      throw new BadRequestException('This request was rejected');
+    }
   }
 
   private async requireRequest(id: string, include?: Prisma.MaintenanceRequestInclude) {
@@ -1336,7 +1378,8 @@ export class MaintenanceService {
       else if (r.reviewStatus === MaintenanceReviewStatus.APPROVED) summary.approvedCount++;
       else if (r.reviewStatus === MaintenanceReviewStatus.REJECTED) summary.rejectedCount++;
 
-      if (r.status === MaintenanceStatus.OPEN) summary.openCount++;
+      // A rejected request stays OPEN in status but is finished — not "open".
+      if (r.status === MaintenanceStatus.OPEN && r.reviewStatus !== MaintenanceReviewStatus.REJECTED) summary.openCount++;
       else if (r.status === MaintenanceStatus.ASSIGNED) summary.assignedCount++;
       else if (r.status === MaintenanceStatus.IN_PROGRESS) summary.inProgressCount++;
       else if (r.status === MaintenanceStatus.RESOLVED) summary.resolvedCount++;

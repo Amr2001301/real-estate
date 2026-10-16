@@ -56,6 +56,7 @@ jest.mock('../../../common/tenant/tenant-context', () => ({
 function buildTx() {
   return {
     contract: { update: jest.fn().mockResolvedValue({}), count: jest.fn().mockResolvedValue(0) },
+    maintenanceRequest: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
     installmentPlan: {
       update: jest.fn().mockResolvedValue({}),
       findFirst: jest.fn().mockResolvedValue(null),
