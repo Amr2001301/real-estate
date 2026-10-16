@@ -130,6 +130,27 @@ describe('NotificationsService foundation', () => {
     expect(prisma.notification.create).toHaveBeenCalledTimes(1);
   });
 
+  it('a suspended company sends no automatic notices — platform notices about the company still go', async () => {
+    const { svc, prisma } = setup();
+    prisma.company.findUnique.mockResolvedValue({ lifecycleStatus: 'ACTIVE', subscriptionStatus: 'SUSPENDED' });
+    await runTenantContext(TENANT, () => svc.sendToUser('u-1', 'evt'));
+    expect(prisma.notification.create).not.toHaveBeenCalled();
+
+    prisma.notificationTemplate.findMany.mockResolvedValue([
+      {
+        code: 'subscription_expired',
+        channel: NotificationChannel.IN_APP,
+        subject: { ar: 'عنوان', en: 'Title' },
+        body: { ar: 'نص', en: 'Body' },
+        active: true,
+        emailEnabled: false,
+        companyId: null,
+      },
+    ]);
+    await runTenantContext(TENANT, () => svc.sendToUser('u-1', 'subscription_expired'));
+    expect(prisma.notification.create).toHaveBeenCalledTimes(1);
+  });
+
   it('escapes user-supplied text in e-mails', async () => {
     const { svc, email } = setup({
       emailEnabled: true,

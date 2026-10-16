@@ -48,6 +48,9 @@ function makeService() {
   const created: Array<Record<string, unknown>> = [];
 
   const prisma = {
+    company: {
+      findUnique: jest.fn().mockResolvedValue({ lifecycleStatus: 'ACTIVE', subscriptionStatus: 'ACTIVE' }),
+    },
     user: {
       findFirst: jest.fn().mockResolvedValue({
         id: 'user-eg-1',

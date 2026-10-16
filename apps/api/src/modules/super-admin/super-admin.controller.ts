@@ -12,6 +12,7 @@ import {
   UpdateCapabilityOverridesDto,
   CancelCompanyDto,
   SuspendCompanyDto,
+  ActivateCompanyDto,
   CreateCompanyAdminDto,
   CreatePricingPackageDto,
   UpdatePricingPackageDto,
@@ -51,7 +52,9 @@ export class SuperAdminController {
   }
 
   @Post('companies/:id/activate')
-  activateCompany(@Param('id') id: string) { return this.service.activateCompany(id); }
+  activateCompany(@Param('id') id: string, @Body() dto: ActivateCompanyDto) {
+    return this.service.activateCompany(id, dto.subscriptionEndAt);
+  }
 
   // MT-041: Hard delete blocked — lifecycle archival is the intended path
   @Delete('companies/:id')

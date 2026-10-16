@@ -28,7 +28,14 @@ import {
   IsUUID,
   MaxLength,
 } from 'class-validator';
-import { Prisma, NotificationChannel, UserRole, type NotificationTemplate } from '@prisma/client';
+import {
+  Prisma,
+  NotificationChannel,
+  UserRole,
+  type CompanyLifecycleStatus,
+  type NotificationTemplate,
+  type SubscriptionStatus,
+} from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { formatMoney, getCompanyCurrency } from '../../common/currency/currency';
 import {
@@ -37,6 +44,7 @@ import {
   scopedUserFindMany,
 } from '../../common/tenant/resolve-tenant-entity';
 import { getRequiredCompanyId, getTenantContext } from '../../common/tenant/tenant-context';
+import { companyAccessAllowed } from '../../common/tenant/company-access';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -227,6 +235,9 @@ function pickEffective(rows: NotificationTemplate[]): Map<string, NotificationTe
   }
   return byCode;
 }
+
+/** Notices about the company's own subscription/state — sent even when it is blocked. */
+const PLATFORM_NOTICE = /^(subscription_|company_)/;
 
 @Injectable()
 export class NotificationsService implements OnModuleInit {
@@ -502,6 +513,27 @@ export class NotificationsService implements OnModuleInit {
     }
   }
 
+  private async companyBlocked(): Promise<boolean> {
+    const companyId = getTenantContext()?.companyId;
+    if (!companyId) return false;
+    let company: { lifecycleStatus: CompanyLifecycleStatus; subscriptionStatus: SubscriptionStatus } | null;
+    try {
+      company = await this.prisma.company.findUnique({
+        where: { id: companyId },
+        select: { lifecycleStatus: true, subscriptionStatus: true },
+      });
+    } catch {
+      return false;
+    }
+    // Only an explicit block stops a send — a partial read is not a reason
+    // to drop a notice.
+    return (
+      !!company &&
+      (company.lifecycleStatus !== undefined || company.subscriptionStatus !== undefined) &&
+      !companyAccessAllowed(company)
+    );
+  }
+
   private async recipientGone(userId: string): Promise<boolean> {
     try {
       const u = await findTenantUser(this.prisma, userId, { active: true, deletedAt: true });
@@ -520,6 +552,10 @@ export class NotificationsService implements OnModuleInit {
     // Automatic events never go to a deactivated or deleted account — a
     // departed employee kept getting pushes about leads and customers.
     if (dto.skipInactive && (await this.recipientGone(dto.userId))) return null;
+    // A suspended, archived or expired company sends its customers and staff
+    // nothing automatic — reminders kept going out after access was cut. The
+    // platform's own notices about the subscription itself still go.
+    if (dto.skipInactive && !PLATFORM_NOTICE.test(dto.templateCode) && (await this.companyBlocked())) return null;
     const channel = dto.channel ?? tpl.channel;
     const payload = (dto.payload ?? {}) as Record<string, unknown>;
 

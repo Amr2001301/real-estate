@@ -24,6 +24,7 @@
 
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { companyAccessAllowed } from '../tenant/company-access';
 import type { CompanyLifecycleStatus } from '@prisma/client';
 
 const ALLOWED_STATUSES: CompanyLifecycleStatus[] = ['ACTIVE'];
@@ -79,10 +80,12 @@ export class CompanyLifecycleGuard implements CanActivate {
 
     const company = await this.prisma.company.findUnique({
       where: { id: effectiveCompanyId },
-      select: { lifecycleStatus: true },
+      select: { lifecycleStatus: true, subscriptionStatus: true },
     });
 
-    if (!company || !ALLOWED_STATUSES.includes(company.lifecycleStatus)) {
+    // Lifecycle (admin switch) and subscription (billing) both gate every
+    // request: a suspended or expired subscription used to stop only logins.
+    if (!company || !ALLOWED_STATUSES.includes(company.lifecycleStatus) || !companyAccessAllowed(company)) {
       throw new ForbiddenException({
         message: 'Company access disabled',
         code: 'COMPANY_NOT_ACTIVE',

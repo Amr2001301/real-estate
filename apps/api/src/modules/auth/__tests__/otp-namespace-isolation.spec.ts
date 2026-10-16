@@ -54,6 +54,9 @@ function makeService() {
   const otpStore: Array<ReturnType<typeof makeOtpRow>> = [];
 
   const prisma = {
+    company: {
+      findUnique: jest.fn().mockResolvedValue({ lifecycleStatus: 'ACTIVE', subscriptionStatus: 'ACTIVE' }),
+    },
     user: {
       findFirst: jest.fn().mockResolvedValue({
         id: 'u-1',

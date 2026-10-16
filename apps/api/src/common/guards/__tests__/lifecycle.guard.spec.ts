@@ -136,7 +136,7 @@ test('CLIENT with null companyId + fallback enabled → checks DEFAULT_COMPANY_I
 
   expect(prisma.company.findUnique).toHaveBeenCalledWith({
     where: { id: DEFAULT_COMPANY },
-    select: { lifecycleStatus: true },
+    select: { lifecycleStatus: true, subscriptionStatus: true },
   });
 });
 
