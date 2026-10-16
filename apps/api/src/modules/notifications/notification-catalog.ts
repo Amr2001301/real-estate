@@ -875,6 +875,17 @@ export const NOTIFICATION_CATALOG: NotificationTemplateDef[] = [
       'An installment of {{amount}} for unit {{unitCode}} was due on {{dueDate}} and is still unpaid. Please pay or contact us.',
   },
   {
+    code: 'installment_late_fee',
+    channel: NotificationChannel.PUSH,
+    emailEnabled: true,
+    ar_subject: 'غرامة تأخير',
+    en_subject: 'Late-payment fee',
+    ar_body:
+      'أُضيفت غرامة تأخير بقيمة {{amount}} على القسط المستحق بتاريخ {{dueDate}} للوحدة {{unitCode}}. يمكنك سداد القسط والغرامة أو التواصل معنا.',
+    en_body:
+      'A late-payment fee of {{amount}} was added to the installment due on {{dueDate}} for unit {{unitCode}}. Please pay the installment and the fee or contact us.',
+  },
+  {
     code: 'installment_overdue_staff',
     channel: NotificationChannel.PUSH,
     ar_subject: 'قسط متأخر على عميل',

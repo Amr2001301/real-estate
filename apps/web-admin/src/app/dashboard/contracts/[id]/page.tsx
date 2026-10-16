@@ -28,6 +28,7 @@ import { ContractPdfPanel } from './pdf-panel';
 import { OwnerDocumentsCard } from '@/components/documents/owner-documents-card';
 import { CreatePlanForm } from './create-plan-form';
 import { RecordPaymentButton } from './record-payment-button';
+import { WaiveLateFeeButton } from './waive-late-fee';
 import { AssignContractNumber } from './assign-number';
 import { SignFollowupsAlert } from './sign-followups-alert';
 import { CancelContract } from './cancel-contract';
@@ -62,13 +63,17 @@ export default async function ContractDetailPage({
     PENDING: { label: m.instPending, cls: 'bg-slate-100 text-slate-600' },
     PAID: { label: m.instPaid, cls: 'bg-success-100 text-success-700' },
     OVERDUE: { label: m.instOverdue, cls: 'bg-danger-100 text-danger-700' },
+    CANCELLED: { label: m.instCancelled, cls: 'bg-slate-100 text-slate-400 line-through' },
   };
+  const WAIVED = { label: m.instWaived, cls: 'bg-slate-100 text-slate-500' };
 
   const PAYMENT_TYPE_LABELS: Record<string, string> = {
     RESERVATION: m.payReservation,
     DOWN_PAYMENT: m.payDownPayment,
     INSTALLMENT: m.payInstallment,
     FINAL_PAYMENT: m.payFinalPayment,
+    BOUNCE_PENALTY: m.payBouncePenalty,
+    LATE_FEE: m.payLateFee,
   };
 
   const CMD_LINK =
@@ -321,8 +326,9 @@ export default async function ContractDetailPage({
                           {(() => {
                             let installmentCounter = 0;
                             return plan.installments!.map((inst) => {
-                              const s =
-                                INST_STATUS[inst.status] ?? INST_STATUS['PENDING']!;
+                              const s = inst.waivedAt
+                                ? WAIVED
+                                : INST_STATUS[inst.status] ?? INST_STATUS['PENDING']!;
                               const canPay =
                                 isAdmin &&
                                 (inst.status === 'PENDING' || inst.status === 'OVERDUE');
@@ -358,6 +364,11 @@ export default async function ContractDetailPage({
                                     {inst.paidAt ? formatDate(inst.paidAt, locale) : '—'}
                                   </td>
                                   <td className="px-4 py-3">
+                                    {canPay && inst.type === 'LATE_FEE' && !inst.awaitingCheque && (
+                                      <span className="me-2">
+                                        <WaiveLateFeeButton contractId={contract.id} installmentId={inst.id} locale={locale} />
+                                      </span>
+                                    )}
                                     {canPay && (
                                       <RecordPaymentButton
                                         contractId={contract.id}

@@ -203,3 +203,13 @@ export async function releaseContractUnitAction(id: string): Promise<ContractFor
   return { ok: true };
 }
 
+
+export async function waiveLateFeeAction(contractId: string, installmentId: string): Promise<ContractFormState> {
+  try {
+    await api.post(`/installments/${installmentId}/waive-late-fee`, {});
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/dashboard/contracts/${contractId}`);
+  return { ok: true };
+}

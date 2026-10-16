@@ -37,7 +37,13 @@ export type PlanTemplateStatus = 'DRAFT' | 'ACTIVE' | 'INACTIVE';
 export type DownPaymentType = 'FIXED' | 'PERCENTAGE';
 export type InstallmentFrequency = 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'YEARLY';
 export type StartDateRule = 'MANUAL' | 'AFTER_RESERVATION' | 'AFTER_CONTRACT';
-export type PlanPaymentType = 'RESERVATION' | 'DOWN_PAYMENT' | 'INSTALLMENT' | 'FINAL_PAYMENT';
+export type PlanPaymentType =
+  | 'RESERVATION'
+  | 'DOWN_PAYMENT'
+  | 'INSTALLMENT'
+  | 'FINAL_PAYMENT'
+  | 'BOUNCE_PENALTY'
+  | 'LATE_FEE';
 export type UnitStatus = 'AVAILABLE' | 'RESERVED' | 'SOLD';
 export type LeadStage = 'NEW' | 'INTERESTED' | 'VISIT' | 'NEGOTIATION' | 'WON' | 'LOST';
 export type VisitStatus = 'PENDING' | 'APPROVED' | 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
@@ -226,6 +232,8 @@ export interface ContractInstallment {
   paidAt: string | null;
   /** FG-01 — open, but paid by a cheque that has not cleared yet. */
   awaitingCheque?: boolean;
+  /** LATE_FEE rows: set when the company waived the fee. */
+  waivedAt?: string | null;
 }
 
 export interface ContractInstallmentPlan {

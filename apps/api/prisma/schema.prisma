@@ -1334,9 +1334,18 @@ model Installment {
 
   deposits Deposit[]
 
+  // LATE_FEE rows: the installment the fee was charged on. A waived fee is
+  // CANCELLED with waivedAt set — it still counts as charged, so the sweep
+  // does not charge that period again.
+  feeForId String?       @db.Uuid
+  feeFor   Installment?  @relation("LateFee", fields: [feeForId], references: [id], onDelete: Cascade)
+  lateFees Installment[] @relation("LateFee")
+  waivedAt DateTime?
+
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  @@index([feeForId])
   @@index([planId, dueDate])
   @@index([status])
   @@index([lastCorrectionId])
@@ -1646,6 +1655,9 @@ enum PlanPaymentType {
   FINAL_PAYMENT
   /// Ad-hoc charge appended to a plan when a cheque bounces (Step B).
   BOUNCE_PENALTY
+  /// Late-payment fee charged by the daily sweep on an overdue installment
+  /// (company setting lateFee.*). Linked to its installment via feeForId.
+  LATE_FEE
 }
 
 model InstallmentPlanTemplate {
