@@ -142,9 +142,9 @@ describe('Section 15 — tenant isolation', () => {
     await expect(guard.canActivate(ctxA)).rejects.toBeInstanceOf(ForbiddenException);
 
     expect(prisma.company.findUnique).toHaveBeenNthCalledWith(1,
-      { where: { id: 'company-a' }, select: { lifecycleStatus: true } });
+      { where: { id: 'company-a' }, select: { lifecycleStatus: true, subscriptionStatus: true } });
     expect(prisma.company.findUnique).toHaveBeenNthCalledWith(2,
-      { where: { id: 'company-b' }, select: { lifecycleStatus: true } });
+      { where: { id: 'company-b' }, select: { lifecycleStatus: true, subscriptionStatus: true } });
   });
 });
 

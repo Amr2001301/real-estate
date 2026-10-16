@@ -13,6 +13,7 @@ import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
 import { randomBytes, randomInt, createHash } from 'node:crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { companyAccessAllowed, companyAccessDenied } from '../../common/tenant/company-access';
 import { claimSyntheticPeers } from '../../common/utils/identity-claim';
 import { canonicalEmail, canonicalPhone } from '../../common/utils/identity-normalize';
 import { getTenantContext, runTenantContext } from '../../common/tenant/tenant-context';
@@ -157,7 +158,7 @@ export class AuthService {
     }
     const user = await this.prisma.user.findUnique({
       where: { id: record.userId },
-      include: { company: { select: { lifecycleStatus: true } } },
+      include: { company: { select: { lifecycleStatus: true, subscriptionStatus: true } } },
     });
     if (!user || !user.active) throw new UnauthorizedException('User inactive');
 
@@ -166,12 +167,7 @@ export class AuthService {
     // SUPER_ADMIN has no company and is always allowed to refresh.
     // Logout (/auth/logout) remains usable even for suspended company users.
     if (user.role !== 'SUPER_ADMIN') {
-      if (user.company && user.company.lifecycleStatus !== 'ACTIVE') {
-        throw new ForbiddenException({
-          message: 'Company access is currently disabled',
-          code: 'COMPANY_NOT_ACTIVE',
-        });
-      }
+      if (user.company && !companyAccessAllowed(user.company)) throw companyAccessDenied();
       // Legacy CLIENT/CUSTOMER with null companyId: check DEFAULT_COMPANY_ID company.
       if (!user.company && !user.companyId) {
         const disableFallback = process.env.DISABLE_DEFAULT_COMPANY_FALLBACK === 'true';
@@ -180,9 +176,9 @@ export class AuthService {
           if (defaultId) {
             const defaultCompany = await this.prisma.company.findUnique({
               where: { id: defaultId },
-              select: { lifecycleStatus: true },
+              select: { lifecycleStatus: true, subscriptionStatus: true },
             });
-            if (!defaultCompany || defaultCompany.lifecycleStatus !== 'ACTIVE') {
+            if (!companyAccessAllowed(defaultCompany)) {
               throw new ForbiddenException({
                 message: 'Company access is currently disabled',
                 code: 'COMPANY_NOT_ACTIVE',
@@ -649,7 +645,7 @@ export class AuthService {
 
     const user = await this.prisma.user.findFirst({
       where: { email, companyId, deletedAt: null },
-      include: { company: { select: { lifecycleStatus: true } } },
+      include: { company: { select: { lifecycleStatus: true, subscriptionStatus: true } } },
     });
 
     if (!user || !user.passwordHash) throw new UnauthorizedException('Invalid credentials');
@@ -663,12 +659,7 @@ export class AuthService {
     if (!ok) throw new UnauthorizedException('Invalid credentials');
 
     // MT-034: Lifecycle enforcement — non-active company cannot issue new sessions.
-    if (user.company && user.company.lifecycleStatus !== 'ACTIVE') {
-      throw new ForbiddenException({
-        message: 'Company access is currently disabled',
-        code: 'COMPANY_NOT_ACTIVE',
-      });
-    }
+    if (user.company && !companyAccessAllowed(user.company)) throw companyAccessDenied();
 
     // Phase 2 — Layer 1: customer-app feature gate at login.
     const customerAppEnabled = await this.capabilityService.hasCapability(companyId, 'feature.customerApp');
@@ -707,14 +698,9 @@ export class AuthService {
     // MT-034: Lifecycle enforcement — non-active company cannot accept new registrations.
     const registeringCompany = await this.prisma.company.findUnique({
       where: { id: companyId },
-      select: { lifecycleStatus: true },
+      select: { lifecycleStatus: true, subscriptionStatus: true },
     });
-    if (!registeringCompany || registeringCompany.lifecycleStatus !== 'ACTIVE') {
-      throw new ForbiddenException({
-        message: 'Company access is currently disabled',
-        code: 'COMPANY_NOT_ACTIVE',
-      });
-    }
+    if (!companyAccessAllowed(registeringCompany)) throw companyAccessDenied();
 
     const email = canonicalEmail(dto.email);
     if (!email) throw new BadRequestException('Invalid email address');
@@ -775,10 +761,20 @@ export class AuthService {
    * @param country    Company.country — used to parse local phone formats.
    * @param rawPhone   Raw phone from client (E.164 or local/national format).
    */
+  /** A suspended, archived or expired company issues no codes and no sessions. */
+  private async assertCompanyAccessible(companyId: string) {
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { lifecycleStatus: true, subscriptionStatus: true },
+    });
+    if (!companyAccessAllowed(company)) throw companyAccessDenied();
+  }
+
   async requestOtpV2(companyId: string, country: string, rawPhone: string) {
     const phone = canonicalPhone(rawPhone) ?? canonicalPhone(rawPhone, country);
     if (!phone) throw new BadRequestException('Invalid phone number');
 
+    await this.assertCompanyAccessible(companyId);
     // Phase 2: OTP is the customer-app login path; gate before sending SMS cost.
     const customerAppEnabled = await this.capabilityService.hasCapability(companyId, 'feature.customerApp');
     if (!customerAppEnabled) {
@@ -822,6 +818,7 @@ export class AuthService {
     const phone = canonicalPhone(rawPhone) ?? canonicalPhone(rawPhone, country);
     if (!phone) throw new BadRequestException('Invalid phone number');
 
+    await this.assertCompanyAccessible(companyId);
     // Phase 2: gate before consuming the OTP code.
     const customerAppEnabled = await this.capabilityService.hasCapability(companyId, 'feature.customerApp');
     if (!customerAppEnabled) {

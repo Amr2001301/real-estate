@@ -20,6 +20,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PLAN_DEFAULTS } from '../capabilities/capability-schema';
 import { PrismaService } from '../prisma/prisma.service';
+import { companyAccessAllowed } from '../tenant/company-access';
 import { normalizeHostname } from '../utils/hostname-normalize';
 import type { Redis } from 'ioredis';
 
@@ -76,6 +77,7 @@ export class DomainResolverService {
             slug: true,
             subscriptionPlan: true,
             lifecycleStatus: true,
+            subscriptionStatus: true,
             websiteEnabled: true,
           },
         },
@@ -86,7 +88,8 @@ export class DomainResolverService {
     // Only resolved verified domains (platform subdomains are auto-verified)
     if (!row.verifiedAt) return null;
     // Non-ACTIVE company is invisible — no tenant leak
-    if (row.company.lifecycleStatus !== 'ACTIVE') return null;
+    // …and so is one whose subscription is suspended, cancelled or expired.
+    if (!companyAccessAllowed(row.company)) return null;
 
     const resolved: ResolvedDomain = {
       companyId: row.company.id,

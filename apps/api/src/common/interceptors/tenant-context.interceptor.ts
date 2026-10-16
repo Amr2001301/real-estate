@@ -94,7 +94,7 @@ export class TenantContextInterceptor implements NestInterceptor {
       if (slug) {
         const resolved = await this.tenantResolver.tryResolveBySlug(slug);
         // Fail-closed: suspended/archived/inactive tenants return not-found on public routes.
-        if (!resolved || resolved.lifecycleStatus !== 'ACTIVE') {
+        if (!resolved || !resolved.accessible) {
           throw new NotFoundException('Tenant not found');
         }
         return { companyId: resolved.companyId, bypass: false, isPublic: true };

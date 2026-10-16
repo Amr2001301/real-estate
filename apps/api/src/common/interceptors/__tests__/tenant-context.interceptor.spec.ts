@@ -25,9 +25,12 @@ function makeReflector(bypassTenant: boolean, isPublic: boolean, isPlatformPubli
 function makeTenantResolver(
   result: { companyId: string; slug: string; country: string; isActive: boolean; lifecycleStatus: string } | null = null,
 ) {
+  // The resolver reports `accessible` from lifecycle + subscription; these
+  // fixtures carry an active subscription, so lifecycle alone decides.
+  const resolved = result && { ...result, accessible: result.lifecycleStatus === 'ACTIVE' };
   return {
-    tryResolveBySlug: jest.fn().mockResolvedValue(result),
-    resolveBySlug: jest.fn().mockResolvedValue(result),
+    tryResolveBySlug: jest.fn().mockResolvedValue(resolved),
+    resolveBySlug: jest.fn().mockResolvedValue(resolved),
   };
 }
 

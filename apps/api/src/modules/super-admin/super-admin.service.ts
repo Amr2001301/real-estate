@@ -474,8 +474,24 @@ export class SuperAdminService {
     return updated;
   }
 
-  async activateCompany(id: string) {
+  /**
+   * Reactivate a company. An end date that has already passed must be
+   * replaced: reactivating without one used to leave the old date, and the
+   * nightly expiry check flipped the company straight back to EXPIRED.
+   */
+  async activateCompany(id: string, subscriptionEndAt?: string) {
     const company = await this.assertExists(id);
+    const now = new Date();
+    const newEnd = subscriptionEndAt ? new Date(subscriptionEndAt) : null;
+    if (newEnd && (Number.isNaN(newEnd.getTime()) || newEnd <= now)) {
+      throw new BadRequestException('subscriptionEndAt must be a future date');
+    }
+    const endPassed = !!company.subscriptionEndAt && company.subscriptionEndAt <= now;
+    if (endPassed && !newEnd) {
+      throw new BadRequestException(
+        'The subscription end date has passed — send a new subscriptionEndAt to reactivate',
+      );
+    }
     const updated = await this.prisma.company.update({
       where: { id },
       data: {
@@ -483,10 +499,7 @@ export class SuperAdminService {
         isActive: true,
         cancelledAt: null,
         cancelReason: null,
-        // If reactivating a previously cancelled company, push the end date forward
-        ...(company.subscriptionStatus === 'CANCELLED' || company.subscriptionStatus === 'EXPIRED'
-          ? {}
-          : {}),
+        ...(newEnd ? { subscriptionEndAt: newEnd } : {}),
       },
     });
     await this.notifyCompanyAdmins(id, 'company_activated');
@@ -541,7 +554,7 @@ export class SuperAdminService {
     return created;
   }
 
-  /** Expire CANCELLING → CANCELLED and ACTIVE → EXPIRED based on subscriptionEndAt. */
+  /** Expire CANCELLING → CANCELLED and ACTIVE/TRIAL → EXPIRED based on subscriptionEndAt. */
   async runExpiryCheck(): Promise<{ expired: number; cancelled: number }> {
     const now = new Date();
     const due = (status: SubscriptionStatus) =>
@@ -549,14 +562,20 @@ export class SuperAdminService {
         where: { subscriptionStatus: status, subscriptionEndAt: { lt: now } },
         select: { id: true },
       });
-    const [toExpire, toCancel] = await Promise.all([due('ACTIVE'), due('CANCELLING')]);
+    // A trial ends like a paid period does — it used to run forever.
+    const [toExpireActive, toExpireTrial, toCancel] = await Promise.all([
+      due('ACTIVE'),
+      due('TRIAL'),
+      due('CANCELLING'),
+    ]);
+    const toExpire = [...toExpireActive, ...toExpireTrial];
 
     const [expired, cancelled] = await Promise.all([
       // ACTIVE past their end date → EXPIRED
       this.prisma.company.updateMany({
         where: {
           id: { in: toExpire.map((c) => c.id) },
-          subscriptionStatus: 'ACTIVE',
+          subscriptionStatus: { in: ['ACTIVE', 'TRIAL'] },
           subscriptionEndAt: { lt: now },
         },
         data: { subscriptionStatus: 'EXPIRED' },

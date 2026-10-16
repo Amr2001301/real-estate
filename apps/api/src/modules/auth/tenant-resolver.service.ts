@@ -9,6 +9,7 @@
 
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { companyAccessAllowed } from '../../common/tenant/company-access';
 
 export interface ResolvedTenant {
   companyId: string;
@@ -16,6 +17,8 @@ export interface ResolvedTenant {
   country: string;
   isActive: boolean;
   lifecycleStatus: string;
+  /** Lifecycle ACTIVE and subscription not suspended/cancelled/expired. */
+  accessible: boolean;
 }
 
 @Injectable()
@@ -40,7 +43,7 @@ export class TenantResolverService {
 
     const company = await this.prisma.company.findUnique({
       where: { slug: normalizedSlug },
-      select: { id: true, slug: true, country: true, isActive: true, lifecycleStatus: true },
+      select: { id: true, slug: true, country: true, isActive: true, lifecycleStatus: true, subscriptionStatus: true },
     });
 
     // Inactive companies behave identically to non-existent ones — do not leak state.
@@ -63,6 +66,7 @@ export class TenantResolverService {
       country: company.country ?? 'EG',
       isActive: company.isActive,
       lifecycleStatus: company.lifecycleStatus,
+      accessible: companyAccessAllowed(company),
     };
   }
 

@@ -141,6 +141,12 @@ export class CancelCompanyDto {
   reason?: string;
 }
 
+export class ActivateCompanyDto {
+  /** Required when the current end date has already passed. */
+  @IsOptional() @IsDateString()
+  subscriptionEndAt?: string;
+}
+
 export class SuspendCompanyDto {
   @IsString() @IsOptional()
   reason?: string;
