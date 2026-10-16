@@ -118,6 +118,7 @@ function buildMock() {
         recordedBy: { fullName: 'مدير' },
       },
     ]) },
+    contractAmendment: { findMany: jest.fn().mockResolvedValue([]) },
     paymentInstrument: { findMany: jest.fn().mockResolvedValue([
       {
         id: 'eeee0000-0000-4000-8000-000000000001',

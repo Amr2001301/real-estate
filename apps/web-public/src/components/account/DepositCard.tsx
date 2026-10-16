@@ -36,6 +36,7 @@ export async function DepositCard({ deposit }: { deposit: MeDeposit }) {
     DOWN_PAYMENT: m.typeDown,
     INSTALLMENT: m.typeInstallment,
     FINAL_PAYMENT: m.typeFinal,
+    FEE: m.typeFee,
   };
 
   const REVIEW_STATUS_LABELS: Record<MeDepositReviewStatus, { label: string; tone: 'success' | 'accent' | 'muted' | 'error' }> = {

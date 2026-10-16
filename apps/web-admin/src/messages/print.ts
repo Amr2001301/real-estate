@@ -115,6 +115,7 @@ const ar = {
       DOWN_PAYMENT: 'دفعة أولى',
       INSTALLMENT: 'قسط',
       FINAL_PAYMENT: 'دفعة أخيرة',
+      FEE: 'رسوم / غرامة',
       OTHER: 'دفعة أخرى',
     } as Record<string, string>,
     method: {
@@ -298,6 +299,7 @@ const en: PrintMessages = {
       DOWN_PAYMENT: 'down payment',
       INSTALLMENT: 'installment',
       FINAL_PAYMENT: 'final payment',
+      FEE: 'fee or penalty',
       OTHER: 'payment',
     },
     method: {

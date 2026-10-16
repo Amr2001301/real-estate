@@ -22,6 +22,7 @@ describe('Late-payment fee (e2e)', () => {
   let companyId: string;
   let overdueId: string;
   let freshId: string;
+  let contractId: string;
   const startedAt = new Date();
 
   const http = () => request(testApp.app.getHttpServer());
@@ -39,8 +40,9 @@ describe('Late-payment fee (e2e)', () => {
     companyId = admin.companyId!;
     const plan = await raw.installmentPlan.findFirstOrThrow({
       where: { contract: { companyId, deletedAt: null, status: { not: 'CANCELLED' } } },
-      select: { id: true },
+      select: { id: true, contractId: true },
     });
+    contractId = plan.contractId;
     const row = (dueDate: Date, status: InstallmentStatus) =>
       raw.installment.create({
         data: { planId: plan.id, companyId, dueDate, amount: 20_000, status, type: PlanPaymentType.INSTALLMENT },
@@ -55,6 +57,7 @@ describe('Late-payment fee (e2e)', () => {
     for (const { key, value } of LATE_FEE_SETTING_DEFAULTS) {
       await raw.setting.updateMany({ where: { companyId, key }, data: { value } });
     }
+    await raw.deposit.deleteMany({ where: { installment: { feeForId: { in: [overdueId, freshId] } } } });
     await raw.installment.deleteMany({ where: { type: PlanPaymentType.LATE_FEE, createdAt: { gte: startedAt } } });
     await raw.auditLog.deleteMany({ where: { action: 'installment.late-fee-waived', createdAt: { gte: startedAt } } });
     await raw.installment.deleteMany({ where: { id: { in: [overdueId, freshId] } } });
@@ -97,5 +100,29 @@ describe('Late-payment fee (e2e)', () => {
 
     await testApp.runCronJob('late-fee');
     expect(await feesOn(overdueId)).toHaveLength(1);
+  });
+
+  it('LF-5: paying a fee is recorded as a fee, not as an instalment of the price', async () => {
+    const raw = testApp.rawPrisma;
+    const fee = await raw.installment.create({
+      data: {
+        planId: (await raw.installment.findUniqueOrThrow({ where: { id: freshId }, select: { planId: true } })).planId,
+        companyId,
+        dueDate: new Date(),
+        amount: 150,
+        status: InstallmentStatus.PENDING,
+        type: PlanPaymentType.LATE_FEE,
+        feeForId: freshId,
+      },
+    });
+    const res = await asAdmin(http().post('/v1/deposits'))
+      .send({ contractId, installmentId: fee.id, amount: 150, paymentMethod: 'CASH' })
+      .expect(201);
+    const deposit = await raw.deposit.findUniqueOrThrow({ where: { id: res.body.id } });
+    expect(deposit.type).toBe('FEE');
+
+    const list = await asAdmin(http().get('/v1/deposits').query({ type: 'FEE', contractId })).expect(200);
+    expect(list.body.data.map((d: { id: string }) => d.id)).toContain(deposit.id);
+    expect(Number(list.body.totals.fees)).toBeGreaterThanOrEqual(150);
   });
 });

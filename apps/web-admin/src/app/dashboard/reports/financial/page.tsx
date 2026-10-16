@@ -98,6 +98,7 @@ export default async function FinancialReportsPage({
   const DEPOSIT_TYPE_CLS: Record<DepositType, string> = {
     BOOKING_AMOUNT: 'bg-indigo-100 text-indigo-700', DOWN_PAYMENT: 'bg-amber-100 text-amber-700',
     INSTALLMENT:    'bg-slate-100 text-slate-600',    FINAL_PAYMENT: 'bg-purple-100 text-purple-700',
+    FEE:            'bg-danger-100 text-danger-700',
   };
 
   function daysLabel(d: number): string {

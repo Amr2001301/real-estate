@@ -2073,6 +2073,7 @@ export class ReportsService {
       DOWN_PAYMENT: 'دفعة أولى',
       INSTALLMENT: 'قسط شهري',
       FINAL_PAYMENT: 'دفعة أخيرة',
+      FEE: 'رسوم وغرامات',
     };
     const AGING_LABEL: Record<string, string> = {
       '1-30': '1-30 يوم',
@@ -2280,6 +2281,7 @@ export class ReportsService {
       DOWN_PAYMENT: 'دفعة أولى',
       INSTALLMENT: 'قسط شهري',
       FINAL_PAYMENT: 'دفعة أخيرة',
+      FEE: 'رسوم وغرامات',
     };
     const AGING_LABEL: Record<string, string> = {
       '1-30': '1-30 يوم', '31-60': '31-60 يوم', '61-90': '61-90 يوم', '90+': '90+ يوم',

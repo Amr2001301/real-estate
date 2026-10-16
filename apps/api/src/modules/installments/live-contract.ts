@@ -1,4 +1,4 @@
-import { ContractStatus, PlanPaymentType, Prisma } from '@prisma/client';
+import { ContractStatus, DepositType, PlanPaymentType, Prisma } from '@prisma/client';
 
 /** A contract that is neither cancelled nor deleted. */
 export const LIVE_CONTRACT_WHERE = {
@@ -36,3 +36,20 @@ export const SURCHARGE_PAYMENT_TYPES: PlanPaymentType[] = [
   PlanPaymentType.BOUNCE_PENALTY,
   PlanPaymentType.TRANSFER_FEE,
 ];
+
+/**
+ * The deposit type for a payment of one schedule row. A fee or penalty is
+ * recorded as FEE, so receipts, the deposits list and reports never show it
+ * as an instalment of the price.
+ */
+export function depositTypeForInstallment(type: PlanPaymentType): DepositType {
+  if (SURCHARGE_PAYMENT_TYPES.includes(type)) return DepositType.FEE;
+  switch (type) {
+    case PlanPaymentType.DOWN_PAYMENT:
+      return DepositType.DOWN_PAYMENT;
+    case PlanPaymentType.FINAL_PAYMENT:
+      return DepositType.FINAL_PAYMENT;
+    default:
+      return DepositType.INSTALLMENT;
+  }
+}

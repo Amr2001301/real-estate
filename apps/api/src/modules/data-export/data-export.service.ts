@@ -36,6 +36,9 @@ import {
 } from '../../common/utils/xlsx';
 import { DEFAULT_CURRENCY } from '../../common/currency/currency';
 import { storedToImportPhone } from '../../common/utils/phone-normaliser';
+import { ownerIdAt, type TransferStep } from '../../common/ownership/owner-at';
+
+type Person = { phone: string | null; fullName: string };
 
 // ── Local helpers ─────────────────────────────────────────────────────────────
 
@@ -216,6 +219,7 @@ export class DataExportService {
           reviewStatus: true, paymentMethod: true,
           contract: {
             select: {
+              id: true,
               contractNumber: true,
               customer: { select: { phone: true, fullName: true } },
             },
@@ -226,6 +230,7 @@ export class DataExportService {
                 select: {
                   contract: {
                     select: {
+                      id: true,
                       contractNumber: true,
                       customer: { select: { phone: true, fullName: true } },
                     },
@@ -362,7 +367,7 @@ export class DataExportService {
     sheetCounts['Contracts'] = this.buildContracts(wb, contracts);
     sheetCounts['InstallmentPlans'] = this.buildInstallmentPlans(wb, installmentPlans, installmentTotals);
     sheetCounts['Installments'] = this.buildInstallments(wb, installments);
-    sheetCounts['Deposits'] = this.buildDeposits(wb, deposits);
+    sheetCounts['Deposits'] = this.buildDeposits(wb, deposits, await this.depositPayers(companyId));
     sheetCounts['PaymentInstruments'] = this.buildPaymentInstruments(wb, instruments);
     sheetCounts['Refunds'] = this.buildRefunds(wb, refunds);
     sheetCounts['Brokers'] = this.buildBrokers(wb, brokers);
@@ -746,25 +751,59 @@ export class DataExportService {
   // Timestamps (datetime, UTC): paidAt
   // Calendar dates: —
 
+  /**
+   * Resolves who paid a deposit: the customer who owned its contract when it
+   * was paid. Null for a contract never transferred (its customer paid).
+   */
+  private async depositPayers(companyId: string): Promise<(contractId: string, paidAt: Date) => Person | null> {
+    const transfers = await this.prisma.contractAmendment.findMany({
+      where: { companyId, type: 'TRANSFER' },
+      select: { contractId: true, fromCustomerId: true, toCustomerId: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (transfers.length === 0) return () => null;
+    const byContract = new Map<string, TransferStep[]>();
+    for (const t of transfers) {
+      const list = byContract.get(t.contractId) ?? [];
+      list.push(t);
+      byContract.set(t.contractId, list);
+    }
+    const ids = [...new Set(transfers.flatMap((t) => [t.fromCustomerId, t.toCustomerId]).filter((id): id is string => !!id))];
+    const people = await this.prisma.user.findMany({
+      where: { companyId, id: { in: ids } },
+      select: { id: true, phone: true, fullName: true },
+    });
+    const byId = new Map(people.map((p) => [p.id, p]));
+    return (contractId, paidAt) => {
+      const id = ownerIdAt(byContract.get(contractId) ?? [], paidAt);
+      return id ? (byId.get(id) ?? null) : null;
+    };
+  }
+
   private buildDeposits(
     wb: Workbook,
     rows: Array<{
       id: string; type: string; amount: Prisma.Decimal;
       paidAt: Date; reviewStatus: string; paymentMethod: string | null;
-      contract: { contractNumber: string | null; customer: { phone: string | null; fullName: string } } | null;
-      installment: { plan: { contract: { contractNumber: string | null; customer: { phone: string | null; fullName: string } } } } | null;
+      contract: { id: string; contractNumber: string | null; customer: { phone: string | null; fullName: string } } | null;
+      installment: { plan: { contract: { id: string; contractNumber: string | null; customer: { phone: string | null; fullName: string } } } } | null;
       paymentInstrument: { id: string } | null;
       recordedBy: { fullName: string };
     }>,
+    payerAt: (contractId: string, paidAt: Date) => Person | null,
   ): number {
     const headers = ['_Ref', 'النوع', 'رقم العقد', 'هاتف العميل', 'اسم العميل', 'المبلغ', 'طريقة الدفع', 'تاريخ الدفع (UTC)', 'حالة المراجعة', 'مرجع الأداة', 'سجّل بواسطة'];
     const ws = this.initSheet(wb, 'Deposits', headers, [10, 14, 16, 16, 25, 14, 16, 22, 16, 10, 22], XLSX_TAB_PAYMENTS);
     rows.forEach((r, i) => {
       // Resolve the customer + contract number — deposit can be direct on contract
       // or via an installment, depending on DepositType.
-      const contractNumber = r.contract?.contractNumber ?? r.installment?.plan.contract.contractNumber ?? null;
-      const customerPhone = r.contract?.customer.phone ?? r.installment?.plan.contract.customer.phone ?? null;
-      const customerName = r.contract?.customer.fullName ?? r.installment?.plan.contract.customer.fullName ?? null;
+      // After a transfer (تنازل) the contract's customer is the new owner; a
+      // payment made before it was the previous owner's.
+      const contract = r.contract ?? r.installment?.plan.contract ?? null;
+      const payer = contract ? (payerAt(contract.id, r.paidAt) ?? contract.customer) : null;
+      const contractNumber = contract?.contractNumber ?? null;
+      const customerPhone = payer?.phone ?? null;
+      const customerName = payer?.fullName ?? null;
       this.writeRow(ws, i, [
         { t: 'text',     v: shortRef(r.id) },
         { t: 'text',     v: r.type },
