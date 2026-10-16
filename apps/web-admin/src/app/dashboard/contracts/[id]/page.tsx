@@ -30,6 +30,7 @@ import { CreatePlanForm } from './create-plan-form';
 import { RecordPaymentButton } from './record-payment-button';
 import { WaiveLateFeeButton } from './waive-late-fee';
 import { AmendmentsPanel } from './amendments-panel';
+import { PlanChangesPanel } from './plan-changes-panel';
 import { AssignContractNumber } from './assign-number';
 import { SignFollowupsAlert } from './sign-followups-alert';
 import { CancelContract } from './cancel-contract';
@@ -492,6 +493,18 @@ export default async function ContractDetailPage({
                   contractId={contract.id}
                   live={!isCancelled}
                   history={amendments}
+                  currency={currency}
+                  locale={locale}
+                />
+              </PremiumSectionCard>
+            )}
+
+            {isAdmin && !isCancelled && plan && (
+              <PremiumSectionCard title={m.planChangesTitle} icon={<Link2 />}>
+                <PlanChangesPanel
+                  contractId={contract.id}
+                  totalAmount={contract.totalAmount}
+                  open={(plan.installments ?? []).filter((i) => i.status === 'PENDING' || i.status === 'OVERDUE')}
                   currency={currency}
                   locale={locale}
                 />

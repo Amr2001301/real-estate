@@ -26,6 +26,8 @@ import {
   CustomerSubmitProofDto,
   ListDepositsQueryDto,
   RecordDepositDto,
+  RecordDepositsBatchDto,
+  SettleContractDto,
   RejectDepositDto,
   ReverseDepositDto,
   VerifyDepositDto,
@@ -92,6 +94,22 @@ export class DepositsController {
   @Post('deposits')
   record(@CurrentUser() user: AuthUser, @Body() dto: RecordDepositDto) {
     return this.svc.record(dto, user.sub);
+  }
+
+  // One payment for several installments (cash or transfer).
+  @Roles(UserRole.ADMIN)
+  @Permissions('deposits:register')
+  @Post('deposits/batch')
+  recordMany(@CurrentUser() user: AuthUser, @Body() dto: RecordDepositsBatchDto) {
+    return this.svc.recordMany(dto, user.sub);
+  }
+
+  // Early settlement: everything still open on the contract.
+  @Roles(UserRole.ADMIN)
+  @Permissions('deposits:register')
+  @Post('deposits/settle')
+  settle(@CurrentUser() user: AuthUser, @Body() dto: SettleContractDto) {
+    return this.svc.settle(dto, user.sub);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)

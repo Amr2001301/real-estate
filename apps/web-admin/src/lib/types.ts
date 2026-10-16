@@ -248,7 +248,7 @@ export interface ContractInstallmentPlan {
 
 export interface ContractAmendment {
   id: string;
-  type: 'TRANSFER' | 'UNIT_SWAP';
+  type: 'TRANSFER' | 'UNIT_SWAP' | 'PRICE_CHANGE' | 'RESCHEDULE';
   reason: string;
   createdAt: string;
   fromCustomerName: string | null;

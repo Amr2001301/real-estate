@@ -27,7 +27,7 @@ import {
   UnitStatus,
   UserRole,
 } from '@prisma/client';
-import { IsNumber, IsOptional, IsPositive, IsString, IsUUID, MaxLength, Min, MinLength } from 'class-validator';
+import { IsDateString, IsInt, IsNumber, IsOptional, IsPositive, IsString, IsUUID, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
@@ -49,6 +49,8 @@ import {
 } from './unit-warranties';
 import { resolveTransferFeeSettings, TRANSFER_FEE_SETTING_KEYS, transferFeeFor } from './transfer-fee';
 import { feeDueDate, feePaymentDays } from '../installments/fee-settings';
+import { assertDiscountAllowed, discountPct } from '../installments/discount-policy';
+import { addMonths } from '../../common/utils/add-months';
 
 export class TransferContractDto {
   @IsUUID()
@@ -80,6 +82,34 @@ export class SwapContractUnitDto {
   @IsPositive()
   totalAmount!: number;
 
+  @IsString()
+  @MinLength(3)
+  @MaxLength(2000)
+  reason!: string;
+}
+
+export class ChangeContractPriceDto {
+  /** The contract's new price. */
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @IsPositive()
+  totalAmount!: number;
+  @IsString()
+  @MinLength(3)
+  @MaxLength(2000)
+  reason!: string;
+}
+
+export class RescheduleContractDto {
+  /** How many months the unpaid monthly installments are spread over. */
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(600)
+  months!: number;
+  /** The first new installment's due date (YYYY-MM-DD). */
+  @IsDateString()
+  startsAt!: string;
   @IsString()
   @MinLength(3)
   @MaxLength(2000)
@@ -406,6 +436,200 @@ export class ContractAmendmentsService {
       }
     }
     return { brokerCommission, salesBonus };
+  }
+
+  /**
+   * تعديل السعر — a discount or addendum on a live contract. The unpaid
+   * installments absorb the difference (as in a unit swap); a discount below
+   * the unit's price goes through the company's cap and is on record; the
+   * sales bonus and broker commission follow the new price while unpaid.
+   */
+  async changePrice(contractId: string, dto: ChangeContractPriceDto, actorId: string) {
+    const companyId = getRequiredCompanyId();
+    const contract = await this.liveContract(contractId, companyId);
+    await this.assertNoWaitingPayments(contractId, contract.reservationId);
+    const oldTotal = Number(contract.totalAmount);
+    const delta = Math.round((dto.totalAmount - oldTotal) * 100) / 100;
+    if (delta === 0) throw new BadRequestException('السعر الجديد هو نفس سعر العقد الحالي');
+    const unit = await this.prisma.unit.findFirst({
+      where: { id: contract.unitId, companyId },
+      select: { id: true, price: true, building: { select: { phase: { select: { projectId: true } } } } },
+    });
+    if (!unit) throw new NotFoundException('Unit not found');
+    await assertDiscountAllowed(this.prisma, {
+      companyId,
+      actorId,
+      pct: discountPct(Number(unit.price), dto.totalAmount),
+      listPrice: Number(unit.price),
+      salePrice: dto.totalAmount,
+      entityType: 'Contract',
+      entityId: contractId,
+    });
+
+    const plan = await this.prisma.installmentPlan.findFirst({
+      where: { contractId, companyId, cancelledAt: null },
+      select: {
+        id: true,
+        installments: {
+          where: { status: { in: OPEN_STATUSES }, type: { notIn: SURCHARGE_TYPES } },
+          orderBy: { dueDate: 'asc' },
+          select: { id: true, amount: true },
+        },
+      },
+    });
+    let rescaled: Array<{ id: string; amount: number }> = [];
+    let extraRow: { amount: number; dueDate: Date } | null = null;
+    if (plan) {
+      const open = plan.installments;
+      if (open.length > 0) {
+        const amounts = rescaleUnpaid(open.map((i) => Number(i.amount)), delta);
+        if (!amounts) {
+          throw new BadRequestException('السعر الجديد أقل مما دُفع بالفعل — استخدم إلغاء العقد واسترداد المبلغ');
+        }
+        rescaled = open.map((i, k) => ({ id: i.id, amount: amounts[k]! }));
+      } else if (delta > 0) {
+        extraRow = { amount: delta, dueDate: new Date(Date.now() + 30 * DAY_MS) };
+      } else {
+        throw new BadRequestException('العقد مسدَّد بالكامل والسعر الجديد أقل — استخدم إلغاء العقد واسترداد المبلغ');
+      }
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const moved = await tx.contract.updateMany({
+        where: { id: contractId, companyId, totalAmount: contract.totalAmount, ...LIVE_CONTRACT_WHERE },
+        data: { totalAmount: new Prisma.Decimal(dto.totalAmount) },
+      });
+      if (moved.count === 0) throw new ConflictException('تغيّر العقد أثناء التنفيذ — أعد المحاولة');
+      for (const r of rescaled) {
+        const res = await tx.installment.updateMany({
+          where: { id: r.id, status: { in: OPEN_STATUSES } },
+          data: { amount: new Prisma.Decimal(r.amount) },
+        });
+        if (res.count === 0) throw new ConflictException('تغيّر جدول الأقساط أثناء التنفيذ — أعد المحاولة');
+      }
+      if (plan && extraRow) {
+        await tx.installment.create({
+          data: {
+            planId: plan.id,
+            type: PlanPaymentType.FINAL_PAYMENT,
+            dueDate: extraRow.dueDate,
+            amount: new Prisma.Decimal(extraRow.amount),
+            status: InstallmentStatus.PENDING,
+            companyId,
+          },
+        });
+      }
+      const commissions = await this.followNewPrice(tx, contractId, companyId, unit, dto.totalAmount);
+      const row = await tx.contractAmendment.create({
+        data: {
+          type: 'PRICE_CHANGE',
+          contractId,
+          fromTotal: new Prisma.Decimal(oldTotal),
+          toTotal: new Prisma.Decimal(dto.totalAmount),
+          reason: dto.reason,
+          performedById: actorId,
+          companyId,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: 'contract.price-changed',
+          entityType: 'Contract',
+          entityId: contractId,
+          before: { totalAmount: oldTotal },
+          after: {
+            totalAmount: dto.totalAmount,
+            rescaledInstallments: rescaled.length,
+            addedFinalPayment: extraRow?.amount ?? null,
+            ...commissions,
+            reason: dto.reason,
+          },
+          companyId,
+        },
+      });
+      return row;
+    });
+  }
+
+  /**
+   * إعادة جدولة — the unpaid monthly installments are replaced by `months`
+   * new ones from `startsAt`, adding up to the same amount to the cent (the
+   * last one carries the rounding). Paid rows, the down and final payments
+   * and fees stay as they are; the replaced rows are kept, cancelled.
+   */
+  async reschedule(contractId: string, dto: RescheduleContractDto, actorId: string) {
+    const companyId = getRequiredCompanyId();
+    const contract = await this.liveContract(contractId, companyId);
+    await this.assertNoWaitingPayments(contractId, contract.reservationId);
+    const plan = await this.prisma.installmentPlan.findFirst({
+      where: { contractId, companyId, cancelledAt: null },
+      select: {
+        id: true,
+        totalMonths: true,
+        installments: {
+          where: { status: { in: OPEN_STATUSES }, type: PlanPaymentType.INSTALLMENT },
+          orderBy: { dueDate: 'asc' },
+          select: { id: true, amount: true },
+        },
+      },
+    });
+    if (!plan) throw new BadRequestException('لا توجد خطة تقسيط على هذا العقد');
+    const open = plan.installments;
+    if (open.length === 0) throw new BadRequestException('لا توجد أقساط شهرية غير مدفوعة لإعادة جدولتها');
+    const totalCents = open.reduce((a, i) => a + Math.round(Number(i.amount) * 100), 0);
+    const monthlyCents = Math.floor(totalCents / dto.months);
+    if (monthlyCents <= 0) throw new BadRequestException('عدد الشهور أكبر من المبلغ المتبقي');
+    const lastCents = totalCents - monthlyCents * (dto.months - 1);
+    const startsAt = new Date(`${dto.startsAt.slice(0, 10)}T00:00:00Z`);
+    const paidMonths = await this.prisma.installment.count({
+      where: { planId: plan.id, type: PlanPaymentType.INSTALLMENT, status: InstallmentStatus.PAID },
+    });
+
+    return this.prisma.$transaction(async (tx) => {
+      const cancelled = await tx.installment.updateMany({
+        where: { id: { in: open.map((i) => i.id) }, status: { in: OPEN_STATUSES } },
+        data: { status: InstallmentStatus.CANCELLED },
+      });
+      if (cancelled.count !== open.length) throw new ConflictException('تغيّر جدول الأقساط أثناء التنفيذ — أعد المحاولة');
+      await tx.installment.createMany({
+        data: Array.from({ length: dto.months }, (_, i) => ({
+          planId: plan.id,
+          type: PlanPaymentType.INSTALLMENT,
+          dueDate: addMonths(startsAt, i),
+          amount: new Prisma.Decimal(i === dto.months - 1 ? lastCents : monthlyCents).div(100),
+          status: InstallmentStatus.PENDING,
+          companyId,
+        })),
+      });
+      await tx.installmentPlan.update({
+        where: { id: plan.id },
+        data: { monthlyAmount: new Prisma.Decimal(monthlyCents).div(100), totalMonths: paidMonths + dto.months },
+      });
+      const row = await tx.contractAmendment.create({
+        data: {
+          type: 'RESCHEDULE',
+          contractId,
+          fromTotal: new Prisma.Decimal(totalCents).div(100),
+          toTotal: new Prisma.Decimal(totalCents).div(100),
+          reason: dto.reason,
+          performedById: actorId,
+          companyId,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: 'contract.rescheduled',
+          entityType: 'Contract',
+          entityId: contractId,
+          before: { openMonthly: open.length },
+          after: { months: dto.months, startsAt: dto.startsAt, monthly: monthlyCents / 100, last: lastCents / 100, reason: dto.reason },
+          companyId,
+        },
+      });
+      return row;
+    });
   }
 
   async swapUnit(contractId: string, dto: SwapContractUnitDto, actorId: string) {

@@ -36,6 +36,8 @@ import {
   CustomerSubmitProofDto,
   ListDepositsOpts,
   RecordDepositDto,
+  RecordDepositsBatchDto,
+  SettleContractDto,
   RejectDepositDto,
   VerifyDepositDto,
 } from './deposits.dto';
@@ -415,6 +417,111 @@ export class DepositsService {
     );
     await this.notifyDepositStaff(deposit.id, DEPOSIT_STATUS_AR.recorded, recordedById);
     return deposit;
+  }
+
+  /**
+   * One payment for several installments of a contract — e.g. a customer who
+   * pays three months at the counter. Cash or bank transfer only (a cheque
+   * pays one installment when it clears). All rows are paid or none.
+   */
+  async recordMany(dto: RecordDepositsBatchDto, recordedById: string) {
+    const companyId = getRequiredCompanyId();
+    const contract = await this.prisma.contract.findFirst({ where: { id: dto.contractId, companyId } });
+    if (!contract) throw new NotFoundException('Contract not found');
+    if (isDeadContract(contract)) throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
+    if (dto.transfer && dto.paymentMethod !== PaymentMethod.BANK_TRANSFER) {
+      throw new BadRequestException('بيانات التحويل تُرسل فقط مع طريقة الدفع تحويل بنكي');
+    }
+    const rows = await this.prisma.installment.findMany({
+      where: { id: { in: dto.installmentIds }, companyId, plan: { contractId: dto.contractId } },
+      select: { id: true, amount: true, type: true, status: true },
+    });
+    if (rows.length !== dto.installmentIds.length) throw new BadRequestException('بعض الأقساط لا تنتمي إلى هذا العقد');
+    if (rows.some((r) => r.status !== InstallmentStatus.PENDING && r.status !== InstallmentStatus.OVERDUE)) {
+      throw new ConflictException('بعض الأقساط مدفوعة بالفعل أو ملغاة');
+    }
+    const totalCents = rows.reduce((a, r) => a + Math.round(Number(r.amount) * 100), 0);
+    if (dto.amount !== undefined && Math.round(dto.amount * 100) !== totalCents) {
+      throw new BadRequestException(`المبلغ لا يساوي مجموع الأقساط المختارة (${(totalCents / 100).toFixed(2)})`);
+    }
+    const paidAt = dto.paidAt ? new Date(dto.paidAt) : new Date();
+
+    const deposits = await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.installment.updateMany({
+        where: { id: { in: rows.map((r) => r.id) }, status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] } },
+        data: { status: InstallmentStatus.PAID, paidAt },
+      });
+      if (claimed.count !== rows.length) throw new ConflictException('بعض الأقساط مدفوعة بالفعل أو ملغاة');
+      const waiting = await tx.deposit.count({
+        where: { installmentId: { in: rows.map((r) => r.id) }, deletedAt: null, reviewStatus: DepositReviewStatus.PENDING_REVIEW },
+      });
+      if (waiting > 0) throw new ConflictException(WAITING_PAYMENT_MESSAGE);
+      const transfer =
+        dto.paymentMethod === PaymentMethod.BANK_TRANSFER
+          ? await tx.paymentInstrument.create({
+              data: {
+                type: PaymentInstrumentType.BANK_TRANSFER,
+                bankName: dto.transfer?.bankName ?? null,
+                referenceNumber: dto.transfer?.referenceNumber ?? null,
+                status: PaymentInstrumentStatus.CLEARED,
+                clearingDate: paidAt,
+                recordedById,
+                companyId,
+              },
+            })
+          : null;
+      const out = [];
+      for (const r of rows) {
+        out.push(
+          await tx.deposit.create({
+            data: {
+              type: depositTypeForInstallment(r.type),
+              contractId: dto.contractId,
+              installmentId: r.id,
+              amount: r.amount,
+              paidAt,
+              receiptUrl: dto.receiptUrl ?? null,
+              paymentMethod: dto.paymentMethod,
+              paymentInstrumentId: transfer?.id ?? null,
+              recordedById,
+            },
+          }),
+        );
+      }
+      return out;
+    });
+    if (dto.receiptUrl) await this.tryLinkReceiptDocument(deposits[0]!.id, dto.receiptUrl, recordedById);
+    const total = (totalCents / 100).toFixed(2);
+    await this.notifications.sendToUser(contract.customerId, 'deposit_recorded', {
+      contractId: dto.contractId,
+      amount: total,
+    });
+    await this.notifyDepositStaff(deposits[0]!.id, DEPOSIT_STATUS_AR.recorded, recordedById);
+    return { count: deposits.length, total, deposits };
+  }
+
+  /**
+   * سداد مبكر — the customer pays off everything still open on the contract.
+   * A settlement discount is a price change on the contract first
+   * (POST contracts/:id/price), so it is approved and on record; this then
+   * collects exactly what is left.
+   */
+  async settle(dto: SettleContractDto, recordedById: string) {
+    const companyId = getRequiredCompanyId();
+    const open = await this.prisma.installment.findMany({
+      where: {
+        companyId,
+        plan: { contractId: dto.contractId, cancelledAt: null },
+        status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] },
+      },
+      select: { id: true },
+    });
+    if (open.length === 0) throw new BadRequestException('لا توجد أقساط مستحقة على هذا العقد');
+    const { contractId, amount, paymentMethod, paidAt, receiptUrl, transfer } = dto;
+    return this.recordMany(
+      { contractId, installmentIds: open.map((i) => i.id), amount, paymentMethod, paidAt, receiptUrl, transfer },
+      recordedById,
+    );
   }
 
   async list(opts: ListDepositsOpts) {

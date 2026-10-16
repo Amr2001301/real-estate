@@ -66,6 +66,8 @@ import { startUnitWarranties } from './unit-warranties';
 import {
   ContractAmendmentsService,
   SwapContractUnitDto,
+  ChangeContractPriceDto,
+  RescheduleContractDto,
   TransferContractDto,
 } from './contract-amendments.service';
 import { reportFailure } from '../../common/observability/report-failure';
@@ -1118,6 +1120,30 @@ class ContractsController {
     @Body() dto: SwapContractUnitDto,
   ) {
     return this.amendments.swapUnit(id, dto, user.sub);
+  }
+
+  // A new contract price; the unpaid installments absorb the difference.
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('contracts:cancel')
+  @Post(':id/price')
+  changePrice(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: ChangeContractPriceDto,
+  ) {
+    return this.amendments.changePrice(id, dto, user.sub);
+  }
+
+  // Spread the unpaid monthly installments over a new number of months.
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('contracts:cancel')
+  @Post(':id/reschedule')
+  reschedule(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: RescheduleContractDto,
+  ) {
+    return this.amendments.reschedule(id, dto, user.sub);
   }
 
   // Cancelled contracts whose customer is still owed part of the refund.
