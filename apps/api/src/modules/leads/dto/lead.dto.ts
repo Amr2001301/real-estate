@@ -31,7 +31,8 @@ export class UpdateLeadDto {
   @IsOptional() @IsUUID() sourceId?: string;
   @IsOptional() @IsUUID() projectInterestId?: string;
   @IsOptional() @IsUUID() unitInterestId?: string;
-  @IsOptional() @IsUUID() assignedSalesId?: string;
+  // No assignedSalesId: assigning goes through PATCH leads/:id/assign, which
+  // checks who may assign to whom, records it and tells both reps.
 }
 
 export class UpdateLeadStageDto {

@@ -35,6 +35,7 @@ function leads() {
       update: jest.fn(async ({ data }: { data: object }) => ({ ...LEAD, ...data })),
     },
     leadActivity: { create: jest.fn().mockResolvedValue({}) },
+    visitAppointment: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
     // The new assignee is an active sales person of the company.
     user: { findFirst: jest.fn().mockResolvedValue({ id: 'sales-2', fullName: 'Sales 2', role: 'SALES' }) },
   };
@@ -80,7 +81,7 @@ describe('lead notifications', () => {
 
   it('a reassignment tells the new sales person and the previous one', async () => {
     const { svc, notifications } = leads();
-    await runInCompany('company-1', () => svc.assign('lead-1', { assignedSalesId: 'sales-2' }, 'admin-1'));
+    await runInCompany('company-1', () => svc.assign('lead-1', { assignedSalesId: 'sales-2' }, { sub: 'admin-1', role: 'ADMIN' } as never));
     expect(notifications.sendToUser).toHaveBeenCalledWith(
       'sales-2',
       'lead_assigned_sales',

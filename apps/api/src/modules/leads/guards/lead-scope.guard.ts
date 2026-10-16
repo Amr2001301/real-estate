@@ -39,7 +39,11 @@ export class LeadScopeGuard implements NestInterceptor {
           where: { id },
           select: { assignedSalesId: true },
         });
-        const ok = await isSalesIdInScope(this.prisma, user, lead?.assignedSalesId ?? null);
+        // A sales manager also works the unassigned queue: they open such a
+        // lead to read and route it.
+        const ok =
+          (user.role === UserRole.SALES_MANAGER && !!lead && !lead.assignedSalesId) ||
+          (await isSalesIdInScope(this.prisma, user, lead?.assignedSalesId ?? null));
         if (!ok) throw new ForbiddenException('Record is outside your team');
       }
     }

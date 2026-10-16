@@ -26,6 +26,7 @@ import type { Lead, Paged, Reservation, LeadStage, VisitRequest, VisitAppointmen
 import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
+import { getSession } from '@/lib/session';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -126,6 +127,9 @@ export default async function LeadDetailPage({
     EXPIRED:   m.activityReservationExpired,
   };
 
+  // Assigning is for admins and sales managers (a manager within their team).
+  const session = await getSession();
+  const canAssign = session?.role === 'ADMIN' || session?.role === 'SALES_MANAGER';
   const [leadRes, salesRes, visitRequestsRes, appointmentsRes, reservationsRes] =
     await Promise.all([
       safe(api.get<LeadDetail>(`/leads/${id}`)),
@@ -262,7 +266,12 @@ export default async function LeadDetailPage({
               }
               className={cn('border-t-[3px]', STAGE_TOP_BORDER[lead.stage])}
             >
-              <StageSegmented leadId={lead.id} currentStage={lead.stage} stages={STAGES} />
+              {/* WON is set by converting a reservation, never by hand. */}
+              <StageSegmented
+                leadId={lead.id}
+                currentStage={lead.stage}
+                stages={lead.stage === 'WON' ? ['WON'] : STAGES.filter((st) => st !== 'WON')}
+              />
             </PremiumSectionCard>
 
             {/* Notes */}
@@ -547,6 +556,7 @@ export default async function LeadDetailPage({
                 </div>
 
                 {/* Update form */}
+                {canAssign && (
                 <form action={assignLeadAction.bind(null, lead.id)} className="flex flex-col gap-2">
                   <Select
                     name="assignedSalesId"
@@ -562,6 +572,7 @@ export default async function LeadDetailPage({
                     {m.btnUpdateAssignment}
                   </Button>
                 </form>
+                )}
               </div>
             </PremiumSectionCard>
 

@@ -99,11 +99,16 @@ export class LeadsController {
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
     @Query('createdBefore') createdBefore?: string,
+    @Query('unassigned') unassigned?: string,
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
   ) {
     const assignedToMe = mine === '1' && user.role === UserRole.SALES ? user.sub : undefined;
-    const scope = await resolveSalesScope(this.prisma, user, salesId);
+    // The queue of leads nobody owns yet (website, imports): admins and sales
+    // managers see it and route it; a sales rep only ever sees their own.
+    const unassignedQueue =
+      unassigned === '1' && (user.role === UserRole.ADMIN || user.role === UserRole.SALES_MANAGER);
+    const scope = unassignedQueue ? {} : await resolveSalesScope(this.prisma, user, salesId);
     return this.leads.findAll({
       page: Number(page),
       pageSize: Number(pageSize),
@@ -116,6 +121,7 @@ export class LeadsController {
       dateFrom,
       dateTo,
       createdBefore: parseIsoInstant(createdBefore, 'createdBefore'),
+      unassigned: unassignedQueue,
     });
   }
 
@@ -180,11 +186,13 @@ export class LeadsController {
     return this.leads.updateStage(id, dto, user.sub);
   }
 
-  @Roles(UserRole.ADMIN)
+  // Admins assign anywhere; a sales manager routes the unassigned queue and
+  // their own team's leads within the team (checked in the service).
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
   @Permissions('leads:assign')
   @Patch('leads/:id/assign')
   assign(@Param('id', ParseUUIDPipe) id: string, @Body() dto: AssignLeadDto, @CurrentUser() user: AuthUser) {
-    return this.leads.assign(id, dto, user.sub);
+    return this.leads.assign(id, dto, user);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)

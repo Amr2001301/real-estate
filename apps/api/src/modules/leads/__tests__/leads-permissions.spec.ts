@@ -68,6 +68,7 @@ function makePrismaMock() {
         ...data,
       })),
     },
+    visitAppointment: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
     lead: {
       findMany: jest.fn().mockImplementation(async (args: ListCall) => {
         findManyArgs.push(args);

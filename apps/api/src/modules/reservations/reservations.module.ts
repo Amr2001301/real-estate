@@ -387,13 +387,19 @@ export class ReservationsService {
     }
 
     let effectiveSalesId = actor.sub;
+    const sellerChosen = actor.role === UserRole.ADMIN && !!dto.salesId;
 
-    if (actor.role === UserRole.ADMIN && dto.salesId) {
+    if (sellerChosen && dto.salesId) {
+      // A selling manager can be credited too.
       const salesUser = await resolveTenantUser(
         this.prisma,
         dto.salesId,
         { id: true, role: true, active: true },
-        { expectRoles: [UserRole.SALES], label: 'Sales person not found', throwBadRequest: true },
+        {
+          expectRoles: [UserRole.SALES, UserRole.SALES_MANAGER],
+          label: 'Sales person not found',
+          throwBadRequest: true,
+        },
       );
       if (!salesUser.active) {
         throw new BadRequestException('Selected sales person is inactive');
@@ -446,6 +452,11 @@ export class ReservationsService {
         throw new BadRequestException('Lead not found');
       }
       assertLeadInScope(ownerScope, lead.assignedSalesId);
+      // The sale is the lead's rep's: a manager or admin booking it on their
+      // behalf does not take the credit (and the commission) for it.
+      if (!sellerChosen && actor.role !== UserRole.SALES && lead.assignedSalesId) {
+        effectiveSalesId = lead.assignedSalesId;
+      }
       if (lead.stage === LeadStage.WON || lead.stage === LeadStage.LOST) {
         throw new BadRequestException(
           `Cannot create a reservation on a ${lead.stage} lead`,
@@ -2173,7 +2184,8 @@ export class ReservationsService {
       }
 
       if (targetLead) {
-        if (wonBumpableStages.includes(targetLead.stage)) {
+        // A signed sale is won even if the lead was marked lost meanwhile.
+        if (targetLead.stage !== LeadStage.WON) {
           await tx.lead.update({
             where: { id: targetLead.id },
             data: { stage: LeadStage.WON },

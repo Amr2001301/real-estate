@@ -9,6 +9,10 @@ import type { NotificationsService } from '../../notifications/notifications.mod
 import type { AuthUser } from '../../../common/decorators/current-user.decorator';
 import { runTenantContext } from '../../../common/tenant/tenant-context';
 
+/** The service resolves users through the tenant-scoped client. */
+const inTenant = <T>(fn: () => Promise<T>) =>
+  runTenantContext({ companyId: 'test-company', bypass: false, isPublic: false }, fn);
+
 /**
  * P3 — Visit lifecycle notifications.
  *
@@ -95,18 +99,20 @@ interface PrismaMock {
       requestStatus: VisitRequestStatus;
       lead: null;
     };
-    salesUser: { id: string; fullName: string; role: UserRole };
+    salesUser: { id: string; fullName: string; role: UserRole; active: boolean };
   };
   visitAppointment: {
     findUnique: jest.Mock;
     create: jest.Mock;
     update: jest.Mock;
     count: jest.Mock;
+    findMany: jest.Mock;
   };
-  visitRequest: { findUnique: jest.Mock; update: jest.Mock };
+  visitRequest: { findUnique: jest.Mock; update: jest.Mock; updateMany: jest.Mock };
+  unit: { findFirst: jest.Mock };
   visitActivity: { create: jest.Mock };
   user: { findUnique: jest.Mock; findFirst: jest.Mock };
-  lead: { updateMany: jest.Mock };
+  lead: { updateMany: jest.Mock; findFirst: jest.Mock; create: jest.Mock; update: jest.Mock };
   leadActivity: { create: jest.Mock };
   $transaction: jest.Mock;
 }
@@ -127,6 +133,7 @@ function makePrisma(): PrismaService {
       id: SALES_ID,
       fullName: 'Sales One',
       role: UserRole.SALES,
+      active: true,
     },
   };
   const m: PrismaMock = {
@@ -139,17 +146,27 @@ function makePrisma(): PrismaService {
         ...data,
       })),
       count: jest.fn(async () => 1),
+      // The rep is free at that time.
+      findMany: jest.fn(async () => []),
     },
     visitRequest: {
       findUnique: jest.fn(async () => fixtures.request),
       update: jest.fn(async () => fixtures.request),
+      updateMany: jest.fn(async () => ({ count: 1 })),
     },
+    unit: { findFirst: jest.fn(async () => ({ status: 'AVAILABLE' })) },
     visitActivity: { create: jest.fn().mockResolvedValue({}) },
     user: {
       findUnique: jest.fn(async () => fixtures.salesUser),
       findFirst: jest.fn(async () => fixtures.salesUser),
     },
-    lead: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    // A signed-in customer's request gets its pipeline lead on scheduling.
+    lead: {
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      findFirst: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockResolvedValue({ id: 'lead-new', stage: 'VISIT' }),
+      update: jest.fn().mockResolvedValue({ id: 'lead-new', stage: 'VISIT' }),
+    },
     leadActivity: { create: jest.fn().mockResolvedValue({}) },
     $transaction: jest.fn(async (cb: unknown) => {
       if (typeof cb === 'function') {
@@ -197,11 +214,11 @@ describe('Visits · lifecycle notifications (P3)', () => {
   });
 
   it('scheduleVisit → visit_scheduled to customer + sales', async () => {
-    await svc.scheduleVisit(
+    await inTenant(() => svc.scheduleVisit(
       'r-1',
       { scheduledAt: SCHEDULED_AT_FUTURE.toISOString(), assignedSalesId: SALES_ID },
       ADMIN_USER,
-    );
+    ));
     expect(notifications.sendToUsers).toHaveBeenCalledTimes(1);
     const [recipients, code] = notifications.sendToUsers.mock.calls[0];
     expect(recipients.sort()).toEqual([CUSTOMER_ID, SALES_ID].sort());
@@ -296,11 +313,11 @@ describe('Visits · lifecycle notifications (P3)', () => {
   });
 
   it('reschedule → visit_rescheduled to customer + new sales', async () => {
-    await svc.reschedule(
+    await inTenant(() => svc.reschedule(
       'a-1',
       { scheduledAt: SCHEDULED_AT_FUTURE.toISOString(), assignedSalesId: SALES_ID },
       ADMIN_USER,
-    );
+    ));
     expect(notifications.sendToUsers).toHaveBeenCalledTimes(1);
     const [recipients, code] = notifications.sendToUsers.mock.calls[0];
     expect(recipients.sort()).toEqual([CUSTOMER_ID, SALES_ID].sort());
@@ -355,11 +372,11 @@ describe('Visits · lifecycle notifications (P3)', () => {
 
   describe('payload safety', () => {
     it('safe placeholders only — no phone, email, address, or amounts', async () => {
-      await svc.scheduleVisit(
+      await inTenant(() => svc.scheduleVisit(
         'r-1',
         { scheduledAt: SCHEDULED_AT_FUTURE.toISOString(), assignedSalesId: SALES_ID },
         ADMIN_USER,
-      );
+      ));
       const [, , payload] = notifications.sendToUsers.mock.calls[0] as [
         unknown[],
         string,
@@ -437,11 +454,11 @@ describe('Visits · lifecycle notifications (P3)', () => {
       // appointment value even when the broadcast helper rejects.
       notifications.sendToUsers.mockRejectedValueOnce(new Error('down'));
       await expect(
-        svc.scheduleVisit(
+        inTenant(() => svc.scheduleVisit(
           'r-1',
           { scheduledAt: SCHEDULED_AT_FUTURE.toISOString(), assignedSalesId: SALES_ID },
           ADMIN_USER,
-        ),
+        )),
       ).rejects.toThrow('down');
       // Note: the helpers in NotificationsService swallow internally, but
       // if a caller passes a non-helper double that rejects, the rejection

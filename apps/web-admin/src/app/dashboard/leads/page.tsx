@@ -17,7 +17,7 @@ export const fetchCache = 'force-no-store';
 export default async function LeadsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ stage?: string; q?: string }>;
+  searchParams: Promise<{ stage?: string; q?: string; unassigned?: string }>;
 }) {
   const [sp, locale] = await Promise.all([
     searchParams,
@@ -31,6 +31,10 @@ export default async function LeadsPage({
   const qs = new URLSearchParams({ pageSize: '200' });
   if (sp.stage) qs.set('stage', sp.stage);
   if (sp.q) qs.set('q', sp.q);
+  // Admins and sales managers route the leads nobody owns yet (website, imports).
+  const canRoute = canImport;
+  const unassignedQueue = canRoute && sp.unassigned === '1';
+  if (unassignedQueue) qs.set('unassigned', '1');
 
   const [leadsRes, pipelineRes] = await Promise.all([
     safe(api.get<Paged<Lead>>(`/leads?${qs.toString()}`)),
@@ -63,6 +67,13 @@ export default async function LeadsPage({
         actions={
           <div className="flex items-center gap-2">
             <LeadsFilterPopover defaultStage={sp.stage} defaultQ={sp.q} />
+            {canRoute && (
+              <Link href={(unassignedQueue ? '/dashboard/leads' : '/dashboard/leads?unassigned=1') as never}>
+                <Button variant={unassignedQueue ? 'primary' : 'outline'} size="md">
+                  {unassignedQueue ? m.allLeads : m.unassignedQueue}
+                </Button>
+              </Link>
+            )}
             {canImport && (
               <Link href={'/dashboard/leads/import' as never}>
                 <Button variant="outline" size="md" leftIcon={<Upload className="h-4 w-4" />}>

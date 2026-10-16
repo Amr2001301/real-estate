@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   ConflictException,
   Controller,
@@ -24,7 +25,7 @@ import {
   MinLength,
 } from 'class-validator';
 import type { Prisma } from '@prisma/client';
-import { InfoRequestStatus, UserRole, VisitRequestSource, VisitRequestStatus, VisitStatus } from '@prisma/client';
+import { InfoRequestStatus, LeadStage, UserRole, VisitRequestSource, VisitRequestStatus, VisitStatus } from '@prisma/client';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { resolveSalesScope } from '../../common/utils/sales-scope';
@@ -204,20 +205,53 @@ export class RequestsService {
     });
   }
 
+  /**
+   * The person's open lead, if any. A closed one (won, lost) is history: a
+   * client lost last year who asks again is a new opportunity, not a note on
+   * a lead nobody looks at.
+   */
+  private openLeadByPhone(phone: string) {
+    return this.prisma.lead.findFirst({
+      where: { phone, stage: { notIn: [LeadStage.WON, LeadStage.LOST] } },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /** A public request names this company's project, and a unit of that project. */
+  private async assertPublicTarget(projectId: string | null, unitId: string | null) {
+    if (projectId) {
+      const project = await this.prisma.project.findFirst({ where: { id: projectId }, select: { id: true } });
+      if (!project) throw new NotFoundException('Project not found');
+    }
+    if (unitId) {
+      const unit = await this.prisma.unit.findFirst({
+        where: { id: unitId },
+        select: { building: { select: { phase: { select: { projectId: true } } } } },
+      });
+      if (!unit) throw new NotFoundException('Unit not found');
+      if (projectId && unit.building.phase.projectId !== projectId) {
+        throw new BadRequestException('The unit is not in this project');
+      }
+    }
+  }
+
   // ---- Info requests ----
   async createInfoRequest(
     dto: CreateInfoRequestDto,
     actor: { userId?: string },
   ) {
     const utm = pickUtm(dto);
+    await this.assertPublicTarget(dto.projectId ?? null, dto.unitId ?? null);
     let leadId: string | null = null;
+    let ownerToTell: string | null = null;
     if (!actor.userId && dto.phone && dto.name) {
       // FG-21 — one canonical form for the lead lookup and the client write,
       // so `01…` and `+201…` from the same visitor land on the same records.
       const phone = (await phoneForWrite(this.prisma, dto.phone, getTenantContext()?.companyId))!;
-      const existing = await this.prisma.lead.findFirst({ where: { phone } });
+      const existing = await this.openLeadByPhone(phone);
       if (existing) {
         leadId = existing.id;
+        ownerToTell = existing.assignedSalesId;
         // Back-fill UTM on first touch if the lead has none yet.
         if (utm && !existing.utmSource && !existing.fbclid) {
           await this.prisma.lead.update({ where: { id: existing.id }, data: utm });
@@ -255,11 +289,10 @@ export class RequestsService {
     // project/unit context. NO phone/email/message in the payload. The helper
     // swallows errors and never throws past this call, and the DB row is written
     // without Firebase (push is best-effort/no-op).
-    await this.notifications.sendToRoles(
-      [UserRole.ADMIN, UserRole.SALES_MANAGER],
-      'info_request_created',
-      await this.buildInfoRequestPayload(created.id, dto, actor.userId ?? null),
-    );
+    const infoPayload = await this.buildInfoRequestPayload(created.id, dto, actor.userId ?? null);
+    await this.notifications.sendToRoles([UserRole.ADMIN, UserRole.SALES_MANAGER], 'info_request_created', infoPayload);
+    // The rep who already owns this person's open lead hears it too.
+    if (ownerToTell) await this.notifications.sendToUser(ownerToTell, 'info_request_created', infoPayload);
 
     return created;
   }
@@ -412,14 +445,17 @@ export class RequestsService {
     actor: { userId?: string },
   ) {
     const utm = pickUtm(dto);
+    await this.assertPublicTarget(dto.projectId ?? null, dto.unitId ?? null);
     let leadId: string | null = null;
+    let ownerToTell: string | null = null;
     if (!actor.userId && dto.phone && dto.name) {
       // FG-21 — one canonical form for the lead lookup and the client write,
       // so `01…` and `+201…` from the same visitor land on the same records.
       const phone = (await phoneForWrite(this.prisma, dto.phone, getTenantContext()?.companyId))!;
-      const existing = await this.prisma.lead.findFirst({ where: { phone } });
+      const existing = await this.openLeadByPhone(phone);
       if (existing) {
         leadId = existing.id;
+        ownerToTell = existing.assignedSalesId;
         if (utm && !existing.utmSource && !existing.fbclid) {
           await this.prisma.lead.update({ where: { id: existing.id }, data: utm });
         }
@@ -471,11 +507,9 @@ export class RequestsService {
     // only: identity, project/unit context, preferred date/time. No phone,
     // email, address, or reservation amounts. The helper swallows errors
     // and never throws past this call.
-    await this.notifications.sendToRoles(
-      [UserRole.ADMIN, UserRole.SALES_MANAGER],
-      'visit_request_created',
-      await this.buildVisitRequestPayload(created.id, dto),
-    );
+    const visitPayload = await this.buildVisitRequestPayload(created.id, dto);
+    await this.notifications.sendToRoles([UserRole.ADMIN, UserRole.SALES_MANAGER], 'visit_request_created', visitPayload);
+    if (ownerToTell) await this.notifications.sendToUser(ownerToTell, 'visit_request_created', visitPayload);
 
     return created;
   }
