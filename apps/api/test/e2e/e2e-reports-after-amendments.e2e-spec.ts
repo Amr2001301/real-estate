@@ -7,12 +7,22 @@
  */
 import 'reflect-metadata';
 import request from 'supertest';
+import { Workbook } from 'exceljs';
 import { DepositReviewStatus, DocumentOwnerType, DocumentVisibility, InstallmentStatus, PlanPaymentType, UserRole } from '@prisma/client';
 import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
 import { bearer, loginAs } from '../helpers/login';
 
 const DAY = 24 * 60 * 60 * 1000;
+
+function binaryParser(
+  res: { on: (event: string, cb: (chunk?: unknown) => void) => void },
+  callback: (err: Error | null, body: Buffer) => void,
+): void {
+  const chunks: Buffer[] = [];
+  res.on('data', (chunk: unknown) => chunks.push(chunk as Buffer));
+  res.on('end', () => callback(null, Buffer.concat(chunks)));
+}
 
 describe('R3 — reports after fees and transfers (e2e)', () => {
   let testApp: TestApp;
@@ -140,6 +150,54 @@ describe('R3 — reports after fees and transfers (e2e)', () => {
       await asAdmin(http().post(`/v1/contracts/${contractId}/transfer`))
         .send({ toCustomerId: fixtures.userIds.customer1UserId, reason: 'R3 transfer back', feeAmount: 0 })
         .expect(201);
+      await raw.refreshToken.deleteMany({ where: { userId: newOwner.id } });
+      await raw.user.delete({ where: { id: newOwner.id } });
+    }
+  });
+
+  it('R3-3: the deposits export names who paid — the owner at the time — not the current owner', async () => {
+    const raw = testApp.rawPrisma;
+    const before = await raw.deposit.create({
+      data: { companyId, contractId, amount: 1313.13, paidAt: new Date(Date.now() - DAY), recordedById: fixtures.userIds.adminId },
+      select: { id: true },
+    });
+    depositIds.push(before.id);
+    const oldOwner = await raw.user.findUniqueOrThrow({ where: { id: fixtures.userIds.customer1UserId }, select: { fullName: true } });
+    const newOwner = await raw.user.create({
+      data: { companyId, role: UserRole.CLIENT, fullName: 'R3 Export Owner', phone: `+2015${stamp}`, locale: 'ar' },
+      select: { id: true },
+    });
+    try {
+      await asAdmin(http().post(`/v1/contracts/${contractId}/transfer`))
+        .send({ toCustomerId: newOwner.id, reason: 'R3 export transfer', feeAmount: 0 })
+        .expect(201);
+      const after = await raw.deposit.create({
+        data: { companyId, contractId, amount: 2424.24, paidAt: new Date(Date.now() + 1000), recordedById: fixtures.userIds.adminId },
+        select: { id: true },
+      });
+      depositIds.push(after.id);
+
+      const res = await asAdmin(http().get('/v1/data-export/export.xlsx')).buffer(true).parse(binaryParser).expect(200);
+      const wb = new Workbook();
+      await wb.xlsx.load(res.body as unknown as ArrayBuffer);
+      const sheet = wb.getWorksheet('Deposits')!;
+      const header = (sheet.getRow(1).values as unknown[]).map(String);
+      const amountCol = header.indexOf('المبلغ');
+      const nameCol = header.indexOf('اسم العميل');
+      const payerOf = (amount: number) => {
+        let name: unknown;
+        sheet.eachRow((row, n) => {
+          if (n > 1 && Number(row.getCell(amountCol).value) === amount) name = row.getCell(nameCol).value;
+        });
+        return name;
+      };
+      expect(payerOf(1313.13)).toBe(oldOwner.fullName);
+      expect(payerOf(2424.24)).toBe('R3 Export Owner');
+    } finally {
+      await asAdmin(http().post(`/v1/contracts/${contractId}/transfer`))
+        .send({ toCustomerId: fixtures.userIds.customer1UserId, reason: 'R3 export transfer back', feeAmount: 0 })
+        .expect(201);
+      await raw.deposit.deleteMany({ where: { id: { in: depositIds } } });
       await raw.refreshToken.deleteMany({ where: { userId: newOwner.id } });
       await raw.user.delete({ where: { id: newOwner.id } });
     }

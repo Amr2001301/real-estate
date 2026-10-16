@@ -34,6 +34,7 @@ function buildEmptyPrisma() {
     deposit:            { findMany: emptyList },
     paymentInstrument:  { findMany: emptyList },
     refund:             { findMany: emptyList },
+    contractAmendment:  { findMany: emptyList },
     broker:             { findMany: emptyList },
     brokerCommission:   { findMany: emptyList },
     maintenanceRequest: { findMany: emptyList },
