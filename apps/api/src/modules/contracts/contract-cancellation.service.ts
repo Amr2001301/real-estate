@@ -126,18 +126,6 @@ export class ContractCancellationService {
     const effectiveBonusAction = input.bonusActionOverride ?? suggestion.policySnapshot.bonusAction;
     const effectiveDemote = input.demoteCustomerOverride ?? suggestion.policySnapshot.demoteClient;
 
-    // Commission (at most 1 per contract, contractId @unique)
-    const commission = await this.prisma.brokerCommission.findUnique({
-      where: { contractId },
-      include: { payout: { select: { status: true } } },
-    });
-
-    // Bonus entry auto-generated for this contract (at most 1, contractId @unique)
-    const bonusEntry = await this.prisma.bonusEntry.findUnique({
-      where: { contractId },
-      select: { id: true, status: true, clawbackStatus: true },
-    });
-
     // Installment plan (may not exist for unsigned contracts with no plan)
     const plan = await this.prisma.installmentPlan.findFirst({
       where: { contractId },
@@ -160,10 +148,38 @@ export class ContractCancellationService {
     let cancelledInstrumentIds: string[] = [];
 
     const cancellation = await this.prisma.$transaction(async (tx) => {
-      // 1. Contract → CANCELLED
-      await tx.contract.update({
-        where: { id: contractId },
+      // 1. Contract → CANCELLED — once: a second cancel running at the same
+      // moment finds it already cancelled.
+      const cancelled = await tx.contract.updateMany({
+        where: { id: contractId, companyId, status: { not: ContractStatus.CANCELLED } },
         data: { status: ContractStatus.CANCELLED, cancelledAt: now },
+      });
+      if (cancelled.count === 0) {
+        throw new ConflictException('Contract is already cancelled — CANCELLED is terminal');
+      }
+
+      // The commission, its payout and the bonus are read here, their rows
+      // locked: a payout approved, sent or paid — or a bonus paid — while the
+      // cancellation runs either finishes first and is seen as such, or waits
+      // and then finds the cancellation done.
+      // Payout before commission — the order the payout paths take.
+      await tx.$queryRaw`
+        SELECT p.id FROM "BrokerPayout" p
+        JOIN "BrokerCommission" c ON c."payoutId" = p.id
+        WHERE c."contractId" = ${contractId}::uuid FOR UPDATE OF p`;
+      await tx.$queryRaw`
+        SELECT id FROM "BrokerCommission" WHERE "contractId" = ${contractId}::uuid FOR UPDATE`;
+      await tx.$queryRaw`
+        SELECT id FROM "BonusEntry" WHERE "contractId" = ${contractId}::uuid FOR UPDATE`;
+      // Commission (at most 1 per contract, contractId @unique)
+      const commission = await tx.brokerCommission.findUnique({
+        where: { contractId },
+        include: { payout: { select: { status: true } } },
+      });
+      // Bonus entry auto-generated for this contract (at most 1, contractId @unique)
+      const bonusEntry = await tx.bonusEntry.findUnique({
+        where: { contractId },
+        select: { id: true, status: true, clawbackStatus: true },
       });
 
       // 2. InstallmentPlan → cancelledAt
@@ -532,21 +548,32 @@ export class ContractCancellationService {
     const now = new Date();
 
     return this.prisma.$transaction(async (tx) => {
-      await tx.unit.update({
-        where: { id: contract.unitId },
-        data: { status: UnitStatus.AVAILABLE },
+      // The unit may have been sold again since the cancellation (a new
+      // contract on it, or a reservation that moved it on). Freeing it then
+      // would put the new buyer's unit back on sale and wipe their
+      // warranties: the release is recorded and the unit left as it is.
+      const otherLive = await tx.contract.count({
+        where: { unitId: contract.unitId, companyId, id: { not: contractId }, ...LIVE_CONTRACT_WHERE },
       });
-
-      await tx.unitStatusHistory.create({
-        data: {
-          unitId: contract.unitId,
-          oldStatus: unit.status,
-          newStatus: UnitStatus.AVAILABLE,
-          changedById: actorId,
-          reason: `Contract ${contractId} cancelled — unit released (REQUIRES_APPROVAL path)`,
-        },
-      });
-      await resetUnitWarranties(tx, contract.unitId);
+      const freed =
+        otherLive === 0
+          ? await tx.unit.updateMany({
+              where: { id: contract.unitId, companyId, status: UnitStatus.SOLD },
+              data: { status: UnitStatus.AVAILABLE },
+            })
+          : { count: 0 };
+      if (freed.count > 0) {
+        await tx.unitStatusHistory.create({
+          data: {
+            unitId: contract.unitId,
+            oldStatus: unit.status,
+            newStatus: UnitStatus.AVAILABLE,
+            changedById: actorId,
+            reason: `Contract ${contractId} cancelled — unit released (REQUIRES_APPROVAL path)`,
+          },
+        });
+        await resetUnitWarranties(tx, contract.unitId);
+      }
 
       const updated = await tx.contractCancellation.update({
         where: { id: cc.id },
@@ -560,7 +587,11 @@ export class ContractCancellationService {
           entityType: 'Contract',
           entityId: contractId,
           before: { unitStatus: unit.status, unitReleasedAt: null },
-          after: { unitStatus: UnitStatus.AVAILABLE, unitReleasedAt: now.toISOString() },
+          after: {
+            unitStatus: freed.count > 0 ? UnitStatus.AVAILABLE : unit.status,
+            unitReleasedAt: now.toISOString(),
+            ...(freed.count > 0 ? {} : { unitLeftAsIs: otherLive > 0 ? 'sold again' : `unit is ${unit.status}` }),
+          },
           companyId,
         },
       });

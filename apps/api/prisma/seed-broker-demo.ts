@@ -698,7 +698,7 @@ async function main(): Promise<void> {
 
     const reservationId = spec.reservationNumber ? reservationIds.get(spec.reservationNumber) : undefined;
 
-    const existing = await prisma.brokerCommission.findUnique({
+    const existing = await prisma.brokerCommission.findFirst({
       where: { commissionNumber: spec.number },
       select: { id: true },
     });
@@ -805,7 +805,7 @@ async function main(): Promise<void> {
   ];
 
   for (const spec of payoutSpecs) {
-    const existing = await prisma.brokerPayout.findUnique({
+    const existing = await prisma.brokerPayout.findFirst({
       where: { payoutNumber: spec.number },
       select: { id: true },
     });

@@ -28,6 +28,12 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
  *   - missing entry id surfaces as 404 via ParseUUIDPipe
  */
 
+// Manual entries are checked against the company (rep and rule).
+jest.mock('../../../common/tenant/tenant-context', () => ({
+  ...jest.requireActual('../../../common/tenant/tenant-context'),
+  getRequiredCompanyId: () => 'c0000000-0000-4000-8000-000000000001',
+}));
+
 const ENTRY_ID = 'e1111111-1111-4111-8111-111111111111';
 const SALES_ID = 'a2222222-2222-4222-8222-222222222222';
 const RULE_ID = 'a3333333-3333-4333-8333-333333333333';
@@ -91,10 +97,13 @@ function makePrismaMock() {
         paidAt: null,
         createdAt: new Date(),
       })),
-      update: jest.fn().mockImplementation(async ({ where, data }) => {
+      // Status moves are guarded on the status read; the fixture follows.
+      updateMany: jest.fn().mockImplementation(async ({ where, data }) => {
+        if (where.status !== fixture.entry.status) return { count: 0 };
         fixture.entry = { ...fixture.entry, ...data, id: where.id };
-        return fixture.entry;
+        return { count: 1 };
       }),
+      findUniqueOrThrow: jest.fn().mockImplementation(async () => fixture.entry),
       findUnique: jest.fn().mockImplementation(async () => ({
         status: fixture.entry.status,
         contract: fixture.contract,
@@ -107,6 +116,10 @@ function makePrismaMock() {
       findUnique: jest.fn().mockImplementation(async ({ where }) => ({ id: where.id })),
       update: jest.fn().mockImplementation(async ({ where, data }) => ({ id: where.id, ...data })),
       updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      findFirst: jest.fn().mockResolvedValue({ active: true }),
+    },
+    user: {
+      findFirst: jest.fn().mockResolvedValue({ role: 'SALES', active: true, deletedAt: null }),
     },
     salesTarget: {
       upsert: jest.fn().mockResolvedValue({}),
@@ -172,7 +185,7 @@ describe('Bonus · entry lifecycle workflow', () => {
     };
     resetFixture();
     mock.bonusEntry.create.mockClear();
-    mock.bonusEntry.update.mockClear();
+    mock.bonusEntry.updateMany.mockClear();
     mock.bonusRule.create.mockClear();
     mock.bonusRule.update.mockClear();
     mock.bonusRule.updateMany.mockClear();
@@ -195,6 +208,22 @@ describe('Bonus · entry lifecycle workflow', () => {
     expect(args.data.ruleId).toBe(RULE_ID);
     expect(args.data.period).toBe('2030-04');
     expect(res.body).toMatchObject({ id: ENTRY_ID, status: 'PENDING', paidAt: null });
+  });
+
+  it('createEntry refuses a rep who left (400) and a rule of another company (404)', async () => {
+    mock.user.findFirst.mockResolvedValueOnce({ role: 'SALES', active: false, deletedAt: null });
+    await request(app.getHttpServer())
+      .post('/bonus-entries')
+      .send({ salesId: SALES_ID, ruleId: RULE_ID, amount: 100, period: '2030-04' })
+      .expect(400);
+    mock.bonusRule.findFirst.mockResolvedValueOnce(null);
+    await request(app.getHttpServer())
+      .post('/bonus-entries')
+      .send({ salesId: SALES_ID, ruleId: RULE_ID, amount: 100, period: '2030-04' })
+      .expect(404);
+    const ruleLookup = mock.bonusRule.findFirst.mock.calls.at(-1)![0] as { where: Record<string, unknown> };
+    expect(ruleLookup.where).toMatchObject({ id: RULE_ID, companyId: 'c0000000-0000-4000-8000-000000000001' });
+    expect(mock.bonusEntry.create).not.toHaveBeenCalled();
   });
 
   it('createEntry rejects negative amount (400)', async () => {
@@ -345,7 +374,7 @@ describe('Bonus · entry lifecycle workflow', () => {
       .post(`/bonus-entries/${ENTRY_ID}/approve`)
       .send({})
       .expect(201);
-    const args = mock.bonusEntry.update.mock.calls[0]![0] as {
+    const args = mock.bonusEntry.updateMany.mock.calls[0]![0] as {
       where: { id: string };
       data: { status: string; paidAt: Date | null };
     };
@@ -356,13 +385,24 @@ describe('Bonus · entry lifecycle workflow', () => {
 
   // ── payEntry ────────────────────────────────────────────────────────────
 
+  it('payEntry twice at the same moment: the second finds it already PAID → 409', async () => {
+    // Both requests read APPROVED; the first one's write landed already.
+    fixture.entry.status = 'PAID';
+    mock.bonusEntry.findUnique.mockResolvedValueOnce({ status: 'APPROVED', contract: null });
+    await request(app.getHttpServer())
+      .post(`/bonus-entries/${ENTRY_ID}/pay`)
+      .send({})
+      .expect(409);
+    expect(fixture.entry.status).toBe('PAID');
+  });
+
   it('payEntry: status → PAID, paidAt stamped with a Date', async () => {
     fixture.entry.status = 'APPROVED';
     await request(app.getHttpServer())
       .post(`/bonus-entries/${ENTRY_ID}/pay`)
       .send({})
       .expect(201);
-    const args = mock.bonusEntry.update.mock.calls[0]![0] as {
+    const args = mock.bonusEntry.updateMany.mock.calls[0]![0] as {
       where: { id: string };
       data: { status: string; paidAt: Date | null };
     };
@@ -375,7 +415,7 @@ describe('Bonus · entry lifecycle workflow', () => {
 
   it('payEntry on a PENDING entry is refused (409) — it must be approved first', async () => {
     await request(app.getHttpServer()).post(`/bonus-entries/${ENTRY_ID}/pay`).send({}).expect(409);
-    expect(mock.bonusEntry.update).not.toHaveBeenCalled();
+    expect(mock.bonusEntry.updateMany).not.toHaveBeenCalled();
   });
 
   it('a CANCELLED entry can be neither approved, paid nor reverted (409)', async () => {
@@ -386,7 +426,7 @@ describe('Bonus · entry lifecycle workflow', () => {
       .patch(`/bonus-entries/${ENTRY_ID}`)
       .send({ status: 'PENDING' })
       .expect(409);
-    expect(mock.bonusEntry.update).not.toHaveBeenCalled();
+    expect(mock.bonusEntry.updateMany).not.toHaveBeenCalled();
   });
 
   it('a PAID entry cannot be reverted to PENDING (409)', async () => {
@@ -395,13 +435,13 @@ describe('Bonus · entry lifecycle workflow', () => {
       .patch(`/bonus-entries/${ENTRY_ID}`)
       .send({ status: 'PENDING' })
       .expect(409);
-    expect(mock.bonusEntry.update).not.toHaveBeenCalled();
+    expect(mock.bonusEntry.updateMany).not.toHaveBeenCalled();
   });
 
   it('an entry of a cancelled contract cannot be approved (409)', async () => {
     fixture.contract = { status: 'CANCELLED', deletedAt: null };
     await request(app.getHttpServer()).post(`/bonus-entries/${ENTRY_ID}/approve`).send({}).expect(409);
-    expect(mock.bonusEntry.update).not.toHaveBeenCalled();
+    expect(mock.bonusEntry.updateMany).not.toHaveBeenCalled();
   });
 
   // ── PATCH /bonus-entries/:id is restricted to revert-to-PENDING ─────────
@@ -412,7 +452,7 @@ describe('Bonus · entry lifecycle workflow', () => {
       .patch(`/bonus-entries/${ENTRY_ID}`)
       .send({ status: 'PENDING' })
       .expect(200);
-    const args = mock.bonusEntry.update.mock.calls[0]![0] as {
+    const args = mock.bonusEntry.updateMany.mock.calls[0]![0] as {
       data: { status: string; paidAt: Date | null };
     };
     expect(args.data.status).toBe('PENDING');
@@ -424,7 +464,7 @@ describe('Bonus · entry lifecycle workflow', () => {
       .patch(`/bonus-entries/${ENTRY_ID}`)
       .send({ status: 'APPROVED' })
       .expect(400);
-    expect(mock.bonusEntry.update).not.toHaveBeenCalled();
+    expect(mock.bonusEntry.updateMany).not.toHaveBeenCalled();
   });
 
   it('PATCH /bonus-entries/:id rejects status=PAID (DTO whitelist, 400)', async () => {
@@ -432,7 +472,7 @@ describe('Bonus · entry lifecycle workflow', () => {
       .patch(`/bonus-entries/${ENTRY_ID}`)
       .send({ status: 'PAID' })
       .expect(400);
-    expect(mock.bonusEntry.update).not.toHaveBeenCalled();
+    expect(mock.bonusEntry.updateMany).not.toHaveBeenCalled();
   });
 
   // ── Param validation ────────────────────────────────────────────────────
@@ -442,6 +482,6 @@ describe('Bonus · entry lifecycle workflow', () => {
       .post('/bonus-entries/not-a-uuid/approve')
       .send({})
       .expect(400);
-    expect(mock.bonusEntry.update).not.toHaveBeenCalled();
+    expect(mock.bonusEntry.updateMany).not.toHaveBeenCalled();
   });
 });
