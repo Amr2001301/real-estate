@@ -271,7 +271,7 @@ export default function CompanyDetailPage() {
               padded={false}
             >
               {showAddAdmin && (
-                <div className="px-5 pt-5 pb-4 border-b border-hairline bg-canvas/40">
+                <div className="px-5 pt-5 pb-4 border-b border-hairline">
                   <AddAdminForm
                     m={m.detail.addAdminForm}
                     cancelLabel={m.detail.cancelBtn}

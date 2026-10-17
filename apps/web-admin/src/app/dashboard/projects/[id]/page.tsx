@@ -156,7 +156,7 @@ export default async function ProjectDetailPage({
     <div className="space-y-6">
 
       {/* ── Premium Project Hero ─────────────────────────────────────────────── */}
-      <div className="relative bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+      <div className="relative bg-surface border border-hairline rounded-[22px] overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-brand-200 via-brand-500 to-brand-200" />
         <div className="px-7 sm:px-9 pt-8 pb-7">
 
@@ -250,7 +250,7 @@ export default async function ProjectDetailPage({
       </div>
 
       {/* ── Snapshot Metrics Strip ───────────────────────────────────────────── */}
-      <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+      <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-hairline">
           {snapshots.map((stat, idx) => (
             <div
@@ -286,7 +286,7 @@ export default async function ProjectDetailPage({
         <div className="xl:col-span-2 space-y-6">
 
           {/* Description card */}
-          <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+          <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
             <div className="flex items-center gap-3 px-6 py-4 bg-canvas/30 border-b border-hairline">
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 ring-1 ring-brand-100 shrink-0">
                 <span className="block h-[3px] w-4 rounded-full bg-brand-500" />
@@ -306,7 +306,7 @@ export default async function ProjectDetailPage({
           </div>
 
           {/* Phases card */}
-          <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+          <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
             <div className="flex items-center justify-between gap-3 px-6 py-4 bg-canvas/30 border-b border-hairline">
               <div className="flex items-center gap-3">
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 ring-1 ring-brand-100 shrink-0">
@@ -436,14 +436,14 @@ export default async function ProjectDetailPage({
           </div>
 
           {/* Available units card */}
-          <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+          <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
             <div className="flex items-center justify-between gap-3 px-6 py-4 bg-canvas/30 border-b border-hairline">
               <div className="flex items-center gap-3">
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 ring-1 ring-brand-100 shrink-0">
                   <Building2 className="h-[15px] w-[15px] text-brand-600" />
                 </span>
                 <div>
-                  <h2 className="text-[14px] font-bold text-navy leading-none">{m.sectionAvailableUnits}</h2>
+                  <h2 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{m.sectionAvailableUnits}</h2>
                   <p className="text-[11px] text-slate-400 mt-0.5">
                     {m.availableUnitsSub}
                   </p>
@@ -536,7 +536,7 @@ export default async function ProjectDetailPage({
           />
 
           {/* Map card */}
-          <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+          <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
             <div className="flex items-center gap-3 px-5 py-4 bg-canvas/30 border-b border-hairline">
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 ring-1 ring-brand-100 shrink-0">
                 <MapIcon className="h-[15px] w-[15px] text-brand-600" />

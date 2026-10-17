@@ -17,7 +17,7 @@ export function ProjectMediaPanel({ project, locale = 'ar' }: { project: Project
   const m = uiT(locale).projectDetailPage;
 
   return (
-    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 px-5 py-4 bg-canvas/30 border-b border-hairline">
         <div className="flex items-center gap-3">
@@ -25,7 +25,7 @@ export function ProjectMediaPanel({ project, locale = 'ar' }: { project: Project
             <ImageIcon className="h-[15px] w-[15px] text-brand-600" />
           </span>
           <div>
-            <h3 className="text-[13.5px] font-bold text-navy leading-none">{m.mediaLibraryTitle}</h3>
+            <h3 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{m.mediaLibraryTitle}</h3>
             <p className="text-[11px] text-slate-400 mt-0.5">
               {media.length > 0 ? m.mediaCountLabel(media.length) : m.mediaEmpty}
             </p>

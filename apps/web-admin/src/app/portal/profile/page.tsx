@@ -192,7 +192,7 @@ export default async function PortalProfilePage() {
 
       {/* ── Identity hero ────────────────────────────────────────────── */}
       <div
-        className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden"
+        className="bg-surface border border-hairline rounded-[22px] overflow-hidden"
         style={{ borderTopWidth: 3, borderTopColor: '#C8A24B' }}
       >
         <div className="p-5 sm:p-6">
@@ -278,7 +278,7 @@ export default async function PortalProfilePage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* Company card */}
-        <div className="lg:col-span-2 bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+        <div className="lg:col-span-2 bg-surface border border-hairline rounded-[22px] overflow-hidden">
           {/* Company header */}
           <div className="flex items-start gap-3 p-5 pb-4 border-b border-hairline">
             {me.broker.logoUrl ? (
@@ -400,7 +400,7 @@ export default async function PortalProfilePage() {
         </div>
 
         {/* Permissions card */}
-        <div className="bg-surface border border-hairline rounded-[20px] shadow-soft p-5">
+        <div className="bg-surface border border-hairline rounded-[22px] p-5">
           <div className="flex items-center gap-2 mb-1">
             <ShieldCheck className="h-4 w-4 text-brand-600 shrink-0" />
             <h2 className="text-sm font-bold text-slate-900">{t.permissionsTitle}</h2>

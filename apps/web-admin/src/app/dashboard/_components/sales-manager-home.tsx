@@ -20,10 +20,10 @@ import {
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, Lead, Reservation, VisitAppointment } from '@/lib/types';
-import { formatCompact, formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
+import { compactParts, formatCompact, formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { cn } from '@/lib/cn';
-import { PremiumPageHero } from '@/components/premium';
+import { PremiumPageHero, PremiumMetricStrip } from '@/components/premium';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
@@ -133,29 +133,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 // ── KPI Tile ──────────────────────────────────────────────────────────────────
-function KpiTile({
-  label, value, sub, icon, topBar, iconCls, valueCls,
-}: {
-  label: string; value: string | number; sub?: string;
-  icon: React.ReactNode; topBar: string; iconCls: string; valueCls: string;
-}) {
-  return (
-    <div className="relative bg-surface rounded-[18px] border border-hairline shadow-soft overflow-hidden">
-      <div className={cn('h-[3px] bg-gradient-to-l', topBar)} />
-      <div className="flex items-center gap-3 px-4 py-4">
-        <span className={cn('h-8 w-8 rounded-xl flex items-center justify-center shrink-0 [&>svg]:h-4 [&>svg]:w-4', iconCls)}>
-          {icon}
-        </span>
-        <div className="min-w-0">
-          <p className={cn('text-xl font-black tabular-nums leading-none', valueCls)}>{value}</p>
-          <p className="text-[11px] text-slate-600 font-medium mt-0.5 truncate">{label}</p>
-          {sub && <p className="text-[10px] text-slate-400 mt-0.5 truncate">{sub}</p>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 export async function SalesManagerDashboard() {
   const locale = await getLocale();
@@ -318,96 +295,39 @@ export async function SalesManagerDashboard() {
         }
       />
 
-      {/* ── KPI tiles — Row 1 & Row 2 ─────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <KpiTile
-          label={m.kpiTeamLeads}
-          value={leadsRes.error ? '—' : allLeadsCount}
-          sub={m.kpiTeamLeadsSub(openLeadsCount)}
-          icon={<Users />}
-          topBar="from-brand-300 via-brand-500 to-brand-300"
-          iconCls="bg-brand-50 text-brand-600 ring-1 ring-brand-100"
-          valueCls="text-brand-700"
-        />
-        <KpiTile
-          label={m.kpiOpenLeads}
-          value={leadsRes.error ? '—' : openLeadsCount}
-          sub={m.kpiOpenLeadsSub(allLeadsCount)}
-          icon={<Zap />}
-          topBar="from-violet-300 via-violet-500 to-violet-300"
-          iconCls="bg-violet-50 text-violet-600 ring-1 ring-violet-100"
-          valueCls="text-violet-700"
-        />
-        <KpiTile
-          label={m.kpiUpcomingVisits}
-          value={visitsRes.error ? '—' : upcomingVisitsCount}
-          sub={m.kpiUpcomingVisitsSub}
-          icon={<CalendarClock />}
-          topBar="from-sky-300 via-sky-500 to-sky-300"
-          iconCls="bg-sky-50 text-sky-600 ring-1 ring-sky-100"
-          valueCls="text-sky-700"
-        />
-        <KpiTile
-          label={m.kpiActiveReservations}
-          value={reservationsRes.error ? '—' : funnelReservations}
-          sub={teamExpiringCount > 0 ? m.kpiActiveReservationsSubWarning(teamExpiringCount) : m.kpiActiveReservationsSubOk}
-          icon={<BookmarkCheck />}
-          topBar={teamExpiringCount > 0 ? 'from-amber-300 via-amber-500 to-amber-300' : 'from-emerald-300 via-emerald-500 to-emerald-300'}
-          iconCls={teamExpiringCount > 0 ? 'bg-amber-50 text-amber-600 ring-1 ring-amber-100' : 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100'}
-          valueCls={teamExpiringCount > 0 ? 'text-amber-700' : 'text-emerald-700'}
-        />
-        <KpiTile
-          label={m.kpiMonthContracts}
-          value={perfRes.error ? '—' : teamSigned}
-          sub={periodLabel}
-          icon={<FileText />}
-          topBar="from-emerald-300 via-emerald-500 to-emerald-300"
-          iconCls="bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100"
-          valueCls="text-emerald-700"
-        />
-        <KpiTile
-          label={m.kpiRealizedValue}
-          value={perfRes.error ? '—' : formatCompact(teamRealized, symbol, locale)}
-          sub={m.kpiRealizedValueSub(periodLabel)}
-          icon={<Banknote />}
-          topBar="from-brand-300 via-brand-500 to-brand-300"
-          iconCls="bg-brand-50 text-brand-600 ring-1 ring-brand-100"
-          valueCls="text-brand-700"
-        />
-        <KpiTile
-          label={m.kpiFinancialTarget}
-          value={perfRes.error ? '—' : pctDisplay(teamAmountPct, m)}
-          sub={perfRes.error ? undefined : pctSub(teamAmountPct, m)}
-          icon={<Target />}
-          topBar={
-            teamAmountPct === null ? 'from-slate-200 via-slate-300 to-slate-200'
-            : teamAmountPct >= 80  ? 'from-emerald-300 via-emerald-500 to-emerald-300'
-            : teamAmountPct >= 50  ? 'from-amber-300 via-amber-500 to-amber-300'
-            :                        'from-red-300 via-red-400 to-red-300'
-          }
-          iconCls={
-            teamAmountPct === null ? 'bg-slate-100 text-slate-500 ring-1 ring-slate-200'
-            : teamAmountPct >= 80  ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100'
-            : teamAmountPct >= 50  ? 'bg-amber-50 text-amber-600 ring-1 ring-amber-100'
-            :                        'bg-red-50 text-red-500 ring-1 ring-red-100'
-          }
-          valueCls={
-            teamAmountPct === null ? 'text-slate-400'
-            : teamAmountPct >= 80  ? 'text-emerald-700'
-            : teamAmountPct >= 50  ? 'text-amber-700'
-            :                        'text-red-600'
-          }
-        />
-        <KpiTile
-          label={m.kpiTeamAlerts}
-          value={managerAlerts.length}
-          sub={managerAlerts.length > 0 ? m.kpiTeamAlertsSubWarning : m.kpiTeamAlertsSubOk}
-          icon={<Bell />}
-          topBar={managerAlerts.length > 0 ? 'from-amber-300 via-amber-500 to-amber-300' : 'from-emerald-300 via-emerald-400 to-emerald-300'}
-          iconCls={managerAlerts.length > 0 ? 'bg-amber-50 text-amber-600 ring-1 ring-amber-100' : 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100'}
-          valueCls={managerAlerts.length > 0 ? 'text-amber-700' : 'text-emerald-700'}
-        />
-      </div>
+      {/* ── KPI band (U5): one navy band; status as a coloured line, not coloured cards ── */}
+      <PremiumMetricStrip
+        variant="compact"
+        cols={4}
+        metrics={[
+          { label: m.kpiTeamLeads, value: leadsRes.error ? '—' : allLeadsCount, icon: <Users />, sub: m.kpiTeamLeadsSub(openLeadsCount) },
+          { label: m.kpiOpenLeads, value: leadsRes.error ? '—' : openLeadsCount, icon: <Zap />, sub: m.kpiOpenLeadsSub(allLeadsCount) },
+          { label: m.kpiUpcomingVisits, value: visitsRes.error ? '—' : upcomingVisitsCount, icon: <CalendarClock />, sub: m.kpiUpcomingVisitsSub },
+          {
+            label: m.kpiActiveReservations, value: reservationsRes.error ? '—' : funnelReservations, icon: <BookmarkCheck />,
+            trend: teamExpiringCount > 0 ? m.kpiActiveReservationsSubWarning(teamExpiringCount) : m.kpiActiveReservationsSubOk,
+            trendCls: teamExpiringCount > 0 ? 'warning' : 'success',
+          },
+          { label: m.kpiMonthContracts, value: perfRes.error ? '—' : teamSigned, icon: <FileText />, sub: periodLabel },
+          perfRes.error
+            ? { label: m.kpiRealizedValue, value: '—', icon: <Banknote /> }
+            : {
+                label: m.kpiRealizedValue, value: compactParts(teamRealized, symbol, locale)[0],
+                unit: compactParts(teamRealized, symbol, locale)[1], icon: <Banknote />, sub: m.kpiRealizedValueSub(periodLabel),
+              },
+          {
+            label: m.kpiFinancialTarget, value: perfRes.error ? '—' : pctDisplay(teamAmountPct, m), icon: <Target />,
+            ring: !perfRes.error && teamAmountPct !== null ? teamAmountPct : undefined,
+            trend: perfRes.error ? undefined : pctSub(teamAmountPct, m),
+            trendCls: teamAmountPct === null ? undefined : teamAmountPct >= 80 ? 'success' : teamAmountPct >= 50 ? 'warning' : 'danger',
+          },
+          {
+            label: m.kpiTeamAlerts, value: managerAlerts.length, icon: <Bell />,
+            trend: managerAlerts.length > 0 ? m.kpiTeamAlertsSubWarning : m.kpiTeamAlertsSubOk,
+            trendCls: managerAlerts.length > 0 ? 'warning' : 'success',
+          },
+        ]}
+      />
 
       {/* ── Team Performance Table ────────────────────────────────────────── */}
       <TeamPerformanceTable
@@ -706,14 +626,14 @@ function TeamFunnel({
   ] as const;
 
   return (
-    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-hairline bg-canvas/30">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-hairline">
         <span className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0 text-brand-600 [&>svg]:h-4 [&>svg]:w-4">
           <TrendingUp />
         </span>
         <div>
-          <h3 className="text-[13.5px] font-bold text-navy leading-none">{m.funnelTitle}</h3>
+          <h3 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{m.funnelTitle}</h3>
           <p className="text-[11px] text-slate-400 mt-0.5">{m.funnelDesc}</p>
         </div>
       </div>
@@ -808,14 +728,14 @@ function TeamPerformanceTable({
   locale?:          Locale;
 }) {
   return (
-    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-      <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-hairline bg-canvas/30">
+    <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-hairline">
         <div className="flex items-center gap-3">
           <span className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0 text-brand-600 [&>svg]:h-4 [&>svg]:w-4">
             <Users />
           </span>
           <div>
-            <h3 className="text-[13.5px] font-bold text-navy leading-none">{m.teamPerfTableTitle}</h3>
+            <h3 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{m.teamPerfTableTitle}</h3>
             {repRows.length > 0 && (
               <p className="text-[11px] text-slate-400 mt-0.5">{m.teamPerfRepsCount(repRows.length)} · {periodLabel}</p>
             )}
@@ -967,15 +887,15 @@ function PipelineCard({
   const activeCount = items.filter((s) => s.count > 0).length;
 
   return (
-    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-hairline bg-canvas/30">
+      <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-hairline">
         <div className="flex items-center gap-3">
           <span className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0 text-brand-600 [&>svg]:h-4 [&>svg]:w-4">
             <TrendingUp />
           </span>
           <div>
-            <h3 className="text-[13.5px] font-bold text-navy leading-none">{m.pipelineTitle}</h3>
+            <h3 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{m.pipelineTitle}</h3>
             <p className="text-[11px] text-slate-400 mt-0.5">
               {total > 0
                 ? m.pipelineTotal(total, activeCount)
@@ -1069,7 +989,7 @@ function AlertCard({
   };
 
   return (
-    <div className="bg-surface border border-amber-100 rounded-[20px] shadow-soft overflow-hidden">
+    <div className="bg-surface border border-amber-100 rounded-[22px] overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-amber-100 bg-amber-50/40">
         <div className="flex items-center gap-3">
@@ -1140,16 +1060,16 @@ function SectionCard({
   className?: string; children: React.ReactNode;
 }) {
   return (
-    <div className={cn('bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden', className)}>
-      <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-hairline bg-canvas/30">
+    <div className={cn('bg-surface border border-hairline rounded-[22px] overflow-hidden', className)}>
+      <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-hairline">
         <div className="flex items-center gap-3">
           <span className={cn(
-            'h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ring-1 [&>svg]:h-4 [&>svg]:w-4',
+            'h-10 w-10 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0 [&>svg]:h-4 [&>svg]:w-4',
             iconCls,
           )}>
             {icon}
           </span>
-          <h3 className="text-[13.5px] font-bold text-navy leading-none">{title}</h3>
+          <h3 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{title}</h3>
         </div>
         <Link href={href as never}
           className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-800 transition-colors shrink-0">

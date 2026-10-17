@@ -31,7 +31,7 @@ export default async function EditInstallmentPlanPage({
 
   return (
     <div className="flex flex-col gap-6 lg:gap-8 pb-2">
-      <div className="relative bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+      <div className="relative bg-surface border border-hairline rounded-[22px] overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-brand-200 via-brand-500 to-brand-200" />
         <div className="px-7 sm:px-9 pt-8 pb-7">
           <nav className="flex items-center gap-1.5 text-[12px] text-slate-400 mb-3">

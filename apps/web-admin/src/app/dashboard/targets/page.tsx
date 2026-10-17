@@ -276,7 +276,7 @@ export default async function TargetsPage({
 
       {/* ── Performance insights strip ────────────────────────────────────── */}
       {hasMeaningfulPerf ? (
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 bg-surface border border-hairline rounded-[20px] shadow-soft px-5 py-3">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 bg-surface border border-hairline rounded-[22px] px-5 py-3">
           <div className="flex items-center gap-2">
             <Award className="h-4 w-4 text-brand-500 shrink-0" />
             <span className="text-2xs text-slate-400">{m.insightTop}</span>
@@ -323,7 +323,7 @@ export default async function TargetsPage({
           )}
         </div>
       ) : targets.length > 0 ? (
-        <div className="flex items-center gap-3 bg-surface border border-hairline rounded-[20px] shadow-soft px-5 py-3">
+        <div className="flex items-center gap-3 bg-surface border border-hairline rounded-[22px] px-5 py-3">
           <TrendingUp className="h-4 w-4 text-slate-300 shrink-0" />
           <p className="text-xs text-slate-500">
             {m.noAchievedYet}{' '}

@@ -421,7 +421,7 @@ export default async function OperationsCenterPage() {
                   {/* Grouped recent events */}
                   {recentGroups.length > 0 && (
                     <>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-5 py-2.5 border-b border-hairline bg-canvas/40">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-5 py-2.5 border-b border-hairline">
                         {m.sections.recentActivity}
                       </p>
                       <ul className="divide-y divide-hairline">
@@ -495,7 +495,7 @@ export default async function OperationsCenterPage() {
                   {summary.topEntities.length > 0 && (
                     <>
                       <p className={cn(
-                        'text-[10px] font-bold uppercase tracking-widest text-slate-400 px-5 py-2.5 border-b border-hairline bg-canvas/40',
+                        'text-[10px] font-bold uppercase tracking-widest text-slate-400 px-5 py-2.5 border-b border-hairline',
                         recentGroups.length > 0 && 'border-t',
                       )}>
                         {m.sections.weekByArea}

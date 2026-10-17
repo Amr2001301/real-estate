@@ -722,7 +722,7 @@ export default async function AuditLogDetailPage({
                 padded={false}
               >
                 {/* Technical path row */}
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-5 py-3 border-b border-hairline bg-canvas/30">
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-5 py-3 border-b border-hairline">
                   <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400 shrink-0">
                     {m.technicalPath}
                   </span>

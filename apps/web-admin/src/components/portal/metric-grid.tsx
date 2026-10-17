@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
+/** A row of figures as one navy band split by gold hairlines (U5, like PremiumMetricStrip). */
 export function MetricGrid({
   cols = 4,
   className,
@@ -11,26 +12,27 @@ export function MetricGrid({
   children: ReactNode;
 }) {
   return (
-    <div className={cn(
-      'grid gap-3',
-      cols === 2 && 'grid-cols-2',
-      cols === 3 && 'grid-cols-3',
-      cols === 4 && 'grid-cols-2 md:grid-cols-4',
-      className,
-    )}>
+    <div
+      className={cn(
+        'grid gap-px overflow-hidden rounded-[22px] border border-[#D8B66A]/[0.28] bg-[#D8B66A]/[0.16]',
+        'shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]',
+        cols === 2 && 'grid-cols-2',
+        cols === 3 && 'grid-cols-3',
+        cols === 4 && 'grid-cols-2 md:grid-cols-4',
+        className,
+      )}
+    >
       {children}
     </div>
   );
 }
 
-const GOLD_BAR = { background: 'linear-gradient(to left, #b8923e, #e6c46a, #b8923e)' } as const;
-
 export function MetricTile({
   label,
   value,
   sub,
-  /** Kept for API compatibility — no longer affects background color. */
-  variant = 'default',
+  /** Kept for API compatibility — the band shows every value in one colour. */
+  variant: _variant = 'default',
   size = 'sm',
 }: {
   label: string;
@@ -40,20 +42,19 @@ export function MetricTile({
   size?: 'sm' | 'md' | 'lg';
 }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-hairline bg-surface shadow-xs">
-      <div className="h-[3px] w-full shrink-0" style={GOLD_BAR} />
-      <div className="px-4 py-4">
-        <p className="text-2xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-        <p className={cn(
-          'mt-2 font-bold tabular-nums text-slate-900',
-          size === 'sm' && 'text-sm',
-          size === 'md' && 'text-xl',
-          size === 'lg' && 'text-3xl leading-none',
-        )}>
-          {value}
-        </p>
-        {sub && <p className="mt-1 text-2xs tabular-nums text-slate-400">{sub}</p>}
-      </div>
+    <div className="bg-navy-band px-5 py-5">
+      <p className="text-[13px] leading-snug text-[#A9B0BD]">{label}</p>
+      <p
+        className={cn(
+          'num mt-1 font-semibold leading-none text-[#F4ECD8]',
+          size === 'sm' && 'text-[22px]',
+          size === 'md' && 'text-[30px]',
+          size === 'lg' && 'text-[40px]',
+        )}
+      >
+        {value}
+      </p>
+      {sub && <p className="mt-2 text-[12px] text-[#A9B0BD]">{sub}</p>}
     </div>
   );
 }
