@@ -863,6 +863,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get phoneChanged => 'تم تغيير رقم الجوال';
 
   @override
+  String get profileDeleteAccount => 'حذف حسابي';
+
+  @override
+  String get profileDeleteAccountTitle => 'حذف حسابك؟';
+
+  @override
+  String get profileDeleteAccountBody => 'تُحذف بياناتك الشخصية (الاسم والهاتف والبريد والصورة) ويتم تسجيل خروجك، وتبقى سجلات العقود والمدفوعات لدى الشركة. لا يمكن التراجع عن ذلك.';
+
+  @override
+  String get profileDeleteAccountConfirm => 'حذف';
+
+  @override
   String get fieldLanguage => 'اللغة';
 
   @override

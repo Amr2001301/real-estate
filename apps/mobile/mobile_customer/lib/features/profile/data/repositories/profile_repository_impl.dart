@@ -35,4 +35,9 @@ class ProfileRepositoryImpl implements ProfileRepository {
   Future<Result<void>> confirmPhoneChange(String code) {
     return guardApiCall(() => _remote.confirmPhoneChange(code));
   }
+
+  @override
+  Future<Result<void>> deleteAccount() {
+    return guardApiCall(() => _remote.deleteMe());
+  }
 }

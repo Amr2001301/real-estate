@@ -13,6 +13,9 @@ abstract interface class ProfileRemoteDataSource {
 
   /// The code sent to the new number: the phone changes now.
   Future<void> confirmPhoneChange(String code);
+
+  /// Deletes the account: deactivated and anonymised; records stay.
+  Future<void> deleteMe();
 }
 
 class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
@@ -39,5 +42,10 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   @override
   Future<void> confirmPhoneChange(String code) async {
     await _dio.post<Map<String, dynamic>>('/auth/me/phone/confirm', data: {'code': code});
+  }
+
+  @override
+  Future<void> deleteMe() async {
+    await _dio.delete<Map<String, dynamic>>('/users/me');
   }
 }

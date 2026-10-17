@@ -385,6 +385,72 @@ export class UsersService {
    * and an OTP sign-in to it would open this account. Staff edit their own
    * phone freely — they never sign in by phone code.
    */
+  /**
+   * "Delete my account" in the customer app (decided 2026-10-16; required by
+   * the App Store and Google Play). The account is deactivated and its
+   * personal data removed — name, phone, e-mail, password, photo — while the
+   * contract and payment records it is part of stay, under an anonymous
+   * name. Refused while the customer has a live contract or an open
+   * reservation: those still need them reachable.
+   */
+  async deleteSelf(caller: { sub: string; role: UserRole }) {
+    if (caller.role !== UserRole.CLIENT && caller.role !== UserRole.CUSTOMER) {
+      throw new BadRequestException('Staff accounts are removed by an admin');
+    }
+    const companyId = getRequiredCompanyId();
+    const id = caller.sub;
+    const user = await this.prisma.user.findFirst({
+      where: { id, companyId, deletedAt: null },
+      select: { id: true, phone: true, avatarUrl: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    await this.assertNoLiveContract(id, companyId);
+    const openReservations = await this.prisma.reservation.count({
+      where: {
+        companyId,
+        deletedAt: null,
+        status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
+        OR: [{ clientId: id }, { lead: { is: { clientId: id } } }],
+      },
+    });
+    if (openReservations > 0) {
+      throw new ConflictException({
+        message: 'لديك حجز قائم — تواصل مع الشركة لإلغائه أولاً',
+        code: 'CUSTOMER_HAS_OPEN_RESERVATION',
+      });
+    }
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id },
+        data: {
+          fullName: 'عميل محذوف',
+          email: null,
+          phone: null,
+          pendingPhone: null,
+          passwordHash: null,
+          avatarUrl: null,
+          notificationPrefs: Prisma.DbNull,
+          emailVerifiedAt: null,
+          phoneVerifiedAt: null,
+          active: false,
+          deletedAt: now,
+        },
+      });
+      await this.cutAccess(tx, id, companyId);
+      if (user.phone) await tx.otpCode.deleteMany({ where: { phone: user.phone, companyId } });
+      await tx.auditLog.create({
+        data: { actorId: id, action: 'user.self-deleted', entityType: 'User', entityId: id, companyId },
+      });
+    });
+    if (user.avatarUrl) {
+      this.r2
+        .delete(this.r2.keyFromPublicUrl(user.avatarUrl))
+        .catch((err) => this.logger.warn(`avatar cleanup failed for ${id}: ${(err as Error).message}`));
+    }
+    return { deleted: true };
+  }
+
   async updateSelf(caller: { sub: string; role: UserRole }, dto: UpdateUserDto) {
     if (dto.phone !== undefined && (caller.role === UserRole.CLIENT || caller.role === UserRole.CUSTOMER)) {
       const companyId = getRequiredCompanyId();
