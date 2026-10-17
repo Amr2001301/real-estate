@@ -81,3 +81,15 @@ export async function seedTimeZoneSettingForCompany(
     skipDuplicates: true,
   });
 }
+
+/**
+ * The current tenant's time zone; the default outside a tenant context (a
+ * platform-wide job, a unit test) rather than throwing.
+ */
+export async function currentCompanyTimeZone(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: { setting: { findMany: (...args: any[]) => Promise<Array<{ companyId: string | null; value: unknown }>> } },
+  companyId: string | null | undefined,
+): Promise<string> {
+  return companyId ? companyTimeZone(db, companyId) : COMPANY_TIMEZONE_DEFAULT;
+}

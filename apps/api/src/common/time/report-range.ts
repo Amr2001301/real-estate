@@ -52,3 +52,37 @@ export function reportRange(
   }
   return range;
 }
+
+/** Today's calendar date (year, month 1–12, day) in `timeZone`. */
+export function localDate(timeZone: string, now = new Date()): { year: number; month: number; day: number } {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: isValidTimeZone(timeZone) ? timeZone : COMPANY_TIMEZONE_DEFAULT,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const get = (t: string) => Number(parts.find((p) => p.type === t)!.value);
+  return { year: get('year'), month: get('month'), day: get('day') };
+}
+
+/**
+ * A calendar month in the company's time zone, as both kinds of bound:
+ * - `start` / `end`: instants (local midnight) — for timestamps such as
+ *   paidAt, signedAt, createdAt;
+ * - `startDay` / `endDay`: UTC midnight of the first days — for calendar
+ *   dates stored as UTC midnight, such as an installment's dueDate.
+ * `month` is 1–12 and may overflow (13 → January of the next year).
+ */
+export function localMonth(year: number, month: number, timeZone: string) {
+  const first = new Date(Date.UTC(year, month - 1, 1));
+  const next = new Date(Date.UTC(year, month, 1));
+  const day = (d: Date) => d.toISOString().slice(0, 10);
+  return {
+    key: `${first.getUTCFullYear()}-${String(first.getUTCMonth() + 1).padStart(2, '0')}`,
+    monthIndex: first.getUTCMonth(),
+    start: localMidnight(day(first), timeZone),
+    end: localMidnight(day(next), timeZone),
+    startDay: first,
+    endDay: next,
+  };
+}
