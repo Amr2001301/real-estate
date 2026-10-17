@@ -68,7 +68,7 @@ import { Permissions, PermissionsStrict } from '../../common/decorators/permissi
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { ClawbackResolutionService } from '../broker-commissions/clawback-resolution.service';
 import { CollectClawbackDto, WaiveClawbackDto } from '../broker-commissions/dto/broker-commission.dto';
-import { CONTRACT_CANCELLED_MESSAGE, isPayableDeal } from '../installments/live-contract';
+import { CONTRACT_CANCELLED_MESSAGE, isPayableDeal, LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 
 /** Allowed bonus entry moves through approve / pay / revert. */
 const ENTRY_TRANSITIONS: Record<BonusEntryStatus, BonusEntryStatus[]> = {
@@ -653,7 +653,8 @@ export class BonusService {
       // contracts in the period give the realized value/units (primary signal);
       // convertedReservationsCount is kept as a documented cross-check/fallback.
       this.prisma.contract.findMany({
-        where: { signedAt: inPeriod, reservation: { salesId: inReps } },
+        // A cancelled or deleted deal is not a sale.
+        where: { signedAt: inPeriod, reservation: { salesId: inReps }, ...LIVE_CONTRACT_WHERE },
         select: { totalAmount: true, reservation: { select: { salesId: true } } },
       }),
     ]);

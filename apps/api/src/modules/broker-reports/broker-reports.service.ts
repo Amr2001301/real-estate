@@ -41,6 +41,9 @@ import {
 } from '../../common/utils/xlsx';
 import { renderBarChartPng } from '../../common/utils/xlsx-chart';
 import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
+import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
+import { companyTimeZone } from '../../common/time/company-timezone';
+import { reportRange } from '../../common/time/report-range';
 
 const TOP_METRIC_LABEL: Record<TopMetric, string> = {
   leads: 'الفرص',
@@ -142,7 +145,7 @@ export class BrokerReportsService {
   // ── Public endpoints ────────────────────────────────────────────────────
 
   async summary(query: BrokerReportsSummaryQueryDto) {
-    const range = this.parseRange(query.from, query.to);
+    const range = await this.parseRange(query.from, query.to);
 
     const brokerFilter: Prisma.BrokerWhereInput = {};
     const counts = this.aggregateCommonCounts({
@@ -203,7 +206,7 @@ export class BrokerReportsService {
   }
 
   async topBrokers(query: TopBrokersQueryDto) {
-    const range = this.parseRange(query.from, query.to);
+    const range = await this.parseRange(query.from, query.to);
     const metric: TopMetric = query.metric ?? 'salesGross';
     const limit = query.limit ?? 10;
 
@@ -320,7 +323,7 @@ export class BrokerReportsService {
     });
     if (!broker) throw new NotFoundException('Broker not found');
 
-    const range = this.parseRange(query.from, query.to);
+    const range = await this.parseRange(query.from, query.to);
     const [summary, monthlyTrend, projectBreakdown, agentBreakdown, recent] =
       await Promise.all([
         this.summary({
@@ -368,7 +371,7 @@ export class BrokerReportsService {
   }
 
   async agents(query: AgentsReportQueryDto) {
-    const range = this.parseRange(query.from, query.to);
+    const range = await this.parseRange(query.from, query.to);
 
     // Find broker agent userIds within the broker (if filtered).
     const agentRows = await this.prisma.brokerUser.findMany({
@@ -424,7 +427,7 @@ export class BrokerReportsService {
   }
 
   async projects(query: ProjectsReportQueryDto & { brokerAgentId?: string }) {
-    const range = this.parseRange(query.from, query.to);
+    const range = await this.parseRange(query.from, query.to);
 
     // Project breakdown built from BrokerCommission rows because they carry
     // projectId directly. Contracts join via unit→building→phase→project,
@@ -1050,12 +1053,11 @@ export class BrokerReportsService {
 
   // ── Internal helpers ────────────────────────────────────────────────────
 
-  private parseRange(from?: string, to?: string) {
-    return {
-      from: from ? new Date(from) : undefined,
-      to: to ? new Date(to) : undefined,
-      inclusive: true,
-    };
+  /** A date-only `to` covers that whole day in the company's time zone (see reportRange). */
+  private async parseRange(from?: string, to?: string) {
+    if (!from && !to) return { from: undefined, to: undefined, inclusive: false };
+    const r = reportRange(from, to, await companyTimeZone(this.prisma, getRequiredCompanyId()));
+    return { from: r.gte, to: r.lt, inclusive: false };
   }
 
   private dateRange(rangeFn: 'gte' | 'gt' = 'gte', r: Range) {
