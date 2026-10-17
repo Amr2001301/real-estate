@@ -672,7 +672,7 @@ export class BonusService {
       this.prisma.contract.findMany({
         // A cancelled or deleted deal is not a sale.
         where: { signedAt: inPeriod, reservation: { salesId: inReps }, ...LIVE_CONTRACT_WHERE },
-        select: { totalAmount: true, reservation: { select: { salesId: true } } },
+        select: { totalAmount: true, reservation: { select: { salesId: true, ...MARKUP_SNAPSHOT_SELECT } } },
       }),
     ]);
 
@@ -698,12 +698,13 @@ export class BonusService {
     const realizedMap = new Map<string, number>();
     for (const c of signedContracts as Array<{
       totalAmount: Prisma.Decimal;
-      reservation: { salesId: string } | null;
+      reservation: { salesId: string; snapshotFinancedAmount: Prisma.Decimal | null; snapshotRemainingAmount: Prisma.Decimal | null } | null;
     }>) {
       const sid = c.reservation?.salesId;
       if (!sid) continue;
       signedCountMap.set(sid, (signedCountMap.get(sid) ?? 0) + 1);
-      realizedMap.set(sid, (realizedMap.get(sid) ?? 0) + Number(c.totalAmount));
+      // Sales at their net price, as the bonus base (decided 2026-10-17).
+      realizedMap.set(sid, (realizedMap.get(sid) ?? 0) + Number(commissionBasis(c.totalAmount, c.reservation)));
     }
 
     const targetMap = new Map<string, { amount: number; units: number }>();

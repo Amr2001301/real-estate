@@ -11,6 +11,7 @@ import {
   InstallmentStatus,
   MaintenanceStatus,
   Prisma,
+  ReservationBookingPaymentStatus,
   ReservationStatus,
   UnitStatus,
   UserRole,
@@ -68,11 +69,13 @@ import {
   renderShareChartPng,
 } from '../../common/utils/xlsx-chart';
 import {
+  againstDueDepositWhere,
   COLLECTED_DEPOSIT_WHERE,
   FEES_DEPOSIT_WHERE,
   RECORDED_DEPOSIT_WHERE,
   TOWARDS_PRICE_DEPOSIT_WHERE,
 } from '../../common/finance/collected';
+import { commissionBasis, MARKUP_SNAPSHOT_SELECT, NET_PRICE_SQL, netContractValue } from '../../common/finance/commission-basis';
 import {
   BILLABLE_PLAN_WHERE,
   LIVE_CONTRACT_WHERE,
@@ -138,7 +141,8 @@ export class ReportsService {
       this.prisma.lead.count(),
       this.prisma.lead.count({ where: { stage: 'NEW' } }),
       this.prisma.visitRequest.count({ where: { status: 'PENDING' } }),
-      this.prisma.contract.count({ where: LIVE_CONTRACT_WHERE }),
+      // Contracts are signed ones, as everywhere (decided 2026-10-17).
+      this.prisma.contract.count({ where: { signedAt: { not: null }, ...LIVE_CONTRACT_WHERE } }),
       this.prisma.deposit.aggregate({ where: COLLECTED_DEPOSIT_WHERE, _sum: { amount: true } }),
     ]);
     return {
@@ -182,12 +186,15 @@ export class ReportsService {
       ? Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`
       : Prisma.empty;
     where = { ...where, ...LIVE_CONTRACT_WHERE };
-    const [count, totalAmount, byProject] = await this.prisma.$transaction([
+    // Sales are the net price, without the instalment markup (decided
+    // 2026-10-17, as the commission base).
+    const [count, total, byProject] = await Promise.all([
       this.prisma.contract.count({ where }),
-      this.prisma.contract.aggregate({ where, _sum: { totalAmount: true } }),
+      netContractValue(this.prisma, where),
       this.prisma.$queryRaw<Array<{ projectId: string; total: number; count: number }>>(Prisma.sql`
-        SELECT p.id as "projectId", COUNT(c.*)::int as count, COALESCE(SUM(c."totalAmount"), 0)::float as total
+        SELECT p.id as "projectId", COUNT(c.*)::int as count, COALESCE(SUM(${NET_PRICE_SQL}), 0)::float as total
         FROM "Contract" c
+        LEFT JOIN "Reservation" r ON r.id = c."reservationId"
         JOIN "Unit" u ON u.id = c."unitId"
         JOIN "Building" b ON b.id = u."buildingId"
         JOIN "Phase" ph ON ph.id = b."phaseId"
@@ -199,7 +206,7 @@ export class ReportsService {
     ]);
     return {
       contracts: count,
-      total: totalAmount._sum.totalAmount ?? 0,
+      total,
       byProject,
     };
   }
@@ -218,29 +225,36 @@ export class ReportsService {
     }
     // deposits / total: money collected (one definition, see collected.ts);
     // verified: of those, the ones a reviewer confirmed.
+    // Collected is two figures (decided 2026-10-16): towards the price, and
+    // fees & penalties. `total` is towards the price — the same figure as the
+    // dashboard; it used to be everything, cancelled deals included.
     const collected: Prisma.DepositWhereInput = { AND: [where, COLLECTED_DEPOSIT_WHERE] };
-    const [count, sum, verified] = await this.prisma.$transaction([
+    const [count, sum, verified, fees] = await this.prisma.$transaction([
       this.prisma.deposit.count({ where: collected }),
-      this.prisma.deposit.aggregate({ where: collected, _sum: { amount: true } }),
+      this.prisma.deposit.aggregate({ where: { AND: [collected, TOWARDS_PRICE_DEPOSIT_WHERE] }, _sum: { amount: true } }),
       this.prisma.deposit.count({ where: { AND: [collected, { verified: true }] } }),
+      this.prisma.deposit.aggregate({ where: { AND: [collected, FEES_DEPOSIT_WHERE] }, _sum: { amount: true } }),
     ]);
     return {
       deposits: count,
       verified,
       total: sum._sum.amount ?? 0,
+      fees: fees._sum.amount ?? 0,
     };
   }
 
   async reservations(dateFrom?: string, dateTo?: string) {
     const tz = await this.rangeTimeZone(dateFrom, dateTo);
+    // A deleted reservation is not one (the reservations list hides it).
     const where: Prisma.ReservationWhereInput =
       dateFrom || dateTo
         ? {
+            deletedAt: null,
             createdAt: {
               ...reportRange(dateFrom, dateTo, tz),
             },
           }
-        : {};
+        : { deletedAt: null };
     const groups = await this.prisma.reservation.groupBy({
       by: ['status'],
       where,
@@ -262,7 +276,7 @@ export class ReportsService {
     const [leads, visits, reservations, contracts] = await this.prisma.$transaction([
       this.prisma.lead.count(dateWhere),
       this.prisma.visitRequest.count(dateWhere),
-      this.prisma.reservation.count(dateWhere),
+      this.prisma.reservation.count({ where: { deletedAt: null, ...(dateWhere?.where ?? {}) } }),
       this.prisma.contract.count({
         // A sale is a signed contract, counted by its signing date.
         where: { signedAt: hasDate ? { not: null, ...dateCond } : { not: null }, ...LIVE_CONTRACT_WHERE },
@@ -333,8 +347,9 @@ export class ReportsService {
     >(Prisma.sql`
        SELECT EXTRACT(MONTH FROM ${localSigned})::int AS month,
               COUNT(c.*)::int AS contracts,
-              COALESCE(SUM(c."totalAmount"), 0)::float AS total
+              COALESCE(SUM(${NET_PRICE_SQL}), 0)::float AS total
        FROM "Contract" c
+       LEFT JOIN "Reservation" r ON r.id = c."reservationId"
        ${projectJoin}
        WHERE EXTRACT(YEAR FROM ${localSigned}) = ${safeYear}
        AND c."companyId" = ${companyId}::uuid
@@ -368,6 +383,7 @@ export class ReportsService {
     const startOfMonth = localMonth(year, month, tz).start;
     const expiringHorizon = new Date(now.getTime() +  7 * 24 * 60 * 60 * 1000);
     const prevMonthStart  = localMonth(year, month - 1, tz).start;
+    const prevMonthSameDay = new Date(Math.min(startOfMonth.getTime(), prevMonthStart.getTime() + (now.getTime() - startOfMonth.getTime())));
     const in30            = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
     const in60            = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
     const in90            = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
@@ -396,7 +412,6 @@ export class ReportsService {
       funnelReservations,
       funnelContracts,
       // ── financial aggregates ──
-      totalContractValueAgg,
       totalCollectedVerifiedAgg,
       overdueAgg,
       pendingBonusAgg,
@@ -428,8 +443,13 @@ export class ReportsService {
         },
       }),
       this.prisma.contract.count({ where: { signedAt: null, ...LIVE_CONTRACT_WHERE } }),
+      // The expiry job lapses approved bookings too.
       this.prisma.reservation.count({
-        where: { status: ReservationStatus.PENDING, expiresAt: { gte: now, lte: expiringHorizon } },
+        where: {
+          deletedAt: null,
+          status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
+          expiresAt: { gte: now, lte: expiringHorizon },
+        },
       }),
       this.prisma.visitAppointment.count({ where: { status: AppointmentStatus.SCHEDULED } }),
       this.prisma.infoRequest.count({ where: { status: InfoRequestStatus.OPEN } }),
@@ -450,10 +470,9 @@ export class ReportsService {
       // ── funnel all-time volumes ──
       this.prisma.lead.count(),
       this.prisma.visitRequest.count(),
-      this.prisma.reservation.count(),
+      this.prisma.reservation.count({ where: { deletedAt: null } }),
       this.prisma.contract.count({ where: { signedAt: { not: null }, ...LIVE_CONTRACT_WHERE } }),
       // ── financial aggregates ──
-      this.prisma.contract.aggregate({ where: LIVE_CONTRACT_WHERE, _sum: { totalAmount: true } }),
       this.prisma.deposit.aggregate({ where: COLLECTED_DEPOSIT_WHERE, _sum: { amount: true } }),
       this.prisma.installment.aggregate({
         where: { status: InstallmentStatus.OVERDUE, plan: LIVE_PLAN_WHERE },
@@ -468,12 +487,14 @@ export class ReportsService {
         _sum: { totalNet: true },
       }),
       // ── MTD vs prior-month ──
+      // Collected towards the price, this month so far against the same days
+      // of last month (a whole month against a few days read as a fall).
       this.prisma.deposit.aggregate({
-        where: { ...COLLECTED_DEPOSIT_WHERE, paidAt: { gte: prevMonthStart, lt: startOfMonth } },
+        where: { AND: [COLLECTED_DEPOSIT_WHERE, TOWARDS_PRICE_DEPOSIT_WHERE, { paidAt: { gte: prevMonthStart, lt: prevMonthSameDay } }] },
         _sum: { amount: true },
       }),
       this.prisma.deposit.aggregate({
-        where: { ...COLLECTED_DEPOSIT_WHERE, paidAt: { gte: startOfMonth } },
+        where: { AND: [COLLECTED_DEPOSIT_WHERE, TOWARDS_PRICE_DEPOSIT_WHERE, { paidAt: { gte: startOfMonth } }] },
         _sum: { amount: true },
       }),
       this.prisma.contract.count({
@@ -504,7 +525,7 @@ export class ReportsService {
     // live contracts plus their payment rows due up to today (fees and
     // cancelled rows out). The collection rate is measured against this, not
     // against the whole contract value — most of that is not due yet (U5).
-    const [collectedTowardsPriceAgg, overdueTowardsPriceAgg, feesCollectedAgg, dueRowsAgg, dueBookingAgg] = await Promise.all([
+    const [collectedTowardsPriceAgg, overdueTowardsPriceAgg, feesCollectedAgg, dueRowsAgg, dueBookingAgg, collectedAgainstDueAgg, totalContractValue] = await Promise.all([
       this.prisma.deposit.aggregate({
         where: { AND: [COLLECTED_DEPOSIT_WHERE, TOWARDS_PRICE_DEPOSIT_WHERE] },
         _sum: { amount: true },
@@ -530,6 +551,14 @@ export class ReportsService {
         where: { contract: { is: LIVE_CONTRACT_WHERE } },
         _sum: { bookingAmount: true },
       }),
+      // The collection rate's numerator: collected against what is due by
+      // today (decided 2026-10-17) — early payments don't count.
+      this.prisma.deposit.aggregate({
+        where: { AND: [COLLECTED_DEPOSIT_WHERE, TOWARDS_PRICE_DEPOSIT_WHERE, againstDueDepositWhere(today)] },
+        _sum: { amount: true },
+      }),
+      // Contract value: signed contracts at their net price (decided 2026-10-17).
+      netContractValue(this.prisma, { signedAt: { not: null }, ...LIVE_CONTRACT_WHERE }),
     ]);
 
     const [reservationTrend, leadSources, recentActivity, topProjects] = await Promise.all([
@@ -560,7 +589,7 @@ export class ReportsService {
         contracts:    funnelContracts,
       },
       financial: {
-        totalContractValue:       Number(totalContractValueAgg._sum.totalAmount     ?? 0),
+        totalContractValue,
         totalCollectedVerified:   Number(totalCollectedVerifiedAgg._sum.amount      ?? 0),
         overdueTotal:             Number(overdueAgg._sum.amount                     ?? 0),
         collectedTowardsPrice:    Number(collectedTowardsPriceAgg._sum.amount       ?? 0),
@@ -568,6 +597,7 @@ export class ReportsService {
         feesCollected:            Number(feesCollectedAgg._sum.amount               ?? 0),
         dueToDate:
           Number(dueRowsAgg._sum.amount ?? 0) + Number(dueBookingAgg._sum.bookingAmount ?? 0),
+        collectedAgainstDue:      Number(collectedAgainstDueAgg._sum.amount         ?? 0),
         pendingBonus:             Number(pendingBonusAgg._sum.amount                ?? 0),
         pendingBrokerPayouts:     Number(pendingPayoutsAgg._sum.totalNet            ?? 0),
         collectedThisMonth:       Number(collectedThisMonthAgg._sum.amount          ?? 0),
@@ -608,7 +638,7 @@ export class ReportsService {
     });
     const counts = await this.prisma.$transaction(
       slots.map((s) =>
-        this.prisma.reservation.count({ where: { createdAt: { gte: s.start, lt: s.end } } }),
+        this.prisma.reservation.count({ where: { deletedAt: null, createdAt: { gte: s.start, lt: s.end } } }),
       ),
     );
     return slots.map((s, i) => ({ month: s.month, label: s.label, value: counts[i] ?? 0 }));
@@ -653,6 +683,7 @@ export class ReportsService {
         select: { id: true, fullName: true, createdAt: true },
       }),
       this.prisma.reservation.findMany({
+        where: { deletedAt: null },
         orderBy: { createdAt: 'desc' },
         take,
         select: {
@@ -690,7 +721,9 @@ export class ReportsService {
         take,
         select: { id: true, createdAt: true, unit: { select: { code: true } } },
       }),
+      // A payment still standing (not deleted, rejected or reversed).
       this.prisma.deposit.findMany({
+        where: RECORDED_DEPOSIT_WHERE,
         orderBy: { createdAt: 'desc' },
         take,
         select: {
@@ -802,7 +835,8 @@ export class ReportsService {
 
   private async topProjects() {
     const projectsRaw = await this.prisma.project.findMany({
-      where: { status: 'PUBLISHED' },
+      // An archived (sold-out) project still has its sales: it showed 0.
+      where: { status: { in: ['PUBLISHED', 'ARCHIVED'] } },
       select: {
         id: true,
         name: true,
@@ -815,7 +849,7 @@ export class ReportsService {
                     status: true,
                     contracts: {
                       where: { signedAt: { not: null }, ...LIVE_CONTRACT_WHERE },
-                      select: { totalAmount: true },
+                      select: { totalAmount: true, reservation: { select: MARKUP_SNAPSHOT_SELECT } },
                     },
                   },
                 },
@@ -843,8 +877,9 @@ export class ReportsService {
         ).length;
         const contracts = units.flatMap((u) => u.contracts);
         const signedContracts = contracts.length;
+        // The net price, without the instalment markup (decided 2026-10-17).
         const contractValue = contracts.reduce(
-          (s, c) => s + Number(c.totalAmount),
+          (s, c) => s + Number(commissionBasis(c.totalAmount, c.reservation)),
           0,
         );
         return {
@@ -1226,7 +1261,6 @@ export class ReportsService {
 
     // ── Run all 13 queries in parallel ────────────────────────────────────
     const [
-      totalContractAgg,
       totalCollectedAgg,
       totalRemainingAgg,
       totalOverdueAgg,
@@ -1244,39 +1278,41 @@ export class ReportsService {
       forecast6190Agg,
     ] = await Promise.all([
       // ── KPI aggregates ──
-      this.prisma.contract.aggregate({
-        where: contractWhere,
-        _sum: { totalAmount: true },
-      }),
       // Headline: money actually collected (see common/finance/collected.ts).
       this.prisma.deposit.aggregate({
         where: filteredDepWhere(COLLECTED_DEPOSIT_WHERE),
         _sum: { amount: true },
       }),
+      // Remaining and overdue are towards the price (fees are their own
+      // figure) — one definition with the dashboard.
       this.prisma.installment.aggregate({
         where: instWhere({
           status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] },
+          type: { notIn: SURCHARGE_PAYMENT_TYPES },
         }),
         _sum: { amount: true },
       }),
       this.prisma.installment.aggregate({
-        where: instWhere({ status: InstallmentStatus.OVERDUE }),
+        where: instWhere({ status: InstallmentStatus.OVERDUE, type: { notIn: SURCHARGE_PAYMENT_TYPES } }),
         _sum: { amount: true },
       }),
       // collectedThisMonth uses baseDepWhere (ignores user date range — always current month)
       this.prisma.deposit.aggregate({
-        where: baseDepWhere({ ...COLLECTED_DEPOSIT_WHERE, paidAt: { gte: thisMonth.start, lt: thisMonth.end } }),
+        where: baseDepWhere({ AND: [COLLECTED_DEPOSIT_WHERE, TOWARDS_PRICE_DEPOSIT_WHERE, { paidAt: { gte: thisMonth.start, lt: thisMonth.end } }] }),
         _sum: { amount: true },
       }),
+      // Everything falling due this month, paid or not (as the trend's bar):
+      // counting only what is still open made it shrink as it got paid.
       this.prisma.installment.aggregate({
         where: instWhere({
           dueDate: { gte: monthStart, lt: monthEnd },
-          status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] },
+          status: { not: InstallmentStatus.CANCELLED },
+          type: { notIn: SURCHARGE_PAYMENT_TYPES },
         }),
         _sum: { amount: true },
       }),
       // ── KPI counts ──
-      this.prisma.contract.count({ where: contractWhere }),
+      this.prisma.contract.count({ where: { AND: [contractWhere, { signedAt: { not: null } }] } }),
       this.prisma.deposit.count({ where: filteredDepWhere() }),
       this.prisma.installment.count({
         where: instWhere({ status: InstallmentStatus.OVERDUE }),
@@ -1399,6 +1435,7 @@ export class ReportsService {
     // see Batch F1 report §8 limitations).
     const resvWhere = (status: ReservationStatus): Prisma.ReservationWhereInput => ({
       status,
+      deletedAt: null,
       ...(opts.projectId
         ? { unit: { building: { phase: { projectId: opts.projectId } } } }
         : {}),
@@ -1406,7 +1443,11 @@ export class ReportsService {
 
     // Unpaid = PENDING or OVERDUE. Explicit IN avoids silently including
     // InstallmentStatus.CANCELLED (added in Step D1) in outstanding totals.
-    const unpaid: Prisma.InstallmentWhereInput = { status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] } };
+    // Towards the price: fee and penalty rows are not part of it.
+    const unpaid: Prisma.InstallmentWhereInput = {
+      status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] },
+      type: { notIn: SURCHARGE_PAYMENT_TYPES },
+    };
     // Overdue (and its aging) follows the overdue sweep: a signed deal, and
     // no payment on its way — a proof under review or a cheque not cleared
     // is the customer having paid. They counted as overdue here before.
@@ -1435,6 +1476,7 @@ export class ReportsService {
       approvedResvAgg,
       bookingCollectedVerifiedAgg,
       bookingCollectedAllAgg,
+      unpaidBookingAgg,
     ] = await Promise.all([
       // Recorded (collected + waiting) vs collected, overall and per type.
       this.prisma.deposit.aggregate({ where: filteredDepWhere(), _sum: { amount: true } }),
@@ -1469,6 +1511,15 @@ export class ReportsService {
       this.prisma.reservation.aggregate({ where: resvWhere(ReservationStatus.APPROVED), _sum: { bookingAmount: true } }),
       this.prisma.deposit.aggregate({ where: bookingDepWhere(COLLECTED_DEPOSIT_WHERE), _sum: { amount: true } }),
       this.prisma.deposit.aggregate({ where: bookingDepWhere(RECORDED_DEPOSIT_WHERE), _sum: { amount: true } }),
+      this.prisma.reservation.aggregate({
+        where: {
+          AND: [
+            { OR: [resvWhere(ReservationStatus.PENDING), resvWhere(ReservationStatus.APPROVED)] },
+            { deletedAt: null, bookingPaymentStatus: { notIn: [ReservationBookingPaymentStatus.PAID, ReservationBookingPaymentStatus.WAIVED] } },
+          ],
+        },
+        _sum: { bookingAmount: true },
+      }),
     ]);
 
     // Decimal-safe coercion for money arithmetic (aggregates are Decimal in
@@ -1492,6 +1543,24 @@ export class ReportsService {
         _sum: { amount: true },
       }),
     ]);
+    // Decisions of 2026-10-17: contract value is signed contracts at their net
+    // price; the collection rate is collected against what is due by today
+    // (the booking and the rows due up to today), as on the dashboard.
+    const signedContractWhere: Prisma.ContractWhereInput = { AND: [contractWhere, { signedAt: { not: null } }] };
+    const [totalContractValue, dueRowsAgg, dueBookingAgg, againstDueAgg] = await Promise.all([
+      netContractValue(this.prisma, signedContractWhere),
+      this.prisma.installment.aggregate({
+        where: instWhere({ status: { not: InstallmentStatus.CANCELLED }, type: { notIn: SURCHARGE_PAYMENT_TYPES }, dueDate: { lte: todayUTC } }),
+        _sum: { amount: true },
+      }),
+      this.prisma.reservation.aggregate({ where: { contract: { is: contractWhere } }, _sum: { bookingAmount: true } }),
+      this.prisma.deposit.aggregate({
+        where: baseDepWhere({ AND: [COLLECTED_DEPOSIT_WHERE, TOWARDS_PRICE_DEPOSIT_WHERE, againstDueDepositWhere(todayUTC)] }),
+        _sum: { amount: true },
+      }),
+    ]);
+    const dueToDate = D(dueRowsAgg._sum.amount).plus(D(dueBookingAgg._sum.bookingAmount));
+    const collectedAgainstDue = D(againstDueAgg._sum.amount);
     const collectedAll = D(recordedAgg._sum.amount);
     const collectedVerified = D(totalCollectedAgg._sum.amount);
     const collectedUnverified = collectedAll.minus(collectedVerified);
@@ -1541,8 +1610,9 @@ export class ReportsService {
     const approvedBooking = D(approvedResvAgg._sum.bookingAmount);
     const bookingCollectedVerified = D(bookingCollectedVerifiedAgg._sum.amount);
     const bookingCollectedAll = D(bookingCollectedAllAgg._sum.amount);
-    const uncollectedRaw = pendingBooking.plus(approvedBooking).minus(bookingCollectedVerified);
-    const bookingUncollectedEstimate = uncollectedRaw.lessThan(0) ? zero : uncollectedRaw;
+    // Bookings of active reservations not paid yet (it subtracted every
+    // booking ever collected, converted ones included, so it read 0).
+    const bookingUncollectedEstimate = D(unpaidBookingAgg._sum.bookingAmount);
     const booking = {
       pendingReservationsCount: pendingResvCount,
       approvedReservationsCount: approvedResvCount,
@@ -1779,7 +1849,8 @@ export class ReportsService {
       Promise.all(
         trendSlots.map(({ start, end }) =>
           this.prisma.deposit.aggregate({
-            where: baseDepWhere({ ...COLLECTED_DEPOSIT_WHERE, paidAt: { gte: start, lt: end } }),
+            // Towards the price, against what fell due (fees out of both).
+            where: baseDepWhere({ AND: [COLLECTED_DEPOSIT_WHERE, TOWARDS_PRICE_DEPOSIT_WHERE, { paidAt: { gte: start, lt: end } }] }),
             _sum: { amount: true },
           }),
         ),
@@ -1792,6 +1863,7 @@ export class ReportsService {
             where: instWhere({
               dueDate: { gte: startDay, lt: endDay },
               status: { not: InstallmentStatus.CANCELLED },
+              type: { notIn: SURCHARGE_PAYMENT_TYPES },
             }),
             _sum: { amount: true },
           }),
@@ -1847,9 +1919,9 @@ export class ReportsService {
 
     return {
       summary: {
-        totalContractValue: (
-          totalContractAgg._sum.totalAmount ?? zero
-        ).toString(),
+        totalContractValue: new Prisma.Decimal(totalContractValue).toDecimalPlaces(2).toString(),
+        dueToDate: dueToDate.toString(),
+        collectedAgainstDue: collectedAgainstDue.toString(),
         // Money collected (common/finance/collected.ts) — same as
         // totalCollectedVerified; totalCollectedAll is everything recorded.
         totalCollected: (totalCollectedAgg._sum.amount ?? zero).toString(),
@@ -1907,15 +1979,20 @@ export class ReportsService {
 
     // Section 1 — summary KPIs (one row per metric)
     const summaryRows: CsvCell[][] = [
-      ['الفترة', period ?? 'الكل'],
+      ['الفترة', reportPeriodLabel(period, dateFrom, dateTo)],
       ['عدد العقود', data.contracts],
-      ['إجمالي قيمة العقود', Number(data.total).toFixed(2)],
+      ['إجمالي المبيعات (السعر الصافي)', Number(data.total).toFixed(2)],
     ];
 
-    // Section 2 — per-project breakdown
-    const projectHeaders = ['معرّف المشروع', 'عدد العقود', 'إجمالي القيمة'];
+    // Section 2 — per-project breakdown, by name
+    const ids = (data.byProject ?? []).map((p) => p.projectId);
+    const projects = ids.length
+      ? await this.prisma.project.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } })
+      : [];
+    const nameById = new Map(projects.map((p) => [p.id, translatableAr(p.name)]));
+    const projectHeaders = ['المشروع', 'عدد العقود', 'إجمالي المبيعات'];
     const projectRows: CsvCell[][] = (data.byProject ?? []).map((p) => [
-      p.projectId,
+      nameById.get(p.projectId) ?? p.projectId,
       p.count,
       Number(p.total).toFixed(2),
     ]);
@@ -1934,7 +2011,7 @@ export class ReportsService {
    * for the chart/table. Chart degrades gracefully to tables-only on failure.
    */
   async salesBoardXlsx(period?: string, dateFrom?: string, dateTo?: string): Promise<Buffer> {
-    const [data, k] = await Promise.all([this.sales(period, dateFrom, dateTo), this.kpis()]);
+    const data = await this.sales(period, dateFrom, dateTo);
 
     const ids = (data.byProject ?? []).map((p) => p.projectId);
     const projects = ids.length
@@ -1964,12 +2041,10 @@ export class ReportsService {
     addKpiCards(
       cover,
       [
-        { label: 'الفترة', value: period ?? 'الكل' },
+        // The period's figures only (all-time lead counts sat beside them).
+        { label: 'الفترة', value: reportPeriodLabel(period, dateFrom, dateTo) },
         { label: 'عدد العقود', value: data.contracts },
-        { label: 'إجمالي قيمة العقود', value: Number(data.total), currency },
-        { label: 'إجمالي الفرص', value: k.leads.total },
-        { label: 'فرص جديدة', value: k.leads.new },
-        { label: 'زيارات قيد الانتظار', value: k.pendingVisits },
+        { label: 'إجمالي المبيعات (السعر الصافي)', value: Number(data.total), currency },
       ],
       { span: SPAN, perRow: 3 },
     );
@@ -1991,10 +2066,11 @@ export class ReportsService {
   async financialCsv(period?: string, dateFrom?: string, dateTo?: string): Promise<string> {
     const data = await this.financial(period, dateFrom, dateTo);
     const rows: CsvCell[][] = [
-      ['الفترة', period ?? 'الكل'],
+      ['الفترة', reportPeriodLabel(period, dateFrom, dateTo)],
       ['عدد الدفعات', data.deposits],
       ['الدفعات الموثّقة', data.verified],
-      ['إجمالي المبالغ المحصّلة', Number(data.total).toFixed(2)],
+      ['المحصّل من السعر', Number(data.total).toFixed(2)],
+      ['الرسوم والغرامات', Number(data.fees).toFixed(2)],
     ];
     return toCsv(['المؤشر', 'القيمة'], rows);
   }
@@ -2028,11 +2104,12 @@ export class ReportsService {
     addKpiCards(
       cover,
       [
-        { label: 'الفترة', value: period ?? 'الكل' },
+        { label: 'الفترة', value: reportPeriodLabel(period, dateFrom, dateTo) },
         { label: 'عدد الدفعات', value: data.deposits },
         { label: 'الدفعات الموثّقة', value: data.verified },
         { label: 'الدفعات غير الموثّقة', value: unverified },
-        { label: 'إجمالي المبالغ المحصّلة', value: Number(data.total), currency },
+        { label: 'المحصّل من السعر', value: Number(data.total), currency },
+        { label: 'الرسوم والغرامات', value: Number(data.fees), currency },
       ],
       { span: SPAN, perRow: 3 },
     );
@@ -2129,8 +2206,13 @@ export class ReportsService {
 
     // A. Summary — metric key (stable) + Arabic label + value.
     const summaryRows: CsvCell[][] = [
-      ['totalContractValue', 'إجمالي قيمة العقود', s.totalContractValue],
-      ['totalCollectedVerified', 'المحصّل المؤكد', s.totalCollectedVerified],
+      ['totalContractValue', 'قيمة العقود الموقّعة (السعر الصافي)', s.totalContractValue],
+      // Collected as two figures, as on the screen (decided 2026-10-16).
+      ['collectedTowardsPrice', 'المحصّل من السعر', s.collectedTowardsPrice],
+      ['feesCollected', 'الرسوم والغرامات', s.feesCollected],
+      ['dueToDate', 'المستحق حتى اليوم', s.dueToDate],
+      ['collectedAgainstDue', 'المحصّل من المستحق', s.collectedAgainstDue],
+      ['totalCollectedVerified', 'المحصّل المؤكد (الكل)', s.totalCollectedVerified],
       ['totalCollectedAll', 'إجمالي المحصّل المسجل', s.totalCollectedAll],
       ['totalCollectedUnverified', 'المحصّل غير المؤكد', s.totalCollectedUnverified],
       ['totalOutstanding', 'المتبقي للتحصيل', s.totalOutstanding],
@@ -2391,8 +2473,9 @@ export class ReportsService {
     addKpiCards(
       cover,
       [
-        { label: 'إجمالي قيمة العقود', value: Number(s.totalContractValue), currency },
-        { label: 'المحصّل المؤكد', value: Number(s.totalCollectedVerified), currency },
+        { label: 'قيمة العقود الموقّعة', value: Number(s.totalContractValue), currency },
+        { label: 'المحصّل من السعر', value: Number(s.collectedTowardsPrice), currency },
+        { label: 'الرسوم والغرامات', value: Number(s.feesCollected), currency },
         { label: 'المحصّل غير المؤكد', value: Number(s.totalCollectedUnverified), currency },
         { label: 'المتبقي للتحصيل', value: Number(s.totalOutstanding), currency },
         { label: 'المحصّل هذا الشهر', value: Number(s.collectedThisMonth), currency },
@@ -2567,7 +2650,7 @@ export class ReportsService {
     const data = await this.financial(period, dateFrom, dateTo);
     const brand = await this.brand();
     const html = financialReportHtml(
-      { deposits: data.deposits, verified: data.verified, total: Number(data.total), periodLabel: reportPeriodLabel(period, dateFrom, dateTo) },
+      { deposits: data.deposits, verified: data.verified, total: Number(data.total), fees: Number(data.fees), periodLabel: reportPeriodLabel(period, dateFrom, dateTo) },
       brand,
     );
     return this.presentPdf(html, brand, () =>

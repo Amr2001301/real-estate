@@ -85,8 +85,9 @@ function makePrismaMock() {
         captured.reservationCountStatuses.push(where.status);
         return where.status === 'PENDING' ? 4 : where.status === 'APPROVED' ? 2 : 0;
       }),
-      aggregate: jest.fn().mockImplementation(async ({ where }: { where: { status: string } }) => ({
-        _sum: { bookingAmount: where.status === 'PENDING' ? 4000 : 2000 },
+      // Unpaid bookings of active reservations (an AND query): 3,500.
+      aggregate: jest.fn().mockImplementation(async ({ where }: { where: { status?: string; AND?: unknown } }) => ({
+        _sum: { bookingAmount: where.AND ? 3500 : where.status === 'PENDING' ? 4000 : 2000 },
       })),
     },
     // Sales bonus: PENDING=300, APPROVED=200, PAID=500.
@@ -234,8 +235,9 @@ describe('Reports · financial-dashboard summary correctness (F1)', () => {
     expect(body.booking.approvedReservationsBookingAmount).toBe('2000');
     expect(body.booking.bookingCollectedVerified).toBe('250');
     expect(body.booking.bookingCollectedAll).toBe('400');
-    // estimate = (4000 + 2000) − 250 verified collected = 5750
-    expect(body.booking.bookingUncollectedEstimate).toBe('5750');
+    // estimate = the bookings of active reservations not paid yet (it used to
+    // subtract every booking ever collected, converted ones too)
+    expect(body.booking.bookingUncollectedEstimate).toBe('3500');
   });
 
   it('sales bonus: pending + approved are unpaid; paid is separate', () => {

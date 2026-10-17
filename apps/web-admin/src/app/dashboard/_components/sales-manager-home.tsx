@@ -184,8 +184,11 @@ export async function SalesManagerDashboard() {
   const teamSigned             = sum((r) => r.signedContractsCount);
   const teamRealized           = sum((r) => r.realizedValue);
   const teamTargetAmount       = sum((r) => r.targetAmount ?? 0);
+  // Against the targets set: only the sales of reps who have one (a rep with
+  // no target pushed the team past 100%).
+  const teamRealizedOnTarget   = sum((r) => (r.targetAmount ? r.realizedValue : 0));
   const teamAmountPct          =
-    teamTargetAmount > 0 ? Math.round((teamRealized / teamTargetAmount) * 100) : null;
+    teamTargetAmount > 0 ? Math.round((teamRealizedOnTarget / teamTargetAmount) * 100) : null;
   // For funnel
   const teamVisits             = sum((r) => r.visitsCount);
   const teamReservations       = sum((r) => r.reservationsCount);

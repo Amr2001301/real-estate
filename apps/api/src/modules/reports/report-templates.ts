@@ -37,6 +37,9 @@ export interface DashboardReportData {
     totalCollectedVerified: number;
     collectedTowardsPrice?: number;
     overdueTotal: number;
+    overdueTowardsPrice?: number;
+    dueToDate?: number;
+    collectedAgainstDue?: number;
     collectedThisMonth: number;
   };
   cashflowForecast: { next30: number; next3160: number; next6190: number };
@@ -66,15 +69,16 @@ export function dashboardReportHtml(s: DashboardReportData, brand: ReportBrand):
     },
     { label: 'قيمة العقود', value: moneyText(f.totalContractValue, c) },
     {
-      label: 'المحصّل (موثّق)',
-      value: moneyText(f.totalCollectedVerified, c),
-      // Price collected over contract value — fees and cancelled deals left out.
-      hint: `${percentText(f.collectedTowardsPrice ?? f.totalCollectedVerified, f.totalContractValue)} من قيمة العقود`,
+      // The dashboard's figures: collected towards the price, the rate against
+      // what is due by today, overdue without fees.
+      label: 'المحصّل من السعر',
+      value: moneyText(f.collectedTowardsPrice ?? f.totalCollectedVerified, c),
+      hint: `نسبة التحصيل ${percentText(f.collectedAgainstDue ?? 0, f.dueToDate ?? 0)} من المستحق`,
     },
     {
       label: 'المتأخرات',
-      value: moneyText(f.overdueTotal, c),
-      tone: f.overdueTotal > 0 ? 'warn' : 'default',
+      value: moneyText(f.overdueTowardsPrice ?? f.overdueTotal, c),
+      tone: (f.overdueTowardsPrice ?? f.overdueTotal) > 0 ? 'warn' : 'default',
     },
     { label: 'فرص جديدة هذا الشهر', value: countText(k.newLeadsThisMonth) },
   ]);
@@ -220,7 +224,10 @@ export function salesReportHtml(d: SalesReportData, brand: ReportBrand): string 
 export interface FinancialReportData {
   deposits: number;
   verified: number;
+  /** Collected towards the price. */
   total: number;
+  /** Fees & penalties collected (decided 2026-10-16: two figures). */
+  fees?: number;
   periodLabel: string;
 }
 
@@ -235,7 +242,8 @@ export function financialReportHtml(d: FinancialReportData, brand: ReportBrand):
       section(
         'الملخص',
         kpiGrid([
-          { label: 'إجمالي المحصّل', value: moneyText(d.total, c) },
+          { label: 'المحصّل من السعر', value: moneyText(d.total, c) },
+          { label: 'الرسوم والغرامات', value: moneyText(d.fees ?? 0, c) },
           { label: 'عدد الدفعات', value: countText(d.deposits) },
           { label: 'الدفعات الموثّقة', value: countText(d.verified), tone: 'good' },
           {
@@ -468,6 +476,10 @@ export interface FinancialDashboardReportData {
   summary: {
     totalContractValue: Amount;
     totalCollectedVerified: Amount;
+    collectedTowardsPrice: Amount;
+    feesCollected: Amount;
+    dueToDate: Amount;
+    collectedAgainstDue: Amount;
     totalCollectedUnverified: Amount;
     totalOutstanding: Amount;
     collectedThisMonth: Amount;
@@ -519,16 +531,18 @@ export function financialDashboardReportHtml(
         'الملخص التنفيذي',
         kpiGrid([
           {
-            label: 'إجمالي قيمة العقود',
+            label: 'قيمة العقود الموقّعة',
             value: moneyText(n(s.totalContractValue), c),
             hint: `${countText(s.contractCount)} عقد`,
           },
           {
-            label: 'المحصّل المؤكد',
-            value: moneyText(n(s.totalCollectedVerified), c),
-            hint: `${percentText(n(s.totalCollectedVerified), n(s.totalContractValue))} من قيمة العقود`,
+            // As on the screen: towards the price; the rate against what is due.
+            label: 'المحصّل من السعر',
+            value: moneyText(n(s.collectedTowardsPrice), c),
+            hint: `نسبة التحصيل ${percentText(n(s.collectedAgainstDue), n(s.dueToDate))} من المستحق`,
             tone: 'good',
           },
+          { label: 'الرسوم والغرامات', value: moneyText(n(s.feesCollected), c) },
           { label: 'المحصّل غير المؤكد', value: moneyText(n(s.totalCollectedUnverified), c) },
           { label: 'المتبقي للتحصيل', value: moneyText(n(s.totalOutstanding), c) },
           { label: 'المحصّل هذا الشهر', value: moneyText(n(s.collectedThisMonth), c) },

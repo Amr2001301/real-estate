@@ -1237,7 +1237,7 @@ const UI = {
         u5: {
           highlightsTitle: 'أبرز النقاط',
           periodSub: (y: number) => `خلال ${y}`,
-          collectionFromSales: 'التحصيل من المبيعات',
+          feesCollected: 'الرسوم والغرامات المحصّلة',
           peak: 'الذروة',
           countDesc: (y: number) => `عدد العقود خلال ${y}`,
           overall: (pct: string) => `إجمالي ${pct}`,
@@ -5022,10 +5022,10 @@ const UI = {
         centerPct: '٪',
         centerLabel: 'محصّل',
         rows: {
-          contractValue: 'إجمالي قيمة العقود',
-          collected: 'المحصّل المؤكد',
+          contractValue: 'قيمة العقود الموقّعة',
+          collected: 'المحصّل من السعر',
           overdue: 'المتأخر',
-          outstanding: 'المتبقي للتحصيل',
+          outstanding: 'لم يستحق بعد',
         },
       },
       forecast: {
@@ -6518,7 +6518,7 @@ const UI = {
         u5: {
           highlightsTitle: 'Highlights',
           periodSub: (y: number) => `In ${y}`,
-          collectionFromSales: 'Collected of sales',
+          feesCollected: 'Fees & penalties collected',
           peak: 'Peak',
           countDesc: (y: number) => `Contracts in ${y}`,
           overall: (pct: string) => `Overall ${pct}`,
@@ -10302,10 +10302,10 @@ const UI = {
         centerPct: '%',
         centerLabel: 'Collected',
         rows: {
-          contractValue: 'Total Contract Value',
-          collected: 'Verified Collected',
+          contractValue: 'Signed contract value',
+          collected: 'Collected towards price',
           overdue: 'Overdue',
-          outstanding: 'Outstanding',
+          outstanding: 'Not yet due',
         },
       },
       forecast: {

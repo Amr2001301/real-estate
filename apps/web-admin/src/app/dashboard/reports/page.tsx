@@ -8,7 +8,7 @@ import {
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
 import { projectOptions } from '@/lib/options';
-import { compactParts, tx } from '@/lib/format';
+import { compactParts, tx, formatCurrency } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import {
   resolveReportDateRange,
@@ -40,7 +40,10 @@ interface Sales {
 interface Financial {
   deposits: number;
   verified: number;
+  /** Collected towards the price. */
   total: number | string;
+  /** Fees & penalties collected. */
+  fees?: number | string;
 }
 interface SalesTrendPoint {
   month: number;
@@ -150,7 +153,9 @@ export default async function ReportsPage({
   const salesTotal     = Number(salesRes.data?.total ?? 0);
   const contractsCount = salesRes.data?.contracts ?? 0;
   const avgContract    = contractsCount > 0 ? salesTotal / contractsCount : 0;
+  // Collected towards the price, and fees & penalties (two figures).
   const financialTotal = Number(financialRes.data?.total ?? 0);
+  const financialFees  = Number(financialRes.data?.fees ?? 0);
   const depositsCount  = financialRes.data?.deposits ?? 0;
   const verifiedCount  = financialRes.data?.verified ?? 0;
   const trendData      = trendRes.data ?? [];
@@ -374,7 +379,10 @@ export default async function ReportsPage({
               { label: m.insights.bestMonth, value: peak ? `${peak.label} · ${peak.contracts} ${m.salesTrend.contractSuffix}` : null },
               { label: m.insights.bestProject, value: topProject?.name ?? null },
               { label: m.insights.topBroker, value: brokers[0]?.brokerName ?? null },
-              { label: m.u5.collectionFromSales, value: salesTotal > 0 ? `${Math.round((financialTotal / salesTotal) * 100)}%` : null },
+              // Fees & penalties: the second "collected" figure (the old
+              // "collection from sales" divided this month's money by this
+              // month's sales — it could pass 150%).
+              { label: m.u5.feesCollected, value: financialFees > 0 ? formatCurrency(financialFees, currency, locale) : null },
             ].map((h) => (
               <div key={h.label} className="bg-surface px-6 py-5">
                 <dt className="text-[13px] text-slate-500">{h.label}</dt>

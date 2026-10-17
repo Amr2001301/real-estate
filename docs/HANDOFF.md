@@ -264,17 +264,27 @@ Four read-only audits of every money figure (reports, dashboard, exports, the sc
   - Broker portal: the commission locked at reservation is on the net price, and the payout detail lists its adjustments.
   - e2e: `e2e-v2-commissions`.
 - **V3 — one definition per report figure.** Decisions (owner, «موافق»):
-  - **a.** "Sales" and "contract value" are the **net price** (without the instalment markup), as the commission base.
-  - **b.** "Contract value" counts **signed** contracts only.
-  - **c.** The collection rate is money collected **against what is due by today** (booking + rows due ≤ today); early payments don't count.
-  - Also in V3:
-    - Every screen and export shows collected as two figures (towards price, and fees & penalties).
-    - Overdue and outstanding are one definition each.
-    - The trend compares month-to-date with the same days of last month.
-    - Deleted reservations and deposits are left out.
-    - Exports carry the right period label.
+  - **a.** "Sales" and "contract value" are the **net price**, without the instalment markup, as the commission base: `NET_PRICE_SQL` and `netContractValue` in `common/finance/commission-basis.ts`. This covers sales, the sales trend, admin-summary, top projects, financial-dashboard, broker sales and sales-target achievement.
+  - **b.** "Contract value" counts **signed** contracts only; KPI contract counts are signed too.
+  - **c.** The collection rate is `collectedAgainstDue / dueToDate`: collected against what is due by today (`againstDueDepositWhere`). Early payments don't count. Both figures are on admin-summary and financial-dashboard; the dashboard, financial page and PDFs use them.
+  - Collected is two figures everywhere:
+    - `/reports/financial` `total` is towards the price, with a new `fees` field.
+    - The financial-dashboard and admin-summary exports show towards price and fees.
+    - The "collection from sales" ratio is gone.
+  - Overdue, remaining, aging, due this month and the cash-flow trend are towards the price (fee rows out). "Due this month" counts paid rows too. The distribution shows "not yet due" = outstanding − overdue.
+  - Dashboard: the collected trend compares with the same days of last month; the reports comparison caps a running period to the days elapsed.
+  - Smaller fixes:
+    - Deleted reservations and deposits are left out of the reports and the activity feed.
+    - "Expiring soon" includes APPROVED reservations.
+    - The booking uncollected estimate is the unpaid bookings of active reservations.
+    - Export period labels are correct, and the sales CSV names projects.
+    - Team target % counts only reps that have a target.
+    - Top projects include archived ones.
+  - e2e: `e2e-v3-report-figures`.
 
 Left for the owner, not in V1–V3:
+- The default report month and the sales home's month are UTC on the web, so the first 2–3 hours of a month in Cairo still show the previous month.
+- The leaderboard share % is of the top 10 brokers.
 - Early settlement that waives unearned markup goes through a price change, so it lowers the commission base and counts as a discount.
 - A reschedule leaves the final (balloon) payment's date as it was.
 

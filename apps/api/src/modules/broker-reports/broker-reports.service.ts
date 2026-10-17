@@ -41,6 +41,7 @@ import {
 } from '../../common/utils/xlsx';
 import { renderBarChartPng } from '../../common/utils/xlsx-chart';
 import { EARNED_COMMISSION_WHERE, earnedCommissionNet, LIVE_CONTRACT_WHERE } from '../installments/live-contract';
+import { netContractValue } from '../../common/finance/commission-basis';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { companyTimeZone } from '../../common/time/company-timezone';
 import { reportRange } from '../../common/time/report-range';
@@ -62,7 +63,7 @@ const TOP_METRIC_LABEL: Record<TopMetric, string> = {
  *   BrokerPayout (created/approved/total counts)        → createdAt
  *   BrokerPayout (paid totals + counts)                 → paidAt
  *
- * salesGross is computed as the sum of Contract.totalAmount for SIGNED broker
+ * salesGross is computed as the net price (total less markup) of SIGNED broker
  * contracts only. Unsigned contracts don't represent realised sales, and
  * including them would inflate sales numbers for contracts that may never
  * close (admin can revoke or cancel before signing).
@@ -1234,12 +1235,9 @@ export class BrokerReportsService {
         return { contractsCreated: created, contractsSigned: signed };
       },
       salesGross: async () => {
-        // Signed contracts only — see service-level comment for rationale.
-        const agg = await this.prisma.contract.aggregate({
-          _sum: { totalAmount: true },
-          where: conSignedW,
-        });
-        return agg._sum.totalAmount ?? new Prisma.Decimal(0);
+        // Signed contracts only — see service-level comment for rationale —
+        // at their net price, as the project breakdown (decided 2026-10-17).
+        return new Prisma.Decimal(await netContractValue(this.prisma, conSignedW)).toDecimalPlaces(2);
       },
       commissionStats: async () => {
         const [pending, approved, rejected, cancelled] = await Promise.all([

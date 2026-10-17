@@ -56,6 +56,8 @@ interface AdminSummary {
     feesCollected?:           number;
     /** Booking + payment rows due by today, towards the price (U5). */
     dueToDate?:               number;
+    /** Collected against what is due by today — the collection rate's numerator. */
+    collectedAgainstDue?:     number;
     overdueTotal:             number;
     pendingBonus:             number;
     pendingBrokerPayouts:     number;
@@ -188,8 +190,11 @@ export default async function DashboardHome() {
   const overdue   = fin?.overdueTowardsPrice ?? fin?.overdueTotal ?? 0;
   // Collection rate against what is due by today, not the whole contract
   // value (review item 2): most of the value is not due yet.
+  // Decided 2026-10-17: the money collected against what is due — a payment
+  // ahead of its date does not lift it (it hid arrears behind a 100% cap).
   const due       = fin?.dueToDate;
-  const rate      = due !== undefined && due > 0 ? Math.min(100, Math.round((collected / due) * 100)) : null;
+  const againstDue = fin?.collectedAgainstDue ?? collected;
+  const rate      = due !== undefined && due > 0 ? Math.min(100, Math.round((againstDue / due) * 100)) : null;
   const rateNote  =
     rate === null ? m.u5.rateNothingDue : rate >= 90 ? m.u5.rateHealthy : rate >= 70 ? m.u5.rateWatch : m.u5.rateLow;
   const collectionDelta = pctDelta(fin?.collectedThisMonth ?? 0, fin?.prevMonthCollected ?? 0);
@@ -212,7 +217,8 @@ export default async function DashboardHome() {
   const funnel = summary?.funnel;
   const topProjects = summary?.topProjects ?? [];
   const forecast = summary?.cashflowForecast;
-  const forecastTotal = forecast ? forecast.next30 + forecast.next3160 + forecast.next6190 + (fin?.overdueTotal ?? 0) : 0;
+  // Overdue is one figure on the page: towards the price, fees out.
+  const forecastTotal = forecast ? forecast.next30 + forecast.next3160 + forecast.next6190 + overdue : 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -404,7 +410,7 @@ export default async function DashboardHome() {
             { label: m.cashFlow.slot30, value: forecast.next30 },
             { label: m.cashFlow.slot60, value: forecast.next3160 },
             { label: m.cashFlow.slot90, value: forecast.next6190 },
-            { label: m.cashFlow.slotOverdue, value: fin?.overdueTotal ?? 0, overdue: true },
+            { label: m.cashFlow.slotOverdue, value: overdue, overdue: true },
           ]}
         />
       )}

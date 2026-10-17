@@ -17,6 +17,9 @@ function prismaMock() {
       count: jest.fn().mockResolvedValue(3),
       aggregate: jest.fn().mockResolvedValue({ _sum: { totalAmount: 6_100_000 } }),
     },
+    reservation: {
+      aggregate: jest.fn().mockResolvedValue({ _sum: { snapshotFinancedAmount: null, snapshotRemainingAmount: null } }),
+    },
     $queryRaw: jest.fn().mockResolvedValue([{ projectId: 'p1', total: 6_100_000, count: 3 }]),
     project: {
       findMany: jest
