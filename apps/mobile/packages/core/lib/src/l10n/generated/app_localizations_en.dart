@@ -862,6 +862,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileSaved => 'Profile updated';
 
   @override
+  String get phoneChangeTitle => 'Confirm your new number';
+
+  @override
+  String get phoneChangeConfirm => 'Confirm';
+
+  @override
+  String get phoneChanged => 'Phone number changed';
+
+  @override
+  String get profileDeleteAccount => 'Delete my account';
+
+  @override
+  String get profileDeleteAccountTitle => 'Delete your account?';
+
+  @override
+  String get profileDeleteAccountBody => 'Your name, phone, e-mail and photo are removed and you are signed out. Your contract and payment records stay with the company. This cannot be undone.';
+
+  @override
+  String get profileDeleteAccountConfirm => 'Delete';
+
+  @override
   String get fieldLanguage => 'Language';
 
   @override
@@ -1070,6 +1091,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myPropertySignedDate => 'Signed on';
 
   @override
+  String get myPropertyHandedOverDate => 'Handed over on';
+
+  @override
+  String get myPropertyNotHandedOver => 'Not handed over yet — maintenance requests open at handover';
+
+  @override
   String get myPropertyInstallmentPlan => 'Installment plan';
 
   @override
@@ -1214,6 +1241,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get installmentStatusOverdue => 'Overdue';
+
+  @override
+  String get installmentStatusCancelled => 'Cancelled (rescheduled)';
 
   @override
   String installmentDueOn(String date) {

@@ -72,6 +72,7 @@ export default async function AdminBrokerPayoutDetailPage({
   if (r.error || !r.data) notFound();
   const payout = r.data;
   const commissions = payout.commissions ?? [];
+  const adjustments = payout.adjustments ?? [];
 
   const isDraft = payout.status === 'DRAFT';
   const isApproved = payout.status === 'APPROVED';
@@ -278,6 +279,53 @@ export default async function AdminBrokerPayoutDetailPage({
           </table>
         </div>
       </Card>
+
+      {adjustments.length > 0 && (
+        <Card className="overflow-hidden">
+          <div className="px-5 pt-5 pb-3">
+            <h2 className="text-sm font-semibold text-slate-900">{m.sectionAdjustments} ({adjustments.length})</h2>
+            <p className="text-2xs text-slate-500 mt-1">{m.adjustmentsHint}</p>
+          </div>
+          <div className="overflow-x-auto scrollbar-thin">
+            <table className="w-full text-sm">
+              <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="text-start font-semibold py-3 ps-5 pe-4">{m.colCommission}</th>
+                  <th className="text-start font-semibold py-3 px-4">{m.colAdjustment}</th>
+                  <th className="text-start font-semibold py-3 px-4">{m.colAmount}</th>
+                  <th className="text-start font-semibold py-3 ps-4 pe-5">{m.colReason}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {adjustments.map((a) => (
+                  <tr key={a.id} className="border-t border-hairline align-top">
+                    <td className="py-3 ps-5 pe-4">
+                      <Link
+                        href={`/dashboard/broker-commissions/${a.commission.id}` as never}
+                        className="font-mono text-xs text-slate-900 hover:text-brand-700"
+                        dir="ltr"
+                      >
+                        {a.commission.commissionNumber}
+                      </Link>
+                      <p className="font-mono text-2xs text-slate-500 mt-0.5" dir="ltr">
+                        {a.commission.contract.contractNumber ?? '—'} · {formatDate(a.createdAt, locale)}
+                      </p>
+                    </td>
+                    <td className="py-3 px-4">{a.kind === 'TOP_UP' ? m.adjustmentTopUp : m.adjustmentClawback}</td>
+                    <td
+                      className={`py-3 px-4 font-semibold tabular-nums ${a.kind === 'TOP_UP' ? 'text-emerald-700' : 'text-rose-700'}`}
+                    >
+                      {a.kind === 'TOP_UP' ? '+' : '−'}
+                      {formatCurrency(a.amount, currency, locale)}
+                    </td>
+                    <td className="py-3 ps-4 pe-5 text-xs text-slate-600">{a.reason}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
 
       {(isDraft || isApproved || isProcessing) && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

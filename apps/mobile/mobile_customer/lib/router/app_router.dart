@@ -95,6 +95,8 @@ import '../features/notifications/domain/usecases/notification_use_cases.dart';
 import '../features/notifications/presentation/notifications_cubit.dart';
 import '../features/notifications/presentation/notifications_screen.dart';
 import '../features/profile/domain/repositories/profile_repository.dart';
+import '../features/profile/domain/usecases/change_my_phone.dart';
+import '../features/profile/domain/usecases/delete_my_account.dart';
 import '../features/profile/domain/usecases/get_my_profile.dart';
 import '../features/profile/domain/usecases/update_my_profile.dart';
 import '../features/profile/presentation/profile_cubit.dart';
@@ -398,8 +400,13 @@ GoRouter createCustomerRouter(
         builder: (context, _) => BlocProvider(
           create: (ctx) {
             final repo = ctx.read<ProfileRepository>();
-            return ProfileCubit(GetMyProfile(repo), UpdateMyProfile(repo))
-              ..load();
+            return ProfileCubit(
+              GetMyProfile(repo),
+              UpdateMyProfile(repo),
+              RequestPhoneChange(repo),
+              ConfirmPhoneChange(repo),
+              DeleteMyAccount(repo),
+            )..load();
           },
           child: const ProfileScreen(),
         ),

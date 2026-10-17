@@ -2,7 +2,8 @@
 
 /// Response from `POST /me/maintenance-requests/:id/documents/presign`.
 /// `uploadUrl` is a short-lived signed PUT URL — treat as a secret: never log
-/// it. `publicUrl` is what we register the document with afterwards.
+/// it. `key` is what we register the document with afterwards (private
+/// bucket — `publicUrl` is empty there).
 class PresignResponseDto {
   const PresignResponseDto({
     required this.uploadUrl,

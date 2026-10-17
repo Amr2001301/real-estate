@@ -854,6 +854,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get profileSaved => 'تم تحديث الملف';
 
   @override
+  String get phoneChangeTitle => 'تأكيد الرقم الجديد';
+
+  @override
+  String get phoneChangeConfirm => 'تأكيد';
+
+  @override
+  String get phoneChanged => 'تم تغيير رقم الجوال';
+
+  @override
+  String get profileDeleteAccount => 'حذف حسابي';
+
+  @override
+  String get profileDeleteAccountTitle => 'حذف حسابك؟';
+
+  @override
+  String get profileDeleteAccountBody => 'تُحذف بياناتك الشخصية (الاسم والهاتف والبريد والصورة) ويتم تسجيل خروجك، وتبقى سجلات العقود والمدفوعات لدى الشركة. لا يمكن التراجع عن ذلك.';
+
+  @override
+  String get profileDeleteAccountConfirm => 'حذف';
+
+  @override
   String get fieldLanguage => 'اللغة';
 
   @override
@@ -1060,6 +1081,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get myPropertySignedDate => 'تاريخ التوقيع';
 
   @override
+  String get myPropertyHandedOverDate => 'تاريخ التسليم';
+
+  @override
+  String get myPropertyNotHandedOver => 'لم تُسلَّم بعد — تُفتح طلبات الصيانة عند التسليم';
+
+  @override
   String get myPropertyInstallmentPlan => 'خطة الأقساط';
 
   @override
@@ -1201,6 +1228,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get installmentStatusOverdue => 'متأخر';
+
+  @override
+  String get installmentStatusCancelled => 'ملغي (أُعيدت الجدولة)';
 
   @override
   String installmentDueOn(String date) {

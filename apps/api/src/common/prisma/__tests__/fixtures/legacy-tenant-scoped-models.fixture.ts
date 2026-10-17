@@ -23,6 +23,7 @@ export const TENANT_SCOPED_MODELS_LEGACY = new Set([
   'contractcancellation', // Step D1 (09-reversal-design.md §4.2)
   'refund', // Step D1 (09-reversal-design.md §4.2)
   'contractamendment', // contract transfer (تنازل) and unit swap (تبديل)
+  'brokercommissionadjustment', // top-up / clawback of a paid commission after a price change
   // Plan templates
   'installmentplantemplate',
   // Bonus / targets
@@ -37,6 +38,8 @@ export const TENANT_SCOPED_MODELS_LEGACY = new Set([
   'brokercommission', 'brokerpayout', 'brokeractivitylog',
   // Platform
   'setting', 'document',
+  'presignedupload', // upload slot of a scoped presign (maintenance photos)
+  'unithandover', // the unit handed over to the buyer (warranty + maintenance start)
   // Chat
   'chatsession', 'chatmessage', 'chatfeedback',
   // Option B part 2 (docs/audit/13-user-tenancy.md): TENANT_CONTROLLED → TENANT_OWNED

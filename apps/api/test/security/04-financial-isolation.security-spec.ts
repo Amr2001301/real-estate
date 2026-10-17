@@ -101,6 +101,14 @@ describe('SEC — Financial aggregate isolation (STEP 4)', () => {
     });
     markerDepositBId = depB.id;
 
+    // A sale is a signed contract (round-4 decision 2): sign both companies'
+    // contracts so the sales report has something to isolate. The fixture
+    // teardown removes them.
+    await testApp.rawPrisma.contract.updateMany({
+      where: { companyId: { in: [fx.companies.aId, fx.companies.bId] }, signedAt: null },
+      data: { signedAt: new Date() },
+    });
+
     // ── Pre-compute expected totals via rawPrisma (no middleware) ──────────
     const [coAAgg, platformAgg] = await Promise.all([
       testApp.rawPrisma.deposit.aggregate({
@@ -200,9 +208,11 @@ describe('SEC — Financial aggregate isolation (STEP 4)', () => {
   // (explicit companyId = getRequiredCompanyId()).
 
   it('FI-3: sales() contract count equals Co-A contract count (raw SQL scoped)', async () => {
+    // Sales = signed, live contracts.
     const coAContracts = await testApp.rawPrisma.contract.count({
-      where: { companyId: fx.companies.aId },
+      where: { companyId: fx.companies.aId, signedAt: { not: null }, status: { not: 'CANCELLED' }, deletedAt: null },
     });
+    expect(coAContracts).toBeGreaterThan(0);
     const platformContracts = await testApp.rawPrisma.contract.count();
 
     const res = await request(testApp.app.getHttpServer())
@@ -220,7 +230,7 @@ describe('SEC — Financial aggregate isolation (STEP 4)', () => {
 
   it('FI-3b: sales() total equals Co-A contract total (raw SQL scoped)', async () => {
     const coAAgg = await testApp.rawPrisma.contract.aggregate({
-      where: { companyId: fx.companies.aId },
+      where: { companyId: fx.companies.aId, signedAt: { not: null }, status: { not: 'CANCELLED' }, deletedAt: null },
       _sum: { totalAmount: true },
     });
     const platformAgg = await testApp.rawPrisma.contract.aggregate({

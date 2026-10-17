@@ -41,6 +41,9 @@ import {
 } from '../../common/utils/xlsx';
 import { renderBarChartPng } from '../../common/utils/xlsx-chart';
 import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
+import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
+import { companyTimeZone } from '../../common/time/company-timezone';
+import { reportRange } from '../../common/time/report-range';
 
 const TOP_METRIC_LABEL: Record<TopMetric, string> = {
   leads: 'الفرص',
@@ -75,6 +78,59 @@ function brokerPeriodLabel(from?: string, to?: string): string {
 /** Narrows a broker-detail export (see detailForExport). */
 export interface DetailExportScope {
   onlyAgent?: string;
+  /** The broker portal: no company-wide counts; see portalDetail(). */
+  portal?: boolean;
+  /** The viewer may not see commission or payout amounts. */
+  withoutMoney?: boolean;
+}
+
+const COMPANY_WIDE_KEYS = ['totalBrokers', 'activeBrokers', 'totalBrokerAgents'] as const;
+const SUMMARY_PAYOUT_KEYS = ['payoutsDraft', 'payoutsApproved', 'payoutsProcessing', 'payoutsPaid', 'payoutsTotalNet'] as const;
+const SUMMARY_MONEY_KEYS = ['commissionsGross', 'commissionsNet', 'commissionsPendingNet', 'payoutsTotalNet'] as const;
+const ROW_MONEY_KEYS = ['commissionGross', 'commissionNet', 'payoutNet'] as const;
+
+function nulled<T extends object>(row: T, keys: readonly string[]): T {
+  const copy = { ...row } as Record<string, unknown>;
+  for (const k of keys) if (k in copy) copy[k] = null;
+  return copy as T;
+}
+
+/**
+ * What the broker portal may show of brokerDetail():
+ *  - never the company's own counts (how many brokers it works with);
+ *  - an agent who is not a firm manager (onlyAgent) sees their own rows —
+ *    and no payout figures, which are the firm's, not the agent's;
+ *  - without canViewCommissions (withoutMoney), no commission or payout
+ *    amounts anywhere, nor the firm's commission terms.
+ */
+export function portalDetail<D extends Awaited<ReturnType<BrokerReportsService['brokerDetail']>>>(
+  detail: D,
+  scope: DetailExportScope,
+): D {
+  const hidePayouts = scope.onlyAgent !== undefined || !!scope.withoutMoney;
+  const summaryKeys = [
+    ...COMPANY_WIDE_KEYS,
+    ...(hidePayouts ? SUMMARY_PAYOUT_KEYS : []),
+    ...(scope.withoutMoney ? SUMMARY_MONEY_KEYS : []),
+  ];
+  const rowKeys = scope.withoutMoney ? ROW_MONEY_KEYS : hidePayouts ? (['payoutNet'] as const) : [];
+  return {
+    ...detail,
+    broker: scope.withoutMoney ? nulled(detail.broker, ['defaultCommissionPct', 'commissionModel']) : detail.broker,
+    summary: nulled(detail.summary, summaryKeys),
+    monthlyTrend: detail.monthlyTrend.map((m) =>
+      nulled(m, [...(hidePayouts ? ['payoutsNet'] : []), ...(scope.withoutMoney ? ['commissionsNet'] : [])]),
+    ),
+    projectBreakdown: detail.projectBreakdown.map((p) => nulled(p, rowKeys)),
+    agentBreakdown: detail.agentBreakdown
+      .filter((a) => scope.onlyAgent === undefined || a.brokerAgentId === scope.onlyAgent)
+      .map((a) => nulled(a, rowKeys)),
+    recent: {
+      ...detail.recent,
+      commissions: scope.withoutMoney ? [] : detail.recent.commissions,
+      payouts: hidePayouts ? [] : detail.recent.payouts,
+    },
+  };
 }
 
 @Injectable()
@@ -89,7 +145,7 @@ export class BrokerReportsService {
   // ── Public endpoints ────────────────────────────────────────────────────
 
   async summary(query: BrokerReportsSummaryQueryDto) {
-    const range = this.parseRange(query.from, query.to);
+    const range = await this.parseRange(query.from, query.to);
 
     const brokerFilter: Prisma.BrokerWhereInput = {};
     const counts = this.aggregateCommonCounts({
@@ -150,7 +206,7 @@ export class BrokerReportsService {
   }
 
   async topBrokers(query: TopBrokersQueryDto) {
-    const range = this.parseRange(query.from, query.to);
+    const range = await this.parseRange(query.from, query.to);
     const metric: TopMetric = query.metric ?? 'salesGross';
     const limit = query.limit ?? 10;
 
@@ -267,7 +323,7 @@ export class BrokerReportsService {
     });
     if (!broker) throw new NotFoundException('Broker not found');
 
-    const range = this.parseRange(query.from, query.to);
+    const range = await this.parseRange(query.from, query.to);
     const [summary, monthlyTrend, projectBreakdown, agentBreakdown, recent] =
       await Promise.all([
         this.summary({
@@ -277,14 +333,18 @@ export class BrokerReportsService {
           from: query.from,
           to: query.to,
         }),
+        // One agent's view (brokerAgentId) narrows every section to that
+        // agent's own deals, not just the summary.
         this.monthlyTrend({
           brokerId,
+          brokerAgentId: query.brokerAgentId,
           projectId: query.projectId,
           from: query.from,
           to: query.to,
         }),
         this.projectBreakdownForBroker({
           brokerId,
+          brokerAgentId: query.brokerAgentId,
           range,
         }),
         this.agents({
@@ -295,6 +355,7 @@ export class BrokerReportsService {
         }),
         this.recent({
           brokerId,
+          brokerAgentId: query.brokerAgentId,
           range,
         }),
       ]);
@@ -310,7 +371,7 @@ export class BrokerReportsService {
   }
 
   async agents(query: AgentsReportQueryDto) {
-    const range = this.parseRange(query.from, query.to);
+    const range = await this.parseRange(query.from, query.to);
 
     // Find broker agent userIds within the broker (if filtered).
     const agentRows = await this.prisma.brokerUser.findMany({
@@ -365,8 +426,8 @@ export class BrokerReportsService {
     return { data: rows };
   }
 
-  async projects(query: ProjectsReportQueryDto) {
-    const range = this.parseRange(query.from, query.to);
+  async projects(query: ProjectsReportQueryDto & { brokerAgentId?: string }) {
+    const range = await this.parseRange(query.from, query.to);
 
     // Project breakdown built from BrokerCommission rows because they carry
     // projectId directly. Contracts join via unit→building→phase→project,
@@ -374,7 +435,7 @@ export class BrokerReportsService {
     // counting distinct contractIds within the commission window per project.
     const commissions = await this.prisma.brokerCommission.findMany({
       where: {
-        ...this.commissionWhere({ brokerId: query.brokerId, range }),
+        ...this.commissionWhere({ brokerId: query.brokerId, brokerAgentId: query.brokerAgentId, range }),
         status: { notIn: [BrokerCommissionStatus.CANCELLED, BrokerCommissionStatus.REJECTED] },
       },
       select: {
@@ -467,6 +528,7 @@ export class BrokerReportsService {
    */
   async monthlyTrend(query: {
     brokerId?: string;
+    brokerAgentId?: string;
     projectId?: string;
     from?: string;
     to?: string;
@@ -499,6 +561,7 @@ export class BrokerReportsService {
         const range = { gte: start, lt: end };
         const c = this.aggregateCommonCounts({
           brokerId: query.brokerId,
+          brokerAgentId: query.brokerAgentId,
           projectId: query.projectId,
           range: { from: start, to: end, inclusive: false },
         });
@@ -511,6 +574,7 @@ export class BrokerReportsService {
             where: {
               ...this.commissionWhere({
                 brokerId: query.brokerId,
+                brokerAgentId: query.brokerAgentId,
                 projectId: query.projectId,
                 range: { from: start, to: end, inclusive: false },
               }),
@@ -732,6 +796,7 @@ export class BrokerReportsService {
    */
   private async detailForExport(brokerId: string, query: BrokerDetailReportQueryDto, opts: DetailExportScope) {
     const detail = await this.brokerDetail(brokerId, query);
+    if (opts.portal) return portalDetail(detail, opts);
     if (opts.onlyAgent !== undefined) {
       detail.agentBreakdown = detail.agentBreakdown.filter((a) => a.brokerAgentId === opts.onlyAgent);
     }
@@ -988,12 +1053,11 @@ export class BrokerReportsService {
 
   // ── Internal helpers ────────────────────────────────────────────────────
 
-  private parseRange(from?: string, to?: string) {
-    return {
-      from: from ? new Date(from) : undefined,
-      to: to ? new Date(to) : undefined,
-      inclusive: true,
-    };
+  /** A date-only `to` covers that whole day in the company's time zone (see reportRange). */
+  private async parseRange(from?: string, to?: string) {
+    if (!from && !to) return { from: undefined, to: undefined, inclusive: false };
+    const r = reportRange(from, to, await companyTimeZone(this.prisma, getRequiredCompanyId()));
+    return { from: r.gte, to: r.lt, inclusive: false };
   }
 
   private dateRange(rangeFn: 'gte' | 'gt' = 'gte', r: Range) {
@@ -1264,19 +1328,27 @@ export class BrokerReportsService {
     };
   }
 
-  private async projectBreakdownForBroker(args: { brokerId: string; range: Range }) {
+  private async projectBreakdownForBroker(args: { brokerId: string; brokerAgentId?: string; range: Range }) {
     const projectsRes = await this.projects({
       brokerId: args.brokerId,
+      brokerAgentId: args.brokerAgentId,
       from: args.range.from?.toISOString(),
       to: args.range.to?.toISOString(),
     });
     return projectsRes.data;
   }
 
-  private async recent(args: { brokerId: string; range: Range }) {
+  private async recent(args: { brokerId: string; brokerAgentId?: string; range: Range }) {
     const dateRange = this.dateRange('gte', args.range);
     const where = (extra: object) => ({
       brokerId: args.brokerId,
+      ...(args.brokerAgentId ? { brokerAgentId: args.brokerAgentId } : {}),
+      ...extra,
+    });
+    // Payouts are the firm's: none in one agent's view.
+    const payoutWhere = (extra: object) => ({
+      brokerId: args.brokerId,
+      ...(args.brokerAgentId ? { id: { in: [] as string[] } } : {}),
       ...extra,
     });
 
@@ -1334,7 +1406,7 @@ export class BrokerReportsService {
         },
       }),
       this.prisma.brokerPayout.findMany({
-        where: where(dateRange ? { createdAt: dateRange } : {}),
+        where: payoutWhere(dateRange ? { createdAt: dateRange } : {}),
         orderBy: { createdAt: 'desc' },
         take: 10,
         select: {

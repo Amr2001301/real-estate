@@ -17,7 +17,10 @@ import {
   RejectBrokerCommissionDto,
 } from './dto/broker-commission.dto';
 import { reportFailure } from '../../common/observability/report-failure';
-import { CONTRACT_CANCELLED_MESSAGE, isDeadContract } from '../installments/live-contract';
+import { isUniqueConflictOn } from '../../common/utils/contract-number';
+import { commissionBasis, MARKUP_SNAPSHOT_SELECT } from '../../common/finance/commission-basis';
+import { CONTRACT_CANCELLED_MESSAGE, isPayableDeal } from '../installments/live-contract';
+import { liveProjectGrant } from '../broker-access/live-grant';
 
 const COMMISSION_INCLUDE = {
   broker: {
@@ -113,6 +116,7 @@ export class BrokerCommissionsService {
       where: { id: contractId },
       select: {
         id: true,
+        companyId: true,
         contractNumber: true,
         signedAt: true,
         totalAmount: true,
@@ -132,8 +136,10 @@ export class BrokerCommissionsService {
             id: true,
             reservationNumber: true,
             brokerId: true,
+            createdAt: true,
             commissionLockedPct: true,
             commissionLockedAmount: true,
+            ...MARKUP_SNAPSHOT_SELECT,
             lead: { select: { id: true, fullName: true } },
           },
         },
@@ -153,14 +159,22 @@ export class BrokerCommissionsService {
     if (!contract.brokerId) {
       return { status: 'skipped', reason: 'contract is not broker-attributed' };
     }
-    // Commission is earned by a broker working with the company: a contract
-    // signed after the broker was suspended or terminated earns nothing new.
+    // A broker suspended or terminated by the time of signing still earns the
+    // commission of a sale reserved while working with the company (decided
+    // 2026-10-16). Otherwise it is held: an error, so the contract shows a
+    // failed sign follow-up, and it is created when the broker is reactivated.
     const brokerNow = await this.prisma.broker.findUnique({
       where: { id: contract.brokerId },
-      select: { status: true },
+      select: { status: true, suspendedAt: true },
     });
     if (brokerNow?.status === 'SUSPENDED' || brokerNow?.status === 'TERMINATED') {
-      return { status: 'skipped', reason: `broker is ${brokerNow.status}` };
+      const reservedAt = contract.reservation?.createdAt;
+      const reservedWhileActive = !!reservedAt && !!brokerNow.suspendedAt && reservedAt < brokerNow.suspendedAt;
+      if (!reservedWhileActive) {
+        throw new ConflictException(
+          `الوسيط موقوف أو منتهٍ وكان كذلك عند الحجز — العمولة معلّقة حتى إعادة تفعيله (broker is ${brokerNow.status})`,
+        );
+      }
     }
     if (!contract.signedAt) {
       return { status: 'skipped', reason: 'contract is not signed' };
@@ -177,7 +191,8 @@ export class BrokerCommissionsService {
 
     let lockedPct = contract.reservation.commissionLockedPct;
     let lockedAmount = contract.reservation.commissionLockedAmount;
-    const basisAmount = contract.totalAmount;
+    // The sale price after discount, without the instalment markup.
+    const basisAmount = commissionBasis(contract.totalAmount, contract.reservation);
     const projectId = contract.unit.building.phase.projectId;
 
     // When the reservation was created through the admin CRM (not the broker
@@ -192,7 +207,8 @@ export class BrokerCommissionsService {
           select: { defaultCommissionPct: true, commissionModel: true },
         }),
         this.prisma.brokerProjectAccess.findFirst({
-          where: { brokerId: contract.brokerId!, projectId, active: true },
+          // The grant in force when the sale was reserved.
+          where: { brokerId: contract.brokerId!, projectId, ...liveProjectGrant(contract.reservation?.createdAt) },
           select: { commissionPct: true, fixedAmountPerUnit: true },
         }),
       ]);
@@ -210,8 +226,8 @@ export class BrokerCommissionsService {
     // snapshot.totalPayable at reservation time, which can differ from
     // contract.totalAmount if the installment plan changed or the contract was
     // created with a different total. We always recompute from the locked RATE
-    // against the final signed contract amount so that commissionNet tracks
-    // salesGross at the correct percentage. For FIXED_PER_UNIT (lockedPct is
+    // against the signed contract's price (basisAmount: after discount, without
+    // the instalment markup). For FIXED_PER_UNIT (lockedPct is
     // null), we use the locked fixed amount since it is not percentage-based.
     let grossAmount: Prisma.Decimal;
     if (lockedPct !== null && lockedPct !== undefined) {
@@ -234,10 +250,8 @@ export class BrokerCommissionsService {
     const withholdingAmount = new Prisma.Decimal(0);
     const netAmount = grossAmount.sub(taxAmount).sub(withholdingAmount);
 
-    const commissionNumber = await this.nextCommissionNumber();
-
-    try {
-      const commission = await this.prisma.$transaction(async (tx) => {
+    const write = (commissionNumber: string) =>
+      this.prisma.$transaction(async (tx) => {
         const created = await tx.brokerCommission.create({
           data: {
             commissionNumber,
@@ -282,6 +296,20 @@ export class BrokerCommissionsService {
         return created;
       });
 
+    try {
+      // Two commissions materialized at the same moment draw the same next
+      // number; the loser of the unique index retries with a fresh one.
+      let commission!: Awaited<ReturnType<typeof write>>;
+      for (let attempt = 0; ; attempt++) {
+        try {
+          commission = await write(await this.nextCommissionNumber(contract.companyId));
+          break;
+        } catch (e) {
+          if (!isUniqueConflictOn(e, 'commissionNumber') || attempt >= 2) throw e;
+        }
+      }
+      const commissionNumber = commission.commissionNumber;
+
       // P4 — safe payload: reference + commissionId + contractNumber only.
       // Recipients are filtered to canViewCommissions broker users, so the
       // amounts they're authorised to see are surfaced in the dashboard,
@@ -298,10 +326,7 @@ export class BrokerCommissionsService {
         commissionNumber,
       };
     } catch (e) {
-      if (
-        e instanceof Prisma.PrismaClientKnownRequestError &&
-        e.code === 'P2002'
-      ) {
+      if (isUniqueConflictOn(e, 'contractId')) {
         // Race: another path materialized the same contract in parallel.
         const existing = await this.prisma.brokerCommission.findUnique({
           where: { contractId },
@@ -379,12 +404,13 @@ export class BrokerCommissionsService {
         'Cannot approve a cancelled commission; create a new contract or re-materialize',
       );
     }
-    // A commission kept (RETAIN / MANUAL) on a cancelled deal is not approved.
+    // On a cancelled deal only a commission kept with RETAIN is approved
+    // (MANUAL waits for the admin's own decision).
     const parent = await this.prisma.brokerCommission.findUnique({
       where: { id },
-      select: { contract: { select: { status: true, deletedAt: true } } },
+      select: { retainedOnCancellation: true, contract: { select: { status: true, deletedAt: true } } },
     });
-    if (isDeadContract(parent?.contract)) throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
+    if (parent && !isPayableDeal(parent)) throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
     const updated = await this.prisma.brokerCommission.update({
       where: { id },
       data: {
@@ -543,13 +569,14 @@ export class BrokerCommissionsService {
 
   /**
    * Max-based generator so deleted rows don't cause duplicate numbers.
-   * Format: COM-YYYY-NNNN.
+   * Format: COM-YYYY-NNNN, numbered per company
+   * (@@unique([companyId, commissionNumber])). Callers retry on a clash.
    */
-  private async nextCommissionNumber(): Promise<string> {
+  private async nextCommissionNumber(companyId: string | null): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = `COM-${year}-`;
     const rows = await this.prisma.brokerCommission.findMany({
-      where: { commissionNumber: { startsWith: prefix } },
+      where: { companyId, commissionNumber: { startsWith: prefix } },
       select: { commissionNumber: true },
     });
     let maxSeq = 0;

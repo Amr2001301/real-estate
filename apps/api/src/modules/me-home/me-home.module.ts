@@ -1,9 +1,14 @@
 import { Controller, Get, Injectable, Module } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { InstallmentStatus, MaintenanceReviewStatus, MaintenanceStatus, UserRole } from '@prisma/client';
+import { ContractStatus, InstallmentStatus, MaintenanceReviewStatus, MaintenanceStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 // A cancelled or deleted contract is no longer the customer's unit or debt.
-import { LIVE_CONTRACT_WHERE, SURCHARGE_PAYMENT_TYPES } from '../installments/live-contract';
+import {
+  CHASED_INSTALLMENT_WHERE,
+  LIVE_CONTRACT_WHERE,
+  PAYMENT_ON_ITS_WAY,
+  SURCHARGE_PAYMENT_TYPES,
+} from '../installments/live-contract';
 import { findTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import { getTenantContext } from '../../common/tenant/tenant-context';
 import { getCompanyCurrency } from '../../common/currency/currency';
@@ -64,7 +69,11 @@ function isEffectivelyOverdue(
   status: InstallmentStatus,
   dueDate: Date,
   overdueBefore: Date,
+  chased = true,
 ): boolean {
+  // The overdue sweep's rule (CHASED_INSTALLMENT_WHERE): an unsigned deal, or
+  // a row whose payment is on its way, is not overdue.
+  if (!chased) return false;
   return (
     status === InstallmentStatus.OVERDUE ||
     (status === InstallmentStatus.PENDING && dueDate < overdueBefore)
@@ -77,6 +86,7 @@ function buildPrimaryAction(
     amount: { toString(): string };
     dueDate: Date;
     status: InstallmentStatus;
+    chased: boolean;
   } | null,
   openMaintenanceCount: number,
   now: Date,
@@ -92,7 +102,7 @@ function buildPrimaryAction(
   };
 
   if (nextDue) {
-    const overdue = isEffectivelyOverdue(nextDue.status, nextDue.dueDate, overdueBefore);
+    const overdue = isEffectivelyOverdue(nextDue.status, nextDue.dueDate, overdueBefore, nextDue.chased);
     const daysUntil = Math.ceil(
       (nextDue.dueDate.getTime() - now.getTime()) / 86_400_000,
     );
@@ -178,7 +188,7 @@ class MeHomeSummaryService {
       totalInstallments,
       paidInstallments,
       effectiveOverdueCount,
-      nextDue,
+      nextDueRow,
       lastPaidInstallment,
       openMaintenanceCount,
       recentMaintenance,
@@ -243,10 +253,12 @@ class MeHomeSummaryService {
       }),
 
       // Q3c: effective overdue — covers the daily-cron gap where PENDING rows
-      // haven't been promoted to OVERDUE yet.
+      // haven't been promoted to OVERDUE yet. The same rule as the overdue
+      // sweep: an unsigned deal, or a row whose payment is on its way, is not
+      // overdue.
       this.prisma.installment.count({
         where: {
-          plan: { contract: { customerId: userId, ...LIVE_CONTRACT_WHERE } },
+          AND: [CHASED_INSTALLMENT_WHERE, { plan: { contract: { customerId: userId } } }],
           OR: [
             { status: InstallmentStatus.OVERDUE },
             { status: InstallmentStatus.PENDING, dueDate: { lt: overdueBefore } },
@@ -261,7 +273,14 @@ class MeHomeSummaryService {
           status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] },
         },
         orderBy: { dueDate: 'asc' },
-        select: { id: true, amount: true, dueDate: true, status: true },
+        select: {
+          id: true,
+          amount: true,
+          dueDate: true,
+          status: true,
+          plan: { select: { contract: { select: { status: true } } } },
+          deposits: { where: PAYMENT_ON_ITS_WAY, select: { id: true }, take: 1 },
+        },
       }),
 
       // Q5: most recently paid installment (for lastPaidAt)
@@ -312,6 +331,16 @@ class MeHomeSummaryService {
       }),
     ]);
 
+    const nextDue = nextDueRow
+      ? {
+          id: nextDueRow.id,
+          amount: nextDueRow.amount,
+          dueDate: nextDueRow.dueDate,
+          status: nextDueRow.status,
+          chased: nextDueRow.plan.contract.status === ContractStatus.ACTIVE && nextDueRow.deposits.length === 0,
+        }
+      : null;
+
     // Q9: determines BUYER vs CUSTOMER — only runs when no signed contracts.
     let customerType: CustomerType = 'OWNER';
     if (ownedUnitsCount === 0) {
@@ -350,7 +379,7 @@ class MeHomeSummaryService {
             amount: nextDue.amount.toString(),
             currency,
             dueDate: nextDue.dueDate.toISOString(),
-            status: isEffectivelyOverdue(nextDue.status, nextDue.dueDate, overdueBefore)
+            status: isEffectivelyOverdue(nextDue.status, nextDue.dueDate, overdueBefore, nextDue.chased)
               ? ('OVERDUE' as const)
               : ('PENDING' as const),
           }

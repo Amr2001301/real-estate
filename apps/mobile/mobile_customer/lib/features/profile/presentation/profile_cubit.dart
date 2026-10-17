@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../domain/entities/user_profile.dart';
 import '../domain/repositories/profile_repository.dart';
+import '../domain/usecases/change_my_phone.dart';
+import '../domain/usecases/delete_my_account.dart';
 import '../domain/usecases/get_my_profile.dart';
 import '../domain/usecases/update_my_profile.dart';
 
@@ -38,10 +40,19 @@ class ProfileState extends Equatable {
 }
 
 class ProfileCubit extends Cubit<ProfileState> {
-  ProfileCubit(this._getProfile, this._updateProfile) : super(const ProfileState());
+  ProfileCubit(
+    this._getProfile,
+    this._updateProfile,
+    this._requestPhoneChange,
+    this._confirmPhoneChange,
+    this._deleteMyAccount,
+  ) : super(const ProfileState());
 
   final GetMyProfile _getProfile;
   final UpdateMyProfile _updateProfile;
+  final RequestPhoneChange _requestPhoneChange;
+  final ConfirmPhoneChange _confirmPhoneChange;
+  final DeleteMyAccount _deleteMyAccount;
 
   Future<void> load() async {
     emit(state.copyWith(status: DataStatus.loading));
@@ -66,5 +77,22 @@ class ProfileCubit extends Cubit<ProfileState> {
         return failure;
       },
     );
+  }
+
+  /// Sends a code to the new number. Returns the failure, or null when sent.
+  Future<AppFailure?> requestPhoneChange(String phone) async {
+    return (await _requestPhoneChange(phone)).failureOrNull;
+  }
+
+  /// Confirms the new number with its code, then reloads the profile.
+  Future<AppFailure?> confirmPhoneChange(String code) async {
+    final failure = (await _confirmPhoneChange(code)).failureOrNull;
+    if (failure == null) await load();
+    return failure;
+  }
+
+  /// Deletes the account. Returns the failure (e.g. a live contract), or null.
+  Future<AppFailure?> deleteAccount() async {
+    return (await _deleteMyAccount(const NoParams())).failureOrNull;
   }
 }

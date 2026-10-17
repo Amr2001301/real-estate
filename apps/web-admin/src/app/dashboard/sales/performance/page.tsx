@@ -57,7 +57,7 @@ interface BonusEntry {
   amount: string;
   period: string;
   status: 'PENDING' | 'APPROVED' | 'PAID';
-  source: 'MANUAL' | 'CONTRACT_AUTO';
+  source: 'MANUAL' | 'CONTRACT_AUTO' | 'ADJUSTMENT';
   basisAmount?: string | null;
   commissionPct?: string | null;
   sales?: { id: string; fullName: string } | null;

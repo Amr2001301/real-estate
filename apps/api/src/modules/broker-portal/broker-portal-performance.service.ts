@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type { BrokerScopeContext } from '../../common/guards/broker-scope.guard';
-import { BrokerReportsService, type DetailExportScope } from '../broker-reports/broker-reports.service';
+import { BrokerReportsService, portalDetail, type DetailExportScope } from '../broker-reports/broker-reports.service';
 import { PortalPerformanceQueryDto } from './dto/portal-performance.dto';
 
 /**
@@ -22,7 +22,7 @@ export class BrokerPortalPerformanceService {
   ) {}
 
   async forBroker(scope: BrokerScopeContext, query: PortalPerformanceQueryDto) {
-    const { brokerAgentId, canSeeAllAgents } = await this.resolveAgentScope(
+    const { brokerAgentId, canSeeAllAgents, canViewCommissions } = await this.resolveAgentScope(
       scope,
       query.brokerAgentId,
     );
@@ -34,27 +34,25 @@ export class BrokerPortalPerformanceService {
       brokerAgentId,
     });
 
-    // Hide the firm-wide agent breakdown when the caller is a non-manager
-    // broker user. They only see their own metrics in the summary above.
-    if (!canSeeAllAgents) {
-      detail.agentBreakdown = detail.agentBreakdown.filter(
-        (r) => r.brokerAgentId === scope.brokerAgentUserId,
-      );
-    }
-
-    return { ...detail, canSeeAllAgents };
+    // A non-manager sees only their own rows; money only with
+    // canViewCommissions; never the company's own counts.
+    return {
+      ...portalDetail(detail, this.agentRows(scope, canSeeAllAgents, canViewCommissions)),
+      canSeeAllAgents,
+      canViewCommissions,
+    };
   }
 
   async exportCsv(scope: BrokerScopeContext, query: PortalPerformanceQueryDto) {
     // Same scoping as forBroker — never leak firm-wide numbers to non-managers.
-    const { brokerAgentId, canSeeAllAgents } = await this.resolveAgentScope(
+    const { brokerAgentId, canSeeAllAgents, canViewCommissions } = await this.resolveAgentScope(
       scope,
       query.brokerAgentId,
     );
     return this.reports.brokerDetailCsv(
       scope.brokerId,
       { from: query.from, to: query.to, projectId: query.projectId, brokerAgentId },
-      this.agentRows(scope, canSeeAllAgents),
+      this.agentRows(scope, canSeeAllAgents, canViewCommissions),
     );
   }
 
@@ -65,27 +63,27 @@ export class BrokerPortalPerformanceService {
    * export their own firm's slice, with no cross-broker leakage.
    */
   async exportXlsx(scope: BrokerScopeContext, query: PortalPerformanceQueryDto) {
-    const { brokerAgentId, canSeeAllAgents } = await this.resolveAgentScope(
+    const { brokerAgentId, canSeeAllAgents, canViewCommissions } = await this.resolveAgentScope(
       scope,
       query.brokerAgentId,
     );
     return this.reports.brokerDetailXlsx(
       scope.brokerId,
       { from: query.from, to: query.to, projectId: query.projectId, brokerAgentId },
-      this.agentRows(scope, canSeeAllAgents),
+      this.agentRows(scope, canSeeAllAgents, canViewCommissions),
     );
   }
 
   /** Presentation PDF twin of exportXlsx — identical scoping. */
   async exportPdf(scope: BrokerScopeContext, query: PortalPerformanceQueryDto) {
-    const { brokerAgentId, canSeeAllAgents } = await this.resolveAgentScope(
+    const { brokerAgentId, canSeeAllAgents, canViewCommissions } = await this.resolveAgentScope(
       scope,
       query.brokerAgentId,
     );
     return this.reports.brokerDetailPdf(
       scope.brokerId,
       { from: query.from, to: query.to, projectId: query.projectId, brokerAgentId },
-      { ...this.agentRows(scope, canSeeAllAgents), title: canSeeAllAgents ? 'أداء الشركة' : 'أدائي' },
+      { ...this.agentRows(scope, canSeeAllAgents, canViewCommissions), title: canSeeAllAgents ? 'أداء الشركة' : 'أدائي' },
     );
   }
 
@@ -93,24 +91,31 @@ export class BrokerPortalPerformanceService {
    * The agent breakdown an export may carry: the whole firm for a manager,
    * only the caller's own row otherwise — the same rule as forBroker().
    */
-  private agentRows(scope: BrokerScopeContext, canSeeAllAgents: boolean): DetailExportScope {
-    return canSeeAllAgents ? {} : { onlyAgent: scope.brokerAgentUserId };
+  private agentRows(scope: BrokerScopeContext, canSeeAllAgents: boolean, canViewCommissions: boolean): DetailExportScope {
+    return {
+      portal: true,
+      withoutMoney: !canViewCommissions,
+      ...(canSeeAllAgents ? {} : { onlyAgent: scope.brokerAgentUserId }),
+    };
   }
 
   async agents(scope: BrokerScopeContext, query: PortalPerformanceQueryDto) {
-    const { canSeeAllAgents } = await this.resolveAgentScope(scope, query.brokerAgentId);
+    const { canSeeAllAgents, canViewCommissions } = await this.resolveAgentScope(scope, query.brokerAgentId);
     const result = await this.reports.agents({
       brokerId: scope.brokerId,
       from: query.from,
       to: query.to,
       projectId: query.projectId,
     });
-    if (!canSeeAllAgents) {
-      return {
-        data: result.data.filter((r) => r.brokerAgentId === scope.brokerAgentUserId),
-      };
-    }
-    return result;
+    // Payouts are the firm's; amounts only with canViewCommissions.
+    const money = canViewCommissions ? (canSeeAllAgents ? [] : ['payoutNet']) : ['commissionGross', 'commissionNet', 'payoutNet'];
+    const scrub = <R extends object>(r: R): R => {
+      const copy = { ...r } as Record<string, unknown>;
+      for (const k of money) if (k in copy) copy[k] = null;
+      return copy as R;
+    };
+    const rows = canSeeAllAgents ? result.data : result.data.filter((r) => r.brokerAgentId === scope.brokerAgentUserId);
+    return { ...result, data: rows.map(scrub) };
   }
 
   /**
@@ -123,7 +128,7 @@ export class BrokerPortalPerformanceService {
   private async resolveAgentScope(
     scope: BrokerScopeContext,
     requested: string | undefined,
-  ): Promise<{ brokerAgentId: string | undefined; canSeeAllAgents: boolean }> {
+  ): Promise<{ brokerAgentId: string | undefined; canSeeAllAgents: boolean; canViewCommissions: boolean }> {
     const me = await this.prisma.brokerUser.findUnique({
       where: { id: scope.brokerUserId },
       select: {
@@ -131,14 +136,16 @@ export class BrokerPortalPerformanceService {
         brokerId: true,
         isPrimaryContact: true,
         canManageBrokerUsers: true,
+        canViewCommissions: true,
       },
     });
     if (!me) {
       throw new ForbiddenException('Broker profile not found');
     }
     const canSeeAllAgents = me.isPrimaryContact || me.canManageBrokerUsers;
+    const canViewCommissions = me.canViewCommissions;
     if (!canSeeAllAgents) {
-      return { brokerAgentId: me.userId, canSeeAllAgents };
+      return { brokerAgentId: me.userId, canSeeAllAgents, canViewCommissions };
     }
     // Manager: if they asked for an agent, verify the agent belongs to the
     // same broker firm before honouring the filter.
@@ -150,8 +157,8 @@ export class BrokerPortalPerformanceService {
       if (!agent) {
         throw new ForbiddenException('Agent not found in this broker firm');
       }
-      return { brokerAgentId: agent.userId, canSeeAllAgents };
+      return { brokerAgentId: agent.userId, canSeeAllAgents, canViewCommissions };
     }
-    return { brokerAgentId: undefined, canSeeAllAgents };
+    return { brokerAgentId: undefined, canSeeAllAgents, canViewCommissions };
   }
 }

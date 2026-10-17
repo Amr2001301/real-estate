@@ -291,15 +291,14 @@ describe('bonuses', () => {
     const prisma = {
       bonusEntry: {
         findUnique: jest.fn().mockResolvedValue({ status: 'APPROVED', contract: null }),
-        update: jest.fn(
-          async ({ where, data }: { where: { id: string }; data: { status: string } }) => ({
-            id: where.id,
-            salesId: 'sales-1',
-            amount: new Prisma.Decimal(12000),
-            period: '2026-10',
-            status: data.status,
-          }),
-        ),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn(async ({ where }: { where: { id: string } }) => ({
+          id: where.id,
+          salesId: 'sales-1',
+          amount: new Prisma.Decimal(12000),
+          period: '2026-10',
+          status: 'PAID',
+        })),
       },
     };
     const svc = new BonusService(prisma as never, undefined, undefined, notifications as never);

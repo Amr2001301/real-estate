@@ -1,4 +1,4 @@
-# Handoff — where the work stands (2026-10-16)
+# Handoff — where the work stands (2026-10-17)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
@@ -9,13 +9,19 @@
 
 **إحنا فين:** خلصنا 3 جولات «سيناريوهات» كاملة على المنصة. كل جولة: نمشي سيناريوهات بيع وتحصيل حقيقية في الكود، نلاقي الأخطاء، تاخد إنت القرارات، وبعدين نصلّح على أجزاء، كل جزء PR لوحده بيتدمج لما الـ CI يخضر. آخر PR اتدمج هو **#86**. الفرع الرئيسي (main) نضيف، ومفيش شغل مفتوح.
 
-**الجولة الرابعة:** المراجعة خلصت، و**وافقت على كل الاقتراحات** (القسم 4 تحت). التنفيذ **لسه ما بدأش** بطلب منك. الخطة 4 أجزاء: U1 أمان وخصوصية، U2 فلوس، U3 العميل والمهام التلقائية، U4 التقارير. أول حاجة تتعمل: أرقام عمولات البروكرز (واقفة عند كل الشركات بعد الأولى).
+**الجولة الرابعة:** **خلصت كلها** — المراجعة واتنفّذت كل الأجزاء الأربعة (القسم 4 تحت فيه القرارات):
+- **U2 فلوس:** خلص — #89، #90، #91.
+- **U1 أمان وخصوصية:** خلص — #92، #93، #94.
+- **U3 العميل والمهام التلقائية:** خلص — #95، #96، #97، #98 (تسليم الوحدة)، وحذف حساب العميل (آخر PR).
+- **U4 التقارير:** خلص — #100، #101، وتوقيت الشركة في التقارير (آخر PR).
+
+ملاحظة: ملفات الترجمة المولّدة في تطبيقات الموبايل (`packages/core/lib/src/l10n/generated/`) اتعدّلت يدوياً لأن Flutter مش متاح في السحابة؛ الـ CI بيشغّل `flutter analyze` عليها.
 
 **التصميم الجديد (U5):** اعتمدت شكل جديد للوحة التحكم (أدمن، مبيعات، بروكر): خطوط جديدة، شريط أرقام كحلي، رأس صفحة أبسط، فلتر موحّد، جداول بدل الكروت، ووضع داكن. التفاصيل في القسم 3 تحت U5، والتصميم نفسه على [هذا اللينك](https://claude.ai/artifact/UPVXRtVxEBMWpmuRMYqb1Z) (خاص بأكونتك — شاركه من زرار Share لو الأكونت التاني محتاج يفتحه).
 
 **حاجات عليك إنت:** الاستضافة، تقييد مفتاح Firebase، حماية الفرع الرئيسي على GitHub، وتسميات الرسوم في تطبيقات الموبايل (محتاجة جهاز عليه Flutter).
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md` وكمّل الجولة الرابعة من U2». كل اللي محتاجه مكتوب هنا.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». الجولة الرابعة خلصت؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -98,6 +104,13 @@ Shared helpers worth knowing (API): `common/utils/add-months.ts`, `common/time/c
 Found by four read-only scenario audits on 2026-10-16. The top items were re-checked by hand. Paths are under `apps/api/` unless noted. Line numbers are as of `main` @ `bd3e46a`.
 
 **Recommended order: U2 → U1 → U3 → U4 → U5** (U2 first because broker commissions are broken for every company after the first).
+
+**Status (2026-10-17):** round 4 is done — U2 (#89–#91), U1 (#92–#94), U3 (#95–#99), U4 (#100, #101 and the time-zone PR). New since this plan:
+- The late-fee clock pause lives on `Installment.lateFeePausedSince` / `lateFeePausedSeconds`.
+- The one chase rule is `CHASED_INSTALLMENT_WHERE` in `installments/live-contract.ts`.
+- Warranties and customer maintenance start at the unit handover (`UnitHandover`, `POST /contracts/:id/handover`); contracts signed before it were backfilled as handed over at their creation date.
+- A customer deletes their own account with `DELETE /users/me` (anonymised, records kept).
+- Reports: `reportRange` / `localMonth` (`common/time/report-range.ts`) — date filters, "this month" and monthly buckets are in the company's time zone; collected is two figures (`TOWARDS_PRICE_DEPOSIT_WHERE`, `FEES_DEPOSIT_WHERE`); a sale counts by `signedAt`.
 
 ### U2 — Money
 
@@ -210,7 +223,7 @@ Check every surface after the change: admin, sales (SALES / SALES_MANAGER), brok
 
 ## 5. Other open items
 
-- **Old contracts that bill the final payment twice** (converted before #83): the SQL to find them is in the #83 PR body. Fix each from the contract page with a price change or reschedule (#86), or write a one-off fix script — ask the owner first.
+- **Old contracts that bill the final payment twice** (converted before #83): the owner chose a script — `scripts/fix-double-final-payment.ts` (logic in `src/modules/contracts/double-final-payment.ts`). Run it on production: take a backup (`scripts/db-backup.sh`), then `pnpm --filter @rep/api contracts:fix-double-final-payment:dry-run` to list them, then `pnpm --filter @rep/api contracts:fix-double-final-payment` to correct them. It takes the excess off the unpaid monthly rows (audit `contract.schedule-corrected`); contracts with a payment waiting, or already paid above the price (a refund), are listed for an admin.
 - **Mobile fee labels:** the customer app shows a FEE payment as a normal "payment", the staff app prints `FEE`. Needs Flutter (not available in the cloud container).
 - **Owner's own tasks:** hosting/deployment, restricting the Firebase API key, GitHub branch protection on `main`.
 - Older backlog docs: `docs/BACKLOG.md`, `docs/EXECUTION_BACKLOG.md`, `docs/PROJECT_CURRENT_STATE.md` (may be behind this file).

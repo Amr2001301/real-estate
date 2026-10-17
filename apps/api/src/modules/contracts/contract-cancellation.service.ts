@@ -74,6 +74,7 @@ function isCommissionEffectivelyPaid(commission: {
 
 export { resetUnitWarranties } from './unit-warranties';
 import { closeOpenMaintenance, resetUnitWarranties } from './unit-warranties';
+import { rebalancePayout, releaseAdjustments } from '../broker-payouts/payout-totals';
 
 @Injectable()
 export class ContractCancellationService {
@@ -126,18 +127,6 @@ export class ContractCancellationService {
     const effectiveBonusAction = input.bonusActionOverride ?? suggestion.policySnapshot.bonusAction;
     const effectiveDemote = input.demoteCustomerOverride ?? suggestion.policySnapshot.demoteClient;
 
-    // Commission (at most 1 per contract, contractId @unique)
-    const commission = await this.prisma.brokerCommission.findUnique({
-      where: { contractId },
-      include: { payout: { select: { status: true } } },
-    });
-
-    // Bonus entry auto-generated for this contract (at most 1, contractId @unique)
-    const bonusEntry = await this.prisma.bonusEntry.findUnique({
-      where: { contractId },
-      select: { id: true, status: true, clawbackStatus: true },
-    });
-
     // Installment plan (may not exist for unsigned contracts with no plan)
     const plan = await this.prisma.installmentPlan.findFirst({
       where: { contractId },
@@ -160,10 +149,38 @@ export class ContractCancellationService {
     let cancelledInstrumentIds: string[] = [];
 
     const cancellation = await this.prisma.$transaction(async (tx) => {
-      // 1. Contract → CANCELLED
-      await tx.contract.update({
-        where: { id: contractId },
+      // 1. Contract → CANCELLED — once: a second cancel running at the same
+      // moment finds it already cancelled.
+      const cancelled = await tx.contract.updateMany({
+        where: { id: contractId, companyId, status: { not: ContractStatus.CANCELLED } },
         data: { status: ContractStatus.CANCELLED, cancelledAt: now },
+      });
+      if (cancelled.count === 0) {
+        throw new ConflictException('Contract is already cancelled — CANCELLED is terminal');
+      }
+
+      // The commission, its payout and the bonus are read here, their rows
+      // locked: a payout approved, sent or paid — or a bonus paid — while the
+      // cancellation runs either finishes first and is seen as such, or waits
+      // and then finds the cancellation done.
+      // Payout before commission — the order the payout paths take.
+      await tx.$queryRaw`
+        SELECT p.id FROM "BrokerPayout" p
+        JOIN "BrokerCommission" c ON c."payoutId" = p.id
+        WHERE c."contractId" = ${contractId}::uuid FOR UPDATE OF p`;
+      await tx.$queryRaw`
+        SELECT id FROM "BrokerCommission" WHERE "contractId" = ${contractId}::uuid FOR UPDATE`;
+      await tx.$queryRaw`
+        SELECT id FROM "BonusEntry" WHERE "contractId" = ${contractId}::uuid FOR UPDATE`;
+      // Commission (at most 1 per contract, contractId @unique)
+      const commission = await tx.brokerCommission.findUnique({
+        where: { contractId },
+        include: { payout: { select: { status: true } } },
+      });
+      // Bonus entry auto-generated for this contract (at most 1, contractId @unique)
+      const bonusEntry = await tx.bonusEntry.findUnique({
+        where: { contractId },
+        select: { id: true, status: true, clawbackStatus: true },
       });
 
       // 2. InstallmentPlan → cancelledAt
@@ -212,9 +229,15 @@ export class ContractCancellationService {
         });
       }
 
-      // 4. Commission handling (CLAWBACK action only; RETAIN/MANUAL = no change)
+      // 4. Commission handling. CLAWBACK cancels or claws back; RETAIN keeps
+      // it payable (decided 2026-10-16); MANUAL leaves it for the admin.
       if (commission && commission.status !== BrokerCommissionStatus.REJECTED && commission.status !== BrokerCommissionStatus.CANCELLED) {
-        if (effectiveCommissionAction === 'CLAWBACK') {
+        if (effectiveCommissionAction === 'RETAIN') {
+          await tx.brokerCommission.update({
+            where: { id: commission.id },
+            data: { retainedOnCancellation: true },
+          });
+        } else if (effectiveCommissionAction === 'CLAWBACK') {
           if (isCommissionEffectivelyPaid(commission)) {
             // Hard Rule 2: status stays; clawback overlay added
             await tx.brokerCommission.update({
@@ -224,6 +247,20 @@ export class ContractCancellationService {
                 clawbackReason: input.clawbackReason ?? input.reason,
                 clawbackAt: now,
                 clawbackById: actorId,
+              },
+            });
+            // What was paid comes back out of the broker's next payout
+            // (decided 2026-10-17); collecting or waiving it by hand stays possible.
+            if (commission.netAmount.isPositive()) await tx.brokerCommissionAdjustment.create({
+              data: {
+                brokerId: commission.brokerId,
+                commissionId: commission.id,
+                kind: 'CLAWBACK',
+                amount: commission.netAmount,
+                reason: input.clawbackReason ?? input.reason,
+                createdById: actorId,
+                settlesClawback: true,
+                companyId,
               },
             });
             commissionClawbackIds.push(commission.id);
@@ -241,14 +278,11 @@ export class ContractCancellationService {
             // Payout side-effects (only for DRAFT / APPROVED payouts — CANCELLED
             // payouts are already terminal; PROCESSING / PAID go through overlay path).
             if (cancelledPayoutId && (cancelledPayoutStatus === 'DRAFT' || cancelledPayoutStatus === 'APPROVED')) {
-              const remainingAgg = await tx.brokerCommission.aggregate({
-                where: { payoutId: cancelledPayoutId },
-                _sum: { grossAmount: true, taxAmount: true, withholdingAmount: true, netAmount: true },
-                _count: { id: true },
-              });
+              const remaining = await tx.brokerCommission.count({ where: { payoutId: cancelledPayoutId } });
 
-              if (remainingAgg._count.id === 0) {
-                // Nothing left to disburse — cancel the payout
+              if (remaining === 0) {
+                // Nothing left to disburse — cancel the payout; any top-ups
+                // or clawbacks netted into it wait for the next one.
                 await tx.brokerPayout.update({
                   where: { id: cancelledPayoutId },
                   data: {
@@ -258,19 +292,15 @@ export class ContractCancellationService {
                     cancelReason: `Contract ${contractId} cancelled — no remaining commissions`,
                   },
                 });
+                await releaseAdjustments(tx, { payoutId: cancelledPayoutId });
               } else {
                 // Recompute totals and revert to DRAFT: the original approval was
                 // for a different (higher) amount; management must re-approve.
                 await tx.brokerPayout.update({
                   where: { id: cancelledPayoutId },
-                  data: {
-                    status: BrokerPayoutStatus.DRAFT,
-                    totalGross: remainingAgg._sum.grossAmount ?? new Prisma.Decimal(0),
-                    totalTax: remainingAgg._sum.taxAmount ?? new Prisma.Decimal(0),
-                    totalWithholding: remainingAgg._sum.withholdingAmount ?? new Prisma.Decimal(0),
-                    totalNet: remainingAgg._sum.netAmount ?? new Prisma.Decimal(0),
-                  },
+                  data: { status: BrokerPayoutStatus.DRAFT },
                 });
+                await rebalancePayout(tx, cancelledPayoutId, commission.brokerId);
               }
             }
           }
@@ -279,7 +309,12 @@ export class ContractCancellationService {
 
       // 5. Bonus handling (same pattern as commission)
       if (bonusEntry && bonusEntry.status !== BonusEntryStatus.CANCELLED) {
-        if (effectiveBonusAction === 'CLAWBACK') {
+        if (effectiveBonusAction === 'RETAIN') {
+          await tx.bonusEntry.update({
+            where: { id: bonusEntry.id },
+            data: { retainedOnCancellation: true },
+          });
+        } else if (effectiveBonusAction === 'CLAWBACK') {
           if (bonusEntry.status === BonusEntryStatus.PAID) {
             // Hard Rule 2: status stays PAID; clawback overlay added
             await tx.bonusEntry.update({
@@ -532,21 +567,32 @@ export class ContractCancellationService {
     const now = new Date();
 
     return this.prisma.$transaction(async (tx) => {
-      await tx.unit.update({
-        where: { id: contract.unitId },
-        data: { status: UnitStatus.AVAILABLE },
+      // The unit may have been sold again since the cancellation (a new
+      // contract on it, or a reservation that moved it on). Freeing it then
+      // would put the new buyer's unit back on sale and wipe their
+      // warranties: the release is recorded and the unit left as it is.
+      const otherLive = await tx.contract.count({
+        where: { unitId: contract.unitId, companyId, id: { not: contractId }, ...LIVE_CONTRACT_WHERE },
       });
-
-      await tx.unitStatusHistory.create({
-        data: {
-          unitId: contract.unitId,
-          oldStatus: unit.status,
-          newStatus: UnitStatus.AVAILABLE,
-          changedById: actorId,
-          reason: `Contract ${contractId} cancelled — unit released (REQUIRES_APPROVAL path)`,
-        },
-      });
-      await resetUnitWarranties(tx, contract.unitId);
+      const freed =
+        otherLive === 0
+          ? await tx.unit.updateMany({
+              where: { id: contract.unitId, companyId, status: UnitStatus.SOLD },
+              data: { status: UnitStatus.AVAILABLE },
+            })
+          : { count: 0 };
+      if (freed.count > 0) {
+        await tx.unitStatusHistory.create({
+          data: {
+            unitId: contract.unitId,
+            oldStatus: unit.status,
+            newStatus: UnitStatus.AVAILABLE,
+            changedById: actorId,
+            reason: `Contract ${contractId} cancelled — unit released (REQUIRES_APPROVAL path)`,
+          },
+        });
+        await resetUnitWarranties(tx, contract.unitId);
+      }
 
       const updated = await tx.contractCancellation.update({
         where: { id: cc.id },
@@ -560,7 +606,11 @@ export class ContractCancellationService {
           entityType: 'Contract',
           entityId: contractId,
           before: { unitStatus: unit.status, unitReleasedAt: null },
-          after: { unitStatus: UnitStatus.AVAILABLE, unitReleasedAt: now.toISOString() },
+          after: {
+            unitStatus: freed.count > 0 ? UnitStatus.AVAILABLE : unit.status,
+            unitReleasedAt: now.toISOString(),
+            ...(freed.count > 0 ? {} : { unitLeftAsIs: otherLive > 0 ? 'sold again' : `unit is ${unit.status}` }),
+          },
           companyId,
         },
       });

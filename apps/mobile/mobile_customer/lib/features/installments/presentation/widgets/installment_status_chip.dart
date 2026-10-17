@@ -53,6 +53,11 @@ class InstallmentStatusChip extends StatelessWidget {
           label: l10n.installmentStatusOverdue,
           tone: BadgeTone.error,
         );
+      case InstallmentStatus.cancelled:
+        return StatusBadge(
+          label: l10n.installmentStatusCancelled,
+          tone: BadgeTone.neutral,
+        );
       case InstallmentStatus.pending:
       case InstallmentStatus.unknown:
         return StatusBadge(

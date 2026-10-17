@@ -42,32 +42,16 @@ export async function resetUnitWarranties(tx: Prisma.TransactionClient, unitId: 
   });
 }
 
-const OPEN_MAINTENANCE = { notIn: ['RESOLVED', 'CLOSED'] as ('RESOLVED' | 'CLOSED')[] };
 
 /**
- * Open maintenance requests follow the owner of the unit. On a transfer they
- * pass to the new owner, who now holds the unit (and its warranty); they used
- * to stay with the old one, who kept being notified and could confirm the
- * work. Returns how many moved.
- */
-export async function handOverOpenMaintenance(
-  tx: Prisma.TransactionClient,
-  unitId: string,
-  fromCustomerId: string,
-  toCustomerId: string,
-  companyId: string,
-): Promise<number> {
-  const moved = await tx.maintenanceRequest.updateMany({
-    where: { unitId, customerId: fromCustomerId, companyId, status: OPEN_MAINTENANCE },
-    data: { customerId: toCustomerId },
-  });
-  return moved.count;
-}
-
-/**
- * When the customer no longer holds the unit (the sale was cancelled, or the
- * contract moved to another unit), their open requests on it are closed: no
- * crew is sent to a unit that may already be resold. Returns how many closed.
+ * When the customer no longer holds the unit (the sale was cancelled, the
+ * contract moved to another unit, or was transferred to another customer),
+ * their open requests on it are closed: no crew is sent to a unit that may
+ * already be resold, and a new owner files their own. Returns how many closed.
+ *
+ * A RESOLVED one waiting on the customer's confirmation is closed too, and
+ * one still waiting for review is rejected: before, an auto-closed request
+ * could still be approved, assigned or reopened.
  */
 export async function closeOpenMaintenance(
   tx: Prisma.TransactionClient,
@@ -76,8 +60,13 @@ export async function closeOpenMaintenance(
   companyId: string,
 ): Promise<number> {
   const now = new Date();
+  const scope = { unitId, customerId, companyId, status: { not: 'CLOSED' as const } };
+  await tx.maintenanceRequest.updateMany({
+    where: { ...scope, reviewStatus: 'PENDING' },
+    data: { reviewStatus: 'REJECTED', rejectedAt: now },
+  });
   const closed = await tx.maintenanceRequest.updateMany({
-    where: { unitId, customerId, companyId, status: OPEN_MAINTENANCE },
+    where: scope,
     data: { status: 'CLOSED', closedAt: now, dueAt: null },
   });
   return closed.count;

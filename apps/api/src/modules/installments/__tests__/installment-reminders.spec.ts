@@ -82,10 +82,16 @@ describe('InstallmentRemindersService.run', () => {
 
     const where = prisma.installment.findMany.mock.calls[0]![0].where;
     expect(where.status).toBe('PENDING'); // paid/overdue excluded by the query
-    // Only live contracts: not cancelled, not deleted, plan not cancelled.
+    // Only signed, live contracts of an active, undeleted customer in a
+    // company that is not blocked; plan not cancelled.
     expect(where.plan).toEqual({
       cancelledAt: null,
-      contract: { status: { not: 'CANCELLED' }, deletedAt: null, customer: { active: true } },
+      contract: {
+        status: 'ACTIVE',
+        deletedAt: null,
+        customer: { active: true, deletedAt: null },
+        company: { lifecycleStatus: 'ACTIVE', subscriptionStatus: { notIn: ['SUSPENDED', 'CANCELLED', 'EXPIRED'] } },
+      },
     });
     expect(where.dueDate.gte).toBeInstanceOf(Date);
     expect(where.dueDate.lte).toBeInstanceOf(Date);

@@ -33,6 +33,7 @@ import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 import { isUniqueConflictOn } from '../../common/utils/contract-number';
 import { agentFilter, brokerFacingPerson, resolveBrokerViewer, withoutMoney } from './broker-viewer';
 import { assertUnitOnSale } from '../projects/inventory-blockers';
+import { liveProjectGrant } from '../broker-access/live-grant';
 
 // Reservation statuses that hold a unit. A CONVERTED reservation is history:
 // the unit is then held by its contract (checked separately), and once that
@@ -633,7 +634,7 @@ export class BrokerPortalReservationsService {
   ): Promise<void> {
     const [projectAccess, unitAccess] = await Promise.all([
       this.prisma.brokerProjectAccess.findFirst({
-        where: { brokerId, projectId, active: true },
+        where: { brokerId, projectId, ...liveProjectGrant() },
         select: { id: true },
       }),
       this.prisma.brokerUnitAccess.findFirst({
@@ -663,7 +664,7 @@ export class BrokerPortalReservationsService {
         where: {
           brokerId: params.brokerId,
           projectId: params.projectId,
-          active: true,
+          ...liveProjectGrant(),
         },
         select: { commissionPct: true, fixedAmountPerUnit: true },
       }),

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
@@ -12,6 +13,7 @@ import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { MaintenanceStatus, AppointmentStatus, LeadStage, Prisma, ReservationStatus, UserRole, VisitStatus } from '@prisma/client';
 import { assertAssignableSales } from '../../common/utils/assignable-sales';
+import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { OPTIONS_LIMIT, optionsResult } from '../../common/utils/options';
 import { clientOwnerScope, ownedClientsWhere } from '../../common/utils/client-ownership';
@@ -377,6 +379,95 @@ export class UsersService {
     return user;
   }
 
+  /**
+   * PATCH /users/me. A customer's phone is changed only through a code sent
+   * to the new number (POST /auth/me/phone): a typed number proves nothing,
+   * and an OTP sign-in to it would open this account. Staff edit their own
+   * phone freely — they never sign in by phone code.
+   */
+  /**
+   * "Delete my account" in the customer app (decided 2026-10-16; required by
+   * the App Store and Google Play). The account is deactivated and its
+   * personal data removed — name, phone, e-mail, password, photo — while the
+   * contract and payment records it is part of stay, under an anonymous
+   * name. Refused while the customer has a live contract or an open
+   * reservation: those still need them reachable.
+   */
+  async deleteSelf(caller: { sub: string; role: UserRole }) {
+    if (caller.role !== UserRole.CLIENT && caller.role !== UserRole.CUSTOMER) {
+      throw new BadRequestException('Staff accounts are removed by an admin');
+    }
+    const companyId = getRequiredCompanyId();
+    const id = caller.sub;
+    const user = await this.prisma.user.findFirst({
+      where: { id, companyId, deletedAt: null },
+      select: { id: true, phone: true, avatarUrl: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    await this.assertNoLiveContract(id, companyId);
+    const openReservations = await this.prisma.reservation.count({
+      where: {
+        companyId,
+        deletedAt: null,
+        status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
+        OR: [{ clientId: id }, { lead: { is: { clientId: id } } }],
+      },
+    });
+    if (openReservations > 0) {
+      throw new ConflictException({
+        message: 'لديك حجز قائم — تواصل مع الشركة لإلغائه أولاً',
+        code: 'CUSTOMER_HAS_OPEN_RESERVATION',
+      });
+    }
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id },
+        data: {
+          fullName: 'عميل محذوف',
+          email: null,
+          phone: null,
+          pendingPhone: null,
+          passwordHash: null,
+          avatarUrl: null,
+          notificationPrefs: Prisma.DbNull,
+          emailVerifiedAt: null,
+          phoneVerifiedAt: null,
+          active: false,
+          deletedAt: now,
+        },
+      });
+      await this.cutAccess(tx, id, companyId);
+      if (user.phone) await tx.otpCode.deleteMany({ where: { phone: user.phone, companyId } });
+      await tx.auditLog.create({
+        data: { actorId: id, action: 'user.self-deleted', entityType: 'User', entityId: id, companyId },
+      });
+    });
+    if (user.avatarUrl) {
+      this.r2
+        .delete(this.r2.keyFromPublicUrl(user.avatarUrl))
+        .catch((err) => this.logger.warn(`avatar cleanup failed for ${id}: ${(err as Error).message}`));
+    }
+    return { deleted: true };
+  }
+
+  async updateSelf(caller: { sub: string; role: UserRole }, dto: UpdateUserDto) {
+    if (dto.phone !== undefined && (caller.role === UserRole.CLIENT || caller.role === UserRole.CUSTOMER)) {
+      const companyId = getRequiredCompanyId();
+      const stored = (await this.prisma.user.findFirst({ where: { id: caller.sub, companyId }, select: { phone: true } }))
+        ?.phone;
+      const unchanged =
+        dto.phone === stored || (dto.phone !== null && (await phoneForWrite(this.prisma, dto.phone, companyId)) === stored);
+      if (!unchanged) {
+        throw new BadRequestException({
+          code: 'PHONE_CHANGE_NEEDS_CODE',
+          message: 'تغيير رقم الجوال يتم برمز يُرسل إلى الرقم الجديد',
+        });
+      }
+    }
+    return this.update(caller.sub, dto);
+  }
+
   async update(id: string, dto: UpdateUserDto) {
     const companyId = getRequiredCompanyId(); // MT-006
     await this.assertExists(id, companyId);
@@ -413,6 +504,7 @@ export class UsersService {
   async deactivate(id: string) {
     const companyId = getRequiredCompanyId(); // MT-007
     await this.assertExists(id, companyId);
+    await this.assertNoLiveContract(id, companyId);
     // Told first, while the account can still receive it.
     try {
       await this.notifications.sendToUser(id, 'user_account_suspended', {
@@ -510,13 +602,20 @@ export class UsersService {
     await tx.deviceToken.deleteMany({ where: { userId: id } });
     await tx.user.updateMany({ where: { managerId: id, companyId }, data: { managerId: null } });
     // Maintenance work assigned to them goes back to the queue — it used to
-    // sit on an account nobody can open until the SLA breach fired.
+    // sit on an account nobody can open until the SLA breach fired. Work in
+    // progress too: unassigned but still IN_PROGRESS, nobody picked it up. A
+    // resolved request waiting on the customer is unassigned, so a colleague
+    // follows up the confirmation or a complaint.
     await tx.maintenanceRequest.updateMany({
-      where: { assignedAdminId: id, companyId, status: MaintenanceStatus.ASSIGNED },
+      where: {
+        assignedAdminId: id,
+        companyId,
+        status: { in: [MaintenanceStatus.ASSIGNED, MaintenanceStatus.IN_PROGRESS] },
+      },
       data: { assignedAdminId: null, status: MaintenanceStatus.OPEN },
     });
     await tx.maintenanceRequest.updateMany({
-      where: { assignedAdminId: id, companyId, status: MaintenanceStatus.IN_PROGRESS },
+      where: { assignedAdminId: id, companyId, status: MaintenanceStatus.RESOLVED },
       data: { assignedAdminId: null },
     });
   }
@@ -589,6 +688,7 @@ export class UsersService {
   async softDelete(id: string) {
     const companyId = getRequiredCompanyId(); // MT-009
     await this.assertExists(id, companyId);
+    await this.assertNoLiveContract(id, companyId);
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.user.update({
         where: { id },
@@ -598,6 +698,22 @@ export class UsersService {
       await this.cutAccess(tx, id, companyId);
       return updated;
     });
+  }
+
+  /**
+   * A customer with a live contract keeps their account: deactivating or
+   * deleting it cut them off from their schedule and receipts while the
+   * contract went on charging (overdue notices, late fees). Cancel or
+   * transfer the contract first.
+   */
+  private async assertNoLiveContract(id: string, companyId: string) {
+    const live = await this.prisma.contract.count({ where: { customerId: id, companyId, ...LIVE_CONTRACT_WHERE } });
+    if (live > 0) {
+      throw new ConflictException({
+        message: 'لهذا العميل عقد ساري — ألغِ العقد أو تنازل عنه أولاً',
+        code: 'CUSTOMER_HAS_LIVE_CONTRACT',
+      });
+    }
   }
 
   async restore(id: string) {

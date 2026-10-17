@@ -109,6 +109,7 @@ function makePrismaMock() {
     visitRequest: { count: jest.fn().mockResolvedValue(0), findMany: jest.fn().mockResolvedValue([]) },
     infoRequest: { count: jest.fn().mockResolvedValue(0), findMany: jest.fn().mockResolvedValue([]) },
     user: { count: jest.fn().mockResolvedValue(0) },
+    setting: { findMany: jest.fn().mockResolvedValue([]) },
     installment: { aggregate: jest.fn().mockResolvedValue(ZERO_AGG_XLSX) },
     bonusEntry: { aggregate: jest.fn().mockResolvedValue(ZERO_AGG_XLSX) },
     brokerPayout: { aggregate: jest.fn().mockResolvedValue(ZERO_AGG_XLSX), groupBy: jest.fn().mockResolvedValue([]) },

@@ -56,19 +56,19 @@ describe('BrokerPortalPerformanceService.exportXlsx · scoping', () => {
 
   it('always scopes to scope.brokerId — never a request param (manager, firm-wide)', async () => {
     prisma.brokerUser.findUnique.mockResolvedValue({
-      userId: 'u-self', brokerId: 'broker-A', isPrimaryContact: true, canManageBrokerUsers: false,
+      userId: 'u-self', brokerId: 'broker-A', isPrimaryContact: true, canManageBrokerUsers: false, canViewCommissions: true,
     });
     await svc.exportXlsx(SCOPE, {});
     expect(reports.brokerDetailXlsx).toHaveBeenCalledWith(
       'broker-A',
       expect.objectContaining({ brokerAgentId: undefined }),
-      {},
+      { portal: true, withoutMoney: false },
     );
   });
 
   it('pins a non-manager to their OWN agent, ignoring a requested brokerAgentId', async () => {
     prisma.brokerUser.findUnique.mockResolvedValue({
-      userId: 'u-self', brokerId: 'broker-A', isPrimaryContact: false, canManageBrokerUsers: false,
+      userId: 'u-self', brokerId: 'broker-A', isPrimaryContact: false, canManageBrokerUsers: false, canViewCommissions: true,
     });
     // Attempt to peek at a colleague — must be ignored.
     await svc.exportXlsx(SCOPE, { brokerAgentId: 'u-colleague' });
@@ -76,19 +76,19 @@ describe('BrokerPortalPerformanceService.exportXlsx · scoping', () => {
       'broker-A',
       expect.objectContaining({ brokerAgentId: 'u-self' }),
       // …and the agent sheet carries only their own row, like the screen.
-      { onlyAgent: 'u-self' },
+      { portal: true, withoutMoney: false, onlyAgent: 'u-self' },
     );
   });
 
   it('a non-manager CSV export carries only their own agent row', async () => {
     prisma.brokerUser.findUnique.mockResolvedValue({
-      userId: 'u-self', brokerId: 'broker-A', isPrimaryContact: false, canManageBrokerUsers: false,
+      userId: 'u-self', brokerId: 'broker-A', isPrimaryContact: false, canManageBrokerUsers: false, canViewCommissions: true,
     });
     await svc.exportCsv(SCOPE, {});
     expect(reports.brokerDetailCsv).toHaveBeenCalledWith(
       'broker-A',
       expect.objectContaining({ brokerAgentId: 'u-self' }),
-      { onlyAgent: 'u-self' },
+      { portal: true, withoutMoney: false, onlyAgent: 'u-self' },
     );
   });
 
@@ -96,27 +96,41 @@ describe('BrokerPortalPerformanceService.exportXlsx · scoping', () => {
     const pdfReports = { brokerDetailPdf: jest.fn().mockResolvedValue(Buffer.from('%PDF-')) };
     const pdfSvc = new BrokerPortalPerformanceService(prisma as never, pdfReports as never);
     prisma.brokerUser.findUnique.mockResolvedValue({
-      userId: 'u-self', brokerId: 'broker-A', isPrimaryContact: false, canManageBrokerUsers: false,
+      userId: 'u-self', brokerId: 'broker-A', isPrimaryContact: false, canManageBrokerUsers: false, canViewCommissions: true,
     });
     await pdfSvc.exportPdf(SCOPE, { brokerAgentId: 'u-colleague' });
     expect(pdfReports.brokerDetailPdf).toHaveBeenCalledWith(
       'broker-A',
       expect.objectContaining({ brokerAgentId: 'u-self' }),
-      { onlyAgent: 'u-self', title: 'أدائي' },
+      { portal: true, withoutMoney: false, onlyAgent: 'u-self', title: 'أدائي' },
     );
   });
 
   it('a manager export keeps the whole firm\'s agent breakdown', async () => {
     prisma.brokerUser.findUnique.mockResolvedValue({
-      userId: 'u-self', brokerId: 'broker-A', isPrimaryContact: false, canManageBrokerUsers: true,
+      userId: 'u-self', brokerId: 'broker-A', isPrimaryContact: false, canManageBrokerUsers: true, canViewCommissions: true,
     });
     await svc.exportXlsx(SCOPE, {});
-    expect(reports.brokerDetailXlsx).toHaveBeenCalledWith('broker-A', expect.anything(), {});
+    expect(reports.brokerDetailXlsx).toHaveBeenCalledWith('broker-A', expect.anything(), {
+      portal: true,
+      withoutMoney: false,
+    });
+  });
+
+  it('an agent without canViewCommissions exports without money', async () => {
+    prisma.brokerUser.findUnique.mockResolvedValue({
+      userId: 'u-self', brokerId: 'broker-A', isPrimaryContact: true, canManageBrokerUsers: false, canViewCommissions: false,
+    });
+    await svc.exportXlsx(SCOPE, {});
+    expect(reports.brokerDetailXlsx).toHaveBeenCalledWith('broker-A', expect.anything(), {
+      portal: true,
+      withoutMoney: true,
+    });
   });
 
   it('rejects a manager requesting an agent from ANOTHER firm (no cross-broker leak)', async () => {
     prisma.brokerUser.findUnique.mockResolvedValue({
-      userId: 'u-self', brokerId: 'broker-A', isPrimaryContact: true, canManageBrokerUsers: false,
+      userId: 'u-self', brokerId: 'broker-A', isPrimaryContact: true, canManageBrokerUsers: false, canViewCommissions: true,
     });
     prisma.brokerUser.findFirst.mockResolvedValue(null); // requested agent not in broker-A
     await expect(svc.exportXlsx(SCOPE, { brokerAgentId: 'agent-of-broker-B' })).rejects.toBeInstanceOf(
@@ -127,7 +141,7 @@ describe('BrokerPortalPerformanceService.exportXlsx · scoping', () => {
 
   it('returns the brokerDetailXlsx buffer for the broker\'s own firm', async () => {
     prisma.brokerUser.findUnique.mockResolvedValue({
-      userId: 'u-self', brokerId: 'broker-A', isPrimaryContact: true, canManageBrokerUsers: false,
+      userId: 'u-self', brokerId: 'broker-A', isPrimaryContact: true, canManageBrokerUsers: false, canViewCommissions: true,
     });
     const out = await svc.exportXlsx(SCOPE, {});
     expect(out.subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));

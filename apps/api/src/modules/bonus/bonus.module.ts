@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -38,6 +39,8 @@ import {
   ReservationStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { currentCompanyTimeZone } from '../../common/time/company-timezone';
+import { localDate, localMonth } from '../../common/time/report-range';
 import { toCsv } from '../../common/utils/csv';
 import {
   addFooter,
@@ -47,7 +50,7 @@ import {
   workbookToBuffer,
 } from '../../common/utils/xlsx';
 import { getCompanyCurrency } from '../../common/currency/currency';
-import { getTenantContext } from '../../common/tenant/tenant-context';
+import { getRequiredCompanyId, getTenantContext } from '../../common/tenant/tenant-context';
 import { ReportBrandService } from '../company-branding/report-brand.service';
 import { presentReportPdf, ReportPdfService } from '../../common/report-pdf/report-pdf.service';
 import { NotificationsModule, NotificationsService } from '../notifications/notifications.module';
@@ -59,13 +62,15 @@ import {
   managerScopeIds,
   assertSalesRecordInScope,
 } from '../../common/utils/sales-scope';
-import { resolveTenantUser, scopedUserFindMany } from '../../common/tenant/resolve-tenant-entity';
+import { findTenantUser, resolveTenantUser, scopedUserFindMany } from '../../common/tenant/resolve-tenant-entity';
+import { SALES_ACTOR_ROLES } from '../../common/utils/sales-scope';
+import { commissionBasis, MARKUP_SNAPSHOT_SELECT } from '../../common/finance/commission-basis';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { ClawbackResolutionService } from '../broker-commissions/clawback-resolution.service';
 import { CollectClawbackDto, WaiveClawbackDto } from '../broker-commissions/dto/broker-commission.dto';
-import { CONTRACT_CANCELLED_MESSAGE, isDeadContract } from '../installments/live-contract';
+import { CONTRACT_CANCELLED_MESSAGE, isPayableDeal, LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 
 /** Allowed bonus entry moves through approve / pay / revert. */
 const ENTRY_TRANSITIONS: Record<BonusEntryStatus, BonusEntryStatus[]> = {
@@ -148,15 +153,16 @@ export interface SalesPerformanceRow {
   targetUnitsPercent: number | null;
 }
 
-function currentPeriod(): string {
-  return new Date().toISOString().slice(0, 7);
+/** This month in the company's time zone, "YYYY-MM". */
+function currentPeriod(tz: string): string {
+  const { year, month } = localDate(tz);
+  return `${year}-${String(month).padStart(2, '0')}`;
 }
 
-function periodRange(period: string): { start: Date; end: Date } {
+/** A "YYYY-MM" period: that month in the company's time zone (not UTC's). */
+function periodRange(period: string, tz: string): { start: Date; end: Date } {
   const parts = period.split('-');
-  const y = Number(parts[0]);
-  const m = Number(parts[1]);
-  return { start: new Date(Date.UTC(y, m - 1, 1)), end: new Date(Date.UTC(y, m, 1)) };
+  return localMonth(Number(parts[0]), Number(parts[1]), tz);
 }
 
 function pct(achieved: number, target: number | null): number | null {
@@ -268,6 +274,19 @@ export class BonusService {
 
   // Entries
   async createEntry(dto: CreateEntryDto) {
+    // Both ids come from the request body: they must be this company's, and
+    // the bonus must go to an active sales rep under an active rule.
+    const companyId = getRequiredCompanyId();
+    const [rep, rule] = await Promise.all([
+      findTenantUser(this.prisma, dto.salesId, { role: true, active: true, deletedAt: true }),
+      this.prisma.bonusRule.findFirst({ where: { id: dto.ruleId, companyId }, select: { active: true } }),
+    ]);
+    if (!rep || !SALES_ACTOR_ROLES.includes(rep.role)) throw new NotFoundException('Sales rep not found');
+    if (rep.deletedAt || rep.active === false) {
+      throw new BadRequestException('مندوب المبيعات غير نشط — لا يمكن إضافة مكافأة له');
+    }
+    if (!rule) throw new NotFoundException('Bonus rule not found');
+    if (!rule.active) throw new BadRequestException('قاعدة المكافأة غير مفعّلة');
     const entry = await this.prisma.bonusEntry.create({
       data: {
         salesId: dto.salesId,
@@ -296,7 +315,7 @@ export class BonusService {
         signedAt: true,
         totalAmount: true,
         reservationId: true,
-        reservation: { select: { salesId: true } },
+        reservation: { select: { salesId: true, ...MARKUP_SNAPSHOT_SELECT } },
         bonusEntry: { select: { id: true } },
       },
     });
@@ -322,7 +341,8 @@ export class BonusService {
     if (rules.length > 1) return { status: 'skipped', reason: 'ambiguous_rules' };
     const rule = rules[0]!;
 
-    const basisAmount = contract.totalAmount;
+    // The sale price after discount, without the instalment markup.
+    const basisAmount = commissionBasis(contract.totalAmount, contract.reservation);
     const amount = basisAmount.mul(rule.percentage).div(100);
     const period = contract.signedAt.toISOString().slice(0, 7);
 
@@ -478,7 +498,7 @@ export class BonusService {
   async setEntryStatus(id: string, dto: UpdateEntryStatusDto) {
     const current = await this.prisma.bonusEntry.findUnique({
       where: { id },
-      select: { status: true, contract: { select: { status: true, deletedAt: true } } },
+      select: { status: true, retainedOnCancellation: true, contract: { select: { status: true, deletedAt: true } } },
     });
     if (!current) throw new NotFoundException('Bonus entry not found');
     // PENDING → APPROVED → PAID, APPROVED → PENDING (revert). PAID and
@@ -489,16 +509,23 @@ export class BonusService {
         `لا يمكن نقل المكافأة من ${current.status} إلى ${dto.status}`,
       );
     }
-    if (dto.status !== BonusEntryStatus.PENDING && isDeadContract(current.contract)) {
+    // On a cancelled deal only a bonus kept with RETAIN moves forward.
+    if (dto.status !== BonusEntryStatus.PENDING && !isPayableDeal(current)) {
       throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
     }
-    const entry = await this.prisma.bonusEntry.update({
-      where: { id },
+    // Only from the status read above: two admins acting at once (pay twice,
+    // or revert while paying) — the second write finds it changed.
+    const moved = await this.prisma.bonusEntry.updateMany({
+      where: { id, status: current.status },
       data: {
         status: dto.status,
         paidAt: dto.status === BonusEntryStatus.PAID ? new Date() : null,
       },
     });
+    if (moved.count === 0) {
+      throw new ConflictException('تغيّرت حالة المكافأة أثناء التنفيذ — حدّث الصفحة وأعد المحاولة');
+    }
+    const entry = await this.prisma.bonusEntry.findUniqueOrThrow({ where: { id } });
     await this.notifyEntry(entry, 'bonus_status_changed', dto.status);
     return entry;
   }
@@ -542,8 +569,9 @@ export class BonusService {
     salesId?: string;
     period?: string;
   }): Promise<SalesPerformanceRow[]> {
-    const period = opts.period ?? currentPeriod();
-    const { start, end } = periodRange(period);
+    const tz = await currentCompanyTimeZone(this.prisma, getTenantContext()?.companyId);
+    const period = opts.period ?? currentPeriod(tz);
+    const { start, end } = periodRange(period, tz);
     const now = new Date();
 
     // Rep scoping by role (sales actors = SALES + SALES_MANAGER):
@@ -629,7 +657,8 @@ export class BonusService {
       // contracts in the period give the realized value/units (primary signal);
       // convertedReservationsCount is kept as a documented cross-check/fallback.
       this.prisma.contract.findMany({
-        where: { signedAt: inPeriod, reservation: { salesId: inReps } },
+        // A cancelled or deleted deal is not a sale.
+        where: { signedAt: inPeriod, reservation: { salesId: inReps }, ...LIVE_CONTRACT_WHERE },
         select: { totalAmount: true, reservation: { select: { salesId: true } } },
       }),
     ]);

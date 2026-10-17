@@ -113,7 +113,8 @@ export type CronJob =
   | 'reservation-expiry'
   | 'broker-agreement-end'
   | 'subscription-expiry'
-  | 'late-fee';
+  | 'late-fee'
+  | 'installment-overdue';
 
 function cronRunner(app: INestApplication): (job: CronJob) => Promise<void> {
   const appointments = app.get(AppointmentReminderCron);
@@ -149,6 +150,8 @@ function cronRunner(app: INestApplication): (job: CronJob) => Promise<void> {
         return asCron(() => subscriptionExpiry.handleExpiry());
       case 'late-fee':
         return asCron(() => installmentsSvc.applyLateFees());
+      case 'installment-overdue':
+        return asCron(() => installmentsSvc.markOverdue());
     }
   };
 }

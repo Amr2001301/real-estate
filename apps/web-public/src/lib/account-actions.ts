@@ -10,7 +10,7 @@
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { authFetch, AuthError, refreshSession } from '@/lib/api-auth';
+import { authFetch, AuthError, ForbiddenError, refreshSession } from '@/lib/api-auth';
 
 const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
 const PHONE_RE = /^\+?[1-9]\d{7,14}$/;
@@ -21,8 +21,11 @@ const ATTACH_MAX_BYTES = 5 * 1024 * 1024;
 const ATTACH_MAX_COUNT = 5;
 
 export type ProfileActionResult =
-  | { ok: true }
+  /** codeSent: a new phone waits for the code sent to it (confirmPhoneAction). */
+  | { ok: true; codeSent?: boolean }
   | { ok: false; error: string; field?: 'fullName' | 'phone' };
+
+export type ConfirmPhoneResult = { ok: true } | { ok: false; error: string };
 
 export type AvatarActionResult =
   | { ok: true; avatarUrl: string }
@@ -143,13 +146,15 @@ export async function changePasswordAction(input: {
 }
 
 /**
- * Update the signed-in user's profile → PATCH /v1/users/me. Sends ONLY the
- * allowed fields (fullName, phone) and re-validates server-side. The backend
- * UpdateUserDto further restricts what can change (no role/email/status).
+ * Update the signed-in user's profile → PATCH /v1/users/me (name), and a new
+ * phone → POST /v1/auth/me/phone: the number changes only once the code sent
+ * to it is entered (confirmPhoneAction), so a typo cannot hand the account to
+ * whoever holds the mistyped number.
  */
 export async function updateProfileAction(input: {
   fullName: string;
   phone: string;
+  initialPhone: string;
 }): Promise<ProfileActionResult> {
   const fullName = input.fullName?.trim() ?? '';
   const phone = (input.phone ?? '').replace(/[\s-]/g, '');
@@ -168,7 +173,7 @@ export async function updateProfileAction(input: {
   try {
     await authFetch('/users/me', {
       method: 'PATCH',
-      body: JSON.stringify({ fullName, phone }),
+      body: JSON.stringify({ fullName }),
     });
   } catch (e) {
     if (e instanceof AuthError) {
@@ -177,6 +182,44 @@ export async function updateProfileAction(input: {
     return { ok: false, error: 'تعذّر حفظ التغييرات حاليًا. حاول مرة أخرى بعد لحظات.' };
   }
 
+  const phoneChanged = phone !== (input.initialPhone ?? '').replace(/[\s-]/g, '');
+  if (phoneChanged) {
+    try {
+      await authFetch('/auth/me/phone', { method: 'POST', body: JSON.stringify({ phone }) });
+    } catch (e) {
+      if (e instanceof AuthError) {
+        return { ok: false, error: 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.' };
+      }
+      const msg = (e as Error).message;
+      if (msg.includes('409')) {
+        return { ok: false, error: 'هذا الرقم مستخدم في حساب آخر — تواصل مع الشركة.', field: 'phone' };
+      }
+      if (msg.includes('400') || msg.includes('429')) {
+        return { ok: false, error: 'تعذّر إرسال الرمز — تأكد من الرقم أو انتظر دقيقة ثم أعد المحاولة.', field: 'phone' };
+      }
+      return { ok: false, error: 'تعذّر إرسال رمز التحقق حاليًا. حاول مرة أخرى بعد لحظات.' };
+    }
+  }
+
+  revalidatePath('/account/profile');
+  return { ok: true, codeSent: phoneChanged };
+}
+
+/** The code sent to the new phone → POST /v1/auth/me/phone/confirm. */
+export async function confirmPhoneAction(code: string): Promise<ConfirmPhoneResult> {
+  const clean = (code ?? '').replace(/\s/g, '');
+  if (!/^[0-9]{6}$/.test(clean)) return { ok: false, error: 'الرمز مكوّن من ٦ أرقام.' };
+  try {
+    await authFetch('/auth/me/phone/confirm', { method: 'POST', body: JSON.stringify({ code: clean }) });
+  } catch (e) {
+    if (e instanceof AuthError) {
+      return { ok: false, error: 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.' };
+    }
+    const msg = (e as Error).message;
+    if (e instanceof ForbiddenError) return { ok: false, error: 'محاولات كثيرة — اطلب رمزًا جديدًا.' };
+    if (msg.includes('409')) return { ok: false, error: 'هذا الرقم مستخدم في حساب آخر — تواصل مع الشركة.' };
+    return { ok: false, error: 'الرمز غير صحيح أو انتهت صلاحيته.' };
+  }
   revalidatePath('/account/profile');
   return { ok: true };
 }

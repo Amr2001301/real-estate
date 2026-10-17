@@ -1694,6 +1694,48 @@ abstract class AppLocalizations {
   /// **'Profile updated'**
   String get profileSaved;
 
+  /// No description provided for @phoneChangeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your new number'**
+  String get phoneChangeTitle;
+
+  /// No description provided for @phoneChangeConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get phoneChangeConfirm;
+
+  /// No description provided for @phoneChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number changed'**
+  String get phoneChanged;
+
+  /// No description provided for @profileDeleteAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete my account'**
+  String get profileDeleteAccount;
+
+  /// No description provided for @profileDeleteAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete your account?'**
+  String get profileDeleteAccountTitle;
+
+  /// No description provided for @profileDeleteAccountBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your name, phone, e-mail and photo are removed and you are signed out. Your contract and payment records stay with the company. This cannot be undone.'**
+  String get profileDeleteAccountBody;
+
+  /// No description provided for @profileDeleteAccountConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get profileDeleteAccountConfirm;
+
   /// No description provided for @fieldLanguage.
   ///
   /// In en, this message translates to:
@@ -2096,6 +2138,18 @@ abstract class AppLocalizations {
   /// **'Signed on'**
   String get myPropertySignedDate;
 
+  /// No description provided for @myPropertyHandedOverDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Handed over on'**
+  String get myPropertyHandedOverDate;
+
+  /// No description provided for @myPropertyNotHandedOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Not handed over yet — maintenance requests open at handover'**
+  String get myPropertyNotHandedOver;
+
   /// No description provided for @myPropertyInstallmentPlan.
   ///
   /// In en, this message translates to:
@@ -2371,6 +2425,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Overdue'**
   String get installmentStatusOverdue;
+
+  /// No description provided for @installmentStatusCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled (rescheduled)'**
+  String get installmentStatusCancelled;
 
   /// No description provided for @installmentDueOn.
   ///

@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../domain/entities/user_profile.dart';
 import '../domain/repositories/profile_repository.dart';
+import '../../auth/presentation/auth_cubit.dart';
 import 'profile_cubit.dart';
 
 const _navyDeep = Color(0xFF0B1726);
@@ -46,22 +47,79 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final l10n = context.l10n;
-    final failure = await context.read<ProfileCubit>().save(
-          UpdateProfileParams(
-            fullName: _fullName.text.trim(),
-            phone: _phone.text.trim(),
-            locale: _locale,
-          ),
-        );
+    final cubit = context.read<ProfileCubit>();
+    final newPhone = _phone.text.trim();
+    // A new number is changed only with the code sent to it (below), never by
+    // the profile save itself.
+    final phoneChanged = newPhone.isNotEmpty && newPhone != (cubit.state.profile?.phone ?? '');
+    final failure = await cubit.save(
+      UpdateProfileParams(fullName: _fullName.text.trim(), locale: _locale),
+    );
     if (!mounted) return;
-    if (failure == null) {
-      setState(() => _editing = false);
+    if (failure != null) {
+      showFailureSnackBar(context, failure);
+      return;
+    }
+    setState(() => _editing = false);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(l10n.profileSaved)));
+    if (phoneChanged) await _changePhone(cubit, newPhone);
+  }
+
+  /// Sends a code to [phone] and asks for it; the number changes only then.
+  Future<void> _changePhone(ProfileCubit cubit, String phone) async {
+    final sendFailure = await cubit.requestPhoneChange(phone);
+    if (!mounted) return;
+    if (sendFailure != null) {
+      showFailureSnackBar(context, sendFailure);
+      return;
+    }
+    final code = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _PhoneCodeDialog(phone: phone),
+    );
+    if (code == null || !mounted) return;
+    final confirmFailure = await cubit.confirmPhoneChange(code);
+    if (!mounted) return;
+    if (confirmFailure != null) {
+      showFailureSnackBar(context, confirmFailure);
+    } else {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(l10n.profileSaved)));
-    } else {
-      showFailureSnackBar(context, failure);
+        ..showSnackBar(SnackBar(content: Text(context.l10n.phoneChanged)));
     }
+  }
+
+  /// "Delete my account": confirmed, then the account is deleted and the
+  /// customer signed out. A live contract is refused with its reason.
+  Future<void> _deleteAccount() async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.profileDeleteAccountTitle),
+        content: Text(l10n.profileDeleteAccountBody),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.actionCancel)),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(ctx).colorScheme.error),
+            child: Text(l10n.profileDeleteAccountConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final authCubit = context.read<AuthCubit>();
+    final failure = await context.read<ProfileCubit>().deleteAccount();
+    if (!mounted) return;
+    if (failure != null) {
+      showFailureSnackBar(context, failure);
+      return;
+    }
+    await authCubit.logout();
   }
 
   @override
@@ -224,6 +282,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ],
             ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Center(
+          child: TextButton.icon(
+            onPressed: _deleteAccount,
+            icon: const Icon(Icons.delete_outline, size: 18),
+            label: Text(l10n.profileDeleteAccount),
+            style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
           ),
         ),
       ],
@@ -528,4 +595,62 @@ class _DotPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DotPainter _) => false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The code sent to a new phone number
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PhoneCodeDialog extends StatefulWidget {
+  const _PhoneCodeDialog({required this.phone});
+  final String phone;
+
+  @override
+  State<_PhoneCodeDialog> createState() => _PhoneCodeDialogState();
+}
+
+class _PhoneCodeDialogState extends State<_PhoneCodeDialog> {
+  final _code = TextEditingController();
+
+  @override
+  void dispose() {
+    _code.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(l10n.phoneChangeTitle),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.authOtpSentTo(widget.phone)),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _code,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            decoration: InputDecoration(labelText: l10n.fieldOtpCode),
+            onChanged: (_) => setState(() {}),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.actionCancel),
+        ),
+        FilledButton(
+          onPressed: _code.text.trim().length == 6
+              ? () => Navigator.of(context).pop(_code.text.trim())
+              : null,
+          child: Text(l10n.phoneChangeConfirm),
+        ),
+      ],
+    );
+  }
 }

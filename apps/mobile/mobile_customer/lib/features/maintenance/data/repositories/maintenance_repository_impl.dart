@@ -56,9 +56,12 @@ class MaintenanceRepositoryImpl implements MaintenanceRepository {
         onProgress: input.onProgress,
       );
       // 3. Register the object as a customer-visible document on the request.
+      // Photos go to the private bucket: the server accepts only the key it
+      // presigned for this request (there is no public URL).
+      final key = presign.key;
       await _remote.registerPhoto(
         requestId: input.requestId,
-        fileUrl: presign.publicUrl,
+        fileUrl: key != null && key.isNotEmpty ? key : presign.publicUrl,
         title: input.fileName,
         fileName: input.fileName,
         mimeType: input.contentType,

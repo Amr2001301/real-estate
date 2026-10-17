@@ -21,6 +21,7 @@ import {
   CreatePortalVisitRequestDto,
   PortalVisitsQueryDto,
 } from './dto/portal-visit.dto';
+import { liveProjectGrant } from '../broker-access/live-grant';
 
 const VISIT_REQUEST_INCLUDE = {
   project: { select: { id: true, name: true, city: true } },
@@ -301,7 +302,7 @@ export class BrokerPortalVisitsService {
     });
     if (!project) throw new NotFoundException('Project not found');
     const access = await this.prisma.brokerProjectAccess.findFirst({
-      where: { brokerId, projectId, active: true },
+      where: { brokerId, projectId, ...liveProjectGrant() },
       select: { id: true },
     });
     if (!access) {
@@ -324,7 +325,7 @@ export class BrokerPortalVisitsService {
     const projectId = unit.building.phase.projectId;
     const [projectAccess, unitAccess] = await Promise.all([
       this.prisma.brokerProjectAccess.findFirst({
-        where: { brokerId, projectId, active: true },
+        where: { brokerId, projectId, ...liveProjectGrant() },
         select: { id: true },
       }),
       this.prisma.brokerUnitAccess.findFirst({

@@ -99,6 +99,7 @@ function makePrismaMock() {
         ...data,
       })),
       update: jest.fn().mockImplementation(async ({ data }) => updated(data.status ?? 'DRAFT')),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       aggregate: jest.fn().mockResolvedValue({ _sum: {} }),
     },
     brokerCommission: {
@@ -114,6 +115,11 @@ function makePrismaMock() {
         },
       }),
     },
+    brokerCommissionAdjustment: {
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
+    },
     brokerUser: { findMany: jest.fn().mockResolvedValue([{ userId: 'broker-user-1' }]) },
     brokerActivityLog: { create: jest.fn().mockResolvedValue({}) },
     notification: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
@@ -127,8 +133,15 @@ function makePrismaMock() {
               ...data,
             })),
             update: jest.fn().mockImplementation(async ({ data }) => updated(data.status ?? 'DRAFT')),
+            updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+          },
+          brokerCommissionAdjustment: {
+            updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+            findMany: jest.fn().mockResolvedValue([]),
+            count: jest.fn().mockResolvedValue(0),
           },
           brokerCommission: {
+            count: jest.fn().mockImplementation(async () => payoutStore.commissionCount),
             updateMany: jest.fn().mockResolvedValue({ count: 0 }),
             aggregate: jest.fn().mockResolvedValue({
               _sum: {
@@ -203,7 +216,7 @@ describe('Broker-payouts module · permissions enforcement', () => {
   beforeEach(() => {
     FakeAuthGuard.currentUser = null;
     prismaMock.userPermission.findMany.mockClear();
-    prismaMock.brokerPayout.update.mockClear();
+    prismaMock.brokerPayout.updateMany.mockClear();
     prismaMock.brokerCommission.updateMany.mockClear();
     prismaMock.brokerActivityLog.create.mockClear();
     notificationsMock.sendToUsers.mockClear();
@@ -364,7 +377,7 @@ describe('Broker-payouts module · permissions enforcement', () => {
         code: 'missing_permission',
         permissions: ['broker_payouts:approve'],
       });
-      expect(prismaMock.brokerPayout.update).not.toHaveBeenCalled();
+      expect(prismaMock.brokerPayout.updateMany).not.toHaveBeenCalled();
       expect(prismaMock.brokerActivityLog.create).not.toHaveBeenCalled();
       expect(notificationsMock.sendToUsers).not.toHaveBeenCalled();
     });
@@ -376,7 +389,8 @@ describe('Broker-payouts module · permissions enforcement', () => {
         codes: ['broker_payouts:approve'],
       };
       await request(app.getHttpServer()).patch(PATH).send({}).expect(200);
-      expect(prismaMock.brokerPayout.update).toHaveBeenCalledTimes(1);
+      // The status write runs inside $transaction(callback), with the count.
+      expect(prismaMock.$transaction).toHaveBeenCalled();
       expect(prismaMock.brokerActivityLog.create).toHaveBeenCalledTimes(1);
       expect(notificationsMock.sendToUsers).toHaveBeenCalled();
     });
@@ -390,7 +404,7 @@ describe('Broker-payouts module · permissions enforcement', () => {
       payoutStore.commissionCount = 0;
       const res = await request(app.getHttpServer()).patch(PATH).send({}).expect(400);
       expect(res.body.message).toContain('no commissions');
-      expect(prismaMock.brokerPayout.update).not.toHaveBeenCalled();
+      expect(prismaMock.brokerPayout.updateMany).not.toHaveBeenCalled();
       expect(prismaMock.brokerActivityLog.create).not.toHaveBeenCalled();
       expect(notificationsMock.sendToUsers).not.toHaveBeenCalled();
     });
@@ -404,7 +418,7 @@ describe('Broker-payouts module · permissions enforcement', () => {
       const res = await request(app.getHttpServer()).patch(PATH).send({}).expect(403);
       expect(res.body.message).toBe('Insufficient role');
       expect(prismaMock.userPermission.findMany).not.toHaveBeenCalled();
-      expect(prismaMock.brokerPayout.update).not.toHaveBeenCalled();
+      expect(prismaMock.brokerPayout.updateMany).not.toHaveBeenCalled();
     });
   });
 
@@ -418,7 +432,7 @@ describe('Broker-payouts module · permissions enforcement', () => {
         code: 'missing_permission',
         permissions: ['broker_payouts:process'],
       });
-      expect(prismaMock.brokerPayout.update).not.toHaveBeenCalled();
+      expect(prismaMock.brokerPayout.updateMany).not.toHaveBeenCalled();
       expect(prismaMock.brokerActivityLog.create).not.toHaveBeenCalled();
       expect(notificationsMock.sendToUsers).not.toHaveBeenCalled();
     });
@@ -431,7 +445,7 @@ describe('Broker-payouts module · permissions enforcement', () => {
       };
       payoutStore.current.status = 'APPROVED';
       await request(app.getHttpServer()).patch(PATH).send({}).expect(200);
-      expect(prismaMock.brokerPayout.update).toHaveBeenCalledTimes(1);
+      expect(prismaMock.brokerPayout.updateMany).toHaveBeenCalledTimes(1);
       expect(prismaMock.brokerActivityLog.create).toHaveBeenCalledTimes(1);
       expect(notificationsMock.sendToUsers).toHaveBeenCalled();
     });
@@ -448,7 +462,7 @@ describe('Broker-payouts module · permissions enforcement', () => {
         code: 'missing_permission',
         permissions: ['broker_payouts:pay'],
       });
-      expect(prismaMock.brokerPayout.update).not.toHaveBeenCalled();
+      expect(prismaMock.brokerPayout.updateMany).not.toHaveBeenCalled();
       expect(prismaMock.brokerActivityLog.create).not.toHaveBeenCalled();
       expect(notificationsMock.sendToUsers).not.toHaveBeenCalled();
     });
@@ -461,7 +475,8 @@ describe('Broker-payouts module · permissions enforcement', () => {
       };
       payoutStore.current.status = 'PROCESSING';
       await request(app.getHttpServer()).patch(PATH).send(BODY).expect(200);
-      expect(prismaMock.brokerPayout.update).toHaveBeenCalledTimes(1);
+      // The status write and the netted clawbacks' settlement share one transaction.
+      expect(prismaMock.$transaction).toHaveBeenCalled();
       expect(prismaMock.brokerActivityLog.create).toHaveBeenCalledTimes(1);
       expect(notificationsMock.sendToUsers).toHaveBeenCalled();
     });
@@ -478,7 +493,7 @@ describe('Broker-payouts module · permissions enforcement', () => {
         code: 'missing_permission',
         permissions: ['broker_payouts:cancel'],
       });
-      expect(prismaMock.brokerPayout.update).not.toHaveBeenCalled();
+      expect(prismaMock.brokerPayout.updateMany).not.toHaveBeenCalled();
       // No commission unlink — this is the service's $transaction body which
       // the guard prevents from running.
       expect(prismaMock.brokerCommission.updateMany).not.toHaveBeenCalled();
@@ -494,7 +509,7 @@ describe('Broker-payouts module · permissions enforcement', () => {
       };
       await request(app.getHttpServer()).patch(PATH).send(BODY).expect(200);
       // The cancel path runs its mutation inside $transaction(callback), so
-      // the top-level brokerPayout.update mock is not directly invoked.
+      // the top-level brokerPayout.updateMany mock is not directly invoked.
       // Side effects (activity + notification) DO run after the transaction.
       expect(prismaMock.brokerActivityLog.create).toHaveBeenCalledTimes(1);
       expect(notificationsMock.sendToUsers).toHaveBeenCalled();

@@ -282,6 +282,13 @@ export interface Contract {
   } | null;
   pdfUrl: string | null;
   signedAt: string | null;
+  /** The unit handover: warranties and the customer's maintenance start there. */
+  handover?: {
+    handedOverAt: string;
+    checklist: Array<{ key: string; done: boolean }> | null;
+    notes: string | null;
+    performedById: string | null;
+  } | null;
   totalAmount: string | number;
   downPayment: string | number;
   createdAt: string;
@@ -1306,6 +1313,15 @@ export interface AdminBrokerPayout extends PortalPayout {
   approvedBy?: { id: string; fullName: string } | null;
   processedBy?: { id: string; fullName: string } | null;
   cancelledBy?: { id: string; fullName: string } | null;
+  /** Top-ups / clawbacks of paid commissions whose price changed, netted here. */
+  adjustments?: Array<{
+    id: string;
+    kind: 'TOP_UP' | 'CLAWBACK';
+    amount: string | number;
+    reason: string;
+    createdAt: string;
+    commission: { id: string; commissionNumber: string; contract: { id: string; contractNumber: string | null } };
+  }>;
   commissions?: Array<{
     id: string;
     commissionNumber: string;
@@ -1716,6 +1732,10 @@ export interface FinancialSummary {
   totalCollectedAll?: string;
   totalCollectedVerified?: string;
   totalCollectedUnverified?: string;
+  /** Decided 2026-10-16: collected towards the price (the collection rate's
+   *  numerator) and fees & penalties, shown apart. */
+  collectedTowardsPrice?: string;
+  feesCollected?: string;
   /** Refunds on cancelled contracts: paid in the period, still owed, collected net of refunds. */
   refundsPaid?: string;
   refundsOwed?: string;

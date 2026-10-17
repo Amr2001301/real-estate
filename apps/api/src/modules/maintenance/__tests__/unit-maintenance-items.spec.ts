@@ -67,6 +67,8 @@ function makePrismaMock() {
     },
     // No signed sale on the unit — a new item's warranty is not started.
     contract: { findFirst: jest.fn().mockResolvedValue(null) },
+    // Not handed over: an item added now does not start its warranty.
+    unitHandover: { findFirst: jest.fn().mockResolvedValue(null) },
     unitMaintenanceItem: {
       findMany: jest.fn().mockImplementation(async ({ where }: { where: { active?: boolean } }) =>
         listFixture.rows.filter((r) => where.active === undefined || r.active === where.active),

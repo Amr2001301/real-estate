@@ -43,7 +43,6 @@ import {
 } from '../installments/live-contract';
 import {
   closeOpenMaintenance,
-  handOverOpenMaintenance,
   resetUnitWarranties,
   startUnitWarranties,
 } from './unit-warranties';
@@ -51,6 +50,14 @@ import { resolveTransferFeeSettings, TRANSFER_FEE_SETTING_KEYS, transferFeeFor }
 import { feeDueDate, feePaymentDays } from '../installments/fee-settings';
 import { assertDiscountAllowed, discountPct } from '../installments/discount-policy';
 import { addMonths } from '../../common/utils/add-months';
+import { companyTimeZone, startOfLocalToday } from '../../common/time/company-timezone';
+import { assertUnitOnSale } from '../projects/inventory-blockers';
+import { commissionBasis, MARKUP_SNAPSHOT_SELECT } from '../../common/finance/commission-basis';
+import { rebalancePayout } from '../broker-payouts/payout-totals';
+import { rescaleUnpaid } from './rescale-unpaid';
+
+// Kept here for the callers and tests that import it from the service.
+export { rescaleUnpaid };
 
 export class TransferContractDto {
   @IsUUID()
@@ -121,27 +128,6 @@ const SURCHARGE_TYPES = SURCHARGE_PAYMENT_TYPES;
 const OPEN_STATUSES: InstallmentStatus[] = [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE];
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/**
- * Spread a price change over the unpaid installments, in proportion to their
- * amounts; the last one takes the rounding. Returns the new amounts, in the
- * same order, or null when the unpaid amount cannot absorb a reduction.
- */
-export function rescaleUnpaid(amounts: number[], delta: number): number[] | null {
-  const cents = amounts.map((a) => Math.round(a * 100));
-  const total = cents.reduce((a, c) => a + c, 0);
-  const target = total + Math.round(delta * 100);
-  if (target < 0 || (total === 0 && target !== 0)) return null;
-  if (total === 0) return amounts.map(() => 0);
-  const out: number[] = [];
-  let used = 0;
-  cents.forEach((c, i) => {
-    const v = i === cents.length - 1 ? target - used : Math.round((c * target) / total);
-    used += v;
-    out.push(v / 100);
-  });
-  return out.some((v) => v < 0) ? null : out;
-}
-
 @Injectable()
 export class ContractAmendmentsService {
   private readonly logger = new Logger(ContractAmendmentsService.name);
@@ -202,8 +188,12 @@ export class ContractAmendmentsService {
   }
 
   /** A payment still on its way belongs to the contract as it is now. */
-  private async assertNoWaitingPayments(contractId: string, reservationId: string | null) {
-    const waiting = await this.prisma.deposit.count({
+  private async assertNoWaitingPayments(
+    contractId: string,
+    reservationId: string | null,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const waiting = await db.deposit.count({
       where: {
         deletedAt: null,
         AND: [
@@ -228,6 +218,27 @@ export class ContractAmendmentsService {
     }
   }
 
+  /**
+   * Inside the amendment's transaction: lock the contract's installment rows
+   * and check again that no payment is on its way. A customer proof locks its
+   * installment row before it is created (DepositsService), so a proof sent
+   * while the amendment runs either is seen here or waits for it and then
+   * meets the amended schedule.
+   */
+  private async lockSchedule(
+    tx: Prisma.TransactionClient,
+    contractId: string,
+    reservationId: string | null,
+    companyId: string,
+  ) {
+    await tx.$queryRaw`
+      SELECT i.id FROM "Installment" i
+      JOIN "InstallmentPlan" p ON p.id = i."planId"
+      WHERE p."contractId" = ${contractId}::uuid AND p."companyId" = ${companyId}::uuid
+      FOR UPDATE OF i`;
+    await this.assertNoWaitingPayments(contractId, reservationId, tx);
+  }
+
   // ── Transfer (تنازل) ──────────────────────────────────────────────────────
 
   async transfer(contractId: string, dto: TransferContractDto, actorId: string) {
@@ -248,6 +259,27 @@ export class ContractAmendmentsService {
       throw new BadRequestException('لا يمكن نقل العقد إلا لعميل');
     }
     await this.assertNoWaitingPayments(contractId, contract.reservationId);
+    // A transfer requires the overdue amounts settled first (decided
+    // 2026-10-16): the new owner does not take on the old one's arrears and
+    // late fees, nor does the old one leave them behind.
+    const today = startOfLocalToday(await companyTimeZone(this.prisma, companyId));
+    const arrears = await this.prisma.installment.count({
+      where: {
+        companyId,
+        plan: { contractId, cancelledAt: null },
+        OR: [
+          { status: InstallmentStatus.OVERDUE },
+          { status: InstallmentStatus.PENDING, dueDate: { lt: today } },
+          { type: PlanPaymentType.LATE_FEE, status: { in: OPEN_STATUSES } },
+        ],
+      },
+    });
+    if (arrears > 0) {
+      throw new ConflictException({
+        message: 'على العقد أقساط متأخرة أو غرامات غير مسددة — سدّدها أو تنازل عنها قبل التنازل عن العقد',
+        code: 'TRANSFER_NEEDS_ARREARS_SETTLED',
+      });
+    }
 
     // The fee goes on the contract's schedule: the admin's amount, else the
     // company setting. Without a schedule there is nowhere to put it.
@@ -277,6 +309,7 @@ export class ContractAmendmentsService {
     const fromId = contract.customerId;
     const now = new Date();
     const amendment = await this.prisma.$transaction(async (tx) => {
+      await this.lockSchedule(tx, contractId, contract.reservationId, companyId);
       const moved = await tx.contract.updateMany({
         where: { id: contractId, companyId, customerId: fromId, ...LIVE_CONTRACT_WHERE },
         data: { customerId: to.id },
@@ -289,7 +322,9 @@ export class ContractAmendmentsService {
           data: { clientId: to.id },
         });
       }
-      const maintenanceMoved = await handOverOpenMaintenance(tx, contract.unitId, fromId, to.id, companyId);
+      // The previous owner's open maintenance requests are closed, not handed
+      // over with their photos (decided 2026-10-16): the new owner files their own.
+      const maintenanceClosed = await closeOpenMaintenance(tx, contract.unitId, fromId, companyId);
       // The new owner gets the customer app; the old one keeps it only while
       // they still own another live contract. Both re-authenticate.
       const promoted = await tx.user.updateMany({
@@ -348,7 +383,7 @@ export class ContractAmendmentsService {
           entityType: 'Contract',
           entityId: contractId,
           before: { customerId: fromId },
-          after: { customerId: to.id, reason: dto.reason, feeAmount, feeInstallmentId, maintenanceMoved },
+          after: { customerId: to.id, reason: dto.reason, feeAmount, feeInstallmentId, maintenanceClosed },
           companyId,
         },
       });
@@ -375,10 +410,21 @@ export class ContractAmendmentsService {
   // ── Unit swap (تبديل) ─────────────────────────────────────────────────────
 
   /**
-   * Commissions not yet paid out follow the contract to its new price and
-   * unit: the broker commission while it is pending or approved and not on
-   * a payout, the sales bonus until it is paid. Anything already on a payout
-   * or paid keeps its amount — the audit row says which.
+   * The broker commission and the sales bonus follow the contract to its new
+   * price and unit (decided 2026-10-16). They are computed on the price after
+   * discount, without the instalment markup.
+   *
+   * Broker commission:
+   *  - not yet paid (pending, approved, or on a draft/approved payout): its
+   *    amounts are recomputed; when they change, an approved commission goes
+   *    back to PENDING for re-approval and leaves its payout, which goes back
+   *    to DRAFT with its totals redone.
+   *  - paid (its payout is being sent or was sent): it stays as paid; the
+   *    difference is a TOP_UP (price up) or CLAWBACK (price down) adjustment,
+   *    netted into the broker's next payout.
+   * Sales bonus: the same — recomputed (approved → PENDING) until paid; once
+   * paid, an ADJUSTMENT entry carries the difference.
+   * A fixed-per-unit commission does not depend on the price.
    */
   private async followNewPrice(
     tx: Prisma.TransactionClient,
@@ -386,56 +432,149 @@ export class ContractAmendmentsService {
     companyId: string,
     unit: { id: string; building: { phase: { projectId: string } } },
     total: number,
+    actorId: string,
+    reason: string,
   ) {
-    const basis = new Prisma.Decimal(total);
-    let brokerCommission: 'recomputed' | 'kept' | null = null;
+    const reservation = await tx.contract.findFirst({
+      where: { id: contractId, companyId },
+      select: { reservation: { select: MARKUP_SNAPSHOT_SELECT } },
+    });
+    const basis = commissionBasis(total, reservation?.reservation);
+    const brokerCommission = await this.followNewPriceBroker(tx, contractId, companyId, unit, basis, actorId, reason);
+    const salesBonus = await this.followNewPriceBonus(tx, contractId, companyId, basis);
+    return { brokerCommission, salesBonus };
+  }
+
+  private async followNewPriceBroker(
+    tx: Prisma.TransactionClient,
+    contractId: string,
+    companyId: string,
+    unit: { id: string; building: { phase: { projectId: string } } },
+    basis: Prisma.Decimal,
+    actorId: string,
+    reason: string,
+  ): Promise<'recomputed' | 'returned_for_approval' | 'top_up' | 'clawback' | 'kept' | null> {
     const bc = await tx.brokerCommission.findFirst({
       where: { contractId, companyId },
-      select: { id: true, status: true, payoutId: true, commissionPct: true, taxPct: true, withholdingPct: true },
+      select: {
+        id: true,
+        brokerId: true,
+        status: true,
+        payoutId: true,
+        payout: { select: { status: true } },
+        commissionPct: true,
+        taxPct: true,
+        withholdingPct: true,
+        netAmount: true,
+        adjustments: { select: { kind: true, amount: true } },
+      },
     });
-    if (bc) {
-      const open = (bc.status === 'PENDING' || bc.status === 'APPROVED') && !bc.payoutId;
-      if (open) {
-        const data: Prisma.BrokerCommissionUpdateManyMutationInput & { unitId: string; projectId: string } = {
-          basisAmount: basis,
-          unitId: unit.id,
-          projectId: unit.building.phase.projectId,
-        };
-        // A fixed-per-unit commission keeps its amount; a percentage follows the price.
-        if (bc.commissionPct !== null) {
-          const gross = basis.mul(bc.commissionPct).div(100).toDecimalPlaces(2);
-          const tax = gross.mul(bc.taxPct).div(100).toDecimalPlaces(2);
-          const withholding = gross.mul(bc.withholdingPct).div(100).toDecimalPlaces(2);
-          Object.assign(data, {
-            grossAmount: gross,
-            taxAmount: tax,
-            withholdingAmount: withholding,
-            netAmount: gross.sub(tax).sub(withholding),
-          });
-        }
-        await tx.brokerCommission.updateMany({ where: { id: bc.id, payoutId: null }, data });
-        brokerCommission = 'recomputed';
-      } else {
-        brokerCommission = 'kept';
-      }
+    if (!bc) return null;
+    if (bc.status !== 'PENDING' && bc.status !== 'APPROVED') return 'kept';
+    const fixed = bc.commissionPct === null;
+    const gross = fixed ? null : basis.mul(bc.commissionPct!).div(100).toDecimalPlaces(2);
+    const tax = gross?.mul(bc.taxPct).div(100).toDecimalPlaces(2);
+    const withholding = gross?.mul(bc.withholdingPct).div(100).toDecimalPlaces(2);
+    const net = gross ? gross.sub(tax!).sub(withholding!) : bc.netAmount;
+
+    const paid = bc.payout?.status === 'PROCESSING' || bc.payout?.status === 'PAID';
+    if (paid) {
+      // What the broker has been or will be paid for this sale so far.
+      const owed = bc.adjustments.reduce(
+        (sum, a) => (a.kind === 'TOP_UP' ? sum.add(a.amount) : sum.sub(a.amount)),
+        new Prisma.Decimal(bc.netAmount),
+      );
+      const delta = net.sub(owed);
+      if (delta.isZero()) return 'kept';
+      await tx.brokerCommissionAdjustment.create({
+        data: {
+          brokerId: bc.brokerId,
+          commissionId: bc.id,
+          kind: delta.isPositive() ? 'TOP_UP' : 'CLAWBACK',
+          amount: delta.abs(),
+          reason,
+          createdById: actorId,
+          companyId,
+        },
+      });
+      return delta.isPositive() ? 'top_up' : 'clawback';
     }
-    let salesBonus: 'recomputed' | 'kept' | null = null;
+
+    const data: Prisma.BrokerCommissionUncheckedUpdateManyInput = {
+      basisAmount: basis,
+      unitId: unit.id,
+      projectId: unit.building.phase.projectId,
+    };
+    const changed = !net.equals(bc.netAmount);
+    if (gross) Object.assign(data, { grossAmount: gross, taxAmount: tax, withholdingAmount: withholding, netAmount: net });
+    if (changed && bc.status === 'APPROVED') {
+      // Approved for another amount: approved again, and off its payout.
+      Object.assign(data, { status: 'PENDING', approvedAt: null, approvedById: null, payoutId: null });
+    }
+    const moved = await tx.brokerCommission.updateMany({
+      where: { id: bc.id, status: bc.status, payoutId: bc.payoutId },
+      data,
+    });
+    if (moved.count === 0) throw new ConflictException('تغيّرت عمولة البروكر أثناء التنفيذ — أعد المحاولة');
+    if (changed && bc.payoutId) {
+      const reopened = await tx.brokerPayout.updateMany({
+        where: { id: bc.payoutId, status: { in: ['DRAFT', 'APPROVED'] } },
+        data: { status: 'DRAFT', approvedAt: null, approvedById: null },
+      });
+      if (reopened.count === 0) throw new ConflictException('تغيّرت دفعة البروكر أثناء التنفيذ — أعد المحاولة');
+      await rebalancePayout(tx, bc.payoutId, bc.brokerId);
+    }
+    return changed && bc.status === 'APPROVED' ? 'returned_for_approval' : 'recomputed';
+  }
+
+  private async followNewPriceBonus(
+    tx: Prisma.TransactionClient,
+    contractId: string,
+    companyId: string,
+    basis: Prisma.Decimal,
+  ): Promise<'recomputed' | 'returned_for_approval' | 'adjusted' | 'kept' | null> {
     const bonus = await tx.bonusEntry.findFirst({
       where: { contractId, companyId },
-      select: { id: true, status: true, commissionPct: true },
+      select: { id: true, status: true, commissionPct: true, amount: true, salesId: true, ruleId: true },
     });
-    if (bonus) {
-      if ((bonus.status === 'PENDING' || bonus.status === 'APPROVED') && bonus.commissionPct !== null) {
-        await tx.bonusEntry.updateMany({
-          where: { id: bonus.id, status: { in: ['PENDING', 'APPROVED'] } },
-          data: { basisAmount: basis, amount: basis.mul(bonus.commissionPct).div(100).toDecimalPlaces(2) },
-        });
-        salesBonus = 'recomputed';
-      } else {
-        salesBonus = 'kept';
-      }
+    if (!bonus) return null;
+    if (bonus.commissionPct === null || bonus.status === 'CANCELLED') return 'kept';
+    const amount = basis.mul(bonus.commissionPct).div(100).toDecimalPlaces(2);
+    if (bonus.status === 'PAID') {
+      const earlier = await tx.bonusEntry.aggregate({
+        where: { adjustsEntryId: bonus.id, companyId, status: { not: 'CANCELLED' } },
+        _sum: { amount: true },
+      });
+      const delta = amount.sub(bonus.amount).sub(earlier._sum.amount ?? 0);
+      if (delta.isZero()) return 'kept';
+      await tx.bonusEntry.create({
+        data: {
+          salesId: bonus.salesId,
+          ruleId: bonus.ruleId,
+          amount: delta,
+          period: new Date().toISOString().slice(0, 7),
+          status: 'PENDING',
+          source: 'ADJUSTMENT',
+          adjustsEntryId: bonus.id,
+          basisAmount: basis,
+          commissionPct: bonus.commissionPct,
+          companyId,
+        },
+      });
+      return 'adjusted';
     }
-    return { brokerCommission, salesBonus };
+    const changed = !amount.equals(bonus.amount);
+    const moved = await tx.bonusEntry.updateMany({
+      where: { id: bonus.id, status: bonus.status },
+      data: {
+        basisAmount: basis,
+        amount,
+        // Approved for another amount: approved again.
+        ...(changed && bonus.status === 'APPROVED' ? { status: 'PENDING' as const } : {}),
+      },
+    });
+    if (moved.count === 0) throw new ConflictException('تغيّرت مكافأة المبيعات أثناء التنفيذ — أعد المحاولة');
+    return changed && bonus.status === 'APPROVED' ? 'returned_for_approval' : 'recomputed';
   }
 
   /**
@@ -494,7 +633,8 @@ export class ContractAmendmentsService {
       }
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const amendment = await this.prisma.$transaction(async (tx) => {
+      await this.lockSchedule(tx, contractId, contract.reservationId, companyId);
       const moved = await tx.contract.updateMany({
         where: { id: contractId, companyId, totalAmount: contract.totalAmount, ...LIVE_CONTRACT_WHERE },
         data: { totalAmount: new Prisma.Decimal(dto.totalAmount) },
@@ -519,7 +659,7 @@ export class ContractAmendmentsService {
           },
         });
       }
-      const commissions = await this.followNewPrice(tx, contractId, companyId, unit, dto.totalAmount);
+      const commissions = await this.followNewPrice(tx, contractId, companyId, unit, dto.totalAmount, actorId, dto.reason);
       const row = await tx.contractAmendment.create({
         data: {
           type: 'PRICE_CHANGE',
@@ -550,6 +690,11 @@ export class ContractAmendmentsService {
       });
       return row;
     });
+    await this.notifyCustomer(contract, 'contract_price_changed', actorId, {
+      totalAmount: dto.totalAmount,
+      oldTotalAmount: oldTotal,
+    });
+    return amendment;
   }
 
   /**
@@ -582,16 +727,32 @@ export class ContractAmendmentsService {
     if (monthlyCents <= 0) throw new BadRequestException('عدد الشهور أكبر من المبلغ المتبقي');
     const lastCents = totalCents - monthlyCents * (dto.months - 1);
     const startsAt = new Date(`${dto.startsAt.slice(0, 10)}T00:00:00Z`);
+    // A first due date already past would make the new rows overdue — and
+    // charge late fees — the moment they are created.
+    if (startsAt < startOfLocalToday(await companyTimeZone(this.prisma, companyId))) {
+      throw new BadRequestException('تاريخ أول قسط في الجدولة الجديدة لا يمكن أن يكون في الماضي');
+    }
     const paidMonths = await this.prisma.installment.count({
       where: { planId: plan.id, type: PlanPaymentType.INSTALLMENT, status: InstallmentStatus.PAID },
     });
 
-    return this.prisma.$transaction(async (tx) => {
+    const amendment = await this.prisma.$transaction(async (tx) => {
+      await this.lockSchedule(tx, contractId, contract.reservationId, companyId);
       const cancelled = await tx.installment.updateMany({
         where: { id: { in: open.map((i) => i.id) }, status: { in: OPEN_STATUSES } },
         data: { status: InstallmentStatus.CANCELLED },
       });
       if (cancelled.count !== open.length) throw new ConflictException('تغيّر جدول الأقساط أثناء التنفيذ — أعد المحاولة');
+      // Their unpaid late fees are waived with them (decided 2026-10-16): the
+      // rows they were charged on are no longer owed. A paid fee stays paid.
+      const feesWaived = await tx.installment.updateMany({
+        where: {
+          feeForId: { in: open.map((i) => i.id) },
+          type: PlanPaymentType.LATE_FEE,
+          status: { in: OPEN_STATUSES },
+        },
+        data: { status: InstallmentStatus.CANCELLED, waivedAt: new Date() },
+      });
       await tx.installment.createMany({
         data: Array.from({ length: dto.months }, (_, i) => ({
           planId: plan.id,
@@ -624,12 +785,50 @@ export class ContractAmendmentsService {
           entityType: 'Contract',
           entityId: contractId,
           before: { openMonthly: open.length },
-          after: { months: dto.months, startsAt: dto.startsAt, monthly: monthlyCents / 100, last: lastCents / 100, reason: dto.reason },
+          after: {
+            months: dto.months,
+            startsAt: dto.startsAt,
+            monthly: monthlyCents / 100,
+            last: lastCents / 100,
+            lateFeesWaived: feesWaived.count,
+            reason: dto.reason,
+          },
           companyId,
         },
       });
       return row;
     });
+    await this.notifyCustomer(contract, 'contract_rescheduled', actorId, {
+      months: dto.months,
+      startsAt: dto.startsAt.slice(0, 10),
+    });
+    return amendment;
+  }
+
+  /** Best-effort: tell the customer their contract changed (a failure is logged, never thrown). */
+  private async notifyCustomer(
+    contract: { id: string; customerId: string; contractNumber: string | null; unit: { code: string } | null },
+    code: 'contract_rescheduled' | 'contract_price_changed',
+    actorId: string,
+    extra: Record<string, string | number>,
+  ) {
+    try {
+      await this.notifications.sendToUser(
+        contract.customerId,
+        code,
+        {
+          contractId: contract.id,
+          contractNumber: contract.contractNumber ?? '',
+          unitCode: contract.unit?.code ?? '',
+          ...extra,
+          entityType: 'contract',
+          entityId: contract.id,
+        },
+        { except: actorId },
+      );
+    } catch (err) {
+      reportFailure(this.logger, 'notifications', `contract ${contract.id} ${code} notice failed`, err);
+    }
   }
 
   async swapUnit(contractId: string, dto: SwapContractUnitDto, actorId: string) {
@@ -638,10 +837,28 @@ export class ContractAmendmentsService {
     if (dto.unitId === contract.unitId) throw new BadRequestException('الوحدة الجديدة هي نفس وحدة العقد');
     const unit = await this.prisma.unit.findFirst({
       where: { id: dto.unitId, companyId },
-      select: { id: true, code: true, status: true, building: { select: { phase: { select: { projectId: true } } } } },
+      select: {
+        id: true,
+        code: true,
+        status: true,
+        price: true,
+        building: { select: { phase: { select: { projectId: true } } } },
+      },
     });
     if (!unit) throw new NotFoundException('Unit not found');
     await this.assertNoWaitingPayments(contractId, contract.reservationId);
+    // Moving to another unit is a sale of that unit: the same archived-project
+    // block and discount cap as a new contract or a price change.
+    await assertUnitOnSale(this.prisma, unit.id);
+    await assertDiscountAllowed(this.prisma, {
+      companyId,
+      actorId,
+      pct: discountPct(Number(unit.price), dto.totalAmount),
+      listPrice: Number(unit.price),
+      salePrice: dto.totalAmount,
+      entityType: 'Contract',
+      entityId: contractId,
+    });
 
     const oldTotal = Number(contract.totalAmount);
     const delta = Math.round((dto.totalAmount - oldTotal) * 100) / 100;
@@ -677,6 +894,7 @@ export class ContractAmendmentsService {
 
     const fromUnitId = contract.unitId;
     const amendment = await this.prisma.$transaction(async (tx) => {
+      await this.lockSchedule(tx, contractId, contract.reservationId, companyId);
       // Claim the new unit exactly as a new contract would.
       const claimed = await tx.unit.updateMany({
         where: { id: unit.id, companyId, status: { not: UnitStatus.SOLD } },
@@ -765,7 +983,7 @@ export class ContractAmendmentsService {
       }
       const maintenanceClosed = await closeOpenMaintenance(tx, fromUnitId, contract.customerId, companyId);
 
-      const commissions = await this.followNewPrice(tx, contractId, companyId, unit, dto.totalAmount);
+      const commissions = await this.followNewPrice(tx, contractId, companyId, unit, dto.totalAmount, actorId, dto.reason);
 
       const row = await tx.contractAmendment.create({
         data: {
@@ -802,13 +1020,18 @@ export class ContractAmendmentsService {
       return row;
     });
 
-    // A signed sale's warranties now run on the new unit.
-    if (contract.signedAt) {
-      try {
-        await startUnitWarranties(this.prisma, unit.id, contract.createdAt);
-      } catch (err) {
-        reportFailure(this.logger, 'contracts', `contract ${contractId} warranty start on swap failed`, err);
-      }
+    // A unit already handed over: the new unit is the one handed over now,
+    // and its warranties start at the swap date (decided 2026-10-16). Before
+    // the handover there is nothing to start — the handover will.
+    try {
+      const swappedAt = new Date();
+      const moved = await this.prisma.unitHandover.updateMany({
+        where: { contractId, companyId },
+        data: { unitId: unit.id },
+      });
+      if (moved.count > 0) await startUnitWarranties(this.prisma, unit.id, swappedAt);
+    } catch (err) {
+      reportFailure(this.logger, 'contracts', `contract ${contractId} warranty start on swap failed`, err);
     }
     try {
       await this.notifications.sendToUser(

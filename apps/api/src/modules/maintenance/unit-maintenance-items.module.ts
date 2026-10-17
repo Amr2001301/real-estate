@@ -27,6 +27,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
+import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 import { startUnitWarranties } from '../contracts/unit-warranties';
 
@@ -52,6 +53,8 @@ class UpdateMaintenanceItemDto {
   @IsOptional() @IsString() @MaxLength(200) contractorName?: string;
   @IsOptional() @IsString() @MaxLength(2000) notes?: string;
   @IsOptional() @IsBoolean() active?: boolean;
+  /** Required to extend a warranty that has already started. */
+  @IsOptional() @IsString() @MinLength(3) @MaxLength(500) warrantyChangeReason?: string;
 }
 
 // Display-only verdict for item management. The authoritative value for a
@@ -121,23 +124,27 @@ class UnitMaintenanceItemsService {
     return withWarrantyStatus(created);
   }
 
-  /** Starts the warranty of an active, not-yet-started item when the unit has a signed live sale. */
+  /** Starts the warranty of an active, not-yet-started item when the unit has been handed over on a live sale. */
   private async startIfSold(unitId: string, item: { active: boolean; warrantyStart: Date | null }) {
     if (!item.active || item.warrantyStart) return false;
-    const sale = await this.prisma.contract.findFirst({
-      where: { unitId, signedAt: { not: null }, ...LIVE_CONTRACT_WHERE },
-      select: { createdAt: true },
+    const handover = await this.prisma.unitHandover.findFirst({
+      where: { unitId, contract: { signedAt: { not: null }, ...LIVE_CONTRACT_WHERE } },
+      select: { handedOverAt: true },
     });
-    if (!sale) return false;
-    await startUnitWarranties(this.prisma, unitId, sale.createdAt);
+    if (!handover) return false;
+    await startUnitWarranties(this.prisma, unitId, handover.handedOverAt);
     return true;
   }
 
-  async update(unitId: string, itemId: string, dto: UpdateMaintenanceItemDto) {
+  async update(unitId: string, itemId: string, dto: UpdateMaintenanceItemDto, actorId: string) {
     const current = await this.prisma.unitMaintenanceItem.findUnique({ where: { id: itemId } });
     if (!current || current.unitId !== unitId) {
       throw new NotFoundException('Maintenance item not found');
     }
+    // A started warranty is the buyer's cover: its start stays as signed and
+    // its end may only move later — an extension, with a reason, on the audit
+    // log. Before, both dates could be changed silently, shortening the cover.
+    const extended = this.warrantyChange(current, dto);
     // A warranty that has already started (on contract signing) can't be
     // unselected — the coverage stays on record for the sold unit.
     if (dto.active === false && current.warrantyStart != null) {
@@ -178,6 +185,18 @@ class UnitMaintenanceItemsService {
       data,
       include: { category: { select: CATEGORY_SELECT } },
     });
+    if (extended) {
+      await this.prisma.auditLog.create({
+        data: {
+          actorId,
+          action: 'unit-maintenance-item.warranty-extended',
+          entityType: 'UnitMaintenanceItem',
+          entityId: itemId,
+          before: { warrantyEnd: current.warrantyEnd?.toISOString() ?? null },
+          after: { warrantyEnd: updated.warrantyEnd?.toISOString() ?? null, reason: dto.warrantyChangeReason ?? null },
+        },
+      });
+    }
     // Re-activated on a sold unit → its warranty starts like the others'.
     if (!current.active && (await this.startIfSold(unitId, updated))) {
       const fresh = await this.prisma.unitMaintenanceItem.findUniqueOrThrow({
@@ -187,6 +206,27 @@ class UnitMaintenanceItemsService {
       return withWarrantyStatus(fresh);
     }
     return withWarrantyStatus(updated);
+  }
+
+  /** True for an extension of a started warranty; throws for any other change to it. */
+  private warrantyChange(
+    current: { warrantyStart: Date | null; warrantyEnd: Date | null },
+    dto: UpdateMaintenanceItemDto,
+  ): boolean {
+    if (current.warrantyStart == null) return false;
+    if (dto.warrantyStart !== undefined && new Date(dto.warrantyStart).getTime() !== current.warrantyStart.getTime()) {
+      throw new BadRequestException('The warranty has started: its start date cannot be changed');
+    }
+    if (dto.warrantyEnd === undefined) return false;
+    const next = new Date(dto.warrantyEnd);
+    if (current.warrantyEnd && next.getTime() === current.warrantyEnd.getTime()) return false;
+    if (current.warrantyEnd && next < current.warrantyEnd) {
+      throw new BadRequestException('The warranty has started: it can only be extended, not shortened');
+    }
+    if (!dto.warrantyChangeReason?.trim()) {
+      throw new BadRequestException('A reason is required to extend a warranty that has started');
+    }
+    return true;
   }
 
   private async assertUnit(unitId: string) {
@@ -241,8 +281,9 @@ class UnitMaintenanceItemsController {
     @Param('unitId', ParseUUIDPipe) unitId: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: UpdateMaintenanceItemDto,
+    @CurrentUser() user: AuthUser,
   ) {
-    return this.svc.update(unitId, itemId, dto);
+    return this.svc.update(unitId, itemId, dto, user.sub);
   }
 }
 

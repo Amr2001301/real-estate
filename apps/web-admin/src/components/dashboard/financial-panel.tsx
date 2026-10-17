@@ -13,6 +13,8 @@ interface Props {
     pendingBrokerPayouts:   number;
     /** Collected toward live contracts' price (no fees, no cancelled deals). */
     collectedTowardsPrice?: number;
+    /** Fees & penalties collected (late fees, transfer fees, cheque penalties). */
+    feesCollected?: number;
   };
   className?:      string;
   currencySymbol: string;
@@ -39,13 +41,22 @@ export function FinancialPanel({ financial, className, currencySymbol, locale = 
       iconBg:  'bg-brand-50 text-brand-600',
       valueCn: 'text-slate-900',
     },
+    // Two figures (decided 2026-10-16): towards the price, and fees & penalties.
     {
-      label:   'إجمالي المحصّل المؤكد',
-      value:   formatCompact(totalCollectedVerified, currencySymbol, locale),
+      label:   'المحصّل من ثمن العقود',
+      value:   formatCompact(towardsPrice, currencySymbol, locale),
       sub:     collectionRate !== null ? `${collectionRate}% معدل التحصيل` : 'مدفوعات محققة',
       icon:    <BadgeCheck />,
       iconBg:  'bg-success-50 text-success-600',
       valueCn: 'text-success-700',
+    },
+    {
+      label:   'الغرامات والرسوم المحصّلة',
+      value:   formatCompact(financial.feesCollected ?? 0, currencySymbol, locale),
+      sub:     'غرامات تأخير ورسوم تنازل وشيكات',
+      icon:    <Coins />,
+      iconBg:  'bg-slate-50 text-slate-500',
+      valueCn: 'text-slate-700',
     },
     {
       label:   'مبالغ متأخرة',

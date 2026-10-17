@@ -14,6 +14,7 @@ class Contract extends Equatable {
     this.contractNumber,
     this.signedAt,
     this.createdAt,
+    this.handedOverAt,
   });
 
   final String id;
@@ -24,7 +25,9 @@ class Contract extends Equatable {
   final ContractStatus status;
   final DateTime? signedAt;
   final DateTime? createdAt;
+  /// When the unit was handed over; maintenance requests open from then.
+  final DateTime? handedOverAt;
 
   @override
-  List<Object?> get props => [id, contractNumber, unitCode, status, signedAt];
+  List<Object?> get props => [id, contractNumber, unitCode, status, signedAt, handedOverAt];
 }

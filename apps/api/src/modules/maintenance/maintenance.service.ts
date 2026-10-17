@@ -14,6 +14,7 @@ import {
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
+import { isUniqueConflictOn } from '../../common/utils/contract-number';
 import { getTenantContext, runInCompany } from '../../common/tenant/tenant-context';
 import { ReportBrandService } from '../company-branding/report-brand.service';
 import { presentReportPdf, ReportPdfService } from '../../common/report-pdf/report-pdf.service';
@@ -85,6 +86,17 @@ function categoryCode(ar: string, en: string): string {
   return base
     .replace(/[^\p{L}\p{N}]+/gu, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+// How long a presigned maintenance upload may be attached after the presign.
+// The PUT URL itself lasts 5 minutes; this leaves room for a slow upload.
+const UPLOAD_SLOT_TTL_MS = 60 * 60_000;
+
+// A category with the same code already exists in this company (P2002 on the
+// per-company code index): the admin's mistake, not a server error.
+function categoryExists(e: unknown): never {
+  if (isUniqueConflictOn(e, 'code')) throw new BadRequestException('Category already exists');
+  throw e;
 }
 
 // Convert an admin-entered SLA (value + unit) into minutes; validates bounds.
@@ -382,20 +394,23 @@ export class MaintenanceService {
     const en = dto.en.trim();
     const code = categoryCode(ar, en);
     if (!code) throw new BadRequestException('Category name is required');
-    const existing = await this.prisma.maintenanceCategory.findUnique({ where: { code } });
+    // Codes are unique per company; the index settles a race between two creates.
+    const existing = await this.prisma.maintenanceCategory.findFirst({ where: { code }, select: { id: true } });
     if (existing) {
       throw new BadRequestException('Category already exists');
     }
-    return this.prisma.maintenanceCategory.create({
-      data: {
-        code,
-        name: { ar, en } as Prisma.InputJsonValue,
-        active: dto.active ?? true,
-        priority: dto.priority ?? MaintenancePriority.MEDIUM,
-        slaDurationMinutes: slaToMinutes(dto.slaValue, dto.slaUnit),
-        warrantyDurationMonths: warrantyToMonths(dto.warrantyValue, dto.warrantyUnit),
-      },
-    });
+    return this.prisma.maintenanceCategory
+      .create({
+        data: {
+          code,
+          name: { ar, en } as Prisma.InputJsonValue,
+          active: dto.active ?? true,
+          priority: dto.priority ?? MaintenancePriority.MEDIUM,
+          slaDurationMinutes: slaToMinutes(dto.slaValue, dto.slaUnit),
+          warrantyDurationMonths: warrantyToMonths(dto.warrantyValue, dto.warrantyUnit),
+        },
+      })
+      .catch(categoryExists);
   }
 
   async updateCategory(id: string, dto: UpdateCategoryDto) {
@@ -410,7 +425,7 @@ export class MaintenanceService {
       const code = categoryCode(ar, en);
       // If the rename collides with a different category's code, reject.
       if (code && code !== current.code) {
-        const clash = await this.prisma.maintenanceCategory.findUnique({ where: { code } });
+        const clash = await this.prisma.maintenanceCategory.findFirst({ where: { code }, select: { id: true } });
         if (clash && clash.id !== id) throw new BadRequestException('Category already exists');
         data.code = code;
       }
@@ -424,7 +439,7 @@ export class MaintenanceService {
     if (dto.warrantyValue !== undefined || dto.warrantyUnit !== undefined) {
       data.warrantyDurationMonths = warrantyToMonths(dto.warrantyValue, dto.warrantyUnit);
     }
-    return this.prisma.maintenanceCategory.update({ where: { id }, data });
+    return this.prisma.maintenanceCategory.update({ where: { id }, data }).catch(categoryExists);
   }
 
   // Units a customer owns through signed/recorded contracts. Used by the admin
@@ -545,10 +560,18 @@ export class MaintenanceService {
    * unsold) unit and read its warranty.
    */
   private async assertOwnsUnit(customerId: string, unitId: string) {
-    const owned = await this.prisma.contract.count({
+    const owned = await this.prisma.contract.findFirst({
       where: { customerId, unitId, ...LIVE_CONTRACT_WHERE },
+      select: { handover: { select: { id: true } } },
     });
-    if (owned === 0) throw new NotFoundException('Unit not found');
+    if (!owned) throw new NotFoundException('Unit not found');
+    // Maintenance opens at the unit's handover (decided 2026-10-16).
+    if (!owned.handover) {
+      throw new BadRequestException({
+        message: 'تُفتح طلبات الصيانة بعد تسليم الوحدة',
+        code: 'MAINTENANCE_BEFORE_HANDOVER',
+      });
+    }
   }
 
   async createRequest(customerId: string, dto: CreateRequestDto) {
@@ -642,6 +665,7 @@ export class MaintenanceService {
   // handling SLA among the request's selected categories (null if none has one).
   async approve(id: string, actorId?: string) {
     const req = await this.requireRequest(id);
+    this.assertNotClosed(req);
     if (req.reviewStatus !== MaintenanceReviewStatus.PENDING) {
       throw new BadRequestException('Only a pending request can be approved');
     }
@@ -725,6 +749,7 @@ export class MaintenanceService {
     await this.assertAssignableAdmin(assignedAdminId);
     const current = await this.requireRequest(id);
     this.assertNotRejected(current);
+    this.assertNotClosed(current);
     const previousAssigneeId = current.assignedAdminId;
     const data: Prisma.MaintenanceRequestUncheckedUpdateInput = { assignedAdminId };
     if (current.status === MaintenanceStatus.OPEN) {
@@ -763,6 +788,13 @@ export class MaintenanceService {
     const updated = await this.prisma.maintenanceRequest.update({ where: { id }, data });
     await this.notifyStatus(id, actorId);
     return updated;
+  }
+
+  /** A closed request is finished — it is not approved or assigned. */
+  private assertNotClosed(req: { status: MaintenanceStatus }) {
+    if (req.status === MaintenanceStatus.CLOSED) {
+      throw new BadRequestException('This request is closed');
+    }
   }
 
   /** A rejected request is finished — it is not worked on or assigned. */
@@ -861,7 +893,7 @@ export class MaintenanceService {
 
   async supervisorPresign(userId: string, id: string, dto: MaintenanceDocPresignDto) {
     await this.assertSupervisorOwns(userId, id);
-    return this.documents.presign(dto);
+    return this.presignForRequest(userId, id, dto);
   }
 
   async supervisorCreateDocument(userId: string, id: string, dto: MaintenanceDocDto) {
@@ -909,7 +941,7 @@ export class MaintenanceService {
 
   async customerPresign(userId: string, id: string, dto: MaintenanceDocPresignDto) {
     await this.assertCustomerOwns(userId, id);
-    return this.documents.presign(dto);
+    return this.presignForRequest(userId, id, dto);
   }
 
   async customerCreateDocument(userId: string, id: string, dto: MaintenanceDocDto) {
@@ -971,7 +1003,11 @@ export class MaintenanceService {
    */
   async customerConfirmResolution(userId: string, id: string, dto: ConfirmResolutionDto) {
     const req = await this.assertCustomerOwns(userId, id);
-    if (req.status !== MaintenanceStatus.RESOLVED && req.status !== MaintenanceStatus.CLOSED) {
+    // Closed without the work done (closed when the customer no longer held
+    // the unit) is not a resolution to confirm.
+    const resolved =
+      req.status === MaintenanceStatus.RESOLVED || (req.status === MaintenanceStatus.CLOSED && req.resolvedAt != null);
+    if (!resolved) {
       throw new BadRequestException('يمكن تأكيد الحل بعد إتمام الإصلاح فقط');
     }
     if (req.customerConfirmedResolutionAt) {
@@ -1192,26 +1228,65 @@ export class MaintenanceService {
     return { scanned: candidates.length, marked };
   }
 
+  // A presign records the key as this user's upload slot on this request.
+  private async presignForRequest(userId: string, id: string, dto: MaintenanceDocPresignDto) {
+    const slot = await this.documents.presign(dto);
+    await this.prisma.presignedUpload.create({
+      data: {
+        key: slot.key,
+        userId,
+        ownerType: DocumentOwnerType.MAINTENANCE_REQUEST,
+        ownerId: id,
+        expiresAt: new Date(Date.now() + UPLOAD_SLOT_TTL_MS),
+      },
+    });
+    return slot;
+  }
+
   // Shared document-create path: owner/category are forced server-side; only
   // the visibility differs per caller. Reuses the documents service so the
   // create logic (URL safety, owner existence) is never duplicated.
-  private attachMaintenancePhoto(
+  //
+  // The file must be the key this user presigned for this request, attached
+  // once. Any other value — an external URL, a key presigned for someone
+  // else, or one copied from another document — would register a file the
+  // caller never uploaded and hand it out through the request's downloads.
+  private async attachMaintenancePhoto(
     uploadedById: string,
     id: string,
     dto: MaintenanceDocDto,
     visibility: DocumentVisibility,
   ) {
+    const key = dto.fileUrl.trim();
+    const claimed = await this.prisma.presignedUpload.updateMany({
+      where: {
+        key,
+        userId: uploadedById,
+        ownerType: DocumentOwnerType.MAINTENANCE_REQUEST,
+        ownerId: id,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      data: { usedAt: new Date() },
+    });
+    if (claimed.count === 0) {
+      throw new BadRequestException('Upload the file for this request first (presign, then attach the returned key)');
+    }
     return this.documents.create(uploadedById, {
       ownerType: DocumentOwnerType.MAINTENANCE_REQUEST,
       ownerId: id,
       category: DocumentCategory.IMAGE,
       title: dto.title,
       description: dto.description,
-      fileUrl: dto.fileUrl,
+      fileUrl: key,
       fileName: dto.fileName,
       mimeType: dto.mimeType,
       sizeBytes: dto.sizeBytes,
       visibility,
+    }).catch(async (err: unknown) => {
+      // Not attached after all: the slot can be used again.
+      await this.prisma.presignedUpload.updateMany({ where: { key, userId: uploadedById }, data: { usedAt: null } });
+      throw err;
     });
   }
 

@@ -1,10 +1,29 @@
-import { ContractStatus, DepositType, PlanPaymentType, Prisma } from '@prisma/client';
+import { ContractStatus, DepositReviewStatus, DepositType, PlanPaymentType, Prisma } from '@prisma/client';
+import { ACCESSIBLE_COMPANY_WHERE } from '../../common/tenant/company-access';
+import { UNCLEARED_INSTRUMENT_STATUSES } from '../deposits/review-queue';
 
 /** A contract that is neither cancelled nor deleted. */
 export const LIVE_CONTRACT_WHERE = {
   status: { not: ContractStatus.CANCELLED },
   deletedAt: null,
 } satisfies Prisma.ContractWhereInput;
+
+/**
+ * A broker commission or sales bonus that may still be approved and paid:
+ * its deal is live, or the deal was cancelled with RETAIN — the commission
+ * stays payable then (decided 2026-10-16).
+ */
+export const PAYABLE_DEAL_WHERE = {
+  OR: [{ contract: LIVE_CONTRACT_WHERE }, { retainedOnCancellation: true }],
+} satisfies Prisma.BrokerCommissionWhereInput;
+
+/** The same check on a row already read (contract status, the RETAIN flag). */
+export function isPayableDeal(row: {
+  retainedOnCancellation?: boolean | null;
+  contract?: { status: ContractStatus; deletedAt: Date | null } | null;
+}): boolean {
+  return !isDeadContract(row.contract) || row.retainedOnCancellation === true;
+}
 
 /**
  * A plan whose contract is still live: not cancelled, not deleted. Reminders,
@@ -26,6 +45,44 @@ export const BILLABLE_PLAN_WHERE = {
   cancelledAt: null,
   contract: { status: ContractStatus.ACTIVE, deletedAt: null },
 } satisfies Prisma.InstallmentPlanWhereInput;
+
+/**
+ * A plan whose installments the automatic jobs chase (overdue, late fees):
+ * billable, its customer's account active and not deleted, and its company
+ * not blocked — no one is charged or notified who cannot reach the app.
+ */
+export const CHASED_PLAN_WHERE = {
+  cancelledAt: null,
+  contract: {
+    status: ContractStatus.ACTIVE,
+    deletedAt: null,
+    customer: { active: true, deletedAt: null },
+    company: ACCESSIBLE_COMPANY_WHERE,
+  },
+} satisfies Prisma.InstallmentPlanWhereInput;
+
+/**
+ * A payment for the row is waiting — a proof under review or a cheque not
+ * cleared yet. While one is, the customer has paid as far as they can tell.
+ */
+export const PAYMENT_ON_ITS_WAY = {
+  deletedAt: null,
+  OR: [
+    { reviewStatus: DepositReviewStatus.PENDING_REVIEW },
+    { paymentInstrument: { status: { in: UNCLEARED_INSTRUMENT_STATUSES } } },
+  ],
+} satisfies Prisma.DepositWhereInput;
+
+/**
+ * The one rule for "should this installment be chased" — by the overdue
+ * sweep, the due-soon reminders and the customer's home banner: its plan is
+ * chased (CHASED_PLAN_WHERE: signed, live, active customer, company not
+ * blocked) and no payment for it is on its way.
+ */
+export const CHASED_INSTALLMENT_WHERE = {
+  plan: CHASED_PLAN_WHERE,
+  deposits: { none: PAYMENT_ON_ITS_WAY },
+} satisfies Prisma.InstallmentWhereInput;
 
 export const CONTRACT_CANCELLED_MESSAGE = 'العقد ملغي — لا يمكن تعديل مدفوعاته أو أقساطه';
 

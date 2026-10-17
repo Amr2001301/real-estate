@@ -5,6 +5,9 @@ enum InstallmentStatus {
   pending('PENDING'),
   paid('PAID'),
   overdue('OVERDUE'),
+  /// Replaced by a reschedule: not owed. The list leaves these out unless
+  /// asked for; never shown as pending.
+  cancelled('CANCELLED'),
   unknown('');
 
   const InstallmentStatus(this.wire);
@@ -134,10 +137,12 @@ class Installment extends Equatable {
   /// installment.
   final PaymentProofSummary? latestProof;
 
-  /// True when the installment is not yet paid AND no proof is currently
-  /// under review. Used to gate the "Submit proof" CTA.
+  /// True when the installment is not yet paid (nor cancelled by a
+  /// reschedule) AND no proof is currently under review. Used to gate the
+  /// "Submit proof" CTA.
   bool get canSubmitProof =>
       status != InstallmentStatus.paid &&
+      status != InstallmentStatus.cancelled &&
       (latestProof == null ||
           latestProof!.reviewStatus == PaymentProofStatus.noProof ||
           latestProof!.reviewStatus == PaymentProofStatus.rejected);

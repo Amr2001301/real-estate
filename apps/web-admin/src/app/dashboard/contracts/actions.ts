@@ -88,6 +88,20 @@ export async function assignContractNumberAction(
   return { ok: true };
 }
 
+// The unit handed over: warranties start and maintenance opens from its date.
+export async function recordHandoverAction(
+  id: string,
+  body: { handedOverAt: string; checklist: Array<{ key: string; done: boolean }>; notes?: string },
+): Promise<ContractFormState> {
+  try {
+    await api.post(`/contracts/${id}/handover`, body);
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/dashboard/contracts/${id}`);
+  return { ok: true };
+}
+
 // FG-10 — re-runs warranties + commissions of a signed contract after a failure.
 export async function retrySignFollowupsAction(id: string): Promise<ContractFormState> {
   let res: { failures: { step: string; error: string }[] };

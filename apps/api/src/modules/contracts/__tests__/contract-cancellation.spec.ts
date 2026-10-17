@@ -55,7 +55,12 @@ jest.mock('../../../common/tenant/tenant-context', () => ({
 
 function buildTx() {
   return {
-    contract: { update: jest.fn().mockResolvedValue({}), count: jest.fn().mockResolvedValue(0) },
+    $queryRaw: jest.fn().mockResolvedValue([]),
+    contract: {
+      update: jest.fn().mockResolvedValue({}),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      count: jest.fn().mockResolvedValue(0),
+    },
     maintenanceRequest: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
     installmentPlan: {
       update: jest.fn().mockResolvedValue({}),
@@ -69,14 +74,20 @@ function buildTx() {
     deposit: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
     brokerCommission: {
       update: jest.fn().mockResolvedValue({}),
+      count: jest.fn().mockResolvedValue(0),
       aggregate: jest.fn().mockResolvedValue({
         _count: { id: 0 },
         _sum: { grossAmount: null, taxAmount: null, withholdingAmount: null, netAmount: null },
       }),
     },
     brokerPayout: { update: jest.fn().mockResolvedValue({}) },
+    brokerCommissionAdjustment: {
+      create: jest.fn().mockResolvedValue({}),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
     bonusEntry: { update: jest.fn().mockResolvedValue({}) },
-    unit: { update: jest.fn().mockResolvedValue({}) },
+    unit: { update: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     unitStatusHistory: { create: jest.fn().mockResolvedValue({}) },
     unitMaintenanceItem: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
     lead: {
@@ -108,6 +119,11 @@ function buildPrisma(overrides: {
   tx?: ReturnType<typeof buildTx>;
 }) {
   const tx = overrides.tx ?? buildTx();
+  // The commission and bonus are read inside the transaction (rows locked).
+  const commissionFind = jest.fn().mockResolvedValue(overrides.commission !== undefined ? overrides.commission : null);
+  const bonusFind = jest.fn().mockResolvedValue(overrides.bonusEntry !== undefined ? overrides.bonusEntry : null);
+  Object.assign(tx.brokerCommission, { findUnique: commissionFind });
+  Object.assign(tx.bonusEntry, { findUnique: bonusFind });
   return {
     contract: {
       findFirst: jest.fn().mockResolvedValue(
@@ -133,12 +149,8 @@ function buildPrisma(overrides: {
         overrides.plan !== undefined ? overrides.plan : { id: PLAN_ID },
       ),
     },
-    brokerCommission: {
-      findUnique: jest.fn().mockResolvedValue(overrides.commission !== undefined ? overrides.commission : null),
-    },
-    bonusEntry: {
-      findUnique: jest.fn().mockResolvedValue(overrides.bonusEntry !== undefined ? overrides.bonusEntry : null),
-    },
+    brokerCommission: { findUnique: commissionFind },
+    bonusEntry: { findUnique: bonusFind },
     unit: {
       findUnique: jest.fn().mockResolvedValue(
         overrides.unit !== undefined ? overrides.unit : { id: UNIT_ID, status: 'SOLD' },
@@ -206,8 +218,8 @@ describe('ContractCancellationService.cancel()', () => {
     expect(data['totalCollectedSnapshot']).toBeInstanceOf(Prisma.Decimal);
 
     // Contract marked CANCELLED
-    const contractUpdate = prisma._tx.contract.update.mock.calls[0]?.[0] as { data: Record<string, unknown> };
-    if (!contractUpdate) throw new Error('contract.update was not called');
+    const contractUpdate = prisma._tx.contract.updateMany.mock.calls[0]?.[0] as { data: Record<string, unknown> };
+    if (!contractUpdate) throw new Error('contract.updateMany was not called');
     expect(contractUpdate.data['status']).toBe('CANCELLED');
     expect(contractUpdate.data['cancelledAt']).toBeInstanceOf(Date);
 
@@ -287,6 +299,8 @@ describe('ContractCancellationService.cancel()', () => {
     const prisma = buildPrisma({
       commission: {
         id: COMMISSION_ID,
+        brokerId: 'broker-uuid',
+        netAmount: new Prisma.Decimal(50_000),
         status: 'PENDING',
         clawbackStatus: null,
         payoutId: null,
@@ -309,6 +323,8 @@ describe('ContractCancellationService.cancel()', () => {
     const prisma = buildPrisma({
       commission: {
         id: COMMISSION_ID,
+        brokerId: 'broker-uuid',
+        netAmount: new Prisma.Decimal(50_000),
         status: 'APPROVED',
         clawbackStatus: null,
         payoutId: PAYOUT_ID,
@@ -329,6 +345,17 @@ describe('ContractCancellationService.cancel()', () => {
     expect(bcUpdate.data['clawbackReason']).toBe('Commission recovery');
     expect(bcUpdate.data['clawbackAt']).toBeInstanceOf(Date);
     expect(bcUpdate.data['clawbackById']).toBe(ACTOR_ID);
+
+    // What was paid comes back out of the broker's next payout.
+    expect(prisma._tx.brokerCommissionAdjustment.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        commissionId: COMMISSION_ID,
+        brokerId: 'broker-uuid',
+        kind: 'CLAWBACK',
+        amount: new Prisma.Decimal(50_000),
+        settlesClawback: true,
+      }),
+    });
 
     // AuditLog payload includes commission clawback id
     const payload = (prisma._tx.auditLog.create.mock.calls[0]?.[0] as { data: Record<string, unknown> }).data['after'] as Record<string, unknown>;
@@ -461,6 +488,17 @@ describe('ContractCancellationService.cancel()', () => {
     expect(auditBefore['signedAt']).toBeNull();
   });
 
+  it('CC-U-9b: cancelled by someone else while this cancel ran → ConflictException, nothing else written', async () => {
+    const tx = buildTx();
+    tx.contract.updateMany.mockResolvedValue({ count: 0 });
+    const prisma = buildPrisma({ tx });
+    const svc = buildSvc(prisma);
+
+    await expect(svc.cancel(CONTRACT_ID, BASE_INPUT, ACTOR_ID)).rejects.toThrow(ConflictException);
+    expect(tx.contractCancellation.create).not.toHaveBeenCalled();
+    expect(tx.installment.updateMany).not.toHaveBeenCalled();
+  });
+
   it('CC-U-9: CANCELLED contract → ConflictException (terminal guard)', async () => {
     const prisma = buildPrisma({
       contract: {
@@ -505,6 +543,8 @@ describe('ContractCancellationService.cancel()', () => {
     const prisma = buildPrisma({
       commission: {
         id: COMMISSION_ID,
+        brokerId: 'broker-uuid',
+        netAmount: new Prisma.Decimal(50_000),
         status: 'APPROVED',
         clawbackStatus: null,
         payoutId: PAYOUT_ID,
@@ -529,6 +569,8 @@ describe('ContractCancellationService.cancel()', () => {
     const prisma = buildPrisma({
       commission: {
         id: COMMISSION_ID,
+        brokerId: 'broker-uuid',
+        netAmount: new Prisma.Decimal(50_000),
         status: 'APPROVED',
         clawbackStatus: null,
         payoutId: PAYOUT_ID,
@@ -545,22 +587,25 @@ describe('ContractCancellationService.cancel()', () => {
     expect(bcUpdate.data['status']).toBe('CANCELLED');
     expect(bcUpdate.data['payoutId']).toBeNull();
 
-    // Aggregate was called to count remaining commissions
-    expect(prisma._tx.brokerCommission.aggregate).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { payoutId: PAYOUT_ID } }),
-    );
+    // The payout's remaining commissions were counted
+    expect(prisma._tx.brokerCommission.count).toHaveBeenCalledWith({ where: { payoutId: PAYOUT_ID } });
 
-    // Default mock returns _count.id=0 → payout CANCELLED
+    // Default mock counts 0 → payout CANCELLED, its adjustments wait for the next one
     const payoutUpdate = prisma._tx.brokerPayout.update.mock.calls[0]?.[0] as { where: Record<string, unknown>; data: Record<string, unknown> };
     if (!payoutUpdate) throw new Error('brokerPayout.update was not called');
     expect(payoutUpdate.where['id']).toBe(PAYOUT_ID);
     expect(payoutUpdate.data['status']).toBe('CANCELLED');
     expect(payoutUpdate.data['cancelledAt']).toBeInstanceOf(Date);
     expect(payoutUpdate.data['cancelledById']).toBe(ACTOR_ID);
+    // Its netted adjustments are released for the next payout.
+    expect(prisma._tx.brokerCommissionAdjustment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { AND: [{ payoutId: PAYOUT_ID }, { payoutId: { not: null } }] } }),
+    );
   });
 
   it('CC-U-19: CLAWBACK + commission APPROVED in APPROVED payout, 1 remaining → payout DRAFT + recomputed totals', async () => {
     const tx = buildTx();
+    tx.brokerCommission.count.mockResolvedValue(1);
     (tx.brokerCommission.aggregate as jest.Mock).mockResolvedValue({
       _count: { id: 1 },
       _sum: {
@@ -573,6 +618,8 @@ describe('ContractCancellationService.cancel()', () => {
     const prisma = buildPrisma({
       commission: {
         id: COMMISSION_ID,
+        brokerId: 'broker-uuid',
+        netAmount: new Prisma.Decimal(50_000),
         status: 'APPROVED',
         clawbackStatus: null,
         payoutId: PAYOUT_ID,
@@ -590,15 +637,48 @@ describe('ContractCancellationService.cancel()', () => {
     expect(bcUpdate.data['status']).toBe('CANCELLED');
     expect(bcUpdate.data['payoutId']).toBeNull();
 
-    // Payout reverted to DRAFT with recomputed totals
-    const payoutUpdate = tx.brokerPayout.update.mock.calls[0]?.[0] as { where: Record<string, unknown>; data: Record<string, unknown> };
-    if (!payoutUpdate) throw new Error('brokerPayout.update was not called');
-    expect(payoutUpdate.where['id']).toBe(PAYOUT_ID);
-    expect(payoutUpdate.data['status']).toBe('DRAFT');
+    // Payout reverted to DRAFT, then its totals recomputed
+    const draft = tx.brokerPayout.update.mock.calls[0]?.[0] as { where: Record<string, unknown>; data: Record<string, unknown> };
+    if (!draft) throw new Error('brokerPayout.update was not called');
+    expect(draft.where['id']).toBe(PAYOUT_ID);
+    expect(draft.data['status']).toBe('DRAFT');
+    const payoutUpdate = tx.brokerPayout.update.mock.calls[1]?.[0] as { where: Record<string, unknown>; data: Record<string, unknown> };
+    if (!payoutUpdate) throw new Error('payout totals were not recomputed');
     expect(String(payoutUpdate.data['totalGross'])).toBe('30000');
     expect(String(payoutUpdate.data['totalTax'])).toBe('3000');
     expect(String(payoutUpdate.data['totalWithholding'])).toBe('1500');
     expect(String(payoutUpdate.data['totalNet'])).toBe('25500');
+  });
+
+  it('CC-U-20: RETAIN keeps the commission and the bonus payable (flagged, not cancelled)', async () => {
+    const prisma = buildPrisma({
+      commission: {
+        id: COMMISSION_ID,
+        brokerId: 'broker-uuid',
+        netAmount: new Prisma.Decimal(50_000),
+        status: 'APPROVED',
+        clawbackStatus: null,
+        payoutId: null,
+        payout: null,
+      },
+      bonusEntry: { id: BONUS_ID, status: 'APPROVED', clawbackStatus: null },
+    });
+    const svc = buildSvc(prisma);
+
+    await svc.cancel(
+      CONTRACT_ID,
+      { ...BASE_INPUT, commissionActionOverride: 'RETAIN', bonusActionOverride: 'RETAIN' },
+      ACTOR_ID,
+    );
+
+    expect(prisma._tx.brokerCommission.update).toHaveBeenCalledWith({
+      where: { id: COMMISSION_ID },
+      data: { retainedOnCancellation: true },
+    });
+    expect(prisma._tx.bonusEntry.update).toHaveBeenCalledWith({
+      where: { id: BONUS_ID },
+      data: { retainedOnCancellation: true },
+    });
   });
 
   it('CC-U-12: policySnapshot stores current setting values, not operator overrides', async () => {
@@ -644,8 +724,12 @@ describe('ContractCancellationService.releaseUnit()', () => {
 
     await svc.releaseUnit(CONTRACT_ID, ACTOR_ID);
 
-    const unitUpdate = prisma._tx.unit.update.mock.calls[0]?.[0] as { data: Record<string, unknown> };
-    if (!unitUpdate) throw new Error('unit.update was not called');
+    const unitUpdate = prisma._tx.unit.updateMany.mock.calls[0]?.[0] as {
+      where: Record<string, unknown>;
+      data: Record<string, unknown>;
+    };
+    if (!unitUpdate) throw new Error('unit.updateMany was not called');
+    expect(unitUpdate.where['status']).toBe('SOLD');
     expect(unitUpdate.data['status']).toBe('AVAILABLE');
 
     expect(prisma._tx.unitStatusHistory.create).toHaveBeenCalledWith(
@@ -667,6 +751,25 @@ describe('ContractCancellationService.releaseUnit()', () => {
         data: expect.objectContaining({ action: 'contract.unit-released' }),
       }),
     );
+  });
+
+  it('CC-U-13b: unit sold again since the cancellation → left as is, release recorded', async () => {
+    const tx = buildTx();
+    tx.contract.count.mockResolvedValue(1); // another live contract on the unit
+    const prisma = buildPrisma({
+      contract: cancelledContract,
+      cancellation: { id: 'cc-uuid', unitReleasedAt: null },
+      tx,
+    });
+    const svc = buildSvc(prisma);
+
+    await svc.releaseUnit(CONTRACT_ID, ACTOR_ID);
+
+    expect(tx.unit.updateMany).not.toHaveBeenCalled();
+    expect(tx.unitStatusHistory.create).not.toHaveBeenCalled();
+    expect(tx.unitMaintenanceItem.updateMany).not.toHaveBeenCalled();
+    const ccUpdate = tx.contractCancellation.update.mock.calls[0]?.[0] as { data: Record<string, unknown> };
+    expect(ccUpdate.data['unitReleasedAt']).toBeInstanceOf(Date);
   });
 
   it('CC-U-14: nonexistent contract → NotFoundException', async () => {

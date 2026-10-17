@@ -39,7 +39,7 @@ interface BonusRule {
   active: boolean;
   autoApplyOnSignedContract?: boolean;
 }
-type EntrySource = 'MANUAL' | 'CONTRACT_AUTO';
+type EntrySource = 'MANUAL' | 'CONTRACT_AUTO' | 'ADJUSTMENT';
 interface BonusEntry {
   id: string;
   amount: string | number;
@@ -158,6 +158,7 @@ export default async function BonusPage({
   const SOURCE_LABEL: Record<EntrySource, string> = {
     MANUAL: m.sourceManual,
     CONTRACT_AUTO: m.sourceAuto,
+    ADJUSTMENT: m.sourceAdjustment,
   };
 
   function salesActorLabel(u: SalesUser): string {

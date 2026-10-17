@@ -28,7 +28,7 @@
  *  D4-B-5  clawbackStatus null → ConflictException
  */
 
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { BonusEntryStatus, BrokerCommissionStatus, ClawbackStatus, PaymentMethod, Prisma } from '@prisma/client';
 import { ClawbackResolutionService } from '../clawback-resolution.service';
 
@@ -46,8 +46,17 @@ const BONUS_AMOUNT = new Prisma.Decimal(20_000);
 
 function buildPrisma(overrides: Record<string, unknown> = {}) {
   const txMock = {
-    brokerCommission: { update: jest.fn().mockResolvedValue({}) },
-    bonusEntry: { update: jest.fn().mockResolvedValue({}) },
+    // updateMany = the guard on the clawback state that was read.
+    brokerCommission: { update: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    // The clawback queued for the broker's next payout: one open row for all of it.
+    brokerCommissionAdjustment: {
+      findMany: jest.fn().mockResolvedValue([
+        { id: 'adj-1', amount: NET_AMOUNT, brokerId: 'broker-1', payoutId: null, payout: null },
+      ]),
+      update: jest.fn().mockResolvedValue({}),
+      delete: jest.fn().mockResolvedValue({}),
+    },
+    bonusEntry: { update: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     auditLog: { create: jest.fn().mockResolvedValue({}) },
   };
   return {
@@ -240,6 +249,54 @@ describe('ClawbackResolutionService — BrokerCommission', () => {
     await expect(
       svc.waiveCommission('nonexistent', { reason: 'reason' }, ACTOR),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  it('D4-C-12: collecting more than is still owed → 400, nothing written', async () => {
+    prisma.brokerCommission.findFirst.mockResolvedValue(
+      makeCommission(ClawbackStatus.PARTIALLY_COLLECTED, new Prisma.Decimal(70_000)),
+    );
+    await expect(
+      svc.collectCommission(COMMISSION_ID, { amount: 5_000.01, paymentMethod: PaymentMethod.CASH }, ACTOR),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('D4-C-13: two collections at once — the second finds the total changed → 409', async () => {
+    prisma.brokerCommission.findFirst.mockResolvedValue(
+      makeCommission(ClawbackStatus.PARTIALLY_COLLECTED, new Prisma.Decimal(20_000)),
+    );
+    prisma._tx.brokerCommission.updateMany.mockResolvedValueOnce({ count: 0 });
+    await expect(
+      svc.collectCommission(COMMISSION_ID, { amount: 10_000, paymentMethod: PaymentMethod.CASH }, ACTOR),
+    ).rejects.toThrow(ConflictException);
+    // The guard matched the state that was read.
+    const guard = prisma._tx.brokerCommission.updateMany.mock.calls[0][0];
+    expect(guard.where).toMatchObject({
+      id: COMMISSION_ID,
+      clawbackStatus: ClawbackStatus.PARTIALLY_COLLECTED,
+      clawbackCollectedAmount: new Prisma.Decimal(20_000),
+    });
+    expect(prisma._tx.brokerCommission.update).not.toHaveBeenCalled();
+  });
+
+  it('D4-C-14: a manual collection takes that much off the payout queue', async () => {
+    prisma.brokerCommission.findFirst.mockResolvedValue(makeCommission(ClawbackStatus.OUTSTANDING));
+    await svc.collectCommission(COMMISSION_ID, { amount: 30_000, paymentMethod: PaymentMethod.CASH }, ACTOR);
+    // 75,000 queued → 45,000 still waits for the next payout.
+    expect(prisma._tx.brokerCommissionAdjustment.update).toHaveBeenCalledWith({
+      where: { id: 'adj-1' },
+      data: { amount: new Prisma.Decimal(45_000) },
+    });
+    expect(prisma._tx.brokerCommissionAdjustment.delete).not.toHaveBeenCalled();
+  });
+
+  it('D4-C-15: no waive while an approved payout is deducting the clawback → 409', async () => {
+    prisma.brokerCommission.findFirst.mockResolvedValue(makeCommission(ClawbackStatus.OUTSTANDING));
+    prisma._tx.brokerCommissionAdjustment.findMany.mockResolvedValueOnce([
+      { id: 'adj-1', amount: NET_AMOUNT, brokerId: 'broker-1', payoutId: 'po-1', payout: { status: 'APPROVED' } },
+    ]);
+    await expect(svc.waiveCommission(COMMISSION_ID, { reason: 'goodwill' }, ACTOR)).rejects.toThrow(ConflictException);
+    expect(prisma._tx.brokerCommission.update).not.toHaveBeenCalled();
   });
 
   it('D4-C-11: Hard Rule 2 — commission.status never set in any path', async () => {

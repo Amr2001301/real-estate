@@ -97,14 +97,22 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * The fees (in currency units, 2 dp) to charge now on one installment, given
  * the fees already charged on it. Empty when nothing is due yet, the cap is
  * reached, or every period has been charged.
+ *
+ * The clock counts only the time it ran: time it was stopped (the company
+ * blocked, a payment waiting — `pausedSeconds` before, and since
+ * `pausedSince` now) does not bring the grace period or a monthly fee closer.
  */
 export function lateFeesDue(
-  installment: { amount: number; dueDate: Date },
+  installment: { amount: number; dueDate: Date; pausedSeconds?: number; pausedSince?: Date | null },
   settings: LateFeeSettings,
   existing: Array<{ amount: number; waived: boolean }>,
-  now: Date,
+  at: Date,
 ): number[] {
   if (!settings.enabled || settings.value <= 0) return [];
+  const stoppedMs =
+    (installment.pausedSeconds ?? 0) * 1000 +
+    (installment.pausedSince ? Math.max(0, at.getTime() - installment.pausedSince.getTime()) : 0);
+  const now = new Date(at.getTime() - stoppedMs);
   const firstAt = new Date(installment.dueDate.getTime() + settings.graceDays * DAY_MS);
   if (now < firstAt) return [];
 

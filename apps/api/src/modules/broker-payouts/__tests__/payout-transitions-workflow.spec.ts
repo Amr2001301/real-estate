@@ -100,6 +100,12 @@ function makePrismaMock() {
       findMany: jest.fn().mockResolvedValue([]),
       count: jest.fn().mockResolvedValue(0),
       update: jest.fn().mockImplementation(async ({ data }) => updated(data.status ?? payoutStore.current.status, data)),
+      // Status moves are guarded on the expected status; the store follows.
+      updateMany: jest.fn().mockImplementation(async ({ where, data }) => {
+        if (!where.status.in.includes(payoutStore.current.status)) return { count: 0 };
+        payoutStore.current = { ...payoutStore.current, ...data };
+        return { count: 1 };
+      }),
       aggregate: jest.fn().mockResolvedValue({ _sum: {} }),
     },
     brokerCommission: {
@@ -109,6 +115,12 @@ function makePrismaMock() {
       aggregate: jest.fn().mockResolvedValue({
         _sum: { grossAmount: 0, taxAmount: 0, withholdingAmount: 0, netAmount: 0 },
       }),
+    },
+    // Top-ups / clawbacks netted into payouts (none open here).
+    brokerCommissionAdjustment: {
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
     },
     brokerUser: { findMany: jest.fn().mockResolvedValue([{ userId: 'broker-user-1' }]) },
     brokerActivityLog: { create: jest.fn().mockResolvedValue({}) },
@@ -121,6 +133,7 @@ function makePrismaMock() {
       const tx = {
         brokerPayout: m.brokerPayout,
         brokerCommission: m.brokerCommission,
+        brokerCommissionAdjustment: m.brokerCommissionAdjustment,
       };
       return (ops as (tx: unknown) => Promise<unknown>)(tx);
     }
@@ -187,7 +200,7 @@ describe('Broker payouts · transitions workflow', () => {
       ],
     };
     resetStore();
-    mock.brokerPayout.update.mockClear();
+    mock.brokerPayout.updateMany.mockClear();
     mock.brokerCommission.updateMany.mockClear();
     mock.brokerActivityLog.create.mockClear();
     notificationsMock.sendToUsers.mockClear();
@@ -201,8 +214,8 @@ describe('Broker payouts · transitions workflow', () => {
       .send({})
       .expect(200);
 
-    expect(mock.brokerPayout.update).toHaveBeenCalledTimes(1);
-    const args = mock.brokerPayout.update.mock.calls[0]![0] as {
+    expect(mock.brokerPayout.updateMany).toHaveBeenCalledTimes(1);
+    const args = mock.brokerPayout.updateMany.mock.calls[0]![0] as {
       where: { id: string };
       data: { status: string; approvedById: string; approvedAt: Date };
     };
@@ -227,7 +240,10 @@ describe('Broker payouts · transitions workflow', () => {
       .patch(`/broker-payouts/${PAYOUT_ID}/approve`)
       .send({})
       .expect(400);
-    expect(mock.brokerPayout.update).not.toHaveBeenCalled();
+    // Counted inside the transaction (rolled back in the database); no
+    // activity or notification goes out.
+    expect(mock.brokerActivityLog.create).not.toHaveBeenCalled();
+    expect(notificationsMock.sendToUsers).not.toHaveBeenCalled();
   });
 
   it('approve() rejects an already-APPROVED payout (409)', async () => {
@@ -236,7 +252,20 @@ describe('Broker payouts · transitions workflow', () => {
       .patch(`/broker-payouts/${PAYOUT_ID}/approve`)
       .send({})
       .expect(409);
-    expect(mock.brokerPayout.update).not.toHaveBeenCalled();
+    expect(mock.brokerPayout.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('approve() racing a cancel: the payout changed after it was read → 409, no side effects', async () => {
+    // Read as DRAFT; by the time of the write another admin cancelled it.
+    mock.brokerPayout.findUnique.mockImplementationOnce(async () => ({ ...payoutStore.current, status: 'DRAFT' }));
+    payoutStore.current.status = 'CANCELLED';
+    await request(app.getHttpServer())
+      .patch(`/broker-payouts/${PAYOUT_ID}/approve`)
+      .send({})
+      .expect(409);
+    expect(payoutStore.current.status).toBe('CANCELLED');
+    expect(mock.brokerActivityLog.create).not.toHaveBeenCalled();
+    expect(notificationsMock.sendToUsers).not.toHaveBeenCalled();
   });
 
   // ── process() ──────────────────────────────────────────────────────────
@@ -247,7 +276,7 @@ describe('Broker payouts · transitions workflow', () => {
       .patch(`/broker-payouts/${PAYOUT_ID}/process`)
       .send({ paymentMethod: 'BANK_TRANSFER' })
       .expect(200);
-    const args = mock.brokerPayout.update.mock.calls[0]![0] as {
+    const args = mock.brokerPayout.updateMany.mock.calls[0]![0] as {
       data: { status: string; processedById: string; processedAt: Date; paymentMethod: string };
     };
     expect(args.data.status).toBe('PROCESSING');
@@ -262,7 +291,7 @@ describe('Broker payouts · transitions workflow', () => {
       .patch(`/broker-payouts/${PAYOUT_ID}/process`)
       .send({})
       .expect(409);
-    expect(mock.brokerPayout.update).not.toHaveBeenCalled();
+    expect(mock.brokerPayout.updateMany).not.toHaveBeenCalled();
   });
 
   // ── markPaid() ─────────────────────────────────────────────────────────
@@ -273,7 +302,7 @@ describe('Broker payouts · transitions workflow', () => {
       .patch(`/broker-payouts/${PAYOUT_ID}/mark-paid`)
       .send({ paymentMethod: 'BANK_TRANSFER', paymentReference: 'TXN-99' })
       .expect(200);
-    const args = mock.brokerPayout.update.mock.calls[0]![0] as {
+    const args = mock.brokerPayout.updateMany.mock.calls[0]![0] as {
       data: { status: string; paymentMethod: string; paymentReference: string | null; paidAt: Date };
     };
     expect(args.data.status).toBe('PAID');
@@ -288,7 +317,7 @@ describe('Broker payouts · transitions workflow', () => {
       .patch(`/broker-payouts/${PAYOUT_ID}/mark-paid`)
       .send({ paymentMethod: 'BANK_TRANSFER' })
       .expect(409);
-    expect(mock.brokerPayout.update).not.toHaveBeenCalled();
+    expect(mock.brokerPayout.updateMany).not.toHaveBeenCalled();
   });
 
   // ── cancel() ───────────────────────────────────────────────────────────
@@ -310,7 +339,7 @@ describe('Broker payouts · transitions workflow', () => {
     expect(unlinkArgs.data.payoutId).toBeNull();
 
     // Payout flipped to CANCELLED with totals zeroed.
-    const updateArgs = mock.brokerPayout.update.mock.calls[0]![0] as {
+    const updateArgs = mock.brokerPayout.updateMany.mock.calls[0]![0] as {
       data: { status: string; cancelReason: string };
     };
     expect(updateArgs.data.status).toBe('CANCELLED');
@@ -324,7 +353,7 @@ describe('Broker payouts · transitions workflow', () => {
       .send({ reason: 'mistake' })
       .expect(400);
     expect(mock.brokerCommission.updateMany).not.toHaveBeenCalled();
-    expect(mock.brokerPayout.update).not.toHaveBeenCalled();
+    expect(mock.brokerPayout.updateMany).not.toHaveBeenCalled();
   });
 
   it('cancel() rejects empty reason (400)', async () => {
@@ -334,6 +363,6 @@ describe('Broker payouts · transitions workflow', () => {
       .patch(`/broker-payouts/${PAYOUT_ID}/cancel`)
       .send({ reason: '' })
       .expect(400);
-    expect(mock.brokerPayout.update).not.toHaveBeenCalled();
+    expect(mock.brokerPayout.updateMany).not.toHaveBeenCalled();
   });
 });

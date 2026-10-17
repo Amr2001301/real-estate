@@ -98,6 +98,8 @@ function makePrismaMock() {
   const zero = jest.fn().mockResolvedValue(0);
   return {
     userPermission: { findMany: jest.fn().mockResolvedValue([]) },
+    // The company time zone (default when none is set).
+    setting: { findMany: jest.fn().mockResolvedValue([]) },
     contract: { count: zero, aggregate: aggCon, findMany: emptyArr },
     deposit: { count: zero, aggregate: aggDep, findMany: emptyArr, groupBy: emptyArr },
     // Refunds on cancelled contracts (financial dashboard).

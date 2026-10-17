@@ -176,6 +176,12 @@ void main() {
       expect(entity.latestProof, isNull);
     });
 
+    test('a cancelled (rescheduled) row is its own state — not owed, no proof', () {
+      final entity = InstallmentDto.fromJson(_installmentJson(status: 'CANCELLED')).toEntity();
+      expect(entity.status, InstallmentStatus.cancelled);
+      expect(entity.canSubmitProof, isFalse);
+    });
+
     test('unknown enums fall back to .unknown without throwing', () {
       final entity = InstallmentDto.fromJson(
         _installmentJson(status: 'WHO_KNOWS', type: 'WHAT_NOW'),

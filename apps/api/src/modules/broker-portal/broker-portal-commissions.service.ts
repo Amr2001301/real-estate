@@ -4,6 +4,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import type { BrokerScopeContext } from '../../common/guards/broker-scope.guard';
 import { PortalCommissionsQueryDto } from './dto/portal-commission.dto';
+import { agentFilter, brokerFacingPerson, resolveBrokerViewer } from './broker-viewer';
 
 const PORTAL_COMMISSION_INCLUDE = {
   brokerAgent: { select: { id: true, fullName: true, email: true, phone: true } },
@@ -22,7 +23,7 @@ const PORTAL_COMMISSION_INCLUDE = {
       id: true,
       reservationNumber: true,
       sales: { select: { id: true, fullName: true } },
-      lead: { select: { id: true, fullName: true, phone: true } },
+      lead: { select: { id: true, fullName: true, phone: true, clientId: true } },
     },
   },
   unit: {
@@ -50,9 +51,12 @@ export class BrokerPortalCommissionsService {
   async list(scope: BrokerScopeContext, query: PortalCommissionsQueryDto) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
+    // An agent who is not a firm manager sees only their own deals.
+    const viewer = await resolveBrokerViewer(this.prisma, scope);
 
     const where: Prisma.BrokerCommissionWhereInput = {
       brokerId: scope.brokerId,
+      ...agentFilter(viewer),
       ...(query.status ? { status: query.status } : {}),
       ...(query.projectId ? { projectId: query.projectId } : {}),
       ...(query.from || query.to
@@ -74,15 +78,27 @@ export class BrokerPortalCommissionsService {
       }),
       this.prisma.brokerCommission.count({ where }),
     ]);
-    return paginate(data, total, { page, pageSize });
+    return paginate(data.map(brokerFacing), total, { page, pageSize });
   }
 
   async findOne(scope: BrokerScopeContext, id: string) {
+    const viewer = await resolveBrokerViewer(this.prisma, scope);
     const commission = await this.prisma.brokerCommission.findFirst({
-      where: { id, brokerId: scope.brokerId },
+      where: { id, brokerId: scope.brokerId, ...agentFilter(viewer) },
       include: PORTAL_COMMISSION_INCLUDE,
     });
     if (!commission) throw new NotFoundException('Commission not found');
-    return commission;
+    return brokerFacing(commission);
   }
+}
+
+/** After a transfer the contract's owner is not the person the broker brought: show the lead. */
+function brokerFacing<
+  C extends {
+    contract: { customer: { id: string; fullName: string; phone: string | null } | null } | null;
+    reservation: { lead: { clientId: string | null; fullName: string; phone: string | null } | null } | null;
+  },
+>(c: C): C {
+  if (!c.contract) return c;
+  return { ...c, contract: { ...c.contract, customer: brokerFacingPerson(c.contract.customer, c.reservation?.lead) } };
 }
