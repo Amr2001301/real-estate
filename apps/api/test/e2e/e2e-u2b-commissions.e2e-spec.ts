@@ -13,6 +13,8 @@
  * - A broker suspended before signing still earns a sale reserved while
  *   active; one reserved afterwards waits (failed sign follow-up) and is
  *   created when the broker is reactivated.
+ * - A cancelled deal's paid commission comes back out of the broker's next
+ *   payouts (decided 2026-10-17), split across them when it does not fit.
  */
 import 'reflect-metadata';
 import request from 'supertest';
@@ -48,7 +50,7 @@ describe('U2b — commissions & bonuses follow the deal (e2e)', () => {
   const money = (v: unknown) => Number(v).toFixed(2);
 
   /** A signed-or-not sale of a fresh 1,000,000 unit on a 12-month plan with a 10% markup. */
-  const makeSale = async (n: number): Promise<Sale> => {
+  const makeSale = async (n: number, pct = 2.5): Promise<Sale> => {
     const raw = testApp.rawPrisma;
     const unitId = (
       await raw.unit.create({
@@ -94,8 +96,8 @@ describe('U2b — commissions & bonuses follow the deal (e2e)', () => {
     await asAdmin(http().post(`/v1/reservations/${reservationId}/booking-payment/confirm`)).send({}).expect(201);
     await asAdmin(http().post(`/v1/reservations/${reservationId}/convert`)).send({ startsAt: '2027-01-15' }).expect(201);
     const contract = await raw.contract.findFirstOrThrow({ where: { reservationId }, select: { id: true } });
-    // A broker sale at 2.5%.
-    await raw.reservation.update({ where: { id: reservationId }, data: { brokerId, commissionLockedPct: 2.5 } });
+    // A broker sale (2.5% unless said otherwise).
+    await raw.reservation.update({ where: { id: reservationId }, data: { brokerId, commissionLockedPct: pct } });
     await raw.contract.update({ where: { id: contract.id }, data: { brokerId } });
     const sale = { unitId, templateId: tpl.body.id, reservationId, contractId: contract.id };
     sales.push(sale);
@@ -298,5 +300,65 @@ describe('U2b — commissions & bonuses follow the deal (e2e)', () => {
     await asAdmin(http().patch(`/v1/brokers/${brokerId}/status`)).send({ status: 'ACTIVE' }).expect(200);
     expect(await raw.brokerCommission.findUnique({ where: { contractId: after.contractId } })).not.toBeNull();
     expect((await raw.broker.findUniqueOrThrow({ where: { id: brokerId } })).suspendedAt).toBeNull();
+  });
+
+  it('CB-6: a cancelled deal\'s paid commission is clawed back from the next payouts', async () => {
+    const raw = testApp.rawPrisma;
+    // Sale 5: commission 25,000 paid.
+    const cancelled = await makeSale(5);
+    await sign(cancelled);
+    const paidCommission = await commissionOf(cancelled);
+    await asAdmin(http().patch(`/v1/broker-commissions/${paidCommission.id}/approve`)).send({}).expect(200);
+    const first = await asAdmin(http().post('/v1/broker-payouts')).send({ brokerId, commissionIds: [paidCommission.id] }).expect(201);
+    payoutIds.push(first.body.id);
+    expect(money(first.body.totalNet)).toBe('25000.00');
+    await asAdmin(http().patch(`/v1/broker-payouts/${first.body.id}/approve`)).send({}).expect(200);
+    await asAdmin(http().patch(`/v1/broker-payouts/${first.body.id}/process`)).send({}).expect(200);
+    await asAdmin(http().patch(`/v1/broker-payouts/${first.body.id}/mark-paid`)).send({ paymentMethod: 'BANK_TRANSFER' }).expect(200);
+    // Sale 6: commission 10,000 (1%), approved.
+    const next = await makeSale(6, 1);
+    await sign(next);
+    const nextCommission = await commissionOf(next);
+    await asAdmin(http().patch(`/v1/broker-commissions/${nextCommission.id}/approve`)).send({}).expect(200);
+
+    await asAdmin(http().post(`/v1/contracts/${cancelled.contractId}/cancel`))
+      .send({ reason: 'customer withdrew', retainedAmount: 0, refundAmount: 0, commissionActionOverride: 'CLAWBACK', bonusActionOverride: 'CLAWBACK' })
+      .expect(201);
+    expect((await commissionOf(cancelled)).clawbackStatus).toBe('OUTSTANDING');
+    const queued = () =>
+      raw.brokerCommissionAdjustment.findMany({ where: { commissionId: paidCommission.id }, orderBy: { amount: 'asc' } });
+    expect((await queued()).map((a) => [money(a.amount), a.payoutId])).toEqual([['25000.00', null]]);
+
+    // The next payout (10,000) takes 10,000 of it; 15,000 waits.
+    const draft = await asAdmin(http().post('/v1/broker-payouts')).send({ brokerId, commissionIds: [nextCommission.id] }).expect(201);
+    payoutIds.push(draft.body.id);
+    expect(money(draft.body.totalNet)).toBe('0.00');
+    expect((await queued()).map((a) => [money(a.amount), a.payoutId])).toEqual([
+      ['10000.00', draft.body.id],
+      ['15000.00', null],
+    ]);
+    // Cancelling that payout gives it all back, in one piece.
+    await asAdmin(http().patch(`/v1/broker-payouts/${draft.body.id}/cancel`)).send({ reason: 'redo' }).expect(200);
+    expect((await queued()).map((a) => [money(a.amount), a.payoutId])).toEqual([['25000.00', null]]);
+
+    const payout = await asAdmin(http().post('/v1/broker-payouts')).send({ brokerId, commissionIds: [nextCommission.id] }).expect(201);
+    payoutIds.push(payout.body.id);
+    await asAdmin(http().patch(`/v1/broker-payouts/${payout.body.id}/approve`)).send({}).expect(200);
+    // Not waived while an approved payout deducts part of it.
+    await asAdmin(http().post(`/v1/broker-commissions/${paidCommission.id}/clawback/waive`)).send({ reason: 'goodwill' }).expect(409);
+    await asAdmin(http().patch(`/v1/broker-payouts/${payout.body.id}/process`)).send({}).expect(200);
+    await asAdmin(http().patch(`/v1/broker-payouts/${payout.body.id}/mark-paid`)).send({ paymentMethod: 'BANK_TRANSFER' }).expect(200);
+    const afterPay = await commissionOf(cancelled);
+    expect(afterPay.clawbackStatus).toBe('PARTIALLY_COLLECTED');
+    expect(money(afterPay.clawbackCollectedAmount)).toBe('10000.00');
+
+    // Collected by hand: that much leaves the queue; waived: the rest.
+    await asAdmin(http().post(`/v1/broker-commissions/${paidCommission.id}/clawback/collect`))
+      .send({ amount: 5000, paymentMethod: 'CASH' })
+      .expect(201);
+    expect((await queued()).filter((a) => a.payoutId === null).map((a) => money(a.amount))).toEqual(['10000.00']);
+    await asAdmin(http().post(`/v1/broker-commissions/${paidCommission.id}/clawback/waive`)).send({ reason: 'goodwill' }).expect(201);
+    expect((await queued()).filter((a) => a.payoutId === null)).toHaveLength(0);
+    expect((await commissionOf(cancelled)).clawbackStatus).toBe('WAIVED');
   });
 });

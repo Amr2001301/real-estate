@@ -82,6 +82,7 @@ function buildTx() {
     },
     brokerPayout: { update: jest.fn().mockResolvedValue({}) },
     brokerCommissionAdjustment: {
+      create: jest.fn().mockResolvedValue({}),
       updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       findMany: jest.fn().mockResolvedValue([]),
     },
@@ -298,6 +299,8 @@ describe('ContractCancellationService.cancel()', () => {
     const prisma = buildPrisma({
       commission: {
         id: COMMISSION_ID,
+        brokerId: 'broker-uuid',
+        netAmount: new Prisma.Decimal(50_000),
         status: 'PENDING',
         clawbackStatus: null,
         payoutId: null,
@@ -320,6 +323,8 @@ describe('ContractCancellationService.cancel()', () => {
     const prisma = buildPrisma({
       commission: {
         id: COMMISSION_ID,
+        brokerId: 'broker-uuid',
+        netAmount: new Prisma.Decimal(50_000),
         status: 'APPROVED',
         clawbackStatus: null,
         payoutId: PAYOUT_ID,
@@ -340,6 +345,17 @@ describe('ContractCancellationService.cancel()', () => {
     expect(bcUpdate.data['clawbackReason']).toBe('Commission recovery');
     expect(bcUpdate.data['clawbackAt']).toBeInstanceOf(Date);
     expect(bcUpdate.data['clawbackById']).toBe(ACTOR_ID);
+
+    // What was paid comes back out of the broker's next payout.
+    expect(prisma._tx.brokerCommissionAdjustment.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        commissionId: COMMISSION_ID,
+        brokerId: 'broker-uuid',
+        kind: 'CLAWBACK',
+        amount: new Prisma.Decimal(50_000),
+        settlesClawback: true,
+      }),
+    });
 
     // AuditLog payload includes commission clawback id
     const payload = (prisma._tx.auditLog.create.mock.calls[0]?.[0] as { data: Record<string, unknown> }).data['after'] as Record<string, unknown>;
@@ -527,6 +543,8 @@ describe('ContractCancellationService.cancel()', () => {
     const prisma = buildPrisma({
       commission: {
         id: COMMISSION_ID,
+        brokerId: 'broker-uuid',
+        netAmount: new Prisma.Decimal(50_000),
         status: 'APPROVED',
         clawbackStatus: null,
         payoutId: PAYOUT_ID,
@@ -551,6 +569,8 @@ describe('ContractCancellationService.cancel()', () => {
     const prisma = buildPrisma({
       commission: {
         id: COMMISSION_ID,
+        brokerId: 'broker-uuid',
+        netAmount: new Prisma.Decimal(50_000),
         status: 'APPROVED',
         clawbackStatus: null,
         payoutId: PAYOUT_ID,
@@ -577,10 +597,10 @@ describe('ContractCancellationService.cancel()', () => {
     expect(payoutUpdate.data['status']).toBe('CANCELLED');
     expect(payoutUpdate.data['cancelledAt']).toBeInstanceOf(Date);
     expect(payoutUpdate.data['cancelledById']).toBe(ACTOR_ID);
-    expect(prisma._tx.brokerCommissionAdjustment.updateMany).toHaveBeenCalledWith({
-      where: { payoutId: PAYOUT_ID },
-      data: { payoutId: null },
-    });
+    // Its netted adjustments are released for the next payout.
+    expect(prisma._tx.brokerCommissionAdjustment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { AND: [{ payoutId: PAYOUT_ID }, { payoutId: { not: null } }] } }),
+    );
   });
 
   it('CC-U-19: CLAWBACK + commission APPROVED in APPROVED payout, 1 remaining → payout DRAFT + recomputed totals', async () => {
@@ -598,6 +618,8 @@ describe('ContractCancellationService.cancel()', () => {
     const prisma = buildPrisma({
       commission: {
         id: COMMISSION_ID,
+        brokerId: 'broker-uuid',
+        netAmount: new Prisma.Decimal(50_000),
         status: 'APPROVED',
         clawbackStatus: null,
         payoutId: PAYOUT_ID,
@@ -630,7 +652,15 @@ describe('ContractCancellationService.cancel()', () => {
 
   it('CC-U-20: RETAIN keeps the commission and the bonus payable (flagged, not cancelled)', async () => {
     const prisma = buildPrisma({
-      commission: { id: COMMISSION_ID, status: 'APPROVED', clawbackStatus: null, payoutId: null, payout: null },
+      commission: {
+        id: COMMISSION_ID,
+        brokerId: 'broker-uuid',
+        netAmount: new Prisma.Decimal(50_000),
+        status: 'APPROVED',
+        clawbackStatus: null,
+        payoutId: null,
+        payout: null,
+      },
       bonusEntry: { id: BONUS_ID, status: 'APPROVED', clawbackStatus: null },
     });
     const svc = buildSvc(prisma);

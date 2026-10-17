@@ -2561,7 +2561,8 @@ model BrokerPayout {
 
 /// A paid commission whose contract price changed afterwards (decided
 /// 2026-10-16): TOP_UP owes the broker the difference, CLAWBACK takes it back.
-/// Both are netted into the broker's next payout (payoutId set when netted).
+/// A cancelled deal's paid commission is clawed back the same way. All are
+/// netted into the broker's next payout (payoutId set when netted).
 model BrokerCommissionAdjustment {
   id           String                         @id @default(uuid()) @db.Uuid
   brokerId     String                         @db.Uuid
@@ -2576,6 +2577,10 @@ model BrokerCommissionAdjustment {
   createdAt    DateTime                       @default(now())
   payoutId     String?                        @db.Uuid
   payout       BrokerPayout?                  @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+  /// A CLAWBACK that recovers a cancelled deal's paid commission (its
+  /// clawback overlay): when the payout netting it is paid, the overlay is
+  /// recorded as collected by that amount.
+  settlesClawback Boolean                     @default(false)
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
