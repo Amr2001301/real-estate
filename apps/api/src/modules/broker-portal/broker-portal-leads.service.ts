@@ -15,6 +15,7 @@ import { phoneForWrite } from '../../common/utils/phone-for-write';
 import type { BrokerScopeContext } from '../../common/guards/broker-scope.guard';
 import { CreatePortalLeadDto, PortalLeadsQueryDto } from './dto/portal-lead.dto';
 import { agentFilter, resolveBrokerViewer } from './broker-viewer';
+import { liveProjectGrant } from '../broker-access/live-grant';
 
 // The broker sees the lead as they submitted it — never the stored profile
 // of whichever account the phone matched (it may be a staff member, another
@@ -245,7 +246,7 @@ export class BrokerPortalLeadsService {
     });
     if (!project) throw new NotFoundException('Project not found');
     const access = await this.prisma.brokerProjectAccess.findFirst({
-      where: { brokerId, projectId, active: true },
+      where: { brokerId, projectId, ...liveProjectGrant() },
       select: { id: true },
     });
     if (!access) {
@@ -273,7 +274,7 @@ export class BrokerPortalLeadsService {
     const projectId = unit.building.phase.projectId;
     const [projectAccess, unitAccess] = await Promise.all([
       this.prisma.brokerProjectAccess.findFirst({
-        where: { brokerId, projectId, active: true },
+        where: { brokerId, projectId, ...liveProjectGrant() },
         select: { id: true },
       }),
       this.prisma.brokerUnitAccess.findFirst({

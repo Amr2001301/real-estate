@@ -187,7 +187,9 @@ export class BrokerPortalTeamService {
           jobTitle: dto.jobTitle ?? null,
           isPrimaryContact: dto.isPrimaryContact ?? false,
           canManageBrokerUsers: dto.canManageBrokerUsers ?? false,
-          canViewCommissions: dto.canViewCommissions ?? true,
+          // Seeing commissions is granted by the company (admin), never from
+          // the portal — a firm manager could otherwise grant it to themselves.
+          canViewCommissions: false,
           invitedAt: now,
           status: BrokerUserStatus.INVITED,
         },
@@ -275,9 +277,8 @@ export class BrokerPortalTeamService {
     if (dto.canManageBrokerUsers !== undefined) {
       linkData.canManageBrokerUsers = dto.canManageBrokerUsers;
     }
-    if (dto.canViewCommissions !== undefined) {
-      linkData.canViewCommissions = dto.canViewCommissions;
-    }
+    // canViewCommissions is the company's to grant (admin, broker-users), not
+    // the firm's: ignored here.
     if (dto.isPrimaryContact !== undefined) {
       linkData.isPrimaryContact = dto.isPrimaryContact;
     }

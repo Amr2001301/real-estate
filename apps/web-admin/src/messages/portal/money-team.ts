@@ -220,7 +220,8 @@ const ar = {
       manageTeamHelp: 'يستطيع هذا العضو إضافة وإيقاف وإزالة بقية أعضاء الفريق.',
       viewCommissions: 'الاطلاع على العمولات والمدفوعات',
       viewCommissionsHelp:
-        'يستطيع هذا العضو رؤية صفحات «العمولات» و«المدفوعات» في البوابة. أَلغِ التحديد لإخفاء البيانات المالية.',
+        'يستطيع هذا العضو رؤية صفحات «العمولات» و«المدفوعات» في البوابة.',
+      viewCommissionsByCompany: 'تمنح الشركة هذه الصلاحية — تواصل معها لتغييرها.',
       cancel: 'إلغاء',
       saving: 'جاري الحفظ…',
     },
@@ -513,7 +514,8 @@ const en: typeof ar = {
       manageTeamHelp: 'This member can add, suspend and remove other team members.',
       viewCommissions: 'View commissions & payouts',
       viewCommissionsHelp:
-        'This member can see the “Commissions” and “Payouts” pages in the portal. Uncheck to hide financial data.',
+        'This member can see the “Commissions” and “Payouts” pages in the portal.',
+      viewCommissionsByCompany: 'Granted by the company — contact them to change it.',
       cancel: 'Cancel',
       saving: 'Saving…',
     },

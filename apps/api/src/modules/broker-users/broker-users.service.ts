@@ -140,7 +140,8 @@ export class BrokerUsersService {
           jobTitle: dto.jobTitle ?? null,
           isPrimaryContact: dto.isPrimaryContact ?? false,
           canManageBrokerUsers: dto.canManageBrokerUsers ?? false,
-          canViewCommissions: dto.canViewCommissions ?? true,
+          // Off until the company grants it.
+          canViewCommissions: dto.canViewCommissions ?? false,
           invitedAt: now,
           status: 'INVITED',
         },

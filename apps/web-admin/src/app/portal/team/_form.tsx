@@ -117,20 +117,22 @@ export function TeamMemberForm({ action, initial, submitLabel, isEdit, locale = 
               </span>
             </span>
           </label>
-          <label className="flex items-start gap-3 text-sm cursor-pointer">
+          {/* Granted by the company, not from the portal: shown, not editable. */}
+          <div className="flex items-start gap-3 text-sm">
             <input
               type="checkbox"
-              name="canViewCommissions"
-              defaultChecked={initial ? initial.canViewCommissions : true}
-              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 shrink-0"
+              checked={initial?.canViewCommissions ?? false}
+              disabled
+              readOnly
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-600 shrink-0 opacity-60"
             />
             <span>
               <span className="block font-medium text-slate-800">{t.viewCommissions}</span>
               <span className="block text-2xs text-slate-500 mt-0.5">
-                {t.viewCommissionsHelp}
+                {t.viewCommissionsHelp} {t.viewCommissionsByCompany}
               </span>
             </span>
-          </label>
+          </div>
         </div>
         </PremiumFormPanel>
       </PremiumFormLayout>

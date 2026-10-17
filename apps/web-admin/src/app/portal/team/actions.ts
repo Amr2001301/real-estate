@@ -42,9 +42,7 @@ export async function createTeamMemberAction(
     locale: (str(formData, 'locale') as 'ar' | 'en' | undefined) ?? 'ar',
     isPrimaryContact: bool(formData, 'isPrimaryContact'),
     canManageBrokerUsers: bool(formData, 'canManageBrokerUsers'),
-    canViewCommissions: formData.get('canViewCommissions') === null
-      ? true
-      : bool(formData, 'canViewCommissions'),
+    // canViewCommissions is granted by the company, not from the portal.
   };
 
   let created: BrokerUser;
@@ -70,7 +68,6 @@ export async function updateTeamMemberAction(
     locale: (str(formData, 'locale') as 'ar' | 'en' | undefined) ?? undefined,
     isPrimaryContact: bool(formData, 'isPrimaryContact'),
     canManageBrokerUsers: bool(formData, 'canManageBrokerUsers'),
-    canViewCommissions: bool(formData, 'canViewCommissions'),
   };
   try {
     await api.patch(`/portal/team/${id}`, payload);

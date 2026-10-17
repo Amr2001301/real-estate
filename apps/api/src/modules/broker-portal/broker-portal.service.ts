@@ -5,6 +5,8 @@ import { paginate, takeSkip } from '../../common/utils/pagination';
 import type { BrokerScopeContext } from '../../common/guards/broker-scope.guard';
 import type { AuthUser } from '../../common/decorators/current-user.decorator';
 import { PortalUnitsQueryDto } from './dto/portal-query.dto';
+import { resolveBrokerViewer } from './broker-viewer';
+import { liveProjectGrant } from '../broker-access/live-grant';
 
 @Injectable()
 export class BrokerPortalService {
@@ -69,7 +71,10 @@ export class BrokerPortalService {
         createdAt: brokerUser.createdAt,
         updatedAt: brokerUser.updatedAt,
       },
-      broker: brokerUser.broker,
+      // The firm's commission terms only for agents who may see commissions.
+      broker: brokerUser.canViewCommissions
+        ? brokerUser.broker
+        : { ...brokerUser.broker, defaultCommissionPct: null, commissionModel: null },
       permissions: {
         isPrimaryContact: brokerUser.isPrimaryContact,
         canManageBrokerUsers: brokerUser.canManageBrokerUsers,
@@ -82,7 +87,7 @@ export class BrokerPortalService {
 
   async listProjects(scope: BrokerScopeContext) {
     const grants = await this.prisma.brokerProjectAccess.findMany({
-      where: { brokerId: scope.brokerId, active: true },
+      where: { brokerId: scope.brokerId, ...liveProjectGrant() },
       orderBy: { createdAt: 'desc' },
       include: {
         project: {
@@ -108,12 +113,14 @@ export class BrokerPortalService {
       },
     });
 
+    const viewer = await resolveBrokerViewer(this.prisma, scope);
     return grants.map((g) => ({
       project: g.project,
       access: {
         id: g.id,
-        commissionPct: g.commissionPct,
-        fixedAmountPerUnit: g.fixedAmountPerUnit,
+        // The rates only for agents who may see commissions.
+        commissionPct: viewer.canViewCommissions ? g.commissionPct : null,
+        fixedAmountPerUnit: viewer.canViewCommissions ? g.fixedAmountPerUnit : null,
         startsAt: g.startsAt,
         endsAt: g.endsAt,
         active: g.active,
@@ -130,7 +137,7 @@ export class BrokerPortalService {
 
     const [projectGrants, unitGrants] = await Promise.all([
       this.prisma.brokerProjectAccess.findMany({
-        where: { brokerId: scope.brokerId, active: true },
+        where: { brokerId: scope.brokerId, ...liveProjectGrant() },
         select: { projectId: true },
       }),
       this.prisma.brokerUnitAccess.findMany({

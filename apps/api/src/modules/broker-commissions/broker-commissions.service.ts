@@ -20,6 +20,7 @@ import { reportFailure } from '../../common/observability/report-failure';
 import { isUniqueConflictOn } from '../../common/utils/contract-number';
 import { commissionBasis, MARKUP_SNAPSHOT_SELECT } from '../../common/finance/commission-basis';
 import { CONTRACT_CANCELLED_MESSAGE, isPayableDeal } from '../installments/live-contract';
+import { liveProjectGrant } from '../broker-access/live-grant';
 
 const COMMISSION_INCLUDE = {
   broker: {
@@ -206,7 +207,8 @@ export class BrokerCommissionsService {
           select: { defaultCommissionPct: true, commissionModel: true },
         }),
         this.prisma.brokerProjectAccess.findFirst({
-          where: { brokerId: contract.brokerId!, projectId, active: true },
+          // The grant in force when the sale was reserved.
+          where: { brokerId: contract.brokerId!, projectId, ...liveProjectGrant(contract.reservation?.createdAt) },
           select: { commissionPct: true, fixedAmountPerUnit: true },
         }),
       ]);

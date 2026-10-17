@@ -121,7 +121,7 @@ export default function CreateBrokerUserForm({ brokerId, locale = 'ar' }: Props)
               <span>{m.createFormCanManage}</span>
             </label>
             <label className="inline-flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer select-none">
-              <Checkbox name="canViewCommissions" defaultChecked />
+              <Checkbox name="canViewCommissions" />
               <span>{m.createFormCanView}</span>
             </label>
           </div>
