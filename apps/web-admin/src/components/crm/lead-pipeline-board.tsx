@@ -186,7 +186,7 @@ export function LeadPipelineBoard({ initialLeads, counts, locale = 'ar' }: Props
 
       <DragOverlay dropAnimation={null}>
         {activeLead ? (
-          <div className="w-[300px] sm:w-[316px] cursor-grabbing">
+          <div className="w-[264px] cursor-grabbing">
             <LeadCardOverlay lead={activeLead} locale={locale} />
           </div>
         ) : null}

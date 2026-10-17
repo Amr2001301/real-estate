@@ -4,13 +4,10 @@ import {
   CircleDollarSign,
   Calculator,
   AlertCircle,
-  Search,
   Building2,
-  Layers,
   Home,
   SlidersHorizontal,
-  ArrowUpRight,
-  BarChart3,
+  ArrowLeft,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { projectOptions } from '@/lib/options';
@@ -22,9 +19,8 @@ import type {
   InventoryMatrixPhase,
   InventoryMatrixBuilding,
 } from '@/lib/types';
-import { formatCurrency } from '@/lib/format';
-import { getReportsCurrency } from '@/lib/currency';
-import { Badge } from '@/components/ui/badge';
+import { compactParts } from '@/lib/format';
+import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { ExportMenu } from '@/components/export-menu';
 import { Input } from '@/components/ui/input';
@@ -35,9 +31,12 @@ import {
   PremiumMetricStrip,
   PremiumFilterBar,
   PremiumFilterField,
-  PremiumSectionCard,
+  PremiumFilterChips,
+  PremiumFilterDivider,
   PremiumEmptyState,
+  UNIT_STATUS_COLORS,
 } from '@/components/premium';
+import { RowTitle, RowIconTile, NumCell } from '@/components/premium/data-table';
 import { getLocale, type Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 
@@ -94,6 +93,9 @@ export default async function InventoryPage({
   const sold           = summary.sold;
   const inventoryValue = summary.totalValue;
   const avgPrice       = total > 0 ? inventoryValue / total : 0;
+  const symbol         = currencySymbol(currency, locale);
+  const valueParts     = compactParts(inventoryValue, symbol, locale);
+  const avgParts       = compactParts(avgPrice, symbol, locale);
 
   // ── URL helpers ─────────────────────────────────────────────────────────
   const qs = (extra: Record<string, string | undefined>) => {
@@ -146,46 +148,23 @@ export default async function InventoryPage({
         }
       />
 
-      {/* ── 2. KPI strip ────────────────────────────────────────────────────── */}
+      {/* ── 2. KPI band with the units distribution (U5) ───────────────────── */}
       <PremiumMetricStrip
         variant="compact"
         cols={4}
         metrics={[
-          {
-            label: m.kpi.totalValue,
-            value: formatCurrency(inventoryValue, currency, locale),
-            icon: <CircleDollarSign />,
-            tone: 'brand',
-            primary: true,
-          },
-          {
-            label: m.kpi.totalUnits,
-            value: total,
-            icon: <Boxes />,
-            tone: 'neutral',
-          },
-          {
-            label: m.kpi.activeProjects,
-            value: projectBuckets.length,
-            icon: <Building2 />,
-            tone: 'info',
-          },
-          {
-            label: m.kpi.avgPrice,
-            value: avgPrice > 0 ? formatCurrency(avgPrice, currency, locale) : '—',
-            icon: <Calculator />,
-            tone: 'success',
-          },
+          { label: m.kpi.totalValue, value: valueParts[0], unit: valueParts[1], icon: <CircleDollarSign /> },
+          { label: m.kpi.totalUnits, value: total, unit: m.kpi.unitsUnit, icon: <Home /> },
+          { label: m.kpi.activeProjects, value: projectBuckets.length, unit: m.kpi.projectsUnit, icon: <Building2 /> },
+          avgPrice > 0
+            ? { label: m.kpi.avgPrice, value: avgParts[0], unit: avgParts[1], icon: <Calculator /> }
+            : { label: m.kpi.avgPrice, value: '—', icon: <Calculator /> },
         ]}
-      />
-
-      {/* ── 3. Availability distribution ────────────────────────────────────── */}
-      <InventoryAvailCard
-        total={total}
-        available={available}
-        reserved={reserved}
-        sold={sold}
-        labels={{ title: m.availCard.title, description: m.availCard.description, available: m.availCard.available, reserved: m.availCard.reserved, sold: m.availCard.sold }}
+        distribution={[
+          { label: m.availCard.sold, value: sold, color: UNIT_STATUS_COLORS.sold },
+          { label: m.availCard.reserved, value: reserved, color: UNIT_STATUS_COLORS.reserved },
+          { label: m.availCard.available, value: available, color: UNIT_STATUS_COLORS.available },
+        ]}
       />
 
       {/* ── Error banners ─────────────────────────────────────────────────── */}
@@ -202,91 +181,49 @@ export default async function InventoryPage({
         </div>
       )}
 
-      {/* ── 4. Filter bar ───────────────────────────────────────────────────── */}
-      <PremiumFilterBar method="get" action="/dashboard/inventory">
-        {/* Preserve active status filter when submitting search/project form */}
+      {/* ── 4. Filter bar (U5): search, project, status chips with counts ──── */}
+      <PremiumFilterBar
+        method="get"
+        action="/dashboard/inventory"
+        trailing={
+          <PremiumFilterChips
+            chips={[
+              { label: m.filter.allChip, count: total, href: `/dashboard/inventory${qs({ status: undefined })}`, active: status === 'all' },
+              { label: m.filter.availableChip, count: available, href: `/dashboard/inventory${qs({ status: 'AVAILABLE' })}`, active: status === 'AVAILABLE' },
+              { label: m.filter.reservedChip, count: reserved, href: `/dashboard/inventory${qs({ status: 'RESERVED' })}`, active: status === 'RESERVED' },
+              { label: m.filter.soldChip, count: sold, href: `/dashboard/inventory${qs({ status: 'SOLD' })}`, active: status === 'SOLD' },
+            ]}
+          />
+        }
+        summary={
+          hasFilters ? (
+            <Link href={resetHref as never} className="font-bold text-brand-700 underline underline-offset-4">
+              {m.filter.clearBtn}
+            </Link>
+          ) : undefined
+        }
+      >
+        {/* Keep the status chip choice when the search or project changes */}
         {status !== 'all' && <input type="hidden" name="status" value={status} />}
 
-        {/* Search — grows to fill available space */}
-        <div className="flex-1 min-w-[180px]">
-          <label htmlFor="inv-q" className="sr-only">{m.filter.searchLabel}</label>
-          <Input
-            id="inv-q"
-            name="q"
-            inputSize="sm"
-            defaultValue={q}
-            placeholder={m.filter.searchPlaceholder}
-            leftAddon={<Search />}
-            className="w-full"
-          />
-        </div>
+        <PremiumFilterField label={m.filter.searchLabel} htmlFor="inv-q">
+          <Input id="inv-q" name="q" type="search" defaultValue={q} placeholder={m.filter.searchPlaceholder} />
+        </PremiumFilterField>
 
-        {/* Project filter */}
-        <PremiumFilterField label={uiT(locale).common.allProjects} htmlFor="projectId">
-          <Select
-            id="projectId"
-            name="projectId"
-            inputSize="sm"
-            defaultValue={projectId}
-            className="w-40 shrink-0"
-          >
+        <PremiumFilterField label={m.matrix.projectLabel} htmlFor="projectId">
+          <Select id="projectId" name="projectId" inputSize="sm" defaultValue={projectId}>
             <option value="">{uiT(locale).common.allProjects}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>{p.name[locale]}</option>
             ))}
           </Select>
         </PremiumFilterField>
-
-        <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
-
-        {/* Status chips — links, not form inputs; change URL directly */}
-        <div className="flex items-center gap-1 flex-wrap">
-          <StatusChip
-            href={`/dashboard/inventory${qs({ status: undefined })}`}
-            active={status === 'all'}
-            label={m.filter.allChip}
-            count={total}
-          />
-          <StatusChip
-            href={`/dashboard/inventory${qs({ status: 'AVAILABLE' })}`}
-            active={status === 'AVAILABLE'}
-            label={m.filter.availableChip}
-            count={available}
-            tone="success"
-          />
-          <StatusChip
-            href={`/dashboard/inventory${qs({ status: 'RESERVED' })}`}
-            active={status === 'RESERVED'}
-            label={m.filter.reservedChip}
-            count={reserved}
-            tone="brand"
-          />
-          <StatusChip
-            href={`/dashboard/inventory${qs({ status: 'SOLD' })}`}
-            active={status === 'SOLD'}
-            label={m.filter.soldChip}
-            count={sold}
-            tone="slate"
-          />
-        </div>
-
-        {/* Apply + Reset */}
-        <div className="flex items-center gap-2 ms-auto shrink-0">
-          {hasFilters && (
-            <Link
-              href={resetHref as never}
-              className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
-            >
-              {m.filter.clearBtn}
-            </Link>
-          )}
-          <Button type="submit" variant="primary" size="sm">{uiT(locale).common.applyBtn}</Button>
-        </div>
+        <PremiumFilterDivider />
       </PremiumFilterBar>
 
       {/* ── 5. Inventory matrix ─────────────────────────────────────────────── */}
       {projectBuckets.length === 0 ? (
-        <div className="bg-surface border border-hairline rounded-[20px] shadow-soft">
+        <div className="bg-surface border border-hairline rounded-[22px]">
           <PremiumEmptyState
             icon={<Boxes />}
             title={q || projectId || status !== 'all' ? m.empty.filteredTitle : m.empty.emptyTitle}
@@ -307,95 +244,11 @@ export default async function InventoryPage({
       ) : (
         <div className="flex flex-col gap-4">
           {projectBuckets.map((proj) => (
-            <ProjectMatrixCard key={proj.id} proj={proj} unitsHref={unitsHref} currency={currency} matrixLabels={m.matrix} locale={locale} />
+            <ProjectMatrixCard key={proj.id} proj={proj} unitsHref={unitsHref} symbol={symbol} matrixLabels={m.matrix} locale={locale} />
           ))}
         </div>
       )}
 
-      <p className="flex items-center justify-center gap-1.5 text-2xs text-slate-400">
-        <Boxes className="h-3 w-3" />
-        <Link href={'/dashboard/units' as never} className="font-semibold text-brand-700 hover:text-brand-800">
-          {m.manageUnitsAdmin}
-        </Link>
-      </p>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  DESIGN PALETTE
-//  متاحة  → success green   (#10B981 / success-500)
-//  محجوزة → brand gold      (#CFAE57 / brand-400)
-//  مباعة  → slate neutral   (#94A3B8 / slate-400)
-// ═══════════════════════════════════════════════════════════════════════════
-
-// ── InventoryAvailCard ───────────────────────────────────────────────────────
-
-function InventoryAvailCard({
-  total, available, reserved, sold, labels,
-}: { total: number; available: number; reserved: number; sold: number; labels: { title: string; description: string; available: string; reserved: string; sold: string } }) {
-  const avPct = total > 0 ? Math.round((available / total) * 100) : 0;
-  const rsPct = total > 0 ? Math.round((reserved  / total) * 100) : 0;
-  const slPct = total > 0 ? Math.round((sold      / total) * 100) : 0;
-
-  return (
-    <PremiumSectionCard
-      icon={<BarChart3 />}
-      title={labels.title}
-      description={labels.description}
-    >
-      <div className="flex flex-col gap-5">
-        <AvailBar
-          label={labels.available}
-          count={available}
-          pct={avPct}
-          barClass="bg-success-500"
-          dotClass="bg-success-500"
-          countClass="text-success-700"
-        />
-        <AvailBar
-          label={labels.reserved}
-          count={reserved}
-          pct={rsPct}
-          barClass="bg-brand-400"
-          dotClass="bg-brand-400"
-          countClass="text-brand-700"
-        />
-        <AvailBar
-          label={labels.sold}
-          count={sold}
-          pct={slPct}
-          barClass="bg-slate-400"
-          dotClass="bg-slate-400"
-          countClass="text-slate-500"
-        />
-      </div>
-    </PremiumSectionCard>
-  );
-}
-
-function AvailBar({ label, count, pct, barClass, dotClass, countClass }: {
-  label: string; count: number; pct: number;
-  barClass: string; dotClass: string; countClass: string;
-}) {
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-2 gap-2">
-        <div className="flex items-center gap-2">
-          <span className={cn('h-2 w-2 rounded-full shrink-0', dotClass)} />
-          <span className="text-[13px] font-medium text-slate-700">{label}</span>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[14px] font-bold text-slate-900 tabular-nums">{count}</span>
-          <span className={cn('text-[11px] font-semibold tabular-nums', countClass)}>({pct}%)</span>
-        </div>
-      </div>
-      <div className="h-2.5 w-full rounded-full bg-canvas overflow-hidden border border-hairline">
-        <div
-          className={cn('h-full rounded-full transition-all duration-700', barClass)}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
     </div>
   );
 }
@@ -405,124 +258,69 @@ function AvailBar({ label, count, pct, barClass, dotClass, countClass }: {
 type MatrixLabels = {
   viewDetails: string;
   unitSuffix: string;
+  projectLabel: string;
   cols: { phase: string; total: string; available: string; reserved: string; sold: string; value: string; availability: string };
   phaseBadge: string;
 };
 
+/** One project (U5): navy tile + Naskh name, its value, then a navy-header table of phases and buildings. */
 function ProjectMatrixCard({
   proj,
   unitsHref,
-  currency,
+  symbol,
   matrixLabels,
   locale = 'ar',
 }: {
   proj: InventoryMatrixProject;
   unitsHref: (overrides: Record<string, string | undefined>) => string;
-  currency: string;
+  symbol: string;
   matrixLabels: MatrixLabels;
   locale?: Locale;
 }) {
   const phases = [...proj.phases].sort((a, b) => a.name.localeCompare(b.name, 'ar'));
-  const av = proj.total > 0 ? (proj.available / proj.total) * 100 : 0;
-  const rs = proj.total > 0 ? (proj.reserved  / proj.total) * 100 : 0;
-  const sl = proj.total > 0 ? (proj.sold      / proj.total) * 100 : 0;
+  const [num, unit] = compactParts(proj.totalValue, symbol, locale);
 
   return (
-    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-      {/* Subtle gold accent line */}
-      <div className="h-[2px] bg-gradient-to-r from-transparent via-brand-300/60 to-transparent" />
-
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-hairline bg-canvas/30">
-        <div className="flex items-center gap-3 min-w-0">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-100/80 shrink-0">
-            <Building2 className="h-4 w-4" />
-          </span>
-          <div className="min-w-0">
-            <Link
-              href={`/dashboard/projects/${proj.id}` as never}
-              className="font-bold text-[16px] text-navy hover:text-brand-700 transition-colors leading-snug block truncate"
-            >
-              {proj.name}
-            </Link>
-            {proj.city && <p className="text-[12px] text-slate-400 mt-0.5">{proj.city}</p>}
-          </div>
-        </div>
-
-        <div className="shrink-0 flex flex-col items-end gap-1.5">
-          {proj.totalValue > 0 && (
-            <p dir="rtl" className="text-[14px] font-bold text-slate-800 tabular-nums leading-none">
-              {formatCurrency(proj.totalValue, currency, locale)}
-            </p>
-          )}
-          <div className="flex items-center gap-3">
-            <span className="text-[12px] text-slate-400">
-              <span className="font-semibold text-slate-600">{proj.total}</span> {matrixLabels.unitSuffix}
-            </span>
-            <Link
-              href={unitsHref({ projectId: proj.id }) as never}
-              className="inline-flex items-center gap-0.5 text-[12px] font-semibold text-brand-600 hover:text-brand-700 transition-colors"
-            >
-              {matrixLabels.viewDetails}
-              <ArrowUpRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
+    <div className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+      <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-5">
+        <RowTitle
+          title={proj.name}
+          href={`/dashboard/projects/${proj.id}`}
+          icon={<RowIconTile><Building2 /></RowIconTile>}
+          code={undefined}
+        />
+        <div className="flex items-center gap-6">
+          {proj.totalValue > 0 && <NumCell value={num} unit={unit} className="[&>span:first-child]:text-[30px]" />}
+          <Link
+            href={unitsHref({ projectId: proj.id }) as never}
+            className="inline-flex items-center gap-1 text-[14px] font-bold text-brand-700 hover:text-brand-600"
+          >
+            {matrixLabels.viewDetails}
+            <ArrowLeft className="h-4 w-4 ltr:rotate-180" aria-hidden />
+          </Link>
         </div>
       </div>
+      <p className="-mt-3 px-6 pb-4 ps-[96px] text-[13px] text-slate-500">
+        {[proj.city, `${proj.total} ${matrixLabels.unitSuffix}`].filter(Boolean).join(' · ')}
+      </p>
 
-      {/* ── Stacked availability bar ─────────────────────────────────────────── */}
-      {proj.total > 0 && (
-        <div className="px-6 py-4 border-b border-hairline space-y-2">
-          <div
-            className="h-3 w-full rounded-full overflow-hidden flex bg-canvas"
-            role="img"
-            aria-label={`${matrixLabels.cols.available} ${proj.available} • ${matrixLabels.cols.reserved} ${proj.reserved} • ${matrixLabels.cols.sold} ${proj.sold}`}
-          >
-            {av > 0 && <span className="h-full bg-success-500 transition-all duration-500 shrink-0" style={{ width: `${av}%` }} />}
-            {rs > 0 && <span className="h-full bg-brand-400  transition-all duration-500 shrink-0" style={{ width: `${rs}%` }} />}
-            {sl > 0 && <span className="h-full bg-slate-400  transition-all duration-500 shrink-0" style={{ width: `${sl}%` }} />}
-          </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-0.5">
-            {av > 0 && (
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-success-700">
-                <span className="h-1.5 w-1.5 rounded-full bg-success-500 shrink-0" />
-                {matrixLabels.cols.available} {proj.available} ({Math.round(av)}%)
-              </span>
-            )}
-            {rs > 0 && (
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-brand-700">
-                <span className="h-1.5 w-1.5 rounded-full bg-brand-400 shrink-0" />
-                {matrixLabels.cols.reserved} {proj.reserved} ({Math.round(rs)}%)
-              </span>
-            )}
-            {sl > 0 && (
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
-                <span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" />
-                {matrixLabels.cols.sold} {proj.sold} ({Math.round(sl)}%)
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Phase / building table ───────────────────────────────────────────── */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto scrollbar-thin">
         <table className="w-full text-sm">
-          <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+          <thead>
             <tr>
-              <th className="text-start py-3 ps-6 pe-4">{matrixLabels.cols.phase}</th>
-              <th className="text-center py-3 px-3">{matrixLabels.cols.total}</th>
-              <th className="text-center py-3 px-3">{matrixLabels.cols.available}</th>
-              <th className="text-center py-3 px-3">{matrixLabels.cols.reserved}</th>
-              <th className="text-center py-3 px-3">{matrixLabels.cols.sold}</th>
-              <th className="text-start py-3 px-3">{matrixLabels.cols.value}</th>
-              <th className="text-start py-3 ps-3 pe-6">{matrixLabels.cols.availability}</th>
+              <th className="text-start py-3.5 ps-6 pe-4">{matrixLabels.cols.phase}</th>
+              <th className="text-center py-3.5 px-3">{matrixLabels.cols.total}</th>
+              <th className="text-center py-3.5 px-3">{matrixLabels.cols.available}</th>
+              <th className="text-center py-3.5 px-3">{matrixLabels.cols.reserved}</th>
+              <th className="text-center py-3.5 px-3">{matrixLabels.cols.sold}</th>
+              <th className="text-start py-3.5 px-3">{matrixLabels.cols.value}</th>
+              <th className="text-start py-3.5 ps-3 pe-6">{matrixLabels.cols.availability}</th>
             </tr>
           </thead>
           <tbody>
             {phases.map((ph) => {
               const buildings = [...ph.buildings].sort((a, b) => a.name.localeCompare(b.name, 'ar'));
-              return <PhaseRows key={ph.id} ph={ph} buildings={buildings} currency={currency} phaseBadgeLabel={matrixLabels.phaseBadge} locale={locale} />;
+              return <PhaseRows key={ph.id} ph={ph} buildings={buildings} symbol={symbol} phaseBadgeLabel={matrixLabels.phaseBadge} locale={locale} />;
             })}
           </tbody>
         </table>
@@ -531,136 +329,58 @@ function ProjectMatrixCard({
   );
 }
 
-// ── PhaseRows ─────────────────────────────────────────────────────────────────
+/** A count in Cormorant, coloured by unit status; a dash for zero. */
+function Count({ n, cls }: { n: number; cls: string }) {
+  return n > 0 ? <span className={cn('num text-[22px] font-semibold', cls)}>{n}</span> : <span className="text-slate-400">—</span>;
+}
 
-function PhaseRows({ ph, buildings, currency, phaseBadgeLabel, locale = 'ar' }: { ph: InventoryMatrixPhase; buildings: InventoryMatrixBuilding[]; currency: string; phaseBadgeLabel: string; locale?: Locale }) {
+function PhaseRows({ ph, buildings, symbol, phaseBadgeLabel, locale = 'ar' }: { ph: InventoryMatrixPhase; buildings: InventoryMatrixBuilding[]; symbol: string; phaseBadgeLabel: string; locale?: Locale }) {
+  const rows = [
+    { ...ph, key: ph.id, phase: true },
+    ...buildings.map((b) => ({ ...b, key: b.id, phase: false })),
+  ];
   return (
     <>
-      <tr className="border-t border-hairline bg-canvas/60">
-        <td className="py-3 ps-6 pe-4">
-          <div className="inline-flex items-center gap-2">
-            <Layers className="h-3.5 w-3.5 text-brand-500 shrink-0" />
-            <span className="text-[13px] font-bold text-slate-800">{ph.name}</span>
-            <span className="inline-flex items-center h-[18px] px-1.5 rounded-full bg-brand-50 border border-brand-100 text-[9px] font-bold text-brand-700 uppercase tracking-wide">
-              {phaseBadgeLabel}
-            </span>
-          </div>
-        </td>
-        <td className="py-3 px-3 text-center tabular-nums text-[13px] font-semibold text-slate-700">{ph.total}</td>
-        <td className="py-3 px-3 text-center tabular-nums text-[13px] font-semibold text-success-700">
-          {ph.available > 0 ? ph.available : <span className="text-slate-300 font-normal">—</span>}
-        </td>
-        <td className="py-3 px-3 text-center tabular-nums text-[13px] font-semibold text-brand-700">
-          {ph.reserved > 0 ? ph.reserved : <span className="text-slate-300 font-normal">—</span>}
-        </td>
-        <td className="py-3 px-3 text-center tabular-nums text-[13px] font-semibold text-slate-500">
-          {ph.sold > 0 ? ph.sold : <span className="text-slate-300 font-normal">—</span>}
-        </td>
-        <td className="py-3 px-3 tabular-nums text-[12px] text-slate-600 whitespace-nowrap">{formatCurrency(ph.totalValue, currency, locale)}</td>
-        <td className="py-3 ps-3 pe-6">
-          <RowAvailBar available={ph.available} reserved={ph.reserved} sold={ph.sold} total={ph.total} />
-        </td>
-      </tr>
-
-      {buildings.map((b) => (
-        <tr key={b.id} className="border-t border-hairline hover:bg-canvas/40 transition-colors duration-100">
-          <td className="py-2.5 ps-6 pe-4">
-            <div className="inline-flex items-center gap-2 ps-5">
-              <Home className="h-3 w-3 text-slate-300 shrink-0" />
-              <span className="text-[12px] text-slate-600">{b.name}</span>
-            </div>
-          </td>
-          <td className="py-2.5 px-3 text-center tabular-nums text-[12px] text-slate-400">{b.total}</td>
-          <td className="py-2.5 px-3 text-center">
-            {b.available > 0
-              ? <Badge tone="success" variant="soft" size="sm">{b.available}</Badge>
-              : <span className="text-slate-300 text-[12px]">—</span>}
-          </td>
-          <td className="py-2.5 px-3 text-center">
-            {b.reserved > 0
-              ? <Badge tone="brand" variant="soft" size="sm">{b.reserved}</Badge>
-              : <span className="text-slate-300 text-[12px]">—</span>}
-          </td>
-          <td className="py-2.5 px-3 text-center">
-            {b.sold > 0
-              ? (
-                <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-600 tabular-nums">
-                  {b.sold}
+      {rows.map((r) => {
+        const [num, unit] = compactParts(r.totalValue, symbol, locale);
+        return (
+          <tr key={r.key} className={cn('border-t border-hairline', r.phase ? 'bg-surface-muted' : 'hover:bg-surface-muted/60')}>
+            <td className="py-4 ps-6 pe-4">
+              {r.phase ? (
+                <span className="inline-flex items-center gap-2.5">
+                  <span className="font-heading text-[16px] font-bold text-slate-900">{r.name}</span>
+                  <span className="rounded-full border border-brand-400/50 px-2.5 py-0.5 text-[11px] font-bold text-brand-700">{phaseBadgeLabel}</span>
                 </span>
-              )
-              : <span className="text-slate-300 text-[12px]">—</span>}
-          </td>
-          <td className="py-2.5 px-3 tabular-nums text-[11px] text-slate-400 whitespace-nowrap">{formatCurrency(b.totalValue, currency, locale)}</td>
-          <td className="py-2.5 ps-3 pe-6 min-w-[140px]">
-            <RowAvailBar available={b.available} reserved={b.reserved} sold={b.sold} total={b.total} />
-          </td>
-        </tr>
-      ))}
+              ) : (
+                <span className="ps-4 text-[14px] text-slate-700">{r.name}</span>
+              )}
+            </td>
+            <td className="py-4 px-3 text-center"><Count n={r.total} cls="text-slate-900" /></td>
+            <td className="py-4 px-3 text-center"><Count n={r.available} cls="text-unit-available-text" /></td>
+            <td className="py-4 px-3 text-center"><Count n={r.reserved} cls="text-brand-700" /></td>
+            <td className="py-4 px-3 text-center"><Count n={r.sold} cls="text-slate-900" /></td>
+            <td className="py-4 px-3"><NumCell value={num} unit={unit} /></td>
+            <td className="py-4 ps-3 pe-6 min-w-[200px]">
+              <AvailBar available={r.available} reserved={r.reserved} sold={r.sold} total={r.total} />
+            </td>
+          </tr>
+        );
+      })}
     </>
   );
 }
 
-// ── RowAvailBar ───────────────────────────────────────────────────────────────
-
-function RowAvailBar({ available, reserved, sold, total }: {
-  available: number; reserved: number; sold: number; total: number;
-}) {
-  if (total === 0) return <span className="text-2xs text-slate-300">—</span>;
-  const av = (available / total) * 100;
-  const rs = (reserved  / total) * 100;
-  const sl = (sold      / total) * 100;
+/** Availability: the one unit-status bar plus the available share. */
+function AvailBar({ available, reserved, sold, total }: { available: number; reserved: number; sold: number; total: number }) {
+  if (total === 0) return <span className="text-slate-400">—</span>;
   return (
-    <div className="flex items-center gap-2">
-      <div
-        className="h-2 flex-1 max-w-[100px] rounded-full overflow-hidden flex bg-canvas"
-        role="img"
-        aria-label={`${available} • ${reserved} • ${sold}`}
-      >
-        {av > 0 && <span className="h-full bg-success-500 shrink-0" style={{ width: `${av}%` }} />}
-        {rs > 0 && <span className="h-full bg-brand-400  shrink-0" style={{ width: `${rs}%` }} />}
-        {sl > 0 && <span className="h-full bg-slate-400  shrink-0" style={{ width: `${sl}%` }} />}
+    <div className="flex items-center gap-3">
+      <div className="flex h-2 flex-1 max-w-[200px] gap-1" role="img" aria-label={`${available} • ${reserved} • ${sold}`}>
+        {available > 0 && <span className="rounded-full bg-unit-available" style={{ flexGrow: available, flexBasis: 0 }} />}
+        {reserved > 0 && <span className="rounded-full bg-unit-reserved" style={{ flexGrow: reserved, flexBasis: 0 }} />}
+        {sold > 0 && <span className="rounded-full bg-unit-sold" style={{ flexGrow: sold, flexBasis: 0 }} />}
       </div>
-      {av > 0 && (
-        <span className="text-[10px] tabular-nums text-success-600 font-semibold shrink-0">
-          {Math.round(av)}%
-        </span>
-      )}
+      <span className="text-[12px] text-slate-500 tabular-nums">{Math.round((available / total) * 100)}%</span>
     </div>
-  );
-}
-
-// ── StatusChip ────────────────────────────────────────────────────────────────
-
-function StatusChip({
-  href, active, label, count, tone = 'brand',
-}: {
-  href: string; active: boolean; label: string; count: number;
-  tone?: 'brand' | 'success' | 'slate';
-}) {
-  const BADGE_INACTIVE: Record<string, string> = {
-    brand:   'bg-brand-50   text-brand-700',
-    success: 'bg-success-50 text-success-700',
-    slate:   'bg-slate-100  text-slate-600',
-  };
-  return (
-    <Link
-      href={href as never}
-      prefetch={false}
-      aria-current={active ? 'page' : undefined}
-      className={cn(
-        'inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[12px] font-medium transition-colors border',
-        active
-          ? 'bg-brand-500 text-white border-brand-500 shadow-sm font-semibold'
-          : 'bg-surface text-slate-500 border-hairline hover:border-brand-200 hover:text-slate-800',
-      )}
-    >
-      {label}
-      <span className={cn(
-        'inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold',
-        active ? 'bg-white/20 text-white' : (BADGE_INACTIVE[tone] ?? 'bg-slate-100 text-slate-600'),
-      )}>
-        {count}
-      </span>
-    </Link>
   );
 }

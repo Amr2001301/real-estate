@@ -3,24 +3,21 @@ import {
   Plus,
   Building2,
   CheckCircle2,
-  MapPinned,
   Star,
-  Eye,
   Pencil,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { projectOptions } from '@/lib/options';
 import { getSession } from '@/lib/session';
-import type { Paged, Project } from '@/lib/types';
-import { tx, formatDate } from '@/lib/format';
+import type { InventoryMatrixResult, Paged, Project } from '@/lib/types';
+import { tx, formatDate, compactParts } from '@/lib/format';
+import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { IconButton } from '@/components/ui/icon-button';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
-import { ProjectStatusBadge } from '@/components/badges';
 import { ProjectThumbnail } from '@/components/projects/project-thumbnail';
 import {
   PremiumPageHero,
@@ -28,7 +25,18 @@ import {
   PremiumFilterBar,
   PremiumFilterField,
   PremiumEmptyState,
+
 } from '@/components/premium';
+import {
+  PremiumTableCard,
+  PREMIUM_ROW,
+  RowTitle,
+  RowIconTile,
+  RowOpenButton,
+  NumCell,
+  UnitsBar,
+  StatusPill,
+} from '@/components/premium/data-table';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -65,10 +73,23 @@ export default async function ProjectsPage({
   if (sp.q) qs.set('q', sp.q);
 
   // For the city dropdown + KPI strip we also pull a wider snapshot.
-  const [pagedRes, snapshotRes] = await Promise.all([
+  // Units per project come from the inventory matrix; contract value (admin
+  // only) from the admin summary — no extra API.
+  const isAdminRole = session?.role === 'ADMIN';
+  const [pagedRes, snapshotRes, matrixRes, summaryRes, currency] = await Promise.all([
     safe(api.get<Paged<Project>>(`/projects?${qs.toString()}`)),
     safe(projectOptions()),
+    safe(api.get<InventoryMatrixResult>('/units/inventory-matrix')),
+    isAdminRole
+      ? safe(api.get<{ topProjects?: Array<{ id: string; contractValue: number }> }>('/reports/admin-summary'))
+      : Promise.resolve({ data: null }),
+    getReportsCurrency(),
   ]);
+  const symbol = currencySymbol(currency, locale);
+  const unitsByProject = new Map(
+    (matrixRes.data?.projects ?? []).map((p) => [p.id, { sold: p.sold, reserved: p.reserved, available: p.available }]),
+  );
+  const valueByProject = new Map((summaryRes.data?.topProjects ?? []).map((p) => [p.id, p.contractValue]));
 
   const paged = pagedRes.data;
   const snapshot = snapshotRes.data;
@@ -87,7 +108,14 @@ export default async function ProjectsPage({
 
   // Project mutations are ADMIN-only (projects:create/update/publish/delete).
   // SALES browses read-only, so creation CTAs are hidden for them.
-  const isAdmin = session?.role === 'ADMIN';
+  const isAdmin = isAdminRole;
+  // Drop "last update" when no row has one (U5: no always-empty columns).
+  const showUpdated = rows.some((p) => !!p.updatedAt);
+  const STATUS_LABEL: Record<string, string> = {
+    PUBLISHED: m.filter.published,
+    DRAFT: m.filter.draft,
+    ARCHIVED: m.filter.archived,
+  };
 
   // KPI computation from real data (no fakes).
   const total = paged?.meta.total ?? allProjects.length;
@@ -140,6 +168,19 @@ export default async function ProjectsPage({
       <PremiumFilterBar
         method="get"
         action="/dashboard/projects"
+        summary={
+          <>
+            <span className="text-slate-700">
+              <span className="num text-[20px] font-semibold text-slate-900">{total}</span>{' '}
+              {m.resultCount(total).replace(/^\d+\s*/, '')}
+            </span>
+            {(sp.status || sp.city || sp.q) && (
+              <Link href={'/dashboard/projects' as never} className="font-bold text-brand-700 underline underline-offset-4">
+                {m.clearAll}
+              </Link>
+            )}
+          </>
+        }
         trailing={
           <div className="flex items-center gap-1.5">
             <Button type="submit" variant="primary" size="sm">{m.filter.searchLabel}</Button>
@@ -181,109 +222,88 @@ export default async function ProjectsPage({
         </PremiumFilterField>
       </PremiumFilterBar>
 
-      {/* ── Projects table ── */}
-      <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-        <div className="overflow-x-auto scrollbar-thin">
-          <table className="w-full text-sm">
-            <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+      {/* ── Projects table (U5) ── */}
+      <PremiumTableCard>
+        <table className="w-full text-sm">
+          <thead>
+            <tr>
+              <th className="text-start py-4 ps-6 pe-4">{m.cols.project}</th>
+              <th className="text-start py-4 px-4">{m.cols.location}</th>
+              <th className="text-start py-4 px-4">{m.cols.status}</th>
+              <th className="text-start py-4 px-4">{m.cols.units}</th>
+              {isAdmin && <th className="text-start py-4 px-4">{m.cols.contractValue}</th>}
+              {showUpdated && <th className="text-start py-4 px-4">{m.cols.updated}</th>}
+              <th className="py-4 ps-4 pe-6 w-px"><span className="sr-only">{m.viewBtn}</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
               <tr>
-                <th className="text-start py-3.5 ps-5 pe-4">{m.cols.project}</th>
-                <th className="text-start py-3.5 px-4">{m.cols.location}</th>
-                <th className="text-start py-3.5 px-4">{m.cols.status}</th>
-                <th className="text-start py-3.5 px-4">{m.cols.phases}</th>
-                <th className="text-start py-3.5 px-4">{m.cols.type}</th>
-                <th className="text-start py-3.5 px-4">{m.cols.updated}</th>
-                <th className="text-start py-3.5 ps-4 pe-5 w-px"></th>
+                <td colSpan={7} className="p-0">
+                  <PremiumEmptyState
+                    icon={<Building2 />}
+                    title={m.empty.title}
+                    description={m.empty.description}
+                    action={
+                      isAdmin ? (
+                        <Link href={'/dashboard/projects/new' as never}>
+                          <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />}>
+                            {m.empty.addBtn}
+                          </Button>
+                        </Link>
+                      ) : undefined
+                    }
+                  />
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-hairline">
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="p-0">
-                    <PremiumEmptyState
-                      icon={<Building2 />}
-                      title={m.empty.title}
-                      description={m.empty.description}
-                      action={
-                        isAdmin ? (
-                          <Link href={'/dashboard/projects/new' as never}>
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              leftIcon={<Plus className="h-4 w-4" />}
-                            >
-                              {m.empty.addBtn}
-                            </Button>
-                          </Link>
-                        ) : undefined
+            )}
+            {rows.map((p) => {
+              const cover = p.media?.[0]?.url;
+              const counts = unitsByProject.get(p.id) ?? { sold: 0, reserved: 0, available: 0 };
+              const value = valueByProject.get(p.id) ?? 0;
+              const [num, unit] = compactParts(value, symbol, locale);
+              return (
+                <tr key={p.id} className={PREMIUM_ROW}>
+                  <td className="py-5 ps-6 pe-4">
+                    <RowTitle
+                      title={tx(p.name)}
+                      href={`/dashboard/projects/${p.id}`}
+                      code={`PJ-${p.id.slice(0, 8).toUpperCase()}`}
+                      icon={
+                        cover ? (
+                          <ProjectThumbnail src={cover} alt={tx(p.name)} size="md" />
+                        ) : (
+                          <RowIconTile><Building2 /></RowIconTile>
+                        )
                       }
                     />
                   </td>
+                  <td className="py-5 px-4 text-[15px] text-slate-600">{p.city || '—'}</td>
+                  <td className="py-5 px-4">
+                    <StatusPill
+                      label={STATUS_LABEL[p.status] ?? p.status}
+                      tone={p.status === 'PUBLISHED' ? 'success' : 'neutral'}
+                    />
+                  </td>
+                  <td className="py-5 px-4">
+                    <UnitsBar counts={counts} labels={m.unitLabels} emptyLabel={m.noUnits} />
+                  </td>
+                  {isAdmin && (
+                    <td className="py-5 px-4">
+                      <NumCell value={num} unit={unit} />
+                    </td>
+                  )}
+                  {showUpdated && (
+                    <td className="py-5 px-4 text-[13px] text-slate-500">{formatDate(p.updatedAt, locale)}</td>
+                  )}
+                  <td className="py-5 ps-4 pe-6">
+                    <RowOpenButton href={`/dashboard/projects/${p.id}`} label={m.viewBtn} />
+                  </td>
                 </tr>
-              )}
-              {rows.map((p) => {
-                const cover = p.media?.[0]?.url;
-                const phaseCount = p.phases?.length ?? 0;
-                return (
-                  <tr
-                    key={p.id}
-                    className="hover:bg-canvas/40 transition-colors duration-100"
-                  >
-                    <td className="py-3.5 ps-5 pe-4">
-                      <div className="flex items-center gap-3">
-                        <ProjectThumbnail src={cover} alt={tx(p.name)} size="md" />
-                        <div className="min-w-0">
-                          <Link
-                            href={`/dashboard/projects/${p.id}` as never}
-                            className="font-semibold text-navy hover:text-brand-700 transition-colors"
-                          >
-                            {tx(p.name)}
-                          </Link>
-                          <p className="text-[11px] text-slate-400 mt-0.5 font-mono">
-                            PJ-{p.id.slice(0, 8).toUpperCase()}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600">
-                      <span className="inline-flex items-center gap-1.5">
-                        <MapPinned className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                        {p.city || '—'}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <ProjectStatusBadge status={p.status} locale={locale} />
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-700 tabular-nums">
-                      {phaseCount > 0 ? `${phaseCount} ${m.phaseSuffix}` : '—'}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      {p.featured ? (
-                        <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
-                          <Star className="h-3 w-3 fill-current" /> {m.featured}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-500">
-                          {m.standard}
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-500 text-xs">
-                      {formatDate(p.updatedAt, locale)}
-                    </td>
-                    <td className="py-3.5 ps-4 pe-5">
-                      <Link href={`/dashboard/projects/${p.id}` as never}>
-                        <IconButton label={m.viewBtn} variant="outline" size="sm">
-                          <Eye />
-                        </IconButton>
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+              );
+            })}
+          </tbody>
+        </table>
 
         {paged && paged.meta.total > PAGE_SIZE && (
           <div className="border-t border-hairline bg-canvas/20">
@@ -297,7 +317,7 @@ export default async function ProjectsPage({
             />
           </div>
         )}
-      </div>
+      </PremiumTableCard>
     </div>
   );
 }

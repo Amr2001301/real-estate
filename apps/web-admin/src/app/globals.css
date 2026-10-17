@@ -41,6 +41,12 @@
     --danger-600: 178 58 42;    --danger-700: 150 45 33;
     --info-50: 236 242 250;     --info-100: 214 227 245;
     --info-600: 44 90 160;      --info-700: 33 72 132;
+
+    /* One set of unit-status colours everywhere (U5). */
+    --unit-sold:      20 26 38;     /* ink */
+    --unit-reserved:  199 154 59;   /* #C79A3B */
+    --unit-available: 159 191 171;  /* #9FBFAB sage */
+    --unit-available-text: 63 107 82;
   }
 
   /* ── Dark (U5) — toggled by .dark on <html> (components/ui/theme-toggle.tsx) ── */
@@ -76,6 +82,11 @@
     --danger-600: 240 150 135;  --danger-700: 240 150 135;
     --info-50: 20 32 52;        --info-100: 26 42 70;
     --info-600: 150 185 235;    --info-700: 150 185 235;
+
+    --unit-sold:      244 236 216;
+    --unit-reserved:  199 154 59;
+    --unit-available: 94 127 107;
+    --unit-available-text: 134 201 160;
   }
 
   :root {
@@ -170,6 +181,20 @@
   .dark .bg-white\/90 {
     background-color: rgb(var(--tw-surface));
   }
+  /* Tables (U5): a navy header row everywhere in the app. */
+  #main-scroll table > thead {
+    background-color: #0e1626;
+    border-color: transparent;
+  }
+  #main-scroll table > thead th {
+    color: #a9b0bd;
+    background-color: transparent;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
   .dark .text-navy:not([class*='bg-']) {
     color: rgb(var(--slate-900));
   }
