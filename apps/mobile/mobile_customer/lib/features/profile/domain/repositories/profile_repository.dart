@@ -12,4 +12,8 @@ class UpdateProfileParams {
 abstract interface class ProfileRepository {
   Future<Result<UserProfile>> getProfile();
   Future<Result<UserProfile>> updateProfile(UpdateProfileParams params);
+
+  /// A new phone is proven by a code sent to it before it replaces the old one.
+  Future<Result<void>> requestPhoneChange(String phone);
+  Future<Result<void>> confirmPhoneChange(String code);
 }

@@ -862,6 +862,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileSaved => 'Profile updated';
 
   @override
+  String get phoneChangeTitle => 'Confirm your new number';
+
+  @override
+  String get phoneChangeConfirm => 'Confirm';
+
+  @override
+  String get phoneChanged => 'Phone number changed';
+
+  @override
   String get fieldLanguage => 'Language';
 
   @override

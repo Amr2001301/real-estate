@@ -102,7 +102,7 @@ export class UsersController {
 
   @Patch('me')
   updateMe(@CurrentUser() user: AuthUser, @Body() dto: UpdateUserDto) {
-    return this.users.update(user.sub, dto);
+    return this.users.updateSelf(user, dto);
   }
 
   // The caller's own e-mail / push opt-outs per notification group.

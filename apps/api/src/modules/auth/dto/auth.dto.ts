@@ -1,6 +1,8 @@
 import {
   IsEmail,
   IsString,
+  Matches,
+  MaxLength,
   MinLength,
 } from 'class-validator';
 
@@ -22,6 +24,19 @@ export class ChangePasswordDto {
   @IsString()
   @MinLength(8)
   newPassword!: string;
+}
+
+// A customer's phone change: the new number, then the code sent to it
+// (POST /auth/me/phone, POST /auth/me/phone/confirm).
+export class PhoneChangeRequestDto {
+  @IsString()
+  @MaxLength(32)
+  phone!: string;
+}
+
+export class PhoneChangeConfirmDto {
+  @Matches(/^[0-9]{6}$/)
+  code!: string;
 }
 
 export class RefreshDto {

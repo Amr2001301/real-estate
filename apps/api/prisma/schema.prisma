@@ -290,6 +290,9 @@ model User {
   /// Set when the user proves the phone with an OTP. Only a verified phone
   /// (or a verified email) may link the account to existing CRM records.
   phoneVerifiedAt DateTime?
+  /// A customer's new number waiting for its OTP (the change is made only
+  /// when the code sent to it is entered; the old number stays until then).
+  pendingPhone    String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   lastLoginAt     DateTime?
@@ -435,6 +438,9 @@ model OtpCode {
   attempts  Int      @default(0)
   consumed  Boolean  @default(false)
   createdAt DateTime @default(now())
+  /// What the code is for: LOGIN (customer sign-in) or PHONE_CHANGE (proving
+  /// a new number on an account). A code is only accepted for its purpose.
+  purpose   String   @default("LOGIN") @db.VarChar(20)
   // MT-021: additive nullable column; OtpCode remains PLATFORM_GLOBAL —
   // no FK relation, no auto-injection. Future: scope OTP lookups per company.
   companyId String?  @db.Uuid

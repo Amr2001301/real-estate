@@ -16,7 +16,9 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { companyAccessAllowed, companyAccessDenied } from '../../common/tenant/company-access';
 import { claimSyntheticPeers } from '../../common/utils/identity-claim';
 import { canonicalEmail, canonicalPhone } from '../../common/utils/identity-normalize';
-import { getTenantContext, runTenantContext } from '../../common/tenant/tenant-context';
+import { getRequiredCompanyId, getTenantContext, runTenantContext } from '../../common/tenant/tenant-context';
+import { phoneForWrite } from '../../common/utils/phone-for-write';
+import { isUniqueConflictOn } from '../../common/utils/contract-number';
 import { SmsService } from './sms.service';
 import { EmailService } from './email.service';
 import { CapabilityService } from '../../common/capabilities/capability.service';
@@ -28,6 +30,9 @@ export const DEPRECATED_ENDPOINT_HEADER = 'Deprecation';
 
 const OTP_TTL_MIN = 10;
 const OTP_MAX_ATTEMPTS = 5;
+/** OtpCode.purpose: a code is accepted only for what it was sent for. */
+const OTP_LOGIN = 'LOGIN';
+const OTP_PHONE_CHANGE = 'PHONE_CHANGE';
 const RESET_TTL_MIN = 20;
 const VERIFY_TTL_MIN = 60;
 const VERIFY_RESEND_COOLDOWN_MS = 60_000;
@@ -776,7 +781,7 @@ export class AuthService {
     }
 
     const recent = await this.prisma.otpCode.findFirst({
-      where: { phone, companyId, createdAt: { gte: new Date(Date.now() - 60_000) } },
+      where: { phone, companyId, purpose: OTP_LOGIN, createdAt: { gte: new Date(Date.now() - 60_000) } },
       orderBy: { createdAt: 'desc' },
     });
     if (recent) throw new BadRequestException('Please wait before requesting another code');
@@ -785,9 +790,81 @@ export class AuthService {
     const codeHash = createHash('sha256').update(code).digest('hex');
     const expiresAt = new Date(Date.now() + OTP_TTL_MIN * 60_000);
 
-    await this.prisma.otpCode.create({ data: { phone, codeHash, expiresAt, companyId } });
+    await this.prisma.otpCode.create({ data: { phone, codeHash, expiresAt, companyId, purpose: OTP_LOGIN } });
     await this.sms.sendOtp(phone, code);
     return { ok: true };
+  }
+
+  // ── U1 — a customer's phone change, proven by a code sent to the new number ──
+
+  /**
+   * Start changing the caller's phone: the new number is kept aside
+   * (pendingPhone) and gets a code. The account keeps its current number —
+   * and an OTP sign-in to the new number does not reach this account — until
+   * the code is entered (confirmPhoneChange). A typo therefore never hands
+   * the account to whoever holds the mistyped number.
+   */
+  async requestPhoneChange(userId: string, rawPhone: string) {
+    const companyId = getRequiredCompanyId();
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, companyId, deletedAt: null },
+      select: { id: true, phone: true },
+    });
+    if (!user) throw new UnauthorizedException('Invalid session');
+    const phone = await phoneForWrite(this.prisma, rawPhone, companyId);
+    if (!phone) throw new BadRequestException('Invalid phone number');
+    if (phone === user.phone) throw new BadRequestException('هذا هو رقمك الحالي');
+    // Taken by another account of the company (a CRM record included).
+    const taken = await this.prisma.user.findFirst({ where: { companyId, phone, id: { not: userId } }, select: { id: true } });
+    if (taken) throw new ConflictException('هذا الرقم مستخدم في حساب آخر — تواصل مع الشركة');
+    const recent = await this.prisma.otpCode.findFirst({
+      where: { phone, companyId, purpose: OTP_PHONE_CHANGE, createdAt: { gte: new Date(Date.now() - 60_000) } },
+    });
+    if (recent) throw new BadRequestException('Please wait before requesting another code');
+
+    const code = String(randomInt(100_000, 999_999));
+    const codeHash = createHash('sha256').update(code).digest('hex');
+    const expiresAt = new Date(Date.now() + OTP_TTL_MIN * 60_000);
+    await this.prisma.user.update({ where: { id: userId }, data: { pendingPhone: phone } });
+    await this.prisma.otpCode.create({ data: { phone, codeHash, expiresAt, companyId, purpose: OTP_PHONE_CHANGE } });
+    await this.sms.sendOtp(phone, code);
+    return { ok: true, pendingPhone: phone };
+  }
+
+  /** The code sent to the new number: the phone changes now, verified. */
+  async confirmPhoneChange(userId: string, code: string) {
+    const companyId = getRequiredCompanyId();
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, companyId, deletedAt: null },
+      select: { id: true, pendingPhone: true },
+    });
+    if (!user) throw new UnauthorizedException('Invalid session');
+    if (!user.pendingPhone) throw new BadRequestException('لا يوجد تغيير رقم قيد التأكيد');
+    const phone = user.pendingPhone;
+    const otp = await this.prisma.otpCode.findFirst({
+      where: { phone, companyId, purpose: OTP_PHONE_CHANGE, consumed: false, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!otp) throw new BadRequestException('Code expired or not found');
+    if (otp.attempts >= OTP_MAX_ATTEMPTS) throw new ForbiddenException('Too many attempts; request a new code');
+    if (createHash('sha256').update(code).digest('hex') !== otp.codeHash) {
+      await this.prisma.otpCode.update({ where: { id: otp.id }, data: { attempts: { increment: 1 } } });
+      throw new BadRequestException('Invalid code');
+    }
+    await this.prisma.otpCode.update({ where: { id: otp.id }, data: { consumed: true } });
+    try {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { phone, phoneVerifiedAt: new Date(), pendingPhone: null },
+      });
+    } catch (e) {
+      // Taken by another account since the code was sent.
+      if (isUniqueConflictOn(e, 'phone')) throw new ConflictException('هذا الرقم مستخدم في حساب آخر — تواصل مع الشركة');
+      throw e;
+    }
+    // The number is proven: the account may now link the CRM records that carry it.
+    await this.tryClaimSyntheticPeers(userId, companyId);
+    return { ok: true, phone };
   }
 
   /**
@@ -820,7 +897,7 @@ export class AuthService {
     }
 
     const otp = await this.prisma.otpCode.findFirst({
-      where: { phone, companyId, consumed: false, expiresAt: { gt: new Date() } },
+      where: { phone, companyId, purpose: OTP_LOGIN, consumed: false, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: 'desc' },
     });
     if (!otp) throw new BadRequestException('Code expired or not found');

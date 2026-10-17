@@ -854,6 +854,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get profileSaved => 'تم تحديث الملف';
 
   @override
+  String get phoneChangeTitle => 'تأكيد الرقم الجديد';
+
+  @override
+  String get phoneChangeConfirm => 'تأكيد';
+
+  @override
+  String get phoneChanged => 'تم تغيير رقم الجوال';
+
+  @override
   String get fieldLanguage => 'اللغة';
 
   @override

@@ -25,4 +25,14 @@ class ProfileRepositoryImpl implements ProfileRepository {
       return dto.toEntity();
     });
   }
+
+  @override
+  Future<Result<void>> requestPhoneChange(String phone) {
+    return guardApiCall(() => _remote.requestPhoneChange(phone));
+  }
+
+  @override
+  Future<Result<void>> confirmPhoneChange(String code) {
+    return guardApiCall(() => _remote.confirmPhoneChange(code));
+  }
 }
