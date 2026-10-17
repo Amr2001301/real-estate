@@ -23,7 +23,7 @@ describe('portalDetail', () => {
       { brokerAgentId: 'colleague', commissionGross: '2', commissionNet: '2', payoutNet: '18000' },
     ],
     recent: { leads: [{ id: 'l' }], commissions: [{ id: 'c' }], payouts: [{ id: 'po' }] },
-  } as never;
+  } as unknown as Parameters<typeof portalDetail>[0];
 
   it('never shows the company\'s own counts', () => {
     const out = portalDetail(detail, { portal: true });
