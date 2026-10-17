@@ -1,16 +1,16 @@
 import type { ReactNode } from 'react';
-import { Inbox } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 type Tone = 'gray' | 'info' | 'purple' | 'warning' | 'success' | 'danger';
 
-const DOT: Record<Tone, string> = {
+// U5: the stage colour is only a 3px line on top of the column.
+const LINE: Record<Tone, string> = {
   gray:    'bg-slate-400',
-  info:    'bg-sky-400',
-  purple:  'bg-violet-400',
-  warning: 'bg-amber-400',
-  success: 'bg-emerald-400',
-  danger:  'bg-rose-400',
+  info:    'bg-[#C79A3B]/70',
+  purple:  'bg-[#C79A3B]',
+  warning: 'bg-[#A87E2C]',
+  success: 'bg-unit-available',
+  danger:  'bg-danger-600/70',
 };
 
 interface Props {
@@ -19,47 +19,36 @@ interface Props {
   tone: Tone;
   isOver?: boolean;
   isEmpty?: boolean;
+  /** Shown in the dashed lane of an empty column. */
+  emptyLabel?: string;
   children: ReactNode;
 }
 
-export function StageColumn({ label, count, tone, isOver, isEmpty, children }: Props) {
+/** A kanban column (U5): fixed 288px, Naskh title, count in Cormorant, dashed "drop here" when empty. */
+export function StageColumn({ label, count, tone, isOver, isEmpty, emptyLabel = 'اسحب فرصة إلى هنا', children }: Props) {
   return (
-    <div className="flex flex-col w-[300px] sm:w-[316px] shrink-0">
-
-      {/* Premium column card */}
-      <div className={cn(
-        'flex flex-col rounded-[20px] border overflow-hidden min-h-[400px] transition-all duration-150',
-        isOver
-          ? 'border-brand-200/80 shadow-[0_4px_24px_-4px_rgb(200_162_75/0.18),0_0_0_1px_rgb(200_162_75/0.15)]'
-          : 'border-hairline shadow-soft bg-surface',
-      )}>
-        {/* Column header */}
-        <div className="flex items-center justify-between gap-2 px-4 py-3.5 bg-canvas/40 border-b border-hairline">
-          <div className="flex items-center gap-2">
-            <span className={cn('h-2 w-2 rounded-full shrink-0', DOT[tone])} />
-            <h3 className="text-[13px] font-bold text-navy leading-none">{label}</h3>
-          </div>
-          <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full text-[10.5px] font-bold tabular-nums bg-slate-100 text-slate-600">
-            {count}
-          </span>
+    <div className="flex w-[288px] shrink-0 flex-col">
+      <div
+        className={cn(
+          'relative flex min-h-[460px] flex-col overflow-hidden rounded-[22px] border bg-surface transition-all duration-150',
+          isOver ? 'border-brand-400/60 shadow-[0_0_0_3px_rgb(200_162_75/0.15)]' : 'border-hairline',
+        )}
+      >
+        <span aria-hidden className={cn('absolute inset-x-0 top-0 h-[3px]', LINE[tone])} />
+        <div className="flex items-center justify-between gap-2 px-5 pb-3 pt-5">
+          <h3 className="font-heading text-[16px] font-bold text-slate-900">{label}</h3>
+          <span className="num text-[28px] font-semibold leading-none text-slate-700">{count}</span>
         </div>
 
-        {/* Card lane */}
-        <div className={cn(
-          'flex flex-col gap-2.5 p-3 flex-1 transition-colors duration-150',
-          isOver ? 'bg-brand-50/15' : 'bg-canvas/20',
-        )}>
+        <div className={cn('flex flex-1 flex-col gap-3 px-3 pb-3', isOver && 'bg-brand-50/30')}>
           {isEmpty ? (
-            <div className={cn(
-              'flex-1 flex flex-col items-center justify-center gap-2 rounded-[14px] border-2 border-dashed py-12 transition-colors',
-              isOver
-                ? 'border-brand-300/60 bg-brand-50/20 text-brand-500'
-                : 'border-hairline text-slate-300',
-            )}>
-              <Inbox className="h-5 w-5" strokeWidth={1.5} />
-              <p className="text-[11px] font-medium text-center px-4 leading-relaxed">
-                {isOver ? 'أفلت العميل هنا' : 'لا توجد فرص'}
-              </p>
+            <div
+              className={cn(
+                'flex flex-1 items-center justify-center rounded-[16px] border border-dashed px-4 text-center text-[13px] transition-colors',
+                isOver ? 'border-brand-400/70 text-brand-700' : 'border-hairline text-slate-500',
+              )}
+            >
+              {emptyLabel}
             </div>
           ) : (
             children

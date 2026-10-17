@@ -11,126 +11,167 @@ type Tone =
   | 'purple'
   | 'teal';
 
-// Value text keeps semantic meaning — only the backgrounds become uniform.
-const VALUE_TONE: Record<Tone, string> = {
-  brand:   'text-brand-700',
-  success: 'text-success-700',
-  warning: 'text-amber-700',
-  danger:  'text-danger-700',
-  info:    'text-info-700',
-  neutral: 'text-slate-900',
-  purple:  'text-purple-700',
-  teal:    'text-teal-700',
-};
-
 export interface Metric {
   label:      string;
   value:      string | number;
+  /** Small gold text after the value ("مليون ج.م", "وحدة"). Split from a string value when omitted. */
+  unit?:      string;
   sub?:       string;
   icon?:      ReactNode;
+  /** Kept for API compatibility: the band shows every value in one colour (U5). */
   tone?:      Tone;
-  /** Kept for API compatibility — no longer affects background. */
+  /** Kept for API compatibility — no longer affects the look. */
   primary?:   boolean;
   valueSize?: 'auto' | 'normal' | 'compact';
   trend?:     string;
   trendCls?:  string;
 }
 
+/** One segment of the band's bottom distribution bar (e.g. sold / reserved / available). */
+export interface MetricSegment {
+  label: string;
+  value: number;
+  /** Bar colour (CSS colour). Use UNIT_STATUS_COLORS for unit statuses. */
+  color: string;
+}
+
+/** One set of unit-status colours on the navy band (U5). */
+export const UNIT_STATUS_COLORS = {
+  sold:      '#F4ECD8',
+  reserved:  '#C79A3B',
+  available: '#5E7F6B',
+} as const;
+
 const COLS: Record<number, string> = {
   2: 'grid-cols-2',
   3: 'grid-cols-2 sm:grid-cols-3',
-  4: 'grid-cols-2 sm:grid-cols-4',
+  4: 'grid-cols-2 lg:grid-cols-4',
   5: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5',
   6: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6',
   8: 'grid-cols-2 sm:grid-cols-4',
 };
 
-const GOLD_BAR = { background: 'linear-gradient(to left, #b8923e, #e6c46a, #b8923e)' } as const;
-
 export interface PremiumMetricStripProps {
-  metrics:    Metric[];
-  cols?:      2 | 3 | 4 | 5 | 6 | 8;
-  variant?:   'dashboard' | 'compact';
-  className?: string;
+  metrics:       Metric[];
+  cols?:         2 | 3 | 4 | 5 | 6 | 8;
+  /** "compact" = a shorter band for list pages; "dashboard" = taller cells. */
+  variant?:      'dashboard' | 'compact';
+  /** Optional segmented bar + legend across the bottom of the band. */
+  distribution?: MetricSegment[];
+  /** Formats a legend count (Western digits). */
+  formatCount?:  (n: number) => string;
+  className?:    string;
 }
 
-export function PremiumMetricStrip({ metrics, cols, variant = 'dashboard', className }: PremiumMetricStripProps) {
+/**
+ * Split "1.9م ج.م" → ["1.9", "م ج.م"], "35%" → ["35", "%"], "12" → ["12", ""].
+ * Values that do not start with a number are shown whole.
+ */
+export function splitValue(value: string | number): [string, string] {
+  if (typeof value === 'number') return [String(value), ''];
+  const m = /^([-+]?[\d.,]+)\s*(.*)$/.exec(value.trim());
+  return m ? [m[1]!, m[2]!] : [value, ''];
+}
+
+/** Trend text on navy: green / red when the caller marked it so, otherwise muted. */
+function trendColour(cls?: string): string {
+  if (!cls) return 'text-[#A9B0BD]';
+  if (/success|emerald|green/.test(cls)) return 'text-[#86C9A0]';
+  if (/danger|red|rose/.test(cls)) return 'text-[#F09687]';
+  if (/warning|amber/.test(cls)) return 'text-[#E8B96E]';
+  return 'text-[#A9B0BD]';
+}
+
+/**
+ * The navy KPI band (U5): one band divided by gold hairlines; each cell has a
+ * thin gold icon in a gold ring, the value in Cormorant in one colour and its
+ * unit in small gold text. Fixed in both themes.
+ */
+export function PremiumMetricStrip({
+  metrics,
+  cols,
+  variant = 'dashboard',
+  distribution,
+  formatCount = (n) => String(n),
+  className,
+}: PremiumMetricStripProps) {
   const effectiveCols = cols ?? (Math.min(metrics.length, 6) as 2 | 3 | 4 | 5 | 6 | 8);
+  const compact = variant === 'compact';
+  const total = distribution?.reduce((a, s) => a + s.value, 0) ?? 0;
 
   return (
-    <div className={cn('grid gap-3', COLS[effectiveCols] ?? COLS[4], className)}>
-      {metrics.map((m, i) => {
-        const tone = m.tone ?? 'neutral';
-        const isLongString =
-          m.valueSize === 'compact' ||
-          (m.valueSize !== 'normal' &&
-            typeof m.value === 'string' &&
-            m.value.length > 8);
-
-        if (variant === 'compact') {
+    <section
+      className={cn(
+        'overflow-hidden rounded-[22px] border border-[#D8B66A]/[0.28] bg-navy-band text-[#F4ECD8]',
+        'shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]',
+        className,
+      )}
+    >
+      <div className={cn('grid gap-px bg-[#D8B66A]/[0.16]', COLS[effectiveCols] ?? COLS[4])}>
+        {metrics.map((m, i) => {
+          const [num, autoUnit] = m.unit !== undefined ? [String(m.value), m.unit] : splitValue(m.value);
+          const long = m.valueSize === 'compact' || (m.valueSize !== 'normal' && num.length > 7);
           return (
-            <div key={i} className="relative overflow-hidden rounded-2xl border border-hairline bg-surface shadow-xs">
-              <div className="h-[3px] w-full shrink-0" style={GOLD_BAR} />
-              <div className="flex items-center gap-4 px-5 py-4">
-                {m.icon && (
-                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-5 [&_svg]:w-5">
-                    {m.icon}
+            <div
+              key={i}
+              className={cn('flex min-w-0 items-center gap-4 bg-navy-band', compact ? 'px-6 py-5' : 'px-6 py-6')}
+            >
+              {m.icon && (
+                <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[#D8B66A]/45 text-[#D8B66A] [&_svg]:h-[18px] [&_svg]:w-[18px] [&_svg]:stroke-[1.6]">
+                  {m.icon}
+                </span>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] leading-snug text-[#A9B0BD] line-clamp-2">{m.label}</p>
+                <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 leading-none">
+                  <span
+                    className={cn(
+                      'num font-semibold text-[#F4ECD8]',
+                      long ? 'text-[30px]' : compact ? 'text-[38px]' : 'text-[44px]',
+                    )}
+                  >
+                    {num}
                   </span>
+                  {autoUnit && <span className="text-[13px] font-bold text-[#D8B66A]">{autoUnit}</span>}
+                </p>
+                {m.sub && <p className="mt-2 text-[12px] leading-snug text-[#A9B0BD]">{m.sub}</p>}
+                {m.trend && (
+                  <p className={cn('mt-1.5 text-[11.5px] font-bold leading-none', trendColour(m.trendCls))}>
+                    {m.trend}
+                  </p>
                 )}
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-semibold leading-snug text-slate-400 line-clamp-2">
-                    {m.label}
-                  </p>
-                  <p className={cn(
-                    'mt-1 font-black tabular-nums leading-none tracking-tight',
-                    isLongString ? 'text-[18px]' : 'text-[22px]',
-                    VALUE_TONE[tone],
-                  )}>
-                    {m.value}
-                  </p>
-                  {m.sub && (
-                    <p className="mt-0.5 text-[10px] leading-snug text-slate-400">{m.sub}</p>
-                  )}
-                </div>
               </div>
             </div>
           );
-        }
+        })}
+      </div>
 
-        // dashboard variant
-        return (
-          <div key={i} className="relative overflow-hidden rounded-2xl border border-hairline bg-surface shadow-xs">
-            <div className="h-[3px] w-full shrink-0" style={GOLD_BAR} />
-            <div className="flex flex-col px-5 py-4">
-              <div className="flex items-center justify-between gap-2">
-                {m.icon && (
-                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[18px] [&_svg]:w-[18px]">
-                    {m.icon}
-                  </span>
-                )}
-                <p className="text-[11px] font-semibold leading-snug text-slate-400 line-clamp-2">
-                  {m.label}
-                </p>
-              </div>
-              <p className={cn(
-                'mt-4 font-black tabular-nums leading-none tracking-tight',
-                isLongString ? 'text-[20px]' : 'text-[26px]',
-                VALUE_TONE[tone],
-              )}>
-                {m.value}
-              </p>
-              {m.sub && (
-                <p className="mt-1.5 text-[11px] leading-snug text-slate-400">{m.sub}</p>
-              )}
-              {m.trend && (
-                <p className={cn('mt-auto pt-3 text-[10px] font-semibold leading-none', m.trendCls ?? 'text-slate-400')}>
-                  {m.trend}
-                </p>
-              )}
-            </div>
+      {distribution && distribution.length > 0 && (
+        <div className="border-t border-[#D8B66A]/[0.16] px-6 py-5">
+          <div className="flex h-2 gap-1" role="img" aria-label={distribution.map((s) => `${s.label} ${formatCount(s.value)}`).join('، ')}>
+            {distribution.map((s) =>
+              s.value > 0 ? (
+                <span
+                  key={s.label}
+                  className="rounded-full"
+                  style={{ flexGrow: s.value, flexBasis: 0, background: s.color }}
+                />
+              ) : null,
+            )}
+            {total === 0 && <span className="flex-1 rounded-full bg-white/10" />}
           </div>
-        );
-      })}
-    </div>
+          <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-[13px] text-[#A9B0BD]">
+            {distribution.map((s) => (
+              <li key={s.label} className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full" style={{ background: s.color }} aria-hidden />
+                <span>{s.label}</span>
+                <span className="num text-[17px] font-semibold text-[#F4ECD8]">{formatCount(s.value)}</span>
+                {total > 0 && <span>· {Math.round((s.value / total) * 100)}%</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
   );
 }

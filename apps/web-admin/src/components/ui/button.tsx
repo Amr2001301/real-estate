@@ -5,12 +5,13 @@ type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'subtl
 type Size = 'sm' | 'md' | 'lg';
 
 const VARIANT: Record<Variant, string> = {
+  // U5: the one gold action per screen — gold gradient pill, dark text.
   primary:
-    'bg-brand-600 text-white shadow-soft hover:bg-brand-700 active:bg-brand-800 disabled:bg-brand-600/60',
+    'bg-gradient-to-b from-[#D8B66A] to-[#B38B3A] text-[#1A1408] font-bold shadow-[0_8px_20px_-8px_rgb(179_139_58/0.65)] hover:from-[#DFC07A] hover:to-[#BC9442] disabled:opacity-60',
   secondary:
     'bg-navy text-white shadow-soft hover:bg-navy-700 active:bg-navy disabled:bg-navy/60',
   outline:
-    'bg-surface text-slate-700 border border-hairline shadow-soft hover:bg-brand-50 hover:border-brand-200 hover:text-brand-700 disabled:opacity-60',
+    'bg-surface text-slate-800 font-bold border border-hairline hover:border-brand-400/60 hover:text-brand-700 disabled:opacity-60',
   ghost:
     'bg-transparent text-slate-700 hover:bg-surface-muted disabled:opacity-60',
   danger:
@@ -20,9 +21,9 @@ const VARIANT: Record<Variant, string> = {
 };
 
 const SIZE: Record<Size, string> = {
-  sm: 'h-8 px-3 text-xs gap-1.5 rounded-lg',
-  md: 'h-10 px-4 text-sm gap-2 rounded-xl',
-  lg: 'h-12 px-5 text-base gap-2 rounded-xl',
+  sm: 'h-9 px-4 text-xs gap-1.5 rounded-full',
+  md: 'h-11 px-5 text-sm gap-2 rounded-full',
+  lg: 'h-12 px-6 text-base gap-2 rounded-full',
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

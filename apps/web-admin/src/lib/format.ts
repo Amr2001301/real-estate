@@ -28,6 +28,27 @@ export function formatCompact(
   return `${Math.round(n).toLocaleString(INTL[locale])} ${symbol}`;
 }
 
+/**
+ * A large figure split for display (U5): the number and its unit apart, so the
+ * number can be set in Cormorant and the unit in small gold text —
+ * 8,180,000 → ["8.18", "مليون ج.م"], 650,600 → ["650.6", "ألف ج.م"].
+ */
+export function compactParts(
+  value: number | string | null | undefined,
+  symbol = 'ج.م',
+  locale: Locale = 'ar',
+): [string, string] {
+  if (value === null || value === undefined) return ['—', ''];
+  const n = typeof value === 'string' ? Number(value) : value;
+  if (Number.isNaN(n)) return ['—', ''];
+  const abs = Math.abs(n);
+  const trim = (x: number, digits: number) => String(Number(x.toFixed(digits)));
+  const [million, thousand] = locale === 'en' ? ['M', 'K'] : ['مليون', 'ألف'];
+  if (abs >= 1_000_000) return [trim(n / 1_000_000, 2), `${million} ${symbol}`];
+  if (abs >= 1_000) return [trim(n / 1_000, 1), `${thousand} ${symbol}`];
+  return [Math.round(n).toLocaleString(INTL[locale]), symbol];
+}
+
 export function formatCurrency(
   value: number | string | null | undefined,
   currency = 'SAR',

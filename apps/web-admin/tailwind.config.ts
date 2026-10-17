@@ -34,6 +34,14 @@ const config: Config = {
         // so the existing text-slate-* / bg-slate-* classes work in dark mode.
         slate: scale('slate', [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]),
 
+        // Unit statuses — one set everywhere (U5).
+        unit: {
+          sold: v('unit-sold'),
+          reserved: v('unit-reserved'),
+          available: v('unit-available'),
+          'available-text': v('unit-available-text'),
+        },
+
         navy: {
           DEFAULT: '#0E1626',
           band: '#0E1626',

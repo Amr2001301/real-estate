@@ -4,8 +4,8 @@
 export { PremiumPageHero } from './page-hero';
 export type { PremiumPageHeroProps, BreadcrumbItem } from './page-hero';
 
-export { PremiumMetricStrip } from './metric-strip';
-export type { PremiumMetricStripProps, Metric } from './metric-strip';
+export { PremiumMetricStrip, UNIT_STATUS_COLORS, splitValue } from './metric-strip';
+export type { PremiumMetricStripProps, Metric, MetricSegment } from './metric-strip';
 
 export { PremiumSectionCard } from './section-card';
 export type { PremiumSectionCardProps } from './section-card';
@@ -25,5 +25,11 @@ export type { PremiumCommandPanelProps, CommandAction } from './command-panel';
 export { PremiumEmptyState } from './empty-state';
 export type { PremiumEmptyStateProps } from './empty-state';
 
-export { PremiumFilterBar, PremiumFilterField } from './filter-bar';
-export type { PremiumFilterBarProps, PremiumFilterFieldProps } from './filter-bar';
+export {
+  PremiumFilterBar,
+  PremiumFilterField,
+  PremiumFilterChips,
+  PremiumFilterDivider,
+  PremiumViewToggle,
+} from './filter-bar';
+export type { PremiumFilterBarProps, PremiumFilterFieldProps, FilterChip, ViewOption } from './filter-bar';
