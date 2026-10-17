@@ -132,8 +132,6 @@ export default async function FinancialReportsPage({
 
   // Primary financials
   const contractVal    = num(s?.totalContractValue);
-  const collectedVerif = num(s?.totalCollectedVerified ?? s?.totalCollected);
-  const collectedAll   = num(s?.totalCollectedAll    ?? s?.totalCollected);
   const outstanding    = num(s?.totalOutstanding     ?? s?.totalRemaining);
   const overdueAmt     = num(s?.overdueAmountComputed ?? s?.totalOverdue);
   const overdueCount   = s?.overdueInstallmentCountComputed ?? s?.overdueInstallmentCount ?? 0;
@@ -146,12 +144,18 @@ export default async function FinancialReportsPage({
   const refundsOwed    = num(s?.refundsOwed);
   const netCollected   = num(s?.netCollected ?? s?.totalCollectedVerified ?? s?.totalCollected);
 
-  const collectionRate = contractVal > 0 ? Math.round((collectedVerif / contractVal) * 100) : 0;
+  // Two figures (decided 2026-10-16): towards the price — the rate's
+  // numerator, as on the dashboard — and fees & penalties.
+  const towardsPrice   = num(s?.collectedTowardsPrice ?? s?.totalCollectedVerified ?? s?.totalCollected);
+  const feesCollected  = num(s?.feesCollected);
+  const collectionRate = contractVal > 0 ? Math.round((towardsPrice / contractVal) * 100) : 0;
   const overdueRate    = contractVal > 0 ? parseFloat(((overdueAmt / contractVal) * 100).toFixed(1)) : 0;
 
   // Comparison deltas
   const contractDelta  = cmpS ? computeDelta(contractVal,   num(cmpS.totalContractValue))                         : undefined;
-  const collectedDelta = cmpS ? computeDelta(collectedVerif, num(cmpS.totalCollectedVerified ?? cmpS.totalCollected)) : undefined;
+  const collectedDelta = cmpS
+    ? computeDelta(towardsPrice, num(cmpS.collectedTowardsPrice ?? cmpS.totalCollectedVerified ?? cmpS.totalCollected))
+    : undefined;
   const outstandDelta  = cmpS ? computeDelta(outstanding,   num(cmpS.totalOutstanding ?? cmpS.totalRemaining))    : undefined;
   const overdueDelta   = cmpS ? computeDelta(overdueAmt,    num(cmpS.overdueAmountComputed ?? cmpS.totalOverdue)) : undefined;
 
@@ -231,10 +235,10 @@ export default async function FinancialReportsPage({
           {
             label:     m.kpi.collected,
             icon:      <DollarSign />,
-            value:     formatCurrency(collectedVerif, currency, locale),
+            value:     formatCurrency(towardsPrice, currency, locale),
             tone:      'success',
             valueSize: 'compact',
-            sub:       m.kpi.collectedSub(collectionRate, formatCurrency(collectedAll, currency, locale)),
+            sub:       m.kpi.collectedSub(collectionRate, formatCurrency(feesCollected, currency, locale)),
             trend:     collectedDelta ? `${collectedDelta.direction === 'up' ? '▲' : collectedDelta.direction === 'down' ? '▼' : '•'} ${collectedDelta.value}` : undefined,
             trendCls:  collectedDelta?.direction === 'up' ? 'text-success-600' : collectedDelta?.direction === 'down' ? 'text-danger-600' : undefined,
           },
@@ -397,7 +401,7 @@ export default async function FinancialReportsPage({
             <div className="h-3 rounded-full bg-slate-100 overflow-hidden flex">
               {contractVal > 0 && (
                 <>
-                  <div className="h-full bg-emerald-500 transition-all" style={{ width: `${(collectedVerif / contractVal) * 100}%` }} />
+                  <div className="h-full bg-emerald-500 transition-all" style={{ width: `${(towardsPrice / contractVal) * 100}%` }} />
                   <div className="h-full bg-danger-400 transition-all" style={{ width: `${(overdueAmt / contractVal) * 100}%` }} />
                 </>
               )}
@@ -410,7 +414,7 @@ export default async function FinancialReportsPage({
               const base = contractVal > 0 ? contractVal : 1;
               return [
                 { label: m.distribution.rows.contractValue, amount: contractVal,    pct: '100%',                                          dot: 'bg-slate-300',   valCls: 'text-slate-900' },
-                { label: m.distribution.rows.collected,     amount: collectedVerif, pct: `${collectionRate}%`,                            dot: 'bg-emerald-500', valCls: 'text-emerald-700' },
+                { label: m.distribution.rows.collected,     amount: towardsPrice,   pct: `${collectionRate}%`,                            dot: 'bg-emerald-500', valCls: 'text-emerald-700' },
                 { label: m.distribution.rows.overdue,       amount: overdueAmt,     pct: `${((overdueAmt / base) * 100).toFixed(1)}%`,   dot: 'bg-danger-500',  valCls: 'text-danger-700' },
                 { label: m.distribution.rows.outstanding,   amount: outstanding,    pct: `${((outstanding  / base) * 100).toFixed(1)}%`, dot: 'bg-slate-200',   valCls: 'text-slate-700' },
               ];

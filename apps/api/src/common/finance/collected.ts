@@ -1,9 +1,11 @@
 import {
   DepositReviewStatus,
+  DepositType,
   PaymentCorrectionType,
   PaymentInstrumentStatus,
   Prisma,
 } from '@prisma/client';
+import { LIVE_CONTRACT_WHERE, LIVE_PLAN_WHERE, SURCHARGE_PAYMENT_TYPES } from '../../modules/installments/live-contract';
 
 /**
  * The one definition of money the company has actually collected. Every
@@ -44,4 +46,28 @@ export const RECORDED_DEPOSIT_WHERE = {
   deletedAt: null,
   reviewStatus: { not: DepositReviewStatus.REJECTED },
   paymentCorrections: { none: { type: PaymentCorrectionType.REVERSAL } },
+} satisfies Prisma.DepositWhereInput;
+
+/**
+ * Decided 2026-10-16: "collected" is shown as two figures.
+ *
+ * Towards the price — the money paid against the price of live contracts:
+ * their down payment, booking and installments. Not fee payments (late fee,
+ * transfer fee, cheque penalty), not deposits on cancelled deals, not
+ * bookings that never became a contract. The collection rate is this over
+ * the contracts' value (measured against everything collected it could pass
+ * 100%). Combine with COLLECTED_DEPOSIT_WHERE.
+ */
+export const TOWARDS_PRICE_DEPOSIT_WHERE = {
+  type: { not: DepositType.FEE },
+  OR: [
+    { installmentId: null, contract: { is: LIVE_CONTRACT_WHERE } },
+    { installment: { is: { type: { notIn: SURCHARGE_PAYMENT_TYPES }, plan: LIVE_PLAN_WHERE } } },
+    { installmentId: null, contractId: null, reservation: { is: { contract: { is: LIVE_CONTRACT_WHERE } } } },
+  ],
+} satisfies Prisma.DepositWhereInput;
+
+/** Fees & penalties — payments of a late fee, a transfer fee or a cheque penalty. */
+export const FEES_DEPOSIT_WHERE = {
+  OR: [{ type: DepositType.FEE }, { installment: { is: { type: { in: SURCHARGE_PAYMENT_TYPES } } } }],
 } satisfies Prisma.DepositWhereInput;
