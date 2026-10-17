@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { Save, Camera, KeyRound, ChevronDown, Loader2, Check, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { updateProfileAction, uploadAvatarAction, changePasswordAction } from '@/lib/account-actions';
+import { updateProfileAction, uploadAvatarAction, changePasswordAction, confirmPhoneAction } from '@/lib/account-actions';
 import { Button } from '@/components/ui/Button';
 import { Input, Field } from '@/components/ui/Input';
 import { FormError } from '@/components/states/FormError';
@@ -55,7 +55,9 @@ function PasswordInput({
 /**
  * Editable profile card body: premium avatar upload + a 2-column credential
  * grid + a collapsible password panel. All three are now fully wired:
- *  • fullName + phone  → updateProfileAction (PATCH /users/me)
+ *  • fullName + phone  → updateProfileAction (PATCH /users/me); a new phone
+ *                        is confirmed with the code sent to it
+ *                        (confirmPhoneAction)
  *  • avatar            → uploadAvatarAction (POST /users/me/avatar, MinIO)
  *  • password          → changePasswordAction (POST /auth/change-password)
  * Email is intentionally omitted — it can't be changed here (backend), and it's
@@ -72,6 +74,12 @@ export function ProfileForm({
 }) {
   const [fullName, setFullName] = useState(initialFullName);
   const [phone, setPhone] = useState(initialPhone);
+  // The current (confirmed) number, and the code step for a new one.
+  const [savedPhone, setSavedPhone] = useState(initialPhone);
+  const [codeSent, setCodeSent] = useState(false);
+  const [code, setCode] = useState('');
+  const [codeError, setCodeError] = useState('');
+  const [codeStatus, setCodeStatus] = useState<Status>('idle');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<Status>('idle');
   const [topError, setTopError] = useState('');
@@ -152,14 +160,32 @@ export function ProfileForm({
     setStatus('submitting');
     setTopError('');
 
-    const res = await updateProfileAction({ fullName: fullName.trim(), phone: phone.trim() });
+    const res = await updateProfileAction({ fullName: fullName.trim(), phone: phone.trim(), initialPhone: savedPhone });
 
     if (res.ok) {
       setStatus('success');
+      setCodeSent(!!res.codeSent);
+      setCode('');
+      setCodeError('');
+      setCodeStatus('idle');
     } else {
       setStatus('error');
       if (res.field) setErrors((prev) => ({ ...prev, [res.field as string]: res.error }));
       else setTopError(res.error);
+    }
+  }
+
+  async function onConfirmPhone() {
+    setCodeStatus('submitting');
+    setCodeError('');
+    const res = await confirmPhoneAction(code);
+    if (res.ok) {
+      setCodeStatus('success');
+      setSavedPhone(phone.trim());
+      setCodeSent(false);
+    } else {
+      setCodeStatus('error');
+      setCodeError(res.error);
     }
   }
 
@@ -281,6 +307,40 @@ export function ProfileForm({
             <FormError>{errors.phone}</FormError>
           </Field>
         </div>
+
+        {codeSent && (
+          <div className="space-y-3 rounded-2xl border border-gold-300 bg-gold-50/60 p-4">
+            <p className="text-sm text-ink-strong">
+              أرسلنا رمز تحقق إلى الرقم الجديد <span dir="ltr">{phone.trim()}</span>. يبقى رقمك الحالي{' '}
+              <span dir="ltr">{savedPhone || '—'}</span> حتى تُدخل الرمز.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+              <Field label="رمز التحقق" required>
+                <Input
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  invalid={!!codeError}
+                  placeholder="000000"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  dir="ltr"
+                />
+                <FormError>{codeError}</FormError>
+              </Field>
+              <Button
+                type="button"
+                size="md"
+                onClick={onConfirmPhone}
+                disabled={codeStatus === 'submitting' || code.trim().length !== 6}
+                className="sm:mt-7"
+              >
+                {codeStatus === 'submitting' ? 'جارٍ التأكيد...' : 'تأكيد الرقم'}
+              </Button>
+            </div>
+          </div>
+        )}
+        {codeStatus === 'success' && <InlineNotice tone="success">تم تغيير رقم الجوال بنجاح</InlineNotice>}
 
         {/* ── Password panel (collapsible, fully wired) ── */}
         <div className="rounded-2xl border border-hairline bg-surface-soft/40">

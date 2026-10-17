@@ -1694,6 +1694,24 @@ abstract class AppLocalizations {
   /// **'Profile updated'**
   String get profileSaved;
 
+  /// No description provided for @phoneChangeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your new number'**
+  String get phoneChangeTitle;
+
+  /// No description provided for @phoneChangeConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get phoneChangeConfirm;
+
+  /// No description provided for @phoneChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number changed'**
+  String get phoneChanged;
+
   /// No description provided for @fieldLanguage.
   ///
   /// In en, this message translates to:

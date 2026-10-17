@@ -1,5 +1,6 @@
 import { Body, Controller, Post, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
 import { Throttle } from '@nestjs/throttler';
 import { Response } from 'express';
 import { AuthService, DEPRECATED_ENDPOINT_HEADER } from './auth.service';
@@ -7,6 +8,8 @@ import { TenantResolverService } from './tenant-resolver.service';
 import {
   ChangePasswordDto,
   ForgotPasswordDto,
+  PhoneChangeConfirmDto,
+  PhoneChangeRequestDto,
   LoginEmailDto,
   RefreshDto,
   ResetPasswordDto,
@@ -25,6 +28,7 @@ import {
 import { Public } from '../../common/decorators/public.decorator';
 import { PlatformPublic } from '../../common/decorators/platform-public.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { runAsPlatform, runInCompany } from '../../common/tenant/tenant-context';
 
 @ApiTags('auth')
@@ -145,6 +149,22 @@ export class AuthController {
   @Post('change-password')
   changePassword(@CurrentUser() user: AuthUser, @Body() dto: ChangePasswordDto) {
     return this.auth.changePassword(user.sub, dto.currentPassword, dto.newPassword);
+  }
+
+  // A customer changing their phone: the code goes to the new number and the
+  // change is made only once it is entered. Own account only (JWT).
+  @Roles(UserRole.CLIENT, UserRole.CUSTOMER)
+  @Throttle({ default: { ttl: 60_000, limit: 3 } })
+  @Post('me/phone')
+  requestPhoneChange(@CurrentUser() user: AuthUser, @Body() dto: PhoneChangeRequestDto) {
+    return this.auth.requestPhoneChange(user.sub, dto.phone);
+  }
+
+  @Roles(UserRole.CLIENT, UserRole.CUSTOMER)
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @Post('me/phone/confirm')
+  confirmPhoneChange(@CurrentUser() user: AuthUser, @Body() dto: PhoneChangeConfirmDto) {
+    return this.auth.confirmPhoneChange(user.sub, dto.code);
   }
 
   // Identical 200 response for existing and non-existing accounts prevents

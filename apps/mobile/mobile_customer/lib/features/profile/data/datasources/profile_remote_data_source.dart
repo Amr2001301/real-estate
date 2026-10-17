@@ -7,6 +7,12 @@ import '../dtos/user_profile_dto.dart';
 abstract interface class ProfileRemoteDataSource {
   Future<UserProfileDto> getMe();
   Future<UserProfileDto> updateMe(Map<String, dynamic> body);
+
+  /// Sends a code to [phone]; the account keeps its number until confirmed.
+  Future<void> requestPhoneChange(String phone);
+
+  /// The code sent to the new number: the phone changes now.
+  Future<void> confirmPhoneChange(String code);
 }
 
 class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
@@ -23,5 +29,15 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
   Future<UserProfileDto> updateMe(Map<String, dynamic> body) async {
     final res = await _dio.patch<Map<String, dynamic>>('/users/me', data: body);
     return UserProfileDto.fromJson(res.data!);
+  }
+
+  @override
+  Future<void> requestPhoneChange(String phone) async {
+    await _dio.post<Map<String, dynamic>>('/auth/me/phone', data: {'phone': phone});
+  }
+
+  @override
+  Future<void> confirmPhoneChange(String code) async {
+    await _dio.post<Map<String, dynamic>>('/auth/me/phone/confirm', data: {'code': code});
   }
 }

@@ -377,6 +377,29 @@ export class UsersService {
     return user;
   }
 
+  /**
+   * PATCH /users/me. A customer's phone is changed only through a code sent
+   * to the new number (POST /auth/me/phone): a typed number proves nothing,
+   * and an OTP sign-in to it would open this account. Staff edit their own
+   * phone freely — they never sign in by phone code.
+   */
+  async updateSelf(caller: { sub: string; role: UserRole }, dto: UpdateUserDto) {
+    if (dto.phone !== undefined && (caller.role === UserRole.CLIENT || caller.role === UserRole.CUSTOMER)) {
+      const companyId = getRequiredCompanyId();
+      const stored = (await this.prisma.user.findFirst({ where: { id: caller.sub, companyId }, select: { phone: true } }))
+        ?.phone;
+      const unchanged =
+        dto.phone === stored || (dto.phone !== null && (await phoneForWrite(this.prisma, dto.phone, companyId)) === stored);
+      if (!unchanged) {
+        throw new BadRequestException({
+          code: 'PHONE_CHANGE_NEEDS_CODE',
+          message: 'تغيير رقم الجوال يتم برمز يُرسل إلى الرقم الجديد',
+        });
+      }
+    }
+    return this.update(caller.sub, dto);
+  }
+
   async update(id: string, dto: UpdateUserDto) {
     const companyId = getRequiredCompanyId(); // MT-006
     await this.assertExists(id, companyId);

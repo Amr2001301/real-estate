@@ -81,7 +81,9 @@ function makeService() {
             otpStore.find((row) => {
               for (const [k, v] of Object.entries(args.where)) {
                 if (k === 'createdAt' || k === 'expiresAt') continue;
-                if ((row as Record<string, unknown>)[k] !== v) return false;
+                // purpose defaults to LOGIN in the database (OtpCode.purpose).
+                const actual = (row as Record<string, unknown>)[k] ?? (k === 'purpose' ? 'LOGIN' : undefined);
+                if (actual !== v) return false;
               }
               return true;
             }) ?? null,
