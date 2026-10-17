@@ -276,6 +276,11 @@ export class ReportsService {
     const conditions: Prisma.Sql[] = [
       Prisma.sql`bc."companyId" = ${companyId}::uuid`,
       Prisma.sql`bc.status = 'APPROVED'`,
+      // Earned and kept (EARNED_COMMISSION_WHERE): the deal live or kept
+      // with RETAIN, and no clawback under way (a waived one stays).
+      Prisma.sql`(bc."retainedOnCancellation" OR EXISTS (
+        SELECT 1 FROM "Contract" ct WHERE ct.id = bc."contractId" AND ct.status <> 'CANCELLED' AND ct."deletedAt" IS NULL))`,
+      Prisma.sql`(bc."clawbackStatus" IS NULL OR bc."clawbackStatus" = 'WAIVED')`,
     ];
     const r = reportRange(dateFrom, dateTo, await companyTimeZone(this.prisma, companyId));
     if (r.gte) conditions.push(Prisma.sql`bc."earnedAt" >= ${r.gte}`);
@@ -290,7 +295,12 @@ export class ReportsService {
       SELECT
         br.id                                                     AS "brokerId",
         COALESCE(br."commercialName", br."companyName")           AS "brokerName",
-        COALESCE(SUM(bc."netAmount"), 0)::float                   AS "commissionAmount",
+        -- With the price-change top-ups and clawbacks on each commission.
+        COALESCE(SUM(bc."netAmount" + COALESCE((
+          SELECT SUM(CASE WHEN a.kind = 'TOP_UP' THEN a.amount ELSE -a.amount END)
+          FROM "BrokerCommissionAdjustment" a
+          WHERE a."commissionId" = bc.id AND NOT a."settlesClawback"
+        ), 0)), 0)::float                                         AS "commissionAmount",
         COUNT(bc.id)::int                                         AS count
       FROM "BrokerCommission" bc
       -- brokerId is the broker firm (Broker), not a User: joining "User" made

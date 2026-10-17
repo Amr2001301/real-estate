@@ -1883,6 +1883,9 @@ model BonusEntry {
   // ── Step D1: clawback overlay for PAID bonuses (same pattern as BrokerCommission) ──
   // Step D4: added clawbackCollectedAmount/Reference/PaymentMethod + clawbackWaiveReason.
   clawbackStatus                ClawbackStatus? // null = no clawback applicable
+  /// What the clawback recovers: what was actually paid (the amount plus paid
+  /// price-change adjustments). Null on older rows — the amount is used then.
+  clawbackAmount                Decimal?        @db.Decimal(14, 2)
   clawbackReason                String?         @db.VarChar(2000) // cancellation reason
   clawbackAt                    DateTime?
   clawbackById                  String?         @db.Uuid
@@ -2504,6 +2507,9 @@ model BrokerCommission {
   // disbursement is tracked via payoutId → BrokerPayout.status (PROCESSING|PAID).
   // Step D4: added clawbackCollectedAmount/Reference/PaymentMethod + clawbackWaiveReason.
   clawbackStatus                ClawbackStatus? // null = no clawback applicable
+  /// What the clawback recovers: what was actually paid (the amount plus paid
+  /// price-change adjustments). Null on older rows — the amount is used then.
+  clawbackAmount                Decimal?        @db.Decimal(14, 2)
   clawbackReason                String?         @db.VarChar(2000) // cancellation reason
   clawbackAt                    DateTime?
   clawbackById                  String?         @db.Uuid

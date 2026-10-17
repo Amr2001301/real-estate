@@ -85,8 +85,13 @@ function buildTx() {
       create: jest.fn().mockResolvedValue({}),
       updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       findMany: jest.fn().mockResolvedValue([]),
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
-    bonusEntry: { update: jest.fn().mockResolvedValue({}) },
+    bonusEntry: {
+      update: jest.fn().mockResolvedValue({}),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
     unit: { update: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     unitStatusHistory: { create: jest.fn().mockResolvedValue({}) },
     unitMaintenanceItem: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
@@ -364,7 +369,7 @@ describe('ContractCancellationService.cancel()', () => {
 
   it('CC-U-5: CLAWBACK + bonusEntry PAID → clawback overlay; status stays PAID (Hard Rule 2)', async () => {
     const prisma = buildPrisma({
-      bonusEntry: { id: BONUS_ID, status: 'PAID', clawbackStatus: null },
+      bonusEntry: { id: BONUS_ID, status: 'PAID', amount: new Prisma.Decimal(5000), clawbackStatus: null },
     });
     const svc = buildSvc(prisma);
 

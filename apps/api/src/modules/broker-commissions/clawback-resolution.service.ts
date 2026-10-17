@@ -124,6 +124,7 @@ export class ClawbackResolutionService {
         status: true,
         clawbackStatus: true,
         clawbackCollectedAmount: true,
+        clawbackAmount: true,
         netAmount: true,
       },
     });
@@ -144,7 +145,9 @@ export class ClawbackResolutionService {
       ? Number(commission.clawbackCollectedAmount)
       : 0;
     const newTotal = new Prisma.Decimal(previouslyCollected).add(new Prisma.Decimal(collected));
-    const fullAmount = commission.netAmount;
+    // What was actually paid (price-change adjustments included); older
+    // clawbacks recorded none and recover the net.
+    const fullAmount = commission.clawbackAmount ?? commission.netAmount;
     assertWithinOutstanding(fullAmount, commission.clawbackCollectedAmount, collected);
     const newStatus: ClawbackStatus = newTotal.gte(fullAmount)
       ? ClawbackStatus.COLLECTED
@@ -286,6 +289,7 @@ export class ClawbackResolutionService {
         status: true,
         clawbackStatus: true,
         clawbackCollectedAmount: true,
+        clawbackAmount: true,
         amount: true,
       },
     });
@@ -306,7 +310,7 @@ export class ClawbackResolutionService {
       ? Number(bonus.clawbackCollectedAmount)
       : 0;
     const newTotal = new Prisma.Decimal(previouslyCollected).add(new Prisma.Decimal(collected));
-    const fullAmount = bonus.amount;
+    const fullAmount = bonus.clawbackAmount ?? bonus.amount;
     assertWithinOutstanding(fullAmount, bonus.clawbackCollectedAmount, collected);
     const newStatus: ClawbackStatus = newTotal.gte(fullAmount)
       ? ClawbackStatus.COLLECTED

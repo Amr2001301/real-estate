@@ -1,4 +1,5 @@
 import { BrokerCommissionAdjustmentKind, ClawbackStatus, Prisma } from '@prisma/client';
+import { PAYABLE_DEAL_WHERE } from '../installments/live-contract';
 
 const ZERO = new Prisma.Decimal(0);
 
@@ -46,12 +47,15 @@ export async function rebalancePayout(tx: Prisma.TransactionClient, payoutId: st
   // Give back what was netted here and net the broker's open ones afresh.
   await releaseAdjustments(tx, { payoutId });
   const agg = await tx.brokerCommission.aggregate({
-    // Only approved commissions are paid out.
-    where: { payoutId, status: 'APPROVED' },
+    // Only approved commissions on a deal still payable are paid out (a deal
+    // cancelled with MANUAL waits for the admin).
+    where: { payoutId, status: 'APPROVED', ...PAYABLE_DEAL_WHERE },
     _sum: { grossAmount: true, taxAmount: true, withholdingAmount: true, netAmount: true },
   });
   const open = await tx.brokerCommissionAdjustment.findMany({
-    where: { brokerId, payoutId: null },
+    // A price-change adjustment follows its deal: none for a dead one. The
+    // clawback of a cancelled deal's paid commission is netted always.
+    where: { brokerId, payoutId: null, OR: [{ settlesClawback: true }, { commission: PAYABLE_DEAL_WHERE }] },
     orderBy: { createdAt: 'asc' },
     select: { id: true, kind: true, amount: true },
   });
@@ -120,14 +124,15 @@ export async function settleNettedClawbacks(
   for (const r of rows) {
     const c = await tx.brokerCommission.findUniqueOrThrow({
       where: { id: r.commissionId },
-      select: { netAmount: true, clawbackCollectedAmount: true },
+      select: { netAmount: true, clawbackAmount: true, clawbackCollectedAmount: true },
     });
     const collected = (c.clawbackCollectedAmount ?? ZERO).add(r.amount);
+    const full = c.clawbackAmount ?? c.netAmount;
     await tx.brokerCommission.update({
       where: { id: r.commissionId },
       data: {
         clawbackCollectedAmount: collected,
-        clawbackStatus: collected.gte(c.netAmount) ? ClawbackStatus.COLLECTED : ClawbackStatus.PARTIALLY_COLLECTED,
+        clawbackStatus: collected.gte(full) ? ClawbackStatus.COLLECTED : ClawbackStatus.PARTIALLY_COLLECTED,
         clawbackCollectedAt: at,
         clawbackCollectedById: actorId,
         clawbackCollectedReference: payout.payoutNumber,

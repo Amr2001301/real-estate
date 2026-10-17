@@ -40,7 +40,7 @@ import {
   workbookToBuffer,
 } from '../../common/utils/xlsx';
 import { renderBarChartPng } from '../../common/utils/xlsx-chart';
-import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
+import { EARNED_COMMISSION_WHERE, earnedCommissionNet, LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { companyTimeZone } from '../../common/time/company-timezone';
 import { reportRange } from '../../common/time/report-range';
@@ -434,9 +434,12 @@ export class BrokerReportsService {
     // which is awkward for groupBy — we approximate contract counts by
     // counting distinct contractIds within the commission window per project.
     const commissions = await this.prisma.brokerCommission.findMany({
+      // Earned and kept only: a cancelled, clawed-back deal is no sale.
       where: {
-        ...this.commissionWhere({ brokerId: query.brokerId, brokerAgentId: query.brokerAgentId, range }),
-        status: { notIn: [BrokerCommissionStatus.CANCELLED, BrokerCommissionStatus.REJECTED] },
+        AND: [
+          this.commissionWhere({ brokerId: query.brokerId, brokerAgentId: query.brokerAgentId, range }),
+          EARNED_COMMISSION_WHERE,
+        ],
       },
       select: {
         projectId: true,
@@ -1261,23 +1264,23 @@ export class BrokerReportsService {
         };
       },
       commissionTotals: async () => {
-        const activeCommW = {
-          ...commW,
-          status: { notIn: [BrokerCommissionStatus.CANCELLED, BrokerCommissionStatus.REJECTED] },
-        };
-        const [allAgg, pendingAgg] = await Promise.all([
+        // Earned and kept: a deal cancelled and clawed back (or left for the
+        // admin) is not, and price-change adjustments count.
+        const activeCommW = { AND: [commW, EARNED_COMMISSION_WHERE] };
+        const [allAgg, net, pendingAgg] = await Promise.all([
           this.prisma.brokerCommission.aggregate({
-            _sum: { grossAmount: true, netAmount: true },
+            _sum: { grossAmount: true },
             where: activeCommW,
           }),
+          earnedCommissionNet(this.prisma, activeCommW),
           this.prisma.brokerCommission.aggregate({
             _sum: { netAmount: true },
-            where: { ...commW, status: BrokerCommissionStatus.PENDING },
+            where: { AND: [commW, EARNED_COMMISSION_WHERE, { status: BrokerCommissionStatus.PENDING }] },
           }),
         ]);
         return {
           gross: allAgg._sum.grossAmount ?? new Prisma.Decimal(0),
-          net: allAgg._sum.netAmount ?? new Prisma.Decimal(0),
+          net,
           pendingNet: pendingAgg._sum.netAmount ?? new Prisma.Decimal(0),
         };
       },

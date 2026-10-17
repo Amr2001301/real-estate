@@ -1286,6 +1286,8 @@ export interface PortalPayout {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Price-change top-ups and clawbacks netted into this payout. */
+  adjustments?: Array<{ id: string; kind: 'TOP_UP' | 'CLAWBACK'; amount: string | number; reason: string; createdAt: string }>;
   commissions?: Array<{
     id: string;
     commissionNumber: string;
