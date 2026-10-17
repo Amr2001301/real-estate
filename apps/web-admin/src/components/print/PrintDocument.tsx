@@ -33,7 +33,7 @@ export function formatMoney(
   const n = typeof value === 'string' ? Number(value) : value;
   if (Number.isNaN(n)) return '—';
   const digits = Number.isInteger(n) ? 0 : 2;
-  return new Intl.NumberFormat(locale === 'en' ? 'en-EG' : 'ar-EG', {
+  return new Intl.NumberFormat(locale === 'en' ? 'en-EG' : 'ar-EG-u-nu-latn', {
     style: 'currency',
     currency,
     minimumFractionDigits: digits,
@@ -43,7 +43,7 @@ export function formatMoney(
 
 /** Plain numbers (area, floor, months) in the document's digits. */
 export function formatNumber(value: number, locale: Locale): string {
-  return value.toLocaleString(locale === 'en' ? 'en-EG' : 'ar-EG');
+  return value.toLocaleString(locale === 'en' ? 'en-EG' : 'ar-EG-u-nu-latn');
 }
 
 /** The company name a document is issued by. */

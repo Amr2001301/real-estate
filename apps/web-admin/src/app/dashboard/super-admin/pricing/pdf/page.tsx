@@ -64,7 +64,7 @@ export default function PricingPdfPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const today = new Date().toLocaleDateString(locale === 'en' ? 'en-SA' : 'ar-SA', {
+  const today = new Date().toLocaleDateString(locale === 'en' ? 'en-SA' : 'ar-SA-u-nu-latn', {
     year: 'numeric', month: 'long', day: 'numeric',
   });
 

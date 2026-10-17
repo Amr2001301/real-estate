@@ -68,7 +68,7 @@ const ar = {
   },
 
   funnel: {
-    numberLocale: 'ar-EG',
+    numberLocale: 'ar-EG-u-nu-latn',
     defaultTitle: 'قمع التحويل',
     stagesCount: (n: number) => `${n} مراحل`,
     stages: {
@@ -83,8 +83,8 @@ const ar = {
   },
 
   trend: {
-    numberLocale: 'ar-EG',
-    currencyLocale: 'ar-SA',
+    numberLocale: 'ar-EG-u-nu-latn',
+    currencyLocale: 'ar-SA-u-nu-latn',
     axisMillion: 'م',
     axisThousand: 'ك',
     tabFinancial: 'المالية',
@@ -158,7 +158,7 @@ const ar = {
   },
   notifications: {
     markRead: 'تعليم كمقروء',
-    dateLocale: 'ar-EG',
+    dateLocale: 'ar-EG-u-nu-latn',
     emptyTitle: 'لا توجد إشعارات',
     emptyDescription: 'عند وصول إشعارات جديدة ستظهر هنا.',
     unread: 'غير مقروء',

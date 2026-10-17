@@ -8,6 +8,8 @@ const UI = {
       help: 'المساعدة',
       lightMode: 'الوضع الفاتح',
       darkMode: 'الوضع الداكن',
+      light: 'فاتح',
+      dark: 'داكن',
     },
     sidebar: {
       logout: 'تسجيل الخروج',
@@ -5217,6 +5219,8 @@ const UI = {
       help: 'Help',
       lightMode: 'Light mode',
       darkMode: 'Dark mode',
+      light: 'Light',
+      dark: 'Dark',
     },
     sidebar: {
       logout: 'Log out',

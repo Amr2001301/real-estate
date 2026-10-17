@@ -1,7 +1,7 @@
 import { LogOut } from 'lucide-react';
 import type { SessionUser, SessionRole } from '@/lib/session';
 import type { Locale } from '@/lib/locale';
-import { filterNavForRole, NAV_ICONS, type NavSection } from '@/lib/nav';
+import { filterNavForRole, type NavSection } from '@/lib/nav';
 import { uiT } from '@/messages/ui';
 import { logoutAction } from '@/app/login/actions';
 import { Brand } from './brand';
@@ -28,51 +28,28 @@ export function SidebarContent({ user, locale, sections, onNavigate }: Props) {
   const m = uiT(locale);
 
   return (
-    <div className="flex flex-col h-full bg-sidebar-bg text-sidebar-text">
+    <div className="flex flex-col h-full bg-sidebar-bg text-sidebar-text border-e border-[#D8B66A]/[0.18]">
 
       {/* Brand header — matches topbar height (72px) for visual alignment */}
-      <div className="px-5 h-[72px] flex items-center border-b border-white/[0.07] shrink-0">
+      <div className="px-5 h-[84px] flex items-center shrink-0">
         <Brand theme="dark" />
-      </div>
-
-      {/* User profile card */}
-      <div className="px-3 pt-3 pb-3 border-b border-white/[0.06] shrink-0">
-        <div className="relative flex items-center gap-3 p-3 rounded-2xl bg-white/[0.07] ring-1 ring-white/[0.09] overflow-hidden">
-          {/* Subtle gold sheen along top */}
-          <span
-            className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-brand-400/60 to-transparent"
-            aria-hidden
-          />
-          <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-navy text-sm font-bold shrink-0 shadow-[0_4px_14px_-4px_rgb(200_162_75/0.55)]">
-            {initials(user.fullName)}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-semibold text-white truncate leading-snug">
-              {user.fullName}
-            </p>
-            <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/[0.09] text-brand-300/90 ring-1 ring-white/[0.12]">
-              {m.sidebar.roles[user.role as SessionRole]}
-            </span>
-          </div>
-        </div>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 py-3 space-y-5">
         {resolved.map((section) => (
           <div key={section.titleKey}>
-            <p className="px-3 mb-2 text-[9.5px] font-bold uppercase tracking-[0.18em] text-sidebar-text-muted/38 select-none">
+            <p className="px-3 mb-2 text-[10.5px] font-bold uppercase tracking-[0.14em] text-sidebar-text-muted select-none">
               {m.nav.sections[section.titleKey]}
             </p>
             <div className="space-y-0.5">
               {section.items.map((item) => {
-                const Icon = NAV_ICONS[item.iconKey];
+                // U5: text + ring, no icons (the mockup's quieter sidebar).
                 return (
                   <NavLink
                     key={item.href}
                     href={item.href}
                     label={m.nav.items[item.labelKey]}
-                    icon={<Icon className="h-[17px] w-[17px]" strokeWidth={1.75} />}
                     onNavigate={onNavigate}
                   />
                 );
@@ -82,14 +59,23 @@ export function SidebarContent({ user, locale, sections, onNavigate }: Props) {
         ))}
       </nav>
 
-      {/* Logout footer */}
-      <div className="border-t border-white/[0.06] px-3 py-3 shrink-0">
+      {/* User card + logout at the bottom (U5); the top bar no longer repeats the name. */}
+      <div className="border-t border-white/[0.06] px-3 py-3 shrink-0 space-y-1">
+        <div className="flex items-center gap-3 px-2 py-2">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#D8B66A] to-[#B38B3A] text-[#1A1408] text-[13px] font-bold shrink-0">
+            {initials(user.fullName)}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-bold text-white truncate leading-snug">{user.fullName}</p>
+            <p className="text-[11px] text-[#D8B66A]/85 truncate">{m.sidebar.roles[user.role as SessionRole]}</p>
+          </div>
+        </div>
         <form action={logoutAction}>
           <button
             type="submit"
-            className="w-full flex items-center gap-3 px-3 h-10 rounded-xl text-[12.5px] font-medium text-sidebar-text-muted/55 hover:text-white/85 hover:bg-white/[0.07] transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-inset"
+            className="w-full flex items-center gap-3 px-3 h-10 rounded-xl text-[12.5px] font-medium text-sidebar-text/70 hover:text-white/90 hover:bg-white/[0.06] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-inset"
           >
-            <LogOut className="h-[15px] w-[15px] shrink-0 opacity-70 group-hover:opacity-100" aria-hidden />
+            <LogOut className="h-[15px] w-[15px] shrink-0 opacity-70" aria-hidden />
             {m.sidebar.logout}
           </button>
         </form>

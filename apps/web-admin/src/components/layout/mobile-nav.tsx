@@ -58,7 +58,7 @@ export function MobileNav({
       {open && (
         <div className="lg:hidden fixed inset-0 z-50 animate-fade-in" role="dialog" aria-modal="true">
           <div
-            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setOpen(false)}
             aria-hidden="true"
           />

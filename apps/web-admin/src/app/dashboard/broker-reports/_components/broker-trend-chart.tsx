@@ -75,7 +75,7 @@ export function BrokerTrendChart({
   noDataLabel?:       string;
 }) {
   function fmt(v: number): string {
-    return new Intl.NumberFormat(locale === 'ar' ? 'ar-SA' : 'en-US', {
+    return new Intl.NumberFormat(locale === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US', {
       style: 'currency', currency, maximumFractionDigits: 0,
     }).format(v);
   }
