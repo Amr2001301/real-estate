@@ -1919,7 +1919,7 @@ export class ReportsService {
 
     return {
       summary: {
-        totalContractValue: totalContractValue.toFixed(2),
+        totalContractValue: new Prisma.Decimal(totalContractValue).toDecimalPlaces(2).toString(),
         dueToDate: dueToDate.toString(),
         collectedAgainstDue: collectedAgainstDue.toString(),
         // Money collected (common/finance/collected.ts) — same as
