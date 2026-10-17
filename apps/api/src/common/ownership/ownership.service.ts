@@ -85,7 +85,9 @@ export class OwnershipService {
    * made: the new owner sees payments from the transfer on, the previous
    * owner keeps the ones made before it. Following contract.customerId alone
    * showed the new owner the previous owner's receipts and cut the previous
-   * owner off from their own.
+   * owner off from their own. "Made" is when the payment was recorded
+   * (createdAt): paidAt is typed by the customer and could move a receipt to
+   * the other side of the transfer.
    */
   async depositOwnershipWhere(userId: string): Promise<Prisma.DepositWhereInput> {
     const transfers = await this.prisma.contractAmendment.findMany({
@@ -103,8 +105,41 @@ export class OwnershipService {
     return {
       OR: [
         { contract: { customerId: userId }, ...(transferredIn.length ? { contractId: { notIn: transferredIn } } : {}) },
-        ...[...since].map(([contractId, at]) => ({ contractId, paidAt: { gte: at } })),
-        ...[...until].map(([contractId, at]) => ({ contractId, paidAt: { lt: at } })),
+        ...[...since].map(([contractId, at]) => ({ contractId, createdAt: { gte: at } })),
+        ...[...until].map(([contractId, at]) => ({ contractId, createdAt: { lt: at } })),
+      ],
+    };
+  }
+
+  /**
+   * The booking payments (made on the reservation, before the contract) that
+   * are this customer's. They stay with whoever paid them (decided
+   * 2026-10-16): a transfer moves the reservation to the new owner, but the
+   * receipts recorded before it remain the previous owner's.
+   */
+  async bookingDepositWhere(userId: string): Promise<Prisma.DepositWhereInput> {
+    const transfers = await this.prisma.contractAmendment.findMany({
+      where: { type: 'TRANSFER', OR: [{ toCustomerId: userId }, { fromCustomerId: userId }] },
+      select: { contractId: true, toCustomerId: true, fromCustomerId: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    const since = new Map<string, Date>();
+    const until = new Map<string, Date>();
+    for (const t of transfers) {
+      if (t.toCustomerId === userId) since.set(t.contractId, t.createdAt);
+      if (t.fromCustomerId === userId) until.set(t.contractId, t.createdAt);
+    }
+    const transferred = [...new Set([...since.keys(), ...until.keys()])];
+    const notTransferred: Prisma.DepositWhereInput = transferred.length
+      ? { NOT: { reservation: { contract: { id: { in: transferred } } } } }
+      : {};
+    return {
+      contractId: null,
+      OR: [
+        { reservation: { clientId: userId }, ...notTransferred },
+        { reservation: { lead: { is: { clientId: userId } } }, ...notTransferred },
+        ...[...since].map(([contractId, at]) => ({ reservation: { contract: { id: contractId } }, createdAt: { gte: at } })),
+        ...[...until].map(([contractId, at]) => ({ reservation: { contract: { id: contractId } }, createdAt: { lt: at } })),
       ],
     };
   }

@@ -1,8 +1,8 @@
 /**
  * R2 — maintenance follows the owner of the unit.
  *
- * A customer files only on a unit they own; a transfer hands the open
- * requests to the new owner; a rejected request is finished; a unit put back
+ * A customer files only on a unit they own; a transfer closes the previous
+ * owner's open requests (round-4 decision 8); a rejected request is finished; a unit put back
  * on sale loses the previous buyer's warranties; a deactivated supervisor's
  * open work goes back to the queue.
  */
@@ -65,7 +65,7 @@ describe('R2 — maintenance ownership (e2e)', () => {
       .expect(201);
   });
 
-  it('R2-2: a transfer hands open requests to the new owner (and back)', async () => {
+  it('R2-2: a transfer closes the previous owner’s open requests', async () => {
     const raw = testApp.rawPrisma;
     const open = await raw.maintenanceRequest.findFirstOrThrow({
       where: { description: 'R2 my unit', createdAt: { gte: startedAt } },
@@ -79,14 +79,13 @@ describe('R2 — maintenance ownership (e2e)', () => {
       await asAdmin(http().post(`/v1/contracts/${contractId}/transfer`))
         .send({ toCustomerId: newOwner.id, reason: 'R2 transfer', feeAmount: 0 })
         .expect(201);
-      expect((await raw.maintenanceRequest.findUniqueOrThrow({ where: { id: open.id } })).customerId).toBe(newOwner.id);
+      const row = await raw.maintenanceRequest.findUniqueOrThrow({ where: { id: open.id } });
+      expect(row.status).toBe(MaintenanceStatus.CLOSED);
+      expect(row.customerId).toBe(fixtures.userIds.customer1UserId);
     } finally {
       await asAdmin(http().post(`/v1/contracts/${contractId}/transfer`))
         .send({ toCustomerId: fixtures.userIds.customer1UserId, reason: 'R2 transfer back', feeAmount: 0 })
         .expect(201);
-      expect((await raw.maintenanceRequest.findUniqueOrThrow({ where: { id: open.id } })).customerId).toBe(
-        fixtures.userIds.customer1UserId,
-      );
       await raw.refreshToken.deleteMany({ where: { userId: newOwner.id } });
       await raw.user.delete({ where: { id: newOwner.id } });
     }

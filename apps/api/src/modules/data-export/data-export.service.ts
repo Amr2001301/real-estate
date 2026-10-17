@@ -215,7 +215,7 @@ export class DataExportService {
       this.prisma.deposit.findMany({
         where: { companyId, deletedAt: null },
         select: {
-          id: true, type: true, amount: true, paidAt: true,
+          id: true, type: true, amount: true, paidAt: true, createdAt: true,
           reviewStatus: true, paymentMethod: true,
           contract: {
             select: {
@@ -753,9 +753,11 @@ export class DataExportService {
 
   /**
    * Resolves who paid a deposit: the customer who owned its contract when it
-   * was paid. Null for a contract never transferred (its customer paid).
+   * was recorded (createdAt, as OwnershipService splits receipts — paidAt is
+   * typed by the customer). Null for a contract never transferred (its
+   * customer paid).
    */
-  private async depositPayers(companyId: string): Promise<(contractId: string, paidAt: Date) => Person | null> {
+  private async depositPayers(companyId: string): Promise<(contractId: string, recordedAt: Date) => Person | null> {
     const transfers = await this.prisma.contractAmendment.findMany({
       where: { companyId, type: 'TRANSFER' },
       select: { contractId: true, fromCustomerId: true, toCustomerId: true, createdAt: true },
@@ -774,8 +776,8 @@ export class DataExportService {
       select: { id: true, phone: true, fullName: true },
     });
     const byId = new Map(people.map((p) => [p.id, p]));
-    return (contractId, paidAt) => {
-      const id = ownerIdAt(byContract.get(contractId) ?? [], paidAt);
+    return (contractId, recordedAt) => {
+      const id = ownerIdAt(byContract.get(contractId) ?? [], recordedAt);
       return id ? (byId.get(id) ?? null) : null;
     };
   }
@@ -784,13 +786,13 @@ export class DataExportService {
     wb: Workbook,
     rows: Array<{
       id: string; type: string; amount: Prisma.Decimal;
-      paidAt: Date; reviewStatus: string; paymentMethod: string | null;
+      paidAt: Date; createdAt: Date; reviewStatus: string; paymentMethod: string | null;
       contract: { id: string; contractNumber: string | null; customer: { phone: string | null; fullName: string } } | null;
       installment: { plan: { contract: { id: string; contractNumber: string | null; customer: { phone: string | null; fullName: string } } } } | null;
       paymentInstrument: { id: string } | null;
       recordedBy: { fullName: string };
     }>,
-    payerAt: (contractId: string, paidAt: Date) => Person | null,
+    payerAt: (contractId: string, recordedAt: Date) => Person | null,
   ): number {
     const headers = ['_Ref', 'النوع', 'رقم العقد', 'هاتف العميل', 'اسم العميل', 'المبلغ', 'طريقة الدفع', 'تاريخ الدفع (UTC)', 'حالة المراجعة', 'مرجع الأداة', 'سجّل بواسطة'];
     const ws = this.initSheet(wb, 'Deposits', headers, [10, 14, 16, 16, 25, 14, 16, 22, 16, 10, 22], XLSX_TAB_PAYMENTS);
@@ -800,7 +802,7 @@ export class DataExportService {
       // After a transfer (تنازل) the contract's customer is the new owner; a
       // payment made before it was the previous owner's.
       const contract = r.contract ?? r.installment?.plan.contract ?? null;
-      const payer = contract ? (payerAt(contract.id, r.paidAt) ?? contract.customer) : null;
+      const payer = contract ? (payerAt(contract.id, r.createdAt) ?? contract.customer) : null;
       const contractNumber = contract?.contractNumber ?? null;
       const customerPhone = payer?.phone ?? null;
       const customerName = payer?.fullName ?? null;

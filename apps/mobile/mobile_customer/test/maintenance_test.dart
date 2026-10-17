@@ -500,8 +500,8 @@ void main() {
         ),
       );
       expect(result.isOk, isTrue);
-      // The public (not signed) URL is what gets registered.
-      expect(ds.registeredFileUrl, 'https://cdn.example/docs/x.jpg');
+      // The presigned key (not the signed URL) is what gets registered.
+      expect(ds.registeredFileUrl, 'docs/x.jpg');
     });
 
     test('a failing PUT maps to Err and never registers', () async {

@@ -43,7 +43,6 @@ import {
 } from '../installments/live-contract';
 import {
   closeOpenMaintenance,
-  handOverOpenMaintenance,
   resetUnitWarranties,
   startUnitWarranties,
 } from './unit-warranties';
@@ -319,7 +318,9 @@ export class ContractAmendmentsService {
           data: { clientId: to.id },
         });
       }
-      const maintenanceMoved = await handOverOpenMaintenance(tx, contract.unitId, fromId, to.id, companyId);
+      // The previous owner's open maintenance requests are closed, not handed
+      // over with their photos (decided 2026-10-16): the new owner files their own.
+      const maintenanceClosed = await closeOpenMaintenance(tx, contract.unitId, fromId, companyId);
       // The new owner gets the customer app; the old one keeps it only while
       // they still own another live contract. Both re-authenticate.
       const promoted = await tx.user.updateMany({
@@ -378,7 +379,7 @@ export class ContractAmendmentsService {
           entityType: 'Contract',
           entityId: contractId,
           before: { customerId: fromId },
-          after: { customerId: to.id, reason: dto.reason, feeAmount, feeInstallmentId, maintenanceMoved },
+          after: { customerId: to.id, reason: dto.reason, feeAmount, feeInstallmentId, maintenanceClosed },
           companyId,
         },
       });

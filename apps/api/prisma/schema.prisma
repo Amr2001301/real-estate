@@ -135,6 +135,7 @@ model Company {
   brokerActivityLogs       BrokerActivityLog[]
   settings                 Setting[]
   documents                Document[]
+  presignedUploads         PresignedUpload[]
   chatSessions             ChatSession[]
   chatMessages             ChatMessage[]
   chatFeedback             ChatFeedback[]
@@ -1960,8 +1961,9 @@ enum MaintenanceResolutionConfirmedBy {
 model MaintenanceCategory {
   id                     String              @id @default(uuid()) @db.Uuid
   // Normalized slug for duplicate prevention (e.g. "plumbing"). Nullable so
-  // existing rows are unaffected; new rows always get a code (unique).
-  code                   String?             @unique
+  // existing rows are unaffected; new rows always get a code, unique per
+  // company (each company names its own categories).
+  code                   String?
   name                   Json // Translatable
   active                 Boolean             @default(true)
   priority               MaintenancePriority @default(MEDIUM)
@@ -1981,6 +1983,7 @@ model MaintenanceCategory {
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  @@unique([companyId, code])
   @@index([companyId])
 }
 
@@ -2714,6 +2717,26 @@ model Document {
   @@index([uploadedById])
   @@index([createdAt])
   @@index([deletedAt])
+  @@index([companyId])
+}
+
+/// An upload slot minted by a scoped presign (maintenance photos): the key a
+/// user may then attach, to that owner only, once, before it expires. A key
+/// presigned elsewhere — another user's, another request's, or one read from
+/// a document — is refused.
+model PresignedUpload {
+  id        String            @id @default(uuid()) @db.Uuid
+  key       String            @unique @db.VarChar(512)
+  userId    String            @db.Uuid
+  ownerType DocumentOwnerType
+  ownerId   String            @db.Uuid
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime          @default(now())
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([companyId])
 }
 
