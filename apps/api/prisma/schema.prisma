@@ -1673,6 +1673,10 @@ model PaymentCorrection {
   performedBy    User     @relation("CorrectionPerformedBy", fields: [performedById], references: [id])
   createdAt      DateTime @default(now())
 
+  /// REVERSAL only: when the deposit was approved again afterwards — it pays
+  /// its installment and counts as collected again (COLLECTED_DEPOSIT_WHERE).
+  supersededAt   DateTime?
+
   companyId  String?  @db.Uuid
   company    Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 

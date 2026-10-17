@@ -240,6 +240,38 @@ Check every surface after the change: admin, sales (SALES / SALES_MANAGER), brok
 
 ---
 
+## 4b. Round 5 — numbers audit (2026-10-17)
+
+Four read-only audits of every money figure (reports, dashboard, exports, the schedule maths, commissions, role home pages). The basics are right (cents, remainder row, final payment once, addMonths, late fees, signing-date sales, tenant scoping). The fixes go in three PRs:
+
+- **V1 — schedule money & cancellation:**
+  - The reservation snapshot is built on the booking actually charged: a percentage of the unit price or an admin's amount (`durationCalc` in `reservations.module.ts`). Editing the booking rebuilds it; that is refused once the booking is paid or has a proof under review. Approving a booking proof checks the amount.
+  - `createPlan` leaves out the reservation's booking.
+  - No 0.00 rows: conversion skips them; a price change or swap cancels a row that rescales to 0, along with its unpaid late fees. A template's booking + down + final must fit in the net price.
+  - The discount cap compares the sale price without the markup (`commissionBasis`) to the list price.
+  - Refund + retained ≤ collected on cancellation.
+  - A payment approved again after a reversal pays its row and counts as collected again (`PaymentCorrection.supersededAt`).
+  - e2e: `e2e-v1-schedule-money`.
+- **V2 — commissions:**
+  - A MANUAL cancellation must not let a payout pay a dead deal's commission.
+  - A CLAWBACK cancellation must settle the price-change adjustments (broker TOP_UP/CLAWBACK, bonus ADJUSTMENT).
+  - The leaderboard and broker portal must not count clawed-back commissions.
+  - The portal's locked commission is on the net price; its payout detail must show adjustments.
+- **V3 — one definition per report figure.** Decisions (owner, «موافق»):
+  - **a.** "Sales" and "contract value" are the **net price** (without the instalment markup), as the commission base.
+  - **b.** "Contract value" counts **signed** contracts only.
+  - **c.** The collection rate is money collected **against what is due by today** (booking + rows due ≤ today); early payments don't count.
+  - Also in V3:
+    - Every screen and export shows collected as two figures (towards price, and fees & penalties).
+    - Overdue and outstanding are one definition each.
+    - The trend compares month-to-date with the same days of last month.
+    - Deleted reservations and deposits are left out.
+    - Exports carry the right period label.
+
+Left for the owner, not in V1–V3:
+- Early settlement that waives unearned markup goes through a price change, so it lowers the commission base and counts as a discount.
+- A reschedule leaves the final (balloon) payment's date as it was.
+
 ## 5. Other open items
 
 - **Old contracts that bill the final payment twice** (converted before #83): the owner chose a script — `scripts/fix-double-final-payment.ts` (logic in `src/modules/contracts/double-final-payment.ts`). Run it on production: take a backup (`scripts/db-backup.sh`), then `pnpm --filter @rep/api contracts:fix-double-final-payment:dry-run` to list them, then `pnpm --filter @rep/api contracts:fix-double-final-payment` to correct them. It takes the excess off the unpaid monthly rows (audit `contract.schedule-corrected`); contracts with a payment waiting, or already paid above the price (a refund), are listed for an admin.

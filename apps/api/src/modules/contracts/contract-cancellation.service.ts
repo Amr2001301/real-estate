@@ -13,6 +13,7 @@
  */
 
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   Logger,
@@ -116,6 +117,14 @@ export class ContractCancellationService {
     // totalCollectedSnapshot — every collected payment of the deal, the
     // booking amount on its reservation included (see collectedForContract).
     const totalCollected = (await this.cancellationPolicy.collectedForContract(contractId)).total;
+    // What is kept and what is given back are both out of what was collected:
+    // a typo here became a refund the company does not owe.
+    const cents = (v: Prisma.Decimal.Value) => new Prisma.Decimal(v).mul(100).toDecimalPlaces(0).toNumber();
+    if (cents(input.refundAmount) + cents(input.retainedAmount) > cents(totalCollected)) {
+      throw new BadRequestException(
+        `المحتجز + المسترد أكبر من المحصّل على العقد (${new Prisma.Decimal(totalCollected).toFixed(2)})`,
+      );
+    }
 
     // Read policy settings for policySnapshot (suggestion layer only)
     const suggestion = await this.cancellationPolicy.getCancellationSuggestion(contractId);

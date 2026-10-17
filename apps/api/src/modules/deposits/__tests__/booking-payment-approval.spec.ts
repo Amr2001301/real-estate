@@ -118,8 +118,11 @@ function makePrismaMock() {
         deposit: m.deposit,
         installment: m.installment,
         reservation: m.reservation,
-        // The locked installment row: open, at the proof's amount.
-        $queryRaw: jest.fn().mockResolvedValue([{ status: 'PENDING', amount: fixture.target?.amount ?? '5000' }]),
+        paymentCorrection: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
+        // The locked installment (or reservation) row: open, at the proof's amount.
+        $queryRaw: jest.fn().mockResolvedValue([
+          { status: 'PENDING', amount: fixture.target?.amount ?? '5000', bookingAmount: fixture.target?.amount ?? '5000' },
+        ]),
       };
       return (ops as (tx: unknown) => Promise<unknown>)(tx);
     }
@@ -192,6 +195,7 @@ describe('Deposits · booking-payment approval propagation + paid totals (Gap 2)
     fixture.target = {
       id: BOOKING_DEPOSIT_ID,
       type: 'BOOKING_AMOUNT',
+      amount: '5000',
       reservationId: RES_ID,
       contractId: null,
       reviewStatus: 'PENDING_REVIEW',

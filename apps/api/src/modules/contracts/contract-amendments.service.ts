@@ -180,6 +180,7 @@ export class ContractAmendmentsService {
         contractNumber: true,
         totalAmount: true,
         unit: { select: { code: true } },
+        reservation: { select: MARKUP_SNAPSHOT_SELECT },
       },
     });
     if (!contract) throw new NotFoundException('Contract not found');
@@ -598,9 +599,12 @@ export class ContractAmendmentsService {
     await assertDiscountAllowed(this.prisma, {
       companyId,
       actorId,
-      pct: discountPct(Number(unit.price), dto.totalAmount),
+      // The discount is on the sale price: the total less the instalment
+      // markup (as the commission base) — the total itself carries the markup
+      // and hid a real discount.
+      pct: discountPct(Number(unit.price), Number(commissionBasis(dto.totalAmount, contract.reservation))),
       listPrice: Number(unit.price),
-      salePrice: dto.totalAmount,
+      salePrice: Number(commissionBasis(dto.totalAmount, contract.reservation)),
       entityType: 'Contract',
       entityId: contractId,
     });
@@ -643,9 +647,21 @@ export class ContractAmendmentsService {
       for (const r of rescaled) {
         const res = await tx.installment.updateMany({
           where: { id: r.id, status: { in: OPEN_STATUSES } },
-          data: { amount: new Prisma.Decimal(r.amount) },
+          // A row left owing nothing is no longer a payment: a 0.00 row
+          // could not be paid and would go overdue and draw late fees.
+          data: r.amount > 0
+            ? { amount: new Prisma.Decimal(r.amount) }
+            : { amount: new Prisma.Decimal(0), status: InstallmentStatus.CANCELLED },
         });
         if (res.count === 0) throw new ConflictException('تغيّر جدول الأقساط أثناء التنفيذ — أعد المحاولة');
+      }
+      // As on a reschedule, a cancelled row's unpaid late fees go with it.
+      const zeroed = rescaled.filter((r) => r.amount <= 0).map((r) => r.id);
+      if (zeroed.length > 0) {
+        await tx.installment.updateMany({
+          where: { feeForId: { in: zeroed }, type: PlanPaymentType.LATE_FEE, status: { in: OPEN_STATUSES } },
+          data: { status: InstallmentStatus.CANCELLED, waivedAt: new Date() },
+        });
       }
       if (plan && extraRow) {
         await tx.installment.create({
@@ -853,9 +869,12 @@ export class ContractAmendmentsService {
     await assertDiscountAllowed(this.prisma, {
       companyId,
       actorId,
-      pct: discountPct(Number(unit.price), dto.totalAmount),
+      // The discount is on the sale price: the total less the instalment
+      // markup (as the commission base) — the total itself carries the markup
+      // and hid a real discount.
+      pct: discountPct(Number(unit.price), Number(commissionBasis(dto.totalAmount, contract.reservation))),
       listPrice: Number(unit.price),
-      salePrice: dto.totalAmount,
+      salePrice: Number(commissionBasis(dto.totalAmount, contract.reservation)),
       entityType: 'Contract',
       entityId: contractId,
     });
@@ -941,9 +960,21 @@ export class ContractAmendmentsService {
       for (const r of rescaled) {
         const res = await tx.installment.updateMany({
           where: { id: r.id, status: { in: OPEN_STATUSES } },
-          data: { amount: new Prisma.Decimal(r.amount) },
+          // A row left owing nothing is no longer a payment: a 0.00 row
+          // could not be paid and would go overdue and draw late fees.
+          data: r.amount > 0
+            ? { amount: new Prisma.Decimal(r.amount) }
+            : { amount: new Prisma.Decimal(0), status: InstallmentStatus.CANCELLED },
         });
         if (res.count === 0) throw new ConflictException('تغيّر جدول الأقساط أثناء التنفيذ — أعد المحاولة');
+      }
+      // As on a reschedule, a cancelled row's unpaid late fees go with it.
+      const zeroed = rescaled.filter((r) => r.amount <= 0).map((r) => r.id);
+      if (zeroed.length > 0) {
+        await tx.installment.updateMany({
+          where: { feeForId: { in: zeroed }, type: PlanPaymentType.LATE_FEE, status: { in: OPEN_STATUSES } },
+          data: { status: InstallmentStatus.CANCELLED, waivedAt: new Date() },
+        });
       }
       if (plan && extraRow) {
         await tx.installment.create({
