@@ -41,8 +41,7 @@ import {
   PremiumDetailLayout,
   PremiumSectionCard,
   PremiumCommandPanel,
-  PremiumEmptyState,
-} from '@/components/premium';
+  PremiumEmptyState, PremiumMetricStrip } from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
 
@@ -142,28 +141,17 @@ export default async function UnitDetailPage({
         </div>
       )}
 
-      {/* Metric cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { label: m.metrics.area,      value: `${unit.area} ${m.metrics.areaSuffix}`,                 icon: <Ruler /> },
-          { label: m.metrics.bedrooms,  value: unit.bedrooms,                                           icon: <BedDouble /> },
-          { label: m.metrics.bathrooms, value: unit.bathrooms,                                          icon: <Bath /> },
-          { label: m.metrics.floor,     value: unit.floor === 0 ? m.metrics.groundFloor : unit.floor,  icon: <Layers /> },
-        ].map(({ label, value, icon }) => (
-          <div key={label} className="relative overflow-hidden rounded-2xl border border-hairline bg-surface shadow-xs">
-            <div className="h-[3px] w-full" style={{ background: 'linear-gradient(to left, #b8923e, #e6c46a, #b8923e)' }} />
-            <div className="px-5 py-4">
-              <div className="flex items-center justify-between gap-2">
-                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[15px] [&_svg]:w-[15px]">
-                  {icon}
-                </span>
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.12em] text-end">{label}</p>
-              </div>
-              <p className="mt-3 text-[26px] font-black tabular-nums leading-none text-slate-900">{value}</p>
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* Metric band (U5) */}
+      <PremiumMetricStrip
+        variant="compact"
+        cols={4}
+        metrics={[
+          { label: m.metrics.area,      value: unit.area, unit: m.metrics.areaSuffix, icon: <Ruler /> },
+          { label: m.metrics.bedrooms,  value: unit.bedrooms,                         icon: <BedDouble /> },
+          { label: m.metrics.bathrooms, value: unit.bathrooms,                        icon: <Bath /> },
+          { label: m.metrics.floor,     value: unit.floor === 0 ? m.metrics.groundFloor : unit.floor, icon: <Layers /> },
+        ]}
+      />
 
       <PremiumDetailLayout
         main={
@@ -460,7 +448,7 @@ function Stat({
 }) {
   return (
     <div className="flex flex-col gap-3 rounded-xl bg-canvas/50 p-4 ring-1 ring-inset ring-hairline">
-      <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[15px] [&_svg]:w-[15px]">
+      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-[15px] [&_svg]:w-[15px]">
         {icon}
       </span>
       <div>

@@ -5,7 +5,6 @@ import { Card } from './card';
 /** Kept for API compatibility — no longer affects icon or card background. */
 type Tone = 'brand' | 'success' | 'warning' | 'danger' | 'info' | 'accent' | 'neutral';
 
-const GOLD_BAR = { background: 'linear-gradient(to left, #b8923e, #e6c46a, #b8923e)' } as const;
 
 export interface KpiCardProps {
   label: string;
@@ -19,25 +18,23 @@ export interface KpiCardProps {
 
 export function KpiCard({ label, value, sub, icon, delta, className }: KpiCardProps) {
   return (
-    <div className={cn('relative overflow-hidden rounded-2xl border border-hairline bg-surface shadow-xs', className)}>
-      {/* Gold accent bar */}
-      <div className="h-[3px] w-full shrink-0" style={GOLD_BAR} />
+    <div className={cn('relative overflow-hidden rounded-[18px] border border-[#D8B66A]/[0.28] bg-navy-band', className)}>
 
       <div className="px-5 py-4">
         {icon && (
           <div className="mb-3 flex items-start justify-between gap-3">
-            <div className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[18px] [&_svg]:w-[18px]">
+            <div className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-[18px] [&_svg]:w-[18px]">
               {icon}
             </div>
             {delta && <DeltaPill {...delta} />}
           </div>
         )}
-        <p className="text-[13px] font-medium leading-tight text-slate-500">{label}</p>
-        <p className="mt-1.5 text-[28px] font-bold leading-none tracking-tight tabular-nums text-slate-900">
+        <p className="text-[13px] font-medium leading-tight text-[#A9B0BD]">{label}</p>
+        <p className="mt-1.5 text-[28px] num font-semibold leading-none text-[#F4ECD8]">
           {value}
         </p>
         {sub && (
-          <p className="mt-2 text-xs text-slate-400">{sub}</p>
+          <p className="mt-2 text-xs text-[#A9B0BD]">{sub}</p>
         )}
         {delta && !icon && (
           <div className="mt-2">

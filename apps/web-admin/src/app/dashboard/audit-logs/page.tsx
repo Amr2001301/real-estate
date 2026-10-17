@@ -334,7 +334,7 @@ export default async function AuditLogsPage({
         ) : (
           <>
             {/* Legend row */}
-            <div className="flex items-center gap-4 px-5 py-2.5 border-b border-hairline bg-canvas/30">
+            <div className="flex items-center gap-4 px-5 py-2.5 border-b border-hairline">
               <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{m.legend.label}</span>
               <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
                 <span className="h-2 w-2 rounded-full bg-success-500 shrink-0" />{m.legend.create}

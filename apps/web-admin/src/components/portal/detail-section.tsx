@@ -28,7 +28,7 @@ export function DetailSection({
       {hasHeader && (
         <div className="flex items-center gap-3 px-6 py-4 bg-canvas/30 border-b border-hairline">
           {icon && (
-            <span className="h-8 w-8 rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-100 flex items-center justify-center shrink-0 [&_svg]:h-4 [&_svg]:w-4">
+            <span className="h-8 w-8 rounded-full border border-brand-400/50 text-brand-700 flex items-center justify-center shrink-0 [&_svg]:h-4 [&_svg]:w-4">
               {icon}
             </span>
           )}

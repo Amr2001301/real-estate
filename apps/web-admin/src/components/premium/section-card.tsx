@@ -3,20 +3,16 @@ import { cn } from '@/lib/cn';
 
 type Tone = 'default' | 'danger' | 'warning';
 
-const HEADER_TONE: Record<Tone, string> = {
-  default: 'bg-canvas/30 border-hairline',
-  danger:  'bg-danger-50/40 border-danger-100',
-  warning: 'bg-warning-50/40 border-warning-100',
-};
-
+// U5: the panel look — no tinted header band or coloured icon chip; a thin
+// gold-ringed icon, a Naskh title, and the tone only on the title.
 const ICON_TONE: Record<Tone, string> = {
-  default: 'bg-brand-50 ring-brand-100 text-brand-600',
-  danger:  'bg-danger-50 ring-danger-100 text-danger-600',
-  warning: 'bg-warning-50 ring-warning-100 text-warning-600',
+  default: 'border-brand-400/50 text-brand-700',
+  danger:  'border-danger-600/40 text-danger-700',
+  warning: 'border-warning-600/40 text-warning-700',
 };
 
 const TITLE_TONE: Record<Tone, string> = {
-  default: 'text-navy',
+  default: 'text-slate-900',
   danger:  'text-danger-700',
   warning: 'text-warning-700',
 };
@@ -46,24 +42,23 @@ export function PremiumSectionCard({
   className,
 }: PremiumSectionCardProps) {
   return (
-    <div
+    <section
       className={cn(
-        'bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden',
+        'bg-surface border border-hairline rounded-[22px] overflow-hidden',
         className,
       )}
     >
-      {/* Header */}
-      <div
+      <header
         className={cn(
-          'flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b',
-          HEADER_TONE[tone],
+          'flex items-start justify-between gap-3 px-5 sm:px-6 pt-5',
+          padded ? 'pb-1' : 'pb-4 border-b border-hairline',
         )}
       >
         <div className="flex items-center gap-3 min-w-0">
           {icon && (
             <span
               className={cn(
-                'inline-flex h-8 w-8 items-center justify-center rounded-xl ring-1 shrink-0 [&_svg]:h-[15px] [&_svg]:w-[15px]',
+                'inline-flex h-10 w-10 items-center justify-center rounded-full border shrink-0 [&_svg]:h-4 [&_svg]:w-4',
                 ICON_TONE[tone],
               )}
             >
@@ -71,24 +66,14 @@ export function PremiumSectionCard({
             </span>
           )}
           <div className="min-w-0">
-            <h3
-              className={cn(
-                'text-[13.5px] font-bold leading-none',
-                TITLE_TONE[tone],
-              )}
-            >
-              {title}
-            </h3>
-            {description && (
-              <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">{description}</p>
-            )}
+            <h3 className={cn('font-heading text-[18px] font-bold leading-snug', TITLE_TONE[tone])}>{title}</h3>
+            {description && <p className="text-[13px] text-slate-500 mt-0.5 leading-snug">{description}</p>}
           </div>
         </div>
         {trailing && <div className="shrink-0">{trailing}</div>}
-      </div>
+      </header>
 
-      {/* Content */}
       <div className={cn(padded && 'p-5 sm:p-6')}>{children}</div>
-    </div>
+    </section>
   );
 }

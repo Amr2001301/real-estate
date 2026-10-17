@@ -545,7 +545,7 @@ export default async function MaintenanceDetailPage({
                 {/* Customer */}
                 <div className="space-y-2.5">
                   <div className="flex items-center gap-3">
-                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[15px] [&_svg]:w-[15px]">
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-[15px] [&_svg]:w-[15px]">
                       <UserIcon />
                     </span>
                     <div className="min-w-0">
@@ -576,7 +576,7 @@ export default async function MaintenanceDetailPage({
                 {/* Unit */}
                 <div className="pt-4 border-t border-hairline space-y-1.5">
                   <div className="flex items-center gap-3">
-                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 [&_svg]:h-[15px] [&_svg]:w-[15px]">
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-[15px] [&_svg]:w-[15px]">
                       <Home />
                     </span>
                     <div className="min-w-0">
@@ -602,7 +602,7 @@ export default async function MaintenanceDetailPage({
                   {/* Current assignee */}
                   {req.assignedAdmin ? (
                     <div className="flex items-center gap-3 rounded-xl bg-canvas/60 px-3 py-2.5 ring-1 ring-inset ring-hairline">
-                      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 [&_svg]:h-3.5 [&_svg]:w-3.5">
+                      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-3.5 [&_svg]:w-3.5">
                         <UserCog />
                       </span>
                       <div className="min-w-0">

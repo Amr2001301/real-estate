@@ -51,7 +51,7 @@ export default async function EditArticlePage({ params }: Props) {
         ]}
       />
 
-      <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+      <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
         <div className="flex items-center gap-2 px-5 py-3.5 border-b border-hairline bg-surface-muted/20">
           <BookOpen className="h-4 w-4 text-brand-600 shrink-0" />
           <h3 className="text-sm font-semibold text-slate-900">محتوى المقال</h3>

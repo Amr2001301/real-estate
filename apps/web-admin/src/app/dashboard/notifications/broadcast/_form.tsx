@@ -507,7 +507,7 @@ export default function BroadcastForm({ locale = 'ar' }: Props) {
         {showPreview && (
           <div className="border-t border-hairline px-4 py-4">
             <div className="flex items-start gap-3 rounded-xl border border-hairline bg-brand-50/30 px-4 py-3">
-              <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+              <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700">
                 <Users className="h-4 w-4" />
               </span>
               <div className="min-w-0 flex-1">

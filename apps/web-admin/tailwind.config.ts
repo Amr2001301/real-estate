@@ -1,5 +1,6 @@
 import type { Config } from 'tailwindcss';
 import forms from '@tailwindcss/forms';
+import defaultColors from 'tailwindcss/colors';
 
 /** A colour read from a CSS variable of RGB channels, so it can flip in dark mode. */
 const v = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
@@ -9,12 +10,19 @@ const scale = (name: string, steps: number[], fixed: Record<string, string> = {}
   ...Object.fromEntries(steps.map((n) => [n, v(`${name}-${n}`)])),
 });
 
+/** Default Tailwind hues whose tints (50–200) and text shades (600–800) flip in dark mode (U5). */
+const THEMED_HUES = ['amber', 'emerald', 'red', 'violet', 'sky', 'blue', 'purple', 'indigo', 'teal', 'rose', 'orange', 'cyan', 'green', 'yellow', 'pink', 'lime', 'fuchsia'] as const;
+const themedHues = Object.fromEntries(
+  THEMED_HUES.map((h) => [h, scale(h, [50, 100, 200, 600, 700, 800], defaultColors[h] as unknown as Record<string, string>)]),
+);
+
 const config: Config = {
   content: ['./src/**/*.{ts,tsx}'],
   darkMode: 'class',
   theme: {
     extend: {
       colors: {
+        ...themedHues,
         // Warm-luxe palette aligned with the public website ("Warm Luxe").
         // Backgrounds/borders/accents are warm; text stays cool navy (slate)
         // to match the website's cool-navy ink on a warm canvas.
@@ -83,25 +91,7 @@ const config: Config = {
           700: '#B45309',
         },
 
-        // Purple tone for stat card variations and accents.
-        purple: {
-          50: '#F3E8FF',
-          100: '#E9D5FF',
-          200: '#D8B4FE',
-          500: '#A855F7',
-          600: '#9333EA',
-          700: '#7E22CE',
-        },
 
-        // Teal/cyan tone for stat card variations and accents.
-        teal: {
-          50: '#F0FDFA',
-          100: '#CCFBF1',
-          200: '#99F6E4',
-          500: '#14B8A6',
-          600: '#0D9488',
-          700: '#0F766E',
-        },
 
         success: scale('success', [50, 100, 600, 700], { 500: '#10B981' }),
         warning: scale('warning', [50, 100, 600, 700], { 500: '#F59E0B' }),

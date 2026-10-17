@@ -505,7 +505,7 @@ export default async function ReservationDetailPage({
                     href={`tel:${clientPhone}`}
                     className="flex items-center gap-2.5 rounded-xl bg-canvas/60 px-3 py-2.5 ring-1 ring-inset ring-hairline hover:bg-canvas transition-colors"
                   >
-                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 [&_svg]:h-3.5 [&_svg]:w-3.5">
+                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-3.5 [&_svg]:w-3.5">
                       <Phone />
                     </span>
                     <span className="text-sm font-medium text-slate-700" dir="ltr">{clientPhone}</span>
@@ -589,7 +589,7 @@ export default async function ReservationDetailPage({
             {project && (
               <PremiumSectionCard title={m.sectionProject} icon={<Building2 />}>
                 <div className="flex items-center gap-3">
-                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 [&_svg]:h-5 [&_svg]:w-5">
+                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-5 [&_svg]:w-5">
                     <Building2 />
                   </span>
                   <div className="min-w-0">
@@ -609,7 +609,7 @@ export default async function ReservationDetailPage({
             {reservation.sales && (
               <PremiumSectionCard title={m.sectionSalesAgent} icon={<User />}>
                 <div className="flex items-center gap-3">
-                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-5 [&_svg]:w-5">
+                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-5 [&_svg]:w-5">
                     <User />
                   </span>
                   <div className="min-w-0">

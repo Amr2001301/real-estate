@@ -492,7 +492,7 @@ export default async function AuditLogDetailPage({
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-400 shrink-0">
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-brand-400/50 text-slate-400 shrink-0">
                         <User className="h-4 w-4" />
                       </span>
                       <span className="text-[13px] text-slate-400 italic">{m.systemActor}</span>
@@ -722,7 +722,7 @@ export default async function AuditLogDetailPage({
                 padded={false}
               >
                 {/* Technical path row */}
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-5 py-3 border-b border-hairline bg-canvas/30">
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-5 py-3 border-b border-hairline">
                   <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400 shrink-0">
                     {m.technicalPath}
                   </span>
@@ -865,7 +865,7 @@ export default async function AuditLogDetailPage({
                 </dl>
               ) : (
                 <div className="flex items-center gap-3">
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-400 shrink-0">
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-brand-400/50 text-slate-400 shrink-0">
                     <User className="h-5 w-5" />
                   </span>
                   <div>

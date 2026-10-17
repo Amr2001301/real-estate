@@ -46,7 +46,7 @@ export function ContractPdfPanel({ contract, locale = 'ar' }: { contract: Contra
             rel="noopener noreferrer"
             className="flex items-center gap-2.5 rounded-xl bg-canvas/60 px-3 py-2.5 ring-1 ring-inset ring-hairline hover:bg-canvas transition-colors"
           >
-            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 [&_svg]:h-3.5 [&_svg]:w-3.5">
+            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-3.5 [&_svg]:w-3.5">
               <FileText />
             </span>
             <span className="text-sm font-medium text-brand-700 flex-1 truncate">
@@ -57,7 +57,7 @@ export function ContractPdfPanel({ contract, locale = 'ar' }: { contract: Contra
         )}
         {contract.pdfUrl && !contract.pdfUrl.startsWith('http') && (
           <div className="flex items-center gap-2.5 rounded-xl bg-canvas/60 px-3 py-2.5 ring-1 ring-inset ring-hairline">
-            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 [&_svg]:h-3.5 [&_svg]:w-3.5">
+            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-3.5 [&_svg]:w-3.5">
               <FileText />
             </span>
             <span className="text-sm text-slate-600 flex-1 truncate">

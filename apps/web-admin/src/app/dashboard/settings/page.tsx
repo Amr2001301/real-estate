@@ -224,7 +224,7 @@ export default async function SettingsPage({
       </div>
 
       {/* ── Search + group filter ────────────────────────────────────────── */}
-      <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+      <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
         <form method="get" action="/dashboard/settings" className="flex items-center gap-2 px-4 py-3">
           {/* Search input */}
           <div className="flex-1 min-w-0">

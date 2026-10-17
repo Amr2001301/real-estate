@@ -113,7 +113,7 @@ export default async function CmsPage() {
       />
 
       {/* ── Section 1: Pages ───────────────────────────────────────────────── */}
-      <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+      <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
         {/*
          * The <details> wraps ONLY the section header + form.
          * The list/empty-state is a sibling OUTSIDE <details>, always visible.
@@ -241,7 +241,7 @@ export default async function CmsPage() {
       </div>
 
       {/* ── Section 2: Banners ─────────────────────────────────────────────── */}
-      <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+      <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
         <details className="group">
           <summary className="list-none [&::-webkit-details-marker]:hidden flex items-center justify-between gap-4 px-5 py-3.5 cursor-pointer select-none hover:bg-surface-muted/30 transition-colors border-b border-hairline">
             <div className="flex items-center gap-2 min-w-0">

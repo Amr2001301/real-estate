@@ -27,7 +27,7 @@ import {
   ReservationStatusBadge,
   AppointmentStatusBadge,
 } from '@/components/badges';
-import { PremiumPageHero } from '@/components/premium';
+import { PremiumPageHero, PremiumMetricStrip } from '@/components/premium';
 import { getLocale, type Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 
@@ -67,30 +67,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ── KPI Tile ──────────────────────────────────────────────────────────────────
-function KpiTile({
-  label, value, sub, icon, topBar, iconCls, valueCls,
-}: {
-  label: string; value: number; sub?: string;
-  icon: React.ReactNode; topBar: string; iconCls: string; valueCls: string;
-}) {
-  return (
-    <div className="relative bg-surface rounded-[18px] border border-hairline shadow-soft overflow-hidden">
-      <div className={cn('h-[3px] bg-gradient-to-l', topBar)} />
-      <div className="flex items-center gap-3 px-4 py-4">
-        <span className={cn('h-8 w-8 rounded-xl flex items-center justify-center shrink-0 [&>svg]:h-4 [&>svg]:w-4', iconCls)}>
-          {icon}
-        </span>
-        <div className="min-w-0">
-          <p className={cn('text-xl font-black tabular-nums leading-none', valueCls)}>{value}</p>
-          <p className="text-[11px] text-slate-600 font-medium mt-0.5 truncate">{label}</p>
-          {sub && <p className="text-[10px] text-slate-400 mt-0.5 truncate">{sub}</p>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Sales Pipeline ────────────────────────────────────────────────────────────
 function SalesPipeline({
   openLeads, visitsCount, reservationsCount, contractsCount, stageGroups, m,
@@ -125,14 +101,14 @@ function SalesPipeline({
   const maxStage = Math.max(...pipelineStages.map((s) => stageGroups[s.key] ?? 0), 1);
 
   return (
-    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-hairline bg-canvas/30">
-        <span className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0 [&>svg]:h-4 [&>svg]:w-4 text-brand-600">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-hairline">
+        <span className="h-8 w-8 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0 [&>svg]:h-4 [&>svg]:w-4 text-brand-700">
           <TrendingUp />
         </span>
         <div>
-          <h3 className="text-[13.5px] font-bold text-navy leading-none">{m.pipelineTitle}</h3>
+          <h3 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{m.pipelineTitle}</h3>
           <p className="text-[11px] text-slate-400 mt-0.5">{m.pipelineDesc}</p>
         </div>
       </div>
@@ -306,63 +282,33 @@ export async function SalesDashboard({ userId }: { userId: string }) {
         }
       />
 
-      {/* ── KPI tiles ─────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
-        <KpiTile
-          label={m.kpiOpenLeads}
-          value={openLeadsCount}
-          sub={m.kpiOpenLeadsSub(wonLeads, lostLeads)}
-          icon={<Zap />}
-          topBar="from-brand-300 via-brand-500 to-brand-300"
-          iconCls="bg-brand-50 text-brand-600 ring-1 ring-brand-100"
-          valueCls="text-brand-700"
-        />
-        <KpiTile
-          label={m.kpiStaleLeads}
-          value={staleLeadsCount}
-          sub={staleLeadsCount > 0 ? m.kpiStaleLeadsSubWarning : m.kpiStaleLeadsSubOk}
-          icon={<AlertTriangle />}
-          topBar={staleLeadsCount > 0 ? 'from-amber-300 via-amber-500 to-amber-300' : 'from-emerald-300 via-emerald-400 to-emerald-300'}
-          iconCls={staleLeadsCount > 0 ? 'bg-amber-50 text-amber-600 ring-1 ring-amber-100' : 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100'}
-          valueCls={staleLeadsCount > 0 ? 'text-amber-700' : 'text-emerald-700'}
-        />
-        <KpiTile
-          label={m.kpiUpcomingVisits}
-          value={upcomingVisitsCount}
-          sub={todayVisits.length > 0 ? m.kpiUpcomingVisitsSubToday(todayVisits.length) : m.kpiUpcomingVisitsSubNone}
-          icon={<CalendarClock />}
-          topBar="from-sky-300 via-sky-500 to-sky-300"
-          iconCls="bg-sky-50 text-sky-600 ring-1 ring-sky-100"
-          valueCls="text-sky-700"
-        />
-        <KpiTile
-          label={m.kpiActiveReservations}
-          value={activeReservationsCount}
-          sub={expiringWithin7 > 0 ? m.kpiActiveReservationsSubWarning(expiringWithin7) : m.kpiActiveReservationsSubOk}
-          icon={<BookmarkCheck />}
-          topBar={expiringWithin7 > 0 ? 'from-amber-300 via-amber-500 to-amber-300' : 'from-emerald-300 via-emerald-500 to-emerald-300'}
-          iconCls={expiringWithin7 > 0 ? 'bg-amber-50 text-amber-600 ring-1 ring-amber-100' : 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100'}
-          valueCls={expiringWithin7 > 0 ? 'text-amber-700' : 'text-emerald-700'}
-        />
-        <KpiTile
-          label={m.kpiMonthContracts}
-          value={closedDeals}
-          sub={signedThisMonth !== undefined ? m.kpiMonthContractsSigned : m.kpiMonthContractsConverted}
-          icon={<FileText />}
-          topBar="from-violet-300 via-violet-500 to-violet-300"
-          iconCls="bg-violet-50 text-violet-600 ring-1 ring-violet-100"
-          valueCls="text-violet-700"
-        />
-        <KpiTile
-          label={m.kpiAvailableUnits}
-          value={availableUnits}
-          sub={m.kpiAvailableUnitsSub}
-          icon={<Home />}
-          topBar="from-teal-300 via-teal-500 to-teal-300"
-          iconCls="bg-teal-50 text-teal-600 ring-1 ring-teal-100"
-          valueCls="text-teal-700"
-        />
-      </div>
+      {/* ── KPI band (U5): one navy band; warnings as a coloured line, not coloured cards ── */}
+      <PremiumMetricStrip
+        variant="compact"
+        cols={6}
+        metrics={[
+          { label: m.kpiOpenLeads, value: openLeadsCount, icon: <Zap />, sub: m.kpiOpenLeadsSub(wonLeads, lostLeads) },
+          {
+            label: m.kpiStaleLeads, value: staleLeadsCount, icon: <AlertTriangle />,
+            trend: staleLeadsCount > 0 ? m.kpiStaleLeadsSubWarning : m.kpiStaleLeadsSubOk,
+            trendCls: staleLeadsCount > 0 ? 'warning' : 'success',
+          },
+          {
+            label: m.kpiUpcomingVisits, value: upcomingVisitsCount, icon: <CalendarClock />,
+            sub: todayVisits.length > 0 ? m.kpiUpcomingVisitsSubToday(todayVisits.length) : m.kpiUpcomingVisitsSubNone,
+          },
+          {
+            label: m.kpiActiveReservations, value: activeReservationsCount, icon: <BookmarkCheck />,
+            trend: expiringWithin7 > 0 ? m.kpiActiveReservationsSubWarning(expiringWithin7) : m.kpiActiveReservationsSubOk,
+            trendCls: expiringWithin7 > 0 ? 'warning' : 'success',
+          },
+          {
+            label: m.kpiMonthContracts, value: closedDeals, icon: <FileText />,
+            sub: signedThisMonth !== undefined ? m.kpiMonthContractsSigned : m.kpiMonthContractsConverted,
+          },
+          { label: m.kpiAvailableUnits, value: availableUnits, icon: <Home />, sub: m.kpiAvailableUnitsSub },
+        ]}
+      />
 
       {/* ── Sales pipeline ────────────────────────────────────────────────── */}
       <SalesPipeline
@@ -607,7 +553,7 @@ function TodayPriorityPanel({
 }) {
   const total = todayVisits.length + expiringUrgent.length;
   return (
-    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
       <div className="flex items-center gap-3 px-5 py-3.5 border-b border-hairline bg-amber-50/50">
         <span className="h-8 w-8 rounded-xl bg-amber-50 ring-1 ring-amber-100 flex items-center justify-center shrink-0 relative">
           <Bell className="h-4 w-4 text-amber-600" />
@@ -683,7 +629,7 @@ function TodayPriorityPanel({
 
 // ── Section card ──────────────────────────────────────────────────────────────
 function SectionCard({
-  title, icon, iconCls, href, hrefLabel = '',
+  title, icon, iconCls: _iconCls, href, hrefLabel = '',
   error, empty, emptyText, loadErrorText, className, children,
 }: {
   title: string; icon: React.ReactNode; iconCls: string;
@@ -693,13 +639,14 @@ function SectionCard({
   className?: string; children: React.ReactNode;
 }) {
   return (
-    <div className={cn('bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden', className)}>
-      <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-hairline bg-canvas/30">
+    <div className={cn('bg-surface border border-hairline rounded-[22px] overflow-hidden', className)}>
+      <div className="flex items-center justify-between gap-2 px-5 pt-5 pb-4 border-b border-hairline">
         <div className="flex items-center gap-3">
-          <span className={cn('h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ring-1 [&>svg]:h-4 [&>svg]:w-4', iconCls)}>
+          {/* U5: a thin gold ring, not a coloured chip (iconCls kept for callers). */}
+          <span className="h-10 w-10 rounded-full border border-brand-400/50 text-brand-700 flex items-center justify-center shrink-0 [&>svg]:h-4 [&>svg]:w-4">
             {icon}
           </span>
-          <h3 className="text-[13.5px] font-bold text-navy leading-none">{title}</h3>
+          <h3 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{title}</h3>
         </div>
         <Link href={href as never} className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-800 transition-colors shrink-0">
           {hrefLabel}

@@ -35,8 +35,8 @@ export function AssetActionCard({ title, actions, icon, className }: Props) {
       )}
     >
       {/* Header band — same as Description / Phases / Map cards on the page */}
-      <div className="flex items-center gap-3 border-b border-hairline bg-canvas/30 px-5 py-4">
-        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-brand-50 ring-1 ring-brand-100 [&_svg]:h-[15px] [&_svg]:w-[15px] [&_svg]:text-brand-600">
+      <div className="flex items-center gap-3 border-b border-hairline px-5 py-4">
+        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-brand-400/50 [&_svg]:h-[15px] [&_svg]:w-[15px] [&_svg]:text-brand-700">
           {icon ?? <LayoutGrid />}
         </span>
         <h3 className="text-[13.5px] font-bold text-navy">{title}</h3>

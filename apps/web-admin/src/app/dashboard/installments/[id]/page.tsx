@@ -287,7 +287,7 @@ export default async function InstallmentPlanDetailPage({
               <div className="space-y-4">
                 {plan.project && (
                   <div className="flex items-center gap-3">
-                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 [&_svg]:h-[15px] [&_svg]:w-[15px]">
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-[15px] [&_svg]:w-[15px]">
                       <Building2 />
                     </span>
                     <div className="min-w-0">
@@ -298,7 +298,7 @@ export default async function InstallmentPlanDetailPage({
                 )}
                 {plan.unit ? (
                   <div className="flex items-center gap-3">
-                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[15px] [&_svg]:w-[15px]">
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-[15px] [&_svg]:w-[15px]">
                       <Home />
                     </span>
                     <div className="min-w-0">

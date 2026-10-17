@@ -19,9 +19,8 @@ export default async function NewUnitPage() {
     <div className="flex flex-col gap-5 lg:gap-6">
 
       {/* ── Premium Command Header Card ── */}
-      <div className="relative bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+      <div className="relative bg-surface border border-hairline rounded-[22px] overflow-hidden">
         {/* Gold accent strip */}
-        <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-brand-200 via-brand-500 to-brand-200" />
 
         <div className="px-7 sm:px-9 pt-8 pb-7">
           {/* Breadcrumb */}

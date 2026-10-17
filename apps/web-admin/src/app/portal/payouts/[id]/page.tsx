@@ -153,7 +153,7 @@ export default async function PortalPayoutDetailPage({
             <PremiumSectionCard title={t.methodTitle} icon={<Wallet className="h-4 w-4" />}>
               <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3">
-                  <span className="h-10 w-10 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0 text-brand-600">
+                  <span className="h-10 w-10 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0 text-brand-700">
                     <Wallet className="h-4 w-4" />
                   </span>
                   <div>

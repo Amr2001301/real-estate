@@ -229,14 +229,14 @@ export default async function PortalPerformancePage({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <FunnelCard summary={summary} title={t.funnelTitle} locale={locale} />
 
-          <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline bg-canvas/30 shrink-0">
+          <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline shrink-0">
               <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
+                <div className="h-8 w-8 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0">
                   <TrendingUp className="h-4 w-4 text-brand-600" />
                 </div>
                 <div>
-                  <h2 className="text-[14px] font-bold text-navy leading-none">{t.trendTitle}</h2>
+                  <h2 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{t.trendTitle}</h2>
                   <p className="text-[11px] text-slate-400 mt-0.5">{t.trendSubtitle}</p>
                 </div>
               </div>
@@ -251,13 +251,13 @@ export default async function PortalPerformancePage({
       {/* ── Project breakdown ───────────────────────────────────────────────── */}
       <div className="space-y-3">
         <SectionLabel>{t.projects.title}</SectionLabel>
-        <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-          <div className="flex items-center gap-3 px-6 py-4 border-b border-hairline bg-canvas/30">
-            <div className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
+        <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
+          <div className="flex items-center gap-3 px-6 py-4 border-b border-hairline">
+            <div className="h-8 w-8 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0">
               <Building2 className="h-4 w-4 text-brand-600" />
             </div>
             <div>
-              <h2 className="text-[14px] font-bold text-navy leading-none">{t.projects.title}</h2>
+              <h2 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{t.projects.title}</h2>
               <p className="text-[11px] text-slate-400 mt-0.5">{t.projects.countFn(perf.projectBreakdown.length)}</p>
             </div>
           </div>
@@ -268,7 +268,7 @@ export default async function PortalPerformancePage({
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-hairline bg-canvas/40">
+                  <tr className="border-b border-hairline">
                     <th className="text-start py-3 ps-6 pe-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.projects.cols.project}</th>
                     <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.projects.cols.contracts}</th>
                     <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.projects.cols.sales}</th>
@@ -324,14 +324,14 @@ export default async function PortalPerformancePage({
       {perf.canSeeAllAgents && perf.agentBreakdown.length > 0 && (
         <div className="space-y-3">
           <SectionLabel>{t.agents.title}</SectionLabel>
-          <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-            <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline bg-canvas/30">
+          <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline">
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-xl bg-violet-50 ring-1 ring-violet-100 flex items-center justify-center shrink-0">
                   <UsersIcon className="h-4 w-4 text-violet-600" />
                 </div>
                 <div>
-                  <h2 className="text-[14px] font-bold text-navy leading-none">{t.agents.title}</h2>
+                  <h2 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{t.agents.title}</h2>
                   <p className="text-[11px] text-slate-400 mt-0.5">{t.agents.countFn(perf.agentBreakdown.length)}</p>
                 </div>
               </div>
@@ -339,7 +339,7 @@ export default async function PortalPerformancePage({
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-hairline bg-canvas/40">
+                  <tr className="border-b border-hairline">
                     <th className="text-start py-3 ps-6 pe-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.agents.cols.agent}</th>
                     <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.agents.cols.leads}</th>
                     <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.agents.cols.reservations}</th>

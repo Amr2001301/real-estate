@@ -28,8 +28,7 @@ export default async function NewMaintenancePage({
     <div className="flex flex-col gap-5 lg:gap-6">
 
       {/* ── Premium header card ── */}
-      <div className="relative bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-brand-200 via-brand-500 to-brand-200" />
+      <div className="relative bg-surface border border-hairline rounded-[22px] overflow-hidden">
         <div className="px-7 sm:px-9 pt-8 pb-7">
           <nav aria-label="breadcrumb" className="mb-5">
             <ol className="flex flex-wrap items-center gap-1 text-xs text-slate-400">

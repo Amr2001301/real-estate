@@ -38,7 +38,7 @@ export function ProjectCard({ p, symbol, locale = 'ar' }: { p: PortalProject; sy
   const isPublished  = p.project.status === 'PUBLISHED';
 
   return (
-    <div className="relative bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden flex flex-col sm:flex-row group hover:shadow-md transition-shadow duration-200">
+    <div className="relative bg-surface border border-hairline rounded-[22px] overflow-hidden flex flex-col sm:flex-row group hover:shadow-md transition-shadow duration-200">
 
       {/* Gold top bar for published */}
       <div className={cn(

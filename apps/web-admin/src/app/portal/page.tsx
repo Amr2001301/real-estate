@@ -33,7 +33,8 @@ import type {
   PortalProject,
   PortalUnit,
 } from '@/lib/types';
-import { tx, formatDate, formatDateTime, formatCompact } from '@/lib/format';
+import { tx, formatDate, formatDateTime, formatCompact, compactParts } from '@/lib/format';
+import { PremiumMetricStrip } from '@/components/premium';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { getLocale, type Locale } from '@/lib/locale';
@@ -214,50 +215,28 @@ function BrokerKpiStrip({ perf, symbol, m, locale = 'ar' }: { perf: PerfSummary 
     },
   ];
 
+  // U5: one navy band; the payout status is a coloured line, not a coloured card.
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-      {tiles.map((tile) => {
-        const isLong = tile.value !== '—' && tile.value.length > 7;
-        return (
-          <div
-            key={tile.label}
-            className={cn(
-              'relative flex flex-col overflow-hidden rounded-2xl border shadow-xs',
-              tile.featured
-                ? 'border-amber-200 bg-amber-50/30'
-                : 'border-hairline bg-surface',
-            )}
-          >
-            {/* Colored top bar */}
-            <div className={cn('h-[3px] w-full shrink-0 bg-gradient-to-l', tile.topBar)} />
-            <div className="flex flex-1 flex-col px-4 py-4">
-              {/* Icon + label row */}
-              <div className="flex items-start justify-between gap-2">
-                <span className={cn(
-                  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl [&_svg]:h-[17px] [&_svg]:w-[17px]',
-                  tile.iconCls,
-                )}>
-                  {tile.icon}
-                </span>
-                <p className="text-[11px] font-semibold text-slate-400 text-end leading-snug line-clamp-2">
-                  {tile.label}
-                </p>
-              </div>
-              {/* Value */}
-              <p className={cn(
-                'mt-3 font-black tabular-nums leading-none tracking-tight',
-                isLong ? 'text-[19px]' : 'text-[26px]',
-                tile.valueCls,
-              )}>
-                {tile.value}
-              </p>
-              {/* Sub */}
-              <p className="mt-1.5 text-[10.5px] text-slate-400 leading-snug">{tile.sub}</p>
-            </div>
-          </div>
-        );
+    <PremiumMetricStrip
+      variant="compact"
+      cols={5}
+      metrics={tiles.map((t) => {
+        const isMoney = t.label === k.salesVolume || t.label === k.myCommissions;
+        const raw = t.label === k.salesVolume ? salesGross : commissionsNet;
+        const [num, unit] = perf && isMoney ? compactParts(raw, symbol, locale) : [t.value, undefined];
+        return {
+          label: t.label,
+          value: num,
+          unit,
+          icon: t.icon,
+          sub: t.label === k.payoutRate ? undefined : t.sub,
+          ring: t.label === k.payoutRate && payoutRate !== null ? payoutRate : undefined,
+          trend: t.label === k.payoutRate ? t.sub : undefined,
+          trendCls:
+            t.label !== k.payoutRate || payoutRate === null ? undefined : payoutRate >= 80 ? 'success' : 'warning',
+        };
       })}
-    </div>
+    />
   );
 }
 
@@ -295,16 +274,16 @@ function SalesFunnelCard({
   }
 
   return (
-    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
 
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 px-6 py-4 border-b border-hairline bg-canvas/30">
+      <div className="flex items-center justify-between gap-2 px-6 py-4 border-b border-hairline">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
+          <div className="h-8 w-8 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0">
             <TrendingUp className="h-4 w-4 text-brand-600" />
           </div>
           <div>
-            <h2 className="text-[14px] font-bold text-navy leading-none">{f.title}</h2>
+            <h2 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{f.title}</h2>
             <p className="text-[11px] text-slate-400 mt-0.5">{f.subtitle}</p>
           </div>
         </div>
@@ -421,22 +400,22 @@ export default async function PortalDashboard() {
     <div className="space-y-5">
 
       {/* ── 1. Hero ───────────────────────────────────────────────────────────── */}
-      <div className="relative rounded-[20px] bg-surface border border-hairline shadow-soft overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-l from-brand-200 via-brand-500 to-brand-200" />
-        <div className="px-6 pt-6 pb-5">
+      {/* U5: on the page ground, like PremiumPageHero — no card, no gold top bar. */}
+      <div className="relative">
+        <div className="pt-2 pb-1">
           <div className="flex items-start justify-between gap-4 flex-wrap">
 
             {/* Avatar + info */}
             <div className="flex items-start gap-4 min-w-0 flex-1">
-              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shrink-0 shadow-md">
-                <span className="text-white font-extrabold text-base tracking-wide">
+              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-[#D8B66A] to-[#B38B3A] flex items-center justify-center shrink-0">
+                <span className="text-[#1A1408] font-extrabold text-base tracking-wide">
                   {initials(me.user.fullName)}
                 </span>
               </div>
               <div className="min-w-0 flex-1">
                 {/* Name + status row */}
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-lg font-extrabold text-navy leading-tight">
+                  <h1 className="font-heading text-[32px] sm:text-[36px] font-bold text-slate-900 leading-[1.3]">
                     {m.home.greetingFn(me.user.fullName)}
                   </h1>
                   <BrokerStatusBadge status={me.broker.status} locale={locale} />
@@ -497,14 +476,14 @@ export default async function PortalDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 items-stretch gap-5">
 
         {/* Recent leads — 2/3 */}
-        <div className="lg:col-span-2 bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-          <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-hairline bg-canvas/30">
+        <div className="lg:col-span-2 bg-surface border border-hairline rounded-[22px] overflow-hidden">
+          <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-hairline">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
+              <div className="h-8 w-8 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0">
                 <UserPlus className="h-4 w-4 text-brand-600" />
               </div>
               <div>
-                <h2 className="text-[14px] font-bold text-navy leading-none">{m.home.leads.title}</h2>
+                <h2 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{m.home.leads.title}</h2>
                 {leadsRes.data?.meta.total != null && (
                   <p className="text-[11px] text-slate-400 mt-0.5">{m.home.leads.totalFn(leadsRes.data.meta.total)}</p>
                 )}
@@ -536,7 +515,7 @@ export default async function PortalDashboard() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-hairline bg-canvas/40">
+                  <tr className="border-b border-hairline">
                     <th className="text-start py-2.5 ps-5 pe-3 text-[11px] font-bold text-slate-500 whitespace-nowrap">{m.home.leads.cols.client}</th>
                     <th className="text-start py-2.5 px-3 text-[11px] font-bold text-slate-500 whitespace-nowrap">{m.home.leads.cols.project}</th>
                     <th className="text-start py-2.5 px-3 text-[11px] font-bold text-slate-500 whitespace-nowrap">{m.home.leads.cols.status}</th>
@@ -606,10 +585,10 @@ export default async function PortalDashboard() {
         </div>
 
         {/* Sidebar — 1/3: projects card fills full height */}
-        <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between px-4 py-3.5 border-b border-hairline bg-canvas/30 shrink-0">
+        <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-hairline shrink-0">
             <div className="flex items-center gap-2.5">
-              <div className="h-7 w-7 rounded-lg bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
+              <div className="h-7 w-7 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0">
                 <Building2 className="h-3.5 w-3.5 text-brand-600" />
               </div>
               <div>
@@ -682,14 +661,14 @@ export default async function PortalDashboard() {
       {activity.length > 0 && (
         <div className="space-y-3">
           <SectionLabel>{m.home.activity.section}</SectionLabel>
-          <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-            <div className="flex items-center justify-between gap-2 px-6 py-4 border-b border-hairline bg-canvas/30">
+          <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
+            <div className="flex items-center justify-between gap-2 px-6 py-4 border-b border-hairline">
               <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
+                <div className="h-8 w-8 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0">
                   <Activity className="h-4 w-4 text-brand-600" />
                 </div>
                 <div>
-                  <h2 className="text-[14px] font-bold text-navy leading-none">{m.home.activity.title}</h2>
+                  <h2 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{m.home.activity.title}</h2>
                   <p className="text-[11px] text-slate-400 mt-0.5">{m.home.activity.countFn(activity.length)}</p>
                 </div>
               </div>

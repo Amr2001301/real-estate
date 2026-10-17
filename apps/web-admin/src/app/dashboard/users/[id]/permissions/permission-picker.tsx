@@ -147,12 +147,12 @@ export function PermissionPicker({ userId, userName, assigned, available, locale
       )}
 
       {/* ── Toolbar card ─────────────────────────────────────────────────── */}
-      <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+      <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
 
         {/* Count row */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-hairline bg-canvas/40">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-hairline">
           <div className="flex items-center gap-3">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-700 shrink-0 [&_svg]:h-4 [&_svg]:w-4">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 shrink-0 [&_svg]:h-4 [&_svg]:w-4">
               <ShieldCheck />
             </span>
             <div>
@@ -213,7 +213,7 @@ export function PermissionPicker({ userId, userName, assigned, available, locale
 
       {/* ── Permission group cards ────────────────────────────────────────── */}
       {groups.length === 0 ? (
-        <div className="bg-surface border border-hairline rounded-[20px] shadow-soft flex flex-col items-center justify-center py-16 gap-2.5">
+        <div className="bg-surface border border-hairline rounded-[22px] flex flex-col items-center justify-center py-16 gap-2.5">
           <ShieldCheck className="h-10 w-10 text-slate-200" />
           <p className="text-[13px] font-semibold text-slate-500">{m.noMatchTitle}</p>
           {query && (
@@ -238,7 +238,7 @@ export function PermissionPicker({ userId, userName, assigned, available, locale
             return (
               <div
                 key={group}
-                className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden"
+                className="bg-surface border border-hairline rounded-[22px] overflow-hidden"
               >
                 {/* Group header */}
                 <div className="flex items-center justify-between px-5 py-3 border-b border-hairline bg-surface-muted/40">

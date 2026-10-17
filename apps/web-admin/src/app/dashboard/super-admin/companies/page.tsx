@@ -99,7 +99,7 @@ export default async function CompaniesPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="text-right text-xs text-slate-500 border-b border-hairline bg-canvas/40">
+              <thead className="text-right text-xs text-slate-500 border-b border-hairline">
                 <tr>
                   <th className="px-5 py-3 font-semibold">{m.companies.cols.company}</th>
                   <th className="px-4 py-3 font-semibold">{m.companies.cols.plan}</th>

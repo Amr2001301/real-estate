@@ -2,15 +2,14 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Search, SlidersHorizontal } from 'lucide-react';
 import type { PortalProject } from '@/lib/types';
 import { tx } from '@/lib/format';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { cn } from '@/lib/cn';
+import { PremiumFilterBar, PremiumFilterField } from '@/components/premium/filter-bar';
 import type { Locale } from '@/lib/locale';
 import { portalSharedT } from '@/messages/portal/shared';
+import { MoreFiltersButton } from './reservations-filter-bar';
 
 export interface UnitSearchParams {
   q?:         string;
@@ -30,169 +29,87 @@ interface Props {
   locale?:     Locale;
 }
 
+/** Broker units filter (U5): the shared pill bar; price and specs behind "more filters". */
 export function UnitsFilterBar({ projects, typeOptions, sp, locale = 'ar' }: Props) {
   const t = portalSharedT(locale);
   const f = t.filters;
+  const L = f.labels;
   const u = t.unitsFilter;
-  // Advanced = secondary filters (price + specs)
-  const advancedValues = [sp.minPrice, sp.maxPrice, sp.bedrooms, sp.bathrooms];
-  const advancedCount  = advancedValues.filter(Boolean).length;
-  const advancedActive = advancedCount > 0;
-
-  // Auto-open when navigating back with active advanced filters
-  const [showAdvanced, setShowAdvanced] = useState(advancedActive);
-
-  const anyFilter = !!(sp.q || sp.projectId || sp.status || sp.type || advancedActive);
+  const advancedCount = [sp.minPrice, sp.maxPrice, sp.bedrooms, sp.bathrooms].filter(Boolean).length;
+  const [showAdvanced, setShowAdvanced] = useState(advancedCount > 0);
+  const anyFilter = !!(sp.q || sp.projectId || sp.status || sp.type || advancedCount > 0);
 
   return (
-    <form
+    <PremiumFilterBar
       method="get"
       action="/portal/units"
-      className="rounded-xl border border-hairline bg-white shadow-xs overflow-hidden"
+      trailing={
+        <>
+          <MoreFiltersButton open={showAdvanced} count={advancedCount} label={u.advanced} onClick={() => setShowAdvanced((v) => !v)} />
+          {anyFilter && (
+            <Link href="/portal/units" className="px-3 text-[13px] font-bold text-brand-700 underline underline-offset-4">
+              {f.clear}
+            </Link>
+          )}
+        </>
+      }
     >
-      {/* ── Row 1: Primary filters ─────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-2 px-3 py-2.5">
-
-        {/* Search */}
-        <Input
-          inputSize="sm"
-          name="q"
-          leftAddon={<Search />}
-          placeholder={u.searchPlaceholder}
-          defaultValue={sp.q ?? ''}
-          className="min-w-[180px] flex-1"
-        />
-
-        {/* Project */}
-        <Select
-          name="projectId"
-          inputSize="sm"
-          defaultValue={sp.projectId ?? ''}
-          className="w-36 shrink-0"
-        >
-          <option value="">{f.allProjects}</option>
+      <PremiumFilterField label={L.search} htmlFor="uf-q">
+        <Input id="uf-q" name="q" placeholder={u.searchPlaceholder} defaultValue={sp.q ?? ''} />
+      </PremiumFilterField>
+      <PremiumFilterField label={L.project} htmlFor="uf-project">
+        <Select id="uf-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
+          <option value="">{f.all}</option>
           {projects.map((p) => (
             <option key={p.project.id} value={p.project.id}>
               {tx(p.project.name, locale)}
             </option>
           ))}
         </Select>
-
-        {/* Status */}
-        <Select
-          name="status"
-          inputSize="sm"
-          defaultValue={sp.status ?? ''}
-          className="w-32 shrink-0"
-        >
-          <option value="">{f.allStatuses}</option>
+      </PremiumFilterField>
+      <PremiumFilterField label={L.status} htmlFor="uf-status">
+        <Select id="uf-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''}>
+          <option value="">{f.all}</option>
           <option value="AVAILABLE">{u.status.AVAILABLE}</option>
           <option value="RESERVED">{u.status.RESERVED}</option>
           <option value="SOLD">{u.status.SOLD}</option>
         </Select>
-
-        {/* Unit type */}
-        <Select
-          name="type"
-          inputSize="sm"
-          defaultValue={sp.type ?? ''}
-          className="w-28 shrink-0"
-        >
-          <option value="">{u.allTypes}</option>
-          {typeOptions.map((t) => (
-            <option key={t} value={t}>{t}</option>
+      </PremiumFilterField>
+      <PremiumFilterField label={L.type} htmlFor="uf-type">
+        <Select id="uf-type" name="type" inputSize="sm" defaultValue={sp.type ?? ''}>
+          <option value="">{f.all}</option>
+          {typeOptions.map((ty) => (
+            <option key={ty} value={ty}>{ty}</option>
           ))}
         </Select>
-
-        {/* Advanced toggle — tinted when open OR when advanced filters are active */}
-        <button
-          type="button"
-          onClick={() => setShowAdvanced((v) => !v)}
-          className={cn(
-            'inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-xs font-medium border transition-colors shrink-0 select-none',
-            showAdvanced || advancedActive
-              ? 'bg-brand-50 border-brand-200 text-brand-700'
-              : 'bg-surface border-hairline text-slate-600 hover:border-slate-300 hover:text-slate-800',
-          )}
-        >
-          <SlidersHorizontal className="h-3 w-3" />
-          {u.advanced}
-          {advancedActive && (
-            <span className="inline-flex items-center justify-center h-4 min-w-[1rem] rounded-full bg-brand-600 text-white text-[9px] font-bold leading-none px-1">
-              {advancedCount}
-            </span>
-          )}
-        </button>
-
-        {/* Apply + Reset */}
-        <div className="flex items-center gap-1.5 ms-auto">
-          <Button type="submit" variant="primary" size="sm">{f.apply}</Button>
-          {anyFilter && (
-            <Link href="/portal/units">
-              <Button type="button" variant="ghost" size="sm">{f.clear}</Button>
-            </Link>
-          )}
-        </div>
-      </div>
-
-      {/* ── Row 2: Advanced filters (collapsible with height animation) ──── */}
-      {/* grid-rows-[0fr/1fr] trick: child overflow-hidden collapses to 0    */}
-      <div
-        className={cn(
-          'grid transition-[grid-template-rows] duration-200 ease-out',
-          showAdvanced ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
-        )}
-      >
-        <div className="overflow-hidden">
-          <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 border-t border-hairline bg-slate-50/50">
-            <span className="text-2xs font-medium text-slate-400 shrink-0">{u.priceAndSpecs}</span>
-
-            <Input
-              inputSize="sm"
-              name="minPrice"
-              type="number"
-              min={0}
-              placeholder={u.minPrice}
-              defaultValue={sp.minPrice ?? ''}
-              className="w-28 shrink-0"
-            />
-            <span className="text-slate-300 text-xs shrink-0">—</span>
-            <Input
-              inputSize="sm"
-              name="maxPrice"
-              type="number"
-              min={0}
-              placeholder={u.maxPrice}
-              defaultValue={sp.maxPrice ?? ''}
-              className="w-28 shrink-0"
-            />
-
-            <Select
-              name="bedrooms"
-              inputSize="sm"
-              defaultValue={sp.bedrooms ?? ''}
-              className="w-28 shrink-0"
-            >
-              <option value="">{u.bedrooms}</option>
+      </PremiumFilterField>
+      {showAdvanced && (
+        <div className="flex basis-full flex-wrap items-center gap-2.5 border-t border-hairline pt-2.5">
+          <span className="px-2 text-[13px] text-slate-500">{u.priceAndSpecs}</span>
+          <PremiumFilterField label={L.minPrice} htmlFor="uf-min">
+            <input id="uf-min" name="minPrice" type="number" min={0} dir="ltr" defaultValue={sp.minPrice ?? ''} className="w-28" />
+          </PremiumFilterField>
+          <PremiumFilterField label={L.maxPrice} htmlFor="uf-max">
+            <input id="uf-max" name="maxPrice" type="number" min={0} dir="ltr" defaultValue={sp.maxPrice ?? ''} className="w-28" />
+          </PremiumFilterField>
+          <PremiumFilterField label={L.bedrooms} htmlFor="uf-bed">
+            <Select id="uf-bed" name="bedrooms" inputSize="sm" defaultValue={sp.bedrooms ?? ''}>
+              <option value="">{f.all}</option>
               {[1, 2, 3, 4, 5].map((n) => (
                 <option key={n} value={String(n)}>{u.bedroomsOption(n)}</option>
               ))}
             </Select>
-
-            <Select
-              name="bathrooms"
-              inputSize="sm"
-              defaultValue={sp.bathrooms ?? ''}
-              className="w-32 shrink-0"
-            >
-              <option value="">{u.bathrooms}</option>
+          </PremiumFilterField>
+          <PremiumFilterField label={L.bathrooms} htmlFor="uf-bath">
+            <Select id="uf-bath" name="bathrooms" inputSize="sm" defaultValue={sp.bathrooms ?? ''}>
+              <option value="">{f.all}</option>
               {[1, 2, 3, 4].map((n) => (
                 <option key={n} value={String(n)}>{u.bathroomsOption(n)}</option>
               ))}
             </Select>
-          </div>
+          </PremiumFilterField>
         </div>
-      </div>
-    </form>
+      )}
+    </PremiumFilterBar>
   );
 }
