@@ -19,6 +19,8 @@ import { awaitingReviewerWhere } from '../deposits/review-queue';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { scopedUserCount } from '../../common/tenant/resolve-tenant-entity';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
+import { COMPANY_TIMEZONE_DEFAULT, companyTimeZone, startOfLocalToday } from '../../common/time/company-timezone';
+import { reportRange } from '../../common/time/report-range';
 import { getCompanyCurrency } from '../../common/currency/currency';
 import { fallbackBrand, type ReportBrand } from '../../common/utils/report-brand';
 import { ReportBrandService } from '../company-branding/report-brand.service';
@@ -133,7 +135,13 @@ export class ReportsService {
     };
   }
 
+  /** The company's time zone, read only when a report is filtered by date. */
+  private async rangeTimeZone(from?: string, to?: string): Promise<string> {
+    return from || to ? companyTimeZone(this.prisma, getRequiredCompanyId()) : COMPANY_TIMEZONE_DEFAULT;
+  }
+
   async sales(period?: string, dateFrom?: string, dateTo?: string) {
+    const tz = await this.rangeTimeZone(dateFrom, dateTo);
     const companyId = getRequiredCompanyId();
     // Sales are live contracts: a cancelled or deleted deal is not a sale.
     let where: Prisma.ContractWhereInput = {};
@@ -145,12 +153,12 @@ export class ReportsService {
     if (dateFrom || dateTo) {
       where = {
         createdAt: {
-          ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
-          ...(dateTo ? { lte: new Date(dateTo) } : {}),
+          ...reportRange(dateFrom, dateTo, tz),
         },
       };
-      if (dateFrom) conditions.push(Prisma.sql`c."createdAt" >= ${new Date(dateFrom)}`);
-      if (dateTo)   conditions.push(Prisma.sql`c."createdAt" <= ${new Date(dateTo + 'T23:59:59.999Z')}`);
+      const r = reportRange(dateFrom, dateTo, tz);
+      if (r.gte) conditions.push(Prisma.sql`c."createdAt" >= ${r.gte}`);
+      if (r.lt) conditions.push(Prisma.sql`c."createdAt" < ${r.lt}`);
     } else if (period) {
       where = this.periodWhereContract(period);
       conditions.push(Prisma.sql`to_char(c."createdAt", 'YYYY-MM') = ${period}`);
@@ -182,12 +190,12 @@ export class ReportsService {
   }
 
   async financial(period?: string, dateFrom?: string, dateTo?: string) {
+    const tz = await this.rangeTimeZone(dateFrom, dateTo);
     let where: Prisma.DepositWhereInput = {};
     if (dateFrom || dateTo) {
       where = {
         paidAt: {
-          ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
-          ...(dateTo ? { lte: new Date(dateTo) } : {}),
+          ...reportRange(dateFrom, dateTo, tz),
         },
       };
     } else if (period) {
@@ -209,12 +217,12 @@ export class ReportsService {
   }
 
   async reservations(dateFrom?: string, dateTo?: string) {
+    const tz = await this.rangeTimeZone(dateFrom, dateTo);
     const where: Prisma.ReservationWhereInput =
       dateFrom || dateTo
         ? {
             createdAt: {
-              ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
-              ...(dateTo ? { lte: new Date(dateTo) } : {}),
+              ...reportRange(dateFrom, dateTo, tz),
             },
           }
         : {};
@@ -230,9 +238,9 @@ export class ReportsService {
   }
 
   async salesFunnel(dateFrom?: string, dateTo?: string) {
+    const tz = await this.rangeTimeZone(dateFrom, dateTo);
     const dateCond = {
-      ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
-      ...(dateTo ? { lte: new Date(dateTo) } : {}),
+      ...reportRange(dateFrom, dateTo, tz),
     };
     const hasDate = !!(dateFrom || dateTo);
     const dateWhere = hasDate ? { where: { createdAt: dateCond } } : undefined;
@@ -253,8 +261,9 @@ export class ReportsService {
       Prisma.sql`bc."companyId" = ${companyId}::uuid`,
       Prisma.sql`bc.status = 'APPROVED'`,
     ];
-    if (dateFrom) conditions.push(Prisma.sql`bc."earnedAt" >= ${new Date(dateFrom)}`);
-    if (dateTo)   conditions.push(Prisma.sql`bc."earnedAt" <= ${new Date(dateTo + 'T23:59:59.999Z')}`);
+    const r = reportRange(dateFrom, dateTo, await companyTimeZone(this.prisma, companyId));
+    if (r.gte) conditions.push(Prisma.sql`bc."earnedAt" >= ${r.gte}`);
+    if (r.lt) conditions.push(Prisma.sql`bc."earnedAt" < ${r.lt}`);
     const whereClause = Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`;
     return this.prisma.$queryRaw<Array<{
       brokerId: string;
@@ -263,14 +272,16 @@ export class ReportsService {
       count: number;
     }>>(Prisma.sql`
       SELECT
-        u.id                                           AS "brokerId",
-        u."fullName"                                   AS "brokerName",
-        COALESCE(SUM(bc."netAmount"), 0)::float        AS "commissionAmount",
-        COUNT(bc.id)::int                              AS count
+        br.id                                                     AS "brokerId",
+        COALESCE(br."commercialName", br."companyName")           AS "brokerName",
+        COALESCE(SUM(bc."netAmount"), 0)::float                   AS "commissionAmount",
+        COUNT(bc.id)::int                                         AS count
       FROM "BrokerCommission" bc
-      JOIN "User" u ON u.id = bc."brokerId"
+      -- brokerId is the broker firm (Broker), not a User: joining "User" made
+      -- the leaderboard always empty.
+      JOIN "Broker" br ON br.id = bc."brokerId" AND br."companyId" = ${companyId}::uuid
       ${whereClause}
-      GROUP BY u.id, u."fullName"
+      GROUP BY br.id, br."commercialName", br."companyName"
       ORDER BY "commissionAmount" DESC
       LIMIT 10
     `);
@@ -318,6 +329,9 @@ export class ReportsService {
   // any demo data when a section is empty.
   async adminSummary() {
     const now = new Date();
+    // Rows due today belong to the next 30 days (they used to be dropped:
+    // a due date is midnight at the start of its day, before "now").
+    const today = startOfLocalToday(await companyTimeZone(this.prisma, getRequiredCompanyId()), now);
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const expiringHorizon = new Date(now.getTime() +  7 * 24 * 60 * 60 * 1000);
     const prevMonthStart  = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -436,7 +450,7 @@ export class ReportsService {
       this.prisma.lead.count({ where: { createdAt: { gte: prevMonthStart, lt: startOfMonth } } }),
       // ── Cash flow forecast (next 30 / 31-60 / 61-90 days) ──
       this.prisma.installment.aggregate({
-        where: { status: InstallmentStatus.PENDING, dueDate: { gte: now, lte: in30 }, plan: LIVE_PLAN_WHERE },
+        where: { status: InstallmentStatus.PENDING, dueDate: { gte: today, lte: in30 }, plan: LIVE_PLAN_WHERE },
         _sum: { amount: true },
       }),
       this.prisma.installment.aggregate({
@@ -987,6 +1001,7 @@ export class ReportsService {
     dateFrom?: string;
     dateTo?: string;
   }) {
+    const tz = await this.rangeTimeZone(opts.dateFrom, opts.dateTo);
     const now = new Date();
     const todayUTC = new Date(
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
@@ -1094,8 +1109,7 @@ export class ReportsService {
     if (opts.dateFrom || opts.dateTo) {
       filteredDepAnd.push({
         paidAt: {
-          ...(opts.dateFrom ? { gte: new Date(opts.dateFrom) } : {}),
-          ...(opts.dateTo ? { lte: new Date(opts.dateTo) } : {}),
+          ...reportRange(opts.dateFrom, opts.dateTo, tz),
         },
       });
     }
@@ -1324,8 +1338,7 @@ export class ReportsService {
     if (opts.dateFrom || opts.dateTo) {
       bookingDepAnd.push({
         paidAt: {
-          ...(opts.dateFrom ? { gte: new Date(opts.dateFrom) } : {}),
-          ...(opts.dateTo ? { lte: new Date(opts.dateTo) } : {}),
+          ...reportRange(opts.dateFrom, opts.dateTo, tz),
         },
       });
     }
@@ -1480,8 +1493,7 @@ export class ReportsService {
       opts.dateFrom || opts.dateTo
         ? {
             [field]: {
-              ...(opts.dateFrom ? { gte: new Date(opts.dateFrom) } : {}),
-              ...(opts.dateTo ? { lte: new Date(opts.dateTo) } : {}),
+              ...reportRange(opts.dateFrom, opts.dateTo, tz),
             },
           }
         : {};
@@ -1611,8 +1623,7 @@ export class ReportsService {
     });
     const signedAtFilter: Prisma.DateTimeNullableFilter<'Contract'> = {
       not: null,
-      ...(opts.dateFrom ? { gte: new Date(opts.dateFrom) } : {}),
-      ...(opts.dateTo ? { lte: new Date(opts.dateTo) } : {}),
+      ...reportRange(opts.dateFrom, opts.dateTo, tz),
     };
 
     const [
@@ -1657,8 +1668,7 @@ export class ReportsService {
           ...(opts.dateFrom || opts.dateTo
             ? {
                 createdAt: {
-                  ...(opts.dateFrom ? { gte: new Date(opts.dateFrom) } : {}),
-                  ...(opts.dateTo ? { lte: new Date(opts.dateTo) } : {}),
+                  ...reportRange(opts.dateFrom, opts.dateTo, tz),
                 },
               }
             : {}),
@@ -1737,8 +1747,7 @@ export class ReportsService {
           ...(opts.dateFrom || opts.dateTo
             ? {
                 paidAt: {
-                  ...(opts.dateFrom ? { gte: new Date(opts.dateFrom) } : {}),
-                  ...(opts.dateTo ? { lte: new Date(opts.dateTo) } : {}),
+                  ...reportRange(opts.dateFrom, opts.dateTo, tz),
                 },
               }
             : {}),
@@ -1757,7 +1766,10 @@ export class ReportsService {
     const refundsPaid = D(refundsPaidAgg._sum.amount);
     const refundsOwedRaw = D(refundsAgreedAgg._sum.refundAmount).minus(D(refundsPaidAllAgg._sum.amount));
     const refundsOwed = refundsOwedRaw.lessThan(0) ? zero : refundsOwedRaw;
-    const netCollected = collectedVerified.minus(refundsPaid);
+    // A refund is not of any payment type: filtered by type (e.g. fees), the
+    // figure is that type's money, with no refund taken off — it used to
+    // subtract every refund of the period from, say, the fees collected.
+    const netCollected = opts.type ? collectedVerified : collectedVerified.minus(refundsPaid);
 
     const cashflowTrend = trendSlots.map(({ month, label }, i) => ({
       month,

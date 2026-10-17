@@ -496,7 +496,12 @@ export class DepositsService {
       }
       return out;
     });
-    if (dto.receiptUrl) await this.tryLinkReceiptDocument(deposits[0]!.id, dto.receiptUrl, recordedById);
+    // One receipt for the whole payment: it belongs to every deposit it
+    // covers (it used to be linked to the first only — the others showed no
+    // receipt, and the customer could not open it from them).
+    if (dto.receiptUrl) {
+      for (const d of deposits) await this.tryLinkReceiptDocument(d.id, dto.receiptUrl, recordedById);
+    }
     const total = (totalCents / 100).toFixed(2);
     await this.notifications.sendToUser(contract.customerId, 'deposit_recorded', {
       contractId: dto.contractId,

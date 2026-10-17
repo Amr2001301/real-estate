@@ -154,6 +154,8 @@ function makePrismaMock() {
     user: {
       count: jest.fn().mockResolvedValue(0),
     },
+    // The company time zone (default when none is set).
+    setting: { findMany: jest.fn().mockResolvedValue([]) },
     installment: {
       aggregate: jest.fn().mockResolvedValue(ZERO_AGG),
     },
