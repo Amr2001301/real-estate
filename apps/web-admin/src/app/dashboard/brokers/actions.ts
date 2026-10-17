@@ -163,9 +163,8 @@ export async function createBrokerUserAction(
     jobTitle: str(formData, 'jobTitle'),
     isPrimaryContact: bool(formData, 'isPrimaryContact'),
     canManageBrokerUsers: bool(formData, 'canManageBrokerUsers'),
-    canViewCommissions: formData.get('canViewCommissions') === null
-      ? true
-      : bool(formData, 'canViewCommissions'),
+    // An unchecked box is absent from the form: off.
+    canViewCommissions: bool(formData, 'canViewCommissions'),
   };
   if (!payload.fullName) return { error: 'الاسم الكامل مطلوب' };
   if (!payload.email && !payload.phone) {

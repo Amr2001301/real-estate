@@ -664,6 +664,43 @@ export class ContractsService {
     return paginate(data, total, opts);
   }
 
+  /**
+   * GET /me/contracts — the customer's own contracts, with only what the
+   * customer app and the website show. The staff list (list()) carries the
+   * broker firm, the broker agent's contact and the locked commission, none
+   * of which is the customer's business.
+   */
+  async listForCustomer(customerId: string, opts: { page: number; pageSize: number }) {
+    const where: Prisma.ContractWhereInput = { deletedAt: null, customerId, companyId: getRequiredCompanyId() };
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.contract.findMany({
+        where,
+        ...takeSkip(opts),
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          contractNumber: true,
+          status: true,
+          totalAmount: true,
+          downPayment: true,
+          pdfUrl: true,
+          signedAt: true,
+          createdAt: true,
+          unit: {
+            select: {
+              id: true, code: true, type: true,
+              building: { select: { phase: { select: { project: { select: { id: true, name: true } } } } } },
+            },
+          },
+          reservation: { select: { id: true, reservationNumber: true } },
+          installmentPlan: { select: { id: true, totalMonths: true, monthlyAmount: true, startsAt: true, frequency: true } },
+        },
+      }),
+      this.prisma.contract.count({ where }),
+    ]);
+    return paginate(data, total, opts);
+  }
+
   async findOne(id: string) {
     const contract = await this.prisma.contract.findUnique({
       where: { id },
@@ -1229,10 +1266,9 @@ class ContractsController {
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
   ) {
-    const result = await this.svc.list({
+    const result = await this.svc.listForCustomer(user.sub, {
       page: Number(page),
       pageSize: Number(pageSize),
-      customerId: user.sub,
     });
     // P12 — surface a `hasDocument` flag so the customer UI can pre-gate the
     // download button (button vs "العقد غير متاح بعد") without leaking any
