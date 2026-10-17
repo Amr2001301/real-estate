@@ -84,6 +84,8 @@ export interface PremiumFilterFieldProps {
   htmlFor?: string;
   children: ReactNode;
   className?: string;
+  /** Always has a value (a year, a month): never shown as an active filter. */
+  neutral?: boolean;
 }
 
 /** The page's free-text search: an input of type "search", or the `q` field. */
@@ -95,7 +97,7 @@ function isSearch(children: ReactNode): boolean {
   );
 }
 
-export function PremiumFilterField({ label, htmlFor, children, className }: PremiumFilterFieldProps) {
+export function PremiumFilterField({ label, htmlFor, children, className, neutral }: PremiumFilterFieldProps) {
   if (isSearch(children)) {
     return (
       <div
@@ -131,7 +133,7 @@ export function PremiumFilterField({ label, htmlFor, children, className }: Prem
         'flex h-11 shrink-0 cursor-pointer items-center gap-1 rounded-full border border-hairline bg-surface ps-4 pe-1',
         'text-[13.5px] text-slate-500 transition-colors hover:border-brand-400/50',
         // Set (a non-empty option chosen) → gold border + gold-soft background.
-        "has-[option:checked:not([value=''])]:border-brand-400/70 has-[option:checked:not([value=''])]:bg-brand-50",
+        !neutral && "has-[option:checked:not([value=''])]:border-brand-400/70 has-[option:checked:not([value=''])]:bg-brand-50",
         // The control inside shows only its value, bold, without its own box.
         '[&_select]:h-9 [&_select]:w-auto [&_select]:min-w-0 [&_select]:border-0 [&_select]:bg-transparent [&_select]:shadow-none',
         '[&_select]:py-0 [&_select]:ps-1 [&_select]:pe-8 [&_select]:text-[13.5px] [&_select]:font-bold [&_select]:text-slate-900',

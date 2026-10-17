@@ -1233,6 +1233,18 @@ const UI = {
           noData: 'لا توجد بيانات',
         },
         trendCompare: 'مقارنة بالسابق',
+        // U5
+        u5: {
+          highlightsTitle: 'أبرز النقاط',
+          periodSub: (y: number) => `خلال ${y}`,
+          collectionFromSales: 'التحصيل من المبيعات',
+          peak: 'الذروة',
+          countDesc: (y: number) => `عدد العقود خلال ${y}`,
+          overall: (pct: string) => `إجمالي ${pct}`,
+          projectsEmpty: 'لا توجد مبيعات للفترة المحددة',
+          brokersEmpty: 'لا توجد بيانات وسطاء للفترة المحددة',
+          bookingsEmpty: 'لا توجد حجوزات في الفترة المحددة',
+        },
       },
       notifications: {
         title: 'الإشعارات',
@@ -6502,6 +6514,18 @@ const UI = {
           noData: 'No data',
         },
         trendCompare: 'vs. previous',
+        // U5
+        u5: {
+          highlightsTitle: 'Highlights',
+          periodSub: (y: number) => `In ${y}`,
+          collectionFromSales: 'Collected of sales',
+          peak: 'Peak',
+          countDesc: (y: number) => `Contracts in ${y}`,
+          overall: (pct: string) => `Overall ${pct}`,
+          projectsEmpty: 'No sales in this period',
+          brokersEmpty: 'No broker data in this period',
+          bookingsEmpty: 'No bookings in this period',
+        },
       },
       notifications: {
         title: 'Notifications',

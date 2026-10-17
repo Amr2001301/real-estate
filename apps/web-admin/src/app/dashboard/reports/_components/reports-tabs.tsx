@@ -11,16 +11,17 @@ export function ReportsTabs({ active, locale = 'ar' }: { active: 'sales' | 'fina
   ];
 
   return (
-    <div className="flex gap-0 border-b border-hairline">
+    <div className="flex gap-8 border-b border-hairline">
       {TABS.map((tab) => (
         <Link
           key={tab.key}
           href={tab.href as never}
           className={cn(
-            'px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors duration-150',
+            // U5: thin tabs, a gold underline on the active one.
+            'font-heading pb-3 text-[17px] font-bold border-b-2 -mb-px transition-colors duration-150',
             active === tab.key
-              ? 'border-brand-600 text-brand-700'
-              : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300',
+              ? 'border-[#C79A3B] text-slate-900'
+              : 'border-transparent text-slate-500 hover:text-slate-800',
           )}
         >
           {tab.label}

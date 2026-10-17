@@ -36,3 +36,6 @@ export type { PremiumFilterBarProps, PremiumFilterFieldProps, FilterChip, ViewOp
 
 export { PremiumPanel, PremiumEmptyNote } from './panel';
 export type { PremiumPanelProps } from './panel';
+
+export { PremiumBars } from './bar-chart';
+export type { BarDatum } from './bar-chart';

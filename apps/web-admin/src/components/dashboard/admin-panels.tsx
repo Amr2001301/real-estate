@@ -4,7 +4,7 @@ import { Banknote, Bookmark, CalendarCheck2, FileText, MessageSquare, UserPlus, 
 import { cn } from '@/lib/cn';
 import { compactParts } from '@/lib/format';
 import type { Locale } from '@/lib/locale';
-import { PremiumPanel, PremiumEmptyNote } from '@/components/premium';
+import { PremiumPanel, PremiumEmptyNote, PremiumBars } from '@/components/premium';
 import { NumCell, UnitsBar } from '@/components/premium/data-table';
 
 /**
@@ -258,26 +258,7 @@ export function MonthlyBarsPanel({
       {max === 0 ? (
         <PremiumEmptyNote>{empty}</PremiumEmptyNote>
       ) : (
-        <div>
-          <div className="flex h-[200px] items-end gap-3 border-b border-hairline" role="img" aria-label={data.map((d) => `${d.label} ${d.value}`).join('، ')}>
-            {data.map((d, i) => (
-              <div key={d.label + i} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
-                {d.value > 0 && <span className="num text-[18px] font-semibold text-slate-900">{d.value}</span>}
-                <span
-                  className={cn('w-full max-w-[44px] rounded-t-xl', d.value > 0 ? 'bg-gradient-to-b from-[#D8B66A] to-[#B38B3A]' : 'bg-surface-sunken')}
-                  style={{ height: d.value > 0 ? `${Math.max(6, (d.value / max) * 82)}%` : '4px' }}
-                />
-              </div>
-            ))}
-          </div>
-          <div className="mt-2 flex gap-3">
-            {data.map((d, i) => (
-              <span key={d.label + i} className={cn('flex-1 text-center text-[12px]', i === data.length - 1 ? 'font-bold text-brand-700' : 'text-slate-500')}>
-                {d.label}
-              </span>
-            ))}
-          </div>
-        </div>
+        <PremiumBars data={data} highlight={[data.length - 1]} height={200} />
       )}
     </PremiumPanel>
   );

@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CalendarDays } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
+import { PremiumFilterField } from '@/components/premium/filter-bar';
+import { intlLocale } from '@/lib/format';
 import type { CompareMode, PeriodMode } from '@/lib/report-filter';
 import type { Locale } from '@/lib/locale';
 
@@ -63,6 +63,11 @@ export interface ReportFilterBarProps {
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
+/**
+ * The reports filter (U5): period as a segmented control, then year / month /
+ * comparison as `label · value` pills; it applies on every change (no Apply
+ * button) and writes the chosen range out at the end.
+ */
 export function ReportFilterBar({
   defaultMode,
   defaultMonth,
@@ -75,168 +80,121 @@ export function ReportFilterBar({
   locale = 'ar',
 }: ReportFilterBarProps) {
   const router = useRouter();
-
-  const [mode, setMode]       = useState<PeriodMode>(defaultMode);
-  const [month, setMonth]     = useState(defaultMonth);
-  const [year, setYear]       = useState(defaultYear);
-  const [quarter, setQuarter] = useState(defaultQuarter);
-  const [dateFrom, setFrom]   = useState(defaultDateFrom);
-  const [dateTo, setTo]       = useState(defaultDateTo);
-  const [compare, setCompare] = useState<CompareMode>(defaultCompare);
-
+  const [state, setState] = useState({
+    mode: defaultMode,
+    month: defaultMonth,
+    year: defaultYear,
+    quarter: defaultQuarter,
+    dateFrom: defaultDateFrom,
+    dateTo: defaultDateTo,
+    compare: defaultCompare,
+  });
   const isAr = locale === 'ar';
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function go(patch: Partial<typeof state>) {
+    const next = { ...state, ...patch };
+    setState(next);
+    if (next.mode === 'custom' && (!next.dateFrom || !next.dateTo)) return;
     const p = new URLSearchParams();
-    p.set('mode', mode);
-    p.set('year', String(year));
-    if (mode === 'monthly')   p.set('month',   String(month));
-    if (mode === 'quarterly') p.set('quarter', String(quarter));
-    if (mode === 'custom') {
-      if (dateFrom) p.set('dateFrom', dateFrom);
-      if (dateTo)   p.set('dateTo',   dateTo);
+    p.set('mode', next.mode);
+    p.set('year', String(next.year));
+    if (next.mode === 'monthly') p.set('month', String(next.month));
+    if (next.mode === 'quarterly') p.set('quarter', String(next.quarter));
+    if (next.mode === 'custom') {
+      p.set('dateFrom', next.dateFrom);
+      p.set('dateTo', next.dateTo);
     }
-    if (compare !== 'none') p.set('compare', compare);
+    if (next.compare !== 'none') p.set('compare', next.compare);
     router.push(`${basePath}?${p.toString()}`);
   }
 
   const MODE_LABEL: Record<PeriodMode, string> = isAr
-    ? { monthly: 'شهري', quarterly: 'ربع سنوي', yearly: 'سنوي', custom: 'نطاق مخصص' }
-    : { monthly: 'Monthly', quarterly: 'Quarterly', yearly: 'Yearly', custom: 'Custom range' };
-
-  const MONTHS   = isAr ? MONTHS_AR   : MONTHS_EN;
+    ? { monthly: 'شهري', quarterly: 'ربع سنوي', yearly: 'سنوي', custom: 'مخصص' }
+    : { monthly: 'Monthly', quarterly: 'Quarterly', yearly: 'Yearly', custom: 'Custom' };
+  const MONTHS = isAr ? MONTHS_AR : MONTHS_EN;
   const QUARTERS = isAr ? QUARTERS_AR : QUARTERS_EN;
+  const COMPARE: Array<[CompareMode, string]> = isAr
+    ? [['none', 'بدون'], ['previous-period', 'الفترة السابقة'], ['previous-month', 'الشهر السابق'], ['yoy', 'العام السابق']]
+    : [['none', 'None'], ['previous-period', 'Previous period'], ['previous-month', 'Previous month'], ['yoy', 'Last year']];
+
+  // "1 – 31 October 2026" — the range the page is showing.
+  let rangeText = '';
+  try {
+    const from = new Date(`${defaultDateFrom}T00:00:00Z`);
+    const to = new Date(`${defaultDateTo}T00:00:00Z`);
+    rangeText = new Intl.DateTimeFormat(intlLocale(locale), { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+      .formatRange(from, to);
+  } catch {
+    rangeText = `${defaultDateFrom} – ${defaultDateTo}`;
+  }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-surface px-4 py-3 shadow-xs"
-    >
-      {/* Icon */}
-      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-        <CalendarDays className="h-3.5 w-3.5" />
-      </span>
-
-      {/* Divider */}
-      <div className="w-px h-5 bg-hairline shrink-0 hidden sm:block" aria-hidden />
-
-      {/* Period mode */}
-      <Select
-        inputSize="sm"
-        value={mode}
-        onChange={(e) => setMode(e.target.value as PeriodMode)}
-        className="w-36"
-        aria-label={isAr ? 'نوع الفترة' : 'Period type'}
-      >
+    <div className="flex flex-wrap items-center gap-2.5 rounded-[28px] border border-hairline bg-surface p-2 sm:p-2.5 shadow-[0_10px_30px_-18px_rgb(20_26_38/0.25)]">
+      <div role="radiogroup" aria-label={isAr ? 'نوع الفترة' : 'Period type'} className="inline-flex items-center gap-1 rounded-full bg-surface-sunken/60 p-1">
         {(Object.keys(MODE_LABEL) as PeriodMode[]).map((m) => (
-          <option key={m} value={m}>{MODE_LABEL[m]}</option>
+          <button
+            key={m}
+            type="button"
+            role="radio"
+            aria-checked={state.mode === m}
+            onClick={() => go({ mode: m })}
+            className={
+              state.mode === m
+                ? 'h-10 rounded-full bg-surface px-5 text-[14px] font-bold text-slate-900 shadow-sm'
+                : 'h-10 rounded-full px-5 text-[14px] text-slate-600 hover:text-slate-900'
+            }
+          >
+            {MODE_LABEL[m]}
+          </button>
         ))}
-      </Select>
+      </div>
 
-      {/* Year — shown for monthly / quarterly / yearly */}
-      {mode !== 'custom' && (
-        <Select
-          inputSize="sm"
-          value={year}
-          onChange={(e) => setYear(Number(e.target.value))}
-          className="w-24"
-          aria-label={isAr ? 'السنة' : 'Year'}
-        >
-          {YEARS.map((y) => (
-            <option key={y} value={y}>{y}</option>
-          ))}
-        </Select>
+      {state.mode !== 'custom' && (
+        <PremiumFilterField neutral label={isAr ? 'السنة' : 'Year'} htmlFor="rf-year">
+          <Select id="rf-year" inputSize="sm" value={state.year} onChange={(e) => go({ year: Number(e.target.value) })}>
+            {YEARS.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </Select>
+        </PremiumFilterField>
       )}
-
-      {/* Month — only for monthly */}
-      {mode === 'monthly' && (
-        <Select
-          inputSize="sm"
-          value={month}
-          onChange={(e) => setMonth(Number(e.target.value))}
-          className="w-36"
-          aria-label={isAr ? 'الشهر' : 'Month'}
-        >
-          {MONTHS.map((m) => (
-            <option key={m.v} value={m.v}>{m.l}</option>
-          ))}
-        </Select>
+      {state.mode === 'monthly' && (
+        <PremiumFilterField neutral label={isAr ? 'الشهر' : 'Month'} htmlFor="rf-month">
+          <Select id="rf-month" inputSize="sm" value={state.month} onChange={(e) => go({ month: Number(e.target.value) })}>
+            {MONTHS.map((m) => (
+              <option key={m.v} value={m.v}>{m.l}</option>
+            ))}
+          </Select>
+        </PremiumFilterField>
       )}
-
-      {/* Quarter — only for quarterly */}
-      {mode === 'quarterly' && (
-        <Select
-          inputSize="sm"
-          value={quarter}
-          onChange={(e) => setQuarter(Number(e.target.value))}
-          className="w-56"
-          aria-label={isAr ? 'الربع' : 'Quarter'}
-        >
-          {QUARTERS.map((q) => (
-            <option key={q.v} value={q.v}>{q.l}</option>
-          ))}
-        </Select>
+      {state.mode === 'quarterly' && (
+        <PremiumFilterField neutral label={isAr ? 'الربع' : 'Quarter'} htmlFor="rf-quarter">
+          <Select id="rf-quarter" inputSize="sm" value={state.quarter} onChange={(e) => go({ quarter: Number(e.target.value) })}>
+            {QUARTERS.map((q) => (
+              <option key={q.v} value={q.v}>{q.l}</option>
+            ))}
+          </Select>
+        </PremiumFilterField>
       )}
-
-      {/* Custom date range */}
-      {mode === 'custom' && (
+      {state.mode === 'custom' && (
         <>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-slate-500 shrink-0">{isAr ? 'من' : 'From'}</span>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setFrom(e.target.value)}
-              className="h-8 rounded-lg border border-hairline bg-white px-2.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 shadow-xs transition-colors"
-              aria-label={isAr ? 'من تاريخ' : 'From date'}
-            />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-slate-500 shrink-0">{isAr ? 'إلى' : 'To'}</span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setTo(e.target.value)}
-              className="h-8 rounded-lg border border-hairline bg-white px-2.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 shadow-xs transition-colors"
-              aria-label={isAr ? 'إلى تاريخ' : 'To date'}
-            />
-          </div>
+          <PremiumFilterField neutral label={isAr ? 'من' : 'From'} htmlFor="rf-from">
+            <input id="rf-from" type="date" value={state.dateFrom} onChange={(e) => go({ dateFrom: e.target.value })} />
+          </PremiumFilterField>
+          <PremiumFilterField neutral label={isAr ? 'إلى' : 'To'} htmlFor="rf-to">
+            <input id="rf-to" type="date" value={state.dateTo} onChange={(e) => go({ dateTo: e.target.value })} />
+          </PremiumFilterField>
         </>
       )}
+      <PremiumFilterField neutral label={isAr ? 'المقارنة' : 'Compare'} htmlFor="rf-compare">
+        <Select id="rf-compare" inputSize="sm" value={state.compare} onChange={(e) => go({ compare: e.target.value as CompareMode })}>
+          {COMPARE.map(([v, l]) => (
+            <option key={v} value={v}>{l}</option>
+          ))}
+        </Select>
+      </PremiumFilterField>
 
-      {/* Divider */}
-      <div className="w-px h-5 bg-hairline shrink-0 hidden sm:block" aria-hidden />
-
-      {/* Comparison mode */}
-      <Select
-        inputSize="sm"
-        value={compare}
-        onChange={(e) => setCompare(e.target.value as CompareMode)}
-        className="w-48"
-        aria-label={isAr ? 'وضع المقارنة' : 'Comparison mode'}
-      >
-        {isAr ? (
-          <>
-            <option value="none">بدون مقارنة</option>
-            <option value="previous-period">الفترة السابقة</option>
-            <option value="previous-month">الشهر السابق</option>
-            <option value="yoy">نفس الفترة من العام السابق</option>
-          </>
-        ) : (
-          <>
-            <option value="none">No comparison</option>
-            <option value="previous-period">Previous period</option>
-            <option value="previous-month">Previous month</option>
-            <option value="yoy">Same period last year</option>
-          </>
-        )}
-      </Select>
-
-      {/* Apply */}
-      <Button type="submit" variant="primary" size="sm" className="ms-auto shrink-0">
-        {isAr ? 'تطبيق' : 'Apply'}
-      </Button>
-    </form>
+      <span className="ms-auto pe-3 text-[13px] text-slate-500">{rangeText}</span>
+    </div>
   );
 }
