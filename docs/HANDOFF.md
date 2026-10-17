@@ -1,4 +1,4 @@
-# Handoff — where the work stands (2026-10-17)
+# Handoff — where the work stands (2026-10-17, evening)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
@@ -7,7 +7,7 @@
 
 ## ملخص سريع (للمالك)
 
-**إحنا فين:** خلصنا 3 جولات «سيناريوهات» كاملة على المنصة. كل جولة: نمشي سيناريوهات بيع وتحصيل حقيقية في الكود، نلاقي الأخطاء، تاخد إنت القرارات، وبعدين نصلّح على أجزاء، كل جزء PR لوحده بيتدمج لما الـ CI يخضر. آخر PR اتدمج هو **#86**. الفرع الرئيسي (main) نضيف، ومفيش شغل مفتوح.
+**إحنا فين:** خلصنا 3 جولات «سيناريوهات» كاملة على المنصة. كل جولة: نمشي سيناريوهات بيع وتحصيل حقيقية في الكود، نلاقي الأخطاء، تاخد إنت القرارات، وبعدين نصلّح على أجزاء، كل جزء PR لوحده بيتدمج لما الـ CI يخضر. آخر شغل: الجولة الرابعة (#89–#103) والتصميم الجديد U5 (#104–#107). الفرع الرئيسي (main) نضيف.
 
 **الجولة الرابعة:** **خلصت كلها** — المراجعة واتنفّذت كل الأجزاء الأربعة (القسم 4 تحت فيه القرارات):
 - **U2 فلوس:** خلص — #89، #90، #91.
@@ -17,11 +17,11 @@
 
 ملاحظة: ملفات الترجمة المولّدة في تطبيقات الموبايل (`packages/core/lib/src/l10n/generated/`) اتعدّلت يدوياً لأن Flutter مش متاح في السحابة؛ الـ CI بيشغّل `flutter analyze` عليها.
 
-**التصميم الجديد (U5):** اعتمدت شكل جديد للوحة التحكم (أدمن، مبيعات، بروكر): خطوط جديدة، شريط أرقام كحلي، رأس صفحة أبسط، فلتر موحّد، جداول بدل الكروت، ووضع داكن. التفاصيل في القسم 3 تحت U5، والتصميم نفسه على [هذا اللينك](https://claude.ai/artifact/UPVXRtVxEBMWpmuRMYqb1Z) (خاص بأكونتك — شاركه من زرار Share لو الأكونت التاني محتاج يفتحه). اعتمدت كمان صفحة التقارير وملاحظات مراجعة الداشبورد (الأرقام المضلّلة). **اتنفّذ:** U5a #104، U5b/U5c #105، U5d #106، U5e (صفحة التقارير). باقي الصفحات أخدت الشكل من المكوّنات المشتركة؛ اللي فاضل في القسم 3 تحت U5 «What is left».
+**التصميم الجديد (U5):** خلص كله. اعتمدت شكل جديد للوحة التحكم (أدمن، مبيعات، بروكر): خطوط جديدة، شريط أرقام كحلي، رأس صفحة أبسط، فلتر موحّد، جداول بهيدر كحلي، ووضع داكن — والتصميم نفسه على [هذا اللينك](https://claude.ai/artifact/UPVXRtVxEBMWpmuRMYqb1Z). اتنفّذ في #104 (الأساس والوضع الداكن)، #105 (المكوّنات المشتركة + المشاريع والمخزون والفرص)، #106 (الداشبورد بأرقام صح + صفحة التقارير)، #107 (الألوان القديمة في الداكن، الكروت، تبويب المالي، صفحات المبيعات والبروكر، صفحات التفاصيل، فلاتر البروكر). أي شاشة جديدة تتبني من المكوّنات المشتركة (القسم 3 تحت U5).
 
 **حاجات عليك إنت:** الاستضافة، تقييد مفتاح Firebase، حماية الفرع الرئيسي على GitHub، وتسميات الرسوم في تطبيقات الموبايل (محتاجة جهاز عليه Flutter).
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». الجولة الرابعة خلصت؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». الجولة الرابعة والتصميم خلصوا؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -217,9 +217,9 @@ Fixed in both themes: sidebar `#0A1120` with gold hairline border; **navy band**
 
 **Slices** (each one PR, merged when CI is green): **U5a** tokens (light/dark), fonts, Western digits, sidebar + top bar + theme toggle; **U5b** `PremiumPageHero`, `PremiumMetricStrip`, the unified filter bar; **U5c** tables + leads kanban + projects list; **U5d** dashboard (with review items 2–9; item 2 needs the API change); **U5e** reports page.
 
-**Status (2026-10-17):** done — U5a #104 (tokens, fonts, Western digits, sidebar, top bar, dark mode), U5b/U5c #105 (shared components, projects, inventory, leads), U5d #106 (dashboard + `financial.dueToDate`), U5e (reports page). Shared pieces to build new screens with, all in `components/premium/`: `PremiumPageHero`, `PremiumMetricStrip` (navy band; `unit`, `ring`, `distribution`), `PremiumFilterBar` / `PremiumFilterField` / `PremiumFilterChips` / `PremiumViewToggle`, `PremiumPanel` / `PremiumEmptyNote`, `PremiumBars`, and `data-table.tsx` (`PremiumTableCard`, `RowTitle`, `RowIconTile`, `NumCell`, `RowOpenButton`, `UnitsBar`, `StatusPill`); `compactParts()` in `lib/format.ts` splits a figure into number + unit. Every `<thead>` under `#main-scroll` gets the navy header from `globals.css`.
+**Status (2026-10-17):** done — U5a #104 (tokens, fonts, Western digits, sidebar, top bar, dark mode), U5b/U5c #105 (shared components, projects, inventory, leads), U5d/U5e #106 (dashboard + `financial.dueToDate`, reports page), U5f–U5h #107 (Tailwind's default hues follow dark mode, `PremiumSectionCard` panel look, financial tab filter, sales / sales-manager / broker homes, detail and form pages, broker filter bars). Shared pieces to build new screens with, all in `components/premium/`: `PremiumPageHero`, `PremiumMetricStrip` (navy band; `unit`, `ring`, `distribution`), `PremiumFilterBar` / `PremiumFilterField` / `PremiumFilterChips` / `PremiumViewToggle`, `PremiumPanel` / `PremiumEmptyNote`, `PremiumBars`, and `data-table.tsx` (`PremiumTableCard`, `RowTitle`, `RowIconTile`, `NumCell`, `RowOpenButton`, `UnitsBar`, `StatusPill`); `compactParts()` in `lib/format.ts` splits a figure into number + unit. Every `<thead>` under `#main-scroll` gets the navy header from `globals.css`.
 
-**What is left:** pages built from one-off markup still show their old cards inside the new frame — the broker portal (`src/app/portal`), the sales / sales-manager homes (`app/dashboard/_components/sales-*-home.tsx`), the financial reports tab, detail pages; and the one-off filter bars listed above (`components/broker/*-filter-bar.tsx`, `components/ui/toolbar.tsx`). Colours from Tailwind's default palette (`bg-emerald-50`, `text-violet-700`…) do not follow dark mode — replace them with the theme tokens when touching a page. The lead card shows when a lead was added; "days in stage" and "last contact" need a stage timestamp the schema does not have.
+**What is left (small):** the lead card shows when a lead was added — "days in stage" and "last contact" from the mockup need a stage-change timestamp the schema does not have (a migration + API field). Dark mode themes the 50–200 and 600–800 steps of Tailwind's default hues; a class using another step (e.g. `text-amber-500`) keeps its light-mode colour — use the theme tokens in new code. `components/ui/toolbar.tsx` is unused (nothing imports it).
 
 Check every surface after the change: admin, sales (SALES / SALES_MANAGER), broker portal, both locales (ar RTL / en LTR), light and dark, and phone width. Playwright suites (`pnpm --filter web-admin e2e`) select by text and test ids — keep labels and `data-testid`s.
 
@@ -243,6 +243,7 @@ Check every surface after the change: admin, sales (SALES / SALES_MANAGER), brok
 ## 5. Other open items
 
 - **Old contracts that bill the final payment twice** (converted before #83): the owner chose a script — `scripts/fix-double-final-payment.ts` (logic in `src/modules/contracts/double-final-payment.ts`). Run it on production: take a backup (`scripts/db-backup.sh`), then `pnpm --filter @rep/api contracts:fix-double-final-payment:dry-run` to list them, then `pnpm --filter @rep/api contracts:fix-double-final-payment` to correct them. It takes the excess off the unpaid monthly rows (audit `contract.schedule-corrected`); contracts with a payment waiting, or already paid above the price (a refund), are listed for an admin.
+- **Lead "days in stage" / "last contact"** (U5 kanban card): needs `Lead.stageChangedAt` (and a last-contact source) — schema + API; the card shows the lead's age until then.
 - **Mobile fee labels:** the customer app shows a FEE payment as a normal "payment", the staff app prints `FEE`. Needs Flutter (not available in the cloud container).
 - **Owner's own tasks:** hosting/deployment, restricting the Firebase API key, GitHub branch protection on `main`.
 - Older backlog docs: `docs/BACKLOG.md`, `docs/EXECUTION_BACKLOG.md`, `docs/PROJECT_CURRENT_STATE.md` (may be behind this file).
