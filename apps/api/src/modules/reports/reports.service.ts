@@ -490,7 +490,11 @@ export class ReportsService {
     // that count toward it — not fee payments, not deposits on cancelled
     // deals, not bookings that never became a contract. Measured against the
     // all-in collected figure the collection rate could pass 100%.
-    const [collectedTowardsPriceAgg, overdueTowardsPriceAgg, feesCollectedAgg] = await Promise.all([
+    // What has fallen due by today towards the price: the booking amounts of
+    // live contracts plus their payment rows due up to today (fees and
+    // cancelled rows out). The collection rate is measured against this, not
+    // against the whole contract value — most of that is not due yet (U5).
+    const [collectedTowardsPriceAgg, overdueTowardsPriceAgg, feesCollectedAgg, dueRowsAgg, dueBookingAgg] = await Promise.all([
       this.prisma.deposit.aggregate({
         where: { AND: [COLLECTED_DEPOSIT_WHERE, TOWARDS_PRICE_DEPOSIT_WHERE] },
         _sum: { amount: true },
@@ -502,6 +506,19 @@ export class ReportsService {
       this.prisma.deposit.aggregate({
         where: { AND: [COLLECTED_DEPOSIT_WHERE, FEES_DEPOSIT_WHERE] },
         _sum: { amount: true },
+      }),
+      this.prisma.installment.aggregate({
+        where: {
+          status: { not: InstallmentStatus.CANCELLED },
+          type: { notIn: SURCHARGE_PAYMENT_TYPES },
+          dueDate: { lte: today },
+          plan: LIVE_PLAN_WHERE,
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.reservation.aggregate({
+        where: { contract: { is: LIVE_CONTRACT_WHERE } },
+        _sum: { bookingAmount: true },
       }),
     ]);
 
@@ -539,6 +556,8 @@ export class ReportsService {
         collectedTowardsPrice:    Number(collectedTowardsPriceAgg._sum.amount       ?? 0),
         overdueTowardsPrice:      Number(overdueTowardsPriceAgg._sum.amount         ?? 0),
         feesCollected:            Number(feesCollectedAgg._sum.amount               ?? 0),
+        dueToDate:
+          Number(dueRowsAgg._sum.amount ?? 0) + Number(dueBookingAgg._sum.bookingAmount ?? 0),
         pendingBonus:             Number(pendingBonusAgg._sum.amount                ?? 0),
         pendingBrokerPayouts:     Number(pendingPayoutsAgg._sum.totalNet            ?? 0),
         collectedThisMonth:       Number(collectedThisMonthAgg._sum.amount          ?? 0),
@@ -614,7 +633,7 @@ export class ReportsService {
    * recent across all sources.
    */
   private async recentActivity(): Promise<
-    Array<{ id: string; type: string; title: string; action: string; context: string | null; createdAt: Date }>
+    Array<{ id: string; type: string; title: string; action: string; context: string | null; createdAt: Date; amount?: number }>
   > {
     const take = 5;
     const [leads, reservations, contracts, visits, maintenance, deposits, infos] = await Promise.all([
@@ -667,6 +686,7 @@ export class ReportsService {
         select: {
           id: true,
           createdAt: true,
+          amount: true,
           contract: { select: { contractNumber: true, customer: { select: { fullName: true } } } },
           // A reservation deposit has no contract yet: name and unit come from the reservation.
           reservation: {
@@ -698,6 +718,8 @@ export class ReportsService {
       action: string;
       context: string | null;
       createdAt: Date;
+      /** Payments only: the amount, so the feed can show it (U5). */
+      amount?: number;
     }> = [
       ...leads.map((l) => ({
         id: `lead:${l.id}`,
@@ -751,6 +773,7 @@ export class ReportsService {
         context:
           d.contract?.contractNumber ?? d.reservation?.unit?.code ?? d.reservation?.reservationNumber ?? null,
         createdAt: d.createdAt,
+        amount: Number(d.amount),
       })),
       ...infos.map((info) => ({
         id: `info:${info.id}`,

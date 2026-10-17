@@ -1,24 +1,15 @@
 import {
-  BarChart3,
-  BookmarkCheck,
   CircleDollarSign,
   FileText,
-  MapPin,
   TrendingUp,
-  UserPlus,
-  Users,
   Wallet,
-  Star,
-  Trophy,
-  CalendarDays,
-  ChevronDown,
-  ArrowRight,
+  ArrowDown,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
 import { projectOptions } from '@/lib/options';
-import { formatCurrency, tx, intlLocale } from '@/lib/format';
-import { getReportsCurrency } from '@/lib/currency';
+import { compactParts, tx } from '@/lib/format';
+import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import {
   resolveReportDateRange,
   resolveComparisonDateRange,
@@ -26,13 +17,17 @@ import {
   type CompareMode,
   type PeriodMode,
 } from '@/lib/report-filter';
-import { PremiumPageHero, PremiumSectionCard, PremiumMetricStrip } from '@/components/premium';
-import { Badge, type BadgeTone } from '@/components/ui/badge';
-import { EmptyState } from '@/components/ui/empty-state';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+  PremiumPanel,
+  PremiumEmptyNote,
+  PremiumBars,
+} from '@/components/premium';
+import { NumCell } from '@/components/premium/data-table';
 import { ExportMenu } from '@/components/export-menu';
 import { ReportFilterBar } from '@/components/reports/report-filter-bar';
 import { ReportsTabs } from './_components/reports-tabs';
-import { SalesTrendChart } from './_components/sales-trend-chart';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 
@@ -67,21 +62,14 @@ interface BrokerEntry {
 }
 
 // ── Status maps ────────────────────────────────────────────────────────────────
-const RESERVATION_STATUS_TONE: Record<string, BadgeTone> = {
-  PENDING:   'warning',
-  CONFIRMED: 'success',
-  APPROVED:  'success',
-  CONVERTED: 'brand',
-  CANCELLED: 'danger',
-  EXPIRED:   'gray',
-};
-const RESERVATION_BAR_COLOR: Record<string, string> = {
-  CONFIRMED: 'bg-emerald-500',
-  APPROVED:  'bg-emerald-400',
-  CONVERTED: 'bg-brand-500',
-  PENDING:   'bg-amber-400',
-  CANCELLED: 'bg-slate-300',
-  EXPIRED:   'bg-slate-200',
+// U5: sage for confirmed / approved, gold for converted, a darker gold for pending.
+const RESERVATION_COLOR: Record<string, string> = {
+  CONFIRMED: '#9FBFAB',
+  APPROVED:  '#9FBFAB',
+  CONVERTED: '#C79A3B',
+  PENDING:   '#E2C98F',
+  CANCELLED: '#B8B2A3',
+  EXPIRED:   '#D9D3C4',
 };
 
 const Q_MONTHS: Record<number, number[]> = {
@@ -112,6 +100,11 @@ export default async function ReportsPage({
 }) {
   const sp = await searchParams;
   const [currency, locale] = await Promise.all([getReportsCurrency(), getLocale()]);
+  const symbol = currencySymbol(currency, locale);
+  const numCell = (v: number) => {
+    const [value, unit] = compactParts(v, symbol, locale);
+    return { value, unit };
+  };
   const m = uiT(locale).pages.reports;
 
   const RESERVATION_STATUS_LABEL: Record<string, string> = {
@@ -191,18 +184,27 @@ export default async function ReportsPage({
   const exportParams: Record<string, string> = { dateFrom, dateTo };
   const anyError = salesRes.error || financialRes.error || reservationsRes.error;
 
-  // Funnel stages
-  const funnelStages = funnel ? [
-    { label: m.funnel.stages.leads,        icon: UserPlus,      value: funnel.leads,        color: 'bg-brand-500',   labelColor: 'text-brand-700',   conv: null,                                            pctOfLeads: 100 },
-    { label: m.funnel.stages.visits,       icon: MapPin,        value: funnel.visits,       color: 'bg-blue-500',    labelColor: 'text-blue-700',    conv: pctStr(funnel.visits, funnel.leads),             pctOfLeads: pct(funnel.visits, funnel.leads) },
-    { label: m.funnel.stages.reservations, icon: BookmarkCheck, value: funnel.reservations, color: 'bg-violet-500',  labelColor: 'text-violet-700',  conv: pctStr(funnel.reservations, funnel.visits),      pctOfLeads: pct(funnel.reservations, funnel.leads) },
-    { label: m.funnel.stages.contracts,    icon: FileText,      value: funnel.contracts,    color: 'bg-emerald-500', labelColor: 'text-emerald-700', conv: pctStr(funnel.contracts, funnel.reservations),   pctOfLeads: pct(funnel.contracts, funnel.leads) },
-  ] : [];
+  const monthNames = trendData.map((d) => d.label);
+  const peak = bestTrendMonth && bestTrendMonth.contracts > 0 ? bestTrendMonth : null;
+  const [salesNum, salesUnit] = compactParts(salesTotal, symbol, locale);
+  const [colNum, colUnit] = compactParts(financialTotal, symbol, locale);
+  const delta = (d: ReturnType<typeof computeDelta> | undefined, prefix = '') =>
+    d ? `${d.direction === 'up' ? '▲' : d.direction === 'down' ? '▼' : '•'} ${prefix}${d.value}` : undefined;
+  const deltaCls = (d: ReturnType<typeof computeDelta> | undefined) =>
+    d?.direction === 'up' ? 'success' : d?.direction === 'down' ? 'danger' : undefined;
+
+  const funnelStages = funnel
+    ? [
+        { label: m.funnel.stages.leads, value: funnel.leads },
+        { label: m.funnel.stages.visits, value: funnel.visits, conv: pctStr(funnel.visits, funnel.leads) },
+        { label: m.funnel.stages.reservations, value: funnel.reservations, conv: pctStr(funnel.reservations, funnel.visits) },
+        { label: m.funnel.stages.contracts, value: funnel.contracts, conv: pctStr(funnel.contracts, funnel.reservations) },
+      ]
+    : [];
+  const funnelMax = Math.max(1, ...funnelStages.map((f) => f.value));
 
   return (
-    <div className="space-y-4">
-
-      {/* ─── Header ──────────────────────────────────────────────────────── */}
+    <div className="flex flex-col gap-6">
       <PremiumPageHero
         title={m.title}
         description={m.description}
@@ -241,396 +243,208 @@ export default async function ReportsPage({
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">{anyError}</div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          METRIC STRIP
-      ════════════════════════════════════════════════════════════════════ */}
+      {/* The navy band: four figures, no empty cards (U5). */}
       <PremiumMetricStrip
-        variant="dashboard"
-        cols={5}
+        cols={4}
         metrics={[
           {
-            label:     m.kpi.totalSales,
-            icon:      <Wallet />,
-            value:     formatCurrency(salesTotal, currency, locale),
-            tone:      'neutral',
-            valueSize: 'compact',
-            sub:       `${contractsCount} ${m.salesTrend.contractSuffix}`,
-            trend:     salesDelta ? `${salesDelta.direction === 'up' ? '▲' : salesDelta.direction === 'down' ? '▼' : '•'} ${salesDelta.value} ${m.trendCompare}` : undefined,
-            trendCls:  salesDelta?.direction === 'up' ? 'text-success-600' : salesDelta?.direction === 'down' ? 'text-danger-600' : undefined,
+            label: m.kpi.totalSales, icon: <Wallet />, value: salesNum, unit: salesUnit,
+            sub: `${contractsCount} ${m.salesTrend.contractSuffix}`,
+            trend: delta(salesDelta), trendCls: deltaCls(salesDelta),
           },
           {
-            label:    m.kpi.contractsSigned,
-            icon:     <FileText />,
-            value:    contractsCount.toLocaleString(intlLocale(locale)),
-            tone:     'neutral',
-            sub:      `${m.kpi.avgPrefix} ${formatCurrency(avgContract, currency, locale)}`,
-            trend:    contractsDelta ? `${contractsDelta.direction === 'up' ? '▲' : contractsDelta.direction === 'down' ? '▼' : '•'} ${contractsDelta.value}` : undefined,
-            trendCls: contractsDelta?.direction === 'up' ? 'text-success-600' : contractsDelta?.direction === 'down' ? 'text-danger-600' : undefined,
+            label: m.kpi.contractsSigned, icon: <FileText />, value: contractsCount, unit: m.salesTrend.contractSuffix,
+            sub: contractsCount > 0 ? `${m.kpi.avgPrefix} ${compactParts(avgContract, symbol, locale).join(' ')}` : undefined,
+            trend: delta(contractsDelta), trendCls: deltaCls(contractsDelta),
           },
           {
-            label:     m.kpi.collected,
-            icon:      <CircleDollarSign />,
-            value:     formatCurrency(financialTotal, currency, locale),
-            tone:      'success',
-            valueSize: 'compact',
-            sub:       `${depositsCount} ${m.kpi.depositSuffix} · ${verifiedCount} ${m.kpi.verifiedSuffix}`,
-            trend:     financialDelta ? `${financialDelta.direction === 'up' ? '▲' : financialDelta.direction === 'down' ? '▼' : '•'} ${financialDelta.value}` : undefined,
-            trendCls:  financialDelta?.direction === 'up' ? 'text-success-600' : financialDelta?.direction === 'down' ? 'text-danger-600' : undefined,
+            label: m.kpi.collected, icon: <CircleDollarSign />, value: colNum, unit: colUnit,
+            sub: `${depositsCount} ${m.kpi.depositSuffix} · ${verifiedCount} ${m.kpi.verifiedSuffix}`,
+            trend: delta(financialDelta), trendCls: deltaCls(financialDelta),
           },
           {
-            label: m.kpi.conversionRate,
-            icon:  <TrendingUp />,
-            value: overallConvStr ?? '—',
-            tone:  overallConvRate >= 50 ? 'success' : overallConvRate >= 25 ? 'warning' : 'purple',
-            sub:   m.kpi.conversionSub,
-          },
-          {
-            label: m.kpi.topProject,
-            icon:  <Trophy />,
-            value: topProject?.name ?? '—',
-            tone:  'neutral',
-            sub:   topProject ? `${topProject.count} ${m.salesTrend.contractSuffix} · ${formatCurrency(topProject.total, currency, locale)}` : undefined,
+            label: m.kpi.conversionRate, icon: <TrendingUp />, value: overallConvStr ? overallConvRate : 0, unit: '%',
+            sub: m.kpi.conversionSub,
           },
         ]}
       />
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          ROW 2 — Monthly Trend (3/5) | Conversion Funnel (2/5)
-      ════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-
-        {/* Monthly Trend */}
-        <PremiumSectionCard
+      <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-5">
+        <PremiumPanel
           className="lg:col-span-3"
-          icon={<BarChart3 />}
           title={m.salesTrend.title}
-          description={`${m.salesTrend.descriptionPrefix} ${year}`}
+          sub={m.u5.countDesc(year)}
           trailing={
-            <div className="text-end">
-              <p className="text-base font-black tabular-nums text-slate-900 leading-none">
-                {trendData.reduce((s, d) => s + d.contracts, 0).toLocaleString(intlLocale(locale))} {m.salesTrend.contractSuffix}
-              </p>
-              {bestTrendMonth && bestTrendMonth.contracts > 0 && (
-                <p className="text-[11px] text-slate-400 mt-0.5 whitespace-nowrap">
-                  {m.salesTrend.peakLabel} <span className="font-semibold text-slate-700">{bestTrendMonth.label}</span>
+            peak ? (
+              <div className="text-end">
+                <p className="text-[12px] text-slate-500">{m.u5.peak}</p>
+                <p className="text-[14px] font-bold text-slate-900">
+                  {peak.label} · <span className="num text-[17px]">{peak.contracts}</span> {m.salesTrend.contractSuffix}
                 </p>
-              )}
-            </div>
-          }
-          padded={false}
-        >
-          <div className="px-5 py-5">
-            <SalesTrendChart data={trendData} highlightMonths={highlightMonths} currency={currency} locale={locale} />
-          </div>
-        </PremiumSectionCard>
-
-        {/* Conversion Funnel — vertical, proportional bars */}
-        <PremiumSectionCard
-          className="lg:col-span-2"
-          icon={<TrendingUp />}
-          title={m.funnel.title}
-          trailing={
-            overallConvStr
-              ? <span className={cn(
-                  'inline-flex items-center h-6 px-2.5 rounded-full text-[11px] font-black border shrink-0',
-                  overallConvRate >= 50 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
-                  overallConvRate >= 25 ? 'bg-amber-50 border-amber-200 text-amber-700' :
-                  'bg-violet-50 border-violet-200 text-violet-700',
-                )}>
-                  {overallConvStr} {m.funnel.totalSuffix}
-                </span>
-              : undefined
-          }
-          padded={false}
-        >
-          {funnelStages.length === 0 ? (
-            <EmptyState icon={<TrendingUp />} title={m.funnel.empty.title} description={m.funnel.empty.description} />
-          ) : (
-            <div className="px-5 py-5 space-y-0">
-              {funnelStages.map((stage, i) => {
-                const StageIcon = stage.icon;
-                const barWidth = Math.max(stage.pctOfLeads, stage.pctOfLeads > 0 ? 4 : 0);
-                return (
-                  <div key={stage.label}>
-                    {/* Connector with conversion rate */}
-                    {i > 0 && (
-                      <div className="flex items-center gap-2 py-1.5 ps-[4.5rem]">
-                        <ChevronDown className="h-3.5 w-3.5 text-slate-300 shrink-0" />
-                        {stage.conv && (
-                          <span className={cn('text-[11px] font-bold', stage.labelColor)}>{stage.conv}</span>
-                        )}
-                        <span className="text-[10px] text-slate-300">{m.funnel.fromPrev}</span>
-                      </div>
-                    )}
-                    {/* Stage row */}
-                    <div className="flex items-center gap-3">
-                      {/* Count */}
-                      <div className="w-12 shrink-0 text-end">
-                        <span className={cn('text-lg font-black tabular-nums leading-none', stage.labelColor)}>
-                          {stage.value.toLocaleString(intlLocale(locale))}
-                        </span>
-                      </div>
-                      {/* Bar */}
-                      <div className="flex-1 h-7 rounded-lg bg-slate-100 overflow-hidden relative">
-                        <div
-                          className={cn('h-full rounded-lg transition-all', stage.color)}
-                          style={{ width: `${barWidth}%` }}
-                        />
-                        <div className="absolute inset-0 flex items-center px-2.5">
-                          <div className={cn('inline-flex items-center gap-1 text-[11px] font-semibold', barWidth > 40 ? 'text-white' : 'text-slate-600')}>
-                            <StageIcon className="h-3 w-3 shrink-0" />
-                            {stage.label}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Footer transition rates */}
-          {funnel && (
-            <div className="border-t border-hairline bg-canvas/40 px-5 py-3">
-              <div className="grid grid-cols-3 gap-2 text-center">
-                {[
-                  { label: m.funnel.transitions.leadVisit,           value: pctStr(funnel.visits, funnel.leads) },
-                  { label: m.funnel.transitions.visitReservation,    value: pctStr(funnel.reservations, funnel.visits) },
-                  { label: m.funnel.transitions.reservationContract, value: pctStr(funnel.contracts, funnel.reservations) },
-                ].map((r) => (
-                  <div key={r.label} className="space-y-0.5">
-                    <p className={cn('text-[13px] font-black tabular-nums', r.value ? 'text-slate-800' : 'text-slate-300')}>
-                      {r.value ?? '—'}
-                    </p>
-                    <p className="text-[9px] text-slate-400 leading-tight">{r.label}</p>
-                  </div>
-                ))}
               </div>
-            </div>
+            ) : undefined
+          }
+        >
+          {trendData.length === 0 ? (
+            <PremiumEmptyNote>{m.salesTrend.noDataMsg}</PremiumEmptyNote>
+          ) : (
+            <PremiumBars
+              data={trendData.map((d) => ({ label: d.label, value: d.contracts }))}
+              highlight={highlightMonths.map((mo) => mo - 1).filter((i) => i >= 0 && i < monthNames.length)}
+            />
           )}
-        </PremiumSectionCard>
+        </PremiumPanel>
 
-      </div>
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          ROW 3 — Reservation Status (horizontal stacked bar)
-      ════════════════════════════════════════════════════════════════════ */}
-      {reservationEntries.length > 0 && (
-        <PremiumSectionCard
-          icon={<BookmarkCheck />}
-          title={m.reservationStatus.title}
-          description={m.reservationStatus.description}
+        <PremiumPanel
+          className="lg:col-span-2"
+          title={m.funnel.title}
+          sub={m.kpi.conversionSub}
           trailing={
-            <span className="text-sm font-black tabular-nums text-slate-900 shrink-0">
-              {reservationTotal.toLocaleString(intlLocale(locale))} {m.reservationStatus.reservationSuffix}
+            <span className="rounded-full border border-brand-400/50 px-3 py-1 text-[12px] font-bold text-brand-700">
+              {m.u5.overall(overallConvStr ?? '0%')}
             </span>
           }
-          padded={false}
         >
-          <div className="px-5 pt-4 pb-3">
-            {/* Stacked bar */}
-            <div className="flex h-3 rounded-full overflow-hidden gap-px mb-4">
-              {reservationEntries.map(([status, count]) => {
-                const w = reservationTotal > 0 ? (Number(count) / reservationTotal) * 100 : 0;
-                return w > 0 ? (
-                  <div
-                    key={status}
-                    className={cn('h-full shrink-0', RESERVATION_BAR_COLOR[status] ?? 'bg-slate-200')}
-                    style={{ width: `${w}%` }}
-                  />
-                ) : null;
-              })}
-            </div>
-
-            {/* Status chips */}
-            <div className="flex flex-wrap gap-3">
-              {reservationEntries.map(([status, count]) => (
-                <div key={status} className="flex items-center gap-2">
-                  <span className={cn('h-2.5 w-2.5 rounded-full shrink-0', RESERVATION_BAR_COLOR[status] ?? 'bg-slate-200')} />
-                  <Badge tone={RESERVATION_STATUS_TONE[status] ?? 'gray'} size="sm">
-                    {RESERVATION_STATUS_LABEL[status] ?? status}
-                  </Badge>
-                  <span className="text-sm font-bold tabular-nums text-slate-900">
-                    {Number(count).toLocaleString(intlLocale(locale))}
-                  </span>
-                  <span className="text-[10px] text-slate-400">
-                    {reservationTotal > 0 ? `${Math.round((Number(count) / reservationTotal) * 100)}%` : '—'}
-                  </span>
+          {funnelStages.length === 0 ? (
+            <PremiumEmptyNote>{m.funnel.empty.description}</PremiumEmptyNote>
+          ) : (
+            <div>
+              {funnelStages.map((st, i) => (
+                <div key={st.label}>
+                  {i > 0 && (
+                    <p className="flex items-center gap-1 py-2 text-[12px] text-slate-500">
+                      <ArrowDown className="h-3 w-3" aria-hidden />
+                      {st.conv ?? '—'} {m.funnel.fromPrev}
+                    </p>
+                  )}
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-[15px] font-bold text-slate-900">{st.label}</span>
+                    <span className="num text-[24px] font-semibold text-slate-900">{st.value}</span>
+                  </div>
+                  <div className="mt-1.5 h-[5px] rounded-full bg-surface-sunken">
+                    <div className="h-full rounded-full bg-gradient-to-l from-[#D8B66A] to-[#B38B3A]" style={{ width: `${(st.value / funnelMax) * 100}%` }} />
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
-        </PremiumSectionCard>
-      )}
+          )}
+        </PremiumPanel>
+      </div>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          ROW 4 — Project Rankings + Broker Leaderboard (side by side)
-      ════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-        {/* Project Rankings */}
-        <PremiumSectionCard
-          icon={<BarChart3 />}
-          title={m.projectRankings.title}
-          description={m.projectRankings.description}
+      <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
+        <PremiumPanel
+          title={m.reservationStatus.title}
+          sub={m.reservationStatus.description}
           trailing={
-            byProject.length > 0
-              ? <span className="text-xs text-slate-400 tabular-nums shrink-0">{byProject.length} {m.projectRankings.projectSuffix}</span>
-              : undefined
+            <span className="inline-flex items-baseline gap-1">
+              <span className="num text-[28px] font-semibold text-slate-900">{reservationTotal}</span>
+              <span className="text-[12px] text-slate-500">{m.reservationStatus.reservationSuffix}</span>
+            </span>
           }
-          padded={false}
         >
+          {reservationEntries.length === 0 ? (
+            <PremiumEmptyNote>{m.u5.bookingsEmpty}</PremiumEmptyNote>
+          ) : (
+            <>
+              <div className="flex h-2 gap-1" role="img" aria-label={reservationEntries.map(([st, c]) => `${RESERVATION_STATUS_LABEL[st] ?? st} ${c}`).join('، ')}>
+                {reservationEntries.map(([st, c]) =>
+                  Number(c) > 0 ? (
+                    <span key={st} className="rounded-full" style={{ flexGrow: Number(c), flexBasis: 0, background: RESERVATION_COLOR[st] ?? '#B8B2A3' }} />
+                  ) : null,
+                )}
+              </div>
+              <ul className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-slate-600">
+                {reservationEntries.map(([st, c]) => (
+                  <li key={st} className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full" style={{ background: RESERVATION_COLOR[st] ?? '#B8B2A3' }} aria-hidden />
+                    {RESERVATION_STATUS_LABEL[st] ?? st}
+                    <span className="num text-[18px] font-semibold text-slate-900">{c}</span>
+                    <span className="text-slate-500">· {pct(Number(c), reservationTotal)}%</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </PremiumPanel>
+
+        {/* Highlights: one card split by hairlines (U5). */}
+        <PremiumPanel title={m.u5.highlightsTitle} sub={m.u5.periodSub(year)} padding="none">
+          <dl className="grid grid-cols-2 gap-px border-t border-hairline bg-hairline">
+            {[
+              { label: m.insights.bestMonth, value: peak ? `${peak.label} · ${peak.contracts} ${m.salesTrend.contractSuffix}` : null },
+              { label: m.insights.bestProject, value: topProject?.name ?? null },
+              { label: m.insights.topBroker, value: brokers[0]?.brokerName ?? null },
+              { label: m.u5.collectionFromSales, value: salesTotal > 0 ? `${Math.round((financialTotal / salesTotal) * 100)}%` : null },
+            ].map((h) => (
+              <div key={h.label} className="bg-surface px-6 py-5">
+                <dt className="text-[13px] text-slate-500">{h.label}</dt>
+                <dd className={cn('mt-1 truncate text-[16px] font-bold', h.value ? 'text-slate-900' : 'text-slate-500')}>
+                  {h.value ?? m.insights.noData}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </PremiumPanel>
+      </div>
+
+      <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
+        <PremiumPanel title={m.projectRankings.title} sub={m.projectRankings.description}>
           {byProject.length === 0 ? (
-            <EmptyState icon={<FileText />} title={m.projectRankings.empty.title} description={m.projectRankings.empty.description} />
+            <PremiumEmptyNote>{m.u5.projectsEmpty}</PremiumEmptyNote>
           ) : (
-            <div className="divide-y divide-hairline">
-              {byProject.map((p, idx) => {
-                const sharePct = salesTotal > 0 ? (Number(p.total) / salesTotal) * 100 : 0;
-                const isTop    = idx === 0;
-                const name     = projectMap.get(p.projectId) ?? m.projectRankings.unknownProject;
-                return (
-                  <div key={p.projectId} className={cn('flex items-center gap-3 px-5 py-3 hover:bg-surface-muted/40 transition-colors', isTop && 'bg-amber-50/40')}>
-                    <RankBadge rank={idx + 1} />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-slate-800 truncate">{name}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <div className="flex-1 max-w-[80px] h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                          <div
-                            className={cn('h-full rounded-full', isTop ? 'bg-amber-400' : 'bg-slate-300')}
-                            style={{ width: `${sharePct}%` }}
-                          />
-                        </div>
-                        <span className="text-[10px] text-slate-400">{sharePct.toFixed(0)}%</span>
-                        <span className="text-[10px] text-slate-400">{p.count} {m.projectRankings.contractSuffix}</span>
-                      </div>
-                    </div>
-                    <div className="text-end shrink-0">
-                      <p className="text-sm font-black tabular-nums text-slate-900 whitespace-nowrap" dir="ltr">
-                        {formatCurrency(p.total, currency, locale)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <ol className="space-y-3">
+              {byProject.map((p, idx) => (
+                <li key={p.projectId} className="flex items-center gap-3">
+                  <Rank n={idx + 1} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-heading text-[15px] font-bold text-slate-900">
+                      {projectMap.get(p.projectId) ?? m.projectRankings.unknownProject}
+                    </span>
+                    <span className="block text-[12px] text-slate-500">
+                      {p.count} {m.projectRankings.contractSuffix} · {pct(Number(p.total), salesTotal)}%
+                    </span>
+                  </span>
+                  <NumCell {...numCell(Number(p.total))} />
+                </li>
+              ))}
+            </ol>
           )}
-        </PremiumSectionCard>
+        </PremiumPanel>
 
-        {/* Broker Leaderboard */}
-        <PremiumSectionCard
-          icon={<Users />}
-          title={m.brokerLeaderboard.title}
-          description={m.brokerLeaderboard.description}
-          trailing={
-            brokers.length > 0
-              ? <span className="text-xs text-slate-400 tabular-nums shrink-0">{brokers.length} {m.brokerLeaderboard.brokerSuffix}</span>
-              : undefined
-          }
-          padded={false}
-        >
+        <PremiumPanel title={m.brokerLeaderboard.title} sub={m.brokerLeaderboard.description}>
           {brokers.length === 0 ? (
-            <EmptyState icon={<Users />} title={m.brokerLeaderboard.empty.title} description={m.brokerLeaderboard.empty.description} />
+            <PremiumEmptyNote>{m.u5.brokersEmpty}</PremiumEmptyNote>
           ) : (
-            <div className="divide-y divide-hairline">
-              {brokers.map((b, idx) => {
-                const sharePct = totalCommissions > 0 ? (b.commissionAmount / totalCommissions) * 100 : 0;
-                return (
-                  <div key={b.brokerId} className={cn('flex items-center gap-3 px-5 py-3 hover:bg-surface-muted/40 transition-colors', idx === 0 && 'bg-amber-50/40')}>
-                    <RankBadge rank={idx + 1} />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-slate-800 truncate">{b.brokerName}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <div className="flex-1 max-w-[80px] h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                          <div
-                            className={cn('h-full rounded-full', idx === 0 ? 'bg-amber-400' : idx <= 2 ? 'bg-violet-400' : 'bg-slate-300')}
-                            style={{ width: `${sharePct}%` }}
-                          />
-                        </div>
-                        <span className="text-[10px] text-slate-400">{sharePct.toFixed(0)}%</span>
-                        <span className="text-[10px] text-slate-400">{b.count} {m.brokerLeaderboard.commissionSuffix}</span>
-                      </div>
-                    </div>
-                    <div className="text-end shrink-0">
-                      <p className="text-sm font-black tabular-nums text-slate-900 whitespace-nowrap" dir="ltr">
-                        {formatCurrency(b.commissionAmount, currency, locale)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <ol className="space-y-3">
+              {brokers.map((b, idx) => (
+                <li key={b.brokerId} className="flex items-center gap-3">
+                  <Rank n={idx + 1} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[14.5px] font-bold text-slate-900">{b.brokerName}</span>
+                    <span className="block text-[12px] text-slate-500">
+                      {b.count} {m.brokerLeaderboard.commissionSuffix} · {pct(b.commissionAmount, totalCommissions)}%
+                    </span>
+                  </span>
+                  <NumCell {...numCell(b.commissionAmount)} />
+                </li>
+              ))}
+            </ol>
           )}
-        </PremiumSectionCard>
-
+        </PremiumPanel>
       </div>
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          ROW 5 — Insights ribbon
-      ════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          {
-            label: m.insights.bestMonth,
-            icon: <CalendarDays className="h-3.5 w-3.5" />,
-            iconBg: 'bg-brand-50 text-brand-600',
-            value: bestTrendMonth?.contracts ? bestTrendMonth.label : '—',
-            sub:   bestTrendMonth?.contracts ? `${bestTrendMonth.contracts} ${m.salesTrend.contractSuffix}` : m.insights.noData,
-          },
-          {
-            label: m.insights.bestProject,
-            icon: <Trophy className="h-3.5 w-3.5" />,
-            iconBg: 'bg-amber-50 text-amber-600',
-            value: topProject?.name ?? '—',
-            sub:   topProject ? `${topProject.count} ${m.salesTrend.contractSuffix}` : m.insights.noData,
-          },
-          {
-            label: m.insights.topBroker,
-            icon: <Star className="h-3.5 w-3.5" />,
-            iconBg: 'bg-violet-50 text-violet-600',
-            value: brokers[0]?.brokerName ?? '—',
-            sub:   brokers[0] ? formatCurrency(brokers[0].commissionAmount, currency, locale) : m.insights.noData,
-            subDir: 'ltr' as const,
-          },
-          {
-            label: m.insights.salesPayments,
-            icon: <ArrowRight className="h-3.5 w-3.5" />,
-            iconBg: 'bg-emerald-50 text-emerald-600',
-            value: salesTotal > 0 ? `${Math.round((financialTotal / salesTotal) * 100)}%` : '—',
-            sub:   m.insights.salesPaymentsSub,
-          },
-        ].map((item) => (
-          <div key={item.label} className="bg-surface rounded-[20px] border border-hairline shadow-soft p-4">
-            <div className={cn('inline-flex h-7 w-7 items-center justify-center rounded-lg mb-2.5', item.iconBg)}>
-              {item.icon}
-            </div>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 leading-none">{item.label}</p>
-            <p className="text-sm font-bold text-slate-900 mt-1.5 leading-tight truncate">{item.value}</p>
-            {item.sub && (
-              <p className="text-[10px] text-slate-400 mt-0.5 truncate" dir={item.subDir}>{item.sub}</p>
-            )}
-          </div>
-        ))}
-      </div>
-
     </div>
   );
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-function RankBadge({ rank }: { rank: number }) {
-  const medals: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
-  const medal = medals[rank];
+function Rank({ n }: { n: number }) {
   return (
-    <div className={cn(
-      'h-7 w-7 rounded-full flex items-center justify-center shrink-0',
-      rank === 1 ? 'bg-amber-100' : rank <= 3 ? 'bg-slate-100' : 'bg-slate-50',
-    )}>
-      {medal
-        ? <span className="text-base leading-none">{medal}</span>
-        : <span className="text-[11px] font-black text-slate-400">{rank}</span>
-      }
-    </div>
+    <span
+      className={cn(
+        'num inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-[17px] font-semibold',
+        n === 1 ? 'border-brand-400/70 text-brand-700' : 'border-hairline text-slate-600',
+      )}
+    >
+      {n}
+    </span>
   );
 }

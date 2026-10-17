@@ -99,6 +99,7 @@ function makePrismaMock() {
       ]),
     },
     reservation: {
+      aggregate: jest.fn().mockResolvedValue({ _sum: { bookingAmount: null } }),
       count: jest.fn().mockImplementation(async (args?: { where?: { expiresAt?: unknown } }) => (args?.where?.expiresAt ? 1 : 2)),
       groupBy: jest.fn().mockResolvedValue([]),
       findMany: jest.fn().mockResolvedValue([
