@@ -71,7 +71,11 @@ const CONTRACT_MOCK = {
   },
 };
 
+// A row the overdue sweep chases: signed contract, no payment on its way.
+const CHASED_ROW = { plan: { contract: { status: 'ACTIVE' } }, deposits: [] };
+
 const INSTALLMENT_MOCK = {
+  ...CHASED_ROW,
   id: 'inst-1',
   amount: new Prisma.Decimal(119000),
   dueDate: FUTURE_DATE,
@@ -218,6 +222,7 @@ describe('GET /me/home-summary', () => {
 
   it('primaryAction is OVERDUE_INSTALLMENT when nextDue status is OVERDUE', async () => {
     mock.installment.findFirst.mockResolvedValueOnce({
+      ...CHASED_ROW,
       id: 'inst-overdue',
       amount: new Prisma.Decimal(50000),
       dueDate: PAST_DATE,
@@ -233,6 +238,7 @@ describe('GET /me/home-summary', () => {
 
   it('primaryAction is OVERDUE_INSTALLMENT for PENDING past dueDate (cron-gap guard)', async () => {
     mock.installment.findFirst.mockResolvedValueOnce({
+      ...CHASED_ROW,
       id: 'inst-pending-overdue',
       amount: new Prisma.Decimal(50000),
       dueDate: PAST_DATE,
@@ -245,8 +251,27 @@ describe('GET /me/home-summary', () => {
     expect(res.body.installments.nextDue?.status).toBe('OVERDUE');
   });
 
+  it('a past-due row whose payment is on its way, or on an unsigned deal, is not overdue', async () => {
+    for (const row of [
+      { plan: { contract: { status: 'ACTIVE' } }, deposits: [{ id: 'proof-under-review' }] },
+      { plan: { contract: { status: 'UNSIGNED' } }, deposits: [] },
+    ]) {
+      mock.installment.findFirst.mockResolvedValueOnce({
+        ...row,
+        id: 'inst-waiting',
+        amount: new Prisma.Decimal(50000),
+        dueDate: PAST_DATE,
+        status: 'PENDING',
+      });
+      const res = await request(app.getHttpServer()).get('/me/home-summary').expect(200);
+      expect(res.body.primaryAction.type).not.toBe('OVERDUE_INSTALLMENT');
+      expect(res.body.installments.nextDue?.status).toBe('PENDING');
+    }
+  });
+
   it('primaryAction is DUE_SOON_INSTALLMENT when nextDue is within 14 days', async () => {
     mock.installment.findFirst.mockResolvedValueOnce({
+      ...CHASED_ROW,
       id: 'inst-due-soon',
       amount: new Prisma.Decimal(119000),
       dueDate: DUE_SOON_DATE,
