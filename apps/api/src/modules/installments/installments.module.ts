@@ -83,8 +83,7 @@ import {
   CONTRACT_CANCELLED_MESSAGE,
   isDeadContract,
   LIVE_CONTRACT_WHERE,
-  BILLABLE_PLAN_WHERE,
-  LIVE_PLAN_WHERE,
+  CHASED_PLAN_WHERE,
   SURCHARGE_PAYMENT_TYPES,
 } from './live-contract';
 import { LATE_FEE_SETTING_KEYS, lateFeesDue, resolveLateFeeSettings } from './late-fee';
@@ -453,8 +452,9 @@ export class InstallmentsService {
         status: InstallmentStatus.PENDING,
         // A superset — the exact cut is per company, below.
         dueDate: { lt: new Date(now.getTime() + 24 * 60 * 60 * 1000) },
-        // Signed, live contracts only: a cancelled, deleted or unsigned deal is not chased.
-        plan: BILLABLE_PLAN_WHERE,
+        // Signed, live contracts only: a cancelled, deleted or unsigned deal is
+        // not chased — nor a deactivated customer's, or a blocked company's.
+        plan: CHASED_PLAN_WHERE,
         // A payment already on its way (proof under review, cheque not
         // cleared) is not overdue — the customer has paid.
         deposits: PAYMENT_NOT_ON_ITS_WAY,
@@ -567,7 +567,7 @@ export class InstallmentsService {
         status: InstallmentStatus.OVERDUE,
         type: { notIn: SURCHARGE_PAYMENT_TYPES },
         dueDate: { lte: graceCutoff },
-        plan: BILLABLE_PLAN_WHERE,
+        plan: CHASED_PLAN_WHERE,
         // A payment already on its way stops the clock.
         deposits: PAYMENT_NOT_ON_ITS_WAY,
       },
@@ -1443,8 +1443,9 @@ export class InstallmentRemindersService {
         dueDate: { gte: start, lte: end },
         // Nothing to remind about once the payment is on its way.
         deposits: PAYMENT_NOT_ON_ITS_WAY,
-        // Only active customers on live contracts receive reminders.
-        plan: { ...LIVE_PLAN_WHERE, contract: { ...LIVE_PLAN_WHERE.contract, customer: { active: true } } },
+        // Only active customers on signed, live contracts of a company that is
+        // not blocked receive reminders (the same rule as the overdue sweep).
+        plan: CHASED_PLAN_WHERE,
       },
       orderBy: { dueDate: 'asc' },
       select: {
@@ -1546,9 +1547,16 @@ export class InstallmentRemindersService {
     dueDate: Date,
     dueDateStr: string,
   ): Promise<Record<string, unknown>> {
-    // 1-based ordinal within the plan (no installmentNumber column exists).
+    // 1-based ordinal within the plan (no installmentNumber column exists),
+    // counting the schedule's own payments only: rows a reschedule cancelled
+    // and fees (late fee, transfer fee, cheque penalty) used to push it up.
     const installmentNumber = await this.prisma.installment.count({
-      where: { planId: inst.planId, dueDate: { lte: dueDate } },
+      where: {
+        planId: inst.planId,
+        dueDate: { lte: dueDate },
+        status: { not: InstallmentStatus.CANCELLED },
+        type: { notIn: SURCHARGE_PAYMENT_TYPES },
+      },
     });
     const name = (contract.unit?.building?.phase?.project?.name ?? {}) as { ar?: string; en?: string };
     return {
@@ -1638,9 +1646,11 @@ class MeInstallmentsService {
       ...LIVE_CONTRACT_WHERE,
       ...(opts.contractId ? { id: opts.contractId } : {}),
     };
+    // Rows a reschedule cancelled are not owed: left out unless asked for by
+    // status (the app used to show them as pending).
     const listWhere: Prisma.InstallmentWhereInput = {
       plan: { contract: contractScope },
-      ...(opts.status ? { status: opts.status } : {}),
+      status: opts.status ?? { not: InstallmentStatus.CANCELLED },
     };
     const summaryWhere: Prisma.InstallmentWhereInput = {
       plan: { contract: contractScope },

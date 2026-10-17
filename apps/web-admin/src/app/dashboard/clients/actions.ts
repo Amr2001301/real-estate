@@ -74,8 +74,14 @@ export async function activateClientAction(id: string) {
   revalidatePath('/dashboard/clients');
 }
 
-export async function deactivateClientAction(id: string) {
-  await api.patch(`/users/${id}/deactivate`, {});
+export async function deactivateClientAction(id: string): Promise<{ error?: string }> {
+  try {
+    await api.patch(`/users/${id}/deactivate`, {});
+  } catch (e) {
+    // e.g. the customer still has a live contract (cancel or transfer it first).
+    return { error: (e as Error).message };
+  }
   revalidatePath(`/dashboard/clients/${id}`);
   revalidatePath('/dashboard/clients');
+  return {};
 }

@@ -430,6 +430,7 @@
   "installmentStatusPending": "قيد الانتظار",
   "installmentStatusPaid": "مدفوع",
   "installmentStatusOverdue": "متأخر",
+  "installmentStatusCancelled": "ملغي (أُعيدت الجدولة)",
   "installmentDueOn": "مستحق في {date}",
   "@installmentDueOn": { "placeholders": { "date": { "type": "String" } } },
   "installmentAmount": "المبلغ",

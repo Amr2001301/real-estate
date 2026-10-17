@@ -2390,6 +2390,12 @@ abstract class AppLocalizations {
   /// **'Overdue'**
   String get installmentStatusOverdue;
 
+  /// No description provided for @installmentStatusCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled (rescheduled)'**
+  String get installmentStatusCancelled;
+
   /// No description provided for @installmentDueOn.
   ///
   /// In en, this message translates to:

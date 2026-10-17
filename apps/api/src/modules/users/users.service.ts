@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
@@ -12,6 +13,7 @@ import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { MaintenanceStatus, AppointmentStatus, LeadStage, Prisma, ReservationStatus, UserRole, VisitStatus } from '@prisma/client';
 import { assertAssignableSales } from '../../common/utils/assignable-sales';
+import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { OPTIONS_LIMIT, optionsResult } from '../../common/utils/options';
 import { clientOwnerScope, ownedClientsWhere } from '../../common/utils/client-ownership';
@@ -436,6 +438,7 @@ export class UsersService {
   async deactivate(id: string) {
     const companyId = getRequiredCompanyId(); // MT-007
     await this.assertExists(id, companyId);
+    await this.assertNoLiveContract(id, companyId);
     // Told first, while the account can still receive it.
     try {
       await this.notifications.sendToUser(id, 'user_account_suspended', {
@@ -612,6 +615,7 @@ export class UsersService {
   async softDelete(id: string) {
     const companyId = getRequiredCompanyId(); // MT-009
     await this.assertExists(id, companyId);
+    await this.assertNoLiveContract(id, companyId);
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.user.update({
         where: { id },
@@ -621,6 +625,22 @@ export class UsersService {
       await this.cutAccess(tx, id, companyId);
       return updated;
     });
+  }
+
+  /**
+   * A customer with a live contract keeps their account: deactivating or
+   * deleting it cut them off from their schedule and receipts while the
+   * contract went on charging (overdue notices, late fees). Cancel or
+   * transfer the contract first.
+   */
+  private async assertNoLiveContract(id: string, companyId: string) {
+    const live = await this.prisma.contract.count({ where: { customerId: id, companyId, ...LIVE_CONTRACT_WHERE } });
+    if (live > 0) {
+      throw new ConflictException({
+        message: 'لهذا العميل عقد ساري — ألغِ العقد أو تنازل عنه أولاً',
+        code: 'CUSTOMER_HAS_LIVE_CONTRACT',
+      });
+    }
   }
 
   async restore(id: string) {

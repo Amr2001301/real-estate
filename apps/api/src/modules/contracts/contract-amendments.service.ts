@@ -629,7 +629,7 @@ export class ContractAmendmentsService {
       }
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const amendment = await this.prisma.$transaction(async (tx) => {
       await this.lockSchedule(tx, contractId, contract.reservationId, companyId);
       const moved = await tx.contract.updateMany({
         where: { id: contractId, companyId, totalAmount: contract.totalAmount, ...LIVE_CONTRACT_WHERE },
@@ -686,6 +686,11 @@ export class ContractAmendmentsService {
       });
       return row;
     });
+    await this.notifyCustomer(contract, 'contract_price_changed', actorId, {
+      totalAmount: dto.totalAmount,
+      oldTotalAmount: oldTotal,
+    });
+    return amendment;
   }
 
   /**
@@ -727,7 +732,7 @@ export class ContractAmendmentsService {
       where: { planId: plan.id, type: PlanPaymentType.INSTALLMENT, status: InstallmentStatus.PAID },
     });
 
-    return this.prisma.$transaction(async (tx) => {
+    const amendment = await this.prisma.$transaction(async (tx) => {
       await this.lockSchedule(tx, contractId, contract.reservationId, companyId);
       const cancelled = await tx.installment.updateMany({
         where: { id: { in: open.map((i) => i.id) }, status: { in: OPEN_STATUSES } },
@@ -772,6 +777,37 @@ export class ContractAmendmentsService {
       });
       return row;
     });
+    await this.notifyCustomer(contract, 'contract_rescheduled', actorId, {
+      months: dto.months,
+      startsAt: dto.startsAt.slice(0, 10),
+    });
+    return amendment;
+  }
+
+  /** Best-effort: tell the customer their contract changed (a failure is logged, never thrown). */
+  private async notifyCustomer(
+    contract: { id: string; customerId: string; contractNumber: string | null; unit: { code: string } | null },
+    code: 'contract_rescheduled' | 'contract_price_changed',
+    actorId: string,
+    extra: Record<string, string | number>,
+  ) {
+    try {
+      await this.notifications.sendToUser(
+        contract.customerId,
+        code,
+        {
+          contractId: contract.id,
+          contractNumber: contract.contractNumber ?? '',
+          unitCode: contract.unit?.code ?? '',
+          ...extra,
+          entityType: 'contract',
+          entityId: contract.id,
+        },
+        { except: actorId },
+      );
+    } catch (err) {
+      reportFailure(this.logger, 'notifications', `contract ${contract.id} ${code} notice failed`, err);
+    }
   }
 
   async swapUnit(contractId: string, dto: SwapContractUnitDto, actorId: string) {

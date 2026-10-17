@@ -1,4 +1,5 @@
 import { ContractStatus, DepositType, PlanPaymentType, Prisma } from '@prisma/client';
+import { ACCESSIBLE_COMPANY_WHERE } from '../../common/tenant/company-access';
 
 /** A contract that is neither cancelled nor deleted. */
 export const LIVE_CONTRACT_WHERE = {
@@ -42,6 +43,21 @@ export const LIVE_PLAN_WHERE = {
 export const BILLABLE_PLAN_WHERE = {
   cancelledAt: null,
   contract: { status: ContractStatus.ACTIVE, deletedAt: null },
+} satisfies Prisma.InstallmentPlanWhereInput;
+
+/**
+ * A plan whose installments the automatic jobs chase (overdue, late fees):
+ * billable, its customer's account active and not deleted, and its company
+ * not blocked — no one is charged or notified who cannot reach the app.
+ */
+export const CHASED_PLAN_WHERE = {
+  cancelledAt: null,
+  contract: {
+    status: ContractStatus.ACTIVE,
+    deletedAt: null,
+    customer: { active: true, deletedAt: null },
+    company: ACCESSIBLE_COMPANY_WHERE,
+  },
 } satisfies Prisma.InstallmentPlanWhereInput;
 
 export const CONTRACT_CANCELLED_MESSAGE = 'العقد ملغي — لا يمكن تعديل مدفوعاته أو أقساطه';

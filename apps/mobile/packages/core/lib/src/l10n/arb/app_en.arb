@@ -433,6 +433,7 @@
   "installmentStatusPending": "Pending",
   "installmentStatusPaid": "Paid",
   "installmentStatusOverdue": "Overdue",
+  "installmentStatusCancelled": "Cancelled (rescheduled)",
   "installmentDueOn": "Due on {date}",
   "@installmentDueOn": { "placeholders": { "date": { "type": "String" } } },
   "installmentAmount": "Amount",

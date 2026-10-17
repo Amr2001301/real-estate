@@ -34,7 +34,7 @@ enum _Filter { all, paid, pending, overdue }
 
 Installment? _nextInstallment(List<Installment> all) {
   final unpaid = all
-      .where((i) => i.status != InstallmentStatus.paid)
+      .where((i) => i.status != InstallmentStatus.paid && i.status != InstallmentStatus.cancelled)
       .toList()
     ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
   return unpaid.isEmpty ? null : unpaid.first;
@@ -44,6 +44,7 @@ Installment? _nextInstallment(List<Installment> all) {
     switch (s) {
       InstallmentStatus.paid => (const Color(0xFF34C77B), l10n.installmentStatusPaid),
       InstallmentStatus.overdue => (const Color(0xFFEF4444), l10n.installmentStatusOverdue),
+      InstallmentStatus.cancelled => (const Color(0xFF9CA3AF), l10n.installmentStatusCancelled),
       _ => (const Color(0xFFF59E0B), l10n.installmentStatusPending),
     };
 
