@@ -784,10 +784,13 @@ export class DepositsService {
     // Verifying a proof under review (or a rejected one) is an approval: it
     // must pay the installment. It used to mark the money collected while the
     // installment stayed unpaid, and the customer got overdue notices.
+    // So is verifying again a payment whose installment was reopened by a
+    // reversal: it set APPROVED and left the installment unpaid.
     if (
       dto.verified &&
       (target.reviewStatus === DepositReviewStatus.PENDING_REVIEW ||
-        target.reviewStatus === DepositReviewStatus.REJECTED)
+        target.reviewStatus === DepositReviewStatus.REJECTED ||
+        (!!target.installmentId && target.installment?.status !== InstallmentStatus.PAID))
     ) {
       return this.approveProof(id, actor, {});
     }
@@ -1367,6 +1370,12 @@ export class DepositsService {
           reviewedById: actor.sub,
         },
       });
+      // Approved again after a reversal: it pays again, so it counts as
+      // collected again (the reversal stays on record, superseded).
+      await tx.paymentCorrection.updateMany({
+        where: { depositId: id, type: PaymentCorrectionType.REVERSAL, supersededAt: null },
+        data: { supersededAt: next.reviewedAt },
+      });
       if (target.installment) {
         // The proof pays the installment as it is now: a price change since
         // it was sent leaves it short or over.
@@ -1396,6 +1405,13 @@ export class DepositsService {
       // keeps showing the booking as UNPAID after approval. Snapshot fields
       // (bookingAmount / mode / percent) are intentionally left untouched.
       if (target.type === DepositType.BOOKING_AMOUNT && target.reservationId) {
+        // Like an installment: the proof pays the booking as it is now — an
+        // amount edited since it was sent would be marked paid short.
+        const [booking] = await tx.$queryRaw<Array<{ bookingAmount: Prisma.Decimal }>>`
+          SELECT "bookingAmount" FROM "Reservation" WHERE "id" = ${target.reservationId}::uuid FOR UPDATE`;
+        if (booking && !new Prisma.Decimal(target.amount).equals(booking.bookingAmount)) {
+          throw new ConflictException('مبلغ الإثبات لا يطابق مبلغ الحجز الحالي — ارفض الإثبات وأرسل إثباتاً جديداً بالمبلغ الصحيح');
+        }
         await tx.reservation.update({
           where: { id: target.reservationId },
           data: {

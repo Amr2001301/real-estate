@@ -18,7 +18,8 @@ import { LIVE_CONTRACT_WHERE, LIVE_PLAN_WHERE, SURCHARGE_PAYMENT_TYPES } from '.
  *     transfer recorded by staff, which pays its installment at once);
  *   - not paid by a cheque that has not cleared — or that bounced, was
  *     replaced or cancelled;
- *   - not reversed (no REVERSAL correction written against it).
+ *   - not reversed (no REVERSAL correction written against it), unless it
+ *     was approved again since (the reversal is then superseded).
  *
  * Refunds on cancelled contracts are not subtracted here; see the refunds
  * report.
@@ -33,7 +34,7 @@ export const COLLECTED_DEPOSIT_WHERE = {
         { paymentInstrument: { status: PaymentInstrumentStatus.CLEARED } },
       ],
     },
-    { paymentCorrections: { none: { type: PaymentCorrectionType.REVERSAL } } },
+    { paymentCorrections: { none: { type: PaymentCorrectionType.REVERSAL, supersededAt: null } } },
   ],
 } satisfies Prisma.DepositWhereInput;
 
@@ -45,7 +46,7 @@ export const COLLECTED_DEPOSIT_WHERE = {
 export const RECORDED_DEPOSIT_WHERE = {
   deletedAt: null,
   reviewStatus: { not: DepositReviewStatus.REJECTED },
-  paymentCorrections: { none: { type: PaymentCorrectionType.REVERSAL } },
+  paymentCorrections: { none: { type: PaymentCorrectionType.REVERSAL, supersededAt: null } },
 } satisfies Prisma.DepositWhereInput;
 
 /**
