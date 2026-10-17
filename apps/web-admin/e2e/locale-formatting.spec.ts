@@ -30,7 +30,14 @@ for (const route of ROUTES) {
   });
 }
 
-test('Arabic stays the default, with Arabic-Indic digits', async ({ page }) => {
-  await page.goto('/dashboard/deposits', { waitUntil: 'networkidle' });
-  await expect(page.locator('main')).toContainText(/[٠-٩]/);
-});
+// U5 (owner-approved design): Arabic stays the default language, but every
+// number uses Western digits — no Arabic-Indic digits mixed in.
+for (const route of ROUTES) {
+  test(`${route} stays Arabic with Western digits`, async ({ page }) => {
+    await page.goto(route, { waitUntil: 'networkidle' });
+    const main = page.locator('main');
+    await expect(main).toContainText(/[\u0600-\u06FF]/);
+    const text = await main.innerText();
+    expect(text.split('\n').filter((l) => /[٠-٩]/.test(l))).toEqual([]);
+  });
+}
