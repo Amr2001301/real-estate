@@ -72,4 +72,13 @@ describe('late-fee settings', () => {
     expect(() => LATE_FEE_VALIDATORS['lateFee.value']!('lateFee.value', 1.234)).toThrow(BadRequestException);
     expect(() => LATE_FEE_VALIDATORS['lateFee.repeat']!('lateFee.repeat', 'MONTHLY')).not.toThrow();
   });
+
+  it('does not count the time the clock was stopped', () => {
+    const s = on({ repeat: 'MONTHLY' });
+    // 10 days stopped before: day 7 of the calendar is day −3 of the clock.
+    expect(lateFeesDue({ ...inst, pausedSeconds: 10 * 86_400 }, s, [], at(7))).toEqual([]);
+    expect(lateFeesDue({ ...inst, pausedSeconds: 10 * 86_400 }, s, [], at(17))).toEqual([100]);
+    // Stopped since day 5 and still stopped: no fee however late it gets.
+    expect(lateFeesDue({ ...inst, pausedSince: at(5) }, s, [], at(90))).toEqual([]);
+  });
 });

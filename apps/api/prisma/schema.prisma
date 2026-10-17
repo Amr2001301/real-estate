@@ -1357,6 +1357,13 @@ model Installment {
   lateFees Installment[] @relation("LateFee")
   waivedAt DateTime?
 
+  // The late-fee clock stops while the company is blocked or a payment for
+  // the row is waiting (proof under review, cheque not cleared) — decided
+  // 2026-10-16. Since when it is stopped (null = running), and for how long
+  // it was stopped before; fees are charged on the time it ran.
+  lateFeePausedSince   DateTime?
+  lateFeePausedSeconds Int       @default(0)
+
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 

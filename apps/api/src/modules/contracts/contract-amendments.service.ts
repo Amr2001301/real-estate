@@ -276,6 +276,27 @@ export class ContractAmendmentsService {
       throw new BadRequestException('لا يمكن نقل العقد إلا لعميل');
     }
     await this.assertNoWaitingPayments(contractId, contract.reservationId);
+    // A transfer requires the overdue amounts settled first (decided
+    // 2026-10-16): the new owner does not take on the old one's arrears and
+    // late fees, nor does the old one leave them behind.
+    const today = startOfLocalToday(await companyTimeZone(this.prisma, companyId));
+    const arrears = await this.prisma.installment.count({
+      where: {
+        companyId,
+        plan: { contractId, cancelledAt: null },
+        OR: [
+          { status: InstallmentStatus.OVERDUE },
+          { status: InstallmentStatus.PENDING, dueDate: { lt: today } },
+          { type: PlanPaymentType.LATE_FEE, status: { in: OPEN_STATUSES } },
+        ],
+      },
+    });
+    if (arrears > 0) {
+      throw new ConflictException({
+        message: 'على العقد أقساط متأخرة أو غرامات غير مسددة — سدّدها أو تنازل عنها قبل التنازل عن العقد',
+        code: 'TRANSFER_NEEDS_ARREARS_SETTLED',
+      });
+    }
 
     // The fee goes on the contract's schedule: the admin's amount, else the
     // company setting. Without a schedule there is nowhere to put it.
@@ -739,6 +760,16 @@ export class ContractAmendmentsService {
         data: { status: InstallmentStatus.CANCELLED },
       });
       if (cancelled.count !== open.length) throw new ConflictException('تغيّر جدول الأقساط أثناء التنفيذ — أعد المحاولة');
+      // Their unpaid late fees are waived with them (decided 2026-10-16): the
+      // rows they were charged on are no longer owed. A paid fee stays paid.
+      const feesWaived = await tx.installment.updateMany({
+        where: {
+          feeForId: { in: open.map((i) => i.id) },
+          type: PlanPaymentType.LATE_FEE,
+          status: { in: OPEN_STATUSES },
+        },
+        data: { status: InstallmentStatus.CANCELLED, waivedAt: new Date() },
+      });
       await tx.installment.createMany({
         data: Array.from({ length: dto.months }, (_, i) => ({
           planId: plan.id,
@@ -771,7 +802,14 @@ export class ContractAmendmentsService {
           entityType: 'Contract',
           entityId: contractId,
           before: { openMonthly: open.length },
-          after: { months: dto.months, startsAt: dto.startsAt, monthly: monthlyCents / 100, last: lastCents / 100, reason: dto.reason },
+          after: {
+            months: dto.months,
+            startsAt: dto.startsAt,
+            monthly: monthlyCents / 100,
+            last: lastCents / 100,
+            lateFeesWaived: feesWaived.count,
+            reason: dto.reason,
+          },
           companyId,
         },
       });

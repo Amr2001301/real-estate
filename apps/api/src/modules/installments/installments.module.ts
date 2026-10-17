@@ -79,11 +79,15 @@ import {
   xlsxFilename,
 } from '../../common/utils/xlsx';
 import { reportFailure } from '../../common/observability/report-failure';
+import { ACCESSIBLE_COMPANY_WHERE } from '../../common/tenant/company-access';
 import {
   CONTRACT_CANCELLED_MESSAGE,
   isDeadContract,
   LIVE_CONTRACT_WHERE,
+  BILLABLE_PLAN_WHERE,
+  CHASED_INSTALLMENT_WHERE,
   CHASED_PLAN_WHERE,
+  PAYMENT_ON_ITS_WAY,
   SURCHARGE_PAYMENT_TYPES,
 } from './live-contract';
 import { LATE_FEE_SETTING_KEYS, lateFeesDue, resolveLateFeeSettings } from './late-fee';
@@ -97,15 +101,22 @@ import { COMPANY_TIMEZONE_DEFAULT, companyTimeZones, startOfLocalToday } from '.
  * cleared yet. While one is, the customer has paid as far as they can tell:
  * no "due soon" reminder, no overdue, no late fee.
  */
-const PAYMENT_NOT_ON_ITS_WAY = {
-  none: {
-    deletedAt: null,
-    OR: [
-      { reviewStatus: DepositReviewStatus.PENDING_REVIEW },
-      { paymentInstrument: { status: { in: UNCLEARED_INSTRUMENT_STATUSES } } },
-    ],
-  },
-} satisfies Prisma.DepositListRelationFilter;
+const PAYMENT_NOT_ON_ITS_WAY = { none: PAYMENT_ON_ITS_WAY } satisfies Prisma.DepositListRelationFilter;
+
+/**
+ * A past-due row whose late-fee clock is stopped (decided 2026-10-16): its
+ * company is blocked, or a payment for it is waiting for review or for its
+ * cheque to clear.
+ */
+const LATE_FEE_CLOCK_STOPPED = {
+  type: { notIn: SURCHARGE_PAYMENT_TYPES },
+  status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] },
+  plan: BILLABLE_PLAN_WHERE,
+  OR: [
+    { plan: { contract: { company: { NOT: ACCESSIBLE_COMPANY_WHERE } } } },
+    { deposits: { some: PAYMENT_ON_ITS_WAY } },
+  ],
+} satisfies Prisma.InstallmentWhereInput;
 
 // ─── Existing contract-based plan DTOs ────────────────────────────────────────
 
@@ -452,12 +463,9 @@ export class InstallmentsService {
         status: InstallmentStatus.PENDING,
         // A superset — the exact cut is per company, below.
         dueDate: { lt: new Date(now.getTime() + 24 * 60 * 60 * 1000) },
-        // Signed, live contracts only: a cancelled, deleted or unsigned deal is
-        // not chased — nor a deactivated customer's, or a blocked company's.
-        plan: CHASED_PLAN_WHERE,
-        // A payment already on its way (proof under review, cheque not
-        // cleared) is not overdue — the customer has paid.
-        deposits: PAYMENT_NOT_ON_ITS_WAY,
+        // Chased only (signed live contract, active customer, company not
+        // blocked), and not while a payment is on its way — the customer has paid.
+        ...CHASED_INSTALLMENT_WHERE,
       },
       select: {
         id: true,
@@ -535,6 +543,7 @@ export class InstallmentsService {
    * for the installment waits for review or for its cheque to clear.
    */
   async applyLateFees(now = new Date()) {
+    await this.trackLateFeeClock(now);
     const enabledRows = await this.prisma.setting.findMany({
       where: { key: 'lateFee.enabled' },
       select: { companyId: true, value: true },
@@ -549,6 +558,29 @@ export class InstallmentsService {
       }
     }
     return { charged };
+  }
+
+  /**
+   * Stops the late-fee clock of past-due rows that are paused now and
+   * restarts the ones no longer paused, adding the stopped time. Runs before
+   * the fees each day, for every company (a blocked one included).
+   */
+  private async trackLateFeeClock(now: Date) {
+    await this.prisma.installment.updateMany({
+      where: { ...LATE_FEE_CLOCK_STOPPED, dueDate: { lt: now }, lateFeePausedSince: null },
+      data: { lateFeePausedSince: now },
+    });
+    const resumed = await this.prisma.installment.findMany({
+      where: { lateFeePausedSince: { not: null }, NOT: LATE_FEE_CLOCK_STOPPED },
+      select: { id: true, lateFeePausedSince: true },
+    });
+    for (const r of resumed) {
+      const seconds = Math.max(0, Math.floor((now.getTime() - r.lateFeePausedSince!.getTime()) / 1000));
+      await this.prisma.installment.updateMany({
+        where: { id: r.id, lateFeePausedSince: r.lateFeePausedSince },
+        data: { lateFeePausedSince: null, lateFeePausedSeconds: { increment: seconds } },
+      });
+    }
   }
 
   private async applyLateFeesForCompany(companyId: string, now: Date): Promise<number> {
@@ -576,6 +608,8 @@ export class InstallmentsService {
         planId: true,
         amount: true,
         dueDate: true,
+        lateFeePausedSeconds: true,
+        lateFeePausedSince: true,
         lateFees: { select: { amount: true, waivedAt: true } },
         plan: {
           select: {
@@ -590,7 +624,12 @@ export class InstallmentsService {
     let count = 0;
     for (const inst of rows) {
       const fees = lateFeesDue(
-        { amount: Number(inst.amount), dueDate: inst.dueDate },
+        {
+          amount: Number(inst.amount),
+          dueDate: inst.dueDate,
+          pausedSeconds: inst.lateFeePausedSeconds,
+          pausedSince: inst.lateFeePausedSince,
+        },
         settings,
         inst.lateFees.map((f) => ({ amount: Number(f.amount), waived: f.waivedAt !== null })),
         now,
@@ -1441,11 +1480,9 @@ export class InstallmentRemindersService {
       where: {
         status: InstallmentStatus.PENDING,
         dueDate: { gte: start, lte: end },
-        // Nothing to remind about once the payment is on its way.
-        deposits: PAYMENT_NOT_ON_ITS_WAY,
-        // Only active customers on signed, live contracts of a company that is
-        // not blocked receive reminders (the same rule as the overdue sweep).
-        plan: CHASED_PLAN_WHERE,
+        // The same rule as the overdue sweep: nothing to remind about once the
+        // payment is on its way, nor on a deal that is not chased.
+        ...CHASED_INSTALLMENT_WHERE,
       },
       orderBy: { dueDate: 'asc' },
       select: {
