@@ -123,6 +123,9 @@ const contractFixture: { rows: ContractRow[] } = { rows: [] };
 // Documents the (mocked) listForOwner draws from; tests set these per case.
 type DocRow = { id: string; visibility: string };
 const documentFixture: { rows: DocRow[] } = { rows: [] };
+type UploadSlot = { key: string; userId: string; ownerId: string; usedAt?: Date | null };
+const uploadSlots: UploadSlot[] = [];
+const PRESIGNED_KEY = 'documents/2026-05-22/x.jpg';
 
 // DocumentsService is overridden so the maintenance suite never touches R2 /
 // the documents prisma tables — those have their own spec. listForOwner honors
@@ -195,6 +198,10 @@ function makePrismaMock() {
     },
     maintenanceCategory: {
       findMany: jest.fn().mockResolvedValue([]),
+      // Duplicate-prevention lookup by normalized code (per company).
+      findFirst: jest.fn().mockImplementation(async ({ where }: { where: { code: string } }) =>
+        categoryFixture.codeExists ? { id: 'cat-existing', code: where.code } : null,
+      ),
       findUnique: jest.fn().mockImplementation(
         async ({ where }: { where: { id?: string; code?: string } }) => {
           // Duplicate-prevention lookup by normalized code.
@@ -220,6 +227,27 @@ function makePrismaMock() {
         id: where.id,
         ...data,
       })),
+    },
+    // Upload slots: a presign records one; an attach claims it (only the key
+    // this user presigned for this request).
+    presignedUpload: {
+      create: jest.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => {
+        uploadSlots.push(data as unknown as UploadSlot);
+        return data;
+      }),
+      updateMany: jest.fn().mockImplementation(
+        async ({ where, data }: { where: Partial<UploadSlot> & { usedAt?: null }; data: { usedAt: Date | null } }) => {
+          const hit = uploadSlots.filter(
+            (u) =>
+              u.key === where.key &&
+              (where.userId === undefined || u.userId === where.userId) &&
+              (where.ownerId === undefined || u.ownerId === where.ownerId) &&
+              (where.usedAt !== null || !u.usedAt),
+          );
+          for (const u of hit) u.usedAt = data.usedAt;
+          return { count: hit.length };
+        },
+      ),
     },
     maintenanceRequest: {
       findMany: jest.fn().mockResolvedValue([]),
@@ -343,6 +371,7 @@ describe('Maintenance module · permissions enforcement', () => {
     documentFixture.rows = [];
     documentsMock.presign.mockClear();
     documentsMock.create.mockClear();
+    uploadSlots.length = 0;
     documentsMock.listForOwner.mockClear();
     mock.contract.findMany.mockClear();
     mock.userPermission.findMany.mockClear();
@@ -1003,8 +1032,12 @@ describe('Maintenance module · permissions enforcement', () => {
         FakeAuthGuard.currentUser = supervisor;
         fixture.assignedAdminId = SUPERVISOR_ID;
         await request(app.getHttpServer())
+          .post(`/me/maintenance-requests/${ID}/documents/presign`)
+          .send({ contentType: 'image/jpeg', sizeBytes: 1024, fileName: 'before.jpg' })
+          .expect(201);
+        await request(app.getHttpServer())
           .post(`/me/maintenance-requests/${ID}/documents`)
-          .send({ title: 'Before repair', fileUrl: 'https://cdn.example/x.jpg' })
+          .send({ title: 'Before repair', fileUrl: PRESIGNED_KEY })
           .expect(201);
         const [uploadedById, dto] = documentsMock.create.mock.calls[0]!;
         expect(uploadedById).toBe(SUPERVISOR_ID);
@@ -1077,8 +1110,12 @@ describe('Maintenance module · permissions enforcement', () => {
     it('creates a CUSTOMER_VISIBLE IMAGE forced to the request owner', async () => {
       FakeAuthGuard.currentUser = customer;
       await request(app.getHttpServer())
+        .post(`/me/maintenance-requests/${ID}/documents/presign`)
+        .send({ contentType: 'image/jpeg', sizeBytes: 1024, fileName: 'leak.jpg' })
+        .expect(201);
+      await request(app.getHttpServer())
         .post(`/me/maintenance-requests/${ID}/documents`)
-        .send({ title: 'Leak under sink', fileUrl: 'https://cdn.example/leak.jpg' })
+        .send({ title: 'Leak under sink', fileUrl: PRESIGNED_KEY })
         .expect(201);
       const [uploadedById, dto] = documentsMock.create.mock.calls[0]!;
       expect(uploadedById).toBe(CUSTOMER_ID);
@@ -1087,7 +1124,24 @@ describe('Maintenance module · permissions enforcement', () => {
         ownerId: ID,
         category: 'IMAGE',
         visibility: 'CUSTOMER_VISIBLE',
+        fileUrl: PRESIGNED_KEY,
       });
+      // The slot is used once.
+      await request(app.getHttpServer())
+        .post(`/me/maintenance-requests/${ID}/documents`)
+        .send({ title: 'Again', fileUrl: PRESIGNED_KEY })
+        .expect(400);
+    });
+
+    it('refuses a file it did not presign for this customer (external URL or another key)', async () => {
+      FakeAuthGuard.currentUser = customer;
+      for (const fileUrl of ['https://cdn.example/leak.jpg', 'contracts/2026-05-22/0b9f2a64-3c1e-4d8e-9a51-6f2b7c8d9e01.pdf']) {
+        await request(app.getHttpServer())
+          .post(`/me/maintenance-requests/${ID}/documents`)
+          .send({ title: 'x', fileUrl })
+          .expect(400);
+      }
+      expect(documentsMock.create).not.toHaveBeenCalled();
     });
 
     it('cannot upload to another customer request (404, ownership checked before the service)', async () => {

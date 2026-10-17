@@ -264,13 +264,12 @@ export class DepositsController {
   @Get('me/deposits')
   async myDeposits(@CurrentUser() user: AuthUser) {
     // Contract payments follow the transfer split (each owner sees the ones
-    // made while the contract was theirs); booking payments bind through the
-    // reservation, as before.
+    // made while the contract was theirs); booking payments stay with whoever
+    // paid them.
     const ownerWhere: Prisma.DepositWhereInput = {
       OR: [
         await this.ownership.depositOwnershipWhere(user.sub),
-        { contractId: null, reservation: { clientId: user.sub } },
-        { contractId: null, reservation: { lead: { is: { clientId: user.sub } } } },
+        await this.ownership.bookingDepositWhere(user.sub),
       ],
     };
     const result = await this.svc.list({ page: 1, pageSize: 100, ownerWhere });

@@ -45,29 +45,10 @@ export async function resetUnitWarranties(tx: Prisma.TransactionClient, unitId: 
 const OPEN_MAINTENANCE = { notIn: ['RESOLVED', 'CLOSED'] as ('RESOLVED' | 'CLOSED')[] };
 
 /**
- * Open maintenance requests follow the owner of the unit. On a transfer they
- * pass to the new owner, who now holds the unit (and its warranty); they used
- * to stay with the old one, who kept being notified and could confirm the
- * work. Returns how many moved.
- */
-export async function handOverOpenMaintenance(
-  tx: Prisma.TransactionClient,
-  unitId: string,
-  fromCustomerId: string,
-  toCustomerId: string,
-  companyId: string,
-): Promise<number> {
-  const moved = await tx.maintenanceRequest.updateMany({
-    where: { unitId, customerId: fromCustomerId, companyId, status: OPEN_MAINTENANCE },
-    data: { customerId: toCustomerId },
-  });
-  return moved.count;
-}
-
-/**
- * When the customer no longer holds the unit (the sale was cancelled, or the
- * contract moved to another unit), their open requests on it are closed: no
- * crew is sent to a unit that may already be resold. Returns how many closed.
+ * When the customer no longer holds the unit (the sale was cancelled, the
+ * contract moved to another unit, or was transferred to another customer),
+ * their open requests on it are closed: no crew is sent to a unit that may
+ * already be resold, and a new owner files their own. Returns how many closed.
  */
 export async function closeOpenMaintenance(
   tx: Prisma.TransactionClient,
