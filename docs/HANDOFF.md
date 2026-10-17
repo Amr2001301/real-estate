@@ -17,6 +17,8 @@
 
 ملاحظة: ملفات الترجمة المولّدة في تطبيقات الموبايل (`packages/core/lib/src/l10n/generated/`) اتعدّلت يدوياً لأن Flutter مش متاح في السحابة؛ الـ CI بيشغّل `flutter analyze` عليها.
 
+**التصميم الجديد (U5):** اعتمدت شكل جديد للوحة التحكم (أدمن، مبيعات، بروكر): خطوط جديدة، شريط أرقام كحلي، رأس صفحة أبسط، فلتر موحّد، جداول بدل الكروت، ووضع داكن. التفاصيل في القسم 3 تحت U5، والتصميم نفسه على [هذا اللينك](https://claude.ai/artifact/UPVXRtVxEBMWpmuRMYqb1Z) (خاص بأكونتك — شاركه من زرار Share لو الأكونت التاني محتاج يفتحه). اعتمدت كمان صفحة التقارير وملاحظات مراجعة الداشبورد (الأرقام المضلّلة). **التنفيذ شغال** على أجزاء، كل جزء PR (U5a → U5e تحت).
+
 **حاجات عليك إنت:** الاستضافة، تقييد مفتاح Firebase، حماية الفرع الرئيسي على GitHub، وتسميات الرسوم في تطبيقات الموبايل (محتاجة جهاز عليه Flutter).
 
 **إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». الجولة الرابعة خلصت؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
@@ -97,11 +99,11 @@ Shared helpers worth knowing (API): `common/utils/add-months.ts`, `common/time/c
 
 ---
 
-## 3. Round 4 — the plan (approved, NOT started)
+## 3. Round 4 — the plan (U1–U4 done; U5 in progress)
 
 Found by four read-only scenario audits on 2026-10-16. The top items were re-checked by hand. Paths are under `apps/api/` unless noted. Line numbers are as of `main` @ `bd3e46a`.
 
-**Recommended order: U2 → U1 → U3 → U4** (U2 first because broker commissions are broken for every company after the first).
+**Recommended order: U2 → U1 → U3 → U4 → U5** (U2 first because broker commissions are broken for every company after the first).
 
 **Status (2026-10-17):** round 4 is done — U2 (#89–#91), U1 (#92–#94), U3 (#95–#99), U4 (#100, #101 and the time-zone PR). New since this plan:
 - The late-fee clock pause lives on `Installment.lateFeePausedSince` / `lateFeePausedSeconds`.
@@ -164,6 +166,58 @@ Found by four read-only scenario audits on 2026-10-16. The top items were re-che
 9. `netCollected` with a type filter subtracts all refunds (`reports.service.ts:1733-1760`).
 10. **Decision 2:** show "collected towards price" and "fees & penalties" as two separate figures; a sale is counted by **`signedAt`** everywhere (reports page and `salesTrend` currently use `createdAt`).
 - Left as is (not decided otherwise): sales use the current (amended) price; inventory "sold value" uses list price; "number of payments" counts deposit rows.
+
+### U5 — Unified premium design (approved 2026-10-16)
+
+The owner approved a redesign of the whole `apps/web-admin` app — the admin dashboard, the sales screens and the broker portal (`src/app/portal`) all share it. Mockups (light + dark, interactive): **https://claude.ai/artifact/UPVXRtVxEBMWpmuRMYqb1Z** — artboards: Dashboard (light / dark), Projects list, Leads Kanban, Inventory. The link is private to the owner's account; ask the owner to share it if you can't open it. Structure, content and section order of the current pages stay; only the look and how data is presented change. Do U5 **after U4** (U4 fixes the numbers these screens show) unless the owner says otherwise.
+
+**Palette** (keep the existing tailwind CSS-variable setup, `darkMode: 'class'`, and map these values onto it):
+
+| Token | Light | Dark |
+|---|---|---|
+| ground (page) | `#F4F0E6` ivory | `#0B111C` |
+| surface (cards) | `#FFFDF8` | `#111927` |
+| raised (nested rows/cards) | `#FBF7EE` | `#152033` |
+| hairline | `#E6DECB` | `#233046` |
+| track (empty bar) | `#EEE6D3` | `#1E2A3D` |
+| ink (text) | `#141A26` | `#EEE8DA` |
+| muted text | `#6B6658` | `#9AA3B2` |
+| gold text (links, units, small accents) | `#86651F` | `#D8B66A` |
+| gold soft (active chip bg) | `#F6EDD6` | `#2A2618` |
+| success | `#2F6B45` | `#86C9A0` |
+
+Fixed in both themes: sidebar `#0A1120` with gold hairline border; **navy band** `#0E1626` + border `rgba(216,182,106,.28)` + soft shadow (KPI strips, table headers, the dark project card); gold `#C79A3B` / `#D8B66A`; primary button = gold gradient `#D8B66A → #B38B3A`, text `#1A1408`, pill shaped.
+
+**Unit status colours — one set everywhere** (bars, chips, legends): sold = ink (`#141A26` light / `#F4ECD8` dark), reserved = gold `#C79A3B`, available = sage (`#9FBFAB` bar, `#3F6B52` text light; `#5E7F6B` bar, `#86C9A0` text dark). Today the inventory page uses green for available and grey for sold — replace.
+
+**Fonts** (`src/app/layout.tsx`, today Inter + IBM Plex Sans Arabic via `next/font/google`): body **Almarai** (400/700/800), headings **Noto Naskh Arabic** (600/700), large numbers **Cormorant Garamond** (500/600, lining numerals). Western digits everywhere — no Arabic-Indic digits mixed in (the inventory page mixes them today).
+
+**Components to change (one change reaches every page):**
+- `components/premium/page-hero.tsx` (`PremiumPageHero`, ~88 uses): drop the white card + gold top border. Breadcrumb, then a 40px Naskh title + muted description, actions on the same row as pill buttons (secondary = outlined, one gold primary). No duplicate badge repeating the title.
+- `components/premium/metric-strip.tsx` (`PremiumMetricStrip`, ~45 uses): one **navy band** divided by gold hairlines instead of separate white cards with a different colour per number; icon = thin gold line icon in a gold-ring circle; value in Cormorant, single colour; unit in small gold text. A distribution (e.g. units sold/reserved/available) can sit in the band's bottom row as one segmented bar + legend.
+- `components/premium/filter-bar.tsx` (`PremiumFilterBar`, ~31 uses) and the one-off filter bars — `components/broker/{commissions,payouts,reservations,units}-filter-bar.tsx`, `components/reports/report-filter-bar.tsx`, `components/crm/leads-filter-popover.tsx`, `components/ui/toolbar.tsx` — become **one** filter bar: a pill-shaped bar with search (ivory inset), filters as pill selects showing `label · value` (active = gold border + gold-soft bg), status as toggle chips **with counts** (as on inventory today), a "more filters" button, and a view toggle (table / cards / kanban) where the page has one. **No "Apply/بحث" button** — submit on change (keep the GET-params form semantics). Under the bar: result count, active filters as removable chips, "clear all".
+- Tables: navy header row (`#0E1626`, muted `#A9B0BD` labels), hairline rows, Naskh for row titles, Cormorant for numbers, a segmented status bar where units are shown, a round chevron button to open the row. **Lists default to table view** on the dashboard (cards stay available via the toggle; remember the user's choice). On the projects list drop columns that are always empty/identical (phases "—", type "قياسي", last update "—" unless filled) and add units distribution + contract value.
+- Kanban (`components/crm/*`, leads page): fixed 288px columns, stage colour only as a 3px top line, count in Cormorant, empty column shows a dashed "drop here"; the 7 coloured stage pills above the board go away (the band shows total / conversion / unassigned / open). Card: client name prominent, project + source, "days in stage" + "last contact", rep avatar only, code small and muted, call/mail round buttons. "Unassigned" becomes a toggle in the filter bar.
+- Dashboard (`app/dashboard/page.tsx`, `components/dashboard/*`): the hero band holds total contracts (largest), collected, collection rate (thin ring), overdue, contracts this month; "needs action" = 4 hairline-divided tiles; thin gold area line for bookings; slim gradient bars for the funnel; segmented bar + legend for financial health; hairline-divided cash-flow columns; project health as cards.
+- Sidebar (`components/layout/sidebar.tsx`): active item = gold-tinted background + gold dot (not a solid gold pill); user card at the bottom; remove the second "Platform Admin" block from the top bar.
+- **Dark mode:** `components/ui/theme-toggle.tsx` already exists (localStorage `admin-theme`, toggles `.dark` on `<html>`) but is not mounted anywhere — mount it in the top bar and give the CSS variables the dark values above. Avoid a flash: `ui/theme-script.tsx` exists for that.
+
+**Dashboard review (owner-approved 2026-10-17)** — besides the look, these screens mislead:
+1. *Two collected figures disagree* (650.6K / 35% at the top vs 575.6K / 31% in "financial health"): fixed in #101 — both use `collectedTowardsPrice`; keep it that way and label it "collected towards price", with "fees & penalties" as its own figure.
+2. *Collection rate* is collected ÷ the whole contract value, so a healthy company shows red "low — action needed" while most instalments are not due yet. Compute it against **what is due up to today** (booking + rows with `dueDate <= today`, not cancelled, fees out) — needs `dueToDate` from `financialDashboard` / `adminSummary` in the API; the rate's colour/label follow that.
+3. *Sales funnel*: bookings can exceed leads (bookings made without a lead), so conversion between stages is meaningless and bars of 1 and 3 render the same length. Bars scale to the largest stage; a conversion % is shown only where the next stage is a subset of the previous one.
+4. *Top sales reps*: when nobody has a signed contract this month, show "no sales this month" instead of ranking zeros.
+5. *Monthly bookings*: bars with the value on each (small integers), not a smoothed line (this replaces "thin gold area line for bookings" above).
+6. *Digits*: Western digits everywhere (the funnel prints ٣/١/٠).
+7. *Recent activity*: group consecutive same-person same-kind rows ("3 payments · 120K") and show the amount on payments.
+8. *Primary action*: "new project" is rare; the gold primary on the dashboard becomes "record payment" (secondary: "new booking").
+9. The header card shrinks to one row (title + actions); no badge repeating the title; "Platform Admin" only once (sidebar).
+
+**Reports page (owner-approved 2026-10-17, same mockup link):** thin tabs (sales & bookings / financial) with a gold underline on the active one; filter = period segmented (monthly / quarterly / yearly), year / month / compare as `label · value` pills, submit on change, the chosen range written out ("1 – 31 October 2026"); the five coloured cards → the navy band (total sales, contracts signed, payments collected, conversion rate), no empty/broken cards ("• · avg EGP"); monthly sales = gold bars with the value above, current month outlined, peak labelled ("May · 1 contract"); funnel = slim single-colour bars with the conversion % between stages (no purple/gold mix, no repeated summary); booking status = a small card beside "highlights", not a full-width strip; the four highlight cards (best month, best project, top broker, collection on sales) = one card split by hairlines, "no data" instead of "—"; empty project/broker tables = one small line in a dashed box.
+
+**Slices** (each one PR, merged when CI is green): **U5a** tokens (light/dark), fonts, Western digits, sidebar + top bar + theme toggle; **U5b** `PremiumPageHero`, `PremiumMetricStrip`, the unified filter bar; **U5c** tables + leads kanban + projects list; **U5d** dashboard (with review items 2–9; item 2 needs the API change); **U5e** reports page.
+
+Check every surface after the change: admin, sales (SALES / SALES_MANAGER), broker portal, both locales (ar RTL / en LTR), light and dark, and phone width. Playwright suites (`pnpm --filter web-admin e2e`) select by text and test ids — keep labels and `data-testid`s.
 
 ---
 
