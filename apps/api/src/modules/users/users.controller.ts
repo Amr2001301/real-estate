@@ -105,6 +105,14 @@ export class UsersController {
     return this.users.updateSelf(user, dto);
   }
 
+  // "Delete my account" (customer app): deactivated and anonymised; the
+  // contract and payment records stay. Declared before `:id`.
+  @Roles(UserRole.CLIENT, UserRole.CUSTOMER)
+  @Delete('me')
+  deleteMe(@CurrentUser() user: AuthUser) {
+    return this.users.deleteSelf(user);
+  }
+
   // The caller's own e-mail / push opt-outs per notification group.
   @Get('me/notification-preferences')
   myNotificationPreferences(@CurrentUser() user: AuthUser) {

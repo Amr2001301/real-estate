@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../domain/entities/user_profile.dart';
 import '../domain/repositories/profile_repository.dart';
+import '../../auth/presentation/auth_cubit.dart';
 import 'profile_cubit.dart';
 
 const _navyDeep = Color(0xFF0B1726);
@@ -89,6 +90,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(context.l10n.phoneChanged)));
     }
+  }
+
+  /// "Delete my account": confirmed, then the account is deleted and the
+  /// customer signed out. A live contract is refused with its reason.
+  Future<void> _deleteAccount() async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.profileDeleteAccountTitle),
+        content: Text(l10n.profileDeleteAccountBody),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.actionCancel)),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(ctx).colorScheme.error),
+            child: Text(l10n.profileDeleteAccountConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final authCubit = context.read<AuthCubit>();
+    final failure = await context.read<ProfileCubit>().deleteAccount();
+    if (!mounted) return;
+    if (failure != null) {
+      showFailureSnackBar(context, failure);
+      return;
+    }
+    await authCubit.logout();
   }
 
   @override
@@ -251,6 +282,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ],
             ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Center(
+          child: TextButton.icon(
+            onPressed: _deleteAccount,
+            icon: const Icon(Icons.delete_outline, size: 18),
+            label: Text(l10n.profileDeleteAccount),
+            style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
           ),
         ),
       ],

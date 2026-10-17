@@ -871,6 +871,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get phoneChanged => 'Phone number changed';
 
   @override
+  String get profileDeleteAccount => 'Delete my account';
+
+  @override
+  String get profileDeleteAccountTitle => 'Delete your account?';
+
+  @override
+  String get profileDeleteAccountBody => 'Your name, phone, e-mail and photo are removed and you are signed out. Your contract and payment records stay with the company. This cannot be undone.';
+
+  @override
+  String get profileDeleteAccountConfirm => 'Delete';
+
+  @override
   String get fieldLanguage => 'Language';
 
   @override
