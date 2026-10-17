@@ -253,10 +253,16 @@ Four read-only audits of every money figure (reports, dashboard, exports, the sc
   - A payment approved again after a reversal pays its row and counts as collected again (`PaymentCorrection.supersededAt`).
   - e2e: `e2e-v1-schedule-money`.
 - **V2 — commissions:**
-  - A MANUAL cancellation must not let a payout pay a dead deal's commission.
-  - A CLAWBACK cancellation must settle the price-change adjustments (broker TOP_UP/CLAWBACK, bonus ADJUSTMENT).
-  - The leaderboard and broker portal must not count clawed-back commissions.
-  - The portal's locked commission is on the net price; its payout detail must show adjustments.
+  - MANUAL cancellation: an approved commission leaves a payout not sent yet. It stays APPROVED for the admin.
+  - Payout totals only count commissions and price-change adjustments on payable deals (`PAYABLE_DEAL_WHERE` in `rebalancePayout`).
+  - CLAWBACK cancellation:
+    - Unpaid price-change adjustments are dropped.
+    - The clawback recovers what was actually paid: net + top-ups sent − clawbacks sent. This is the new `clawbackAmount` on BrokerCommission and BonusEntry, also used by collect and payout settling.
+    - Open bonus ADJUSTMENT entries are cancelled; paid ones are added to the bonus clawback.
+  - A bonus ADJUSTMENT follows the bonus it adjusts when approved.
+  - Leaderboard and broker reports count earned-and-kept commissions only (`EARNED_COMMISSION_WHERE`, `earnedCommissionNet`), with adjustments.
+  - Broker portal: the commission locked at reservation is on the net price, and the payout detail lists its adjustments.
+  - e2e: `e2e-v2-commissions`.
 - **V3 — one definition per report figure.** Decisions (owner, «موافق»):
   - **a.** "Sales" and "contract value" are the **net price** (without the instalment markup), as the commission base.
   - **b.** "Contract value" counts **signed** contracts only.

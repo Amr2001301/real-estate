@@ -35,6 +35,12 @@ const PORTAL_PAYOUT_INCLUDE = {
       project: { select: { id: true, name: true } },
     },
   },
+  // Price-change top-ups and clawbacks netted into this payout: the net is
+  // gross − tax − withholding + top-ups − clawbacks.
+  adjustments: {
+    orderBy: { createdAt: 'asc' as const },
+    select: { id: true, kind: true, amount: true, reason: true, createdAt: true },
+  },
 } as const;
 
 @Injectable()

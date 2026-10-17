@@ -34,6 +34,7 @@ import { isUniqueConflictOn } from '../../common/utils/contract-number';
 import { agentFilter, brokerFacingPerson, resolveBrokerViewer, withoutMoney } from './broker-viewer';
 import { assertUnitOnSale } from '../projects/inventory-blockers';
 import { liveProjectGrant } from '../broker-access/live-grant';
+import { commissionBasis } from '../../common/finance/commission-basis';
 
 // Reservation statuses that hold a unit. A CONVERTED reservation is history:
 // the unit is then held by its contract (checked separately), and once that
@@ -418,7 +419,12 @@ export class BrokerPortalReservationsService {
     const commission = await this.computeCommissionSnapshot({
       brokerId,
       projectId,
-      basisAmount: snapshot.totalPayable ?? new Prisma.Decimal(unit.price),
+      // On the sale price, without the instalment markup — the base the
+      // commission is computed on at signing (decided 2026-10-16).
+      basisAmount: commissionBasis(snapshot.totalPayable ?? new Prisma.Decimal(unit.price), {
+        snapshotFinancedAmount: snapshot.financedAmount ?? null,
+        snapshotRemainingAmount: snapshot.remainingAmount ?? null,
+      }),
     });
 
     const expiresAt = new Date(

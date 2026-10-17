@@ -498,9 +498,22 @@ export class BonusService {
   async setEntryStatus(id: string, dto: UpdateEntryStatusDto) {
     const current = await this.prisma.bonusEntry.findUnique({
       where: { id },
-      select: { status: true, retainedOnCancellation: true, contract: { select: { status: true, deletedAt: true } } },
+      select: {
+        status: true,
+        retainedOnCancellation: true,
+        adjustsEntryId: true,
+        contract: { select: { status: true, deletedAt: true } },
+      },
     });
     if (!current) throw new NotFoundException('Bonus entry not found');
+    // A price-change adjustment has no contract of its own: it follows the
+    // bonus it adjusts (it used to pass as a live deal after a cancellation).
+    const deal = current.adjustsEntryId
+      ? await this.prisma.bonusEntry.findUnique({
+          where: { id: current.adjustsEntryId },
+          select: { retainedOnCancellation: true, contract: { select: { status: true, deletedAt: true } } },
+        })
+      : current;
     // PENDING → APPROVED → PAID, APPROVED → PENDING (revert). PAID and
     // CANCELLED are final: a cancelled bonus is never paid, a paid one is
     // never reopened (its clawback is resolved on its own path).
@@ -510,7 +523,7 @@ export class BonusService {
       );
     }
     // On a cancelled deal only a bonus kept with RETAIN moves forward.
-    if (dto.status !== BonusEntryStatus.PENDING && !isPayableDeal(current)) {
+    if (dto.status !== BonusEntryStatus.PENDING && deal && !isPayableDeal(deal)) {
       throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
     }
     // Only from the status read above: two admins acting at once (pay twice,

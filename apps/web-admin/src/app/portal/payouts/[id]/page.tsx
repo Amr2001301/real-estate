@@ -139,6 +139,15 @@ export default async function PortalPayoutDetailPage({
                     <span className="text-2xs text-slate-400">{t.withholding}</span>
                     <span className="text-2xs text-red-500 tabular-nums">− {formatCurrency(payout.totalWithholding, currency, locale)}</span>
                   </div>
+                  {/* Price-change top-ups and clawbacks: without them the lines did not add up to the net. */}
+                  {(payout.adjustments ?? []).map((a) => (
+                    <div key={a.id} className="flex items-center justify-between gap-2 px-4 py-2.5" title={a.reason}>
+                      <span className="text-2xs text-slate-400">{a.kind === 'TOP_UP' ? t.topUp : t.clawback}</span>
+                      <span className={cn('text-2xs tabular-nums', a.kind === 'TOP_UP' ? 'text-emerald-700' : 'text-red-500')}>
+                        {a.kind === 'TOP_UP' ? '+' : '−'} {formatCurrency(a.amount, currency, locale)}
+                      </span>
+                    </div>
+                  ))}
                   <div className="flex items-center justify-between gap-2 px-4 py-3 bg-slate-50">
                     <span className="text-xs font-bold text-slate-700">{t.net}</span>
                     <span className={cn('text-sm font-black tabular-nums', isPaid ? 'text-emerald-700' : 'text-slate-900')}>

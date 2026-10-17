@@ -17,6 +17,39 @@ export const PAYABLE_DEAL_WHERE = {
   OR: [{ contract: LIVE_CONTRACT_WHERE }, { retainedOnCancellation: true }],
 } satisfies Prisma.BrokerCommissionWhereInput;
 
+/**
+ * A commission the broker has earned and keeps: not cancelled or rejected,
+ * on a deal still payable, and not being clawed back (a waived clawback
+ * leaves it with the broker). Reports and the leaderboard count these, with
+ * their price-change adjustments (earnedCommissionNet).
+ */
+export const EARNED_COMMISSION_WHERE = {
+  status: { notIn: ['CANCELLED', 'REJECTED'] },
+  AND: [PAYABLE_DEAL_WHERE, { OR: [{ clawbackStatus: null }, { clawbackStatus: 'WAIVED' }] }],
+} satisfies Prisma.BrokerCommissionWhereInput;
+
+/**
+ * The net the broker earns on the commissions `where` selects: their net plus
+ * the price-change top-ups, less the price-change clawbacks (paid out or not).
+ */
+export async function earnedCommissionNet(
+  db: Pick<Prisma.TransactionClient, 'brokerCommission' | 'brokerCommissionAdjustment'>,
+  where: Prisma.BrokerCommissionWhereInput,
+): Promise<Prisma.Decimal> {
+  const [agg, adjustments] = await Promise.all([
+    db.brokerCommission.aggregate({ where, _sum: { netAmount: true } }),
+    db.brokerCommissionAdjustment.groupBy({
+      by: ['kind'],
+      where: { settlesClawback: false, commission: where },
+      _sum: { amount: true },
+    }),
+  ]);
+  return adjustments.reduce(
+    (sum, a) => (a.kind === 'TOP_UP' ? sum.add(a._sum.amount ?? 0) : sum.sub(a._sum.amount ?? 0)),
+    new Prisma.Decimal(agg._sum.netAmount ?? 0),
+  );
+}
+
 /** The same check on a row already read (contract status, the RETAIN flag). */
 export function isPayableDeal(row: {
   retainedOnCancellation?: boolean | null;
