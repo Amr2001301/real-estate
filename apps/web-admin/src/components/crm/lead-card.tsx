@@ -40,10 +40,17 @@ function LeadCardBody({ lead, dragging, showGrip, locale = 'ar' }: InnerProps) {
   const email        = lead.client?.email ?? lead.email;
   const isBrokerLead = !!lead.brokerId;
   const brokerName   = lead.broker?.commercialName || lead.broker?.companyName || lead.broker?.code || null;
-  const days         = daysSince(lead.createdAt);
-  const ageLabel     = locale === 'en'
-    ? `Added ${days === 0 ? 'today' : `${days} days ago`}`
-    : `أُضيفت ${days === 0 ? 'اليوم' : `منذ ${days} ${days === 1 ? 'يوم' : days <= 10 ? 'أيام' : 'يوماً'}`}`;
+  // U5: days in the current stage (DB-kept), and the last note as "last contact".
+  const days         = daysSince(lead.stageChangedAt ?? lead.createdAt);
+  const dayWord      = (n: number) =>
+    locale === 'en' ? (n === 1 ? 'day' : 'days') : n === 1 ? 'يوم' : n <= 10 ? 'أيام' : 'يوماً';
+  const inStage      = locale === 'en'
+    ? `In stage ${days === 0 ? 'since today' : `for ${days} ${dayWord(days)}`}`
+    : `في المرحلة ${days === 0 ? 'منذ اليوم' : `منذ ${days} ${dayWord(days)}`}`;
+  const contactDays  = lead.lastContactAt ? daysSince(lead.lastContactAt) : null;
+  const lastContact  = locale === 'en'
+    ? `Last contact: ${contactDays === null ? '—' : contactDays === 0 ? 'today' : `${contactDays} ${dayWord(contactDays)} ago`}`
+    : `آخر تواصل: ${contactDays === null ? '—' : contactDays === 0 ? 'اليوم' : `منذ ${contactDays} ${dayWord(contactDays)}`}`;
   const rep          = lead.assignedSales?.fullName;
 
   return (
@@ -88,7 +95,10 @@ function LeadCardBody({ lead, dragging, showGrip, locale = 'ar' }: InnerProps) {
           </p>
         )}
 
-        <p className="text-[12px] text-slate-500">{ageLabel}</p>
+        <p className="flex flex-wrap gap-x-4 gap-y-0.5 text-[12px] text-slate-500">
+          <span className={cn(days >= 14 && 'font-bold text-warning-700')}>{inStage}</span>
+          <span>{lastContact}</span>
+        </p>
       </div>
 
       <div className="mx-4 flex items-center gap-2 border-t border-hairline py-3">

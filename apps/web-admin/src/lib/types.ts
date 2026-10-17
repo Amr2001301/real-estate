@@ -186,6 +186,10 @@ export interface Lead {
   assignedSalesId: string | null;
   assignedSales?: { id: string; fullName: string } | null;
   stage: LeadStage;
+  /** When the stage last changed (kept by a DB trigger). */
+  stageChangedAt?: string;
+  /** The latest note on the lead — the kanban card's "last contact"; null without one. */
+  lastContactAt?: string | null;
   createdAt: string;
   // ── Broker attribution (present only for broker-origin leads) ──
   brokerId?: string | null;
