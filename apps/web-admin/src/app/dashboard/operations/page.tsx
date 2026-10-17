@@ -208,7 +208,7 @@ function relativeTime(
   if (hrs < 24)  return rt.hours(hrs);
   const days = Math.floor(hrs / 24);
   if (days < 7)  return rt.days(days);
-  return new Date(date).toLocaleDateString(locale === 'en' ? 'en-EG' : 'ar-SA', { day: 'numeric', month: 'short' });
+  return new Date(date).toLocaleDateString(locale === 'en' ? 'en-EG' : 'ar-SA-u-nu-latn', { day: 'numeric', month: 'short' });
 }
 
 // ── Event grouping ────────────────────────────────────────────────────────────

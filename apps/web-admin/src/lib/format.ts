@@ -1,7 +1,7 @@
 import type { Locale } from '@/lib/locale';
 
 /** The Intl tag each UI locale formats numbers and dates with. */
-const INTL: Record<Locale, string> = { ar: 'ar-EG', en: 'en-EG' };
+const INTL: Record<Locale, string> = { ar: 'ar-EG-u-nu-latn', en: 'en-EG' };
 
 /** For direct Intl / toLocaleString calls: the tag the helpers below use. */
 export function intlLocale(locale: Locale = 'ar'): string {
@@ -74,10 +74,10 @@ export function maintenanceSlaLabel(minutes: number | null | undefined, locale: 
   }
   if (minutes % 1440 === 0) {
     const days = minutes / 1440;
-    return days === 1 ? 'يوم واحد' : days === 2 ? 'يومان' : `${days.toLocaleString('ar-EG')} أيام`;
+    return days === 1 ? 'يوم واحد' : days === 2 ? 'يومان' : `${days.toLocaleString('ar-EG-u-nu-latn')} أيام`;
   }
   const hours = minutes / 60;
-  return hours === 1 ? 'ساعة واحدة' : hours === 2 ? 'ساعتان' : `${hours.toLocaleString('ar-EG')} ساعات`;
+  return hours === 1 ? 'ساعة واحدة' : hours === 2 ? 'ساعتان' : `${hours.toLocaleString('ar-EG-u-nu-latn')} ساعات`;
 }
 
 // Warranty-duration label (months → "سنتان" / "18 شهراً"; "2 years" / "18 months").
@@ -89,7 +89,7 @@ export function warrantyMonthsLabel(months: number | null | undefined, locale: L
   }
   if (months % 12 === 0) {
     const years = months / 12;
-    return years === 1 ? 'سنة واحدة' : years === 2 ? 'سنتان' : `${years.toLocaleString('ar-EG')} سنوات`;
+    return years === 1 ? 'سنة واحدة' : years === 2 ? 'سنتان' : `${years.toLocaleString('ar-EG-u-nu-latn')} سنوات`;
   }
-  return months === 1 ? 'شهر واحد' : `${months.toLocaleString('ar-EG')} شهراً`;
+  return months === 1 ? 'شهر واحد' : `${months.toLocaleString('ar-EG-u-nu-latn')} شهراً`;
 }

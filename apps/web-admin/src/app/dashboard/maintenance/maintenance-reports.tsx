@@ -35,7 +35,7 @@ export async function MaintenanceReports({ filters, locale = 'ar' }: { filters: 
   }
 
   const r = res.data;
-  const numFmt = locale === 'ar' ? 'ar-EG' : 'en-US';
+  const numFmt = locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-US';
   const num = (n: number) => (n === 0 ? '0' : n.toLocaleString(numFmt));
   const maxCategoryCount = r.byCategory[0]?.count ?? 1;
   const maxAssigneeCount = r.byAssignee[0]?.count ?? 1;

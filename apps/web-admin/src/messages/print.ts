@@ -23,7 +23,7 @@ const ar = {
     stamp: 'ختم الشركة',
     total: 'الإجمالي',
     fallbackCompany: 'الشركة',
-    months: (n: number) => `${n.toLocaleString('ar-EG')} شهر`,
+    months: (n: number) => `${n.toLocaleString('ar-EG-u-nu-latn')} شهر`,
     sqm: 'م²',
     generated: (date: string) => `صدر هذا المستند إلكترونيًا بتاريخ ${date}.`,
   },

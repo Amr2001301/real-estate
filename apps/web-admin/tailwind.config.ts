@@ -1,6 +1,14 @@
 import type { Config } from 'tailwindcss';
 import forms from '@tailwindcss/forms';
 
+/** A colour read from a CSS variable of RGB channels, so it can flip in dark mode. */
+const v = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
+/** A scale whose listed steps flip in dark mode; the rest stay fixed. */
+const scale = (name: string, steps: number[], fixed: Record<string, string> = {}) => ({
+  ...fixed,
+  ...Object.fromEntries(steps.map((n) => [n, v(`${name}-${n}`)])),
+});
+
 const config: Config = {
   content: ['./src/**/*.{ts,tsx}'],
   darkMode: 'class',
@@ -22,17 +30,22 @@ const config: Config = {
 
         // Refined dark navy used by the website for nav/footer/CTAs — gives the
         // admin shell the same branded identity.
+        // Ink / muted / tracks: the whole slate scale follows the theme (U5),
+        // so the existing text-slate-* / bg-slate-* classes work in dark mode.
+        slate: scale('slate', [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]),
+
         navy: {
-          DEFAULT: '#0F1E33',
+          DEFAULT: '#0E1626',
+          band: '#0E1626',
           700: '#1C3050',
           600: '#26405F',
         },
 
         sidebar: {
-          bg: '#0F1E33',
-          'bg-elev': '#1C3050',
-          'bg-hover': '#1A2A45',
-          border: '#0A1626',
+          bg: '#0A1120',
+          'bg-elev': '#121B2D',
+          'bg-hover': '#141E31',
+          border: '#060B15',
           text: '#9AA6B6',
           'text-muted': '#6E7C90',
           'text-active': '#FFFFFF',
@@ -40,14 +53,14 @@ const config: Config = {
 
         // Gold accent matched to the website gold ramp (signature = 500/#C8A24B).
         brand: {
-          50: '#FBF6EA',
-          100: '#F5E9CC',
+          50: v('brand-50'),
+          100: v('brand-100'),
           200: '#E9D49B',
           300: '#DABE6E',
           400: '#CFAE57',
           500: '#C8A24B',
           600: '#AE8835',
-          700: '#8E6E29',
+          700: v('brand-700'),
           800: '#6E551F',
           900: '#4F3D16',
         },
@@ -82,56 +95,30 @@ const config: Config = {
           700: '#0F766E',
         },
 
-        success: {
-          50: '#ECFDF5',
-          100: '#D1FAE5',
-          500: '#10B981',
-          600: '#059669',
-          700: '#047857',
-        },
-        warning: {
-          50: '#FFFBEB',
-          100: '#FEF3C7',
-          500: '#F59E0B',
-          600: '#D97706',
-          700: '#B45309',
-        },
-        danger: {
-          50: '#FEF2F2',
-          100: '#FEE2E2',
-          500: '#EF4444',
-          600: '#DC2626',
-          700: '#B91C1C',
-        },
-        info: {
-          50: '#EFF6FF',
-          100: '#DBEAFE',
-          500: '#3B82F6',
-          600: '#2563EB',
-          700: '#1D4ED8',
-        },
+        success: scale('success', [50, 100, 600, 700], { 500: '#10B981' }),
+        warning: scale('warning', [50, 100, 600, 700], { 500: '#F59E0B' }),
+        danger: scale('danger', [50, 100, 600, 700], { 500: '#EF4444' }),
+        info: scale('info', [50, 100, 600, 700], { 500: '#3B82F6' }),
 
         // Semantic text colors for hierarchy and emphasis.
-        'text-primary': '#0F1E33',
-        'text-secondary': '#64748B',
-        'text-muted': '#94A3B8',
+        'text-primary': v('slate-900'),
+        'text-secondary': v('slate-500'),
+        'text-muted': v('slate-400'),
       },
 
       fontFamily: {
+        // U5: Almarai for text, Noto Naskh Arabic for headings, Cormorant
+        // Garamond for large numbers.
         sans: [
           'var(--font-sans)',
-          'var(--font-arabic)',
           'system-ui',
           '-apple-system',
           'Segoe UI',
           'sans-serif',
         ],
-        display: [
-          'var(--font-sans)',
-          'var(--font-arabic)',
-          'system-ui',
-          'sans-serif',
-        ],
+        display: ['var(--font-heading)', 'var(--font-sans)', 'serif'],
+        heading: ['var(--font-heading)', 'var(--font-sans)', 'serif'],
+        numeric: ['var(--font-numeric)', 'var(--font-sans)', 'serif'],
         mono: [
           'ui-monospace',
           'SFMono-Regular',

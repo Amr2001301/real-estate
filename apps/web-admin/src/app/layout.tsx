@@ -1,19 +1,29 @@
 import type { Metadata } from 'next';
-import { Inter, IBM_Plex_Sans_Arabic } from 'next/font/google';
+import { Almarai, Cormorant_Garamond, Noto_Naskh_Arabic } from 'next/font/google';
 import { getLocale } from '@/lib/locale';
 import './globals.css';
 import { ThemeScript } from '@/components/ui/theme-script';
 
-const inter = Inter({
-  subsets: ['latin'],
+// U5 type: Almarai for text, Noto Naskh Arabic for headings, Cormorant
+// Garamond for large numbers (lining numerals).
+const almarai = Almarai({
+  subsets: ['arabic', 'latin'],
+  weight: ['400', '700', '800'],
   variable: '--font-sans',
   display: 'swap',
 });
 
-const plexArabic = IBM_Plex_Sans_Arabic({
-  subsets: ['arabic'],
-  weight: ['300', '400', '500', '600', '700'],
-  variable: '--font-arabic',
+const naskh = Noto_Naskh_Arabic({
+  subsets: ['arabic', 'latin'],
+  weight: ['600', '700'],
+  variable: '--font-heading',
+  display: 'swap',
+});
+
+const cormorant = Cormorant_Garamond({
+  subsets: ['latin'],
+  weight: ['500', '600'],
+  variable: '--font-numeric',
   display: 'swap',
 });
 
@@ -30,7 +40,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html
       lang={locale}
       dir={dir}
-      className={`${inter.variable} ${plexArabic.variable}`}
+      className={`${almarai.variable} ${naskh.variable} ${cormorant.variable}`}
       suppressHydrationWarning
     >
       <head>

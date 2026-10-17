@@ -56,7 +56,7 @@ export function NotificationBell({
 
   return (
     <Link href={href as never} className="relative inline-flex">
-      <IconButton label="الإشعارات" variant="ghost" size="md" className="text-slate-400 hover:text-slate-700 hover:bg-surface-muted/80 rounded-xl">
+      <IconButton label="الإشعارات" variant="ghost" size="md" className="h-10 w-10 rounded-full border border-hairline bg-surface text-slate-700 hover:border-brand-400/50 hover:bg-surface">
         <Bell />
       </IconButton>
       {count > 0 && (

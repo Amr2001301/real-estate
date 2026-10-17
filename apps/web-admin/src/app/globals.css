@@ -4,16 +4,81 @@
 
 @layer base {
   :root {
-    --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-    --font-arabic: 'IBM Plex Sans Arabic', system-ui, 'Segoe UI', Tahoma, sans-serif;
+    /* Fonts (U5) — set by next/font in app/layout.tsx; these are fallbacks. */
+    --font-sans: 'Almarai', system-ui, 'Segoe UI', Tahoma, sans-serif;
+    --font-heading: 'Noto Naskh Arabic', 'Almarai', serif;
+    --font-numeric: 'Cormorant Garamond', Georgia, serif;
 
-    /* ── Theme-aware layout tokens (RGB channel values for Tailwind / <alpha-value>) ── */
-    --tw-canvas:         250 247 242;   /* #FAF7F2 — warm off-white page bg */
-    --tw-surface:        255 255 255;   /* #FFFFFF — card / panel bg */
-    --tw-surface-muted:  244 239 232;   /* #F4EFE8 */
-    --tw-surface-sunken: 234 226 214;   /* #EAE2D6 */
-    --tw-hairline:       231 223 211;   /* #E7DFD3 */
+    /* ── Theme tokens (RGB channels for Tailwind <alpha-value>) — light ── */
+    --tw-canvas:         244 240 230;   /* #F4F0E6 ivory ground */
+    --tw-surface:        255 253 248;   /* #FFFDF8 cards */
+    --tw-surface-muted:  251 247 238;   /* #FBF7EE raised rows */
+    --tw-surface-sunken: 238 230 211;   /* #EEE6D3 tracks */
+    --tw-hairline:       230 222 203;   /* #E6DECB */
 
+    /* Ink → muted → tracks (Tailwind's slate scale is mapped onto these). */
+    --slate-50:  249 247 241;
+    --slate-100: 241 237 227;
+    --slate-200: 230 222 203;
+    --slate-300: 206 198 180;
+    --slate-400: 150 143 128;
+    --slate-500: 107 102 88;    /* #6B6658 muted text */
+    --slate-600: 84 80 70;
+    --slate-700: 58 60 66;
+    --slate-800: 36 41 52;
+    --slate-900: 20 26 38;      /* #141A26 ink */
+    --slate-950: 11 15 24;
+
+    --brand-50:  246 237 214;   /* #F6EDD6 gold soft */
+    --brand-100: 240 225 186;
+    --brand-700: 134 101 31;    /* #86651F gold text */
+
+    --success-50: 233 243 236;  --success-100: 210 231 217;
+    --success-600: 47 107 69;   --success-700: 38 88 56;     /* #2F6B45 */
+    --warning-50: 253 246 228;  --warning-100: 250 234 196;
+    --warning-600: 180 110 18;  --warning-700: 146 88 14;
+    --danger-50: 252 238 235;   --danger-100: 248 218 212;
+    --danger-600: 178 58 42;    --danger-700: 150 45 33;
+    --info-50: 236 242 250;     --info-100: 214 227 245;
+    --info-600: 44 90 160;      --info-700: 33 72 132;
+  }
+
+  /* ── Dark (U5) — toggled by .dark on <html> (components/ui/theme-toggle.tsx) ── */
+  .dark {
+    color-scheme: dark;
+    --tw-canvas:         11 17 28;      /* #0B111C */
+    --tw-surface:        17 25 39;      /* #111927 */
+    --tw-surface-muted:  21 32 51;      /* #152033 */
+    --tw-surface-sunken: 30 42 61;      /* #1E2A3D */
+    --tw-hairline:       35 48 70;      /* #233046 */
+
+    --slate-50:  21 32 51;
+    --slate-100: 30 42 61;
+    --slate-200: 35 48 70;
+    --slate-300: 58 72 94;
+    --slate-400: 120 131 150;
+    --slate-500: 154 163 178;   /* #9AA3B2 muted text */
+    --slate-600: 178 186 198;
+    --slate-700: 206 210 216;
+    --slate-800: 226 224 216;
+    --slate-900: 238 232 218;   /* #EEE8DA ink */
+    --slate-950: 246 242 232;
+
+    --brand-50:  42 38 24;      /* #2A2618 */
+    --brand-100: 58 51 30;
+    --brand-700: 216 182 106;   /* #D8B66A */
+
+    --success-50: 20 40 32;     --success-100: 26 54 42;
+    --success-600: 134 201 160; --success-700: 134 201 160;  /* #86C9A0 */
+    --warning-50: 45 35 16;     --warning-100: 62 47 20;
+    --warning-600: 232 185 110; --warning-700: 232 185 110;
+    --danger-50: 48 24 24;      --danger-100: 66 30 30;
+    --danger-600: 240 150 135;  --danger-700: 240 150 135;
+    --info-50: 20 32 52;        --info-100: 26 42 70;
+    --info-600: 150 185 235;    --info-700: 150 185 235;
+  }
+
+  :root {
     /* Design System: Primary Colors */
     --color-navy-deep: #0F1E33;
     --color-navy-soft: #26405F;
@@ -73,12 +138,8 @@
     text-rendering: optimizeLegibility;
   }
 
-  html[dir='rtl'] body {
-    font-family: var(--font-arabic), var(--font-sans);
-  }
-
-  html[dir='ltr'] body {
-    font-family: var(--font-sans), var(--font-arabic);
+  body {
+    font-family: var(--font-sans);
   }
 
   ::selection {
@@ -93,7 +154,32 @@
   h2,
   h3,
   h4 {
-    @apply tracking-tight text-slate-900;
+    @apply tracking-normal text-slate-900;
+    font-family: var(--font-heading);
+  }
+
+  /* Dark mode for classes that name a fixed light colour. Elements with their
+     own background (buttons, badges) keep their navy text. */
+  .dark .bg-white,
+  .dark .bg-white\/40,
+  .dark .bg-white\/50,
+  .dark .bg-white\/55,
+  .dark .bg-white\/60,
+  .dark .bg-white\/70,
+  .dark .bg-white\/80,
+  .dark .bg-white\/90 {
+    background-color: rgb(var(--tw-surface));
+  }
+  .dark .text-navy:not([class*='bg-']) {
+    color: rgb(var(--slate-900));
+  }
+}
+
+@layer components {
+  /* Large figures (KPI values, totals): Cormorant with lining numerals. */
+  .num {
+    font-family: var(--font-numeric);
+    font-variant-numeric: lining-nums tabular-nums;
   }
 }
 
