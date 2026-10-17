@@ -1225,6 +1225,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get installmentStatusOverdue => 'Overdue';
 
   @override
+  String get installmentStatusCancelled => 'Cancelled (rescheduled)';
+
+  @override
   String installmentDueOn(String date) {
     return 'Due on $date';
   }

@@ -24,7 +24,12 @@ export function ConfirmButton({ action, confirm, label, className }: Props) {
         if (!window.confirm(confirm)) return;
         start(async () => {
           try {
-            await action();
+            const result = await action();
+            // Server actions that refuse return { error } (a thrown message is
+            // hidden in production).
+            if (result && typeof result === 'object' && 'error' in result && result.error) {
+              alert(String(result.error));
+            }
           } catch (e) {
             alert((e as Error).message);
           }

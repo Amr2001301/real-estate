@@ -591,6 +591,7 @@ class _InstallmentCard extends StatelessWidget {
     return switch (installment.status) {
       InstallmentStatus.paid => l10n.installmentStatusPaid,
       InstallmentStatus.overdue => l10n.installmentStatusOverdue,
+      InstallmentStatus.cancelled => l10n.installmentStatusCancelled,
       _ => l10n.installmentStatusPending,
     };
   }

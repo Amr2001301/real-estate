@@ -1212,6 +1212,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get installmentStatusOverdue => 'متأخر';
 
   @override
+  String get installmentStatusCancelled => 'ملغي (أُعيدت الجدولة)';
+
+  @override
   String installmentDueOn(String date) {
     return 'مستحق في $date';
   }
