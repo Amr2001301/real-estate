@@ -157,7 +157,6 @@ export default async function ProjectDetailPage({
 
       {/* ── Premium Project Hero ─────────────────────────────────────────────── */}
       <div className="relative bg-surface border border-hairline rounded-[22px] overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-brand-200 via-brand-500 to-brand-200" />
         <div className="px-7 sm:px-9 pt-8 pb-7">
 
           {/* Breadcrumbs */}
@@ -288,7 +287,7 @@ export default async function ProjectDetailPage({
           {/* Description card */}
           <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
             <div className="flex items-center gap-3 px-6 py-4 bg-canvas/30 border-b border-hairline">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 ring-1 ring-brand-100 shrink-0">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-brand-400/50 shrink-0">
                 <span className="block h-[3px] w-4 rounded-full bg-brand-500" />
               </span>
               <h2 className="text-[14px] font-bold text-navy">{m.sectionDescription}</h2>
@@ -309,7 +308,7 @@ export default async function ProjectDetailPage({
           <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
             <div className="flex items-center justify-between gap-3 px-6 py-4 bg-canvas/30 border-b border-hairline">
               <div className="flex items-center gap-3">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 ring-1 ring-brand-100 shrink-0">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-brand-400/50 shrink-0">
                   <Layers className="h-[15px] w-[15px] text-brand-600" />
                 </span>
                 <h2 className="text-[14px] font-bold text-navy">{m.sectionPhases}</h2>
@@ -439,7 +438,7 @@ export default async function ProjectDetailPage({
           <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
             <div className="flex items-center justify-between gap-3 px-6 py-4 bg-canvas/30 border-b border-hairline">
               <div className="flex items-center gap-3">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 ring-1 ring-brand-100 shrink-0">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-brand-400/50 shrink-0">
                   <Building2 className="h-[15px] w-[15px] text-brand-600" />
                 </span>
                 <div>
@@ -538,7 +537,7 @@ export default async function ProjectDetailPage({
           {/* Map card */}
           <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
             <div className="flex items-center gap-3 px-5 py-4 bg-canvas/30 border-b border-hairline">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 ring-1 ring-brand-100 shrink-0">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-brand-400/50 shrink-0">
                 <MapIcon className="h-[15px] w-[15px] text-brand-600" />
               </span>
               <h3 className="text-[13.5px] font-bold text-navy">{m.sectionMap}</h3>

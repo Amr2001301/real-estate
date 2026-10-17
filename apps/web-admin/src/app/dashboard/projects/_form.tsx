@@ -108,7 +108,6 @@ export default function ProjectForm({ project, locale = 'ar' }: Props) {
         <aside className="hidden lg:flex flex-col gap-3 w-[272px] shrink-0 sticky top-6 self-start">
           <div className="bg-surface border border-hairline rounded-2xl shadow-soft overflow-hidden">
             {/* Gold accent strip */}
-            <div className="h-[2px] bg-gradient-to-r from-brand-200 via-brand-500 to-brand-200" />
 
             {/* Panel header */}
             <div className="px-5 py-4 border-b border-hairline flex items-center justify-between gap-3">

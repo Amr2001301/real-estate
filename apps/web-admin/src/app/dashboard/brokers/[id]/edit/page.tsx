@@ -29,7 +29,6 @@ export default async function EditBrokerPage({
   return (
     <div className="flex flex-col gap-6 lg:gap-8">
       <div className="relative bg-surface border border-hairline rounded-[22px] overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-brand-200 via-brand-500 to-brand-200" />
         <div className="px-7 sm:px-9 pt-8 pb-7">
           <nav className="flex items-center gap-1.5 text-[12px] text-slate-400 mb-3">
             <Link href="/dashboard" className="hover:text-navy transition-colors">{m.common.breadcrumbHome}</Link>

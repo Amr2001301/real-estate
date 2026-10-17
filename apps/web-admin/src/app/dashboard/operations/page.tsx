@@ -479,7 +479,7 @@ export default async function OperationsCenterPage() {
                                   >
                                     {g.action}
                                   </span>
-                                  <span className="inline-flex items-center justify-center h-7 w-7 rounded-lg text-slate-300 group-hover:text-brand-600 group-hover:bg-brand-50 transition-colors">
+                                  <span className="inline-flex items-center justify-center h-7 w-7 rounded-full text-slate-300 group-hover:text-brand-700 group-hover:border border-brand-400/50 transition-colors">
                                     <Eye className="h-3.5 w-3.5" />
                                   </span>
                                 </div>
@@ -507,7 +507,7 @@ export default async function OperationsCenterPage() {
                               href={`/dashboard/audit-logs?entityType=${encodeURIComponent(e.entityType)}`}
                               className="group flex items-center gap-4 px-5 py-3.5 hover:bg-canvas/40 transition-colors"
                             >
-                              <span className="shrink-0 inline-flex items-center justify-center h-9 w-9 rounded-xl bg-brand-50 text-brand-600">
+                              <span className="shrink-0 inline-flex items-center justify-center h-9 w-9 rounded-full border border-brand-400/50 text-brand-700">
                                 <Activity className="h-4 w-4" />
                               </span>
                               <div className="flex-1 min-w-0">
@@ -521,7 +521,7 @@ export default async function OperationsCenterPage() {
                               <span className="shrink-0 text-[13px] font-bold tabular-nums bg-slate-100 text-slate-700 px-3 py-1 rounded-full">
                                 {e.count}
                               </span>
-                              <span className="shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-lg text-slate-300 group-hover:text-brand-600 group-hover:bg-brand-50 transition-colors">
+                              <span className="shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-full text-slate-300 group-hover:text-brand-700 group-hover:border border-brand-400/50 transition-colors">
                                 <Eye className="h-3.5 w-3.5" />
                               </span>
                             </Link>

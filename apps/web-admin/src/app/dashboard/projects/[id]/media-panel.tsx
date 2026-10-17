@@ -21,7 +21,7 @@ export function ProjectMediaPanel({ project, locale = 'ar' }: { project: Project
       {/* Header */}
       <div className="flex items-center justify-between gap-3 px-5 py-4 bg-canvas/30 border-b border-hairline">
         <div className="flex items-center gap-3">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 ring-1 ring-brand-100 shrink-0">
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-brand-400/50 shrink-0">
             <ImageIcon className="h-[15px] w-[15px] text-brand-600" />
           </span>
           <div>

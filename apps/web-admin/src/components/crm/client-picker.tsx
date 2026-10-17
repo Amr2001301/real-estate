@@ -164,7 +164,7 @@ export function ClientPicker({ initialClient, clientIdName = 'clientId' }: Props
                         'flex items-center gap-3',
                       )}
                     >
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-700 text-xs font-bold shrink-0">
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 text-xs font-bold shrink-0">
                         {u.fullName.trim().charAt(0)}
                       </span>
                       <div className="min-w-0 flex-1">

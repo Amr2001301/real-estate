@@ -71,7 +71,7 @@ export function NotificationPreferences({
   return (
     <Card className="p-5">
       <div className="flex items-start gap-3">
-        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700">
           <BellRing className="h-4 w-4" aria-hidden />
         </span>
         <div className="min-w-0">

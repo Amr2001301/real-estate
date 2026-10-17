@@ -256,7 +256,7 @@ export default async function BrokerUsersPage({
                   <summary className="flex items-center gap-5 px-5 py-4 cursor-pointer list-none hover:bg-canvas/40 transition-colors duration-100">
                     {/* Avatar + Name */}
                     <div className="flex items-center gap-3 w-[200px] shrink-0 min-w-0">
-                      <div className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 border border-brand-100 text-brand-700 text-[13px] font-bold">
+                      <div className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-brand-400/50 border border-brand-100 text-brand-700 text-[13px] font-bold">
                         {u.fullName.charAt(0)}
                       </div>
                       <div className="min-w-0">

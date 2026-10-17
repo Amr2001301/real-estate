@@ -104,7 +104,7 @@ function SalesPipeline({
     <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-4 border-b border-hairline">
-        <span className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0 [&>svg]:h-4 [&>svg]:w-4 text-brand-600">
+        <span className="h-8 w-8 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0 [&>svg]:h-4 [&>svg]:w-4 text-brand-700">
           <TrendingUp />
         </span>
         <div>

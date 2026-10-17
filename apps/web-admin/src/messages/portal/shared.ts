@@ -11,6 +11,21 @@ const ar = {
     clear: 'مسح التصفية',
     allStatuses: 'كل الحالات',
     allProjects: 'كل المشاريع',
+    // U5 filter-bar pills: `label · value`
+    all: 'الكل',
+    labels: {
+      search: 'بحث',
+      status: 'الحالة',
+      project: 'المشروع',
+      type: 'النوع',
+      from: 'من',
+      to: 'إلى',
+      period: 'الفترة',
+      minPrice: 'سعر من',
+      maxPrice: 'سعر إلى',
+      bedrooms: 'الغرف',
+      bathrooms: 'الحمامات',
+    },
   },
 
   commissionsFilter: {
@@ -276,6 +291,20 @@ const en: typeof ar = {
     clear: 'Clear filters',
     allStatuses: 'All statuses',
     allProjects: 'All projects',
+    all: 'All',
+    labels: {
+      search: 'Search',
+      status: 'Status',
+      project: 'Project',
+      type: 'Type',
+      from: 'From',
+      to: 'To',
+      period: 'Period',
+      minPrice: 'Min price',
+      maxPrice: 'Max price',
+      bedrooms: 'Bedrooms',
+      bathrooms: 'Bathrooms',
+    },
   },
 
   commissionsFilter: {

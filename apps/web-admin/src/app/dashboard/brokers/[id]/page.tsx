@@ -195,7 +195,7 @@ export default async function BrokerDetailPage({
                 </div>
                 {/* Email tile */}
                 <div className="flex items-center gap-2.5 rounded-xl bg-canvas/60 px-3 py-2.5 ring-1 ring-inset ring-hairline">
-                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 [&_svg]:h-[15px] [&_svg]:w-[15px]">
+                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-[15px] [&_svg]:w-[15px]">
                     <Mail />
                   </span>
                   <div className="min-w-0">

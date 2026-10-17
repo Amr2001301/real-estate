@@ -1,8 +1,7 @@
 import Link from 'next/link';
-import { Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { PremiumFilterBar, PremiumFilterField } from '@/components/premium/filter-bar';
 import type { Locale } from '@/lib/locale';
 import { portalSharedT } from '@/messages/portal/shared';
 
@@ -19,71 +18,48 @@ interface Props {
   locale?: Locale;
 }
 
+/** Broker payouts filter (U5): the shared pill bar, applied on change. */
 export function PayoutsFilterBar({ sp, locale = 'ar' }: Props) {
   const t = portalSharedT(locale);
   const f = t.filters;
-  const p = t.payoutsFilter;
+  const L = f.labels;
+  const c = t.payoutsFilter;
   const anyFilter = !!(sp.q || sp.status || sp.period || sp.from || sp.to);
 
   return (
-    <form
+    <PremiumFilterBar
       method="get"
       action="/portal/payouts"
-      className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs"
-    >
-      <Input
-        inputSize="sm"
-        name="q"
-        leftAddon={<Search />}
-        placeholder={p.searchPlaceholder}
-        defaultValue={sp.q ?? ''}
-        className="flex-1 min-w-[200px]"
-      />
-      <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-40 shrink-0">
-        <option value="">{f.allStatuses}</option>
-        <option value="DRAFT">{p.status.DRAFT}</option>
-        <option value="APPROVED">{p.status.APPROVED}</option>
-        <option value="PROCESSING">{p.status.PROCESSING}</option>
-        <option value="PAID">{p.status.PAID}</option>
-        <option value="CANCELLED">{p.status.CANCELLED}</option>
-      </Select>
-      <Input
-        name="period"
-        inputSize="sm"
-        placeholder={p.periodPlaceholder}
-        dir="ltr"
-        defaultValue={sp.period ?? ''}
-        className="w-28 shrink-0"
-      />
-      <Input
-        name="from"
-        inputSize="sm"
-        type="date"
-        dir="ltr"
-        defaultValue={sp.from ?? ''}
-        className="w-36 shrink-0"
-      />
-      <span className="text-slate-300 text-xs shrink-0 select-none">—</span>
-      <Input
-        name="to"
-        inputSize="sm"
-        type="date"
-        dir="ltr"
-        defaultValue={sp.to ?? ''}
-        className="w-36 shrink-0"
-      />
-      <div className="flex items-center gap-1.5 ms-auto">
-        <Button type="submit" variant="primary" size="sm">
-          {f.apply}
-        </Button>
-        {anyFilter && (
-          <Link href="/portal/payouts">
-            <Button type="button" variant="ghost" size="sm">
-              {f.clear}
-            </Button>
+      trailing={
+        anyFilter ? (
+          <Link href="/portal/payouts" className="px-3 text-[13px] font-bold text-brand-700 underline underline-offset-4">
+            {f.clear}
           </Link>
-        )}
-      </div>
-    </form>
+        ) : undefined
+      }
+    >
+      <PremiumFilterField label={L.search} htmlFor="pf-q">
+        <Input id="pf-q" name="q" placeholder={c.searchPlaceholder} defaultValue={sp.q ?? ''} />
+      </PremiumFilterField>
+      <PremiumFilterField label={L.status} htmlFor="pf-status">
+        <Select id="pf-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''}>
+          <option value="">{f.all}</option>
+          <option value="DRAFT">{c.status.DRAFT}</option>
+          <option value="APPROVED">{c.status.APPROVED}</option>
+          <option value="PROCESSING">{c.status.PROCESSING}</option>
+          <option value="PAID">{c.status.PAID}</option>
+          <option value="CANCELLED">{c.status.CANCELLED}</option>
+        </Select>
+      </PremiumFilterField>
+      <PremiumFilterField label={L.period} htmlFor="pf-period">
+        <input id="pf-period" name="period" dir="ltr" placeholder={c.periodPlaceholder} defaultValue={sp.period ?? ''} />
+      </PremiumFilterField>
+      <PremiumFilterField label={L.from} htmlFor="pf-from">
+        <input id="pf-from" name="from" type="date" dir="ltr" defaultValue={sp.from ?? ''} />
+      </PremiumFilterField>
+      <PremiumFilterField label={L.to} htmlFor="pf-to">
+        <input id="pf-to" name="to" type="date" dir="ltr" defaultValue={sp.to ?? ''} />
+      </PremiumFilterField>
+    </PremiumFilterBar>
   );
 }

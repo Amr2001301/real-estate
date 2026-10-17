@@ -152,7 +152,7 @@ export function PermissionPicker({ userId, userName, assigned, available, locale
         {/* Count row */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-hairline">
           <div className="flex items-center gap-3">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-700 shrink-0 [&_svg]:h-4 [&_svg]:w-4">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 shrink-0 [&_svg]:h-4 [&_svg]:w-4">
               <ShieldCheck />
             </span>
             <div>

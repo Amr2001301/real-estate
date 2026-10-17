@@ -153,7 +153,7 @@ export default async function NotificationTemplatesPage() {
         <details className="group border-t border-hairline">
           <summary className="list-none [&::-webkit-details-marker]:hidden flex items-center justify-between gap-4 px-5 py-3.5 cursor-pointer select-none hover:bg-surface-muted/30 transition-colors">
             <div className="flex items-center gap-3">
-              <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+              <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700">
                 <FileEdit className="h-3.5 w-3.5" />
               </span>
               <span className="text-sm font-semibold text-slate-800">{m.formTitle}</span>

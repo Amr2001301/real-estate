@@ -575,7 +575,7 @@ export default async function ContractDetailPage({
                       href={`tel:${contract.customer.phone}`}
                       className="flex items-center gap-2.5 rounded-xl bg-canvas/60 px-3 py-2.5 ring-1 ring-inset ring-hairline hover:bg-canvas transition-colors"
                     >
-                      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 [&_svg]:h-3.5 [&_svg]:w-3.5">
+                      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-3.5 [&_svg]:w-3.5">
                         <Phone />
                       </span>
                       <span className="text-sm font-medium text-slate-700" dir="ltr">

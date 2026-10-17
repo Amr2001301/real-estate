@@ -232,7 +232,7 @@ export default async function PortalPerformancePage({
           <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline shrink-0">
               <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
+                <div className="h-8 w-8 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0">
                   <TrendingUp className="h-4 w-4 text-brand-600" />
                 </div>
                 <div>
@@ -253,7 +253,7 @@ export default async function PortalPerformancePage({
         <SectionLabel>{t.projects.title}</SectionLabel>
         <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
           <div className="flex items-center gap-3 px-6 py-4 border-b border-hairline">
-            <div className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
+            <div className="h-8 w-8 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0">
               <Building2 className="h-4 w-4 text-brand-600" />
             </div>
             <div>

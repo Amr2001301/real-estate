@@ -153,7 +153,7 @@ export default function PricingPage() {
               <span className="font-semibold text-[13px]">{m.newBtn}</span>
             </button>
             <Link href="/dashboard/super-admin/pricing/pdf" className="group flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 hover:bg-canvas/40 transition-colors duration-150">
-              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[15px] [&_svg]:w-[15px]">
+              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-[15px] [&_svg]:w-[15px]">
                 <FileText />
               </span>
               <span className="text-[13px]">{m.pdfBtn}</span>
@@ -242,7 +242,7 @@ function PricingCard({ pkg, locale, m, onEdit, onDelete, pending }: {
 
         {/* Actions */}
         <div className="flex items-center gap-1 shrink-0">
-          <button onClick={onEdit} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-brand-50 hover:text-brand-600 transition-colors">
+          <button onClick={onEdit} className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:border border-brand-400/50 hover:text-brand-700 transition-colors">
             <Pencil className="h-3.5 w-3.5" />
           </button>
           <button onClick={onDelete} disabled={pending} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50">
