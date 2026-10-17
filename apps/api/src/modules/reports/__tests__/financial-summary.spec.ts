@@ -38,6 +38,8 @@ const captured = {
 function makePrismaMock() {
   return {
     userPermission: { findMany: jest.fn().mockResolvedValue([]) },
+    // The company time zone (default when none is set).
+    setting: { findMany: jest.fn().mockResolvedValue([]) },
     contract: {
       count: jest.fn().mockResolvedValue(0),
       aggregate: jest.fn().mockResolvedValue({ _sum: { totalAmount: 0 } }),

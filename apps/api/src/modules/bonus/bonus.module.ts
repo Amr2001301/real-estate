@@ -39,6 +39,8 @@ import {
   ReservationStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { currentCompanyTimeZone } from '../../common/time/company-timezone';
+import { localDate, localMonth } from '../../common/time/report-range';
 import { toCsv } from '../../common/utils/csv';
 import {
   addFooter,
@@ -151,15 +153,16 @@ export interface SalesPerformanceRow {
   targetUnitsPercent: number | null;
 }
 
-function currentPeriod(): string {
-  return new Date().toISOString().slice(0, 7);
+/** This month in the company's time zone, "YYYY-MM". */
+function currentPeriod(tz: string): string {
+  const { year, month } = localDate(tz);
+  return `${year}-${String(month).padStart(2, '0')}`;
 }
 
-function periodRange(period: string): { start: Date; end: Date } {
+/** A "YYYY-MM" period: that month in the company's time zone (not UTC's). */
+function periodRange(period: string, tz: string): { start: Date; end: Date } {
   const parts = period.split('-');
-  const y = Number(parts[0]);
-  const m = Number(parts[1]);
-  return { start: new Date(Date.UTC(y, m - 1, 1)), end: new Date(Date.UTC(y, m, 1)) };
+  return localMonth(Number(parts[0]), Number(parts[1]), tz);
 }
 
 function pct(achieved: number, target: number | null): number | null {
@@ -566,8 +569,9 @@ export class BonusService {
     salesId?: string;
     period?: string;
   }): Promise<SalesPerformanceRow[]> {
-    const period = opts.period ?? currentPeriod();
-    const { start, end } = periodRange(period);
+    const tz = await currentCompanyTimeZone(this.prisma, getTenantContext()?.companyId);
+    const period = opts.period ?? currentPeriod(tz);
+    const { start, end } = periodRange(period, tz);
     const now = new Date();
 
     // Rep scoping by role (sales actors = SALES + SALES_MANAGER):

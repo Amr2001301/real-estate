@@ -18,9 +18,14 @@ import {
 import { awaitingReviewerWhere } from '../deposits/review-queue';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { scopedUserCount } from '../../common/tenant/resolve-tenant-entity';
-import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
-import { COMPANY_TIMEZONE_DEFAULT, companyTimeZone, startOfLocalToday } from '../../common/time/company-timezone';
-import { reportRange } from '../../common/time/report-range';
+import { getRequiredCompanyId, getTenantContext } from '../../common/tenant/tenant-context';
+import {
+  COMPANY_TIMEZONE_DEFAULT,
+  companyTimeZone,
+  currentCompanyTimeZone,
+  startOfLocalToday,
+} from '../../common/time/company-timezone';
+import { localDate, localMonth, reportRange } from '../../common/time/report-range';
 import { getCompanyCurrency } from '../../common/currency/currency';
 import { fallbackBrand, type ReportBrand } from '../../common/utils/report-brand';
 import { ReportBrandService } from '../company-branding/report-brand.service';
@@ -169,8 +174,9 @@ export class ReportsService {
       if (r.gte) conditions.push(Prisma.sql`c."signedAt" >= ${r.gte}`);
       if (r.lt) conditions.push(Prisma.sql`c."signedAt" < ${r.lt}`);
     } else if (period) {
-      where = this.periodWhereContract(period);
-      conditions.push(Prisma.sql`to_char(c."signedAt", 'YYYY-MM') = ${period}`);
+      where = await this.periodWhereContract(period);
+      const { start, end } = await this.periodMonth(period);
+      conditions.push(Prisma.sql`c."signedAt" >= ${start}`, Prisma.sql`c."signedAt" < ${end}`);
     }
     const whereClause = conditions.length
       ? Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`
@@ -208,7 +214,7 @@ export class ReportsService {
         },
       };
     } else if (period) {
-      where = this.periodWhereDeposit(period);
+      where = await this.periodWhereDeposit(period);
     }
     // deposits / total: money collected (one definition, see collected.ts);
     // verified: of those, the ones a reviewer confirmed.
@@ -308,20 +314,24 @@ export class ReportsService {
     const projectFilter = projectId
       ? Prisma.sql`AND ph."projectId" = ${projectId}::uuid`
       : Prisma.empty;
+    // The signing date's month and year in the company's time zone (signedAt
+    // is stored as UTC).
+    const tz = await companyTimeZone(this.prisma, companyId);
+    const localSigned = Prisma.sql`((c."signedAt" AT TIME ZONE 'UTC') AT TIME ZONE ${tz})`;
     const rows = await this.prisma.$queryRaw<
       Array<{ month: number; contracts: number; total: number }>
     >(Prisma.sql`
-       SELECT EXTRACT(MONTH FROM c."signedAt")::int AS month,
+       SELECT EXTRACT(MONTH FROM ${localSigned})::int AS month,
               COUNT(c.*)::int AS contracts,
               COALESCE(SUM(c."totalAmount"), 0)::float AS total
        FROM "Contract" c
        ${projectJoin}
-       WHERE EXTRACT(YEAR FROM c."signedAt") = ${safeYear}
+       WHERE EXTRACT(YEAR FROM ${localSigned}) = ${safeYear}
        AND c."companyId" = ${companyId}::uuid
        AND c."status" <> 'CANCELLED'
        AND c."deletedAt" IS NULL
        ${projectFilter}
-       GROUP BY EXTRACT(MONTH FROM c."signedAt")
+       GROUP BY 1
     `);
     const byMonth = new Map(rows.map((r) => [r.month, r]));
     return Array.from({ length: 12 }, (_, i) => {
@@ -341,10 +351,13 @@ export class ReportsService {
     const now = new Date();
     // Rows due today belong to the next 30 days (they used to be dropped:
     // a due date is midnight at the start of its day, before "now").
-    const today = startOfLocalToday(await companyTimeZone(this.prisma, getRequiredCompanyId()), now);
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const tz = await currentCompanyTimeZone(this.prisma, getTenantContext()?.companyId);
+    const today = startOfLocalToday(tz, now);
+    // "This month" is the company's month, not the server's (UTC).
+    const { year, month } = localDate(tz, now);
+    const startOfMonth = localMonth(year, month, tz).start;
     const expiringHorizon = new Date(now.getTime() +  7 * 24 * 60 * 60 * 1000);
-    const prevMonthStart  = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonthStart  = localMonth(year, month - 1, tz).start;
     const in30            = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
     const in60            = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
     const in90            = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
@@ -493,7 +506,7 @@ export class ReportsService {
     ]);
 
     const [reservationTrend, leadSources, recentActivity, topProjects] = await Promise.all([
-      this.reservationTrend(now),
+      this.reservationTrend(now, tz),
       this.leadSourceDistribution(),
       this.recentActivity(),
       this.topProjects(),
@@ -557,17 +570,12 @@ export class ReportsService {
   /** Reservation counts grouped by calendar month for the last 6 months. */
   private async reservationTrend(
     now: Date,
+    tz: string,
   ): Promise<Array<{ month: string; label: string; value: number }>> {
+    const { year, month } = localDate(tz, now);
     const slots = Array.from({ length: 6 }, (_, i) => {
-      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-      const start = new Date(d.getFullYear(), d.getMonth(), 1);
-      const end = new Date(d.getFullYear(), d.getMonth() + 1, 1);
-      return {
-        start,
-        end,
-        month: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`,
-        label: AR_MONTHS[start.getMonth()]!,
-      };
+      const m = localMonth(year, month - (5 - i), tz);
+      return { start: m.start, end: m.end, month: m.key, label: AR_MONTHS[m.monthIndex]! };
     });
     const counts = await this.prisma.$transaction(
       slots.map((s) =>
@@ -1009,17 +1017,16 @@ export class ReportsService {
     dateFrom?: string;
     dateTo?: string;
   }) {
-    const tz = await this.rangeTimeZone(opts.dateFrom, opts.dateTo);
+    // Today, this month and the monthly buckets are the company's (its time
+    // zone), not UTC's. Calendar dates (dueDate) compare with the UTC
+    // midnight of the local date; timestamps (paidAt) with local midnight.
+    const tz = await currentCompanyTimeZone(this.prisma, getTenantContext()?.companyId);
     const now = new Date();
-    const todayUTC = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
-    );
-    const monthStart = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
-    );
-    const monthEnd = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
-    );
+    const todayUTC = startOfLocalToday(tz, now);
+    const local = localDate(tz, now);
+    const thisMonth = localMonth(local.year, local.month, tz);
+    const monthStart = thisMonth.startDay;
+    const monthEnd = thisMonth.endDay;
     const weekEnd = new Date(
       todayUTC.getTime() + 7 * 24 * 60 * 60 * 1000,
     );
@@ -1225,7 +1232,7 @@ export class ReportsService {
       }),
       // collectedThisMonth uses baseDepWhere (ignores user date range — always current month)
       this.prisma.deposit.aggregate({
-        where: baseDepWhere({ ...COLLECTED_DEPOSIT_WHERE, paidAt: { gte: monthStart, lt: monthEnd } }),
+        where: baseDepWhere({ ...COLLECTED_DEPOSIT_WHERE, paidAt: { gte: thisMonth.start, lt: thisMonth.end } }),
         _sum: { amount: true },
       }),
       this.prisma.installment.aggregate({
@@ -1722,18 +1729,16 @@ export class ReportsService {
     };
 
     // ── Cashflow trend: last 6 months (collected vs due) ──────────────────────
+    // The company's last 6 months: payments by local midnight, dues by date.
     const trendSlots = Array.from({ length: 6 }, (_, i) => {
-      const d = new Date(
-        Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5 + i, 1),
-      );
+      const m = localMonth(local.year, local.month - 5 + i, tz);
       return {
-        start: d,
-        end: new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)),
-        month: `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`,
-        label: new Intl.DateTimeFormat('ar-EG', {
-          month: 'short',
-          timeZone: 'UTC',
-        }).format(d),
+        start: m.start,
+        end: m.end,
+        startDay: m.startDay,
+        endDay: m.endDay,
+        month: m.key,
+        label: new Intl.DateTimeFormat('ar-EG', { month: 'short', timeZone: 'UTC' }).format(m.startDay),
       };
     });
 
@@ -1747,12 +1752,12 @@ export class ReportsService {
         ),
       ),
       Promise.all(
-        trendSlots.map(({ start, end }) =>
+        trendSlots.map(({ startDay, endDay }) =>
           this.prisma.installment.aggregate({
             // Due = everything that fell due that month, paid or not — but not
             // what was cancelled.
             where: instWhere({
-              dueDate: { gte: start, lt: end },
+              dueDate: { gte: startDay, lt: endDay },
               status: { not: InstallmentStatus.CANCELLED },
             }),
             _sum: { amount: true },
@@ -2551,17 +2556,19 @@ export class ReportsService {
     return this.presentPdf(html, brand, () => buildBrokerPdf({ brokers, dateFrom, dateTo }, brand));
   }
 
-  private periodWhereContract(period: string): Prisma.ContractWhereInput {
+  /** A "YYYY-MM" period: that month in the company's time zone. */
+  private async periodMonth(period: string) {
     const [y, m] = period.split('-').map(Number);
-    const start = new Date(Date.UTC(y!, (m ?? 1) - 1, 1));
-    const end = new Date(Date.UTC(y!, m!, 1));
+    return localMonth(y!, m ?? 1, await currentCompanyTimeZone(this.prisma, getTenantContext()?.companyId));
+  }
+
+  private async periodWhereContract(period: string): Promise<Prisma.ContractWhereInput> {
+    const { start, end } = await this.periodMonth(period);
     return { signedAt: { gte: start, lt: end } };
   }
 
-  private periodWhereDeposit(period: string): Prisma.DepositWhereInput {
-    const [y, m] = period.split('-').map(Number);
-    const start = new Date(Date.UTC(y!, (m ?? 1) - 1, 1));
-    const end = new Date(Date.UTC(y!, m!, 1));
+  private async periodWhereDeposit(period: string): Promise<Prisma.DepositWhereInput> {
+    const { start, end } = await this.periodMonth(period);
     return { paidAt: { gte: start, lt: end } };
   }
 }

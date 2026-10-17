@@ -1,5 +1,6 @@
 jest.mock('../../../common/tenant/tenant-context', () => ({
   getRequiredCompanyId: () => 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+  getTenantContext: () => ({ companyId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' }),
 }));
 
 import {
@@ -50,6 +51,8 @@ function makePrismaMock() {
     unit: { count: zero() },
     lead: { count: zero() },
     visitRequest: { count: zero() },
+    // The company time zone (default when none is set).
+    setting: { findMany: jest.fn().mockResolvedValue([]) },
     contract: { count: zero(), aggregate: sumZero(), findMany: emptyArr() },
     deposit: { count: zero(), aggregate: sumZero(), findMany: emptyArr(), groupBy: emptyArr() },
     // Refunds on cancelled contracts (financial dashboard).

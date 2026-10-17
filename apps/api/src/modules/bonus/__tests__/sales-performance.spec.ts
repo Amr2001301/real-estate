@@ -120,6 +120,8 @@ function makePrismaMock() {
     lead: { groupBy: jest.fn().mockResolvedValue([]) },
     visitAppointment: { groupBy: jest.fn().mockResolvedValue([]) },
     reservation: { groupBy: jest.fn().mockResolvedValue([]) },
+    // The company time zone (default when none is set).
+    setting: { findMany: jest.fn().mockResolvedValue([]) },
     contract: {
       findMany: jest.fn().mockImplementation(async () => data.contracts),
     },

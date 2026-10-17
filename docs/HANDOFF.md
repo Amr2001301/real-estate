@@ -9,17 +9,17 @@
 
 **إحنا فين:** خلصنا 3 جولات «سيناريوهات» كاملة على المنصة. كل جولة: نمشي سيناريوهات بيع وتحصيل حقيقية في الكود، نلاقي الأخطاء، تاخد إنت القرارات، وبعدين نصلّح على أجزاء، كل جزء PR لوحده بيتدمج لما الـ CI يخضر. آخر PR اتدمج هو **#86**. الفرع الرئيسي (main) نضيف، ومفيش شغل مفتوح.
 
-**الجولة الرابعة:** المراجعة خلصت، و**وافقت على كل الاقتراحات** (القسم 4 تحت). الخطة 4 أجزاء، واتنفّذ منها 3:
+**الجولة الرابعة:** **خلصت كلها** — المراجعة واتنفّذت كل الأجزاء الأربعة (القسم 4 تحت فيه القرارات):
 - **U2 فلوس:** خلص — #89، #90، #91.
 - **U1 أمان وخصوصية:** خلص — #92، #93، #94.
 - **U3 العميل والمهام التلقائية:** خلص — #95، #96، #97، #98 (تسليم الوحدة)، وحذف حساب العميل (آخر PR).
-- **U4 التقارير:** **لسه** — ده اللي جاي (القسم 3 تحت).
+- **U4 التقارير:** خلص — #100، #101، وتوقيت الشركة في التقارير (آخر PR).
 
 ملاحظة: ملفات الترجمة المولّدة في تطبيقات الموبايل (`packages/core/lib/src/l10n/generated/`) اتعدّلت يدوياً لأن Flutter مش متاح في السحابة؛ الـ CI بيشغّل `flutter analyze` عليها.
 
 **حاجات عليك إنت:** الاستضافة، تقييد مفتاح Firebase، حماية الفرع الرئيسي على GitHub، وتسميات الرسوم في تطبيقات الموبايل (محتاجة جهاز عليه Flutter).
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md` وكمّل الجولة الرابعة من U4». كل اللي محتاجه مكتوب هنا.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». الجولة الرابعة خلصت؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -103,11 +103,12 @@ Found by four read-only scenario audits on 2026-10-16. The top items were re-che
 
 **Recommended order: U2 → U1 → U3 → U4** (U2 first because broker commissions are broken for every company after the first).
 
-**Status (2026-10-17):** U2, U1 and U3 are merged (U2: #89–#91; U1: #92–#94; U3: #95–#98 plus the account-deletion PR). **U4 is next.** New since this plan:
+**Status (2026-10-17):** round 4 is done — U2 (#89–#91), U1 (#92–#94), U3 (#95–#99), U4 (#100, #101 and the time-zone PR). New since this plan:
 - The late-fee clock pause lives on `Installment.lateFeePausedSince` / `lateFeePausedSeconds`.
 - The one chase rule is `CHASED_INSTALLMENT_WHERE` in `installments/live-contract.ts`.
 - Warranties and customer maintenance start at the unit handover (`UnitHandover`, `POST /contracts/:id/handover`); contracts signed before it were backfilled as handed over at their creation date.
 - A customer deletes their own account with `DELETE /users/me` (anonymised, records kept).
+- Reports: `reportRange` / `localMonth` (`common/time/report-range.ts`) — date filters, "this month" and monthly buckets are in the company's time zone; collected is two figures (`TOWARDS_PRICE_DEPOSIT_WHERE`, `FEES_DEPOSIT_WHERE`); a sale counts by `signedAt`.
 
 ### U2 — Money
 
