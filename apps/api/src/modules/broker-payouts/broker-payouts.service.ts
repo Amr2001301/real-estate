@@ -28,7 +28,7 @@ import {
 import { reportFailure } from '../../common/observability/report-failure';
 import { PAYABLE_DEAL_WHERE } from '../installments/live-contract';
 import { isUniqueConflictOn } from '../../common/utils/contract-number';
-import { rebalancePayout } from './payout-totals';
+import { rebalancePayout, releaseAdjustments, settleNettedClawbacks } from './payout-totals';
 
 const PAYOUT_INCLUDE = {
   broker: {
@@ -409,13 +409,17 @@ export class BrokerPayoutsService {
     const payout = await this.assertPayoutInStatus(id, BrokerPayoutStatus.PROCESSING);
     await this.assertNotHeld(payout.brokerId);
     const paidAt = dto.paidAt ? new Date(dto.paidAt) : new Date();
-    await this.moveStatus(this.prisma, id, [BrokerPayoutStatus.PROCESSING], {
-      status: BrokerPayoutStatus.PAID,
-      paymentMethod: dto.paymentMethod,
-      paymentReference: dto.paymentReference ?? null,
-      receiptUrl: dto.receiptUrl ?? null,
-      paidAt,
-      notes: dto.notes ? appendNote(payout.notes, `[paid] ${dto.notes.trim()}`) : payout.notes,
+    await this.prisma.$transaction(async (tx) => {
+      await this.moveStatus(tx, id, [BrokerPayoutStatus.PROCESSING], {
+        status: BrokerPayoutStatus.PAID,
+        paymentMethod: dto.paymentMethod,
+        paymentReference: dto.paymentReference ?? null,
+        receiptUrl: dto.receiptUrl ?? null,
+        paidAt,
+        notes: dto.notes ? appendNote(payout.notes, `[paid] ${dto.notes.trim()}`) : payout.notes,
+      });
+      // Cancellation clawbacks deducted here are now collected.
+      await settleNettedClawbacks(tx, { id, payoutNumber: payout.payoutNumber }, actor.sub, paidAt);
     });
     const updated = await this.findOne(id);
 
@@ -466,7 +470,7 @@ export class BrokerPayoutsService {
         where: { payoutId: id },
         data: { payoutId: null },
       });
-      await tx.brokerCommissionAdjustment.updateMany({ where: { payoutId: id }, data: { payoutId: null } });
+      await releaseAdjustments(tx, { payoutId: id });
     });
     const updated = await this.findOne(id);
 

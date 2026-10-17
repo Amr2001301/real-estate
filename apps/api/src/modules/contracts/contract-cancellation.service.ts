@@ -74,7 +74,7 @@ function isCommissionEffectivelyPaid(commission: {
 
 export { resetUnitWarranties } from './unit-warranties';
 import { closeOpenMaintenance, resetUnitWarranties } from './unit-warranties';
-import { rebalancePayout } from '../broker-payouts/payout-totals';
+import { rebalancePayout, releaseAdjustments } from '../broker-payouts/payout-totals';
 
 @Injectable()
 export class ContractCancellationService {
@@ -249,6 +249,20 @@ export class ContractCancellationService {
                 clawbackById: actorId,
               },
             });
+            // What was paid comes back out of the broker's next payout
+            // (decided 2026-10-17); collecting or waiving it by hand stays possible.
+            if (commission.netAmount.isPositive()) await tx.brokerCommissionAdjustment.create({
+              data: {
+                brokerId: commission.brokerId,
+                commissionId: commission.id,
+                kind: 'CLAWBACK',
+                amount: commission.netAmount,
+                reason: input.clawbackReason ?? input.reason,
+                createdById: actorId,
+                settlesClawback: true,
+                companyId,
+              },
+            });
             commissionClawbackIds.push(commission.id);
           } else {
             // No effective disbursement (PENDING, APPROVED-no-payout, or APPROVED
@@ -278,10 +292,7 @@ export class ContractCancellationService {
                     cancelReason: `Contract ${contractId} cancelled — no remaining commissions`,
                   },
                 });
-                await tx.brokerCommissionAdjustment.updateMany({
-                  where: { payoutId: cancelledPayoutId },
-                  data: { payoutId: null },
-                });
+                await releaseAdjustments(tx, { payoutId: cancelledPayoutId });
               } else {
                 // Recompute totals and revert to DRAFT: the original approval was
                 // for a different (higher) amount; management must re-approve.

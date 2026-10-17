@@ -475,7 +475,8 @@ describe('Broker-payouts module · permissions enforcement', () => {
       };
       payoutStore.current.status = 'PROCESSING';
       await request(app.getHttpServer()).patch(PATH).send(BODY).expect(200);
-      expect(prismaMock.brokerPayout.updateMany).toHaveBeenCalledTimes(1);
+      // The status write and the netted clawbacks' settlement share one transaction.
+      expect(prismaMock.$transaction).toHaveBeenCalled();
       expect(prismaMock.brokerActivityLog.create).toHaveBeenCalledTimes(1);
       expect(notificationsMock.sendToUsers).toHaveBeenCalled();
     });

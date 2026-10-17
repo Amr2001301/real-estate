@@ -7,6 +7,7 @@ import {
 import { ClawbackStatus, PaymentMethod, Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
+import { rebalancePayout } from '../broker-payouts/payout-totals';
 import type { AuthUser } from '../../common/decorators/current-user.decorator';
 import {
   CollectClawbackDto,
@@ -56,6 +57,51 @@ async function claimClawback(
   if (claimed.count === 0) {
     throw new ConflictException('تغيّر الاسترداد أثناء التنفيذ — حدّث الصفحة وأعد المحاولة');
   }
+}
+
+/**
+ * A cancellation clawback is also queued for the broker's next payout
+ * (settlesClawback adjustments). Collecting or waiving it by hand takes it
+ * off that queue: `amount` (or everything, for a waive) comes out of the open
+ * rows and those netted into draft payouts, which are then rebalanced. What a
+ * payout already approved or being sent deducts cannot be touched: a waive,
+ * or a collection reaching into it, is refused (409).
+ */
+async function takeOffPayoutQueue(
+  tx: Prisma.TransactionClient,
+  commissionId: string,
+  amount: Prisma.Decimal | 'all',
+) {
+  const rows = await tx.brokerCommissionAdjustment.findMany({
+    where: { commissionId, kind: 'CLAWBACK', settlesClawback: true },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, amount: true, brokerId: true, payoutId: true, payout: { select: { status: true } } },
+  });
+  const free = rows.filter((r) => !r.payout || r.payout.status === 'DRAFT');
+  const locked = rows.filter((r) => r.payout && (r.payout.status === 'APPROVED' || r.payout.status === 'PROCESSING'));
+  const available = free.reduce((sum, r) => sum.add(r.amount), new Prisma.Decimal(0));
+  // Collecting more than the queue still holds would count what a payout
+  // is deducting right now twice. (A clawback never queued — from before
+  // netting existed — has no rows at all and is collected as before.)
+  if (locked.length > 0 && (amount === 'all' || amount.gt(available))) {
+    throw new ConflictException('جزء من الاسترداد يُخصم الآن من دفعة معتمدة أو قيد الصرف — انتظر صرفها أو ألغِها أولاً');
+  }
+  // Open rows first, then those on draft payouts.
+  free.sort((a, b) => Number(!!a.payoutId) - Number(!!b.payoutId));
+  let left = amount === 'all' || amount.gt(available) ? available : amount;
+  const drafts = new Map<string, string>();
+  for (const r of free) {
+    if (!left.isPositive()) break;
+    if (r.amount.lte(left)) {
+      await tx.brokerCommissionAdjustment.delete({ where: { id: r.id } });
+      left = left.sub(r.amount);
+    } else {
+      await tx.brokerCommissionAdjustment.update({ where: { id: r.id }, data: { amount: r.amount.sub(left) } });
+      left = new Prisma.Decimal(0);
+    }
+    if (r.payoutId) drafts.set(r.payoutId, r.brokerId);
+  }
+  for (const [payoutId, brokerId] of drafts) await rebalancePayout(tx, payoutId, brokerId);
 }
 
 @Injectable()
@@ -110,6 +156,7 @@ export class ClawbackResolutionService {
       // Only from the state read above: two collections at the same moment
       // both added to the same old total, and one was lost.
       await claimClawback(tx.brokerCommission, id, commission);
+      await takeOffPayoutQueue(tx, id, new Prisma.Decimal(collected));
       const updated = await tx.brokerCommission.update({
         where: { id },
         data: {
@@ -186,6 +233,7 @@ export class ClawbackResolutionService {
 
     return this.prisma.$transaction(async (tx) => {
       await claimClawback(tx.brokerCommission, id, commission);
+      await takeOffPayoutQueue(tx, id, 'all');
       const updated = await tx.brokerCommission.update({
         where: { id },
         data: {
