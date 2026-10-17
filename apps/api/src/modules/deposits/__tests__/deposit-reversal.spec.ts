@@ -134,6 +134,7 @@ function makePrismaMock() {
     },
     paymentCorrection: {
       findFirst: jest.fn().mockImplementation(async () => existingReversal),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       create: jest.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => {
         const row = { id: `corr-${Date.now()}`, ...data };
         createdCorrections.push(row);

@@ -198,6 +198,14 @@ class CalculateInstallmentDto {
   @IsOptional() @IsNumber() @Min(0) finalPaymentAmount?: number;
 }
 
+/** Booking + down payment + final payment must fit in the plan's net price. */
+function assertFinalPaymentFits(reservation: number, down: number, final: number, netPrice: number) {
+  const cents = (n: number) => Math.round(n * 100);
+  if (cents(reservation) + cents(down) + cents(final) > cents(netPrice)) {
+    throw new BadRequestException('مبلغ الحجز + الدفعة الأولى + الدفعة الأخيرة تتجاوز صافي السعر');
+  }
+}
+
 // ─── Existing contract-based plan service ─────────────────────────────────────
 
 @Injectable()
@@ -218,7 +226,7 @@ export class InstallmentsService {
       include: {
         installmentPlan: true,
         unit: { select: { code: true } },
-        reservation: { select: { salesId: true } },
+        reservation: { select: { salesId: true, bookingAmount: true } },
       },
     });
     if (!contract) throw new NotFoundException('Contract not found');
@@ -231,19 +239,22 @@ export class InstallmentsService {
     // The schedule must add up to the contract: a down-payment row (so it can
     // be recorded at all — a payment needs an installment) plus the monthly
     // rows covering the rest. A typed monthly amount that does not fit is
-    // refused with the right one; the last row absorbs the rounding.
+    // refused with the right one; the last row absorbs the rounding. The
+    // reservation's booking is part of the price (booking + rows = contract),
+    // so the rows cover what is left after it.
     const toCents = (v: Prisma.Decimal | number) => Math.round(Number(v) * 100);
     const downCents = toCents(contract.downPayment ?? 0);
-    const remainingCents = toCents(contract.totalAmount) - downCents;
+    const bookingCents = toCents(contract.reservation?.bookingAmount ?? 0);
+    const remainingCents = toCents(contract.totalAmount) - bookingCents - downCents;
     if (remainingCents <= 0) {
-      throw new BadRequestException('لا يتبقى مبلغ للتقسيط بعد المقدّم');
+      throw new BadRequestException('لا يتبقى مبلغ للتقسيط بعد الحجز والمقدّم');
     }
     const expectedMonthlyCents = Math.floor(remainingCents / dto.totalMonths);
     const monthlyCents = dto.monthlyAmount != null ? toCents(dto.monthlyAmount) : expectedMonthlyCents;
     // Up to one currency unit a month of rounding is fine; the last row settles it.
     if (Math.abs(monthlyCents * dto.totalMonths - remainingCents) >= dto.totalMonths * 100) {
       throw new BadRequestException(
-        `القسط الشهري لا يطابق قيمة العقد — المتبقي بعد المقدّم ${(remainingCents / 100).toFixed(2)} على ${dto.totalMonths} شهراً = ${(expectedMonthlyCents / 100).toFixed(2)} شهرياً`,
+        `القسط الشهري لا يطابق قيمة العقد — المتبقي بعد الحجز والمقدّم ${(remainingCents / 100).toFixed(2)} على ${dto.totalMonths} شهراً = ${(expectedMonthlyCents / 100).toFixed(2)} شهرياً`,
       );
     }
     const lastCents = remainingCents - monthlyCents * (dto.totalMonths - 1);
@@ -1092,6 +1103,9 @@ class PlanTemplatesService {
         'مبلغ الحجز + الدفعة الأولى يتجاوزان صافي السعر',
       );
     }
+    // …nor with the final payment on top: more would be clamped off the
+    // monthly part and the schedule would add up to more than the price.
+    assertFinalPaymentFits(reservation, dpAmount, dto.finalPaymentAmount ?? 0, netPrice);
 
     const useDurationOptions = !!dto.durationOptions && dto.durationOptions.length > 0;
     const durationOptionRows = buildDurationOptionRows(dto.durationOptions);
@@ -1285,6 +1299,7 @@ class PlanTemplatesService {
         'مبلغ الحجز + الدفعة الأولى يتجاوزان صافي السعر',
       );
     }
+    assertFinalPaymentFits(reservation, dpAmount, merged.finalPaymentAmount ?? 0, netPrice);
 
     // Resolve duration options: explicit payload replaces the set; if not provided, keep existing.
     const explicitDurationOptions = dto.durationOptions !== undefined;

@@ -296,6 +296,32 @@ function toMeReservation<
   };
 }
 
+/**
+ * A plan's schedule for one duration, on the booking the customer actually
+ * pays. Booking + down payment + final payment must leave something to
+ * finance (or exactly nothing): more would be clamped away and the schedule
+ * would add up to more than the price.
+ */
+function durationCalc(
+  plan: { netPrice: Prisma.Decimal; downPaymentAmount: Prisma.Decimal; finalPaymentAmount: Prisma.Decimal | null },
+  durationMonths: number,
+  increasePercentage: Prisma.Decimal,
+  bookingAmount: Prisma.Decimal,
+) {
+  const fixed = new Prisma.Decimal(bookingAmount).add(plan.downPaymentAmount).add(plan.finalPaymentAmount ?? 0);
+  if (fixed.gt(plan.netPrice)) {
+    throw new BadRequestException('مبلغ الحجز مع المقدّم والدفعة الأخيرة أكبر من سعر الوحدة في الخطة');
+  }
+  return computeDurationOption({
+    netPrice: Number(plan.netPrice),
+    reservationAmount: Number(bookingAmount),
+    downPaymentAmount: Number(plan.downPaymentAmount),
+    durationMonths,
+    increasePercentage: Number(increasePercentage),
+    finalPaymentAmount: Number(plan.finalPaymentAmount ?? 0),
+  });
+}
+
 @Injectable()
 export class ReservationsService {
   private readonly logger = new Logger(ReservationsService.name);
@@ -397,6 +423,7 @@ export class ReservationsService {
     plan: Awaited<ReturnType<ReservationsService['validateBookingPlan']>> | null,
     optionId: string | undefined,
     unitPrice: Prisma.Decimal,
+    bookingAmount: Prisma.Decimal,
   ): Prisma.ReservationUncheckedUpdateInput {
     const empty = {
       selectedDurationOptionId: null,
@@ -416,14 +443,7 @@ export class ReservationsService {
     if (!optionId) throw new BadRequestException('اختر مدة التقسيط من الخطة الجديدة');
     const option = plan.durationOptions.find((o) => o.id === optionId);
     if (!option) throw new BadRequestException('مدة التقسيط المختارة لا تنتمي إلى الخطة');
-    const calc = computeDurationOption({
-      netPrice: Number(plan.netPrice),
-      reservationAmount: Number(plan.reservationAmount),
-      downPaymentAmount: Number(plan.downPaymentAmount),
-      durationMonths: option.durationMonths,
-      increasePercentage: Number(option.increasePercentage),
-      finalPaymentAmount: Number(plan.finalPaymentAmount ?? 0),
-    });
+    const calc = durationCalc(plan, option.durationMonths, option.increasePercentage, bookingAmount);
     return {
       selectedDurationOptionId: option.id,
       selectedDurationMonths: option.durationMonths,
@@ -591,6 +611,8 @@ export class ReservationsService {
     let snapshotMonthlyInstallment: Prisma.Decimal | null = null;
     let snapshotTotalPayable: Prisma.Decimal | null = null;
     let snapshotFinalPaymentAmount: Prisma.Decimal | null = null;
+    let durationPlan: Awaited<ReturnType<ReservationsService['validateBookingPlan']>> | null = null;
+    let durationOption: { id: string; durationMonths: number; increasePercentage: Prisma.Decimal } | null = null;
 
     if (dto.installmentPlanTemplateId) {
       const plan = await this.validateBookingPlan(
@@ -637,23 +659,9 @@ export class ReservationsService {
             'مدة التقسيط المختارة لا تنتمي إلى الخطة',
           );
         }
-        const calc = computeDurationOption({
-          netPrice: Number(plan.netPrice),
-          reservationAmount: Number(plan.reservationAmount),
-          downPaymentAmount: Number(plan.downPaymentAmount),
-          durationMonths: option.durationMonths,
-          increasePercentage: Number(option.increasePercentage),
-          finalPaymentAmount: Number(plan.finalPaymentAmount ?? 0),
-        });
-        selectedDurationOptionId = option.id;
-        selectedDurationMonths = option.durationMonths;
-        selectedIncreasePercentage = option.increasePercentage;
-        snapshotDownPaymentAmount = plan.downPaymentAmount;
-        snapshotRemainingAmount = new Prisma.Decimal(calc.remainingAmount);
-        snapshotFinancedAmount = new Prisma.Decimal(calc.financedAmount);
-        snapshotMonthlyInstallment = new Prisma.Decimal(calc.monthlyInstallment);
-        snapshotTotalPayable = new Prisma.Decimal(calc.totalPayable);
-        snapshotFinalPaymentAmount = plan.finalPaymentAmount ?? null;
+        // The snapshot is worked out once the booking amount is final (below).
+        durationPlan = plan;
+        durationOption = option;
       } else if (dto.installmentPlanDurationOptionId) {
         // Plan has no duration options but client sent one → reject.
         throw new BadRequestException(
@@ -701,6 +709,22 @@ export class ReservationsService {
       resolvedBookingAmountMode = ReservationBookingAmountMode.FIXED;
     }
     // else: FIXED, no override → keep plan-derived value (or 0 when no plan).
+
+    // The schedule is built on the booking the customer actually pays: a
+    // percentage of the unit price, or an admin's amount, can differ from the
+    // plan's own, and booking + rows must still add up to the contract.
+    if (durationPlan && durationOption) {
+      const calc = durationCalc(durationPlan, durationOption.durationMonths, durationOption.increasePercentage, resolvedBookingAmount);
+      selectedDurationOptionId = durationOption.id;
+      selectedDurationMonths = durationOption.durationMonths;
+      selectedIncreasePercentage = durationOption.increasePercentage;
+      snapshotDownPaymentAmount = durationPlan.downPaymentAmount;
+      snapshotRemainingAmount = new Prisma.Decimal(calc.remainingAmount);
+      snapshotFinancedAmount = new Prisma.Decimal(calc.financedAmount);
+      snapshotMonthlyInstallment = new Prisma.Decimal(calc.monthlyInstallment);
+      snapshotTotalPayable = new Prisma.Decimal(calc.totalPayable);
+      snapshotFinalPaymentAmount = durationPlan.finalPaymentAmount ?? null;
+    }
 
     // Payment status on create is always UNPAID; payment is confirmed later
     // via POST /reservations/:id/booking-payment/confirm.
@@ -1669,6 +1693,7 @@ export class ReservationsService {
         bookingAmount: true,
         bookingPaymentStatus: true,
         installmentPlanTemplateId: true,
+        selectedDurationOptionId: true,
         sales: { select: { fullName: true } },
         unit: { select: { price: true, building: { select: { phase: { select: { projectId: true } } } } } },
       },
@@ -1733,11 +1758,12 @@ export class ReservationsService {
     }
 
     // ── Booking amount fields ────────────────────────────────────────────
+    let newPlan: Awaited<ReturnType<ReservationsService['validateBookingPlan']>> | null = null;
     if (dto.installmentPlanTemplateId !== undefined) {
       if (dto.installmentPlanTemplateId === null) {
         if (reservation.installmentPlanTemplateId) {
           data.installmentPlanTemplate = { disconnect: true };
-          Object.assign(data, this.planSnapshot(null, undefined, new Prisma.Decimal(reservation.unit.price)));
+          Object.assign(data, this.planSnapshot(null, undefined, new Prisma.Decimal(reservation.unit.price), reservation.bookingAmount));
           changes.push('تم إلغاء ربط خطة التقسيط');
         }
       } else {
@@ -1749,14 +1775,12 @@ export class ReservationsService {
         if (plan.id !== reservation.installmentPlanTemplateId) {
           data.installmentPlanTemplate = { connect: { id: plan.id } };
           // The duration and prices follow the new plan — conversion used
-          // the old plan's numbers under the new plan's name.
-          Object.assign(
-            data,
-            this.planSnapshot(plan, dto.installmentPlanDurationOptionId, new Prisma.Decimal(reservation.unit.price)),
-          );
+          // the old plan's numbers under the new plan's name. Worked out
+          // below, once the booking amount is final.
+          newPlan = plan;
           changes.push('تم تحديث خطة التقسيط');
           // If admin did not also send a booking amount, default to plan's reservationAmount
-          if (dto.bookingAmount === undefined) {
+          if (dto.bookingAmount === undefined && !plan.reservationAmount.eq(reservation.bookingAmount)) {
             data.bookingAmount = plan.reservationAmount;
             changes.push('تم تحديث مبلغ الحجز من خطة التقسيط');
           }
@@ -1770,6 +1794,44 @@ export class ReservationsService {
         data.bookingAmount = amount;
         changes.push(`تم تحديث مبلغ الحجز إلى ${amount.toString()}`);
       }
+    }
+
+    const bookingAmount = (data.bookingAmount as Prisma.Decimal | undefined) ?? reservation.bookingAmount;
+    if (data.bookingAmount !== undefined) {
+      // A booking already paid, or with a proof under review, is paid at the
+      // old amount: changing it would mark it paid short.
+      if (reservation.bookingPaymentStatus === ReservationBookingPaymentStatus.PAID) {
+        throw new BadRequestException('مبلغ الحجز مدفوع بالفعل — لا يمكن تعديله');
+      }
+      const waiting = await this.prisma.deposit.count({
+        where: {
+          reservationId: id,
+          type: DepositType.BOOKING_AMOUNT,
+          deletedAt: null,
+          reviewStatus: DepositReviewStatus.PENDING_REVIEW,
+        },
+      });
+      if (waiting > 0) {
+        throw new BadRequestException('يوجد إثبات دفع لمبلغ الحجز قيد المراجعة — راجعه أولاً قبل تعديل المبلغ');
+      }
+    }
+    // The schedule is built on the booking actually paid, so a new booking
+    // amount (or a new plan) recomputes it.
+    if (newPlan) {
+      Object.assign(
+        data,
+        this.planSnapshot(newPlan, dto.installmentPlanDurationOptionId, new Prisma.Decimal(reservation.unit.price), bookingAmount),
+      );
+    } else if (data.bookingAmount !== undefined && reservation.installmentPlanTemplateId && reservation.selectedDurationOptionId) {
+      const plan = await this.validateBookingPlan(
+        reservation.installmentPlanTemplateId,
+        reservation.unitId,
+        reservation.unit.building.phase.projectId,
+      );
+      Object.assign(
+        data,
+        this.planSnapshot(plan, reservation.selectedDurationOptionId, new Prisma.Decimal(reservation.unit.price), bookingAmount),
+      );
     }
 
     if (
@@ -2111,14 +2173,18 @@ export class ReservationsService {
         const lastCents = financedCents - monthlyCents * (months - 1);
         const rows: Prisma.InstallmentCreateManyInput[] = [];
         for (let i = 0; i < months; i++) {
+          const cents = i === months - 1 ? lastCents : monthlyCents;
+          // Nothing financed (booking + down + final cover the price): no
+          // rows of 0.00 — they could not be paid and would go overdue.
+          if (cents <= 0) continue;
           rows.push({
             planId: plan.id,
             type: PlanPaymentType.INSTALLMENT,
             dueDate: addMonths(startsAt, i),
-            amount: new Prisma.Decimal(i === months - 1 ? lastCents : monthlyCents).div(100),
+            amount: new Prisma.Decimal(cents).div(100),
           });
         }
-        await tx.installment.createMany({ data: rows });
+        if (rows.length > 0) await tx.installment.createMany({ data: rows });
 
         // 4c. FINAL_PAYMENT row (one period after the last monthly installment).
         if (reservation.snapshotFinalPaymentAmount?.gt(0)) {
