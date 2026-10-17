@@ -282,6 +282,13 @@ export interface Contract {
   } | null;
   pdfUrl: string | null;
   signedAt: string | null;
+  /** The unit handover: warranties and the customer's maintenance start there. */
+  handover?: {
+    handedOverAt: string;
+    checklist: Array<{ key: string; done: boolean }> | null;
+    notes: string | null;
+    performedById: string | null;
+  } | null;
   totalAmount: string | number;
   downPayment: string | number;
   createdAt: string;

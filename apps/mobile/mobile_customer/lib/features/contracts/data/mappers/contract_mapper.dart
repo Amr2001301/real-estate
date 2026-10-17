@@ -13,5 +13,6 @@ extension ContractDtoMapper on ContractDto {
         status: signed ? ContractStatus.signed : ContractStatus.draft,
         signedAt: DateTime.tryParse(signedAt ?? ''),
         createdAt: DateTime.tryParse(createdAt ?? ''),
+        handedOverAt: DateTime.tryParse(handedOverAt ?? ''),
       );
 }

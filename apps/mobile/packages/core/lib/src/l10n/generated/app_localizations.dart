@@ -2114,6 +2114,18 @@ abstract class AppLocalizations {
   /// **'Signed on'**
   String get myPropertySignedDate;
 
+  /// No description provided for @myPropertyHandedOverDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Handed over on'**
+  String get myPropertyHandedOverDate;
+
+  /// No description provided for @myPropertyNotHandedOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Not handed over yet — maintenance requests open at handover'**
+  String get myPropertyNotHandedOver;
+
   /// No description provided for @myPropertyInstallmentPlan.
   ///
   /// In en, this message translates to:

@@ -302,8 +302,9 @@ function makePrismaMock() {
     },
     contract: {
       findMany: jest.fn().mockImplementation(async () => contractFixture.rows),
-      // The customer owns the unit (a live contract of theirs on it).
+      // The customer owns the unit (a live contract of theirs on it), handed over.
       count: jest.fn().mockResolvedValue(1),
+      findFirst: jest.fn().mockResolvedValue({ handover: { id: 'handover-1' } }),
     },
     $transaction: jest.fn().mockImplementation(async (ops: unknown) => {
       if (Array.isArray(ops)) return Promise.all(ops);

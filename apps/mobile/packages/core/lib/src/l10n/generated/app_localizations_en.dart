@@ -1079,6 +1079,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myPropertySignedDate => 'Signed on';
 
   @override
+  String get myPropertyHandedOverDate => 'Handed over on';
+
+  @override
+  String get myPropertyNotHandedOver => 'Not handed over yet — maintenance requests open at handover';
+
+  @override
   String get myPropertyInstallmentPlan => 'Installment plan';
 
   @override

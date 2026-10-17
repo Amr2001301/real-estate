@@ -1037,13 +1037,18 @@ export class ContractAmendmentsService {
       return row;
     });
 
-    // A signed sale's warranties now run on the new unit.
-    if (contract.signedAt) {
-      try {
-        await startUnitWarranties(this.prisma, unit.id, contract.createdAt);
-      } catch (err) {
-        reportFailure(this.logger, 'contracts', `contract ${contractId} warranty start on swap failed`, err);
-      }
+    // A unit already handed over: the new unit is the one handed over now,
+    // and its warranties start at the swap date (decided 2026-10-16). Before
+    // the handover there is nothing to start — the handover will.
+    try {
+      const swappedAt = new Date();
+      const moved = await this.prisma.unitHandover.updateMany({
+        where: { contractId, companyId },
+        data: { unitId: unit.id },
+      });
+      if (moved.count > 0) await startUnitWarranties(this.prisma, unit.id, swappedAt);
+    } catch (err) {
+      reportFailure(this.logger, 'contracts', `contract ${contractId} warranty start on swap failed`, err);
     }
     try {
       await this.notifications.sendToUser(

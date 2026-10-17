@@ -902,6 +902,15 @@ export const NOTIFICATION_CATALOG: NotificationTemplateDef[] = [
     en_body: 'Your contract ({{contractNumber}}) moved from unit {{oldUnitCode}} to unit {{unitCode}} at a price of {{totalAmount}}. Please review your updated schedule.',
   },
   {
+    code: 'unit_handed_over',
+    channel: NotificationChannel.PUSH,
+    emailEnabled: true,
+    ar_subject: 'تم تسليم وحدتك',
+    en_subject: 'Your unit was handed over',
+    ar_body: 'تم تسليم الوحدة {{unitCode}} (العقد {{contractNumber}}) بتاريخ {{handedOverAt}}. يبدأ ضمانها من هذا التاريخ، ويمكنك الآن تقديم طلبات الصيانة من التطبيق.',
+    en_body: 'Unit {{unitCode}} (contract {{contractNumber}}) was handed over on {{handedOverAt}}. Its warranty starts from that date, and you can now file maintenance requests in the app.',
+  },
+  {
     code: 'contract_rescheduled',
     channel: NotificationChannel.PUSH,
     emailEnabled: true,

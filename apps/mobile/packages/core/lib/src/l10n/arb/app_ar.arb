@@ -378,6 +378,8 @@
   "myPropertyContractNumber": "رقم العقد",
   "myPropertyReservationNumber": "رقم الحجز",
   "myPropertySignedDate": "تاريخ التوقيع",
+  "myPropertyHandedOverDate": "تاريخ التسليم",
+  "myPropertyNotHandedOver": "لم تُسلَّم بعد — تُفتح طلبات الصيانة عند التسليم",
   "myPropertyInstallmentPlan": "خطة الأقساط",
   "myPropertyInstallmentSummary": "{amount} / شهريًا · {months} شهرًا",
   "@myPropertyInstallmentSummary": { "placeholders": { "amount": { "type": "String" }, "months": { "type": "int" } } },

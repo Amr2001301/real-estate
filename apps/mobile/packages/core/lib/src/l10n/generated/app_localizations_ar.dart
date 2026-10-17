@@ -1069,6 +1069,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get myPropertySignedDate => 'تاريخ التوقيع';
 
   @override
+  String get myPropertyHandedOverDate => 'تاريخ التسليم';
+
+  @override
+  String get myPropertyNotHandedOver => 'لم تُسلَّم بعد — تُفتح طلبات الصيانة عند التسليم';
+
+  @override
   String get myPropertyInstallmentPlan => 'خطة الأقساط';
 
   @override

@@ -14,6 +14,7 @@ class ContractDto {
     this.projectNameEn,
     this.signedAt,
     this.createdAt,
+    this.handedOverAt,
   });
 
   final String id;
@@ -25,6 +26,8 @@ class ContractDto {
   final String? projectNameEn;
   final String? signedAt;
   final String? createdAt;
+  /// The unit's handover date — maintenance opens from it. Null until then.
+  final String? handedOverAt;
 
   factory ContractDto.fromJson(Map<String, dynamic> json) {
     final unit = json['unit'] as Map<String, dynamic>?;
@@ -45,6 +48,7 @@ class ContractDto {
       signed: json['signedAt'] != null,
       signedAt: json['signedAt'] as String?,
       createdAt: json['createdAt'] as String?,
+      handedOverAt: (json['handover'] as Map<String, dynamic>?)?['handedOverAt'] as String?,
     );
   }
 }

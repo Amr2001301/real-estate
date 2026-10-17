@@ -168,6 +168,7 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   Setting: 'TENANT_OWNED',
   Document: 'TENANT_OWNED',
   PresignedUpload: 'TENANT_OWNED',
+  UnitHandover: 'TENANT_OWNED',
 
   // Chat
   ChatSession: 'TENANT_OWNED',
