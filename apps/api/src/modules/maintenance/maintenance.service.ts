@@ -657,6 +657,7 @@ export class MaintenanceService {
   // handling SLA among the request's selected categories (null if none has one).
   async approve(id: string, actorId?: string) {
     const req = await this.requireRequest(id);
+    this.assertNotClosed(req);
     if (req.reviewStatus !== MaintenanceReviewStatus.PENDING) {
       throw new BadRequestException('Only a pending request can be approved');
     }
@@ -740,6 +741,7 @@ export class MaintenanceService {
     await this.assertAssignableAdmin(assignedAdminId);
     const current = await this.requireRequest(id);
     this.assertNotRejected(current);
+    this.assertNotClosed(current);
     const previousAssigneeId = current.assignedAdminId;
     const data: Prisma.MaintenanceRequestUncheckedUpdateInput = { assignedAdminId };
     if (current.status === MaintenanceStatus.OPEN) {
@@ -778,6 +780,13 @@ export class MaintenanceService {
     const updated = await this.prisma.maintenanceRequest.update({ where: { id }, data });
     await this.notifyStatus(id, actorId);
     return updated;
+  }
+
+  /** A closed request is finished — it is not approved or assigned. */
+  private assertNotClosed(req: { status: MaintenanceStatus }) {
+    if (req.status === MaintenanceStatus.CLOSED) {
+      throw new BadRequestException('This request is closed');
+    }
   }
 
   /** A rejected request is finished — it is not worked on or assigned. */
@@ -986,7 +995,11 @@ export class MaintenanceService {
    */
   async customerConfirmResolution(userId: string, id: string, dto: ConfirmResolutionDto) {
     const req = await this.assertCustomerOwns(userId, id);
-    if (req.status !== MaintenanceStatus.RESOLVED && req.status !== MaintenanceStatus.CLOSED) {
+    // Closed without the work done (closed when the customer no longer held
+    // the unit) is not a resolution to confirm.
+    const resolved =
+      req.status === MaintenanceStatus.RESOLVED || (req.status === MaintenanceStatus.CLOSED && req.resolvedAt != null);
+    if (!resolved) {
       throw new BadRequestException('يمكن تأكيد الحل بعد إتمام الإصلاح فقط');
     }
     if (req.customerConfirmedResolutionAt) {

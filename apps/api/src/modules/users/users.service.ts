@@ -536,13 +536,20 @@ export class UsersService {
     await tx.deviceToken.deleteMany({ where: { userId: id } });
     await tx.user.updateMany({ where: { managerId: id, companyId }, data: { managerId: null } });
     // Maintenance work assigned to them goes back to the queue — it used to
-    // sit on an account nobody can open until the SLA breach fired.
+    // sit on an account nobody can open until the SLA breach fired. Work in
+    // progress too: unassigned but still IN_PROGRESS, nobody picked it up. A
+    // resolved request waiting on the customer is unassigned, so a colleague
+    // follows up the confirmation or a complaint.
     await tx.maintenanceRequest.updateMany({
-      where: { assignedAdminId: id, companyId, status: MaintenanceStatus.ASSIGNED },
+      where: {
+        assignedAdminId: id,
+        companyId,
+        status: { in: [MaintenanceStatus.ASSIGNED, MaintenanceStatus.IN_PROGRESS] },
+      },
       data: { assignedAdminId: null, status: MaintenanceStatus.OPEN },
     });
     await tx.maintenanceRequest.updateMany({
-      where: { assignedAdminId: id, companyId, status: MaintenanceStatus.IN_PROGRESS },
+      where: { assignedAdminId: id, companyId, status: MaintenanceStatus.RESOLVED },
       data: { assignedAdminId: null },
     });
   }
