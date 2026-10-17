@@ -524,6 +524,18 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
       },
     });
 
+    // 100,000 collected (staff cash): what is kept and given back must fit
+    // in it (numbers audit V1), and differs from the suggestion.
+    await testApp.rawPrisma.deposit.create({
+      data: {
+        contractId: opContract.id,
+        amount: 100_000,
+        paidAt: new Date('2026-09-02'),
+        recordedById: fx.users.adminA.id,
+        companyId: fx.companies.aId,
+      },
+    });
+
     try {
       await request(testApp.app.getHttpServer())
         .post(`/v1/contracts/${opContract.id}/cancel`)
@@ -543,10 +555,10 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
       // Stored amounts must exactly match what the operator submitted
       expect(Number(cc.retainedAmount)).toBe(88_888);
       expect(Number(cc.refundAmount)).toBe(11_111);
-      // No approved deposits → totalCollectedSnapshot = 0
-      expect(Number(cc.totalCollectedSnapshot)).toBe(0);
+      expect(Number(cc.totalCollectedSnapshot)).toBe(100_000);
     } finally {
       await testApp.rawPrisma.contractCancellation.deleteMany({ where: { contractId: opContract.id } }).catch(() => void 0);
+      await testApp.rawPrisma.deposit.deleteMany({ where: { contractId: opContract.id } }).catch(() => void 0);
       await testApp.rawPrisma.contract.deleteMany({ where: { id: opContract.id } }).catch(() => void 0);
       await testApp.rawPrisma.unit.deleteMany({ where: { id: opUnit.id } }).catch(() => void 0);
     }
