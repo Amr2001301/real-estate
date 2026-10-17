@@ -118,7 +118,8 @@ export default async function FinancialReportsPage({
   const [dashRes, cmpDashRes, projectsRes, refundsRes] = await Promise.all([
     safe(api.get<FinancialDashboard>(apiUrl({ dateFrom, dateTo, projectId: sp.projectId, q: sp.q, type: sp.type }))),
     cmpRange
-      ? safe(api.get<FinancialDashboard>(apiUrl({ dateFrom: cmpRange.dateFrom, dateTo: cmpRange.dateTo, projectId: sp.projectId })))
+      // The same filters as the current period, only the dates differ.
+      ? safe(api.get<FinancialDashboard>(apiUrl({ dateFrom: cmpRange.dateFrom, dateTo: cmpRange.dateTo, projectId: sp.projectId, q: sp.q, type: sp.type })))
       : Promise.resolve({ data: null, error: null }),
     safe(fetchProjectOptions()),
     safe(api.get<OutstandingRefunds>('/contracts/refunds/outstanding')),
@@ -148,8 +149,14 @@ export default async function FinancialReportsPage({
   // numerator, as on the dashboard — and fees & penalties.
   const towardsPrice   = num(s?.collectedTowardsPrice ?? s?.totalCollectedVerified ?? s?.totalCollected);
   const feesCollected  = num(s?.feesCollected);
-  const collectionRate = contractVal > 0 ? Math.round((towardsPrice / contractVal) * 100) : 0;
-  const overdueRate    = contractVal > 0 ? parseFloat(((overdueAmt / contractVal) * 100).toFixed(1)) : 0;
+  // The rate is collected against what is due by today (decided 2026-10-17),
+  // as on the dashboard — it divided the period's money by every contract's
+  // whole value. The overdue rate is the share of what is due left unpaid.
+  const dueToDate      = num(s?.dueToDate);
+  const againstDue     = num(s?.collectedAgainstDue ?? s?.collectedTowardsPrice);
+  const collectionRate = dueToDate > 0 ? Math.min(100, Math.round((againstDue / dueToDate) * 100)) : 0;
+  const overdueRate    = dueToDate > 0 ? parseFloat(((overdueAmt / dueToDate) * 100).toFixed(1)) : 0;
+  const notYetDue      = Math.max(0, outstanding - overdueAmt);
 
   // Comparison deltas
   const contractDelta  = cmpS ? computeDelta(contractVal,   num(cmpS.totalContractValue))                         : undefined;
@@ -353,7 +360,7 @@ export default async function FinancialReportsPage({
               <div className="w-px h-8 bg-hairline" />
               <div className="text-end">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{m.collectionEfficiency.remainingLabel}</p>
-                <p className="text-[18px] font-black tabular-nums text-slate-700">{contractVal > 0 ? (100 - collectionRate) : 0}%</p>
+                <p className="text-[18px] font-black tabular-nums text-slate-700">{dueToDate > 0 ? (100 - collectionRate) : 0}%</p>
               </div>
             </div>
           </div>
@@ -414,9 +421,11 @@ export default async function FinancialReportsPage({
               const base = contractVal > 0 ? contractVal : 1;
               return [
                 { label: m.distribution.rows.contractValue, amount: contractVal,    pct: '100%',                                          dot: 'bg-slate-300',   valCls: 'text-slate-900' },
-                { label: m.distribution.rows.collected,     amount: towardsPrice,   pct: `${collectionRate}%`,                            dot: 'bg-emerald-500', valCls: 'text-emerald-700' },
+                // Each a share of the value: collected, overdue, and not yet due
+                // (outstanding already holds the overdue — they summed past 100%).
+                { label: m.distribution.rows.collected,     amount: towardsPrice,   pct: `${((towardsPrice / base) * 100).toFixed(1)}%`, dot: 'bg-emerald-500', valCls: 'text-emerald-700' },
                 { label: m.distribution.rows.overdue,       amount: overdueAmt,     pct: `${((overdueAmt / base) * 100).toFixed(1)}%`,   dot: 'bg-danger-500',  valCls: 'text-danger-700' },
-                { label: m.distribution.rows.outstanding,   amount: outstanding,    pct: `${((outstanding  / base) * 100).toFixed(1)}%`, dot: 'bg-slate-200',   valCls: 'text-slate-700' },
+                { label: m.distribution.rows.outstanding,   amount: notYetDue,      pct: `${((notYetDue  / base) * 100).toFixed(1)}%`,   dot: 'bg-slate-200',   valCls: 'text-slate-700' },
               ];
             })().map((r) => (
               <div key={r.label} className="flex items-center gap-3 px-5 py-3.5">

@@ -79,6 +79,10 @@ describe('presentation report templates', () => {
         summary: {
           totalContractValue: '6100000',
           totalCollectedVerified: '1461666.68',
+          collectedTowardsPrice: '1400000',
+          feesCollected: '61666.68',
+          dueToDate: '2000000',
+          collectedAgainstDue: '1300000',
           totalCollectedUnverified: '206666.67',
           totalOutstanding: '3673333.44',
           collectedThisMonth: '541666.67',

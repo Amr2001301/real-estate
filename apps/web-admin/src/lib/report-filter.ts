@@ -116,6 +116,20 @@ export function resolveReportDateRange(params: ReportFilterParams): ResolvedDate
 export function resolveComparisonDateRange(
   current: ResolvedDateRange,
   compare: string,
+  today: string = new Date().toISOString().slice(0, 10),
+): { dateFrom: string; dateTo: string } | null {
+  const range = comparisonRange(current, compare);
+  if (!range || current.dateTo <= today || current.dateFrom > today) return range;
+  // The period is still running: compare it with the same number of days of
+  // the other period — a month so far against a whole month read as a fall.
+  const elapsed = Math.round((Date.parse(today) - Date.parse(current.dateFrom)) / 86_400_000);
+  const cappedTo = new Date(Date.parse(range.dateFrom) + elapsed * 86_400_000).toISOString().slice(0, 10);
+  return { dateFrom: range.dateFrom, dateTo: cappedTo < range.dateTo ? cappedTo : range.dateTo };
+}
+
+function comparisonRange(
+  current: ResolvedDateRange,
+  compare: string,
 ): { dateFrom: string; dateTo: string } | null {
   if (!compare || compare === 'none') return null;
 

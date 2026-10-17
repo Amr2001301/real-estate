@@ -1725,7 +1725,11 @@ export interface PortalUnit {
 // ── Financial Reports ─────────────────────────────────────────────────────────
 
 export interface FinancialSummary {
+  /** Signed contracts at their net price (decided 2026-10-17). */
   totalContractValue: string;
+  /** What has fallen due by today (booking + rows due), and what was collected against it. */
+  dueToDate?: string;
+  collectedAgainstDue?: string;
   totalCollected: string;
   totalRemaining: string;
   totalOverdue: string;

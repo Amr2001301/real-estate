@@ -37,3 +37,26 @@ export function commissionBasis(
   const basis = new Prisma.Decimal(totalAmount).sub(financingMarkup(reservation));
   return basis.isNegative() ? new Prisma.Decimal(0) : basis.toDecimalPlaces(2);
 }
+
+/**
+ * A contract's sale price in SQL: its total less the instalment markup
+ * (decided 2026-10-17: "sales" and "contract value" are the net price, as the
+ * commission base). The query must alias the contract `c` and join its
+ * reservation: LEFT JOIN "Reservation" r ON r.id = c."reservationId".
+ */
+export const NET_PRICE_SQL = Prisma.sql`(c."totalAmount" - GREATEST(COALESCE(r."snapshotFinancedAmount" - r."snapshotRemainingAmount", 0), 0))`;
+
+type NetValueDb = Pick<Prisma.TransactionClient, 'contract' | 'reservation'>;
+
+/** The net price (total less markup) of the contracts `where` selects. */
+export async function netContractValue(db: NetValueDb, where: Prisma.ContractWhereInput): Promise<number> {
+  const [total, markup] = await Promise.all([
+    db.contract.aggregate({ where, _sum: { totalAmount: true } }),
+    db.reservation.aggregate({
+      where: { contract: { is: where }, snapshotFinancedAmount: { not: null }, snapshotRemainingAmount: { not: null } },
+      _sum: { snapshotFinancedAmount: true, snapshotRemainingAmount: true },
+    }),
+  ]);
+  const added = Number(markup._sum.snapshotFinancedAmount ?? 0) - Number(markup._sum.snapshotRemainingAmount ?? 0);
+  return Number(total._sum.totalAmount ?? 0) - Math.max(0, added);
+}
