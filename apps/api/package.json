@@ -36,6 +36,8 @@
     "contracts:backfill-documents": "tsx scripts/backfill-contract-documents.ts --execute",
     "deposits:backfill-booking-status:dry-run": "tsx scripts/backfill-booking-payment-status.ts",
     "deposits:backfill-booking-status": "tsx scripts/backfill-booking-payment-status.ts --execute",
+    "contracts:fix-double-final-payment:dry-run": "tsx scripts/fix-double-final-payment.ts",
+    "contracts:fix-double-final-payment": "tsx scripts/fix-double-final-payment.ts --execute",
     "reminders:installments:due-soon:dry-run": "tsx scripts/send-installment-due-soon-reminders.ts",
     "reminders:installments:due-soon": "tsx scripts/send-installment-due-soon-reminders.ts --execute",
     "cleanup:duplicate-seed-data:dry-run": "tsx scripts/cleanup-duplicate-seed-data.ts"
