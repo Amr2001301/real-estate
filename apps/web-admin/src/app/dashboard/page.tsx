@@ -1,42 +1,29 @@
-import {
-  Plus,
-  AlertCircle,
-  Activity,
-  Building2,
-  ArrowUpRight,
-  TrendingUp,
-  CalendarDays,
-  ArrowLeft,
-  FileText,
-  Wrench,
-  CalendarCheck2,
-  MessageSquare,
-  Bell,
-  CheckCircle2,
-  Award,
-  LayoutDashboard,
-} from 'lucide-react';
-import type { ReactNode } from 'react';
+import { Plus, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
-import { cn } from '@/lib/cn';
-import { formatCompact } from '@/lib/format';
+import { compactParts, intlLocale } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { getLocale, type Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
-import { ChartPanel } from '@/components/dashboard/chart-panel';
-import { SalesPerformanceChart } from '@/components/dashboard/sales-performance-chart';
-import { LeadSourceDonut } from '@/components/dashboard/lead-source-donut';
-import { ActivityTable } from '@/components/dashboard/activity-table';
 import { ExportMenu } from '@/components/export-menu';
-import { FinancialHealthCard, SalesFunnelCard } from '@/components/dashboard/platform-summary';
-import { ProjectHealthMatrix } from '@/components/dashboard/project-health-matrix';
-import { PremiumPageHero } from '@/components/premium';
+import { PremiumPageHero, PremiumMetricStrip } from '@/components/premium';
+import {
+  ActivityPanel,
+  CashFlowPanel,
+  FinancialHealthPanel,
+  FunnelPanel,
+  LeadSourcesPanel,
+  LeaderboardPanel,
+  MonthlyBarsPanel,
+  NeedsActionPanel,
+  ProjectHealthPanel,
+  groupActivity,
+} from '@/components/dashboard/admin-panels';
 import { SalesDashboard } from './_components/sales-home';
 import { SalesManagerDashboard } from './_components/sales-manager-home';
-import type { TopBrokerRow, TopBrokersResponse } from '@/lib/types';
+import type { TopBrokersResponse } from '@/lib/types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -65,7 +52,10 @@ interface AdminSummary {
     totalCollectedVerified:   number;
     /** Collected towards live contracts' price; fees & penalties apart. */
     collectedTowardsPrice?:   number;
+    overdueTowardsPrice?:     number;
     feesCollected?:           number;
+    /** Booking + payment rows due by today, towards the price (U5). */
+    dueToDate?:               number;
     overdueTotal:             number;
     pendingBonus:             number;
     pendingBrokerPayouts:     number;
@@ -99,6 +89,7 @@ interface AdminSummary {
     action:    string;
     context:   string | null;
     createdAt: string;
+    amount?:   number;
   }>;
   alerts: {
     contractsAwaitingSignature:  number;
@@ -120,7 +111,6 @@ interface PerformanceRow {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const DONUT_COLORS = ['#C8A24B', '#A855F7', '#14B8A6', '#0F1E33', '#26405F', '#94A3B8'];
 
 function activityHref(type: string, id: string): string | undefined {
   switch (type) {
@@ -143,487 +133,26 @@ function relativeTime(iso: string, m: ReturnType<typeof uiT>['pages']['dashboard
   return m.relativeDays(Math.round(hrs / 24));
 }
 
-function SectionLabel({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex items-center gap-2.5">
-      <span className="h-[5px] w-[5px] rounded-full bg-brand-400/80 shrink-0" />
-      <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-[0.12em] whitespace-nowrap">
-        {children}
-      </span>
-      <div className="flex-1 h-px bg-hairline" />
-    </div>
-  );
-}
-
-function EmptyBlock({ message }: { message: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-2.5 py-10 text-center">
-      <TrendingUp className="h-5 w-5 text-slate-200" aria-hidden />
-      <p className="text-sm text-slate-400">{message}</p>
-    </div>
-  );
-}
-
 function pctDelta(current: number, prev: number): number | null {
   if (prev <= 0) return null;
   return Math.round(((current - prev) / prev) * 100);
 }
 
 
-// ── Revenue Command Strip (KPI tiles) — KEEP EXACTLY ────────────────────────
-
-interface CommandTile {
-  label:     string;
-  value:     string;
-  sub:       string;
-  valueCls:  string;
-  delta?:    string;
-  deltaCls?: string;
-  icon:      ReactNode;
-  iconCls:   string;
-}
-
-function RevenueCommandStrip({
-  kpis,
-  financial,
-  symbol,
-  m,
-  locale = 'ar',
-}: {
-  kpis:      AdminSummary['kpis'] | undefined | null;
-  financial: AdminSummary['financial'] | undefined | null;
-  symbol?:   string;
-  m:         ReturnType<typeof uiT>['pages']['dashboard'];
-  locale?:   Locale;
-}) {
-  const hasFin     = financial != null;
-  const total      = financial?.totalContractValue     ?? 0;
-  // The rate compares like with like: the price collected over the contracts'
-  // value (fees are not part of the price), as on the financial report.
-  const collected  = financial?.collectedTowardsPrice ?? financial?.totalCollectedVerified ?? 0;
-  const overdue    = financial?.overdueTotal           ?? 0;
-  const rate       = total > 0 ? Math.round((collected / total) * 100)  : null;
-  const overdueRate = total > 0 ? Math.round((overdue  / total) * 100)  : null;
-
-  const collectedThisMonth = financial?.collectedThisMonth    ?? 0;
-  const prevMonthCollected = financial?.prevMonthCollected     ?? 0;
-  const collectionDeltaPct = pctDelta(collectedThisMonth, prevMonthCollected);
-
-  const signedThisMonth     = financial?.signedContractsThisMonth ?? 0;
-  const prevSignedContracts = financial?.prevMonthSignedContracts  ?? 0;
-  const contractsDelta      = prevSignedContracts > 0 ? signedThisMonth - prevSignedContracts : null;
-
-  const rateValueCls =
-    rate === null  ? 'text-slate-400'  :
-    rate >= 70     ? 'text-success-700' :
-    rate >= 40     ? 'text-amber-700'   :
-                     'text-danger-700';
-
-  const rateIconCls =
-    rate === null  ? 'bg-slate-100 text-slate-400'   :
-    rate >= 70     ? 'bg-success-50 text-success-600' :
-    rate >= 40     ? 'bg-amber-50 text-amber-600'     :
-                     'bg-danger-50 text-danger-500';
-
-  const tiles: CommandTile[] = [
-    {
-      label:    m.kpi.totalContracts,
-      value:    hasFin ? formatCompact(total, symbol, locale) : '—',
-      sub:      m.kpi.totalContractsSub,
-      valueCls: 'text-slate-900',
-      iconCls:  'bg-brand-50 text-brand-600 ring-1 ring-brand-100',
-      icon:     <Building2 className="h-[18px] w-[18px]" />,
-    },
-    {
-      label:    m.kpi.totalCollected,
-      value:    hasFin ? formatCompact(collected, symbol, locale) : '—',
-      sub:      rate !== null ? m.collectedRateSub(rate) : '—',
-      valueCls: 'text-success-700',
-      iconCls:  'bg-success-50 text-success-600 ring-1 ring-success-100',
-      delta:    collectionDeltaPct !== null ? m.deltaLabel(collectionDeltaPct) : undefined,
-      deltaCls: collectionDeltaPct !== null && collectionDeltaPct >= 0
-                  ? 'text-success-600'
-                  : 'text-danger-600',
-      icon:     <TrendingUp className="h-[18px] w-[18px]" />,
-    },
-    {
-      label:    m.kpi.collectionRate,
-      value:    rate !== null ? `${rate}%` : '—',
-      sub:      rate === null  ? '—'                          :
-                rate >= 70     ? m.kpi.collectionGood :
-                rate >= 40     ? m.kpi.collectionOk   :
-                                 m.kpi.collectionBad,
-      valueCls: rateValueCls,
-      iconCls:  rateIconCls,
-      icon:     <Activity className="h-[18px] w-[18px]" />,
-    },
-    {
-      label:    m.kpi.overdue,
-      value:    hasFin ? formatCompact(overdue, symbol, locale) : '—',
-      sub:      overdue > 0
-                  ? overdueRate !== null
-                    ? m.overdueRateSub(overdueRate)
-                    : m.overdueExceeded
-                  : m.kpi.overdueNone,
-      valueCls: hasFin && overdue > 0 ? 'text-danger-700' : 'text-slate-400',
-      iconCls:  hasFin && overdue > 0
-                  ? 'bg-danger-50 text-danger-600 ring-1 ring-danger-100'
-                  : 'bg-slate-100 text-slate-400',
-      icon:     <AlertCircle className="h-[18px] w-[18px]" />,
-    },
-    {
-      label:    m.kpi.monthContracts,
-      value:    hasFin ? String(signedThisMonth) : '—',
-      sub:      kpis
-                  ? m.monthContractsSub(kpis.soldUnits, kpis.reservedUnits)
-                  : '—',
-      valueCls: 'text-slate-900',
-      iconCls:  'bg-sky-50 text-sky-600 ring-1 ring-sky-100',
-      delta:    contractsDelta !== null
-                  ? m.monthDeltaSign(contractsDelta)
-                  : undefined,
-      deltaCls: contractsDelta !== null && contractsDelta >= 0
-                  ? 'text-success-600'
-                  : 'text-danger-600',
-      icon:     <CalendarDays className="h-[18px] w-[18px]" />,
-    },
-  ];
-
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-      {tiles.map((tile) => (
-        <div
-          key={tile.label}
-          className="relative flex flex-col overflow-hidden rounded-2xl border border-hairline bg-surface shadow-xs"
-        >
-          {/* Thin top accent — same on every card */}
-          <div
-            className="h-[3px] w-full shrink-0"
-            style={{ background: 'linear-gradient(to left, #b8923e, #e6c46a, #b8923e)' }}
-          />
-          <div className="flex flex-1 flex-col px-5 py-4">
-            {/* Label + icon row */}
-            <div className="flex items-center justify-between gap-2">
-              <span className={cn('inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', tile.iconCls)}>
-                {tile.icon}
-              </span>
-              <p className="text-[11px] font-semibold leading-snug text-slate-400">
-                {tile.label}
-              </p>
-            </div>
-            {/* Value */}
-            <p className={cn(
-              'mt-4 text-[26px] font-black tabular-nums leading-none tracking-tight',
-              tile.valueCls,
-            )}>
-              {tile.value}
-            </p>
-            {/* Sub-label */}
-            <p className="mt-1.5 text-[11px] leading-snug text-slate-400">{tile.sub}</p>
-            {/* Delta */}
-            {tile.delta && (
-              <p className={cn('mt-auto pt-3 text-[10px] font-semibold leading-none', tile.deltaCls)}>
-                {tile.delta}
-              </p>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ── Compact Action Bar ────────────────────────────────────────────────────────
-
-function CompactActionBar({
-  alerts,
-  m,
-}: {
-  alerts: AdminSummary['alerts'] | undefined;
-  m: ReturnType<typeof uiT>['pages']['dashboard'];
-}) {
-  const items = [
-    { key: 'contracts',   label: m.actionBar.pendingContracts,  value: alerts?.contractsAwaitingSignature ?? 0,  href: '/dashboard/contracts',  icon: <FileText />,       tone: 'danger'  as const },
-    { key: 'maintenance', label: m.actionBar.openMaintenance,   value: alerts?.openMaintenance ?? 0,             href: '/dashboard/maintenance', icon: <Wrench />,         tone: 'warning' as const },
-    { key: 'visits',      label: m.actionBar.pendingVisits,     value: alerts?.visitsAwaitingConfirmation ?? 0,  href: '/dashboard/visits',     icon: <CalendarCheck2 />, tone: 'info'    as const },
-    { key: 'requests',    label: m.actionBar.openLeads,         value: alerts?.infoRequestsOpen ?? 0,            href: '/dashboard/requests',   icon: <MessageSquare />,  tone: 'info'    as const },
-  ];
-  const total = items.reduce((s, i) => s + i.value, 0);
-
-  const toneCls = {
-    danger:  { icon: 'bg-danger-50 text-danger-600',  badge: 'bg-danger-100 text-danger-700'  },
-    warning: { icon: 'bg-amber-50 text-amber-600',    badge: 'bg-amber-100 text-amber-700'   },
-    info:    { icon: 'bg-sky-50 text-sky-600',         badge: 'bg-sky-100 text-sky-700'       },
-  };
-
-  return (
-    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-      <div className="flex items-center gap-3 px-5 py-3 border-b border-hairline bg-canvas/40">
-        <div className={cn(
-          'relative h-7 w-7 rounded-lg flex items-center justify-center shrink-0',
-          total > 0 ? 'bg-danger-50 ring-1 ring-danger-100' : 'bg-success-50 ring-1 ring-success-100',
-        )}>
-          {total > 0 ? (
-            <>
-              <Bell className="h-3.5 w-3.5 text-danger-600" />
-              <span className="absolute -top-0.5 -end-0.5 h-2 w-2 rounded-full bg-danger-500 ring-2 ring-white" />
-            </>
-          ) : (
-            <CheckCircle2 className="h-3.5 w-3.5 text-success-600" />
-          )}
-        </div>
-        <p className="text-sm font-bold text-slate-900">{m.actionBar.header}</p>
-        {total > 0 ? (
-          <span className="inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-danger-100 text-danger-700 text-2xs font-black px-1.5 tabular-nums">
-            {total}
-          </span>
-        ) : (
-          <p className="text-xs text-success-600 font-medium">{m.actionBar.allClear}</p>
-        )}
-      </div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-hairline">
-        {items.map((item) => {
-          const isActive = item.value > 0;
-          const t        = toneCls[item.tone];
-          return (
-            <Link
-              key={item.key}
-              href={item.href as never}
-              className="group flex items-center gap-3 bg-surface hover:bg-canvas/40 transition-colors px-5 py-3.5"
-            >
-              <span className={cn(
-                'h-8 w-8 rounded-lg flex items-center justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 shrink-0',
-                isActive ? t.icon : 'bg-slate-100 text-slate-300',
-              )}>
-                {item.icon}
-              </span>
-              <p className={cn(
-                'text-[11px] font-semibold leading-snug flex-1 truncate',
-                isActive ? 'text-slate-700' : 'text-slate-400',
-              )}>
-                {item.label}
-              </p>
-              <span className={cn(
-                'inline-flex items-center justify-center h-6 min-w-6 rounded-full text-sm font-black tabular-nums px-1.5 shrink-0',
-                isActive ? t.badge : 'bg-slate-100 text-slate-300',
-              )}>
-                {item.value}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ── Top Sales Card ────────────────────────────────────────────────────────────
-
-const RANK_CLS = [
-  'bg-gradient-to-br from-amber-300 to-amber-500 text-white shadow-sm',
-  'bg-gradient-to-br from-slate-300 to-slate-400 text-white shadow-sm',
-  'bg-gradient-to-br from-amber-600 to-amber-700 text-white shadow-sm',
-];
-
-function RankBadge({ rank }: { rank: number }) {
-  const cls = RANK_CLS[rank] ?? 'bg-slate-100 text-slate-500';
-  return (
-    <span className={cn(
-      'h-6 w-6 rounded-full flex items-center justify-center text-2xs font-black tabular-nums shrink-0',
-      cls,
-    )}>
-      {rank + 1}
-    </span>
-  );
-}
-
-function TopSalesCard({
-  rows,
-  symbol,
-  m,
-  locale = 'ar',
-}: {
-  rows: PerformanceRow[];
-  symbol?: string;
-  m: ReturnType<typeof uiT>['pages']['dashboard'];
-  locale?: Locale;
-}) {
-  return (
-    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-      <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-hairline bg-canvas/40">
-        <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-lg bg-emerald-50 ring-1 ring-emerald-100 flex items-center justify-center shrink-0">
-            <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 leading-tight">{m.topSales.title}</h3>
-            <p className="text-2xs text-slate-400 mt-0.5">{m.topSales.sub}</p>
-          </div>
-        </div>
-        <Link
-          href={'/dashboard/sales/performance' as never}
-          className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-800 transition-colors"
-        >
-          {m.viewAll}
-          <ArrowUpRight className="h-3.5 w-3.5" />
-        </Link>
-      </div>
-      {rows.length > 0 ? (
-        <div className="divide-y divide-hairline">
-          {rows.map((r, i) => (
-            <div key={r.salesId} className="flex items-center gap-3 px-5 py-3">
-              <RankBadge rank={i} />
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-slate-900 truncate">{r.salesName}</p>
-                <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">{r.signedContractsCount} {m.topSales.contractSuffix}</p>
-              </div>
-              <p className="text-xs font-black tabular-nums text-emerald-700 shrink-0">
-                {formatCompact(r.achievedAmount, symbol, locale)}
-              </p>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="px-5 py-6 text-center">
-          <p className="text-xs text-slate-400">{m.topSales.empty}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Top Brokers Card ──────────────────────────────────────────────────────────
-
-function TopBrokersCard({
-  rows,
-  symbol,
-  m,
-  locale = 'ar',
-}: {
-  rows: TopBrokerRow[];
-  symbol?: string;
-  m: ReturnType<typeof uiT>['pages']['dashboard'];
-  locale?: Locale;
-}) {
-  return (
-    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-      <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-hairline bg-canvas/40">
-        <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-lg bg-violet-50 ring-1 ring-violet-100 flex items-center justify-center shrink-0">
-            <Award className="h-3.5 w-3.5 text-violet-600" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 leading-tight">{m.topBrokers.title}</h3>
-            <p className="text-2xs text-slate-400 mt-0.5">{m.topBrokers.sub}</p>
-          </div>
-        </div>
-        <Link
-          href={'/dashboard/broker-reports' as never}
-          className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-800 transition-colors"
-        >
-          {m.viewAll}
-          <ArrowUpRight className="h-3.5 w-3.5" />
-        </Link>
-      </div>
-      {rows.length > 0 ? (
-        <div className="divide-y divide-hairline">
-          {rows.map((r, i) => (
-            <div key={r.brokerId} className="flex items-center gap-3 px-5 py-3">
-              <RankBadge rank={i} />
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-slate-900 truncate">{r.companyName}</p>
-                <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">{r.contractsSigned} {m.topBrokers.contractSuffix}</p>
-              </div>
-              <p className="text-xs font-black tabular-nums text-violet-700 shrink-0">
-                {formatCompact(Number(r.salesGross), symbol, locale)}
-              </p>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="px-5 py-6 text-center">
-          <p className="text-xs text-slate-400">{m.topBrokers.empty}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Cash Flow Forecast Card ───────────────────────────────────────────────────
-
-function CashFlowPreviewCard({
-  forecast,
-  overdueTotal,
-  symbol,
-  m,
-  locale = 'ar',
-}: {
-  forecast:     NonNullable<AdminSummary['cashflowForecast']>;
-  overdueTotal: number;
-  symbol?:      string;
-  m:            ReturnType<typeof uiT>['pages']['dashboard'];
-  locale?:      Locale;
-}) {
-  const { next30, next3160, next6190 } = forecast;
-  const grandTotal = next30 + next3160 + next6190 + overdueTotal;
-
-  const slots = [
-    { label: m.cashFlow.slot30,      amount: next30,      barCls: 'bg-success-400', valueCls: 'text-success-700' },
-    { label: m.cashFlow.slot60,      amount: next3160,     barCls: 'bg-amber-400',   valueCls: 'text-amber-700'   },
-    { label: m.cashFlow.slot90,      amount: next6190,     barCls: 'bg-brand-400',   valueCls: 'text-brand-700'   },
-    { label: m.cashFlow.slotOverdue, amount: overdueTotal, barCls: 'bg-danger-400',  valueCls: 'text-danger-700'  },
-  ] as const;
-
-  return (
-    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-      <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline bg-canvas/30">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
-            <CalendarDays className="h-4 w-4 text-brand-600" />
-          </div>
-          <div>
-            <p className="text-[14px] font-bold text-navy leading-none">{m.cashFlow.title}</p>
-            {grandTotal > 0 && (
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                {m.cashFlow.totalSub}{' '}
-                <span className="font-semibold text-slate-600">{formatCompact(grandTotal, symbol, locale)}</span>
-              </p>
-            )}
-          </div>
-        </div>
-        <Link
-          href={'/dashboard/financial-dashboard' as never}
-          className="flex items-center gap-1 text-[11px] font-bold text-brand-700 hover:text-brand-800 transition-colors"
-        >
-          {m.cashFlow.detailLink}
-          <ArrowLeft className="h-3 w-3" />
-        </Link>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-hairline">
-        {slots.map((slot) => {
-          const pct = grandTotal > 0 ? Math.round((slot.amount / grandTotal) * 100) : 0;
-          return (
-            <div key={slot.label} className="bg-surface px-6 py-5 flex flex-col gap-2.5">
-              <p className="text-[11px] font-medium text-slate-400 leading-none">{slot.label}</p>
-              <p className={cn('text-[24px] font-black tabular-nums leading-none tracking-tight', slot.valueCls)}>
-                {formatCompact(slot.amount, symbol, locale)}
-              </p>
-              <div className="h-1.5 w-full rounded-full bg-surface-muted overflow-hidden">
-                <div className={cn('h-full rounded-full', slot.barCls)} style={{ width: `${pct}%` }} />
-              </div>
-              <p className="text-[10px] text-slate-400 leading-none tabular-nums">{m.pctOfTotal(pct)}</p>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
+
+/** The greeting and the date line, on Cairo time (the platform's companies are Egyptian). */
+function greetingAndDate(locale: Locale, m: ReturnType<typeof uiT>['pages']['dashboard']) {
+  const now = new Date();
+  const hour = Number(new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hourCycle: 'h23', timeZone: 'Africa/Cairo' }).format(now));
+  const date = new Intl.DateTimeFormat(intlLocale(locale), {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Africa/Cairo',
+  }).format(now);
+  return { greeting: hour < 12 ? m.u5.greetingMorning : m.u5.greetingEvening, date };
+}
 
 export default async function DashboardHome() {
   const session = await getSession();
@@ -636,6 +165,7 @@ export default async function DashboardHome() {
   ]);
   const m      = uiT(locale).pages.dashboard;
   const symbol = currencySymbol(currency, locale);
+  const money  = { symbol, locale };
   const now    = new Date();
   const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
@@ -648,59 +178,50 @@ export default async function DashboardHome() {
   const summary = r.data;
   const error   = r.error;
   const kpis    = summary?.kpis;
+  const fin     = summary?.financial;
+  const { greeting, date } = greetingAndDate(locale, m);
 
-  // Charts
-  const leadSlices = (summary?.leadSources ?? []).map((s, i) => ({
-    label: s.source,
-    value: s.count,
-    color: DONUT_COLORS[i % DONUT_COLORS.length]!,
-  }));
-  const leadTotal   = leadSlices.reduce((sum, s) => sum + s.value, 0);
-  const donutCenter = leadTotal > 0 ? String(leadTotal) : undefined;
+  // ── Band ──
+  const total     = fin?.totalContractValue ?? 0;
+  const collected = fin?.collectedTowardsPrice ?? fin?.totalCollectedVerified ?? 0;
+  const fees      = fin?.feesCollected ?? 0;
+  const overdue   = fin?.overdueTowardsPrice ?? fin?.overdueTotal ?? 0;
+  // Collection rate against what is due by today, not the whole contract
+  // value (review item 2): most of the value is not due yet.
+  const due       = fin?.dueToDate;
+  const rate      = due !== undefined && due > 0 ? Math.min(100, Math.round((collected / due) * 100)) : null;
+  const rateNote  =
+    rate === null ? m.u5.rateNothingDue : rate >= 90 ? m.u5.rateHealthy : rate >= 70 ? m.u5.rateWatch : m.u5.rateLow;
+  const collectionDelta = pctDelta(fin?.collectedThisMonth ?? 0, fin?.prevMonthCollected ?? 0);
+  const [totalNum, totalUnit] = compactParts(total, symbol, locale);
+  const [colNum, colUnit]     = compactParts(collected, symbol, locale);
+  const [ovNum, ovUnit]       = compactParts(overdue, symbol, locale);
 
-  const trendData = (summary?.reservationTrend ?? []).map((t) => ({
-    month: t.label,
-    value: t.value,
-  }));
+  // ── Activity: payments carry their amount; repeats are grouped ──
+  const activity = groupActivity(
+    (summary?.recentActivity ?? []).map((it) => {
+      const rawId = it.id.includes(':') ? it.id.split(':').slice(1).join(':') : it.id;
+      return {
+        id: it.id, type: it.type, who: it.title, action: it.action, ref: it.context,
+        when: relativeTime(it.createdAt, m), href: activityHref(it.type, rawId), amount: it.amount,
+      };
+    }),
+    m.u5.groupedPayments,
+  ).slice(0, 7);
 
-  const activityRows = (summary?.recentActivity ?? []).map((it) => {
-    const rawId = it.id.includes(':') ? it.id.split(':').slice(1).join(':') : it.id;
-    return {
-      id:     it.id,
-      user:   it.title,
-      action: it.action,
-      entity: it.context ?? '—',
-      time:   relativeTime(it.createdAt, m),
-      href:   activityHref(it.type, rawId),
-      type:   it.type,
-    };
-  });
-
-  const topProjects  = summary?.topProjects ?? [];
-  const hasFunnel    = !!(summary?.funnel && summary.funnel.leads > 0);
-  const hasFinancial = !!summary?.financial;
-
-  // Top performers
-  const topSalesRows  = (topSalesRes.data ?? [])
-    .sort((a, b) => b.achievedAmount - a.achievedAmount)
-    .slice(0, 5);
-  const topBrokerRows = (topBrokersRes.data?.data ?? []).slice(0, 5);
+  const funnel = summary?.funnel;
+  const topProjects = summary?.topProjects ?? [];
+  const forecast = summary?.cashflowForecast;
+  const forecastTotal = forecast ? forecast.next30 + forecast.next3160 + forecast.next6190 + (fin?.overdueTotal ?? 0) : 0;
 
   return (
-    <div className="space-y-5">
-
-      {/* ── Hero ─────────────────────────────────────────────────────────────── */}
+    <div className="flex flex-col gap-6">
       <PremiumPageHero
-        title={m.title}
+        eyebrow={date}
+        title={greeting}
         description={m.description}
-        meta={
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-1 text-[11px] font-bold text-brand-700">
-            <LayoutDashboard className="h-3.5 w-3.5" />
-            {m.badge}
-          </span>
-        }
         actions={
-          <div className="flex items-center gap-2">
+          <>
             <ExportMenu
               locale={locale}
               label={m.exportReport}
@@ -709,16 +230,42 @@ export default async function DashboardHome() {
               csvPath="/reports/admin-summary/export.csv"
               filenameBase="dashboard-report"
             />
-            <Link href={'/dashboard/projects/new' as never}>
-              <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-                {m.newProject}
-              </Button>
+            <Link href={'/dashboard/reservations/new' as never}>
+              <Button variant="outline" size="md" leftIcon={<Plus className="h-4 w-4" />}>{m.u5.newBooking}</Button>
             </Link>
-          </div>
+            <Link href={'/dashboard/deposits/new' as never}>
+              <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>{m.u5.recordPayment}</Button>
+            </Link>
+          </>
         }
-      />
+      >
+        {summary && (
+          <PremiumMetricStrip
+            cols={5}
+            metrics={[
+              { label: m.kpi.totalContracts, value: totalNum, unit: totalUnit, sub: m.kpi.totalContractsSub },
+              {
+                label: m.u5.collected, value: colNum, unit: colUnit,
+                sub: fees > 0 ? m.u5.feesSub(compactParts(fees, symbol, locale).join(' ')) : undefined,
+                trend: collectionDelta !== null ? m.deltaLabel(collectionDelta) : undefined,
+                trendCls: collectionDelta !== null && collectionDelta >= 0 ? 'success' : 'danger',
+              },
+              {
+                label: m.kpi.collectionRate, value: rate !== null ? rate : '—', unit: rate !== null ? '%' : '',
+                ring: rate ?? undefined, sub: rate !== null ? m.u5.rateSub : rateNote,
+                trend: rate !== null ? rateNote : undefined,
+                trendCls: rate === null ? undefined : rate >= 90 ? 'success' : rate >= 70 ? 'warning' : 'danger',
+              },
+              { label: m.kpi.overdue, value: ovNum, unit: ovUnit, sub: overdue > 0 ? m.overdueExceeded : m.kpi.overdueNone },
+              {
+                label: m.kpi.monthContracts, value: fin?.signedContractsThisMonth ?? 0,
+                sub: kpis ? m.monthContractsSub(kpis.soldUnits, kpis.reservedUnits) : undefined,
+              },
+            ]}
+          />
+        )}
+      </PremiumPageHero>
 
-      {/* ── Error Banner ─────────────────────────────────────────────────────── */}
       {error && (
         <div className="rounded-[18px] bg-warning-50 border border-warning-100 text-warning-700 p-4 text-sm flex items-start gap-3">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
@@ -729,151 +276,138 @@ export default async function DashboardHome() {
         </div>
       )}
 
-      {/* ── KPI Strip — KEEP EXACTLY ──────────────────────────────────────────── */}
-      {summary && (
-        <RevenueCommandStrip kpis={kpis} financial={summary.financial} symbol={symbol} m={m} locale={locale} />
-      )}
+      <NeedsActionPanel
+        title={m.actionBar.header}
+        allClear={m.actionBar.allClear}
+        items={[
+          { key: 'contracts', label: m.actionBar.pendingContracts, value: summary?.alerts.contractsAwaitingSignature ?? 0, href: '/dashboard/contracts', icon: 'contracts' },
+          { key: 'maintenance', label: m.actionBar.openMaintenance, value: summary?.alerts.openMaintenance ?? 0, href: '/dashboard/maintenance', icon: 'maintenance' },
+          { key: 'visits', label: m.actionBar.pendingVisits, value: summary?.alerts.visitsAwaitingConfirmation ?? 0, href: '/dashboard/visits', icon: 'visits' },
+          { key: 'requests', label: m.actionBar.openLeads, value: summary?.alerts.infoRequestsOpen ?? 0, href: '/dashboard/requests', icon: 'requests' },
+        ]}
+      />
 
-      {/* ── Compact Action Bar ────────────────────────────────────────────────── */}
-      <CompactActionBar alerts={summary?.alerts} m={m} />
-
-      {/* ── Activity Feed + Top Performers ────────────────────────────────────── */}
-      <SectionLabel>{m.sections.activity}</SectionLabel>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
-
-        {/* Activity Feed — 2/3 */}
-        <div className="lg:col-span-2 bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-          <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline bg-canvas/30">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
-                <Activity className="h-4 w-4 text-brand-600" />
-              </div>
-              <div>
-                <h2 className="text-[14px] font-bold text-navy leading-none">{m.activityFeed.title}</h2>
-                {activityRows.length > 0 && (
-                  <p className="text-[11px] text-slate-400 mt-0.5">{m.activityCount(activityRows.length)}</p>
-                )}
-              </div>
-            </div>
-            <Link
-              href={'/dashboard/audit' as never}
-              className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-800 transition-colors"
-            >
-              {m.viewAllFull}
-              <ArrowUpRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-          {activityRows.length > 0
-            ? <ActivityTable rows={activityRows.slice(0, 8)} compact />
-            : <EmptyBlock message={m.activityFeed.empty} />
-          }
-        </div>
-
-        {/* Top Performers — 1/3 */}
-        <div className="space-y-4">
-          <TopSalesCard rows={topSalesRows} symbol={symbol} m={m} locale={locale} />
-          <TopBrokersCard rows={topBrokerRows} symbol={symbol} m={m} locale={locale} />
-        </div>
-      </div>
-
-      {/* ── Performance Analytics ─────────────────────────────────────────────── */}
-      <div className="space-y-3">
-        <SectionLabel>{m.sections.analysis}</SectionLabel>
-        <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch gap-5">
-          <ChartPanel
-            title={m.charts.reservationTrend}
-            description={m.charts.reservationDesc}
-            className={hasFunnel ? 'lg:col-span-7' : 'lg:col-span-12'}
-            trailing={
-              <span className="inline-flex items-center h-6 px-2.5 rounded-full bg-brand-50 text-brand-700 text-2xs font-semibold">
-                {m.charts.reservationBadge}
-              </span>
-            }
-          >
-            {trendData.length > 0
-              ? <SalesPerformanceChart data={trendData} />
-              : <EmptyBlock message={m.charts.empty} />
-            }
-          </ChartPanel>
-          {hasFunnel && summary?.funnel && (
-            <div className="lg:col-span-5">
-              <SalesFunnelCard funnel={summary.funnel} locale={locale} />
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Project Health Matrix ─────────────────────────────────────────────── */}
-      {topProjects.length > 0 && (
-        <div className="space-y-3">
-          <SectionLabel>{m.sections.projectHealth}</SectionLabel>
-          <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-            <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline bg-canvas/30">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
-                  <Building2 className="h-4 w-4 text-brand-600" />
-                </div>
-                <div>
-                  <h2 className="text-[14px] font-bold text-navy leading-none">{m.projectHealth.title}</h2>
-                  <p className="text-[11px] text-slate-400 mt-0.5">{topProjects.length} {m.projectHealth.activeSuffix}</p>
-                </div>
-              </div>
-              <Link
-                href={'/dashboard/projects' as never}
-                className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-800 transition-colors"
-              >
-                {m.projectHealth.viewAll}
-                <ArrowUpRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-            <div className="p-5">
-              <ProjectHealthMatrix projects={topProjects} currencySymbol={symbol} locale={locale} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Financial Health + Lead Sources ───────────────────────────────────── */}
-      {(hasFinancial || leadSlices.length > 0) && (
-        <div className="space-y-3">
-          <SectionLabel>{m.sections.financial}</SectionLabel>
-          <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch gap-5">
-            {hasFinancial && summary?.financial && (
-              <div className={cn('lg:col-span-8', leadSlices.length === 0 && 'lg:col-span-12')}>
-                <FinancialHealthCard financial={summary.financial} currencySymbol={symbol} locale={locale} />
-              </div>
-            )}
-            {leadSlices.length > 0 && (
-              <ChartPanel
-                title={m.charts.leadSources}
-                description={m.charts.leadSourcesDesc}
-                className={cn(hasFinancial ? 'lg:col-span-4' : 'lg:col-span-12')}
-              >
-                <LeadSourceDonut
-                  slices={leadSlices}
-                  centerLabel={donutCenter}
-                  centerSub={m.charts.donutSub}
-                />
-              </ChartPanel>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Cash Flow Forecast ────────────────────────────────────────────────── */}
-      {summary?.cashflowForecast && (
-        <div className="space-y-3">
-          <SectionLabel>{m.sections.cashFlow}</SectionLabel>
-          <CashFlowPreviewCard
-            forecast={summary.cashflowForecast}
-            overdueTotal={summary.financial?.overdueTotal ?? 0}
-            symbol={symbol}
-            m={m}
-            locale={locale}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <ActivityPanel
+            title={m.activityFeed.title}
+            sub={m.activityCount(summary?.recentActivity.length ?? 0)}
+            link={{ href: '/dashboard/audit', label: m.viewAllFull }}
+            empty={m.activityFeed.empty}
+            items={activity}
+            money={money}
           />
         </div>
+        <div className="flex flex-col gap-6">
+          <LeaderboardPanel
+            title={m.topSales.title}
+            sub={m.topSales.sub}
+            link={{ href: '/dashboard/sales/performance', label: m.viewAll }}
+            empty={m.u5.noSalesThisMonth}
+            money={money}
+            rows={[...(topSalesRes.data ?? [])]
+              .sort((a, b) => b.achievedAmount - a.achievedAmount)
+              .slice(0, 5)
+              .map((x) => ({ id: x.salesId, name: x.salesName, sub: `${x.signedContractsCount} ${m.topSales.contractSuffix}`, value: x.achievedAmount }))}
+          />
+          <LeaderboardPanel
+            title={m.topBrokers.title}
+            sub={m.topBrokers.sub}
+            link={{ href: '/dashboard/broker-reports', label: m.viewAll }}
+            empty={m.topBrokers.empty}
+            money={money}
+            rows={(topBrokersRes.data?.data ?? [])
+              .slice(0, 5)
+              .map((b) => ({ id: b.brokerId, name: b.companyName, sub: `${b.contractsSigned} ${m.topBrokers.contractSuffix}`, value: Number(b.salesGross) }))}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <MonthlyBarsPanel
+            title={m.charts.reservationTrend}
+            sub={m.charts.reservationDesc}
+            badge={m.charts.reservationBadge}
+            empty={m.charts.empty}
+            data={(summary?.reservationTrend ?? []).map((t) => ({ label: t.label, value: t.value }))}
+          />
+        </div>
+        {funnel && (
+          <FunnelPanel
+            title={m.u5.funnel.title}
+            sub={m.u5.funnel.sub}
+            footnote={m.u5.funnelNote}
+            stages={[
+              { label: m.u5.funnel.leads, value: funnel.leads },
+              { label: m.u5.funnel.visits, value: funnel.visits },
+              { label: m.u5.funnel.reservations, value: funnel.reservations },
+              {
+                label: m.u5.funnel.contracts,
+                value: funnel.contracts,
+                // Contracts come from bookings, so this rate means something.
+                note: funnel.reservations > 0
+                  ? m.u5.funnelConversion(Math.round((funnel.contracts / funnel.reservations) * 100))
+                  : undefined,
+              },
+            ]}
+          />
+        )}
+      </div>
+
+      {topProjects.length > 0 && (
+        <ProjectHealthPanel
+          title={m.projectHealth.title}
+          sub={`${topProjects.length} ${m.projectHealth.activeSuffix}`}
+          link={{ href: '/dashboard/projects', label: m.projectHealth.viewAll }}
+          labels={m.u5.projects}
+          money={money}
+          projects={topProjects.map((p) => ({
+            id: p.id, name: p.name, sold: p.soldUnits, reserved: p.reservedUnits, available: p.availableUnits,
+            signed: p.signedContracts, value: p.contractValue,
+          }))}
+        />
       )}
 
+      <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3">
+        {fin && (
+          <div className="lg:col-span-2">
+            <FinancialHealthPanel
+              title={m.u5.healthTitle}
+              sub={m.u5.healthSub}
+              total={total}
+              collected={collected}
+              overdue={overdue}
+              fees={fees}
+              labels={m.u5.health}
+              money={money}
+            />
+          </div>
+        )}
+        <LeadSourcesPanel
+          title={m.charts.leadSources}
+          sub={m.charts.leadSourcesDesc}
+          centerSub={m.charts.donutSub}
+          empty={m.charts.empty}
+          slices={(summary?.leadSources ?? []).map((s) => ({ label: s.source, value: s.count }))}
+        />
+      </div>
+
+      {forecast && (
+        <CashFlowPanel
+          title={m.cashFlow.title}
+          sub={<>{m.u5.next90} · {m.cashFlow.totalSub} {compactParts(forecastTotal, symbol, locale).join(' ')}</>}
+          link={{ href: '/dashboard/financial-dashboard', label: m.cashFlow.detailLink }}
+          pctOfTotal={m.pctOfTotal}
+          money={money}
+          slots={[
+            { label: m.cashFlow.slot30, value: forecast.next30 },
+            { label: m.cashFlow.slot60, value: forecast.next3160 },
+            { label: m.cashFlow.slot90, value: forecast.next6190 },
+            { label: m.cashFlow.slotOverdue, value: fin?.overdueTotal ?? 0, overdue: true },
+          ]}
+        />
+      )}
     </div>
   );
 }

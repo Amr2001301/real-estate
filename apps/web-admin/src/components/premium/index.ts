@@ -33,3 +33,6 @@ export {
   PremiumViewToggle,
 } from './filter-bar';
 export type { PremiumFilterBarProps, PremiumFilterFieldProps, FilterChip, ViewOption } from './filter-bar';
+
+export { PremiumPanel, PremiumEmptyNote } from './panel';
+export type { PremiumPanelProps } from './panel';
