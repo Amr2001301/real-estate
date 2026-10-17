@@ -12,6 +12,7 @@ import {
   Phone,
   Mail,
   ExternalLink,
+  KeyRound,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
@@ -35,6 +36,8 @@ import { AssignContractNumber } from './assign-number';
 import { SignFollowupsAlert } from './sign-followups-alert';
 import { CancelContract } from './cancel-contract';
 import { CancellationPanel } from './cancellation-panel';
+import { HandoverPanel } from './handover-panel';
+import { handoverT } from '@/messages/handover';
 import { PrintButton } from '@/components/print/PrintButton';
 import {
   PremiumPageHero,
@@ -197,6 +200,18 @@ export default async function ContractDetailPage({
                 </Field>
               </div>
             </PremiumSectionCard>
+
+            {!isCancelled && (
+              <PremiumSectionCard title={handoverT(locale).title} icon={<KeyRound />}>
+                <HandoverPanel
+                  id={contract.id}
+                  handover={contract.handover ?? null}
+                  signed={!!contract.signedAt}
+                  canRecord={isAdmin}
+                  locale={locale}
+                />
+              </PremiumSectionCard>
+            )}
 
             {/* Source reservation */}
             {contract.reservation && (

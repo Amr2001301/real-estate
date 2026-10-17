@@ -7,6 +7,7 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { startUnitWarranties } from '../unit-warranties';
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -332,22 +333,32 @@ describe('Contracts · signing workflow', () => {
     expect(audit.data.action).toBe('contract.sign_followup_ok');
   });
 
-  // ── Warranty start on sign (Batch 13C) ─────────────────────────────────
+  // ── Warranty start (Batch 13C; at the unit handover since round 4) ─────
+
+  it('signing does not start the warranties — the handover does', async () => {
+    warrantyFixture.items = [
+      { id: 'ui-plumbing', warrantyDurationMonthsSnapshot: null, category: { warrantyDurationMonths: 12 } },
+    ];
+    await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2030-05-19T00:00:00Z' })
+      .expect(201);
+    expect(mock.unitMaintenanceItem.update).not.toHaveBeenCalled();
+  });
+
+  // The handover date here: 2030-05-01.
+  const startAtHandover = () => startUnitWarranties(mock as never, 'unit-1', new Date('2030-05-01T00:00:00Z'));
 
   it('starts warranties for the unit active items, freezing duration + computing end', async () => {
     warrantyFixture.items = [
       { id: 'ui-plumbing', warrantyDurationMonthsSnapshot: null, category: { warrantyDurationMonths: 12 } },
       { id: 'ui-electrical', warrantyDurationMonthsSnapshot: null, category: { warrantyDurationMonths: 24 } },
     ];
-    await request(app.getHttpServer())
-      .post(PATH_SIGN)
-      .send({ signedAt: '2030-05-19T00:00:00Z' })
-      .expect(201);
+    await startAtHandover();
 
     expect(mock.unitMaintenanceItem.update).toHaveBeenCalledTimes(2);
     const calls = mock.unitMaintenanceItem.update.mock.calls.map((c) => c[0] as { where: { id: string }; data: Record<string, unknown> });
     const plumbing = calls.find((c) => c.where.id === 'ui-plumbing')!;
-    // Warranty anchors to contract createdAt (2030-05-01), NOT signedAt.
     expect(new Date(plumbing.data.warrantyStart as Date).toISOString()).toBe('2030-05-01T00:00:00.000Z');
     expect(plumbing.data.warrantyDurationMonthsSnapshot).toBe(12);
     expect(new Date(plumbing.data.warrantyEnd as Date).toISOString()).toBe('2031-05-01T00:00:00.000Z');
@@ -361,10 +372,7 @@ describe('Contracts · signing workflow', () => {
     warrantyFixture.items = [
       { id: 'ui-1', warrantyDurationMonthsSnapshot: 24, category: { warrantyDurationMonths: 36 } },
     ];
-    await request(app.getHttpServer())
-      .post(PATH_SIGN)
-      .send({ signedAt: '2030-05-19T00:00:00Z' })
-      .expect(201);
+    await startAtHandover();
     const call = mock.unitMaintenanceItem.update.mock.calls[0]![0] as { data: Record<string, unknown> };
     expect(call.data.warrantyDurationMonthsSnapshot).toBe(24);
     expect(new Date(call.data.warrantyEnd as Date).toISOString()).toBe('2032-05-01T00:00:00.000Z');
@@ -374,10 +382,7 @@ describe('Contracts · signing workflow', () => {
     warrantyFixture.items = [
       { id: 'ui-1', warrantyDurationMonthsSnapshot: null, category: { warrantyDurationMonths: null } },
     ];
-    await request(app.getHttpServer())
-      .post(PATH_SIGN)
-      .send({ signedAt: '2030-05-19T00:00:00Z' })
-      .expect(201);
+    await startAtHandover();
     const call = mock.unitMaintenanceItem.update.mock.calls[0]![0] as { data: Record<string, unknown> };
     expect(call.data.warrantyStart).toBeInstanceOf(Date);
     expect(call.data.warrantyEnd ?? null).toBeNull();

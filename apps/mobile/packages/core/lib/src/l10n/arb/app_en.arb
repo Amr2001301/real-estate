@@ -381,6 +381,8 @@
   "myPropertyContractNumber": "Contract no.",
   "myPropertyReservationNumber": "Reservation no.",
   "myPropertySignedDate": "Signed on",
+  "myPropertyHandedOverDate": "Handed over on",
+  "myPropertyNotHandedOver": "Not handed over yet — maintenance requests open at handover",
   "myPropertyInstallmentPlan": "Installment plan",
   "myPropertyInstallmentSummary": "{amount} / month · {months} months",
   "@myPropertyInstallmentSummary": { "placeholders": { "amount": { "type": "String" }, "months": { "type": "int" } } },

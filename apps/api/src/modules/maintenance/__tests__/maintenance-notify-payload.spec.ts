@@ -27,7 +27,7 @@ describe('Maintenance notifications · deep-link payload', () => {
   it('maintenance_request_created carries entityType/entityId/requestId/action', async () => {
     const prisma = {
       unit: { findUnique: jest.fn().mockResolvedValue({ id: 'u1' }) },
-      contract: { count: jest.fn().mockResolvedValue(1) },
+      contract: { count: jest.fn().mockResolvedValue(1), findFirst: jest.fn().mockResolvedValue({ handover: { id: 'h-1' } }) },
       maintenanceCategory: {
         findUnique: jest.fn().mockResolvedValue({ id: 'cat-1', priority: 'MEDIUM', slaDurationMinutes: null }),
       },

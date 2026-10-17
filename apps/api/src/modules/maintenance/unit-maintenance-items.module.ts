@@ -124,15 +124,15 @@ class UnitMaintenanceItemsService {
     return withWarrantyStatus(created);
   }
 
-  /** Starts the warranty of an active, not-yet-started item when the unit has a signed live sale. */
+  /** Starts the warranty of an active, not-yet-started item when the unit has been handed over on a live sale. */
   private async startIfSold(unitId: string, item: { active: boolean; warrantyStart: Date | null }) {
     if (!item.active || item.warrantyStart) return false;
-    const sale = await this.prisma.contract.findFirst({
-      where: { unitId, signedAt: { not: null }, ...LIVE_CONTRACT_WHERE },
-      select: { createdAt: true },
+    const handover = await this.prisma.unitHandover.findFirst({
+      where: { unitId, contract: { signedAt: { not: null }, ...LIVE_CONTRACT_WHERE } },
+      select: { handedOverAt: true },
     });
-    if (!sale) return false;
-    await startUnitWarranties(this.prisma, unitId, sale.createdAt);
+    if (!handover) return false;
+    await startUnitWarranties(this.prisma, unitId, handover.handedOverAt);
     return true;
   }
 

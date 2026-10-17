@@ -560,10 +560,18 @@ export class MaintenanceService {
    * unsold) unit and read its warranty.
    */
   private async assertOwnsUnit(customerId: string, unitId: string) {
-    const owned = await this.prisma.contract.count({
+    const owned = await this.prisma.contract.findFirst({
       where: { customerId, unitId, ...LIVE_CONTRACT_WHERE },
+      select: { handover: { select: { id: true } } },
     });
-    if (owned === 0) throw new NotFoundException('Unit not found');
+    if (!owned) throw new NotFoundException('Unit not found');
+    // Maintenance opens at the unit's handover (decided 2026-10-16).
+    if (!owned.handover) {
+      throw new BadRequestException({
+        message: 'تُفتح طلبات الصيانة بعد تسليم الوحدة',
+        code: 'MAINTENANCE_BEFORE_HANDOVER',
+      });
+    }
   }
 
   async createRequest(customerId: string, dto: CreateRequestDto) {

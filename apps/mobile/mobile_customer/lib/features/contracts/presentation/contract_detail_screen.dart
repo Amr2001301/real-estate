@@ -407,6 +407,22 @@ class _SummaryCard extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                children: [
+                  Icon(AppIcons.calendar, size: 14, color: colors.inkMuted),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      contract.handedOverAt != null
+                          ? '${l10n.myPropertyHandedOverDate}: '
+                              '${DateFormatter.mediumDate(contract.handedOverAt!, languageCode: lang)}'
+                          : l10n.myPropertyNotHandedOver,
+                      style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ],
         ),

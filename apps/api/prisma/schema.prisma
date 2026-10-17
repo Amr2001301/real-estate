@@ -136,6 +136,7 @@ model Company {
   settings                 Setting[]
   documents                Document[]
   presignedUploads         PresignedUpload[]
+  unitHandovers            UnitHandover[]
   chatSessions             ChatSession[]
   chatMessages             ChatMessage[]
   chatFeedback             ChatFeedback[]
@@ -1288,6 +1289,7 @@ model Contract {
   bonusEntry       BonusEntry?
   cancellation     ContractCancellation?
   amendments       ContractAmendment[]
+  handover         UnitHandover?
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -2724,6 +2726,30 @@ model Document {
   @@index([uploadedById])
   @@index([createdAt])
   @@index([deletedAt])
+  @@index([companyId])
+}
+
+/// The unit handed over to the buyer (decided 2026-10-16): the date and the
+/// handover checklist. The unit's warranties start and the customer's
+/// maintenance requests open from this date, not from the contract's.
+model UnitHandover {
+  id            String    @id @default(uuid()) @db.Uuid
+  contractId    String    @unique @db.Uuid
+  contract      Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  /// The unit handed over; after a unit swap, the new unit.
+  unitId        String    @db.Uuid
+  handedOverAt  DateTime
+  /// [{ key, done }] over HANDOVER_CHECKLIST_KEYS.
+  checklist     Json      @default("[]")
+  notes         String?   @db.VarChar(2000)
+  /// Null for the rows backfilled from contracts signed before handovers.
+  performedById String?   @db.Uuid
+  createdAt     DateTime  @default(now())
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([unitId])
   @@index([companyId])
 }
 

@@ -63,6 +63,7 @@ import { BonusService } from '../bonus/bonus.module';
 import { CancellationPolicyService } from './cancellation-policy.service';
 import { ContractCancellationService } from './contract-cancellation.service';
 import { startUnitWarranties } from './unit-warranties';
+import { RecordHandoverDto, UnitHandoverService } from './unit-handover.service';
 import {
   ContractAmendmentsService,
   SwapContractUnitDto,
@@ -694,6 +695,7 @@ export class ContractsService {
           },
           reservation: { select: { id: true, reservationNumber: true } },
           installmentPlan: { select: { id: true, totalMonths: true, monthlyAmount: true, startsAt: true, frequency: true } },
+          handover: { select: { handedOverAt: true } },
         },
       }),
       this.prisma.contract.count({ where }),
@@ -731,6 +733,7 @@ export class ContractsService {
         brokerAgent: {
           select: { id: true, fullName: true, email: true, phone: true },
         },
+        handover: true,
       },
     });
     if (!contract) throw new NotFoundException('Contract not found');
@@ -1023,11 +1026,10 @@ export class ContractsService {
     contract: { id: string; unitId: string; createdAt: Date; brokerId: string | null },
     actorId: string,
   ): Promise<SignFollowupFailure[]> {
+    // The unit's warranties start at its handover (UnitHandoverService), not
+    // at signing (decided 2026-10-16). 'warranties' stays a step name so
+    // failures recorded before still read.
     const steps: Array<[SignFollowupStep, () => Promise<unknown>]> = [
-      // Warranty START anchors to the contract's CREATION date (not the signed
-      // date) per product requirement. Only items with no warrantyStart yet are
-      // touched, and the per-item duration is snapshotted.
-      ['warranties', () => this.startUnitWarranties(contract.unitId, contract.createdAt)],
       // A contract that already has a BrokerCommission returns `already_exists`.
       ...(contract.brokerId
         ? [['broker_commission', () => this.brokerCommissions.materializeFromContract(contract.id)] as [SignFollowupStep, () => Promise<unknown>]]
@@ -1124,7 +1126,21 @@ class ContractsController {
     private readonly cancellationSvc: ContractCancellationService,
     private readonly refunds: ContractRefundsService,
     private readonly amendments: ContractAmendmentsService,
+    private readonly handovers: UnitHandoverService,
   ) {}
+
+  // The unit handed over to the buyer: the warranties start and the
+  // customer's maintenance requests open from its date.
+  @Roles(UserRole.ADMIN)
+  @Permissions('contracts:update')
+  @Post(':id/handover')
+  recordHandover(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: RecordHandoverDto,
+  ) {
+    return this.handovers.record(id, dto, user.sub);
+  }
 
   // Transfers and unit swaps recorded on the contract.
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
@@ -1432,6 +1448,7 @@ class ContractsController {
     ContractCancellationService,
     ContractRefundsService,
     ContractAmendmentsService,
+    UnitHandoverService,
   ],
   exports: [ContractsService, CancellationPolicyService, ContractCancellationService],
 })

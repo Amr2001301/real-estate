@@ -362,7 +362,11 @@ async function main(): Promise<void> {
         signedAt: new Date(),
         status: 'ACTIVE', // FG-27 — a signed contract is ACTIVE
       },
-      select: { id: true },
+      select: { id: true, companyId: true },
+    });
+    // Handed over too: the customer files maintenance from the handover on.
+    await prisma.unitHandover.create({
+      data: { contractId: c.id, unitId: opts.unitId, handedOverAt: new Date(), companyId: c.companyId },
     });
     // Flip unit to SOLD so no other spec ever picks it as AVAILABLE.
     await prisma.unit.update({
