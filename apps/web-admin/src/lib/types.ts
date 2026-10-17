@@ -1732,6 +1732,10 @@ export interface FinancialSummary {
   totalCollectedAll?: string;
   totalCollectedVerified?: string;
   totalCollectedUnverified?: string;
+  /** Decided 2026-10-16: collected towards the price (the collection rate's
+   *  numerator) and fees & penalties, shown apart. */
+  collectedTowardsPrice?: string;
+  feesCollected?: string;
   /** Refunds on cancelled contracts: paid in the period, still owed, collected net of refunds. */
   refundsPaid?: string;
   refundsOwed?: string;

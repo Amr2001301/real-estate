@@ -63,6 +63,9 @@ interface AdminSummary {
   financial?: {
     totalContractValue:       number;
     totalCollectedVerified:   number;
+    /** Collected towards live contracts' price; fees & penalties apart. */
+    collectedTowardsPrice?:   number;
+    feesCollected?:           number;
     overdueTotal:             number;
     pendingBonus:             number;
     pendingBrokerPayouts:     number;
@@ -195,7 +198,9 @@ function RevenueCommandStrip({
 }) {
   const hasFin     = financial != null;
   const total      = financial?.totalContractValue     ?? 0;
-  const collected  = financial?.totalCollectedVerified ?? 0;
+  // The rate compares like with like: the price collected over the contracts'
+  // value (fees are not part of the price), as on the financial report.
+  const collected  = financial?.collectedTowardsPrice ?? financial?.totalCollectedVerified ?? 0;
   const overdue    = financial?.overdueTotal           ?? 0;
   const rate       = total > 0 ? Math.round((collected / total) * 100)  : null;
   const overdueRate = total > 0 ? Math.round((overdue  / total) * 100)  : null;

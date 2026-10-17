@@ -4896,8 +4896,8 @@ const UI = {
       kpi: {
         contractValue: 'إجمالي قيمة العقود',
         contractValueSub: (contracts: number, deposits: number) => `${contracts} عقد · ${deposits} دفعة`,
-        collected: 'المحصّل المؤكد',
-        collectedSub: (rate: number, total: string) => `${rate}% محصّل · إجمالي: ${total}`,
+        collected: 'المحصّل من ثمن العقود',
+        collectedSub: (rate: number, fees: string) => `${rate}% محصّل · غرامات ورسوم: ${fees}`,
         outstanding: 'المتبقي للتحصيل',
         outstandingSub: (amount: string) => `مستحق خلال 7 أيام: ${amount}`,
         overdue: 'المتأخر المحسوب',
@@ -10101,8 +10101,8 @@ const UI = {
       kpi: {
         contractValue: 'Total Contract Value',
         contractValueSub: (contracts: number, deposits: number) => `${contracts} contract${contracts !== 1 ? 's' : ''} · ${deposits} payment${deposits !== 1 ? 's' : ''}`,
-        collected: 'Verified Collected',
-        collectedSub: (rate: number, total: string) => `${rate}% collected · total: ${total}`,
+        collected: 'Collected towards the price',
+        collectedSub: (rate: number, fees: string) => `${rate}% collected · fees & penalties: ${fees}`,
         outstanding: 'Outstanding',
         outstandingSub: (amount: string) => `Due in 7 days: ${amount}`,
         overdue: 'Computed Overdue',

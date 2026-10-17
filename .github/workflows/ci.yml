@@ -426,7 +426,7 @@ jobs:
         run: |
           set -o pipefail
           pnpm exec jest --config ./test/jest-e2e.json --runInBand \
-            --testPathPattern="e2e-maintenance|e2e-mt-security|e2e-isolated-apps|e2e-offboarding|e2e-broker-suspension|e2e-company-access|e2e-late-fee|e2e-contract-amendments|e2e-broker-portal-guards|e2e-maintenance-ownership|e2e-reports-after-amendments|e2e-public-privacy|e2e-plan-schedule|e2e-sales-pipeline|e2e-inventory-pricing|e2e-plan-amendments|e2e-u2-money|e2e-u2b-commissions|e2e-u1-phone-change|e2e-u1b-leaks|e2e-u1c-maintenance-transfer|e2e-u3a-customer-schedule|e2e-u3b-late-fee-rules|e2e-u3c-maintenance-lifecycle|e2e-u3d-unit-handover|e2e-u3e-account-deletion|e2e-u4a-report-numbers" \
+            --testPathPattern="e2e-maintenance|e2e-mt-security|e2e-isolated-apps|e2e-offboarding|e2e-broker-suspension|e2e-company-access|e2e-late-fee|e2e-contract-amendments|e2e-broker-portal-guards|e2e-maintenance-ownership|e2e-reports-after-amendments|e2e-public-privacy|e2e-plan-schedule|e2e-sales-pipeline|e2e-inventory-pricing|e2e-plan-amendments|e2e-u2-money|e2e-u2b-commissions|e2e-u1-phone-change|e2e-u1b-leaks|e2e-u1c-maintenance-transfer|e2e-u3a-customer-schedule|e2e-u3b-late-fee-rules|e2e-u3c-maintenance-lifecycle|e2e-u3d-unit-handover|e2e-u3e-account-deletion|e2e-u4a-report-numbers|e2e-u4b-collected-figures" \
             2>&1 | tee /tmp/jest-e2e2.log
           # Guard: any pending/skipped tests indicate a silent suite failure
           # (e.g. a hook registered inside another hook marks tests pending).
