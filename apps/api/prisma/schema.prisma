@@ -706,6 +706,9 @@ model Lead {
   assignedSalesId   String?     @db.Uuid
   assignedSales     User?       @relation("LeadAssignedSales", fields: [assignedSalesId], references: [id])
   stage             LeadStage   @default(NEW)
+  /// When the stage last changed. Kept by the `lead_stage_changed_at` DB
+  /// trigger on every stage update (migration 20261017170000).
+  stageChangedAt    DateTime    @default(now())
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
