@@ -17,7 +17,7 @@
 
 ملاحظة: ملفات الترجمة المولّدة في تطبيقات الموبايل (`packages/core/lib/src/l10n/generated/`) اتعدّلت يدوياً لأن Flutter مش متاح في السحابة؛ الـ CI بيشغّل `flutter analyze` عليها.
 
-**التصميم الجديد (U5):** اعتمدت شكل جديد للوحة التحكم (أدمن، مبيعات، بروكر): خطوط جديدة، شريط أرقام كحلي، رأس صفحة أبسط، فلتر موحّد، جداول بدل الكروت، ووضع داكن. التفاصيل في القسم 3 تحت U5، والتصميم نفسه على [هذا اللينك](https://claude.ai/artifact/UPVXRtVxEBMWpmuRMYqb1Z) (خاص بأكونتك — شاركه من زرار Share لو الأكونت التاني محتاج يفتحه).
+**التصميم الجديد (U5):** اعتمدت شكل جديد للوحة التحكم (أدمن، مبيعات، بروكر): خطوط جديدة، شريط أرقام كحلي، رأس صفحة أبسط، فلتر موحّد، جداول بدل الكروت، ووضع داكن. التفاصيل في القسم 3 تحت U5، والتصميم نفسه على [هذا اللينك](https://claude.ai/artifact/UPVXRtVxEBMWpmuRMYqb1Z) (خاص بأكونتك — شاركه من زرار Share لو الأكونت التاني محتاج يفتحه). اعتمدت كمان صفحة التقارير وملاحظات مراجعة الداشبورد (الأرقام المضلّلة). **التنفيذ شغال** على أجزاء، كل جزء PR (U5a → U5e تحت).
 
 **حاجات عليك إنت:** الاستضافة، تقييد مفتاح Firebase، حماية الفرع الرئيسي على GitHub، وتسميات الرسوم في تطبيقات الموبايل (محتاجة جهاز عليه Flutter).
 
@@ -99,7 +99,7 @@ Shared helpers worth knowing (API): `common/utils/add-months.ts`, `common/time/c
 
 ---
 
-## 3. Round 4 — the plan (approved, NOT started)
+## 3. Round 4 — the plan (U1–U4 done; U5 in progress)
 
 Found by four read-only scenario audits on 2026-10-16. The top items were re-checked by hand. Paths are under `apps/api/` unless noted. Line numbers are as of `main` @ `bd3e46a`.
 
@@ -201,6 +201,21 @@ Fixed in both themes: sidebar `#0A1120` with gold hairline border; **navy band**
 - Dashboard (`app/dashboard/page.tsx`, `components/dashboard/*`): the hero band holds total contracts (largest), collected, collection rate (thin ring), overdue, contracts this month; "needs action" = 4 hairline-divided tiles; thin gold area line for bookings; slim gradient bars for the funnel; segmented bar + legend for financial health; hairline-divided cash-flow columns; project health as cards.
 - Sidebar (`components/layout/sidebar.tsx`): active item = gold-tinted background + gold dot (not a solid gold pill); user card at the bottom; remove the second "Platform Admin" block from the top bar.
 - **Dark mode:** `components/ui/theme-toggle.tsx` already exists (localStorage `admin-theme`, toggles `.dark` on `<html>`) but is not mounted anywhere — mount it in the top bar and give the CSS variables the dark values above. Avoid a flash: `ui/theme-script.tsx` exists for that.
+
+**Dashboard review (owner-approved 2026-10-17)** — besides the look, these screens mislead:
+1. *Two collected figures disagree* (650.6K / 35% at the top vs 575.6K / 31% in "financial health"): fixed in #101 — both use `collectedTowardsPrice`; keep it that way and label it "collected towards price", with "fees & penalties" as its own figure.
+2. *Collection rate* is collected ÷ the whole contract value, so a healthy company shows red "low — action needed" while most instalments are not due yet. Compute it against **what is due up to today** (booking + rows with `dueDate <= today`, not cancelled, fees out) — needs `dueToDate` from `financialDashboard` / `adminSummary` in the API; the rate's colour/label follow that.
+3. *Sales funnel*: bookings can exceed leads (bookings made without a lead), so conversion between stages is meaningless and bars of 1 and 3 render the same length. Bars scale to the largest stage; a conversion % is shown only where the next stage is a subset of the previous one.
+4. *Top sales reps*: when nobody has a signed contract this month, show "no sales this month" instead of ranking zeros.
+5. *Monthly bookings*: bars with the value on each (small integers), not a smoothed line (this replaces "thin gold area line for bookings" above).
+6. *Digits*: Western digits everywhere (the funnel prints ٣/١/٠).
+7. *Recent activity*: group consecutive same-person same-kind rows ("3 payments · 120K") and show the amount on payments.
+8. *Primary action*: "new project" is rare; the gold primary on the dashboard becomes "record payment" (secondary: "new booking").
+9. The header card shrinks to one row (title + actions); no badge repeating the title; "Platform Admin" only once (sidebar).
+
+**Reports page (owner-approved 2026-10-17, same mockup link):** thin tabs (sales & bookings / financial) with a gold underline on the active one; filter = period segmented (monthly / quarterly / yearly), year / month / compare as `label · value` pills, submit on change, the chosen range written out ("1 – 31 October 2026"); the five coloured cards → the navy band (total sales, contracts signed, payments collected, conversion rate), no empty/broken cards ("• · avg EGP"); monthly sales = gold bars with the value above, current month outlined, peak labelled ("May · 1 contract"); funnel = slim single-colour bars with the conversion % between stages (no purple/gold mix, no repeated summary); booking status = a small card beside "highlights", not a full-width strip; the four highlight cards (best month, best project, top broker, collection on sales) = one card split by hairlines, "no data" instead of "—"; empty project/broker tables = one small line in a dashed box.
+
+**Slices** (each one PR, merged when CI is green): **U5a** tokens (light/dark), fonts, Western digits, sidebar + top bar + theme toggle; **U5b** `PremiumPageHero`, `PremiumMetricStrip`, the unified filter bar; **U5c** tables + leads kanban + projects list; **U5d** dashboard (with review items 2–9; item 2 needs the API change); **U5e** reports page.
 
 Check every surface after the change: admin, sales (SALES / SALES_MANAGER), broker portal, both locales (ar RTL / en LTR), light and dark, and phone width. Playwright suites (`pnpm --filter web-admin e2e`) select by text and test ids — keep labels and `data-testid`s.
 
