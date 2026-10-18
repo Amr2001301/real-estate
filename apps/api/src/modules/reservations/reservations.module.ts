@@ -88,6 +88,7 @@ import { getTenantContext, runInCompany, runTenantContext } from '../../common/t
 import { isUniqueConflictOn } from '../../common/utils/contract-number';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import { addMonths } from '../../common/utils/add-months';
+import { currentCompanyTimeZone, startOfLocalToday } from '../../common/time/company-timezone';
 import { assertUnitOnSale } from '../projects/inventory-blockers';
 // BrokerCommissionsModule/Service no longer imported here. Commission
 // materialisation runs from ContractsService.sign() — the only path that
@@ -2123,6 +2124,8 @@ export class ReservationsService {
       }
     }
     const now = new Date();
+    // Due dates are days (UTC midnight of each), in the company's zone.
+    const today = startOfLocalToday(await currentCompanyTimeZone(this.prisma, reservation.companyId), now);
 
     // Retry up to 3 times in the rare case two conversions race on the same
     // contract number.  The root fix (max-based generator) makes this unlikely;
@@ -2222,7 +2225,11 @@ export class ReservationsService {
 
         // 4a. DOWN_PAYMENT row (before monthly installments).
         if (downPayment.gt(0)) {
-          const downPaymentDueDate = now;
+          // Due on the day of conversion — or on the start date when that is
+          // earlier (a back-dated contract owed it before its instalments). It
+          // was `now`, the time included: it fell out of "due by today" on its
+          // own day, and came after instalments already due.
+          const downPaymentDueDate = startsAt < today ? startsAt : today;
           await tx.installment.create({
             data: {
               planId: plan.id,

@@ -44,6 +44,15 @@ export function startOfLocalToday(timeZone: string, now = new Date()): Date {
   return new Date(Date.UTC(get('year'), get('month') - 1, get('day')));
 }
 
+/**
+ * A due date `days` after today in `timeZone`: a day (UTC midnight of it),
+ * like every schedule row. A due date carrying the time it was written fell
+ * out of "due by today" and was chased a day late.
+ */
+export function localDayAfter(timeZone: string, days: number, now = new Date()): Date {
+  return new Date(startOfLocalToday(timeZone, now).getTime() + days * 24 * 60 * 60 * 1000);
+}
+
 /** Each listed company's time zone (default when missing or malformed). */
 export async function companyTimeZones(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
