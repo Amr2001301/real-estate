@@ -2,6 +2,7 @@ import {
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -39,6 +40,8 @@ export class ListAppointmentsDto {
   @IsOptional() @IsDateString() scheduledFrom?: string;
   @IsOptional() @IsDateString() scheduledTo?: string;
   @IsOptional() @IsString() today?: string;
+  /** 'true' → only visits still to happen (not completed, cancelled, no-show or rescheduled). */
+  @IsOptional() @IsIn(['true', 'false']) open?: string;
   @IsOptional() @IsString() q?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(MAX_PAGE_SIZE) pageSize?: number;
