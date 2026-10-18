@@ -13,6 +13,7 @@ import { periodicInstallmentLabel } from '@/lib/installment-frequency';
 import { uiT } from '@/messages/ui';
 
 import { intlLocale } from '@/lib/format';
+import { nowWallTime } from '@/lib/zoned-time';
 interface Props {
   reservation: Pick<
     Reservation,
@@ -39,6 +40,7 @@ export function ConvertReservationForm({ reservation, symbol, locale = 'ar' }: P
   const m = uiT(locale).pages.reservationDetailPage;
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [startsAt, setStartsAt] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   // P8 — replace the raw "paste a URL" input with a signed upload. The picked
@@ -197,8 +199,17 @@ export function ConvertReservationForm({ reservation, symbol, locale = 'ar' }: P
                   name="startsAt"
                   type="date"
                   required
+                  value={startsAt}
+                  onChange={(e) => setStartsAt(e.target.value)}
                   className="w-full rounded-xl border border-hairline bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
                 />
+                {/* A start date in the past: the rows already due come in
+                    overdue (without late fees) — the admin records what was paid. */}
+                {startsAt && startsAt < nowWallTime().slice(0, 10) && (
+                  <p data-testid="backdated-warning" className="mt-1 text-xs text-amber-700">
+                    {m.convertBackdatedWarning}
+                  </p>
+                )}
               </Field>
             )}
 

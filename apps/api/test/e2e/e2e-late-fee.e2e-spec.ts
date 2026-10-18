@@ -23,6 +23,7 @@ describe('Late-payment fee (e2e)', () => {
   let overdueId: string;
   let freshId: string;
   let contractId: string;
+  let contractCreatedAt: Date;
   const startedAt = new Date();
 
   const http = () => request(testApp.app.getHttpServer());
@@ -40,9 +41,16 @@ describe('Late-payment fee (e2e)', () => {
     companyId = admin.companyId!;
     const plan = await raw.installmentPlan.findFirstOrThrow({
       where: { contract: { companyId, deletedAt: null, status: { not: 'CANCELLED' } } },
-      select: { id: true, contractId: true },
+      select: { id: true, contractId: true, contract: { select: { createdAt: true } } },
     });
     contractId = plan.contractId;
+    // The rows below are due 3 and 10 days ago: the contract was in the
+    // system before then (a row due before it was entered earns no fee).
+    contractCreatedAt = plan.contract.createdAt;
+    await raw.contract.update({
+      where: { id: contractId },
+      data: { createdAt: new Date(Date.now() - 30 * DAY) },
+    });
     const row = (dueDate: Date, status: InstallmentStatus) =>
       raw.installment.create({
         data: { planId: plan.id, companyId, dueDate, amount: 20_000, status, type: PlanPaymentType.INSTALLMENT },
@@ -61,6 +69,7 @@ describe('Late-payment fee (e2e)', () => {
     await raw.installment.deleteMany({ where: { type: PlanPaymentType.LATE_FEE, createdAt: { gte: startedAt } } });
     await raw.auditLog.deleteMany({ where: { action: 'installment.late-fee-waived', createdAt: { gte: startedAt } } });
     await raw.installment.deleteMany({ where: { id: { in: [overdueId, freshId] } } });
+    await raw.contract.update({ where: { id: contractId }, data: { createdAt: contractCreatedAt } });
   });
 
   it('LF-1: switched off (the default), the sweep charges nothing', async () => {
@@ -124,5 +133,40 @@ describe('Late-payment fee (e2e)', () => {
     const list = await asAdmin(http().get('/v1/deposits').query({ type: 'FEE', contractId })).expect(200);
     expect(list.body.data.map((d: { id: string }) => d.id)).toContain(deposit.id);
     expect(Number(list.body.totals.fees)).toBeGreaterThanOrEqual(150);
+  });
+
+  it('LF-6: a row due before the contract was entered earns no fee (a back-dated contract)', async () => {
+    const raw = testApp.rawPrisma;
+    // The contract is entered today; its row was due 10 days ago (e.g. a
+    // contract signed in July, entered in October).
+    await raw.contract.update({ where: { id: contractId }, data: { createdAt: new Date() } });
+    const planId = (await raw.installment.findUniqueOrThrow({ where: { id: freshId }, select: { planId: true } }))
+      .planId;
+    const older = await raw.installment.create({
+      data: {
+        planId,
+        companyId,
+        dueDate: new Date(Date.now() - 10 * DAY),
+        amount: 20_000,
+        status: InstallmentStatus.OVERDUE,
+        type: PlanPaymentType.INSTALLMENT,
+      },
+      select: { id: true },
+    });
+    try {
+      await testApp.runCronJob('late-fee');
+      expect(await feesOn(older.id)).toHaveLength(0);
+      // It is still overdue — only the fee is not charged.
+      expect((await raw.installment.findUniqueOrThrow({ where: { id: older.id } })).status).toBe(
+        InstallmentStatus.OVERDUE,
+      );
+    } finally {
+      await raw.installment.deleteMany({ where: { feeForId: older.id } });
+      await raw.installment.deleteMany({ where: { id: older.id } });
+      await raw.contract.update({
+        where: { id: contractId },
+        data: { createdAt: new Date(Date.now() - 30 * DAY) },
+      });
+    }
   });
 });
