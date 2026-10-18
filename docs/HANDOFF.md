@@ -288,10 +288,11 @@ Four read-only audits of every money figure (reports, dashboard, exports, the sc
   - `financingMarkup` / `commissionBasis` / `NET_PRICE_SQL` subtract the waiver.
   - Amendment type `MARKUP_WAIVER`; the contract page has the form. e2e: `e2e-w1-markup-waiver`.
 
+- **W2 — reschedule and the final payment (decided 2026-10-18):** an unpaid final (balloon) payment due before the new schedule ends moves to a month after its last row, and its unpaid late fees are waived. e2e: `e2e-w2-reschedule-final`.
+
 Left for the owner, not in V1–V3:
 - The default report month and the sales home's month are UTC on the web, so the first 2–3 hours of a month in Cairo still show the previous month.
 - The leaderboard share % is of the top 10 brokers.
-- A reschedule leaves the final (balloon) payment's date as it was.
 
 ## 5. Other open items
 
