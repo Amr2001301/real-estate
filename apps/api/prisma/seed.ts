@@ -15,6 +15,11 @@ import { seedTimeZoneSettingForCompany } from '../src/common/time/company-timezo
 import { normalizeHostname } from '../src/common/utils/hostname-normalize';
 import { upsertUserByEmail } from './seed-user-upsert';
 import { NOTIFICATION_CATALOG } from '../src/modules/notifications/notification-catalog';
+import {
+  MAINTENANCE_SUPERVISOR_DEFAULT_PERMISSIONS,
+  SALES_DEFAULT_PERMISSIONS,
+  SALES_MANAGER_DEFAULT_PERMISSIONS,
+} from '../src/modules/permissions/role-default-permissions';
 
 const prisma = new PrismaClient();
 
@@ -871,25 +876,8 @@ async function main() {
   // tier only — no strict financial/admin actions (approve/reject/sign/verify/
   // pay, plan/project/unit mutations, users/permissions/settings) are granted.
   // Idempotent via skipDuplicates; safe to re-run.
-  const SALES_DEFAULT_PERMISSIONS = [
-    // CRM
-    'leads:read', 'leads:create', 'leads:update', 'leads:note',
-    'leads:assign', 'leads:advance-stage',
-    // Visits
-    'visits:read', 'visits:create', 'visits:schedule', 'visits:confirm',
-    'visits:complete', 'visits:reschedule', 'visits:cancel', 'visits:no-show',
-    // Reservations (create/read/update only — strict transitions stay admin)
-    'reservations:read', 'reservations:create', 'reservations:update',
-    // Contracts (read only)
-    'contracts:read',
-    // Inventory / read-only references
-    'projects:read', 'units:read', 'installments:read', 'deposits:read',
-    // Compensation self-read (API self-scopes SALES to their own rows)
-    'bonus:entries:read', 'targets:read',
-    // Broker-attributed read surfaces SALES routes already allow
-    'broker_leads:read', 'broker_contracts:read', 'broker_reservations:read',
-  ];
-
+  // The tiers live in src/modules/permissions/role-default-permissions.ts
+  // (new users get them on creation); here they are granted to seeded users.
   const salesUsers = await prisma.user.findMany({
     where: { role: UserRole.SALES },
     select: { id: true },
@@ -914,8 +902,6 @@ async function main() {
   // endpoints aggregate ALL sales data and are not team-scoped, so they remain
   // ADMIN-only until a team-scoped reporting surface exists. Idempotent via
   // skipDuplicates.
-  const SALES_MANAGER_DEFAULT_PERMISSIONS = [...SALES_DEFAULT_PERMISSIONS, 'targets:manage'];
-
   const managerUsers = await prisma.user.findMany({
     where: { role: UserRole.SALES_MANAGER },
     select: { id: true },
@@ -939,11 +925,6 @@ async function main() {
   // finance/security codes, and explicitly NOT maintenance:assign/create/
   // categories:manage or any documents:* grant (supervisor uploads go through
   // scoped /me routes, not the admin documents controller). Idempotent.
-  const MAINTENANCE_SUPERVISOR_DEFAULT_PERMISSIONS = [
-    'maintenance:read',
-    'maintenance:resolve',
-  ];
-
   const supervisorUsers = await prisma.user.findMany({
     where: { role: UserRole.MAINTENANCE_SUPERVISOR },
     select: { id: true },
