@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  InstallmentFrequency,
   PlanTemplateStatus,
   Prisma,
   ReservationActivityType,
@@ -23,7 +24,7 @@ import { computeDurationOption } from '../installments/duration-calc';
 // We import the existing service (ReservationsModule re-exports it) to reuse
 // `nextReservationNumber()` and `validateBookingPlan()` — both made public to
 // avoid duplicating logic. Behavior is otherwise untouched.
-import { ReservationsService } from '../reservations/reservations.module';
+import { ReservationsService, countPlanSnapshot } from '../reservations/reservations.module';
 import {
   CreatePortalReservationDto,
   PortalReservationsQueryDto,
@@ -333,6 +334,7 @@ export class BrokerPortalReservationsService {
       finalPaymentAmount: Prisma.Decimal | null;
       durationMonths: number | null;
       increasePercentage: Prisma.Decimal | null;
+      frequency: InstallmentFrequency | null;
     } = {
       downPaymentAmount: null,
       remainingAmount: null,
@@ -342,6 +344,7 @@ export class BrokerPortalReservationsService {
       finalPaymentAmount: null,
       durationMonths: null,
       increasePercentage: null,
+      frequency: null,
     };
 
     // A broker reservation MUST carry a booking amount derived from an
@@ -410,6 +413,18 @@ export class BrokerPortalReservationsService {
         snapshot.totalPayable = new Prisma.Decimal(calc.totalPayable);
         snapshot.durationMonths = option.durationMonths;
         snapshot.increasePercentage = option.increasePercentage;
+      } else {
+        // Priced by instalment count (quarterly, semi-annual, a final payment).
+        const snap = countPlanSnapshot(plan, bookingAmount);
+        if (snap) {
+          snapshot.remainingAmount = snap.snapshotRemainingAmount;
+          snapshot.financedAmount = snap.snapshotFinancedAmount;
+          snapshot.monthlyInstallment = snap.snapshotMonthlyInstallment;
+          snapshot.totalPayable = snap.snapshotTotalPayable;
+          snapshot.durationMonths = snap.selectedDurationMonths;
+          snapshot.increasePercentage = snap.selectedIncreasePercentage;
+          snapshot.frequency = snap.snapshotFrequency;
+        }
       }
     }
 
@@ -463,6 +478,7 @@ export class BrokerPortalReservationsService {
           // Without a duration the price is the unit's price today, not on conversion day.
           snapshotTotalPayable: snapshot.totalPayable ?? new Prisma.Decimal(unit.price),
           snapshotFinalPaymentAmount: snapshot.finalPaymentAmount,
+          snapshotFrequency: snapshot.frequency,
         },
         include: PORTAL_RESERVATION_INCLUDE,
       });

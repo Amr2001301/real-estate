@@ -19,6 +19,7 @@ import { formatDate, formatDateTime, tx, intlLocale } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { getLocale } from '@/lib/locale';
+import { periodicInstallmentLabel } from '@/lib/installment-frequency';
 import { printT } from '@/messages/print';
 import { uiT } from '@/messages/ui';
 import {
@@ -347,7 +348,7 @@ export default async function ReservationDetailPage({
                       </Field>
                     )}
                     {reservation.snapshotMonthlyInstallment != null && (
-                      <Field label={m.fieldMonthly}>
+                      <Field label={periodicInstallmentLabel(reservation.snapshotFrequency, locale) ?? m.fieldMonthly}>
                         <span className="text-[14px] font-bold text-brand-700 tabular-nums" dir="ltr">
                           {Number(reservation.snapshotMonthlyInstallment).toLocaleString(intlLocale(locale), {
                             minimumFractionDigits: 2,
@@ -486,6 +487,7 @@ export default async function ReservationDetailPage({
                     selectedIncreasePercentage: reservation.selectedIncreasePercentage ?? null,
                     snapshotDownPaymentAmount: reservation.snapshotDownPaymentAmount ?? null,
                     snapshotMonthlyInstallment: reservation.snapshotMonthlyInstallment ?? null,
+                    snapshotFrequency: reservation.snapshotFrequency ?? null,
                     snapshotTotalPayable: reservation.snapshotTotalPayable ?? null,
                     clientName,
                     unitCode: reservation.unit?.code ?? '—',

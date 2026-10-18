@@ -9,6 +9,7 @@ import { DocumentUploader, type UploadResult } from '@/components/documents/docu
 import { convertReservationAction } from '../../actions';
 import type { Reservation } from '@/lib/types';
 import type { Locale } from '@/lib/locale';
+import { periodicInstallmentLabel } from '@/lib/installment-frequency';
 import { uiT } from '@/messages/ui';
 
 import { intlLocale } from '@/lib/format';
@@ -25,6 +26,7 @@ interface Props {
     | 'snapshotDownPaymentAmount'
     | 'snapshotMonthlyInstallment'
     | 'snapshotTotalPayable'
+    | 'snapshotFrequency'
   > & {
     clientName: string;
     unitCode: string;
@@ -160,7 +162,9 @@ export function ConvertReservationForm({ reservation, symbol, locale = 'ar' }: P
             )}
             {reservation.snapshotMonthlyInstallment != null && (
               <div className="flex justify-between">
-                <dt className="text-slate-500">{m.convertMonthlyLabel}</dt>
+                <dt className="text-slate-500">
+                  {periodicInstallmentLabel(reservation.snapshotFrequency, locale) ?? m.convertMonthlyLabel}
+                </dt>
                 <dd className="font-bold tabular-nums text-brand-700" dir="ltr">
                   {Number(reservation.snapshotMonthlyInstallment).toLocaleString(intlLocale(locale), {
                     minimumFractionDigits: 2,

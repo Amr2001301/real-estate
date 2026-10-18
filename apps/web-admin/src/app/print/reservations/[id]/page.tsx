@@ -3,6 +3,7 @@ import { api, safe } from '@/lib/api';
 import { formatDate, tx } from '@/lib/format';
 import { getLetterhead } from '@/lib/letterhead';
 import { getLocale } from '@/lib/locale';
+import { periodicInstallmentLabel } from '@/lib/installment-frequency';
 import type { Reservation } from '@/lib/types';
 import { printT } from '@/messages/print';
 import {
@@ -121,7 +122,7 @@ export default async function ReservationPrintPage({ params }: { params: Params 
               value: t.common.months(r.selectedDurationMonths),
             },
             r.snapshotMonthlyInstallment != null && {
-              label: m.amounts.monthly,
+              label: periodicInstallmentLabel(r.snapshotFrequency, locale) ?? m.amounts.monthly,
               value: money(r.snapshotMonthlyInstallment),
             },
             r.snapshotTotalPayable != null && { label: m.amounts.total, value: money(r.snapshotTotalPayable) },

@@ -672,6 +672,7 @@ export interface Reservation {
   snapshotMonthlyInstallment: string | number | null;
   snapshotTotalPayable: string | number | null;
   snapshotFinalPaymentAmount: string | number | null;
+  snapshotFrequency?: InstallmentFrequency | null;
   reservationNotes?: ReservationNote[];
   activities?: ReservationActivity[];
   contract?: { id: string; contractNumber: string | null } | null;
@@ -1596,6 +1597,7 @@ export interface PortalReservation {
   snapshotMonthlyInstallment: string | number | null;
   snapshotTotalPayable: string | number | null;
   snapshotFinalPaymentAmount: string | number | null;
+  snapshotFrequency?: InstallmentFrequency | null;
   installmentPlanTemplateId: string | null;
   selectedDurationOptionId: string | null;
   unit?: {
