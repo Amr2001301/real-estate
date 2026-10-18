@@ -12,6 +12,7 @@ import { DepositReviewStatus, DocumentOwnerType, DocumentVisibility, Installment
 import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
 import { bearer, loginAs } from '../helpers/login';
+import { localDayAfter } from '../../src/common/time/company-timezone';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -137,7 +138,9 @@ describe('R3 — reports after fees and transfers (e2e)', () => {
       const fee = await raw.installment.findFirstOrThrow({
         where: { planId, type: PlanPaymentType.TRANSFER_FEE, createdAt: { gte: startedAt } },
       });
-      expect(Math.round((fee.dueDate.getTime() - t0) / DAY)).toBe(30);
+      // Due dates are days (Y1): the company-local day 30 days on, not 30 × 24 h
+      // from now (which rounded to 29 in a UTC afternoon).
+      expect(fee.dueDate.toISOString()).toBe(localDayAfter('Africa/Cairo', 30, new Date(t0)).toISOString());
 
       const newToken = await testApp.signAccessToken(newOwner.id, 'CUSTOMER');
       const theirs = await http().get('/v1/me/documents/all').set('Authorization', bearer(newToken)).expect(200);
