@@ -56,6 +56,8 @@ interface SalesFunnel {
   visits: number;
   reservations: number;
   contracts: number;
+  /** The period's leads, and how many of them reached each stage (at any date). */
+  cohort?: { leads: number; visited: number; reserved: number; signed: number };
 }
 interface BrokerEntry {
   brokerId: string;
@@ -176,8 +178,12 @@ export default async function ReportsPage({
     ? { name: projectMap.get(byProject[0].projectId) ?? m.projectRankings.unknownProject, total: byProject[0].total, count: byProject[0].count }
     : null;
 
-  const overallConvRate = pct(funnel?.contracts ?? 0, funnel?.leads ?? 0);
-  const overallConvStr  = pctStr(funnel?.contracts ?? 0, funnel?.leads ?? 0);
+  // Conversion follows the period's leads through the stages: the stage
+  // counts are each the period's own activity, and contracts signed over
+  // reservations made in one month ran past 100%.
+  const cohort          = funnel?.cohort;
+  const overallConvRate = pct(cohort?.signed ?? 0, cohort?.leads ?? 0);
+  const overallConvStr  = pctStr(cohort?.signed ?? 0, cohort?.leads ?? 0);
 
   const salesDelta     = cmpSalesRes?.data ? computeDelta(salesTotal,      Number(cmpSalesRes.data.total ?? 0))        : undefined;
   const contractsDelta = cmpSalesRes?.data ? computeDelta(contractsCount,  cmpSalesRes.data.contracts ?? 0)            : undefined;
@@ -203,9 +209,9 @@ export default async function ReportsPage({
   const funnelStages = funnel
     ? [
         { label: m.funnel.stages.leads, value: funnel.leads },
-        { label: m.funnel.stages.visits, value: funnel.visits, conv: pctStr(funnel.visits, funnel.leads) },
-        { label: m.funnel.stages.reservations, value: funnel.reservations, conv: pctStr(funnel.reservations, funnel.visits) },
-        { label: m.funnel.stages.contracts, value: funnel.contracts, conv: pctStr(funnel.contracts, funnel.reservations) },
+        { label: m.funnel.stages.visits, value: funnel.visits, conv: cohort && pctStr(cohort.visited, cohort.leads) },
+        { label: m.funnel.stages.reservations, value: funnel.reservations, conv: cohort && pctStr(cohort.reserved, cohort.visited) },
+        { label: m.funnel.stages.contracts, value: funnel.contracts, conv: cohort && pctStr(cohort.signed, cohort.reserved) },
       ]
     : [];
   const funnelMax = Math.max(1, ...funnelStages.map((f) => f.value));
@@ -319,7 +325,7 @@ export default async function ReportsPage({
               {funnelStages.map((st, i) => (
                 <div key={st.label}>
                   {i > 0 && (
-                    <p className="flex items-center gap-1 py-2 text-[12px] text-slate-500">
+                    <p data-testid="funnel-conv" className="flex items-center gap-1 py-2 text-[12px] text-slate-500">
                       <ArrowDown className="h-3 w-3" aria-hidden />
                       {st.conv ?? '—'} {m.funnel.fromPrev}
                     </p>

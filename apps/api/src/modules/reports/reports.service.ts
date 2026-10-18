@@ -282,7 +282,37 @@ export class ReportsService {
         where: { signedAt: hasDate ? { not: null, ...dateCond } : { not: null }, ...LIVE_CONTRACT_WHERE },
       }),
     ]);
-    return { leads, visits, reservations, contracts };
+    // The four counts are each the period's own activity, so a ratio between
+    // two of them (contracts signed this month over reservations made this
+    // month) is no conversion and ran past 100%. Conversion follows the
+    // period's leads instead: how many of them went on to a visit, a
+    // reservation and a signed contract, at any date. A stage includes the
+    // ones past it (a lead reserved without a recorded visit still got that
+    // far), so each rate is at most the one before it.
+    const signed = {
+      reservations: {
+        some: { deletedAt: null, contract: { signedAt: { not: null }, ...LIVE_CONTRACT_WHERE } },
+      },
+    } satisfies Prisma.LeadWhereInput;
+    const reserved = { reservations: { some: { deletedAt: null } } } satisfies Prisma.LeadWhereInput;
+    const cohort = dateWhere?.where ?? {};
+    const [visitedLeads, reservedLeads, signedLeads] = await this.prisma.$transaction([
+      this.prisma.lead.count({
+        where: {
+          ...cohort,
+          OR: [{ visitRequests: { some: {} } }, { appointments: { some: {} } }, reserved],
+        },
+      }),
+      this.prisma.lead.count({ where: { ...cohort, ...reserved } }),
+      this.prisma.lead.count({ where: { ...cohort, ...signed } }),
+    ]);
+    return {
+      leads,
+      visits,
+      reservations,
+      contracts,
+      cohort: { leads, visited: visitedLeads, reserved: reservedLeads, signed: signedLeads },
+    };
   }
 
   async brokerLeaderboard(dateFrom?: string, dateTo?: string) {
