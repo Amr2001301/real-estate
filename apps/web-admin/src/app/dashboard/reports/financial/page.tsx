@@ -31,7 +31,7 @@ import type {
   OutstandingRefunds,
 } from '@/lib/types';
 import { formatCurrency, formatDate, tx, intlLocale } from '@/lib/format';
-import { getReportsCurrency } from '@/lib/currency';
+import { getReportsCurrency, getCompanyTimeZone, todayIn } from '@/lib/currency';
 import {
   resolveReportDateRange,
   resolveComparisonDateRange,
@@ -82,10 +82,12 @@ export default async function FinancialReportsPage({
 
   const sp = await searchParams;
   const currency = await getReportsCurrency();
-  const resolved = resolveReportDateRange(sp);
+  // The company's today: its month is the default, a running period is capped at it.
+  const today    = todayIn(await getCompanyTimeZone());
+  const resolved = resolveReportDateRange(sp, today);
   const { dateFrom, dateTo, year, mode, month, quarter } = resolved;
   const compare  = (sp.compare ?? 'none') as CompareMode;
-  const cmpRange = resolveComparisonDateRange(resolved, compare);
+  const cmpRange = resolveComparisonDateRange(resolved, compare, today);
 
   const PAYMENT_TYPE_LABELS: Partial<Record<PlanPaymentType, string>> = m.paymentTypeLabels;
   const PAYMENT_TYPE_CLS: Partial<Record<PlanPaymentType, string>> = {

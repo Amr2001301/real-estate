@@ -21,7 +21,7 @@ import {
 import { api, safe } from '@/lib/api';
 import type { Paged, Lead, Reservation, VisitAppointment } from '@/lib/types';
 import { compactParts, formatCompact, formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
-import { getReportsCurrency, currencySymbol } from '@/lib/currency';
+import { getReportsCurrency, currencySymbol, getCompanyTimeZone, todayIn } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { PremiumPageHero, PremiumMetricStrip } from '@/components/premium';
 import { Button } from '@/components/ui/button';
@@ -139,7 +139,8 @@ export async function SalesManagerDashboard() {
   const m = uiT(locale).pages.salesManagerHome;
 
   const nowIso = new Date().toISOString();
-  const period = nowIso.slice(0, 7);
+  // The company's month (its time zone), not UTC's.
+  const period = todayIn(await getCompanyTimeZone()).slice(0, 7);
   const currency = await getReportsCurrency();
   const symbol = currencySymbol(currency, locale);
 

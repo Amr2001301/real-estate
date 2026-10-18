@@ -40,10 +40,13 @@ function lastDayOfMonth(year: number, month: number): string {
 const Q_START = [0, 1, 4, 7, 10] as const; // index 1-4
 const Q_END   = [0, 3, 6, 9, 12] as const;
 
-export function resolveReportDateRange(params: ReportFilterParams): ResolvedDateRange {
-  const now = new Date();
-  const currentYear  = now.getUTCFullYear();
-  const currentMonth = now.getUTCMonth() + 1;
+export function resolveReportDateRange(
+  params: ReportFilterParams,
+  /** Today (YYYY-MM-DD) in the company's time zone; the default month is its. */
+  today: string = new Date().toISOString().slice(0, 10),
+): ResolvedDateRange {
+  const currentYear  = Number(today.slice(0, 4));
+  const currentMonth = Number(today.slice(5, 7));
 
   // Map legacy period=YYYY-MM → monthly mode (backward-compat for old links).
   if (params.period && !params.mode) {
