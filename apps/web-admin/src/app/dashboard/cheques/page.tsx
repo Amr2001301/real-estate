@@ -154,11 +154,18 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
                       </td>
                       <td className="px-4 py-3 text-slate-600">{pi.drawerBankName ?? pi.bankName ?? '—'}</td>
                       <td className="px-4 py-3 text-slate-600">{pi.chequeDueDate ? formatDate(pi.chequeDueDate, locale) : '—'}</td>
-                      <td className="px-4 py-3 text-slate-800">{d?.contract?.customer?.fullName ?? '—'}</td>
+                      <td className="px-4 py-3 text-slate-800">
+                        {d?.contract?.customer?.fullName ?? d?.reservation?.client?.fullName ?? '—'}
+                      </td>
                       <td className="px-4 py-3">
                         {d?.contract ? (
                           <Link href={`/dashboard/contracts/${d.contract.id}`} className="text-brand-600 hover:underline">
                             {d.contract.contractNumber ?? `#${d.contract.id.slice(0, 8)}`}
+                          </Link>
+                        ) : d?.reservation ? (
+                          // A booking-amount cheque: it pays the reservation.
+                          <Link href={`/dashboard/reservations/${d.reservation.id}`} className="text-brand-600 hover:underline">
+                            {d.reservation.reservationNumber ?? `#${d.reservation.id.slice(0, 8)}`}
                           </Link>
                         ) : (
                           '—'

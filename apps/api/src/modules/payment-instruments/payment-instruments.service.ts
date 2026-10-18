@@ -12,6 +12,8 @@ import {
   PaymentInstrumentType,
   PlanPaymentType,
   Prisma,
+  ReservationBookingPaymentStatus,
+  ReservationStatus,
   UserRole,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -98,6 +100,8 @@ export class ChequeLifecycleService {
             id: true,
             reviewStatus: true,
             installmentId: true,
+            // A booking-amount cheque pays a reservation, not an installment.
+            reservationId: true,
             installment: {
               select: {
                 id: true,
@@ -270,6 +274,11 @@ export class ChequeLifecycleService {
                   some: { contract: { customer: { fullName: { contains: q, mode: 'insensitive' } } } },
                 },
               },
+              {
+                deposits: {
+                  some: { reservation: { client: { fullName: { contains: q, mode: 'insensitive' } } } },
+                },
+              },
             ],
           }
         : {}),
@@ -292,6 +301,14 @@ export class ChequeLifecycleService {
                   id: true,
                   contractNumber: true,
                   customer: { select: { id: true, fullName: true } },
+                },
+              },
+              // A booking-amount cheque belongs to a reservation.
+              reservation: {
+                select: {
+                  id: true,
+                  reservationNumber: true,
+                  client: { select: { id: true, fullName: true } },
                 },
               },
             },
@@ -336,6 +353,7 @@ export class ChequeLifecycleService {
           },
         });
       }
+      await reopenBookings(tx, pendingBookingIds(pi.deposits));
       return tx.paymentInstrument.update({
         where: { id },
         data: { status: PaymentInstrumentStatus.CANCELLED },
@@ -394,6 +412,14 @@ export class ChequeLifecycleService {
         await tx.installment.updateMany({
           where: { id: { in: installmentIds }, status: { in: ['PENDING', 'OVERDUE'] } },
           data: { status: 'PAID', paidAt: clearingDate },
+        });
+      }
+      // A booking-amount cheque: the booking is paid now, not when recorded.
+      const bookings = pendingBookingIds(pi.deposits);
+      if (bookings.length > 0) {
+        await tx.reservation.updateMany({
+          where: { id: { in: bookings }, bookingPaymentStatus: ReservationBookingPaymentStatus.PENDING },
+          data: { bookingPaymentStatus: ReservationBookingPaymentStatus.PAID, bookingPaidAt: clearingDate },
         });
       }
     });
@@ -463,6 +489,23 @@ export class ChequeLifecycleService {
             reviewStatus: DepositReviewStatus.REJECTED,
             rejectionReason,
           },
+        });
+      }
+
+      // A booking cheque that bounces leaves the booking unpaid — still
+      // waiting (pending) or already counted (cleared, not yet converted).
+      await reopenBookings(tx, pendingBookingIds(pi.deposits));
+      const clearedBookings = approvedDeposits
+        .filter((d) => d.reservationId && !d.installmentId)
+        .map((d) => d.reservationId as string);
+      if (clearedBookings.length > 0) {
+        await tx.reservation.updateMany({
+          where: {
+            id: { in: clearedBookings },
+            bookingPaymentStatus: ReservationBookingPaymentStatus.PAID,
+            status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
+          },
+          data: { bookingPaymentStatus: ReservationBookingPaymentStatus.UNPAID, bookingPaidAt: null },
         });
       }
 
@@ -601,13 +644,24 @@ export class ChequeLifecycleService {
         paymentInstrumentId: id,
         deletedAt: null,
         reviewStatus: DepositReviewStatus.REJECTED,
-        installment: { status: { in: ['PENDING', 'OVERDUE'] } },
+        OR: [
+          { installment: { status: { in: ['PENDING', 'OVERDUE'] } } },
+          // A booking still owed on a reservation still open.
+          {
+            installmentId: null,
+            reservation: {
+              bookingPaymentStatus: ReservationBookingPaymentStatus.UNPAID,
+              status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
+            },
+          },
+        ],
       },
       select: {
         type: true,
         amount: true,
         contractId: true,
         installmentId: true,
+        reservationId: true,
         paymentMethod: true,
       },
     });
@@ -642,6 +696,7 @@ export class ChequeLifecycleService {
             amount: d.amount,
             contractId: d.contractId,
             installmentId: d.installmentId,
+            reservationId: d.reservationId,
             paymentMethod: d.paymentMethod,
             paidAt: new Date(),
             recordedById,
@@ -651,10 +706,36 @@ export class ChequeLifecycleService {
           },
         });
       }
+      // The booking waits on the replacement cheque now.
+      const bookings = carried.filter((d) => d.reservationId && !d.installmentId).map((d) => d.reservationId as string);
+      if (bookings.length > 0) {
+        await tx.reservation.updateMany({
+          where: { id: { in: bookings }, bookingPaymentStatus: ReservationBookingPaymentStatus.UNPAID },
+          data: { bookingPaymentStatus: ReservationBookingPaymentStatus.PENDING },
+        });
+      }
       return [replacement];
     });
     await this.notifyInstrument(id, PaymentInstrumentStatus.REPLACED, recordedById);
 
     return newPi;
   }
+}
+
+/** Reservations whose booking amount waits on this instrument (deposits still under review). */
+function pendingBookingIds(
+  deposits: Array<{ reviewStatus: DepositReviewStatus; installmentId: string | null; reservationId: string | null }>,
+): string[] {
+  return deposits
+    .filter((d) => d.reviewStatus === DepositReviewStatus.PENDING_REVIEW && d.reservationId && !d.installmentId)
+    .map((d) => d.reservationId as string);
+}
+
+/** The cheque will not pay those bookings: they are unpaid again. */
+async function reopenBookings(tx: Prisma.TransactionClient, reservationIds: string[]) {
+  if (reservationIds.length === 0) return;
+  await tx.reservation.updateMany({
+    where: { id: { in: reservationIds }, bookingPaymentStatus: ReservationBookingPaymentStatus.PENDING },
+    data: { bookingPaymentStatus: ReservationBookingPaymentStatus.UNPAID, bookingPaidAt: null },
+  });
 }
