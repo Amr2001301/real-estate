@@ -37,6 +37,8 @@ export class ApiError extends Error {
     // two 403 shapes the API emits — no per-action rewriting needed.
     if (this.code === 'missing_permission') {
       this.message = formatMissingPermissionMessage(this);
+    } else if (this.code === 'BROKER_FIRM_NOT_ACTIVE' || this.code === 'BROKER_USER_NOT_ACTIVE') {
+      // Already Arabic, and it says what to do (the firm awaits activation).
     } else if (this.status === 403) {
       this.message = 'ليست لديك صلاحية الوصول إلى هذا المورد.';
     }

@@ -25,6 +25,7 @@ import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { BrokerStatusBadge } from '@/components/badges';
 import { OwnerDocumentsCard } from '@/components/documents/owner-documents-card';
+import { ActivateBrokerNotice } from './activate-notice';
 import {
   PremiumPageHero,
   PremiumMetricStrip,
@@ -138,6 +139,8 @@ export default async function BrokerDetailPage({
           </div>
         }
       />
+
+      {broker.status === 'PENDING' && <ActivateBrokerNotice brokerId={broker.id} locale={locale} />}
 
       {/* ── KPI strip ────────────────────────────────────────────────── */}
       <PremiumMetricStrip

@@ -1,9 +1,4 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { enterTenantContext } from '../tenant/tenant-context';
 
@@ -16,8 +11,8 @@ export interface BrokerScopeContext {
 /**
  * Gate for /portal/* endpoints. Verifies the caller:
  *   - has a JWT with role === BROKER (set by JwtAuthGuard upstream),
- *   - is linked to an ACTIVE BrokerUser row,
- *   - whose Broker firm is ACTIVE.
+ *   - whose Broker firm is ACTIVE,
+ *   - is linked to an ACTIVE BrokerUser row (an INVITED one joins here).
  *
  * On success, attaches { brokerId, brokerUserId, brokerAgentUserId } to the
  * request so portal services can scope their queries. The brokerId is NEVER
@@ -74,13 +69,33 @@ export class BrokerScopeGuard implements CanActivate {
     if (!brokerUser) {
       throw new ForbiddenException('No broker profile attached to this user');
     }
-    if (brokerUser.status !== 'ACTIVE') {
-      throw new ForbiddenException('Broker user is not active');
-    }
+    // The firm is activated by the developer (onboarding); say so, instead of
+    // a bare "no access".
     if (brokerUser.broker.status !== 'ACTIVE') {
-      throw new ForbiddenException('Broker firm is not active');
+      throw new ForbiddenException({
+        message:
+          brokerUser.broker.status === 'PENDING'
+            ? 'شركة الوساطة لم تُفعَّل بعد لدى المطوّر — تواصل معه لتفعيلها'
+            : 'شركة الوساطة موقوفة لدى المطوّر — تواصل معه',
+        code: 'BROKER_FIRM_NOT_ACTIVE',
+      });
     }
 
+    // An invited agent joins by signing in: nothing else ever turned INVITED
+    // into ACTIVE, so an agent the admin created (password and all) was
+    // refused on every portal page until someone found the "تفعيل" button.
+    // A suspended or removed agent stays out.
+    if (brokerUser.status === 'INVITED') {
+      await this.prisma.brokerUser.updateMany({
+        where: { id: brokerUser.id, status: 'INVITED' },
+        data: { status: 'ACTIVE', joinedAt: new Date() },
+      });
+    } else if (brokerUser.status !== 'ACTIVE') {
+      throw new ForbiddenException({
+        message: 'حسابك في بوابة الوسطاء موقوف — تواصل مع مسؤول شركتك',
+        code: 'BROKER_USER_NOT_ACTIVE',
+      });
+    }
     req.brokerId = brokerUser.brokerId;
     req.brokerUserId = brokerUser.id;
     req.brokerAgentUserId = brokerUser.userId;

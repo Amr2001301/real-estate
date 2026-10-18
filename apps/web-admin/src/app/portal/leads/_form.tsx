@@ -91,7 +91,7 @@ export default function PortalLeadForm({ projects, locale = 'ar' }: Props) {
               name="phone"
               required
               dir="ltr"
-              placeholder="+9665…"
+              placeholder="+201…"
             />
           </Field>
           <Field label={m.email} name="email" hint={m.optional}>

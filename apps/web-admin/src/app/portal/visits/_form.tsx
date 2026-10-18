@@ -198,7 +198,7 @@ export default function PortalVisitForm({ projects, locale = 'ar' }: Props) {
                 name="customerPhone"
                 required
                 dir="ltr"
-                placeholder="+9665…"
+                placeholder="+201…"
               />
             </Field>
             <Field label={m.email} name="customerEmail" hint={m.optional}>
