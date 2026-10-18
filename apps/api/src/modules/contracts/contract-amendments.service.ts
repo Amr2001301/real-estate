@@ -50,7 +50,7 @@ import { resolveTransferFeeSettings, TRANSFER_FEE_SETTING_KEYS, transferFeeFor }
 import { feeDueDate, feePaymentDays } from '../installments/fee-settings';
 import { assertDiscountAllowed, discountPct } from '../installments/discount-policy';
 import { addMonths } from '../../common/utils/add-months';
-import { companyTimeZone, startOfLocalToday } from '../../common/time/company-timezone';
+import { companyTimeZone, localDayAfter, startOfLocalToday } from '../../common/time/company-timezone';
 import { assertUnitOnSale } from '../projects/inventory-blockers';
 import { commissionBasis, financingMarkup, MARKUP_SNAPSHOT_SELECT } from '../../common/finance/commission-basis';
 import { rebalancePayout } from '../broker-payouts/payout-totals';
@@ -138,7 +138,6 @@ export class RescheduleContractDto {
 /** Charges added on top of the price — they do not move with it. */
 const SURCHARGE_TYPES = SURCHARGE_PAYMENT_TYPES;
 const OPEN_STATUSES: InstallmentStatus[] = [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE];
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class ContractAmendmentsService {
@@ -341,7 +340,11 @@ export class ContractAmendmentsService {
       throw new BadRequestException('لا يوجد جدول أقساط على العقد لإضافة رسوم التنازل — أنشئ الجدول أولاً');
     }
     const feeAmount = fee;
-    const feeDue = feeDueDate(new Date(), await feePaymentDays(this.prisma, companyId));
+    const feeDue = feeDueDate(
+      new Date(),
+      await feePaymentDays(this.prisma, companyId),
+      await companyTimeZone(this.prisma, companyId),
+    );
 
     const fromId = contract.customerId;
     const now = new Date();
@@ -667,7 +670,7 @@ export class ContractAmendmentsService {
         }
         rescaled = open.map((i, k) => ({ id: i.id, amount: amounts[k]! }));
       } else if (delta > 0) {
-        extraRow = { amount: delta, dueDate: new Date(Date.now() + 30 * DAY_MS) };
+        extraRow = { amount: delta, dueDate: localDayAfter(await companyTimeZone(this.prisma, companyId), 30) };
       } else {
         throw new BadRequestException('العقد مسدَّد بالكامل والسعر الجديد أقل — استخدم إلغاء العقد واسترداد المبلغ');
       }
@@ -1027,7 +1030,7 @@ export class ContractAmendmentsService {
         }
         rescaled = open.map((i, k) => ({ id: i.id, amount: amounts[k]! }));
       } else if (delta > 0) {
-        extraRow = { amount: delta, dueDate: new Date(Date.now() + 30 * DAY_MS) };
+        extraRow = { amount: delta, dueDate: localDayAfter(await companyTimeZone(this.prisma, companyId), 30) };
       } else {
         throw new BadRequestException('العقد مسدَّد بالكامل والسعر الجديد أقل — استخدم إلغاء العقد واسترداد المبلغ');
       }

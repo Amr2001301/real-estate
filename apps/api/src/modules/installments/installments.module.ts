@@ -94,7 +94,7 @@ import { LATE_FEE_SETTING_KEYS, lateFeesDue, resolveLateFeeSettings } from './la
 import { feeDueDate, feePaymentDays } from './fee-settings';
 import { addMonths } from '../../common/utils/add-months';
 import { assertDiscountAllowed, discountPct } from './discount-policy';
-import { COMPANY_TIMEZONE_DEFAULT, companyTimeZones, startOfLocalToday } from '../../common/time/company-timezone';
+import { COMPANY_TIMEZONE_DEFAULT, companyTimeZone, companyTimeZones, startOfLocalToday } from '../../common/time/company-timezone';
 
 /**
  * No payment for the row is waiting — a proof under review or a cheque not
@@ -602,7 +602,11 @@ export class InstallmentsService {
       }),
     );
     if (!settings.enabled) return 0;
-    const dueDate = feeDueDate(now, await feePaymentDays(this.prisma, companyId));
+    const dueDate = feeDueDate(
+      now,
+      await feePaymentDays(this.prisma, companyId),
+      await companyTimeZone(this.prisma, companyId),
+    );
     const graceCutoff = new Date(now.getTime() - settings.graceDays * 24 * 60 * 60 * 1000);
     const rows = await this.prisma.installment.findMany({
       where: {
