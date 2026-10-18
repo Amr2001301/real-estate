@@ -1816,6 +1816,14 @@ export interface FinancialLiabilities {
     processingCount: number;
     paidCount: number;
   };
+  /** Clawbacks still owed back to the company (cancelled deals already paid out). */
+  clawbacksOwed?: {
+    brokerCommissionsAmount: string;
+    brokerCommissionsCount: number;
+    salesBonusAmount: string;
+    salesBonusCount: number;
+    totalAmount: string;
+  };
   totalUnpaidLiabilities: string;
 }
 

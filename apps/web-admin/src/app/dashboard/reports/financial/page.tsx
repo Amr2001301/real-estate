@@ -747,8 +747,10 @@ export default async function FinancialReportsPage({
                 { label: m.liabilities.salesBonus,       value: formatCurrency(dash.liabilities.salesBonus.unpaidAmount, currency, locale),                     cls: 'text-amber-700' },
                 { label: m.liabilities.brokerCommissions, value: formatCurrency(dash.liabilities.brokerCommissions.unpaidAmount, currency, locale),              cls: 'text-amber-700' },
                 { label: m.liabilities.paid,             value: formatCurrency(num(dash.liabilities.salesBonus.paidAmount) + num(dash.liabilities.brokerCommissions.paidAmount), currency, locale), cls: 'text-success-700' },
+                // Paid out on deals since cancelled, and not recovered yet.
+                { label: m.liabilities.clawbacksOwed,    value: formatCurrency(dash.liabilities.clawbacksOwed?.totalAmount ?? 0, currency, locale),             cls: 'text-brand-700', testId: 'clawbacks-owed' },
               ].map((row) => (
-                <div key={row.label} className="flex items-center justify-between gap-3 px-5 py-3">
+                <div key={row.label} data-testid={'testId' in row ? row.testId : undefined} className="flex items-center justify-between gap-3 px-5 py-3">
                   <span className="text-sm text-slate-500">{row.label}</span>
                   <span className={cn('text-sm tabular-nums whitespace-nowrap font-bold', row.cls)} dir="ltr">{row.value}</span>
                 </div>
