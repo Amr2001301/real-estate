@@ -133,6 +133,8 @@ function makePrismaMock() {
     unit: {
       findUnique: jest.fn().mockResolvedValue({ id: 'unit-1', status: 'AVAILABLE' }),
     },
+    // The company's late-fee setting (a new contract's default clause).
+    setting: { findFirst: jest.fn().mockResolvedValue(null) },
     user: {
       findFirst: jest.fn().mockResolvedValue({ id: 'customer-1' }),
     },

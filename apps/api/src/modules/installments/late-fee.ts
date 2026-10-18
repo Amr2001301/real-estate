@@ -108,7 +108,9 @@ export function lateFeesDue(
   existing: Array<{ amount: number; waived: boolean }>,
   at: Date,
 ): number[] {
-  if (!settings.enabled || settings.value <= 0) return [];
+  // Whether a fee applies at all is the contract's clause (the caller only
+  // passes rows of contracts that have one), not settings.enabled.
+  if (settings.value <= 0) return [];
   const stoppedMs =
     (installment.pausedSeconds ?? 0) * 1000 +
     (installment.pausedSince ? Math.max(0, at.getTime() - installment.pausedSince.getTime()) : 0);
@@ -153,4 +155,16 @@ export async function seedLateFeeSettingsForCompany(
     data: LATE_FEE_SETTING_DEFAULTS.map(({ key, value }) => ({ companyId, key, value })),
     skipDuplicates: true,
   });
+}
+
+/**
+ * Whether a new contract gets a late-fee clause when the admin does not say:
+ * the company's default for new contracts (lateFee.enabled).
+ */
+export async function companyLateFeesOn(
+  prisma: { setting: { findFirst: (args: { where: { companyId: string; key: string }; select: { value: true } }) => Promise<{ value: unknown } | null> } },
+  companyId: string,
+): Promise<boolean> {
+  const row = await prisma.setting.findFirst({ where: { companyId, key: 'lateFee.enabled' }, select: { value: true } });
+  return row?.value === true;
 }

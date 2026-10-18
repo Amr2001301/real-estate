@@ -23,6 +23,7 @@ describe('Late-payment fee (e2e)', () => {
   let overdueId: string;
   let freshId: string;
   let contractId: string;
+  let contractCreatedAt: Date;
   const startedAt = new Date();
 
   const http = () => request(testApp.app.getHttpServer());
@@ -40,9 +41,16 @@ describe('Late-payment fee (e2e)', () => {
     companyId = admin.companyId!;
     const plan = await raw.installmentPlan.findFirstOrThrow({
       where: { contract: { companyId, deletedAt: null, status: { not: 'CANCELLED' } } },
-      select: { id: true, contractId: true },
+      select: { id: true, contractId: true, contract: { select: { createdAt: true } } },
     });
     contractId = plan.contractId;
+    // The rows below are due 3 and 10 days ago: the contract was in the
+    // system before then (a row due before it was entered earns no fee).
+    contractCreatedAt = plan.contract.createdAt;
+    await raw.contract.update({
+      where: { id: contractId },
+      data: { createdAt: new Date(Date.now() - 30 * DAY) },
+    });
     const row = (dueDate: Date, status: InstallmentStatus) =>
       raw.installment.create({
         data: { planId: plan.id, companyId, dueDate, amount: 20_000, status, type: PlanPaymentType.INSTALLMENT },
@@ -61,9 +69,13 @@ describe('Late-payment fee (e2e)', () => {
     await raw.installment.deleteMany({ where: { type: PlanPaymentType.LATE_FEE, createdAt: { gte: startedAt } } });
     await raw.auditLog.deleteMany({ where: { action: 'installment.late-fee-waived', createdAt: { gte: startedAt } } });
     await raw.installment.deleteMany({ where: { id: { in: [overdueId, freshId] } } });
+    await raw.contract.update({
+      where: { id: contractId },
+      data: { createdAt: contractCreatedAt, lateFeesApply: false },
+    });
   });
 
-  it('LF-1: switched off (the default), the sweep charges nothing', async () => {
+  it('LF-1: a contract without a late-fee clause (the default) is charged nothing', async () => {
     await testApp.runCronJob('late-fee');
     expect(await feesOn(overdueId)).toHaveLength(0);
   });
@@ -73,8 +85,9 @@ describe('Late-payment fee (e2e)', () => {
     await setSetting('lateFee.graceDays', -3).expect(400);
   });
 
-  it('LF-3: switched on, a fee is charged past the grace period — once', async () => {
-    await setSetting('lateFee.enabled', true).expect(200);
+  it('LF-3: with a late-fee clause, a fee is charged past the grace period — once', async () => {
+    // The contract decides; the company sets the rate.
+    await testApp.rawPrisma.contract.update({ where: { id: contractId }, data: { lateFeesApply: true } });
     await setSetting('lateFee.value', 2).expect(200);
     await testApp.runCronJob('late-fee');
     await testApp.runCronJob('late-fee');
@@ -124,5 +137,98 @@ describe('Late-payment fee (e2e)', () => {
     const list = await asAdmin(http().get('/v1/deposits').query({ type: 'FEE', contractId })).expect(200);
     expect(list.body.data.map((d: { id: string }) => d.id)).toContain(deposit.id);
     expect(Number(list.body.totals.fees)).toBeGreaterThanOrEqual(150);
+  });
+
+  it('LF-6: a row due before the contract was entered earns no fee (a back-dated contract)', async () => {
+    const raw = testApp.rawPrisma;
+    // The contract is entered today; its row was due 10 days ago (e.g. a
+    // contract signed in July, entered in October).
+    await raw.contract.update({ where: { id: contractId }, data: { createdAt: new Date() } });
+    const planId = (await raw.installment.findUniqueOrThrow({ where: { id: freshId }, select: { planId: true } }))
+      .planId;
+    const older = await raw.installment.create({
+      data: {
+        planId,
+        companyId,
+        dueDate: new Date(Date.now() - 10 * DAY),
+        amount: 20_000,
+        status: InstallmentStatus.OVERDUE,
+        type: PlanPaymentType.INSTALLMENT,
+      },
+      select: { id: true },
+    });
+    try {
+      await testApp.runCronJob('late-fee');
+      expect(await feesOn(older.id)).toHaveLength(0);
+      // It is still overdue — only the fee is not charged.
+      expect((await raw.installment.findUniqueOrThrow({ where: { id: older.id } })).status).toBe(
+        InstallmentStatus.OVERDUE,
+      );
+    } finally {
+      await raw.installment.deleteMany({ where: { feeForId: older.id } });
+      await raw.installment.deleteMany({ where: { id: older.id } });
+      await raw.contract.update({
+        where: { id: contractId },
+        data: { createdAt: new Date(Date.now() - 30 * DAY) },
+      });
+    }
+  });
+
+  it('LF-7: a contract without a late-fee clause is not charged; turning it on charges it', async () => {
+    const raw = testApp.rawPrisma;
+    // The overdue row's fee from LF-3 was waived in LF-4 and recharged; start clean.
+    await raw.installment.deleteMany({ where: { feeForId: overdueId } });
+    await asAdmin(http().patch(`/v1/contracts/${contractId}/late-fee-clause`))
+      .send({ lateFeesApply: false })
+      .expect(200);
+    try {
+      await testApp.runCronJob('late-fee');
+      expect(await feesOn(overdueId)).toHaveLength(0);
+
+      await asAdmin(http().patch(`/v1/contracts/${contractId}/late-fee-clause`))
+        .send({ lateFeesApply: true })
+        .expect(200);
+      await testApp.runCronJob('late-fee');
+      expect(await feesOn(overdueId)).toHaveLength(1);
+      const audit = await raw.auditLog.findFirst({
+        where: { action: 'contract.late-fee-clause', entityId: contractId, createdAt: { gte: startedAt } },
+      });
+      expect(audit).not.toBeNull();
+    } finally {
+      await raw.contract.update({ where: { id: contractId }, data: { lateFeesApply: true } });
+      await raw.auditLog.deleteMany({ where: { action: 'contract.late-fee-clause', createdAt: { gte: startedAt } } });
+    }
+  });
+
+  it('LF-8: a new contract takes the company setting unless the admin chooses', async () => {
+    const raw = testApp.rawPrisma;
+    const unit = await raw.unit.findFirstOrThrow({ where: { companyId, status: 'AVAILABLE' }, select: { id: true } });
+    const made: string[] = [];
+    try {
+      // The company's default for new contracts: a clause.
+      await setSetting('lateFee.enabled', true).expect(200);
+      const a = await asAdmin(http().post('/v1/contracts'))
+        .send({ customerId: fixtures.userIds.customer1UserId, unitId: unit.id, totalAmount: 1_000_000 })
+        .expect(201);
+      made.push(a.body.id);
+      expect((await raw.contract.findUniqueOrThrow({ where: { id: a.body.id } })).lateFeesApply).toBe(true);
+      // The admin says this one has no clause.
+      await asAdmin(http().delete(`/v1/contracts/${a.body.id}`)).expect(200);
+      const b = await asAdmin(http().post('/v1/contracts'))
+        .send({
+          customerId: fixtures.userIds.customer1UserId,
+          unitId: unit.id,
+          totalAmount: 1_000_000,
+          lateFeesApply: false,
+        })
+        .expect(201);
+      made.push(b.body.id);
+      expect((await raw.contract.findUniqueOrThrow({ where: { id: b.body.id } })).lateFeesApply).toBe(false);
+    } finally {
+      await raw.auditLog.deleteMany({ where: { entityId: { in: [...made, unit.id] }, createdAt: { gte: startedAt } } });
+      await raw.contract.deleteMany({ where: { id: { in: made } } });
+      await raw.unitStatusHistory.deleteMany({ where: { unitId: unit.id, changedAt: { gte: startedAt } } });
+      await raw.unit.update({ where: { id: unit.id }, data: { status: 'AVAILABLE' } });
+    }
   });
 });

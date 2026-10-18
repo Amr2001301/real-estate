@@ -19,6 +19,7 @@ import {
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ApiTags } from '@nestjs/swagger';
 import {
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
@@ -53,6 +54,7 @@ import {
   UserRole,
 } from '@prisma/client';
 import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
+import { companyLateFeesOn } from '../installments/late-fee';
 import { DepositChequeDto } from '../deposits/deposits.dto';
 import { nextContractNumber } from '../../common/utils/contract-number';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -173,6 +175,11 @@ class ConvertReservationDto {
   @IsOptional() @IsString() @MaxLength(255) fileName?: string;
   @IsOptional() @IsString() @MaxLength(120) mimeType?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) sizeBytes?: number;
+  /**
+   * The contract has a late-fee clause (the late-fee sweep charges only
+   * those). Omitted → the company's late-fee setting at this moment.
+   */
+  @IsOptional() @IsBoolean() lateFeesApply?: boolean;
 }
 
 class AddNoteDto {
@@ -2184,6 +2191,8 @@ export class ReservationsService {
     // Retry up to 3 times in the rare case two conversions race on the same
     // contract number.  The root fix (max-based generator) makes this unlikely;
     // the retry is purely a safety net.
+    const lateFeesApply =
+      dto.lateFeesApply ?? (reservation.companyId ? await companyLateFeesOn(this.prisma, reservation.companyId) : false);
     for (let attempt = 0; attempt < 3; attempt++) {
       const contractNumber = await nextContractNumber(this.prisma);
 
@@ -2207,6 +2216,7 @@ export class ReservationsService {
               totalAmount,
               downPayment,
               pdfUrl: dto.pdfUrl ?? null,
+              lateFeesApply,
               // Conversion always creates an unsigned contract. Signing flows
               // through POST /contracts/:id/sign (strict permission), which
               // also fires the broker_contract_signed activity / notification

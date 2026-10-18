@@ -14,8 +14,12 @@ const on = (s: Partial<LateFeeSettings> = {}): LateFeeSettings => ({ ...LATE_FEE
 const inst = { amount: 10_000, dueDate: due };
 
 describe('lateFeesDue', () => {
-  it('charges nothing while switched off', () => {
-    expect(lateFeesDue(inst, LATE_FEE_DEFAULTS, [], at(60))).toEqual([]);
+  it('charges nothing at a zero rate', () => {
+    expect(lateFeesDue(inst, { ...LATE_FEE_DEFAULTS, value: 0 }, [], at(60))).toEqual([]);
+  });
+
+  it('the company switch does not decide: the contract clause does (the caller filters)', () => {
+    expect(lateFeesDue(inst, { ...LATE_FEE_DEFAULTS, enabled: false }, [], at(60)).length).toBeGreaterThan(0);
   });
 
   it('waits out the grace period', () => {

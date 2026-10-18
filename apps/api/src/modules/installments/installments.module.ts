@@ -548,18 +548,23 @@ export class InstallmentsService {
   }
 
   /**
-   * Daily, after markOverdue: charge the late-payment fee (company setting
-   * lateFee.*, off by default) on overdue installments of live contracts.
+   * Daily, after markOverdue: charge the late-payment fee on overdue
+   * installments of live contracts that have a late-fee clause, at the
+   * company's lateFee.* rate and grace period.
    * Fees are never charged on a fee, a transfer fee or a cheque penalty, nor while a payment
    * for the installment waits for review or for its cheque to clear.
    */
   async applyLateFees(now = new Date()) {
     await this.trackLateFeeClock(now);
-    const enabledRows = await this.prisma.setting.findMany({
-      where: { key: 'lateFee.enabled' },
-      select: { companyId: true, value: true },
-    });
-    const companyIds = enabledRows.filter((r) => r.value === true).map((r) => r.companyId);
+    // The contract decides, not a company switch: every company with a
+    // contract that has a late-fee clause.
+    const companyIds = (
+      await this.prisma.contract.findMany({
+        where: { lateFeesApply: true, deletedAt: null, companyId: { not: null } },
+        distinct: ['companyId'],
+        select: { companyId: true },
+      })
+    ).map((c) => c.companyId as string);
     let charged = 0;
     for (const companyId of companyIds) {
       try {
@@ -601,11 +606,11 @@ export class InstallmentsService {
         select: { key: true, value: true },
       }),
     );
-    if (!settings.enabled) return 0;
+    const timeZone = await companyTimeZone(this.prisma, companyId);
     const dueDate = feeDueDate(
       now,
       await feePaymentDays(this.prisma, companyId),
-      await companyTimeZone(this.prisma, companyId),
+      timeZone,
     );
     const graceCutoff = new Date(now.getTime() - settings.graceDays * 24 * 60 * 60 * 1000);
     const rows = await this.prisma.installment.findMany({
@@ -614,7 +619,8 @@ export class InstallmentsService {
         status: InstallmentStatus.OVERDUE,
         type: { notIn: SURCHARGE_PAYMENT_TYPES },
         dueDate: { lte: graceCutoff },
-        plan: CHASED_PLAN_WHERE,
+        // Only a contract with a late-fee clause is charged.
+        plan: { ...CHASED_PLAN_WHERE, contract: { ...CHASED_PLAN_WHERE.contract, lateFeesApply: true } },
         // A payment already on its way stops the clock.
         deposits: PAYMENT_NOT_ON_ITS_WAY,
       },
@@ -629,7 +635,13 @@ export class InstallmentsService {
         plan: {
           select: {
             contract: {
-              select: { id: true, contractNumber: true, customerId: true, unit: { select: { code: true } } },
+              select: {
+                id: true,
+                contractNumber: true,
+                customerId: true,
+                createdAt: true,
+                unit: { select: { code: true } },
+              },
             },
           },
         },
@@ -638,6 +650,13 @@ export class InstallmentsService {
 
     let count = 0;
     for (const inst of rows) {
+      // A back-dated contract (instalments from July, entered in October)
+      // earned late fees at once for months before it was in the system —
+      // those were paid, or are being settled, outside it. Only a row due
+      // on or after the day the contract was entered earns a fee; the older
+      // ones stay overdue (decided 2026-10-18).
+      const entered = inst.plan?.contract?.createdAt;
+      if (entered && inst.dueDate < startOfLocalToday(timeZone, entered)) continue;
       const fees = lateFeesDue(
         {
           amount: Number(inst.amount),

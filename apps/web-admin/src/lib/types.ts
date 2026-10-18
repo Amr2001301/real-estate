@@ -276,6 +276,8 @@ export interface Contract {
   signFollowupFailed?: boolean;
   /** The instalment markup still in totalAmount (detail only). */
   markupLeft?: string;
+  /** The contract has a late-fee clause (only those are charged late fees). */
+  lateFeesApply?: boolean;
   customerId: string;
   customer?: { id: string; fullName: string; phone: string | null; email?: string | null };
   unitId: string;
