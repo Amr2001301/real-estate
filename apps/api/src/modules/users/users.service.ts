@@ -26,6 +26,7 @@ import type { NotificationPrefsDto } from './dto/notification-prefs.dto';
 import { PlanLimitService } from '../../common/capabilities/plan-limit.service';
 import { collectPages, isoDate, listCsv, listXlsx, type ListColumn } from '../../common/utils/list-export';
 import { ReportBrandService } from '../company-branding/report-brand.service';
+import { grantRoleDefaultPermissions } from '../permissions/role-default-permissions';
 
 /** People lists the admin can export: prospects (CLIENT) and buyers (CUSTOMER). */
 export const EXPORTABLE_ROLES = ['CLIENT', 'CUSTOMER'] as const;
@@ -148,6 +149,8 @@ export class UsersService {
       },
       select: this.publicSelect(),
     });
+    // Their role's starting codes: without them every page refused them.
+    await grantRoleDefaultPermissions(this.prisma, created.id, created.role);
     try {
       // Welcome (in-app, and by e-mail when they have one) …
       await this.notifications.sendToUser(created.id, 'user_account_created', {

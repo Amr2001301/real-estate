@@ -37,6 +37,7 @@ import type {
   UpdateCompanyModulesDto,
 } from './dto/super-admin.dto';
 import { reportFailure } from '../../common/observability/report-failure';
+import { grantRoleDefaultPermissions } from '../permissions/role-default-permissions';
 
 @Injectable()
 export class SuperAdminService {
@@ -532,6 +533,8 @@ export class SuperAdminService {
       },
       select: { id: true, fullName: true, email: true, role: true, createdAt: true },
     });
+    // The company's first admin holds every code, the strict ones included.
+    await grantRoleDefaultPermissions(this.prisma, created.id, created.role);
     await this.welcome(companyId, created);
     return created;
   }
@@ -558,6 +561,7 @@ export class SuperAdminService {
       },
       select: { id: true, fullName: true, email: true, role: true, phone: true, createdAt: true },
     });
+    await grantRoleDefaultPermissions(this.prisma, created.id, created.role);
     await this.welcome(companyId, created);
     return created;
   }

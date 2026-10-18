@@ -24,6 +24,8 @@ describe('Users · MAINTENANCE_SUPERVISOR role foundation', () => {
     }));
     const prisma = {
       user: { create, findFirst: jest.fn().mockResolvedValue(null) },
+      // Role default permissions (none in this catalog).
+      permission: { findMany: jest.fn().mockResolvedValue([]) },
       company: {
         findUnique: jest.fn().mockResolvedValue({ maxUsers: null, _count: { users: 0 } }),
       },
