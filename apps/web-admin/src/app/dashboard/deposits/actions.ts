@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { api } from '@/lib/api';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
+import { depositPayload } from '@/lib/deposit-payload';
 
 export interface DepositFormState {
   error?: string;
@@ -15,29 +16,10 @@ export async function recordDepositAction(
   _prev: DepositFormState,
   formData: FormData,
 ): Promise<DepositFormState> {
-  const str = (k: string) => String(formData.get(k) ?? '').trim() || undefined;
-  const paymentMethod = str('paymentMethod');
-  const payload = {
+  const payload = depositPayload(formData, {
     contractId: String(formData.get('contractId') ?? ''),
-    installmentId: str('installmentId'),
-    amount: Number(formData.get('amount') ?? 0),
-    paidAt: str('paidAt'),
-    receiptUrl: str('receiptUrl'),
-    paymentMethod,
-    // FG-01 — a cheque is tracked until it clears; transfer details are optional.
-    cheque:
-      paymentMethod === 'CHEQUE'
-        ? {
-            chequeNumber: str('chequeNumber'),
-            drawerBankName: str('drawerBankName'),
-            chequeDueDate: str('chequeDueDate'),
-          }
-        : undefined,
-    transfer:
-      paymentMethod === 'BANK_TRANSFER' && (str('transferBank') || str('transferRef'))
-        ? { bankName: str('transferBank'), referenceNumber: str('transferRef') }
-        : undefined,
-  };
+    installmentId: String(formData.get('installmentId') ?? '').trim() || undefined,
+  });
   try {
     await api.post('/deposits', payload);
   } catch (e) {

@@ -9,6 +9,7 @@ import { SearchSelect, type SearchOption } from '@/components/form/search-select
 import { Button } from '@/components/ui/button';
 import { FormFooter } from '@/components/ui/form-footer';
 import { MediaUploader } from '@/components/media-uploader';
+import { PaymentMethodFields } from '@/components/deposits/payment-method-fields';
 import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import type { Contract, ContractInstallment } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/format';
@@ -43,7 +44,6 @@ export default function RecordDepositForm({ initialContract, currency, locale = 
   const [loadingInst, setLoadingInst] = useState(false);
   const [selectedInstallmentId, setSelectedInstallmentId] = useState('');
   const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState('');
 
   useEffect(() => {
     if (!contractId) {
@@ -173,6 +173,7 @@ export default function RecordDepositForm({ initialContract, currency, locale = 
                   }}
                   className={`${inputClass} ${selectedInstallment ? 'bg-slate-50 text-slate-500' : ''}`}
                 />
+                {selectedInstallment && <p className="mt-1 text-[11px] text-slate-500">{m.amountFullNote}</p>}
               </Field>
               <Field label={m.labelPaidAt} name="paidAt">
                 <input
@@ -185,53 +186,7 @@ export default function RecordDepositForm({ initialContract, currency, locale = 
               </Field>
             </div>
 
-            <Field label={m.labelMethod} name="paymentMethod">
-              <select
-                id="paymentMethod"
-                name="paymentMethod"
-                required
-                value={method}
-                onChange={(e) => setMethod(e.target.value)}
-                className={inputClass}
-              >
-                <option value="" disabled>{m.optionChoose}</option>
-                {(['CASH', 'BANK_TRANSFER', 'CHEQUE', 'OTHER'] as const).map((k) => (
-                  <option key={k} value={k}>{m.methodLabels[k]}</option>
-                ))}
-              </select>
-            </Field>
-
-            {/* FG-01 — a cheque stays unpaid until it clears on the Cheques page. */}
-            {method === 'CHEQUE' && (
-              <div className="flex flex-col gap-4 rounded-xl border border-warning-100 bg-warning-50/40 p-4">
-                <p className="text-xs text-warning-700">{m.chequeNote}</p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Field label={m.labelChequeNumber} name="chequeNumber">
-                    <input id="chequeNumber" name="chequeNumber" required maxLength={100} className={inputClass} />
-                  </Field>
-                  <Field label={m.labelDrawerBank} name="drawerBankName">
-                    <input id="drawerBankName" name="drawerBankName" maxLength={200} className={inputClass} />
-                  </Field>
-                  <Field label={m.labelChequeDueDate} name="chequeDueDate">
-                    <input id="chequeDueDate" name="chequeDueDate" type="date" required className={inputClass} />
-                  </Field>
-                </div>
-              </div>
-            )}
-
-            {method === 'BANK_TRANSFER' && (
-              <div className="flex flex-col gap-4">
-                <p className="text-xs text-slate-500">{m.transferNote}</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Field label={m.labelTransferBank} name="transferBank">
-                    <input id="transferBank" name="transferBank" maxLength={200} className={inputClass} />
-                  </Field>
-                  <Field label={m.labelTransferRef} name="transferRef">
-                    <input id="transferRef" name="transferRef" maxLength={100} className={inputClass} />
-                  </Field>
-                </div>
-              </div>
-            )}
+            <PaymentMethodFields locale={locale} />
 
             <Field label={m.labelReceipt} name="receiptUrl_display">
               {receiptUrl ? (

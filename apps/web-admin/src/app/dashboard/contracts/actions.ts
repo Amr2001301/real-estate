@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { api } from '@/lib/api';
+import { depositPayload } from '@/lib/deposit-payload';
 
 export interface ContractFormState {
   error?: string;
@@ -137,13 +138,9 @@ export async function recordInstallmentPaymentAction(
   installmentId: string,
   formData: FormData,
 ): Promise<{ error?: string }> {
-  const payload = {
-    contractId,
-    installmentId,
-    amount: Number(formData.get('amount') ?? 0),
-    paidAt: String(formData.get('paidAt') ?? '') || undefined,
-    receiptUrl: String(formData.get('receiptUrl') ?? '') || undefined,
-  };
+  // The same body as the "تسجيل دفعة" page: the row used to be saved with
+  // no payment method, out of every method report and reconciliation.
+  const payload = depositPayload(formData, { contractId, installmentId });
   try {
     await api.post('/deposits', payload);
   } catch (e) {
