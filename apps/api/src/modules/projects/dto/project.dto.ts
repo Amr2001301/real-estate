@@ -32,7 +32,7 @@ export class CreateProjectDto {
   @MinLength(2)
   @MaxLength(64)
   @Matches(ENTITY_CODE_PATTERN, {
-    message: 'code must be 2–64 characters: uppercase letters, digits, and hyphens (e.g. NILE-CREST)',
+    message: 'الكود من 2 إلى 64 حرفاً: حروف إنجليزية كبيرة وأرقام وشرطات فقط (مثال: NILE-CREST)',
   })
   code!: string;
 
@@ -75,7 +75,7 @@ export class UpdateProjectDto {
   @MinLength(2)
   @MaxLength(64)
   @Matches(ENTITY_CODE_PATTERN, {
-    message: 'code must be 2–64 characters: uppercase letters, digits, and hyphens (e.g. NILE-CREST)',
+    message: 'الكود من 2 إلى 64 حرفاً: حروف إنجليزية كبيرة وأرقام وشرطات فقط (مثال: NILE-CREST)',
   })
   code?: string;
 

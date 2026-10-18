@@ -15,7 +15,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { IsInt, IsOptional, IsString, IsUUID, Matches, MaxLength, Min, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { ENTITY_CODE_PATTERN, normalizeEntityCode } from '../../common/utils/entity-code';
+import { ENTITY_CODE_PATTERN, codeTaken, normalizeEntityCode } from '../../common/utils/entity-code';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -31,7 +31,7 @@ class CreateBuildingDto {
   @MinLength(2)
   @MaxLength(64)
   @Matches(ENTITY_CODE_PATTERN, {
-    message: 'code must be 2–64 characters: uppercase letters, digits, and hyphens (e.g. TOWER-A)',
+    message: 'الكود من 2 إلى 64 حرفاً: حروف إنجليزية كبيرة وأرقام وشرطات فقط (مثال: TOWER-A)',
   })
   code!: string;
 
@@ -88,7 +88,7 @@ class BuildingsService {
         totalFloors: dto.totalFloors ?? 1,
         order: dto.order ?? 0,
       },
-    });
+    }).catch(codeTaken('لمبنى آخر في هذه المرحلة'));
   }
 
   update(id: string, dto: UpdateBuildingDto) {

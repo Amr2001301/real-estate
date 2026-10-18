@@ -5,6 +5,7 @@ import { CreateProjectDto, ProjectQueryDto, ProjectSort, UpdateProjectDto } from
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { OPTIONS_LIMIT, optionsResult } from '../../common/utils/options';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
+import { codeTaken } from '../../common/utils/entity-code';
 import { PlanLimitService } from '../../common/capabilities/plan-limit.service';
 import {
   serializePublicProjectDetail,
@@ -35,7 +36,7 @@ export class ProjectsService {
         services: (dto.services ?? []) as unknown as Prisma.InputJsonValue,
       },
       include: { media: true },
-    });
+    }).catch(codeTaken('لمشروع آخر في الشركة'));
   }
 
   /** Every project of the company, id + display fields — see common/utils/options.ts. */
@@ -216,7 +217,7 @@ export class ProjectsService {
       where: { id },
       data,
       include: { media: true },
-    });
+    }).catch(codeTaken('لمشروع آخر في الشركة'));
   }
 
   async remove(id: string) {

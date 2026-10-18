@@ -25,6 +25,7 @@ function parseTranslatableJson(raw: string): { ar: string; en: string }[] {
 
 function buildProjectPayload(formData: FormData) {
   return {
+    code: String(formData.get('code') ?? '').trim().toUpperCase(),
     name: {
       ar: String(formData.get('name_ar') ?? ''),
       en: String(formData.get('name_en') ?? ''),
@@ -96,24 +97,46 @@ export async function deleteProjectMediaAction(projectId: string, mediaId: strin
   revalidatePath(`/dashboard/projects/${projectId}`);
 }
 
-export async function createPhaseAction(projectId: string, formData: FormData) {
-  await api.post('/phases', {
-    projectId,
-    name: {
-      ar: String(formData.get('name_ar') ?? ''),
-      en: String(formData.get('name_en') ?? ''),
-    },
-    order: Number(formData.get('order') ?? 0),
-  });
+// Phases and buildings are created from inline forms on the project page;
+// both need a code (unique in the project / phase), as the API requires.
+export async function createPhaseAction(
+  projectId: string,
+  _prev: ProjectFormState,
+  formData: FormData,
+): Promise<ProjectFormState> {
+  try {
+    await api.post('/phases', {
+      projectId,
+      code: String(formData.get('code') ?? '').trim().toUpperCase(),
+      name: {
+        ar: String(formData.get('name_ar') ?? ''),
+        en: String(formData.get('name_en') ?? ''),
+      },
+      order: Number(formData.get('order') ?? 0),
+    });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
   revalidatePath(`/dashboard/projects/${projectId}`);
+  return { ok: true };
 }
 
-export async function createBuildingAction(projectId: string, formData: FormData) {
-  await api.post('/buildings', {
-    phaseId: String(formData.get('phaseId')),
-    name: String(formData.get('name')),
-    totalFloors: Number(formData.get('totalFloors') ?? 1),
-    order: Number(formData.get('order') ?? 0),
-  });
+export async function createBuildingAction(
+  projectId: string,
+  _prev: ProjectFormState,
+  formData: FormData,
+): Promise<ProjectFormState> {
+  try {
+    await api.post('/buildings', {
+      phaseId: String(formData.get('phaseId')),
+      code: String(formData.get('code') ?? '').trim().toUpperCase(),
+      name: String(formData.get('name')),
+      totalFloors: Number(formData.get('totalFloors') ?? 1),
+      order: Number(formData.get('order') ?? 0),
+    });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
   revalidatePath(`/dashboard/projects/${projectId}`);
+  return { ok: true };
 }
