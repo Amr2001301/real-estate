@@ -76,6 +76,7 @@ export interface Media {
 
 export interface Project {
   id: string;
+  code?: string | null;
   name: Translatable;
   description: Translatable;
   city: string;
@@ -93,6 +94,7 @@ export interface Project {
 export interface Phase {
   id: string;
   projectId: string;
+  code?: string | null;
   name: Translatable;
   order: number;
   buildings?: Building[];
@@ -101,6 +103,7 @@ export interface Phase {
 export interface Building {
   id: string;
   phaseId: string;
+  code?: string | null;
   name: string;
   totalFloors: number;
   order: number;

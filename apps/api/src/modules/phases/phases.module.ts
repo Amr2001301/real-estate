@@ -4,7 +4,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { IsOptional, IsString, IsUUID, IsInt, Matches, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { Prisma } from '@prisma/client';
-import { ENTITY_CODE_PATTERN, normalizeEntityCode } from '../../common/utils/entity-code';
+import { ENTITY_CODE_PATTERN, codeTaken, normalizeEntityCode } from '../../common/utils/entity-code';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -25,7 +25,7 @@ class CreatePhaseDto {
   @MinLength(2)
   @MaxLength(64)
   @Matches(ENTITY_CODE_PATTERN, {
-    message: 'code must be 2–64 characters: uppercase letters, digits, and hyphens (e.g. PH-1)',
+    message: 'الكود من 2 إلى 64 حرفاً: حروف إنجليزية كبيرة وأرقام وشرطات فقط (مثال: PH-1)',
   })
   code!: string;
 
@@ -84,7 +84,7 @@ class PhasesService {
         name: dto.name as unknown as Prisma.InputJsonValue,
         order: dto.order ?? 0,
       },
-    });
+    }).catch(codeTaken('لمرحلة أخرى في هذا المشروع'));
   }
 
   update(id: string, dto: UpdatePhaseDto) {

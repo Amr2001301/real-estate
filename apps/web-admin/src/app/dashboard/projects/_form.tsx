@@ -176,6 +176,20 @@ export default function ProjectForm({ project, locale = 'ar' }: Props) {
                 defaultValueAr={project?.name?.ar}
                 defaultValueEn={project?.name?.en}
               />
+              <Field label={m.labelCode} name="code" hint={m.hintCode} required>
+                <Input
+                  id="code"
+                  name="code"
+                  required
+                  dir="ltr"
+                  minLength={2}
+                  maxLength={64}
+                  pattern="[A-Za-z0-9][A-Za-z0-9\-]{1,63}"
+                  placeholder="NILE-RES"
+                  defaultValue={project?.code ?? ''}
+                  className="uppercase"
+                />
+              </Field>
               <TranslatableInput
                 name="description"
                 label={m.labelDescription}

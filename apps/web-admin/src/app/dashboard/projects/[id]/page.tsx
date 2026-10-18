@@ -35,10 +35,9 @@ import {
   publishProjectAction,
   archiveProjectAction,
   deleteProjectAction,
-  createPhaseAction,
-  createBuildingAction,
 } from '../actions';
 import { ProjectMediaPanel } from './media-panel';
+import { BuildingCreateForm, PhaseCreateForm } from './structure-forms';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 
@@ -368,27 +367,7 @@ export default async function ProjectDetailPage({
                               <summary className="text-[11px] font-semibold text-brand-700 cursor-pointer inline-flex items-center gap-1 hover:text-brand-800">
                                 <Plus className="h-3 w-3" /> {m.addBuildingLabel}
                               </summary>
-                              <form
-                                action={createBuildingAction.bind(null, project.id)}
-                                className="mt-2 flex flex-wrap gap-2"
-                              >
-                                <input type="hidden" name="phaseId" value={ph.id} />
-                                <input
-                                  name="name"
-                                  required
-                                  placeholder={m.buildingNamePlaceholder}
-                                  className="text-xs h-8 rounded-lg border border-hairline bg-surface px-2.5 focus:outline-none focus:border-brand-500"
-                                />
-                                <input
-                                  name="totalFloors"
-                                  type="number"
-                                  min={1}
-                                  defaultValue={1}
-                                  placeholder={m.floorsPlaceholder}
-                                  className="w-24 text-xs h-8 rounded-lg border border-hairline bg-surface px-2.5 focus:outline-none focus:border-brand-500"
-                                />
-                                <Button type="submit" variant="outline" size="sm">{m.btnSave}</Button>
-                              </form>
+                              <BuildingCreateForm projectId={project.id} phaseId={ph.id} locale={locale} />
                             </details>
                           )}
                         </div>
@@ -403,32 +382,7 @@ export default async function ProjectDetailPage({
                   <summary className="text-sm font-semibold text-brand-700 cursor-pointer inline-flex items-center gap-1.5 hover:text-brand-800">
                     <Plus className="h-4 w-4" /> {m.addPhaseLabel}
                   </summary>
-                  <form
-                    action={createPhaseAction.bind(null, project.id)}
-                    className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-2"
-                  >
-                    <input
-                      name="name_ar"
-                      required
-                      dir="rtl"
-                      placeholder={m.phaseNameArPlaceholder}
-                      className="text-sm h-9 rounded-lg border border-hairline bg-surface px-3 focus:outline-none focus:border-brand-500"
-                    />
-                    <input
-                      name="name_en"
-                      required
-                      dir="ltr"
-                      placeholder="Phase name (English)"
-                      className="text-sm h-9 rounded-lg border border-hairline bg-surface px-3 focus:outline-none focus:border-brand-500"
-                    />
-                    <input
-                      name="order"
-                      type="number"
-                      defaultValue={phaseCount}
-                      className="w-20 text-sm h-9 rounded-lg border border-hairline bg-surface px-3 focus:outline-none focus:border-brand-500"
-                    />
-                    <Button type="submit" variant="primary" size="sm">{m.btnAdd}</Button>
-                  </form>
+                  <PhaseCreateForm projectId={project.id} nextOrder={phaseCount} locale={locale} />
                 </details>
               )}
             </div>
