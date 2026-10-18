@@ -785,7 +785,13 @@ export class VisitsService {
     const todayEnd = todayStart ? new Date(todayStart.getTime() + 86_400_000) : undefined;
 
     const where: Prisma.VisitAppointmentWhereInput = {
-      ...(dto.status ? { status: dto.status } : {}),
+      // "Upcoming" is a visit still to happen: a completed or cancelled one
+      // later today was counted as upcoming on the sales home pages.
+      ...(dto.status
+        ? { status: dto.status }
+        : dto.open === 'true'
+          ? { status: { notIn: FINAL_STATUSES } }
+          : {}),
       ...(dto.projectId ? { projectId: dto.projectId } : {}),
       ...(dto.assignedSalesId ? { assignedSalesId: dto.assignedSalesId } : {}),
       ...(dto.leadId ? { leadId: dto.leadId } : {}),

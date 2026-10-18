@@ -161,7 +161,7 @@ export async function SalesManagerDashboard() {
       `/reservations?status=PENDING,APPROVED&expiresFrom=${nowIso}&expiresTo=${in7DaysIso}&pageSize=1`,
     )),
     safe(api.get<Paged<VisitAppointment>>(
-      `/visits/appointments?scheduledFrom=${nowIso}&pageSize=50`,
+      `/visits/appointments?scheduledFrom=${nowIso}&open=true&pageSize=50`,
     )),
   ]);
 

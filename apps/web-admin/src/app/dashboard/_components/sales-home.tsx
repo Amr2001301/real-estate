@@ -203,7 +203,7 @@ export async function SalesDashboard({ userId }: { userId: string }) {
         `/reservations?status=PENDING,APPROVED&expiresFrom=${nowIso}&expiresTo=${in7DaysIso}&sort=expiresAt&pageSize=50`,
       )),
       safe(api.get<Paged<VisitAppointment>>(
-        `/visits/appointments?assignedSalesId=${userId}&scheduledFrom=${nowIso}&pageSize=50`,
+        `/visits/appointments?assignedSalesId=${userId}&scheduledFrom=${nowIso}&open=true&pageSize=50`,
       )),
       safe(api.get<Paged<unknown>>('/units?status=AVAILABLE&pageSize=1')),
       // The company's month (its time zone), not UTC's.
