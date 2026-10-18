@@ -19,7 +19,7 @@ import { getSession } from '@/lib/session';
 import { ExportMenu } from '@/components/export-menu';
 import type { CancellationSuggestion, Contract, ContractAmendment, ContractCancellationView } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
-import { getReportsCurrency } from '@/lib/currency';
+import { getCompanyTimeZone, getReportsCurrency, todayIn } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { getLocale } from '@/lib/locale';
 import { printT } from '@/messages/print';
@@ -34,6 +34,7 @@ import { AmendmentsPanel } from './amendments-panel';
 import { PlanChangesPanel } from './plan-changes-panel';
 import { AssignContractNumber } from './assign-number';
 import { SignFollowupsAlert } from './sign-followups-alert';
+import { SignContract } from './sign-contract';
 import { CancelContract } from './cancel-contract';
 import { CancellationPanel } from './cancellation-panel';
 import { HandoverPanel } from './handover-panel';
@@ -87,7 +88,7 @@ export default async function ContractDetailPage({
   const CMD_ICON =
     'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[15px] [&_svg]:w-[15px]';
 
-  const currency = await getReportsCurrency();
+  const [currency, timeZone] = await Promise.all([getReportsCurrency(), getCompanyTimeZone()]);
   const r = await safe(api.get<Contract>(`/contracts/${id}`));
 
   if (r.error || !r.data) {
@@ -192,7 +193,12 @@ export default async function ContractDetailPage({
                   {contract.signedAt ? (
                     <span className="text-[13px] font-semibold text-success-700">{formatDateTime(contract.signedAt, locale)}</span>
                   ) : (
-                    <span className="text-[13px] text-slate-400">{m.notSigned}</span>
+                    <>
+                      <span className="text-[13px] text-slate-400">{m.notSigned}</span>
+                      {isAdmin && !isCancelled && (
+                        <SignContract contractId={contract.id} today={todayIn(timeZone)} locale={locale} />
+                      )}
+                    </>
                   )}
                 </Field>
                 <Field label={m.fieldCreatedAt}>
