@@ -758,11 +758,13 @@ export class ContractAmendmentsService {
         installments: {
           where: { status: { in: OPEN_STATUSES }, type: { notIn: SURCHARGE_TYPES } },
           orderBy: { dueDate: 'asc' },
-          select: { id: true, amount: true },
+          select: { id: true, amount: true, type: true },
         },
       },
     });
-    const open = plan?.installments ?? [];
+    // The markup is on the financed part: the unpaid down payment keeps its
+    // amount (it was rescaled with the rest — 400,000 → 350,230.41).
+    const open = financedFirst(plan?.installments ?? []);
     const amounts = open.length > 0 ? rescaleUnpaid(open.map((i) => Number(i.amount)), -dto.amount) : null;
     if (!amounts) throw new BadRequestException('الإعفاء أكبر مما تبقى من أقساط غير مدفوعة');
     const rescaled = open.map((i, k) => ({ id: i.id, amount: amounts[k]! }));
@@ -1013,7 +1015,7 @@ export class ContractAmendmentsService {
         installments: {
           where: { status: { in: OPEN_STATUSES }, type: { notIn: SURCHARGE_TYPES } },
           orderBy: { dueDate: 'asc' },
-          select: { id: true, amount: true, dueDate: true },
+          select: { id: true, amount: true, dueDate: true, type: true },
         },
       },
     });
@@ -1022,7 +1024,9 @@ export class ContractAmendmentsService {
     let rescaled: Array<{ id: string; amount: number }> = [];
     let extraRow: { amount: number; dueDate: Date } | null = null;
     if (plan && delta !== 0) {
-      const open = plan.installments;
+      // The instalments absorb the new price; an unpaid down payment keeps
+      // its amount (it doubled on a swap: 110,000 → 226,321.83).
+      const open = financedFirst(plan.installments);
       if (open.length > 0) {
         const amounts = rescaleUnpaid(open.map((i) => Number(i.amount)), delta);
         if (!amounts) {
@@ -1191,4 +1195,14 @@ export class ContractAmendmentsService {
     }
     return amendment;
   }
+}
+
+/**
+ * The unpaid rows a markup waiver or a unit swap spreads over: the
+ * instalments and the final payment, not the down payment — unless only the
+ * down payment is left to pay.
+ */
+function financedFirst<T extends { type: PlanPaymentType }>(open: T[]): T[] {
+  const financed = open.filter((i) => i.type !== PlanPaymentType.DOWN_PAYMENT);
+  return financed.length > 0 ? financed : open;
 }

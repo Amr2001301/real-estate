@@ -77,6 +77,7 @@ import { CONTRACT_CANCELLED_MESSAGE, LIVE_CONTRACT_WHERE, isDeadContract } from 
 import { ContractRefundsService, RecordRefundDto } from './contract-refunds.service';
 import { assertUnitOnSale } from '../projects/inventory-blockers';
 import { assertDiscountAllowed, discountPct } from '../installments/discount-policy';
+import { financingMarkup, MARKUP_SNAPSHOT_SELECT } from '../../common/finance/commission-basis';
 
 // ── P12 legacy backfill helpers ─────────────────────────────────────────────
 // Pure (exported for unit tests). Derive safe display metadata for a backfilled
@@ -718,6 +719,7 @@ export class ContractsService {
             commissionLockedAmount: true,
             sales: { select: { id: true, fullName: true, email: true, phone: true } },
             lead: { select: { id: true, fullName: true, phone: true } },
+            ...MARKUP_SNAPSHOT_SELECT,
           },
         },
         installmentPlan: { include: { installments: { orderBy: { dueDate: 'asc' } } } },
@@ -738,7 +740,13 @@ export class ContractsService {
       },
     });
     if (!contract) throw new NotFoundException('Contract not found');
-    return { ...contract, signFollowupFailed: await this.signFollowupFailed(id) };
+    return {
+      ...contract,
+      // The instalment markup still in the total (the swap form adds it to
+      // the new unit's price — entered without it, the contract lost it).
+      markupLeft: financingMarkup(contract.reservation ?? undefined, contract.markupWaived).toString(),
+      signFollowupFailed: await this.signFollowupFailed(id),
+    };
   }
 
   /**
