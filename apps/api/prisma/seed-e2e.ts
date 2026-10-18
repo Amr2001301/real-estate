@@ -54,6 +54,8 @@ export const E2E_USERS = {
   CLIENT_1: { email: 'client@example.com', password: 'ClientPass1!!', fullName: 'E2E Client' },
   CUSTOMER_1: { email: 'customer@example.com', password: 'CustomerPass1!', fullName: 'E2E Customer' },
   CUSTOMER_2: { email: 'customer2@example.com', password: 'CustomerPass2!', fullName: 'E2E Customer Two' },
+  // The platform owner (no company), for the super-admin dashboard specs.
+  SUPER_ADMIN: { email: 'platform@example.com', password: 'PlatformPass1!!', fullName: 'E2E Platform Owner' },
 } as const;
 
 /** Stable, unique broker firm codes — idempotent upsert key. */
@@ -100,6 +102,17 @@ async function main(): Promise<void> {
     upsertE2EUser(defaultCompany.id, E2E_USERS.CUSTOMER_1.email, E2E_USERS.CUSTOMER_1.password, E2E_USERS.CUSTOMER_1.fullName, UserRole.CUSTOMER),
     upsertE2EUser(defaultCompany.id, E2E_USERS.CUSTOMER_2.email, E2E_USERS.CUSTOMER_2.password, E2E_USERS.CUSTOMER_2.fullName, UserRole.CUSTOMER),
   ]);
+  // A SUPER_ADMIN belongs to no company (loginSuperAdmin requires companyId = null).
+  {
+    const { email, password, fullName } = E2E_USERS.SUPER_ADMIN;
+    const passwordHash = await argon2.hash(password);
+    const existing = await prisma.user.findFirst({ where: { email, role: UserRole.SUPER_ADMIN }, select: { id: true } });
+    if (existing) {
+      await prisma.user.update({ where: { id: existing.id }, data: { passwordHash, fullName } });
+    } else {
+      await prisma.user.create({ data: { email, passwordHash, fullName, role: UserRole.SUPER_ADMIN, locale: 'en', companyId: null } });
+    }
+  }
 
   console.log('🌱 [e2e] Step 3/4 — upserting 2 broker firms + linking each broker user…');
   const broker1Firm = await prisma.broker.upsert({

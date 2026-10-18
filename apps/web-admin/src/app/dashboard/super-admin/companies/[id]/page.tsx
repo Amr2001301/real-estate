@@ -43,7 +43,8 @@ interface CompanyDetail {
   subscriptionStartAt: string | null; subscriptionEndAt: string | null;
   maxUsers: number | null; cancelledAt: string | null; cancelReason: string | null;
   createdAt: string; updatedAt: string;
-  _count: { users: number };
+  // Staff and customers (not SUPER_ADMIN) — as the API names it.
+  userCount: number;
   users: Array<{
     id: string; fullName: string; email: string | null;
     role: string; active: boolean; lastLoginAt: string | null; createdAt: string;
@@ -151,7 +152,7 @@ export default function CompanyDetailPage() {
             </span>
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-500 px-2.5 py-0.5 text-[11px] font-semibold">
               <Users className="h-3 w-3" />
-              {company._count.users}{company.maxUsers ? ` / ${company.maxUsers}` : ''}
+              {company.userCount}{company.maxUsers ? ` / ${company.maxUsers}` : ''}
             </span>
           </>
         }
@@ -234,7 +235,7 @@ export default function CompanyDetailPage() {
                   </Field>
                   <Field label={m.detail.fields.usersCount}>
                     <span className="text-[13px] tabular-nums text-slate-700">
-                      {company._count.users}
+                      {company.userCount}
                       {company.maxUsers ? ` / ${company.maxUsers}` : ''}
                     </span>
                   </Field>
@@ -254,7 +255,7 @@ export default function CompanyDetailPage() {
 
             {/* Users */}
             <PremiumSectionCard
-              title={`${m.detail.usersTitle} (${company._count.users})`}
+              title={`${m.detail.usersTitle} (${company.userCount})`}
               icon={<Users />}
               trailing={
                 !showAddAdmin && (

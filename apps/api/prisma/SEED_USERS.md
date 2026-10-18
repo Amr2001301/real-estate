@@ -32,6 +32,7 @@ additional fixtures for future Phase 7B+ flows.
 | 8 | `client@example.com` | `ClientPass1!!` | `CLIENT` | e2e seed | Active client used by future Flow B/C (visit requests). |
 | 9 | `customer@example.com` | `CustomerPass1!` | `CUSTOMER` | e2e seed | Customer with a contract + deposit + maintenance request (added by e2e seed as `// PHASE_7B` baseline). Drives future Flow E/F. |
 | 10 | `customer2@example.com` | `CustomerPass2!` | `CUSTOMER` | e2e seed | Second customer used for cross-account ownership-guard negative tests in future Flow E. |
+| 11 | `platform@example.com` | `PlatformPass1!!` | `SUPER_ADMIN` | e2e seed | Platform owner (no company). Logs in at `/super-admin/login`; used by the web-admin super-admin specs. |
 
 ## Broker scoping
 
