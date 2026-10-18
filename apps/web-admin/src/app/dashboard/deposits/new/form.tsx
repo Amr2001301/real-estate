@@ -16,6 +16,7 @@ import { formatCurrency, formatDate } from '@/lib/format';
 import type { Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { recordDepositAction, type DepositFormState } from '../actions';
+import { nowWallTime } from '@/lib/zoned-time';
 
 interface Props {
   /** Pre-selected when the page is opened from a contract (?contractId=). */
@@ -180,7 +181,7 @@ export default function RecordDepositForm({ initialContract, currency, locale = 
                   id="paidAt"
                   name="paidAt"
                   type="datetime-local"
-                  defaultValue={new Date().toISOString().slice(0, 16)}
+                  defaultValue={nowWallTime()}
                   className={inputClass}
                 />
               </Field>

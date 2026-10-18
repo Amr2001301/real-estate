@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { depositPayload } from '@/lib/deposit-payload';
+import { getCompanyTimeZone } from '@/lib/currency';
 
 export interface DepositFormState {
   error?: string;
@@ -19,7 +20,7 @@ export async function recordDepositAction(
   const payload = depositPayload(formData, {
     contractId: String(formData.get('contractId') ?? ''),
     installmentId: String(formData.get('installmentId') ?? '').trim() || undefined,
-  });
+  }, await getCompanyTimeZone());
   try {
     await api.post('/deposits', payload);
   } catch (e) {

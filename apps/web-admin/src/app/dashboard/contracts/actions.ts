@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { api } from '@/lib/api';
 import { depositPayload } from '@/lib/deposit-payload';
+import { getCompanyTimeZone } from '@/lib/currency';
+import { wallTimeToIso } from '@/lib/zoned-time';
 
 export interface ContractFormState {
   error?: string;
@@ -25,7 +27,8 @@ export async function createContractAction(
     pdfUrl: String(formData.get('pdfUrl') ?? '') || undefined,
     contractNumber: String(formData.get('contractNumber') ?? '').trim() || undefined,
   };
-  const signedAt = String(formData.get('signedAt') ?? '') || undefined;
+  const signedAtRaw = String(formData.get('signedAt') ?? '').trim();
+  const signedAt = signedAtRaw ? wallTimeToIso(signedAtRaw, await getCompanyTimeZone()) : undefined;
 
   let created: { id: string };
   try {
@@ -140,7 +143,7 @@ export async function recordInstallmentPaymentAction(
 ): Promise<{ error?: string }> {
   // The same body as the "تسجيل دفعة" page: the row used to be saved with
   // no payment method, out of every method report and reconciliation.
-  const payload = depositPayload(formData, { contractId, installmentId });
+  const payload = depositPayload(formData, { contractId, installmentId }, await getCompanyTimeZone());
   try {
     await api.post('/deposits', payload);
   } catch (e) {

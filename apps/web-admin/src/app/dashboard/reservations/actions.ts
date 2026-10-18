@@ -3,6 +3,8 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { ApiError, api } from '@/lib/api';
+import { getCompanyTimeZone } from '@/lib/currency';
+import { wallTimeToIso } from '@/lib/zoned-time';
 
 export interface ReservationFormState {
   error?: string;
@@ -223,7 +225,8 @@ export async function convertReservationAction(
   // The convert UI still exposes the optional signedAt field; we split
   // the flow here.
   const startsAt = String(formData.get('startsAt') ?? '').trim() || undefined;
-  const signedAt = String(formData.get('signedAt') ?? '').trim() || undefined;
+  const signedAtRaw = String(formData.get('signedAt') ?? '').trim();
+  const signedAt = signedAtRaw ? wallTimeToIso(signedAtRaw, await getCompanyTimeZone()) : undefined;
   const pdfUrl = String(formData.get('pdfUrl') ?? '').trim() || undefined;
   // P12 — forward the uploaded file's metadata so the registered CONTRACT
   // document carries a proper name/type/size in the Documents Center. Only
@@ -293,7 +296,7 @@ export async function confirmBookingPaymentAction(
   const note = String(formData?.get('note') ?? '').trim() || undefined;
   const paymentMethod = String(formData?.get('paymentMethod') ?? '').trim() || undefined;
   const payload: Record<string, unknown> = {};
-  if (paidAtRaw) payload.paidAt = new Date(paidAtRaw).toISOString();
+  if (paidAtRaw) payload.paidAt = wallTimeToIso(paidAtRaw, await getCompanyTimeZone());
   if (note) payload.note = note;
   if (paymentMethod) payload.paymentMethod = paymentMethod;
   // A cheque is tracked on the Cheques screen; the booking counts as paid

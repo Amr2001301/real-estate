@@ -71,11 +71,26 @@ export function formatDate(value: string | Date | null | undefined, locale: Loca
   return new Intl.DateTimeFormat(INTL[locale], { dateStyle: 'medium' }).format(d);
 }
 
-export function formatDateTime(value: string | Date | null | undefined, locale: Locale = 'ar'): string {
+/**
+ * Times are shown in the company's zone — Cairo, the platform's default
+ * (company.timezone defaults to it). Formatted without one they took the
+ * server's: on Vercel (UTC) every time read three hours behind.
+ */
+export const DEFAULT_TIME_ZONE = 'Africa/Cairo';
+
+export function formatDateTime(
+  value: string | Date | null | undefined,
+  locale: Locale = 'ar',
+  timeZone: string = DEFAULT_TIME_ZONE,
+): string {
   if (!value) return '—';
   const d = typeof value === 'string' ? new Date(value) : value;
   if (Number.isNaN(d.getTime())) return '—';
-  return new Intl.DateTimeFormat(INTL[locale], { dateStyle: 'medium', timeStyle: 'short' }).format(d);
+  try {
+    return new Intl.DateTimeFormat(INTL[locale], { dateStyle: 'medium', timeStyle: 'short', timeZone }).format(d);
+  } catch {
+    return new Intl.DateTimeFormat(INTL[locale], { dateStyle: 'medium', timeStyle: 'short' }).format(d);
+  }
 }
 
 export interface Translatable { ar: string; en: string }
