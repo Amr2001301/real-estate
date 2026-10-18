@@ -27,6 +27,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { normalizeHostname, InvalidHostnameError } from '../../common/utils/hostname-normalize';
 import type { PatchCompanyBrandingDto } from './dto/patch-company-branding.dto';
 import { ReportBrandService } from './report-brand.service';
+import { companyTimeZone } from '../../common/time/company-timezone';
 
 export const BRANDING_CACHE_REDIS = Symbol('BRANDING_CACHE_REDIS');
 
@@ -198,6 +199,11 @@ export class CompanyBrandingService {
   /** The company's currency (normalized; unsupported values read as the default). */
   async getCurrency(companyId: string): Promise<CurrencyCode> {
     return getCompanyCurrency(this.prisma, companyId);
+  }
+
+  /** The company's time zone (setting company.timezone, default Africa/Cairo). */
+  async getTimeZone(companyId: string): Promise<string> {
+    return companyTimeZone(this.prisma, companyId);
   }
 
   /** Admin write — persists branding fields and invalidates cache. */

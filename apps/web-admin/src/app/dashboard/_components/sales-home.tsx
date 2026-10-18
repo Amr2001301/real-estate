@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getCompanyTimeZone, todayIn } from '@/lib/currency';
 import {
   Zap,
   CalendarClock,
@@ -205,7 +206,8 @@ export async function SalesDashboard({ userId }: { userId: string }) {
         `/visits/appointments?assignedSalesId=${userId}&scheduledFrom=${nowIso}&pageSize=50`,
       )),
       safe(api.get<Paged<unknown>>('/units?status=AVAILABLE&pageSize=1')),
-      safe(api.get<PerformanceRow[]>(`/sales-targets/performance?period=${nowIso.slice(0, 7)}`)),
+      // The company's month (its time zone), not UTC's.
+      safe(api.get<PerformanceRow[]>(`/sales-targets/performance?period=${todayIn(await getCompanyTimeZone()).slice(0, 7)}`)),
     ]);
 
   const leadStages  = leadsRes.data?.meta.facets?.counts?.stage ?? {};

@@ -290,8 +290,12 @@ Four read-only audits of every money figure (reports, dashboard, exports, the sc
 
 - **W2 — reschedule and the final payment (decided 2026-10-18):** an unpaid final (balloon) payment due before the new schedule ends moves to a month after its last row, and its unpaid late fees are waived. e2e: `e2e-w2-reschedule-final`.
 
+- **W3 — company time zone on the web (decided 2026-10-18):** `GET /company/currency` also returns `timeZone` (setting `company.timezone`).
+  - The web reads it with `getCompanyTimeZone()` / `todayIn()` in `lib/currency.ts`.
+  - It sets the reports' default month and the running-period cap, the sales homes' and performance page's month, and the dashboard greeting/date. These were UTC or hard-coded Cairo before.
+  - e2e: `e2e-w3-company-timezone`.
+
 Left for the owner, not in V1–V3:
-- The default report month and the sales home's month are UTC on the web, so the first 2–3 hours of a month in Cairo still show the previous month.
 - The leaderboard share % is of the top 10 brokers.
 
 ## 5. Other open items

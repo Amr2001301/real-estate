@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import { compactParts, intlLocale } from '@/lib/format';
-import { getReportsCurrency, currencySymbol } from '@/lib/currency';
+import { getReportsCurrency, currencySymbol, getCompanyTimeZone } from '@/lib/currency';
 import { getLocale, type Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
@@ -146,12 +146,12 @@ function pctDelta(current: number, prev: number): number | null {
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
-/** The greeting and the date line, on Cairo time (the platform's companies are Egyptian). */
-function greetingAndDate(locale: Locale, m: ReturnType<typeof uiT>['pages']['dashboard']) {
+/** The greeting and the date line, on the company's time (its time zone setting). */
+function greetingAndDate(locale: Locale, m: ReturnType<typeof uiT>['pages']['dashboard'], timeZone: string) {
   const now = new Date();
-  const hour = Number(new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hourCycle: 'h23', timeZone: 'Africa/Cairo' }).format(now));
+  const hour = Number(new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hourCycle: 'h23', timeZone }).format(now));
   const date = new Intl.DateTimeFormat(intlLocale(locale), {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Africa/Cairo',
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone,
   }).format(now);
   return { greeting: hour < 12 ? m.u5.greetingMorning : m.u5.greetingEvening, date };
 }
@@ -181,7 +181,7 @@ export default async function DashboardHome() {
   const error   = r.error;
   const kpis    = summary?.kpis;
   const fin     = summary?.financial;
-  const { greeting, date } = greetingAndDate(locale, m);
+  const { greeting, date } = greetingAndDate(locale, m, await getCompanyTimeZone());
 
   // ── Band ──
   const total     = fin?.totalContractValue ?? 0;

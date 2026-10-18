@@ -9,7 +9,7 @@ import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
 import { projectOptions } from '@/lib/options';
 import { compactParts, tx, formatCurrency } from '@/lib/format';
-import { getReportsCurrency, currencySymbol } from '@/lib/currency';
+import { getReportsCurrency, currencySymbol, getCompanyTimeZone, todayIn } from '@/lib/currency';
 import {
   resolveReportDateRange,
   resolveComparisonDateRange,
@@ -119,10 +119,12 @@ export default async function ReportsPage({
     EXPIRED:   m.reservationStatus.statusLabels.EXPIRED,
   };
 
-  const resolved = resolveReportDateRange(sp);
+  // The company's today: its month is the default, a running period is capped at it.
+  const today    = todayIn(await getCompanyTimeZone());
+  const resolved = resolveReportDateRange(sp, today);
   const { dateFrom, dateTo, year, mode, month, quarter } = resolved;
   const compare  = (sp.compare ?? 'none') as CompareMode;
-  const cmpRange = resolveComparisonDateRange(resolved, compare);
+  const cmpRange = resolveComparisonDateRange(resolved, compare, today);
   const qs       = `dateFrom=${dateFrom}&dateTo=${dateTo}`;
 
   const [

@@ -13,7 +13,7 @@ import {
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
 import { formatCurrency, intlLocale } from '@/lib/format';
-import { getReportsCurrency } from '@/lib/currency';
+import { getReportsCurrency, getCompanyTimeZone, todayIn } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { PremiumPageHero, PremiumMetricStrip, PremiumSectionCard, PremiumFilterBar, PremiumFilterField, PremiumEmptyState } from '@/components/premium';
@@ -71,8 +71,9 @@ interface SalesActor {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function currentPeriod(): string {
-  return new Date().toISOString().slice(0, 7);
+// The company's month (its time zone), not UTC's.
+async function currentPeriod(): Promise<string> {
+  return todayIn(await getCompanyTimeZone()).slice(0, 7);
 }
 
 interface Theme { bar: string; text: string; accent: string; badge: string; label: string }
@@ -88,7 +89,7 @@ export default async function SalesPerformancePage({
 
   const sp     = await searchParams;
   const currency = await getReportsCurrency();
-  const period = sp.period ?? currentPeriod();
+  const period = sp.period ?? (await currentPeriod());
 
   const [y, mo] = period.split('-');
   const periodStr = `${m.months[parseInt(mo ?? '1', 10) - 1] ?? mo} ${y}`;

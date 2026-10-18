@@ -68,7 +68,13 @@ export class CompanyCurrencyController {
   @Get()
   async getCurrency(@CurrentUser() user: AuthUser) {
     if (!user?.companyId) throw new ForbiddenException('No associated company');
-    return { currency: await this.service.getCurrency(user.companyId) };
+    // The time zone too: the web picks "this month" and "today" in it, not
+    // in UTC (the first hours of a month in Cairo showed the last month).
+    const [currency, timeZone] = await Promise.all([
+      this.service.getCurrency(user.companyId),
+      this.service.getTimeZone(user.companyId),
+    ]);
+    return { currency, timeZone };
   }
 }
 
