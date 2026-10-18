@@ -12,6 +12,7 @@ import { markAllNotificationsReadAction } from '@/app/_actions/notifications';
 import { AdminNotificationRow } from './notification-row';
 import type { Locale } from '@/lib/locale';
 import { portalSharedT } from '@/messages/portal/shared';
+import { DEFAULT_TIME_ZONE } from '@/lib/format';
 
 interface Props {
   items: NotificationItem[];
@@ -185,7 +186,7 @@ function formatCompact(value: string, dateLocale: string): string {
   const now = new Date();
   const isToday = d.toDateString() === now.toDateString();
   if (isToday) {
-    return new Intl.DateTimeFormat(dateLocale, { timeStyle: 'short' }).format(d);
+    return new Intl.DateTimeFormat(dateLocale, { timeStyle: 'short', timeZone: DEFAULT_TIME_ZONE }).format(d);
   }
   return new Intl.DateTimeFormat(dateLocale, { dateStyle: 'short' }).format(d);
 }

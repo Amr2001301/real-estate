@@ -7,6 +7,7 @@ import { rescheduleVisitAction } from '../actions';
 import { salesActorLabel } from '@/lib/sales-actor';
 import { uiT } from '@/messages/ui';
 import type { Locale } from '@/lib/locale';
+import { nowWallTime } from '@/lib/zoned-time';
 
 interface Props {
   appointmentId: string;
@@ -44,7 +45,8 @@ export function RescheduleModal({
     INITIAL,
   );
 
-  const defaultDate = currentScheduledAt ? currentScheduledAt.slice(0, 16) : '';
+  // The visit's time as the viewer's clock shows it, not its UTC digits.
+  const defaultDate = currentScheduledAt ? nowWallTime(new Date(currentScheduledAt)) : '';
 
   return (
     <Dialog

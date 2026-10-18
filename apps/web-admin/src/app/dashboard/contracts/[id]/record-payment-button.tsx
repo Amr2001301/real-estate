@@ -9,6 +9,7 @@ import { uiT } from '@/messages/ui';
 import { recordInstallmentPaymentAction } from '../actions';
 import { PaymentMethodFields } from '@/components/deposits/payment-method-fields';
 import { formatCurrency, formatDate } from '@/lib/format';
+import { nowWallTime } from '@/lib/zoned-time';
 
 interface Props {
   contractId:      string;
@@ -83,7 +84,7 @@ export function RecordPaymentButton({ contractId, installmentId, amount, dueDate
             id="paidAt"
             name="paidAt"
             type="datetime-local"
-            defaultValue={new Date().toISOString().slice(0, 16)}
+            defaultValue={nowWallTime()}
             className={inputClass}
           />
         </Field>

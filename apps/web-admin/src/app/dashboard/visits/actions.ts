@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { api } from '@/lib/api';
+import { getCompanyTimeZone } from '@/lib/currency';
+import { wallTimeToIso } from '@/lib/zoned-time';
 
 export interface VisitFormState {
   error?: string;
@@ -48,7 +50,8 @@ export async function createVisitAction(
       projectId,
       unitId,
       assignedSalesId,
-      scheduledAt: new Date(scheduledAt).toISOString(),
+      // The time typed is the company's, not the server's (UTC on Vercel).
+      scheduledAt: wallTimeToIso(scheduledAt, await getCompanyTimeZone()),
       durationMinutes,
       location,
       meetingPoint,
@@ -75,7 +78,7 @@ export async function updateRequestStatusAction(requestId: string, formData: For
 }
 
 export async function scheduleVisitAction(requestId: string, formData: FormData) {
-  const scheduledAt = String(formData.get('scheduledAt'));
+  const scheduledAt = wallTimeToIso(String(formData.get('scheduledAt')), await getCompanyTimeZone());
   const assignedSalesId = formData.get('assignedSalesId') as string | null;
   const durationMinutes = formData.get('durationMinutes');
   const location = formData.get('location') as string | null;
@@ -134,7 +137,7 @@ export async function updateAppointmentStatusAction(appointmentId: string, formD
 }
 
 export async function rescheduleVisitAction(appointmentId: string, formData: FormData) {
-  const scheduledAt = String(formData.get('scheduledAt'));
+  const scheduledAt = wallTimeToIso(String(formData.get('scheduledAt')), await getCompanyTimeZone());
   const assignedSalesId = formData.get('assignedSalesId') as string | null;
   const location = formData.get('location') as string | null;
   const meetingPoint = formData.get('meetingPoint') as string | null;
