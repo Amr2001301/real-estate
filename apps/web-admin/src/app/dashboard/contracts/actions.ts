@@ -51,26 +51,17 @@ export async function createContractAction(
   redirect(`/dashboard/contracts/${created.id}`);
 }
 
-export async function updateContractAction(
-  id: string,
-  formData: FormData,
-) {
-  const pdfUrl = String(formData.get('pdfUrl') ?? '') || undefined;
-  const signedAt = String(formData.get('signedAt') ?? '') || undefined;
-
-  // Generic update — pdfUrl only. The API no longer accepts signedAt on PATCH.
-  if (pdfUrl !== undefined) {
-    await api.patch(`/contracts/${id}`, { pdfUrl });
-  }
-
-  // Signing is a separate action (requires the strict `contracts:sign`
-  // permission). Idempotent server-side: re-signing an already-signed
-  // contract is a no-op.
-  if (signedAt) {
+// Signing is its own step (the strict `contracts:sign` permission): a contract
+// converted without a signing date stayed unsigned, with no way to sign it.
+export async function signContractAction(id: string, signedAt: string): Promise<ContractFormState> {
+  try {
     await api.post(`/contracts/${id}/sign`, { signedAt });
+  } catch (e) {
+    return { error: (e as Error).message };
   }
-
   revalidatePath(`/dashboard/contracts/${id}`);
+  revalidatePath('/dashboard/contracts');
+  return {};
 }
 
 // FG-04 — numbers a contract that has none; empty → the API assigns the next one.
