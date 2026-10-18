@@ -208,7 +208,7 @@ export default async function ContractDetailPage({
                 <Field label={uiT(locale).common.lateFeeClause.label}>
                   <LateFeeClause
                     contractId={contract.id}
-                    applies={contract.lateFeesApply ?? true}
+                    applies={contract.lateFeesApply ?? false}
                     editable={isAdmin && !isCancelled}
                     locale={locale}
                   />

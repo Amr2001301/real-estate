@@ -548,18 +548,23 @@ export class InstallmentsService {
   }
 
   /**
-   * Daily, after markOverdue: charge the late-payment fee (company setting
-   * lateFee.*, off by default) on overdue installments of live contracts.
+   * Daily, after markOverdue: charge the late-payment fee on overdue
+   * installments of live contracts that have a late-fee clause, at the
+   * company's lateFee.* rate and grace period.
    * Fees are never charged on a fee, a transfer fee or a cheque penalty, nor while a payment
    * for the installment waits for review or for its cheque to clear.
    */
   async applyLateFees(now = new Date()) {
     await this.trackLateFeeClock(now);
-    const enabledRows = await this.prisma.setting.findMany({
-      where: { key: 'lateFee.enabled' },
-      select: { companyId: true, value: true },
-    });
-    const companyIds = enabledRows.filter((r) => r.value === true).map((r) => r.companyId);
+    // The contract decides, not a company switch: every company with a
+    // contract that has a late-fee clause.
+    const companyIds = (
+      await this.prisma.contract.findMany({
+        where: { lateFeesApply: true, deletedAt: null, companyId: { not: null } },
+        distinct: ['companyId'],
+        select: { companyId: true },
+      })
+    ).map((c) => c.companyId as string);
     let charged = 0;
     for (const companyId of companyIds) {
       try {
@@ -601,7 +606,6 @@ export class InstallmentsService {
         select: { key: true, value: true },
       }),
     );
-    if (!settings.enabled) return 0;
     const timeZone = await companyTimeZone(this.prisma, companyId);
     const dueDate = feeDueDate(
       now,

@@ -77,6 +77,8 @@ describe('U3a — customer schedule, notices and chasing (e2e)', () => {
         data: {
           companyId, customerId, unitId, totalAmount: 100_000, status: ContractStatus.ACTIVE,
           signedAt: new Date(), contractNumber: `U3A-${stamp}`,
+          // A contract with a late-fee clause (only those are charged).
+          lateFeesApply: true,
         },
         select: { id: true },
       })

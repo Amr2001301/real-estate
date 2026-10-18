@@ -12,7 +12,7 @@ const API_BASE = process.env.E2E_API_BASE_URL ?? 'http://localhost:4000';
  * contract page shows its late-fee clause and the admin turns it on or off
  * as the signed contract says.
  */
-test('the admin removes and restores a contract’s late-fee clause', async ({
+test('the admin adds and removes a contract’s late-fee clause', async ({
   page,
   request,
   context,
@@ -28,12 +28,13 @@ test('the admin removes and restores a contract’s late-fee clause', async ({
 
   await gotoReady(page, `/dashboard/contracts/${contractId}`);
   const clause = page.getByTestId('late-fee-clause');
-  await expect(clause).toContainText('العقد ينص على غرامة تأخير');
-  await clause.getByRole('button', { name: 'إزالة بند الغرامة' }).click();
+  // The seeded contract has no clause (the default): add it, then remove it.
   await expect(clause).toContainText('لا غرامة تأخير في العقد');
-  expect(await applies()).toBe(false);
-
   await clause.getByRole('button', { name: 'إضافة بند الغرامة' }).click();
   await expect(clause).toContainText('العقد ينص على غرامة تأخير');
   expect(await applies()).toBe(true);
+
+  await clause.getByRole('button', { name: 'إزالة بند الغرامة' }).click();
+  await expect(clause).toContainText('لا غرامة تأخير في العقد');
+  expect(await applies()).toBe(false);
 });

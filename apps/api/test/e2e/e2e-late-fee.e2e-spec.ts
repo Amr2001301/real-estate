@@ -69,10 +69,13 @@ describe('Late-payment fee (e2e)', () => {
     await raw.installment.deleteMany({ where: { type: PlanPaymentType.LATE_FEE, createdAt: { gte: startedAt } } });
     await raw.auditLog.deleteMany({ where: { action: 'installment.late-fee-waived', createdAt: { gte: startedAt } } });
     await raw.installment.deleteMany({ where: { id: { in: [overdueId, freshId] } } });
-    await raw.contract.update({ where: { id: contractId }, data: { createdAt: contractCreatedAt } });
+    await raw.contract.update({
+      where: { id: contractId },
+      data: { createdAt: contractCreatedAt, lateFeesApply: false },
+    });
   });
 
-  it('LF-1: switched off (the default), the sweep charges nothing', async () => {
+  it('LF-1: a contract without a late-fee clause (the default) is charged nothing', async () => {
     await testApp.runCronJob('late-fee');
     expect(await feesOn(overdueId)).toHaveLength(0);
   });
@@ -82,8 +85,9 @@ describe('Late-payment fee (e2e)', () => {
     await setSetting('lateFee.graceDays', -3).expect(400);
   });
 
-  it('LF-3: switched on, a fee is charged past the grace period — once', async () => {
-    await setSetting('lateFee.enabled', true).expect(200);
+  it('LF-3: with a late-fee clause, a fee is charged past the grace period — once', async () => {
+    // The contract decides; the company sets the rate.
+    await testApp.rawPrisma.contract.update({ where: { id: contractId }, data: { lateFeesApply: true } });
     await setSetting('lateFee.value', 2).expect(200);
     await testApp.runCronJob('late-fee');
     await testApp.runCronJob('late-fee');
@@ -201,7 +205,8 @@ describe('Late-payment fee (e2e)', () => {
     const unit = await raw.unit.findFirstOrThrow({ where: { companyId, status: 'AVAILABLE' }, select: { id: true } });
     const made: string[] = [];
     try {
-      // lateFee.enabled is on (LF-3): the default is a clause.
+      // The company's default for new contracts: a clause.
+      await setSetting('lateFee.enabled', true).expect(200);
       const a = await asAdmin(http().post('/v1/contracts'))
         .send({ customerId: fixtures.userIds.customer1UserId, unitId: unit.id, totalAmount: 1_000_000 })
         .expect(201);

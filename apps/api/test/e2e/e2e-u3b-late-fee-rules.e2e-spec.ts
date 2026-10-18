@@ -89,6 +89,8 @@ describe('U3b — late-fee rules and the chase rule (e2e)', () => {
         data: {
           companyId, customerId, unitId, totalAmount: 100_000, status: ContractStatus.ACTIVE,
           signedAt: new Date(), contractNumber: `U3B-${stamp}`,
+          // A contract with a late-fee clause (only those are charged).
+          lateFeesApply: true,
         },
         select: { id: true },
       })
