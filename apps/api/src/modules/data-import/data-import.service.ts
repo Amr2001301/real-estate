@@ -1065,6 +1065,20 @@ export class DataImportService {
         op = changed ? 'update' : 'unchanged';
       }
 
+      // SOLD and RESERVED come from a contract or a reservation: a file
+      // could mark a unit sold with no sale behind it (inventory and reports
+      // then showed a sale nobody made). A status the unit already has (an
+      // exported file read back) is not a change.
+      if (status !== undefined && status !== UnitStatus.AVAILABLE && status !== existing?.status) {
+        plan._addError({
+          sheet: UNITS_SHEET.name,
+          rowNumber,
+          column: UNITS_SHEET.fields.status,
+          message: `${status}: a unit is SOLD by a contract and RESERVED by a reservation — record the sale or the booking instead`,
+        });
+        return;
+      }
+
       plan.ops.push({
         rowNumber, op, code, projectCode, phaseCode, buildingCode,
         id, buildingId, type, floor, area, bedrooms, bathrooms, price, status,

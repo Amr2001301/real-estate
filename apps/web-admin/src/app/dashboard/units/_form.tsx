@@ -282,17 +282,24 @@ export default function UnitForm({ unit, projects, locale = 'ar' }: Props) {
                     defaultValue={unit?.price as number | undefined}
                   />
                 </Field>
-                <Field label={m.labelStatus} name="status">
-                  <Select id="status" name="status" defaultValue={unit?.status ?? 'AVAILABLE'}>
-                    <option value="AVAILABLE">{m.optionAvailable}</option>
-                    <option value="RESERVED">{m.optionReserved}</option>
-                    <option value="SOLD">{m.optionSold}</option>
-                  </Select>
-                </Field>
-                {unit && (
-                  <Field label={m.labelStatusReason} name="statusReason">
-                    <Input id="statusReason" name="statusReason" placeholder={m.placeholderStatusReason} />
-                  </Field>
+                {/* A unit is sold by a contract and reserved by a reservation,
+                    never by hand: a new unit is for sale, and an existing one
+                    can only be put back on sale (when no deal holds it). */}
+                {unit ? (
+                  <>
+                    <Field label={m.labelStatus} name="status" hint={m.hintStatusFromDeals}>
+                      <Select id="status" name="status" defaultValue={unit.status}>
+                        <option value="AVAILABLE">{m.optionAvailable}</option>
+                        {unit.status === 'RESERVED' && <option value="RESERVED">{m.optionReserved}</option>}
+                        {unit.status === 'SOLD' && <option value="SOLD">{m.optionSold}</option>}
+                      </Select>
+                    </Field>
+                    <Field label={m.labelStatusReason} name="statusReason">
+                      <Input id="statusReason" name="statusReason" placeholder={m.placeholderStatusReason} />
+                    </Field>
+                  </>
+                ) : (
+                  <input type="hidden" name="status" value="AVAILABLE" />
                 )}
               </div>
             </div>
