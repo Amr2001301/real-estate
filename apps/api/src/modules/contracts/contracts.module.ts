@@ -70,6 +70,7 @@ import {
   ChangeContractPriceDto,
   RescheduleContractDto,
   TransferContractDto,
+  WaiveMarkupDto,
 } from './contract-amendments.service';
 import { reportFailure } from '../../common/observability/report-failure';
 import { CONTRACT_CANCELLED_MESSAGE, LIVE_CONTRACT_WHERE, isDeadContract } from '../installments/live-contract';
@@ -1185,6 +1186,18 @@ class ContractsController {
     @Body() dto: ChangeContractPriceDto,
   ) {
     return this.amendments.changePrice(id, dto, user.sub);
+  }
+
+  // Waive unearned instalment markup (early settlement); the price stays.
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('contracts:cancel')
+  @Post(':id/waive-markup')
+  waiveMarkup(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: WaiveMarkupDto,
+  ) {
+    return this.amendments.waiveMarkup(id, dto, user.sub);
   }
 
   // Spread the unpaid monthly installments over a new number of months.

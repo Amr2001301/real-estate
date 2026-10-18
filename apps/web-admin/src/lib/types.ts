@@ -252,7 +252,7 @@ export interface ContractInstallmentPlan {
 
 export interface ContractAmendment {
   id: string;
-  type: 'TRANSFER' | 'UNIT_SWAP' | 'PRICE_CHANGE' | 'RESCHEDULE';
+  type: 'TRANSFER' | 'UNIT_SWAP' | 'PRICE_CHANGE' | 'RESCHEDULE' | 'MARKUP_WAIVER';
   reason: string;
   createdAt: string;
   fromCustomerName: string | null;

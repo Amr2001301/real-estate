@@ -11,6 +11,7 @@ import {
   payInstallmentsAction,
   rescheduleContractAction,
   settleContractAction,
+  waiveMarkupAction,
 } from '../actions';
 
 const INPUT = 'h-9 w-full rounded-lg border border-hairline bg-white px-3 text-sm';
@@ -140,6 +141,25 @@ export function PlanChangesPanel({
           <input name="reason" required minLength={3} maxLength={2000} placeholder={m.amendReason} className={INPUT} />
           <button type="submit" disabled={pending} className={BTN} data-testid="price-submit">
             {m.planPriceBtn}
+          </button>
+        </form>
+
+        <form onSubmit={run(waiveMarkupAction)} className="space-y-3 rounded-xl border border-hairline p-4">
+          <p className="text-sm font-bold text-slate-900">{m.planWaiveTitle}</p>
+          <p className="text-[12px] text-slate-500">{m.planWaiveHint}</p>
+          <input
+            name="amount"
+            type="number"
+            required
+            min={0.01}
+            step="0.01"
+            placeholder={m.planWaiveAmount}
+            aria-label={m.planWaiveAmount}
+            className={INPUT}
+          />
+          <input name="reason" required minLength={3} maxLength={2000} placeholder={m.amendReason} className={INPUT} />
+          <button type="submit" disabled={pending || payable.length === 0} className={BTN} data-testid="waive-markup-submit">
+            {m.planWaiveBtn}
           </button>
         </form>
 

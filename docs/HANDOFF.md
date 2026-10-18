@@ -282,10 +282,15 @@ Four read-only audits of every money figure (reports, dashboard, exports, the sc
     - Top projects include archived ones.
   - e2e: `e2e-v3-report-figures`.
 
+- **W1 — markup waiver (decided 2026-10-18):** `POST contracts/:id/waive-markup` on early settlement waives instalment markup not paid yet.
+  - The total and `Contract.markupWaived` move together, so the sale price, commission, bonus and net sales stay; it is not a discount.
+  - The unpaid rows absorb it. More than the markup left is refused, because that is a price change.
+  - `financingMarkup` / `commissionBasis` / `NET_PRICE_SQL` subtract the waiver.
+  - Amendment type `MARKUP_WAIVER`; the contract page has the form. e2e: `e2e-w1-markup-waiver`.
+
 Left for the owner, not in V1–V3:
 - The default report month and the sales home's month are UTC on the web, so the first 2–3 hours of a month in Cairo still show the previous month.
 - The leaderboard share % is of the top 10 brokers.
-- Early settlement that waives unearned markup goes through a price change, so it lowers the commission base and counts as a discount.
 - A reschedule leaves the final (balloon) payment's date as it was.
 
 ## 5. Other open items

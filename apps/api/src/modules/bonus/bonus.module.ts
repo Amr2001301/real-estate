@@ -314,6 +314,7 @@ export class BonusService {
         id: true,
         signedAt: true,
         totalAmount: true,
+        markupWaived: true,
         reservationId: true,
         reservation: { select: { salesId: true, ...MARKUP_SNAPSHOT_SELECT } },
         bonusEntry: { select: { id: true } },
@@ -342,7 +343,7 @@ export class BonusService {
     const rule = rules[0]!;
 
     // The sale price after discount, without the instalment markup.
-    const basisAmount = commissionBasis(contract.totalAmount, contract.reservation);
+    const basisAmount = commissionBasis(contract.totalAmount, contract.reservation, contract.markupWaived);
     const amount = basisAmount.mul(rule.percentage).div(100);
     const period = contract.signedAt.toISOString().slice(0, 7);
 
@@ -672,7 +673,7 @@ export class BonusService {
       this.prisma.contract.findMany({
         // A cancelled or deleted deal is not a sale.
         where: { signedAt: inPeriod, reservation: { salesId: inReps }, ...LIVE_CONTRACT_WHERE },
-        select: { totalAmount: true, reservation: { select: { salesId: true, ...MARKUP_SNAPSHOT_SELECT } } },
+        select: { totalAmount: true, markupWaived: true, reservation: { select: { salesId: true, ...MARKUP_SNAPSHOT_SELECT } } },
       }),
     ]);
 
@@ -698,13 +699,14 @@ export class BonusService {
     const realizedMap = new Map<string, number>();
     for (const c of signedContracts as Array<{
       totalAmount: Prisma.Decimal;
+      markupWaived: Prisma.Decimal;
       reservation: { salesId: string; snapshotFinancedAmount: Prisma.Decimal | null; snapshotRemainingAmount: Prisma.Decimal | null } | null;
     }>) {
       const sid = c.reservation?.salesId;
       if (!sid) continue;
       signedCountMap.set(sid, (signedCountMap.get(sid) ?? 0) + 1);
       // Sales at their net price, as the bonus base (decided 2026-10-17).
-      realizedMap.set(sid, (realizedMap.get(sid) ?? 0) + Number(commissionBasis(c.totalAmount, c.reservation)));
+      realizedMap.set(sid, (realizedMap.get(sid) ?? 0) + Number(commissionBasis(c.totalAmount, c.reservation, c.markupWaived)));
     }
 
     const targetMap = new Map<string, { amount: number; units: number }>();

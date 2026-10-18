@@ -849,7 +849,7 @@ export class ReportsService {
                     status: true,
                     contracts: {
                       where: { signedAt: { not: null }, ...LIVE_CONTRACT_WHERE },
-                      select: { totalAmount: true, reservation: { select: MARKUP_SNAPSHOT_SELECT } },
+                      select: { totalAmount: true, markupWaived: true, reservation: { select: MARKUP_SNAPSHOT_SELECT } },
                     },
                   },
                 },
@@ -879,7 +879,7 @@ export class ReportsService {
         const signedContracts = contracts.length;
         // The net price, without the instalment markup (decided 2026-10-17).
         const contractValue = contracts.reduce(
-          (s, c) => s + Number(commissionBasis(c.totalAmount, c.reservation)),
+          (s, c) => s + Number(commissionBasis(c.totalAmount, c.reservation, c.markupWaived)),
           0,
         );
         return {

@@ -120,6 +120,7 @@ export class BrokerCommissionsService {
         contractNumber: true,
         signedAt: true,
         totalAmount: true,
+        markupWaived: true,
         brokerId: true,
         brokerAgentId: true,
         reservationId: true,
@@ -192,7 +193,7 @@ export class BrokerCommissionsService {
     let lockedPct = contract.reservation.commissionLockedPct;
     let lockedAmount = contract.reservation.commissionLockedAmount;
     // The sale price after discount, without the instalment markup.
-    const basisAmount = commissionBasis(contract.totalAmount, contract.reservation);
+    const basisAmount = commissionBasis(contract.totalAmount, contract.reservation, contract.markupWaived);
     const projectId = contract.unit.building.phase.projectId;
 
     // When the reservation was created through the admin CRM (not the broker
