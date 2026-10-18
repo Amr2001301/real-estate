@@ -1180,6 +1180,9 @@ model Reservation {
   snapshotMonthlyInstallment Decimal?                       @db.Decimal(14, 2)
   snapshotTotalPayable       Decimal?                       @db.Decimal(14, 2)
   snapshotFinalPaymentAmount Decimal?                       @db.Decimal(14, 2)
+  // A plan priced by instalment count (no duration options): how often its
+  // rows fall. Null = monthly, as every duration option is.
+  snapshotFrequency          InstallmentFrequency?
 
   // ── Broker attribution (additive, all nullable; salesId stays required) ──
   brokerId               String?  @db.Uuid

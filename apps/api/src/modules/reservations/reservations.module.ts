@@ -35,6 +35,7 @@ import { Type } from 'class-transformer';
 import {
   DepositReviewStatus,
   DepositType,
+  InstallmentFrequency,
   PaymentMethod,
   LeadStage,
   NotificationChannel,
@@ -322,6 +323,49 @@ function durationCalc(
   });
 }
 
+/** Months between two rows of a schedule that falls at this frequency. */
+export const FREQUENCY_MONTHS: Record<InstallmentFrequency, number> = {
+  MONTHLY: 1,
+  QUARTERLY: 3,
+  SEMI_ANNUAL: 6,
+  YEARLY: 12,
+};
+
+/**
+ * A plan priced by instalment count (no duration options — the only way to
+ * sell quarterly, semi-annual or yearly rows): the same snapshot a duration
+ * option gives, on the booking the customer actually pays. No markup;
+ * `selectedDurationMonths` is the months the rows span and the "monthly"
+ * amount is per row. Conversion used to refuse these reservations outright
+ * (no snapshot), so such a plan could be made but never sold.
+ */
+export function countPlanSnapshot(
+  plan: {
+    netPrice: Prisma.Decimal;
+    downPaymentAmount: Prisma.Decimal;
+    finalPaymentAmount: Prisma.Decimal | null;
+    installmentsCount: number | null;
+    frequency: InstallmentFrequency;
+  },
+  bookingAmount: Prisma.Decimal,
+) {
+  const count = plan.installmentsCount ?? 0;
+  if (count <= 0) return null;
+  const calc = durationCalc(plan, count, new Prisma.Decimal(0), bookingAmount);
+  return {
+    selectedDurationOptionId: null,
+    selectedDurationMonths: count * FREQUENCY_MONTHS[plan.frequency],
+    selectedIncreasePercentage: new Prisma.Decimal(0),
+    snapshotDownPaymentAmount: plan.downPaymentAmount,
+    snapshotRemainingAmount: new Prisma.Decimal(calc.remainingAmount),
+    snapshotFinancedAmount: new Prisma.Decimal(calc.financedAmount),
+    snapshotMonthlyInstallment: new Prisma.Decimal(calc.monthlyInstallment),
+    snapshotTotalPayable: new Prisma.Decimal(calc.totalPayable),
+    snapshotFinalPaymentAmount: plan.finalPaymentAmount ?? null,
+    snapshotFrequency: plan.frequency,
+  };
+}
+
 @Injectable()
 export class ReservationsService {
   private readonly logger = new Logger(ReservationsService.name);
@@ -385,6 +429,8 @@ export class ReservationsService {
         reservationAmountValue: true,
         downPaymentAmount: true,
         finalPaymentAmount: true,
+        installmentsCount: true,
+        frequency: true,
         durationOptions: {
           select: { id: true, durationMonths: true, increasePercentage: true },
         },
@@ -434,11 +480,12 @@ export class ReservationsService {
       snapshotFinancedAmount: null,
       snapshotMonthlyInstallment: null,
       snapshotFinalPaymentAmount: null,
+      snapshotFrequency: null,
       snapshotTotalPayable: unitPrice,
     };
     if (!plan || plan.durationOptions.length === 0) {
       if (optionId) throw new BadRequestException('خطة التقسيط المختارة لا تحتوي على خيارات مدة');
-      return empty;
+      return (plan && countPlanSnapshot(plan, bookingAmount)) ?? empty;
     }
     if (!optionId) throw new BadRequestException('اختر مدة التقسيط من الخطة الجديدة');
     const option = plan.durationOptions.find((o) => o.id === optionId);
@@ -454,6 +501,7 @@ export class ReservationsService {
       snapshotMonthlyInstallment: new Prisma.Decimal(calc.monthlyInstallment),
       snapshotTotalPayable: new Prisma.Decimal(calc.totalPayable),
       snapshotFinalPaymentAmount: plan.finalPaymentAmount ?? null,
+      snapshotFrequency: null,
     };
   }
 
@@ -611,6 +659,8 @@ export class ReservationsService {
     let snapshotMonthlyInstallment: Prisma.Decimal | null = null;
     let snapshotTotalPayable: Prisma.Decimal | null = null;
     let snapshotFinalPaymentAmount: Prisma.Decimal | null = null;
+    let snapshotFrequency: InstallmentFrequency | null = null;
+    let countPlan: Awaited<ReturnType<ReservationsService['validateBookingPlan']>> | null = null;
     let durationPlan: Awaited<ReturnType<ReservationsService['validateBookingPlan']>> | null = null;
     let durationOption: { id: string; durationMonths: number; increasePercentage: Prisma.Decimal } | null = null;
 
@@ -667,6 +717,9 @@ export class ReservationsService {
         throw new BadRequestException(
           'خطة التقسيط المختارة لا تحتوي على خيارات مدة',
         );
+      } else {
+        // Priced by instalment count: snapshotted below, on the final booking.
+        countPlan = plan;
       }
     } else if (dto.installmentPlanDurationOptionId) {
       // No plan but option provided → reject as inconsistent input.
@@ -724,6 +777,19 @@ export class ReservationsService {
       snapshotMonthlyInstallment = new Prisma.Decimal(calc.monthlyInstallment);
       snapshotTotalPayable = new Prisma.Decimal(calc.totalPayable);
       snapshotFinalPaymentAmount = durationPlan.finalPaymentAmount ?? null;
+    } else if (countPlan) {
+      const snap = countPlanSnapshot(countPlan, resolvedBookingAmount);
+      if (snap) {
+        selectedDurationMonths = snap.selectedDurationMonths;
+        selectedIncreasePercentage = snap.selectedIncreasePercentage;
+        snapshotDownPaymentAmount = snap.snapshotDownPaymentAmount;
+        snapshotRemainingAmount = snap.snapshotRemainingAmount;
+        snapshotFinancedAmount = snap.snapshotFinancedAmount;
+        snapshotMonthlyInstallment = snap.snapshotMonthlyInstallment;
+        snapshotTotalPayable = snap.snapshotTotalPayable;
+        snapshotFinalPaymentAmount = snap.snapshotFinalPaymentAmount;
+        snapshotFrequency = snap.snapshotFrequency;
+      }
     }
 
     // Payment status on create is always UNPAID; payment is confirmed later
@@ -773,6 +839,7 @@ export class ReservationsService {
           // silently rewrote the deal.
           snapshotTotalPayable: snapshotTotalPayable ?? new Prisma.Decimal(unit.price),
           snapshotFinalPaymentAmount,
+          snapshotFrequency,
         },
       });
       await tx.unitStatusHistory.create({
@@ -2139,13 +2206,17 @@ export class ReservationsService {
         dto.startsAt
       ) {
         const startsAt = new Date(dto.startsAt);
+        // Monthly unless the plan is priced by a quarterly / semi-annual /
+        // yearly instalment count: the rows fall that many months apart.
+        const frequency = reservation.snapshotFrequency ?? InstallmentFrequency.MONTHLY;
+        const period = FREQUENCY_MONTHS[frequency];
         const plan = await tx.installmentPlan.create({
           data: {
             contractId: contract.id,
             totalMonths: reservation.selectedDurationMonths,
             monthlyAmount: reservation.snapshotMonthlyInstallment,
             startsAt,
-            frequency: 'MONTHLY',
+            frequency,
           },
         });
 
@@ -2162,9 +2233,9 @@ export class ReservationsService {
           });
         }
 
-        // 4b. Monthly INSTALLMENT rows: equal amounts, the last one carrying
-        // the rounding so the rows add up to the financed amount exactly.
-        const months = reservation.selectedDurationMonths;
+        // 4b. INSTALLMENT rows: equal amounts, the last one carrying the
+        // rounding so the rows add up to the financed amount exactly.
+        const months = Math.round(reservation.selectedDurationMonths / period);
         const monthlyCents = Math.round(Number(reservation.snapshotMonthlyInstallment) * 100);
         const financedCents =
           reservation.snapshotFinancedAmount != null
@@ -2180,13 +2251,13 @@ export class ReservationsService {
           rows.push({
             planId: plan.id,
             type: PlanPaymentType.INSTALLMENT,
-            dueDate: addMonths(startsAt, i),
+            dueDate: addMonths(startsAt, i * period),
             amount: new Prisma.Decimal(cents).div(100),
           });
         }
         if (rows.length > 0) await tx.installment.createMany({ data: rows });
 
-        // 4c. FINAL_PAYMENT row (one period after the last monthly installment).
+        // 4c. FINAL_PAYMENT row (one period after the last installment).
         if (reservation.snapshotFinalPaymentAmount?.gt(0)) {
           const finalDueDate = addMonths(startsAt, reservation.selectedDurationMonths);
           await tx.installment.create({
