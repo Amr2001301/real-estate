@@ -77,6 +77,7 @@ import { CONTRACT_CANCELLED_MESSAGE, LIVE_CONTRACT_WHERE, isDeadContract } from 
 import { ContractRefundsService, RecordRefundDto } from './contract-refunds.service';
 import { assertUnitOnSale } from '../projects/inventory-blockers';
 import { assertDiscountAllowed, discountPct } from '../installments/discount-policy';
+import { companyLateFeesOn } from '../installments/late-fee';
 import { financingMarkup, MARKUP_SNAPSHOT_SELECT } from '../../common/finance/commission-basis';
 
 // ── P12 legacy backfill helpers ─────────────────────────────────────────────
@@ -140,6 +141,16 @@ class CreateContractDto {
    * before the system). Omitted → the next CON-<year>-<seq> is assigned.
    */
   @IsOptional() @IsString() @IsNotEmpty() @MaxLength(50) contractNumber?: string;
+  /**
+   * The contract has a late-fee clause (the late-fee sweep charges only
+   * those). Omitted → the company's late-fee setting at this moment.
+   */
+  @IsOptional() @IsBoolean() lateFeesApply?: boolean;
+}
+
+/** Turn a contract's late-fee clause on or off (as signed). */
+class SetLateFeeClauseDto {
+  @IsBoolean() lateFeesApply!: boolean;
 }
 
 class UpdateContractDto {
@@ -392,6 +403,8 @@ export class ContractsService {
 
   async create(dto: CreateContractDto, actorId: string) {
     const companyId = getRequiredCompanyId();
+    // No choice made → the company's late-fee setting today.
+    dto = { ...dto, lateFeesApply: dto.lateFeesApply ?? (await companyLateFeesOn(this.prisma, companyId)) };
     const unit = await this.prisma.unit.findUnique({ where: { id: dto.unitId } });
     if (!unit) throw new NotFoundException('Unit not found');
     if (unit.status === UnitStatus.SOLD) {
@@ -482,6 +495,7 @@ export class ContractsService {
           totalAmount: new Prisma.Decimal(dto.totalAmount),
           downPayment: new Prisma.Decimal(dto.downPayment ?? 0),
           pdfUrl: dto.pdfUrl ?? null,
+          lateFeesApply: dto.lateFeesApply ?? false,
           // Contracts are created unsigned. Signing goes through sign().
           signedAt: null,
         },
@@ -838,6 +852,39 @@ export class ContractsService {
         });
       }
       await tx.contract.update({ where: { id }, data: { deletedAt: null } });
+    });
+  }
+
+  /**
+   * The contract's late-fee clause, as signed: the late-fee sweep charges
+   * only contracts that have one. Audited.
+   */
+  async setLateFeeClause(id: string, dto: SetLateFeeClauseDto, actorId: string) {
+    const companyId = getRequiredCompanyId();
+    const contract = await this.prisma.contract.findFirst({
+      where: { id, companyId, deletedAt: null },
+      select: { id: true, lateFeesApply: true },
+    });
+    if (!contract) throw new NotFoundException('Contract not found');
+    if (contract.lateFeesApply === dto.lateFeesApply) return contract;
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.contract.update({
+        where: { id },
+        data: { lateFeesApply: dto.lateFeesApply },
+        select: { id: true, lateFeesApply: true },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: 'contract.late-fee-clause',
+          entityType: 'Contract',
+          entityId: id,
+          before: { lateFeesApply: contract.lateFeesApply },
+          after: { lateFeesApply: dto.lateFeesApply },
+          companyId,
+        },
+      });
+      return updated;
     });
   }
 
@@ -1335,6 +1382,17 @@ class ContractsController {
         hasDocument: withDoc.has(row.id),
       })),
     };
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('contracts:update')
+  @Patch(':id/late-fee-clause')
+  setLateFeeClause(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetLateFeeClauseDto,
+  ) {
+    return this.svc.setLateFeeClause(id, dto, user.sub);
   }
 
   @Roles(UserRole.ADMIN)

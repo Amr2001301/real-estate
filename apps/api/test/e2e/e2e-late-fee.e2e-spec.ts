@@ -169,4 +169,61 @@ describe('Late-payment fee (e2e)', () => {
       });
     }
   });
+
+  it('LF-7: a contract without a late-fee clause is not charged; turning it on charges it', async () => {
+    const raw = testApp.rawPrisma;
+    // The overdue row's fee from LF-3 was waived in LF-4 and recharged; start clean.
+    await raw.installment.deleteMany({ where: { feeForId: overdueId } });
+    await asAdmin(http().patch(`/v1/contracts/${contractId}/late-fee-clause`))
+      .send({ lateFeesApply: false })
+      .expect(200);
+    try {
+      await testApp.runCronJob('late-fee');
+      expect(await feesOn(overdueId)).toHaveLength(0);
+
+      await asAdmin(http().patch(`/v1/contracts/${contractId}/late-fee-clause`))
+        .send({ lateFeesApply: true })
+        .expect(200);
+      await testApp.runCronJob('late-fee');
+      expect(await feesOn(overdueId)).toHaveLength(1);
+      const audit = await raw.auditLog.findFirst({
+        where: { action: 'contract.late-fee-clause', entityId: contractId, createdAt: { gte: startedAt } },
+      });
+      expect(audit).not.toBeNull();
+    } finally {
+      await raw.contract.update({ where: { id: contractId }, data: { lateFeesApply: true } });
+      await raw.auditLog.deleteMany({ where: { action: 'contract.late-fee-clause', createdAt: { gte: startedAt } } });
+    }
+  });
+
+  it('LF-8: a new contract takes the company setting unless the admin chooses', async () => {
+    const raw = testApp.rawPrisma;
+    const unit = await raw.unit.findFirstOrThrow({ where: { companyId, status: 'AVAILABLE' }, select: { id: true } });
+    const made: string[] = [];
+    try {
+      // lateFee.enabled is on (LF-3): the default is a clause.
+      const a = await asAdmin(http().post('/v1/contracts'))
+        .send({ customerId: fixtures.userIds.customer1UserId, unitId: unit.id, totalAmount: 1_000_000 })
+        .expect(201);
+      made.push(a.body.id);
+      expect((await raw.contract.findUniqueOrThrow({ where: { id: a.body.id } })).lateFeesApply).toBe(true);
+      // The admin says this one has no clause.
+      await asAdmin(http().delete(`/v1/contracts/${a.body.id}`)).expect(200);
+      const b = await asAdmin(http().post('/v1/contracts'))
+        .send({
+          customerId: fixtures.userIds.customer1UserId,
+          unitId: unit.id,
+          totalAmount: 1_000_000,
+          lateFeesApply: false,
+        })
+        .expect(201);
+      made.push(b.body.id);
+      expect((await raw.contract.findUniqueOrThrow({ where: { id: b.body.id } })).lateFeesApply).toBe(false);
+    } finally {
+      await raw.auditLog.deleteMany({ where: { entityId: { in: [...made, unit.id] }, createdAt: { gte: startedAt } } });
+      await raw.contract.deleteMany({ where: { id: { in: made } } });
+      await raw.unitStatusHistory.deleteMany({ where: { unitId: unit.id, changedAt: { gte: startedAt } } });
+      await raw.unit.update({ where: { id: unit.id }, data: { status: 'AVAILABLE' } });
+    }
+  });
 });

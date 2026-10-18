@@ -615,7 +615,8 @@ export class InstallmentsService {
         status: InstallmentStatus.OVERDUE,
         type: { notIn: SURCHARGE_PAYMENT_TYPES },
         dueDate: { lte: graceCutoff },
-        plan: CHASED_PLAN_WHERE,
+        // Only a contract with a late-fee clause is charged.
+        plan: { ...CHASED_PLAN_WHERE, contract: { ...CHASED_PLAN_WHERE.contract, lateFeesApply: true } },
         // A payment already on its way stops the clock.
         deposits: PAYMENT_NOT_ON_ITS_WAY,
       },

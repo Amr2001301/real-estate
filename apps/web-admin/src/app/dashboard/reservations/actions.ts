@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { ApiError, api } from '@/lib/api';
 import { getCompanyTimeZone } from '@/lib/currency';
 import { wallTimeToIso } from '@/lib/zoned-time';
+import { lateFeesApplyFrom } from '@/components/form/late-fee-clause-field';
 
 export interface ReservationFormState {
   error?: string;
@@ -240,9 +241,11 @@ export async function convertReservationAction(
   try {
     result = await api.post<{ contractId: string; contractNumber: string }>(
       `/reservations/${id}/convert`,
-      pdfUrl
-        ? { startsAt, pdfUrl, fileName, mimeType, sizeBytes }
-        : { startsAt },
+      {
+        startsAt,
+        lateFeesApply: lateFeesApplyFrom(formData),
+        ...(pdfUrl ? { pdfUrl, fileName, mimeType, sizeBytes } : {}),
+      },
     );
   } catch (e: unknown) {
     // An expired/absent session surfaces as 401 from the API. Show an

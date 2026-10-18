@@ -14,6 +14,7 @@ import { tx, formatCurrency } from '@/lib/format';
 import type { Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { createContractAction, type ContractFormState } from '../actions';
+import { LateFeeClauseField } from '@/components/form/late-fee-clause-field';
 
 interface Props {
   currency: string;
@@ -120,6 +121,8 @@ export default function ContractForm({ currency, locale = 'ar' }: Props) {
                 />
               </Field>
             </div>
+
+            <LateFeeClauseField locale={locale} />
 
             <Field label={m.labelSignedAt} name="signedAt">
               <input id="signedAt" name="signedAt" type="datetime-local" className={inputClass} />

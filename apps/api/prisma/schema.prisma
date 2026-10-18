@@ -1278,6 +1278,10 @@ model Contract {
   /// total and off the markup alike, so the sale price — and the commission
   /// on it — stays as it was.
   markupWaived   Decimal      @default(0) @db.Decimal(14, 2)
+  /// The contract has a late-fee clause: the late-fee sweep charges only these
+  /// (with the company's late-fee setting on). Set when the contract is made —
+  /// from the company setting unless the admin chooses — and editable after.
+  lateFeesApply  Boolean      @default(true)
   downPayment    Decimal      @default(0) @db.Decimal(14, 2)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt

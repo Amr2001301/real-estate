@@ -14,6 +14,7 @@ import { uiT } from '@/messages/ui';
 
 import { intlLocale } from '@/lib/format';
 import { nowWallTime } from '@/lib/zoned-time';
+import { LateFeeClauseField } from '@/components/form/late-fee-clause-field';
 interface Props {
   reservation: Pick<
     Reservation,
@@ -212,6 +213,8 @@ export function ConvertReservationForm({ reservation, symbol, locale = 'ar' }: P
                 )}
               </Field>
             )}
+
+            <LateFeeClauseField locale={locale} />
 
             <Field label={m.convertSignedAtLabel} name="signedAt">
               <input

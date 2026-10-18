@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { depositPayload } from '@/lib/deposit-payload';
 import { getCompanyTimeZone } from '@/lib/currency';
 import { wallTimeToIso } from '@/lib/zoned-time';
+import { lateFeesApplyFrom } from '@/components/form/late-fee-clause-field';
 
 export interface ContractFormState {
   error?: string;
@@ -26,6 +27,7 @@ export async function createContractAction(
     downPayment: Number(formData.get('downPayment') ?? 0),
     pdfUrl: String(formData.get('pdfUrl') ?? '') || undefined,
     contractNumber: String(formData.get('contractNumber') ?? '').trim() || undefined,
+    lateFeesApply: lateFeesApplyFrom(formData),
   };
   const signedAtRaw = String(formData.get('signedAt') ?? '').trim();
   const signedAt = signedAtRaw ? wallTimeToIso(signedAtRaw, await getCompanyTimeZone()) : undefined;
@@ -57,6 +59,16 @@ export async function createContractAction(
 
 // Signing is its own step (the strict `contracts:sign` permission): a contract
 // converted without a signing date stayed unsigned, with no way to sign it.
+export async function setLateFeeClauseAction(id: string, lateFeesApply: boolean): Promise<ContractFormState> {
+  try {
+    await api.patch(`/contracts/${id}/late-fee-clause`, { lateFeesApply });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/dashboard/contracts/${id}`);
+  return { ok: true };
+}
+
 export async function signContractAction(id: string, signedAt: string): Promise<ContractFormState> {
   try {
     await api.post(`/contracts/${id}/sign`, { signedAt });

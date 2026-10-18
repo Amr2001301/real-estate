@@ -154,3 +154,15 @@ export async function seedLateFeeSettingsForCompany(
     skipDuplicates: true,
   });
 }
+
+/**
+ * Whether a new contract gets a late-fee clause when the admin does not say:
+ * the company's late-fee setting at the time the contract is made.
+ */
+export async function companyLateFeesOn(
+  prisma: { setting: { findFirst: (args: { where: { companyId: string; key: string }; select: { value: true } }) => Promise<{ value: unknown } | null> } },
+  companyId: string,
+): Promise<boolean> {
+  const row = await prisma.setting.findFirst({ where: { companyId, key: 'lateFee.enabled' }, select: { value: true } });
+  return row?.value === true;
+}

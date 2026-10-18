@@ -35,6 +35,7 @@ import { PlanChangesPanel } from './plan-changes-panel';
 import { AssignContractNumber } from './assign-number';
 import { SignFollowupsAlert } from './sign-followups-alert';
 import { SignContract } from './sign-contract';
+import { LateFeeClause } from './late-fee-clause';
 import { CancelContract } from './cancel-contract';
 import { CancellationPanel } from './cancellation-panel';
 import { HandoverPanel } from './handover-panel';
@@ -203,6 +204,14 @@ export default async function ContractDetailPage({
                 </Field>
                 <Field label={m.fieldCreatedAt}>
                   <span className="text-[13px] font-semibold text-slate-800">{formatDateTime(contract.createdAt, locale)}</span>
+                </Field>
+                <Field label={uiT(locale).common.lateFeeClause.label}>
+                  <LateFeeClause
+                    contractId={contract.id}
+                    applies={contract.lateFeesApply ?? true}
+                    editable={isAdmin && !isCancelled}
+                    locale={locale}
+                  />
                 </Field>
               </div>
             </PremiumSectionCard>
