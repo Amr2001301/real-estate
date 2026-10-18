@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import type { Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { recordInstallmentPaymentAction } from '../actions';
+import { PaymentMethodFields } from '@/components/deposits/payment-method-fields';
 import { formatCurrency, formatDate } from '@/lib/format';
 
 interface Props {
@@ -60,7 +61,7 @@ export function RecordPaymentButton({ contractId, installmentId, amount, dueDate
   }
 
   return (
-    <div className="mt-1 rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm space-y-3">
+    <div data-testid="record-payment-form" className="mt-1 rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm space-y-3">
       <div className="flex items-center justify-between">
         <span className="font-medium text-brand-800 text-xs">
           {m.recordPaymentTitle} — {PAYMENT_TYPE_LABELS[installmentType ?? 'INSTALLMENT'] ?? m.payTypeInstallment} {formatDate(dueDate, locale)}
@@ -86,6 +87,8 @@ export function RecordPaymentButton({ contractId, installmentId, amount, dueDate
             className={inputClass}
           />
         </Field>
+
+        <PaymentMethodFields locale={locale} />
 
         <Field label={m.recordPaymentReceiptLabel} name="receiptUrl">
           <input
