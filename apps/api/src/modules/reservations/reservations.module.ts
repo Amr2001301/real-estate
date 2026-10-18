@@ -30,12 +30,15 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
   DepositReviewStatus,
   DepositType,
   InstallmentFrequency,
+  PaymentInstrumentStatus,
+  PaymentInstrumentType,
   PaymentMethod,
   LeadStage,
   NotificationChannel,
@@ -50,6 +53,7 @@ import {
   UserRole,
 } from '@prisma/client';
 import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
+import { DepositChequeDto } from '../deposits/deposits.dto';
 import { nextContractNumber } from '../../common/utils/contract-number';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { findTenantUser } from '../../common/tenant/resolve-tenant-entity';
@@ -180,6 +184,12 @@ class ConfirmBookingPaymentDto {
   @IsOptional() @IsString() note?: string;
   /** FG-08 — how the booking amount was paid; stored on the booking deposit. */
   @IsOptional() @IsEnum(PaymentMethod) paymentMethod?: PaymentMethod;
+  /**
+   * Required with paymentMethod CHEQUE: the booking is not paid until the
+   * cheque clears on the Cheques screen (it is tracked there, and a bounce
+   * reopens the booking).
+   */
+  @IsOptional() @ValidateNested() @Type(() => DepositChequeDto) cheque?: DepositChequeDto;
 }
 
 class UnconfirmBookingPaymentDto {
@@ -1527,16 +1537,34 @@ export class ReservationsService {
   ) {
     const reservation = await this.prisma.reservation.findUnique({
       where: { id },
-      select: { id: true, status: true, bookingAmount: true, bookingPaymentStatus: true },
+      select: { id: true, status: true, bookingAmount: true, bookingPaymentStatus: true, companyId: true },
     });
     if (!reservation) throw new NotFoundException('Reservation not found');
 
-    // Step G: block admin confirm while a customer proof is under review.
-    // Guard 1 — FG-13 dual-path collision prevention.
+    // Step G: block admin confirm while a customer proof — or a booking
+    // cheque — is waiting. Guard 1 — FG-13 dual-path collision prevention.
     if (reservation.bookingPaymentStatus === ReservationBookingPaymentStatus.PENDING) {
+      const chequeOut = await this.prisma.deposit.count({
+        where: {
+          reservationId: id,
+          type: DepositType.BOOKING_AMOUNT,
+          deletedAt: null,
+          reviewStatus: DepositReviewStatus.PENDING_REVIEW,
+          paymentInstrumentId: { not: null },
+        },
+      });
       throw new ConflictException(
-        'A customer payment proof is under review. Resolve it before confirming manually.',
+        chequeOut > 0
+          ? 'مبلغ الحجز عليه شيك لم يُصرف بعد — اصرفه أو ألغه من شاشة الشيكات'
+          : 'A customer payment proof is under review. Resolve it before confirming manually.',
       );
+    }
+    const byCheque = dto.paymentMethod === PaymentMethod.CHEQUE;
+    if (byCheque && !dto.cheque) {
+      throw new BadRequestException('بيانات الشيك مطلوبة (الرقم وتاريخ الاستحقاق)');
+    }
+    if (dto.cheque && !byCheque) {
+      throw new BadRequestException('بيانات الشيك تُرسل فقط مع طريقة الدفع شيك');
     }
 
     if (
@@ -1569,12 +1597,28 @@ export class ReservationsService {
     const paidAt = dto.paidAt ? new Date(dto.paidAt) : new Date();
 
     return this.prisma.$transaction(async (tx) => {
+      // A booking paid by cheque was marked PAID at once, and no cheque was
+      // created: if it bounced, nothing tracked it. Now the cheque waits on
+      // the Cheques screen and the booking is PENDING (money held — the
+      // expiry sweep leaves it) until it clears.
+      const instrument = byCheque
+        ? await tx.paymentInstrument.create({
+            data: {
+              type: PaymentInstrumentType.CHEQUE,
+              chequeNumber: dto.cheque!.chequeNumber,
+              drawerBankName: dto.cheque!.drawerBankName ?? null,
+              chequeDueDate: new Date(dto.cheque!.chequeDueDate),
+              status: PaymentInstrumentStatus.PENDING_CLEARANCE,
+              recordedById: actor.sub,
+              companyId: reservation.companyId,
+            },
+          })
+        : null;
       const updated = await tx.reservation.update({
         where: { id },
-        data: {
-          bookingPaymentStatus: ReservationBookingPaymentStatus.PAID,
-          bookingPaidAt: paidAt,
-        },
+        data: instrument
+          ? { bookingPaymentStatus: ReservationBookingPaymentStatus.PENDING, bookingPaidAt: null }
+          : { bookingPaymentStatus: ReservationBookingPaymentStatus.PAID, bookingPaidAt: paidAt },
       });
       await tx.reservationActivity.create({
         data: {
@@ -1583,7 +1627,9 @@ export class ReservationsService {
           actorId: actor.sub,
           note:
             dto.note?.trim()?.substring(0, 500) ??
-            `تم تأكيد استلام مبلغ الحجز (${updated.bookingAmount.toString()})`,
+            (instrument
+              ? `استُلم شيك بمبلغ الحجز (${updated.bookingAmount.toString()}) — يُحتسب عند صرفه`
+              : `تم تأكيد استلام مبلغ الحجز (${updated.bookingAmount.toString()})`),
         },
       });
       // Idempotent: remove a previous admin-created BOOKING_AMOUNT deposit,
@@ -1604,11 +1650,19 @@ export class ReservationsService {
           paidAt,
           paymentMethod: dto.paymentMethod ?? null,
           recordedById: actor.sub,
-          verified: true,
+          ...(instrument
+            ? {
+                verified: false,
+                reviewStatus: DepositReviewStatus.PENDING_REVIEW,
+                paymentInstrumentId: instrument.id,
+              }
+            : { verified: true }),
         },
       });
       return updated;
     }).then(async (updated) => {
+      // A cheque is not money yet: the "booking paid" notice waits for it.
+      if (byCheque) return updated;
       // P4 — event: booking payment confirmed. Notify customer + sales rep.
       const payload = await this.buildReservationPayload(updated.id);
       await this.notifications.sendToUsers(

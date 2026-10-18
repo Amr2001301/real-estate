@@ -296,6 +296,16 @@ export async function confirmBookingPaymentAction(
   if (paidAtRaw) payload.paidAt = new Date(paidAtRaw).toISOString();
   if (note) payload.note = note;
   if (paymentMethod) payload.paymentMethod = paymentMethod;
+  // A cheque is tracked on the Cheques screen; the booking counts as paid
+  // when it clears.
+  if (paymentMethod === 'CHEQUE') {
+    const v = (k: string) => String(formData?.get(k) ?? '').trim() || undefined;
+    payload.cheque = {
+      chequeNumber: v('chequeNumber'),
+      drawerBankName: v('drawerBankName'),
+      chequeDueDate: v('chequeDueDate'),
+    };
+  }
   try {
     await api.post(`/reservations/${id}/booking-payment/confirm`, payload);
   } catch (e: unknown) {

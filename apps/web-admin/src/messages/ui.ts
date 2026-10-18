@@ -1685,7 +1685,10 @@ const UI = {
         bookingPaymentMethodLabel: 'طريقة الدفع',
         bookingPaymentMethodChoose: 'اختر طريقة الدفع',
         bookingPaymentMethods: { CASH: 'نقدًا', BANK_TRANSFER: 'تحويل بنكي', CHEQUE: 'شيك', OTHER: 'أخرى' },
-        bookingPaymentChequeHint: 'أكّد الاستلام بشيك بعد صرفه فقط.',
+        bookingPaymentChequeHint: 'يُسجَّل الشيك في شاشة الشيكات، ولا يُحتسب مبلغ الحجز مدفوعاً إلا بعد صرفه.',
+        bookingChequeNumber: 'رقم الشيك',
+        bookingChequeBank: 'بنك الشيك',
+        bookingChequeDueDate: 'تاريخ استحقاق الشيك',
         // Page header / breadcrumb
         titlePrefix: 'حجز — ',
         breadcrumbReservationFallback: 'الحجز',
@@ -6979,7 +6982,10 @@ const UI = {
         bookingPaymentMethodLabel: 'Payment method',
         bookingPaymentMethodChoose: 'Choose the payment method',
         bookingPaymentMethods: { CASH: 'Cash', BANK_TRANSFER: 'Bank transfer', CHEQUE: 'Cheque', OTHER: 'Other' },
-        bookingPaymentChequeHint: 'Confirm a cheque payment only once the cheque has cleared.',
+        bookingPaymentChequeHint: 'The cheque is tracked on the Cheques screen; the booking counts as paid only once it clears.',
+        bookingChequeNumber: 'Cheque number',
+        bookingChequeBank: 'Cheque bank',
+        bookingChequeDueDate: 'Cheque due date',
         // Page header / breadcrumb
         titlePrefix: 'Reservation — ',
         breadcrumbReservationFallback: 'Reservation',

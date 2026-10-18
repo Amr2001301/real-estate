@@ -441,6 +441,12 @@ export interface PaymentInstrument {
       contractNumber: string | null;
       customer: { id: string; fullName: string } | null;
     } | null;
+    /** A booking-amount cheque: the reservation it pays. */
+    reservation?: {
+      id: string;
+      reservationNumber: string | null;
+      client: { id: string; fullName: string } | null;
+    } | null;
   }>;
 }
 

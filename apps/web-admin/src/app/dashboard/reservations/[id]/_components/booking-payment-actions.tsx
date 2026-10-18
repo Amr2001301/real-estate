@@ -32,6 +32,7 @@ export function BookingPaymentActions({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [method, setMethod] = useState('');
+  const [cheque, setCheque] = useState({ number: '', bank: '', dueDate: '' });
 
   // Only PENDING / APPROVED reservations allow booking payment changes
   const canEditPayment =
@@ -44,6 +45,11 @@ export function BookingPaymentActions({
     startTransition(async () => {
       const form = new FormData();
       form.set('paymentMethod', method);
+      if (method === 'CHEQUE') {
+        form.set('chequeNumber', cheque.number);
+        form.set('drawerBankName', cheque.bank);
+        form.set('chequeDueDate', cheque.dueDate);
+      }
       const res = await confirmBookingPaymentAction(reservationId, form);
       if (res.error) setError(res.error);
       else router.refresh();
@@ -92,7 +98,9 @@ export function BookingPaymentActions({
             variant="primary"
             size="sm"
             loading={pending}
-            disabled={pending || bookingAmount <= 0 || !method}
+            disabled={
+              pending || bookingAmount <= 0 || !method || (method === 'CHEQUE' && (!cheque.number || !cheque.dueDate))
+            }
             onClick={handleConfirm}
             leftIcon={<CheckCircle2 className="h-4 w-4" />}
           >
@@ -114,7 +122,28 @@ export function BookingPaymentActions({
         )}
       </div>
       {method === 'CHEQUE' && bookingPaymentStatus !== 'PAID' && (
-        <p className="text-xs text-amber-700">{m.bookingPaymentChequeHint}</p>
+        <div data-testid="booking-cheque-fields" className="flex flex-col gap-2">
+          <p className="text-xs text-amber-700">{m.bookingPaymentChequeHint}</p>
+          <div className="flex flex-wrap gap-2">
+            {(
+              [
+                ['number', m.bookingChequeNumber, 'text'],
+                ['bank', m.bookingChequeBank, 'text'],
+                ['dueDate', m.bookingChequeDueDate, 'date'],
+              ] as const
+            ).map(([key, label, type]) => (
+              <input
+                key={key}
+                type={type}
+                aria-label={label}
+                placeholder={label}
+                value={cheque[key]}
+                onChange={(e) => setCheque((c) => ({ ...c, [key]: e.target.value }))}
+                className="rounded-xl border border-hairline bg-surface px-3 py-2 text-[13px] text-slate-800"
+              />
+            ))}
+          </div>
+        </div>
       )}
       {bookingAmount <= 0 && bookingPaymentStatus !== 'PAID' && (
         <p className="text-xs text-amber-700">
