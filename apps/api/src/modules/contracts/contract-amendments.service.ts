@@ -880,6 +880,30 @@ export class ContractAmendmentsService {
         where: { id: plan.id },
         data: { monthlyAmount: new Prisma.Decimal(monthlyCents).div(100), totalMonths: paidMonths + dto.months },
       });
+      // The final (balloon) payment follows the schedule: still open and due
+      // before the new rows end, it moves to a month after the last one — it
+      // was chased (and drew late fees) ahead of the monthly payments.
+      // Its unpaid late fees go, as the replaced rows' do: it is not late now.
+      const finalDue = addMonths(startsAt, dto.months);
+      const finals = await tx.installment.findMany({
+        where: {
+          planId: plan.id,
+          type: PlanPaymentType.FINAL_PAYMENT,
+          status: { in: OPEN_STATUSES },
+          dueDate: { lt: finalDue },
+        },
+        select: { id: true },
+      });
+      const finalMoved = await tx.installment.updateMany({
+        where: { id: { in: finals.map((f) => f.id) }, status: { in: OPEN_STATUSES } },
+        data: { dueDate: finalDue, status: InstallmentStatus.PENDING },
+      });
+      if (finals.length > 0) {
+        await tx.installment.updateMany({
+          where: { feeForId: { in: finals.map((f) => f.id) }, type: PlanPaymentType.LATE_FEE, status: { in: OPEN_STATUSES } },
+          data: { status: InstallmentStatus.CANCELLED, waivedAt: new Date() },
+        });
+      }
       const row = await tx.contractAmendment.create({
         data: {
           type: 'RESCHEDULE',
@@ -904,6 +928,7 @@ export class ContractAmendmentsService {
             monthly: monthlyCents / 100,
             last: lastCents / 100,
             lateFeesWaived: feesWaived.count,
+            finalPaymentMovedTo: finalMoved.count > 0 ? finalDue.toISOString().slice(0, 10) : null,
             reason: dto.reason,
           },
           companyId,
