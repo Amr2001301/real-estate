@@ -4,6 +4,7 @@ import {
   BonusEntryStatus,
   BrokerCommissionStatus,
   BrokerPayoutStatus,
+  ClawbackStatus,
   DepositType,
   DocumentCategory,
   DocumentOwnerType,
@@ -1713,6 +1714,41 @@ export class ReportsService {
       }),
     ]);
 
+    // Clawbacks still owed back to the company (a cancelled deal whose
+    // commission or bonus was already paid): what each recovers less what was
+    // collected, by hand or netted into a paid payout. They are money owed
+    // *to* the company, so they stay out of totalUnpaidLiabilities — but they
+    // were on no report, and the paid lines kept counting them as paid out.
+    const owedStatus = { in: [ClawbackStatus.OUTSTANDING, ClawbackStatus.PARTIALLY_COLLECTED] };
+    const clawbackRange = dateRange('createdAt').createdAt
+      ? { clawbackAt: dateRange('createdAt').createdAt }
+      : {};
+    const [bcClawbacks, bonusClawbacks] = await Promise.all([
+      this.prisma.brokerCommission.findMany({
+        where: {
+          clawbackStatus: owedStatus,
+          ...(opts.projectId ? { projectId: opts.projectId } : {}),
+          ...clawbackRange,
+        },
+        select: { netAmount: true, clawbackAmount: true, clawbackCollectedAmount: true },
+      }),
+      this.prisma.bonusEntry.findMany({
+        where: { clawbackStatus: owedStatus, ...clawbackRange },
+        select: { amount: true, clawbackAmount: true, clawbackCollectedAmount: true },
+      }),
+    ]);
+    const stillOwed = (rows: Array<{ full: Prisma.Decimal; collected: Prisma.Decimal | null }>) =>
+      rows.reduce((sum, r) => {
+        const left = r.full.sub(r.collected ?? zero);
+        return left.isPositive() ? sum.plus(left) : sum;
+      }, zero);
+    const bcClawbackOwed = stillOwed(
+      bcClawbacks.map((c) => ({ full: c.clawbackAmount ?? c.netAmount, collected: c.clawbackCollectedAmount })),
+    );
+    const bonusClawbackOwed = stillOwed(
+      bonusClawbacks.map((b) => ({ full: b.clawbackAmount ?? b.amount, collected: b.clawbackCollectedAmount })),
+    );
+
     const bonusPendingAmt = D(bonusPendingAgg._sum.amount);
     const bonusApprovedAmt = D(bonusApprovedAgg._sum.amount);
     const bonusUnpaidAmt = bonusPendingAmt.plus(bonusApprovedAmt);
@@ -1759,6 +1795,13 @@ export class ReportsService {
         approvedCount: payoutCnt(BrokerPayoutStatus.APPROVED),
         processingCount: payoutCnt(BrokerPayoutStatus.PROCESSING),
         paidCount: payoutCnt(BrokerPayoutStatus.PAID),
+      },
+      clawbacksOwed: {
+        brokerCommissionsAmount: bcClawbackOwed.toString(),
+        brokerCommissionsCount: bcClawbacks.length,
+        salesBonusAmount: bonusClawbackOwed.toString(),
+        salesBonusCount: bonusClawbacks.length,
+        totalAmount: bcClawbackOwed.plus(bonusClawbackOwed).toString(),
       },
       // No double-count: payout totals are NOT added here — they represent the
       // same broker commissions already captured in brokerCommissions.unpaid.
@@ -2320,6 +2363,9 @@ export class ReportsService {
       ['brokerPayouts', 'processing', 'دفعات الوسطاء - قيد المعالجة', L.brokerPayouts.processingCount, L.brokerPayouts.processingAmount],
       ['brokerPayouts', 'paid', 'دفعات الوسطاء - مدفوعة', L.brokerPayouts.paidCount, L.brokerPayouts.paidAmount],
       ['total', 'unpaid', 'إجمالي الالتزامات غير المدفوعة', '', L.totalUnpaidLiabilities],
+      // Owed to the company, not by it: outside the total above.
+      ['clawbacks', 'brokerCommissions', 'مستردات عمولات الوسطاء المستحقة', L.clawbacksOwed.brokerCommissionsCount, L.clawbacksOwed.brokerCommissionsAmount],
+      ['clawbacks', 'salesBonus', 'مستردات مستحقات المبيعات المستحقة', L.clawbacksOwed.salesBonusCount, L.clawbacksOwed.salesBonusAmount],
     ];
 
     // F. Documents / receipts health.

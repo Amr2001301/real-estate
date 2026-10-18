@@ -64,8 +64,14 @@ function makePrismaMock() {
       count: zero(),
       aggregate: jest.fn().mockResolvedValue({ _sum: { bookingAmount: 0 } }),
     },
-    bonusEntry: { aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 }, _count: { _all: 0 } }) },
-    brokerCommission: { aggregate: jest.fn().mockResolvedValue({ _sum: { netAmount: 0 }, _count: { _all: 0 } }) },
+    bonusEntry: {
+      aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 }, _count: { _all: 0 } }),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    brokerCommission: {
+      aggregate: jest.fn().mockResolvedValue({ _sum: { netAmount: 0 }, _count: { _all: 0 } }),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
     brokerPayout: { groupBy: jest.fn().mockResolvedValue([]) },
     document: { findMany: emptyArr() },
     $queryRaw: jest.fn().mockResolvedValue([]),

@@ -5101,6 +5101,7 @@ const UI = {
         salesBonus: 'مستحقات المبيعات غير المدفوعة',
         brokerCommissions: 'عمولات الوسطاء غير المدفوعة',
         paid: 'المدفوع من العمولات',
+        clawbacksOwed: 'مستردات مستحقة للشركة (عقود ملغاة)',
       },
       recentDeposits: {
         title: 'آخر الدفعات',
@@ -10391,6 +10392,7 @@ const UI = {
         salesBonus: 'Unpaid Sales Dues',
         brokerCommissions: 'Unpaid Broker Commissions',
         paid: 'Paid from Commissions',
+        clawbacksOwed: 'Clawbacks owed to the company (cancelled deals)',
       },
       recentDeposits: {
         title: 'Recent Payments',

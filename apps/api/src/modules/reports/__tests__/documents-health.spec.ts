@@ -107,8 +107,11 @@ function makePrismaMock() {
     contractCancellation: { aggregate: jest.fn().mockResolvedValue({ _sum: { refundAmount: 0 } }) },
     installment: { count: zero, aggregate: zeroAgg, findMany: emptyArr },
     reservation: { groupBy: emptyArr, count: zero, aggregate: jest.fn().mockResolvedValue({ _sum: { bookingAmount: 0 } }) },
-    bonusEntry: { aggregate: zeroAgg },
-    brokerCommission: { aggregate: jest.fn().mockResolvedValue({ _sum: { netAmount: 0 }, _count: { _all: 0 } }) },
+    bonusEntry: { aggregate: zeroAgg, findMany: jest.fn().mockResolvedValue([]) },
+    brokerCommission: {
+      aggregate: jest.fn().mockResolvedValue({ _sum: { netAmount: 0 }, _count: { _all: 0 } }),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
     brokerPayout: { groupBy: emptyArr },
     document: {
       findMany: jest.fn().mockImplementation(async ({ where }: { where: { ownerType: string } }) =>

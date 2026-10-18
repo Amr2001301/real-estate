@@ -2,7 +2,7 @@ import { CanActivate, ExecutionContext, Global, INestApplication, Module } from 
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { UserRole } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { ReportsModule } from '../reports.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
@@ -96,6 +96,10 @@ function makePrismaMock() {
         const amount = where.status === 'PENDING' ? 300 : where.status === 'APPROVED' ? 200 : 500;
         return { _sum: { amount }, _count: { _all: 1 } };
       }),
+      // A paid bonus clawed back on a cancellation, nothing recovered yet.
+      findMany: jest.fn().mockResolvedValue([
+        { amount: new Prisma.Decimal(230), clawbackAmount: new Prisma.Decimal(230), clawbackCollectedAmount: null },
+      ]),
     },
     // Broker commissions: detect status / paid-vs-unpaid in the where clause.
     brokerCommission: {
@@ -109,6 +113,14 @@ function makePrismaMock() {
         else if (j.includes('"status":"APPROVED"')) netAmount = 1600; // total approved
         return { _sum: { netAmount }, _count: { _all: 1 } };
       }),
+      // A paid commission clawed back: 1,000 owed, 400 collected so far.
+      findMany: jest.fn().mockResolvedValue([
+        {
+          netAmount: new Prisma.Decimal(900),
+          clawbackAmount: new Prisma.Decimal(1000),
+          clawbackCollectedAmount: new Prisma.Decimal(400),
+        },
+      ]),
     },
     brokerPayout: {
       groupBy: jest.fn().mockResolvedValue([
@@ -159,6 +171,7 @@ describe('Reports · financial-dashboard summary correctness (F1)', () => {
       salesBonus: Record<string, string | number>;
       brokerCommissions: Record<string, string | number>;
       brokerPayouts: Record<string, string | number>;
+      clawbacksOwed: Record<string, string | number>;
       totalUnpaidLiabilities: string;
     };
   };
@@ -270,6 +283,18 @@ describe('Reports · financial-dashboard summary correctness (F1)', () => {
   it('totalUnpaidLiabilities = sales unpaid + broker commission unpaid (payouts NOT re-added)', () => {
     // 500 (bonus unpaid) + 700 (broker commission unpaid) = 1200.
     // Broker payout totals (950) are deliberately excluded → no double count.
+    expect(body.liabilities.totalUnpaidLiabilities).toBe('1200');
+  });
+
+  it('clawbacksOwed = what each open clawback recovers less what was collected, outside the total', () => {
+    // Commission: 1000 − 400 collected = 600; bonus: 230 nothing collected.
+    expect(body.liabilities.clawbacksOwed).toEqual({
+      brokerCommissionsAmount: '600',
+      brokerCommissionsCount: 1,
+      salesBonusAmount: '230',
+      salesBonusCount: 1,
+      totalAmount: '830',
+    });
     expect(body.liabilities.totalUnpaidLiabilities).toBe('1200');
   });
 
