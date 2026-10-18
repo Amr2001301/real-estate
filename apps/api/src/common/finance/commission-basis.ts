@@ -16,11 +16,15 @@ type MarkupSnapshot = {
  * financed amount less the amount it finances (decided at reservation, fixed
  * afterwards). Zero for a cash deal or a contract without a reservation.
  */
-export function financingMarkup(reservation: MarkupSnapshot | undefined): Prisma.Decimal {
+export function financingMarkup(
+  reservation: MarkupSnapshot | undefined,
+  /** Contract.markupWaived — markup the company let go (early settlement). */
+  markupWaived: Prisma.Decimal | number = 0,
+): Prisma.Decimal {
   const financed = reservation?.snapshotFinancedAmount;
   const remaining = reservation?.snapshotRemainingAmount;
   if (financed == null || remaining == null) return new Prisma.Decimal(0);
-  const markup = new Prisma.Decimal(financed).sub(remaining);
+  const markup = new Prisma.Decimal(financed).sub(remaining).sub(markupWaived);
   return markup.isNegative() ? new Prisma.Decimal(0) : markup;
 }
 
@@ -28,13 +32,15 @@ export function financingMarkup(reservation: MarkupSnapshot | undefined): Prisma
  * The amount broker commissions and sales bonuses are computed on (decided
  * 2026-10-16): the sale price after any discount, without the instalment
  * markup. contract.totalAmount is what the customer pays in all — price plus
- * markup; a price change or a unit swap moves it, the markup stays.
+ * markup; a price change or a unit swap moves it, the markup stays. A
+ * markup waiver takes the same amount off both, so the basis stays.
  */
 export function commissionBasis(
   totalAmount: Prisma.Decimal | number,
   reservation: MarkupSnapshot | undefined,
+  markupWaived: Prisma.Decimal | number = 0,
 ): Prisma.Decimal {
-  const basis = new Prisma.Decimal(totalAmount).sub(financingMarkup(reservation));
+  const basis = new Prisma.Decimal(totalAmount).sub(financingMarkup(reservation, markupWaived));
   return basis.isNegative() ? new Prisma.Decimal(0) : basis.toDecimalPlaces(2);
 }
 
@@ -44,19 +50,22 @@ export function commissionBasis(
  * commission base). The query must alias the contract `c` and join its
  * reservation: LEFT JOIN "Reservation" r ON r.id = c."reservationId".
  */
-export const NET_PRICE_SQL = Prisma.sql`(c."totalAmount" - GREATEST(COALESCE(r."snapshotFinancedAmount" - r."snapshotRemainingAmount", 0), 0))`;
+export const NET_PRICE_SQL = Prisma.sql`(c."totalAmount" - GREATEST(COALESCE(r."snapshotFinancedAmount" - r."snapshotRemainingAmount", 0) - c."markupWaived", 0))`;
 
 type NetValueDb = Pick<Prisma.TransactionClient, 'contract' | 'reservation'>;
 
 /** The net price (total less markup) of the contracts `where` selects. */
 export async function netContractValue(db: NetValueDb, where: Prisma.ContractWhereInput): Promise<number> {
   const [total, markup] = await Promise.all([
-    db.contract.aggregate({ where, _sum: { totalAmount: true } }),
+    db.contract.aggregate({ where, _sum: { totalAmount: true, markupWaived: true } }),
     db.reservation.aggregate({
       where: { contract: { is: where }, snapshotFinancedAmount: { not: null }, snapshotRemainingAmount: { not: null } },
       _sum: { snapshotFinancedAmount: true, snapshotRemainingAmount: true },
     }),
   ]);
-  const added = Number(markup._sum.snapshotFinancedAmount ?? 0) - Number(markup._sum.snapshotRemainingAmount ?? 0);
+  const added =
+    Number(markup._sum.snapshotFinancedAmount ?? 0) -
+    Number(markup._sum.snapshotRemainingAmount ?? 0) -
+    Number(total._sum.markupWaived ?? 0);
   return Number(total._sum.totalAmount ?? 0) - Math.max(0, added);
 }

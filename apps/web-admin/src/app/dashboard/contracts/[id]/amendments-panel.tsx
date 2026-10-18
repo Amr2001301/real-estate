@@ -68,7 +68,9 @@ export function AmendmentsPanel({
                       ? m.amendSwap
                       : a.type === 'PRICE_CHANGE'
                         ? m.amendPrice
-                        : m.amendReschedule}
+                        : a.type === 'MARKUP_WAIVER'
+                          ? m.planWaiveTitle
+                          : m.amendReschedule}
                 </span>
                 {(a.type === 'TRANSFER' || a.type === 'UNIT_SWAP') && (
                   <span className="font-medium text-slate-900">
@@ -82,7 +84,7 @@ export function AmendmentsPanel({
                     {m.amendFee} {formatCurrency(a.feeAmount, currency, locale)}
                   </span>
                 )}
-                {(a.type === 'UNIT_SWAP' || a.type === 'PRICE_CHANGE') && a.toTotal != null && (
+                {(a.type === 'UNIT_SWAP' || a.type === 'PRICE_CHANGE' || a.type === 'MARKUP_WAIVER') && a.toTotal != null && (
                   <span className="tabular-nums text-slate-600">
                     {formatCurrency(a.fromTotal ?? 0, currency, locale)} ← {formatCurrency(a.toTotal, currency, locale)}
                   </span>

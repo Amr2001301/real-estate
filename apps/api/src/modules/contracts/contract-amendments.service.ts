@@ -52,7 +52,7 @@ import { assertDiscountAllowed, discountPct } from '../installments/discount-pol
 import { addMonths } from '../../common/utils/add-months';
 import { companyTimeZone, startOfLocalToday } from '../../common/time/company-timezone';
 import { assertUnitOnSale } from '../projects/inventory-blockers';
-import { commissionBasis, MARKUP_SNAPSHOT_SELECT } from '../../common/finance/commission-basis';
+import { commissionBasis, financingMarkup, MARKUP_SNAPSHOT_SELECT } from '../../common/finance/commission-basis';
 import { rebalancePayout } from '../broker-payouts/payout-totals';
 import { rescaleUnpaid } from './rescale-unpaid';
 
@@ -101,6 +101,18 @@ export class ChangeContractPriceDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @IsPositive()
   totalAmount!: number;
+  @IsString()
+  @MinLength(3)
+  @MaxLength(2000)
+  reason!: string;
+}
+
+export class WaiveMarkupDto {
+  /** How much of the instalment markup still unpaid is waived. */
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @IsPositive()
+  amount!: number;
   @IsString()
   @MinLength(3)
   @MaxLength(2000)
@@ -180,6 +192,7 @@ export class ContractAmendmentsService {
         contractNumber: true,
         totalAmount: true,
         unit: { select: { code: true } },
+        markupWaived: true,
         reservation: { select: MARKUP_SNAPSHOT_SELECT },
       },
     });
@@ -226,6 +239,29 @@ export class ContractAmendmentsService {
    * while the amendment runs either is seen here or waits for it and then
    * meets the amended schedule.
    */
+  /** Writes the rescaled unpaid rows (claimed while still open). */
+  private async applyRescaled(tx: Prisma.TransactionClient, rescaled: Array<{ id: string; amount: number }>) {
+    for (const r of rescaled) {
+      const res = await tx.installment.updateMany({
+        where: { id: r.id, status: { in: OPEN_STATUSES } },
+        // A row left owing nothing is no longer a payment: a 0.00 row
+        // could not be paid and would go overdue and draw late fees.
+        data: r.amount > 0
+          ? { amount: new Prisma.Decimal(r.amount) }
+          : { amount: new Prisma.Decimal(0), status: InstallmentStatus.CANCELLED },
+      });
+      if (res.count === 0) throw new ConflictException('تغيّر جدول الأقساط أثناء التنفيذ — أعد المحاولة');
+    }
+    // As on a reschedule, a cancelled row's unpaid late fees go with it.
+    const zeroed = rescaled.filter((r) => r.amount <= 0).map((r) => r.id);
+    if (zeroed.length > 0) {
+      await tx.installment.updateMany({
+        where: { feeForId: { in: zeroed }, type: PlanPaymentType.LATE_FEE, status: { in: OPEN_STATUSES } },
+        data: { status: InstallmentStatus.CANCELLED, waivedAt: new Date() },
+      });
+    }
+  }
+
   private async lockSchedule(
     tx: Prisma.TransactionClient,
     contractId: string,
@@ -438,9 +474,9 @@ export class ContractAmendmentsService {
   ) {
     const reservation = await tx.contract.findFirst({
       where: { id: contractId, companyId },
-      select: { reservation: { select: MARKUP_SNAPSHOT_SELECT } },
+      select: { markupWaived: true, reservation: { select: MARKUP_SNAPSHOT_SELECT } },
     });
-    const basis = commissionBasis(total, reservation?.reservation);
+    const basis = commissionBasis(total, reservation?.reservation, reservation?.markupWaived);
     const brokerCommission = await this.followNewPriceBroker(tx, contractId, companyId, unit, basis, actorId, reason);
     const salesBonus = await this.followNewPriceBonus(tx, contractId, companyId, basis);
     return { brokerCommission, salesBonus };
@@ -602,9 +638,9 @@ export class ContractAmendmentsService {
       // The discount is on the sale price: the total less the instalment
       // markup (as the commission base) — the total itself carries the markup
       // and hid a real discount.
-      pct: discountPct(Number(unit.price), Number(commissionBasis(dto.totalAmount, contract.reservation))),
+      pct: discountPct(Number(unit.price), Number(commissionBasis(dto.totalAmount, contract.reservation, contract.markupWaived))),
       listPrice: Number(unit.price),
-      salePrice: Number(commissionBasis(dto.totalAmount, contract.reservation)),
+      salePrice: Number(commissionBasis(dto.totalAmount, contract.reservation, contract.markupWaived)),
       entityType: 'Contract',
       entityId: contractId,
     });
@@ -644,25 +680,7 @@ export class ContractAmendmentsService {
         data: { totalAmount: new Prisma.Decimal(dto.totalAmount) },
       });
       if (moved.count === 0) throw new ConflictException('تغيّر العقد أثناء التنفيذ — أعد المحاولة');
-      for (const r of rescaled) {
-        const res = await tx.installment.updateMany({
-          where: { id: r.id, status: { in: OPEN_STATUSES } },
-          // A row left owing nothing is no longer a payment: a 0.00 row
-          // could not be paid and would go overdue and draw late fees.
-          data: r.amount > 0
-            ? { amount: new Prisma.Decimal(r.amount) }
-            : { amount: new Prisma.Decimal(0), status: InstallmentStatus.CANCELLED },
-        });
-        if (res.count === 0) throw new ConflictException('تغيّر جدول الأقساط أثناء التنفيذ — أعد المحاولة');
-      }
-      // As on a reschedule, a cancelled row's unpaid late fees go with it.
-      const zeroed = rescaled.filter((r) => r.amount <= 0).map((r) => r.id);
-      if (zeroed.length > 0) {
-        await tx.installment.updateMany({
-          where: { feeForId: { in: zeroed }, type: PlanPaymentType.LATE_FEE, status: { in: OPEN_STATUSES } },
-          data: { status: InstallmentStatus.CANCELLED, waivedAt: new Date() },
-        });
-      }
+      await this.applyRescaled(tx, rescaled);
       if (plan && extraRow) {
         await tx.installment.create({
           data: {
@@ -709,6 +727,85 @@ export class ContractAmendmentsService {
     await this.notifyCustomer(contract, 'contract_price_changed', actorId, {
       totalAmount: dto.totalAmount,
       oldTotalAmount: oldTotal,
+    });
+    return amendment;
+  }
+
+  /**
+   * إعفاء من فوائد التقسيط — on early settlement the company lets go of
+   * instalment markup not paid yet. The total and the markup both come down
+   * by the amount, so the sale price stays: no discount, no cap, and the
+   * commission and sales bonus on it don't move (decided 2026-10-18). The
+   * unpaid rows absorb it; more than the markup left is a price change.
+   */
+  async waiveMarkup(contractId: string, dto: WaiveMarkupDto, actorId: string) {
+    const companyId = getRequiredCompanyId();
+    const contract = await this.liveContract(contractId, companyId);
+    await this.assertNoWaitingPayments(contractId, contract.reservationId);
+    const left = financingMarkup(contract.reservation, contract.markupWaived);
+    if (new Prisma.Decimal(dto.amount).gt(left)) {
+      throw new BadRequestException(
+        `الإعفاء أكبر من فوائد التقسيط المتبقية على العقد (${left.toFixed(2)}) — ما يزيد عنها تعديل على السعر`,
+      );
+    }
+    const plan = await this.prisma.installmentPlan.findFirst({
+      where: { contractId, companyId, cancelledAt: null },
+      select: {
+        id: true,
+        installments: {
+          where: { status: { in: OPEN_STATUSES }, type: { notIn: SURCHARGE_TYPES } },
+          orderBy: { dueDate: 'asc' },
+          select: { id: true, amount: true },
+        },
+      },
+    });
+    const open = plan?.installments ?? [];
+    const amounts = open.length > 0 ? rescaleUnpaid(open.map((i) => Number(i.amount)), -dto.amount) : null;
+    if (!amounts) throw new BadRequestException('الإعفاء أكبر مما تبقى من أقساط غير مدفوعة');
+    const rescaled = open.map((i, k) => ({ id: i.id, amount: amounts[k]! }));
+    const oldTotal = new Prisma.Decimal(contract.totalAmount);
+    const newTotal = oldTotal.sub(dto.amount);
+
+    const amendment = await this.prisma.$transaction(async (tx) => {
+      await this.lockSchedule(tx, contractId, contract.reservationId, companyId);
+      const moved = await tx.contract.updateMany({
+        where: { id: contractId, companyId, totalAmount: contract.totalAmount, markupWaived: contract.markupWaived, ...LIVE_CONTRACT_WHERE },
+        data: { totalAmount: newTotal, markupWaived: { increment: dto.amount } },
+      });
+      if (moved.count === 0) throw new ConflictException('تغيّر العقد أثناء التنفيذ — أعد المحاولة');
+      await this.applyRescaled(tx, rescaled);
+      const row = await tx.contractAmendment.create({
+        data: {
+          type: 'MARKUP_WAIVER',
+          contractId,
+          fromTotal: oldTotal,
+          toTotal: newTotal,
+          reason: dto.reason,
+          performedById: actorId,
+          companyId,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: 'contract.markup-waived',
+          entityType: 'Contract',
+          entityId: contractId,
+          before: { totalAmount: Number(oldTotal), markupWaived: Number(contract.markupWaived) },
+          after: {
+            totalAmount: Number(newTotal),
+            markupWaived: Number(new Prisma.Decimal(contract.markupWaived).add(dto.amount)),
+            rescaledInstallments: rescaled.length,
+            reason: dto.reason,
+          },
+          companyId,
+        },
+      });
+      return row;
+    });
+    await this.notifyCustomer(contract, 'contract_price_changed', actorId, {
+      totalAmount: Number(newTotal),
+      oldTotalAmount: Number(oldTotal),
     });
     return amendment;
   }
@@ -872,9 +969,9 @@ export class ContractAmendmentsService {
       // The discount is on the sale price: the total less the instalment
       // markup (as the commission base) — the total itself carries the markup
       // and hid a real discount.
-      pct: discountPct(Number(unit.price), Number(commissionBasis(dto.totalAmount, contract.reservation))),
+      pct: discountPct(Number(unit.price), Number(commissionBasis(dto.totalAmount, contract.reservation, contract.markupWaived))),
       listPrice: Number(unit.price),
-      salePrice: Number(commissionBasis(dto.totalAmount, contract.reservation)),
+      salePrice: Number(commissionBasis(dto.totalAmount, contract.reservation, contract.markupWaived)),
       entityType: 'Contract',
       entityId: contractId,
     });
@@ -957,25 +1054,7 @@ export class ContractAmendmentsService {
         });
       }
 
-      for (const r of rescaled) {
-        const res = await tx.installment.updateMany({
-          where: { id: r.id, status: { in: OPEN_STATUSES } },
-          // A row left owing nothing is no longer a payment: a 0.00 row
-          // could not be paid and would go overdue and draw late fees.
-          data: r.amount > 0
-            ? { amount: new Prisma.Decimal(r.amount) }
-            : { amount: new Prisma.Decimal(0), status: InstallmentStatus.CANCELLED },
-        });
-        if (res.count === 0) throw new ConflictException('تغيّر جدول الأقساط أثناء التنفيذ — أعد المحاولة');
-      }
-      // As on a reschedule, a cancelled row's unpaid late fees go with it.
-      const zeroed = rescaled.filter((r) => r.amount <= 0).map((r) => r.id);
-      if (zeroed.length > 0) {
-        await tx.installment.updateMany({
-          where: { feeForId: { in: zeroed }, type: PlanPaymentType.LATE_FEE, status: { in: OPEN_STATUSES } },
-          data: { status: InstallmentStatus.CANCELLED, waivedAt: new Date() },
-        });
-      }
+      await this.applyRescaled(tx, rescaled);
       if (plan && extraRow) {
         await tx.installment.create({
           data: {

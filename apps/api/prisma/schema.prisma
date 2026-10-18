@@ -1271,6 +1271,10 @@ model Contract {
   pdfUrl         String?
   signedAt       DateTime?
   totalAmount    Decimal      @db.Decimal(14, 2)
+  /// Instalment markup the company waived (early settlement): taken off the
+  /// total and off the markup alike, so the sale price — and the commission
+  /// on it — stays as it was.
+  markupWaived   Decimal      @default(0) @db.Decimal(14, 2)
   downPayment    Decimal      @default(0) @db.Decimal(14, 2)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -1536,6 +1540,8 @@ enum ContractAmendmentType {
   PRICE_CHANGE
   /// إعادة جدولة — the unpaid monthly installments are spread over a new number of months.
   RESCHEDULE
+  /// إعفاء من فوائد التقسيط — unearned instalment markup waived (early settlement); the price stays.
+  MARKUP_WAIVER
 }
 
 /// History of transfers, unit swaps, price changes and reschedules on a live contract.

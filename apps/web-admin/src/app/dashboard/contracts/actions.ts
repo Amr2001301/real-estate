@@ -308,6 +308,19 @@ export async function changeContractPriceAction(id: string, formData: FormData):
   return done(id);
 }
 
+// Unearned instalment markup waived (early settlement); the sale price stays.
+export async function waiveMarkupAction(id: string, formData: FormData): Promise<ContractFormState> {
+  try {
+    await api.post(`/contracts/${id}/waive-markup`, {
+      amount: Number(formData.get('amount')),
+      reason: String(formData.get('reason') ?? '').trim(),
+    });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  return done(id);
+}
+
 // The unpaid monthly installments spread over a new number of months.
 export async function rescheduleContractAction(id: string, formData: FormData): Promise<ContractFormState> {
   try {
