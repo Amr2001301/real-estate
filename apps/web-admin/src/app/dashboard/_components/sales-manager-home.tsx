@@ -645,9 +645,11 @@ function TeamFunnel({
       <div className="p-5">
         {/* Funnel stages */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+          {/* No rate between stages: they are counts at this moment (open
+              leads, upcoming visits, active reservations, signed contracts),
+              not one group of leads moving on, and a ratio between them read
+              "200% conversion". */}
           {stages.map((s, i) => {
-            const prev = i > 0 ? stages[i - 1]!.value : null;
-            const rate = prev && prev > 0 ? Math.round((s.value / prev) * 100) : null;
             return (
               <div key={s.label} className="flex flex-col items-center text-center gap-2">
                 <div className="flex items-center gap-2 w-full justify-center">
@@ -663,11 +665,6 @@ function TeamFunnel({
                 <div>
                   <p className="text-2xl font-black text-slate-900 tabular-nums leading-none">{s.value}</p>
                   <p className="text-[11px] text-slate-500 font-medium mt-0.5">{s.label}</p>
-                  {rate !== null && (
-                    <p className={cn('text-[10px] font-semibold mt-0.5', rate > 0 ? 'text-emerald-600' : 'text-slate-400')}>
-                      {rate}{m.conversionSuffix}
-                    </p>
-                  )}
                 </div>
               </div>
             );
