@@ -20,18 +20,25 @@ export function AmendmentsPanel({
   live,
   history,
   currency,
+  markupLeft = 0,
   locale = 'ar',
 }: {
   contractId: string;
   live: boolean;
   history: ContractAmendment[];
   currency: string;
+  /** The instalment markup still in the contract's total. */
+  markupLeft?: number;
   locale?: Locale;
 }) {
   const m = uiT(locale).contractDetailPage;
   const c = uiT(locale).common;
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  // The new total is the new unit's price plus the markup still on the
+  // contract: entered as the bare price, the contract lost its markup and
+  // showed a net value under the unit's price.
+  const [swapTotal, setSwapTotal] = useState('');
   const [pending, startTransition] = useTransition();
 
   function submit(action: typeof transferContractAction) {
@@ -148,6 +155,7 @@ export function AmendmentsPanel({
               })}
               placeholder={c.searchUnitPlaceholder}
               locale={locale}
+              onChange={(u) => setSwapTotal(u ? String(Math.round((Number(u.price) + markupLeft) * 100) / 100) : '')}
             />
             <input
               name="totalAmount"
@@ -155,10 +163,17 @@ export function AmendmentsPanel({
               required
               min={1}
               step="0.01"
+              value={swapTotal}
+              onChange={(e) => setSwapTotal(e.target.value)}
               placeholder={m.swapTotal}
               aria-label={m.swapTotal}
               className={INPUT}
             />
+            {markupLeft > 0 && (
+              <p data-testid="swap-markup-hint" className="text-[12px] text-slate-500">
+                {m.swapMarkupHint(formatCurrency(markupLeft, currency, locale))}
+              </p>
+            )}
             <input name="reason" required minLength={3} maxLength={2000} placeholder={m.amendReason} className={INPUT} />
             <button type="submit" disabled={pending} className={BTN} data-testid="swap-submit">
               {m.swapBtn}

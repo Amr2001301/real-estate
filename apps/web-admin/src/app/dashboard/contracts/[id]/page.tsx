@@ -515,6 +515,7 @@ export default async function ContractDetailPage({
                   live={!isCancelled}
                   history={amendments}
                   currency={currency}
+                  markupLeft={Number(contract.markupLeft ?? 0)}
                   locale={locale}
                 />
               </PremiumSectionCard>
