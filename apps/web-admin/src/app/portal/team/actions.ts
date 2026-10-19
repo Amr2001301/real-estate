@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
 import type { BrokerUser, BrokerUserStatus } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
@@ -49,6 +49,7 @@ export async function createTeamMemberAction(
   try {
     created = await api.post<BrokerUser>('/portal/team', payload);
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath('/portal/team');
@@ -72,6 +73,7 @@ export async function updateTeamMemberAction(
   try {
     await api.patch(`/portal/team/${id}`, payload);
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath('/portal/team');
@@ -87,6 +89,7 @@ export async function setTeamMemberStatusAction(formData: FormData) {
   try {
     await api.patch(`/portal/team/${id}/status`, { status });
   } catch (e) {
+    unstable_rethrow(e);
     errMessage = (e as Error).message;
   }
   revalidatePath('/portal/team');

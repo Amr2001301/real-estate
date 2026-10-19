@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { formatMissingPermissionMessage } from './permission-error';
 
 export const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
@@ -158,11 +158,13 @@ async function request<T>(path: string, opts: ApiOptions = {}): Promise<T> {
 
   // 401 — attempt a single token refresh then retry.
   const refreshed = await refreshAdminSession();
-  if (!refreshed) redirect('/login');
+  // ?expired=1 makes the proxy drop the dead cookies; with them still set it
+  // would send /login straight back to the dashboard.
+  if (!refreshed) redirect('/login?expired=1');
 
   const newToken = (await cookies()).get('access_token')?.value;
   const second = await doFetch(path, newToken, opts);
-  if (second.status === 401) redirect('/login');
+  if (second.status === 401) redirect('/login?expired=1');
 
   const payload2 = await readPayload(second);
   if (second.status === 204) return undefined as T;
@@ -247,6 +249,10 @@ export async function safe<T>(
   try {
     return { data: await promise, error: null };
   } catch (e) {
+    // A session that cannot be renewed redirects to /login (request() above).
+    // That redirect is an exception; caught here, the page rendered "تعذّر
+    // تحميل" boxes or an English 404 instead of the login page.
+    unstable_rethrow(e);
     if (e instanceof ApiError) {
       return {
         data: null,

@@ -1,6 +1,6 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { ApiError, api } from '@/lib/api';
 import { getCompanyTimeZone } from '@/lib/currency';
@@ -120,6 +120,7 @@ export async function createReservationAction(
     });
     createdId = res.id;
   } catch (e: unknown) {
+    unstable_rethrow(e);
     const msg = e instanceof Error ? e.message : 'حدث خطأ غير متوقع';
     return { error: msg };
   }
@@ -138,6 +139,7 @@ export async function approveReservationAction(
   try {
     await api.post(`/reservations/${id}/approve`, {});
   } catch (e) {
+    unstable_rethrow(e);
     return toReservationActionError(e, 'اعتماد الحجز');
   }
   revalidatePath('/dashboard/reservations');
@@ -149,6 +151,7 @@ export async function detachReservationBrokerAction(id: string): Promise<Reserva
   try {
     await api.post(`/reservations/${id}/detach-broker`, {});
   } catch (e) {
+    unstable_rethrow(e);
     return toReservationActionError(e, 'فصل الحجز عن البروكر');
   }
   revalidatePath(`/dashboard/reservations/${id}`);
@@ -163,6 +166,7 @@ export async function rejectReservationAction(
   try {
     await api.post(`/reservations/${id}/reject`, { reason });
   } catch (e) {
+    unstable_rethrow(e);
     return toReservationActionError(e, 'رفض الحجز');
   }
   revalidatePath('/dashboard/reservations');
@@ -181,6 +185,7 @@ export async function cancelReservationAction(
   try {
     await api.post(`/reservations/${id}/cancel`, { reason });
   } catch (e: unknown) {
+    unstable_rethrow(e);
     return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
   }
   revalidatePath('/dashboard/reservations');
@@ -210,6 +215,7 @@ export async function updateReservationAction(
   try {
     await api.patch(`/reservations/${id}`, payload);
   } catch (e: unknown) {
+    unstable_rethrow(e);
     return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
   }
   revalidatePath('/dashboard/reservations');
@@ -248,6 +254,7 @@ export async function convertReservationAction(
       },
     );
   } catch (e: unknown) {
+    unstable_rethrow(e);
     // An expired/absent session surfaces as 401 from the API. Show an
     // auth-recovery message so the user re-logs-in rather than re-submitting
     // (which would silently fail again).
@@ -267,6 +274,7 @@ export async function convertReservationAction(
     try {
       await api.post(`/contracts/${result.contractId}/sign`, { signedAt });
     } catch (e: unknown) {
+      unstable_rethrow(e);
       revalidatePath('/dashboard/reservations');
       revalidatePath(`/dashboard/reservations/${id}`);
       revalidatePath('/dashboard/contracts');
@@ -315,6 +323,7 @@ export async function confirmBookingPaymentAction(
   try {
     await api.post(`/reservations/${id}/booking-payment/confirm`, payload);
   } catch (e: unknown) {
+    unstable_rethrow(e);
     return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
   }
   revalidatePath('/dashboard/reservations');
@@ -335,6 +344,7 @@ export async function unconfirmBookingPaymentAction(
   try {
     await api.post(`/reservations/${id}/booking-payment/unconfirm`, payload);
   } catch (e: unknown) {
+    unstable_rethrow(e);
     return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
   }
   revalidatePath('/dashboard/reservations');
@@ -384,6 +394,7 @@ export async function updateReservationBookingAction(
   try {
     await api.patch(`/reservations/${id}`, payload);
   } catch (e: unknown) {
+    unstable_rethrow(e);
     return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
   }
   revalidatePath('/dashboard/reservations');

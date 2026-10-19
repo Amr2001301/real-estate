@@ -1,5 +1,6 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { api } from '@/lib/api';
 
@@ -21,6 +22,7 @@ async function run(path: string, body: Record<string, unknown> = {}): Promise<Ch
   try {
     await api.post(path, body);
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidate();

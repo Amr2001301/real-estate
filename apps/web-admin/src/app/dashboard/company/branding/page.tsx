@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { Palette } from 'lucide-react';
+import { unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
 import { PremiumPageHero } from '@/components/premium';
 import { BrandingForm } from './_components/branding-form';
@@ -8,7 +9,8 @@ import { BrandingForm } from './_components/branding-form';
 async function fetchBranding() {
   try {
     return await api.get<Record<string, unknown>>('/company/branding');
-  } catch {
+  } catch (e) {
+    unstable_rethrow(e);
     return {};
   }
 }

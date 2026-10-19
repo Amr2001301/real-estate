@@ -1,5 +1,6 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { api } from '@/lib/api';
 
@@ -24,6 +25,7 @@ export async function approveBrokerCommissionAction(
   try {
     await api.patch(`/broker-commissions/${id}/approve`, { notes });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/broker-commissions/${id}`);
@@ -41,6 +43,7 @@ export async function rejectBrokerCommissionAction(
   try {
     await api.patch(`/broker-commissions/${id}/reject`, { reason });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/broker-commissions/${id}`);
@@ -58,6 +61,7 @@ export async function cancelBrokerCommissionAction(
   try {
     await api.patch(`/broker-commissions/${id}/cancel`, { reason });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/broker-commissions/${id}`);

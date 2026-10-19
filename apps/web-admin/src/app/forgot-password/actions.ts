@@ -1,5 +1,6 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
 import { API_BASE } from '@/lib/api';
 
 export interface ForgotPasswordState {
@@ -26,7 +27,8 @@ export async function forgotPasswordAction(
     }
     // Always show success to avoid user enumeration.
     return { sent: true };
-  } catch {
+  } catch (e) {
+    unstable_rethrow(e);
     return { error: 'تعذر الاتصال بالخادم. تأكد أن الـ API يعمل.' };
   }
 }

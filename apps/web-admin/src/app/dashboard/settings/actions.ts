@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
 
 /**
@@ -18,7 +18,8 @@ export async function patchSettingAction(formData: FormData) {
   let value: unknown = rawValue;
   try {
     value = JSON.parse(rawValue);
-  } catch {
+  } catch (e) {
+    unstable_rethrow(e);
     // Not JSON — store as a string literal.
     value = rawValue;
   }
@@ -26,6 +27,7 @@ export async function patchSettingAction(formData: FormData) {
   try {
     await api.patch(`/settings/${encodeURIComponent(key)}`, { value });
   } catch (e) {
+    unstable_rethrow(e);
     errMessage = (e as Error).message;
   }
   revalidatePath('/dashboard/settings');

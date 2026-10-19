@@ -1,6 +1,6 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { api } from '@/lib/api';
 
@@ -39,6 +39,7 @@ export async function createPlanAction(
     const res = await api.post<{ id: string }>('/installment-plan-templates', payload);
     createdId = res.id;
   } catch (e: unknown) {
+    unstable_rethrow(e);
     return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
   }
 
@@ -59,6 +60,7 @@ export async function updatePlanAction(
   try {
     await api.patch(`/installment-plan-templates/${id}`, payload);
   } catch (e: unknown) {
+    unstable_rethrow(e);
     return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
   }
 
@@ -70,6 +72,7 @@ export async function deletePlanAction(id: string): Promise<{ error?: string }> 
   try {
     await api.delete(`/installment-plan-templates/${id}`);
   } catch (e: unknown) {
+    unstable_rethrow(e);
     return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
   }
   revalidateAll();
@@ -80,6 +83,7 @@ export async function activatePlanAction(id: string): Promise<{ error?: string }
   try {
     await api.post(`/installment-plan-templates/${id}/activate`, {});
   } catch (e: unknown) {
+    unstable_rethrow(e);
     return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
   }
   revalidateAll(id);
@@ -90,6 +94,7 @@ export async function deactivatePlanAction(id: string): Promise<{ error?: string
   try {
     await api.post(`/installment-plan-templates/${id}/deactivate`, {});
   } catch (e: unknown) {
+    unstable_rethrow(e);
     return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
   }
   revalidateAll(id);
@@ -124,7 +129,8 @@ function buildPayload(formData: FormData): Record<string, unknown> {
           })
           .filter((x): x is { durationMonths: number; increasePercentage: number } => x !== null);
       }
-    } catch {
+    } catch (e) {
+      unstable_rethrow(e);
       // ignore malformed input — treat as empty
     }
   }

@@ -1,5 +1,6 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { api } from '@/lib/api';
 
@@ -42,6 +43,7 @@ export async function patchBrandingAction(
     revalidatePath('/', 'layout');
     return { ok: true };
   } catch (e) {
+    unstable_rethrow(e);
     return { ok: false, error: (e as Error).message ?? 'حدث خطأ غير متوقع.' };
   }
 }

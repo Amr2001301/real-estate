@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
 import type { AdminBrokerPayout, BrokerPayoutMethod } from '@/lib/types';
 
@@ -36,6 +36,7 @@ export async function createBrokerPayoutAction(
       commissionIds: commissionIds.length > 0 ? commissionIds : undefined,
     });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath('/dashboard/broker-payouts');
@@ -76,6 +77,7 @@ export async function approvePayoutAction(
   try {
     await api.patch(`/broker-payouts/${payoutId}/approve`, { notes });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/broker-payouts/${payoutId}`);
@@ -101,6 +103,7 @@ export async function processPayoutAction(
       notes,
     });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/broker-payouts/${payoutId}`);
@@ -131,6 +134,7 @@ export async function markPayoutPaidAction(
       notes,
     });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/broker-payouts/${payoutId}`);
@@ -148,6 +152,7 @@ export async function cancelPayoutAction(
   try {
     await api.patch(`/broker-payouts/${payoutId}/cancel`, { reason });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/broker-payouts/${payoutId}`);

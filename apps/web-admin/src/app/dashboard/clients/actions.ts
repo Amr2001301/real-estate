@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
 
 export interface ClientFormState {
@@ -40,6 +40,7 @@ export async function createClientAction(
       locale,
     });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath('/dashboard/clients');
@@ -61,6 +62,7 @@ export async function updateClientAction(
   try {
     await api.patch(`/users/${id}`, { fullName, phone, locale });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/clients/${id}`);
@@ -78,6 +80,7 @@ export async function deactivateClientAction(id: string): Promise<{ error?: stri
   try {
     await api.patch(`/users/${id}/deactivate`, {});
   } catch (e) {
+    unstable_rethrow(e);
     // e.g. the customer still has a live contract (cancel or transfer it first).
     return { error: (e as Error).message };
   }

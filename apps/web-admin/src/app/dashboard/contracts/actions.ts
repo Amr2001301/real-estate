@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
 import { depositPayload } from '@/lib/deposit-payload';
 import { getCompanyTimeZone } from '@/lib/currency';
@@ -36,6 +36,7 @@ export async function createContractAction(
   try {
     created = await api.post<{ id: string }>('/contracts', payload);
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
 
@@ -46,6 +47,7 @@ export async function createContractAction(
     try {
       await api.post(`/contracts/${created.id}/sign`, { signedAt });
     } catch (e) {
+      unstable_rethrow(e);
       revalidatePath('/dashboard/contracts');
       return {
         error: `تم إنشاء العقد لكن فشل التوقيع: ${(e as Error).message}. افتح صفحة العقد من القائمة وحاول التوقيع مرة أخرى.`,
@@ -63,6 +65,7 @@ export async function setLateFeeClauseAction(id: string, lateFeesApply: boolean)
   try {
     await api.patch(`/contracts/${id}/late-fee-clause`, { lateFeesApply });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/contracts/${id}`);
@@ -73,6 +76,7 @@ export async function signContractAction(id: string, signedAt: string): Promise<
   try {
     await api.post(`/contracts/${id}/sign`, { signedAt });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/contracts/${id}`);
@@ -88,6 +92,7 @@ export async function assignContractNumberAction(
   try {
     await api.patch(`/contracts/${id}`, contractNumber ? { contractNumber } : { autoNumber: true });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/contracts/${id}`);
@@ -103,6 +108,7 @@ export async function recordHandoverAction(
   try {
     await api.post(`/contracts/${id}/handover`, body);
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/contracts/${id}`);
@@ -115,6 +121,7 @@ export async function retrySignFollowupsAction(id: string): Promise<ContractForm
   try {
     res = await api.post<{ failures: { step: string; error: string }[] }>(`/contracts/${id}/sign-followups`, {});
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/contracts/${id}`);
@@ -142,6 +149,7 @@ export async function createInstallmentPlanAction(
       startsAt: new Date(String(formData.get('startsAt'))).toISOString(),
     });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/contracts/${contractId}`);
@@ -159,6 +167,7 @@ export async function recordInstallmentPaymentAction(
   try {
     await api.post('/deposits', payload);
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/contracts/${contractId}`);
@@ -184,6 +193,7 @@ export async function cancelContractAction(id: string, formData: FormData): Prom
       demoteCustomerOverride: formData.get('demoteCustomer') === 'on',
     });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/contracts/${id}`);
@@ -203,6 +213,7 @@ export async function recordRefundAction(id: string, formData: FormData): Promis
       notes: str(formData.get('notes')),
     });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/contracts/${id}`);
@@ -214,6 +225,7 @@ export async function releaseContractUnitAction(id: string): Promise<ContractFor
   try {
     await api.post(`/contracts/${id}/release-unit`, {});
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/contracts/${id}`);
@@ -225,6 +237,7 @@ export async function waiveLateFeeAction(contractId: string, installmentId: stri
   try {
     await api.post(`/installments/${installmentId}/waive-late-fee`, {});
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/contracts/${contractId}`);
@@ -243,6 +256,7 @@ export async function transferContractAction(id: string, formData: FormData): Pr
         : {}),
     });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/contracts/${id}`);
@@ -258,6 +272,7 @@ export async function swapContractUnitAction(id: string, formData: FormData): Pr
       reason: String(formData.get('reason') ?? '').trim(),
     });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/contracts/${id}`);
@@ -279,6 +294,7 @@ export async function payInstallmentsAction(id: string, formData: FormData): Pro
       paymentMethod: String(formData.get('paymentMethod') ?? 'CASH'),
     });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   return done(id);
@@ -293,6 +309,7 @@ export async function settleContractAction(id: string, formData: FormData): Prom
       paymentMethod: String(formData.get('paymentMethod') ?? 'CASH'),
     });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   return done(id);
@@ -306,6 +323,7 @@ export async function changeContractPriceAction(id: string, formData: FormData):
       reason: String(formData.get('reason') ?? '').trim(),
     });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   return done(id);
@@ -319,6 +337,7 @@ export async function waiveMarkupAction(id: string, formData: FormData): Promise
       reason: String(formData.get('reason') ?? '').trim(),
     });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   return done(id);
@@ -333,6 +352,7 @@ export async function rescheduleContractAction(id: string, formData: FormData): 
       reason: String(formData.get('reason') ?? '').trim(),
     });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   return done(id);

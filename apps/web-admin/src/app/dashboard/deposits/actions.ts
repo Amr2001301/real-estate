@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
@@ -24,6 +24,7 @@ export async function recordDepositAction(
   try {
     await api.post('/deposits', payload);
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath('/dashboard/deposits');
@@ -50,6 +51,7 @@ export async function approveDepositAction(
   try {
     await api.post(`/deposits/${id}/approve`, note ? { note } : {});
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath('/dashboard/deposits');
@@ -72,6 +74,7 @@ export async function rejectDepositAction(
   try {
     await api.post(`/deposits/${id}/reject`, { reason });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath('/dashboard/deposits');
@@ -100,6 +103,7 @@ export async function reverseDepositAction(
   try {
     await api.post(`/deposits/${id}/reverse`, { reason });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidateDeposit(id, contractId);
@@ -110,6 +114,7 @@ export async function deleteDepositAction(id: string, contractId: string | null)
   try {
     await api.delete(`/deposits/${id}`);
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidateDeposit(id, contractId);
@@ -120,6 +125,7 @@ export async function restoreDepositAction(id: string, contractId: string | null
   try {
     await api.post(`/deposits/${id}/restore`, {});
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidateDeposit(id, contractId);
@@ -142,6 +148,7 @@ export async function attachContractDocumentAction(
       sizeBytes: Number(formData.get('sizeBytes') ?? 0) || undefined,
     });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/contracts/${contractId}`);

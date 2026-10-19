@@ -1,5 +1,6 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { ApiError, api } from '@/lib/api';
 
@@ -43,6 +44,7 @@ export async function approveBrokerLeadAction(
   try {
     await api.patch(`/broker-leads/${id}/approve`, { assignedSalesId, note });
   } catch (e) {
+    unstable_rethrow(e);
     return toErrorState(e);
   }
   revalidatePath(`/dashboard/broker-leads/${id}`);
@@ -60,6 +62,7 @@ export async function rejectBrokerLeadAction(
   try {
     await api.patch(`/broker-leads/${id}/reject`, { reason });
   } catch (e) {
+    unstable_rethrow(e);
     return toErrorState(e);
   }
   revalidatePath(`/dashboard/broker-leads/${id}`);
@@ -76,6 +79,7 @@ export async function markBrokerLeadDuplicateAction(
   try {
     await api.patch(`/broker-leads/${id}/mark-duplicate`, { reason });
   } catch (e) {
+    unstable_rethrow(e);
     return toErrorState(e);
   }
   revalidatePath(`/dashboard/broker-leads/${id}`);

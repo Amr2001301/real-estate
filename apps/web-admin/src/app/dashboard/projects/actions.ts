@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
 
 export interface ProjectFormState {
@@ -18,7 +18,8 @@ function parseTranslatableJson(raw: string): { ar: string; en: string }[] {
       (item): item is { ar: string; en: string } =>
         item && typeof item === 'object' && typeof item.ar === 'string' && typeof item.en === 'string',
     );
-  } catch {
+  } catch (e) {
+    unstable_rethrow(e);
     return [];
   }
 }
@@ -52,6 +53,7 @@ export async function createProjectAction(
   try {
     created = await api.post<{ id: string }>('/projects', payload);
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath('/dashboard/projects');
@@ -67,6 +69,7 @@ export async function updateProjectAction(
   try {
     await api.patch(`/projects/${id}`, payload);
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/projects/${id}`);
@@ -115,6 +118,7 @@ export async function createPhaseAction(
       order: Number(formData.get('order') ?? 0),
     });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/projects/${projectId}`);
@@ -135,6 +139,7 @@ export async function createBuildingAction(
       order: Number(formData.get('order') ?? 0),
     });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/projects/${projectId}`);
