@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { SettingCard } from './_components/setting-row';
 import { AddSettingPanel } from './_components/add-setting-panel';
+import { KNOWN_SETTING_KEYS } from './_components/known-settings';
 import {
   PremiumPageHero,
   PremiumMetricStrip,
@@ -110,7 +111,9 @@ export default async function SettingsPage({
     system:        m.groupLabels.system,
   };
 
-  function groupLabel(g: string): string { return groupLabels[g] ?? g; }
+  function groupLabel(g: string): string {
+    return groupLabels[g] ?? (m.groupLabels as Record<string, string>)[g] ?? g;
+  }
   function keyLabel(key: string): string { return m.keyLabels[key] ?? key; }
 
   const sp = await searchParams;
@@ -118,8 +121,14 @@ export default async function SettingsPage({
   if (sp.q)     qs.set('q', sp.q);
   if (sp.group) qs.set('group', sp.group);
 
-  const res   = await safe(api.get<SettingItem[]>(`/settings${qs.toString() ? `?${qs}` : ''}`));
+  const filtered = qs.toString() !== '';
+  const [res, allRes] = await Promise.all([
+    safe(api.get<SettingItem[]>(`/settings${filtered ? `?${qs}` : ''}`)),
+    filtered ? safe(api.get<SettingItem[]>('/settings')) : Promise.resolve(null),
+  ]);
   const items = res.data ?? [];
+  // The add list offers only the known settings the company does not have yet.
+  const existingKeys = (allRes ?? res).data?.map((s) => s.key) ?? [];
 
   // ── Group items ─────────────────────────────────────────────────────────────
   const grouped = new Map<string, SettingItem[]>();
@@ -164,7 +173,7 @@ export default async function SettingsPage({
             {m.badge}
           </span>
         }
-        actions={<AddSettingPanel locale={locale} />}
+        actions={<AddSettingPanel locale={locale} existingKeys={existingKeys} />}
       />
 
       {/* ── Toast banners ───────────────────────────────────────────────── */}
@@ -317,6 +326,7 @@ export default async function SettingsPage({
                   typeCls={TYPE_CLS[type]}
                   preview={preview}
                   sensitive={row.sensitive}
+                  unused={!KNOWN_SETTING_KEYS.has(row.key)}
                   updatedAt={formatDateTime(row.updatedAt, locale)}
                   locale={locale}
                 />
