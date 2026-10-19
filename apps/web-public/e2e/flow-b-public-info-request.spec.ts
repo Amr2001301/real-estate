@@ -34,7 +34,7 @@ test.describe('Flow B — public submits an info-request via /contact', () => {
 
     // Fill the three required fields (Arabic placeholders are stable in this version).
     await page.getByPlaceholder('مثال: محمد الأحمد').fill(FORM_NAME);
-    await page.getByPlaceholder('+966 5X XXX XXXX').fill(FORM_PHONE);
+    await page.getByPlaceholder('+20 10 XXXX XXXX').fill(FORM_PHONE);
     await page.getByPlaceholder('أخبرنا كيف يمكننا مساعدتك...').fill(
       'phase 7b — e2e cross-app proof',
     );

@@ -90,6 +90,8 @@ export default async function NewLeadPage({
         sales={salesOptions}
         initialClient={clientRes.data ?? null}
         locale={locale}
+        allowUnassigned={session?.role === 'ADMIN'}
+        defaultSalesId={session?.id ?? ''}
       />
     </div>
   );

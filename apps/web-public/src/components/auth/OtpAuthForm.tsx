@@ -63,7 +63,7 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
     if (isRegister && fullName.trim().length < 2) e.fullName = 'يرجى إدخال الاسم الكامل.';
     const normalized = normalizePhone(phone);
     if (!normalized) e.phone = 'يرجى إدخال رقم الهاتف.';
-    else if (!PHONE_RE.test(normalized)) e.phone = 'يرجى إدخال رقم هاتف صحيح بصيغة دولية، مثال: +9665XXXXXXXX';
+    else if (!PHONE_RE.test(normalized)) e.phone = 'يرجى إدخال رقم هاتف صحيح بصيغة دولية، مثال: +2010XXXXXXXX';
     if (isRegister && !terms) e.terms = 'يرجى الموافقة على الشروط والأحكام.';
     setErrors(e);
     if (Object.keys(e).length) return;
@@ -138,7 +138,7 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
               value={phone}
               onChange={(ev) => setPhone(ev.target.value)}
               invalid={!!errors.phone}
-              placeholder="+9665XXXXXXXX"
+              placeholder="+2010XXXXXXXX"
               inputMode="tel"
               dir="ltr"
               autoComplete="tel"

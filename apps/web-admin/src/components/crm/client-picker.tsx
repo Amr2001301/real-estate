@@ -222,7 +222,7 @@ export function ClientPicker({ initialClient, clientIdName = 'clientId' }: Props
         <Field
           label="رقم الهاتف"
           name="phone"
-          hint="بصيغة E.164، مثال: +966500000001"
+          hint="بصيغة E.164، مثال: +201001234567"
           required
         >
           <Input id="phone" name="phone" required dir="ltr" />

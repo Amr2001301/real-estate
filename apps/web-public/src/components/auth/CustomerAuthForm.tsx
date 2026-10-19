@@ -97,7 +97,7 @@ export function CustomerAuthForm({
     if (password.length < 8) e.password = 'كلمة المرور يجب ألا تقل عن ٨ أحرف.';
     if (isRegister) {
       if (fullName.trim().length < 2) e.fullName = 'يرجى إدخال الاسم الكامل.';
-      if (!PHONE_RE.test(phone.trim().replace(/[\s-]/g, ''))) e.phone = 'يرجى إدخال رقم جوال صحيح بصيغة دولية، مثال: +9665XXXXXXXX';
+      if (!PHONE_RE.test(phone.trim().replace(/[\s-]/g, ''))) e.phone = 'يرجى إدخال رقم جوال صحيح بصيغة دولية، مثال: +2010XXXXXXXX';
       if (confirm !== password) e.confirm = 'كلمتا المرور غير متطابقتين.';
       if (!terms) e.terms = 'يرجى الموافقة على الشروط والأحكام.';
     }
@@ -193,7 +193,7 @@ export function CustomerAuthForm({
                 <FormError>{errors.fullName}</FormError>
               </Field>
               <Field label="رقم الجوال" required>
-                <Input value={phone} onChange={(e) => setPhone(e.target.value)} invalid={!!errors.phone} placeholder="+9665XXXXXXXX" inputMode="tel" dir="ltr" autoComplete="tel" />
+                <Input value={phone} onChange={(e) => setPhone(e.target.value)} invalid={!!errors.phone} placeholder="+2010XXXXXXXX" inputMode="tel" dir="ltr" autoComplete="tel" />
                 <FormError>{errors.phone}</FormError>
               </Field>
             </div>

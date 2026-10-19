@@ -519,6 +519,10 @@ export default async function UsersPage({
 
                     {/* ── Action ──────────────────────────────────── */}
                     <td className="py-3 ps-4 pe-5">
+                      <div className="flex items-center gap-1.5">
+                      <Link href={`/dashboard/users/${u.id}/permissions` as never}>
+                        <Button variant="ghost" size="sm">{m.actionBtns.permissions}</Button>
+                      </Link>
                       {u.active ? (
                         <form action={deactivateAction.bind(null, u.id)}>
                           <Button
@@ -537,6 +541,7 @@ export default async function UsersPage({
                           </Button>
                         </form>
                       )}
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -1,5 +1,7 @@
+import { redirect } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { getLocale } from '@/lib/locale';
+import { getSession } from '@/lib/session';
 import { uiT } from '@/messages/ui';
 import ClientForm from '../_form';
 
@@ -10,7 +12,9 @@ export default async function NewClientPage({
 }: {
   searchParams: Promise<{ role?: string }>;
 }) {
-  const sp = await searchParams;
+  const [sp, session] = await Promise.all([searchParams, getSession()]);
+  // Only an admin creates users; a rep adds a client through the lead form.
+  if (session?.role !== 'ADMIN') redirect('/dashboard/leads/new' as never);
   const role: 'CLIENT' | 'CUSTOMER' = sp.role === 'CUSTOMER' ? 'CUSTOMER' : 'CLIENT';
   const locale = await getLocale();
   const m = uiT(locale);

@@ -32,9 +32,21 @@ interface Props {
   sales: Pick<User, 'id' | 'fullName' | 'role'>[];
   initialClient?: User | null;
   locale?: Locale;
+  // Only an admin can leave a lead unassigned: the API assigns anyone
+  // else's lead to the creator, so the option would be misleading.
+  allowUnassigned?: boolean;
+  defaultSalesId?: string;
 }
 
-export default function LeadForm({ projects, sources, sales, initialClient, locale = 'ar' }: Props) {
+export default function LeadForm({
+  projects,
+  sources,
+  sales,
+  initialClient,
+  locale = 'ar',
+  allowUnassigned = true,
+  defaultSalesId = '',
+}: Props) {
   const m = uiT(locale).pages.leadsForm;
   const c = uiT(locale).common;
   const [state, formAction] = useActionState<LeadFormState, FormData>(
@@ -140,8 +152,8 @@ export default function LeadForm({ projects, sources, sales, initialClient, loca
         >
           <div className="flex flex-col gap-5">
             <Field label={m.labelSales} name="assignedSalesId">
-              <Select id="assignedSalesId" name="assignedSalesId" defaultValue="">
-                <option value="">{m.optionUnsetSales}</option>
+              <Select id="assignedSalesId" name="assignedSalesId" defaultValue={allowUnassigned ? '' : defaultSalesId}>
+                {allowUnassigned && <option value="">{m.optionUnsetSales}</option>}
                 {sales.map((s) => (
                   <option key={s.id} value={s.id}>
                     {salesActorLabel(s)}

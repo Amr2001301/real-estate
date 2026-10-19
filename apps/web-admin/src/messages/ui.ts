@@ -1141,7 +1141,7 @@ const UI = {
         noManager: 'بدون مدير',
         saveBtn: 'حفظ',
         statusBadge: { active: 'نشط', inactive: 'معطل' },
-        actionBtns: { deactivate: 'تعطيل', activate: 'تفعيل' },
+        actionBtns: { deactivate: 'تعطيل', activate: 'تفعيل', permissions: 'الصلاحيات' },
         empty: {
           filteredTitle: 'لا توجد نتائج مطابقة',
           emptyTitle: 'لا يوجد مستخدمون بعد',
@@ -6486,7 +6486,7 @@ const UI = {
         noManager: 'No Manager',
         saveBtn: 'Save',
         statusBadge: { active: 'Active', inactive: 'Inactive' },
-        actionBtns: { deactivate: 'Deactivate', activate: 'Activate' },
+        actionBtns: { deactivate: 'Deactivate', activate: 'Activate', permissions: 'Permissions' },
         empty: {
           filteredTitle: 'No matching results',
           emptyTitle: 'No users yet',

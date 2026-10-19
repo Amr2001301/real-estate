@@ -179,21 +179,6 @@ export default async function LoginPage({
                       </div>
                     ))}
                   </div>
-
-                  {/* Trust stats — inline, no big cards */}
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                    <span className="text-[11.5px] text-white/45">
-                      <strong className="font-bold text-white/65">+500</strong>{' '}وحدة عقارية
-                    </span>
-                    <span aria-hidden className="h-[3px] w-[3px] rounded-full bg-white/20" />
-                    <span className="text-[11.5px] text-white/45">
-                      <strong className="font-bold text-white/65">12</strong>{' '}مشروع نشط
-                    </span>
-                    <span aria-hidden className="h-[3px] w-[3px] rounded-full bg-white/20" />
-                    <span className="text-[11.5px] text-white/45">
-                      <strong className="font-bold text-white/65">24/7</strong>{' '}دعم متواصل
-                    </span>
-                  </div>
                 </div>
 
                 {/* Panel footer */}

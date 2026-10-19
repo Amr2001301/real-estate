@@ -260,7 +260,7 @@ export function ContactForm({
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               invalid={!!errors.phone}
-              placeholder="+966 5X XXX XXXX"
+              placeholder="+20 10 XXXX XXXX"
               inputMode="tel"
               dir="ltr"
               autoComplete="tel"

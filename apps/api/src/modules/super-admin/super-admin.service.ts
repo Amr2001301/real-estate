@@ -197,7 +197,8 @@ export class SuperAdminService {
           currency: dto.currency ?? DEFAULT_CURRENCY,
           timezone: dto.timezone ?? 'Africa/Cairo',
           subscriptionPlan: dto.subscriptionPlan ?? 'TRIAL',
-          subscriptionStatus: 'TRIAL',
+          // A company put on a paid plan is subscribed, not on trial.
+          subscriptionStatus: (dto.subscriptionPlan ?? 'TRIAL') === 'TRIAL' ? 'TRIAL' : 'ACTIVE',
           subscriptionStartAt: dto.subscriptionStartAt ? new Date(dto.subscriptionStartAt) : null,
           subscriptionEndAt: dto.subscriptionEndAt ? new Date(dto.subscriptionEndAt) : null,
           maxUsers: dto.maxUsers ?? null,
@@ -243,7 +244,14 @@ export class SuperAdminService {
   }
 
   async updateCompany(id: string, dto: UpdateCompanyDto) {
-    await this.assertExists(id);
+    const current = await this.assertExists(id);
+    // Moving a trial company onto a paid plan ends the trial, unless the
+    // caller sets the status explicitly.
+    const endsTrial =
+      dto.subscriptionStatus === undefined &&
+      dto.subscriptionPlan !== undefined &&
+      dto.subscriptionPlan !== 'TRIAL' &&
+      current.subscriptionStatus === 'TRIAL';
 
     // When the subscription plan changes, derive maxUsers from the matching
     // PricingPackage so the company limit stays in sync with the package definition.
@@ -270,6 +278,7 @@ export class SuperAdminService {
         ...(dto.timezone !== undefined && { timezone: dto.timezone }),
         ...(dto.subscriptionPlan !== undefined && { subscriptionPlan: dto.subscriptionPlan }),
         ...(dto.subscriptionStatus !== undefined && { subscriptionStatus: dto.subscriptionStatus }),
+        ...(endsTrial && { subscriptionStatus: 'ACTIVE' as const }),
         ...(dto.subscriptionStartAt !== undefined && {
           subscriptionStartAt: dto.subscriptionStartAt ? new Date(dto.subscriptionStartAt) : null,
         }),

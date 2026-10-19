@@ -59,10 +59,11 @@ test.describe('SALES smoke', () => {
   // empty for a sales rep. They now come from /users/options.
   test('staff and project dropdowns are filled for a sales rep', async ({ page }) => {
     await page.goto('/dashboard/leads/new', { waitUntil: 'networkidle' });
-    // Beyond the empty "— unset —" option.
+    // A rep assigns only themself: their own name, already selected.
     await expect
       .poll(() => page.locator('select[name="assignedSalesId"] option').count())
-      .toBeGreaterThan(1);
+      .toBe(1);
+    expect(await page.locator('select[name="assignedSalesId"]').inputValue()).not.toBe('');
     await expect
       .poll(() => page.locator('select[name="projectInterestId"] option').count())
       .toBeGreaterThan(1);

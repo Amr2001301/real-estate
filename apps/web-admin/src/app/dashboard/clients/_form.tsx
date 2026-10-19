@@ -135,7 +135,7 @@ export default function ClientForm({ user, defaultRole = 'CLIENT', locale = 'ar'
                 name="phone"
                 type="tel"
                 dir="ltr"
-                placeholder="+966 5X XXX XXXX"
+                placeholder="+20 10 XXXX XXXX"
                 defaultValue={user?.phone ?? ''}
               />
             </Field>

@@ -165,7 +165,7 @@ export async function updateProfileAction(input: {
   if (!PHONE_RE.test(phone)) {
     return {
       ok: false,
-      error: 'يرجى إدخال رقم جوال صحيح بصيغة دولية، مثال: +9665XXXXXXXX',
+      error: 'يرجى إدخال رقم جوال صحيح بصيغة دولية، مثال: +2010XXXXXXXX',
       field: 'phone',
     };
   }
