@@ -20,6 +20,8 @@ interface Props {
   typeCls: string;
   preview: string;
   sensitive: boolean;
+  /** Nothing in the system reads this key (F7). */
+  unused?: boolean;
   updatedAt: string;
   locale?: Locale;
 }
@@ -143,6 +145,7 @@ export function SettingCard({
   typeCls,
   preview,
   sensitive,
+  unused = false,
   updatedAt,
   locale = 'ar',
 }: Props) {
@@ -167,6 +170,15 @@ export function SettingCard({
         </p>
 
         <div className="flex items-center gap-1.5 shrink-0 mt-px">
+          {unused && (
+            <span
+              data-testid="setting-unused"
+              title={uiT(locale).pages.settings.unusedHint}
+              className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 bg-slate-100 text-slate-500 border border-slate-200"
+            >
+              {uiT(locale).pages.settings.unusedBadge}
+            </span>
+          )}
           {/* Type badge */}
           <span className={cn(
             'text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0',
