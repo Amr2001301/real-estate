@@ -19,6 +19,8 @@ import {
   type FeedbackRating,
 } from '@/lib/chat';
 import { ChatPanel } from './ChatPanel';
+import { useCompanyContact } from '@/components/contact/CompanyContactProvider';
+import { whatsappHref } from '@/lib/contact';
 
 /** Routes where the widget is hidden (private area + auth screens). */
 function isHiddenRoute(pathname: string): boolean {
@@ -34,6 +36,7 @@ const localId = (p: string) => `${p}-${Date.now()}-${msgSeq++}`;
 
 export function ChatWidget() {
   const pathname = usePathname();
+  const { whatsapp } = useCompanyContact();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatUiMessage[]>([]);
   const [quickReplies, setQuickReplies] = useState<string[]>([]);
@@ -196,9 +199,10 @@ export function ChatWidget() {
     <>
       {!open && (
         <div className="fixed bottom-6 left-6 z-[60] flex flex-col items-center gap-3">
-          {/* WhatsApp — secondary action, sits above the AI button */}
+          {/* WhatsApp — the company's own number (branding); hidden without one. */}
+          {whatsapp && (
           <a
-            href="https://wa.me/201008239075"
+            href={whatsappHref(whatsapp)}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="تواصل عبر واتساب"
@@ -211,6 +215,7 @@ export function ChatWidget() {
               تواصل عبر واتساب
             </span>
           </a>
+          )}
 
           {/* AI assistant — hero action */}
           <button

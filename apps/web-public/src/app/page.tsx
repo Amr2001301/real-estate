@@ -33,7 +33,7 @@ export default async function HomePage() {
   const tenant = await getResolvedTenant();
   if (!tenant) notFound();
 
-  const [locale, projects, units] = await Promise.all([
+  const [locale, projects, units, cities] = await Promise.all([
     getLocale(),
     // No `featured` filter: the API already orders featured-first, so this one
     // request returns featured projects first then fills with normal published
@@ -44,6 +44,12 @@ export default async function HomePage() {
     }),
     // Homepage shows 6 featured units (two rows); the full catalogue lives on /units.
     safeFetch<Paginated<PublicUnit>>('/public/units?pageSize=6', {
+      revalidate: REVALIDATE,
+      tenantSlug: tenant.slug,
+    }),
+    // The company's own project cities (the search offered Saudi cities to
+    // every tenant, an Egyptian developer's included — F37).
+    safeFetch<{ cities: string[] }>('/public/projects/cities', {
       revalidate: REVALIDATE,
       tenantSlug: tenant.slug,
     }),
@@ -63,7 +69,7 @@ export default async function HomePage() {
 
       {/* Premium search panel overlapping the hero's lower edge. */}
       <Container className="relative z-10 -mt-12 sm:-mt-14">
-        <SearchPanel locale={locale} />
+        <SearchPanel locale={locale} cities={cities.ok ? cities.data.cities : []} />
       </Container>
 
       <InvestmentCategories locale={locale} />

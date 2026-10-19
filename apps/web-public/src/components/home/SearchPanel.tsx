@@ -13,7 +13,7 @@ import { siteT } from '@/messages/site';
 const SELECT_CLS =
   'h-12 w-full rounded-2xl border border-hairline bg-surface px-4 text-[15px] text-ink shadow-sm transition-colors duration-200 focus:border-gold-300 focus:outline-none focus:ring-2 focus:ring-gold-400/40';
 
-export function SearchPanel({ locale }: { locale: Locale }) {
+export function SearchPanel({ locale, cities }: { locale: Locale; cities: string[] }) {
   const router = useRouter();
   const m = siteT(locale).home.search;
 
@@ -82,18 +82,20 @@ export function SearchPanel({ locale }: { locale: Locale }) {
           />
         </div>
 
-        {/* City */}
-        <select
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          aria-label={m.allCities}
-          className={SELECT_CLS}
-        >
-          <option value="">{m.allCities}</option>
-          {m.cities.map((c) => (
-            <option key={c.value} value={c.value}>{c.label}</option>
-          ))}
-        </select>
+        {/* City — the company's project cities; hidden when it has none. */}
+        {cities.length > 0 && (
+          <select
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            aria-label={m.allCities}
+            className={SELECT_CLS}
+          >
+            <option value="">{m.allCities}</option>
+            {cities.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        )}
 
         {/* Price range */}
         <select

@@ -82,13 +82,6 @@ const SITE_MESSAGES = {
           { key: 'med',   label: 'طبي',    type: '' },
           { key: 'hotel', label: 'فندقي',  type: '' },
         ],
-        cities: [
-          { value: 'الرياض',          label: 'الرياض' },
-          { value: 'جدة',             label: 'جدة' },
-          { value: 'الدمام',          label: 'الدمام' },
-          { value: 'مكة المكرمة',     label: 'مكة المكرمة' },
-          { value: 'المدينة المنورة', label: 'المدينة المنورة' },
-        ],
         allCities: 'المدينة',
         statuses: [
           { value: '',          label: 'كل الحالات' },
@@ -935,13 +928,6 @@ const SITE_MESSAGES = {
           { key: 'comm',  label: 'Commercial',   type: 'retail' },
           { key: 'med',   label: 'Medical',      type: '' },
           { key: 'hotel', label: 'Hotel',        type: '' },
-        ],
-        cities: [
-          { value: 'الرياض',          label: 'Riyadh' },
-          { value: 'جدة',             label: 'Jeddah' },
-          { value: 'الدمام',          label: 'Dammam' },
-          { value: 'مكة المكرمة',     label: 'Mecca' },
-          { value: 'المدينة المنورة', label: 'Medina' },
         ],
         allCities: 'City',
         statuses: [

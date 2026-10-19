@@ -1,8 +1,11 @@
+'use client';
+
 import type { Route } from 'next';
 import Link from 'next/link';
 import { MessageCircle, CalendarDays, ShieldCheck, Phone, Users, Building2 } from 'lucide-react';
 import { routes } from '@/lib/routes';
-import { getContactPhone, getWhatsappPhone, telHref, whatsappHref } from '@/lib/contact';
+import { telHref, whatsappHref } from '@/lib/contact';
+import { useCompanyContact } from '@/components/contact/CompanyContactProvider';
 import { ButtonLink } from '@/components/ui/Button';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 
@@ -24,8 +27,7 @@ export function InquiryCard({ projectId, projectName }: { projectId: string; pro
   const info  = `${routes.contact}?projectId=${projectId}` as Route;
   const visit = `${routes.contact}?type=visit&projectId=${projectId}` as Route;
 
-  const contactPhone  = getContactPhone();
-  const whatsappPhone = getWhatsappPhone();
+  const { phone: contactPhone, whatsapp: whatsappPhone } = useCompanyContact();
   const waMessage     = `مرحبًا، أنا مهتم بمشروع ${projectName}. أرجو تزويدي بمزيد من التفاصيل.`;
 
   return (
