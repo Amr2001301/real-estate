@@ -149,7 +149,7 @@ export function ProfileForm({
     const e: Record<string, string> = {};
     if (fullName.trim().length < 2) e.fullName = 'يرجى إدخال الاسم الكامل.';
     if (!PHONE_RE.test(phone.trim().replace(/[\s-]/g, '')))
-      e.phone = 'يرجى إدخال رقم جوال صحيح بصيغة دولية، مثال: +9665XXXXXXXX';
+      e.phone = 'يرجى إدخال رقم جوال صحيح بصيغة دولية، مثال: +2010XXXXXXXX';
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -299,7 +299,7 @@ export function ProfileForm({
                 if (status !== 'idle') setStatus('idle');
               }}
               invalid={!!errors.phone}
-              placeholder="+9665XXXXXXXX"
+              placeholder="+2010XXXXXXXX"
               inputMode="tel"
               dir="ltr"
               autoComplete="tel"

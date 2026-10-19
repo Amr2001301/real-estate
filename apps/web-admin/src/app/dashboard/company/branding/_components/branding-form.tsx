@@ -356,10 +356,10 @@ export function BrandingForm({ initial }: { initial: RawBranding }) {
             <Input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="info@company.com" dir="ltr" />
           </Field>
           <Field label="رقم الهاتف">
-            <Input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="+966501234567" dir="ltr" />
+            <Input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="+201001234567" dir="ltr" />
           </Field>
           <Field label="واتساب">
-            <Input value={contactWhatsApp} onChange={(e) => setContactWhatsApp(e.target.value)} placeholder="966501234567" dir="ltr" />
+            <Input value={contactWhatsApp} onChange={(e) => setContactWhatsApp(e.target.value)} placeholder="201001234567" dir="ltr" />
           </Field>
           <Field label="العنوان (عربي)">
             <Input value={addressAr} onChange={(e) => setAddressAr(e.target.value)} placeholder="الرياض، حي العليا" dir="rtl" />
