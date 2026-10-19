@@ -335,6 +335,9 @@ export default [
       'apps/api/src/modules/auth/auth.controller.ts',
       // Runs before TenantContextInterceptor; the sub is what finds the company.
       'apps/api/src/modules/auth/jwt.strategy.ts',
+      // Startup, no request: writes the global Permission catalog and the first
+      // SUPER_ADMIN (companyId null) — platform rows, no tenant to scope to.
+      'apps/api/src/modules/permissions/permission-catalog.bootstrap.ts',
       'apps/api/src/**/*.spec.ts',
       'apps/api/src/**/__tests__/**/*.ts',
     ],

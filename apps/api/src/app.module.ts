@@ -71,6 +71,7 @@ import { ReportBrandModule } from './modules/company-branding/report-brand.modul
 import { ReportPdfModule } from './common/report-pdf/report-pdf.module';
 import { DataExportModule } from './modules/data-export/data-export.module';
 import { DataImportModule } from './modules/data-import/data-import.module';
+import { PermissionCatalogBootstrap } from './modules/permissions/permission-catalog.bootstrap';
 
 @Module({
   imports: [
@@ -139,6 +140,8 @@ import { DataImportModule } from './modules/data-import/data-import.module';
   ],
   controllers: [HealthController],
   providers: [
+    // F1: writes missing permission codes and the first SUPER_ADMIN at startup.
+    PermissionCatalogBootstrap,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     // MT-034: Runs after JwtAuthGuard so req.user (DB-authoritative companyId) is
