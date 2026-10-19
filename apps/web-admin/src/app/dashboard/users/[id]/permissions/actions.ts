@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
 
 async function patch(id: string, body: { addPermissionCodes?: string[]; removePermissionCodes?: string[] }) {
@@ -9,6 +9,7 @@ async function patch(id: string, body: { addPermissionCodes?: string[]; removePe
   try {
     await api.patch(`/users/${id}/permissions`, body);
   } catch (e) {
+    unstable_rethrow(e);
     errMessage = (e as Error).message;
   }
   revalidatePath(`/dashboard/users/${id}/permissions`);
@@ -57,6 +58,7 @@ export async function applyUserPermissions(
       ...(remove.length ? { removePermissionCodes: remove } : {}),
     });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/users/${id}/permissions`);

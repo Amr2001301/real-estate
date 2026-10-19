@@ -1,5 +1,6 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { api } from '@/lib/api';
 
@@ -15,6 +16,7 @@ export async function setInquiryStatusAction(
   try {
     await api.patch(`/info-requests/${id}`, { status });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath('/dashboard/requests');

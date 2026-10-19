@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
 import { getLocale } from '@/lib/locale';
 import { portalReservationsContractsT } from '@/messages/portal/reservations-contracts';
@@ -40,6 +40,7 @@ export async function createPortalReservationAction(
   try {
     created = await api.post<PortalReservation>('/portal/reservations', payload);
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath('/portal/reservations');

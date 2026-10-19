@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
 import type {
   DocumentCategory,
@@ -59,6 +59,7 @@ export async function createDocumentAction(
   try {
     created = await api.post<DocumentItem>('/documents', payload);
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath('/dashboard/documents');
@@ -72,6 +73,7 @@ export async function softDeleteDocumentAction(formData: FormData) {
   try {
     await api.delete(`/documents/${id}`);
   } catch (e) {
+    unstable_rethrow(e);
     errMessage = (e as Error).message;
   }
   revalidatePath('/dashboard/documents');

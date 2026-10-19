@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
 import { getLocale } from '@/lib/locale';
 import { portalLeadsVisitsT } from '@/messages/portal/leads-visits';
@@ -54,6 +54,7 @@ export async function createPortalVisitRequestAction(
   try {
     await api.post<PortalVisitRequest>('/portal/visits/requests', payload);
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath('/portal/visits');

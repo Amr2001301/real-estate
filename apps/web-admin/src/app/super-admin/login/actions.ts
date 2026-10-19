@@ -1,7 +1,7 @@
 'use server';
 
 import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { loginSuperAdmin, ApiError } from '@/lib/api';
 
 export interface SuperAdminLoginState {
@@ -21,6 +21,7 @@ export async function superAdminLoginAction(
   try {
     result = await loginSuperAdmin(email, password);
   } catch (e) {
+    unstable_rethrow(e);
     if (e instanceof ApiError) {
       if (e.status === 401 || e.status === 403) return { error: 'بيانات الدخول غير صحيحة' };
     }

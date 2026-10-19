@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
 import { getCompanyTimeZone } from '@/lib/currency';
 import { wallTimeToIso } from '@/lib/zoned-time';
@@ -62,6 +62,7 @@ export async function createVisitAction(
     });
     createdId = res.id;
   } catch (e: unknown) {
+    unstable_rethrow(e);
     return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
   }
 

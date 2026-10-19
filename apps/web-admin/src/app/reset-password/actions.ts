@@ -1,6 +1,6 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { API_BASE } from '@/lib/api';
 
 export interface ResetPasswordState {
@@ -31,7 +31,8 @@ export async function resetPasswordAction(
       if (res.status >= 500) return { error: 'تعذر الاتصال بالخادم. حاول مرة أخرى.' };
       return { error: 'رابط إعادة التعيين غير صالح أو منتهي الصلاحية. اطلب رابطًا جديدًا.' };
     }
-  } catch {
+  } catch (e) {
+    unstable_rethrow(e);
     return { error: 'تعذر الاتصال بالخادم. تأكد أن الـ API يعمل.' };
   }
 

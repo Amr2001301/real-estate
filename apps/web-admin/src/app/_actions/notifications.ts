@@ -1,5 +1,6 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { api } from '@/lib/api';
 import { getSession } from '@/lib/session';
@@ -43,6 +44,7 @@ export async function previewBroadcastAction(
       usersWithoutDevices: result.usersWithoutDevices,
     };
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
 }
@@ -135,6 +137,7 @@ export async function broadcastNotificationAction(
       failureHint: result.failureHint as BroadcastState['failureHint'],
     };
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
 }
@@ -150,7 +153,8 @@ export async function markNotificationReadAction(formData: FormData) {
   if (!id) return;
   try {
     await api.patch(`/me/notifications/${id}/read`);
-  } catch {
+  } catch (e) {
+    unstable_rethrow(e);
     // swallow — UI will refresh and reflect the real state on next load
   }
   revalidatePath(`${base}/notifications`);
@@ -161,7 +165,8 @@ export async function markAllNotificationsReadAction(formData: FormData) {
   const base = basePathFrom(formData);
   try {
     await api.patch('/me/notifications/read-all');
-  } catch {
+  } catch (e) {
+    unstable_rethrow(e);
     // ignore
   }
   revalidatePath(`${base}/notifications`);
@@ -179,6 +184,7 @@ export async function updateNotificationPreferencesAction(
     await api.put('/users/me/notification-preferences', { [channel]: { [group]: value } });
     return {};
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
 }

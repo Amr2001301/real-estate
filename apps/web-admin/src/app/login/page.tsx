@@ -6,11 +6,12 @@ import LoginForm from './form';
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string | string[]; reset?: string | string[] }>;
+  searchParams: Promise<{ from?: string | string[]; reset?: string | string[]; expired?: string | string[] }>;
 }) {
   const sp = await searchParams;
   const from = typeof sp.from === 'string' ? sp.from : undefined;
   const passwordReset = sp.reset === '1';
+  const sessionExpired = sp.expired === '1';
   const c = await cookies();
   const lastCompanySlug = c.get('last_company_slug')?.value;
 
@@ -78,6 +79,11 @@ export default async function LoginPage({
                   {passwordReset && (
                     <div className="mb-5 rounded-xl border border-success-100 bg-success-50 px-4 py-3">
                       <p className="text-sm text-success-700">تم تغيير كلمة المرور بنجاح. سجّل دخولك بكلمة المرور الجديدة.</p>
+                    </div>
+                  )}
+                  {sessionExpired && (
+                    <div role="status" className="mb-5 rounded-xl border border-warning-100 bg-warning-50 px-4 py-3">
+                      <p className="text-sm text-warning-700">انتهت جلستك. سجّل دخولك من جديد.</p>
                     </div>
                   )}
                   {/* Form — all auth logic lives here */}

@@ -1,5 +1,6 @@
 'use server';
 
+import { unstable_rethrow } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { api } from '@/lib/api';
 
@@ -76,7 +77,8 @@ export async function submitSalesFeedbackAction(
       rating: input.rating ?? undefined,
       notes: input.notes?.trim() || undefined,
     });
-  } catch {
+  } catch (e) {
+    unstable_rethrow(e);
     return { ok: false, error: 'تعذّر حفظ ملاحظات الزيارة. تأكد من إدخال تقييم أو ملاحظة وأنك مخوّل.' };
   }
   revalidatePath(`/dashboard/visits/appointments/${appointmentId}`);

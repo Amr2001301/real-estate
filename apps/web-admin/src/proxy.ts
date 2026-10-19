@@ -99,6 +99,15 @@ export async function proxy(req: NextRequest) {
 
   const hasToken = Boolean(req.cookies.get('access_token')?.value);
 
+  // ── 1b. A session the API refused and could not renew (lib/api.ts) ──────
+  // Its cookies are still set, so the login pages below would bounce back to
+  // the dashboard and loop. Drop them and serve the login page.
+  if ((pathname === '/login' || pathname === '/super-admin/login') && req.nextUrl.searchParams.get('expired') === '1') {
+    const response = NextResponse.next();
+    for (const name of ['access_token', 'refresh_token', 'user']) response.cookies.delete(name);
+    return response;
+  }
+
   // ── 2. /super-admin/login ────────────────────────────────────────────────
   // Unauthenticated: serve the page.
   // Authenticated SUPER_ADMIN: already logged in → bounce to their workspace.

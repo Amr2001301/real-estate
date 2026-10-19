@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
 import type { Phase } from '@/lib/types';
 
@@ -38,6 +38,7 @@ export async function createUnitAction(
   try {
     created = await api.post<{ id: string }>('/units', payload);
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath('/dashboard/units');
@@ -60,6 +61,7 @@ export async function updateUnitAction(
       await api.patch(`/units/${id}/status`, { status, reason });
     }
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/units/${id}`);
@@ -84,7 +86,8 @@ export async function getProjectPhasesAction(projectId: string): Promise<Phase[]
   try {
     const project = await api.get<{ phases?: Phase[] }>(`/projects/${projectId}`);
     return project.phases ?? [];
-  } catch {
+  } catch (e) {
+    unstable_rethrow(e);
     return [];
   }
 }

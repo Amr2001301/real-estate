@@ -1,3 +1,4 @@
+import { unstable_rethrow } from 'next/navigation';
 import { Search } from 'lucide-react';
 import type { SessionUser } from '@/lib/session';
 import type { Locale } from '@/lib/locale';
@@ -19,7 +20,8 @@ async function getUnreadCount(): Promise<number> {
   try {
     const res = await api.get<{ count: number }>('/me/notifications/unread-count');
     return Number(res.count) || 0;
-  } catch {
+  } catch (e) {
+    unstable_rethrow(e);
     return 0;
   }
 }

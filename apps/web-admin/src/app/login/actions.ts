@@ -1,7 +1,7 @@
 'use server';
 
 import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { loginStaff, ApiError } from '@/lib/api';
 
 export interface LoginState {
@@ -20,6 +20,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   try {
     result = await loginStaff(slug, email, password);
   } catch (e) {
+    unstable_rethrow(e);
     if (e instanceof ApiError) {
       if (e.status === 404) return { error: 'الشركة غير موجودة — تحقق من كود الشركة' };
       if (e.status === 401) return { error: 'بيانات الدخول غير صحيحة' };

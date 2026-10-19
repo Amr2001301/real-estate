@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
 import type { AdminBrokerReservation } from '@/lib/types';
 
@@ -49,6 +49,7 @@ export async function createAdminBrokerReservationAction(
   try {
     created = await api.post<AdminBrokerReservation>('/broker-reservations', payload);
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath('/dashboard/broker-reservations');

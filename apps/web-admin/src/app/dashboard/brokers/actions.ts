@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
 import type {
   Broker,
@@ -81,6 +81,7 @@ export async function createBrokerAction(
   try {
     created = await api.post<Broker>('/brokers', payload);
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath('/dashboard/brokers');
@@ -96,6 +97,7 @@ export async function updateBrokerAction(
   try {
     await api.patch(`/brokers/${id}`, payload);
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/brokers/${id}`);
@@ -124,6 +126,7 @@ export async function updateBrokerStatusAction(
       await api.patch(`/brokers/${id}/status`, { status, reason });
     }
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/brokers/${id}`);
@@ -136,6 +139,7 @@ export async function setBrokerPayoutHoldAction(id: string, hold: boolean): Prom
   try {
     await api.post(`/brokers/${id}/payout-hold`, { hold });
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/brokers/${id}`);
@@ -173,6 +177,7 @@ export async function createBrokerUserAction(
   try {
     await api.post(`/brokers/${brokerId}/users`, payload);
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath(`/dashboard/brokers/${brokerId}/users`);

@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
 import type { LeadStage } from '@/lib/types';
 
@@ -50,6 +50,7 @@ export async function createLeadAction(
   try {
     created = await api.post<{ id: string }>('/leads', payload);
   } catch (e) {
+    unstable_rethrow(e);
     return { error: (e as Error).message };
   }
   revalidatePath('/dashboard/leads');
@@ -84,6 +85,7 @@ async function sourceResult(run: () => Promise<unknown>): Promise<never> {
   try {
     await run();
   } catch (e) {
+    unstable_rethrow(e);
     err = (e as Error).message;
   }
   revalidatePath(SOURCES_PATH);
