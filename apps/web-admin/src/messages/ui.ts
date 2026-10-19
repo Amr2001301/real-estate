@@ -2166,6 +2166,10 @@ const UI = {
         labelTotal: 'إجمالي العقد',
         labelDownPayment: 'الدفعة المقدمة',
         labelSignedAt: 'تاريخ التوقيع (اختياري)',
+        labelSignedAtRequired: 'تاريخ التوقيع الفعلي',
+        labelPreSystem: 'عقد مُبرم قبل النظام',
+        hintPreSystem: 'يُسجَّل بتاريخ توقيعه الفعلي دون إشعارات ودون عمولة وسيط أو بونص مبيعات، وبعد إضافة خطة الأقساط تُعلَّم الأقساط المدفوعة قبل إدخاله دفعة واحدة من صفحة العقد.',
+        errorPreSystemSignedAt: 'العقد المُبرم قبل النظام يحتاج تاريخ توقيعه الفعلي (في الماضي).',
         labelPdfUrl: 'رابط ملف العقد PDF (اختياري — يمكن رفعه لاحقًا)',
         labelContractNumber: 'رقم العقد (اختياري)',
         hintContractNumber: 'اتركه فارغًا ليُعطى الرقم التالي تلقائيًا — اكتبه فقط لعقد له رقم سابق.',
@@ -4608,6 +4612,19 @@ const UI = {
       cancelConfirm: 'تأكيد إلغاء العقد',
       cancelBack: 'تراجع',
       cancelledBadge: 'ملغي',
+      preSystemBadge: 'عقد سابق على النظام',
+      planBackdated: 'تاريخ البداية في الماضي: الأقساط المستحقة قبل اليوم ستظهر متأخرة (دون غرامات تأخير) — سجّل ما دُفع منها.',
+      planBackdatedPreSystem: 'تاريخ البداية في الماضي: بعد إنشاء الخطة علّم ما دُفع قبل إدخال العقد من «ما دُفع قبل إدخال العقد» (دون غرامات تأخير على ما سبق).',
+      paidBeforeTitle: 'ما دُفع قبل إدخال العقد',
+      paidBeforeHint: (count: number, total: string, day: string) =>
+        `${count} من الأقساط مستحقة قبل إدخال العقد (${day}) بإجمالي ${total} وتظهر غير مدفوعة. علّم ما دفعه العميل وقتها: يُسجَّل كل قسط مدفوعاً في تاريخ استحقاقه.`,
+      paidBeforeUpTo: 'دفع حتى (اتركه فارغاً لكل ما قبل الإدخال)',
+      paidBeforeBtn: 'تعليمها مدفوعة قبل النظام',
+      paidBeforeConfirm: (upTo: string) =>
+        upTo
+          ? `تعليم الأقساط المستحقة حتى ${upTo} مدفوعة قبل النظام؟`
+          : 'تعليم كل الأقساط المستحقة قبل إدخال العقد مدفوعة قبل النظام؟',
+      paidBeforeDone: (count: number) => `تم تعليم ${count} من الأقساط مدفوعة قبل النظام.`,
       cancellationTitle: 'الإلغاء والمبالغ المستردة',
       cancellationDate: 'تاريخ الإلغاء',
       cancellationBy: 'بواسطة',
@@ -7524,6 +7541,10 @@ const UI = {
         labelTotal: 'Contract Total',
         labelDownPayment: 'Down Payment',
         labelSignedAt: 'Signature Date (optional)',
+        labelSignedAtRequired: 'Actual signing date',
+        labelPreSystem: 'Signed before the system',
+        hintPreSystem: 'Recorded with its real signing date, without notifications, broker commission or sales bonus. Once its plan is added, the instalments paid before it was entered are marked in one go from the contract page.',
+        errorPreSystemSignedAt: 'A contract signed before the system needs its actual (past) signing date.',
         labelPdfUrl: 'Contract PDF URL (optional — can be uploaded later)',
         labelContractNumber: 'Contract number (optional)',
         hintContractNumber: 'Leave empty to assign the next number — fill it only for a contract that already has one.',
@@ -9966,6 +9987,19 @@ const UI = {
       cancelConfirm: 'Confirm cancellation',
       cancelBack: 'Back',
       cancelledBadge: 'Cancelled',
+      preSystemBadge: 'Signed before the system',
+      planBackdated: 'The start date is in the past: instalments due before today come in overdue (with no late fees) — record what was already paid.',
+      planBackdatedPreSystem: 'The start date is in the past: once the plan is created, mark what was paid before the contract was entered under “Paid before the contract was entered” (no late fees on those).',
+      paidBeforeTitle: 'Paid before the contract was entered',
+      paidBeforeHint: (count: number, total: string, day: string) =>
+        `${count} instalments fell due before the contract was entered (${day}), totalling ${total}, and show unpaid. Mark what the customer paid back then: each is recorded as paid on its due date.`,
+      paidBeforeUpTo: 'Paid up to (leave empty for everything before entry)',
+      paidBeforeBtn: 'Mark paid before the system',
+      paidBeforeConfirm: (upTo: string) =>
+        upTo
+          ? `Mark the instalments due up to ${upTo} as paid before the system?`
+          : 'Mark every instalment due before the contract was entered as paid before the system?',
+      paidBeforeDone: (count: number) => `${count} instalments marked paid before the system.`,
       cancellationTitle: 'Cancellation and refunds',
       cancellationDate: 'Cancelled on',
       cancellationBy: 'By',

@@ -146,6 +146,12 @@ class CreateContractDto {
    * those). Omitted → the company's late-fee setting at this moment.
    */
   @IsOptional() @IsBoolean() lateFeesApply?: boolean;
+  /**
+   * Signed before the company used the system: entered now with its real
+   * signing date (POST :id/sign), quietly — no notifications, no broker
+   * commission or sales bonus.
+   */
+  @IsOptional() @IsBoolean() preSystem?: boolean;
 }
 
 /** Turn a contract's late-fee clause on or off (as signed). */
@@ -496,6 +502,7 @@ export class ContractsService {
           downPayment: new Prisma.Decimal(dto.downPayment ?? 0),
           pdfUrl: dto.pdfUrl ?? null,
           lateFeesApply: dto.lateFeesApply ?? false,
+          preSystem: dto.preSystem ?? false,
           // Contracts are created unsigned. Signing goes through sign().
           signedAt: null,
         },
@@ -970,6 +977,7 @@ export class ContractsService {
         brokerId: true,
         brokerAgentId: true,
         reservationId: true,
+        preSystem: true,
         reservation: {
           select: {
             reservationNumber: true,
@@ -1005,6 +1013,10 @@ export class ContractsService {
     if (before.pdfUrl) {
       await this.tryLinkContractDocument(id, before.pdfUrl, actorId);
     }
+
+    // A contract signed before the system is old news: no one is told, and
+    // no commission or bonus is created for a sale made back then.
+    if (before.preSystem) return { ...updated, signFollowupFailures: [] };
 
     if (before.brokerId) {
       // Broker portal activity timeline. Best-effort: failures are logged
@@ -1132,10 +1144,13 @@ export class ContractsService {
         signedAt: true,
         status: true,
         deletedAt: true,
+        preSystem: true,
       },
     });
     if (!contract) throw new NotFoundException('Contract not found');
     if (!contract.signedAt) throw new ConflictException('العقد غير موقّع');
+    // Nothing follows a contract signed before the system.
+    if (contract.preSystem) return { failures: [] };
     // Re-running would create commission, bonus and warranties for a dead deal.
     if (isDeadContract(contract)) throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
     const failures = await this.runSignFollowups(contract, actorId);

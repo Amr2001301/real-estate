@@ -82,6 +82,16 @@ export class SettleContractDto {
   @IsOptional() @ValidateNested() @Type(() => DepositTransferDto) transfer?: DepositTransferDto;
 }
 
+/**
+ * A contract signed before the system: its instalments due before it was
+ * entered, marked paid on their due dates. `upTo` stops earlier (a day,
+ * YYYY-MM-DD) when the customer had fallen behind.
+ */
+export class PaidBeforeSystemDto {
+  @IsUUID() contractId!: string;
+  @IsOptional() @IsDateString() upTo?: string;
+}
+
 export class VerifyDepositDto {
   @IsBoolean() verified!: boolean;
 }

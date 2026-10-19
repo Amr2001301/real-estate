@@ -32,6 +32,7 @@ import { RecordPaymentButton } from './record-payment-button';
 import { WaiveLateFeeButton } from './waive-late-fee';
 import { AmendmentsPanel } from './amendments-panel';
 import { PlanChangesPanel } from './plan-changes-panel';
+import { PaidBeforeSystem } from './paid-before-system';
 import { AssignContractNumber } from './assign-number';
 import { SignFollowupsAlert } from './sign-followups-alert';
 import { SignContract } from './sign-contract';
@@ -111,6 +112,17 @@ export default async function ContractDetailPage({
         .filter((i) => i.status === 'PENDING' || i.status === 'OVERDUE')
         .reduce((a, i) => a + Number(i.amount) * 100, 0),
     ) / 100;
+  // Signed before the system: the price rows due before the day it was
+  // entered, still unpaid, can be marked paid in one go.
+  const enteredDay = todayIn(timeZone, new Date(contract.createdAt));
+  const paidBeforeRows = contract.preSystem
+    ? (plan?.installments ?? []).filter(
+        (i) =>
+          (i.status === 'PENDING' || i.status === 'OVERDUE') &&
+          ['DOWN_PAYMENT', 'INSTALLMENT', 'FINAL_PAYMENT'].includes(i.type ?? 'INSTALLMENT') &&
+          i.dueDate.slice(0, 10) < enteredDay,
+      )
+    : [];
   const projectName =
     tx(contract.unit?.building?.phase?.project?.name) || '—';
   const displayNumber = contract.contractNumber ?? contract.id.slice(0, 8);
@@ -141,7 +153,16 @@ export default async function ContractDetailPage({
           { label: displayNumber },
         ]}
         meta={
-          isCancelled ? (
+          <span className="inline-flex flex-wrap items-center gap-2">
+          {contract.preSystem && (
+            <span
+              className="inline-flex items-center gap-1.5 text-xs text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full border border-hairline"
+              data-testid="pre-system-badge"
+            >
+              {m.preSystemBadge}
+            </span>
+          )}
+          {isCancelled ? (
             <span className="inline-flex items-center gap-1.5 text-xs text-danger-700 bg-danger-50 px-2.5 py-1 rounded-full border border-danger-100">
               <AlertCircle className="h-3.5 w-3.5" />
               {m.cancelledBadge}
@@ -156,7 +177,8 @@ export default async function ContractDetailPage({
               <Clock className="h-3.5 w-3.5" />
               {m.metaPending}
             </span>
-          )
+          )}
+          </span>
         }
         actions={<PrintButton path="contracts" id={contract.id} label={printT(locale).common.print} />}
       />
@@ -449,7 +471,13 @@ export default async function ContractDetailPage({
                   {isAdmin && (
                     <CreatePlanForm
                       contractId={contract.id}
-                      labels={{ months: m.formMonthsPlaceholder, monthly: m.formMonthlyAmountPlaceholder, submit: m.btnCreatePlan }}
+                      labels={{
+                        months: m.formMonthsPlaceholder,
+                        monthly: m.formMonthlyAmountPlaceholder,
+                        submit: m.btnCreatePlan,
+                        backdated: contract.preSystem ? m.planBackdatedPreSystem : m.planBackdated,
+                      }}
+                      today={todayIn(timeZone)}
                     />
                   )}
                 </div>
@@ -533,6 +561,22 @@ export default async function ContractDetailPage({
                   history={amendments}
                   currency={currency}
                   markupLeft={Number(contract.markupLeft ?? 0)}
+                  locale={locale}
+                />
+              </PremiumSectionCard>
+            )}
+
+            {isAdmin && !isCancelled && paidBeforeRows.length > 0 && (
+              <PremiumSectionCard title={m.paidBeforeTitle} icon={<CheckCircle2 />}>
+                <PaidBeforeSystem
+                  id={contract.id}
+                  count={paidBeforeRows.length}
+                  total={formatCurrency(
+                    paidBeforeRows.reduce((a, i) => a + Math.round(Number(i.amount) * 100), 0) / 100,
+                    currency,
+                    locale,
+                  )}
+                  enteredOn={formatDate(contract.createdAt, locale)}
                   locale={locale}
                 />
               </PremiumSectionCard>

@@ -12,11 +12,15 @@ const inputClass =
 export function CreatePlanForm({
   contractId,
   labels,
+  today,
 }: {
   contractId: string;
-  labels: { months: string; monthly: string; submit: string };
+  labels: { months: string; monthly: string; submit: string; backdated: string };
+  /** Today in the company's time zone (YYYY-MM-DD). */
+  today: string;
 }) {
   const [error, setError] = useState<string | null>(null);
+  const [startsAt, setStartsAt] = useState('');
   const [pending, startTransition] = useTransition();
 
   return (
@@ -34,8 +38,20 @@ export function CreatePlanForm({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <input name="totalMonths" type="number" min={1} max={360} placeholder={labels.months} required className={inputClass} />
         <input name="monthlyAmount" type="number" step="any" min={0} placeholder={labels.monthly} className={inputClass} />
-        <input name="startsAt" type="date" required className={inputClass} />
+        <input
+          name="startsAt"
+          type="date"
+          required
+          value={startsAt}
+          onChange={(e) => setStartsAt(e.target.value)}
+          className={inputClass}
+        />
       </div>
+      {startsAt && startsAt < today && (
+        <p className="text-xs text-warning-700" data-testid="plan-backdated-warning">
+          {labels.backdated}
+        </p>
+      )}
       {error && <p className="text-xs text-danger-700">{error}</p>}
       <Button type="submit" variant="primary" size="sm" disabled={pending}>
         {labels.submit}

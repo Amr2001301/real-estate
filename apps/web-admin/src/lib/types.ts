@@ -278,6 +278,8 @@ export interface Contract {
   markupLeft?: string;
   /** The contract has a late-fee clause (only those are charged late fees). */
   lateFeesApply?: boolean;
+  /** Signed before the company used the system (entered afterwards). */
+  preSystem?: boolean;
   customerId: string;
   customer?: { id: string; fullName: string; phone: string | null; email?: string | null };
   unitId: string;

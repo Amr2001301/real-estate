@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { AlertCircle, X } from 'lucide-react';
 import { Field, inputClass } from '@/components/form/field';
 import { SubmitButton } from '@/components/form/submit-button';
@@ -31,6 +31,7 @@ export default function ContractForm({ currency, locale = 'ar' }: Props) {
     createContractAction,
     {},
   );
+  const [preSystem, setPreSystem] = useState(false);
 
   const NAV_SECTIONS = [
     { id: 'section-parties',   num: '01', label: m.navParties.label,   sub: m.navParties.sub },
@@ -124,8 +125,26 @@ export default function ContractForm({ currency, locale = 'ar' }: Props) {
 
             <LateFeeClauseField locale={locale} />
 
-            <Field label={m.labelSignedAt} name="signedAt">
-              <input id="signedAt" name="signedAt" type="datetime-local" className={inputClass} />
+            {/* A contract signed before the company used the system: entered
+                with its real signing date, quietly (no notifications, no
+                commission or bonus); what was paid back then is marked from
+                the contract page. */}
+            <label className="flex items-start gap-2.5 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                name="preSystem"
+                checked={preSystem}
+                onChange={(e) => setPreSystem(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="font-semibold">{m.labelPreSystem}</span>
+                <span className="block text-xs text-slate-500">{m.hintPreSystem}</span>
+              </span>
+            </label>
+
+            <Field label={preSystem ? m.labelSignedAtRequired : m.labelSignedAt} name="signedAt">
+              <input id="signedAt" name="signedAt" type="datetime-local" required={preSystem} className={inputClass} />
             </Field>
 
             {/* FG-04 — empty → the next CON-<year>-<seq> is assigned. */}
