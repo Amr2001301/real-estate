@@ -29,7 +29,7 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
-import { startUnitWarranties } from '../contracts/unit-warranties';
+import { fillOpenWarranties, startUnitWarranties } from '../contracts/unit-warranties';
 
 class CreateMaintenanceItemDto {
   @IsString() @MinLength(1) ar!: string;
@@ -198,7 +198,10 @@ class UnitMaintenanceItemsService {
       });
     }
     // Re-activated on a sold unit → its warranty starts like the others'.
-    if (!current.active && (await this.startIfSold(unitId, updated))) {
+    const started = !current.active && (await this.startIfSold(unitId, updated));
+    // A started warranty with no duration takes its new category's.
+    if (dto.categoryId) await fillOpenWarranties(this.prisma, { id: itemId });
+    if (started || dto.categoryId) {
       const fresh = await this.prisma.unitMaintenanceItem.findUniqueOrThrow({
         where: { id: itemId },
         include: { category: { select: CATEGORY_SELECT } },

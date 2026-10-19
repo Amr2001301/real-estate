@@ -118,6 +118,15 @@ const FEATURE_LABELS: Record<string, string> = {
 };
 
 /**
+ * A refusal the API words for the user (Arabic) — e.g. «الخصم 8% أكبر من
+ * الحد المسموح (5%)». Shown as is; only a bare or internal (English)
+ * message is replaced by the generic one.
+ */
+export function userFacingRefusal(message: unknown): string | null {
+  return typeof message === 'string' && /[\u0600-\u06FF]/.test(message) ? message : null;
+}
+
+/**
  * Arabic text for the two plan refusals (CapabilityService / PlanLimitService).
  * They are 403s, and the generic "ليست لديك صلاحية" made an admin look for a
  * missing permission when the company's plan was the reason.
@@ -167,7 +176,10 @@ export function formatMissingPermissionMessage(err: unknown): string {
     const code = (err as { code?: unknown }).code;
     const plan = planRefusalMessage(typeof code === 'string' ? code : undefined, (err as { payload?: unknown }).payload);
     if (plan) return plan;
-    return 'ليست لديك صلاحية الوصول إلى هذا المورد.';
+    return (
+      userFacingRefusal((err as { rawMessage?: unknown; message?: unknown }).rawMessage ?? (err as { message?: unknown }).message) ??
+      'ليست لديك صلاحية الوصول إلى هذا المورد.'
+    );
   }
   if (err instanceof Error) return err.message;
   if (typeof err === 'string') return err;

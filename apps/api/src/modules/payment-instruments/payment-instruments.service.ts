@@ -458,7 +458,8 @@ export class ChequeLifecycleService {
     );
 
     const affectedDepositIds = pendingDeposits.map((d) => d.id);
-    const rejectionReason = `Instrument bounced — ${pi.type === PaymentInstrumentType.CHEQUE ? 'cheque' : 'transfer'} ${instrumentLabel} returned ${bounceDateStr}`;
+    // Shown to the customer as the reason their payment was rejected.
+    const rejectionReason = `${pi.type === PaymentInstrumentType.CHEQUE ? 'ارتدّ الشيك' : 'ارتدّ التحويل'} رقم ${instrumentLabel} بتاريخ ${bounceDateStr}`;
 
     // Determine the installment plan for a potential penalty installment —
     // never a cancelled deal's plan.

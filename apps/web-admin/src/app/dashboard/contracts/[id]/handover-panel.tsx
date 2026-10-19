@@ -21,12 +21,15 @@ export function HandoverPanel({
   handover,
   signed,
   canRecord,
+  unpaid = null,
   locale = 'ar',
 }: {
   id: string;
   handover: UnitHandoverView | null;
   signed: boolean;
   canRecord: boolean;
+  /** The contract's unpaid balance, formatted; null when nothing is left. */
+  unpaid?: string | null;
   locale?: Locale;
 }) {
   const m = handoverT(locale);
@@ -63,6 +66,11 @@ export function HandoverPanel({
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
+    // One click used to record it: the date and checklist above are easy
+    // to miss, and the handover can't be undone.
+    const checked = HANDOVER_CHECKLIST_KEYS.filter((k) => done[k]).length;
+    const question = m.confirm(date, checked, HANDOVER_CHECKLIST_KEYS.length);
+    if (!window.confirm(unpaid ? `${m.unpaid(unpaid)}\n${question}` : question)) return;
     setError(null);
     startTransition(async () => {
       const res = await recordHandoverAction(id, {
@@ -80,6 +88,11 @@ export function HandoverPanel({
       <p className="text-[13px] text-slate-500">{m.notYet}</p>
       {canRecord && (
         <form onSubmit={submit} className="space-y-3" data-testid="handover-form">
+          {unpaid && (
+            <p className="rounded-lg bg-warning-50 px-3 py-2 text-xs font-semibold text-warning-700" data-testid="handover-unpaid">
+              {m.unpaid(unpaid)}
+            </p>
+          )}
           <label className="block text-xs font-semibold text-slate-600">
             {m.handedOverAt}
             <input

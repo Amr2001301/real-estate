@@ -114,5 +114,12 @@ describe('AA2 — a booking paid by cheque waits for the cheque (e2e)', () => {
     expect((await booking(reservationId)).bookingPaymentStatus).toBe(
       ReservationBookingPaymentStatus.UNPAID,
     );
+    // CC3 (F22): the customer sees why, in Arabic — not "Instrument bounced".
+    const rejected = await testApp.rawPrisma.deposit.findFirstOrThrow({
+      where: { reservationId },
+      select: { reviewStatus: true, rejectionReason: true },
+    });
+    expect(rejected.reviewStatus).toBe('REJECTED');
+    expect(rejected.rejectionReason).toBe(`ارتدّ الشيك رقم AA2-${stamp}-2 بتاريخ 2026-11-02`);
   });
 });

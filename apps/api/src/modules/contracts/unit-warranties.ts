@@ -31,6 +31,38 @@ export async function startUnitWarranties(prisma: PrismaService, unitId: string,
   }
 }
 /**
+ * Warranties that started with no duration (the item had no category, or
+ * its category no warranty yet) have no end, and showed «غير معروف» for
+ * good. Once the category has a duration they take it, from their own
+ * start; a warranty already frozen with a duration is never changed.
+ */
+export async function fillOpenWarranties(
+  prisma: PrismaService,
+  where: Prisma.UnitMaintenanceItemWhereInput,
+) {
+  const items = await prisma.unitMaintenanceItem.findMany({
+    where: {
+      ...where,
+      warrantyStart: { not: null },
+      warrantyEnd: null,
+      warrantyDurationMonthsSnapshot: null,
+      category: { warrantyDurationMonths: { not: null } },
+    },
+    select: { id: true, warrantyStart: true, category: { select: { warrantyDurationMonths: true } } },
+  });
+  for (const item of items) {
+    const months = item.category!.warrantyDurationMonths!;
+    await prisma.unitMaintenanceItem.update({
+      where: { id: item.id },
+      data: {
+        warrantyEnd: addMonths(item.warrantyStart!, months),
+        warrantyDurationMonthsSnapshot: months,
+      },
+    });
+  }
+}
+
+/**
  * A released unit goes back on sale: the cancelled buyer's warranties are
  * cleared so the next contract's signing starts them afresh (signing only
  * starts items whose warrantyStart is still empty, and freezes the duration).

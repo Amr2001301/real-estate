@@ -104,6 +104,13 @@ export default async function ContractDetailPage({
   const session = await getSession();
   const isAdmin = session?.role === 'ADMIN';
   const plan = contract.installmentPlan;
+  // What the customer still owes on the schedule — shown before a handover.
+  const unpaid =
+    Math.round(
+      (plan?.installments ?? [])
+        .filter((i) => i.status === 'PENDING' || i.status === 'OVERDUE')
+        .reduce((a, i) => a + Number(i.amount) * 100, 0),
+    ) / 100;
   const projectName =
     tx(contract.unit?.building?.phase?.project?.name) || '—';
   const displayNumber = contract.contractNumber ?? contract.id.slice(0, 8);
@@ -223,6 +230,7 @@ export default async function ContractDetailPage({
                   handover={contract.handover ?? null}
                   signed={!!contract.signedAt}
                   canRecord={isAdmin}
+                  unpaid={unpaid > 0 ? formatCurrency(unpaid, currency, locale) : null}
                   locale={locale}
                 />
               </PremiumSectionCard>

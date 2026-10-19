@@ -33,6 +33,7 @@ import { DocumentsService } from '../documents/documents.module';
 import { R2Service } from '../media/r2.service';
 import { NotificationsService } from '../notifications/notifications.module';
 import { paginate, takeSkip } from '../../common/utils/pagination';
+import { fillOpenWarranties } from '../contracts/unit-warranties';
 import {
   SlaUnit,
   WarrantyUnit,
@@ -439,7 +440,10 @@ export class MaintenanceService {
     if (dto.warrantyValue !== undefined || dto.warrantyUnit !== undefined) {
       data.warrantyDurationMonths = warrantyToMonths(dto.warrantyValue, dto.warrantyUnit);
     }
-    return this.prisma.maintenanceCategory.update({ where: { id }, data }).catch(categoryExists);
+    const updated = await this.prisma.maintenanceCategory.update({ where: { id }, data }).catch(categoryExists);
+    // Units already handed over before the category had a warranty get it now.
+    await fillOpenWarranties(this.prisma, { categoryId: id });
+    return updated;
   }
 
   // Units a customer owns through signed/recorded contracts. Used by the admin

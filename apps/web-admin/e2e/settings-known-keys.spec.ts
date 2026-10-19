@@ -34,6 +34,15 @@ test('settings offer only what the system reads, named in Arabic', async ({
   await expect(page.getByText('القسط بعد ارتداد الشيك', { exact: false })).toBeVisible();
   await expect(page.getByTestId('setting-unused')).toHaveCount(1);
 
+  // The discount cap is offered until it is set (discount-refusal.spec.ts
+  // sets it); once set, it is listed under its Arabic name — and with every
+  // key the system reads set, there is nothing left to add.
+  const capSet = await request.get(`${API_BASE}/v1/settings/pricing.maxDiscountPct`, { headers });
+  if (capSet.ok()) {
+    await expect(page.getByText('أقصى نسبة خصم مسموحة').first()).toBeVisible();
+    return;
+  }
+
   await page.getByRole('button', { name: 'إضافة إعداد' }).click();
   const options = await page
     .getByRole('dialog')
