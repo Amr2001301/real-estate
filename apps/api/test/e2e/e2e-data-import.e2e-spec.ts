@@ -1083,3 +1083,30 @@ describe('DI-E2E-8 — a lead with an unknown _ImportId is not duplicated on re-
     expect(leads[0]!.phone).toBe('+201077770009');
   });
 });
+
+describe('DI-E2E-9 — a unit is not imported as SOLD or RESERVED (F9)', () => {
+  it('a new unit marked SOLD in the file is a row error; AVAILABLE is fine', async () => {
+    const { UNITS_SHEET: US } = await import('../../src/common/utils/import-headers');
+    const building = await testApp.rawPrisma.building.findFirstOrThrow({
+      where: { companyId },
+      select: { code: true, phase: { select: { code: true, project: { select: { code: true } } } } },
+    });
+    const sheet = (status: string) => (wb: import('exceljs').Workbook) => {
+      const ws = wb.addWorksheet(US.name);
+      ws.addRow([
+        US.fields.projectCode, US.fields.phaseCode, US.fields.buildingCode, US.fields.code,
+        US.fields.type, US.fields.area, US.fields.price, US.fields.status,
+      ]);
+      ws.addRow([
+        building.phase.project.code, building.phase.code, building.code, 'DI9-UNIT-1',
+        '2BR', 100, 1_000_000, status,
+      ]);
+    };
+    const sold = await importFile(sheet('SOLD'), 'preview');
+    expect(sold.status).toBe(200);
+    expect(JSON.stringify(sold.body)).toContain('SOLD by a contract');
+
+    const available = await importFile(sheet('AVAILABLE'), 'preview');
+    expect(JSON.stringify(available.body)).not.toContain('SOLD by a contract');
+  });
+});

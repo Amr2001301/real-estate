@@ -110,13 +110,28 @@ describe('T4 — inventory & pricing (e2e)', () => {
     await as(adminToken, http().post(`/v1/reservations/${reservationId}/cancel`)).send({ reason: 'IP cleanup' }).expect(201);
   });
 
-  it('IP-3: RESERVED is never set by hand; SOLD without a contract needs a reason', async () => {
+  it('IP-3: RESERVED and SOLD are never set by hand — a sale is a contract (F9)', async () => {
     await as(adminToken, http().patch(`/v1/units/${freeUnitId}/status`)).send({ status: 'RESERVED' }).expect(400);
     await as(adminToken, http().patch(`/v1/units/${freeUnitId}/status`)).send({ status: 'SOLD' }).expect(400);
+    // A reason no longer makes a sale: one made before the system is
+    // entered as a contract.
     await as(adminToken, http().patch(`/v1/units/${freeUnitId}/status`))
       .send({ status: 'SOLD', reason: 'sold before the system' })
-      .expect(200);
-    await as(adminToken, http().patch(`/v1/units/${freeUnitId}/status`)).send({ status: 'AVAILABLE' }).expect(200);
+      .expect(400);
+    const created = await as(adminToken, http().post('/v1/units')).send({
+      buildingId,
+      code: `IP-SOLD-${Date.now().toString().slice(-6)}`,
+      type: '2BR',
+      area: 100,
+      bedrooms: 2,
+      bathrooms: 1,
+      floor: 1,
+      price: 1_000_000,
+      status: 'SOLD',
+    });
+    expect(created.status).toBe(400);
+    expect(created.body.message).toContain('البيع يتم بعقد');
+    expect((await testApp.rawPrisma.unit.findUniqueOrThrow({ where: { id: freeUnitId } })).status).toBe('AVAILABLE');
   });
 
   it('IP-4: a discount above the cap needs the approve-discount permission', async () => {

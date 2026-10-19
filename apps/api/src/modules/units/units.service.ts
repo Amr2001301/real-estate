@@ -130,10 +130,15 @@ export class UnitsService {
     // The parent id comes from the client: it must be this company's building.
     const building = await this.prisma.building.findFirst({ where: { id: dto.buildingId }, select: { id: true } });
     if (!building) throw new NotFoundException('Building not found');
-    // A new unit is for sale, or (a sale made before the system) sold — never
-    // reserved without a reservation.
+    // A new unit is for sale. SOLD comes from a contract — a sale made
+    // before the system is entered as a contract with its own number and
+    // signing date — and RESERVED from a reservation: a unit created SOLD
+    // showed in inventory and reports as a sale nobody made.
     if (dto.status === UnitStatus.RESERVED) {
       throw new BadRequestException('الحجز يتم من شاشة الحجوزات — لا يمكن إنشاء وحدة محجوزة');
+    }
+    if (dto.status === UnitStatus.SOLD) {
+      throw new BadRequestException('البيع يتم بعقد — سجّل العقد (ولو مُبرماً قبل النظام) لتصبح الوحدة مباعة');
     }
     const created = await this.prisma.unit.create({
       data: {
@@ -148,11 +153,6 @@ export class UnitsService {
         status: dto.status ?? UnitStatus.AVAILABLE,
       },
     });
-    if (created.status === UnitStatus.SOLD) {
-      await this.prisma.unitStatusHistory.create({
-        data: { unitId: created.id, oldStatus: UnitStatus.AVAILABLE, newStatus: UnitStatus.SOLD, reason: 'أُنشئت كمباعة' },
-      });
-    }
     return created;
   }
 
@@ -365,14 +365,15 @@ export class UnitsService {
         throw new ConflictException('على الوحدة حجز قائم — ألغِ الحجز أولاً لتغيير حالتها');
       }
       // Without a deal: RESERVED belongs to a reservation (which carries the
-      // client and an expiry — a hand-set one never expires), and SOLD with no
-      // contract here (a sale made before the system) needs its reason kept.
+      // client and an expiry — a hand-set one never expires), and SOLD to a
+      // contract (a sale made before the system is entered as one): marked
+      // sold by hand, the unit showed as a sale nobody made.
       if (liveContract === 0 && liveReservation === 0) {
         if (dto.status === UnitStatus.RESERVED) {
           throw new BadRequestException('الحجز يتم من شاشة الحجوزات — لا يمكن تعليم الوحدة محجوزة يدوياً');
         }
-        if (dto.status === UnitStatus.SOLD && !dto.reason?.trim()) {
-          throw new BadRequestException('اذكر سبب تعليم الوحدة مباعة بدون عقد في النظام');
+        if (dto.status === UnitStatus.SOLD) {
+          throw new BadRequestException('البيع يتم بعقد — سجّل العقد (ولو مُبرماً قبل النظام) لتصبح الوحدة مباعة');
         }
       }
       const updated = await tx.unit.update({
