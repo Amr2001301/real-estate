@@ -876,6 +876,8 @@ export interface InstallmentPlanTemplate {
   id: string;
   name: string;
   description: string | null;
+  /** Cash plan (F11): no instalments; the rest is due at signing. */
+  isCash?: boolean;
   projectId: string;
   project?: { id: string; name: Translatable };
   unitId: string | null;

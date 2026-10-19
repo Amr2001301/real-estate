@@ -117,6 +117,7 @@ export default function PlanForm({ projects, initialData, mode, currency, locale
     d?.finalPaymentAmount != null ? safeStr(d.finalPaymentAmount) : '',
   );
 
+  const [isCash, setIsCash] = useState<boolean>(d?.isCash ?? false);
   const [durationOptions, setDurationOptions] = useState<DurationOptionState[]>(() => {
     if (d?.durationOptions && d.durationOptions.length > 0) {
       return d.durationOptions.map((opt) => ({
@@ -258,7 +259,13 @@ export default function PlanForm({ projects, initialData, mode, currency, locale
     };
   }
 
-  const navSections = useDurationModel
+  const navSections = isCash
+    ? [
+        { id: 'section-plan-info',    num: '01', label: m.nav01Title, sub: m.nav01Sub },
+        { id: 'section-pricing',      num: '02', label: m.nav02Title, sub: m.nav02Sub },
+        { id: 'section-down-payment', num: '03', label: m.planTypeCash, sub: m.cashDueLabel },
+      ]
+    : useDurationModel
     ? [
         { id: 'section-plan-info',    num: '01', label: m.nav01Title, sub: m.nav01Sub },
         { id: 'section-pricing',      num: '02', label: m.nav02Title, sub: m.nav02Sub },
@@ -544,6 +551,50 @@ export default function PlanForm({ projects, initialData, mode, currency, locale
           description={m.p3Desc}
         >
           <div className="flex flex-col gap-5">
+            {/* Plan type (F11): a cash plan has no instalments — the rest of
+                the price is due once, at signing. Fixed after creation. */}
+            <input type="hidden" name="isCash" value={isCash ? 'true' : 'false'} />
+            <div>
+              <span className="text-sm font-medium text-slate-700">{m.planTypeLabel}</span>
+              <div className="flex flex-wrap gap-3 mt-2" data-testid="plan-type">
+                {([false, true] as const).map((cash) => (
+                  <label
+                    key={String(cash)}
+                    className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm transition ${
+                      mode === 'edit' ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'
+                    } ${
+                      isCash === cash
+                        ? 'border-brand-500 bg-brand-50 text-brand-700'
+                        : 'border-hairline bg-surface text-muted hover:border-brand-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="planType"
+                      value={cash ? 'CASH' : 'INSTALLMENTS'}
+                      checked={isCash === cash}
+                      disabled={mode === 'edit'}
+                      onChange={() => setIsCash(cash)}
+                      className="accent-brand-500"
+                    />
+                    <span>{cash ? m.planTypeCash : m.planTypeInstallments}</span>
+                  </label>
+                ))}
+              </div>
+              {mode === 'edit' && <p className="text-xs text-slate-500 mt-1">{m.planTypeLocked}</p>}
+            </div>
+
+            {isCash ? (
+              <div className="rounded-xl bg-brand-50 border border-brand-100 p-3 text-sm" data-testid="cash-due">
+                <p className="text-brand-700">{m.cashNote}</p>
+                {netPrice > 0 && (
+                  <p className="text-brand-900 text-lg font-bold mt-1">
+                    {m.cashDueLabel}: {formatCurrency(Math.max(0, netPrice - reservation), currency, locale)}
+                  </p>
+                )}
+              </div>
+            ) : (
+            <>
             <div>
               <span className="text-sm font-medium text-slate-700">{m.downPaymentTypeLabel}</span>
               <div className="flex flex-wrap gap-3 mt-2">
@@ -589,8 +640,13 @@ export default function PlanForm({ projects, initialData, mode, currency, locale
                 <p className="text-amber-900 text-lg font-bold mt-0.5">{formatCurrency(dpAmount, currency, locale)}</p>
               </div>
             )}
+            </>
+            )}
           </div>
         </PremiumFormPanel>
+
+        {!isCash && (
+        <>
 
         {/* ── Panel 04: Duration Options ── */}
         <PremiumFormPanel
@@ -837,6 +893,8 @@ export default function PlanForm({ projects, initialData, mode, currency, locale
             )}
           </div>
         </PremiumFormPanel>
+        </>
+        )}
       </PremiumFormLayout>
 
       {/* ── Net price summary ── */}

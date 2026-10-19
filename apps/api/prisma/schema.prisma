@@ -1779,6 +1779,9 @@ model InstallmentPlanTemplate {
   startDateRule          StartDateRule        @default(AFTER_CONTRACT)
   manualStartDate        DateTime?
   finalPaymentAmount     Decimal?             @db.Decimal(14, 2)
+  // Cash sale (F11): no instalments — whatever the booking leaves is one
+  // payment due at signing. No durations, no instalment count, no final payment.
+  isCash                 Boolean              @default(false)
   visibility             String               @default("SALES_ONLY")
   status                 PlanTemplateStatus   @default(DRAFT)
   createdById            String               @db.Uuid

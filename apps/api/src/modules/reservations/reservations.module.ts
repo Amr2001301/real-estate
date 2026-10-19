@@ -365,9 +365,11 @@ export function countPlanSnapshot(
     finalPaymentAmount: Prisma.Decimal | null;
     installmentsCount: number | null;
     frequency: InstallmentFrequency;
+    isCash?: boolean;
   },
   bookingAmount: Prisma.Decimal,
 ) {
+  if (plan.isCash) return cashPlanSnapshot(plan.netPrice, bookingAmount);
   const count = plan.installmentsCount ?? 0;
   if (count <= 0) return null;
   const calc = durationCalc(plan, count, new Prisma.Decimal(0), bookingAmount);
@@ -382,6 +384,28 @@ export function countPlanSnapshot(
     snapshotTotalPayable: new Prisma.Decimal(calc.totalPayable),
     snapshotFinalPaymentAmount: plan.finalPaymentAmount ?? null,
     snapshotFrequency: plan.frequency,
+  };
+}
+
+/**
+ * A cash plan (F11): no instalments. Whatever the booking the customer
+ * actually pays leaves is one payment due at signing (the contract's down
+ * payment row); 0 months, nothing financed.
+ */
+function cashPlanSnapshot(netPrice: Prisma.Decimal, bookingAmount: Prisma.Decimal) {
+  const due = new Prisma.Decimal(netPrice).sub(bookingAmount);
+  if (due.lt(0)) throw new BadRequestException('مبلغ الحجز أكبر من سعر الوحدة في الخطة');
+  return {
+    selectedDurationOptionId: null,
+    selectedDurationMonths: 0,
+    selectedIncreasePercentage: new Prisma.Decimal(0),
+    snapshotDownPaymentAmount: due,
+    snapshotRemainingAmount: new Prisma.Decimal(0),
+    snapshotFinancedAmount: new Prisma.Decimal(0),
+    snapshotMonthlyInstallment: new Prisma.Decimal(0),
+    snapshotTotalPayable: new Prisma.Decimal(netPrice),
+    snapshotFinalPaymentAmount: null,
+    snapshotFrequency: InstallmentFrequency.MONTHLY,
   };
 }
 
@@ -450,6 +474,7 @@ export class ReservationsService {
         finalPaymentAmount: true,
         installmentsCount: true,
         frequency: true,
+        isCash: true,
         durationOptions: {
           select: { id: true, durationMonths: true, increasePercentage: true },
         },
@@ -2164,7 +2189,8 @@ export class ReservationsService {
       }
     }
 
-    if (reservation.selectedDurationMonths != null && !dto.startsAt) {
+    // A cash plan has no instalments to start: its one payment is due today.
+    if (reservation.selectedDurationMonths != null && reservation.selectedDurationMonths > 0 && !dto.startsAt) {
       throw new BadRequestException('تاريخ بدء التقسيط مطلوب عند وجود مدة تقسيط محددة');
     }
 
@@ -2277,9 +2303,10 @@ export class ReservationsService {
       if (
         reservation.selectedDurationMonths != null &&
         reservation.snapshotMonthlyInstallment != null &&
-        dto.startsAt
+        (dto.startsAt || reservation.selectedDurationMonths === 0)
       ) {
-        const startsAt = new Date(dto.startsAt);
+        // A cash plan has no instalments: its one payment row is due today.
+        const startsAt = dto.startsAt ? new Date(dto.startsAt) : today;
         // Monthly unless the plan is priced by a quarterly / semi-annual /
         // yearly instalment count: the rows fall that many months apart.
         const frequency = reservation.snapshotFrequency ?? InstallmentFrequency.MONTHLY;
