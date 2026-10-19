@@ -1283,6 +1283,11 @@ model Contract {
   /// is made — the admin's choice, or the company's default for new
   /// contracts (lateFee.enabled) — and editable after.
   lateFeesApply  Boolean      @default(false)
+  /// Signed before the company used the system (entered afterwards with its
+  /// real signing date): signing it notifies no one and creates no broker
+  /// commission or sales bonus, and its instalments due before it was
+  /// entered can be marked paid in one go.
+  preSystem      Boolean      @default(false)
   downPayment    Decimal      @default(0) @db.Decimal(14, 2)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt

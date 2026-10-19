@@ -16,6 +16,7 @@ import {
   PaymentInstrumentStatus,
   PaymentInstrumentType,
   PaymentMethod,
+  PlanPaymentType,
   Prisma,
   ReservationBookingPaymentStatus,
   ReservationStatus,
@@ -38,12 +39,14 @@ import {
   RecordDepositDto,
   RecordDepositsBatchDto,
   SettleContractDto,
+  PaidBeforeSystemDto,
   RejectDepositDto,
   VerifyDepositDto,
 } from './deposits.dto';
 import { reportFailure } from '../../common/observability/report-failure';
 import { CONTRACT_CANCELLED_MESSAGE, depositTypeForInstallment, isDeadContract } from '../installments/live-contract';
 import { COLLECTED_DEPOSIT_WHERE } from '../../common/finance/collected';
+import { companyTimeZone, localDayAfter, startOfLocalToday } from '../../common/time/company-timezone';
 
 /** Reservations whose booking can still be paid. */
 const LIVE_RESERVATION_STATUSES: ReservationStatus[] = [
@@ -509,6 +512,92 @@ export class DepositsService {
     });
     await this.notifyDepositStaff(deposits[0]!.id, DEPOSIT_STATUS_AR.recorded, recordedById);
     return { count: deposits.length, total, deposits };
+  }
+
+  /**
+   * A contract signed before the system was entered with its real dates, so
+   * its schedule starts in the past and every row due before the day it was
+   * entered shows unpaid. Those the customer paid back then are marked paid
+   * in one go, each on its own due date (method OTHER): the collection
+   * reports count them in the month they were paid, not today. Only price
+   * rows (down payment, instalments, final payment), only before the entry
+   * day, and only on a contract flagged as signed before the system.
+   */
+  async markPaidBeforeSystem(dto: PaidBeforeSystemDto, recordedById: string) {
+    const companyId = getRequiredCompanyId();
+    const contract = await this.prisma.contract.findFirst({
+      where: { id: dto.contractId, companyId },
+      select: { id: true, preSystem: true, createdAt: true, status: true, deletedAt: true },
+    });
+    if (!contract) throw new NotFoundException('Contract not found');
+    if (isDeadContract(contract)) throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
+    if (!contract.preSystem) {
+      throw new BadRequestException('هذا العقد ليس سابقاً على النظام — سجّل دفعاته بتاريخها');
+    }
+    const timeZone = await companyTimeZone(this.prisma, companyId);
+    const entered = startOfLocalToday(timeZone, contract.createdAt);
+    let cutoff = entered;
+    if (dto.upTo) {
+      const upToEnd = localDayAfter(timeZone, 1, new Date(`${dto.upTo.slice(0, 10)}T12:00:00Z`));
+      if (upToEnd < cutoff) cutoff = upToEnd;
+    }
+    const rows = await this.prisma.installment.findMany({
+      where: {
+        companyId,
+        plan: { contractId: contract.id },
+        status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] },
+        type: { in: [PlanPaymentType.DOWN_PAYMENT, PlanPaymentType.INSTALLMENT, PlanPaymentType.FINAL_PAYMENT] },
+        dueDate: { lt: cutoff },
+      },
+      orderBy: { dueDate: 'asc' },
+      select: { id: true, amount: true, type: true, dueDate: true },
+    });
+    if (rows.length === 0) throw new BadRequestException('لا توجد أقساط غير مدفوعة مستحقة قبل إدخال العقد');
+
+    const deposits = await this.prisma.$transaction(async (tx) => {
+      const waiting = await tx.deposit.count({
+        where: { installmentId: { in: rows.map((r) => r.id) }, deletedAt: null, reviewStatus: DepositReviewStatus.PENDING_REVIEW },
+      });
+      if (waiting > 0) throw new ConflictException(WAITING_PAYMENT_MESSAGE);
+      const out = [];
+      for (const r of rows) {
+        const claimed = await tx.installment.updateMany({
+          where: { id: r.id, status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] } },
+          data: { status: InstallmentStatus.PAID, paidAt: r.dueDate },
+        });
+        if (claimed.count !== 1) throw new ConflictException('بعض الأقساط مدفوعة بالفعل أو ملغاة');
+        out.push(
+          await tx.deposit.create({
+            data: {
+              type: depositTypeForInstallment(r.type),
+              contractId: contract.id,
+              installmentId: r.id,
+              amount: r.amount,
+              paidAt: r.dueDate,
+              paymentMethod: PaymentMethod.OTHER,
+              recordedById,
+            },
+          }),
+        );
+      }
+      await tx.auditLog.create({
+        data: {
+          actorId: recordedById,
+          action: 'contract.paid-before-system',
+          entityType: 'Contract',
+          entityId: contract.id,
+          after: {
+            installments: rows.length,
+            total: (rows.reduce((a, r) => a + Math.round(Number(r.amount) * 100), 0) / 100).toFixed(2),
+            upTo: dto.upTo ?? null,
+          },
+          companyId,
+        },
+      });
+      return out;
+    });
+    const totalCents = rows.reduce((a, r) => a + Math.round(Number(r.amount) * 100), 0);
+    return { count: deposits.length, total: (totalCents / 100).toFixed(2) };
   }
 
   /**

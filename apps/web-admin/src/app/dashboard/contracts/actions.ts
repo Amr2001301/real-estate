@@ -7,6 +7,8 @@ import { depositPayload } from '@/lib/deposit-payload';
 import { getCompanyTimeZone } from '@/lib/currency';
 import { wallTimeToIso } from '@/lib/zoned-time';
 import { lateFeesApplyFrom } from '@/components/form/late-fee-clause-field';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 export interface ContractFormState {
   error?: string;
@@ -28,9 +30,14 @@ export async function createContractAction(
     pdfUrl: String(formData.get('pdfUrl') ?? '') || undefined,
     contractNumber: String(formData.get('contractNumber') ?? '').trim() || undefined,
     lateFeesApply: lateFeesApplyFrom(formData),
+    preSystem: formData.get('preSystem') === 'on' ? true : undefined,
   };
   const signedAtRaw = String(formData.get('signedAt') ?? '').trim();
   const signedAt = signedAtRaw ? wallTimeToIso(signedAtRaw, await getCompanyTimeZone()) : undefined;
+  // Signed before the system: it is entered signed, on a past date.
+  if (payload.preSystem && (!signedAt || new Date(signedAt) > new Date())) {
+    return { error: uiT(await getLocale()).pages.contractsForm.errorPreSystemSignedAt };
+  }
 
   let created: { id: string };
   try {
@@ -356,4 +363,24 @@ export async function rescheduleContractAction(id: string, formData: FormData): 
     return { error: (e as Error).message };
   }
   return done(id);
+}
+
+// A contract signed before the system: what the customer paid before it was
+// entered, each instalment on its due date.
+export async function paidBeforeSystemAction(
+  id: string,
+  upTo: string,
+): Promise<ContractFormState & { count?: number }> {
+  let res: { count: number };
+  try {
+    res = await api.post<{ count: number }>(`/deposits/paid-before-system`, {
+      contractId: id,
+      ...(upTo ? { upTo } : {}),
+    });
+  } catch (e) {
+    unstable_rethrow(e);
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/dashboard/contracts/${id}`);
+  return { ok: true, count: res.count };
 }

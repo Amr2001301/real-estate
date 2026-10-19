@@ -28,6 +28,7 @@ import {
   RecordDepositDto,
   RecordDepositsBatchDto,
   SettleContractDto,
+  PaidBeforeSystemDto,
   RejectDepositDto,
   ReverseDepositDto,
   VerifyDepositDto,
@@ -102,6 +103,14 @@ export class DepositsController {
   @Post('deposits/batch')
   recordMany(@CurrentUser() user: AuthUser, @Body() dto: RecordDepositsBatchDto) {
     return this.svc.recordMany(dto, user.sub);
+  }
+
+  // A contract signed before the system: what was paid before it was entered.
+  @Roles(UserRole.ADMIN)
+  @Permissions('deposits:register')
+  @Post('deposits/paid-before-system')
+  paidBeforeSystem(@CurrentUser() user: AuthUser, @Body() dto: PaidBeforeSystemDto) {
+    return this.svc.markPaidBeforeSystem(dto, user.sub);
   }
 
   // Early settlement: everything still open on the contract.
