@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Body,
   ConflictException,
   Controller,
@@ -534,6 +535,12 @@ export class ReservationsService {
     }
 
     let effectiveSalesId = actor.sub;
+    // Only an admin books on someone's behalf; a rep or manager books as
+    // themself (F17 — the form let a rep pick another rep, and the choice
+    // was silently dropped).
+    if (actor.role !== UserRole.ADMIN && dto.salesId && dto.salesId !== actor.sub) {
+      throw new ForbiddenException('تحجز باسمك فقط — الأدمن وحده يحجز باسم بائع آخر');
+    }
     const sellerChosen = actor.role === UserRole.ADMIN && !!dto.salesId;
 
     if (sellerChosen && dto.salesId) {
@@ -2912,6 +2919,19 @@ class ReservationsController {
     return this.svc.addNote(id, dto, user.sub);
   }
 
+  /** A manager approves or rejects the team's reservations, not their own. */
+  private async assertManagerMayDecide(user: AuthUser, id: string) {
+    if (user.role !== UserRole.SALES_MANAGER) return;
+    await this.assertReservationInScope(user, id);
+    const reservation = await this.prisma.reservation.findUnique({
+      where: { id },
+      select: { salesId: true },
+    });
+    if (reservation?.salesId === user.sub) {
+      throw new ForbiddenException('لا يمكنك اعتماد أو رفض حجزك — يقرره الأدمن');
+    }
+  }
+
   // ADMIN: no-op. SALES: only own reservations (salesId = self).
   // SALES_MANAGER: only reservations owned by reps on their team.
   private async assertReservationInScope(user: AuthUser, id: string) {
@@ -2933,26 +2953,29 @@ class ReservationsController {
   }
 
   // Strict: approval is the gate that lets a reservation proceed to contract
-  // conversion. Classic SoD — separate creator from approver.
-  @Roles(UserRole.ADMIN)
+  // conversion. Classic SoD — separate creator from approver. A sales manager
+  // decides on the team's reservations (F17), never on their own.
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
   @PermissionsStrict('reservations:approve')
   @Post(':id/approve')
-  approveReservation(
+  async approveReservation(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: AuthUser,
   ) {
+    await this.assertManagerMayDecide(user, id);
     return this.svc.setStatus(id, { status: ReservationStatus.APPROVED }, user);
   }
 
   // Strict: rejection frees the unit and writes a permanent rejection record.
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
   @PermissionsStrict('reservations:reject')
   @Post(':id/reject')
-  rejectReservation(
+  async rejectReservation(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: StatusChangeReasonDto,
     @CurrentUser() user: AuthUser,
   ) {
+    await this.assertManagerMayDecide(user, id);
     return this.svc.setStatus(
       id,
       { status: ReservationStatus.REJECTED, reason: dto.reason },

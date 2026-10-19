@@ -17,6 +17,7 @@ import { Pagination } from '@/components/ui/pagination';
 import { DataTable } from '@/components/table';
 import { ReservationStatusBadge, ReservationBookingPaymentBadge } from '@/components/badges';
 import { ReservationActions } from './_components/reservation-actions';
+import { getSession } from '@/lib/session';
 import {
   PremiumPageHero,
   PremiumMetricStrip,
@@ -96,6 +97,9 @@ export default async function ReservationsPage({
   if (sp.dateFrom) qs.set('dateFrom', sp.dateFrom);
   if (sp.dateTo) qs.set('dateTo', sp.dateTo);
 
+  const session = await getSession();
+  const isAdmin = session?.role === 'ADMIN';
+  const isManager = session?.role === 'SALES_MANAGER';
   const [statsRes, reservationsRes, projectsRes, salesRes, currency, locale] = await Promise.all([
     safe(api.get<Stats>('/reservations/stats')),
     safe(api.get<Paged<Reservation>>(`/reservations?${qs}`)),
@@ -347,7 +351,13 @@ export default async function ReservationsPage({
           {
             key: 'actions',
             header: '',
-            cell: (r) => <ReservationActions reservation={r} locale={locale} />,
+            cell: (r) => (
+              <ReservationActions
+                reservation={r}
+                canDecide={isAdmin || (isManager && r.salesId !== session?.id)}
+                locale={locale}
+              />
+            ),
           },
         ]}
       />

@@ -51,10 +51,16 @@ export const SALES_DEFAULT_PERMISSIONS = [
 ];
 
 /**
- * SALES_MANAGER: the sales tier plus team targets. Sales/operational reports
- * aggregate all sales data, not the team's, so they stay ADMIN-only.
+ * SALES_MANAGER: the sales tier plus team targets, and approving or rejecting
+ * the team's reservations (F17 — managers approve deals in practice). Sales/
+ * operational reports aggregate all sales data, so they stay ADMIN-only.
  */
-export const SALES_MANAGER_DEFAULT_PERMISSIONS = [...SALES_DEFAULT_PERMISSIONS, 'targets:manage'];
+export const SALES_MANAGER_DEFAULT_PERMISSIONS = [
+  ...SALES_DEFAULT_PERMISSIONS,
+  'targets:manage',
+  'reservations:approve',
+  'reservations:reject',
+];
 
 /** Mobile-only staff: read maintenance and drive its status. */
 export const MAINTENANCE_SUPERVISOR_DEFAULT_PERMISSIONS = [
