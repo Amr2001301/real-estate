@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Plus, AlertCircle, Upload, Users, TrendingUp, UserX, Kanban } from 'lucide-react';
+import { Plus, AlertCircle, Upload, Users, TrendingUp, UserX, Kanban, Radio } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, Lead, LeadSource, LeadStage } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
@@ -82,6 +82,13 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
         ]}
         actions={
           <>
+            {session?.role === 'ADMIN' && (
+              <Link href={'/dashboard/leads/sources' as never}>
+                <Button variant="outline" size="md" leftIcon={<Radio className="h-4 w-4" />}>
+                  {m.manageSources}
+                </Button>
+              </Link>
+            )}
             {canImport && (
               <Link href={'/dashboard/leads/import' as never}>
                 <Button variant="outline" size="md" leftIcon={<Upload className="h-4 w-4" />}>

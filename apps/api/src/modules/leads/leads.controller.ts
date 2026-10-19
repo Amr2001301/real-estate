@@ -28,6 +28,7 @@ import {
   CreateLeadNoteDto,
   CreateLeadSourceDto,
   UpdateLeadDto,
+  UpdateLeadSourceDto,
   UpdateLeadStageDto,
 } from './dto/lead.dto';
 
@@ -72,6 +73,13 @@ export class LeadsController {
   @Post('lead-sources')
   createSource(@Body() dto: CreateLeadSourceDto) {
     return this.leads.createSource(dto);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('lead_sources:manage')
+  @Patch('lead-sources/:id')
+  updateSource(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateLeadSourceDto) {
+    return this.leads.updateSource(id, dto);
   }
 
   // Pipeline counts

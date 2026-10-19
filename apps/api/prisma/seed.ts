@@ -12,6 +12,7 @@ import { seedLateFeeSettingsForCompany } from '../src/modules/installments/late-
 import { seedTransferFeeSettingsForCompany } from '../src/modules/contracts/transfer-fee';
 import { seedFeeSettingsForCompany } from '../src/modules/installments/fee-settings';
 import { seedTimeZoneSettingForCompany } from '../src/common/time/company-timezone';
+import { seedLeadSourcesForCompany } from '../src/modules/leads/lead-source-defaults';
 import { normalizeHostname } from '../src/common/utils/hostname-normalize';
 import { upsertUserByEmail } from './seed-user-upsert';
 import { NOTIFICATION_CATALOG } from '../src/modules/notifications/notification-catalog';
@@ -57,12 +58,6 @@ async function findPhaseByTranslatedName(
 
 async function findBuildingByName(phaseId: string, name: string) {
   return prisma.building.findFirst({ where: { phaseId, name } });
-}
-
-async function findLeadSourceByEn(nameEn: string) {
-  return prisma.leadSource.findFirst({
-    where: { name: { path: ['en'], equals: nameEn } },
-  });
 }
 
 async function findMaintenanceCategoryByEn(nameEn: string) {
@@ -554,18 +549,8 @@ async function main() {
     });
   }
 
-  // ---- Lead sources (find-or-create by en name; JSON column has no unique idx) ----
-  for (const name of [
-    { ar: 'فيسبوك', en: 'Facebook' },
-    { ar: 'انستغرام', en: 'Instagram' },
-    { ar: 'موقع الويب', en: 'Website' },
-    { ar: 'إحالة', en: 'Referral' },
-  ]) {
-    const existing = await findLeadSourceByEn(name.en);
-    if (!existing) {
-      await prisma.leadSource.create({ data: { name } });
-    }
-  }
+  // ---- Lead sources: the defaults every company starts with ----
+  await seedLeadSourcesForCompany(prisma, company.id);
 
   // ---- Demo project 1: idempotent project + phase + buildings + units ----
   const proj1 = await ensureProject({
@@ -684,7 +669,9 @@ async function main() {
   );
 
   // ---- Lead + assignment (idempotent by clientId + projectInterestId) ----
-  const fbSource = await findLeadSourceByEn('Facebook');
+  const fbSource = await prisma.leadSource.findFirst({
+    where: { companyId: company.id, name: { path: ['en'], equals: 'Facebook' } },
+  });
   if (fbSource) {
     const phone = '+201060000001';
     const email = 'ahmed@example.com';
@@ -955,6 +942,7 @@ async function main() {
     await seedTransferFeeSettingsForCompany(prisma, c.id);
     await seedFeeSettingsForCompany(prisma, c.id);
     await seedTimeZoneSettingForCompany(prisma, c.id);
+    await seedLeadSourcesForCompany(prisma, c.id);
   }
 
   // ---- Backfill companyId on all rows that were created before this seed run ----

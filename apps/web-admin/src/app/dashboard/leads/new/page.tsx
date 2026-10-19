@@ -86,7 +86,7 @@ export default async function NewLeadPage({
 
       <LeadForm
         projects={projectsRes.data?.data ?? []}
-        sources={sourcesRes.data ?? []}
+        sources={(sourcesRes.data ?? []).filter((s) => s.active)}
         sales={salesOptions}
         initialClient={clientRes.data ?? null}
         locale={locale}
