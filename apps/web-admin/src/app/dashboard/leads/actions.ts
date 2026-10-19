@@ -77,10 +77,38 @@ export async function addNoteAction(leadId: string, formData: FormData) {
   revalidatePath(`/dashboard/leads/${leadId}`);
 }
 
-export async function createSourceAction(formData: FormData) {
-  await api.post('/lead-sources', {
-    ar: String(formData.get('ar') ?? ''),
-    en: String(formData.get('en') ?? ''),
-  });
+const SOURCES_PATH = '/dashboard/leads/sources';
+
+async function sourceResult(run: () => Promise<unknown>): Promise<never> {
+  let err: string | null = null;
+  try {
+    await run();
+  } catch (e) {
+    err = (e as Error).message;
+  }
+  revalidatePath(SOURCES_PATH);
   revalidatePath('/dashboard/leads');
+  redirect(`${SOURCES_PATH}?${err ? `err=${encodeURIComponent(err)}` : 'ok=1'}` as never);
+}
+
+export async function createSourceAction(formData: FormData) {
+  await sourceResult(() =>
+    api.post('/lead-sources', {
+      ar: String(formData.get('ar') ?? '').trim(),
+      en: String(formData.get('en') ?? '').trim(),
+    }),
+  );
+}
+
+export async function updateSourceAction(id: string, formData: FormData) {
+  await sourceResult(() =>
+    api.patch(`/lead-sources/${id}`, {
+      ar: String(formData.get('ar') ?? '').trim(),
+      en: String(formData.get('en') ?? '').trim(),
+    }),
+  );
+}
+
+export async function setSourceActiveAction(id: string, active: boolean) {
+  await sourceResult(() => api.patch(`/lead-sources/${id}`, { active }));
 }

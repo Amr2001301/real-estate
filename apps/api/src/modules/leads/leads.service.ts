@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -18,6 +19,7 @@ import {
   AssignLeadDto,
   CreateLeadNoteDto,
   CreateLeadSourceDto,
+  UpdateLeadSourceDto,
 } from './dto/lead.dto';
 import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { enumFilter } from '../../common/utils/query-filters';
@@ -38,13 +40,57 @@ export class LeadsService {
 
   // ----- Sources -----
   listSources() {
-    return this.prisma.leadSource.findMany({ orderBy: { createdAt: 'desc' } });
+    return this.prisma.leadSource.findMany({ orderBy: { createdAt: 'asc' } });
   }
 
-  createSource(dto: CreateLeadSourceDto) {
-    return this.prisma.leadSource.create({
-      data: { name: { ar: dto.ar, en: dto.en } as Prisma.InputJsonValue },
+  async createSource(dto: CreateLeadSourceDto) {
+    const name = { ar: dto.ar.trim(), en: dto.en.trim() };
+    await this.assertSourceNameFree(name);
+    return this.prisma.leadSource.create({ data: { name: name as Prisma.InputJsonValue } });
+  }
+
+  /** Rename a source or switch it off. A switched-off source stays on its leads. */
+  async updateSource(id: string, dto: UpdateLeadSourceDto) {
+    const source = await this.prisma.leadSource.findFirst({ where: { id } });
+    if (!source) throw new NotFoundException('Lead source not found');
+    const current = source.name as { ar?: string; en?: string };
+    const name = {
+      ar: dto.ar?.trim() ?? current.ar ?? '',
+      en: dto.en?.trim() ?? current.en ?? '',
+    };
+    if (dto.ar !== undefined || dto.en !== undefined) await this.assertSourceNameFree(name, id);
+    return this.prisma.leadSource.update({
+      where: { id },
+      data: {
+        ...(dto.ar !== undefined || dto.en !== undefined
+          ? { name: name as Prisma.InputJsonValue }
+          : {}),
+        ...(dto.active !== undefined ? { active: dto.active } : {}),
+      },
     });
+  }
+
+  /** Two sources with one name split the reports and make the Excel import ambiguous. */
+  private async assertSourceNameFree(name: { ar: string; en: string }, exceptId?: string) {
+    const all = await this.prisma.leadSource.findMany({ select: { id: true, name: true } });
+    const norm = (v: unknown) => (typeof v === 'string' ? v.trim().toLowerCase() : '');
+    const taken = all.some((s) => {
+      if (s.id === exceptId) return false;
+      const n = s.name as { ar?: string; en?: string };
+      return norm(n.ar) === norm(name.ar) || norm(n.en) === norm(name.en);
+    });
+    if (taken) throw new ConflictException('يوجد مصدر بنفس الاسم');
+  }
+
+  /** A lead's source must be one of the company's active sources. */
+  private async assertUsableSource(sourceId: string | null | undefined) {
+    if (!sourceId) return;
+    const source = await this.prisma.leadSource.findFirst({
+      where: { id: sourceId },
+      select: { active: true },
+    });
+    if (!source) throw new BadRequestException('Lead source not found');
+    if (!source.active) throw new BadRequestException('هذا المصدر موقوف — اختر مصدراً آخر');
   }
 
   // ----- Leads -----
@@ -80,6 +126,8 @@ export class LeadsService {
     if (assignedSalesId && assignedSalesId !== actor?.sub) {
       await assertAssignableSales(this.prisma, assignedSalesId);
     }
+
+    await this.assertUsableSource(dto.sourceId);
 
     const lead = await this.prisma.$transaction(async (tx) => {
       const client = await this.resolveClient(tx, dto);
@@ -415,6 +463,9 @@ export class LeadsService {
 
   async update(id: string, dto: UpdateLeadDto, actorId?: string) {
     const lead = await this.assertExists(id);
+    if (dto.sourceId !== undefined && dto.sourceId !== lead.sourceId) {
+      await this.assertUsableSource(dto.sourceId);
+    }
     const data: Prisma.LeadUncheckedUpdateInput = { ...dto };
     if (dto.phone !== undefined) {
       // Stored E.164, like on create — duplicate and OTP lookups match on it.
@@ -581,6 +632,7 @@ export class LeadsService {
    */
   async importLeads(buffer: Buffer, sourceId?: string, actor?: AuthUser): Promise<ImportResult> {
     const actorId = actor?.sub;
+    await this.assertUsableSource(sourceId);
     const rows = await this.parseExcelBuffer(buffer);
     if (rows.length > LEGACY_IMPORT_MAX_ROWS) {
       throw new BadRequestException(`الملف يتجاوز الحد الأقصى (${LEGACY_IMPORT_MAX_ROWS} صف)`);

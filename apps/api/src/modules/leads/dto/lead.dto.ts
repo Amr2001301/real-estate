@@ -1,5 +1,7 @@
 import {
+  IsBoolean,
   IsEmail,
+  IsNotEmpty,
   IsEnum,
   IsOptional,
   IsString,
@@ -49,6 +51,12 @@ export class CreateLeadNoteDto {
 }
 
 export class CreateLeadSourceDto {
-  @IsString() ar!: string;
-  @IsString() en!: string;
+  @IsString() @IsNotEmpty() ar!: string;
+  @IsString() @IsNotEmpty() en!: string;
+}
+
+export class UpdateLeadSourceDto {
+  @IsOptional() @IsString() @IsNotEmpty() ar?: string;
+  @IsOptional() @IsString() @IsNotEmpty() en?: string;
+  @IsOptional() @IsBoolean() active?: boolean;
 }
