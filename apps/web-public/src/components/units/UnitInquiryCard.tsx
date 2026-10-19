@@ -5,7 +5,8 @@ import { Price } from '@/components/currency/CurrencyProvider';
 import { MessageCircle, CalendarDays, ShieldCheck, Phone, Users, Building2 } from 'lucide-react';
 import { routes } from '@/lib/routes';
 
-import { getContactPhone, getWhatsappPhone, telHref, whatsappHref } from '@/lib/contact';
+import { telHref, whatsappHref } from '@/lib/contact';
+import { useCompanyContact } from '@/components/contact/CompanyContactProvider';
 import { ButtonLink } from '@/components/ui/Button';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import type { Locale } from '@/lib/locale';
@@ -42,8 +43,7 @@ export function UnitInquiryCard({
   const info  = `${routes.contact}?unitId=${unitId}` as Route;
   const visit = `${routes.contact}?type=visit&unitId=${unitId}` as Route;
 
-  const contactPhone  = getContactPhone();
-  const whatsappPhone = getWhatsappPhone();
+  const { phone: contactPhone, whatsapp: whatsappPhone } = useCompanyContact();
   const subject  = unitCode ? t.waUnitSubject(unitCode) : t.waThisUnit;
   const waMessage = t.waInterest(subject, projectName ?? '');
 

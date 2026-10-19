@@ -23,6 +23,20 @@ export function getWhatsappPhone(): string | null {
   return clean(process.env.NEXT_PUBLIC_WHATSAPP_PHONE);
 }
 
+/**
+ * The company's own numbers first (branding), the deployment's env second.
+ * WhatsApp and the call button belong to the tenant, not to the platform.
+ */
+export function companyContact(branding?: {
+  contactPhone?: string | null;
+  contactWhatsApp?: string | null;
+} | null): { phone: string | null; whatsapp: string | null } {
+  return {
+    phone: clean(branding?.contactPhone ?? undefined) ?? getContactPhone(),
+    whatsapp: clean(branding?.contactWhatsApp ?? undefined) ?? getWhatsappPhone(),
+  };
+}
+
 /** Configured contact email, or null when unset. */
 export function getContactEmail(): string | null {
   return clean(process.env.NEXT_PUBLIC_CONTACT_EMAIL);

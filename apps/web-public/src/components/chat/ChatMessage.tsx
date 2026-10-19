@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { Bath, BedDouble, ChevronLeft, ExternalLink, MapPin, Ruler, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { CoverImage } from '@/components/ui/CoverImage';
 import { cn } from '@/lib/cn';
-import { getWhatsappPhone, whatsappHref } from '@/lib/contact';
+import { whatsappHref } from '@/lib/contact';
+import { useCompanyContact } from '@/components/contact/CompanyContactProvider';
 import type { ChatCard, ChatCta, ChatUiMessage, FeedbackRating } from '@/lib/chat';
 
 interface ChatMessageProps {
@@ -112,10 +113,10 @@ function ChatCtaButton({ cta }: { cta: ChatCta }) {
   const base =
     'inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all duration-200 focus-visible:ring-2 focus-visible:ring-gold-400/50 focus-visible:ring-offset-1';
 
-  // WhatsApp: build the wa.me link on the client from env; backend supplies only
-  // the prefilled message. Hide the CTA when no number is configured.
+  // WhatsApp: the company's number (branding, then env); the backend supplies
+  // only the prefilled message. Hide the CTA when no number is configured.
+  const { whatsapp: phone } = useCompanyContact();
   if (cta.kind === 'whatsapp') {
-    const phone = getWhatsappPhone();
     if (!phone) return null;
     return (
       <a

@@ -13,6 +13,8 @@ import { Footer } from '@/components/layout/Footer';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import { FavoritesProvider } from '@/components/favorites/FavoritesProvider';
 import { ChatWidget } from '@/components/chat/ChatWidget';
+import { CompanyContactProvider } from '@/components/contact/CompanyContactProvider';
+import { companyContact } from '@/lib/contact';
 import { PageViewTracker } from '@/components/analytics/PageViewTracker';
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
@@ -101,10 +103,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ThemeProvider>
           <CurrencyProvider currency={branding?.currency ?? DEFAULT_CURRENCY}>
           <FavoritesProvider>
+          <CompanyContactProvider contact={companyContact(branding)}>
             <Navbar locale={locale} branding={branding ?? undefined} />
             <main className="min-h-screen">{children}</main>
             <Footer locale={locale} branding={branding ?? undefined} />
             <ChatWidget />
+          </CompanyContactProvider>
           </FavoritesProvider>
           </CurrencyProvider>
         </ThemeProvider>

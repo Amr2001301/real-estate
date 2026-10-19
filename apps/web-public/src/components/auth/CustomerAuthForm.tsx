@@ -29,7 +29,6 @@ function readFrom(): string | undefined {
   return new URLSearchParams(window.location.search).get('from') ?? undefined;
 }
 
-const CITIES = ['الرياض', 'جدة', 'الدمام', 'مكة المكرمة', 'المدينة المنورة'];
 const INTERESTS = [
   { value: 'apartment', label: 'شقة' },
   { value: 'villa', label: 'فيلا' },
@@ -224,10 +223,8 @@ export function CustomerAuthForm({
             <p className="pt-2 text-sm font-semibold text-gold-600">تفضيلاتك العقارية <span className="font-normal text-ink-muted">(اختياري)</span></p>
             <div className="grid gap-5 sm:grid-cols-2">
               <Field label="المدينة">
-                <Select value={city} onChange={(e) => setCity(e.target.value)}>
-                  <option value="">اختر المدينة</option>
-                  {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </Select>
+                {/* Free text: a fixed list offered Saudi cities to every company (F37). */}
+                <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="مثال: القاهرة" maxLength={80} />
               </Field>
               <Field label="نوع الاهتمام">
                 <Select value={interestType} onChange={(e) => setInterestType(e.target.value)}>
