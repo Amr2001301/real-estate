@@ -46,7 +46,13 @@ test('the WhatsApp button and the city search belong to the company', async ({ p
     // branding cache), so the new number shows there within a minute.
     const whatsappHref = async () => {
       await page.goto('/units', { waitUntil: 'networkidle' });
-      return page.getByRole('link', { name: 'تواصل عبر واتساب' }).first().getAttribute('href');
+      // Short timeout: while the cached branding has no number the button is
+      // absent, and a waiting getAttribute would eat the whole poll.
+      return page
+        .getByRole('link', { name: 'تواصل عبر واتساب' })
+        .first()
+        .getAttribute('href', { timeout: 2_000 })
+        .catch(() => null);
     };
     await expect
       .poll(whatsappHref, { timeout: 120_000, intervals: [5_000] })
