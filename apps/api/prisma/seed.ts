@@ -16,6 +16,7 @@ import { seedLeadSourcesForCompany } from '../src/modules/leads/lead-source-defa
 import { normalizeHostname } from '../src/common/utils/hostname-normalize';
 import { upsertUserByEmail } from './seed-user-upsert';
 import { NOTIFICATION_CATALOG } from '../src/modules/notifications/notification-catalog';
+import { PERMISSION_CATALOG } from '../src/modules/permissions/permission-catalog';
 import {
   MAINTENANCE_SUPERVISOR_DEFAULT_PERMISSIONS,
   SALES_DEFAULT_PERMISSIONS,
@@ -699,140 +700,11 @@ async function main() {
     }
   }
 
-  // ---- Permission codes ----
-  // Broker codes were seeded since Phase 1. The 8 codes below are the first
-  // P0 codes that are actually enforced at runtime — see settings.module.ts
-  // for the pilot wiring. The bootstrap admin receives every code so the
-  // existing admin UI doesn't show empty rows on first boot.
-  const brokerPermissions: Array<{ code: string; description: string }> = [
-    { code: 'brokers:read', description: 'List/view brokerage firms' },
-    { code: 'brokers:create', description: 'Onboard a new brokerage firm' },
-    { code: 'brokers:update', description: 'Edit brokerage firm profile and access' },
-    { code: 'brokers:suspend', description: 'Suspend a brokerage firm' },
-    { code: 'brokers:terminate', description: 'Terminate a brokerage firm' },
-    { code: 'broker_users:read', description: 'List/view broker agent users' },
-    { code: 'broker_users:invite', description: 'Invite a new broker agent' },
-    { code: 'broker_users:update', description: 'Edit broker agent profile and permissions' },
-    { code: 'broker_users:remove', description: 'Remove a broker agent from a firm' },
-    { code: 'broker_access:read', description: 'Read broker project and unit access' },
-    { code: 'broker_access:manage', description: 'Manage broker project and unit access' },
-    { code: 'broker_leads:read', description: 'Read broker-submitted leads' },
-    { code: 'broker_leads:approve', description: 'Approve a lead submitted by a broker' },
-    { code: 'broker_leads:reject', description: 'Reject a lead submitted by a broker' },
-    { code: 'broker_contracts:read', description: 'Read broker-attributed contracts' },
-    { code: 'broker_reservations:read', description: 'Read broker reservations' },
-    { code: 'broker_reservations:create', description: 'Create broker reservations' },
-    { code: 'broker_reports:read', description: 'Read broker performance reports' },
-  ];
-
-  const corePermissions: Array<{ code: string; description: string }> = [
-    { code: 'settings:read', description: 'Read system settings' },
-    { code: 'settings:write', description: 'Modify system settings' },
-    { code: 'permissions:manage', description: 'List permissions and assign/revoke them on users' },
-    { code: 'users:read', description: 'List/view platform users' },
-    { code: 'users:create', description: 'Create a new platform user' },
-    { code: 'users:update', description: 'Edit a platform user profile' },
-    { code: 'users:activate', description: 'Activate a deactivated user' },
-    { code: 'users:deactivate', description: 'Deactivate a user account' },
-    { code: 'audit:read', description: 'Read audit logs and operations summary' },
-    { code: 'reports:operational:read', description: 'Read operational dashboard and KPI reports' },
-    { code: 'reports:sales:read', description: 'Read sales reports' },
-    { code: 'reports:financial:read', description: 'Read financial reports' },
-    { code: 'deposits:read', description: 'Read deposit records' },
-    { code: 'deposits:register', description: 'Register deposit payments' },
-    { code: 'deposits:verify', description: 'Verify deposit payments' },
-    { code: 'deposits:reverse', description: 'Manually reverse an approved deposit (writes PaymentCorrection audit trail)' },
-    { code: 'payment-instruments:manage', description: 'Create and transition payment instruments (cheques, bank transfers)' },
-    { code: 'payment-instruments:bounce', description: 'Record cheque bounce (ADMIN-only, strict permission)' },
-    { code: 'contracts:read', description: 'Read contract records' },
-    { code: 'contracts:upload', description: 'Create contracts and attach PDFs' },
-    { code: 'contracts:update', description: 'Update editable contract fields' },
-    { code: 'contracts:sign', description: 'Sign contracts and materialize commission side effects' },
-    { code: 'contracts:cancel', description: 'Cancel a contract and apply financial settlement (Step D3)' },
-    { code: 'contracts:release-unit', description: 'Release the unit after a REQUIRES_APPROVAL cancellation (Step D3)' },
-    { code: 'broker_commissions:read', description: 'Read broker commission records' },
-    { code: 'broker_commissions:approve', description: 'Approve broker commissions' },
-    { code: 'broker_commissions:reject', description: 'Reject broker commissions' },
-    { code: 'broker_commissions:cancel', description: 'Cancel broker commissions' },
-    { code: 'broker-commissions:clawback:resolve', description: 'Collect or waive an outstanding commission clawback receivable (Step D4)' },
-    { code: 'bonus:clawback:resolve', description: 'Collect or waive an outstanding bonus entry clawback receivable (Step D4)' },
-    { code: 'broker_payouts:read', description: 'Read broker payout records' },
-    { code: 'broker_payouts:create', description: 'Create broker payout drafts' },
-    { code: 'broker_payouts:update', description: 'Update broker payout drafts' },
-    { code: 'broker_payouts:approve', description: 'Approve broker payouts' },
-    { code: 'broker_payouts:process', description: 'Mark broker payouts as processing' },
-    { code: 'broker_payouts:pay', description: 'Mark broker payouts as paid' },
-    { code: 'broker_payouts:cancel', description: 'Cancel broker payouts' },
-    { code: 'bonus:rules:manage', description: 'Manage bonus rules' },
-    { code: 'bonus:entries:read', description: 'Read bonus entries' },
-    { code: 'bonus:entries:create', description: 'Create bonus entries' },
-    { code: 'bonus:entries:approve', description: 'Approve bonus entries' },
-    { code: 'bonus:entries:pay', description: 'Mark bonus entries as paid' },
-    { code: 'targets:read', description: 'Read sales targets' },
-    { code: 'targets:manage', description: 'Manage sales targets' },
-    { code: 'reservations:read', description: 'Read reservation records' },
-    { code: 'reservations:create', description: 'Create reservations' },
-    { code: 'reservations:update', description: 'Update reservation editable fields' },
-    { code: 'reservations:approve', description: 'Approve reservations' },
-    { code: 'reservations:reject', description: 'Reject reservations' },
-    { code: 'reservations:cancel', description: 'Cancel reservations' },
-    { code: 'reservations:convert', description: 'Convert reservations to contracts' },
-    { code: 'reservations:booking-payment', description: 'Confirm or unconfirm reservation booking payments' },
-    { code: 'leads:read', description: 'Read leads and lead pipeline data' },
-    { code: 'leads:create', description: 'Create leads' },
-    { code: 'leads:update', description: 'Update lead details' },
-    { code: 'leads:assign', description: 'Assign leads to sales users' },
-    { code: 'leads:advance-stage', description: 'Advance lead pipeline stage' },
-    { code: 'leads:note', description: 'Add lead notes' },
-    { code: 'lead_sources:manage', description: 'Manage lead sources' },
-    { code: 'visits:read', description: 'Read visit requests and appointments' },
-    { code: 'visits:create', description: 'Create visit appointments' },
-    { code: 'visits:approve', description: 'Review or update visit requests' },
-    { code: 'visits:schedule', description: 'Schedule visit appointments from requests' },
-    { code: 'visits:confirm', description: 'Confirm visit appointments' },
-    { code: 'visits:complete', description: 'Complete visit appointments' },
-    { code: 'visits:cancel', description: 'Cancel visit appointments' },
-    { code: 'visits:no-show', description: 'Mark visit appointments as no-show' },
-    { code: 'visits:reschedule', description: 'Reschedule visit appointments' },
-    { code: 'visits:assign', description: 'Assign visit appointments to sales users' },
-    { code: 'maintenance:read', description: 'Read maintenance requests' },
-    // Seeded but unwired — reserved for a future admin-create-on-behalf route.
-    { code: 'maintenance:create', description: 'Create maintenance requests on behalf of customers' },
-    { code: 'maintenance:assign', description: 'Assign maintenance requests to admin staff' },
-    { code: 'maintenance:resolve', description: 'Drive maintenance request status transitions' },
-    { code: 'maintenance:categories:manage', description: 'Manage maintenance categories' },
-    { code: 'maintenance:items:manage', description: 'Manage unit maintenance/warranty items' },
-    { code: 'projects:read', description: 'Read projects, phases, and buildings' },
-    { code: 'projects:create', description: 'Create projects' },
-    { code: 'projects:update', description: 'Update project details' },
-    { code: 'projects:delete', description: 'Delete projects' },
-    { code: 'projects:publish', description: 'Publish or archive projects' },
-    { code: 'phases:manage', description: 'Manage project phases' },
-    { code: 'buildings:manage', description: 'Manage project buildings' },
-    { code: 'project_media:manage', description: 'Manage project and unit media' },
-    { code: 'units:read', description: 'Read units and use installment calculator' },
-    { code: 'units:create', description: 'Create units' },
-    { code: 'units:update', description: 'Update unit details and pricing' },
-    { code: 'units:change-status', description: 'Change unit status' },
-    { code: 'units:delete', description: 'Delete units' },
-    { code: 'cms:pages:manage', description: 'Manage CMS pages' },
-    { code: 'cms:banners:manage', description: 'Manage CMS banners' },
-    { code: 'cms:articles:manage', description: 'Manage CMS articles' },
-    { code: 'documents:read', description: 'Read document records' },
-    { code: 'documents:upload', description: 'Upload and register documents' },
-    { code: 'documents:update', description: 'Update document metadata' },
-    { code: 'documents:delete', description: 'Delete document records' },
-    { code: 'notifications:templates:manage', description: 'Manage notification templates' },
-    { code: 'notifications:send', description: 'Send notifications to users' },
-    { code: 'installments:read', description: 'Read installment plans and templates' },
-    { code: 'installments:manage', description: 'Create, update, and delete installment plans and templates' },
-    { code: 'installments:activate', description: 'Activate or deactivate installment plan templates' },
-    { code: 'pricing:approve-discount', description: 'Give a discount above the company cap (pricing.maxDiscountPct)' },
-  ];
-
-  const allPermissions = [...brokerPermissions, ...corePermissions];
+  // ---- Permission codes (src/modules/permissions/permission-catalog.ts) ----
+  // The API also writes missing codes at startup; the seed refreshes the
+  // descriptions. The bootstrap admin receives every code below.
   await Promise.all(
-    allPermissions.map((p) =>
+    PERMISSION_CATALOG.map((p) =>
       prisma.permission.upsert({
         where: { code: p.code },
         create: p,

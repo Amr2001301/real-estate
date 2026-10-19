@@ -20,8 +20,8 @@ import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 
 /**
  * Lightweight, ADMIN-only management surface for the existing
- * `Permission` and `UserPermission` tables. The codes are seeded by
- * apps/api/prisma/seed.ts; this module lets an admin attach/detach codes
+ * `Permission` and `UserPermission` tables. The codes live in
+ * permission-catalog.ts and are written at startup; this module lets an admin attach/detach codes
  * to a specific user.
  *
  * Important: as of Phase 16, NO route in the codebase reads
