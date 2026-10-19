@@ -417,6 +417,8 @@ export class BrokerPortalReservationsService {
         // Priced by instalment count (quarterly, semi-annual, a final payment).
         const snap = countPlanSnapshot(plan, bookingAmount);
         if (snap) {
+          // A cash plan's single payment is what the booking leaves (F11).
+          snapshot.downPaymentAmount = snap.snapshotDownPaymentAmount;
           snapshot.remainingAmount = snap.snapshotRemainingAmount;
           snapshot.financedAmount = snap.snapshotFinancedAmount;
           snapshot.monthlyInstallment = snap.snapshotMonthlyInstallment;

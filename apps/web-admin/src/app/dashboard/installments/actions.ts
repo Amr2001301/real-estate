@@ -28,9 +28,10 @@ export async function createPlanAction(
   const payload = buildPayload(formData);
 
   // Validate: must have either duration options or legacy installmentsCount
+  // (a cash plan has neither — F11).
   const hasDurations = Array.isArray(payload.durationOptions) && payload.durationOptions.length > 0;
   const hasLegacy = typeof payload.installmentsCount === 'number' && payload.installmentsCount > 0;
-  if (!hasDurations && !hasLegacy) {
+  if (!payload.isCash && !hasDurations && !hasLegacy) {
     return { error: 'أضف خيار مدة واحد على الأقل أو حدد عدد الأقساط (للنمط القديم)' };
   }
 
@@ -133,6 +134,26 @@ function buildPayload(formData: FormData): Record<string, unknown> {
       unstable_rethrow(e);
       // ignore malformed input — treat as empty
     }
+  }
+
+  // Cash plan (F11): no down payment, durations, instalments or start rule of
+  // its own — the API sets the one payment due at signing.
+  const isCash = formData.get('isCash') === 'true';
+  if (isCash) {
+    return {
+      isCash: true,
+      name: str('name'),
+      description: str('description'),
+      projectId: str('projectId'),
+      unitId: str('unitId') || null,
+      totalPrice: num('totalPrice'),
+      discountType: str('discountType'),
+      discountValue: num('discountValue'),
+      reservationAmountType: str('reservationAmountType'),
+      reservationAmountValue: num('reservationAmountValue'),
+      startDateRule: 'AFTER_CONTRACT',
+      status: str('status'),
+    };
   }
 
   return {

@@ -128,7 +128,9 @@ export default async function InstallmentPlanDetailPage({
                 </Field>
                 <Field label={hasDurationOptions ? m.fieldDurationOptions : m.fieldInstallmentsCount}>
                   <span className="text-[14px] font-bold text-slate-900">
-                    {hasDurationOptions
+                    {plan.isCash
+                      ? uiT(locale).pages.installmentsForm.planTypeCash
+                      : hasDurationOptions
                       ? m.durationOptionsLabel(durationOptions.length)
                       : plan.installmentsCount != null
                         ? m.installmentsLabel(plan.installmentsCount)

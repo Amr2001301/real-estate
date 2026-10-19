@@ -24,6 +24,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { ApiTags } from '@nestjs/swagger';
 import {
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
@@ -35,6 +36,7 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -149,8 +151,12 @@ class CreatePlanTemplateDto {
   @IsOptional() @IsNumber() @Min(0) reservationAmount?: number;
   @IsOptional() @IsEnum(DownPaymentType) reservationAmountType?: DownPaymentType;
   @IsOptional() @IsNumber() @Min(0) reservationAmountValue?: number;
-  @IsEnum(DownPaymentType) downPaymentType!: DownPaymentType;
-  @IsNumber() @IsPositive() downPaymentValue!: number;
+  // A cash plan has no down payment of its own: the remainder is due at signing.
+  @IsOptional() @IsBoolean() isCash?: boolean;
+  @ValidateIf((o: { isCash?: boolean }) => !o.isCash) @IsEnum(DownPaymentType)
+  downPaymentType!: DownPaymentType;
+  @ValidateIf((o: { isCash?: boolean }) => !o.isCash) @IsNumber() @IsPositive()
+  downPaymentValue!: number;
   // installmentsCount + frequency are legacy single-duration fields.
   // New templates should send durationOptions instead.
   @IsOptional() @IsInt() @Min(1) installmentsCount?: number;
@@ -177,6 +183,7 @@ class UpdatePlanTemplateDto {
   @IsOptional() @IsNumber() @Min(0) reservationAmountValue?: number;
   @IsOptional() @IsEnum(DownPaymentType) downPaymentType?: DownPaymentType;
   @IsOptional() @IsNumber() @IsPositive() downPaymentValue?: number;
+  @IsOptional() @IsBoolean() isCash?: boolean;
   @IsOptional() @IsInt() @Min(1) installmentsCount?: number;
   @IsOptional() @IsEnum(InstallmentFrequency) frequency?: InstallmentFrequency;
   @IsOptional() @IsEnum(StartDateRule) startDateRule?: StartDateRule;
@@ -750,6 +757,21 @@ export class InstallmentsService {
 
 // ─── Template service ──────────────────────────────────────────────────────────
 
+/** A cash plan carries no instalments, durations or final payment (F11). */
+function assertCashPlanShape(dto: {
+  durationOptions?: unknown[];
+  installmentsCount?: number;
+  finalPaymentAmount?: number;
+}) {
+  if (
+    (dto.durationOptions && dto.durationOptions.length > 0) ||
+    dto.installmentsCount ||
+    (dto.finalPaymentAmount ?? 0) > 0
+  ) {
+    throw new BadRequestException('خطة الكاش بلا أقساط أو مدد أو دفعة أخيرة');
+  }
+}
+
 function computeDownPaymentAmount(
   netPrice: number,
   type: DownPaymentType,
@@ -1102,11 +1124,8 @@ class PlanTemplatesService {
     }
     const discountAmount = disc.amount;
     const netPrice = totalPrice - discountAmount;
-    const dpAmount = computeDownPaymentAmount(
-      netPrice,
-      dto.downPaymentType,
-      dto.downPaymentValue,
-    );
+    const isCash = dto.isCash === true;
+    if (isCash) assertCashPlanShape(dto);
 
     // Booking amount: FIXED → value is the amount; PERCENTAGE → value is a
     // percent (0–100] of netPrice for the template schedule. The percent is
@@ -1118,6 +1137,10 @@ class PlanTemplatesService {
       );
     }
     const reservation = resv.amount;
+    // Cash: the down payment is everything the booking leaves (F11).
+    const dpType = isCash ? DownPaymentType.FIXED : dto.downPaymentType;
+    const dpValue = isCash ? Math.max(0, netPrice - reservation) : dto.downPaymentValue;
+    const dpAmount = computeDownPaymentAmount(netPrice, dpType, dpValue);
 
     // Business rule (shared with legacy and new model):
     // reservationAmount + downPaymentAmount cannot exceed netPrice
@@ -1158,10 +1181,11 @@ class PlanTemplatesService {
           reservationAmount: new Prisma.Decimal(reservation),
           reservationAmountType: resv.type,
           reservationAmountValue: new Prisma.Decimal(resv.value),
-          downPaymentType: dto.downPaymentType,
-          downPaymentValue: new Prisma.Decimal(dto.downPaymentValue),
+          downPaymentType: dpType,
+          downPaymentValue: new Prisma.Decimal(dpValue),
           downPaymentAmount: new Prisma.Decimal(dpAmount),
-          installmentsCount: useDurationOptions ? null : dto.installmentsCount,
+          installmentsCount: useDurationOptions || isCash ? null : dto.installmentsCount,
+          isCash,
           frequency: dto.frequency,
           startDateRule: dto.startDateRule,
           manualStartDate: dto.manualStartDate ? new Date(dto.manualStartDate) : null,
@@ -1276,9 +1300,14 @@ class PlanTemplatesService {
     ) {
       await this.assertPlanPricing(resolvedUnitId, totalPrice, netPrice, actorId, id);
     }
-    const dpType = dto.downPaymentType ?? existing.downPaymentType;
-    const dpValue = dto.downPaymentValue ?? Number(existing.downPaymentValue);
-    const dpAmount = computeDownPaymentAmount(netPrice, dpType, dpValue);
+    // A plan stays cash or not: switching would reprice open reservations.
+    if (dto.isCash !== undefined && dto.isCash !== existing.isCash) {
+      throw new BadRequestException('لا يمكن تحويل الخطة بين كاش وتقسيط — أنشئ خطة جديدة');
+    }
+    const isCash = existing.isCash;
+    if (isCash) assertCashPlanShape(dto);
+    let dpType = dto.downPaymentType ?? existing.downPaymentType;
+    let dpValue = dto.downPaymentValue ?? Number(existing.downPaymentValue);
 
     // Booking amount: prefer explicit type/value; a legacy `reservationAmount`
     // (without type/value) is treated as a FIXED override; otherwise keep the
@@ -1292,6 +1321,11 @@ class PlanTemplatesService {
       throw new BadRequestException('نسبة دفعة الحجز يجب أن تكون أكبر من صفر وحتى 100');
     }
     const reservationAmountComputed = computeDownPaymentAmount(netPrice, resvType, resvValue);
+    if (isCash) {
+      dpType = DownPaymentType.FIXED;
+      dpValue = Math.max(0, netPrice - reservationAmountComputed);
+    }
+    const dpAmount = computeDownPaymentAmount(netPrice, dpType, dpValue);
 
     const merged: CreatePlanTemplateDto = {
       name: dto.name ?? existing.name,
@@ -1305,7 +1339,9 @@ class PlanTemplatesService {
       reservationAmountValue: resvValue,
       downPaymentType: dpType,
       downPaymentValue: dpValue,
-      installmentsCount: dto.installmentsCount ?? existing.installmentsCount ?? undefined,
+      installmentsCount: isCash
+        ? undefined
+        : (dto.installmentsCount ?? existing.installmentsCount ?? undefined),
       frequency: dto.frequency ?? existing.frequency,
       startDateRule: dto.startDateRule ?? existing.startDateRule,
       manualStartDate:
