@@ -68,6 +68,8 @@ interface SalesUser {
 }
 
 interface Props {
+  /** ADMIN only: book on a seller's behalf. */
+  canChooseSeller?: boolean;
   salesOptions: SalesUser[];
   plans: PlanOption[];
   /** The company currency (getReportsCurrency()). */
@@ -82,6 +84,7 @@ function toFiniteOrEmpty(v: unknown): string {
 }
 
 export default function NewReservationForm({
+  canChooseSeller = false,
   salesOptions,
   plans,
   currency,
@@ -325,16 +328,20 @@ export default function NewReservationForm({
           description={m.p3Desc}
         >
           <div className="flex flex-col gap-5">
-            <Field label={m.salesLabel} name="salesId">
-              <Select name="salesId">
-                <option value="">{m.salesOptionEmpty}</option>
-                {salesOptions.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {salesActorLabel(s)}
-                  </option>
-                ))}
-              </Select>
-            </Field>
+            {/* Only the admin books on someone's behalf (F17); a rep or a
+                manager books as themself. */}
+            {canChooseSeller && (
+              <Field label={m.salesLabel} name="salesId">
+                <Select name="salesId">
+                  <option value="">{m.salesOptionEmpty}</option>
+                  {salesOptions.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {salesActorLabel(s)}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
 
             <Field
               label={m.expiryLabel}

@@ -17,10 +17,12 @@ import {
 
 interface Props {
   reservation: Reservation;
+  /** Approve / reject: the admin, or the rep's manager (not on their own). */
+  canDecide?: boolean;
   locale?: Locale;
 }
 
-export function ReservationActions({ reservation, locale = 'ar' }: Props) {
+export function ReservationActions({ reservation, canDecide = false, locale = 'ar' }: Props) {
   const m = uiT(locale).pages.reservationDetailPage;
   const [rejectOpen, setRejectOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -51,7 +53,7 @@ export function ReservationActions({ reservation, locale = 'ar' }: Props) {
           <span className="w-px h-4 bg-hairline shrink-0 mx-0.5" aria-hidden />
 
           {/* Approve + Reject as icon-only buttons to keep PENDING rows compact */}
-          {isPending && (
+          {isPending && canDecide && (
             <>
               <IconButton
                 label={m.listApproveLabel}

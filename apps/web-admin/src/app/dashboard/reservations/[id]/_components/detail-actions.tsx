@@ -31,6 +31,8 @@ interface Props {
   /** Approve/reject/cancel are admin/finance actions (strict permissions).
    *  When false (e.g. SALES), only the edit action is offered. */
   canManage?: boolean;
+  /** Approve / reject: the admin, or the rep's manager (not on their own). */
+  canDecide?: boolean;
   /** A broker brought this deal: the admin may detach it (no commission). */
   hasBroker?: boolean;
   locale?: Locale;
@@ -43,6 +45,7 @@ export function ReservationDetailActions({
   currentNotes,
   salesOptions,
   canManage = false,
+  canDecide = false,
   hasBroker = false,
   locale = 'ar',
 }: Props) {
@@ -81,7 +84,7 @@ export function ReservationDetailActions({
   return (
     <div className="flex flex-col items-stretch sm:items-end gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        {canManage && isPending && (
+        {canDecide && isPending && (
           <>
             <Button
               variant="primary"

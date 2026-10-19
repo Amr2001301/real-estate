@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
 import { staffOptions } from '@/lib/options';
+import { getSession } from '@/lib/session';
 import type { Paged, InstallmentPlanTemplate } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
 import { getReportsCurrency } from '@/lib/currency';
@@ -16,8 +17,10 @@ export default async function NewReservationPage() {
 
   // Units, leads and clients are searched from the form itself (SearchSelect);
   // preloading them here capped each list at 200 records.
+  const session = await getSession();
+  const canChooseSeller = session?.role === 'ADMIN';
   const [salesRes, plansRes] = await Promise.all([
-    safe(staffOptions(['SALES', 'SALES_MANAGER'])),
+    canChooseSeller ? safe(staffOptions(['SALES', 'SALES_MANAGER'])) : Promise.resolve({ data: null }),
     safe(api.get<Paged<InstallmentPlanTemplate>>(
       '/installment-plan-templates?status=ACTIVE&pageSize=200',
     )),
@@ -72,6 +75,7 @@ export default async function NewReservationPage() {
       </div>
 
       <NewReservationForm
+        canChooseSeller={canChooseSeller}
         currency={currency}
         salesOptions={salesRes.data?.data ?? []}
         plans={(plansRes.data?.data ?? []).map((p) => ({

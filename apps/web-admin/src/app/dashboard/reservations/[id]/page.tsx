@@ -130,6 +130,10 @@ export default async function ReservationDetailPage({
                 role: s.role,
               }))}
               canManage={isAdmin}
+              canDecide={
+                isAdmin ||
+                (session?.role === 'SALES_MANAGER' && reservation.salesId !== session.id)
+              }
               hasBroker={!!reservation.brokerId}
               locale={locale}
             />
