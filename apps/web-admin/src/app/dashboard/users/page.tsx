@@ -19,6 +19,8 @@ import {
   PremiumFilterField,
 } from '@/components/premium';
 import { getLocale } from '@/lib/locale';
+import { getSession } from '@/lib/session';
+import { getDisabledFeatures } from '@/lib/capabilities';
 import { uiT } from '@/messages/ui';
 
 export const dynamic    = 'force-dynamic';
@@ -120,11 +122,17 @@ export default async function UsersPage({
   const locale = await getLocale();
   const m = uiT(locale).pages.users;
 
+  // A maintenance supervisor only works maintenance; the API refuses one on
+  // a plan without it (F36).
+  const session = await getSession();
+  const disabledFeatures = session ? await getDisabledFeatures(session.role) : new Set<string>();
   const CREATABLE_ROLES: { value: string; label: string }[] = [
     { value: 'ADMIN',                  label: m.roleLabels.ADMIN },
     { value: 'SALES',                  label: m.roleLabels.SALES },
     { value: 'SALES_MANAGER',          label: m.roleLabels.SALES_MANAGER },
-    { value: 'MAINTENANCE_SUPERVISOR', label: m.roleLabels.MAINTENANCE_SUPERVISOR },
+    ...(disabledFeatures.has('feature.maintenance')
+      ? []
+      : [{ value: 'MAINTENANCE_SUPERVISOR', label: m.roleLabels.MAINTENANCE_SUPERVISOR }]),
   ];
 
   const ROLE_LABEL: Record<UserRole, string> = {

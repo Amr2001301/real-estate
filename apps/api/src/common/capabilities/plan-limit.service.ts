@@ -23,7 +23,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CapabilityService } from './capability.service';
 import { STAFF_SEAT_ROLES } from './capability-schema';
 import { getRequiredCompanyId } from '../tenant/tenant-context';
-import type { UserRole } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 
 @Injectable()
 export class PlanLimitService {
@@ -43,6 +43,11 @@ export class PlanLimitService {
     if (!staffRoles.includes(intendedRole)) return; // CLIENT/CUSTOMER — no limit
 
     const companyId = getRequiredCompanyId();
+    // A maintenance supervisor only works the maintenance app; on a plan
+    // without maintenance every request of theirs is refused (F36).
+    if (intendedRole === UserRole.MAINTENANCE_SUPERVISOR) {
+      await this.capabilityService.requireCapability(companyId, 'feature.maintenance');
+    }
     const limits = await this.capabilityService.getEffectiveLimits(companyId);
     const maxUsers = limits['limit.maxUsers'] as number | null;
     if (maxUsers === null) return; // unlimited (ENTERPRISE / CUSTOM)

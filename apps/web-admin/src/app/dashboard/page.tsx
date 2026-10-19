@@ -2,6 +2,7 @@ import { Plus, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
+import { getDisabledFeatures } from '@/lib/capabilities';
 import { compactParts, intlLocale } from '@/lib/format';
 import { getReportsCurrency, currencySymbol, getCompanyTimeZone } from '@/lib/currency';
 import { getLocale, type Locale } from '@/lib/locale';
@@ -161,9 +162,10 @@ export default async function DashboardHome() {
   if (session?.role === 'SALES')         return <SalesDashboard userId={session.id} />;
   if (session?.role === 'SALES_MANAGER') return <SalesManagerDashboard />;
 
-  const [currency, locale] = await Promise.all([
+  const [currency, locale, disabledFeatures] = await Promise.all([
     getReportsCurrency(),
     getLocale(),
+    session ? getDisabledFeatures(session.role) : Promise.resolve(new Set<string>()),
   ]);
   const m      = uiT(locale).pages.dashboard;
   const symbol = currencySymbol(currency, locale);
@@ -287,7 +289,10 @@ export default async function DashboardHome() {
         allClear={m.actionBar.allClear}
         items={[
           { key: 'contracts', label: m.actionBar.pendingContracts, value: summary?.alerts.contractsAwaitingSignature ?? 0, href: '/dashboard/contracts', icon: 'contracts' },
-          { key: 'maintenance', label: m.actionBar.openMaintenance, value: summary?.alerts.openMaintenance ?? 0, href: '/dashboard/maintenance', icon: 'maintenance' },
+          // Off the plan, maintenance has no page to open (F36).
+          ...(disabledFeatures.has('feature.maintenance')
+            ? []
+            : [{ key: 'maintenance', label: m.actionBar.openMaintenance, value: summary?.alerts.openMaintenance ?? 0, href: '/dashboard/maintenance', icon: 'maintenance' as const }]),
           { key: 'visits', label: m.actionBar.pendingVisits, value: summary?.alerts.visitsAwaitingConfirmation ?? 0, href: '/dashboard/visits', icon: 'visits' },
           { key: 'requests', label: m.actionBar.openLeads, value: summary?.alerts.infoRequestsOpen ?? 0, href: '/dashboard/requests', icon: 'requests' },
         ]}
