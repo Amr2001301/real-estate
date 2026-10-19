@@ -137,7 +137,8 @@ export default async function MaintenancePage({
   const [reqsRes, catsRes, adminsRes] = await Promise.all([
     safe(api.get<Paged<MaintenanceRequest>>(`/maintenance-requests?${listQs}`)),
     safe(api.get<MaintenanceCategory[]>('/maintenance-categories')),
-    safe(staffOptions(['ADMIN'])),
+    // Requests are assigned to admins and maintenance supervisors (F36).
+    safe(staffOptions(['ADMIN', 'MAINTENANCE_SUPERVISOR'])),
   ]);
 
   const rows = reqsRes.data?.data ?? [];

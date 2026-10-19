@@ -107,6 +107,37 @@ export function getPermissionLabel(code: string): string {
   return PERMISSION_LABELS[code] ?? code;
 }
 
+const FEATURE_LABELS: Record<string, string> = {
+  'feature.maintenance': 'الصيانة',
+  'feature.brokers': 'الوسطاء',
+  'feature.customerApp': 'تطبيق العملاء',
+  'feature.staffApp': 'تطبيق الموظفين',
+  'feature.publicWebsite': 'الموقع العام',
+  'feature.advancedReports': 'التقارير المتقدمة',
+  'feature.customDomain': 'النطاق الخاص',
+};
+
+/**
+ * Arabic text for the two plan refusals (CapabilityService / PlanLimitService).
+ * They are 403s, and the generic "ليست لديك صلاحية" made an admin look for a
+ * missing permission when the company's plan was the reason.
+ */
+export function planRefusalMessage(code: string | undefined, payload: unknown): string | null {
+  const p = (payload && typeof payload === 'object' ? payload : {}) as {
+    capability?: unknown;
+    max?: unknown;
+  };
+  if (code === 'CAPABILITY_NOT_ENABLED') {
+    const label = typeof p.capability === 'string' ? FEATURE_LABELS[p.capability] : undefined;
+    return `${label ? `«${label}» غير مشمولة` : 'هذه الميزة غير مشمولة'} في باقة شركتك. تواصل مع إدارة المنصة لترقية الباقة.`;
+  }
+  if (code === 'PLAN_LIMIT_REACHED') {
+    const max = typeof p.max === 'number' ? ` (${p.max})` : '';
+    return `وصلت شركتك إلى الحد الأقصى المسموح في باقتها${max}. تواصل مع إدارة المنصة لترقية الباقة.`;
+  }
+  return null;
+}
+
 /**
  * Produce a friendly Arabic message from anything thrown by the api helpers.
  *
@@ -133,6 +164,9 @@ export function formatMissingPermissionMessage(err: unknown): string {
     'status' in err &&
     (err as { status: unknown }).status === 403
   ) {
+    const code = (err as { code?: unknown }).code;
+    const plan = planRefusalMessage(typeof code === 'string' ? code : undefined, (err as { payload?: unknown }).payload);
+    if (plan) return plan;
     return 'ليست لديك صلاحية الوصول إلى هذا المورد.';
   }
   if (err instanceof Error) return err.message;

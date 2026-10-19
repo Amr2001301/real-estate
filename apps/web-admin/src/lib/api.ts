@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { redirect, unstable_rethrow } from 'next/navigation';
-import { formatMissingPermissionMessage } from './permission-error';
+import { formatMissingPermissionMessage, planRefusalMessage } from './permission-error';
 
 export const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
 
@@ -40,7 +40,8 @@ export class ApiError extends Error {
     } else if (this.code === 'BROKER_FIRM_NOT_ACTIVE' || this.code === 'BROKER_USER_NOT_ACTIVE') {
       // Already Arabic, and it says what to do (the firm awaits activation).
     } else if (this.status === 403) {
-      this.message = 'ليست لديك صلاحية الوصول إلى هذا المورد.';
+      this.message =
+        planRefusalMessage(this.code, payload) ?? 'ليست لديك صلاحية الوصول إلى هذا المورد.';
     }
   }
 }

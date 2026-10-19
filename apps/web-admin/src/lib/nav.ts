@@ -98,6 +98,9 @@ export interface NavItem {
    *  team-view pages that are otherwise admin-managed). Has no effect unless
    *  `admin` is also true. */
   manager?: boolean;
+  /** Plan feature the page needs (CapabilityService key). Hidden when the
+   *  company's plan switches it off — the API would refuse the page. */
+  feature?: string;
 }
 
 export interface NavSection {
@@ -148,7 +151,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/dashboard/deposits', label: 'الدفعات', labelKey: 'deposits', iconKey: 'Receipt', admin: true },
       // FG-01 — GET /payment-instruments is ADMIN + SALES_MANAGER.
       { href: '/dashboard/cheques', label: 'الشيكات', labelKey: 'cheques', iconKey: 'Landmark', admin: true, manager: true },
-      { href: '/dashboard/maintenance', label: 'الصيانة', labelKey: 'maintenance', iconKey: 'Wrench', admin: true },
+      { href: '/dashboard/maintenance', label: 'الصيانة', labelKey: 'maintenance', iconKey: 'Wrench', admin: true, feature: 'feature.maintenance' },
       { href: '/dashboard/bonus', label: 'العمولات', labelKey: 'bonus', iconKey: 'BadgePercent', admin: true },
       { href: '/dashboard/sales/performance', label: 'أداء فريق المبيعات', labelKey: 'salesPerformance', iconKey: 'Target', admin: true, manager: true },
       { href: '/dashboard/targets', label: 'إدارة أهداف المبيعات', labelKey: 'targets', iconKey: 'Gauge', admin: true, manager: true },
@@ -159,13 +162,13 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'الوسطاء',
     titleKey: 'brokers',
     items: [
-      { href: '/dashboard/brokers', label: 'الوسطاء', labelKey: 'brokers', iconKey: 'Briefcase', admin: true },
-      { href: '/dashboard/broker-leads', label: 'فرص من الوسطاء', labelKey: 'brokerLeads', iconKey: 'Users', admin: true },
-      { href: '/dashboard/broker-reservations', label: 'حجوزات من الوسطاء', labelKey: 'brokerReservations', iconKey: 'BookmarkCheck', admin: true },
-      { href: '/dashboard/broker-contracts', label: 'عقود من الوسطاء', labelKey: 'brokerContracts', iconKey: 'FileText', admin: true },
-      { href: '/dashboard/broker-commissions', label: 'عمولات الوسطاء', labelKey: 'brokerCommissions', iconKey: 'BadgePercent', admin: true },
-      { href: '/dashboard/broker-payouts', label: 'مدفوعات الوسطاء', labelKey: 'brokerPayouts', iconKey: 'Wallet', admin: true },
-      { href: '/dashboard/broker-reports', label: 'تقارير الوسطاء', labelKey: 'brokerReports', iconKey: 'BarChart3', admin: true },
+      { href: '/dashboard/brokers', label: 'الوسطاء', labelKey: 'brokers', iconKey: 'Briefcase', admin: true, feature: 'feature.brokers' },
+      { href: '/dashboard/broker-leads', label: 'فرص من الوسطاء', labelKey: 'brokerLeads', iconKey: 'Users', admin: true, feature: 'feature.brokers' },
+      { href: '/dashboard/broker-reservations', label: 'حجوزات من الوسطاء', labelKey: 'brokerReservations', iconKey: 'BookmarkCheck', admin: true, feature: 'feature.brokers' },
+      { href: '/dashboard/broker-contracts', label: 'عقود من الوسطاء', labelKey: 'brokerContracts', iconKey: 'FileText', admin: true, feature: 'feature.brokers' },
+      { href: '/dashboard/broker-commissions', label: 'عمولات الوسطاء', labelKey: 'brokerCommissions', iconKey: 'BadgePercent', admin: true, feature: 'feature.brokers' },
+      { href: '/dashboard/broker-payouts', label: 'مدفوعات الوسطاء', labelKey: 'brokerPayouts', iconKey: 'Wallet', admin: true, feature: 'feature.brokers' },
+      { href: '/dashboard/broker-reports', label: 'تقارير الوسطاء', labelKey: 'brokerReports', iconKey: 'BarChart3', admin: true, feature: 'feature.brokers' },
     ],
   },
   {
@@ -200,13 +203,17 @@ export const SUPER_ADMIN_NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-export function filterNavForRole(role: SessionRole): NavSection[] {
+export function filterNavForRole(
+  role: SessionRole,
+  disabledFeatures: ReadonlySet<string> = new Set(),
+): NavSection[] {
   if (role === 'SUPER_ADMIN') return SUPER_ADMIN_NAV_SECTIONS;
   // Brokers don't use the admin nav at all — see BROKER_NAV_SECTIONS below.
   if (role === 'BROKER') return [];
   return NAV_SECTIONS.map((section) => ({
     ...section,
     items: section.items.filter((item) => {
+      if (item.feature && disabledFeatures.has(item.feature)) return false;
       if (item.admin) {
         return role === 'ADMIN' || (item.manager === true && role === 'SALES_MANAGER');
       }
