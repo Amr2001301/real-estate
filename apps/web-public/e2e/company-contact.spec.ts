@@ -6,9 +6,9 @@ import { test, expect, type APIRequestContext } from '@playwright/test';
  * (الرياض، جدة…) to an Egyptian developer. The button now uses the company's
  * WhatsApp from its branding, and the cities are the company's project cities.
  *
- * The site caches the branding (60 s) and the home page (ISR, 60 s), so the
- * number is polled for. The options must be exactly the company's project
- * cities (the e2e seed's projects happen to be Saudi).
+ * The site caches the branding for 60 s, so the number is polled for. The
+ * city options must be exactly the company's project cities (the e2e seed's
+ * projects happen to be Saudi).
  */
 const API_BASE = process.env.E2E_API_BASE_URL ?? 'http://localhost:4000';
 const SLUG = process.env.E2E_COMPANY_SLUG ?? 'default';
@@ -42,12 +42,14 @@ test('the WhatsApp button and the city search belong to the company', async ({ p
 
   await setWhatsApp('+20 100 555 1234');
   try {
+    // /units renders per request (the home page is ISR-cached on top of the
+    // branding cache), so the new number shows there within a minute.
     const whatsappHref = async () => {
-      await page.goto('/', { waitUntil: 'networkidle' });
+      await page.goto('/units', { waitUntil: 'networkidle' });
       return page.getByRole('link', { name: 'تواصل عبر واتساب' }).first().getAttribute('href');
     };
     await expect
-      .poll(whatsappHref, { timeout: 200_000, intervals: [5_000] })
+      .poll(whatsappHref, { timeout: 120_000, intervals: [5_000] })
       .toBe('https://wa.me/201005551234');
 
     const cities = (await (
@@ -55,6 +57,7 @@ test('the WhatsApp button and the city search belong to the company', async ({ p
         headers: { 'X-Tenant-Slug': SLUG },
       })
     ).json()) as { cities: string[] };
+    await page.goto('/', { waitUntil: 'networkidle' });
     const options = await page.locator('select[aria-label="المدينة"] option').allTextContents();
     expect(options.slice(1).sort()).toEqual([...cities.cities].sort());
   } finally {
