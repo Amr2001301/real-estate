@@ -12,6 +12,9 @@ const ar = {
   record: 'تسجيل التسليم',
   recording: 'جارٍ التسجيل…',
   backfilled: 'سُجِّل قبل تتبّع التسليم (تاريخ إنشاء العقد).',
+  confirm: (date: string, checked: number, total: number) =>
+    `تسجيل تسليم الوحدة بتاريخ ${date} (${checked} من ${total} بنود القائمة)؟ يبدأ الضمان من هذا التاريخ ولا يمكن التراجع.`,
+  unpaid: (amount: string) => `ما زال على العقد ${amount} غير مسدَّد.`,
   items: {
     keys: 'تسليم المفاتيح',
     meters: 'قراءة العدادات',
@@ -31,6 +34,9 @@ const en: typeof ar = {
   record: 'Record handover',
   recording: 'Recording…',
   backfilled: 'Recorded before handovers were tracked (the contract’s creation date).',
+  confirm: (date: string, checked: number, total: number) =>
+    `Record the handover on ${date} (${checked} of ${total} checklist items)? The warranty starts from this date; it can't be undone.`,
+  unpaid: (amount: string) => `${amount} is still unpaid on this contract.`,
   items: {
     keys: 'Keys handed over',
     meters: 'Meter readings taken',

@@ -309,9 +309,12 @@ export default async function AdminBrokerLeadsPage({
                   >
                     {/* Client */}
                     <td className="py-3.5 ps-5 pe-4">
-                      <p className="font-semibold text-slate-900 truncate max-w-[180px]">
+                      <Link
+                        href={`/dashboard/broker-leads/${l.id}` as never}
+                        className="block font-semibold text-slate-900 truncate max-w-[180px] hover:text-brand-700"
+                      >
                         {l.fullName}
-                      </p>
+                      </Link>
                       <span
                         className="mt-0.5 inline-flex items-center gap-1 text-2xs text-slate-400"
                         dir="ltr"

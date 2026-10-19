@@ -231,6 +231,7 @@ export default function PortalReservationForm({
               })}
               onChange={onLeadChange}
               placeholder={t.leadPlaceholder}
+              emptyText={t.leadEmpty}
             />
           </Field>
           <Field

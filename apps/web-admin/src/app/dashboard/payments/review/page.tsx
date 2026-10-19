@@ -81,6 +81,7 @@ export default async function PaymentReviewQueuePage({ searchParams }: { searchP
                   <tr className="border-b border-slate-200">
                     <th className="px-3 py-2">{m.colCustomer}</th>
                     <th className="px-3 py-2">{m.colContractUnit}</th>
+                    <th className="px-3 py-2">{m.colFor}</th>
                     <th className="px-3 py-2">{m.colAmount}</th>
                     <th className="px-3 py-2">{m.colMethod}</th>
                     <th className="px-3 py-2">{m.colSentDate}</th>
@@ -91,9 +92,21 @@ export default async function PaymentReviewQueuePage({ searchParams }: { searchP
                 <tbody>
                   {data.map((d: Deposit) => {
                     const contractId = d.contract?.id ?? null;
-                    const customer = d.contract?.customer?.fullName ?? '—';
-                    const unit = d.contract?.unit?.code ?? '—';
-                    const contractNum = d.contract?.contractNumber ?? '—';
+                    const customer =
+                      d.contract?.customer?.fullName ??
+                      d.reservation?.client?.fullName ??
+                      d.reservation?.lead?.fullName ??
+                      '—';
+                    const unit = d.contract?.unit?.code ?? d.reservation?.unit?.code ?? '—';
+                    const contractNum =
+                      d.contract?.contractNumber ?? d.reservation?.reservationNumber ?? '—';
+                    // Which payment the proof is for: two proofs from one
+                    // customer for two months otherwise look identical.
+                    const paysFor = d.installment
+                      ? `${m.forType[d.installment.type ?? 'INSTALLMENT'] ?? m.forFallback} · ${m.dueOn(formatDate(d.installment.dueDate, locale))}`
+                      : d.type === 'BOOKING_AMOUNT'
+                        ? m.forBooking
+                        : '—';
                     const method =
                       d.paymentMethod ? (m.methodLabel[d.paymentMethod] ?? d.paymentMethod) : '—';
                     const proofDocId = d.proofDocument?.id ?? null;
@@ -102,6 +115,9 @@ export default async function PaymentReviewQueuePage({ searchParams }: { searchP
                         <td className="px-3 py-3 font-medium text-slate-800">{customer}</td>
                         <td className="px-3 py-3 text-slate-600">
                           {contractNum} <span className="text-slate-400">·</span> {unit}
+                        </td>
+                        <td className="px-3 py-3 text-slate-600 whitespace-nowrap" data-testid="proof-for">
+                          {paysFor}
                         </td>
                         <td className="px-3 py-3 tabular-nums font-semibold text-slate-800">
                           {formatCurrency(Number(d.amount), currency, locale)}

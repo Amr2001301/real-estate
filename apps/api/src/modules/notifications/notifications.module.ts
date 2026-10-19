@@ -38,6 +38,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { formatMoney, getCompanyCurrency } from '../../common/currency/currency';
+import { COMPANY_TIMEZONE_DEFAULT, currentCompanyTimeZone } from '../../common/time/company-timezone';
 import {
   findTenantUser,
   resolveTenantUser,
@@ -181,21 +182,64 @@ const MONEY_KEYS = new Set([
   'retainedAmount',
 ]);
 
+const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?Z$/;
+
+/**
+ * A timestamp in a payload, as a reader expects it: a day ("2026-09-01")
+ * for a date-only value (stored at UTC midnight, or midnight company
+ * time), else the company's wall time ("2026-10-20 13:00").
+ */
+function formatPayloadTime(iso: string, timeZone: string): string {
+  if (/T00:00(:00(\.0+)?)?Z$/.test(iso)) return iso.slice(0, 10);
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    })
+      .formatToParts(new Date(iso))
+      .map((p) => [p.type, p.value]),
+  );
+  const day = `${parts.year}-${parts.month}-${parts.day}`;
+  const time = `${parts.hour}:${parts.minute}`;
+  return time === '00:00' ? day : `${day} ${time}`;
+}
+
+/** Like the currency: formatting a date must never fail the notification. */
+async function notificationTimeZone(
+  db: Parameters<typeof currentCompanyTimeZone>[0],
+  companyId: string | null | undefined,
+): Promise<string> {
+  try {
+    return await currentCompanyTimeZone(db, companyId);
+  } catch {
+    return COMPANY_TIMEZONE_DEFAULT;
+  }
+}
+
 /**
  * Fills `{{var}}` placeholders from the notification payload. Amounts are
  * shown in the company's currency, in the reader's language
- * ("٢٬٥٠٠٬٠٠٠ ج.م." / "EGP 2,500,000") instead of the raw "2500000.00".
+ * ("٢٬٥٠٠٬٠٠٠ ج.م." / "EGP 2,500,000") instead of the raw "2500000.00";
+ * timestamps as a day or the company's wall time, not raw ISO.
  */
 function interpolate(
   template: string,
   payload: Record<string, unknown>,
   locale: Locale,
   currency: string,
+  timeZone: string,
 ): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
     const v = payload[key];
     if (v === null || v === undefined) return '';
-    return MONEY_KEYS.has(key) ? formatMoney(v, currency, locale) : String(v);
+    if (MONEY_KEYS.has(key)) return formatMoney(v, currency, locale);
+    if (typeof v === 'string' && ISO_TIMESTAMP.test(v)) return formatPayloadTime(v, timeZone);
+    return String(v);
   });
 }
 
@@ -210,10 +254,11 @@ function resolveText(
   locale: Locale,
   fallback: string,
   currency: string,
+  timeZone: string,
 ): string {
   const t = (text ?? {}) as TranslatableText;
   const raw = t[locale] ?? t.ar ?? t.en ?? fallback;
-  return interpolate(raw, payload, locale, currency);
+  return interpolate(raw, payload, locale, currency, timeZone);
 }
 
 
@@ -611,7 +656,11 @@ export class NotificationsService implements OnModuleInit {
       const pushWanted = want.push && channelAllowed(user?.notificationPrefs, 'push', n.templateCode);
       const emailWanted = want.email && channelAllowed(user?.notificationPrefs, 'email', n.templateCode);
       const locale = pickLocale(user?.locale ?? 'ar');
-      const currency = await getCompanyCurrency(this.prisma, getTenantContext()?.companyId);
+      const companyId = getTenantContext()?.companyId;
+      const [currency, timeZone] = await Promise.all([
+        getCompanyCurrency(this.prisma, companyId),
+        notificationTimeZone(this.prisma, companyId),
+      ]);
 
       // FCM data values must all be strings. Include entityType/entityId so
       // the mobile app can deep-link directly from the push tap without a
@@ -640,8 +689,8 @@ export class NotificationsService implements OnModuleInit {
         ? Promise.resolve()
         : this.push
         .sendToUser(n.userId, {
-          title: resolveText(tpl.subject, payload, locale, n.templateCode, currency),
-          body:  resolveText(tpl.body,    payload, locale, '', currency),
+          title: resolveText(tpl.subject, payload, locale, n.templateCode, currency, timeZone),
+          body:  resolveText(tpl.body,    payload, locale, '', currency, timeZone),
           data:  fcmData,
         })
         .then((result) => {
@@ -666,8 +715,8 @@ export class NotificationsService implements OnModuleInit {
         user?.email && tpl.emailEnabled && emailWanted
           ? (() => {
               // Escaped: payload values (names, notes) are user input.
-              const subject  = escapeHtml(resolveText(tpl.subject, payload, locale, n.templateCode, currency));
-              const bodyText = escapeHtml(resolveText(tpl.body,    payload, locale, '', currency));
+              const subject  = escapeHtml(resolveText(tpl.subject, payload, locale, n.templateCode, currency, timeZone));
+              const bodyText = escapeHtml(resolveText(tpl.body,    payload, locale, '', currency, timeZone));
               const dir      = locale === 'ar' ? 'rtl' : 'ltr';
               const htmlBody = `<div dir="${dir}" style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px;color:#1a1a2e;"><h2 style="margin:0 0 16px;color:#0F1E33;">${subject}</h2><p style="margin:0 0 24px;line-height:1.7;">${bodyText}</p><hr style="margin:28px 0;border:none;border-top:1px solid #eee;"/><p style="margin:0;font-size:12px;color:#999;">© ديفورا — منصة الإدارة العقارية</p></div>`;
               return this.email
@@ -790,9 +839,11 @@ export class NotificationsService implements OnModuleInit {
 
     // Resolve titles/bodies from templates (batched) in the requested locale.
     const codes = [...new Set(rows.map((r) => r.templateCode))];
-    const [byCode, currency] = await Promise.all([
+    const companyId = getTenantContext()?.companyId;
+    const [byCode, currency, timeZone] = await Promise.all([
       this.templatesFor(codes),
-      getCompanyCurrency(this.prisma, getTenantContext()?.companyId),
+      getCompanyCurrency(this.prisma, companyId),
+      notificationTimeZone(this.prisma, companyId),
     ]);
 
     const data = rows.map((r) => {
@@ -801,8 +852,8 @@ export class NotificationsService implements OnModuleInit {
       return {
         id: r.id,
         templateCode: r.templateCode,
-        title: resolveText(tpl?.subject, payload, opts.locale, r.templateCode, currency),
-        body: resolveText(tpl?.body, payload, opts.locale, '', currency),
+        title: resolveText(tpl?.subject, payload, opts.locale, r.templateCode, currency, timeZone),
+        body: resolveText(tpl?.body, payload, opts.locale, '', currency, timeZone),
         payload: r.payload,
         channel: r.channel,
         read: r.readAt !== null,

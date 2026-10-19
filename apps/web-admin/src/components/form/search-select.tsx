@@ -34,6 +34,8 @@ interface Props<T> {
   /** Picks the status texts (no results, searching, clear). */
   locale?: Locale;
   pageSize?: number;
+  /** Shown instead of "no results" — e.g. why a record may be missing. */
+  emptyText?: string;
 }
 
 const DEBOUNCE_MS = 250;
@@ -54,6 +56,7 @@ export function SearchSelect<T>({
   placeholder,
   locale = 'ar',
   pageSize = 20,
+  emptyText,
 }: Props<T>) {
   const t = uiT(locale).common;
   const listId = useId();
@@ -202,7 +205,7 @@ export function SearchSelect<T>({
           {loading && options.length === 0 ? (
             <li className="px-3 py-2 text-sm text-slate-500">{t.searchLoading}</li>
           ) : options.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-slate-500">{t.searchNoResults}</li>
+            <li className="px-3 py-2 text-sm text-slate-500">{emptyText ?? t.searchNoResults}</li>
           ) : (
             options.map((option, i) => (
               <li

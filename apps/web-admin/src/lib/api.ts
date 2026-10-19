@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { redirect, unstable_rethrow } from 'next/navigation';
-import { formatMissingPermissionMessage, planRefusalMessage } from './permission-error';
+import { formatMissingPermissionMessage, planRefusalMessage, userFacingRefusal } from './permission-error';
 
 export const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
 
@@ -41,7 +41,9 @@ export class ApiError extends Error {
       // Already Arabic, and it says what to do (the firm awaits activation).
     } else if (this.status === 403) {
       this.message =
-        planRefusalMessage(this.code, payload) ?? 'ليست لديك صلاحية الوصول إلى هذا المورد.';
+        planRefusalMessage(this.code, payload) ??
+        userFacingRefusal(message) ??
+        'ليست لديك صلاحية الوصول إلى هذا المورد.';
     }
   }
 }
