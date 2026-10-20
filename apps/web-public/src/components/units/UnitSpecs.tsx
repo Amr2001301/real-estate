@@ -24,7 +24,7 @@ export async function UnitSpecs({ unit }: { unit: PublicUnit }) {
   specs.push({ icon: Bath,       label: s.bathrooms,  value: formatNumber(unit.bathrooms) });
   specs.push({ icon: Building2,  label: s.floor,      value: formatNumber(unit.floor) });
   if (unit.type)
-    specs.push({ icon: Home,     label: s.unitType,   value: unitTypeLabel(unit.type) });
+    specs.push({ icon: Home,     label: s.unitType,   value: unitTypeLabel(unit.type, unit.typeName) });
   specs.push({ icon: BadgeCheck, label: s.status,     value: statusValue });
 
   return (

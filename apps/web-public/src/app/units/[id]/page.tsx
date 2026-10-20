@@ -52,7 +52,7 @@ function fetchUnit(id: string, tenantSlug: string) {
 }
 
 function unitTitle(unit: PublicUnit, fallbackPrefix = 'وحدة'): string {
-  return unit.type ? unitTypeLabel(unit.type) : `${fallbackPrefix} ${unit.code}`;
+  return unit.type ? unitTypeLabel(unit.type, unit.typeName) : `${fallbackPrefix} ${unit.code}`;
 }
 
 /**

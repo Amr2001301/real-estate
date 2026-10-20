@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
 import { projectOptions } from '@/lib/options';
-import type { Unit } from '@/lib/types';
+import type { Unit, UnitTypeOption } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import UnitForm from '../../_form';
@@ -14,9 +14,10 @@ export default async function EditUnitPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [unitRes, projectsRes, locale] = await Promise.all([
+  const [unitRes, projectsRes, typesRes, locale] = await Promise.all([
     safe(api.get<Unit>(`/units/${id}`)),
     safe(projectOptions()),
+    safe(api.get<UnitTypeOption[]>('/unit-types')),
     getLocale(),
   ]);
   const m = uiT(locale);
@@ -57,7 +58,7 @@ export default async function EditUnitPage({
           </div>
         </div>
       </div>
-      <UnitForm unit={unit} projects={projectsRes.data?.data ?? []} locale={locale} />
+      <UnitForm unit={unit} projects={projectsRes.data?.data ?? []} types={typesRes.data ?? []} locale={locale} />
     </div>
   );
 }

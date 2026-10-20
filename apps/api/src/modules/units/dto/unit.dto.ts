@@ -12,7 +12,7 @@ import {
   Max,
   MaxLength,
 } from 'class-validator';
-import { UnitStatus } from '@prisma/client';
+import { UnitStatus, UnitUsage } from '@prisma/client';
 import { MAX_PAGE_SIZE } from '../../../common/utils/pagination';
 
 export class CreateUnitDto {
@@ -22,6 +22,7 @@ export class CreateUnitDto {
   @IsString()
   code!: string;
 
+  /** One of the company's unit types (code or name, any case). */
   @IsString()
   type!: string;
 
@@ -29,13 +30,16 @@ export class CreateUnitDto {
   @IsPositive()
   area!: number;
 
+  /** Ignored (0) unless the type is residential. */
+  @IsOptional()
   @IsInt()
   @Min(0)
-  bedrooms!: number;
+  bedrooms: number = 0;
 
+  @IsOptional()
   @IsInt()
   @Min(0)
-  bathrooms!: number;
+  bathrooms: number = 0;
 
   @IsInt()
   @Min(0)
@@ -85,6 +89,8 @@ export class UnitQueryDto {
   @IsOptional() @IsString() type?: string;
   /** Match any of these unit types (e.g. a category that spans 1BR/2BR/3BR). */
   @IsOptional() @IsArray() @IsString({ each: true }) typeIn?: string[];
+  /** Residential, commercial, administrative, medical or parking units only. */
+  @IsOptional() @IsEnum(UnitUsage) usage?: UnitUsage;
   @IsOptional() @IsEnum(UnitStatus) status?: UnitStatus;
   @IsOptional() @IsNumber() priceMin?: number;
   @IsOptional() @IsNumber() priceMax?: number;

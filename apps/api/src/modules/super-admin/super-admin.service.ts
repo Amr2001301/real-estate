@@ -22,6 +22,7 @@ import { seedTransferFeeSettingsForCompany } from '../contracts/transfer-fee';
 import { seedFeeSettingsForCompany } from '../installments/fee-settings';
 import { seedTimeZoneSettingForCompany } from '../../common/time/company-timezone';
 import { seedLeadSourcesForCompany } from '../leads/lead-source-defaults';
+import { seedUnitTypesForCompany } from '../units/unit-type-defaults';
 import { NotificationsService } from '../notifications/notifications.module';
 import { USER_ROLE_AR } from '../notifications/notification-catalog';
 import { runInCompany } from '../../common/tenant/tenant-context';
@@ -230,6 +231,7 @@ export class SuperAdminService {
     await seedFeeSettingsForCompany(this.prisma, company.id);
     await seedTimeZoneSettingForCompany(this.prisma, company.id);
     await seedLeadSourcesForCompany(this.prisma, company.id);
+    await seedUnitTypesForCompany(this.prisma, company.id);
 
     let adminUser = null;
     if (dto.adminEmail && dto.adminPassword && dto.adminFullName) {

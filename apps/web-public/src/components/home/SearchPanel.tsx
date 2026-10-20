@@ -29,8 +29,9 @@ export function SearchPanel({ locale, cities }: { locale: Locale; cities: string
       return;
     }
     const params = new URLSearchParams();
-    const type = m.tabs.find((t) => t.key === tab)?.type ?? '';
-    if (type) params.set('type', type);
+    // Each tab is a usage (residential, administrative, …), not one type.
+    const usage = m.tabs.find((t) => t.key === tab)?.usage ?? '';
+    if (usage) params.set('usage', usage);
     if (city) params.set('city', city);
     if (status) params.set('status', status);
     const range = m.priceRanges.find((r) => r.value === price);

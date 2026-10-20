@@ -80,6 +80,7 @@ function rawUnit(id: string, projectStatus: string) {
 function makePrismaMock() {
   return {
     userPermission: { findMany: jest.fn().mockResolvedValue([]) },
+    unitType: { findMany: jest.fn().mockResolvedValue([{ code: '2BR', name: { ar: 'شقة غرفتين نوم', en: '2-bedroom apartment' } }]) },
     unit: {
       findMany: jest.fn().mockResolvedValue([rawUnit(PUBLISHED_UNIT, 'PUBLISHED')]),
       count: jest.fn().mockResolvedValue(1),
@@ -179,7 +180,7 @@ describe('Public units · response contract', () => {
     // projectId and the public PUBLISHED constraint compose together.
     expect(where.building.phase.projectId).toBe(projectId);
     expect(where.building.phase.project.status).toBe('PUBLISHED');
-    expect(where.type).toBe('villa');
+    expect(where.type).toEqual({ equals: 'villa', mode: 'insensitive' });
     expect(where.bathrooms).toBe(3);
     expect(where.bedrooms).toBe(2);
     expect(where.price).toBeDefined();

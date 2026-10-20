@@ -46,6 +46,7 @@ import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
 import { type TestApp, createE2ETestApp } from '../setup-app';
 import { loginAs, bearer } from '../helpers/login';
+import { seedUnitTypesForCompany } from '../../src/modules/units/unit-type-defaults';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -151,6 +152,7 @@ beforeAll(async () => {
   if (existing) {
     await raw.lead.deleteMany({ where: { companyId: existing.id } });
     await raw.leadSource.deleteMany({ where: { companyId: existing.id } });
+    await raw.unitType.deleteMany({ where: { companyId: existing.id } });
     await raw.unit.deleteMany({ where: { companyId: existing.id } });
     await raw.building.deleteMany({ where: { companyId: existing.id } });
     await raw.phase.deleteMany({ where: { companyId: existing.id } });
@@ -163,6 +165,8 @@ beforeAll(async () => {
     data: { name: 'E2E Import Test Co', slug: SLUG, isActive: true, country: 'EG' },
   });
   companyId = company.id;
+  // A company created by the platform gets the default unit types (F10).
+  await seedUnitTypesForCompany(raw, companyId);
 
   const hash = await (await import('argon2')).hash('ImportTest123!');
   const admin = await raw.user.create({
@@ -465,6 +469,7 @@ afterAll(async () => {
   await raw.otpCode.deleteMany({ where: { companyId } });
   await raw.lead.deleteMany({ where: { companyId } });
   await raw.leadSource.deleteMany({ where: { companyId } });
+  await raw.unitType.deleteMany({ where: { companyId } });
   await raw.unit.deleteMany({ where: { companyId } });
   await raw.building.deleteMany({ where: { companyId } });
   await raw.phase.deleteMany({ where: { companyId } });

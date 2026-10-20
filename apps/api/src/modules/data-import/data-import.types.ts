@@ -1,4 +1,4 @@
-import { LeadStage, Locale, ProjectStatus, UnitStatus } from '@prisma/client';
+import { UnitUsage, LeadStage, Locale, ProjectStatus, UnitStatus } from '@prisma/client';
 
 // 'locked' = existing unit has an active contract or reservation; entire row skipped
 export type ImportOp = 'create' | 'update' | 'unchanged' | 'locked';
@@ -69,7 +69,9 @@ export interface UnitPlan {
   buildingCode: string;
   id?: string;
   buildingId?: string;
+  /** The company's unit type code the row resolved to. */
   type?: string;
+  usage?: UnitUsage;
   floor?: number;
   area?: number;
   bedrooms?: number;

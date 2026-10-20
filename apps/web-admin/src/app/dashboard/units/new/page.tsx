@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { safe } from '@/lib/api';
+import { api, safe } from '@/lib/api';
+import type { UnitTypeOption } from '@/lib/types';
 import { projectOptions } from '@/lib/options';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
@@ -8,9 +9,10 @@ import UnitForm from '../_form';
 export const dynamic = 'force-dynamic';
 
 export default async function NewUnitPage() {
-  const [r, locale] = await Promise.all([
+  const [r, locale, typesRes] = await Promise.all([
     safe(projectOptions()),
     getLocale(),
+    safe(api.get<UnitTypeOption[]>('/unit-types')),
   ]);
   const m = uiT(locale);
   const n = m.pages.unitsNew;
@@ -73,7 +75,7 @@ export default async function NewUnitPage() {
           {r.error}
         </div>
       ) : (
-        <UnitForm projects={r.data?.data ?? []} locale={locale} />
+        <UnitForm types={typesRes.data ?? []} projects={r.data?.data ?? []} locale={locale} />
       )}
     </div>
   );

@@ -98,6 +98,7 @@ model Company {
   unitStatusHistories      UnitStatusHistory[]
   unitMaintenanceItems     UnitMaintenanceItem[]
   leadSources              LeadSource[]
+  unitTypes                UnitType[]
   leads                    Lead[]
   leadNotes                LeadNote[]
   leadActivities           LeadActivity[]
@@ -488,6 +489,34 @@ enum ProjectStatus {
   ARCHIVED
 }
 
+/// What a unit is for.
+enum UnitUsage {
+  RESIDENTIAL
+  COMMERCIAL
+  ADMINISTRATIVE
+  MEDICAL
+  PARKING
+}
+
+/// A company's unit types (F10): the defaults (unit-type-defaults.ts) plus
+/// its own. Unit.type holds the code; the code never changes, the names and
+/// the usage can, and a type switched off is not offered for a new unit.
+model UnitType {
+  id        String    @id @default(uuid()) @db.Uuid
+  code      String
+  name      Json // Translatable { ar, en }
+  usage     UnitUsage @default(RESIDENTIAL)
+  active    Boolean   @default(true)
+  order     Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, code])
+  @@index([companyId])
+}
+
 enum UnitStatus {
   AVAILABLE
   RESERVED
@@ -593,7 +622,10 @@ model Unit {
   buildingId           String     @db.Uuid
   building             Building   @relation(fields: [buildingId], references: [id], onDelete: Cascade)
   code                 String
-  type                 String // studio | 1BR | 2BR | villa | ...
+  type                 String // a UnitType code of the company (Studio, 2BR, Office, Garage, ...)
+  /// What the unit is for — taken from its type. Only a residential unit
+  /// has bedrooms.
+  usage                UnitUsage  @default(RESIDENTIAL)
   area                 Float
   bedrooms             Int        @default(0)
   bathrooms            Int        @default(0)

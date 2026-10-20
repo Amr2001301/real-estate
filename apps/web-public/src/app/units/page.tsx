@@ -14,6 +14,7 @@ import { Container } from '@/components/ui/Container';
 import { ErrorState } from '@/components/states/ErrorState';
 import { EmptyState } from '@/components/states/EmptyState';
 import { Pagination } from '@/components/projects/Pagination';
+import { unitTypeLabel } from '@/lib/format';
 import { UnitsFilterBar, type UnitsFilterValues } from '@/components/units/UnitsFilterBar';
 import { UnitsExplorer } from '@/components/units/UnitsExplorer';
 import { derivePriceValue, deriveAreaValue } from '@/lib/unit-filters';
@@ -52,6 +53,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
   const projectId = firstStr(sp.projectId);
   const city = firstStr(sp.city);
   const type = firstStr(sp.type);
+  const usage = firstStr(sp.usage);
   const bedrooms = firstStr(sp.bedrooms);
   const bathrooms = firstStr(sp.bathrooms);
   const status = firstStr(sp.status);
@@ -67,6 +69,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
   if (projectId) apiParams.set('projectId', projectId);
   if (city) apiParams.set('city', city);
   if (type) apiParams.set('type', type);
+  if (usage) apiParams.set('usage', usage);
   if (bedrooms) apiParams.set('bedrooms', bedrooms);
   if (bathrooms) apiParams.set('bathrooms', bathrooms);
   if (status) apiParams.set('status', status);
@@ -76,22 +79,31 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
   if (areaMax) apiParams.set('areaMax', areaMax);
   if (sort) apiParams.set('sort', sort);
 
-  const [result, locale] = await Promise.all([
+  const [result, locale, typesRes] = await Promise.all([
     safeFetch<Paginated<PublicUnit>>(`/public/units?${apiParams.toString()}`, { revalidate: REVALIDATE, tenantSlug: tenant.slug }),
     getLocale(),
+    // The company's own unit types (F10) for the type filter.
+    safeFetch<Array<{ code: string; name: string | { ar?: string; en?: string } }>>('/public/unit-types', {
+      revalidate: REVALIDATE,
+      tenantSlug: tenant.slug,
+    }),
   ]);
+  const typeOptions = typesRes.ok
+    ? typesRes.data.map((t) => ({ value: t.code, label: unitTypeLabel(t.code, t.name) }))
+    : undefined;
   const m = siteT(locale);
 
   const units = result.ok ? result.data.data : [];
   const meta = result.ok ? result.data.meta : null;
   const hasFilters = Boolean(
-    type || bedrooms || bathrooms || status || priceMin || priceMax || areaMin || areaMax || city || projectId,
+    type || usage || bedrooms || bathrooms || status || priceMin || priceMax || areaMin || areaMax || city || projectId,
   );
 
   const initialFilters: UnitsFilterValues = {
     projectId,
     city,
     type,
+    usage,
     bedrooms,
     bathrooms,
     price: derivePriceValue(priceMin, priceMax),
@@ -120,7 +132,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
 
       {/* Filter bar overlapping the hero's lower edge — unified with the homepage. */}
       <Container className="relative z-10 -mt-12 sm:-mt-14">
-        <UnitsFilterBar initial={initialFilters} locale={locale} />
+        <UnitsFilterBar initial={initialFilters} types={typeOptions} locale={locale} />
       </Container>
 
       <Section tone="canvas" className="pt-12 pb-12 sm:pt-14 lg:pb-16">

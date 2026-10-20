@@ -122,11 +122,26 @@ export interface UnitStatusHistoryEntry {
   changedAt: string;
 }
 
+export type UnitUsage = 'RESIDENTIAL' | 'COMMERCIAL' | 'ADMINISTRATIVE' | 'MEDICAL' | 'PARKING';
+
+/** One of the company's unit types (F10); Unit.type holds its code. */
+export interface UnitTypeOption {
+  id: string;
+  code: string;
+  name: Translatable;
+  usage: UnitUsage;
+  active: boolean;
+  order: number;
+}
+
 export interface Unit {
   id: string;
   buildingId: string;
   code: string;
   type: string;
+  /** The type's name from the company's list (null for a type it no longer has). */
+  typeName?: Translatable | null;
+  usage?: UnitUsage;
   area: number;
   bedrooms: number;
   bathrooms: number;

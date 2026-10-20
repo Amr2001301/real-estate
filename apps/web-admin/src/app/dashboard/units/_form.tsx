@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { AlertCircle, CheckCircle2, X, MapPin, Tag, Ruler, DollarSign, Info } from 'lucide-react';
 import { Field } from '@/components/form/field';
 import { SubmitButton } from '@/components/form/submit-button';
@@ -12,7 +12,8 @@ import { FormFooter } from '@/components/ui/form-footer';
 import { BuildingPicker } from './_building-picker';
 import type { Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
-import type { Project, Unit } from '@/lib/types';
+import type { Project, Unit, UnitTypeOption, UnitUsage } from '@/lib/types';
+import { tx } from '@/lib/format';
 import { createUnitAction, updateUnitAction, type UnitFormState } from './actions';
 
 function PanelHeader({ number, title, description }: { number: string; title: string; description: string }) {
@@ -36,13 +37,20 @@ interface Props {
   unit?: Unit;
   // Dropdown rows (/projects/options): only these fields are read.
   projects: Pick<Project, 'id' | 'name' | 'city'>[];
+  /** The company's unit types (F10). */
+  types: UnitTypeOption[];
   locale?: Locale;
 }
 
-const UNIT_TYPES = ['Studio', '1BR', '2BR', '3BR', '4BR', 'Villa', 'Duplex', 'Penthouse'];
+const USAGE_ORDER: UnitUsage[] = ['RESIDENTIAL', 'COMMERCIAL', 'ADMINISTRATIVE', 'MEDICAL', 'PARKING'];
 
-export default function UnitForm({ unit, projects, locale = 'ar' }: Props) {
+export default function UnitForm({ unit, projects, types, locale = 'ar' }: Props) {
   const m = uiT(locale).pages.unitsForm;
+  const usageLabels = uiT(locale).pages.units.usageLabels;
+  // Switched-off types are not offered, except the one the unit already has.
+  const offered = types.filter((t) => t.active || t.code === unit?.type);
+  const [typeCode, setTypeCode] = useState(unit?.type ?? offered[0]?.code ?? '');
+  const usage: UnitUsage = offered.find((t) => t.code === typeCode)?.usage ?? 'RESIDENTIAL';
   const action = unit ? updateUnitAction.bind(null, unit.id) : createUnitAction;
   const [state, formAction] = useActionState<UnitFormState, FormData>(action, {});
 
@@ -190,11 +198,17 @@ export default function UnitForm({ unit, projects, locale = 'ar' }: Props) {
                 </Field>
 
                 <Field label={m.labelType} name="type">
-                  <Select id="type" name="type" defaultValue={unit?.type ?? '1BR'}>
-                    {UNIT_TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
+                  <Select id="type" name="type" value={typeCode} onChange={(e) => setTypeCode(e.target.value)}>
+                    {USAGE_ORDER.filter((u) => offered.some((t) => t.usage === u)).map((u) => (
+                      <optgroup key={u} label={usageLabels[u]}>
+                        {offered
+                          .filter((t) => t.usage === u)
+                          .map((t) => (
+                            <option key={t.code} value={t.code}>
+                              {tx(t.name, locale) || t.code}
+                            </option>
+                          ))}
+                      </optgroup>
                     ))}
                   </Select>
                 </Field>
@@ -236,15 +250,20 @@ export default function UnitForm({ unit, projects, locale = 'ar' }: Props) {
                     defaultValue={unit?.area}
                   />
                 </Field>
-                <Field label={m.labelBedrooms} name="bedrooms">
-                  <Input
-                    id="bedrooms"
-                    name="bedrooms"
-                    type="number"
-                    min={0}
-                    defaultValue={unit?.bedrooms ?? 1}
-                  />
-                </Field>
+                {/* Only a residential unit has bedrooms. */}
+                {usage === 'RESIDENTIAL' ? (
+                  <Field label={m.labelBedrooms} name="bedrooms">
+                    <Input
+                      id="bedrooms"
+                      name="bedrooms"
+                      type="number"
+                      min={0}
+                      defaultValue={unit?.bedrooms ?? 1}
+                    />
+                  </Field>
+                ) : (
+                  <input type="hidden" name="bedrooms" value="0" />
+                )}
                 <Field label={m.labelBathrooms} name="bathrooms">
                   <Input
                     id="bathrooms"

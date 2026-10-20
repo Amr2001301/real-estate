@@ -76,11 +76,11 @@ const SITE_MESSAGES = {
       },
       search: {
         tabs: [
-          { key: 'res',   label: 'سكني',   type: '' },
-          { key: 'admin', label: 'إداري',  type: 'office' },
-          { key: 'comm',  label: 'تجاري',  type: 'retail' },
-          { key: 'med',   label: 'طبي',    type: '' },
-          { key: 'hotel', label: 'فندقي',  type: '' },
+          { key: 'res',   label: 'سكني',   usage: 'RESIDENTIAL' },
+          { key: 'admin', label: 'إداري',  usage: 'ADMINISTRATIVE' },
+          { key: 'comm',  label: 'تجاري',  usage: 'COMMERCIAL' },
+          { key: 'med',   label: 'طبي',    usage: 'MEDICAL' },
+          { key: 'hotel', label: 'فندقي',  usage: '' },
         ],
         allCities: 'المدينة',
         statuses: [
@@ -923,11 +923,11 @@ const SITE_MESSAGES = {
       },
       search: {
         tabs: [
-          { key: 'res',   label: 'Residential', type: '' },
-          { key: 'admin', label: 'Office',       type: 'office' },
-          { key: 'comm',  label: 'Commercial',   type: 'retail' },
-          { key: 'med',   label: 'Medical',      type: '' },
-          { key: 'hotel', label: 'Hotel',        type: '' },
+          { key: 'res',   label: 'Residential', usage: 'RESIDENTIAL' },
+          { key: 'admin', label: 'Office',       usage: 'ADMINISTRATIVE' },
+          { key: 'comm',  label: 'Commercial',   usage: 'COMMERCIAL' },
+          { key: 'med',   label: 'Medical',      usage: 'MEDICAL' },
+          { key: 'hotel', label: 'Hotel',        usage: '' },
         ],
         allCities: 'City',
         statuses: [

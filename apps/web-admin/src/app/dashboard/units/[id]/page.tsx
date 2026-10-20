@@ -108,7 +108,7 @@ export default async function UnitDetailPage({
         meta={
           <>
             <UnitStatusBadge status={unit.status} />
-            <Badge tone="gray" variant="soft">{unit.type}</Badge>
+            <Badge tone="gray" variant="soft">{tx(unit.typeName, locale) || unit.type}</Badge>
             <span className="text-sm font-semibold text-navy tabular-nums">
               {formatCurrency(unit.price, currency, locale)}
             </span>
@@ -160,7 +160,7 @@ export default async function UnitDetailPage({
             <PremiumSectionCard title={m.specsTitle} icon={<Ruler />}>
               <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <KV label={m.fieldCode} value={<span className="font-mono">{unit.code}</span>} />
-                <KV label={m.fieldType} value={unit.type} />
+                <KV label={m.fieldType} value={tx(unit.typeName, locale) || unit.type} />
                 <KV label={m.fieldFloor} value={unit.floor === 0 ? m.metrics.groundFloor : unit.floor} />
                 <KV label={m.fieldArea} value={`${unit.area} ${m.metrics.areaSuffix}`} />
                 <KV label={m.fieldBedrooms} value={unit.bedrooms} />

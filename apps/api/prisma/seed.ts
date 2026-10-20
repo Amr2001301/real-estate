@@ -13,6 +13,7 @@ import { seedTransferFeeSettingsForCompany } from '../src/modules/contracts/tran
 import { seedFeeSettingsForCompany } from '../src/modules/installments/fee-settings';
 import { seedTimeZoneSettingForCompany } from '../src/common/time/company-timezone';
 import { seedLeadSourcesForCompany } from '../src/modules/leads/lead-source-defaults';
+import { seedUnitTypesForCompany, syncUnitUsageForCompany } from '../src/modules/units/unit-type-defaults';
 import { normalizeHostname } from '../src/common/utils/hostname-normalize';
 import { upsertUserByEmail } from './seed-user-upsert';
 import { NOTIFICATION_CATALOG } from '../src/modules/notifications/notification-catalog';
@@ -239,7 +240,7 @@ async function seedPublicDemo() {
   const ncTowerA = await ensureBuilding(ncPhase.id, 'NC-TOWER-A', 'Nile Tower A', 20, 0);
   const ncTowerB = await ensureBuilding(ncPhase.id, 'NC-TOWER-B', 'Nile Tower B', 18, 1);
   await ensureUnits(ncTowerA.id, [
-    { code: 'NC-A-101', type: 'studio', area: 80, bedrooms: 1, bathrooms: 1, floor: 1, price: 1200000, media: [DEMO_IMG.interior1], latitude: 21.5433, longitude: 39.1728, address: 'Nile Tower A، شارع الأمير محمد بن عبدالعزيز، جدة' },
+    { code: 'NC-A-101', type: 'Studio', area: 80, bedrooms: 1, bathrooms: 1, floor: 1, price: 1200000, media: [DEMO_IMG.interior1], latitude: 21.5433, longitude: 39.1728, address: 'Nile Tower A، شارع الأمير محمد بن عبدالعزيز، جدة' },
     { code: 'NC-A-102', type: '1BR', area: 95, bedrooms: 1, bathrooms: 1, floor: 1, price: 1450000, media: [DEMO_IMG.apartment2], latitude: 21.5433, longitude: 39.1728, address: 'Nile Tower A، شارع الأمير محمد بن عبدالعزيز، جدة' },
     { code: 'NC-A-201', type: '2BR', area: 130, bedrooms: 2, bathrooms: 2, floor: 2, price: 2100000, media: [DEMO_IMG.apartment1, DEMO_IMG.interior1], latitude: 21.5433, longitude: 39.1728, address: 'Nile Tower A، شارع الأمير محمد بن عبدالعزيز، جدة' },
     { code: 'NC-A-305', type: '3BR', area: 180, bedrooms: 3, bathrooms: 3, floor: 3, price: 3200000, media: [DEMO_IMG.apartment1], latitude: 21.5433, longitude: 39.1728, address: 'Nile Tower A، شارع الأمير محمد بن عبدالعزيز، جدة' },
@@ -273,10 +274,10 @@ async function seedPublicDemo() {
   const palmPhase = await ensurePhase(palm.id, 'PD-PH1', 'المرحلة الأولى', 'Phase 1', 0);
   const palmCluster = await ensureBuilding(palmPhase.id, 'PD-CLUSTER-A', 'Palm Cluster A', 2, 0);
   await ensureUnits(palmCluster.id, [
-    { code: 'PD-V-01', type: 'villa', area: 420, bedrooms: 5, bathrooms: 5, floor: 0, price: 6500000, media: [DEMO_IMG.villa1, DEMO_IMG.villa2], latitude: 24.7136, longitude: 46.6753, address: 'Palm Cluster A، حي النرجس، الرياض' },
-    { code: 'PD-V-02', type: 'villa', area: 380, bedrooms: 4, bathrooms: 4, floor: 0, price: 5800000, media: [DEMO_IMG.villa2], latitude: 24.7138, longitude: 46.6755, address: 'Palm Cluster A، حي النرجس، الرياض' },
-    { code: 'PD-T-01', type: 'townhouse', area: 260, bedrooms: 4, bathrooms: 3, floor: 0, price: 3900000, media: [DEMO_IMG.modernHouse], latitude: 24.7140, longitude: 46.6757, address: 'Palm Cluster A، حي النرجس، الرياض' },
-    { code: 'PD-T-02', type: 'townhouse', area: 240, bedrooms: 3, bathrooms: 3, floor: 0, price: 3600000, status: UnitStatus.SOLD, media: [DEMO_IMG.modernHouse], latitude: 24.7142, longitude: 46.6759, address: 'Palm Cluster A، حي النرجس، الرياض' },
+    { code: 'PD-V-01', type: 'Villa', area: 420, bedrooms: 5, bathrooms: 5, floor: 0, price: 6500000, media: [DEMO_IMG.villa1, DEMO_IMG.villa2], latitude: 24.7136, longitude: 46.6753, address: 'Palm Cluster A، حي النرجس، الرياض' },
+    { code: 'PD-V-02', type: 'Villa', area: 380, bedrooms: 4, bathrooms: 4, floor: 0, price: 5800000, media: [DEMO_IMG.villa2], latitude: 24.7138, longitude: 46.6755, address: 'Palm Cluster A، حي النرجس، الرياض' },
+    { code: 'PD-T-01', type: 'Townhouse', area: 260, bedrooms: 4, bathrooms: 3, floor: 0, price: 3900000, media: [DEMO_IMG.modernHouse], latitude: 24.7140, longitude: 46.6757, address: 'Palm Cluster A، حي النرجس، الرياض' },
+    { code: 'PD-T-02', type: 'Townhouse', area: 240, bedrooms: 3, bathrooms: 3, floor: 0, price: 3600000, status: UnitStatus.SOLD, media: [DEMO_IMG.modernHouse], latitude: 24.7142, longitude: 46.6759, address: 'Palm Cluster A، حي النرجس، الرياض' },
   ]);
 
   // ── 3) The Avenue Business Hub — commercial / offices (الدمام) ──
@@ -304,16 +305,16 @@ async function seedPublicDemo() {
   const avPhase = await ensurePhase(avenue.id, 'AV-PH1', 'المرحلة الأولى', 'Phase 1', 0);
   const avTower = await ensureBuilding(avPhase.id, 'AV-TOWER', 'Business Tower', 24, 0);
   await ensureUnits(avTower.id, [
-    { code: 'AV-O-101', type: 'office', area: 120, bedrooms: 0, bathrooms: 1, floor: 1, price: 1900000, media: [DEMO_IMG.officeInt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
-    { code: 'AV-O-205', type: 'office', area: 180, bedrooms: 0, bathrooms: 2, floor: 2, price: 2800000, media: [DEMO_IMG.officeInt, DEMO_IMG.officeExt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
-    { code: 'AV-R-001', type: 'retail', area: 90, bedrooms: 0, bathrooms: 1, floor: 0, price: 1600000, media: [DEMO_IMG.officeExt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
-    { code: 'AV-O-310', type: 'office', area: 250, bedrooms: 0, bathrooms: 2, floor: 3, price: 3500000, media: [DEMO_IMG.officeInt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
-    { code: 'AV-O-401', type: 'office', area: 140, bedrooms: 0, bathrooms: 1, floor: 4, price: 2100000, media: [DEMO_IMG.officeInt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
-    { code: 'AV-O-402', type: 'office', area: 160, bedrooms: 0, bathrooms: 1, floor: 4, price: 2400000, media: [DEMO_IMG.officeExt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
-    { code: 'AV-O-501', type: 'office', area: 200, bedrooms: 0, bathrooms: 2, floor: 5, price: 3000000, media: [DEMO_IMG.officeInt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
-    { code: 'AV-O-502', type: 'office', area: 220, bedrooms: 0, bathrooms: 2, floor: 5, price: 3200000, media: [DEMO_IMG.officeExt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
-    { code: 'AV-R-002', type: 'retail', area: 75, bedrooms: 0, bathrooms: 1, floor: 0, price: 1400000, media: [DEMO_IMG.officeExt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
-    { code: 'AV-R-003', type: 'retail', area: 85, bedrooms: 0, bathrooms: 1, floor: 0, price: 1550000, media: [DEMO_IMG.officeInt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
+    { code: 'AV-O-101', type: 'Office', area: 120, bedrooms: 0, bathrooms: 1, floor: 1, price: 1900000, media: [DEMO_IMG.officeInt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
+    { code: 'AV-O-205', type: 'Office', area: 180, bedrooms: 0, bathrooms: 2, floor: 2, price: 2800000, media: [DEMO_IMG.officeInt, DEMO_IMG.officeExt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
+    { code: 'AV-R-001', type: 'Shop', area: 90, bedrooms: 0, bathrooms: 1, floor: 0, price: 1600000, media: [DEMO_IMG.officeExt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
+    { code: 'AV-O-310', type: 'Office', area: 250, bedrooms: 0, bathrooms: 2, floor: 3, price: 3500000, media: [DEMO_IMG.officeInt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
+    { code: 'AV-O-401', type: 'Office', area: 140, bedrooms: 0, bathrooms: 1, floor: 4, price: 2100000, media: [DEMO_IMG.officeInt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
+    { code: 'AV-O-402', type: 'Office', area: 160, bedrooms: 0, bathrooms: 1, floor: 4, price: 2400000, media: [DEMO_IMG.officeExt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
+    { code: 'AV-O-501', type: 'Office', area: 200, bedrooms: 0, bathrooms: 2, floor: 5, price: 3000000, media: [DEMO_IMG.officeInt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
+    { code: 'AV-O-502', type: 'Office', area: 220, bedrooms: 0, bathrooms: 2, floor: 5, price: 3200000, media: [DEMO_IMG.officeExt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
+    { code: 'AV-R-002', type: 'Shop', area: 75, bedrooms: 0, bathrooms: 1, floor: 0, price: 1400000, media: [DEMO_IMG.officeExt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
+    { code: 'AV-R-003', type: 'Shop', area: 85, bedrooms: 0, bathrooms: 1, floor: 0, price: 1550000, media: [DEMO_IMG.officeInt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
   ]);
 
   // ── 4) Solara Heights — modern high-rise apartments (مكة المكرمة) ──
@@ -345,7 +346,7 @@ async function seedPublicDemo() {
     { code: 'SH-205', type: '2BR', area: 120, bedrooms: 2, bathrooms: 2, floor: 2, price: 1950000, media: [DEMO_IMG.apartment1], latitude: 21.3891, longitude: 39.8579, address: 'Solara Tower One، شارع إبراهيم الخليل، مكة المكرمة' },
     { code: 'SH-310', type: '2BR', area: 135, bedrooms: 2, bathrooms: 2, floor: 3, price: 2150000, media: [DEMO_IMG.apartment2], latitude: 21.3891, longitude: 39.8579, address: 'Solara Tower One، شارع إبراهيم الخليل، مكة المكرمة' },
     { code: 'SH-1201', type: '3BR', area: 175, bedrooms: 3, bathrooms: 3, floor: 12, price: 3400000, media: [DEMO_IMG.apartment1, DEMO_IMG.highrise], latitude: 21.3891, longitude: 39.8579, address: 'Solara Tower One، شارع إبراهيم الخليل، مكة المكرمة' },
-    { code: 'SH-1505', type: 'studio', area: 70, bedrooms: 1, bathrooms: 1, floor: 15, price: 1100000, media: [DEMO_IMG.interior1], latitude: 21.3891, longitude: 39.8579, address: 'Solara Tower One، شارع إبراهيم الخليل، مكة المكرمة' },
+    { code: 'SH-1505', type: 'Studio', area: 70, bedrooms: 1, bathrooms: 1, floor: 15, price: 1100000, media: [DEMO_IMG.interior1], latitude: 21.3891, longitude: 39.8579, address: 'Solara Tower One، شارع إبراهيم الخليل، مكة المكرمة' },
   ]);
 
   console.log('🏙️  Public demo data ready: 4 projects · 24 units.');
@@ -552,6 +553,7 @@ async function main() {
 
   // ---- Lead sources: the defaults every company starts with ----
   await seedLeadSourcesForCompany(prisma, company.id);
+  await seedUnitTypesForCompany(prisma, company.id);
 
   // ---- Demo project 1: idempotent project + phase + buildings + units ----
   const proj1 = await ensureProject({
@@ -815,10 +817,13 @@ async function main() {
     await seedFeeSettingsForCompany(prisma, c.id);
     await seedTimeZoneSettingForCompany(prisma, c.id);
     await seedLeadSourcesForCompany(prisma, c.id);
+    await seedUnitTypesForCompany(prisma, c.id);
   }
 
   // ---- Backfill companyId on all rows that were created before this seed run ----
   await backfillCompanyId(company.id);
+  // Units take the usage of their type (offices, shops: no bedrooms).
+  for (const c of allCompanies) await syncUnitUsageForCompany(prisma, c.id);
 
   console.log('✅ Seed complete');
   console.log('   Admin:', adminEmail, '/', adminPassword);

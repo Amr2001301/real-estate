@@ -78,6 +78,10 @@ function makeService(overrides: Record<string, unknown> = {}) {
       findMany: jest.fn().mockResolvedValue([]),
       createMany: jest.fn().mockResolvedValue({ count: 7 }),
     },
+    unitType: {
+      findMany: jest.fn().mockResolvedValue([]),
+      createMany: jest.fn().mockResolvedValue({ count: 15 }),
+    },
     ...overrides,
   };
 

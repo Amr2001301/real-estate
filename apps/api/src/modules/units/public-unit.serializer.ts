@@ -18,8 +18,10 @@ interface ProjectSummaryInput {
 
 interface UnitInput extends Pick<
   Unit,
-  'id' | 'code' | 'type' | 'area' | 'bedrooms' | 'bathrooms' | 'floor' | 'price' | 'status' | 'updatedAt'
+  'id' | 'code' | 'type' | 'usage' | 'area' | 'bedrooms' | 'bathrooms' | 'floor' | 'price' | 'status' | 'updatedAt'
 > {
+  /** The type's name from the company's list ({ar,en}; flattened per locale). */
+  typeName?: Prisma.JsonValue | null;
   media?: MediaLike[];
   project?: ProjectSummaryInput | null;
 }
@@ -49,6 +51,8 @@ export function serializePublicUnit(unit: UnitInput) {
     id: unit.id,
     code: unit.code,
     type: unit.type,
+    typeName: unit.typeName ?? null,
+    usage: unit.usage,
     area: unit.area,
     bedrooms: unit.bedrooms,
     bathrooms: unit.bathrooms,

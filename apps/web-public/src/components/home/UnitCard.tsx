@@ -35,7 +35,7 @@ function typeIcon(type: string): typeof Home {
 
 export function UnitCard({ unit, action }: { unit: PublicUnit; action?: React.ReactNode }) {
   const status = STATUS[unit.status] ?? DEFAULT_STATUS;
-  const typeLabel = unitTypeLabel(unit.type);
+  const typeLabel = unitTypeLabel(unit.type, unit.typeName);
   const TypeIcon = typeIcon(unit.type);
 
   const projectName = unit.project ? pickAr(unit.project.name) : '';

@@ -84,6 +84,11 @@ function makePrismaMock() {
       }),
     },
     building: { findFirst: jest.fn().mockResolvedValue({ id: 'b-1' }) },
+    unitType: {
+      findMany: jest.fn().mockResolvedValue([
+        { code: '2BR', name: { ar: 'شقة غرفتين نوم', en: '2-bedroom apartment' }, usage: 'RESIDENTIAL', active: true },
+      ]),
+    },
     unit: {
       findMany: jest.fn().mockResolvedValue([]),
       // findOne(publicOnly=true) traverses unit.building.phase.project.status,
