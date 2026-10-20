@@ -1130,7 +1130,6 @@ export class ReservationsService {
           : {}),
       ...(opts.unitId ? { unitId: opts.unitId } : {}),
       ...(opts.leadId ? { leadId: opts.leadId } : {}),
-      ...(opts.clientId ? { clientId: opts.clientId } : {}),
       ...(opts.projectId
         ? { unit: { building: { phase: { projectId: opts.projectId } } } }
         : {}),
@@ -1170,6 +1169,12 @@ export class ReservationsService {
           }
         : {}),
     };
+    // A client's reservations include those booked on one of their leads
+    // (a lead's reservation carries the lead, not always the client).
+    if (opts.clientId) {
+      const and = where.AND ? (Array.isArray(where.AND) ? where.AND : [where.AND]) : [];
+      where.AND = [...and, { OR: [{ clientId: opts.clientId }, { lead: { is: { clientId: opts.clientId } } }] }];
+    }
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.reservation.findMany({
@@ -2072,7 +2077,10 @@ export class ReservationsService {
     return this.prisma.reservationActivity.findMany({
       where: {
         reservation: {
-          ...(opts.clientId ? { clientId: opts.clientId } : {}),
+          // A client's reservations include those booked on one of their leads.
+          ...(opts.clientId
+            ? { OR: [{ clientId: opts.clientId }, { lead: { is: { clientId: opts.clientId } } }] }
+            : {}),
           ...(opts.leadId ? { leadId: opts.leadId } : {}),
         },
       },
