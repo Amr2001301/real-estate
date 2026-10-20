@@ -263,7 +263,7 @@ export function NotificationList({ items, basePath, locale = 'ar', bare = false 
                     <p className={cn('text-sm leading-snug', unread ? 'font-semibold text-slate-900' : 'font-medium text-slate-700')}>
                       {title}
                     </p>
-                    <span className="shrink-0 text-xs text-slate-400 whitespace-nowrap tabular-nums leading-snug" dir="ltr">
+                    <span className="shrink-0 text-xs text-slate-400 whitespace-nowrap tabular-nums leading-snug">
                       {formatCompact(n.createdAt, nt.dateLocale)}
                     </span>
                   </div>
