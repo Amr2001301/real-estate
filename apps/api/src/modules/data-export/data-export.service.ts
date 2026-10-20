@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { UserRole, type Prisma } from '@prisma/client';
+import { UserRole, type Prisma, type UnitFinishing, type UnitOrientation, type UnitView } from '@prisma/client';
 import { type Cell, type Workbook, type Worksheet } from 'exceljs';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
@@ -8,6 +8,7 @@ import {
   BUILDINGS_SHEET,
   UNITS_SHEET,
 } from '../../common/utils/import-headers';
+import { FINISHING_AR, ORIENTATION_AR, VIEW_AR } from '../units/unit-specs';
 import {
   applySheetChrome,
   createReportWorkbook,
@@ -127,6 +128,8 @@ export class DataExportService {
         select: {
           code: true, type: true, floor: true, area: true,
           bedrooms: true, bathrooms: true, price: true, status: true, createdAt: true,
+          netArea: true, gardenArea: true, roofArea: true, terraceArea: true, landArea: true,
+          finishing: true, view: true, orientation: true,
           building: {
             select: {
               code: true,
@@ -524,13 +527,16 @@ export class DataExportService {
   // Timestamps (datetime, UTC): createdAt
   // Calendar dates: —
   // Integers: floor, bedrooms, bathrooms
-  // Decimals: area
+  // Decimals: area, netArea, gardenArea, roofArea, terraceArea, landArea
 
   private buildUnits(
     wb: Workbook,
     rows: Array<{
       code: string; type: string; floor: number; area: number;
       bedrooms: number; bathrooms: number; price: Prisma.Decimal;
+      netArea: number | null; gardenArea: number | null; roofArea: number | null;
+      terraceArea: number | null; landArea: number | null;
+      finishing: UnitFinishing | null; view: UnitView | null; orientation: UnitOrientation | null;
       status: string; createdAt: Date;
       building: { code: string | null; name: string; phase: { code: string | null; name: Prisma.JsonValue; project: { code: string | null; name: Prisma.JsonValue } } };
     }>,
@@ -554,6 +560,14 @@ export class DataExportService {
         { t: 'decimal',  v: r.area },
         { t: 'int',      v: r.bedrooms },
         { t: 'int',      v: r.bathrooms },
+        { t: 'decimal',  v: r.netArea },
+        { t: 'decimal',  v: r.gardenArea },
+        { t: 'decimal',  v: r.roofArea },
+        { t: 'decimal',  v: r.terraceArea },
+        { t: 'decimal',  v: r.landArea },
+        { t: 'text',     v: r.finishing ? FINISHING_AR[r.finishing] : null },
+        { t: 'text',     v: r.view ? VIEW_AR[r.view] : null },
+        { t: 'text',     v: r.orientation ? ORIENTATION_AR[r.orientation] : null },
         { t: 'amount',   v: r.price },
         { t: 'text',     v: r.status },
         { t: 'datetime', v: r.createdAt },

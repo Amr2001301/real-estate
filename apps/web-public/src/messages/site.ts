@@ -316,6 +316,8 @@ const SITE_MESSAGES = {
 
     // ── Units filter bar ────────────────────────────────────────────────────────
     unitsFilter: {
+      finishing: 'التشطيب',
+      allFinishing: 'كل التشطيبات',
       withinProject: 'داخل مشروع محدد',
       propertyType: 'نوع العقار',
       bedrooms: 'غرف النوم',
@@ -352,12 +354,47 @@ const SITE_MESSAGES = {
 
     // ── Unit specs ───────────────────────────────────────────────────────────────
     unitSpecs: {
-      area: 'المساحة',
+      area: 'المساحة الإجمالية',
       bedrooms: 'غرف النوم',
       bathrooms: 'دورات المياه',
       floor: 'الطابق',
       unitType: 'نوع الوحدة',
       status: 'الحالة',
+      netArea: 'المساحة الصافية',
+      gardenArea: 'الحديقة',
+      roofArea: 'الروف',
+      terraceArea: 'التراس',
+      landArea: 'مساحة الأرض',
+      finishing: 'التشطيب',
+      view: 'الإطلالة',
+      orientation: 'الاتجاه',
+      finishingLabels: {
+        CORE_AND_SHELL: 'على الطوب',
+        SEMI_FINISHED: 'نصف تشطيب',
+        FULLY_FINISHED: 'تشطيب كامل',
+        FURNISHED: 'مفروشة',
+      } as Record<string, string>,
+      viewLabels: {
+        GARDEN: 'حديقة',
+        POOL: 'حمام سباحة',
+        LAGOON: 'لاجون',
+        SEA: 'بحر',
+        NILE: 'النيل',
+        CLUB: 'النادي',
+        LANDSCAPE: 'مساحات خضراء',
+        MAIN_STREET: 'شارع رئيسي',
+        SIDE_STREET: 'شارع جانبي',
+      } as Record<string, string>,
+      orientationLabels: {
+        NORTH: 'بحري',
+        SOUTH: 'قبلي',
+        EAST: 'شرقي',
+        WEST: 'غربي',
+        NORTH_EAST: 'بحري شرقي',
+        NORTH_WEST: 'بحري غربي',
+        SOUTH_EAST: 'قبلي شرقي',
+        SOUTH_WEST: 'قبلي غربي',
+      } as Record<string, string>,
     },
 
     // ── Unit inquiry card ────────────────────────────────────────────────────────
@@ -1157,6 +1194,8 @@ const SITE_MESSAGES = {
 
     // ── Units filter bar ────────────────────────────────────────────────────────
     unitsFilter: {
+      finishing: 'Finishing',
+      allFinishing: 'Any finishing',
       withinProject: 'Within a specific project',
       propertyType: 'Property Type',
       bedrooms: 'Bedrooms',
@@ -1193,12 +1232,47 @@ const SITE_MESSAGES = {
 
     // ── Unit specs ───────────────────────────────────────────────────────────────
     unitSpecs: {
-      area: 'Area',
+      area: 'Gross area',
       bedrooms: 'Bedrooms',
       bathrooms: 'Bathrooms',
       floor: 'Floor',
       unitType: 'Unit Type',
       status: 'Status',
+      netArea: 'Net area',
+      gardenArea: 'Garden',
+      roofArea: 'Roof',
+      terraceArea: 'Terrace',
+      landArea: 'Land area',
+      finishing: 'Finishing',
+      view: 'View',
+      orientation: 'Orientation',
+      finishingLabels: {
+        CORE_AND_SHELL: 'Core & shell',
+        SEMI_FINISHED: 'Semi-finished',
+        FULLY_FINISHED: 'Fully finished',
+        FURNISHED: 'Furnished',
+      } as Record<string, string>,
+      viewLabels: {
+        GARDEN: 'Garden',
+        POOL: 'Pool',
+        LAGOON: 'Lagoon',
+        SEA: 'Sea',
+        NILE: 'Nile',
+        CLUB: 'Clubhouse',
+        LANDSCAPE: 'Landscape',
+        MAIN_STREET: 'Main street',
+        SIDE_STREET: 'Side street',
+      } as Record<string, string>,
+      orientationLabels: {
+        NORTH: 'North',
+        SOUTH: 'South',
+        EAST: 'East',
+        WEST: 'West',
+        NORTH_EAST: 'North-east',
+        NORTH_WEST: 'North-west',
+        SOUTH_EAST: 'South-east',
+        SOUTH_WEST: 'South-west',
+      } as Record<string, string>,
     },
 
     // ── Unit inquiry card ────────────────────────────────────────────────────────

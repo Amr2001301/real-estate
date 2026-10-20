@@ -498,6 +498,36 @@ enum UnitUsage {
   PARKING
 }
 
+enum UnitFinishing {
+  CORE_AND_SHELL
+  SEMI_FINISHED
+  FULLY_FINISHED
+  FURNISHED
+}
+
+enum UnitView {
+  GARDEN
+  POOL
+  LAGOON
+  SEA
+  NILE
+  CLUB
+  LANDSCAPE
+  MAIN_STREET
+  SIDE_STREET
+}
+
+enum UnitOrientation {
+  NORTH
+  SOUTH
+  EAST
+  WEST
+  NORTH_EAST
+  NORTH_WEST
+  SOUTH_EAST
+  SOUTH_WEST
+}
+
 /// A company's unit types (F10): the defaults (unit-type-defaults.ts) plus
 /// its own. Unit.type holds the code; the code never changes, the names and
 /// the usage can, and a type switched off is not offered for a new unit.
@@ -626,7 +656,17 @@ model Unit {
   /// What the unit is for — taken from its type. Only a residential unit
   /// has bedrooms.
   usage                UnitUsage  @default(RESIDENTIAL)
+  /// Gross area (BUA, m²) — what the price per meter applies to.
   area                 Float
+  /// The unit's specs (F10): all optional, a unit entered before them has none.
+  netArea              Float?
+  gardenArea           Float?
+  roofArea             Float?
+  terraceArea          Float?
+  landArea             Float?
+  finishing            UnitFinishing?
+  view                 UnitView?
+  orientation          UnitOrientation?
   bedrooms             Int        @default(0)
   bathrooms            Int        @default(0)
   floor                Int        @default(0)

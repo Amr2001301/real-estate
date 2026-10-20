@@ -47,7 +47,7 @@ const DATA_SHEETS: Array<{ name: string; headerCount: number }> = [
   { name: 'Projects',           headerCount:  8 },
   { name: 'Phases',             headerCount:  8 },
   { name: 'Buildings',          headerCount: 11 },
-  { name: 'Units',              headerCount: 17 },
+  { name: 'Units',              headerCount: 25 },
   { name: 'Customers',          headerCount:  5 },
   { name: 'Leads',              headerCount: 13 },
   { name: 'Contracts',          headerCount: 19 },

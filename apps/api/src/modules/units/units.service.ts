@@ -26,6 +26,24 @@ import { arText, collectPages, isoDate, listCsv, listXlsx, type ListColumn } fro
 import { ReportBrandService } from '../company-branding/report-brand.service';
 import { resetUnitWarranties } from '../contracts/unit-warranties';
 
+/** The unit's specs (F10): written as sent, null clears one. */
+const SPEC_FIELDS = [
+  'netArea',
+  'gardenArea',
+  'roofArea',
+  'terraceArea',
+  'landArea',
+  'finishing',
+  'view',
+  'orientation',
+] as const satisfies ReadonlyArray<keyof CreateUnitDto & keyof UpdateUnitDto>;
+
+function specData(dto: CreateUnitDto | UpdateUnitDto) {
+  const data: Partial<Record<(typeof SPEC_FIELDS)[number], unknown>> = {};
+  for (const f of SPEC_FIELDS) if (dto[f] !== undefined) data[f] = dto[f];
+  return data as Pick<Prisma.UnitUncheckedCreateInput, (typeof SPEC_FIELDS)[number]>;
+}
+
 /** The fields of a listed unit the export reads (findAll includes the rest). */
 type UnitExportRow = {
   code: string;
@@ -161,6 +179,7 @@ export class UnitsService {
         floor: dto.floor,
         price: new Prisma.Decimal(dto.price),
         status: dto.status ?? UnitStatus.AVAILABLE,
+        ...specData(dto),
       },
     });
     return created;
@@ -217,6 +236,9 @@ export class UnitsService {
           ? { type: { equals: query.type, mode: 'insensitive' as const } }
           : {}),
       ...(query.usage ? { usage: query.usage } : {}),
+      ...(query.finishing ? { finishing: query.finishing } : {}),
+      ...(query.view ? { view: query.view } : {}),
+      ...(query.orientation ? { orientation: query.orientation } : {}),
       ...(query.bathrooms !== undefined ? { bathrooms: query.bathrooms } : {}),
       ...(query.priceMin !== undefined || query.priceMax !== undefined
         ? {
@@ -346,8 +368,8 @@ export class UnitsService {
         : null;
     const usage = newType?.usage ?? unit.usage;
     const bedrooms = usage === UnitUsage.RESIDENTIAL ? dto.bedrooms : dto.bedrooms !== undefined || newType ? 0 : undefined;
-    // A unit in a live deal keeps what was sold: its price, area, type, floor
-    // and code are the deal's. Changing them rewrote the customer's contract
+    // A unit in a live deal keeps what was sold: its price, areas, type,
+    // specs, floor and code are the deal's. Changing them rewrote the customer's contract
     // and portal with nothing on record. (Unchanged values pass — the edit
     // form sends every field.)
     const changed = [
@@ -358,6 +380,7 @@ export class UnitsService {
       dto.bathrooms !== undefined && dto.bathrooms !== unit.bathrooms,
       dto.floor !== undefined && dto.floor !== unit.floor,
       dto.price !== undefined && !new Prisma.Decimal(dto.price).equals(unit.price),
+      ...SPEC_FIELDS.map((f) => dto[f] !== undefined && dto[f] !== unit[f]),
     ].some(Boolean);
     if (changed && (await this.liveDeals(id)) > 0) {
       throw new ConflictException('الوحدة عليها حجز أو عقد قائم — لا يمكن تعديل بياناتها أو سعرها');
@@ -373,6 +396,7 @@ export class UnitsService {
     if (dto.bathrooms !== undefined) data.bathrooms = dto.bathrooms;
     if (dto.floor !== undefined) data.floor = dto.floor;
     if (dto.price !== undefined) data.price = new Prisma.Decimal(dto.price);
+    Object.assign(data, specData(dto));
     return this.prisma.unit.update({ where: { id }, data });
   }
 

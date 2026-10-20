@@ -1,4 +1,4 @@
-import { Maximize, BedDouble, Bath, Building2, Home, BadgeCheck } from 'lucide-react';
+import { Maximize, BedDouble, Bath, Building2, Home, BadgeCheck, Trees, Paintbrush, Eye, Compass } from 'lucide-react';
 import { formatArea, formatNumber, unitTypeLabel } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -20,7 +20,18 @@ export async function UnitSpecs({ unit }: { unit: PublicUnit }) {
   const specs: Spec[] = [];
   if (Number.isFinite(unit.area) && unit.area > 0)
     specs.push({ icon: Maximize,   label: s.area,      value: formatArea(unit.area) });
-  specs.push({ icon: BedDouble,  label: s.bedrooms,   value: formatNumber(unit.bedrooms) });
+  for (const f of ['netArea', 'gardenArea', 'roofArea', 'terraceArea', 'landArea'] as const) {
+    const v = unit[f];
+    if (v && v > 0) specs.push({ icon: f === 'gardenArea' ? Trees : Maximize, label: s[f], value: formatArea(v) });
+  }
+  if (unit.finishing)
+    specs.push({ icon: Paintbrush, label: s.finishing, value: s.finishingLabels[unit.finishing] ?? unit.finishing });
+  if (unit.view) specs.push({ icon: Eye, label: s.view, value: s.viewLabels[unit.view] ?? unit.view });
+  if (unit.orientation)
+    specs.push({ icon: Compass, label: s.orientation, value: s.orientationLabels[unit.orientation] ?? unit.orientation });
+  // Only a residential unit has bedrooms.
+  if (!unit.usage || unit.usage === 'RESIDENTIAL')
+    specs.push({ icon: BedDouble,  label: s.bedrooms,   value: formatNumber(unit.bedrooms) });
   specs.push({ icon: Bath,       label: s.bathrooms,  value: formatNumber(unit.bathrooms) });
   specs.push({ icon: Building2,  label: s.floor,      value: formatNumber(unit.floor) });
   if (unit.type)

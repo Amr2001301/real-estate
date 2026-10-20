@@ -1,4 +1,4 @@
-import { UnitUsage, LeadStage, Locale, ProjectStatus, UnitStatus } from '@prisma/client';
+import { UnitUsage, LeadStage, Locale, ProjectStatus, UnitFinishing, UnitOrientation, UnitStatus, UnitView } from '@prisma/client';
 
 // 'locked' = existing unit has an active contract or reservation; entire row skipped
 export type ImportOp = 'create' | 'update' | 'unchanged' | 'locked';
@@ -76,6 +76,14 @@ export interface UnitPlan {
   area?: number;
   bedrooms?: number;
   bathrooms?: number;
+  netArea?: number;
+  gardenArea?: number;
+  roofArea?: number;
+  terraceArea?: number;
+  landArea?: number;
+  finishing?: UnitFinishing;
+  view?: UnitView;
+  orientation?: UnitOrientation;
   price?: number;
   status?: UnitStatus;
 }

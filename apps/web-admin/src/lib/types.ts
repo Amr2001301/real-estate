@@ -123,6 +123,11 @@ export interface UnitStatusHistoryEntry {
 }
 
 export type UnitUsage = 'RESIDENTIAL' | 'COMMERCIAL' | 'ADMINISTRATIVE' | 'MEDICAL' | 'PARKING';
+export type UnitFinishing = 'CORE_AND_SHELL' | 'SEMI_FINISHED' | 'FULLY_FINISHED' | 'FURNISHED';
+export type UnitView =
+  | 'GARDEN' | 'POOL' | 'LAGOON' | 'SEA' | 'NILE' | 'CLUB' | 'LANDSCAPE' | 'MAIN_STREET' | 'SIDE_STREET';
+export type UnitOrientation =
+  | 'NORTH' | 'SOUTH' | 'EAST' | 'WEST' | 'NORTH_EAST' | 'NORTH_WEST' | 'SOUTH_EAST' | 'SOUTH_WEST';
 
 /** One of the company's unit types (F10); Unit.type holds its code. */
 export interface UnitTypeOption {
@@ -142,7 +147,16 @@ export interface Unit {
   /** The type's name from the company's list (null for a type it no longer has). */
   typeName?: Translatable | null;
   usage?: UnitUsage;
+  /** Gross area (BUA). */
   area: number;
+  netArea?: number | null;
+  gardenArea?: number | null;
+  roofArea?: number | null;
+  terraceArea?: number | null;
+  landArea?: number | null;
+  finishing?: UnitFinishing | null;
+  view?: UnitView | null;
+  orientation?: UnitOrientation | null;
   bedrooms: number;
   bathrooms: number;
   floor: number;

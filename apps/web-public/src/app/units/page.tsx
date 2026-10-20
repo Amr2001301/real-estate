@@ -54,6 +54,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
   const city = firstStr(sp.city);
   const type = firstStr(sp.type);
   const usage = firstStr(sp.usage);
+  const finishing = firstStr(sp.finishing);
   const bedrooms = firstStr(sp.bedrooms);
   const bathrooms = firstStr(sp.bathrooms);
   const status = firstStr(sp.status);
@@ -70,6 +71,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
   if (city) apiParams.set('city', city);
   if (type) apiParams.set('type', type);
   if (usage) apiParams.set('usage', usage);
+  if (finishing) apiParams.set('finishing', finishing);
   if (bedrooms) apiParams.set('bedrooms', bedrooms);
   if (bathrooms) apiParams.set('bathrooms', bathrooms);
   if (status) apiParams.set('status', status);
@@ -96,7 +98,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
   const units = result.ok ? result.data.data : [];
   const meta = result.ok ? result.data.meta : null;
   const hasFilters = Boolean(
-    type || usage || bedrooms || bathrooms || status || priceMin || priceMax || areaMin || areaMax || city || projectId,
+    type || usage || finishing || bedrooms || bathrooms || status || priceMin || priceMax || areaMin || areaMax || city || projectId,
   );
 
   const initialFilters: UnitsFilterValues = {
@@ -108,6 +110,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
     bathrooms,
     price: derivePriceValue(priceMin, priceMax),
     area: deriveAreaValue(areaMin, areaMax),
+    finishing,
     status,
     sort,
   };
