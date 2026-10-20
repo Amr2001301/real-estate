@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { requireAdmin } from '@/lib/session';
+import { api, safe } from '@/lib/api';
+import type { Paged, User } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
@@ -15,7 +17,11 @@ export default async function BroadcastNotificationPage() {
   const session = await requireAdmin();
   if (session.role !== 'ADMIN') notFound();
 
-  const locale = await getLocale();
+  const [locale, usersRes] = await Promise.all([
+    getLocale(),
+    safe(api.get<Paged<User>>('/users?pageSize=100&active=true')),
+  ]);
+  const users = (usersRes.data?.data ?? []).map((u) => ({ id: u.id, fullName: u.fullName, role: u.role }));
   const m = uiT(locale).notificationsBroadcast;
 
   return (
@@ -36,7 +42,7 @@ export default async function BroadcastNotificationPage() {
           </Link>
         }
       />
-      <BroadcastForm locale={locale} />
+      <BroadcastForm locale={locale} users={users} />
     </div>
   );
 }

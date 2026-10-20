@@ -47,16 +47,17 @@ export async function getCompanyCurrency(db: CompanyReader, companyId: string | 
 
 /**
  * An amount as text for messages (notifications, emails, chat): grouped
- * digits and the currency, in the reader's language — "٢٬٥٠٠٬٠٠٠ ج.م." /
- * "EGP 2,500,000". Whole amounts drop the decimals. Non-numeric input is
- * returned unchanged.
+ * digits and the currency, in the reader's language — "2,500,000 ج.م." /
+ * "EGP 2,500,000". Western digits in Arabic too (U5, owner-approved: no
+ * Arabic-Indic digits anywhere). Whole amounts drop the decimals.
+ * Non-numeric input is returned unchanged.
  */
 export function formatMoney(amount: unknown, currency: string, locale: 'ar' | 'en'): string {
   const n = typeof amount === 'number' ? amount : Number(String(amount ?? '').trim());
   if (amount === null || amount === undefined || String(amount).trim() === '' || !Number.isFinite(n)) {
     return amount === null || amount === undefined ? '' : String(amount);
   }
-  return new Intl.NumberFormat(locale === 'en' ? 'en-EG' : 'ar-EG', {
+  return new Intl.NumberFormat(locale === 'en' ? 'en-EG' : 'ar-EG-u-nu-latn', {
     style: 'currency',
     currency: normalizeCurrency(currency),
     // Whole amounts without decimals; anything else with exactly two.

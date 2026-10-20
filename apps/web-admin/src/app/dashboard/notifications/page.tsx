@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { FileEdit, Inbox, Bell, CheckCheck, Clock, Megaphone } from 'lucide-react';
+import { FileEdit, Clock, Megaphone } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { NotificationItem, Paged } from '@/lib/types';
 import { formatDate } from '@/lib/format';
@@ -10,7 +10,8 @@ import {
   NotificationPreferences,
   type NotificationPrefs,
 } from '@/components/notifications/notification-preferences';
-import { PremiumPageHero, PremiumMetricStrip } from '@/components/premium';
+import { PremiumPageHero, PremiumPanel } from '@/components/premium';
+import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 
@@ -56,7 +57,10 @@ export default async function AdminNotificationsInboxPage({
     ),
     safe(api.get<{ count: number }>('/me/notifications/unread-count')),
   ]);
-  const prefsRes = await safe(api.get<NotificationPrefs>('/users/me/notification-preferences'));
+  const [prefsRes, session] = await Promise.all([
+    safe(api.get<NotificationPrefs>('/users/me/notification-preferences')),
+    getSession(),
+  ]);
   const m = uiT(locale).pages.notifications;
 
   const items = extractItems(res.data);
@@ -64,61 +68,70 @@ export default async function AdminNotificationsInboxPage({
   const total =
     res.data && !Array.isArray(res.data) && res.data.meta ? res.data.meta.total : items.length;
   const unreadCount = unreadRes.data?.count ?? items.filter((n) => !n.read).length;
-  const readCount = Math.max(0, total - unreadCount);
   // Backend returns items sorted newest-first; first item is the most recent.
   const lastDate = page === 1 && items.length > 0 ? (items[0]?.createdAt ?? null) : null;
 
+  const isAdmin = session?.role === 'ADMIN';
+
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-5 pb-2 lg:gap-6">
       <PremiumPageHero
         title={m.title}
-        description={m.description}
+        description={isAdmin ? m.description : m.descriptionStaff}
         breadcrumbs={[
           { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
           { label: m.breadcrumb },
         ]}
+        meta={
+          lastDate ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-hairline px-3 py-1 text-[11.5px] font-semibold text-slate-500">
+              <Clock className="h-3.5 w-3.5" />
+              {m.kpi.lastNotif}: {formatDate(lastDate, locale)}
+            </span>
+          ) : undefined
+        }
         actions={
-          <div className="flex items-center gap-2">
-            <Link href="/dashboard/notifications/broadcast">
-              <Button variant="primary" size="sm" leftIcon={<Megaphone className="h-3.5 w-3.5" />}>
-                {m.sendBtn}
-              </Button>
-            </Link>
-            <Link href="/dashboard/notifications/templates">
-              <Button variant="outline" size="sm" leftIcon={<FileEdit className="h-3.5 w-3.5" />}>
-                {m.templatesBtn}
-              </Button>
-            </Link>
-          </div>
+          // Sending and the templates are the admin's (the API refuses others).
+          isAdmin ? (
+            <div className="flex items-center gap-2" data-testid="notifications-admin-actions">
+              <Link href="/dashboard/notifications/broadcast">
+                <Button variant="primary" size="sm" leftIcon={<Megaphone className="h-3.5 w-3.5" />}>
+                  {m.sendBtn}
+                </Button>
+              </Link>
+              <Link href="/dashboard/notifications/templates">
+                <Button variant="outline" size="sm" leftIcon={<FileEdit className="h-3.5 w-3.5" />}>
+                  {m.templatesBtn}
+                </Button>
+              </Link>
+            </div>
+          ) : undefined
         }
       />
 
-      {/* ── Summary strip ──────────────────────────────────────────────────── */}
-      <PremiumMetricStrip
-        variant="compact"
-        metrics={[
-          { label: m.kpi.total, value: total, icon: <Inbox /> },
-          {
-            label: m.kpi.unread,
-            value: unreadCount,
-            icon: <Bell />,
-            tone: unreadCount > 0 ? 'brand' : 'neutral',
-            primary: unreadCount > 0,
-          },
-          { label: m.kpi.read, value: readCount, icon: <CheckCheck /> },
-          ...(lastDate
-            ? [{ label: m.kpi.lastNotif, value: formatDate(lastDate, locale), icon: <Clock />, valueSize: 'compact' as const }]
-            : []),
-        ]}
-      />
-
       {res.error && (
-        <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+        <div className="rounded-2xl border border-danger-100 bg-danger-50 p-4 text-sm text-danger-700">
           {m.errorPrefix} {res.error}
         </div>
       )}
 
-      <NotificationList items={items} basePath="/dashboard" locale={locale} />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
+        <PremiumPanel
+          className="lg:col-span-2"
+          title={m.inboxTitle}
+          sub={m.inboxSub(total, unreadCount)}
+          padding="none"
+        >
+          <NotificationList items={items} basePath="/dashboard" locale={locale} bare />
+        </PremiumPanel>
+
+        {prefsRes.data && (
+          <PremiumPanel title={m.prefsTitle} padding="none">
+            <NotificationPreferences initial={prefsRes.data} locale={locale} bare />
+          </PremiumPanel>
+        )}
+      </div>
+
       <Pagination
         page={page}
         pageSize={PAGE_SIZE}
@@ -126,8 +139,6 @@ export default async function AdminNotificationsInboxPage({
         basePath="/dashboard/notifications"
         locale={locale}
       />
-
-      {prefsRes.data && <NotificationPreferences initial={prefsRes.data} locale={locale} />}
     </div>
   );
 }

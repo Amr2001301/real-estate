@@ -19,6 +19,8 @@ interface Props {
   /** Either '/dashboard' or '/portal' — used to build links to entities. */
   basePath: '/dashboard' | '/portal';
   locale?: Locale;
+  /** Without its own card, for a page that frames it in a panel. */
+  bare?: boolean;
 }
 
 interface RelatedLink {
@@ -132,17 +134,17 @@ function relatedLink(
 /** Category icon (+ tint) by template code — for the row even when unlinked. */
 function categoryVisual(code: string, related: RelatedLink | null): { Icon: LucideIcon; chip: string } {
   const c = code.toLowerCase();
-  if (c.includes('maintenance')) return { Icon: Wrench, chip: 'bg-amber-50 text-amber-600' };
-  if (c.includes('payment_proof') || c.includes('deposit')) return { Icon: Wallet, chip: 'bg-emerald-50 text-emerald-600' };
-  if (c.includes('payout')) return { Icon: Wallet, chip: 'bg-emerald-50 text-emerald-600' };
-  if (c.includes('commission')) return { Icon: BadgePercent, chip: 'bg-violet-50 text-violet-600' };
-  if (c.includes('contract')) return { Icon: FileText, chip: 'bg-sky-50 text-sky-600' };
-  if (c.includes('reservation')) return { Icon: BookmarkCheck, chip: 'bg-brand-50 text-brand-600' };
-  if (c.includes('visit')) return { Icon: CalendarClock, chip: 'bg-brand-50 text-brand-600' };
-  if (c.includes('lead')) return { Icon: Users, chip: 'bg-slate-100 text-slate-600' };
-  if (c.includes('request') || c.includes('inquiry')) return { Icon: MessageSquareText, chip: 'bg-slate-100 text-slate-600' };
-  if (related) return { Icon: related.icon, chip: 'bg-slate-100 text-slate-600' };
-  return { Icon: Bell, chip: 'bg-slate-100 text-slate-600' };
+  if (c.includes('maintenance')) return { Icon: Wrench, chip: 'bg-amber-500/12 text-amber-600' };
+  if (c.includes('payment_proof') || c.includes('deposit')) return { Icon: Wallet, chip: 'bg-emerald-500/12 text-emerald-600' };
+  if (c.includes('payout')) return { Icon: Wallet, chip: 'bg-emerald-500/12 text-emerald-600' };
+  if (c.includes('commission')) return { Icon: BadgePercent, chip: 'bg-violet-500/12 text-violet-600' };
+  if (c.includes('contract')) return { Icon: FileText, chip: 'bg-sky-500/12 text-sky-600' };
+  if (c.includes('reservation')) return { Icon: BookmarkCheck, chip: 'bg-brand-500/12 text-brand-700' };
+  if (c.includes('visit')) return { Icon: CalendarClock, chip: 'bg-brand-500/12 text-brand-700' };
+  if (c.includes('lead')) return { Icon: Users, chip: 'bg-slate-500/10 text-slate-600' };
+  if (c.includes('request') || c.includes('inquiry')) return { Icon: MessageSquareText, chip: 'bg-slate-500/10 text-slate-600' };
+  if (related) return { Icon: related.icon, chip: 'bg-slate-500/10 text-slate-600' };
+  return { Icon: Bell, chip: 'bg-slate-500/10 text-slate-600' };
 }
 
 /** Never returns the raw template code. The server's title (in the reader's
@@ -191,28 +193,29 @@ function formatCompact(value: string, dateLocale: string): string {
   return new Intl.DateTimeFormat(dateLocale, { dateStyle: 'short' }).format(d);
 }
 
-export function NotificationList({ items, basePath, locale = 'ar' }: Props) {
+export function NotificationList({ items, basePath, locale = 'ar', bare = false }: Props) {
+  const Frame = bare ? BareFrame : Card;
   const nt = portalSharedT(locale).notifications;
   const safeItems = Array.isArray(items) ? items : [];
   const unreadCount = safeItems.filter((n) => !n.read).length;
 
   if (safeItems.length === 0) {
     return (
-      <Card className="overflow-hidden">
+      <Frame className="overflow-hidden">
         <EmptyState
           icon={<Bell />}
           title={nt.emptyTitle}
           description={nt.emptyDescription}
         />
-      </Card>
+      </Frame>
     );
   }
 
   return (
-    <Card className="overflow-hidden">
+    <Frame className="overflow-hidden">
       {/* Inbox header: unread count + mark-all — only when there are unread items */}
       {unreadCount > 0 && (
-        <div className="flex items-center justify-between border-b border-hairline bg-brand-50/50 px-4 py-2.5">
+        <div className="flex items-center justify-between border-b border-hairline bg-brand-500/[0.06] px-5 py-2.5">
           <p className="text-xs text-slate-600">
             <span className="font-semibold tabular-nums text-brand-700">{unreadCount}</span>
             {' '}{nt.unread}
@@ -234,9 +237,9 @@ export function NotificationList({ items, basePath, locale = 'ar' }: Props) {
           const { Icon, chip } = categoryVisual(n.templateCode, related);
           const unread = !n.read;
           const rowClass = cn(
-            'flex w-full items-start gap-3 px-4 py-3 text-start transition-colors',
-            (unread || related) && 'cursor-pointer hover:bg-slate-50',
-            unread && 'bg-brand-50/30',
+            'flex w-full items-start gap-3 px-5 py-4 text-start transition-colors',
+            (unread || related) && 'cursor-pointer hover:bg-surface-muted/50',
+            unread && 'bg-brand-500/[0.05]',
           );
           return (
             <li key={n.id}>
@@ -249,7 +252,7 @@ export function NotificationList({ items, basePath, locale = 'ar' }: Props) {
                 markReadLabel={nt.markRead}
               >
                 {/* Category icon chip */}
-                <span className={cn('mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', chip)}>
+                <span className={cn('mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full', chip)}>
                   <Icon className="h-4 w-4" />
                 </span>
 
@@ -277,7 +280,7 @@ export function NotificationList({ items, basePath, locale = 'ar' }: Props) {
 
                   {/* Row 3: entity action pill */}
                   {related && (
-                    <span className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
+                    <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-brand-500/30 px-2.5 py-0.5 text-xs font-semibold text-brand-700">
                       <related.icon className="h-3 w-3 shrink-0" />
                       {nt.openFn(related.label)}
                     </span>
@@ -293,6 +296,10 @@ export function NotificationList({ items, basePath, locale = 'ar' }: Props) {
           );
         })}
       </ul>
-    </Card>
+    </Frame>
   );
+}
+
+function BareFrame({ className, children }: { className?: string; children: React.ReactNode }) {
+  return <div className={cn('border-t border-hairline', className)}>{children}</div>;
 }

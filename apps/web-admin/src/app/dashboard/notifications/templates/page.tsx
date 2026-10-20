@@ -1,16 +1,18 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { revalidatePath } from 'next/cache';
-import { Plus, FileEdit, ArrowRight, Bell } from 'lucide-react';
+import { notFound } from 'next/navigation';
+import { Plus, FileEdit, ArrowRight, Bell, Mail, Search, Smartphone } from 'lucide-react';
+import { requireAdmin } from '@/lib/session';
+import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
 import type { Translatable } from '@/lib/types';
 import { tx, formatDate } from '@/lib/format';
-import { Badge, type BadgeTone } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
-import { PremiumPageHero, PremiumSectionCard } from '@/components/premium';
+import { PremiumPageHero, PremiumPanel } from '@/components/premium';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 
@@ -43,26 +45,72 @@ async function upsertTemplateAction(formData: FormData) {
   revalidatePath('/dashboard/notifications/templates');
 }
 
-// ── Channel tone ──────────────────────────────────────────────────────────────
+// ── Channel look ──────────────────────────────────────────────────────────────
 
-const CHANNEL_TONE: Record<Template['channel'], BadgeTone> = {
-  PUSH:   'info',
-  EMAIL:  'brand',
-  IN_APP: 'success',
+const CHANNEL_ICON: Record<Template['channel'], ReactNode> = {
+  PUSH:   <Smartphone className="h-4 w-4" />,
+  EMAIL:  <Mail className="h-4 w-4" />,
+  IN_APP: <Bell className="h-4 w-4" />,
 };
+const CHANNEL_CLS: Record<Template['channel'], string> = {
+  PUSH:   'bg-sky-500/12 text-sky-600',
+  EMAIL:  'bg-brand-500/12 text-brand-700',
+  IN_APP: 'bg-emerald-500/12 text-emerald-600',
+};
+
+/** A template text with its {{placeholders}} set apart as small chips. */
+function WithPlaceholders({ text }: { text: string }) {
+  const parts = text.split(/(\{\{\s*\w+\s*\}\})/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        /^\{\{\s*\w+\s*\}\}$/.test(part) ? (
+          <span key={i} className="mx-0.5 rounded bg-brand-500/12 px-1 font-mono text-[10.5px] text-brand-700" dir="ltr">
+            {part.replace(/[{}\s]/g, '')}
+          </span>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+interface Search { q?: string; channel?: string; edit?: string; new?: string }
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
-export default async function NotificationTemplatesPage() {
-  const [r, locale] = await Promise.all([
+export default async function NotificationTemplatesPage({ searchParams }: { searchParams: Promise<Search> }) {
+  // The templates are the admin's (the API refuses other roles).
+  const session = await requireAdmin();
+  if (session.role !== 'ADMIN') notFound();
+
+  const [r, locale, sp] = await Promise.all([
     safe(api.get<Template[]>('/notification-templates')),
     getLocale(),
+    searchParams,
   ]);
-  const templates = r.data ?? [];
+  // The manual send's own passthrough template is filled from the form, not edited here.
+  const templates = (r.data ?? []).filter((t) => t.code !== 'admin_broadcast');
   const m = uiT(locale).notifTemplatesPage;
 
+  const q = sp.q?.trim().toLowerCase() ?? '';
+  const shown = templates.filter(
+    (t) =>
+      (!sp.channel || t.channel === sp.channel) &&
+      (!q || [t.code, tx(t.subject), tx(t.body), t.subject.ar, t.subject.en].some((v) => v?.toLowerCase().includes(q))),
+  );
+  const editing = sp.edit ? templates.find((t) => t.code === sp.edit) ?? null : null;
+  const formOpen = !!editing || sp.new === '1';
+  const link = (params: Record<string, string | undefined>) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries({ q: sp.q, channel: sp.channel, ...params })) if (v) p.set(k, v);
+    const s = p.toString();
+    return `/dashboard/notifications/templates${s ? `?${s}` : ''}`;
+  };
+
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-5 pb-2 lg:gap-6">
       <PremiumPageHero
         title={m.title}
         description={m.description}
@@ -72,163 +120,126 @@ export default async function NotificationTemplatesPage() {
           { label: m.breadcrumbTemplates },
         ]}
         actions={
-          <Link href="/dashboard/notifications">
-            <Button variant="outline" size="sm" leftIcon={<ArrowRight className="h-3.5 w-3.5" />}>
-              {m.backButton}
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href={`${link({ new: '1' })}#editor` as never}>
+              <Button variant="primary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />}>{m.newBtn}</Button>
+            </Link>
+            <Link href="/dashboard/notifications">
+              <Button variant="outline" size="sm" leftIcon={<ArrowRight className="h-3.5 w-3.5" />}>{m.backButton}</Button>
+            </Link>
+          </div>
         }
       />
 
       {r.error && (
-        <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+        <div className="rounded-2xl border border-danger-100 bg-danger-50 p-4 text-sm text-danger-700">
           {m.loadError} {r.error}
         </div>
       )}
 
-      <PremiumSectionCard
-        icon={<Bell />}
-        title={m.sectionTitle}
-        trailing={<CountChip count={templates.length} />}
-        padded={false}
-      >
-        {/* ── Template list ────────────────────────────────────────────────── */}
-        {templates.length === 0 ? (
-          <CompactEmpty
-            icon={<Bell className="h-8 w-8" />}
-            title={m.emptyTitle}
-            description={m.emptyDesc}
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px] text-sm">
-              <thead>
-                <tr className="border-b border-hairline bg-surface-muted/40">
-                  <th className="px-5 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">{m.colCode}</th>
-                  <th className="px-4 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">{m.colChannel}</th>
-                  <th className="px-4 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">{m.colSubject}</th>
-                  <th className="px-4 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">{m.colEmail}</th>
-                  <th className="px-4 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">{m.colStatus}</th>
-                  <th className="px-4 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">{m.colUpdated}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                {templates.map((t) => (
-                  <tr key={t.id} className="hover:bg-surface-muted/20 transition-colors">
-                    <td className="px-5 py-3">
-                      <span className="font-mono text-xs text-brand-700 bg-brand-50 px-2 py-0.5 rounded" dir="ltr">
-                        {t.code}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge tone={CHANNEL_TONE[t.channel]} size="sm">
-                        {m.channelLabel[t.channel]}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 max-w-[220px]">
-                      <p className="text-sm font-medium text-slate-800 truncate">{tx(t.subject)}</p>
-                      <p className="text-xs text-slate-400 truncate mt-0.5">{tx(t.body)}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge tone={t.emailEnabled ? 'brand' : 'gray'} size="sm">
-                        {t.emailEnabled ? m.emailOn : m.emailOff}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge tone={t.active ? 'success' : 'gray'} size="sm" dot>
-                        {t.active ? m.statusActive : m.statusInactive}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-400" dir="ltr">
-                      {formatDate(t.updatedAt, locale)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* ── Create / Edit form (collapsible) ─────────────────────────────── */}
-        <details className="group border-t border-hairline">
-          <summary className="list-none [&::-webkit-details-marker]:hidden flex items-center justify-between gap-4 px-5 py-3.5 cursor-pointer select-none hover:bg-surface-muted/30 transition-colors">
-            <div className="flex items-center gap-3">
-              <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700">
-                <FileEdit className="h-3.5 w-3.5" />
-              </span>
-              <span className="text-sm font-semibold text-slate-800">{m.formTitle}</span>
+      {/* ── Editor (opened by "edit" or "new") ──────────────────────────── */}
+      {formOpen && (
+        <PremiumPanel
+          title={editing ? `${m.editing}: ${tx(editing.subject)}` : m.newBtn}
+          sub={m.placeholdersHint}
+          link={{ href: link({}), label: m.backButton }}
+        >
+          <form id="editor" action={upsertTemplateAction} className="scroll-mt-24 space-y-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {editing ? (
+                <input type="hidden" name="code" value={editing.code} />
+              ) : (
+                <Input name="code" required dir="ltr" placeholder={m.codeLabel} inputSize="sm" className="font-mono" />
+              )}
+              <Select name="channel" defaultValue={editing?.channel ?? 'PUSH'} inputSize="sm">
+                <option value="PUSH">{m.channelPush}</option>
+                <option value="EMAIL">{m.channelEmail}</option>
+                <option value="IN_APP">{m.channelInApp}</option>
+              </Select>
             </div>
-            <Plus className="h-4 w-4 text-slate-400 shrink-0 transition-transform duration-200 group-open:rotate-45" />
-          </summary>
-
-          <div className="px-5 py-4 bg-surface-muted/20 border-t border-hairline">
-            <form action={upsertTemplateAction} className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Input
-                  name="code"
-                  required
-                  dir="ltr"
-                  placeholder="code (e.g. visit_approved)"
-                  inputSize="sm"
-                  className="font-mono"
-                />
-                <Select name="channel" defaultValue="PUSH" inputSize="sm">
-                  <option value="PUSH">{m.channelPush}</option>
-                  <option value="EMAIL">{m.channelEmail}</option>
-                  <option value="IN_APP">{m.channelInApp}</option>
-                </Select>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Input name="ar_subject" required dir="rtl" placeholder={m.arSubjectPlaceholder} inputSize="sm" />
-                <Input name="en_subject" required dir="ltr" placeholder="Subject (English)" inputSize="sm" />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Textarea name="ar_body" required dir="rtl" rows={3} placeholder={m.arBodyPlaceholder} className="text-sm" />
-                <Textarea name="en_body" required dir="ltr" rows={3} placeholder="Notification body (English)" className="text-sm" />
-              </div>
-              <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-slate-700">
-                <input type="checkbox" name="emailEnabled" value="true" className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <Input name="ar_subject" required dir="rtl" placeholder={m.arSubjectPlaceholder} defaultValue={editing?.subject.ar} inputSize="sm" />
+              <Input name="en_subject" required dir="ltr" placeholder="Subject (English)" defaultValue={editing?.subject.en} inputSize="sm" />
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <Textarea name="ar_body" required dir="rtl" rows={4} placeholder={m.arBodyPlaceholder} defaultValue={editing?.body.ar} className="text-sm" />
+              <Textarea name="en_body" required dir="ltr" rows={4} placeholder="Notification body (English)" defaultValue={editing?.body.en} className="text-sm" />
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <label className="flex cursor-pointer select-none items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" name="emailEnabled" value="true" defaultChecked={editing?.emailEnabled} className="h-4 w-4 rounded border-hairline text-brand-600" />
                 {m.emailEnabledLabel}
               </label>
-              <div className="flex justify-end">
-                <Button type="submit" size="sm">
-                  {m.saveButton}
-                </Button>
-              </div>
-            </form>
+              <Button type="submit" size="sm">{m.saveButton}</Button>
+            </div>
+          </form>
+        </PremiumPanel>
+      )}
+
+      {/* ── The templates ───────────────────────────────────────────────── */}
+      <PremiumPanel title={m.sectionTitle} sub={m.count(shown.length, templates.length)} padding="none">
+        <div className="flex flex-wrap items-center gap-2 border-t border-hairline px-5 py-3">
+          <form method="get" action="/dashboard/notifications/templates" className="min-w-[220px] flex-1">
+            {sp.channel && <input type="hidden" name="channel" value={sp.channel} />}
+            <Input name="q" inputSize="sm" defaultValue={sp.q ?? ''} placeholder={m.searchPlaceholder} leftAddon={<Search className="h-3.5 w-3.5" />} />
+          </form>
+          {([undefined, 'IN_APP', 'PUSH', 'EMAIL'] as const).map((ch) => (
+            <Link
+              key={ch ?? 'all'}
+              href={link({ channel: ch }) as never}
+              className={cn(
+                'rounded-full border px-3 py-1.5 text-[12px] font-semibold transition-colors',
+                (sp.channel ?? undefined) === ch
+                  ? 'border-brand-500/50 bg-brand-500/12 text-brand-700'
+                  : 'border-hairline text-slate-600 hover:border-brand-500/30',
+              )}
+            >
+              {ch ? m.channelLabel[ch] : m.allChannels}
+            </Link>
+          ))}
+        </div>
+
+        {shown.length === 0 ? (
+          <div className="border-t border-hairline px-6 py-10 text-center text-[13px] text-slate-500">
+            {templates.length === 0 ? m.emptyTitle : m.noMatch}
           </div>
-        </details>
-      </PremiumSectionCard>
-    </div>
-  );
-}
-
-// ── Local helpers ─────────────────────────────────────────────────────────────
-
-function CountChip({ count }: { count: number }) {
-  return (
-    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-100 px-1.5 text-2xs font-semibold text-slate-600 tabular-nums">
-      {count}
-    </span>
-  );
-}
-
-function CompactEmpty({
-  icon,
-  title,
-  description,
-}: {
-  icon: ReactNode;
-  title: string;
-  description?: string;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-2 py-10 text-center">
-      <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-300">
-        {icon}
-      </span>
-      <p className="text-sm font-medium text-slate-600">{title}</p>
-      {description && <p className="text-xs text-slate-400 max-w-xs">{description}</p>}
+        ) : (
+          <ul className="divide-y divide-hairline border-t border-hairline" data-testid="templates-list">
+            {shown.map((t) => (
+              <li key={t.id} title={t.code} className="flex items-start gap-4 px-5 py-4 transition-colors hover:bg-surface-muted/40">
+                <span className={cn('mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full', CHANNEL_CLS[t.channel])}>
+                  {CHANNEL_ICON[t.channel]}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-[14px] font-semibold text-slate-900">{tx(t.subject)}</p>
+                    <span className={cn('rounded-full px-2 py-0.5 text-[10.5px] font-semibold', CHANNEL_CLS[t.channel])}>{m.channelLabel[t.channel]}</span>
+                    {t.emailEnabled && (
+                      <span className="rounded-full bg-brand-500/12 px-2 py-0.5 text-[10.5px] font-semibold text-brand-700">{m.colEmail}</span>
+                    )}
+                    {!t.active && (
+                      <span className="rounded-full bg-slate-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-slate-500">{m.statusInactive}</span>
+                    )}
+                  </div>
+                  <p className="mt-1 line-clamp-2 text-[12.5px] leading-relaxed text-slate-500">
+                    <WithPlaceholders text={tx(t.body)} />
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  <Link
+                    href={`${link({ edit: t.code })}#editor` as never}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-hairline px-3 py-1 text-[12px] font-semibold text-slate-700 transition-colors hover:border-brand-500/40 hover:text-brand-700"
+                  >
+                    <FileEdit className="h-3.5 w-3.5" />
+                    {m.editBtn}
+                  </Link>
+                  <span className="text-[11px] text-slate-400 tabular-nums">{formatDate(t.updatedAt, locale)}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </PremiumPanel>
     </div>
   );
 }
