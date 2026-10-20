@@ -379,8 +379,8 @@ export default async function FinancialReportsPage({
       )}
 
       {/* ─── Contract value + what is coming ─────────────────────────── */}
-      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-5 lg:gap-6">
-        <PremiumPanel className="lg:col-span-3" title={m.distribution.title} sub={m.distribution.description}>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-5 lg:gap-6">
+        <PremiumPanel className="lg:col-span-3" title={m.distribution.title} sub={m.distribution.description} bodyClassName="flex flex-col justify-center">
           <div className="flex flex-col gap-5" data-testid="fin-distribution">
             <div className="flex h-3 overflow-hidden rounded-full bg-surface-muted">
               <span className="h-full bg-emerald-500" style={{ width: `${share(towardsPrice)}%` }} />
@@ -409,7 +409,7 @@ export default async function FinancialReportsPage({
           </div>
         </PremiumPanel>
 
-        <PremiumPanel className="lg:col-span-2" title={m.forecast.title} sub={m.forecast.description}>
+        <PremiumPanel className="lg:col-span-2" title={m.forecast.title} sub={m.forecast.description} bodyClassName="flex flex-col justify-center">
           {forecast && forecastTotal > 0 ? (
             <ol className="flex flex-col gap-4" data-testid="fin-forecast">
               {[
@@ -541,7 +541,7 @@ export default async function FinancialReportsPage({
       )}
 
       {/* ─── Upcoming + by payment type ────────────────────────────────── */}
-      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2 lg:gap-6">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
         <PremiumPanel title={m.upcoming.title} sub={m.upcoming.sub}>
           <div className="flex flex-col gap-5" data-testid="fin-upcoming">
             {[
@@ -578,7 +578,7 @@ export default async function FinancialReportsPage({
           </div>
         </PremiumPanel>
 
-        <PremiumPanel title={m.collectionByType.title} sub={m.collectionByType.description}>
+        <PremiumPanel title={m.collectionByType.title} sub={m.collectionByType.description} bodyClassName="flex flex-col justify-center">
           {byType.length === 0 ? (
             <PremiumEmptyNote>{m.collectionByType.empty}</PremiumEmptyNote>
           ) : (
@@ -617,17 +617,17 @@ export default async function FinancialReportsPage({
 
       {/* ─── Bookings + liabilities ────────────────────────────────────── */}
       {(dash?.booking || dash?.liabilities) && (
-        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2 lg:gap-6">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
           {dash?.booking && (
-            <PremiumPanel title={m.booking.title} sub={m.booking.description} padding="none">
-              <ul className="divide-y divide-hairline border-t border-hairline">
+            <PremiumPanel title={m.booking.title} sub={m.booking.description} padding="none" bodyClassName="flex flex-col">
+              <ul className="flex flex-1 flex-col divide-y divide-hairline border-t border-hairline">
                 {[
                   { label: m.booking.pendingReservations,  n: dash.booking.pendingReservationsCount,  value: dash.booking.pendingReservationsBookingAmount,  cls: 'text-amber-600' },
                   { label: m.booking.approvedReservations, n: dash.booking.approvedReservationsCount, value: dash.booking.approvedReservationsBookingAmount, cls: 'text-slate-900' },
                   { label: m.booking.bookingCollected,     value: dash.booking.bookingCollectedVerified,   cls: 'text-emerald-600' },
                   { label: m.booking.bookingUncollected,   value: dash.booking.bookingUncollectedEstimate, cls: 'text-slate-700' },
                 ].map((row) => (
-                  <li key={row.label} className="flex items-center gap-3 px-6 py-3.5">
+                  <li key={row.label} className="flex flex-1 items-center gap-3 px-6 py-3.5">
                     <span className="min-w-0 flex-1 text-[13px] text-slate-600">{row.label}</span>
                     {'n' in row && row.n !== undefined && (
                       <span className="shrink-0 rounded-full bg-surface-muted px-2.5 py-0.5 text-[11px] font-semibold text-slate-600 tabular-nums">

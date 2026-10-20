@@ -14,13 +14,15 @@ export interface PremiumPanelProps {
   className?: string;
   /** Padding of the body; "none" for tables / hairline grids that run edge to edge. */
   padding?: 'normal' | 'none';
+  /** Extra classes for the body (e.g. to centre short content in a stretched card). */
+  bodyClassName?: string;
 }
 
 /**
  * The content card of the U5 pages: cream surface, hairline border, a Naskh
  * title with a muted line, and an optional gold link — no coloured icon chip.
  */
-export function PremiumPanel({ title, sub, link, trailing, children, className, padding = 'normal' }: PremiumPanelProps) {
+export function PremiumPanel({ title, sub, link, trailing, children, className, padding = 'normal', bodyClassName }: PremiumPanelProps) {
   return (
     <section className={cn('flex flex-col overflow-hidden rounded-[22px] border border-hairline bg-surface', className)}>
       <header className="flex items-start justify-between gap-4 px-6 pb-4 pt-5">
@@ -41,7 +43,7 @@ export function PremiumPanel({ title, sub, link, trailing, children, className, 
           )}
         </div>
       </header>
-      <div className={cn('flex-1', padding === 'normal' && 'px-6 pb-6')}>{children}</div>
+      <div className={cn('flex-1', padding === 'normal' && 'px-6 pb-6', bodyClassName)}>{children}</div>
     </section>
   );
 }
