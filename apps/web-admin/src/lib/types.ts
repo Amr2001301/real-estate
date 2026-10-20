@@ -337,6 +337,10 @@ export interface ContractAmendment {
 export interface Contract {
   id: string;
   contractNumber: string | null;
+  /** F10 — the handover date the contract promises; the one expected now; days late. */
+  deliveryDate?: string | null;
+  expectedDeliveryDate?: string | null;
+  deliveryDelayDays?: number;
   status?: 'UNSIGNED' | 'ACTIVE' | 'CANCELLED';
   /** FG-10 — the latest run of the sign follow-ups (warranties, commissions) had a failure. */
   signFollowupFailed?: boolean;

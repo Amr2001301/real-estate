@@ -55,6 +55,7 @@ export default async function ContractsPage({
     q?: string;
     signed?: string;
     hasReservation?: string;
+    deliveryDelayed?: string;
     page?: string;
   }>;
 }) {
@@ -68,6 +69,7 @@ export default async function ContractsPage({
   if (sp.q) qs.set('q', sp.q);
   if (sp.signed) qs.set('signed', sp.signed);
   if (sp.hasReservation) qs.set('hasReservation', sp.hasReservation);
+  if (sp.deliveryDelayed === 'true') qs.set('deliveryDelayed', 'true');
 
   // One wave. getReportsCurrency() used to run before the contract fetches and
   // getSession() after them, so a render that needs no ordering at all cost
@@ -174,9 +176,16 @@ export default async function ContractsPage({
           </Select>
         </PremiumFilterField>
 
+        <PremiumFilterField label={m.filter.deliveryLabel} htmlFor="con-delivery">
+          <Select id="con-delivery" name="deliveryDelayed" inputSize="sm" defaultValue={sp.deliveryDelayed ?? ''} className="w-40 shrink-0">
+            <option value="">{m.filter.deliveryAll}</option>
+            <option value="true">{m.filter.deliveryDelayed}</option>
+          </Select>
+        </PremiumFilterField>
+
         <div className="flex items-center gap-2 ms-auto shrink-0">
           <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
-          {(sp.q || sp.signed || sp.hasReservation) && (
+          {(sp.q || sp.signed || sp.hasReservation || sp.deliveryDelayed) && (
             <Link href="/dashboard/contracts">
               <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
             </Link>

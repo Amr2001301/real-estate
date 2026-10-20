@@ -36,6 +36,7 @@ import { PaidBeforeSystem } from './paid-before-system';
 import { AssignContractNumber } from './assign-number';
 import { SignFollowupsAlert } from './sign-followups-alert';
 import { SignContract } from './sign-contract';
+import { ContractDeliveryDate } from './delivery-date';
 import { LateFeeClause } from './late-fee-clause';
 import { CancelContract } from './cancel-contract';
 import { CancellationPanel } from './cancellation-panel';
@@ -226,10 +227,25 @@ export default async function ContractDetailPage({
                     <>
                       <span className="text-[13px] text-slate-400">{m.notSigned}</span>
                       {isAdmin && !isCancelled && (
-                        <SignContract contractId={contract.id} today={todayIn(timeZone)} locale={locale} />
+                        <SignContract
+                          contractId={contract.id}
+                          today={todayIn(timeZone)}
+                          deliveryDefault={contract.expectedDeliveryDate}
+                          locale={locale}
+                        />
                       )}
                     </>
                   )}
+                </Field>
+                <Field label={m.fieldDelivery}>
+                  <ContractDeliveryDate
+                    contractId={contract.id}
+                    deliveryDate={contract.deliveryDate ?? null}
+                    expected={contract.expectedDeliveryDate ?? null}
+                    delayDays={contract.deliveryDelayDays ?? 0}
+                    editable={isAdmin && !isCancelled && !!contract.signedAt}
+                    locale={locale}
+                  />
                 </Field>
                 <Field label={m.fieldCreatedAt}>
                   <span className="text-[13px] font-semibold text-slate-800">{formatDateTime(contract.createdAt, locale)}</span>

@@ -854,6 +854,19 @@ export const NOTIFICATION_CATALOG: NotificationTemplateDef[] = [
     ar_body: 'تم إلغاء العقد {{contractNumber}} للوحدة {{unitCode}} ({{customerName}}).',
     en_body: 'Contract {{contractNumber}} for unit {{unitCode}} ({{customerName}}) was cancelled.',
   },
+  // F10 — the handover date now expected is later than the one the signed
+  // contract promised.
+  {
+    code: 'delivery_delayed_customer',
+    channel: NotificationChannel.PUSH,
+    emailEnabled: true,
+    ar_subject: 'تغيّر موعد تسليم وحدتك',
+    en_subject: 'Your handover date has moved',
+    ar_body:
+      'موعد تسليم الوحدة {{unitCode}} المتوقع أصبح {{expectedDate}}، بعد الموعد المحدد في العقد ({{contractDate}}). للاستفسار تواصل معنا.',
+    en_body:
+      'The expected handover date for unit {{unitCode}} is now {{expectedDate}}, after the date in your contract ({{contractDate}}). Contact us with any questions.',
+  },
   {
     code: 'contract_number_assigned',
     channel: NotificationChannel.IN_APP,

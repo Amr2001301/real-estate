@@ -15,6 +15,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { dateOnlyString, toDateOnly } from '../../common/time/date-only';
 import { ApiTags } from '@nestjs/swagger';
 import {
   IsBoolean,
@@ -171,6 +172,8 @@ class UpdateContractDto {
   @IsOptional() @IsString() @IsNotEmpty() @MaxLength(50) contractNumber?: string;
   /** FG-04 — with no contractNumber: give a numberless contract the next one. */
   @IsOptional() @IsBoolean() autoNumber?: boolean;
+  /** The handover date the contract promises (F10); null clears it. */
+  @IsOptional() @IsDateString() deliveryDate?: string | null;
 }
 
 type SignFollowupStep = 'warranties' | 'broker_commission' | 'sales_commission';
@@ -183,6 +186,8 @@ const SIGN_FOLLOWUP_OK = 'contract.sign_followup_ok';
 
 class SignContractDto {
   @IsDateString() signedAt!: string;
+  /** The handover date the contract states; none → the unit's date (its own, or its phase's). */
+  @IsOptional() @IsDateString() deliveryDate?: string;
 }
 
 /// P11 — admin attaches a presigned-uploaded file as the contract PDF.
@@ -619,9 +624,13 @@ export class ContractsService {
     // attribution is derived via the linked reservation's salesId. An empty
     // team yields no rows; direct (reservation-less) contracts are excluded.
     salesIds?: string[];
+    /** F10 — live contracts whose expected handover is after the promised one. */
+    deliveryDelayed?: boolean;
   }) {
+    const delayedIds = opts.deliveryDelayed ? await this.delayedContractIds() : null;
     const where: Prisma.ContractWhereInput = {
       deletedAt: null,
+      ...(delayedIds ? { id: { in: delayedIds } } : {}),
       ...(opts.salesIds ? { reservation: { salesId: { in: opts.salesIds } } } : {}),
       ...(opts.customerId ? { customerId: opts.customerId } : {}),
       ...(opts.brokerId ? { brokerId: opts.brokerId } : {}),
@@ -686,6 +695,26 @@ export class ContractsService {
       this.prisma.contract.count({ where }),
     ]);
     return paginate(data, total, opts);
+  }
+
+  /**
+   * F10 — this company's live contracts whose handover date expected now
+   * (the unit's own, or its phase's) is after the one the contract promises.
+   * Two columns compared: not expressible in a Prisma where.
+   */
+  private async delayedContractIds(): Promise<string[]> {
+    const rows = await this.prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT c.id::text AS id
+      FROM "Contract" c
+      JOIN "Unit" u ON u.id = c."unitId"
+      JOIN "Building" b ON b.id = u."buildingId"
+      JOIN "Phase" p ON p.id = b."phaseId"
+      WHERE c."companyId" = ${getRequiredCompanyId()}::uuid
+        AND c."deletedAt" IS NULL
+        AND c.status <> 'CANCELLED'
+        AND c."deliveryDate" IS NOT NULL
+        AND COALESCE(u."deliveryDate", p."deliveryDate") > c."deliveryDate"`;
+    return rows.map((r) => r.id);
   }
 
   /**
@@ -761,8 +790,20 @@ export class ContractsService {
       },
     });
     if (!contract) throw new NotFoundException('Contract not found');
+    // F10 — the handover date expected now (the unit's own, or its phase's)
+    // against the one the contract promises.
+    const expectedDeliveryDate = dateOnlyString(
+      contract.unit?.deliveryDate ?? contract.unit?.building?.phase?.deliveryDate ?? null,
+    );
+    const promised = dateOnlyString(contract.deliveryDate);
+    const deliveryDelayDays =
+      promised && expectedDeliveryDate && expectedDeliveryDate > promised
+        ? Math.round((Date.parse(expectedDeliveryDate) - Date.parse(promised)) / 86_400_000)
+        : 0;
     return {
       ...contract,
+      expectedDeliveryDate,
+      deliveryDelayDays,
       // The instalment markup still in the total (the swap form adds it to
       // the new unit's price — entered without it, the contract lost it).
       markupLeft: financingMarkup(contract.reservation ?? undefined, contract.markupWaived).toString(),
@@ -924,7 +965,10 @@ export class ContractsService {
 
     const updated = await this.prisma.contract.update({
       where: { id },
-      data: { pdfUrl: dto.pdfUrl ?? undefined },
+      data: {
+        pdfUrl: dto.pdfUrl ?? undefined,
+        ...(dto.deliveryDate !== undefined ? { deliveryDate: toDateOnly(dto.deliveryDate) } : {}),
+      },
     });
     // Mirror the attached PDF as a first-class document (best-effort; pdfUrl is
     // already persisted on the contract for back-compat).
@@ -978,6 +1022,8 @@ export class ContractsService {
         brokerAgentId: true,
         reservationId: true,
         preSystem: true,
+        deliveryDate: true,
+        unit: { select: { deliveryDate: true, building: { select: { phase: { select: { deliveryDate: true } } } } } },
         reservation: {
           select: {
             reservationNumber: true,
@@ -1004,7 +1050,18 @@ export class ContractsService {
     const signedAtDate = new Date(dto.signedAt);
     const updated = await this.prisma.contract.update({
       where: { id },
-      data: { signedAt: signedAtDate, status: ContractStatus.ACTIVE },
+      data: {
+        signedAt: signedAtDate,
+        status: ContractStatus.ACTIVE,
+        // F10 — what the contract promises stays, whatever the phase's date
+        // does later: the date it states, else the unit's now.
+        deliveryDate:
+          toDateOnly(dto.deliveryDate) ??
+          before.deliveryDate ??
+          before.unit?.deliveryDate ??
+          before.unit?.building?.phase?.deliveryDate ??
+          null,
+      },
     });
 
     // Ensure the existing contract PDF (if any) is linked as a document. No PDF
@@ -1308,6 +1365,7 @@ class ContractsController {
     @Query('hasReservation') hasReservation?: string,
     @Query('brokerId') brokerId?: string,
     @Query('brokerAgentId') brokerAgentId?: string,
+    @Query('deliveryDelayed') deliveryDelayed?: string,
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
   ) {
@@ -1328,6 +1386,7 @@ class ContractsController {
       brokerId,
       brokerAgentId,
       salesIds,
+      deliveryDelayed: deliveryDelayed === 'true',
     });
   }
 

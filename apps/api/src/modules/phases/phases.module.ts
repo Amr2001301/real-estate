@@ -11,6 +11,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { UserRole } from '@prisma/client';
 import { assertInventoryDeletable } from '../projects/inventory-blockers';
+import { DeliveryDelaysService } from '../units/delivery-delays.service';
 
 class TranslatableDto {
   @IsString() ar!: string;
@@ -60,7 +61,10 @@ class UpdatePhaseDto {
 
 @Injectable()
 class PhasesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly deliveryDelays: DeliveryDelaysService,
+  ) {}
 
   list(projectId?: string) {
     return this.prisma.phase.findMany({
@@ -95,12 +99,18 @@ class PhasesService {
     }).catch(codeTaken('لمرحلة أخرى في هذا المشروع'));
   }
 
-  update(id: string, dto: UpdatePhaseDto) {
+  async update(id: string, dto: UpdatePhaseDto) {
     const data: Prisma.PhaseUpdateInput = {};
     if (dto.name) data.name = dto.name as unknown as Prisma.InputJsonValue;
     if (dto.order !== undefined) data.order = dto.order;
     if (dto.deliveryDate !== undefined) data.deliveryDate = toDateOnly(dto.deliveryDate);
-    return this.prisma.phase.update({ where: { id }, data });
+    // The phase's units that follow its date: a later one than a signed
+    // contract promised is told to its customer (F10).
+    const units: Prisma.UnitWhereInput = { building: { phaseId: id } };
+    const promised = dto.deliveryDate !== undefined ? await this.deliveryDelays.snapshot(units) : undefined;
+    const saved = await this.prisma.phase.update({ where: { id }, data });
+    if (promised) await this.deliveryDelays.notifySlips(units, promised);
+    return saved;
   }
 
   async remove(id: string) {
@@ -153,6 +163,6 @@ class PhasesController {
 
 @Module({
   controllers: [PhasesController],
-  providers: [PhasesService],
+  providers: [PhasesService, DeliveryDelaysService],
 })
 export class PhasesModule {}

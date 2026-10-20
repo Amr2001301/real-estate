@@ -24,6 +24,7 @@ import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { serializePublicUnit } from './public-unit.serializer';
 import { UnitTypesService } from './unit-types.service';
 import { UnitModelsService } from './unit-models.service';
+import { DeliveryDelaysService } from './delivery-delays.service';
 import { arText, collectPages, isoDate, listCsv, listXlsx, type ListColumn } from '../../common/utils/list-export';
 import { ReportBrandService } from '../company-branding/report-brand.service';
 import { resetUnitWarranties } from '../contracts/unit-warranties';
@@ -108,6 +109,7 @@ export class UnitsService {
     @Optional() private readonly reportBrand?: ReportBrandService,
     @Optional() unitTypes?: UnitTypesService,
     @Optional() unitModels?: UnitModelsService,
+    @Optional() private readonly deliveryDelays?: DeliveryDelaysService,
   ) {
     this.unitTypes = unitTypes ?? new UnitTypesService(prisma);
     this.unitModels = unitModels ?? new UnitModelsService(prisma, this.unitTypes);
@@ -472,7 +474,12 @@ export class UnitsService {
         : { disconnect: true };
     }
     Object.assign(data, specData(dto));
-    return this.prisma.unit.update({ where: { id }, data });
+    // A later handover date than a signed contract promised is told to its
+    // customer (F10).
+    const promised = dto.deliveryDate !== undefined ? await this.deliveryDelays?.snapshot({ id }) : undefined;
+    const saved = await this.prisma.unit.update({ where: { id }, data });
+    if (promised) await this.deliveryDelays?.notifySlips({ id }, promised);
+    return saved;
   }
 
   /**
