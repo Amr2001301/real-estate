@@ -3,6 +3,7 @@ import type { ReservationActivity, ReservationActivityType } from '@/lib/types';
 import { formatDateTime } from '@/lib/format';
 import type { Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
+import { PremiumEmptyNote } from '@/components/premium';
 
 const TYPE_COLORS: Record<ReservationActivityType, string> = {
   CREATED: 'bg-brand-500',
@@ -25,42 +26,38 @@ export function ReservationTimeline({ activities, locale = 'ar' }: Props) {
   const m = uiT(locale).pages.reservationDetailPage;
 
   if (activities.length === 0) {
-    return (
-      <div className="text-center py-8 text-sm text-slate-400">{m.timelineEmpty}</div>
-    );
+    return <PremiumEmptyNote>{m.timelineEmpty}</PremiumEmptyNote>;
   }
 
   return (
-    <div className="space-y-0">
+    <ol data-testid="reservation-timeline" className="max-h-[420px] overflow-y-auto">
       {activities.map((a, i) => {
         const isLast = i === activities.length - 1;
         const dotColor = TYPE_COLORS[a.type] ?? 'bg-slate-400';
         const label = m.timelineLabels[a.type] ?? a.type;
         return (
-          <div key={a.id} className="flex gap-3">
+          <li key={a.id} className="flex gap-3.5">
             <div className="flex flex-col items-center">
-              <div className={`h-2.5 w-2.5 rounded-full mt-1 shrink-0 ${dotColor}`} />
-              {!isLast && <div className="w-px flex-1 bg-slate-200 my-1" />}
+              <span className="mt-1 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-surface ring-1 ring-hairline">
+                <span className={`h-2 w-2 rounded-full ${dotColor}`} />
+              </span>
+              {!isLast && <span className="my-1 w-px flex-1 bg-hairline" />}
             </div>
-            <div className="pb-4 min-w-0">
-              <p className="text-sm font-medium text-slate-900">
-                {label}
+            <div className="min-w-0 pb-5">
+              <p className="text-[13.5px] font-semibold text-slate-900">{label}</p>
+              {a.note && <p className="mt-0.5 text-[12.5px] leading-relaxed text-slate-600">{a.note}</p>}
+              <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11.5px] text-slate-500">
+                <span className="font-semibold">
+                  {a.actor ? a.actor.fullName : a.actorId === null ? m.timelineSystemActor : ''}
+                </span>
+                {(a.actor || a.actorId === null) && <span className="text-slate-400">·</span>}
+                <span className="tabular-nums">{formatDateTime(a.createdAt, locale)}</span>
               </p>
-              {a.note && <p className="text-xs text-slate-600 mt-0.5">{a.note}</p>}
-              <div className="flex items-center gap-2 mt-1">
-                {a.actor && (
-                  <span className="text-xs text-slate-500">{a.actor.fullName}</span>
-                )}
-                {!a.actor && a.actorId === null && (
-                  <span className="text-xs text-slate-400">{m.timelineSystemActor}</span>
-                )}
-                <span className="text-xs text-slate-400">{formatDateTime(a.createdAt, locale)}</span>
-              </div>
             </div>
-          </div>
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 }
 

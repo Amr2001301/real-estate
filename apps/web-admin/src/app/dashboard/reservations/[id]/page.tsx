@@ -3,13 +3,20 @@ import {
   Phone,
   Mail,
   Building2,
-  User,
   ExternalLink,
   AlertCircle,
   Clock,
   Home,
   FileText,
   Banknote,
+  BadgeCheck,
+  CalendarClock,
+  ArrowUpLeft,
+  Check,
+  X,
+  Hourglass,
+  Circle,
+  FileSignature,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { staffOptions } from '@/lib/options';
@@ -36,16 +43,11 @@ import { PrintButton } from '@/components/print/PrintButton';
 import {
   PremiumPageHero,
   PremiumDetailLayout,
-  PremiumSectionCard,
-  PremiumCommandPanel,
+  PremiumPanel,
+  PremiumEmptyNote,
 } from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
-
-const CMD_LINK =
-  'group flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 hover:bg-canvas/40 transition-colors duration-150';
-const CMD_ICON =
-  'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[15px] [&_svg]:w-[15px]';
 
 export default async function ReservationDetailPage({
   params,
@@ -94,8 +96,21 @@ export default async function ReservationDetailPage({
     reservation.status === 'PENDING' &&
     new Date(reservation.expiresAt) < new Date();
 
+  const nf = (v: string | number | null | undefined, frac = 0) =>
+    Number(v ?? 0).toLocaleString(intlLocale(locale), {
+      minimumFractionDigits: frac,
+      maximumFractionDigits: frac,
+    });
+  const bookingAmount = Number(reservation.bookingAmount ?? 0);
+  const daysLeft = Math.ceil((new Date(reservation.expiresAt).getTime() - Date.now()) / 86_400_000);
+  const isLive = reservation.status === 'PENDING' || reservation.status === 'APPROVED';
+  const steps = journeySteps(reservation, m);
+  const down = Number(reservation.snapshotDownPaymentAmount ?? 0);
+  const financed = Number(reservation.snapshotFinancedAmount ?? 0);
+  const downPct = down + financed > 0 ? Math.round((down / (down + financed)) * 100) : 0;
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PremiumPageHero
         title={`${m.titlePrefix}${reservation.reservationNumber ?? reservation.id.slice(0, 8)}`}
         description={`${m.clientPrefix} ${clientName}${reservation.unit ? ` · ${m.unitPrefix} ${reservation.unit.code}` : ''}`}
@@ -106,9 +121,9 @@ export default async function ReservationDetailPage({
         ]}
         meta={
           <div className="flex items-center gap-2 flex-wrap">
-            <ReservationStatusBadge status={reservation.status} />
+            <ReservationStatusBadge status={reservation.status} locale={locale} />
             {isExpired && (
-              <span className="inline-flex items-center gap-1 text-xs text-danger-600 bg-danger-50 px-2 py-0.5 rounded-full">
+              <span className="inline-flex items-center gap-1 rounded-full bg-danger-500/12 px-2.5 py-0.5 text-xs font-semibold text-danger-600">
                 <Clock className="h-3.5 w-3.5" />
                 {m.expiredBadge}
               </span>
@@ -139,165 +154,227 @@ export default async function ReservationDetailPage({
             />
           </div>
         }
-      />
+      >
+        {/* Key figures */}
+        <div
+          data-testid="reservation-kpis"
+          className="grid grid-cols-2 overflow-hidden rounded-[22px] border border-hairline bg-surface lg:grid-cols-4"
+        >
+          <Kpi label={m.kpiUnitPrice} icon={<Home />}>
+            {reservation.unit ? (
+              <Money value={nf(reservation.unit.price)} symbol={symbol} />
+            ) : (
+              '—'
+            )}
+          </Kpi>
+          <Kpi
+            label={m.kpiBookingAmount}
+            icon={<Banknote />}
+            foot={<ReservationBookingPaymentBadge status={reservation.bookingPaymentStatus} locale={locale} />}
+          >
+            <Money value={nf(bookingAmount)} symbol={symbol} />
+          </Kpi>
+          <Kpi
+            label={periodicInstallmentLabel(reservation.snapshotFrequency, locale) ?? m.fieldMonthly}
+            icon={<CalendarClock />}
+            foot={
+              reservation.selectedDurationMonths != null ? (
+                <span className="text-[12px] text-slate-500 tabular-nums">
+                  {reservation.selectedDurationMonths} {m.monthSuffix}
+                </span>
+              ) : undefined
+            }
+          >
+            {reservation.snapshotMonthlyInstallment != null ? (
+              <Money value={nf(reservation.snapshotMonthlyInstallment, 2)} symbol={symbol} gold />
+            ) : (
+              '—'
+            )}
+          </Kpi>
+          {reservation.contract ? (
+            <Kpi label={m.kpiContract} icon={<FileText />}>
+              <Link
+                href={`/dashboard/contracts/${reservation.contract.id}` as never}
+                className="inline-flex items-center gap-1.5 font-mono text-[17px] font-bold text-brand-700 hover:text-brand-600"
+              >
+                {reservation.contract.contractNumber ?? reservation.contract.id.slice(0, 8)}
+                <ArrowUpLeft className="h-4 w-4 ltr:rotate-90" />
+              </Link>
+            </Kpi>
+          ) : (
+            <Kpi
+              label={m.kpiExpiry}
+              icon={<Clock />}
+              foot={
+                isLive ? (
+                  <span
+                    className={cn(
+                      'rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold',
+                      isExpired
+                        ? 'bg-danger-500/12 text-danger-600'
+                        : daysLeft <= 3
+                          ? 'bg-amber-500/12 text-amber-600'
+                          : 'bg-emerald-500/12 text-emerald-600',
+                    )}
+                  >
+                    {isExpired ? m.expiredBadge : m.daysLeft(daysLeft)}
+                  </span>
+                ) : undefined
+              }
+            >
+              <span className={cn('num text-[24px] font-semibold', isExpired ? 'text-danger-600' : 'text-slate-900')}>
+                {formatDate(reservation.expiresAt, locale)}
+              </span>
+            </Kpi>
+          )}
+        </div>
+      </PremiumPageHero>
 
       <PremiumDetailLayout
         main={
           <>
-            {/* Reservation details */}
-            <PremiumSectionCard title={m.sectionReservationDetails}>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-                <Field label={m.fieldReservationNumber}>
-                  <span className="font-mono text-[15px] font-bold text-slate-900">
-                    {reservation.reservationNumber ?? reservation.id.slice(0, 8)}
-                  </span>
-                </Field>
-                <Field label={m.fieldStatus}>
-                  <ReservationStatusBadge status={reservation.status} />
-                </Field>
-                <Field label={m.fieldCreatedAt}>
-                  <span className="text-[13px] font-semibold text-slate-800">
-                    {formatDateTime(reservation.createdAt, locale)}
-                  </span>
-                </Field>
-                <Field label={m.fieldExpiresAt}>
-                  <span className={cn('text-[13px] font-semibold', isExpired ? 'text-danger-600' : 'text-slate-800')}>
-                    {formatDateTime(reservation.expiresAt, locale)}
-                  </span>
-                </Field>
-                {reservation.approvedAt && (
-                  <Field
-                    label={m.fieldApprovedAt}
-                    className={!reservation.rejectedAt ? 'col-span-2' : undefined}
-                  >
-                    <span className="text-[13px] font-semibold text-success-700">
-                      {formatDateTime(reservation.approvedAt, locale)}
+            {/* Journey */}
+            <PremiumPanel title={m.sectionJourney} sub={m.journeySub}>
+              <ol data-testid="reservation-journey" className="grid grid-cols-3">
+                {steps.map((st, i) => (
+                  <li key={st.key} className="relative flex flex-col items-center px-2 text-center">
+                    {i > 0 && (
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'absolute top-[22px] h-[2px] w-[calc(100%-56px)] end-[calc(50%+28px)]',
+                          st.tone === 'todo' || st.tone === 'current'
+                            ? 'bg-hairline'
+                            : st.tone === 'bad'
+                              ? 'bg-danger-500/40'
+                              : 'bg-gradient-to-l from-brand-500 to-brand-400',
+                        )}
+                      />
+                    )}
+                    <span
+                      className={cn(
+                        'relative z-10 inline-flex h-11 w-11 items-center justify-center rounded-full [&_svg]:h-[18px] [&_svg]:w-[18px]',
+                        st.tone === 'done' && 'bg-gradient-to-br from-brand-400 to-brand-600 text-[#1a1408] shadow-[0_6px_18px_-6px_rgba(201,162,77,0.7)]',
+                        st.tone === 'bad' && 'bg-danger-500/15 text-danger-600 ring-1 ring-danger-500/40',
+                        st.tone === 'current' && 'bg-surface text-brand-600 ring-2 ring-brand-500/70 ring-offset-4 ring-offset-surface',
+                        st.tone === 'todo' && 'bg-surface-muted text-slate-400 ring-1 ring-hairline',
+                      )}
+                    >
+                      {st.tone === 'done' ? <Check /> : st.tone === 'bad' ? <X /> : st.tone === 'current' ? <Hourglass /> : <Circle />}
                     </span>
-                  </Field>
-                )}
-                {reservation.rejectedAt && (
-                  <Field
-                    label={m.fieldRejectedAt}
-                    className={!reservation.approvedAt ? 'col-span-2' : undefined}
-                  >
-                    <span className="text-[13px] font-semibold text-danger-600">
-                      {formatDateTime(reservation.rejectedAt, locale)}
-                    </span>
-                  </Field>
-                )}
-                {reservation.cancelledAt && (
-                  <Field
-                    label={m.fieldCancelledAt}
-                    className={!reservation.convertedAt ? 'col-span-2' : undefined}
-                  >
-                    <span className="text-[13px] font-semibold text-danger-600">
-                      {formatDateTime(reservation.cancelledAt, locale)}
-                    </span>
-                  </Field>
-                )}
-                {reservation.convertedAt && (
-                  <Field
-                    label={m.fieldConvertedAt}
-                    className={!reservation.cancelledAt ? 'col-span-2' : undefined}
-                  >
-                    <span className="text-[13px] font-semibold text-success-700">
-                      {formatDateTime(reservation.convertedAt, locale)}
-                    </span>
-                  </Field>
-                )}
-                {reservation.reason && (
-                  <Field label={m.fieldReason} className="col-span-2">
-                    <span className="text-[13px] font-medium text-slate-700">{reservation.reason}</span>
-                  </Field>
-                )}
-                {reservation.notes && (
-                  <Field label={m.fieldNotes} className="col-span-2">
-                    <span className="text-[13px] font-medium text-slate-700">{reservation.notes}</span>
-                  </Field>
-                )}
-              </div>
-            </PremiumSectionCard>
+                    <p
+                      className={cn(
+                        'mt-3 text-[13.5px] font-bold',
+                        st.tone === 'todo' ? 'text-slate-400' : st.tone === 'bad' ? 'text-danger-600' : 'text-slate-900',
+                      )}
+                    >
+                      {st.label}
+                    </p>
+                    <p className="mt-1 text-[12px] text-slate-500 tabular-nums">
+                      {st.at ? formatDateTime(st.at, locale) : m.stepNotYet}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+
+              {(reservation.reason || reservation.notes) && (
+                <div className="mt-6 grid gap-3 border-t border-hairline pt-5">
+                  {reservation.reason && (
+                    <Quote label={m.fieldReason} tone="danger">{reservation.reason}</Quote>
+                  )}
+                  {reservation.notes && <Quote label={m.fieldNotes}>{reservation.notes}</Quote>}
+                </div>
+              )}
+            </PremiumPanel>
 
             {/* Booking amount */}
-            <PremiumSectionCard title={m.sectionBookingAmount}>
+            <PremiumPanel
+              title={m.sectionBookingAmount}
+              trailing={<ReservationBookingPaymentBadge status={reservation.bookingPaymentStatus} locale={locale} />}
+            >
               <div className="space-y-4">
-                {/* Installment plan / notes (rare) */}
-                {(reservation.installmentPlanTemplate || reservation.bookingNotes) && (
-                  <div className="space-y-4">
-                    {reservation.installmentPlanTemplate && (
-                      <Field label={m.fieldInstallmentPlan}>
-                        <Link
-                          href={`/dashboard/installments/${reservation.installmentPlanTemplate.id}` as never}
-                          className="text-[13px] font-semibold text-brand-700 hover:underline"
-                        >
-                          {reservation.installmentPlanTemplate.name}
-                        </Link>
-                      </Field>
-                    )}
-                    {reservation.bookingNotes && (
-                      <Field label={m.fieldBookingNotes}>
-                        <span className="text-[13px] font-medium text-slate-700 whitespace-pre-wrap">
-                          {reservation.bookingNotes}
-                        </span>
-                      </Field>
-                    )}
-                  </div>
+                {reservation.installmentPlanTemplate && (
+                  <Field label={m.fieldInstallmentPlan}>
+                    <Link
+                      href={`/dashboard/installments/${reservation.installmentPlanTemplate.id}` as never}
+                      className="text-[13px] font-semibold text-brand-700 hover:underline"
+                    >
+                      {reservation.installmentPlanTemplate.name}
+                    </Link>
+                  </Field>
+                )}
+                {reservation.bookingNotes && (
+                  <Quote label={m.fieldBookingNotes}>{reservation.bookingNotes}</Quote>
                 )}
 
-                {/* Deposit receipts */}
-                {bookingDeposits.length > 0 && (
-                  <div className="space-y-2.5">
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.12em]">
-                      {m.depositLabel}
-                    </p>
-                    <ul className="flex flex-col gap-2">
-                      {bookingDeposits.map((dep) => (
-                        <li
-                          key={dep.id}
-                          className="flex items-center gap-3.5 rounded-2xl bg-canvas/50 ring-1 ring-inset ring-hairline px-4 py-3.5"
+                {bookingDeposits.length > 0 ? (
+                  <ul className="flex flex-col gap-2.5">
+                    {bookingDeposits.map((dep) => (
+                      <li
+                        key={dep.id}
+                        className="flex flex-wrap items-center gap-4 rounded-2xl border border-hairline bg-surface-muted/50 px-5 py-4"
+                      >
+                        <span
+                          className={cn(
+                            'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full [&_svg]:h-[18px] [&_svg]:w-[18px]',
+                            dep.verified ? 'bg-emerald-500/12 text-emerald-600' : 'bg-amber-500/12 text-amber-600',
+                          )}
                         >
-                          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-success-50 text-success-600 [&_svg]:h-[15px] [&_svg]:w-[15px]">
-                            <Banknote />
-                          </span>
-                          {/* Amount + date */}
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[17px] font-bold tabular-nums text-slate-900 leading-snug">
-                              {Number(dep.amount).toLocaleString(intlLocale(locale))}{' '}
-                              <span className="text-[13px] font-medium text-slate-400">{symbol}</span>
-                            </p>
-                            <p className="text-[12px] text-slate-400 mt-0.5">{formatDate(dep.paidAt, locale)}</p>
-                          </div>
-                          {/* Status + links on the same line */}
-                          <div className="flex items-center gap-3 shrink-0">
-                            <span className={cn('text-[12px] font-semibold', dep.verified ? 'text-success-600' : 'text-amber-600')}>
+                          {dep.verified ? <BadgeCheck /> : <Banknote />}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11.5px] text-slate-500">{m.depositLabel}</p>
+                          <Money value={nf(dep.amount)} symbol={symbol} />
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-end">
+                            <span
+                              className={cn(
+                                'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold',
+                                dep.verified ? 'bg-emerald-500/12 text-emerald-600' : 'bg-amber-500/12 text-amber-600',
+                              )}
+                            >
+                              <span className={cn('h-1.5 w-1.5 rounded-full', dep.verified ? 'bg-emerald-500' : 'bg-amber-500')} />
                               {dep.verified ? m.depositVerified : m.depositNotVerified}
                             </span>
+                            <p className="mt-1 text-[12px] text-slate-500 tabular-nums">{formatDate(dep.paidAt, locale)}</p>
+                          </div>
+                          <span className="h-9 w-px bg-hairline" aria-hidden />
+                          <div className="flex flex-col items-start gap-1">
+                            <Link
+                              href={`/dashboard/deposits/${dep.id}` as never}
+                              className="inline-flex items-center gap-1 text-[12.5px] font-bold text-brand-700 hover:text-brand-600"
+                            >
+                              {m.depositDetailsLabel}
+                              <ArrowUpLeft className="h-3.5 w-3.5 ltr:rotate-90" />
+                            </Link>
                             {dep.receiptUrl && (
                               <a
                                 href={dep.receiptUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-xs text-brand-600 hover:underline inline-flex items-center gap-1"
+                                className="inline-flex items-center gap-1 text-[12px] text-slate-500 hover:text-brand-700"
                               >
                                 <ExternalLink className="h-3 w-3" /> {m.receiptLabel}
                               </a>
                             )}
-                            <Link
-                              href={`/dashboard/deposits/${dep.id}` as never}
-                              className="text-xs font-semibold text-brand-700 hover:text-brand-800"
-                            >
-                              {m.depositDetailsLabel}
-                            </Link>
                           </div>
-                        </li>
-                      ))}
-                    </ul>
-                    {bookingDeposits.length > 1 && (
-                      <p className="text-2xs text-amber-700">
-                        {m.depositMultipleWarning}
-                      </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <PremiumEmptyNote>
+                    {m.noDeposits}
+                    {bookingAmount > 0 && (
+                      <span className="mt-1 block text-slate-900">
+                        {m.bookingRequired}: <span className="font-bold tabular-nums">{nf(bookingAmount)} {symbol}</span>
+                      </span>
                     )}
-                  </div>
+                  </PremiumEmptyNote>
+                )}
+                {bookingDeposits.length > 1 && (
+                  <p className="text-[12px] text-amber-600">{m.depositMultipleWarning}</p>
                 )}
 
                 {isAdmin && (
@@ -305,331 +382,412 @@ export default async function ReservationDetailPage({
                     reservationId={reservation.id}
                     bookingPaymentStatus={reservation.bookingPaymentStatus}
                     reservationStatus={reservation.status}
-                    bookingAmount={Number(reservation.bookingAmount)}
+                    bookingAmount={bookingAmount}
                     locale={locale}
                   />
                 )}
               </div>
-            </PremiumSectionCard>
+            </PremiumPanel>
 
-            {/* Selected duration snapshot */}
+            {/* Selected plan snapshot */}
             {reservation.selectedDurationMonths != null && (
-              <PremiumSectionCard title={m.sectionInstallmentPlan}>
-                <div className="space-y-5">
-                  <p className="text-2xs text-slate-400">
-                    {m.snapshotFrozenNote}
-                  </p>
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                    <Field label={m.fieldDuration}>
-                      <span className="text-[14px] font-bold text-slate-900 tabular-nums">
-                        {reservation.selectedDurationMonths} {m.monthSuffix}
-                      </span>
-                    </Field>
-                    <Field label={m.fieldIncreaseRate}>
-                      <span className="text-[14px] font-bold text-slate-900 tabular-nums">
-                        {Number(reservation.selectedIncreasePercentage ?? 0)}%
-                      </span>
-                    </Field>
+              <PremiumPanel
+                title={m.sectionInstallmentPlan}
+                sub={m.snapshotFrozenNote}
+                trailing={
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-500/12 px-3 py-1 text-[12px] font-semibold text-brand-700 tabular-nums">
+                    {reservation.selectedDurationMonths} {m.monthSuffix}
+                    <span className="text-brand-500/60">·</span>
+                    {Number(reservation.selectedIncreasePercentage ?? 0)}%
+                  </span>
+                }
+              >
+                <div data-testid="reservation-plan" className="space-y-6">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     {reservation.snapshotDownPaymentAmount != null && (
-                      <Field label={m.fieldDownPayment}>
-                        <span className="text-[14px] font-bold text-slate-900 tabular-nums" dir="ltr">
-                          {Number(reservation.snapshotDownPaymentAmount).toLocaleString(intlLocale(locale))} {symbol}
-                        </span>
-                      </Field>
-                    )}
-                    {reservation.snapshotRemainingAmount != null && (
-                      <Field label={m.fieldRemaining}>
-                        <span className="text-[14px] font-bold text-slate-900 tabular-nums" dir="ltr">
-                          {Number(reservation.snapshotRemainingAmount).toLocaleString(intlLocale(locale))} {symbol}
-                        </span>
-                      </Field>
+                      <PlanTile label={m.fieldDownPayment} value={nf(reservation.snapshotDownPaymentAmount)} symbol={symbol} />
                     )}
                     {reservation.snapshotFinancedAmount != null && (
-                      <Field label={m.fieldFinanced}>
-                        <span className="text-[14px] font-bold text-slate-900 tabular-nums" dir="ltr">
-                          {Number(reservation.snapshotFinancedAmount).toLocaleString(intlLocale(locale))} {symbol}
-                        </span>
-                      </Field>
+                      <PlanTile label={m.fieldFinanced} value={nf(reservation.snapshotFinancedAmount)} symbol={symbol} />
                     )}
                     {reservation.snapshotMonthlyInstallment != null && (
-                      <Field label={periodicInstallmentLabel(reservation.snapshotFrequency, locale) ?? m.fieldMonthly}>
-                        <span className="text-[14px] font-bold text-brand-700 tabular-nums" dir="ltr">
-                          {Number(reservation.snapshotMonthlyInstallment).toLocaleString(intlLocale(locale), {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}{' '}
-                          {symbol}
-                        </span>
-                      </Field>
+                      <PlanTile
+                        label={periodicInstallmentLabel(reservation.snapshotFrequency, locale) ?? m.fieldMonthly}
+                        value={nf(reservation.snapshotMonthlyInstallment, 2)}
+                        symbol={symbol}
+                        gold
+                      />
                     )}
                   </div>
-                  {reservation.snapshotTotalPayable != null && (
-                    <>
-                      <div
-                        className="h-[2px] rounded-full"
-                        style={{ background: 'linear-gradient(to left, transparent, #e6c46a 30%, #b8923e 50%, #e6c46a 70%, transparent)' }}
-                      />
-                      <div className="flex items-end justify-between gap-4">
-                        <Field label={m.fieldTotalPayable}>
-                          <span className="text-[28px] font-black tabular-nums leading-none text-slate-900" dir="ltr">
-                            {Number(reservation.snapshotTotalPayable).toLocaleString(intlLocale(locale))}
-                            <span className="text-[15px] font-semibold text-slate-400 ms-1.5">{symbol}</span>
-                          </span>
-                        </Field>
+
+                  {down + financed > 0 && (
+                    <div>
+                      <div className="flex h-2.5 overflow-hidden rounded-full bg-surface-muted">
+                        <span className="h-full bg-gradient-to-l from-brand-400 to-brand-600" style={{ width: `${downPct}%` }} />
+                        <span className="h-full flex-1 bg-slate-400/35" />
                       </div>
-                    </>
+                      <div className="mt-2.5 flex items-center justify-between text-[12px] text-slate-500">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-brand-500" />
+                          {m.planDownShare} <span className="font-semibold text-slate-900 tabular-nums">{downPct}%</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-slate-400" />
+                          {m.planFinancedShare} <span className="font-semibold text-slate-900 tabular-nums">{100 - downPct}%</span>
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {reservation.snapshotTotalPayable != null && (
+                    <div className="relative overflow-hidden rounded-2xl border border-brand-500/25 bg-gradient-to-l from-brand-500/[0.12] via-brand-500/[0.04] to-transparent px-6 py-5">
+                      <div className="flex flex-wrap items-end justify-between gap-3">
+                        <p className="text-[13px] font-semibold text-slate-600">{m.fieldTotalPayable}</p>
+                        <p className="num text-[40px] font-semibold leading-none text-slate-900" dir="ltr">
+                          {nf(reservation.snapshotTotalPayable)}
+                          <span className="ms-2 font-sans text-[15px] font-medium text-slate-500">{symbol}</span>
+                        </p>
+                      </div>
+                    </div>
                   )}
                 </div>
-              </PremiumSectionCard>
+              </PremiumPanel>
             )}
 
-            {/* Internal notes */}
-            <PremiumSectionCard title={m.sectionInternalNotes}>
-              <div className="space-y-4">
-                <AddNoteForm reservationId={reservation.id} />
-                {notes.length > 0 && (
-                  <ul className="flex flex-col gap-2.5 mt-1">
-                    {notes.map((note) => (
-                      <li
-                        key={note.id}
-                        className="relative rounded-2xl bg-canvas/60 border border-hairline px-4 py-3"
-                      >
-                        <span className="absolute end-0 top-3 bottom-3 w-[3px] rounded-s-full bg-brand-400" />
-                        <p className="text-[13.5px] text-slate-800 leading-relaxed pe-3">{note.body}</p>
-                        <p className="text-2xs text-slate-400 mt-1.5 inline-flex items-center gap-1.5">
-                          <span className="font-medium text-slate-500">
-                            {note.author?.fullName ?? m.noteAuthorSystem}
-                          </span>
-                          <span className="text-slate-300">·</span>
-                          <span>{formatDateTime(note.createdAt, locale)}</span>
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </PremiumSectionCard>
+            {/* Notes + activity */}
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+              <PremiumPanel
+                title={m.sectionInternalNotes}
+                trailing={notes.length > 0 ? <CountPill n={notes.length} /> : undefined}
+              >
+                <div className="space-y-4">
+                  {notes.length > 0 ? (
+                    <ul className="flex max-h-[340px] flex-col gap-2.5 overflow-y-auto">
+                      {notes.map((note) => (
+                        <li key={note.id} className="relative rounded-2xl border border-hairline bg-surface-muted/50 px-4 py-3">
+                          <span className="absolute end-0 top-3 bottom-3 w-[3px] rounded-s-full bg-brand-500" />
+                          <p className="pe-3 text-[13.5px] leading-relaxed text-slate-800">{note.body}</p>
+                          <p className="mt-1.5 inline-flex items-center gap-1.5 text-[11.5px] text-slate-500">
+                            <span className="font-semibold">{note.author?.fullName ?? m.noteAuthorSystem}</span>
+                            <span className="text-slate-400">·</span>
+                            <span className="tabular-nums">{formatDateTime(note.createdAt, locale)}</span>
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <PremiumEmptyNote>{m.notesEmpty}</PremiumEmptyNote>
+                  )}
+                  <AddNoteForm reservationId={reservation.id} locale={locale} />
+                </div>
+              </PremiumPanel>
 
-            {/* Activity timeline — render ReservationTimeline directly to avoid duplicate header */}
-            <PremiumSectionCard title={m.sectionActivity}>
-              <ReservationTimeline activities={activities} />
-            </PremiumSectionCard>
+              <PremiumPanel
+                title={m.sectionActivity}
+                trailing={activities.length > 0 ? <CountPill n={activities.length} /> : undefined}
+              >
+                <ReservationTimeline activities={activities} locale={locale} />
+              </PremiumPanel>
+            </div>
           </>
         }
         side={
           <>
-            {/* Quick navigation */}
-            <PremiumCommandPanel title={m.sectionQuickActions}>
-              {reservation.unit && (
-                <Link href={`/dashboard/units/${reservation.unitId}` as never} className={CMD_LINK}>
-                  <span className={CMD_ICON}><Home /></span>
-                  <span>{m.cmdViewUnit}</span>
-                </Link>
-              )}
-              {reservation.lead && (
-                <Link href={`/dashboard/leads/${reservation.leadId}` as never} className={CMD_LINK}>
-                  <span className={CMD_ICON}><User /></span>
-                  <span>{m.cmdViewLead}</span>
-                </Link>
-              )}
-              {reservation.client && (
-                <Link href={`/dashboard/clients/${reservation.clientId}` as never} className={CMD_LINK}>
-                  <span className={CMD_ICON}><User /></span>
-                  <span>{m.cmdViewClient}</span>
-                </Link>
-              )}
-              {project && (
-                <Link href={`/dashboard/projects/${project.id}` as never} className={CMD_LINK}>
-                  <span className={CMD_ICON}><Building2 /></span>
-                  <span>{m.cmdViewProject}</span>
-                </Link>
-              )}
-              {reservation.status === 'CONVERTED' && reservation.contract && (
-                <Link href={`/dashboard/contracts/${reservation.contract.id}` as never} className={CMD_LINK}>
-                  <span className={CMD_ICON}><FileText /></span>
-                  <span>{m.cmdViewContract}</span>
-                </Link>
-              )}
-            </PremiumCommandPanel>
-
-            {/* Linked contract */}
-            {reservation.status === 'CONVERTED' && reservation.contract && (
-              <PremiumSectionCard title={m.sectionLinkedContract} icon={<FileText />}>
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-success-50 text-success-600 [&_svg]:h-5 [&_svg]:w-5">
-                    <FileText />
-                  </span>
-                  <div className="min-w-0">
-                    <Link
-                      href={`/dashboard/contracts/${reservation.contract.id}` as never}
-                      className="text-[13.5px] font-bold text-brand-700 hover:underline inline-flex items-center gap-1.5"
-                    >
-                      {reservation.contract.contractNumber ?? reservation.contract.id.slice(0, 8)}
-                      <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-                    </Link>
-                    {reservation.convertedAt && (
-                      <p className="text-2xs text-slate-400 mt-0.5">
-                        {m.contractConvertedAtPrefix}{formatDateTime(reservation.convertedAt, locale)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </PremiumSectionCard>
-            )}
-
             {/* Convert to contract */}
             {isAdmin && reservation.status === 'APPROVED' && (
-              <PremiumSectionCard title={m.sectionConvertToContract} icon={<FileText />}>
-                <ConvertReservationForm
-                  reservation={{
-                    id: reservation.id,
-                    status: reservation.status,
-                    bookingAmount: reservation.bookingAmount,
-                    bookingPaymentStatus: reservation.bookingPaymentStatus,
-                    installmentPlanTemplateId: reservation.installmentPlanTemplateId ?? null,
-                    selectedDurationMonths: reservation.selectedDurationMonths ?? null,
-                    selectedIncreasePercentage: reservation.selectedIncreasePercentage ?? null,
-                    snapshotDownPaymentAmount: reservation.snapshotDownPaymentAmount ?? null,
-                    snapshotMonthlyInstallment: reservation.snapshotMonthlyInstallment ?? null,
-                    snapshotFrequency: reservation.snapshotFrequency ?? null,
-                    snapshotTotalPayable: reservation.snapshotTotalPayable ?? null,
-                    clientName,
-                    unitCode: reservation.unit?.code ?? '—',
-                  }}
-                  symbol={symbol}
-                  locale={locale}
-                />
-              </PremiumSectionCard>
+              <section
+                data-testid="reservation-convert"
+                className="relative overflow-hidden rounded-[22px] border border-brand-500/30 bg-surface"
+              >
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-brand-500/[0.14] via-transparent to-transparent" />
+                <div className="relative p-6">
+                  <div className="mb-5 flex items-center gap-3">
+                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-[#1a1408] [&_svg]:h-5 [&_svg]:w-5">
+                      <FileSignature />
+                    </span>
+                    <div>
+                      <h2 className="font-heading text-[19px] font-bold text-slate-900">{m.sectionConvertToContract}</h2>
+                      <p className="text-[12.5px] text-slate-500">{m.convertSub}</p>
+                    </div>
+                  </div>
+                  <ConvertReservationForm
+                    reservation={{
+                      id: reservation.id,
+                      status: reservation.status,
+                      bookingAmount: reservation.bookingAmount,
+                      bookingPaymentStatus: reservation.bookingPaymentStatus,
+                      installmentPlanTemplateId: reservation.installmentPlanTemplateId ?? null,
+                      selectedDurationMonths: reservation.selectedDurationMonths ?? null,
+                      selectedIncreasePercentage: reservation.selectedIncreasePercentage ?? null,
+                      snapshotDownPaymentAmount: reservation.snapshotDownPaymentAmount ?? null,
+                      snapshotMonthlyInstallment: reservation.snapshotMonthlyInstallment ?? null,
+                      snapshotFrequency: reservation.snapshotFrequency ?? null,
+                      snapshotTotalPayable: reservation.snapshotTotalPayable ?? null,
+                      clientName,
+                      unitCode: reservation.unit?.code ?? '—',
+                    }}
+                    symbol={symbol}
+                    locale={locale}
+                  />
+                </div>
+              </section>
             )}
 
-            {/* Client / Lead */}
-            <PremiumSectionCard title={m.sectionClientInfo} icon={<User />}>
-              <div className="space-y-2.5">
-                <p className="text-[15px] font-bold text-slate-900">{clientName}</p>
-                {clientPhone && (
-                  <a
-                    href={`tel:${clientPhone}`}
-                    className="flex items-center gap-2.5 rounded-xl bg-canvas/60 px-3 py-2.5 ring-1 ring-inset ring-hairline hover:bg-canvas transition-colors"
-                  >
-                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-3.5 [&_svg]:w-3.5">
-                      <Phone />
-                    </span>
-                    <span className="text-sm font-medium text-slate-700" dir="ltr">{clientPhone}</span>
-                  </a>
+            {/* Parties: client, unit, project, sales */}
+            <PremiumPanel title={m.sectionParties} sub={m.partiesSub} padding="none">
+              <div data-testid="reservation-parties" className="divide-y divide-hairline border-t border-hairline">
+                <div className="px-6 py-5">
+                  <PartyLabel>{m.partyClient}</PartyLabel>
+                  <div className="flex items-center gap-3.5">
+                    <Avatar name={clientName} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[15px] font-bold text-slate-900">{clientName}</p>
+                      {(reservation.client || reservation.lead) && (
+                        <Link
+                          href={
+                            (reservation.client
+                              ? `/dashboard/clients/${reservation.clientId}`
+                              : `/dashboard/leads/${reservation.leadId}`) as never
+                          }
+                          className="mt-0.5 inline-flex items-center gap-1 text-[12.5px] font-bold text-brand-700 hover:text-brand-600"
+                        >
+                          {reservation.client ? m.linkViewClient : m.linkViewLead}
+                          <ArrowUpLeft className="h-3.5 w-3.5 ltr:rotate-90" />
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                  {(clientPhone || clientEmail) && (
+                    <div className="mt-4 flex flex-col gap-2">
+                      {clientPhone && (
+                        <ContactRow href={`tel:${clientPhone}`} icon={<Phone />}>{clientPhone}</ContactRow>
+                      )}
+                      {clientEmail && (
+                        <ContactRow href={`mailto:${clientEmail}`} icon={<Mail />}>{clientEmail}</ContactRow>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {reservation.unit && (
+                  <div className="px-6 py-5">
+                    <PartyLabel>{m.partyUnit}</PartyLabel>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <Link
+                          href={`/dashboard/units/${reservation.unitId}` as never}
+                          className="font-mono text-[18px] font-bold text-slate-900 hover:text-brand-700"
+                        >
+                          {reservation.unit.code}
+                        </Link>
+                        {reservation.unit.type && (
+                          <p className="text-[12px] text-slate-500">{reservation.unit.type}</p>
+                        )}
+                      </div>
+                      <UnitStatusBadge status={reservation.unit.status} locale={locale} />
+                    </div>
+                    <div className="mt-4 grid grid-cols-3 overflow-hidden rounded-2xl border border-hairline">
+                      <UnitStat label={m.fieldArea} value={`${reservation.unit.area} ${m.areaSuffix}`} />
+                      <UnitStat label={m.fieldFloor} value={String(reservation.unit.floor ?? '—')} />
+                      <UnitStat label={m.fieldBedrooms} value={String(reservation.unit.bedrooms ?? '—')} />
+                    </div>
+                  </div>
                 )}
-                {clientEmail && (
-                  <a
-                    href={`mailto:${clientEmail}`}
-                    className="flex items-center gap-2.5 rounded-xl bg-canvas/60 px-3 py-2.5 ring-1 ring-inset ring-hairline hover:bg-canvas transition-colors"
-                  >
-                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-info-50 text-info-600 [&_svg]:h-3.5 [&_svg]:w-3.5">
-                      <Mail />
-                    </span>
-                    <span className="text-sm font-medium text-slate-700 truncate" dir="ltr">{clientEmail}</span>
-                  </a>
-                )}
-                {reservation.lead && (
+
+                {project && (
                   <Link
-                    href={`/dashboard/leads/${reservation.leadId}` as never}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:underline"
+                    href={`/dashboard/projects/${project.id}` as never}
+                    className="group flex items-center gap-3.5 px-6 py-4 transition-colors hover:bg-surface-muted/50"
                   >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    {m.linkViewLead}
+                    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-500/12 text-brand-700 [&_svg]:h-[18px] [&_svg]:w-[18px]">
+                      <Building2 />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11.5px] text-slate-500">{m.partyProject}</p>
+                      <p className="truncate text-[14px] font-bold text-slate-900">{tx(project.name)}</p>
+                      {project.city && <p className="text-[12px] text-slate-500">{project.city}</p>}
+                    </div>
+                    <ArrowUpLeft className="h-4 w-4 text-slate-400 transition-colors group-hover:text-brand-600 ltr:rotate-90" />
                   </Link>
                 )}
-                {reservation.client && (
-                  <Link
-                    href={`/dashboard/clients/${reservation.clientId}` as never}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:underline"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    {m.linkViewClient}
-                  </Link>
+
+                {reservation.sales && (
+                  <div className="flex items-center gap-3.5 px-6 py-4">
+                    <Avatar name={reservation.sales.fullName} small />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11.5px] text-slate-500">{m.partySales}</p>
+                      <p className="truncate text-[14px] font-bold text-slate-900">{reservation.sales.fullName}</p>
+                      <p className="text-[12px] text-slate-500 tabular-nums">
+                        {m.salesCreatedPrefix} {formatDate(reservation.createdAt, locale)}
+                      </p>
+                    </div>
+                  </div>
                 )}
               </div>
-            </PremiumSectionCard>
-
-            {/* Unit */}
-            {reservation.unit && (
-              <PremiumSectionCard title={m.sectionUnitInfo} icon={<Home />}>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <Link
-                      href={`/dashboard/units/${reservation.unitId}` as never}
-                      className="text-[16px] font-bold text-brand-700 hover:underline"
-                    >
-                      {reservation.unit.code}
-                    </Link>
-                    <UnitStatusBadge status={reservation.unit.status} />
-                  </div>
-                  {reservation.unit.type && (
-                    <p className="text-xs text-slate-400 -mt-2">{reservation.unit.type}</p>
-                  )}
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                    <Field label={m.fieldArea}>
-                      <span className="text-[14px] font-bold text-slate-800 tabular-nums">
-                        {reservation.unit.area} {m.areaSuffix}
-                      </span>
-                    </Field>
-                    <Field label={m.fieldFloor}>
-                      <span className="text-[14px] font-bold text-slate-800 tabular-nums">
-                        {reservation.unit.floor}
-                      </span>
-                    </Field>
-                    <Field label={m.fieldBedrooms}>
-                      <span className="text-[14px] font-bold text-slate-800 tabular-nums">
-                        {reservation.unit.bedrooms}
-                      </span>
-                    </Field>
-                    <Field label={m.fieldPrice}>
-                      <span className="text-[14px] font-bold text-slate-800 tabular-nums" dir="ltr">
-                        {Number(reservation.unit.price).toLocaleString(intlLocale(locale))} {symbol}
-                      </span>
-                    </Field>
-                  </div>
-                </div>
-              </PremiumSectionCard>
-            )}
-
-            {/* Project */}
-            {project && (
-              <PremiumSectionCard title={m.sectionProject} icon={<Building2 />}>
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-5 [&_svg]:w-5">
-                    <Building2 />
-                  </span>
-                  <div className="min-w-0">
-                    <Link
-                      href={`/dashboard/projects/${project.id}` as never}
-                      className="text-[13.5px] font-bold text-brand-700 hover:underline truncate block"
-                    >
-                      {tx(project.name)}
-                    </Link>
-                    <p className="text-2xs text-slate-400 mt-0.5">{project.city}</p>
-                  </div>
-                </div>
-              </PremiumSectionCard>
-            )}
-
-            {/* Sales person */}
-            {reservation.sales && (
-              <PremiumSectionCard title={m.sectionSalesAgent} icon={<User />}>
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-5 [&_svg]:w-5">
-                    <User />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-[13.5px] font-bold text-slate-900">{reservation.sales.fullName}</p>
-                    <p className="text-2xs text-slate-400 mt-0.5">
-                      {m.salesCreatedPrefix} {formatDate(reservation.createdAt, locale)}
-                    </p>
-                  </div>
-                </div>
-              </PremiumSectionCard>
-            )}
+            </PremiumPanel>
           </>
         }
       />
+    </div>
+  );
+}
+
+type Msg = ReturnType<typeof uiT>['pages']['reservationDetailPage'];
+type Step = { key: string; label: string; at: string | null; tone: 'done' | 'bad' | 'current' | 'todo' };
+
+/** Three steps: created → approved (or rejected/expired/cancelled) → contract. */
+function journeySteps(r: Reservation, m: Msg): Step[] {
+  const steps: Step[] = [{ key: 'created', label: m.stepCreated, at: r.createdAt, tone: 'done' }];
+  if (r.rejectedAt) {
+    steps.push({ key: 'decision', label: m.stepRejected, at: r.rejectedAt, tone: 'bad' });
+  } else if (r.approvedAt) {
+    steps.push({ key: 'decision', label: m.stepApproved, at: r.approvedAt, tone: 'done' });
+  } else if (r.status === 'EXPIRED') {
+    steps.push({ key: 'decision', label: m.stepExpired, at: r.expiresAt, tone: 'bad' });
+  } else if (r.cancelledAt) {
+    steps.push({ key: 'decision', label: m.stepCancelled, at: r.cancelledAt, tone: 'bad' });
+  } else {
+    steps.push({ key: 'decision', label: m.stepAwaitingApproval, at: null, tone: 'current' });
+  }
+  const stopped = steps[1]!.tone === 'bad';
+  if (r.convertedAt) {
+    steps.push({ key: 'contract', label: m.stepConverted, at: r.convertedAt, tone: 'done' });
+  } else if (!stopped && r.cancelledAt) {
+    steps.push({ key: 'contract', label: m.stepCancelled, at: r.cancelledAt, tone: 'bad' });
+  } else if (!stopped && r.status === 'EXPIRED') {
+    steps.push({ key: 'contract', label: m.stepExpired, at: r.expiresAt, tone: 'bad' });
+  } else {
+    steps.push({
+      key: 'contract',
+      label: m.stepConverted,
+      at: null,
+      tone: !stopped && r.status === 'APPROVED' ? 'current' : 'todo',
+    });
+  }
+  return steps;
+}
+
+function Money({ value, symbol, gold }: { value: string; symbol: string; gold?: boolean }) {
+  return (
+    <span className="inline-flex items-baseline gap-1.5" dir="ltr">
+      <span className={cn('num text-[26px] font-semibold leading-none', gold ? 'text-brand-700' : 'text-slate-900')}>
+        {value}
+      </span>
+      <span className="text-[12.5px] font-medium text-slate-500">{symbol}</span>
+    </span>
+  );
+}
+
+function Kpi({
+  label,
+  icon,
+  foot,
+  children,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  foot?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-3 border-hairline p-5 [&:not(:first-child)]:border-s max-lg:[&:nth-child(3)]:border-s-0 max-lg:[&:nth-child(n+3)]:border-t">
+      <div className="flex items-center gap-2 text-[12.5px] font-semibold text-slate-500">
+        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-500/12 text-brand-700 [&_svg]:h-3.5 [&_svg]:w-3.5">
+          {icon}
+        </span>
+        {label}
+      </div>
+      <div className="min-h-[28px]">{children}</div>
+      {foot && <div>{foot}</div>}
+    </div>
+  );
+}
+
+function PlanTile({ label, value, symbol, gold }: { label: string; value: string; symbol: string; gold?: boolean }) {
+  return (
+    <div
+      className={cn(
+        'rounded-2xl border px-4 py-4',
+        gold ? 'border-brand-500/30 bg-brand-500/[0.07]' : 'border-hairline bg-surface-muted/50',
+      )}
+    >
+      <p className="text-[12px] font-semibold text-slate-500">{label}</p>
+      <div className="mt-2">
+        <Money value={value} symbol={symbol} gold={gold} />
+      </div>
+    </div>
+  );
+}
+
+function Quote({ label, tone, children }: { label: string; tone?: 'danger'; children: React.ReactNode }) {
+  return (
+    <div
+      className={cn(
+        'relative rounded-2xl border px-5 py-4',
+        tone === 'danger' ? 'border-danger-500/25 bg-danger-500/[0.06]' : 'border-hairline bg-surface-muted/50',
+      )}
+    >
+      <span
+        aria-hidden
+        className={cn('absolute end-0 top-4 bottom-4 w-[3px] rounded-s-full', tone === 'danger' ? 'bg-danger-500' : 'bg-brand-500')}
+      />
+      <p className="text-[11.5px] font-semibold text-slate-500">{label}</p>
+      <p className="mt-1 whitespace-pre-wrap pe-3 text-[13.5px] leading-relaxed text-slate-800">{children}</p>
+    </div>
+  );
+}
+
+function CountPill({ n }: { n: number }) {
+  return (
+    <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-[12px] font-semibold text-slate-600 tabular-nums">
+      {n}
+    </span>
+  );
+}
+
+function PartyLabel({ children }: { children: React.ReactNode }) {
+  return <p className="mb-3 text-[11.5px] font-semibold text-slate-500">{children}</p>;
+}
+
+function Avatar({ name, small }: { name: string; small?: boolean }) {
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('');
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'inline-flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-400/35 to-brand-700/20 font-heading font-bold text-brand-700 ring-1 ring-brand-500/40',
+        small ? 'h-10 w-10 text-[14px]' : 'h-12 w-12 text-[16px]',
+      )}
+    >
+      {initials || '—'}
+    </span>
+  );
+}
+
+function ContactRow({ href, icon, children }: { href: string; icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <a
+      href={href}
+      className="group flex items-center gap-3 rounded-xl border border-hairline px-3.5 py-2.5 transition-colors hover:border-brand-500/40 hover:bg-brand-500/[0.05]"
+    >
+      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-muted text-slate-500 group-hover:text-brand-700 [&_svg]:h-3.5 [&_svg]:w-3.5">
+        {icon}
+      </span>
+      <span className="truncate text-[13px] font-medium text-slate-700" dir="ltr">{children}</span>
+    </a>
+  );
+}
+
+function UnitStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="px-3 py-3 text-center [&:not(:first-child)]:border-s [&:not(:first-child)]:border-hairline">
+      <p className="text-[11px] text-slate-500">{label}</p>
+      <p className="mt-1 text-[14px] font-bold text-slate-900 tabular-nums">{value}</p>
     </div>
   );
 }

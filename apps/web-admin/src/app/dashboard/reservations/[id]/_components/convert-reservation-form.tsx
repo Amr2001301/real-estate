@@ -11,6 +11,7 @@ import type { Reservation } from '@/lib/types';
 import type { Locale } from '@/lib/locale';
 import { periodicInstallmentLabel } from '@/lib/installment-frequency';
 import { uiT } from '@/messages/ui';
+import { ReservationBookingPaymentBadge } from '@/components/badges';
 
 import { intlLocale } from '@/lib/format';
 import { nowWallTime } from '@/lib/zoned-time';
@@ -73,6 +74,8 @@ export function ConvertReservationForm({ reservation, symbol, locale = 'ar' }: P
       reservation.snapshotTotalPayable == null);
 
   const needsStartDate = reservation.selectedDurationMonths != null;
+  const fmt = (v: string | number, frac = 0) =>
+    Number(v).toLocaleString(intlLocale(locale), { minimumFractionDigits: frac, maximumFractionDigits: frac });
 
   async function handleSubmit(formData: FormData) {
     setError(null);
@@ -120,75 +123,55 @@ export function ConvertReservationForm({ reservation, symbol, locale = 'ar' }: P
       )}
 
       {open && (
-        <div className="rounded-2xl border border-brand-100 bg-brand-50/40 p-4 space-y-4">
-          <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-            <ArrowLeftRight className="h-4 w-4 text-brand-600" />
-            {m.convertTitle}
-          </h3>
-
+        <div data-testid="convert-form" className="space-y-5">
           {/* Read-only summary */}
-          <dl className="grid grid-cols-1 gap-2 text-xs">
-            <div className="flex justify-between">
-              <dt className="text-slate-500">{m.convertClientLabel}</dt>
-              <dd className="font-medium text-slate-800">{reservation.clientName}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-slate-500">{m.convertUnitLabel}</dt>
-              <dd className="font-medium text-slate-800">{reservation.unitCode}</dd>
-            </div>
+          <dl className="divide-y divide-hairline overflow-hidden rounded-2xl border border-hairline text-[13px]">
+            <SummaryRow label={m.convertClientLabel}>{reservation.clientName}</SummaryRow>
+            <SummaryRow label={m.convertUnitLabel}>
+              <span className="font-mono">{reservation.unitCode}</span>
+            </SummaryRow>
             {bookingAmount > 0 && (
-              <div className="flex justify-between">
-                <dt className="text-slate-500">{m.convertBookingAmountLabel}</dt>
-                <dd className="font-medium tabular-nums" dir="ltr">
-                  {bookingAmount.toLocaleString(intlLocale(locale))} {symbol}
-                  <span className="mr-1 text-slate-400">({reservation.bookingPaymentStatus})</span>
-                </dd>
-              </div>
+              <SummaryRow label={m.convertBookingAmountLabel}>
+                <span className="inline-flex items-center gap-2">
+                  <span className="tabular-nums" dir="ltr">{fmt(bookingAmount)} {symbol}</span>
+                  <ReservationBookingPaymentBadge status={reservation.bookingPaymentStatus} locale={locale} />
+                </span>
+              </SummaryRow>
             )}
             {reservation.snapshotDownPaymentAmount != null && (
-              <div className="flex justify-between">
-                <dt className="text-slate-500">{m.convertDownPaymentLabel}</dt>
-                <dd className="font-medium tabular-nums" dir="ltr">
-                  {Number(reservation.snapshotDownPaymentAmount).toLocaleString(intlLocale(locale))} {symbol}
-                </dd>
-              </div>
+              <SummaryRow label={m.convertDownPaymentLabel}>
+                <span className="tabular-nums" dir="ltr">{fmt(reservation.snapshotDownPaymentAmount)} {symbol}</span>
+              </SummaryRow>
             )}
             {reservation.selectedDurationMonths != null && (
-              <div className="flex justify-between">
-                <dt className="text-slate-500">{m.convertDurationLabel}</dt>
-                <dd className="font-medium tabular-nums">
-                  {reservation.selectedDurationMonths} {m.convertDurationLabel}
+              <SummaryRow label={m.convertDurationLabel}>
+                <span className="tabular-nums">
+                  {reservation.selectedDurationMonths} {m.monthSuffix}
                   {reservation.selectedIncreasePercentage != null &&
-                    ` — ${m.convertIncreaseLabel} ${Number(reservation.selectedIncreasePercentage)}%`}
-                </dd>
-              </div>
+                    ` · ${m.convertIncreaseLabel} ${Number(reservation.selectedIncreasePercentage)}%`}
+                </span>
+              </SummaryRow>
             )}
             {reservation.snapshotMonthlyInstallment != null && (
-              <div className="flex justify-between">
-                <dt className="text-slate-500">
-                  {periodicInstallmentLabel(reservation.snapshotFrequency, locale) ?? m.convertMonthlyLabel}
-                </dt>
-                <dd className="font-bold tabular-nums text-brand-700" dir="ltr">
-                  {Number(reservation.snapshotMonthlyInstallment).toLocaleString(intlLocale(locale), {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}{' '}
-                  {symbol}
-                </dd>
-              </div>
+              <SummaryRow label={periodicInstallmentLabel(reservation.snapshotFrequency, locale) ?? m.convertMonthlyLabel}>
+                <span className="font-bold tabular-nums text-brand-700" dir="ltr">
+                  {fmt(reservation.snapshotMonthlyInstallment, 2)} {symbol}
+                </span>
+              </SummaryRow>
             )}
             {reservation.snapshotTotalPayable != null && (
-              <div className="flex justify-between border-t border-hairline pt-2 mt-1">
-                <dt className="text-slate-500">{m.convertTotalLabel}</dt>
-                <dd className="font-bold tabular-nums text-slate-900" dir="ltr">
-                  {Number(reservation.snapshotTotalPayable).toLocaleString(intlLocale(locale))} {symbol}
+              <div className="flex items-center justify-between gap-3 bg-brand-500/[0.08] px-4 py-3">
+                <dt className="font-semibold text-slate-600">{m.convertTotalLabel}</dt>
+                <dd className="num text-[22px] font-semibold leading-none text-slate-900" dir="ltr">
+                  {fmt(reservation.snapshotTotalPayable)}
+                  <span className="ms-1.5 font-sans text-[12px] font-medium text-slate-500">{symbol}</span>
                 </dd>
               </div>
             )}
           </dl>
 
           {/* Form inputs */}
-          <form action={handleSubmit} className="space-y-3">
+          <form action={handleSubmit} className="space-y-4">
             {needsStartDate && (
               <Field
                 label={m.convertStartDateLabel}
@@ -202,7 +185,7 @@ export function ConvertReservationForm({ reservation, symbol, locale = 'ar' }: P
                   required
                   value={startsAt}
                   onChange={(e) => setStartsAt(e.target.value)}
-                  className="w-full rounded-xl border border-hairline bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                  className="w-full rounded-xl border border-hairline bg-surface px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-400"
                 />
                 {/* A start date in the past: the rows already due come in
                     overdue (without late fees) — the admin records what was paid. */}
@@ -220,7 +203,7 @@ export function ConvertReservationForm({ reservation, symbol, locale = 'ar' }: P
               <input
                 name="signedAt"
                 type="datetime-local"
-                className="w-full rounded-xl border border-hairline bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+                className="w-full rounded-xl border border-hairline bg-surface px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-400"
               />
             </Field>
 
@@ -259,7 +242,7 @@ export function ConvertReservationForm({ reservation, symbol, locale = 'ar' }: P
               <Button
                 type="submit"
                 variant="primary"
-                size="sm"
+                size="md"
                 disabled={isPending}
                 className="flex-1"
               >
@@ -278,6 +261,15 @@ export function ConvertReservationForm({ reservation, symbol, locale = 'ar' }: P
           </form>
         </div>
       )}
+    </div>
+  );
+}
+
+function SummaryRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+      <dt className="text-slate-500">{label}</dt>
+      <dd className="text-end font-semibold text-slate-900">{children}</dd>
     </div>
   );
 }
