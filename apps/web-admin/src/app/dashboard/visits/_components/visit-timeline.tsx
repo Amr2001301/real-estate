@@ -40,7 +40,7 @@ export function VisitTimeline({ activities, locale = 'ar' }: Props) {
           <div key={a.id} className="flex gap-3">
             <div className="flex flex-col items-center">
               <div className={`h-2.5 w-2.5 rounded-full mt-1 shrink-0 ${dotColor}`} />
-              {!isLast && <div className="w-px flex-1 bg-slate-200 my-1" />}
+              {!isLast && <div className="w-px flex-1 bg-hairline my-1" />}
             </div>
             <div className={`pb-4 min-w-0 ${isLast ? '' : ''}`}>
               <p className="text-sm font-medium text-slate-900">

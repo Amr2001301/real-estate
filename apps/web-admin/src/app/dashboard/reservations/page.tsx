@@ -7,7 +7,7 @@ import { api, safe } from '@/lib/api';
 import { projectOptions, staffOptions } from '@/lib/options';
 import { getLocale } from '@/lib/locale';
 import type { Paged, Reservation } from '@/lib/types';
-import { formatDate, formatDateTime, tx, intlLocale } from '@/lib/format';
+import { formatDate, formatTime, tx, intlLocale, DEFAULT_TIME_ZONE } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -24,6 +24,7 @@ import {
   PremiumFilterBar,
   PremiumFilterField,
 } from '@/components/premium';
+import { CodeCell, PersonCell, StackCell } from '@/components/premium/list-cells';
 import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
@@ -275,13 +276,12 @@ export default async function ReservationsPage({
             key: 'number',
             header: m.cols.id,
             cell: (r) => (
-              <Link
+              <CodeCell
                 href={`/dashboard/reservations/${r.id}`}
                 title={m.detailTitle}
-                className="font-mono text-xs font-semibold text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
-              >
-                {r.reservationNumber ?? r.id.slice(0, 8)}
-              </Link>
+                code={r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
+                muted={!r.reservationNumber}
+              />
             ),
           },
           {
@@ -289,13 +289,7 @@ export default async function ReservationsPage({
             header: m.cols.client,
             cell: (r) => {
               const name = r.client?.fullName ?? r.lead?.fullName ?? '—';
-              const phone = r.client?.phone ?? r.lead?.phone ?? '';
-              return (
-                <div>
-                  <p className="font-medium text-slate-900">{name}</p>
-                  {phone && <p className="text-xs text-slate-500">{phone}</p>}
-                </div>
-              );
+              return <PersonCell name={name} sub={r.client?.phone ?? r.lead?.phone} />;
             },
           },
           {
@@ -304,17 +298,17 @@ export default async function ReservationsPage({
             cell: (r) => {
               const project = r.unit?.building?.phase?.project;
               return (
-                <div>
-                  <p>{project ? tx(project.name) : '—'}</p>
-                  {r.unit && <p className="text-xs text-slate-500">{m.unitPrefix} {r.unit.code}</p>}
-                </div>
+                <StackCell
+                  main={project ? tx(project.name) : '—'}
+                  sub={r.unit ? <span dir="ltr">{r.unit.code}</span> : undefined}
+                />
               );
             },
           },
           {
             key: 'sales',
             header: m.cols.agent,
-            cell: (r) => r.sales?.fullName ?? '—',
+            cell: (r) => <span className="whitespace-nowrap text-slate-700">{r.sales?.fullName ?? '—'}</span>,
           },
           {
             key: 'booking',
@@ -322,10 +316,10 @@ export default async function ReservationsPage({
             cell: (r) => {
               const amount = Number(r.bookingAmount);
               return (
-                <div className="flex flex-col gap-1">
-                  <span className="font-medium text-slate-800" dir="ltr">
+                <div className="flex flex-col items-start gap-1">
+                  <span className="whitespace-nowrap font-bold tabular-nums text-slate-900">
                     {Number.isFinite(amount)
-                      ? `${amount.toLocaleString(intlLocale(locale))} ${symbol}`
+                      ? <>{amount.toLocaleString(intlLocale(locale))} <span className="text-[11px] font-semibold text-slate-500">{symbol}</span></>
                       : '—'}
                   </span>
                   <ReservationBookingPaymentBadge status={r.bookingPaymentStatus} locale={locale} />
@@ -341,12 +335,17 @@ export default async function ReservationsPage({
           {
             key: 'expires',
             header: m.cols.expiresAt,
-            cell: (r) => <span className="text-xs">{formatDateTime(r.expiresAt, locale)}</span>,
+            cell: (r) => (
+              <StackCell
+                main={<span className="tabular-nums">{formatDate(r.expiresAt, locale, DEFAULT_TIME_ZONE)}</span>}
+                sub={<span className="tabular-nums">{formatTime(r.expiresAt, locale)}</span>}
+              />
+            ),
           },
           {
             key: 'created',
             header: m.cols.created,
-            cell: (r) => formatDate(r.createdAt, locale),
+            cell: (r) => <span className="whitespace-nowrap tabular-nums text-slate-600">{formatDate(r.createdAt, locale)}</span>,
           },
           {
             key: 'actions',

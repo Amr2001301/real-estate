@@ -3745,6 +3745,9 @@ const UI = {
         leadLinkPrefix: 'عميل محتمل: ',
         cardProjectTitle: 'المشروع والوحدة',
         unitLabel: 'وحدة',
+        heroKicker: 'طلب زيارة',
+        eventsCount: (n: number) => `${n} حدث`,
+        noProject: 'لم يتم تحديد مشروع',
       },
     },
     documentsPage: {
@@ -9497,6 +9500,9 @@ const UI = {
         leadLinkPrefix: 'Lead: ',
         cardProjectTitle: 'Project & Unit',
         unitLabel: 'Unit',
+        heroKicker: 'Visit request',
+        eventsCount: (n: number) => `${n} events`,
+        noProject: 'No project selected',
       },
     },
     documentsPage: {

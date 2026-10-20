@@ -6,6 +6,7 @@ import type { Paged } from '@/lib/types';
 import { formatCurrency, formatDate, tx } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
+import { CodeCell, PersonCell, StackCell } from '@/components/premium/list-cells';
 import { uiT } from '@/messages/ui';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -210,37 +211,29 @@ export default async function ContractsPage({
             key: 'number',
             header: m.cols.id,
             cell: (c) => (
-              <Link
+              <CodeCell
                 href={`/dashboard/contracts/${c.id}`}
                 title={m.viewBtn}
-                className="font-mono text-xs font-semibold text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
-              >
-                {c.contractNumber ?? c.id.slice(0, 8)}
-              </Link>
+                code={c.contractNumber ?? `#${c.id.slice(0, 8).toUpperCase()}`}
+                muted={!c.contractNumber}
+              />
             ),
           },
           {
             key: 'customer',
             header: m.cols.client,
             cell: (c) => (
-              <div>
-                <p className="font-medium text-slate-900">{c.customer?.fullName ?? '—'}</p>
-                {c.customer?.phone && (
-                  <p className="text-xs text-slate-500 font-mono" dir="ltr">{c.customer.phone}</p>
-                )}
-              </div>
+              <PersonCell name={c.customer?.fullName ?? '—'} sub={c.customer?.phone} />
             ),
           },
           {
             key: 'unit',
             header: m.cols.unit,
             cell: (c) => (
-              <div>
-                <p className="font-medium">{c.unit?.code ?? '—'} · {c.unit?.type ?? ''}</p>
-                <p className="text-xs text-slate-400">
-                  {tx(c.unit?.building?.phase?.project?.name) || '—'}
-                </p>
-              </div>
+              <StackCell
+                main={<><span dir="ltr">{c.unit?.code ?? '—'}</span>{c.unit?.type ? ` · ${c.unit.type}` : ''}</>}
+                sub={tx(c.unit?.building?.phase?.project?.name) || '—'}
+              />
             ),
           },
           {
@@ -248,9 +241,9 @@ export default async function ContractsPage({
             header: m.cols.total,
             cell: (c) => (
               <div className="tabular-nums text-sm">
-                <p className="font-semibold">{formatCurrency(c.totalAmount, currency, locale)}</p>
+                <p className="whitespace-nowrap font-bold text-slate-900">{formatCurrency(c.totalAmount, currency, locale)}</p>
                 {Number(c.downPayment) > 0 && (
-                  <p className="text-xs text-slate-400">{m.downPaymentPrefix} {formatCurrency(c.downPayment, currency, locale)}</p>
+                  <p className="whitespace-nowrap text-[11.5px] text-slate-500">{m.downPaymentPrefix} {formatCurrency(c.downPayment, currency, locale)}</p>
                 )}
               </div>
             ),
@@ -260,7 +253,7 @@ export default async function ContractsPage({
             header: m.cols.plan,
             cell: (c) =>
               c.installmentPlan ? (
-                <span className="inline-flex items-center gap-1 text-xs text-success-700 bg-success-50 px-2 py-0.5 rounded-full">
+                <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-emerald-500/12 px-2.5 py-1 text-[11.5px] font-semibold text-emerald-600">
                   <CheckCircle2 className="h-3 w-3" />
                   {c.installmentPlan.totalMonths} {m.monthsSuffix}
                 </span>
@@ -275,7 +268,8 @@ export default async function ContractsPage({
               c.reservation ? (
                 <Link
                   href={`/dashboard/reservations/${c.reservation.id}`}
-                  className="inline-flex items-center gap-1 text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
+                  className="inline-flex items-center gap-1 whitespace-nowrap font-mono text-[11.5px] font-semibold text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
+                  dir="ltr"
                 >
                   <Link2 className="h-3 w-3" />
                   {c.reservation.reservationNumber ?? c.reservation.id.slice(0, 8)}
@@ -292,9 +286,9 @@ export default async function ContractsPage({
             header: m.cols.signed,
             cell: (c) =>
               c.signedAt ? (
-                <span className="text-xs text-success-700">{formatDate(c.signedAt, locale)}</span>
+                <span className="whitespace-nowrap rounded-full bg-emerald-500/12 px-2.5 py-1 text-[11.5px] font-semibold tabular-nums text-emerald-600">{formatDate(c.signedAt, locale)}</span>
               ) : (
-                <span className="text-xs text-slate-400">{m.unsignedLabel}</span>
+                <span className="whitespace-nowrap rounded-full bg-amber-500/12 px-2.5 py-1 text-[11.5px] font-semibold text-amber-600">{m.unsignedLabel}</span>
               ),
           },
           {

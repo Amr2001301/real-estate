@@ -64,11 +64,15 @@ export function formatCurrency(
   }).format(n);
 }
 
-export function formatDate(value: string | Date | null | undefined, locale: Locale = 'ar'): string {
+export function formatDate(
+  value: string | Date | null | undefined,
+  locale: Locale = 'ar',
+  timeZone?: string,
+): string {
   if (!value) return '—';
   const d = typeof value === 'string' ? new Date(value) : value;
   if (Number.isNaN(d.getTime())) return '—';
-  return new Intl.DateTimeFormat(INTL[locale], { dateStyle: 'medium' }).format(d);
+  return new Intl.DateTimeFormat(INTL[locale], { dateStyle: 'medium', timeZone }).format(d);
 }
 
 /**
@@ -91,6 +95,18 @@ export function formatDateTime(
   } catch {
     return new Intl.DateTimeFormat(INTL[locale], { dateStyle: 'medium', timeStyle: 'short' }).format(d);
   }
+}
+
+/** Time of day alone, in the company's zone (pairs with formatDate(…, DEFAULT_TIME_ZONE)). */
+export function formatTime(
+  value: string | Date | null | undefined,
+  locale: Locale = 'ar',
+  timeZone: string = DEFAULT_TIME_ZONE,
+): string {
+  if (!value) return '—';
+  const d = typeof value === 'string' ? new Date(value) : value;
+  if (Number.isNaN(d.getTime())) return '—';
+  return new Intl.DateTimeFormat(INTL[locale], { timeStyle: 'short', timeZone }).format(d);
 }
 
 export interface Translatable { ar: string; en: string }

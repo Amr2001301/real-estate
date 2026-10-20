@@ -39,3 +39,4 @@ export type { PremiumPanelProps } from './panel';
 
 export { PremiumBars } from './bar-chart';
 export type { BarDatum } from './bar-chart';
+export { CodeCell, PersonCell, StackCell } from './list-cells';

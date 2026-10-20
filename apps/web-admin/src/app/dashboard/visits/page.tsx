@@ -7,7 +7,6 @@ import {
   AlertCircle,
   Plus,
 } from 'lucide-react';
-import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { api, safe } from '@/lib/api';
 import { staffOptions } from '@/lib/options';
@@ -24,6 +23,7 @@ import {
   PremiumSectionCard,
   PremiumEmptyState,
 } from '@/components/premium';
+import { CodeCell, PersonCell, StackCell } from '@/components/premium/list-cells';
 import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
@@ -235,61 +235,52 @@ export default async function VisitsPage({
                     return (
                       <tr
                         key={r.id}
-                        className="hover:bg-canvas/40 transition-colors duration-100 align-middle"
+                        className="hover:bg-brand-500/[0.04] transition-colors duration-100 align-middle"
                       >
-                        <td className="py-3 ps-5 pe-4">
-                          <Link
-                            href={`/dashboard/visits/requests/${r.id}` as never}
-                            className="font-mono text-xs font-semibold text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
-                          >
-                            {r.requestNumber ?? r.id.slice(0, 8)}
-                          </Link>
+                        <td className="py-3.5 ps-5 pe-4">
+                          <CodeCell
+                            href={`/dashboard/visits/requests/${r.id}`}
+                            code={r.requestNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
+                            muted={!r.requestNumber}
+                          />
                         </td>
-                        <td className="py-3 px-4">
-                          <div>
-                            <p
-                              className={cn(
-                                'font-medium',
-                                isFallback ? 'text-slate-400 italic text-xs' : 'text-slate-900',
-                              )}
-                            >
-                              {name}
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              {r.customerPhone ?? r.user?.phone ?? r.lead?.phone ?? ''}
-                            </p>
-                          </div>
+                        <td className="py-3.5 px-4">
+                          <PersonCell
+                            name={name}
+                            muted={isFallback}
+                            sub={r.customerPhone ?? r.user?.phone ?? r.lead?.phone}
+                          />
                         </td>
-                        <td className="py-3 px-4">
-                          <div>
-                            <p className="text-slate-800">{tx(r.project?.name)}</p>
-                            {r.unit && (
-                              <p className="text-xs text-slate-500">{m.unitPrefix} {r.unit.code}</p>
-                            )}
-                          </div>
+                        <td className="py-3.5 px-4">
+                          <StackCell
+                            main={tx(r.project?.name) || '—'}
+                            sub={r.unit ? `${m.unitPrefix} ${r.unit.code}` : undefined}
+                          />
                         </td>
-                        <td className="py-3 px-4">
-                          <div>
-                            <p className="text-slate-800">{formatDate(r.preferredDate, locale)}</p>
-                            {r.preferredTime && (
-                              <p className="text-xs text-slate-500">{r.preferredTime}</p>
-                            )}
-                          </div>
+                        <td className="py-3.5 px-4">
+                          <StackCell
+                            main={<span className="tabular-nums">{formatDate(r.preferredDate, locale)}</span>}
+                            sub={r.preferredTime ? <span className="tabular-nums" dir="ltr">{r.preferredTime}</span> : undefined}
+                          />
                         </td>
-                        <td className="py-3 px-4 text-slate-600 text-sm">
-                          {r.source ? (SOURCE_LABEL[r.source] ?? r.source) : '—'}
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          {r.source ? (
+                            <span className="rounded-full bg-sky-500/12 px-2.5 py-1 text-[11.5px] font-semibold text-sky-600">
+                              {SOURCE_LABEL[r.source] ?? r.source}
+                            </span>
+                          ) : '—'}
                         </td>
-                        <td className="py-3 px-4">
+                        <td className="py-3.5 px-4">
                           {r.requestStatus ? (
                             <VisitRequestStatusBadge status={r.requestStatus} locale={locale} />
                           ) : (
                             <span className="text-xs text-slate-400">—</span>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-xs text-slate-500 whitespace-nowrap">
+                        <td className="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">
                           {formatDate(r.createdAt, locale)}
                         </td>
-                        <td className="py-3 ps-4 pe-5 text-end">
+                        <td className="py-3.5 ps-4 pe-5 text-end whitespace-nowrap">
                           <RequestActions request={r} salesOptions={salesOptions} locale={locale} />
                         </td>
                       </tr>
@@ -342,52 +333,34 @@ export default async function VisitsPage({
                     return (
                       <tr
                         key={a.id}
-                        className="hover:bg-canvas/40 transition-colors duration-100 align-middle"
+                        className="hover:bg-brand-500/[0.04] transition-colors duration-100 align-middle"
                       >
-                        <td className="py-3 ps-5 pe-4">
-                          <Link
-                            href={`/dashboard/visits/appointments/${a.id}` as never}
-                            className="font-mono text-xs font-semibold text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
-                          >
-                            {a.visitNumber}
-                          </Link>
+                        <td className="py-3.5 ps-5 pe-4">
+                          <CodeCell href={`/dashboard/visits/appointments/${a.id}`} code={a.visitNumber} />
                         </td>
-                        <td className="py-3 px-4">
-                          <div>
-                            <p
-                              className={cn(
-                                'font-medium',
-                                isFallback ? 'text-slate-400 italic text-xs' : 'text-slate-900',
-                              )}
-                            >
-                              {name}
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              {a.client?.phone ??
-                                a.lead?.phone ??
-                                a.visitRequest?.customerPhone ??
-                                ''}
-                            </p>
-                          </div>
+                        <td className="py-3.5 px-4">
+                          <PersonCell
+                            name={name}
+                            muted={isFallback}
+                            sub={a.client?.phone ?? a.lead?.phone ?? a.visitRequest?.customerPhone}
+                          />
                         </td>
-                        <td className="py-3 px-4">
-                          <div>
-                            <p className="text-slate-800">{tx(a.project?.name)}</p>
-                            {a.unit && (
-                              <p className="text-xs text-slate-500">{m.unitPrefix} {a.unit.code}</p>
-                            )}
-                          </div>
+                        <td className="py-3.5 px-4">
+                          <StackCell
+                            main={tx(a.project?.name) || '—'}
+                            sub={a.unit ? `${m.unitPrefix} ${a.unit.code}` : undefined}
+                          />
                         </td>
-                        <td className="py-3 px-4 text-xs text-slate-700 whitespace-nowrap">
+                        <td className="py-3.5 px-4 text-xs text-slate-700 whitespace-nowrap">
                           {formatDateTime(a.scheduledAt, locale)}
                         </td>
-                        <td className="py-3 px-4 text-sm text-slate-700">
+                        <td className="py-3.5 px-4 text-sm text-slate-700 whitespace-nowrap">
                           {a.assignedSales?.fullName ?? '—'}
                         </td>
-                        <td className="py-3 px-4">
+                        <td className="py-3.5 px-4">
                           <AppointmentStatusBadge status={a.status} locale={locale} />
                         </td>
-                        <td className="py-3 ps-4 pe-5 text-end">
+                        <td className="py-3.5 ps-4 pe-5 text-end whitespace-nowrap">
                           <AppointmentActions appointment={a} salesOptions={salesOptions} locale={locale} />
                         </td>
                       </tr>
