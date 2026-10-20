@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, X, Layers, ChevronDown, Building2, BedDouble, Bath, Wallet, Tag, Ruler, ArrowDownUp, Paintbrush } from 'lucide-react';
+import { Search, X, Layers, ChevronDown, Building2, BedDouble, Bath, Wallet, Tag, Ruler, ArrowDownUp, Paintbrush, CalendarCheck } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
@@ -22,6 +22,8 @@ export interface UnitsFilterValues {
   area: string;
   /** Core & shell … furnished. */
   finishing?: string;
+  /** Handover: 'now', or within N years. */
+  delivery?: string;
   status: string;
   sort: string;
 }
@@ -79,11 +81,12 @@ export function UnitsFilterBar({
   const [price, setPrice] = useState(initial.price);
   const [area, setArea] = useState(initial.area);
   const [finishing, setFinishing] = useState(initial.finishing ?? '');
+  const [delivery, setDelivery] = useState(initial.delivery ?? '');
   const [status, setStatus] = useState(initial.status);
   const [sort, setSort] = useState(initial.sort);
 
   function pushWith(next: Partial<UnitsFilterValues>) {
-    const v = { type, bedrooms, bathrooms, price, area, finishing, status, sort, ...next };
+    const v = { type, bedrooms, bathrooms, price, area, finishing, delivery, status, sort, ...next };
     const params = new URLSearchParams();
     if (initial.projectId) params.set('projectId', initial.projectId);
     if (initial.city) params.set('city', initial.city);
@@ -92,6 +95,7 @@ export function UnitsFilterBar({
     if (v.bedrooms) params.set('bedrooms', v.bedrooms);
     if (v.bathrooms) params.set('bathrooms', v.bathrooms);
     if (v.finishing) params.set('finishing', v.finishing);
+    if (v.delivery) params.set('delivery', v.delivery);
     if (v.status) params.set('status', v.status);
     const range = PRICE_RANGES.find((r) => r.value === v.price);
     if (range?.min) params.set('priceMin', range.min);
@@ -111,6 +115,7 @@ export function UnitsFilterBar({
     setPrice('');
     setArea('');
     setFinishing('');
+    setDelivery('');
     setStatus('');
     setSort('');
     const params = new URLSearchParams();
@@ -120,7 +125,7 @@ export function UnitsFilterBar({
     router.push((qs ? `${routes.units}?${qs}` : routes.units) as never);
   }
 
-  const activeCount = [type, bedrooms, bathrooms, price, area, finishing, status, sort].filter(Boolean).length;
+  const activeCount = [type, bedrooms, bathrooms, price, area, finishing, delivery, status, sort].filter(Boolean).length;
 
   return (
     <form
@@ -137,7 +142,7 @@ export function UnitsFilterBar({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-[repeat(8,minmax(0,1fr))_auto]">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-[repeat(9,minmax(0,1fr))_auto]">
         <CompactSelect icon={Building2} label={t.propertyType} value={type} onChange={setType}>
           {typeOptions.map((tp) => (
             <option key={tp.value} value={tp.value}>{tp.label}</option>
@@ -171,6 +176,11 @@ export function UnitsFilterBar({
           <option value="">{t.allFinishing}</option>
           {Object.entries(finishingLabels).map(([value, label]) => (
             <option key={value} value={value}>{label}</option>
+          ))}
+        </CompactSelect>
+        <CompactSelect icon={CalendarCheck} label={t.delivery} value={delivery} onChange={setDelivery}>
+          {t.deliveryOptions.map((o) => (
+            <option key={o.value || 'any'} value={o.value}>{o.label}</option>
           ))}
         </CompactSelect>
         <CompactSelect icon={Tag} label={t.unitStatus} value={status} onChange={setStatus}>

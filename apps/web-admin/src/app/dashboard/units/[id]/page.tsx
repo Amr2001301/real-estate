@@ -171,6 +171,12 @@ export default async function UnitDetailPage({
                     <KV key={f} label={unitsM.specLabels[f] ?? f} value={`${unit[f]} ${m.metrics.areaSuffix}`} />
                   ) : null,
                 )}
+                {unit.effectiveDeliveryDate && (
+                  <KV
+                    label={uiT(locale).pages.unitsForm.labelDelivery}
+                    value={`${unit.effectiveDeliveryDate}${unit.deliveryDate ? '' : ` ${uiT(locale).pages.unitsForm.fromPhase}`}`}
+                  />
+                )}
                 {unit.model && (
                   <KV
                     label={uiT(locale).pages.unitsForm.labelModel}

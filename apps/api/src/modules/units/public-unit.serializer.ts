@@ -43,6 +43,8 @@ interface UnitInput extends Pick<
   typeName?: Prisma.JsonValue | null;
   /** The project's model the unit was entered from (F10). */
   model?: { code: string; name: Prisma.JsonValue } | null;
+  /** Its handover date — its own, or its phase's (YYYY-MM-DD). */
+  effectiveDeliveryDate?: string | null;
   media?: MediaLike[];
   project?: ProjectSummaryInput | null;
 }
@@ -75,6 +77,7 @@ export function serializePublicUnit(unit: UnitInput) {
     typeName: unit.typeName ?? null,
     usage: unit.usage,
     model: unit.model ? { code: unit.model.code, name: unit.model.name } : null,
+    deliveryDate: unit.effectiveDeliveryDate ?? null,
     area: unit.area,
     netArea: unit.netArea ?? null,
     gardenArea: unit.gardenArea ?? null,

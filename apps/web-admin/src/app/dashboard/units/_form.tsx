@@ -283,6 +283,15 @@ export default function UnitForm({ unit, projects, types, locale = 'ar' }: Props
                   />
                 </Field>
 
+                <Field label={m.labelDelivery} name="deliveryDate" hint={m.hintDelivery}>
+                  <Input
+                    id="deliveryDate"
+                    name="deliveryDate"
+                    type="date"
+                    defaultValue={unit?.deliveryDate?.slice(0, 10) ?? ''}
+                  />
+                </Field>
+
                 <Field label={m.labelModel} name="modelId" hint={offeredModels.length ? m.hintModel : m.hintNoModels}>
                   <Select
                     id="modelId"

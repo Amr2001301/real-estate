@@ -1,7 +1,8 @@
 import { Body, Controller, Delete, Get, Module, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID, IsInt, Matches, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
+import { IsDateString, IsOptional, IsString, IsUUID, IsInt, Matches, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
+import { toDateOnly } from '../../common/time/date-only';
 import { Transform, Type } from 'class-transformer';
 import { Prisma } from '@prisma/client';
 import { ENTITY_CODE_PATTERN, codeTaken, normalizeEntityCode } from '../../common/utils/entity-code';
@@ -37,6 +38,9 @@ class CreatePhaseDto {
   @IsInt()
   @Min(0)
   order?: number;
+
+  /** When the phase's units are handed over (YYYY-MM-DD). */
+  @IsOptional() @IsDateString() deliveryDate?: string | null;
 }
 
 class UpdatePhaseDto {
@@ -49,6 +53,9 @@ class UpdatePhaseDto {
   @IsInt()
   @Min(0)
   order?: number;
+
+  /** null clears it. */
+  @IsOptional() @IsDateString() deliveryDate?: string | null;
 }
 
 @Injectable()
@@ -83,6 +90,7 @@ class PhasesService {
         code: dto.code,
         name: dto.name as unknown as Prisma.InputJsonValue,
         order: dto.order ?? 0,
+        deliveryDate: toDateOnly(dto.deliveryDate),
       },
     }).catch(codeTaken('لمرحلة أخرى في هذا المشروع'));
   }
@@ -91,6 +99,7 @@ class PhasesService {
     const data: Prisma.PhaseUpdateInput = {};
     if (dto.name) data.name = dto.name as unknown as Prisma.InputJsonValue;
     if (dto.order !== undefined) data.order = dto.order;
+    if (dto.deliveryDate !== undefined) data.deliveryDate = toDateOnly(dto.deliveryDate);
     return this.prisma.phase.update({ where: { id }, data });
   }
 

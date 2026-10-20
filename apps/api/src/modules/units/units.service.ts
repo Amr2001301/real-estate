@@ -27,6 +27,12 @@ import { UnitModelsService } from './unit-models.service';
 import { arText, collectPages, isoDate, listCsv, listXlsx, type ListColumn } from '../../common/utils/list-export';
 import { ReportBrandService } from '../company-branding/report-brand.service';
 import { resetUnitWarranties } from '../contracts/unit-warranties';
+import { dateOnlyString, toDateOnly } from '../../common/time/date-only';
+
+/** A unit's handover date: its own, or its phase's (F10). */
+function effectiveDelivery(unit: { deliveryDate: Date | null; building?: { phase?: { deliveryDate: Date | null } } }) {
+  return dateOnlyString(unit.deliveryDate ?? unit.building?.phase?.deliveryDate ?? null);
+}
 
 /** A unit priced by the meter: the price per meter × its gross area. */
 export function meterPrice(pricePerMeter: Prisma.Decimal.Value, area: number): Prisma.Decimal {
@@ -198,6 +204,7 @@ export class UnitsService {
         price,
         pricePerMeter,
         modelId: model?.id ?? null,
+        deliveryDate: toDateOnly(dto.deliveryDate) ?? null,
         status: dto.status ?? UnitStatus.AVAILABLE,
         ...specData(dto),
       },
@@ -257,6 +264,15 @@ export class UnitsService {
           : {}),
       ...(query.usage ? { usage: query.usage } : {}),
       ...(query.modelId ? { modelId: query.modelId } : {}),
+      // Handed over by then: the unit's own date, or (none) its phase's.
+      ...(query.deliveryBy
+        ? {
+            OR: [
+              { deliveryDate: { lte: toDateOnly(query.deliveryBy)! } },
+              { deliveryDate: null, building: { phase: { deliveryDate: { lte: toDateOnly(query.deliveryBy)! } } } },
+            ],
+          }
+        : {}),
       ...(query.finishing ? { finishing: query.finishing } : {}),
       ...(query.view ? { view: query.view } : {}),
       ...(query.orientation ? { orientation: query.orientation } : {}),
@@ -302,7 +318,12 @@ export class UnitsService {
       // No facets here: summed prices and per-status counts would give anyone
       // the company's sales volume (?status=SOLD) — they are staff KPIs.
       const serialized = data.map((u) =>
-        serializePublicUnit({ ...u, project: u.building.phase.project, typeName: typeNames.get(u.type) ?? null }),
+        serializePublicUnit({
+          ...u,
+          project: u.building.phase.project,
+          typeName: typeNames.get(u.type) ?? null,
+          effectiveDeliveryDate: effectiveDelivery(u),
+        }),
       );
       return paginate(serialized, total, { page, pageSize });
     }
@@ -331,7 +352,7 @@ export class UnitsService {
     };
 
     return paginate(
-      data.map((u) => ({ ...u, typeName: typeNames.get(u.type) ?? null })),
+      data.map((u) => ({ ...u, typeName: typeNames.get(u.type) ?? null, effectiveDeliveryDate: effectiveDelivery(u) })),
       total,
       { page, pageSize },
       facets,
@@ -374,10 +395,11 @@ export class UnitsService {
       throw new NotFoundException('Unit not found');
     }
     const typeName = (await this.unitTypes.names()).get(unit.type) ?? null;
+    const effectiveDeliveryDate = effectiveDelivery(unit);
     if (publicOnly) {
-      return serializePublicUnit({ ...unit, project: unit.building.phase.project, typeName });
+      return serializePublicUnit({ ...unit, project: unit.building.phase.project, typeName, effectiveDeliveryDate });
     }
-    return { ...unit, typeName };
+    return { ...unit, typeName, effectiveDeliveryDate };
   }
 
   async update(id: string, dto: UpdateUnitDto) {
@@ -441,6 +463,7 @@ export class UnitsService {
     if (dto.floor !== undefined) data.floor = dto.floor;
     if (price !== undefined) data.price = price;
     if (dto.pricePerMeter !== undefined) data.pricePerMeter = dto.pricePerMeter;
+    if (dto.deliveryDate !== undefined) data.deliveryDate = toDateOnly(dto.deliveryDate);
     // The model (F10): one of the unit's project's; the one it has passes
     // even if switched off since.
     if (dto.modelId !== undefined && dto.modelId !== unit.modelId) {
