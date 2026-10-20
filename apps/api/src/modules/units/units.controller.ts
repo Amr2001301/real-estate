@@ -21,6 +21,8 @@ import { CurrentUser, AuthUser } from '../../common/decorators/current-user.deco
 import { UnitsService } from './units.service';
 import { UnitTypesService } from './unit-types.service';
 import { CreateUnitTypeDto, UpdateUnitTypeDto } from './dto/unit-type.dto';
+import { UnitModelsService } from './unit-models.service';
+import { CreateUnitModelDto, UpdateUnitModelDto } from './dto/unit-model.dto';
 import {
   CalcInstallmentDto,
   CreateUnitDto,
@@ -37,6 +39,7 @@ export class UnitsController {
   constructor(
     private readonly units: UnitsService,
     private readonly unitTypes: UnitTypesService,
+    private readonly unitModels: UnitModelsService,
   ) {}
 
   // Unit types (F10): the company's list, managed by an admin.
@@ -65,6 +68,28 @@ export class UnitsController {
   @Patch('unit-types/:id')
   updateUnitType(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUnitTypeDto) {
     return this.unitTypes.update(id, dto);
+  }
+
+  // Unit models (F10): a project's layouts, units are entered from.
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
+  @Permissions('units:read')
+  @Get('projects/:projectId/unit-models')
+  listUnitModels(@Param('projectId', ParseUUIDPipe) projectId: string) {
+    return this.unitModels.list(projectId);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('units:create')
+  @Post('projects/:projectId/unit-models')
+  createUnitModel(@Param('projectId', ParseUUIDPipe) projectId: string, @Body() dto: CreateUnitModelDto) {
+    return this.unitModels.create(projectId, dto);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('units:update')
+  @Patch('unit-models/:id')
+  updateUnitModel(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUnitModelDto) {
+    return this.unitModels.update(id, dto);
   }
 
   // Public

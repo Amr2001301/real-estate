@@ -1,4 +1,4 @@
-import { Maximize, BedDouble, Bath, Building2, Home, BadgeCheck, Trees, Paintbrush, Eye, Compass } from 'lucide-react';
+import { Maximize, BedDouble, Bath, Building2, Home, BadgeCheck, Trees, Paintbrush, Eye, Compass, LayoutTemplate } from 'lucide-react';
 import { formatArea, formatNumber, unitTypeLabel } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -36,6 +36,10 @@ export async function UnitSpecs({ unit }: { unit: PublicUnit }) {
   specs.push({ icon: Building2,  label: s.floor,      value: formatNumber(unit.floor) });
   if (unit.type)
     specs.push({ icon: Home,     label: s.unitType,   value: unitTypeLabel(unit.type, unit.typeName) });
+  if (unit.model) {
+    const name = typeof unit.model.name === 'string' ? unit.model.name : (unit.model.name[locale] ?? unit.model.name.ar);
+    specs.push({ icon: LayoutTemplate, label: s.model, value: name || unit.model.code });
+  }
   specs.push({ icon: BadgeCheck, label: s.status,     value: statusValue });
 
   return (

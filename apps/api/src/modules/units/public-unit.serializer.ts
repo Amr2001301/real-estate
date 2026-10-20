@@ -41,6 +41,8 @@ interface UnitInput extends Pick<
 > {
   /** The type's name from the company's list ({ar,en}; flattened per locale). */
   typeName?: Prisma.JsonValue | null;
+  /** The project's model the unit was entered from (F10). */
+  model?: { code: string; name: Prisma.JsonValue } | null;
   media?: MediaLike[];
   project?: ProjectSummaryInput | null;
 }
@@ -72,6 +74,7 @@ export function serializePublicUnit(unit: UnitInput) {
     type: unit.type,
     typeName: unit.typeName ?? null,
     usage: unit.usage,
+    model: unit.model ? { code: unit.model.code, name: unit.model.name } : null,
     area: unit.area,
     netArea: unit.netArea ?? null,
     gardenArea: unit.gardenArea ?? null,

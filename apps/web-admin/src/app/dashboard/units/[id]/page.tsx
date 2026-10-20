@@ -171,6 +171,12 @@ export default async function UnitDetailPage({
                     <KV key={f} label={unitsM.specLabels[f] ?? f} value={`${unit[f]} ${m.metrics.areaSuffix}`} />
                   ) : null,
                 )}
+                {unit.model && (
+                  <KV
+                    label={uiT(locale).pages.unitsForm.labelModel}
+                    value={`${unit.model.code} — ${tx(unit.model.name, locale)}`}
+                  />
+                )}
                 {unit.pricePerMeter != null && (
                   <KV label={unitsM.pricePerMeter} value={formatCurrency(unit.pricePerMeter, currency, locale)} />
                 )}

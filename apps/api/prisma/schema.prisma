@@ -15,52 +15,52 @@ datasource db {
 // =============================================================================
 
 model Company {
-  id                  String                 @id @default(uuid()) @db.Uuid
-  name                String
-  slug                String                 @unique // URL-safe identifier, used for subdomain routing
+  id   String @id @default(uuid()) @db.Uuid
+  name String
+  slug String @unique // URL-safe identifier, used for subdomain routing
 
   // ── MT-055: Public branding ────────────────────────────────────────────────
   // All nullable — null means "use platform default". Never blocks company creation.
   // Served by GET /v1/public/branding; null fields are omitted from the response.
-  logoUrl             String?   // square 1:1, PNG/WebP/SVG
-  faviconUrl          String?   // 32×32 or 64×64, PNG/ICO/SVG
-  ogImageUrl          String?   // 1200×630 social share banner
-  displayName         String?   // public-facing name override; falls back to Company.name
-  primaryColor        String?   // #RRGGBB — buttons, CTAs, nav accent
-  accentColor         String?   // #RRGGBB — secondary highlight
-  tagline             Json?     // { ar: String, en: String }
-  contactEmail        String?
-  contactPhone        String?
-  contactWhatsApp     String?   // digits only, for wa.me links
-  contactAddress      Json?     // { ar: String, en: String }
-  officeHours         Json?     // { ar: String, en: String }
-  socialLinks         Json?     // { instagram?, facebook?, twitter?, linkedin?, youtube?, tiktok? }
-  registrationNumber  String?   // developer/brokerage license ID (RERA, REGA, etc.)
+  logoUrl            String? // square 1:1, PNG/WebP/SVG
+  faviconUrl         String? // 32×32 or 64×64, PNG/ICO/SVG
+  ogImageUrl         String? // 1200×630 social share banner
+  displayName        String? // public-facing name override; falls back to Company.name
+  primaryColor       String? // #RRGGBB — buttons, CTAs, nav accent
+  accentColor        String? // #RRGGBB — secondary highlight
+  tagline            Json? // { ar: String, en: String }
+  contactEmail       String?
+  contactPhone       String?
+  contactWhatsApp    String? // digits only, for wa.me links
+  contactAddress     Json? // { ar: String, en: String }
+  officeHours        Json? // { ar: String, en: String }
+  socialLinks        Json? // { instagram?, facebook?, twitter?, linkedin?, youtube?, tiktok? }
+  registrationNumber String? // developer/brokerage license ID (RERA, REGA, etc.)
 
   country             String? // ISO 3166-1 alpha-2 (SA, AE, EG …)
-  currency            String                 @default("EGP") // ISO 4217 — every amount on every surface; set from branding
-  defaultLocale       Locale                 @default(ar)
-  timezone            String                 @default("Africa/Cairo") // IANA tz database name
+  currency            String             @default("EGP") // ISO 4217 — every amount on every surface; set from branding
+  defaultLocale       Locale             @default(ar)
+  timezone            String             @default("Africa/Cairo") // IANA tz database name
   // ── Legacy operational flag — still used by TenantResolverService and auth.
   // Future: lifecycleStatus will become the canonical control; isActive will be
   // derived or removed once MT-034 lifecycle guard is enforced.
-  isActive            Boolean                @default(true)
-  subscriptionPlan    SubscriptionPlan       @default(TRIAL)
-  subscriptionStatus  SubscriptionStatus     @default(TRIAL)
+  isActive            Boolean            @default(true)
+  subscriptionPlan    SubscriptionPlan   @default(TRIAL)
+  subscriptionStatus  SubscriptionStatus @default(TRIAL)
   subscriptionStartAt DateTime?
   subscriptionEndAt   DateTime?
   maxUsers            Int?
   cancelledAt         DateTime?
   cancelReason        String?
-  createdAt           DateTime               @default(now())
-  updatedAt           DateTime               @updatedAt
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
   // ── MT-040: Company classification ────────────────────────────────────────
   // DEVELOPER: real-estate developer (existing platform tenants, default)
   // BROKERAGE: independent broker company (not a Developer sub-entity)
   // Existing Broker/BrokerUser rows are tenant-local partner features and are
   // NOT the same as Company.type = BROKERAGE.
-  type                CompanyType            @default(DEVELOPER)
+  type CompanyType @default(DEVELOPER)
 
   // ── MT-036: Lifecycle status (schema only — enforcement comes in MT-034) ──
   // ACTIVE: fully operational (all existing rows backfilled to ACTIVE)
@@ -68,12 +68,12 @@ model Company {
   // ARCHIVED: soft-decommissioned, read-only
   // Distinct from subscriptionStatus: lifecycle is an administrative state;
   // subscription is a billing concern. Both temporarily coexist in D1.
-  lifecycleStatus     CompanyLifecycleStatus @default(ACTIVE)
+  lifecycleStatus CompanyLifecycleStatus @default(ACTIVE)
 
   // ── MT-037: Runtime capabilities (schema only — enforcement in D2) ─────────
   // JSONB blob provisioned at company creation time. Shape is defined by the
   // CapabilityService (future). Null = no explicit entitlements stored yet.
-  capabilities        Json?
+  capabilities Json?
 
   // ── MT-040A: Exposure / channel flags ─────────────────────────────────────
   // These are channel controls, independent of CompanyType and capabilities.
@@ -82,71 +82,72 @@ model Company {
   // staffAppEnabled:      may staff access this company via the shared staff app?
   // NULL = no explicit override — use the plan default.
   // Resolution: column (if NOT NULL) > plan default.
-  websiteEnabled      Boolean?
-  customerAppEnabled  Boolean?
-  staffAppEnabled     Boolean?
+  websiteEnabled     Boolean?
+  customerAppEnabled Boolean?
+  staffAppEnabled    Boolean?
 
   // ── Relations ──────────────────────────────────────────────────────────────
   // MT-044: Platform subdomains are provisioned here at company creation time.
   // Custom domains are added by tenant admins post-creation.
-  companyDomains           CompanyDomain[]
-  users                    User[]
-  projects                 Project[]
-  phases                   Phase[]
-  buildings                Building[]
-  units                    Unit[]
-  unitStatusHistories      UnitStatusHistory[]
-  unitMaintenanceItems     UnitMaintenanceItem[]
-  leadSources              LeadSource[]
-  unitTypes                UnitType[]
-  leads                    Lead[]
-  leadNotes                LeadNote[]
-  leadActivities           LeadActivity[]
-  infoRequests             InfoRequest[]
-  visitRequests            VisitRequest[]
-  visitAppointments        VisitAppointment[]
-  visitActivities          VisitActivity[]
-  reservations             Reservation[]
-  reservationNotes         ReservationNote[]
-  reservationActivities    ReservationActivity[]
-  contracts                Contract[]
-  installmentPlans         InstallmentPlan[]
-  installments             Installment[]
-  deposits                 Deposit[]
-  installmentPlanTemplates InstallmentPlanTemplate[]
-  bonusRules               BonusRule[]
-  bonusEntries             BonusEntry[]
-  salesTargets             SalesTarget[]
-  maintenanceCategories    MaintenanceCategory[]
-  maintenanceRequests      MaintenanceRequest[]
-  maintenanceRequestItems  MaintenanceRequestItem[]
-  cmsPages                 CmsPage[]
-  banners                  Banner[]
-  articles                 Article[]
-  notificationTemplates    NotificationTemplate[]
-  notifications            Notification[]
-  auditLogs                AuditLog[]
-  brokers                  Broker[]
-  brokerUsers              BrokerUser[]
-  brokerProjectAccesses    BrokerProjectAccess[]
-  brokerUnitAccesses       BrokerUnitAccess[]
-  brokerCommissions        BrokerCommission[]
-  brokerPayouts            BrokerPayout[]
+  companyDomains              CompanyDomain[]
+  users                       User[]
+  projects                    Project[]
+  phases                      Phase[]
+  buildings                   Building[]
+  units                       Unit[]
+  unitStatusHistories         UnitStatusHistory[]
+  unitMaintenanceItems        UnitMaintenanceItem[]
+  leadSources                 LeadSource[]
+  unitTypes                   UnitType[]
+  unitModels                  UnitModel[]
+  leads                       Lead[]
+  leadNotes                   LeadNote[]
+  leadActivities              LeadActivity[]
+  infoRequests                InfoRequest[]
+  visitRequests               VisitRequest[]
+  visitAppointments           VisitAppointment[]
+  visitActivities             VisitActivity[]
+  reservations                Reservation[]
+  reservationNotes            ReservationNote[]
+  reservationActivities       ReservationActivity[]
+  contracts                   Contract[]
+  installmentPlans            InstallmentPlan[]
+  installments                Installment[]
+  deposits                    Deposit[]
+  installmentPlanTemplates    InstallmentPlanTemplate[]
+  bonusRules                  BonusRule[]
+  bonusEntries                BonusEntry[]
+  salesTargets                SalesTarget[]
+  maintenanceCategories       MaintenanceCategory[]
+  maintenanceRequests         MaintenanceRequest[]
+  maintenanceRequestItems     MaintenanceRequestItem[]
+  cmsPages                    CmsPage[]
+  banners                     Banner[]
+  articles                    Article[]
+  notificationTemplates       NotificationTemplate[]
+  notifications               Notification[]
+  auditLogs                   AuditLog[]
+  brokers                     Broker[]
+  brokerUsers                 BrokerUser[]
+  brokerProjectAccesses       BrokerProjectAccess[]
+  brokerUnitAccesses          BrokerUnitAccess[]
+  brokerCommissions           BrokerCommission[]
+  brokerPayouts               BrokerPayout[]
   brokerCommissionAdjustments BrokerCommissionAdjustment[]
-  brokerActivityLogs       BrokerActivityLog[]
-  settings                 Setting[]
-  documents                Document[]
-  presignedUploads         PresignedUpload[]
-  unitHandovers            UnitHandover[]
-  chatSessions             ChatSession[]
-  chatMessages             ChatMessage[]
-  chatFeedback             ChatFeedback[]
-  pricingPackages          PricingPackage[]
-  paymentInstruments       PaymentInstrument[]
-  paymentCorrections       PaymentCorrection[]
-  contractCancellations    ContractCancellation[]
-  contractAmendments       ContractAmendment[]
-  refunds                  Refund[]
+  brokerActivityLogs          BrokerActivityLog[]
+  settings                    Setting[]
+  documents                   Document[]
+  presignedUploads            PresignedUpload[]
+  unitHandovers               UnitHandover[]
+  chatSessions                ChatSession[]
+  chatMessages                ChatMessage[]
+  chatFeedback                ChatFeedback[]
+  pricingPackages             PricingPackage[]
+  paymentInstruments          PaymentInstrument[]
+  paymentCorrections          PaymentCorrection[]
+  contractCancellations       ContractCancellation[]
+  contractAmendments          ContractAmendment[]
+  refunds                     Refund[]
 
   // Module flags — controls which dashboard sections are visible for this company
   modules Json? // { broker, website, maintenance, reports, leads, visits, contracts, installments, deposits }
@@ -169,17 +170,17 @@ model PricingPackage {
   nameEn       String
   descAr       String?
   descEn       String?
-  currency     String   @default("SAR")
-  monthlyPrice Decimal? @db.Decimal(12, 2)
-  annualPrice  Decimal? @db.Decimal(12, 2)
-  setupFee     Decimal? @db.Decimal(12, 2)
+  currency     String           @default("SAR")
+  monthlyPrice Decimal?         @db.Decimal(12, 2)
+  annualPrice  Decimal?         @db.Decimal(12, 2)
+  setupFee     Decimal?         @db.Decimal(12, 2)
   maxUsers     Int?
-  highlights   Json     @default("[]") // string[]  — key bullet points
+  highlights   Json             @default("[]") // string[]  — key bullet points
   specialOffer Json? // { titleAr, titleEn, discountPct, validUntil } | null
-  sortOrder    Int      @default(0)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  sortOrder    Int              @default(0)
+  isActive     Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 
   @@index([companyId])
   @@index([planTier])
@@ -249,56 +250,56 @@ enum DomainType {
 // Queried before tenant context exists (DomainResolverService), but writes always
 // enforce explicit ownership check: req.user.companyId must equal companyId.
 model CompanyDomain {
-  id                String      @id @default(uuid()) @db.Uuid
-  companyId         String      @db.Uuid
-  company           Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid()) @db.Uuid
+  companyId String  @db.Uuid
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   // Stored in canonical normalized form (trim, lowercase, no port, no trailing dot).
   // normalizeHostname() must be applied before every read/write.
-  hostname          String      @unique
+  hostname String @unique
 
-  type              DomainType
-  isPrimary         Boolean     @default(false)
+  type      DomainType
+  isPrimary Boolean    @default(false)
 
   // Null until DNS verification succeeds. PLATFORM_SUBDOMAIN is auto-verified at creation.
-  verifiedAt        DateTime?
+  verifiedAt DateTime?
 
   // Random token placed in DNS TXT record _host-verification.{hostname}.
   // PLATFORM_SUBDOMAIN has a non-null token for schema consistency, but DNS
   // verification is never required (verifiedAt is set at creation).
   verificationToken String
 
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([companyId])
   @@index([isPrimary])
 }
 
 model User {
-  id              String    @id @default(uuid()) @db.Uuid
-  role            UserRole
-  email           String?
-  phone           String?
-  passwordHash    String?
-  fullName        String
-  locale          Locale    @default(ar)
+  id                String    @id @default(uuid()) @db.Uuid
+  role              UserRole
+  email             String?
+  phone             String?
+  passwordHash      String?
+  fullName          String
+  locale            Locale    @default(ar)
   /// Per-user e-mail / push opt-outs by notification group
   /// ({ email: { finance: false }, push: { sales: false } }). Null = every
   /// channel on. In-app notifications are never switched off.
   notificationPrefs Json?
-  active          Boolean   @default(true)
-  avatarUrl       String?
-  emailVerifiedAt DateTime?
+  active            Boolean   @default(true)
+  avatarUrl         String?
+  emailVerifiedAt   DateTime?
   /// Set when the user proves the phone with an OTP. Only a verified phone
   /// (or a verified email) may link the account to existing CRM records.
-  phoneVerifiedAt DateTime?
+  phoneVerifiedAt   DateTime?
   /// A customer's new number waiting for its OTP (the change is made only
   /// when the code sent to it is entered; the old number stays until then).
-  pendingPhone    String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  lastLoginAt     DateTime?
+  pendingPhone      String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  lastLoginAt       DateTime?
 
   refreshTokens           RefreshToken[]
   passwordResetTokens     PasswordResetToken[]
@@ -335,32 +336,32 @@ model User {
   planTemplatesCreated    InstallmentPlanTemplate[] @relation("PlanTemplateCreator")
 
   // ── Broker relations (additive) ──────────────────────────────────────────
-  brokerProfile             BrokerUser?
-  brokersOnboarded          Broker[]            @relation("BrokerCreatedBy")
-  brokerLeads               Lead[]              @relation("LeadBrokerAgent")
-  brokerReservations        Reservation[]       @relation("ReservationBrokerAgent")
-  brokerContracts           Contract[]          @relation("ContractBrokerAgent")
-  brokerVisitRequests       VisitRequest[]      @relation("VisitRequestBrokerAgent")
-  brokerAppointments        VisitAppointment[]  @relation("AppointmentBrokerAgent")
-  brokerCommissionsAsAgent  BrokerCommission[]  @relation("BrokerCommissionAgent")
-  brokerCommissionsApproved BrokerCommission[]  @relation("BrokerCommissionApprovedBy")
-  brokerCommissionsRejected BrokerCommission[]  @relation("BrokerCommissionRejectedBy")
-  brokerPayoutsApproved     BrokerPayout[]      @relation("BrokerPayoutApprovedBy")
-  brokerPayoutsProcessed    BrokerPayout[]      @relation("BrokerPayoutProcessedBy")
-  brokerPayoutsCancelled    BrokerPayout[]      @relation("BrokerPayoutCancelledBy")
-  brokerActivityLogs        BrokerActivityLog[] @relation("BrokerActivityLogAgent")
-  uploadedDocuments         Document[]          @relation("DocumentUploader")
-  paymentInstrumentsRecorded    PaymentInstrument[]   @relation("InstrumentRecordedBy")
-  performedCorrections          PaymentCorrection[]   @relation("CorrectionPerformedBy")
-  contractCancellations         ContractCancellation[] @relation("CancellationPerformedBy")
-  refundsRecorded               Refund[]              @relation("RefundRecordedBy")
+  brokerProfile                BrokerUser?
+  brokersOnboarded             Broker[]               @relation("BrokerCreatedBy")
+  brokerLeads                  Lead[]                 @relation("LeadBrokerAgent")
+  brokerReservations           Reservation[]          @relation("ReservationBrokerAgent")
+  brokerContracts              Contract[]             @relation("ContractBrokerAgent")
+  brokerVisitRequests          VisitRequest[]         @relation("VisitRequestBrokerAgent")
+  brokerAppointments           VisitAppointment[]     @relation("AppointmentBrokerAgent")
+  brokerCommissionsAsAgent     BrokerCommission[]     @relation("BrokerCommissionAgent")
+  brokerCommissionsApproved    BrokerCommission[]     @relation("BrokerCommissionApprovedBy")
+  brokerCommissionsRejected    BrokerCommission[]     @relation("BrokerCommissionRejectedBy")
+  brokerPayoutsApproved        BrokerPayout[]         @relation("BrokerPayoutApprovedBy")
+  brokerPayoutsProcessed       BrokerPayout[]         @relation("BrokerPayoutProcessedBy")
+  brokerPayoutsCancelled       BrokerPayout[]         @relation("BrokerPayoutCancelledBy")
+  brokerActivityLogs           BrokerActivityLog[]    @relation("BrokerActivityLogAgent")
+  uploadedDocuments            Document[]             @relation("DocumentUploader")
+  paymentInstrumentsRecorded   PaymentInstrument[]    @relation("InstrumentRecordedBy")
+  performedCorrections         PaymentCorrection[]    @relation("CorrectionPerformedBy")
+  contractCancellations        ContractCancellation[] @relation("CancellationPerformedBy")
+  refundsRecorded              Refund[]               @relation("RefundRecordedBy")
   // Step D1: clawback-resolution actor relations
-  commissionsClawbackInitiated  BrokerCommission[]    @relation("CommissionClawbackBy")
-  commissionsClawbackCollected  BrokerCommission[]    @relation("CommissionClawbackCollectedBy")
-  commissionsClawbackWaived     BrokerCommission[]    @relation("CommissionClawbackWaivedBy")
-  bonusesClawbackInitiated      BonusEntry[]          @relation("BonusClawbackBy")
-  bonusesClawbackCollected      BonusEntry[]          @relation("BonusClawbackCollectedBy")
-  bonusesClawbackWaived         BonusEntry[]          @relation("BonusClawbackWaivedBy")
+  commissionsClawbackInitiated BrokerCommission[]     @relation("CommissionClawbackBy")
+  commissionsClawbackCollected BrokerCommission[]     @relation("CommissionClawbackCollectedBy")
+  commissionsClawbackWaived    BrokerCommission[]     @relation("CommissionClawbackWaivedBy")
+  bonusesClawbackInitiated     BonusEntry[]           @relation("BonusClawbackBy")
+  bonusesClawbackCollected     BonusEntry[]           @relation("BonusClawbackCollectedBy")
+  bonusesClawbackWaived        BonusEntry[]           @relation("BonusClawbackWaivedBy")
 
   // ── Tenant scoping ───────────────────────────────────────────────────────
   // Nullable so existing users and platform-level ADMIN users without a
@@ -383,12 +384,12 @@ model User {
   // endpoints and cannot log in. Restore via POST /v1/users/:id/restore (ADMIN).
   deletedAt DateTime?
 
+  @@unique([companyId, email])
+  @@unique([companyId, phone])
   @@index([role])
   @@index([phone])
   @@index([email])
   @@index([managerId])
-  @@unique([companyId, email])
-  @@unique([companyId, phone])
   @@index([companyId])
   @@index([deletedAt])
 }
@@ -528,6 +529,37 @@ enum UnitOrientation {
   SOUTH_WEST
 }
 
+/// A project's unit models (F10): a layout — type, areas, rooms, finishing —
+/// that units are entered from (the form fills them in; the unit keeps its
+/// own values after). Optional: a project may have none.
+model UnitModel {
+  id          String         @id @default(uuid()) @db.Uuid
+  projectId   String         @db.Uuid
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  code        String
+  name        Json // { ar, en }
+  type        String // a UnitType code of the company
+  area        Float
+  netArea     Float?
+  gardenArea  Float?
+  roofArea    Float?
+  terraceArea Float?
+  landArea    Float?
+  bedrooms    Int            @default(0)
+  bathrooms   Int            @default(0)
+  finishing   UnitFinishing?
+  active      Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  units       Unit[]
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, code])
+  @@index([companyId])
+}
+
 /// A company's unit types (F10): the defaults (unit-type-defaults.ts) plus
 /// its own. Unit.type holds the code; the code never changes, the names and
 /// the usage can, and a type switched off is not offered for a new unit.
@@ -576,6 +608,7 @@ model Project {
 
   media             ProjectMedia[]
   phases            Phase[]
+  unitModels        UnitModel[]
   leads             Lead[]
   visitRequests     VisitRequest[]
   infoRequests      InfoRequest[]
@@ -648,14 +681,14 @@ model Building {
 }
 
 model Unit {
-  id                   String     @id @default(uuid()) @db.Uuid
-  buildingId           String     @db.Uuid
-  building             Building   @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  id                   String           @id @default(uuid()) @db.Uuid
+  buildingId           String           @db.Uuid
+  building             Building         @relation(fields: [buildingId], references: [id], onDelete: Cascade)
   code                 String
   type                 String // a UnitType code of the company (Studio, 2BR, Office, Garage, ...)
   /// What the unit is for — taken from its type. Only a residential unit
   /// has bedrooms.
-  usage                UnitUsage  @default(RESIDENTIAL)
+  usage                UnitUsage        @default(RESIDENTIAL)
   /// Gross area (BUA, m²) — what the price per meter applies to.
   area                 Float
   /// The unit's specs (F10): all optional, a unit entered before them has none.
@@ -667,20 +700,23 @@ model Unit {
   finishing            UnitFinishing?
   view                 UnitView?
   orientation          UnitOrientation?
-  bedrooms             Int        @default(0)
-  bathrooms            Int        @default(0)
-  floor                Int        @default(0)
-  price                Decimal    @db.Decimal(14, 2)
+  /// The project's model the unit was entered from (F10), if any.
+  modelId              String?          @db.Uuid
+  model                UnitModel?       @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  bedrooms             Int              @default(0)
+  bathrooms            Int              @default(0)
+  floor                Int              @default(0)
+  price                Decimal          @db.Decimal(14, 2)
   /// Set when the unit is priced by the meter: price = pricePerMeter × area
   /// (gross). Null for a unit priced as a whole.
-  pricePerMeter        Decimal?   @db.Decimal(14, 2)
-  status               UnitStatus @default(AVAILABLE)
+  pricePerMeter        Decimal?         @db.Decimal(14, 2)
+  status               UnitStatus       @default(AVAILABLE)
   reservationExpiresAt DateTime?
   latitude             Float?
   longitude            Float?
   address              String?
-  createdAt            DateTime   @default(now())
-  updatedAt            DateTime   @updatedAt
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
 
   media               UnitMedia[]
   history             UnitStatusHistory[]
@@ -1183,18 +1219,18 @@ enum InstallmentStatus {
 
 /// Step D1 — lifecycle of a Contract once D1 lands.
 enum ContractStatus {
-  UNSIGNED  // created, not yet signed. signedAt = null.
-  ACTIVE    // signed. Normal operational state.
+  UNSIGNED // created, not yet signed. signedAt = null.
+  ACTIVE // signed. Normal operational state.
   CANCELLED // deal unwound — see ContractCancellation record.
 }
 
 /// Step D1 — clawback state for PAID commissions/bonuses after contract cancel.
 /// Step D4 — added PARTIALLY_COLLECTED for partial broker repayment.
 enum ClawbackStatus {
-  OUTSTANDING         // money owed; not yet recovered
+  OUTSTANDING // money owed; not yet recovered
   PARTIALLY_COLLECTED // partial repayment received; remaining balance still owed
-  COLLECTED           // broker/sales returned the full amount
-  WAIVED              // operator chose not to pursue
+  COLLECTED // broker/sales returned the full amount
+  WAIVED // operator chose not to pursue
 }
 
 enum DepositType {
@@ -1523,7 +1559,7 @@ enum PaymentInstrumentStatus {
 /// Carries its own lifecycle independent of the Deposit review lifecycle.
 /// Tenant-owned: companyId required on every write; middleware auto-injects on reads.
 model PaymentInstrument {
-  id   String                 @id @default(uuid()) @db.Uuid
+  id   String                @id @default(uuid()) @db.Uuid
   type PaymentInstrumentType
 
   // ── Bank-transfer fields (type = BANK_TRANSFER) ────────────────────────────
@@ -1539,11 +1575,11 @@ model PaymentInstrument {
   bounceDate     DateTime?
 
   // ── Replacement chain (BOUNCED → REPLACED → new instrument) ───────────────
-  replacedById String?              @db.Uuid
+  replacedById String?             @db.Uuid
   replacedBy   PaymentInstrument?  @relation("InstrumentReplacement", fields: [replacedById], references: [id])
   replacements PaymentInstrument[] @relation("InstrumentReplacement")
 
-  status    PaymentInstrumentStatus @default(PENDING_CLEARANCE)
+  status PaymentInstrumentStatus @default(PENDING_CLEARANCE)
 
   recordedById String   @db.Uuid
   recordedBy   User     @relation("InstrumentRecordedBy", fields: [recordedById], references: [id])
@@ -1590,11 +1626,11 @@ model Deposit {
   paymentMethod   PaymentMethod?
 
   // ── Step A: link to structured payment instrument (nullable; existing rows unaffected) ──
-  paymentInstrumentId String?             @db.Uuid
-  paymentInstrument   PaymentInstrument?  @relation(fields: [paymentInstrumentId], references: [id])
+  paymentInstrumentId String?            @db.Uuid
+  paymentInstrument   PaymentInstrument? @relation(fields: [paymentInstrumentId], references: [id])
 
   // ── Step C: correction history (LEDGER — never delete, never mutate settled rows) ──
-  paymentCorrections  PaymentCorrection[] @relation("CorrectionDeposit")
+  paymentCorrections PaymentCorrection[] @relation("CorrectionDeposit")
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1672,10 +1708,10 @@ model ContractCancellation {
   cancellationDate DateTime
 
   // ── Financial settlement (operator-entered; policy produces suggestion only) ──
-  totalCollectedSnapshot Decimal  @db.Decimal(14, 2)
-  retainedAmount         Decimal  @db.Decimal(14, 2)
-  refundAmount           Decimal  @db.Decimal(14, 2)
-  financialNotes         String?  @db.VarChar(2000)
+  totalCollectedSnapshot Decimal @db.Decimal(14, 2)
+  retainedAmount         Decimal @db.Decimal(14, 2)
+  refundAmount           Decimal @db.Decimal(14, 2)
+  financialNotes         String? @db.VarChar(2000)
 
   // ── Per-transaction overrides ─────────────────────────────────────────────
   unitReleaseOverride      String?  @db.VarChar(50)
@@ -1748,34 +1784,34 @@ model PaymentCorrection {
   id   String                @id @default(uuid()) @db.Uuid
   type PaymentCorrectionType
 
-  depositId  String  @db.Uuid
-  deposit    Deposit @relation("CorrectionDeposit", fields: [depositId], references: [id])
+  depositId String  @db.Uuid
+  deposit   Deposit @relation("CorrectionDeposit", fields: [depositId], references: [id])
 
   /// For REVERSAL: the installment being un-paid.
   /// For REASSIGNMENT: the source (wrong) installment.
-  sourceInstallmentId  String?      @db.Uuid
-  sourceInstallment    Installment? @relation("CorrectionSource", fields: [sourceInstallmentId], references: [id])
+  sourceInstallmentId String?      @db.Uuid
+  sourceInstallment   Installment? @relation("CorrectionSource", fields: [sourceInstallmentId], references: [id])
 
   /// For REASSIGNMENT only: the target (correct) installment being credited.
-  targetInstallmentId  String?      @db.Uuid
-  targetInstallment    Installment? @relation("CorrectionTarget", fields: [targetInstallmentId], references: [id])
+  targetInstallmentId String?      @db.Uuid
+  targetInstallment   Installment? @relation("CorrectionTarget", fields: [targetInstallmentId], references: [id])
 
   /// MANDATORY — freetext reason shown in audit view and dispute export.
-  reason  String  @db.VarChar(2000)
+  reason String @db.VarChar(2000)
 
-  performedById  String   @db.Uuid
-  performedBy    User     @relation("CorrectionPerformedBy", fields: [performedById], references: [id])
-  createdAt      DateTime @default(now())
+  performedById String   @db.Uuid
+  performedBy   User     @relation("CorrectionPerformedBy", fields: [performedById], references: [id])
+  createdAt     DateTime @default(now())
 
   /// REVERSAL only: when the deposit was approved again afterwards — it pays
   /// its installment and counts as collected again (COLLECTED_DEPOSIT_WHERE).
-  supersededAt   DateTime?
+  supersededAt DateTime?
 
-  companyId  String?  @db.Uuid
-  company    Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
   /// Reverse relation: Installment rows that carry this as their lastCorrection pointer.
-  lastCorrectionOf  Installment[] @relation("InstallmentLastCorrection")
+  lastCorrectionOf Installment[] @relation("InstallmentLastCorrection")
 
   @@index([depositId])
   @@index([sourceInstallmentId])
@@ -1979,24 +2015,24 @@ model BonusEntry {
 
   // ── Step D1: clawback overlay for PAID bonuses (same pattern as BrokerCommission) ──
   // Step D4: added clawbackCollectedAmount/Reference/PaymentMethod + clawbackWaiveReason.
-  clawbackStatus                ClawbackStatus? // null = no clawback applicable
+  clawbackStatus                 ClawbackStatus? // null = no clawback applicable
   /// What the clawback recovers: what was actually paid (the amount plus paid
   /// price-change adjustments). Null on older rows — the amount is used then.
-  clawbackAmount                Decimal?        @db.Decimal(14, 2)
-  clawbackReason                String?         @db.VarChar(2000) // cancellation reason
-  clawbackAt                    DateTime?
-  clawbackById                  String?         @db.Uuid
-  clawbackBy                    User?           @relation("BonusClawbackBy", fields: [clawbackById], references: [id])
-  clawbackCollectedAt           DateTime?
-  clawbackCollectedById         String?         @db.Uuid
-  clawbackCollectedBy           User?           @relation("BonusClawbackCollectedBy", fields: [clawbackCollectedById], references: [id])
-  clawbackCollectedAmount       Decimal?        @db.Decimal(14, 2) // accumulated across collect calls
-  clawbackCollectedReference    String?         @db.VarChar(100)
+  clawbackAmount                 Decimal?        @db.Decimal(14, 2)
+  clawbackReason                 String?         @db.VarChar(2000) // cancellation reason
+  clawbackAt                     DateTime?
+  clawbackById                   String?         @db.Uuid
+  clawbackBy                     User?           @relation("BonusClawbackBy", fields: [clawbackById], references: [id])
+  clawbackCollectedAt            DateTime?
+  clawbackCollectedById          String?         @db.Uuid
+  clawbackCollectedBy            User?           @relation("BonusClawbackCollectedBy", fields: [clawbackCollectedById], references: [id])
+  clawbackCollectedAmount        Decimal?        @db.Decimal(14, 2) // accumulated across collect calls
+  clawbackCollectedReference     String?         @db.VarChar(100)
   clawbackCollectedPaymentMethod PaymentMethod?
-  clawbackWaivedAt              DateTime?
-  clawbackWaivedById            String?         @db.Uuid
-  clawbackWaivedBy              User?           @relation("BonusClawbackWaivedBy", fields: [clawbackWaivedById], references: [id])
-  clawbackWaiveReason           String?         @db.VarChar(2000) // separate from clawbackReason (the cancellation reason)
+  clawbackWaivedAt               DateTime?
+  clawbackWaivedById             String?         @db.Uuid
+  clawbackWaivedBy               User?           @relation("BonusClawbackWaivedBy", fields: [clawbackWaivedById], references: [id])
+  clawbackWaiveReason            String?         @db.VarChar(2000) // separate from clawbackReason (the cancellation reason)
 
   /// The contract was cancelled with RETAIN: the bonus stays payable.
   retainedOnCancellation Boolean @default(false)
@@ -2299,7 +2335,7 @@ model NotificationTemplate {
   // company gets; a company row with the same code is that company's override.
   // The index is NULLS NOT DISTINCT (migration 20261007000003), so there is
   // exactly one platform row per code.
-  code         String              // "visit_approved", "deposit_recorded"
+  code         String // "visit_approved", "deposit_recorded"
   channel      NotificationChannel
   subject      Json // Translatable
   body         Json // Translatable (supports {{var}} placeholders)
@@ -2332,10 +2368,10 @@ model Notification {
 
   // Delivery outcome — written back by NotificationsService.send() after the
   // push and email calls complete. Null means not attempted or not applicable.
-  emailSentAt  DateTime?
-  emailError   String?    @db.VarChar(500)
-  pushSentAt   DateTime?
-  pushError    String?    @db.VarChar(500)
+  emailSentAt     DateTime?
+  emailError      String?   @db.VarChar(500)
+  pushSentAt      DateTime?
+  pushError       String?   @db.VarChar(500)
   // FG-09 — redelivery of a failed push / e-mail (NotificationRetryCron).
   deliveryRetries Int       @default(0)
   lastRetryAt     DateTime?
@@ -2470,18 +2506,18 @@ model Broker {
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
 
-  brokerUsers       BrokerUser[]
-  projectAccess     BrokerProjectAccess[]
-  unitAccess        BrokerUnitAccess[]
-  leads             Lead[]
-  reservations      Reservation[]
-  contracts         Contract[]
-  visitRequests     VisitRequest[]
-  visitAppointments VisitAppointment[]
-  commissions       BrokerCommission[]
-  payouts           BrokerPayout[]
+  brokerUsers           BrokerUser[]
+  projectAccess         BrokerProjectAccess[]
+  unitAccess            BrokerUnitAccess[]
+  leads                 Lead[]
+  reservations          Reservation[]
+  contracts             Contract[]
+  visitRequests         VisitRequest[]
+  visitAppointments     VisitAppointment[]
+  commissions           BrokerCommission[]
+  payouts               BrokerPayout[]
   commissionAdjustments BrokerCommissionAdjustment[]
-  activityLogs      BrokerActivityLog[]
+  activityLogs          BrokerActivityLog[]
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -2603,27 +2639,27 @@ model BrokerCommission {
   // commission.status stays APPROVED (BrokerCommissionStatus has no PAID value);
   // disbursement is tracked via payoutId → BrokerPayout.status (PROCESSING|PAID).
   // Step D4: added clawbackCollectedAmount/Reference/PaymentMethod + clawbackWaiveReason.
-  clawbackStatus                ClawbackStatus? // null = no clawback applicable
+  clawbackStatus                 ClawbackStatus? // null = no clawback applicable
   /// What the clawback recovers: what was actually paid (the amount plus paid
   /// price-change adjustments). Null on older rows — the amount is used then.
-  clawbackAmount                Decimal?        @db.Decimal(14, 2)
-  clawbackReason                String?         @db.VarChar(2000) // cancellation reason
-  clawbackAt                    DateTime?
-  clawbackById                  String?         @db.Uuid
-  clawbackBy                    User?           @relation("CommissionClawbackBy", fields: [clawbackById], references: [id])
-  clawbackCollectedAt           DateTime?
-  clawbackCollectedById         String?         @db.Uuid
-  clawbackCollectedBy           User?           @relation("CommissionClawbackCollectedBy", fields: [clawbackCollectedById], references: [id])
-  clawbackCollectedAmount       Decimal?        @db.Decimal(14, 2) // accumulated across collect calls
-  clawbackCollectedReference    String?         @db.VarChar(100)
+  clawbackAmount                 Decimal?        @db.Decimal(14, 2)
+  clawbackReason                 String?         @db.VarChar(2000) // cancellation reason
+  clawbackAt                     DateTime?
+  clawbackById                   String?         @db.Uuid
+  clawbackBy                     User?           @relation("CommissionClawbackBy", fields: [clawbackById], references: [id])
+  clawbackCollectedAt            DateTime?
+  clawbackCollectedById          String?         @db.Uuid
+  clawbackCollectedBy            User?           @relation("CommissionClawbackCollectedBy", fields: [clawbackCollectedById], references: [id])
+  clawbackCollectedAmount        Decimal?        @db.Decimal(14, 2) // accumulated across collect calls
+  clawbackCollectedReference     String?         @db.VarChar(100)
   clawbackCollectedPaymentMethod PaymentMethod?
-  clawbackWaivedAt              DateTime?
-  clawbackWaivedById            String?         @db.Uuid
-  clawbackWaivedBy              User?           @relation("CommissionClawbackWaivedBy", fields: [clawbackWaivedById], references: [id])
-  clawbackWaiveReason           String?         @db.VarChar(2000) // separate from clawbackReason (the cancellation reason)
+  clawbackWaivedAt               DateTime?
+  clawbackWaivedById             String?         @db.Uuid
+  clawbackWaivedBy               User?           @relation("CommissionClawbackWaivedBy", fields: [clawbackWaivedById], references: [id])
+  clawbackWaiveReason            String?         @db.VarChar(2000) // separate from clawbackReason (the cancellation reason)
 
   /// The contract was cancelled with RETAIN: the commission stays payable.
-  retainedOnCancellation Boolean @default(false)
+  retainedOnCancellation Boolean                      @default(false)
   adjustments            BrokerCommissionAdjustment[]
 
   companyId String?  @db.Uuid
@@ -2692,23 +2728,23 @@ model BrokerPayout {
 /// A cancelled deal's paid commission is clawed back the same way. All are
 /// netted into the broker's next payout (payoutId set when netted).
 model BrokerCommissionAdjustment {
-  id           String                         @id @default(uuid()) @db.Uuid
-  brokerId     String                         @db.Uuid
-  broker       Broker                         @relation(fields: [brokerId], references: [id])
-  commissionId String                         @db.Uuid
-  commission   BrokerCommission               @relation(fields: [commissionId], references: [id], onDelete: Cascade)
-  kind         BrokerCommissionAdjustmentKind
+  id              String                         @id @default(uuid()) @db.Uuid
+  brokerId        String                         @db.Uuid
+  broker          Broker                         @relation(fields: [brokerId], references: [id])
+  commissionId    String                         @db.Uuid
+  commission      BrokerCommission               @relation(fields: [commissionId], references: [id], onDelete: Cascade)
+  kind            BrokerCommissionAdjustmentKind
   /// Always positive; the kind gives the direction.
-  amount       Decimal                        @db.Decimal(14, 2)
-  reason       String                         @db.VarChar(2000)
-  createdById  String?                        @db.Uuid
-  createdAt    DateTime                       @default(now())
-  payoutId     String?                        @db.Uuid
-  payout       BrokerPayout?                  @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+  amount          Decimal                        @db.Decimal(14, 2)
+  reason          String                         @db.VarChar(2000)
+  createdById     String?                        @db.Uuid
+  createdAt       DateTime                       @default(now())
+  payoutId        String?                        @db.Uuid
+  payout          BrokerPayout?                  @relation(fields: [payoutId], references: [id], onDelete: SetNull)
   /// A CLAWBACK that recovers a cancelled deal's paid commission (its
   /// clawback overlay): when the payout netting it is paid, the overlay is
   /// recorded as collected by that amount.
-  settlesClawback Boolean                     @default(false)
+  settlesClawback Boolean                        @default(false)
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -2843,18 +2879,18 @@ model Document {
 /// handover checklist. The unit's warranties start and the customer's
 /// maintenance requests open from this date, not from the contract's.
 model UnitHandover {
-  id            String    @id @default(uuid()) @db.Uuid
-  contractId    String    @unique @db.Uuid
-  contract      Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  id            String   @id @default(uuid()) @db.Uuid
+  contractId    String   @unique @db.Uuid
+  contract      Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
   /// The unit handed over; after a unit swap, the new unit.
-  unitId        String    @db.Uuid
+  unitId        String   @db.Uuid
   handedOverAt  DateTime
   /// [{ key, done }] over HANDOVER_CHECKLIST_KEYS.
-  checklist     Json      @default("[]")
-  notes         String?   @db.VarChar(2000)
+  checklist     Json     @default("[]")
+  notes         String?  @db.VarChar(2000)
   /// Null for the rows backfilled from contracts signed before handovers.
-  performedById String?   @db.Uuid
-  createdAt     DateTime  @default(now())
+  performedById String?  @db.Uuid
+  createdAt     DateTime @default(now())
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)

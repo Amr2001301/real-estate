@@ -54,6 +54,9 @@ export class CreateUnitDto {
   /** Priced by the meter: the price is this × the gross area. */
   @IsOptional() @IsNumber() @IsPositive() pricePerMeter?: number | null;
 
+  /** The project's model the unit is entered from (F10). */
+  @IsOptional() @IsUUID() modelId?: string | null;
+
   @IsOptional()
   @IsEnum(UnitStatus)
   status?: UnitStatus;
@@ -79,6 +82,8 @@ export class UpdateUnitDto {
   @IsOptional() @IsNumber() @IsPositive() price?: number;
   /** Set → the price follows it (× the gross area); null → priced as a whole. */
   @IsOptional() @IsNumber() @IsPositive() pricePerMeter?: number | null;
+  /** The project's model (F10); null → none. */
+  @IsOptional() @IsUUID() modelId?: string | null;
   @IsOptional() @IsNumber() @IsPositive() netArea?: number | null;
   @IsOptional() @IsNumber() @IsPositive() gardenArea?: number | null;
   @IsOptional() @IsNumber() @IsPositive() roofArea?: number | null;
@@ -116,6 +121,8 @@ export class UnitQueryDto {
   @IsOptional() @IsArray() @IsString({ each: true }) typeIn?: string[];
   /** Residential, commercial, administrative, medical or parking units only. */
   @IsOptional() @IsEnum(UnitUsage) usage?: UnitUsage;
+  /** The units of one of the project's models. */
+  @IsOptional() @IsUUID() modelId?: string;
   @IsOptional() @IsEnum(UnitFinishing) finishing?: UnitFinishing;
   @IsOptional() @IsEnum(UnitView) view?: UnitView;
   @IsOptional() @IsEnum(UnitOrientation) orientation?: UnitOrientation;
