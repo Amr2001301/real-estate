@@ -12,7 +12,7 @@ import {
   Max,
   MaxLength,
 } from 'class-validator';
-import { UnitStatus, UnitUsage } from '@prisma/client';
+import { UnitFinishing, UnitOrientation, UnitStatus, UnitUsage, UnitView } from '@prisma/client';
 import { MAX_PAGE_SIZE } from '../../../common/utils/pagination';
 
 export class CreateUnitDto {
@@ -52,6 +52,16 @@ export class CreateUnitDto {
   @IsOptional()
   @IsEnum(UnitStatus)
   status?: UnitStatus;
+
+  // Specs (F10) — all optional; null clears one.
+  @IsOptional() @IsNumber() @IsPositive() netArea?: number | null;
+  @IsOptional() @IsNumber() @IsPositive() gardenArea?: number | null;
+  @IsOptional() @IsNumber() @IsPositive() roofArea?: number | null;
+  @IsOptional() @IsNumber() @IsPositive() terraceArea?: number | null;
+  @IsOptional() @IsNumber() @IsPositive() landArea?: number | null;
+  @IsOptional() @IsEnum(UnitFinishing) finishing?: UnitFinishing | null;
+  @IsOptional() @IsEnum(UnitView) view?: UnitView | null;
+  @IsOptional() @IsEnum(UnitOrientation) orientation?: UnitOrientation | null;
 }
 
 export class UpdateUnitDto {
@@ -62,6 +72,14 @@ export class UpdateUnitDto {
   @IsOptional() @IsInt() @Min(0) bathrooms?: number;
   @IsOptional() @IsInt() @Min(0) floor?: number;
   @IsOptional() @IsNumber() @IsPositive() price?: number;
+  @IsOptional() @IsNumber() @IsPositive() netArea?: number | null;
+  @IsOptional() @IsNumber() @IsPositive() gardenArea?: number | null;
+  @IsOptional() @IsNumber() @IsPositive() roofArea?: number | null;
+  @IsOptional() @IsNumber() @IsPositive() terraceArea?: number | null;
+  @IsOptional() @IsNumber() @IsPositive() landArea?: number | null;
+  @IsOptional() @IsEnum(UnitFinishing) finishing?: UnitFinishing | null;
+  @IsOptional() @IsEnum(UnitView) view?: UnitView | null;
+  @IsOptional() @IsEnum(UnitOrientation) orientation?: UnitOrientation | null;
   // No `status` here: a status change goes through PATCH /units/:id/status,
   // which checks for a live reservation/contract and writes the history.
 }
@@ -91,6 +109,9 @@ export class UnitQueryDto {
   @IsOptional() @IsArray() @IsString({ each: true }) typeIn?: string[];
   /** Residential, commercial, administrative, medical or parking units only. */
   @IsOptional() @IsEnum(UnitUsage) usage?: UnitUsage;
+  @IsOptional() @IsEnum(UnitFinishing) finishing?: UnitFinishing;
+  @IsOptional() @IsEnum(UnitView) view?: UnitView;
+  @IsOptional() @IsEnum(UnitOrientation) orientation?: UnitOrientation;
   @IsOptional() @IsEnum(UnitStatus) status?: UnitStatus;
   @IsOptional() @IsNumber() priceMin?: number;
   @IsOptional() @IsNumber() priceMax?: number;

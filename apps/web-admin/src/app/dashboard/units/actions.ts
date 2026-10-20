@@ -12,6 +12,15 @@ export interface UnitFormState {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** An optional spec: empty → null (cleared). */
+function optNumber(formData: FormData, name: string): number | null {
+  const v = String(formData.get(name) ?? '').trim();
+  return v === '' ? null : Number(v);
+}
+function optEnum(formData: FormData, name: string): string | null {
+  return String(formData.get(name) ?? '').trim() || null;
+}
+
 function buildPayload(formData: FormData) {
   return {
     buildingId: String(formData.get('buildingId') ?? ''),
@@ -22,6 +31,14 @@ function buildPayload(formData: FormData) {
     bathrooms: Number(formData.get('bathrooms') ?? 0),
     floor: Number(formData.get('floor') ?? 0),
     price: Number(formData.get('price') ?? 0),
+    netArea: optNumber(formData, 'netArea'),
+    gardenArea: optNumber(formData, 'gardenArea'),
+    roofArea: optNumber(formData, 'roofArea'),
+    terraceArea: optNumber(formData, 'terraceArea'),
+    landArea: optNumber(formData, 'landArea'),
+    finishing: optEnum(formData, 'finishing'),
+    view: optEnum(formData, 'view'),
+    orientation: optEnum(formData, 'orientation'),
     status: String(formData.get('status') ?? 'AVAILABLE') as 'AVAILABLE' | 'RESERVED' | 'SOLD',
   };
 }
@@ -51,8 +68,9 @@ export async function updateUnitAction(
   formData: FormData,
 ): Promise<UnitFormState> {
   const payload = buildPayload(formData);
-  // status is handled separately to track history; only update non-status fields here
-  const { status, ...rest } = payload;
+  // status is handled separately to track history; only update non-status fields here.
+  // The building is not editable (the API refuses it: a unit is not moved).
+  const { status, buildingId: _building, ...rest } = payload;
   try {
     await api.patch(`/units/${id}`, rest);
     const current = await api.get<{ status: string }>(`/units/${id}`);

@@ -2,6 +2,8 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { Workbook, ValueType } from 'exceljs';
 import type { Prisma } from '@prisma/client';
 import { LeadStage, Locale, ProjectStatus, ReservationStatus, UnitStatus, UnitUsage, UserRole } from '@prisma/client';
+import type { UnitFinishing, UnitOrientation, UnitView } from '@prisma/client';
+import { FINISHING_AR, ORIENTATION_AR, VIEW_AR, parseSpec } from '../units/unit-specs';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   PROJECTS_SHEET,
@@ -79,6 +81,14 @@ interface DbUnit {
   area: number;
   bedrooms: number;
   bathrooms: number;
+  netArea?: number | null;
+  gardenArea?: number | null;
+  roofArea?: number | null;
+  terraceArea?: number | null;
+  landArea?: number | null;
+  finishing?: UnitFinishing | null;
+  view?: UnitView | null;
+  orientation?: UnitOrientation | null;
   price: number;
   status: UnitStatus;
   updatedAt: Date;
@@ -249,7 +259,12 @@ export class DataImportService {
       }),
       this.prisma.unit.findMany({
         where: { companyId },
-        select: { id: true, code: true, buildingId: true, type: true, floor: true, area: true, bedrooms: true, bathrooms: true, price: true, status: true, updatedAt: true },
+        select: {
+          id: true, code: true, buildingId: true, type: true, floor: true, area: true, bedrooms: true, bathrooms: true,
+          netArea: true, gardenArea: true, roofArea: true, terraceArea: true, landArea: true,
+          finishing: true, view: true, orientation: true,
+          price: true, status: true, updatedAt: true,
+        },
       }),
       this.prisma.contract.findMany({
         where: { companyId, deletedAt: null },
@@ -355,6 +370,8 @@ export class DataImportService {
       const dbUnit: DbUnit = {
         id: u.id, code: u.code, buildingId: u.buildingId, type: u.type,
         floor: u.floor, area: u.area, bedrooms: u.bedrooms, bathrooms: u.bathrooms,
+        netArea: u.netArea, gardenArea: u.gardenArea, roofArea: u.roofArea, terraceArea: u.terraceArea, landArea: u.landArea,
+        finishing: u.finishing, view: u.view, orientation: u.orientation,
         price: parseFloat(String(u.price)), status: u.status, updatedAt: u.updatedAt,
       };
       unitByKey.set(`${bldInfo.projectCode}:${bldInfo.phaseCode}:${bldInfo.code}:${u.code}`, dbUnit);
@@ -942,6 +959,14 @@ export class DataImportService {
     const bathroomsColIdx = colMap.get(UNITS_SHEET.fields.bathrooms);
     const priceColIdx     = colMap.get(UNITS_SHEET.fields.price);
     const statusColIdx    = colMap.get(UNITS_SHEET.fields.status);
+    const specAreaCols = (['netArea', 'gardenArea', 'roofArea', 'terraceArea', 'landArea'] as const).map(
+      (f) => [f, colMap.get(UNITS_SHEET.fields[f])] as const,
+    );
+    const specEnumCols = [
+      ['finishing', colMap.get(UNITS_SHEET.fields.finishing), FINISHING_AR],
+      ['view', colMap.get(UNITS_SHEET.fields.view), VIEW_AR],
+      ['orientation', colMap.get(UNITS_SHEET.fields.orientation), ORIENTATION_AR],
+    ] as const;
 
     const allBldKeys = new Set<string>();
     for (const [key] of buildingByKey) allBldKeys.add(key);
@@ -1020,6 +1045,33 @@ export class DataImportService {
         return;
       }
 
+      // Specs (F10): a blank cell leaves the unit's as it is.
+      const specs: Partial<Pick<UnitPlan, 'netArea' | 'gardenArea' | 'roofArea' | 'terraceArea' | 'landArea' | 'finishing' | 'view' | 'orientation'>> = {};
+      for (const [f, col] of specAreaCols) {
+        const v = readDecimalCell(row, col);
+        if (v === undefined) continue;
+        if (!(v > 0)) {
+          plan._addError({ sheet: UNITS_SHEET.name, rowNumber, column: UNITS_SHEET.fields[f], message: `${UNITS_SHEET.fields[f]} must be greater than 0` });
+          return;
+        }
+        specs[f] = v;
+      }
+      for (const [f, col, labels] of specEnumCols) {
+        const raw = readStringCell(row, col);
+        if (raw === undefined) continue;
+        const v = parseSpec<string>(labels, raw);
+        if (!v) {
+          plan._addError({
+            sheet: UNITS_SHEET.name,
+            rowNumber,
+            column: UNITS_SHEET.fields[f],
+            message: `${UNITS_SHEET.fields[f]} «${raw}» غير معروف — واحدة من: ${Object.values(labels).join('، ')}`,
+          });
+          return;
+        }
+        (specs as Record<string, string>)[f] = v;
+      }
+
       let status: UnitStatus | undefined;
       if (statusColIdx !== undefined) {
         const rawStatus = readStringCell(row, statusColIdx);
@@ -1093,6 +1145,7 @@ export class DataImportService {
           (area      !== undefined && area      !== existing.area)      ||
           (bedrooms  !== undefined && bedrooms  !== existing.bedrooms)  ||
           (bathrooms !== undefined && bathrooms !== existing.bathrooms) ||
+          (Object.keys(specs) as Array<keyof typeof specs>).some((f) => specs[f] !== existing[f]) ||
           (price     !== undefined && Math.abs(price - existing.price) > 0.005) ||
           (status    !== undefined && status    !== existing.status);
         op = changed ? 'update' : 'unchanged';
@@ -1118,6 +1171,7 @@ export class DataImportService {
         // Only a residential unit has bedrooms.
         bedrooms: usage !== undefined && usage !== UnitUsage.RESIDENTIAL ? 0 : bedrooms,
         bathrooms, price, status,
+        ...specs,
       });
     });
 
@@ -1808,6 +1862,11 @@ export class DataImportService {
           if (u.bathrooms !== undefined) updateData.bathrooms = u.bathrooms;
           if (u.price     !== undefined) updateData.price = u.price;
           if (u.status    !== undefined) updateData.status = u.status;
+          const specs = {
+            netArea: u.netArea, gardenArea: u.gardenArea, roofArea: u.roofArea, terraceArea: u.terraceArea, landArea: u.landArea,
+            finishing: u.finishing, view: u.view, orientation: u.orientation,
+          };
+          for (const [f, v] of Object.entries(specs)) if (v !== undefined) (updateData as Record<string, unknown>)[f] = v;
 
           // The deal check ran when the file was read; a reservation or
           // contract made since then holds the unit — leave it untouched.
@@ -1839,6 +1898,7 @@ export class DataImportService {
               bathrooms: u.bathrooms ?? 0,
               price: u.price!,
               status: u.status ?? UnitStatus.AVAILABLE,
+              ...Object.fromEntries(Object.entries(specs).filter(([, v]) => v !== undefined)),
             },
             update: updateData,
           });

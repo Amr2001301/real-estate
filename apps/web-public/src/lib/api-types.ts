@@ -58,7 +58,16 @@ export interface PublicUnit {
   /** The type's name from the company's list, in the reader's language. */
   typeName?: string | { ar?: string; en?: string } | null;
   usage?: 'RESIDENTIAL' | 'COMMERCIAL' | 'ADMINISTRATIVE' | 'MEDICAL' | 'PARKING';
+  /** Gross area (BUA). */
   area: number;
+  netArea?: number | null;
+  gardenArea?: number | null;
+  roofArea?: number | null;
+  terraceArea?: number | null;
+  landArea?: number | null;
+  finishing?: 'CORE_AND_SHELL' | 'SEMI_FINISHED' | 'FULLY_FINISHED' | 'FURNISHED' | null;
+  view?: string | null;
+  orientation?: string | null;
   bedrooms: number;
   bathrooms: number;
   floor: number;

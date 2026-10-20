@@ -63,7 +63,8 @@ export default async function UnitDetailPage({
     getLocale(),
   ]);
 
-  const m = uiT(locale).pages.units.detail;
+  const unitsM = uiT(locale).pages.units;
+  const m = unitsM.detail;
 
   if (unitRes.error || !unitRes.data) {
     return (
@@ -165,6 +166,16 @@ export default async function UnitDetailPage({
                 <KV label={m.fieldArea} value={`${unit.area} ${m.metrics.areaSuffix}`} />
                 <KV label={m.fieldBedrooms} value={unit.bedrooms} />
                 <KV label={m.fieldBathrooms} value={unit.bathrooms} />
+                {(['netArea', 'gardenArea', 'roofArea', 'terraceArea', 'landArea'] as const).map((f) =>
+                  unit[f] ? (
+                    <KV key={f} label={unitsM.specLabels[f] ?? f} value={`${unit[f]} ${m.metrics.areaSuffix}`} />
+                  ) : null,
+                )}
+                {unit.finishing && <KV label={unitsM.specLabels.finishing ?? ''} value={unitsM.finishingLabels[unit.finishing] ?? unit.finishing} />}
+                {unit.view && <KV label={unitsM.specLabels.view ?? ''} value={unitsM.viewLabels[unit.view] ?? unit.view} />}
+                {unit.orientation && (
+                  <KV label={unitsM.specLabels.orientation ?? ''} value={unitsM.orientationLabels[unit.orientation] ?? unit.orientation} />
+                )}
               </dl>
             </PremiumSectionCard>
 

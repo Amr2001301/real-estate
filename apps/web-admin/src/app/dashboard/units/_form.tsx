@@ -42,11 +42,20 @@ interface Props {
   locale?: Locale;
 }
 
+const AREA_SPECS = ['netArea', 'gardenArea', 'roofArea', 'terraceArea', 'landArea'] as const;
+
 const USAGE_ORDER: UnitUsage[] = ['RESIDENTIAL', 'COMMERCIAL', 'ADMINISTRATIVE', 'MEDICAL', 'PARKING'];
 
 export default function UnitForm({ unit, projects, types, locale = 'ar' }: Props) {
   const m = uiT(locale).pages.unitsForm;
-  const usageLabels = uiT(locale).pages.units.usageLabels;
+  const unitsM = uiT(locale).pages.units;
+  const usageLabels = unitsM.usageLabels;
+  const specLabels = unitsM.specLabels;
+  const ENUM_SPECS = [
+    ['finishing', unitsM.finishingLabels],
+    ['view', unitsM.viewLabels],
+    ['orientation', unitsM.orientationLabels],
+  ] as const;
   // Switched-off types are not offered, except the one the unit already has.
   const offered = types.filter((t) => t.active || t.code === unit?.type);
   const [typeCode, setTypeCode] = useState(unit?.type ?? offered[0]?.code ?? '');
@@ -273,6 +282,28 @@ export default function UnitForm({ unit, projects, types, locale = 'ar' }: Props
                     defaultValue={unit?.bathrooms ?? 1}
                   />
                 </Field>
+                {AREA_SPECS.map((f) => (
+                  <Field key={f} label={`${specLabels[f] ?? f} (${m.areaUnit})`} name={f} hint={m.hintOptionalArea}>
+                    <Input
+                      id={f}
+                      name={f}
+                      type="number"
+                      step="any"
+                      min={0}
+                      defaultValue={unit?.[f] ?? undefined}
+                    />
+                  </Field>
+                ))}
+                {ENUM_SPECS.map(([f, options]) => (
+                  <Field key={f} label={specLabels[f] ?? f} name={f}>
+                    <Select id={f} name={f} defaultValue={unit?.[f] ?? ''}>
+                      <option value="">{m.notSet}</option>
+                      {Object.entries(options).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </Select>
+                  </Field>
+                ))}
               </div>
             </div>
           </section>
