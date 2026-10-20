@@ -22,7 +22,20 @@ export interface StaffProjectSummary {
 
 interface ProjectListInput extends Pick<
   Project,
-  'id' | 'name' | 'description' | 'city' | 'lat' | 'lng' | 'services' | 'featured' | 'status' | 'updatedAt'
+  | 'id'
+  | 'name'
+  | 'description'
+  | 'city'
+  | 'type'
+  | 'district'
+  | 'totalArea'
+  | 'licenseNumber'
+  | 'lat'
+  | 'lng'
+  | 'services'
+  | 'featured'
+  | 'status'
+  | 'updatedAt'
 > {
   media?: MediaLike[];
 }
@@ -45,6 +58,8 @@ export function serializePublicProjectListItem(
     name: project.name,
     description: project.description,
     city: project.city,
+    type: project.type ?? null,
+    district: project.district ?? null,
     lat: project.lat,
     lng: project.lng,
     services: project.services,
@@ -74,6 +89,8 @@ export function serializeStaffProjectListItem(
     id: project.id,
     name: project.name,
     city: project.city,
+    type: project.type ?? null,
+    district: project.district ?? null,
     status: project.status,
     media,
     coverImageUrl: media[0]?.url ?? null,
@@ -94,6 +111,10 @@ export function serializePublicProjectDetail(
     name: project.name,
     description: project.description,
     city: project.city,
+    type: project.type ?? null,
+    district: project.district ?? null,
+    totalArea: project.totalArea ?? null,
+    licenseNumber: project.licenseNumber ?? null,
     lat: project.lat,
     lng: project.lng,
     services: project.services,

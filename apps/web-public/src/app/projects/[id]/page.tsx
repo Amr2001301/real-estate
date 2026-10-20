@@ -242,7 +242,25 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
                   {project.city && (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-black/30 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur-md ring-1 ring-white/10">
                       <MapPin className="h-3 w-3 text-gold-300" aria-hidden />
-                      {project.city}
+                      {project.district ? `${project.district}، ${project.city}` : project.city}
+                    </span>
+                  )}
+                  {project.type && m.projectTypes[project.type] && (
+                    <span className="inline-flex items-center rounded-full bg-black/30 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-md ring-1 ring-white/10">
+                      {m.projectTypes[project.type]}
+                    </span>
+                  )}
+                  {project.totalArea && (
+                    <span className="inline-flex items-center rounded-full bg-black/30 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-md ring-1 ring-white/10">
+                      {m.projectFacts.totalArea}: {formatNumber(project.totalArea)} {m.projectFacts.sqm}
+                    </span>
+                  )}
+                  {project.licenseNumber && (
+                    <span
+                      data-testid="project-license"
+                      className="inline-flex items-center rounded-full bg-black/30 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-md ring-1 ring-white/10"
+                    >
+                      {m.projectFacts.license}: <span dir="ltr" className="ms-1">{project.licenseNumber}</span>
                     </span>
                   )}
                   {project.status && m.projectDetail.status[project.status as keyof typeof m.projectDetail.status] && (

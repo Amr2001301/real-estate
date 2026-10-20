@@ -34,6 +34,10 @@ export class ProjectsService {
         status: dto.status ?? ProjectStatus.DRAFT,
         featured: dto.featured ?? false,
         services: (dto.services ?? []) as unknown as Prisma.InputJsonValue,
+        type: dto.type ?? null,
+        district: dto.district?.trim() || null,
+        totalArea: dto.totalArea ?? null,
+        licenseNumber: dto.licenseNumber?.trim() || null,
       },
       include: { media: true },
     }).catch(codeTaken('لمشروع آخر في الشركة'));
@@ -63,6 +67,7 @@ export class ProjectsService {
           : {}),
       // The public catalogue is PUBLISHED only; a ?status= filter is staff-only.
       ...(query.status && !publicOnly ? { status: query.status } : {}),
+      ...(query.type ? { type: query.type } : {}),
       ...(query.featured !== undefined ? { featured: query.featured } : {}),
       ...(query.q
         ? {
@@ -212,6 +217,10 @@ export class ProjectsService {
     if (dto.status !== undefined) data.status = dto.status;
     if (dto.featured !== undefined) data.featured = dto.featured;
     if (dto.services) data.services = dto.services as unknown as Prisma.InputJsonValue;
+    if (dto.type !== undefined) data.type = dto.type;
+    if (dto.district !== undefined) data.district = dto.district?.trim() || null;
+    if (dto.totalArea !== undefined) data.totalArea = dto.totalArea;
+    if (dto.licenseNumber !== undefined) data.licenseNumber = dto.licenseNumber?.trim() || null;
 
     return this.prisma.project.update({
       where: { id },

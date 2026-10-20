@@ -499,6 +499,16 @@ enum UnitUsage {
   PARKING
 }
 
+/// What a project is (F10).
+enum ProjectType {
+  RESIDENTIAL
+  COASTAL
+  ADMINISTRATIVE
+  COMMERCIAL
+  MEDICAL
+  MIXED_USE
+}
+
 enum UnitFinishing {
   CORE_AND_SHELL
   SEMI_FINISHED
@@ -593,18 +603,24 @@ enum MediaType {
 }
 
 model Project {
-  id          String        @id @default(uuid()) @db.Uuid
-  code        String?
-  name        Json // Translatable { ar, en }
-  description Json
-  city        String
-  lat         Float
-  lng         Float
-  status      ProjectStatus @default(DRAFT)
-  featured    Boolean       @default(false)
-  services    Json          @default("[]") // Translatable[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id            String        @id @default(uuid()) @db.Uuid
+  code          String?
+  name          Json // Translatable { ar, en }
+  description   Json
+  city          String
+  /// The project's data (F10): all optional.
+  type          ProjectType?
+  district      String?
+  /// Land area of the whole project, m².
+  totalArea     Float?
+  licenseNumber String?
+  lat           Float
+  lng           Float
+  status        ProjectStatus @default(DRAFT)
+  featured      Boolean       @default(false)
+  services      Json          @default("[]") // Translatable[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   media             ProjectMedia[]
   phases            Phase[]

@@ -35,6 +35,11 @@ export interface PublicProjectDetail {
   name: Translatable;
   description: Translatable;
   city: string;
+  /** The project's data (F10). */
+  type?: string | null;
+  district?: string | null;
+  totalArea?: number | null;
+  licenseNumber?: string | null;
   lat: number;
   lng: number;
   services: Translatable[];

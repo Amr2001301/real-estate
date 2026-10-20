@@ -274,6 +274,33 @@ export default function ProjectForm({ project, locale = 'ar' }: Props) {
                 </Field>
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Field label={m.labelDistrict} name="district">
+                  <Input id="district" name="district" defaultValue={project?.district ?? ''} />
+                </Field>
+                <Field label={m.labelType} name="type">
+                  <Select id="type" name="type" defaultValue={project?.type ?? ''}>
+                    <option value="">{m.notSet}</option>
+                    {Object.entries(m.projectTypes).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label={m.labelTotalArea} name="totalArea">
+                  <Input
+                    id="totalArea"
+                    name="totalArea"
+                    type="number"
+                    step="any"
+                    min={0}
+                    defaultValue={project?.totalArea ?? undefined}
+                  />
+                </Field>
+                <Field label={m.labelLicense} name="licenseNumber">
+                  <Input id="licenseNumber" name="licenseNumber" dir="ltr" defaultValue={project?.licenseNumber ?? ''} />
+                </Field>
+              </div>
+
               {(!latValid || !lngValid) && (
                 <div className="flex items-start gap-2 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3 text-xs">
                   <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />

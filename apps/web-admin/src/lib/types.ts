@@ -74,12 +74,19 @@ export interface Media {
   order: number;
 }
 
+export type ProjectType = 'RESIDENTIAL' | 'COASTAL' | 'ADMINISTRATIVE' | 'COMMERCIAL' | 'MEDICAL' | 'MIXED_USE';
+
 export interface Project {
   id: string;
   code?: string | null;
   name: Translatable;
   description: Translatable;
   city: string;
+  /** The project's data (F10). */
+  type?: ProjectType | null;
+  district?: string | null;
+  totalArea?: number | null;
+  licenseNumber?: string | null;
   lat: number;
   lng: number;
   status: ProjectStatus;

@@ -36,6 +36,11 @@ function buildProjectPayload(formData: FormData) {
       en: String(formData.get('description_en') ?? ''),
     },
     city: String(formData.get('city') ?? ''),
+    // The project's data (F10): empty → none.
+    type: String(formData.get('type') ?? '') || null,
+    district: String(formData.get('district') ?? '').trim() || null,
+    totalArea: String(formData.get('totalArea') ?? '').trim() ? Number(formData.get('totalArea')) : null,
+    licenseNumber: String(formData.get('licenseNumber') ?? '').trim() || null,
     lat: Number(formData.get('lat') ?? 0),
     lng: Number(formData.get('lng') ?? 0),
     status: String(formData.get('status') ?? 'DRAFT') as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED',

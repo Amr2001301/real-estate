@@ -361,6 +361,16 @@ const SITE_MESSAGES = {
     },
 
     // ── Unit specs ───────────────────────────────────────────────────────────────
+    projectTypes: {
+      RESIDENTIAL: 'كمبوند سكني',
+      COASTAL: 'ساحلي',
+      ADMINISTRATIVE: 'إداري',
+      COMMERCIAL: 'تجاري',
+      MEDICAL: 'طبي',
+      MIXED_USE: 'متعدد الاستخدامات',
+    } as Record<string, string>,
+    projectFacts: { totalArea: 'مساحة المشروع', license: 'رقم الترخيص', sqm: 'م²' },
+
     unitSpecs: {
       area: 'المساحة الإجمالية',
       bedrooms: 'غرف النوم',
@@ -427,6 +437,8 @@ const SITE_MESSAGES = {
 
     // ── Projects filter bar ──────────────────────────────────────────────────────
     projectsFilter: {
+      typeLabel: 'نوع المشروع',
+      allTypes: 'كل الأنواع',
       searchPlaceholder: 'ابحث عن اسم المشروع...',
       searchLabel: 'بحث',
       cityLabel: 'المدينة',
@@ -1251,6 +1263,16 @@ const SITE_MESSAGES = {
     },
 
     // ── Unit specs ───────────────────────────────────────────────────────────────
+    projectTypes: {
+      RESIDENTIAL: 'Residential compound',
+      COASTAL: 'Coastal',
+      ADMINISTRATIVE: 'Administrative',
+      COMMERCIAL: 'Commercial',
+      MEDICAL: 'Medical',
+      MIXED_USE: 'Mixed use',
+    } as Record<string, string>,
+    projectFacts: { totalArea: 'Project area', license: 'License no.', sqm: 'm²' },
+
     unitSpecs: {
       area: 'Gross area',
       bedrooms: 'Bedrooms',
@@ -1317,6 +1339,8 @@ const SITE_MESSAGES = {
 
     // ── Projects filter bar ──────────────────────────────────────────────────────
     projectsFilter: {
+      typeLabel: 'Project type',
+      allTypes: 'All types',
       searchPlaceholder: 'Search for a project name...',
       searchLabel: 'Search',
       cityLabel: 'City',
