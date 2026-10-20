@@ -10,7 +10,9 @@ describe('company currency helpers', () => {
   it('formats amounts in the reader\'s language, dropping decimals on whole amounts', () => {
     expect(formatMoney('2500000.00', 'EGP', 'en')).toMatch(/^EGP\s2,500,000$/);
     expect(formatMoney(1250.5, 'SAR', 'en')).toMatch(/^SAR\s1,250\.50$/);
-    expect(formatMoney('2500000', 'EGP', 'ar')).toContain('٢٬٥٠٠٬٠٠٠');
+    // Western digits in Arabic too (no Arabic-Indic digits — U5).
+    expect(formatMoney('2500000', 'EGP', 'ar')).toContain('2,500,000');
+    expect(formatMoney('2500000', 'EGP', 'ar')).not.toMatch(/[٠-٩]/);
     expect(formatMoney('2500000', 'EGP', 'ar')).toContain('ج.م');
   });
 

@@ -1,42 +1,24 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronLeft, ShieldCheck, Info, Mail, Phone } from 'lucide-react';
+import { Mail, Phone } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { UserPermissionsResponse, UserRole } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
-import { PremiumPageHero, PremiumSectionCard } from '@/components/premium';
+import { PremiumPageHero } from '@/components/premium';
 import { PermissionPicker } from './permission-picker';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
-const ROLE_BADGE_CLS: Record<UserRole, string> = {
-  ADMIN:                  'bg-purple-100 text-purple-700',
-  SALES_MANAGER:          'bg-blue-100   text-blue-700',
-  SALES:                  'bg-brand-100  text-brand-700',
-  MAINTENANCE_SUPERVISOR: 'bg-orange-100 text-orange-700',
-  CLIENT:                 'bg-slate-100  text-slate-600',
-  CUSTOMER:               'bg-teal-100   text-teal-700',
-  BROKER:                 'bg-indigo-100 text-indigo-700',
+const ROLE_CHIP: Partial<Record<UserRole, string>> = {
+  ADMIN:                  'bg-brand-500/12 text-brand-700',
+  SALES_MANAGER:          'bg-sky-500/12 text-sky-600',
+  SALES:                  'bg-emerald-500/12 text-emerald-600',
+  MAINTENANCE_SUPERVISOR: 'bg-orange-500/12 text-orange-600',
+  CUSTOMER:               'bg-teal-500/12 text-teal-600',
+  BROKER:                 'bg-indigo-500/12 text-indigo-600',
 };
-
-const AVATAR_PALETTE = [
-  'bg-violet-100 text-violet-700',
-  'bg-sky-100    text-sky-700',
-  'bg-emerald-100 text-emerald-700',
-  'bg-amber-100  text-amber-700',
-  'bg-pink-100   text-pink-700',
-  'bg-indigo-100 text-indigo-700',
-];
-
-function avatarColor(id: string): string {
-  if (!id) return 'bg-slate-100 text-slate-700';
-  const n = id.charCodeAt(0) + (id.charCodeAt(id.length - 1) || 0);
-  return AVATAR_PALETTE[n % AVATAR_PALETTE.length] ?? 'bg-slate-100 text-slate-700';
-}
 
 function initials(name: string): string {
   return name
@@ -60,10 +42,13 @@ export default async function UserPermissionsPage({
   const { user, assigned, available } = res.data;
   const m = uiT(locale).userPermissionsPage;
 
-  return (
-    <div className="space-y-5">
+  const total = assigned.length + available.length;
+  const pct = total > 0 ? Math.round((assigned.length / total) * 100) : 0;
+  const r = 44;
+  const c = 2 * Math.PI * r;
 
-      {/* ── Header ─────────────────────────────────────────────────────── */}
+  return (
+    <div className="flex flex-col gap-5 pb-2 lg:gap-6">
       <PremiumPageHero
         title={`${m.titlePrefix} ${user.fullName}`}
         description={m.description}
@@ -72,88 +57,71 @@ export default async function UserPermissionsPage({
           { label: m.breadcrumbPermissions, href: '/dashboard/permissions' },
           { label: user.fullName },
         ]}
-        meta={
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-1 text-[11px] font-bold text-brand-700">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            {m.metaBadge}
-          </span>
-        }
-        actions={
-          <Link href="/dashboard/permissions">
-            <Button variant="outline" size="sm" leftIcon={<ChevronLeft className="h-4 w-4" />}>
-              {m.backButton}
-            </Button>
-          </Link>
-        }
       />
 
-      {/* ── User identity card ──────────────────────────────────────────── */}
-      <PremiumSectionCard title={m.sectionUser} padded={false}>
-        <div className="flex items-center gap-5 px-6 py-5">
-          {/* Avatar */}
-          <span
-            className={cn(
-              'inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl font-bold leading-none',
-              avatarColor(user.id),
-            )}
-            aria-hidden
-          >
-            {initials(user.fullName)}
-          </span>
+      {/* ── Who, and how much of the catalogue they hold ──────────────────── */}
+      <section
+        data-testid="user-permissions-hero"
+        className="relative overflow-hidden rounded-[26px] border border-hairline bg-surface"
+      >
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-brand-500/[0.10] via-transparent to-transparent" />
+        <div className="pointer-events-none absolute -top-24 start-1/4 h-56 w-56 rounded-full bg-brand-500/10 blur-3xl" />
+        <div className="relative flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+          <div className="flex min-w-0 items-center gap-5">
+            <span
+              aria-hidden
+              className="inline-flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-400/35 to-brand-700/20 font-heading text-[26px] font-bold text-brand-700 ring-2 ring-brand-500/40 ring-offset-4 ring-offset-surface"
+            >
+              {initials(user.fullName)}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate font-heading text-[26px] font-bold leading-tight text-slate-900">{user.fullName}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className={cn('rounded-full px-3 py-1 text-[12px] font-semibold', ROLE_CHIP[user.role] ?? 'bg-slate-500/10 text-slate-600')}>
+                  {m.roleLabels[user.role] ?? user.role}
+                </span>
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold',
+                    user.active ? 'bg-emerald-500/12 text-emerald-600' : 'bg-slate-500/10 text-slate-500',
+                  )}
+                >
+                  <span className={cn('h-1.5 w-1.5 rounded-full', user.active ? 'bg-emerald-500' : 'bg-slate-400')} />
+                  {user.active ? m.activeLabel : m.inactiveLabel}
+                </span>
+              </div>
+              {(user.email || user.phone) && (
+                <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-[12.5px] text-slate-500">
+                  {user.email && (
+                    <span className="inline-flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /><span dir="ltr">{user.email}</span></span>
+                  )}
+                  {user.phone && (
+                    <span className="inline-flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /><span dir="ltr">{user.phone}</span></span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
 
-          {/* Identity */}
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <span className="text-[17px] font-bold text-slate-900 leading-tight">
-                {user.fullName}
-              </span>
-              <span
-                className={cn(
-                  'inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold leading-tight',
-                  ROLE_BADGE_CLS[user.role] ?? 'bg-slate-100 text-slate-600',
-                )}
-              >
-                {m.roleLabels[user.role] ?? user.role}
-              </span>
-              <span
-                className={cn(
-                  'inline-block px-2.5 py-1 rounded-full text-[10px] font-semibold leading-tight',
-                  user.active
-                    ? 'bg-success-50 text-success-700 border border-success-200'
-                    : 'bg-slate-100 text-slate-500',
-                )}
-              >
-                {user.active ? m.activeLabel : m.inactiveLabel}
+          <div className="flex items-center gap-5">
+            <div className="relative h-[110px] w-[110px] shrink-0" data-testid="user-permissions-ring">
+              <svg viewBox="0 0 110 110" className="h-full w-full -rotate-90">
+                <circle cx="55" cy="55" r={r} fill="none" strokeWidth="9" className="stroke-surface-muted" />
+                <circle cx="55" cy="55" r={r} fill="none" strokeWidth="9" strokeLinecap="round" strokeDasharray={`${(pct / 100) * c} ${c}`} className="stroke-brand-500" />
+              </svg>
+              <span className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="num text-[30px] font-semibold leading-none text-slate-900">{assigned.length}</span>
+                <span className="mt-1 text-[11px] text-slate-500 tabular-nums">{m.ofLabel} {total}</span>
               </span>
             </div>
-
-            {(user.email || user.phone) && (
-              <div className="flex items-center gap-4 mt-1.5 flex-wrap">
-                {user.email && (
-                  <span className="inline-flex items-center gap-1.5 text-[12px] text-slate-500">
-                    <Mail className="h-3 w-3 text-slate-400 shrink-0" />
-                    <span className="font-mono" dir="ltr">{user.email}</span>
-                  </span>
-                )}
-                {user.phone && (
-                  <span className="inline-flex items-center gap-1.5 text-[12px] text-slate-500">
-                    <Phone className="h-3 w-3 text-slate-400 shrink-0" />
-                    <span className="font-mono" dir="ltr">{user.phone}</span>
-                  </span>
-                )}
-              </div>
-            )}
+            <div>
+              <p className="text-[14px] font-bold text-slate-900">{m.grantedTitle}</p>
+              <p className="mt-1 max-w-[220px] text-[12px] leading-relaxed text-slate-500">{m.infoNotice(user.fullName)}</p>
+            </div>
           </div>
         </div>
-      </PremiumSectionCard>
+      </section>
 
-      {/* ── Info notice ─────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2.5 rounded-xl border border-brand-100 bg-brand-50/40 px-4 py-3 text-[12px] text-brand-800">
-        <Info className="h-4 w-4 shrink-0 text-brand-600" />
-        <span>{m.infoNotice(user.fullName)}</span>
-      </div>
-
-      {/* ── Permissions editor ──────────────────────────────────────────── */}
       <PermissionPicker
         userId={id}
         userName={user.fullName}
@@ -161,7 +129,6 @@ export default async function UserPermissionsPage({
         available={available}
         locale={locale}
       />
-
     </div>
   );
 }

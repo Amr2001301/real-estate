@@ -25,7 +25,7 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(function Switch
       className={cn(
         'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-smooth',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas',
-        checked ? 'bg-brand-600' : 'bg-slate-200',
+        checked ? 'bg-brand-500' : 'bg-slate-400/30',
         disabled && 'opacity-50 cursor-not-allowed',
         className,
       )}
@@ -34,7 +34,7 @@ export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(function Switch
       <span
         aria-hidden="true"
         className={cn(
-          'pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ease-smooth',
+          'pointer-events-none inline-block h-5 w-5 rounded-full bg-[#fff] shadow-sm ring-0 transition-transform duration-200 ease-smooth',
           checked ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-0.5 rtl:-translate-x-0.5',
         )}
         style={{ marginTop: 2 }}

@@ -21,7 +21,17 @@ test("a user's permission is switched on and off from its tile", async ({ page }
   await gotoReady(page, '/dashboard/users');
   await page.getByTestId('users-table').locator('tr', { hasText: 'Ahmed Khaled' }).locator('a[href$="/permissions"]').click();
   await expect(page).toHaveURL(/\/permissions$/);
+  await expect(page.getByTestId('user-permissions-hero')).toBeVisible();
+  // No "back to permissions" button (the breadcrumb leads there).
+  await expect(page.getByRole('link', { name: 'العودة للصلاحيات' })).toHaveCount(0);
   await expect(page.locator('main')).not.toContainText('buildings:manage');
+
+  // The section filter beside the search shows one section.
+  const filter = page.getByTestId('permission-section-filter');
+  const value = await filter.locator('option').nth(1).getAttribute('value');
+  await filter.selectOption(value!);
+  await expect(page.locator('section[id^="perm-"]')).toHaveCount(1);
+  await filter.selectOption('');
 
   const tile = page.getByTestId('permission-toggle').filter({ hasText: 'إدارة المباني' });
   const before = await tile.getAttribute('aria-checked');

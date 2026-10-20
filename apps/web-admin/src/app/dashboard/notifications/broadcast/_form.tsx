@@ -21,15 +21,7 @@ import {
 import { uiT } from '@/messages/ui';
 import type { Locale } from '@/lib/locale';
 
-const ROLE_OPTIONS = [
-  { value: 'ADMIN',                  label: 'ADMIN' },
-  { value: 'SALES',                  label: 'SALES' },
-  { value: 'SALES_MANAGER',          label: 'SALES_MANAGER' },
-  { value: 'CUSTOMER',               label: 'CUSTOMER' },
-  { value: 'BROKER',                 label: 'BROKER' },
-  { value: 'MAINTENANCE_SUPERVISOR', label: 'MAINTENANCE_SUPERVISOR' },
-  { value: 'CLIENT',                 label: 'CLIENT' },
-];
+const ROLES = ['ADMIN', 'SALES', 'SALES_MANAGER', 'CUSTOMER', 'BROKER', 'MAINTENANCE_SUPERVISOR', 'CLIENT'] as const;
 
 // Targets that are mass-sends and require estimate + confirmation before send.
 const MASS_TARGETS = new Set([
@@ -37,10 +29,15 @@ const MASS_TARGETS = new Set([
   'ALL_MAINTENANCE_SUPERVISORS', 'ALL_ACTIVE',
 ]);
 
-interface Props { locale?: Locale; }
+interface Props {
+  locale?: Locale;
+  /** Who a single notification can go to, by name. */
+  users?: Array<{ id: string; fullName: string; role: string }>;
+}
 
-export default function BroadcastForm({ locale = 'ar' }: Props) {
+export default function BroadcastForm({ locale = 'ar', users = [] }: Props) {
   const m = uiT(locale).notificationsBroadcast;
+  const roleLabels = uiT(locale).pages.users.roleLabels as Record<string, string>;
 
   const TARGET_OPTIONS = Object.entries(m.targetOptions).map(([value, label]) => ({ value, label }));
 
@@ -376,7 +373,7 @@ export default function BroadcastForm({ locale = 'ar' }: Props) {
                 value={targetRole}
                 onChange={(e) => { setTargetRole(e.target.value); resetEstimate(); }}
               >
-                {ROLE_OPTIONS.map((o) => (
+                {ROLES.map((r) => ({ value: r, label: roleLabels[r] ?? r })).map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </Select>
@@ -385,16 +382,20 @@ export default function BroadcastForm({ locale = 'ar' }: Props) {
 
           {target === 'USER' && (
             <Field label={au.userIdLabel} name="targetUserId" required>
-              <Input
+              <Select
                 id="targetUserId"
                 name="targetUserId"
                 required
-                dir="ltr"
-                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                pattern="[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
                 value={targetUser}
                 onChange={(e) => { setTargetUser(e.target.value); resetEstimate(); }}
-              />
+              >
+                <option value="">{dl.userPick}</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.fullName} — {roleLabels[u.role] ?? u.role}
+                  </option>
+                ))}
+              </Select>
             </Field>
           )}
         </div>
@@ -471,13 +472,12 @@ export default function BroadcastForm({ locale = 'ar' }: Props) {
       <FormSection title={dl.title} description={dl.description}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label={dl.entityTypeLabel} name="entityType" hint={dl.entityTypeHint}>
-            <Input
-              id="entityType"
-              name="entityType"
-              maxLength={60}
-              placeholder={dl.entityTypePlace}
-              dir="ltr"
-            />
+            <Select id="entityType" name="entityType" defaultValue="">
+              <option value="">{dl.entityTypeNone}</option>
+              {Object.entries(dl.entityTypeOptions).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </Select>
           </Field>
           <Field label={dl.entityIdLabel} name="entityId">
             <Input

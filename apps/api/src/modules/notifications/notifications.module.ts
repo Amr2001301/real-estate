@@ -224,7 +224,7 @@ async function notificationTimeZone(
 /**
  * Fills `{{var}}` placeholders from the notification payload. Amounts are
  * shown in the company's currency, in the reader's language
- * ("٢٬٥٠٠٬٠٠٠ ج.م." / "EGP 2,500,000") instead of the raw "2500000.00";
+ * ("2,500,000 ج.م." / "EGP 2,500,000") instead of the raw "2500000.00";
  * timestamps as a day or the company's wall time, not raw ISO.
  */
 function interpolate(
