@@ -171,6 +171,9 @@ export default async function UnitDetailPage({
                     <KV key={f} label={unitsM.specLabels[f] ?? f} value={`${unit[f]} ${m.metrics.areaSuffix}`} />
                   ) : null,
                 )}
+                {unit.pricePerMeter != null && (
+                  <KV label={unitsM.pricePerMeter} value={formatCurrency(unit.pricePerMeter, currency, locale)} />
+                )}
                 {unit.finishing && <KV label={unitsM.specLabels.finishing ?? ''} value={unitsM.finishingLabels[unit.finishing] ?? unit.finishing} />}
                 {unit.view && <KV label={unitsM.specLabels.view ?? ''} value={unitsM.viewLabels[unit.view] ?? unit.view} />}
                 {unit.orientation && (

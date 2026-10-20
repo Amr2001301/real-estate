@@ -671,6 +671,9 @@ model Unit {
   bathrooms            Int        @default(0)
   floor                Int        @default(0)
   price                Decimal    @db.Decimal(14, 2)
+  /// Set when the unit is priced by the meter: price = pricePerMeter × area
+  /// (gross). Null for a unit priced as a whole.
+  pricePerMeter        Decimal?   @db.Decimal(14, 2)
   status               UnitStatus @default(AVAILABLE)
   reservationExpiresAt DateTime?
   latitude             Float?

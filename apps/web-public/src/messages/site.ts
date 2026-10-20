@@ -428,6 +428,7 @@ const SITE_MESSAGES = {
 
     // ── Unit detail ──────────────────────────────────────────────────────────────
     unitDetail: {
+      perMeter: 'للمتر',
       status: {
         AVAILABLE: 'متاحة',
         RESERVED:  'محجوزة',
@@ -1305,6 +1306,7 @@ const SITE_MESSAGES = {
     },
 
     unitDetail: {
+      perMeter: 'per m²',
       status: {
         AVAILABLE: 'Available',
         RESERVED:  'Reserved',

@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Header,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -27,6 +28,7 @@ import {
   UnitQueryDto,
   UpdateUnitDto,
   UpdateUnitStatusDto,
+  RepriceUnitsDto,
 } from './dto/unit.dto';
 
 @ApiTags('units')
@@ -136,6 +138,15 @@ export class UnitsController {
   @Post('units')
   create(@Body() dto: CreateUnitDto) {
     return this.units.create(dto);
+  }
+
+  /** Reprice by the meter the units for sale in a project, phase or building. */
+  @Roles(UserRole.ADMIN)
+  @Permissions('units:update')
+  @Post('units/reprice')
+  @HttpCode(200)
+  reprice(@Body() dto: RepriceUnitsDto) {
+    return this.units.reprice(dto);
   }
 
   @Roles(UserRole.ADMIN)

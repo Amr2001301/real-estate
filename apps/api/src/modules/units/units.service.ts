@@ -12,6 +12,7 @@ import {
   CalcInstallmentDto,
   CreateUnitDto,
   InventoryMatrixQueryDto,
+  RepriceUnitsDto,
   UnitQueryDto,
   UnitSort,
   UpdateUnitDto,
@@ -25,6 +26,13 @@ import { UnitTypesService } from './unit-types.service';
 import { arText, collectPages, isoDate, listCsv, listXlsx, type ListColumn } from '../../common/utils/list-export';
 import { ReportBrandService } from '../company-branding/report-brand.service';
 import { resetUnitWarranties } from '../contracts/unit-warranties';
+
+/** A unit priced by the meter: the price per meter × its gross area. */
+export function meterPrice(pricePerMeter: Prisma.Decimal.Value, area: number): Prisma.Decimal {
+  return new Prisma.Decimal(pricePerMeter).mul(area).toDecimalPlaces(2);
+}
+
+const NOT_PRICED = 'أدخل سعر الوحدة أو سعر المتر';
 
 /** The unit's specs (F10): written as sent, null clears one. */
 const SPEC_FIELDS = [
@@ -167,6 +175,10 @@ export class UnitsService {
     // The type is one of the company's (F10); its usage comes with it, and
     // only a residential unit has bedrooms.
     const type = await this.unitTypes.resolveActive(dto.type);
+    // Priced by the meter, or as a whole.
+    const pricePerMeter = dto.pricePerMeter ?? null;
+    if (pricePerMeter === null && dto.price === undefined) throw new BadRequestException(NOT_PRICED);
+    const price = pricePerMeter !== null ? meterPrice(pricePerMeter, dto.area) : new Prisma.Decimal(dto.price!);
     const created = await this.prisma.unit.create({
       data: {
         buildingId: dto.buildingId,
@@ -177,7 +189,8 @@ export class UnitsService {
         bedrooms: type.usage === UnitUsage.RESIDENTIAL ? dto.bedrooms : 0,
         bathrooms: dto.bathrooms,
         floor: dto.floor,
-        price: new Prisma.Decimal(dto.price),
+        price,
+        pricePerMeter,
         status: dto.status ?? UnitStatus.AVAILABLE,
         ...specData(dto),
       },
@@ -367,6 +380,26 @@ export class UnitsService {
         ? await this.unitTypes.resolveActive(dto.type)
         : null;
     const usage = newType?.usage ?? unit.usage;
+    // Priced by the meter, the price follows the price per meter and the
+    // gross area; a whole price sent for it is refused (it would be lost).
+    const currentPpm = unit.pricePerMeter ?? null;
+    const pricePerMeter = dto.pricePerMeter !== undefined ? dto.pricePerMeter : currentPpm;
+    let price: Prisma.Decimal | undefined;
+    if (pricePerMeter !== null) {
+      price = meterPrice(pricePerMeter, dto.area ?? unit.area);
+      if (dto.price !== undefined && !new Prisma.Decimal(dto.price).equals(price)) {
+        throw new BadRequestException('الوحدة مسعّرة بالمتر — عدّل سعر المتر أو امسحه لتحديد سعر إجمالي');
+      }
+    } else if (dto.price !== undefined) {
+      price = new Prisma.Decimal(dto.price);
+    } else if (dto.pricePerMeter === null && currentPpm !== null) {
+      throw new BadRequestException(NOT_PRICED);
+    }
+    const ppmChanged =
+      dto.pricePerMeter !== undefined &&
+      (dto.pricePerMeter === null || currentPpm === null
+        ? dto.pricePerMeter !== currentPpm
+        : !new Prisma.Decimal(dto.pricePerMeter).equals(currentPpm));
     const bedrooms = usage === UnitUsage.RESIDENTIAL ? dto.bedrooms : dto.bedrooms !== undefined || newType ? 0 : undefined;
     // A unit in a live deal keeps what was sold: its price, areas, type,
     // specs, floor and code are the deal's. Changing them rewrote the customer's contract
@@ -379,7 +412,8 @@ export class UnitsService {
       bedrooms !== undefined && bedrooms !== unit.bedrooms,
       dto.bathrooms !== undefined && dto.bathrooms !== unit.bathrooms,
       dto.floor !== undefined && dto.floor !== unit.floor,
-      dto.price !== undefined && !new Prisma.Decimal(dto.price).equals(unit.price),
+      price !== undefined && !price.equals(unit.price),
+      ppmChanged,
       ...SPEC_FIELDS.map((f) => dto[f] !== undefined && dto[f] !== unit[f]),
     ].some(Boolean);
     if (changed && (await this.liveDeals(id)) > 0) {
@@ -395,9 +429,74 @@ export class UnitsService {
     if (bedrooms !== undefined) data.bedrooms = bedrooms;
     if (dto.bathrooms !== undefined) data.bathrooms = dto.bathrooms;
     if (dto.floor !== undefined) data.floor = dto.floor;
-    if (dto.price !== undefined) data.price = new Prisma.Decimal(dto.price);
+    if (price !== undefined) data.price = price;
+    if (dto.pricePerMeter !== undefined) data.pricePerMeter = dto.pricePerMeter;
     Object.assign(data, specData(dto));
     return this.prisma.unit.update({ where: { id }, data });
+  }
+
+  /**
+   * Reprice by the meter every unit for sale in a project, phase or building
+   * (F10): price = price per meter × gross area. A unit reserved, sold or
+   * held by a live reservation or contract keeps its price — the deal's.
+   * A unit's own price plan is then stale (booking refuses it until it is
+   * updated); the count is returned so the admin knows.
+   */
+  async reprice(dto: RepriceUnitsDto) {
+    const companyId = getRequiredCompanyId();
+    if (!dto.projectId && !dto.phaseId && !dto.buildingId) {
+      throw new BadRequestException('اختر مشروعاً أو مرحلة أو مبنى');
+    }
+    // The scope ids come from the client: they must be this company's.
+    const [project, phase, building] = await Promise.all([
+      dto.projectId ? this.prisma.project.findFirst({ where: { id: dto.projectId, companyId }, select: { id: true } }) : true,
+      dto.phaseId ? this.prisma.phase.findFirst({ where: { id: dto.phaseId, companyId }, select: { id: true } }) : true,
+      dto.buildingId ? this.prisma.building.findFirst({ where: { id: dto.buildingId, companyId }, select: { id: true } }) : true,
+    ]);
+    if (!project || !phase || !building) throw new NotFoundException('المشروع أو المرحلة أو المبنى غير موجود');
+
+    const scope: Prisma.UnitWhereInput = {
+      companyId,
+      ...(dto.buildingId ? { buildingId: dto.buildingId } : {}),
+      ...(dto.phaseId || dto.projectId
+        ? {
+            building: {
+              ...(dto.phaseId ? { phaseId: dto.phaseId } : {}),
+              ...(dto.projectId ? { phase: { projectId: dto.projectId } } : {}),
+            },
+          }
+        : {}),
+      ...(dto.type ? { type: { equals: dto.type, mode: 'insensitive' as const } } : {}),
+    };
+    const forSale: Prisma.UnitWhereInput = {
+      ...scope,
+      status: UnitStatus.AVAILABLE,
+      reservations: {
+        none: { deletedAt: null, status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] } },
+      },
+      contracts: { none: LIVE_CONTRACT_WHERE },
+    };
+    const [units, inScope] = await Promise.all([
+      this.prisma.unit.findMany({ where: forSale, select: { id: true, area: true } }),
+      this.prisma.unit.count({ where: scope }),
+    ]);
+    const ids = units.map((u) => u.id);
+    const stalePlans = ids.length
+      ? await this.prisma.installmentPlanTemplate.count({ where: { companyId, unitId: { in: ids } } })
+      : 0;
+    const summary = { updated: units.length, kept: inScope - units.length, stalePlans };
+    if (dto.dryRun || units.length === 0) return summary;
+
+    await this.prisma.$transaction(
+      units.map((u) =>
+        this.prisma.unit.updateMany({
+          // Still for sale when written (a booking made meanwhile keeps its price).
+          where: { id: u.id, companyId, status: UnitStatus.AVAILABLE },
+          data: { pricePerMeter: new Prisma.Decimal(dto.pricePerMeter), price: meterPrice(dto.pricePerMeter, u.area) },
+        }),
+      ),
+    );
+    return summary;
   }
 
   async setStatus(id: string, dto: UpdateUnitStatusDto, changedById?: string) {

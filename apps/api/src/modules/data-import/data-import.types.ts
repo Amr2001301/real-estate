@@ -85,6 +85,8 @@ export interface UnitPlan {
   view?: UnitView;
   orientation?: UnitOrientation;
   price?: number;
+  /** Priced by the meter: the price follows it × the gross area. */
+  pricePerMeter?: number;
   status?: UnitStatus;
 }
 
