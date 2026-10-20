@@ -7,7 +7,6 @@ import {
   Layers,
   Building2,
   MapPin,
-  History,
   CalendarClock,
   Bookmark,
   BookmarkCheck,
@@ -29,6 +28,7 @@ import type {
 } from '@/lib/types';
 import { tx, formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
+import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ReservationStatusBadge, UnitStatusBadge } from '@/components/badges';
@@ -37,18 +37,12 @@ import { UnitMediaPanel } from './media-panel';
 import { MaintenanceItemsCard } from './maintenance-items-card';
 import { deleteUnitAction } from '../actions';
 import {
-  PremiumPageHero,
   PremiumDetailLayout,
-  PremiumSectionCard,
-  PremiumCommandPanel,
-  PremiumEmptyState, PremiumMetricStrip } from '@/components/premium';
+  PremiumPanel,
+  PremiumEmptyNote,
+} from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
-
-const CMD_LINK =
-  'group flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 hover:bg-canvas/40 transition-colors duration-150';
-const CMD_ICON =
-  'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[15px] [&_svg]:w-[15px]';
 
 export default async function UnitDetailPage({
   params,
@@ -68,7 +62,7 @@ export default async function UnitDetailPage({
 
   if (unitRes.error || !unitRes.data) {
     return (
-      <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-6 text-sm">
+      <div className="rounded-2xl bg-danger-500/10 text-danger-600 p-6 text-sm">
         {m.errorLoad} {unitRes.error ?? m.errorNotFound}
       </div>
     );
@@ -96,291 +90,257 @@ export default async function UnitDetailPage({
     city || null,
   ].filter(Boolean) as string[];
 
-  return (
-    <div className="space-y-5">
-      <PremiumPageHero
-        title={m.title(unit.code)}
-        description={locationParts.join(' · ') || undefined}
-        breadcrumbs={[
-          { label: m.breadcrumbDashboard, href: '/dashboard' },
-          { label: m.breadcrumbList, href: '/dashboard/units' },
-          { label: unit.code },
-        ]}
-        meta={
-          <>
-            <UnitStatusBadge status={unit.status} />
-            <Badge tone="gray" variant="soft">{tx(unit.typeName, locale) || unit.type}</Badge>
-            <span className="text-sm font-semibold text-navy tabular-nums">
-              {formatCurrency(unit.price, currency, locale)}
-            </span>
-          </>
-        }
-        actions={
-          isAdmin ? (
-            <Link href={`/dashboard/units/${id}/edit` as never}>
-              <Button variant="outline" size="md" leftIcon={<Pencil className="h-4 w-4" />}>
-                {m.editBtn}
-              </Button>
-            </Link>
-          ) : undefined
-        }
-      />
+  const project = unit.building?.phase?.project;
+  const typeLabel = tx(unit.typeName, locale) || unit.type;
+  const facts = [
+    { label: m.metrics.area, value: `${unit.area}`, suffix: m.metrics.areaSuffix, icon: <Ruler /> },
+    { label: m.metrics.bedrooms, value: unit.bedrooms, icon: <BedDouble /> },
+    { label: m.metrics.bathrooms, value: unit.bathrooms, icon: <Bath /> },
+    { label: m.metrics.floor, value: unit.floor === 0 ? m.metrics.groundFloor : unit.floor, icon: <Layers /> },
+  ];
+  const specs: Array<[string, React.ReactNode]> = [
+    [m.fieldCode, <span key="c" className="font-mono">{unit.code}</span>],
+    [m.fieldType, typeLabel],
+    ...(['netArea', 'gardenArea', 'roofArea', 'terraceArea', 'landArea'] as const)
+      .filter((f) => unit[f])
+      .map((f) => [unitsM.specLabels[f] ?? f, `${unit[f]} ${m.metrics.areaSuffix}`] as [string, React.ReactNode]),
+    ...(unit.pricePerMeter != null
+      ? [[unitsM.pricePerMeter, formatCurrency(unit.pricePerMeter, currency, locale)] as [string, React.ReactNode]]
+      : []),
+    ...(unit.finishing ? [[unitsM.specLabels.finishing ?? '', unitsM.finishingLabels[unit.finishing] ?? unit.finishing] as [string, React.ReactNode]] : []),
+    ...(unit.view ? [[unitsM.specLabels.view ?? '', unitsM.viewLabels[unit.view] ?? unit.view] as [string, React.ReactNode]] : []),
+    ...(unit.orientation
+      ? [[unitsM.specLabels.orientation ?? '', unitsM.orientationLabels[unit.orientation] ?? unit.orientation] as [string, React.ReactNode]]
+      : []),
+    ...(unit.model
+      ? [[uiT(locale).pages.unitsForm.labelModel, `${unit.model.code} — ${tx(unit.model.name, locale)}`] as [string, React.ReactNode]]
+      : []),
+    ...(unit.effectiveDeliveryDate
+      ? [[
+          uiT(locale).pages.unitsForm.labelDelivery,
+          `${unit.effectiveDeliveryDate}${unit.deliveryDate ? '' : ` ${uiT(locale).pages.unitsForm.fromPhase}`}`,
+        ] as [string, React.ReactNode]]
+      : []),
+  ];
 
-      {/* Cover image — only when media exists */}
-      {cover && (
-        <div className="relative h-48 sm:h-52 overflow-hidden rounded-[20px] border border-hairline shadow-soft">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={cover} alt={unit.code} className="h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/55 via-transparent to-transparent" />
-          <div className="absolute bottom-4 start-5 end-5 flex items-end justify-between gap-3">
-            <div>
-              <p className="text-[11px] text-white/60">{m.coverPriceLabel}</p>
-              <p className="mt-0.5 text-xl font-bold text-white tabular-nums">{formatCurrency(unit.price, currency, locale)}</p>
+  return (
+    <div className="space-y-6">
+      {/* ── Hero ───────────────────────────────────────────────────────── */}
+      <section data-testid="unit-hero" className="relative isolate overflow-hidden rounded-[26px] border border-hairline bg-surface">
+        {cover ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={cover} alt="" aria-hidden className="absolute inset-0 -z-10 h-full w-full object-cover" />
+            <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#070b14] via-[#070b14]/80 to-[#070b14]/30" />
+          </>
+        ) : (
+          <div className="absolute inset-0 -z-10 bg-gradient-to-bl from-brand-500/[0.14] via-transparent to-transparent" />
+        )}
+        <div className={cn('flex flex-col gap-6 p-7 sm:p-9', cover && 'min-h-[300px] justify-end')}>
+          <nav aria-label="breadcrumb">
+            <ol className={cn('flex flex-wrap items-center gap-1.5 text-[13px]', cover ? 'text-white/70' : 'text-slate-500')}>
+              <li><Link href={'/dashboard' as never} className="hover:text-brand-400">{m.breadcrumbDashboard}</Link></li>
+              <li aria-hidden>›</li>
+              <li><Link href={'/dashboard/units' as never} className="hover:text-brand-400">{m.breadcrumbList}</Link></li>
+              <li aria-hidden>›</li>
+              <li className="font-semibold text-brand-400">{unit.code}</li>
+            </ol>
+          </nav>
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <UnitStatusBadge status={unit.status} locale={locale} />
+                <span className={cn('rounded-full px-3 py-0.5 text-[12px] font-semibold', cover ? 'bg-white/10 text-white ring-1 ring-white/20' : 'bg-surface-muted text-slate-600')}>
+                  {typeLabel}
+                </span>
+              </div>
+              <h1 className={cn('mt-3 font-heading text-[34px] font-bold leading-tight sm:text-[42px]', cover ? 'text-white' : 'text-slate-900')}>
+                {m.title(unit.code)}
+              </h1>
+              {locationParts.length > 0 && (
+                <p className={cn('mt-2 inline-flex items-center gap-1.5 text-[14px]', cover ? 'text-white/80' : 'text-slate-500')}>
+                  <MapPin className="h-4 w-4 text-brand-400" />
+                  {locationParts.join(' · ')}
+                </p>
+              )}
             </div>
-            <UnitStatusBadge status={unit.status} />
+            <div className="flex flex-col items-start gap-4 lg:items-end">
+              <div className={cn('lg:text-end', cover ? 'text-white' : 'text-slate-900')}>
+                <p className={cn('text-[12.5px] font-semibold', cover ? 'text-white/70' : 'text-slate-500')}>{m.coverPriceLabel}</p>
+                <p className="num mt-1 text-[36px] font-semibold leading-none text-brand-400" dir="ltr">
+                  {formatCurrency(unit.price, currency, locale)}
+                </p>
+              </div>
+              {isAdmin && (
+                <Link href={`/dashboard/units/${id}/edit` as never}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    leftIcon={<Pencil className="h-4 w-4" />}
+                    className={cn(cover && 'border-white/30 bg-black/20 text-white backdrop-blur hover:bg-black/30')}
+                  >
+                    {m.editBtn}
+                  </Button>
+                </Link>
+              )}
+            </div>
           </div>
         </div>
-      )}
+      </section>
 
-      {/* Metric band (U5) */}
-      <PremiumMetricStrip
-        variant="compact"
-        cols={4}
-        metrics={[
-          { label: m.metrics.area,      value: unit.area, unit: m.metrics.areaSuffix, icon: <Ruler /> },
-          { label: m.metrics.bedrooms,  value: unit.bedrooms,                         icon: <BedDouble /> },
-          { label: m.metrics.bathrooms, value: unit.bathrooms,                        icon: <Bath /> },
-          { label: m.metrics.floor,     value: unit.floor === 0 ? m.metrics.groundFloor : unit.floor, icon: <Layers /> },
-        ]}
-      />
+      {/* ── Facts ──────────────────────────────────────────────────────── */}
+      <div data-testid="unit-facts" className="grid grid-cols-2 overflow-hidden rounded-[22px] border border-hairline bg-surface lg:grid-cols-4">
+        {facts.map((f, i) => (
+          <div
+            key={f.label}
+            className={cn(
+              'flex items-center gap-4 p-5',
+              i > 0 && 'lg:border-s lg:border-hairline',
+              i % 2 === 1 && 'max-lg:border-s max-lg:border-hairline',
+              i >= 2 && 'max-lg:border-t max-lg:border-hairline',
+            )}
+          >
+            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-500/12 text-brand-700 [&_svg]:h-5 [&_svg]:w-5">
+              {f.icon}
+            </span>
+            <div>
+              <p className="num text-[30px] font-semibold leading-none text-slate-900">
+                {f.value}
+                {f.suffix && <span className="ms-1 font-sans text-[14px] font-medium text-slate-500">{f.suffix}</span>}
+              </p>
+              <p className="mt-1 text-[12.5px] font-semibold text-slate-500">{f.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
 
       <PremiumDetailLayout
         main={
           <>
             {/* Specifications */}
-            <PremiumSectionCard title={m.specsTitle} icon={<Ruler />}>
-              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <KV label={m.fieldCode} value={<span className="font-mono">{unit.code}</span>} />
-                <KV label={m.fieldType} value={tx(unit.typeName, locale) || unit.type} />
-                <KV label={m.fieldFloor} value={unit.floor === 0 ? m.metrics.groundFloor : unit.floor} />
-                <KV label={m.fieldArea} value={`${unit.area} ${m.metrics.areaSuffix}`} />
-                <KV label={m.fieldBedrooms} value={unit.bedrooms} />
-                <KV label={m.fieldBathrooms} value={unit.bathrooms} />
-                {(['netArea', 'gardenArea', 'roofArea', 'terraceArea', 'landArea'] as const).map((f) =>
-                  unit[f] ? (
-                    <KV key={f} label={unitsM.specLabels[f] ?? f} value={`${unit[f]} ${m.metrics.areaSuffix}`} />
-                  ) : null,
-                )}
-                {unit.effectiveDeliveryDate && (
-                  <KV
-                    label={uiT(locale).pages.unitsForm.labelDelivery}
-                    value={`${unit.effectiveDeliveryDate}${unit.deliveryDate ? '' : ` ${uiT(locale).pages.unitsForm.fromPhase}`}`}
-                  />
-                )}
-                {unit.model && (
-                  <KV
-                    label={uiT(locale).pages.unitsForm.labelModel}
-                    value={`${unit.model.code} — ${tx(unit.model.name, locale)}`}
-                  />
-                )}
-                {unit.pricePerMeter != null && (
-                  <KV label={unitsM.pricePerMeter} value={formatCurrency(unit.pricePerMeter, currency, locale)} />
-                )}
-                {unit.finishing && <KV label={unitsM.specLabels.finishing ?? ''} value={unitsM.finishingLabels[unit.finishing] ?? unit.finishing} />}
-                {unit.view && <KV label={unitsM.specLabels.view ?? ''} value={unitsM.viewLabels[unit.view] ?? unit.view} />}
-                {unit.orientation && (
-                  <KV label={unitsM.specLabels.orientation ?? ''} value={unitsM.orientationLabels[unit.orientation] ?? unit.orientation} />
-                )}
+            <PremiumPanel title={m.specsTitle}>
+              <div className="overflow-hidden rounded-2xl border border-hairline">
+              <dl className={cn('-mb-px -me-px grid grid-cols-1 sm:grid-cols-2', specs.length >= 3 && 'lg:grid-cols-3')}>
+                {specs.map(([label, value]) => (
+                  <div key={label} className="border-b border-e border-hairline px-5 py-4">
+                    <dt className="text-[11.5px] font-semibold text-slate-500">{label}</dt>
+                    <dd className="mt-1.5 text-[15px] font-bold text-slate-900">{value}</dd>
+                  </div>
+                ))}
               </dl>
-            </PremiumSectionCard>
-
-            {/* Project / Location */}
-            <PremiumSectionCard title={m.projectTitle} icon={<Building2 />}>
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                <KV
-                  label={m.fieldProject}
-                  value={
-                    unit.building?.phase?.project ? (
-                      <Link
-                        href={`/dashboard/projects/${unit.building.phase.project.id}` as never}
-                        className="text-brand-700 hover:text-brand-800 font-medium"
-                      >
-                        {projectName}
-                      </Link>
-                    ) : (
-                      projectName
-                    )
-                  }
-                />
-                <KV label={m.fieldPhase} value={phaseName} />
-                <KV label={m.fieldBuilding} value={buildingName ? m.buildingLabel(buildingName) : '—'} />
-                <KV
-                  label={m.fieldCity}
-                  value={
-                    city ? (
-                      <span className="inline-flex items-center gap-1.5">
-                        <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                        {city}
-                      </span>
-                    ) : (
-                      '—'
-                    )
-                  }
-                />
-              </dl>
-            </PremiumSectionCard>
-
-            {/* Status & reservation */}
-            <PremiumSectionCard title={m.reservationTitle}>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Stat
-                  icon={<Bookmark className="h-4 w-4" />}
-                  label={m.statCurrentStatus}
-                  value={<UnitStatusBadge status={unit.status} />}
-                />
-                <Stat
-                  icon={<CalendarClock className="h-4 w-4" />}
-                  label={m.statExpiresAt}
-                  value={
-                    unit.reservationExpiresAt
-                      ? formatDate(unit.reservationExpiresAt, locale)
-                      : '—'
-                  }
-                />
-                <Stat
-                  icon={<History className="h-4 w-4" />}
-                  label={m.statLastUpdated}
-                  value={formatDate(unit.updatedAt, locale)}
-                />
               </div>
+            </PremiumPanel>
 
+            {/* Reservation */}
+            <PremiumPanel
+              title={m.reservationTitle}
+              trailing={<UnitStatusBadge status={unit.status} locale={locale} />}
+            >
               {activeReservation ? (
-                <div className="mt-5 rounded-2xl border border-warning-100 bg-warning-50/40 p-4 sm:p-5">
-                  <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-                    <div className="flex items-center gap-2">
-                      <BookmarkCheck className="h-5 w-5 text-warning-600" />
-                      <h3 className="text-sm font-semibold text-slate-900">{m.activeReservationTitle}</h3>
-                      <ReservationStatusBadge status={activeReservation.status} />
+                <div data-testid="unit-active-reservation" className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/15 text-amber-600">
+                        <BookmarkCheck className="h-5 w-5" />
+                      </span>
+                      <div>
+                        <p className="text-[14px] font-bold text-slate-900">{m.activeReservationTitle}</p>
+                        <p className="font-mono text-[12.5px] text-slate-500">
+                          {activeReservation.reservationNumber ?? `#${activeReservation.id.slice(0, 8).toUpperCase()}`}
+                        </p>
+                      </div>
+                      <ReservationStatusBadge status={activeReservation.status} locale={locale} />
                     </div>
                     <Link
                       href={`/dashboard/reservations/${activeReservation.id}` as never}
-                      className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
+                      className="inline-flex items-center gap-1 text-[13px] font-bold text-brand-700 hover:text-brand-600"
                     >
                       {m.reservationDetailsLink}
-                      <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
+                      <ArrowLeft className="h-3.5 w-3.5 ltr:rotate-180" />
                     </Link>
                   </div>
-                  <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                    <KV
-                      label={m.fieldReservationNumber}
-                      value={
-                        <span className="font-mono">
-                          {activeReservation.reservationNumber ??
-                            `#${activeReservation.id.slice(0, 8).toUpperCase()}`}
-                        </span>
-                      }
-                    />
-                    <KV
-                      label={m.fieldClient}
-                      value={
-                        <span className="inline-flex items-center gap-1.5">
-                          <UserIcon className="h-3.5 w-3.5 text-slate-400" />
-                          {activeReservation.client?.fullName ??
-                            activeReservation.lead?.fullName ??
-                            '—'}
-                        </span>
-                      }
-                    />
-                    <KV
-                      label={m.fieldSales}
-                      value={
-                        activeReservation.sales?.fullName ? (
-                          <span className="inline-flex items-center gap-1.5">
-                            <UserCog className="h-3.5 w-3.5 text-slate-400" />
-                            {activeReservation.sales.fullName}
-                          </span>
-                        ) : (
-                          '—'
-                        )
-                      }
-                    />
-                    <KV
-                      label={m.fieldExpiresAt}
-                      value={formatDate(activeReservation.expiresAt, locale)}
-                    />
+                  <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <Mini icon={<UserIcon />} label={m.fieldClient}>
+                      {activeReservation.client?.fullName ?? activeReservation.lead?.fullName ?? '—'}
+                    </Mini>
+                    <Mini icon={<UserCog />} label={m.fieldSales}>
+                      {activeReservation.sales?.fullName ?? '—'}
+                    </Mini>
+                    <Mini icon={<CalendarClock />} label={m.fieldExpiresAt}>
+                      {formatDate(activeReservation.expiresAt, locale)}
+                    </Mini>
                   </dl>
                 </div>
               ) : (
-                unit.status === 'AVAILABLE' && (
-                  <p className="mt-4 text-xs text-slate-500">
-                    {m.noActiveReservation}
-                  </p>
-                )
-              )}
-            </PremiumSectionCard>
-
-            {/* Reservation history */}
-            {pastReservations.length > 0 && (
-              <PremiumSectionCard
-                title={m.reservationHistoryTitle}
-                trailing={
-                  <span className="text-xs text-slate-400 tabular-nums">
-                    {pastReservations.length} {m.reservationSuffix}
+                <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-hairline bg-surface-muted/40 p-5">
+                  <span
+                    className={cn(
+                      'inline-flex h-10 w-10 items-center justify-center rounded-full',
+                      unit.status === 'AVAILABLE' ? 'bg-emerald-500/12 text-emerald-600' : 'bg-amber-500/12 text-amber-600',
+                    )}
+                  >
+                    <Bookmark className="h-5 w-5" />
                   </span>
-                }
-                padded={false}
-              >
-                <ul className="flex flex-col divide-y divide-hairline">
-                  {pastReservations.map((r) => (
-                    <li key={r.id}>
-                      <Link
-                        href={`/dashboard/reservations/${r.id}` as never}
-                        className="flex items-center gap-3 px-5 py-3.5 hover:bg-canvas/40 transition-colors duration-100"
-                      >
-                        <span className="font-mono text-2xs text-slate-400 shrink-0">
-                          {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-medium text-slate-900 truncate">
-                              {r.client?.fullName ?? r.lead?.fullName ?? '—'}
-                            </p>
-                            <ReservationStatusBadge status={r.status} />
-                          </div>
-                          <p className="text-2xs text-slate-500 mt-0.5">
-                            {formatDateTime(r.createdAt, locale)}
+                  <p className="min-w-0 flex-1 text-[13.5px] text-slate-600">
+                    {unit.status === 'AVAILABLE' ? m.noActiveReservation : m.statusLabels[unit.status] ?? unit.status}
+                  </p>
+                  <span className="text-[12px] text-slate-500 tabular-nums">
+                    {m.statLastUpdated}: {formatDate(unit.updatedAt, locale)}
+                  </span>
+                </div>
+              )}
+
+              {pastReservations.length > 0 && (
+                <div className="mt-5">
+                  <p className="mb-2 text-[12.5px] font-semibold text-slate-500">
+                    {m.reservationHistoryTitle} · <span className="tabular-nums">{pastReservations.length}</span>
+                  </p>
+                  <ul className="divide-y divide-hairline overflow-hidden rounded-2xl border border-hairline">
+                    {pastReservations.map((r) => (
+                      <li key={r.id}>
+                        <Link
+                          href={`/dashboard/reservations/${r.id}` as never}
+                          className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-surface-muted/40"
+                        >
+                          <span className="shrink-0 font-mono text-[12px] text-slate-500">
+                            {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
+                          </span>
+                          <p className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-slate-900">
+                            {r.client?.fullName ?? r.lead?.fullName ?? '—'}
                           </p>
-                        </div>
-                        <ArrowLeft className="h-4 w-4 text-slate-300 rtl:rotate-180" />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </PremiumSectionCard>
-            )}
+                          <ReservationStatusBadge status={r.status} locale={locale} />
+                          <span className="hidden text-[12px] text-slate-500 tabular-nums sm:inline">
+                            {formatDate(r.createdAt, locale)}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </PremiumPanel>
 
             {/* Maintenance / warranty items (ADMIN-only API) */}
             {isAdmin && <MaintenanceItemsCard unitId={id} locale={locale} />}
 
-            {/* Activity / history timeline */}
-            <PremiumSectionCard
+            {/* Activity */}
+            <PremiumPanel
               title={m.activityTitle}
               trailing={
                 history.length > 0 ? (
-                  <span className="text-xs text-slate-400 tabular-nums">
-                    {history.length} {m.activitySuffix}
+                  <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-[12px] font-semibold text-slate-600 tabular-nums">
+                    {history.length}
                   </span>
                 ) : undefined
               }
             >
               {history.length === 0 ? (
-                <PremiumEmptyState
-                  icon={<History />}
-                  title={m.activityEmpty}
-                  description={m.activityEmptyDesc}
-                />
+                <PremiumEmptyNote>
+                  <span className="block font-semibold text-slate-700">{m.activityEmpty}</span>
+                  {m.activityEmptyDesc}
+                </PremiumEmptyNote>
               ) : (
-                <ol className="relative ms-4 border-s-2 border-hairline ps-6 space-y-5">
+                <ol className="relative ms-4 space-y-5 border-s-2 border-hairline ps-6">
                   {history.map((h) => (
                     <HistoryItem
                       key={h.id}
@@ -393,55 +353,58 @@ export default async function UnitDetailPage({
                   ))}
                 </ol>
               )}
-            </PremiumSectionCard>
+            </PremiumPanel>
           </>
         }
         side={
           <>
-            <PremiumCommandPanel title={m.cmdTitle}>
-                {isAdmin && (
-                  <Link href={`/dashboard/units/${id}/edit` as never} className={CMD_LINK}>
-                    <span className={CMD_ICON}><Pencil /></span>
-                    <span>{m.cmdEdit}</span>
-                  </Link>
-                )}
-                <Link href="/dashboard/units" className={CMD_LINK}>
-                  <span className={CMD_ICON}><ArrowLeft /></span>
-                  <span>{m.cmdList}</span>
-                </Link>
-                {unit.building?.phase?.project && (
+            {/* Location */}
+            <PremiumPanel title={m.projectTitle} padding="none">
+              <div data-testid="unit-location" className="divide-y divide-hairline border-t border-hairline">
+                {project && (
                   <Link
-                    href={`/dashboard/projects/${unit.building.phase.project.id}` as never}
-                    className={CMD_LINK}
+                    href={`/dashboard/projects/${project.id}` as never}
+                    className="group flex items-center gap-3.5 px-6 py-4 transition-colors hover:bg-surface-muted/50"
                   >
-                    <span className={CMD_ICON}><Building2 /></span>
-                    <span>{m.cmdProject}</span>
+                    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-500/12 text-brand-700">
+                      <Building2 className="h-[18px] w-[18px]" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11.5px] text-slate-500">{m.fieldProject}</p>
+                      <p className="truncate text-[14.5px] font-bold text-slate-900">{projectName}</p>
+                    </div>
+                    <ArrowLeft className="h-4 w-4 text-slate-400 transition-colors group-hover:text-brand-600 ltr:rotate-180" />
                   </Link>
                 )}
+                <div className="grid grid-cols-2">
+                  <SideFact label={m.fieldPhase}>{phaseName}</SideFact>
+                  <SideFact label={m.fieldBuilding} start>{buildingName ? m.buildingLabel(buildingName) : '—'}</SideFact>
+                </div>
+                <div className="grid grid-cols-2">
+                  <SideFact label={m.fieldCity}>{city || '—'}</SideFact>
+                  <SideFact label={m.statLastUpdated} start>{formatDate(unit.updatedAt, locale)}</SideFact>
+                </div>
                 <Link
                   href={`/dashboard/reservations?unitId=${id}` as never}
-                  className={CMD_LINK}
+                  className="group flex items-center justify-between gap-3 px-6 py-3.5 text-[13px] font-bold text-brand-700 hover:text-brand-600"
                 >
-                  <span className={CMD_ICON}><Bookmark /></span>
-                  <span>{m.cmdReservations}</span>
+                  {m.cmdReservations}
+                  <ArrowLeft className="h-4 w-4 ltr:rotate-180" />
                 </Link>
-              </PremiumCommandPanel>
+              </div>
+            </PremiumPanel>
 
             <UnitMediaPanel unit={unit} locale={locale} />
 
             {isAdmin && (
-              <PremiumSectionCard title={m.dangerTitle} tone="danger">
-                <div className="space-y-3">
-                  <p className="text-xs text-slate-500">
-                    {m.dangerDesc}
-                  </p>
-                  <ConfirmButton
-                    label={m.deleteBtn}
-                    confirm={m.deleteConfirm}
-                    action={deleteUnitAction.bind(null, id)}
-                  />
-                </div>
-              </PremiumSectionCard>
+              <PremiumPanel title={m.dangerTitle} className="border-danger-500/25">
+                <p className="mb-4 text-[12.5px] leading-relaxed text-slate-500">{m.dangerDesc}</p>
+                <ConfirmButton
+                  label={m.deleteBtn}
+                  confirm={m.deleteConfirm}
+                  action={deleteUnitAction.bind(null, id)}
+                />
+              </PremiumPanel>
             )}
           </>
         }
@@ -452,37 +415,25 @@ export default async function UnitDetailPage({
 
 // ── Local helpers ─────────────────────────────────────────────────────────────
 
-function KV({ label, value }: { label: string; value: React.ReactNode }) {
+function Mini({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
-    <div className="min-w-0 rounded-xl bg-canvas/50 px-4 py-3.5 ring-1 ring-inset ring-hairline">
-      <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 leading-none">
-        {label}
-      </dt>
-      <dd className="mt-2 text-[15px] font-bold text-slate-900">{value}</dd>
+    <div className="flex items-center gap-3 rounded-xl bg-surface/60 px-3.5 py-3">
+      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-muted text-slate-500 [&_svg]:h-3.5 [&_svg]:w-3.5">
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <dt className="text-[11.5px] text-slate-500">{label}</dt>
+        <dd className="truncate text-[13.5px] font-semibold text-slate-900">{children}</dd>
+      </div>
     </div>
   );
 }
 
-function Stat({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: React.ReactNode;
-}) {
+function SideFact({ label, children, start }: { label: string; children: React.ReactNode; start?: boolean }) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl bg-canvas/50 p-4 ring-1 ring-inset ring-hairline">
-      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-[15px] [&_svg]:w-[15px]">
-        {icon}
-      </span>
-      <div>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 leading-none">
-          {label}
-        </p>
-        <div className="mt-1.5 text-sm font-semibold text-slate-900">{value}</div>
-      </div>
+    <div className={cn('px-6 py-3.5', start && 'border-s border-hairline')}>
+      <p className="text-[11.5px] text-slate-500">{label}</p>
+      <p className="mt-0.5 truncate text-[13.5px] font-semibold text-slate-900">{children}</p>
     </div>
   );
 }

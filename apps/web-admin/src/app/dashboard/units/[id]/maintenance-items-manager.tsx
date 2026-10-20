@@ -61,7 +61,7 @@ export function MaintenanceItemsManager({
   return (
     <div className="space-y-3">
       {error && (
-        <div className="rounded-xl bg-danger-50 border border-danger-100 text-danger-700 px-4 py-2.5 text-xs flex items-start gap-2">
+        <div className="rounded-xl bg-danger-500/10 text-danger-600 px-4 py-2.5 text-xs flex items-start gap-2">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
           {error}
         </div>
@@ -79,19 +79,19 @@ export function MaintenanceItemsManager({
               onClick={() => toggle(cat)}
               disabled={busy || (selected && warrantyStarted)}
               className={cn(
-                'relative text-start rounded-xl border p-3.5 transition-colors',
+                'relative text-start rounded-2xl border p-4 transition-colors',
                 selected
-                  ? 'border-brand-300 bg-brand-50/60 ring-1 ring-inset ring-brand-200'
+                  ? 'border-brand-500/60 bg-brand-500/[0.08] shadow-[0_10px_30px_-18px_rgba(201,162,77,0.8)]'
                   : 'border-hairline bg-surface hover:bg-surface-muted/50',
                 (busy || (selected && warrantyStarted)) && 'cursor-not-allowed opacity-80',
               )}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-semibold text-slate-900">{tx(cat.name)}</span>
+                <span className="text-[14px] font-bold text-slate-900">{tx(cat.name)}</span>
                 <span
                   className={cn(
                     'inline-flex h-5 w-5 items-center justify-center rounded-full border',
-                    selected ? 'bg-brand-600 border-brand-600 text-white' : 'border-slate-300 text-transparent',
+                    selected ? 'border-brand-500 bg-brand-500 text-[#1a1408]' : 'border-slate-400/50 text-transparent',
                   )}
                 >
                   {busy ? <Loader2 className="h-3 w-3 animate-spin text-brand-600" /> : <Check className="h-3 w-3" />}

@@ -23,12 +23,12 @@ export function ServiceTileGrid({ services, className }: Props) {
         return (
           <div
             key={`${s.ar}-${i}`}
-            className="flex flex-col items-center justify-center text-center gap-2 rounded-2xl border border-hairline bg-info-50/50 px-3 py-4"
+            className="flex flex-col items-center justify-center gap-2.5 rounded-2xl border border-hairline bg-surface-muted/40 px-3 py-5 text-center transition-colors hover:border-brand-500/40"
           >
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand-400/50 text-brand-700">
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-brand-500/12 text-brand-700">
               <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
             </span>
-            <span className="text-xs font-medium text-slate-700 leading-snug">
+            <span className="text-[13px] font-semibold leading-snug text-slate-800">
               {s.ar}
             </span>
           </div>

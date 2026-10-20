@@ -19,14 +19,11 @@ export function ProjectMediaPanel({ project, locale = 'ar' }: { project: Project
   return (
     <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 px-5 py-4 bg-canvas/30 border-b border-hairline">
+      <div className="flex items-start justify-between gap-3 px-6 pb-4 pt-5">
         <div className="flex items-center gap-3">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-brand-400/50 shrink-0">
-            <ImageIcon className="h-[15px] w-[15px] text-brand-600" />
-          </span>
           <div>
-            <h3 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{m.mediaLibraryTitle}</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">
+            <h3 className="font-heading text-[19px] font-bold leading-snug text-slate-900">{m.mediaLibraryTitle}</h3>
+            <p className="mt-0.5 text-[13px] text-slate-500">
               {media.length > 0 ? m.mediaCountLabel(media.length) : m.mediaEmpty}
             </p>
           </div>
@@ -40,7 +37,7 @@ export function ProjectMediaPanel({ project, locale = 'ar' }: { project: Project
       </div>
 
       {/* Content */}
-      <div className="p-4 sm:p-5">
+      <div className="px-6 pb-6">
         {media.length === 0 ? (
           <EmptyState
             icon={<ImageIcon />}

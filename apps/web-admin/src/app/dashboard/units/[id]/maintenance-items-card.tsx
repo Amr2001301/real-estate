@@ -1,4 +1,3 @@
-import { Wrench } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { MaintenanceCategory, UnitMaintenanceItem } from '@/lib/types';
 import type { Locale } from '@/lib/locale';
@@ -16,19 +15,14 @@ export async function MaintenanceItemsCard({ unitId, locale = 'ar' }: { unitId: 
   ]);
 
   return (
-    <Card className="p-5 sm:p-6">
-      <div className="flex items-center gap-2">
-        <span className="h-5 w-1 rounded-full bg-brand-500" />
-        <h2 className="text-base font-semibold text-slate-900 tracking-tight inline-flex items-center gap-1.5">
-          <Wrench className="h-4 w-4 text-brand-500" /> {m.title}
-        </h2>
-      </div>
-      <p className="mt-1.5 mb-4 text-xs text-slate-500">
+    <Card className="rounded-[22px] p-6">
+      <h2 className="font-heading text-[19px] font-bold leading-snug text-slate-900">{m.title}</h2>
+      <p className="mb-5 mt-0.5 text-[13px] text-slate-500">
         {m.description}
       </p>
 
       {itemsRes.error ? (
-        <div className="rounded-xl bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm">
+        <div className="rounded-xl bg-danger-500/10 text-danger-600 px-4 py-3 text-sm">
           {m.errorLoad} {itemsRes.error}
         </div>
       ) : (

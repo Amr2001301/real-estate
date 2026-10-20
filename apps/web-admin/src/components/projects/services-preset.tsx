@@ -35,6 +35,25 @@ export const SERVICE_PRESETS: ServicePreset[] = [
   { ar: 'مصاعد', en: 'Elevators', icon: ArrowUpDown },
 ];
 
+// Free-typed services ("حمام سباحة", "نادي صحي") still get a fitting icon.
+const KEYWORDS: Array<[RegExp, string]> = [
+  [/مسبح|سباح|حمام سباحة|pool/i, 'مسبح أولمبي'],
+  [/نادي|رياض|جيم|gym|fitness/i, 'نادي رياضي'],
+  [/حدائق|حديقة|garden/i, 'حدائق خاصة'],
+  [/أمن|امن|حراس|security/i, 'أمن 24 ساعة'],
+  [/مواقف|جراج|parking/i, 'مواقف ذكية'],
+  [/خضراء|green/i, 'مساحات خضراء'],
+  [/أطفال|اطفال|kids|playground/i, 'ملعب أطفال'],
+  [/اجتماع|meeting/i, 'قاعات اجتماعات'],
+  [/إنترنت|انترنت|wi-?fi|internet/i, 'إنترنت عالي السرعة'],
+  [/سبا|spa/i, 'صالة سبا'],
+  [/مطعم|كافيه|مقهى|restaurant|cafe/i, 'مطعم'],
+  [/مصاعد|مصعد|elevator|lift/i, 'مصاعد'],
+];
+
 export function findPreset(ar: string): ServicePreset | undefined {
-  return SERVICE_PRESETS.find((s) => s.ar === ar);
+  const exact = SERVICE_PRESETS.find((s) => s.ar === ar);
+  if (exact) return exact;
+  const hit = KEYWORDS.find(([re]) => re.test(ar));
+  return hit ? SERVICE_PRESETS.find((s) => s.ar === hit[1]) : undefined;
 }
