@@ -8,8 +8,8 @@ test.use({ storageState: ADMIN_STORAGE });
 const API_BASE = process.env.E2E_API_BASE_URL ?? 'http://localhost:4000';
 
 /**
- * F10 — units priced by the meter: the unit form computes the total from the
- * price per meter and the area, and a new price per meter is applied to the
+ * F10 — units priced by the meter: the unit form takes the price per meter
+ * and computes the total from the area (no total to type), and a new price per meter is applied to the
  * units for sale of a project at once.
  */
 test('a unit is priced by the meter, then repriced with its project', async ({ page, request, context }) => {
@@ -40,6 +40,10 @@ test('a unit is priced by the meter, then repriced with its project', async ({ p
 
   // The form: price per meter × area.
   await gotoReady(page, `/dashboard/units/${id}/edit`);
+  // No total to type: a unit priced as a whole shows its price ÷ area.
+  await expect(page.locator('input[name="price"]')).toHaveCount(0);
+  await expect(page.locator('input[name="pricePerMeter"]')).toHaveValue('9000');
+  await expect(page.getByTestId('unit-meter-price')).toHaveValue('900000');
   await page.locator('input[name="area"]').fill('150');
   await page.locator('input[name="pricePerMeter"]').fill('10000');
   await expect(page.getByTestId('unit-meter-price')).toHaveValue('1500000');
