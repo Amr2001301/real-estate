@@ -1,36 +1,27 @@
 import Link from 'next/link';
 import {
   AlertTriangle,
+  ArrowDownRight,
   ArrowUpRight,
   BadgeCheck,
-  BarChart3,
-  CalendarDays,
   CheckCircle2,
-  CircleDollarSign,
   Clock,
-  Coins,
-  CreditCard,
-  DollarSign,
   FileText,
-  Receipt,
-  TrendingUp,
-  Wallet,
   XCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
 import { projectOptions as fetchProjectOptions } from '@/lib/options';
-import { getLocale } from '@/lib/locale';
+import { getLocale, type Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import type {
   FinancialDashboard,
-  FinancialInstallmentRow,
   FinancialDepositRow,
   DepositType,
   PlanPaymentType,
   OutstandingRefunds,
 } from '@/lib/types';
-import { formatCurrency, formatDate, tx, intlLocale } from '@/lib/format';
+import { compactParts, formatCurrency, formatDate, tx, intlLocale } from '@/lib/format';
 import { getReportsCurrency, getCompanyTimeZone, todayIn } from '@/lib/currency';
 import {
   resolveReportDateRange,
@@ -39,11 +30,11 @@ import {
   type CompareMode,
   type PeriodMode,
 } from '@/lib/report-filter';
-import { PremiumPageHero, PremiumSectionCard, PremiumMetricStrip } from '@/components/premium';
+import { PremiumPageHero, PremiumPanel, PremiumEmptyNote } from '@/components/premium';
 import { ExportMenu } from '@/components/export-menu';
 import { ReportsTabs } from '../_components/reports-tabs';
 import { FinancialFilterBar } from './_components/financial-filter-bar';
-import { CashflowBarChart } from './_components/cashflow-bar-chart';
+import { CashflowChart } from './_components/cashflow-chart';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -91,16 +82,16 @@ export default async function FinancialReportsPage({
 
   const PAYMENT_TYPE_LABELS: Partial<Record<PlanPaymentType, string>> = m.paymentTypeLabels;
   const PAYMENT_TYPE_CLS: Partial<Record<PlanPaymentType, string>> = {
-    RESERVATION: 'bg-indigo-100 text-indigo-700', DOWN_PAYMENT: 'bg-amber-100 text-amber-700',
-    INSTALLMENT: 'bg-slate-100 text-slate-600',   FINAL_PAYMENT: 'bg-purple-100 text-purple-700',
-    BOUNCE_PENALTY: 'bg-danger-100 text-danger-700', LATE_FEE: 'bg-danger-100 text-danger-700',
-    TRANSFER_FEE: 'bg-slate-100 text-slate-600',
+    RESERVATION: 'bg-indigo-500/12 text-indigo-600', DOWN_PAYMENT: 'bg-brand-500/15 text-brand-700',
+    INSTALLMENT: 'bg-slate-500/10 text-slate-600',    FINAL_PAYMENT: 'bg-violet-500/12 text-violet-600',
+    BOUNCE_PENALTY: 'bg-danger-500/12 text-danger-600', LATE_FEE: 'bg-danger-500/12 text-danger-600',
+    TRANSFER_FEE: 'bg-slate-500/10 text-slate-600',
   };
   const DEPOSIT_TYPE_LABELS: Record<DepositType, string> = m.depositTypeLabels;
   const DEPOSIT_TYPE_CLS: Record<DepositType, string> = {
-    BOOKING_AMOUNT: 'bg-indigo-100 text-indigo-700', DOWN_PAYMENT: 'bg-amber-100 text-amber-700',
-    INSTALLMENT:    'bg-slate-100 text-slate-600',    FINAL_PAYMENT: 'bg-purple-100 text-purple-700',
-    FEE:            'bg-danger-100 text-danger-700',
+    BOOKING_AMOUNT: 'bg-indigo-500/12 text-indigo-600', DOWN_PAYMENT: 'bg-brand-500/15 text-brand-700',
+    INSTALLMENT:    'bg-slate-500/10 text-slate-600',    FINAL_PAYMENT: 'bg-violet-500/12 text-violet-600',
+    FEE:            'bg-danger-500/12 text-danger-600',
   };
 
   function daysLabel(d: number): string {
@@ -170,13 +161,28 @@ export default async function FinancialReportsPage({
 
   const aging    = dash?.aging   ?? [];
   const forecast = dash?.cashflowForecast;
-  const agingMax = Math.max(1, ...aging.map((b) => num(b.amount)));
 
   const showFilters = !!(sp.q || sp.type || sp.projectId || sp.showFilters === '1');
   const projectOptions = projects.map((p) => ({ id: p.id, name: tx(p.name) }));
 
+  // The currency's own sign ("ج.م." / "EGP"), for amounts set as number + unit.
+  const currencySign =
+    new Intl.NumberFormat(intlLocale(locale), { style: 'currency', currency }).formatToParts(0).find((p) => p.type === 'currency')?.value ?? currency;
+  const money = (n: number | string) => formatCurrency(n, currency, locale);
+  const short = (n: number) => compactParts(n, '', locale).join(' ').trim();
+  const count = (n: number) => n.toLocaleString(intlLocale(locale));
+
+  const forecastTotal = forecast ? forecast.next30 + forecast.next3160 + forecast.next6190 : 0;
+  const agingTotal = aging.reduce((sum, b) => sum + num(b.amount), 0);
+  const overdueRows = dash?.overdue ?? [];
+  const allClear = !!dash && overdueAmt === 0 && overdueRows.length === 0;
+  const byType = (dash?.collectionByType ?? []).filter((c) => c.count > 0 || num(c.totalAll) > 0);
+  const byTypeMax = Math.max(1, ...byType.map((c) => num(c.totalAll)));
+  const share = (n: number) => (contractVal > 0 ? (n / contractVal) * 100 : 0);
+  const rateTone = collectionRate >= 75 ? 'good' : collectionRate >= 40 ? 'mid' : 'low';
+
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-5 pb-2 lg:gap-6">
 
       {/* ─── Header ──────────────────────────────────────────────────────── */}
       <PremiumPageHero
@@ -188,16 +194,14 @@ export default async function FinancialReportsPage({
           { label: m.breadcrumbSelf },
         ]}
         actions={
-          <div className="flex items-center gap-2">
-            <ExportMenu locale={locale}
-              label={m.exportBtn}
-              pdfPath="/reports/financial-dashboard/export.pdf"
-              xlsxPath="/reports/financial-dashboard/export.xlsx"
-              csvPath="/reports/financial-dashboard/export.csv"
-              filenameBase="financial-dashboard"
-              params={{ dateFrom, dateTo, projectId: sp.projectId, q: sp.q, type: sp.type }}
-            />
-          </div>
+          <ExportMenu locale={locale}
+            label={m.exportBtn}
+            pdfPath="/reports/financial-dashboard/export.pdf"
+            xlsxPath="/reports/financial-dashboard/export.xlsx"
+            csvPath="/reports/financial-dashboard/export.csv"
+            filenameBase="financial-dashboard"
+            params={{ dateFrom, dateTo, projectId: sp.projectId, q: sp.q, type: sp.type }}
+          />
         }
       />
 
@@ -219,612 +223,506 @@ export default async function FinancialReportsPage({
       />
 
       {dashRes.error && (
-        <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+        <div className="rounded-2xl border border-danger-100 bg-danger-50 p-4 text-sm text-danger-700">
           {dashRes.error}
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          ROW 1 — Primary KPI Strip
-      ════════════════════════════════════════════════════════════════════ */}
-      <PremiumMetricStrip
-        variant="dashboard"
-        cols={4}
-        metrics={[
-          {
-            label:     m.kpi.contractValue,
-            icon:      <FileText />,
-            value:     formatCurrency(contractVal, currency, locale),
-            tone:      'neutral',
-            valueSize: 'compact',
-            sub:       m.kpi.contractValueSub(contractCount, depositCount),
-            trend:     contractDelta ? `${contractDelta.direction === 'up' ? '▲' : contractDelta.direction === 'down' ? '▼' : '•'} ${contractDelta.value}` : undefined,
-            trendCls:  contractDelta?.direction === 'up' ? 'text-success-600' : contractDelta?.direction === 'down' ? 'text-danger-600' : undefined,
-          },
-          {
-            label:     m.kpi.collected,
-            icon:      <DollarSign />,
-            value:     formatCurrency(towardsPrice, currency, locale),
-            tone:      'success',
-            valueSize: 'compact',
-            sub:       m.kpi.collectedSub(collectionRate, formatCurrency(feesCollected, currency, locale)),
-            trend:     collectedDelta ? `${collectedDelta.direction === 'up' ? '▲' : collectedDelta.direction === 'down' ? '▼' : '•'} ${collectedDelta.value}` : undefined,
-            trendCls:  collectedDelta?.direction === 'up' ? 'text-success-600' : collectedDelta?.direction === 'down' ? 'text-danger-600' : undefined,
-          },
-          {
-            label:     m.kpi.outstanding,
-            icon:      <Clock />,
-            value:     formatCurrency(outstanding, currency, locale),
-            tone:      'neutral',
-            valueSize: 'compact',
-            sub:       m.kpi.outstandingSub(formatCurrency(dueSoon, currency, locale)),
-            trend:     outstandDelta ? `${outstandDelta.direction === 'up' ? '▲' : outstandDelta.direction === 'down' ? '▼' : '•'} ${outstandDelta.value}` : undefined,
-            trendCls:  outstandDelta?.direction === 'up' ? 'text-danger-600' : outstandDelta?.direction === 'down' ? 'text-success-600' : undefined,
-          },
-          {
-            label:     m.kpi.overdue,
-            icon:      <AlertTriangle />,
-            value:     formatCurrency(overdueAmt, currency, locale),
-            tone:      overdueAmt > 0 ? 'danger' : 'neutral',
-            valueSize: 'compact',
-            sub:       m.kpi.overdueSub(overdueCount, overdueRate),
-            trend:     overdueDelta ? `${overdueDelta.direction === 'up' ? '▲' : overdueDelta.direction === 'down' ? '▼' : '•'} ${overdueDelta.value}` : undefined,
-            trendCls:  overdueDelta?.direction === 'up' ? 'text-danger-600' : overdueDelta?.direction === 'down' ? 'text-success-600' : undefined,
-          },
-        ]}
-      />
+      {/* ─── Hero: what came in, the rate, the months ───────────────────── */}
+      <section data-testid="fin-hero" className="relative overflow-hidden rounded-[26px] border border-hairline bg-surface">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-brand-500/[0.09] via-transparent to-transparent" />
+        <div className="pointer-events-none absolute -top-24 start-1/3 h-56 w-56 rounded-full bg-brand-500/10 blur-3xl" />
+        <div className="relative grid grid-cols-1 gap-8 p-6 sm:p-8 lg:grid-cols-[minmax(0,340px)_1fr] lg:gap-10">
+          <div className="flex flex-col justify-between gap-7">
+            <div>
+              <p className="text-[13px] font-semibold text-slate-500">{m.kpi.collected}</p>
+              <div className="mt-2" data-testid="fin-collected">
+                <Amount value={towardsPrice} sign={currencySign} locale={locale} size="hero" />
+              </div>
+              {collectedDelta && <DeltaChip delta={collectedDelta} label={m.hero.vsCompare} />}
+            </div>
 
-      <PremiumMetricStrip
-        variant="compact"
-        cols={5}
-        metrics={[
-          { label: m.kpi.collectedMonth, icon: <TrendingUp />,    value: formatCurrency(collectedMonth, currency, locale),                  tone: 'success' },
-          { label: m.kpi.dueMonth,       icon: <CalendarDays />,  value: formatCurrency(dueMonth, currency, locale),                        tone: 'warning' },
-          { label: m.kpi.contractCount,  icon: <FileText />,      value: contractCount.toLocaleString(intlLocale(locale)),           tone: 'neutral' },
-          { label: m.kpi.depositCount,   icon: <Receipt />,       value: depositCount.toLocaleString(intlLocale(locale)),            tone: 'neutral' },
-          { label: m.kpi.overdueCount,   icon: <AlertTriangle />, value: overdueCount.toLocaleString(intlLocale(locale)), tone: overdueCount > 0 ? 'danger' : 'neutral' },
-        ]}
-      />
+            <div className="flex items-center gap-5">
+              <RateRing rate={collectionRate} tone={rateTone} />
+              <div className="min-w-0">
+                <p className="text-[14px] font-bold text-slate-900">{m.hero.rate}</p>
+                <p className="mt-0.5 text-[12px] text-slate-500">{m.hero.rateSub}</p>
+                <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[12px]">
+                  <span className="text-slate-500">
+                    {m.collectionEfficiency.overdueLabel}{' '}
+                    <b className={cn('tabular-nums', overdueRate > 0 ? 'text-danger-600' : 'text-slate-700')}>{overdueRate}%</b>
+                  </span>
+                  <span className="text-slate-500">
+                    {m.collectionEfficiency.remainingLabel}{' '}
+                    <b className="text-slate-700 tabular-nums">{dueToDate > 0 ? 100 - collectionRate : 0}%</b>
+                  </span>
+                </p>
+              </div>
+            </div>
 
-      {(refundsPaid > 0 || refundsOwed > 0) && (
-        <PremiumMetricStrip
-          variant="compact"
-          cols={3}
-          metrics={[
-            { label: m.kpi.netCollected, icon: <TrendingUp />,    value: formatCurrency(netCollected, currency, locale), tone: 'success' },
-            { label: m.kpi.refundsPaid,  icon: <Receipt />,       value: formatCurrency(refundsPaid, currency, locale),  tone: 'neutral' },
-            { label: m.kpi.refundsOwed,  icon: <AlertTriangle />, value: formatCurrency(refundsOwed, currency, locale),  tone: refundsOwed > 0 ? 'warning' : 'neutral' },
-          ]}
-        />
-      )}
-
-      {refundsOwedRows.length > 0 && (
-        <PremiumSectionCard icon={<AlertTriangle />} title={m.refundsOwed.title} padded={false}>
-          <table className="w-full text-[13px]" data-testid="refunds-owed">
-            <thead>
-              <tr className="text-[11px] text-slate-400">
-                <th className="px-5 py-2 text-start font-medium">{m.refundsOwed.contract}</th>
-                <th className="px-5 py-2 text-start font-medium">{m.refundsOwed.customer}</th>
-                <th className="px-5 py-2 text-end font-medium">{m.refundsOwed.agreed}</th>
-                <th className="px-5 py-2 text-end font-medium">{m.refundsOwed.paid}</th>
-                <th className="px-5 py-2 text-end font-medium">{m.refundsOwed.owed}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-hairline">
-              {refundsOwedRows.map((r) => (
-                <tr key={r.contractId}>
-                  <td className="px-5 py-2.5">
-                    <Link href={`/dashboard/contracts/${r.contractId}`} className="font-mono font-semibold text-brand-700 hover:underline">
-                      {r.contractNumber ?? r.contractId.slice(0, 8)}
-                    </Link>
-                  </td>
-                  <td className="px-5 py-2.5 text-slate-700">{r.customer?.fullName ?? '—'}</td>
-                  <td className="px-5 py-2.5 text-end tabular-nums">{formatCurrency(r.refundAmount, currency, locale)}</td>
-                  <td className="px-5 py-2.5 text-end tabular-nums">{formatCurrency(r.refunded, currency, locale)}</td>
-                  <td className="px-5 py-2.5 text-end font-bold tabular-nums text-warning-700">{formatCurrency(r.outstanding, currency, locale)}</td>
-                </tr>
+            <dl className="grid grid-cols-3 gap-4 border-t border-hairline pt-5">
+              {[
+                { label: m.kpi.collectedMonth, value: money(collectedMonth) },
+                { label: m.kpi.dueMonth,       value: money(dueMonth) },
+                { label: m.hero.fees,          value: money(feesCollected) },
+              ].map((x) => (
+                <div key={x.label} className="min-w-0">
+                  <dt className="truncate text-[11px] font-medium text-slate-500" title={x.label}>{x.label}</dt>
+                  <dd className="mt-1 truncate text-[14px] font-bold text-slate-900 tabular-nums" title={x.value}>{x.value}</dd>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </PremiumSectionCard>
-      )}
+            </dl>
+          </div>
 
-      {contractVal > 0 && (
-        <PremiumSectionCard
-          icon={<TrendingUp />}
-          title={m.collectionEfficiency.title}
-          trailing={
-            <span className={cn(
-              'text-[22px] font-black tabular-nums',
-              collectionRate >= 75 ? 'text-emerald-700' : collectionRate >= 40 ? 'text-amber-700' : 'text-danger-700',
-            )}>
-              {collectionRate}%
-            </span>
-          }
-        >
-          <div className="flex items-center gap-5 flex-wrap">
-            <div className="flex-1 min-w-[120px]">
-              <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
-                <div
-                  className={cn(
-                    'h-full rounded-full transition-all',
-                    collectionRate >= 75 ? 'bg-emerald-500' : collectionRate >= 40 ? 'bg-amber-400' : 'bg-danger-500',
-                  )}
-                  style={{ width: `${Math.min(100, collectionRate)}%` }}
-                />
+          <div className="flex min-w-0 flex-col gap-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-heading text-[17px] font-bold text-slate-900">{m.cashflow.title}</p>
+                <p className="mt-0.5 text-[12px] text-slate-500">{m.cashflow.description}</p>
+              </div>
+              <div className="flex items-center gap-4 text-[11.5px] font-medium text-slate-500">
+                <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-brand-500" />{m.cashflow.legendCollected}</span>
+                <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-slate-400/40" />{m.cashflow.legendDue}</span>
               </div>
             </div>
-            <div className="flex items-center gap-6 shrink-0">
-              <div className="text-end">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{m.collectionEfficiency.overdueLabel}</p>
-                <p className={cn('text-[18px] font-black tabular-nums', overdueRate > 0 ? 'text-danger-700' : 'text-slate-300')}>{overdueRate}%</p>
-              </div>
-              <div className="w-px h-8 bg-hairline" />
-              <div className="text-end">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{m.collectionEfficiency.remainingLabel}</p>
-                <p className="text-[18px] font-black tabular-nums text-slate-700">{dueToDate > 0 ? (100 - collectionRate) : 0}%</p>
-              </div>
-            </div>
+            {(dash?.cashflowTrend ?? []).some((d) => d.collected > 0 || d.due > 0) ? (
+              <CashflowChart
+                data={dash!.cashflowTrend}
+                labels={{ collected: m.cashflow.legendCollected, due: m.cashflow.legendDue }}
+                money={money}
+                short={short}
+              />
+            ) : (
+              <PremiumEmptyNote>{m.cashflow.emptyMsg}</PremiumEmptyNote>
+            )}
           </div>
-        </PremiumSectionCard>
-      )}
+        </div>
+      </section>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          ROW 2 — Cashflow Trend (3/5) + Distribution (2/5)
-      ════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
-
-        {/* Cashflow bar chart */}
-        <PremiumSectionCard
-          className="xl:col-span-3"
-          icon={<BarChart3 />}
-          title={m.cashflow.title}
-          description={m.cashflow.description}
-          trailing={
-            <div className="flex items-center gap-3 shrink-0">
-              <span className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
-                <span className="h-2 w-2 rounded-sm bg-emerald-500" />{m.cashflow.legendCollected}
-              </span>
-              <span className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
-                <span className="h-2 w-2 rounded-sm bg-amber-400" />{m.cashflow.legendDue}
-              </span>
-            </div>
-          }
-          padded={false}
-        >
-          <div className="px-5 py-5">
-            <CashflowBarChart data={dash?.cashflowTrend ?? []} locale={locale} />
-          </div>
-        </PremiumSectionCard>
-
-        {/* Payment distribution */}
-        <PremiumSectionCard
-          className="xl:col-span-2"
-          icon={<CreditCard />}
-          title={m.distribution.title}
-          description={m.distribution.description}
-          padded={false}
-        >
-          {/* Stacked bar */}
-          <div className="px-5 pt-4 pb-2">
-            <div className="h-3 rounded-full bg-slate-100 overflow-hidden flex">
-              {contractVal > 0 && (
-                <>
-                  <div className="h-full bg-emerald-500 transition-all" style={{ width: `${(towardsPrice / contractVal) * 100}%` }} />
-                  <div className="h-full bg-danger-400 transition-all" style={{ width: `${(overdueAmt / contractVal) * 100}%` }} />
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Legend rows */}
-          <div className="divide-y divide-hairline">
-            {((): { label: string; amount: number; pct: string; dot: string; valCls: string }[] => {
-              const base = contractVal > 0 ? contractVal : 1;
-              return [
-                { label: m.distribution.rows.contractValue, amount: contractVal,    pct: '100%',                                          dot: 'bg-slate-300',   valCls: 'text-slate-900' },
-                // Each a share of the value: collected, overdue, and not yet due
-                // (outstanding already holds the overdue — they summed past 100%).
-                { label: m.distribution.rows.collected,     amount: towardsPrice,   pct: `${((towardsPrice / base) * 100).toFixed(1)}%`, dot: 'bg-emerald-500', valCls: 'text-emerald-700' },
-                { label: m.distribution.rows.overdue,       amount: overdueAmt,     pct: `${((overdueAmt / base) * 100).toFixed(1)}%`,   dot: 'bg-danger-500',  valCls: 'text-danger-700' },
-                { label: m.distribution.rows.outstanding,   amount: notYetDue,      pct: `${((notYetDue  / base) * 100).toFixed(1)}%`,   dot: 'bg-slate-200',   valCls: 'text-slate-700' },
-              ];
-            })().map((r) => (
-              <div key={r.label} className="flex items-center gap-3 px-5 py-3.5">
-                <span className={cn('h-3 w-3 rounded-full shrink-0', r.dot)} />
-                <span className="flex-1 text-[13px] text-slate-600">{r.label}</span>
-                <span className="text-[11px] font-semibold tabular-nums text-slate-400 w-14 text-right shrink-0" dir="ltr">{r.pct}</span>
-                <span className={cn('text-[13px] font-bold tabular-nums whitespace-nowrap shrink-0', r.valCls)} dir="ltr">
-                  {formatCurrency(r.amount, currency, locale)}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* Month footer */}
-          <div className="grid grid-cols-2 gap-px bg-hairline border-t border-hairline mt-1">
-            <div className="bg-surface px-5 py-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">{m.distribution.collectedMonthLabel}</p>
-              <p className="text-[15px] font-black tabular-nums text-success-700 whitespace-nowrap" dir="ltr">{formatCurrency(collectedMonth, currency, locale)}</p>
-            </div>
-            <div className="bg-surface px-5 py-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">{m.distribution.dueMonthLabel}</p>
-              <p className="text-[15px] font-black tabular-nums text-amber-600 whitespace-nowrap" dir="ltr">{formatCurrency(dueMonth, currency, locale)}</p>
-            </div>
-          </div>
-        </PremiumSectionCard>
+      {/* ─── Key figures ───────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <FigureCard
+          testId="fin-kpi-contracts"
+          icon={<FileText />}
+          label={m.kpi.contractValue}
+          value={<Amount value={contractVal} sign={currencySign} locale={locale} />}
+          sub={m.kpi.contractValueSub(contractCount, depositCount)}
+          delta={contractDelta}
+        />
+        <FigureCard
+          testId="fin-kpi-outstanding"
+          icon={<Clock />}
+          label={m.kpi.outstanding}
+          value={<Amount value={outstanding} sign={currencySign} locale={locale} />}
+          sub={m.kpi.outstandingSub(money(dueSoon))}
+          delta={outstandDelta}
+          upIsBad
+        />
+        <FigureCard
+          testId="fin-kpi-overdue"
+          icon={<AlertTriangle />}
+          tone={overdueAmt > 0 ? 'warn' : 'good'}
+          label={m.kpi.overdue}
+          value={<Amount value={overdueAmt} sign={currencySign} locale={locale} />}
+          sub={m.kpi.overdueSub(overdueCount, overdueRate)}
+          delta={overdueDelta}
+          upIsBad
+        />
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          ROW 3 — Cashflow Forecast (conditional)
-      ════════════════════════════════════════════════════════════════════ */}
-      {forecast && (forecast.next30 > 0 || forecast.next3160 > 0 || forecast.next6190 > 0) && (
-        <PremiumSectionCard
-          icon={<CalendarDays />}
-          title={m.forecast.title}
-          description={m.forecast.description}
-          padded={false}
-        >
-          <div className="grid grid-cols-3 gap-px bg-hairline">
+      {/* ─── Refunds (only when there are any) ─────────────────────────── */}
+      {(refundsPaid > 0 || refundsOwed > 0 || refundsOwedRows.length > 0) && (
+        <PremiumPanel title={m.refundsTitle} sub={m.refundsOwed.title} padding="none">
+          <dl className="grid grid-cols-1 gap-px border-y border-hairline bg-hairline sm:grid-cols-3">
             {[
-              { label: m.forecast.next30,   amount: forecast.next30,   pctCls: 'bg-brand-500',  valCls: 'text-brand-700',  bg: 'bg-surface' },
-              { label: m.forecast.next3160, amount: forecast.next3160, pctCls: 'bg-amber-400',  valCls: 'text-amber-700',  bg: 'bg-surface' },
-              { label: m.forecast.next6190, amount: forecast.next6190, pctCls: 'bg-violet-400', valCls: 'text-violet-700', bg: 'bg-surface' },
-            ].map((b) => {
-              const total = forecast.next30 + forecast.next3160 + forecast.next6190;
-              const pct   = total > 0 ? Math.round((b.amount / total) * 100) : 0;
-              return (
-                <div key={b.label} className={cn('px-5 py-5', b.bg)}>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">{b.label}</p>
-                  <p className={cn('text-[24px] font-black tabular-nums leading-none tracking-tight whitespace-nowrap', b.valCls)} dir="ltr">
-                    {formatCurrency(b.amount, currency, locale)}
-                  </p>
-                  <div className="mt-3 h-1.5 rounded-full bg-white/70 overflow-hidden">
-                    <div className={cn('h-full rounded-full', b.pctCls)} style={{ width: `${pct}%` }} />
-                  </div>
-                  <p className="text-[10px] text-slate-400 mt-1">{m.forecast.pctOfTotal(pct)}</p>
-                </div>
-              );
-            })}
-          </div>
-        </PremiumSectionCard>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          ROW 4 — Aging Analysis
-      ════════════════════════════════════════════════════════════════════ */}
-      {aging.length > 0 && (
-        <PremiumSectionCard
-          tone="danger"
-          icon={<AlertTriangle />}
-          title={m.aging.title}
-          description={m.aging.description}
-          trailing={
-            <span className="text-xs font-bold tabular-nums text-slate-700 whitespace-nowrap" dir="ltr">
-              {formatCurrency(aging.reduce((s, b) => s + num(b.amount), 0), currency, locale)} {m.aging.totalSuffix}
-            </span>
-          }
-          padded={false}
-        >
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-hairline">
-            {aging.map((b) => {
-              const amt    = num(b.amount);
-              const isHigh = b.label === '90+' || b.label === '61-90';
-              const active = b.count > 0;
-              const pct    = (amt / agingMax) * 100;
-              return (
-                <div key={b.label} className={cn('bg-surface px-5 py-4', !active && 'opacity-50')}>
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{m.aging.labels[b.label as keyof typeof m.aging.labels] ?? b.label}</p>
-                    <span className={cn(
-                      'inline-flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full text-[10px] font-bold shrink-0',
-                      active && isHigh  ? 'bg-danger-100 text-danger-700' :
-                      active && !isHigh ? 'bg-amber-100 text-amber-700' :
-                      'bg-slate-100 text-slate-400',
-                    )}>
-                      {b.count}
-                    </span>
-                  </div>
-                  <p className={cn(
-                    'text-[22px] font-black tabular-nums leading-none tracking-tight whitespace-nowrap',
-                    active && isHigh  ? 'text-danger-700' :
-                    active && !isHigh ? 'text-amber-700'  :
-                    'text-slate-300',
-                  )} dir="ltr">
-                    {formatCurrency(amt, currency, locale)}
-                  </p>
-                  <div className="mt-3 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                    <div
-                      className={cn(
-                        'h-full rounded-full',
-                        isHigh ? 'bg-danger-400' : 'bg-amber-300',
-                        !active && 'bg-slate-200',
-                      )}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </PremiumSectionCard>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════
-          ROW 5 — Overdue Installments Table
-      ════════════════════════════════════════════════════════════════════ */}
-      <PremiumSectionCard
-        tone="danger"
-        icon={<AlertTriangle />}
-        title={m.overdueTable.title}
-        description={overdueCount > 0 ? m.overdueTable.overdueSuffix(overdueCount) : undefined}
-        trailing={
-          <Link href="/dashboard/deposits" className="text-xs text-brand-600 hover:underline whitespace-nowrap flex items-center gap-1">
-            {m.overdueTable.viewAll} <ArrowUpRight className="h-3 w-3" />
-          </Link>
-        }
-        padded={false}
-      >
-        {(!dash?.overdue || dash.overdue.length === 0) ? (
-          <div className="flex flex-col items-center gap-2 py-10 text-center">
-            <BadgeCheck className="h-7 w-7 text-slate-200" />
-            <p className="text-sm text-slate-400">{m.overdueTable.emptyTitle}</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[640px]">
-              <thead className="bg-surface-muted/60 text-[10px] font-bold tracking-wide text-slate-500 border-b border-hairline">
-                <tr>
-                  <th className="text-start py-2.5 ps-5 pe-4">{m.overdueTable.cols.client}</th>
-                  <th className="text-start py-2.5 px-4 whitespace-nowrap">{m.overdueTable.cols.contract}</th>
-                  <th className="text-start py-2.5 px-4 whitespace-nowrap">{m.overdueTable.cols.unit}</th>
-                  <th className="text-start py-2.5 px-4 whitespace-nowrap">{m.overdueTable.cols.type}</th>
-                  <th className="text-start py-2.5 px-4 whitespace-nowrap">{m.overdueTable.cols.dueDate}</th>
-                  <th className="text-right py-2.5 px-4 whitespace-nowrap">{m.overdueTable.cols.amount}</th>
-                  <th className="text-start py-2.5 ps-4 pe-5 whitespace-nowrap">{m.overdueTable.cols.delay}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                {dash.overdue.map((row) => {
-                  const c    = row.plan.contract;
-                  const days = daysOverdue(row.dueDate);
-                  return (
-                    <tr key={row.id} className="hover:bg-surface-muted/40 transition-colors align-middle">
-                      <td className="py-3 ps-5 pe-4 font-semibold text-slate-800 max-w-[160px] truncate">{c.customer.fullName}</td>
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <Link href={`/dashboard/contracts/${c.id}`} className="font-mono text-xs text-brand-600 hover:underline">
-                          {c.contractNumber ?? `#${c.id.slice(0, 8)}`}
+              { label: m.kpi.netCollected, value: money(netCollected), cls: 'text-emerald-600' },
+              { label: m.kpi.refundsPaid,  value: money(refundsPaid),  cls: 'text-slate-900' },
+              { label: m.kpi.refundsOwed,  value: money(refundsOwed),  cls: refundsOwed > 0 ? 'text-amber-600' : 'text-slate-900' },
+            ].map((x) => (
+              <div key={x.label} className="bg-surface px-6 py-4">
+                <dt className="text-[12px] text-slate-500">{x.label}</dt>
+                <dd className={cn('mt-1 text-[18px] font-bold tabular-nums', x.cls)}>{x.value}</dd>
+              </div>
+            ))}
+          </dl>
+          {refundsOwedRows.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px] text-[13px]" data-testid="refunds-owed">
+                <thead>
+                  <tr className="text-[11.5px] text-slate-500">
+                    <th className="px-6 py-3 text-start font-semibold">{m.refundsOwed.contract}</th>
+                    <th className="px-4 py-3 text-start font-semibold">{m.refundsOwed.customer}</th>
+                    <th className="px-4 py-3 text-end font-semibold">{m.refundsOwed.agreed}</th>
+                    <th className="px-4 py-3 text-end font-semibold">{m.refundsOwed.paid}</th>
+                    <th className="px-6 py-3 text-end font-semibold">{m.refundsOwed.owed}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-hairline border-t border-hairline">
+                  {refundsOwedRows.map((r) => (
+                    <tr key={r.contractId} className="transition-colors hover:bg-surface-muted/50">
+                      <td className="px-6 py-3">
+                        <Link href={`/dashboard/contracts/${r.contractId}`} className="font-mono font-semibold text-brand-700 hover:underline">
+                          {r.contractNumber ?? r.contractId.slice(0, 8)}
                         </Link>
                       </td>
-                      <td className="py-3 px-4 font-mono text-xs text-slate-400 whitespace-nowrap">{c.unit.code}</td>
-                      <td className="py-3 px-4">
-                        <span className={cn('inline-block px-2 py-0.5 rounded-full text-[11px] font-medium', PAYMENT_TYPE_CLS[row.type] ?? 'bg-slate-100 text-slate-600')}>
-                          {PAYMENT_TYPE_LABELS[row.type] ?? row.type}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-xs text-slate-400 whitespace-nowrap tabular-nums">{formatDate(row.dueDate, locale)}</td>
-                      <td className="py-3 px-4 whitespace-nowrap font-bold tabular-nums text-slate-900 text-right" dir="ltr">{formatCurrency(row.amount, currency, locale)}</td>
-                      <td className="py-3 ps-4 pe-5 whitespace-nowrap">
-                        <span className={cn(
-                          'inline-block px-2 py-0.5 rounded-full text-[11px] font-bold',
-                          days > 60 ? 'bg-danger-100 text-danger-700' :
-                          days > 30 ? 'bg-red-100 text-red-600' :
-                          days > 7  ? 'bg-amber-100 text-amber-700' :
-                          'bg-orange-100 text-orange-600',
-                        )}>
-                          {daysLabel(days)}
-                        </span>
-                      </td>
+                      <td className="px-4 py-3 text-slate-700">{r.customer?.fullName ?? '—'}</td>
+                      <td className="px-4 py-3 text-end tabular-nums">{money(r.refundAmount)}</td>
+                      <td className="px-4 py-3 text-end tabular-nums">{money(r.refunded)}</td>
+                      <td className="px-6 py-3 text-end font-bold tabular-nums text-amber-600">{money(r.outstanding)}</td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </PremiumSectionCard>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </PremiumPanel>
+      )}
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          ROW 6 — Upcoming Payments (2 col)
-      ════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {[
-          { title: m.upcoming.thisWeekTitle,  rows: dash?.upcomingThisWeek  ?? [], empty: m.upcoming.thisWeekEmpty },
-          { title: m.upcoming.thisMonthTitle, rows: dash?.upcomingThisMonth ?? [], empty: m.upcoming.thisMonthEmpty },
-        ].map((panel) => (
-          <PremiumSectionCard
-            key={panel.title}
-            icon={<CalendarDays />}
-            title={panel.title}
-            trailing={
-              panel.rows.length > 0
-                ? <span className="text-xs font-bold tabular-nums text-slate-700 whitespace-nowrap" dir="ltr">
-                    {formatCurrency(panel.rows.reduce((s, r) => s + num(r.amount), 0), currency, locale)}
+      {/* ─── Contract value + what is coming ─────────────────────────── */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-5 lg:gap-6">
+        <PremiumPanel className="lg:col-span-3" title={m.distribution.title} sub={m.distribution.description} bodyClassName="flex flex-col justify-center">
+          <div className="flex flex-col gap-5" data-testid="fin-distribution">
+            <div className="flex h-3 overflow-hidden rounded-full bg-surface-muted">
+              <span className="h-full bg-emerald-500" style={{ width: `${share(towardsPrice)}%` }} />
+              <span className="h-full bg-danger-500" style={{ width: `${share(overdueAmt)}%` }} />
+              <span className="h-full bg-slate-400/40" style={{ width: `${share(notYetDue)}%` }} />
+            </div>
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {[
+                { label: m.distribution.rows.contractValue, amount: contractVal,  dot: 'bg-brand-500',    pct: contractVal > 0 ? 100 : 0 },
+                // Each a share of the value: collected, overdue, and not yet due
+                // (outstanding already holds the overdue — they summed past 100%).
+                { label: m.distribution.rows.collected,     amount: towardsPrice, dot: 'bg-emerald-500',  pct: share(towardsPrice) },
+                { label: m.distribution.rows.overdue,       amount: overdueAmt,   dot: 'bg-danger-500',   pct: share(overdueAmt) },
+                { label: m.distribution.rows.outstanding,   amount: notYetDue,    dot: 'bg-slate-400/60', pct: share(notYetDue) },
+              ].map((r) => (
+                <li key={r.label} className="flex items-center gap-3 rounded-2xl border border-hairline px-4 py-3">
+                  <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', r.dot)} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[12px] text-slate-500">{r.label}</span>
+                    <span className="block truncate text-[15px] font-bold text-slate-900 tabular-nums">{money(r.amount)}</span>
                   </span>
-                : undefined
-            }
-            padded={false}
-          >
-            {panel.rows.length === 0 ? (
-              <div className="flex flex-col items-center gap-1.5 py-8 text-center">
-                <BadgeCheck className="h-6 w-6 text-slate-200" />
-                <p className="text-sm text-slate-400">{panel.empty}</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-hairline">
-                {panel.rows.map((row) => (
-                  <div key={row.id} className="flex items-center justify-between gap-3 px-5 py-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="text-[11px] text-slate-400 tabular-nums whitespace-nowrap shrink-0">{formatDate(row.dueDate, locale)}</span>
-                      <span className="text-sm font-medium text-slate-700 truncate">{row.plan.contract.customer.fullName}</span>
+                  <span className="shrink-0 text-[12px] font-semibold text-slate-400 tabular-nums">{r.pct.toFixed(r.pct === 100 || r.pct === 0 ? 0 : 1)}%</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </PremiumPanel>
+
+        <PremiumPanel className="lg:col-span-2" title={m.forecast.title} sub={m.forecast.description} bodyClassName="flex flex-col justify-center">
+          {forecast && forecastTotal > 0 ? (
+            <ol className="flex flex-col gap-4" data-testid="fin-forecast">
+              {[
+                { label: m.forecast.next30,   amount: forecast.next30,   bar: 'bg-brand-500' },
+                { label: m.forecast.next3160, amount: forecast.next3160, bar: 'bg-brand-400/70' },
+                { label: m.forecast.next6190, amount: forecast.next6190, bar: 'bg-brand-300/50' },
+              ].map((b) => {
+                const pct = Math.round((b.amount / forecastTotal) * 100);
+                return (
+                  <li key={b.label}>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-[12.5px] font-medium text-slate-500">{b.label}</span>
+                      <span className="text-[15px] font-bold text-slate-900 tabular-nums">{money(b.amount)}</span>
                     </div>
-                    <span className="text-sm font-bold tabular-nums whitespace-nowrap text-slate-900 shrink-0" dir="ltr">
-                      {formatCurrency(row.amount, currency, locale)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </PremiumSectionCard>
-        ))}
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-muted">
+                      <div className={cn('h-full rounded-full', b.bar)} style={{ width: `${pct}%` }} />
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-400">{m.forecast.pctOfTotal(pct)}</p>
+                  </li>
+                );
+              })}
+            </ol>
+          ) : (
+            <PremiumEmptyNote>{m.forecast.empty}</PremiumEmptyNote>
+          )}
+        </PremiumPanel>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          ROW 7 — Collection by Payment Type
-      ════════════════════════════════════════════════════════════════════ */}
-      {(dash?.collectionByType ?? []).length > 0 && (
-        <PremiumSectionCard
-          icon={<Wallet />}
-          title={m.collectionByType.title}
-          description={m.collectionByType.description}
-          padded={false}
+      {/* ─── Overdue: one calm line when clear, the detail when not ────── */}
+      {allClear ? (
+        <div
+          data-testid="fin-all-clear"
+          className="flex items-center gap-4 rounded-[22px] border border-emerald-500/25 bg-emerald-500/[0.06] px-6 py-5"
         >
-          {/* Header */}
-          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-2.5 bg-canvas/50 border-b border-hairline">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{m.collectionByType.colType}</span>
-            <span className="w-36 text-right text-[10px] font-bold uppercase tracking-wide text-slate-400">{m.collectionByType.colTotal}</span>
-            <span className="w-32 text-right text-[10px] font-bold uppercase tracking-wide text-slate-400">{m.collectionByType.colVerified}</span>
-            <span className="w-32 text-right text-[10px] font-bold uppercase tracking-wide text-slate-400">{m.collectionByType.colUnverified}</span>
+          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">
+            <BadgeCheck className="h-5 w-5" />
+          </span>
+          <div className="min-w-0">
+            <p className="font-heading text-[17px] font-bold text-slate-900">{m.attention.allClear}</p>
+            <p className="mt-0.5 text-[13px] text-slate-500">{m.attention.allClearSub}</p>
           </div>
-          <div className="divide-y divide-hairline">
-            {(dash?.collectionByType ?? []).map((c) => (
-              <div key={c.type} className="grid grid-cols-[1fr_auto_auto_auto] gap-4 items-center px-5 py-3.5 hover:bg-canvas/40 transition-colors">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className={cn('inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold shrink-0', DEPOSIT_TYPE_CLS[c.type] ?? 'bg-slate-100 text-slate-600')}>
-                    {DEPOSIT_TYPE_LABELS[c.type] ?? c.type}
-                  </span>
-                  <span className="text-[11px] text-slate-400 tabular-nums">{c.count.toLocaleString(intlLocale(locale))} {m.collectionByType.depositSuffix}</span>
+        </div>
+      ) : (
+        <PremiumPanel
+          title={m.overdueTable.title}
+          sub={overdueCount > 0 ? m.overdueTable.overdueSuffix(overdueCount) : undefined}
+          link={{ href: '/dashboard/deposits', label: m.overdueTable.viewAll }}
+          padding="none"
+        >
+          {aging.length > 0 && (
+            <div className="grid grid-cols-2 gap-px border-y border-hairline bg-hairline lg:grid-cols-4" data-testid="fin-aging">
+              {aging.map((b) => {
+                const amt = num(b.amount);
+                const late = b.label === '90+' || b.label === '61-90';
+                return (
+                  <div key={b.label} className="bg-surface px-6 py-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[12px] font-medium text-slate-500">{m.aging.labels[b.label as keyof typeof m.aging.labels] ?? b.label}</p>
+                      <span className={cn(
+                        'rounded-full px-2 py-0.5 text-[10.5px] font-bold tabular-nums',
+                        b.count === 0 ? 'bg-surface-muted text-slate-400' : late ? 'bg-danger-500/12 text-danger-600' : 'bg-amber-500/15 text-amber-600',
+                      )}>
+                        {count(b.count)}
+                      </span>
+                    </div>
+                    <p className={cn('mt-2 text-[17px] font-bold tabular-nums', b.count === 0 ? 'text-slate-400' : late ? 'text-danger-600' : 'text-amber-600')}>
+                      {money(amt)}
+                    </p>
+                    <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-surface-muted">
+                      <div className={cn('h-full rounded-full', late ? 'bg-danger-500' : 'bg-amber-400')} style={{ width: `${agingTotal > 0 ? (amt / agingTotal) * 100 : 0}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {overdueRows.length === 0 ? (
+            <div className="px-6 py-6">
+              <PremiumEmptyNote>{m.overdueTable.emptyTitle}</PremiumEmptyNote>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[680px] text-[13px]">
+                <thead>
+                  <tr className="text-[11.5px] text-slate-500">
+                    <th className="py-3 ps-6 pe-4 text-start font-semibold">{m.overdueTable.cols.client}</th>
+                    <th className="px-4 py-3 text-start font-semibold">{m.overdueTable.cols.contract}</th>
+                    <th className="px-4 py-3 text-start font-semibold">{m.overdueTable.cols.unit}</th>
+                    <th className="px-4 py-3 text-start font-semibold">{m.overdueTable.cols.type}</th>
+                    <th className="px-4 py-3 text-start font-semibold">{m.overdueTable.cols.dueDate}</th>
+                    <th className="px-4 py-3 text-end font-semibold">{m.overdueTable.cols.amount}</th>
+                    <th className="py-3 ps-4 pe-6 text-start font-semibold">{m.overdueTable.cols.delay}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-hairline border-t border-hairline">
+                  {overdueRows.map((row) => {
+                    const c    = row.plan.contract;
+                    const days = daysOverdue(row.dueDate);
+                    return (
+                      <tr key={row.id} className="align-middle transition-colors hover:bg-surface-muted/50">
+                        <td className="max-w-[180px] truncate py-3 ps-6 pe-4 font-semibold text-slate-900">{c.customer.fullName}</td>
+                        <td className="whitespace-nowrap px-4 py-3">
+                          <Link href={`/dashboard/contracts/${c.id}`} className="font-mono text-[12px] text-brand-700 hover:underline">
+                            {c.contractNumber ?? `#${c.id.slice(0, 8)}`}
+                          </Link>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 font-mono text-[12px] text-slate-500">{c.unit.code}</td>
+                        <td className="px-4 py-3">
+                          <TypeChip cls={PAYMENT_TYPE_CLS[row.type]}>{PAYMENT_TYPE_LABELS[row.type] ?? row.type}</TypeChip>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-[12px] text-slate-500 tabular-nums">{formatDate(row.dueDate, locale)}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-end font-bold text-slate-900 tabular-nums">{money(row.amount)}</td>
+                        <td className="whitespace-nowrap py-3 ps-4 pe-6">
+                          <span className={cn(
+                            'inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold',
+                            days > 30 ? 'bg-danger-500/12 text-danger-600' : 'bg-amber-500/15 text-amber-600',
+                          )}>
+                            {daysLabel(days)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </PremiumPanel>
+      )}
+
+      {/* ─── Upcoming + by payment type ────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
+        <PremiumPanel title={m.upcoming.title} sub={m.upcoming.sub}>
+          <div className="flex flex-col gap-5" data-testid="fin-upcoming">
+            {[
+              { title: m.upcoming.thisWeekTitle,  rows: dash?.upcomingThisWeek  ?? [], empty: m.upcoming.thisWeekEmpty },
+              { title: m.upcoming.thisMonthTitle, rows: dash?.upcomingThisMonth ?? [], empty: m.upcoming.thisMonthEmpty },
+            ].map((group) => (
+              <div key={group.title}>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <p className="text-[12.5px] font-bold text-slate-700">{group.title}</p>
+                  {group.rows.length > 0 && (
+                    <span className="text-[12.5px] font-bold text-brand-700 tabular-nums">
+                      {money(group.rows.reduce((sum, r) => sum + num(r.amount), 0))}
+                    </span>
+                  )}
                 </div>
-                <p className="w-36 text-right text-[13px] font-bold tabular-nums text-slate-900 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalAll, currency, locale)}</p>
-                <p className="w-32 text-right text-[13px] tabular-nums text-success-700 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalVerified, currency, locale)}</p>
-                <p className="w-32 text-right text-[13px] tabular-nums text-amber-600 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalUnverified, currency, locale)}</p>
+                {group.rows.length === 0 ? (
+                  <p className="flex items-center gap-2 rounded-2xl border border-dashed border-hairline px-4 py-3 text-[12.5px] text-slate-500">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                    {group.empty}
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-hairline rounded-2xl border border-hairline">
+                    {group.rows.map((row) => (
+                      <li key={row.id} className="flex items-center gap-3 px-4 py-2.5">
+                        <span className="w-20 shrink-0 text-[11.5px] text-slate-500 tabular-nums">{formatDate(row.dueDate, locale)}</span>
+                        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-800">{row.plan.contract.customer.fullName}</span>
+                        <span className="shrink-0 text-[13px] font-bold text-slate-900 tabular-nums">{money(row.amount)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             ))}
           </div>
-        </PremiumSectionCard>
-      )}
+        </PremiumPanel>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          ROW 8 — Booking Pipeline + Liabilities (collapsed panels)
-      ════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-        {/* Booking pipeline */}
-        {dash?.booking && (
-          <PremiumSectionCard
-            icon={<Receipt />}
-            title={m.booking.title}
-            description={m.booking.description}
-            padded={false}
-          >
-            <div className="divide-y divide-hairline">
-              {[
-                { label: m.booking.pendingReservations,  value: `${dash.booking.pendingReservationsCount} · ${formatCurrency(dash.booking.pendingReservationsBookingAmount, currency, locale)}`, cls: 'text-amber-700' },
-                { label: m.booking.approvedReservations, value: `${dash.booking.approvedReservationsCount} · ${formatCurrency(dash.booking.approvedReservationsBookingAmount, currency, locale)}`, cls: 'text-slate-900' },
-                { label: m.booking.bookingCollected,     value: formatCurrency(dash.booking.bookingCollectedVerified, currency, locale), cls: 'text-success-700' },
-                { label: m.booking.bookingUncollected,   value: formatCurrency(dash.booking.bookingUncollectedEstimate, currency, locale), cls: 'text-slate-600' },
-              ].map((row) => (
-                <div key={row.label} className="flex items-center justify-between gap-3 px-5 py-3">
-                  <span className="text-sm text-slate-500">{row.label}</span>
-                  <span className={cn('text-sm font-bold tabular-nums whitespace-nowrap', row.cls)}>{row.value}</span>
-                </div>
-              ))}
-            </div>
-          </PremiumSectionCard>
-        )}
-
-        {/* Liabilities */}
-        {dash?.liabilities && (
-          <PremiumSectionCard
-            icon={<Coins />}
-            title={m.liabilities.title}
-            description={m.liabilities.description}
-            padded={false}
-          >
-            <div className="divide-y divide-hairline">
-              {[
-                { label: m.liabilities.total,            value: formatCurrency(dash.liabilities.totalUnpaidLiabilities, currency, locale),                      cls: 'text-danger-700 font-black' },
-                { label: m.liabilities.salesBonus,       value: formatCurrency(dash.liabilities.salesBonus.unpaidAmount, currency, locale),                     cls: 'text-amber-700' },
-                { label: m.liabilities.brokerCommissions, value: formatCurrency(dash.liabilities.brokerCommissions.unpaidAmount, currency, locale),              cls: 'text-amber-700' },
-                { label: m.liabilities.paid,             value: formatCurrency(num(dash.liabilities.salesBonus.paidAmount) + num(dash.liabilities.brokerCommissions.paidAmount), currency, locale), cls: 'text-success-700' },
-                // Paid out on deals since cancelled, and not recovered yet.
-                { label: m.liabilities.clawbacksOwed,    value: formatCurrency(dash.liabilities.clawbacksOwed?.totalAmount ?? 0, currency, locale),             cls: 'text-brand-700', testId: 'clawbacks-owed' },
-              ].map((row) => (
-                <div key={row.label} data-testid={'testId' in row ? row.testId : undefined} className="flex items-center justify-between gap-3 px-5 py-3">
-                  <span className="text-sm text-slate-500">{row.label}</span>
-                  <span className={cn('text-sm tabular-nums whitespace-nowrap font-bold', row.cls)} dir="ltr">{row.value}</span>
-                </div>
-              ))}
-            </div>
-          </PremiumSectionCard>
-        )}
+        <PremiumPanel title={m.collectionByType.title} sub={m.collectionByType.description} bodyClassName="flex flex-col justify-center">
+          {byType.length === 0 ? (
+            <PremiumEmptyNote>{m.collectionByType.empty}</PremiumEmptyNote>
+          ) : (
+            <ul className="flex flex-col gap-4" data-testid="fin-by-type">
+              {byType.map((c) => {
+                const all = num(c.totalAll);
+                const verified = num(c.totalVerified);
+                const unverified = num(c.totalUnverified);
+                return (
+                  <li key={c.type}>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <TypeChip cls={DEPOSIT_TYPE_CLS[c.type]}>{DEPOSIT_TYPE_LABELS[c.type] ?? c.type}</TypeChip>
+                        <span className="text-[11.5px] text-slate-400 tabular-nums">{count(c.count)} {m.collectionByType.depositSuffix}</span>
+                      </span>
+                      <span className="shrink-0 text-[14px] font-bold text-slate-900 tabular-nums">{money(all)}</span>
+                    </div>
+                    <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-surface-muted">
+                      <span className="h-full bg-emerald-500" style={{ width: `${(verified / byTypeMax) * 100}%` }} />
+                      <span className="h-full bg-amber-400" style={{ width: `${(unverified / byTypeMax) * 100}%` }} />
+                    </div>
+                    {unverified > 0 && (
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        {m.collectionByType.colVerified} <b className="text-emerald-600 tabular-nums">{money(verified)}</b>
+                        {' · '}
+                        {m.collectionByType.colUnverified} <b className="text-amber-600 tabular-nums">{money(unverified)}</b>
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </PremiumPanel>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          ROW 9 — Recent Deposits
-      ════════════════════════════════════════════════════════════════════ */}
-      <PremiumSectionCard
-        icon={<CircleDollarSign />}
+      {/* ─── Bookings + liabilities ────────────────────────────────────── */}
+      {(dash?.booking || dash?.liabilities) && (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
+          {dash?.booking && (
+            <PremiumPanel title={m.booking.title} sub={m.booking.description} padding="none" bodyClassName="flex flex-col">
+              <ul className="flex flex-1 flex-col divide-y divide-hairline border-t border-hairline">
+                {[
+                  { label: m.booking.pendingReservations,  n: dash.booking.pendingReservationsCount,  value: dash.booking.pendingReservationsBookingAmount,  cls: 'text-amber-600' },
+                  { label: m.booking.approvedReservations, n: dash.booking.approvedReservationsCount, value: dash.booking.approvedReservationsBookingAmount, cls: 'text-slate-900' },
+                  { label: m.booking.bookingCollected,     value: dash.booking.bookingCollectedVerified,   cls: 'text-emerald-600' },
+                  { label: m.booking.bookingUncollected,   value: dash.booking.bookingUncollectedEstimate, cls: 'text-slate-700' },
+                ].map((row) => (
+                  <li key={row.label} className="flex flex-1 items-center gap-3 px-6 py-3.5">
+                    <span className="min-w-0 flex-1 text-[13px] text-slate-600">{row.label}</span>
+                    {'n' in row && row.n !== undefined && (
+                      <span className="shrink-0 rounded-full bg-surface-muted px-2.5 py-0.5 text-[11px] font-semibold text-slate-600 tabular-nums">
+                        {m.booking.count(row.n)}
+                      </span>
+                    )}
+                    <span className={cn('shrink-0 text-[14px] font-bold tabular-nums', row.cls)}>{money(row.value)}</span>
+                  </li>
+                ))}
+              </ul>
+            </PremiumPanel>
+          )}
+
+          {dash?.liabilities && (
+            <PremiumPanel title={m.liabilities.title} sub={m.liabilities.description} padding="none">
+              <div className="flex items-baseline justify-between gap-3 border-t border-hairline bg-danger-500/[0.04] px-6 py-4">
+                <span className="text-[13px] font-semibold text-slate-700">{m.liabilities.total}</span>
+                <span className={cn('text-[19px] font-bold tabular-nums', num(dash.liabilities.totalUnpaidLiabilities) > 0 ? 'text-danger-600' : 'text-slate-900')}>
+                  {money(dash.liabilities.totalUnpaidLiabilities)}
+                </span>
+              </div>
+              <ul className="divide-y divide-hairline border-t border-hairline">
+                {[
+                  { label: m.liabilities.salesBonus,        value: money(dash.liabilities.salesBonus.unpaidAmount),        cls: 'text-amber-600' },
+                  { label: m.liabilities.brokerCommissions, value: money(dash.liabilities.brokerCommissions.unpaidAmount), cls: 'text-amber-600' },
+                  { label: m.liabilities.paid,              value: money(num(dash.liabilities.salesBonus.paidAmount) + num(dash.liabilities.brokerCommissions.paidAmount)), cls: 'text-emerald-600' },
+                  // Paid out on deals since cancelled, and not recovered yet.
+                  { label: m.liabilities.clawbacksOwed,     value: money(dash.liabilities.clawbacksOwed?.totalAmount ?? 0), cls: 'text-brand-700', testId: 'clawbacks-owed' },
+                ].map((row) => (
+                  <li key={row.label} data-testid={'testId' in row ? row.testId : undefined} className="flex items-center justify-between gap-3 px-6 py-3.5">
+                    <span className="text-[13px] text-slate-600">{row.label}</span>
+                    <span className={cn('whitespace-nowrap text-[14px] font-bold tabular-nums', row.cls)}>{row.value}</span>
+                  </li>
+                ))}
+              </ul>
+            </PremiumPanel>
+          )}
+        </div>
+      )}
+
+      {/* ─── Recent payments ───────────────────────────────────────────── */}
+      <PremiumPanel
         title={m.recentDeposits.title}
-        description={m.recentDeposits.description}
-        trailing={
-          <Link href="/dashboard/deposits" className="text-xs text-brand-600 hover:underline whitespace-nowrap flex items-center gap-1">
-            {m.recentDeposits.viewAll} <ArrowUpRight className="h-3 w-3" />
-          </Link>
-        }
-        padded={false}
+        sub={m.recentDeposits.description}
+        link={{ href: '/dashboard/deposits', label: m.recentDeposits.viewAll }}
+        padding="none"
       >
         {(!dash || dash.recentDeposits.length === 0) ? (
-          <div className="flex flex-col items-center gap-2 py-10 text-center">
-            <CircleDollarSign className="h-7 w-7 text-slate-200" />
-            <p className="text-sm text-slate-400">{m.recentDeposits.empty}</p>
+          <div className="px-6 pb-6">
+            <PremiumEmptyNote>{m.recentDeposits.empty}</PremiumEmptyNote>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[580px]">
-              <thead className="bg-surface-muted/60 text-[10px] font-bold tracking-wide text-slate-500 border-b border-hairline">
-                <tr>
-                  <th className="text-start py-2.5 ps-5 pe-4 whitespace-nowrap">{m.recentDeposits.cols.type}</th>
-                  <th className="text-start py-2.5 px-4">{m.recentDeposits.cols.client}</th>
-                  <th className="text-start py-2.5 px-4 whitespace-nowrap">{m.recentDeposits.cols.unit}</th>
-                  <th className="text-start py-2.5 px-4 whitespace-nowrap">{m.recentDeposits.cols.ref}</th>
-                  <th className="text-start py-2.5 px-4 whitespace-nowrap">{m.recentDeposits.cols.paidAt}</th>
-                  <th className="text-start py-2.5 px-4 whitespace-nowrap">{m.recentDeposits.cols.amount}</th>
-                  <th className="text-start py-2.5 ps-4 pe-5 whitespace-nowrap">{m.recentDeposits.cols.verified}</th>
+            <table className="w-full min-w-[640px] text-[13px]" data-testid="fin-recent">
+              <thead>
+                <tr className="text-[11.5px] text-slate-500">
+                  <th className="py-3 ps-6 pe-4 text-start font-semibold">{m.recentDeposits.cols.type}</th>
+                  <th className="px-4 py-3 text-start font-semibold">{m.recentDeposits.cols.client}</th>
+                  <th className="px-4 py-3 text-start font-semibold">{m.recentDeposits.cols.unit}</th>
+                  <th className="px-4 py-3 text-start font-semibold">{m.recentDeposits.cols.ref}</th>
+                  <th className="px-4 py-3 text-start font-semibold">{m.recentDeposits.cols.paidAt}</th>
+                  <th className="px-4 py-3 text-end font-semibold">{m.recentDeposits.cols.amount}</th>
+                  <th className="py-3 ps-4 pe-6 text-start font-semibold">{m.recentDeposits.cols.verified}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-hairline">
+              <tbody className="divide-y divide-hairline border-t border-hairline">
                 {dash.recentDeposits.slice(0, 10).map((d) => (
-                  <tr key={d.id} className="hover:bg-surface-muted/40 transition-colors align-middle">
-                    <td className="py-2.5 ps-5 pe-4 whitespace-nowrap">
-                      <span className={cn('inline-block px-2 py-0.5 rounded-full text-[11px] font-medium', DEPOSIT_TYPE_CLS[d.type] ?? 'bg-slate-100 text-slate-600')}>
-                        {DEPOSIT_TYPE_LABELS[d.type] ?? d.type}
-                      </span>
+                  <tr key={d.id} className="align-middle transition-colors hover:bg-surface-muted/50">
+                    <td className="whitespace-nowrap py-3 ps-6 pe-4">
+                      <TypeChip cls={DEPOSIT_TYPE_CLS[d.type]}>{DEPOSIT_TYPE_LABELS[d.type] ?? d.type}</TypeChip>
                     </td>
-                    <td className="py-2.5 px-4 font-medium text-slate-800 max-w-[160px] truncate">{getDepositLabel(d)}</td>
-                    <td className="py-2.5 px-4 font-mono text-xs text-slate-400 whitespace-nowrap">{getDepositUnit(d)}</td>
-                    <td className="py-2.5 px-4 whitespace-nowrap">
+                    <td className="max-w-[180px] truncate px-4 py-3 font-semibold text-slate-900">{getDepositLabel(d)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-[12px] text-slate-500">{getDepositUnit(d)}</td>
+                    <td className="whitespace-nowrap px-4 py-3">
                       {d.contract ? (
-                        <Link href={`/dashboard/contracts/${d.contract.id}`} className="font-mono text-xs text-brand-600 hover:underline">
+                        <Link href={`/dashboard/contracts/${d.contract.id}`} className="font-mono text-[12px] text-brand-700 hover:underline">
                           {d.contract.contractNumber ?? `#${d.contract.id.slice(0, 8)}`}
                         </Link>
                       ) : d.reservation ? (
-                        <Link href={`/dashboard/reservations/${d.reservation.id}`} className="font-mono text-xs text-indigo-600 hover:underline">
+                        <Link href={`/dashboard/reservations/${d.reservation.id}`} className="font-mono text-[12px] text-indigo-600 hover:underline">
                           {d.reservation.reservationNumber ?? `#${d.reservation.id.slice(0, 8)}`}
                         </Link>
                       ) : (
-                        <span className="text-slate-300 text-xs">—</span>
+                        <span className="text-[12px] text-slate-400">—</span>
                       )}
                     </td>
-                    <td className="py-2.5 px-4 text-xs text-slate-400 whitespace-nowrap tabular-nums">{formatDate(d.paidAt, locale)}</td>
-                    <td className="py-2.5 px-4 font-bold tabular-nums text-slate-900 whitespace-nowrap" dir="ltr">{formatCurrency(d.amount, currency, locale)}</td>
-                    <td className="py-2.5 ps-4 pe-5 whitespace-nowrap">
+                    <td className="whitespace-nowrap px-4 py-3 text-[12px] text-slate-500 tabular-nums">{formatDate(d.paidAt, locale)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-end font-bold text-slate-900 tabular-nums">{money(d.amount)}</td>
+                    <td className="whitespace-nowrap py-3 ps-4 pe-6">
                       {d.verified ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success-700">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
                           <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />{m.recentDeposits.verifiedLabel}
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-amber-600">
                           <XCircle className="h-3.5 w-3.5 shrink-0" />{m.recentDeposits.pendingLabel}
                         </span>
                       )}
@@ -835,8 +733,113 @@ export default async function FinancialReportsPage({
             </table>
           </div>
         )}
-      </PremiumSectionCard>
-
+      </PremiumPanel>
     </div>
+  );
+}
+
+// ── Building blocks ───────────────────────────────────────────────────────────
+
+/** An exact amount set as a large number with its currency in small gold. */
+function Amount({ value, sign, locale, size = 'card' }: { value: number; sign: string; locale: Locale; size?: 'hero' | 'card' }) {
+  const n = Math.round(value).toLocaleString(intlLocale(locale));
+  return (
+    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap" dir="ltr">
+      {locale === 'en' && <span className={cn('font-bold text-brand-700', size === 'hero' ? 'text-[16px]' : 'text-[12px]')}>{sign}</span>}
+      <span className={cn('num font-semibold leading-none text-slate-900', size === 'hero' ? 'text-[54px] tracking-tight' : 'text-[30px]')}>{n}</span>
+      {locale !== 'en' && <span className={cn('font-bold text-brand-700', size === 'hero' ? 'text-[16px]' : 'text-[12px]')}>{sign}</span>}
+    </span>
+  );
+}
+
+type Delta = { value: string; direction: 'up' | 'down' | 'flat' };
+
+function DeltaChip({ delta, label, upIsBad = false }: { delta: Delta; label?: string; upIsBad?: boolean }) {
+  const good = delta.direction === 'flat' ? null : (delta.direction === 'up') !== upIsBad;
+  return (
+    <span
+      className={cn(
+        'mt-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-bold',
+        good === true && 'bg-emerald-500/12 text-emerald-600',
+        good === false && 'bg-danger-500/10 text-danger-600',
+        good === null && 'bg-surface-muted text-slate-500',
+      )}
+    >
+      {delta.direction === 'up' ? <ArrowUpRight className="h-3.5 w-3.5" /> : delta.direction === 'down' ? <ArrowDownRight className="h-3.5 w-3.5" /> : null}
+      <span dir="ltr">{delta.value}</span>
+      {label && <span className="font-medium opacity-80">{label}</span>}
+    </span>
+  );
+}
+
+/** The collection rate as a ring. */
+function RateRing({ rate, tone }: { rate: number; tone: 'good' | 'mid' | 'low' }) {
+  const r = 42;
+  const c = 2 * Math.PI * r;
+  return (
+    <div className="relative h-[104px] w-[104px] shrink-0" data-testid="fin-rate">
+      <svg viewBox="0 0 104 104" className="h-full w-full -rotate-90">
+        <circle cx="52" cy="52" r={r} fill="none" strokeWidth="9" className="stroke-surface-muted" />
+        <circle
+          cx="52"
+          cy="52"
+          r={r}
+          fill="none"
+          strokeWidth="9"
+          strokeLinecap="round"
+          strokeDasharray={`${(Math.min(100, rate) / 100) * c} ${c}`}
+          className={tone === 'good' ? 'stroke-emerald-500' : tone === 'mid' ? 'stroke-brand-500' : 'stroke-danger-500'}
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center">
+        <span className="num text-[28px] font-semibold text-slate-900">{rate}<span className="text-[15px] text-slate-500">%</span></span>
+      </span>
+    </div>
+  );
+}
+
+function FigureCard({
+  icon, label, value, sub, delta, upIsBad, tone = 'neutral', testId,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+  sub?: string;
+  delta?: Delta;
+  upIsBad?: boolean;
+  tone?: 'neutral' | 'good' | 'warn';
+  testId?: string;
+}) {
+  return (
+    <div
+      data-testid={testId}
+      className={cn(
+        'flex flex-col gap-3 overflow-hidden rounded-[20px] border bg-surface p-5 transition-colors',
+        tone === 'warn' ? 'border-danger-500/30' : tone === 'good' ? 'border-emerald-500/25' : 'border-hairline hover:border-brand-500/30',
+      )}
+    >
+      <div className="flex items-center gap-2 text-[12px] font-semibold text-slate-500">
+        <span className={cn(
+          'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg [&_svg]:h-3.5 [&_svg]:w-3.5',
+          tone === 'warn' ? 'bg-danger-500/12 text-danger-600' : tone === 'good' ? 'bg-emerald-500/12 text-emerald-600' : 'bg-brand-500/12 text-brand-700',
+        )}>
+          {icon}
+        </span>
+        <span className="truncate" title={label}>{label}</span>
+      </div>
+      <div>{value}</div>
+      <div className="flex flex-wrap items-center gap-2">
+        {sub && <p className="text-[12px] text-slate-500">{sub}</p>}
+        {delta && <DeltaChip delta={delta} upIsBad={upIsBad} />}
+      </div>
+    </div>
+  );
+}
+
+function TypeChip({ cls, children }: { cls?: string; children: React.ReactNode }) {
+  return (
+    <span className={cn('inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold', cls ?? 'bg-slate-500/10 text-slate-600')}>
+      {children}
+    </span>
   );
 }

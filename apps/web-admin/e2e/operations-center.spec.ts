@@ -24,4 +24,7 @@ test('the operations center shows the trend, the insights and a clean breakdown'
   const names = areas.map((t) => t.split('\n')[0]!.trim());
   expect(new Set(names).size).toBe(names.length);
   await expect(page.locator('main')).not.toContainText(/\b[a-z-]+\.[a-z_-]+\b/);
+
+  // No shortcuts block (removed at the owner's request).
+  await expect(page.getByRole('heading', { name: 'اختصارات' })).toHaveCount(0);
 });
