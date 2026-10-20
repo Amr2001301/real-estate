@@ -78,6 +78,7 @@ function buildMockPrisma(clientUsers: typeof AUTH_USER_E164[], globalHits: Globa
     },
     lead:        { findMany: empty },
     leadSource:  { findMany: empty },
+    unitType: { findMany: jest.fn().mockResolvedValue([{ code: '2BR', name: { ar: 'شقة غرفتين نوم', en: '2-bedroom apartment' }, usage: 'RESIDENTIAL', active: true }]) },
   };
 }
 

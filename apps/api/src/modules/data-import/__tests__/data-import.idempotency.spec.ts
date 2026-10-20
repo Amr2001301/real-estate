@@ -137,6 +137,7 @@ function buildImportPrisma() {
     user:        { findMany: empty },
     lead:        { findMany: empty },
     leadSource:  { findMany: empty },
+    unitType: { findMany: jest.fn().mockResolvedValue([{ code: '2BR', name: { ar: 'شقة غرفتين نوم', en: '2-bedroom apartment' }, usage: 'RESIDENTIAL', active: true }]) },
     auditLog:    { create: auditCreate },
     $transaction: jest.fn().mockImplementation((fn: (tx: unknown) => Promise<unknown>) => {
       const tx = {

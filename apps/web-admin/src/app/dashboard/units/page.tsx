@@ -157,6 +157,9 @@ export default async function UnitsPage({
                   priceMin: sp.priceMin, priceMax: sp.priceMax, areaMin: sp.areaMin, areaMax: sp.areaMax,
                 }}
               />
+              <Link href={'/dashboard/units/types' as never}>
+                <Button variant="outline" size="md">{m.manageTypes}</Button>
+              </Link>
               <Link href={'/dashboard/units/new' as never}>
                 <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
                   {m.addBtn}
@@ -369,7 +372,7 @@ export default async function UnitsPage({
                         </div>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-700">{u.type}</td>
+                    <td className="py-3.5 px-4 text-slate-700">{tx(u.typeName, locale) || u.type}</td>
                     <td className="py-3.5 px-4 text-slate-700 tabular-nums">
                       <span className="inline-flex items-center gap-1">
                         <Ruler className="h-3.5 w-3.5 text-slate-400" />

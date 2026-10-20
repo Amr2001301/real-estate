@@ -14,6 +14,8 @@ export interface UnitsFilterValues {
   projectId: string;
   city: string;
   type: string;
+  /** Residential, commercial, … (the home page's tabs). */
+  usage?: string;
   bedrooms: string;
   bathrooms: string;
   price: string;
@@ -54,11 +56,15 @@ function CompactSelect({
 
 export function UnitsFilterBar({
   initial,
+  types,
   locale,
 }: {
   initial: UnitsFilterValues;
+  /** The company's unit types; the fixed list when the API gave none. */
+  types?: Array<{ value: string; label: string }>;
   locale: Locale;
 }) {
+  const typeOptions = types?.length ? [TYPES[0]!, ...types] : TYPES;
   const router = useRouter();
   const t = siteT(locale).unitsFilter;
   const statuses = siteT(locale).home.search.statuses;
@@ -77,6 +83,7 @@ export function UnitsFilterBar({
     const params = new URLSearchParams();
     if (initial.projectId) params.set('projectId', initial.projectId);
     if (initial.city) params.set('city', initial.city);
+    if (initial.usage) params.set('usage', initial.usage);
     if (v.type) params.set('type', v.type);
     if (v.bedrooms) params.set('bedrooms', v.bedrooms);
     if (v.bathrooms) params.set('bathrooms', v.bathrooms);
@@ -126,7 +133,7 @@ export function UnitsFilterBar({
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-[repeat(7,minmax(0,1fr))_auto]">
         <CompactSelect icon={Building2} label={t.propertyType} value={type} onChange={setType}>
-          {TYPES.map((tp) => (
+          {typeOptions.map((tp) => (
             <option key={tp.value} value={tp.value}>{tp.label}</option>
           ))}
         </CompactSelect>

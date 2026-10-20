@@ -108,6 +108,7 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
 
   // CRM
   LeadSource: 'TENANT_OWNED',
+  UnitType: 'TENANT_OWNED',
   Lead: 'TENANT_OWNED',
   LeadNote: 'TENANT_OWNED',
   LeadActivity: 'TENANT_OWNED',

@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Workbook, ValueType } from 'exceljs';
 import type { Prisma } from '@prisma/client';
-import { LeadStage, Locale, ProjectStatus, ReservationStatus, UnitStatus, UserRole } from '@prisma/client';
+import { LeadStage, Locale, ProjectStatus, ReservationStatus, UnitStatus, UnitUsage, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   PROJECTS_SHEET,
@@ -446,7 +446,12 @@ export class DataImportService {
     const projects = this.parseProjectsSheet(wb, projectByCode);
     const phases = this.parsePhasesSheet(wb, projectByCode, phaseByKey, projects);
     const buildings = this.parseBuildingsSheet(wb, projectByCode, phaseByKey, buildingByKey, projects, phases);
-    const units = this.parseUnitsSheet(wb, phaseByKey, buildingByKey, unitByKey, activeUnitIds, projects, phases, buildings);
+    // A unit's type is one of the company's (F10), matched on its code or name.
+    const unitTypes = await this.prisma.unitType.findMany({
+      where: { companyId },
+      select: { code: true, name: true, usage: true, active: true },
+    });
+    const units = this.parseUnitsSheet(wb, phaseByKey, buildingByKey, unitByKey, activeUnitIds, projects, phases, buildings, unitTypes);
 
     const unresolvedSalesTracker = { count: 0 };
     // Emails already taken in this company (any account) — compared in their
@@ -897,7 +902,18 @@ export class DataImportService {
     projectsPlan: SheetPlan<ProjectPlan>,
     phasesPlan: SheetPlan<PhasePlan>,
     buildingsPlan: SheetPlan<BuildingPlan>,
+    unitTypes: Array<{ code: string; name: Prisma.JsonValue; usage: UnitUsage; active: boolean }> = [],
   ): SheetPlan<UnitPlan> {
+    const findType = (input: string) => {
+      const needle = input.trim().toLowerCase();
+      return (
+        unitTypes.find((t) => t.code.toLowerCase() === needle) ??
+        unitTypes.find((t) => {
+          const n = (t.name ?? {}) as { ar?: string; en?: string };
+          return n.ar?.trim().toLowerCase() === needle || n.en?.trim().toLowerCase() === needle;
+        })
+      );
+    };
     const plan = makeSheetPlan<UnitPlan>(UNITS_SHEET.name);
     const ws = wb.getWorksheet(UNITS_SHEET.name);
     if (!ws) return plan;
@@ -981,7 +997,7 @@ export class DataImportService {
       }
       seenKeys.add(unitKey);
 
-      const type      = readStringCell(row, typeColIdx);
+      const typeCell  = readStringCell(row, typeColIdx);
       const floor     = readIntCell(row, floorColIdx);
       const area      = readDecimalCell(row, areaColIdx);
       const bedrooms  = readIntCell(row, bedroomsColIdx);
@@ -1023,6 +1039,23 @@ export class DataImportService {
       let id: string | undefined;
 
       const existing = buildingId ? unitByKey.get(unitKey) : undefined;
+      let type: string | undefined;
+      let usage: UnitUsage | undefined;
+      if (typeCell !== undefined) {
+        const t = findType(typeCell);
+        if (!t) {
+          plan._addError({ sheet: UNITS_SHEET.name, rowNumber, column: UNITS_SHEET.fields.type, message: `نوع الوحدة «${typeCell}» غير موجود — أضفه من صفحة أنواع الوحدات` });
+          return;
+        }
+        // The unit's own type written differently ("STUDIO") is no change.
+        const same = existing !== undefined && t.code.toLowerCase() === existing.type.toLowerCase();
+        if (!t.active && !same) {
+          plan._addError({ sheet: UNITS_SHEET.name, rowNumber, column: UNITS_SHEET.fields.type, message: `نوع الوحدة «${t.code}» موقوف` });
+          return;
+        }
+        type = same ? existing!.type : t.code;
+        usage = t.usage;
+      }
       if (!existing) {
         if (!type) {
           plan._addError({ sheet: UNITS_SHEET.name, rowNumber, column: UNITS_SHEET.fields.type, message: 'Unit type is required when creating a new unit' });
@@ -1081,7 +1114,10 @@ export class DataImportService {
 
       plan.ops.push({
         rowNumber, op, code, projectCode, phaseCode, buildingCode,
-        id, buildingId, type, floor, area, bedrooms, bathrooms, price, status,
+        id, buildingId, type, usage, floor, area,
+        // Only a residential unit has bedrooms.
+        bedrooms: usage !== undefined && usage !== UnitUsage.RESIDENTIAL ? 0 : bedrooms,
+        bathrooms, price, status,
       });
     });
 
@@ -1765,6 +1801,7 @@ export class DataImportService {
 
           const updateData: Prisma.UnitUpdateInput = {};
           if (u.type      !== undefined) updateData.type = u.type;
+          if (u.usage     !== undefined) updateData.usage = u.usage;
           if (u.floor     !== undefined) updateData.floor = u.floor;
           if (u.area      !== undefined) updateData.area = u.area;
           if (u.bedrooms  !== undefined) updateData.bedrooms = u.bedrooms;
@@ -1795,6 +1832,7 @@ export class DataImportService {
               buildingId,
               code: u.code,
               type: u.type!,
+              usage: u.usage ?? UnitUsage.RESIDENTIAL,
               floor: u.floor ?? 0,
               area: u.area!,
               bedrooms: u.bedrooms ?? 0,

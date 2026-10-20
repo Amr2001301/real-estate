@@ -36,7 +36,7 @@ const ROWS: Row[] = [
   { label: 'غرف النوم', value: (u) => formatNumber(u.bedrooms), metric: (u) => u.bedrooms, dir: 'max' },
   { label: 'دورات المياه', value: (u) => formatNumber(u.bathrooms), metric: (u) => u.bathrooms, dir: 'max' },
   { label: 'الطابق', value: (u) => formatNumber(u.floor) },
-  { label: 'النوع', value: (u) => unitTypeLabel(u.type) },
+  { label: 'النوع', value: (u) => unitTypeLabel(u.type, u.typeName) },
   { label: 'الحالة', value: (u) => (STATUS[u.status] ?? DEFAULT_STATUS).label },
   { label: 'المشروع', value: (u) => (u.project ? pickAr(u.project.name, '—') : '—') },
   { label: 'المدينة', value: (u) => cityLabel(u.project?.city) },
@@ -129,7 +129,7 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
               </div>
               <div className="flex flex-1 flex-col p-5">
                 <div className="line-clamp-1 text-sm text-ink-muted">
-                  {unitTypeLabel(u.type)}{project ? ` · ${project}` : ''}
+                  {unitTypeLabel(u.type, u.typeName)}{project ? ` · ${project}` : ''}
                 </div>
                 <div className="mt-1 font-display text-xl font-bold text-ink-strong">{formatPrice(u.price, currency)}</div>
                 <div className="mt-auto flex flex-wrap gap-2 pt-4">
@@ -178,7 +178,7 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
             const project = u.project ? pickAr(u.project.name) : '';
             return (
               <div key={u.id} className="border-s border-white/10 px-6 py-4 text-center">
-                <div className="line-clamp-1 text-sm font-bold">{unitTypeLabel(u.type)}</div>
+                <div className="line-clamp-1 text-sm font-bold">{unitTypeLabel(u.type, u.typeName)}</div>
                 {project && <div className="mt-0.5 line-clamp-1 text-xs text-white/65">{project}</div>}
               </div>
             );
@@ -221,7 +221,7 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
           return (
             <div key={u.id} className="overflow-hidden rounded-3xl border border-hairline bg-surface shadow-soft">
               <div className="flex items-center gap-3 border-b border-hairline bg-surface-soft/50 px-5 py-4">
-                <span className="font-display text-ink-strong">{unitTypeLabel(u.type)}</span>
+                <span className="font-display text-ink-strong">{unitTypeLabel(u.type, u.typeName)}</span>
                 {project && (
                   <span className="inline-flex items-center gap-1 text-xs text-ink-muted">
                     <MapPin className="h-3.5 w-3.5 text-gold-500" aria-hidden />

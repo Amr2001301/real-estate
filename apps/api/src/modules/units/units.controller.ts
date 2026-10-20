@@ -18,6 +18,8 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { UnitsService } from './units.service';
+import { UnitTypesService } from './unit-types.service';
+import { CreateUnitTypeDto, UpdateUnitTypeDto } from './dto/unit-type.dto';
 import {
   CalcInstallmentDto,
   CreateUnitDto,
@@ -30,7 +32,38 @@ import {
 @ApiTags('units')
 @Controller()
 export class UnitsController {
-  constructor(private readonly units: UnitsService) {}
+  constructor(
+    private readonly units: UnitsService,
+    private readonly unitTypes: UnitTypesService,
+  ) {}
+
+  // Unit types (F10): the company's list, managed by an admin.
+  @Public()
+  @Get('public/unit-types')
+  publicUnitTypes() {
+    return this.unitTypes.list(true);
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
+  @Permissions('units:read')
+  @Get('unit-types')
+  listUnitTypes() {
+    return this.unitTypes.list();
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('settings:write')
+  @Post('unit-types')
+  createUnitType(@Body() dto: CreateUnitTypeDto) {
+    return this.unitTypes.create(dto);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('settings:write')
+  @Patch('unit-types/:id')
+  updateUnitType(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUnitTypeDto) {
+    return this.unitTypes.update(id, dto);
+  }
 
   // Public
   @Public()

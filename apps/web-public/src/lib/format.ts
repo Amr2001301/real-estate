@@ -46,14 +46,31 @@ const UNIT_TYPE_LABELS: Record<string, string> = {
   '1br': 'شقة غرفة نوم',
   '2br': 'شقة غرفتين',
   '3br': 'شقة ثلاث غرف',
+  '4br': 'شقة ٤ غرف',
+  duplex: 'دوبلكس',
+  penthouse: 'بنتهاوس',
   villa: 'فيلا',
   townhouse: 'تاون هاوس',
+  'twin house': 'توين هاوس',
+  chalet: 'شاليه',
   office: 'مكتب',
   retail: 'محل تجاري',
+  shop: 'محل تجاري',
+  clinic: 'عيادة',
+  garage: 'جراج',
 };
 
-/** Map a backend unit `type` to an Arabic label; falls back to the raw value. */
-export function unitTypeLabel(type: string | null | undefined): string {
+/**
+ * A unit's type as a label: the company's name for it when the API sent one
+ * (each company names its own types), else a label for a default code, else
+ * the code itself.
+ */
+export function unitTypeLabel(
+  type: string | null | undefined,
+  name?: string | { ar?: string; en?: string } | null,
+): string {
+  const given = typeof name === 'string' ? name : name?.ar ?? name?.en;
+  if (given?.trim()) return given;
   if (!type) return '—';
   return UNIT_TYPE_LABELS[type.toLowerCase()] ?? type;
 }

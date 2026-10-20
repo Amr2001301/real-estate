@@ -5,7 +5,7 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import { Prisma, ReservationStatus, UnitStatus } from '@prisma/client';
+import { Prisma, ReservationStatus, UnitStatus, UnitUsage } from '@prisma/client';
 import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
@@ -21,6 +21,7 @@ import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { PlanLimitService } from '../../common/capabilities/plan-limit.service';
 import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { serializePublicUnit } from './public-unit.serializer';
+import { UnitTypesService } from './unit-types.service';
 import { arText, collectPages, isoDate, listCsv, listXlsx, type ListColumn } from '../../common/utils/list-export';
 import { ReportBrandService } from '../company-branding/report-brand.service';
 import { resetUnitWarranties } from '../contracts/unit-warranties';
@@ -72,7 +73,12 @@ export class UnitsService {
     private readonly planLimits: PlanLimitService,
     // Optional so unit tests can build the service without it.
     @Optional() private readonly reportBrand?: ReportBrandService,
-  ) {}
+    @Optional() unitTypes?: UnitTypesService,
+  ) {
+    this.unitTypes = unitTypes ?? new UnitTypesService(prisma);
+  }
+
+  private readonly unitTypes: UnitTypesService;
 
   // ── List export (the admin units / inventory pages) ─────────────────────
 
@@ -140,13 +146,17 @@ export class UnitsService {
     if (dto.status === UnitStatus.SOLD) {
       throw new BadRequestException('البيع يتم بعقد — سجّل العقد (ولو مُبرماً قبل النظام) لتصبح الوحدة مباعة');
     }
+    // The type is one of the company's (F10); its usage comes with it, and
+    // only a residential unit has bedrooms.
+    const type = await this.unitTypes.resolveActive(dto.type);
     const created = await this.prisma.unit.create({
       data: {
         buildingId: dto.buildingId,
         code: dto.code,
-        type: dto.type,
+        type: type.code,
+        usage: type.usage,
         area: dto.area,
-        bedrooms: dto.bedrooms,
+        bedrooms: type.usage === UnitUsage.RESIDENTIAL ? dto.bedrooms : 0,
         bathrooms: dto.bathrooms,
         floor: dto.floor,
         price: new Prisma.Decimal(dto.price),
@@ -200,7 +210,13 @@ export class UnitsService {
         : publicOnly
           ? { status: UnitStatus.AVAILABLE }
           : {}),
-      ...(query.typeIn?.length ? { type: { in: query.typeIn } } : query.type ? { type: query.type } : {}),
+      // Any case: a link written before the types had codes ("?type=office").
+      ...(query.typeIn?.length
+        ? { type: { in: query.typeIn } }
+        : query.type
+          ? { type: { equals: query.type, mode: 'insensitive' as const } }
+          : {}),
+      ...(query.usage ? { usage: query.usage } : {}),
       ...(query.bathrooms !== undefined ? { bathrooms: query.bathrooms } : {}),
       ...(query.priceMin !== undefined || query.priceMax !== undefined
         ? {
@@ -236,11 +252,13 @@ export class UnitsService {
       this.prisma.unit.count({ where }),
     ]);
 
+    // Each unit's type by its name (the company's list), not its code.
+    const typeNames = await this.unitTypes.names();
     if (publicOnly) {
       // No facets here: summed prices and per-status counts would give anyone
       // the company's sales volume (?status=SOLD) — they are staff KPIs.
       const serialized = data.map((u) =>
-        serializePublicUnit({ ...u, project: u.building.phase.project }),
+        serializePublicUnit({ ...u, project: u.building.phase.project, typeName: typeNames.get(u.type) ?? null }),
       );
       return paginate(serialized, total, { page, pageSize });
     }
@@ -268,7 +286,12 @@ export class UnitsService {
       },
     };
 
-    return paginate(data, total, { page, pageSize }, facets);
+    return paginate(
+      data.map((u) => ({ ...u, typeName: typeNames.get(u.type) ?? null })),
+      total,
+      { page, pageSize },
+      facets,
+    );
   }
 
   async findOne(id: string, publicOnly = false) {
@@ -305,24 +328,33 @@ export class UnitsService {
     if (publicOnly && unit.building.phase.project.status !== 'PUBLISHED') {
       throw new NotFoundException('Unit not found');
     }
+    const typeName = (await this.unitTypes.names()).get(unit.type) ?? null;
     if (publicOnly) {
-      return serializePublicUnit({ ...unit, project: unit.building.phase.project });
+      return serializePublicUnit({ ...unit, project: unit.building.phase.project, typeName });
     }
-    return unit;
+    return { ...unit, typeName };
   }
 
   async update(id: string, dto: UpdateUnitDto) {
     const unit = await this.prisma.unit.findUnique({ where: { id } });
     if (!unit) throw new NotFoundException('Unit not found');
+    // A new type must be one of the company's, switched on; the same type
+    // written differently ("villa" for "Villa") is no change.
+    const newType =
+      dto.type !== undefined && dto.type.trim().toLowerCase() !== unit.type.toLowerCase()
+        ? await this.unitTypes.resolveActive(dto.type)
+        : null;
+    const usage = newType?.usage ?? unit.usage;
+    const bedrooms = usage === UnitUsage.RESIDENTIAL ? dto.bedrooms : dto.bedrooms !== undefined || newType ? 0 : undefined;
     // A unit in a live deal keeps what was sold: its price, area, type, floor
     // and code are the deal's. Changing them rewrote the customer's contract
     // and portal with nothing on record. (Unchanged values pass — the edit
     // form sends every field.)
     const changed = [
       dto.code !== undefined && dto.code !== unit.code,
-      dto.type !== undefined && dto.type !== unit.type,
+      newType !== null && newType.code !== unit.type,
       dto.area !== undefined && dto.area !== Number(unit.area),
-      dto.bedrooms !== undefined && dto.bedrooms !== unit.bedrooms,
+      bedrooms !== undefined && bedrooms !== unit.bedrooms,
       dto.bathrooms !== undefined && dto.bathrooms !== unit.bathrooms,
       dto.floor !== undefined && dto.floor !== unit.floor,
       dto.price !== undefined && !new Prisma.Decimal(dto.price).equals(unit.price),
@@ -332,9 +364,12 @@ export class UnitsService {
     }
     const data: Prisma.UnitUpdateInput = {};
     if (dto.code !== undefined) data.code = dto.code;
-    if (dto.type !== undefined) data.type = dto.type;
+    if (newType) {
+      data.type = newType.code;
+      data.usage = newType.usage;
+    }
     if (dto.area !== undefined) data.area = dto.area;
-    if (dto.bedrooms !== undefined) data.bedrooms = dto.bedrooms;
+    if (bedrooms !== undefined) data.bedrooms = bedrooms;
     if (dto.bathrooms !== undefined) data.bathrooms = dto.bathrooms;
     if (dto.floor !== undefined) data.floor = dto.floor;
     if (dto.price !== undefined) data.price = new Prisma.Decimal(dto.price);

@@ -55,6 +55,9 @@ export interface PublicUnit {
   id: string;
   code: string;
   type: string;
+  /** The type's name from the company's list, in the reader's language. */
+  typeName?: string | { ar?: string; en?: string } | null;
+  usage?: 'RESIDENTIAL' | 'COMMERCIAL' | 'ADMINISTRATIVE' | 'MEDICAL' | 'PARKING';
   area: number;
   bedrooms: number;
   bathrooms: number;
