@@ -6,6 +6,7 @@ import type { ContractInstallment } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/format';
 import type { Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
+import { ActionTabs } from './action-tabs';
 import {
   changeContractPriceAction,
   payInstallmentsAction,
@@ -14,8 +15,10 @@ import {
   waiveMarkupAction,
 } from '../actions';
 
-const INPUT = 'h-9 w-full rounded-lg border border-hairline bg-white px-3 text-sm';
-const BTN = 'h-9 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white disabled:opacity-50';
+const INPUT =
+  'h-10 w-full rounded-xl border border-hairline bg-surface px-3.5 text-sm text-slate-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20';
+const BTN =
+  'h-10 rounded-xl bg-gradient-to-l from-brand-500 to-brand-600 px-6 text-sm font-bold text-[#1a1408] shadow-[0_8px_20px_-10px_rgba(201,162,77,0.8)] transition-opacity hover:opacity-90 disabled:opacity-50';
 const cents = (v: string | number) => Math.round(Number(v) * 100);
 
 // Money changes on a live contract: one payment for several installments,
@@ -82,18 +85,18 @@ export function PlanChangesPanel({
 
   return (
     <div className="space-y-4" data-testid="plan-changes">
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <ActionTabs labels={[m.planPayManyTitle, m.planSettleTitle, m.planPriceTitle, m.planWaiveTitle, m.planRescheduleTitle]}>
         <form
           onSubmit={run(payInstallmentsAction, { installmentIds: picked.join(','), amount: String(pickedTotal) })}
-          className="space-y-3 rounded-xl border border-hairline p-4"
+          className="space-y-3"
         >
-          <p className="text-sm font-bold text-slate-900">{m.planPayManyTitle}</p>
-          <p className="text-[12px] text-slate-500">{m.planPayManyHint}</p>
-          <div className="max-h-48 space-y-1 overflow-y-auto">
+          <p className="text-[12.5px] leading-relaxed text-slate-500">{m.planPayManyHint}</p>
+          <div className="max-h-60 divide-y divide-hairline overflow-y-auto rounded-2xl border border-hairline">
             {payable.map((i) => (
-              <label key={i.id} className="flex items-center gap-2 text-[13px] text-slate-700">
+              <label key={i.id} className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-[13px] text-slate-700 transition-colors hover:bg-surface-muted/50 has-[:checked]:bg-brand-500/[0.07]">
                 <input
                   type="checkbox"
+                  className="h-4 w-4 accent-[#c9a24d]"
                   checked={picked.includes(i.id)}
                   onChange={(e) =>
                     setPicked((p) => (e.target.checked ? [...p, i.id] : p.filter((x) => x !== i.id)))
@@ -112,11 +115,10 @@ export function PlanChangesPanel({
 
         <form
           onSubmit={run(settleContractAction, { amount: String(leftTotal) })}
-          className="space-y-3 rounded-xl border border-hairline p-4"
+          className="space-y-3"
         >
-          <p className="text-sm font-bold text-slate-900">{m.planSettleTitle}</p>
-          <p className="text-[12px] text-slate-500">{m.planSettleHint}</p>
-          <p className="text-sm tabular-nums text-slate-900">
+          <p className="text-[12.5px] leading-relaxed text-slate-500">{m.planSettleHint}</p>
+          <p className="rounded-2xl border border-brand-500/25 bg-brand-500/[0.07] px-4 py-3 text-sm tabular-nums text-slate-900">
             {m.planSettleLeft} <strong>{formatCurrency(leftTotal, currency, locale)}</strong>
           </p>
           {methodSelect}
@@ -125,9 +127,8 @@ export function PlanChangesPanel({
           </button>
         </form>
 
-        <form onSubmit={run(changeContractPriceAction)} className="space-y-3 rounded-xl border border-hairline p-4">
-          <p className="text-sm font-bold text-slate-900">{m.planPriceTitle}</p>
-          <p className="text-[12px] text-slate-500">{m.planPriceHint}</p>
+        <form onSubmit={run(changeContractPriceAction)} className="space-y-3">
+          <p className="text-[12.5px] leading-relaxed text-slate-500">{m.planPriceHint}</p>
           <input
             name="totalAmount"
             type="number"
@@ -144,9 +145,8 @@ export function PlanChangesPanel({
           </button>
         </form>
 
-        <form onSubmit={run(waiveMarkupAction)} className="space-y-3 rounded-xl border border-hairline p-4">
-          <p className="text-sm font-bold text-slate-900">{m.planWaiveTitle}</p>
-          <p className="text-[12px] text-slate-500">{m.planWaiveHint}</p>
+        <form onSubmit={run(waiveMarkupAction)} className="space-y-3">
+          <p className="text-[12.5px] leading-relaxed text-slate-500">{m.planWaiveHint}</p>
           <input
             name="amount"
             type="number"
@@ -163,9 +163,8 @@ export function PlanChangesPanel({
           </button>
         </form>
 
-        <form onSubmit={run(rescheduleContractAction)} className="space-y-3 rounded-xl border border-hairline p-4">
-          <p className="text-sm font-bold text-slate-900">{m.planRescheduleTitle}</p>
-          <p className="text-[12px] text-slate-500">{m.planRescheduleHint}</p>
+        <form onSubmit={run(rescheduleContractAction)} className="space-y-3">
+          <p className="text-[12.5px] leading-relaxed text-slate-500">{m.planRescheduleHint}</p>
           <input
             name="months"
             type="number"
@@ -184,8 +183,8 @@ export function PlanChangesPanel({
             {m.planRescheduleBtn}
           </button>
         </form>
-      </div>
-      {error && <p className="text-sm text-danger-700">{error}</p>}
+      </ActionTabs>
+      {error && <p className="rounded-xl bg-danger-500/10 px-4 py-2.5 text-sm text-danger-600">{error}</p>}
     </div>
   );
 }

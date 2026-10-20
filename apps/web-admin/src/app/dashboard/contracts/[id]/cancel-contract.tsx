@@ -48,7 +48,7 @@ export function CancelContract({
         type="button"
         data-testid="cancel-contract-open"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 rounded-xl border border-danger-100 bg-white px-3 py-2 text-[13px] font-semibold text-danger-700 hover:bg-danger-50"
+        className="inline-flex items-center gap-1.5 rounded-xl border border-danger-500/40 px-4 py-2.5 text-[13px] font-semibold text-danger-600 transition-colors hover:bg-danger-500/10"
       >
         <Ban className="h-4 w-4" />
         {m.cancelOpen}
@@ -63,12 +63,9 @@ export function CancelContract({
   ] as const;
 
   return (
-    <form action={submit} data-testid="cancel-contract-form" className="space-y-4 rounded-2xl border border-danger-100 bg-danger-50/40 p-4">
-      <div>
-        <h3 className="text-[15px] font-bold text-danger-700">{m.cancelTitle}</h3>
-        <p className="mt-1 text-xs text-slate-600">{m.cancelHint}</p>
-      </div>
-      <p className="text-[13px] text-slate-700">
+    <form action={submit} data-testid="cancel-contract-form" className="space-y-4">
+      <p className="text-[12.5px] leading-relaxed text-slate-500">{m.cancelHint}</p>
+      <p className="rounded-2xl border border-hairline bg-surface-muted/50 px-4 py-3 text-[13px] text-slate-700">
         {m.cancelCollected}:{' '}
         <span className="font-bold tabular-nums">{formatCurrency(suggestion.totalCollected, currency, locale)}</span>
       </p>
@@ -135,7 +132,7 @@ export function CancelContract({
           type="button"
           onClick={() => setOpen(false)}
           disabled={pending}
-          className="h-9 rounded-xl border border-hairline bg-white px-4 text-[13px] font-semibold text-slate-700"
+          className="h-9 rounded-xl border border-hairline bg-surface px-4 text-[13px] font-semibold text-slate-700"
         >
           {m.cancelBack}
         </button>

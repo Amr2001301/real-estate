@@ -7,11 +7,13 @@ import type { ContractAmendment, Unit, User } from '@/lib/types';
 import { formatCurrency, formatDate, tx } from '@/lib/format';
 import type { Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
+import { ActionTabs } from './action-tabs';
 import { swapContractUnitAction, transferContractAction } from '../actions';
 
-const INPUT = 'h-9 w-full rounded-lg border border-hairline bg-white px-3 text-sm';
+const INPUT =
+  'h-10 w-full rounded-xl border border-hairline bg-surface px-3.5 text-sm text-slate-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20';
 const BTN =
-  'h-9 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white disabled:opacity-50';
+  'h-10 rounded-xl bg-gradient-to-l from-brand-500 to-brand-600 px-6 text-sm font-bold text-[#1a1408] shadow-[0_8px_20px_-10px_rgba(201,162,77,0.8)] transition-opacity hover:opacity-90 disabled:opacity-50';
 
 // History of transfers (تنازل) and unit swaps (تبديل), plus — on a live
 // contract — the two forms an admin uses to make them.
@@ -62,13 +64,13 @@ export function AmendmentsPanel({
   return (
     <div className="space-y-5" data-testid="contract-amendments">
       {history.length === 0 ? (
-        <p className="text-sm text-slate-500">{m.amendmentsEmpty}</p>
+        <p className="rounded-2xl border border-dashed border-hairline px-4 py-5 text-center text-[13px] text-slate-500">{m.amendmentsEmpty}</p>
       ) : (
-        <ul className="divide-y divide-hairline rounded-xl border border-hairline">
+        <ul className="divide-y divide-hairline overflow-hidden rounded-2xl border border-hairline">
           {history.map((a) => (
             <li key={a.id} className="px-4 py-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700">
+                <span className="rounded-full bg-brand-500/12 px-2.5 py-0.5 text-[11.5px] font-semibold text-brand-700">
                   {a.type === 'TRANSFER'
                     ? m.amendTransfer
                     : a.type === 'UNIT_SWAP'
@@ -108,10 +110,9 @@ export function AmendmentsPanel({
       )}
 
       {live && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <form onSubmit={submit(transferContractAction)} className="space-y-3 rounded-xl border border-hairline p-4">
-            <p className="text-sm font-bold text-slate-900">{m.transferTitle}</p>
-            <p className="text-[12px] text-slate-500">{m.transferHint}</p>
+        <ActionTabs labels={[m.transferTitle, m.swapTitle]}>
+          <form onSubmit={submit(transferContractAction)} className="space-y-3">
+              <p className="text-[12.5px] leading-relaxed text-slate-500">{m.transferHint}</p>
             <label className="block text-[12px] font-semibold text-slate-700">{m.transferTo}</label>
             <SearchSelect<User>
               name="toCustomerId"
@@ -140,9 +141,8 @@ export function AmendmentsPanel({
             </button>
           </form>
 
-          <form onSubmit={submit(swapContractUnitAction)} className="space-y-3 rounded-xl border border-hairline p-4">
-            <p className="text-sm font-bold text-slate-900">{m.swapTitle}</p>
-            <p className="text-[12px] text-slate-500">{m.swapHint}</p>
+          <form onSubmit={submit(swapContractUnitAction)} className="space-y-3">
+              <p className="text-[12.5px] leading-relaxed text-slate-500">{m.swapHint}</p>
             <label className="block text-[12px] font-semibold text-slate-700">{m.swapUnit}</label>
             <SearchSelect<Unit>
               name="unitId"
@@ -179,9 +179,9 @@ export function AmendmentsPanel({
               {m.swapBtn}
             </button>
           </form>
-        </div>
+        </ActionTabs>
       )}
-      {error && <p className="text-sm text-danger-700">{error}</p>}
+      {error && <p className="rounded-xl bg-danger-500/10 px-4 py-2.5 text-sm text-danger-600">{error}</p>}
     </div>
   );
 }

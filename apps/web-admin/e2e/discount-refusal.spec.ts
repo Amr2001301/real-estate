@@ -41,6 +41,8 @@ test('a discount over the cap says so', async ({ page, request, context }) => {
   await setApprover(false);
   try {
     await gotoReady(page, `/dashboard/contracts/${contractId}`);
+    // The plan changes sit in tabs: open the price one first.
+    await page.getByRole('tab', { name: 'تعديل سعر العقد' }).click();
     const form = page.locator('form:has([data-testid="price-submit"])');
     await form.locator('input[name="totalAmount"]').fill('1000');
     await form.locator('input[name="reason"]').fill('PW discount over cap');
