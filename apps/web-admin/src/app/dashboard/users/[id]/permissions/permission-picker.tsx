@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Search, ShieldCheck, CheckCircle2, AlertCircle, Loader2,
+  Search, ShieldCheck, AlertCircle, Loader2,
   CheckCheck, X, TrendingUp, Calendar, Bookmark, FileText,
   CreditCard, Wrench, BarChart3, Lock, LayoutGrid, Award,
   CircleDollarSign, Users as UsersIcon,
@@ -147,7 +147,7 @@ export function PermissionPicker({ userId, userName, assigned, available, locale
       )}
 
       {/* ── Toolbar card ─────────────────────────────────────────────────── */}
-      <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
+      <div className="sticky top-2 z-10 overflow-hidden rounded-[22px] border border-hairline bg-surface shadow-[0_10px_30px_-18px_rgb(0_0_0/0.45)]">
 
         {/* Count row */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-hairline">
@@ -241,80 +241,85 @@ export function PermissionPicker({ userId, userName, assigned, available, locale
                 className="bg-surface border border-hairline rounded-[22px] overflow-hidden"
               >
                 {/* Group header */}
-                <div className="flex items-center justify-between px-5 py-3 border-b border-hairline bg-surface-muted/40">
+                <div className="flex items-center justify-between gap-3 border-b border-hairline px-5 py-3.5">
                   <div className="flex items-center gap-2.5">
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-brand-100 text-brand-700 shrink-0 [&_svg]:h-3.5 [&_svg]:w-3.5">
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500/12 text-brand-700 shrink-0 [&_svg]:h-4 [&_svg]:w-4">
                       {icon}
                     </span>
-                    <h3 className="text-[13px] font-semibold text-slate-800">{groupLabel}</h3>
+                    <h3 className="font-heading text-[16px] font-bold text-slate-900">{groupLabel}</h3>
                   </div>
-                  <span
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() =>
+                        allGranted
+                          ? run([], rows.map((r) => r.code), null)
+                          : run(rows.filter((r) => !r.assigned).map((r) => r.code), [], null)
+                      }
+                      className="rounded-full border border-hairline px-3 py-1 text-[11.5px] font-semibold text-slate-600 transition-colors hover:border-brand-500/40 hover:text-brand-700 disabled:opacity-50"
+                    >
+                      {allGranted ? m.deselectAllBtn : m.selectAllBtn}
+                    </button>
+                    <span
                     className={cn(
                       'inline-flex h-5 min-w-[40px] px-2 items-center justify-center rounded-full text-[10px] font-bold tabular-nums',
-                      allGranted  ? 'bg-success-100 text-success-700' :
-                      someGranted ? 'bg-brand-100   text-brand-700'   :
-                                    'bg-slate-100   text-slate-500',
+                      allGranted  ? 'bg-emerald-500/12 text-emerald-600' :
+                      someGranted ? 'bg-brand-500/12 text-brand-700' :
+                                    'bg-slate-500/10 text-slate-500',
                     )}
                   >
                     {grantedInGroup}/{rows.length}
                   </span>
+                  </div>
                 </div>
 
-                {/* Permission rows */}
-                <ul className="divide-y divide-hairline">
+                {/* Permission tiles: two to a line; the switch grants or revokes */}
+                <ul className="grid grid-cols-1 gap-px bg-hairline md:grid-cols-2 [&>li:last-child:nth-child(odd)]:md:col-span-2">
                   {rows.map((row) => (
-                    <li key={row.id}>
-                      <label
+                    <li key={row.id} className="bg-surface">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={row.assigned}
+                        aria-label={row.label}
+                        title={row.code}
+                        disabled={pending}
+                        onClick={() => toggle(row)}
+                        data-testid="permission-toggle"
                         className={cn(
-                          'flex items-start gap-4 px-5 py-4 cursor-pointer transition-colors',
-                          row.assigned
-                            ? 'bg-success-50/20 hover:bg-success-50/30'
-                            : 'hover:bg-canvas/40',
+                          'flex h-full w-full items-center gap-4 px-5 py-3.5 text-start transition-colors disabled:cursor-wait',
+                          row.assigned ? 'bg-brand-500/[0.05] hover:bg-brand-500/[0.08]' : 'hover:bg-surface-muted/50',
                         )}
                       >
-                        {/* Content */}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[13px] font-semibold text-slate-900 leading-tight">
-                              {row.label}
-                            </span>
-                            <span
-                              className={cn(
-                                'inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold leading-tight shrink-0',
-                                PERMISSION_TYPE_CLS[row.type],
-                              )}
-                            >
+                        <span className="min-w-0 flex-1">
+                          <span className="flex flex-wrap items-center gap-2">
+                            <span className="text-[13.5px] font-semibold leading-tight text-slate-900">{row.label}</span>
+                            <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold leading-tight', PERMISSION_TYPE_CLS[row.type])}>
                               {row.type}
                             </span>
-                            {busyCode === row.code && (
-                              <Loader2 className="h-3 w-3 animate-spin text-slate-400 shrink-0" />
+                          </span>
+                          {row.desc && <span className="mt-1 block text-[12px] leading-relaxed text-slate-500">{row.desc}</span>}
+                        </span>
+                        {busyCode === row.code ? (
+                          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-slate-400" />
+                        ) : (
+                          <span
+                            aria-hidden
+                            className={cn(
+                              'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors',
+                              row.assigned ? 'bg-brand-500' : 'bg-slate-400/30',
                             )}
-                          </div>
-                          {row.desc && (
-                            <p className="text-[12px] text-slate-500 mt-0.5 leading-relaxed">
-                              {row.desc}
-                            </p>
-                          )}
-                          <p className="font-mono text-[11px] text-slate-400 mt-1.5 select-all" dir="ltr">
-                            {row.code}
-                          </p>
-                        </div>
-
-                        {/* Granted tick OR checkbox */}
-                        <div className="shrink-0 mt-0.5">
-                          {row.assigned && busyCode !== row.code ? (
-                            <CheckCircle2 className="h-5 w-5 text-success-500" />
-                          ) : (
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 rounded border-hairline text-brand-600 focus:ring-2 focus:ring-brand-600/30 disabled:opacity-40 cursor-pointer mt-0.5"
-                              checked={row.assigned}
-                              disabled={pending}
-                              onChange={() => toggle(row)}
+                          >
+                            <span
+                              className={cn(
+                                'absolute h-5 w-5 rounded-full bg-[#fff] shadow transition-all',
+                                row.assigned ? 'start-[22px]' : 'start-0.5',
+                              )}
                             />
-                          )}
-                        </div>
-                      </label>
+                          </span>
+                        )}
+                      </button>
                     </li>
                   ))}
                 </ul>
