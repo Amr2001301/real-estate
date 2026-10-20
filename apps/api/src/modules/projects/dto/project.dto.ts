@@ -12,9 +12,10 @@ import {
   MinLength,
   ValidateNested,
   Max,
+  IsPositive,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { ProjectStatus } from '@prisma/client';
+import { ProjectStatus, ProjectType } from '@prisma/client';
 import { ENTITY_CODE_PATTERN, normalizeEntityCode } from '../../../common/utils/entity-code';
 import { MAX_PAGE_SIZE } from '../../../common/utils/pagination';
 
@@ -66,6 +67,13 @@ export class CreateProjectDto {
   @ValidateNested({ each: true })
   @Type(() => TranslatableDto)
   services?: TranslatableDto[];
+
+  // The project's data (F10); null clears one.
+  @IsOptional() @IsEnum(ProjectType) type?: ProjectType | null;
+  @IsOptional() @IsString() @MaxLength(100) district?: string | null;
+  /** Land area of the whole project, m². */
+  @IsOptional() @IsNumber() @IsPositive() totalArea?: number | null;
+  @IsOptional() @IsString() @MaxLength(100) licenseNumber?: string | null;
 }
 
 export class UpdateProjectDto {
@@ -114,6 +122,13 @@ export class UpdateProjectDto {
   @ValidateNested({ each: true })
   @Type(() => TranslatableDto)
   services?: TranslatableDto[];
+
+  // The project's data (F10); null clears one.
+  @IsOptional() @IsEnum(ProjectType) type?: ProjectType | null;
+  @IsOptional() @IsString() @MaxLength(100) district?: string | null;
+  /** Land area of the whole project, m². */
+  @IsOptional() @IsNumber() @IsPositive() totalArea?: number | null;
+  @IsOptional() @IsString() @MaxLength(100) licenseNumber?: string | null;
 }
 
 /**
@@ -144,6 +159,11 @@ export class ProjectQueryDto {
   @IsOptional()
   @IsEnum(ProjectStatus)
   status?: ProjectStatus;
+
+  /** Compounds, coastal, administrative, … (F10). */
+  @IsOptional()
+  @IsEnum(ProjectType)
+  type?: ProjectType;
 
   @IsOptional()
   @IsBoolean()

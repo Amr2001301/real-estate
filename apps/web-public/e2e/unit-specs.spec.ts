@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { API_BASE, SLUG, adminApiHeaders } from './helpers/staff';
 
 /**
  * F10 — the public unit page showed one area and the bedrooms, even for a
@@ -6,20 +7,9 @@ import { test, expect } from '@playwright/test';
  * orientation (and its price per meter and model), and the units list filters by
  * finishing.
  */
-const API_BASE = process.env.E2E_API_BASE_URL ?? 'http://localhost:4000';
-const SLUG = process.env.E2E_COMPANY_SLUG ?? 'default';
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'ChangeMe123!';
 
 test('a unit page shows its specs and the list filters by finishing', async ({ page, request }) => {
-  const login = await request.post(`${API_BASE}/v1/auth/login-staff`, {
-    data: { slug: SLUG, email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
-  });
-  expect(login.ok()).toBeTruthy();
-  const headers = {
-    Authorization: `Bearer ${(await login.json()).tokens.accessToken as string}`,
-    'X-Tenant-Slug': SLUG,
-  };
+  const headers = await adminApiHeaders(request);
   const listed = await (await request.get(`${API_BASE}/v1/units?pageSize=100`, { headers })).json();
   const published = (
     listed.data as Array<{ buildingId: string; building: { phase: { projectId: string; project: { status: string } } } }>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Star, X, ChevronDown, MapPin, ArrowDownUp } from 'lucide-react';
+import { Search, Star, X, ChevronDown, MapPin, ArrowDownUp, Building2 } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/Button';
@@ -15,6 +15,8 @@ interface ProjectsFilterBarProps {
   initialCity: string;
   initialFeatured: boolean;
   initialSort: string;
+  /** Compound, coastal, … (F10). */
+  initialType?: string;
   cities: string[];
   locale: Locale;
 }
@@ -24,6 +26,7 @@ export function ProjectsFilterBar({
   initialCity,
   initialFeatured,
   initialSort,
+  initialType = '',
   cities,
   locale,
 }: ProjectsFilterBarProps) {
@@ -35,17 +38,21 @@ export function ProjectsFilterBar({
   const [city, setCity] = useState(initialCity);
   const [featured, setFeatured] = useState(initialFeatured);
   const [sort, setSort] = useState(initialSort);
+  const [type, setType] = useState(initialType);
+  const projectTypes = siteT(locale).projectTypes;
 
-  function apply(next: { q?: string; city?: string; featured?: boolean; sort?: string }) {
+  function apply(next: { q?: string; city?: string; featured?: boolean; sort?: string; type?: string }) {
     const params = new URLSearchParams();
     const nextQ = next.q ?? q;
     const nextCity = next.city ?? city;
     const nextFeatured = next.featured ?? featured;
     const nextSort = next.sort ?? sort;
+    const nextType = next.type ?? type;
     if (nextQ.trim()) params.set('q', nextQ.trim());
     if (nextCity) params.set('city', nextCity);
     if (nextFeatured) params.set('featured', 'true');
     if (nextSort) params.set('sort', nextSort);
+    if (nextType) params.set('type', nextType);
     const qs = params.toString();
     router.push((qs ? `${routes.projects}?${qs}` : routes.projects) as never);
   }
@@ -55,10 +62,11 @@ export function ProjectsFilterBar({
     setCity('');
     setFeatured(false);
     setSort('');
+    setType('');
     router.push(routes.projects as never);
   }
 
-  const hasFilters = q.trim() !== '' || city !== '' || featured || sort !== '';
+  const hasFilters = q.trim() !== '' || city !== '' || featured || sort !== '' || type !== '';
 
   return (
     <form
@@ -100,6 +108,25 @@ export function ProjectsFilterBar({
             <ChevronDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/50" aria-hidden />
           </div>
         )}
+
+        <div className="relative min-w-[160px]">
+          <Building2 className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gold-500" aria-hidden />
+          <Select
+            value={type}
+            onChange={(e) => {
+              setType(e.target.value);
+              apply({ type: e.target.value });
+            }}
+            aria-label={t.typeLabel}
+            className="h-12 pr-11 pl-9"
+          >
+            <option value="">{t.allTypes}</option>
+            {Object.entries(projectTypes).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </Select>
+          <ChevronDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/50" aria-hidden />
+        </div>
 
         <button
           type="button"

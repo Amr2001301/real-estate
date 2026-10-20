@@ -49,6 +49,7 @@ export default async function ProjectDetailPage({
   const { id } = await params;
   const [currency, locale] = await Promise.all([getReportsCurrency(), getLocale()]);
   const m = uiT(locale).projectDetailPage;
+  const pf = uiT(locale).pages.projectsForm;
 
   const [projectRes, unitsRes] = await Promise.all([
     safe(api.get<Project>(`/projects/${id}`)),
@@ -200,6 +201,7 @@ export default async function ProjectDetailPage({
                 )}
               </div>
               <p className="text-sm text-slate-500">
+                {project.district ? `${project.district} · ` : ''}
                 {project.city}
                 {project.lat && project.lng && (
                   <span className="font-mono text-slate-400 ms-1.5">
@@ -207,6 +209,17 @@ export default async function ProjectDetailPage({
                   </span>
                 )}
               </p>
+              {(project.type || project.totalArea || project.licenseNumber) && (
+                <p className="text-sm text-slate-500 mt-1" data-testid="project-data">
+                  {[
+                    project.type ? pf.projectTypes[project.type] : null,
+                    project.totalArea ? `${pf.labelTotalArea}: ${project.totalArea.toLocaleString('en-US')}` : null,
+                    project.licenseNumber ? `${pf.labelLicense}: ${project.licenseNumber}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </p>
+              )}
 
               {/* Admin actions */}
               {isAdmin && (
