@@ -137,6 +137,7 @@ const META: Record<string, PermissionMeta> = {
   'reservations:reject': { label: 'رفض الحجوزات', description: 'رفض طلب الحجز.', category: 'الحجوزات', type: 'اعتماد' },
   'reservations:cancel': { label: 'إلغاء الحجوزات', description: 'إلغاء حجز قائم.', category: 'الحجوزات', type: 'اعتماد' },
   'reservations:convert': { label: 'تحويل الحجز إلى عقد', description: 'إنشاء عقد من الحجز المعتمد.', category: 'الحجوزات', type: 'اعتماد' },
+  'reservations:delete': { label: 'حذف الحجوزات', description: 'حذف حجز أو استعادته.', category: 'الحجوزات', type: 'حذف' },
   'reservations:booking-payment': { label: 'تأكيد مبلغ الحجز', description: 'تأكيد أو إلغاء تأكيد دفع مبلغ الحجز.', category: 'الحجوزات', type: 'مالي' },
 
   // ── العقود ───────────────────────────────────────────────────────────────
@@ -144,11 +145,18 @@ const META: Record<string, PermissionMeta> = {
   'contracts:upload': { label: 'إنشاء العقود وإرفاق الملفات', description: 'إنشاء عقد وإرفاق ملف PDF.', category: 'العقود', type: 'تعديل' },
   'contracts:update': { label: 'تعديل العقود', description: 'تحديث الحقول القابلة للتعديل في العقد.', category: 'العقود', type: 'تعديل' },
   'contracts:sign': { label: 'توقيع العقود', description: 'اعتماد توقيع العقد رسمياً.', category: 'العقود', type: 'اعتماد' },
+  'contracts:cancel': { label: 'إلغاء العقود', description: 'إلغاء العقد وتطبيق التسوية المالية.', category: 'العقود', type: 'اعتماد' },
+  'contracts:release-unit': { label: 'إعادة الوحدة للبيع بعد الإلغاء', description: 'إتاحة الوحدة بعد إلغاء يحتاج موافقة.', category: 'العقود', type: 'اعتماد' },
+  'contracts:delete': { label: 'حذف العقود', description: 'حذف عقد أو استعادته.', category: 'العقود', type: 'حذف' },
 
   // ── الدفعات ──────────────────────────────────────────────────────────────
   'deposits:read': { label: 'عرض الدفعات', description: 'الاطلاع على سجل الدفعات المالية.', category: 'الدفعات', type: 'قراءة' },
   'deposits:register': { label: 'تسجيل دفعة', description: 'تسجيل دفعة مالية جديدة.', category: 'الدفعات', type: 'مالي' },
   'deposits:verify': { label: 'اعتماد الدفعات', description: 'التحقق من الدفعة واعتمادها.', category: 'الدفعات', type: 'مالي' },
+  'deposits:reverse': { label: 'عكس دفعة معتمدة', description: 'عكس دفعة معتمدة يدويًا مع تسجيل التصحيح.', category: 'الدفعات', type: 'مالي' },
+  'deposits:delete': { label: 'حذف الدفعات', description: 'حذف دفعة أو استعادتها.', category: 'الدفعات', type: 'حذف' },
+  'payment-instruments:manage': { label: 'إدارة الشيكات والتحويلات', description: 'تسجيل الشيكات والتحويلات البنكية وتغيير حالتها.', category: 'الدفعات', type: 'مالي' },
+  'payment-instruments:bounce': { label: 'تسجيل ارتداد شيك', description: 'تسجيل شيك مرتد (لمدير النظام).', category: 'الدفعات', type: 'مالي' },
   'installments:read': { label: 'عرض خطط التقسيط', description: 'الاطلاع على خطط وأقساط التقسيط.', category: 'الدفعات', type: 'قراءة' },
   'installments:manage': { label: 'إدارة خطط التقسيط', description: 'إنشاء وتعديل خطط التقسيط.', category: 'الدفعات', type: 'إداري' },
   'installments:activate': { label: 'تفعيل خطط التقسيط', description: 'تفعيل خطة تقسيط للعقد.', category: 'الدفعات', type: 'إداري' },
@@ -160,6 +168,7 @@ const META: Record<string, PermissionMeta> = {
   'maintenance:assign': { label: 'إسناد الصيانة', description: 'إسناد طلب الصيانة لمسؤول.', category: 'الصيانة', type: 'تعديل' },
   'maintenance:resolve': { label: 'إنهاء طلبات الصيانة', description: 'إغلاق أو حل طلب الصيانة.', category: 'الصيانة', type: 'تعديل' },
   'maintenance:categories:manage': { label: 'إدارة فئات الصيانة', description: 'إضافة وتعديل فئات الصيانة.', category: 'الصيانة', type: 'إداري' },
+  'maintenance:items:manage': { label: 'إدارة بنود الصيانة والضمان', description: 'إدارة بنود الصيانة والضمان للوحدات.', category: 'الصيانة', type: 'إداري' },
 
   // ── المستندات ────────────────────────────────────────────────────────────
   'documents:read': { label: 'عرض المستندات', description: 'الاطلاع على مستندات النظام.', category: 'المستندات', type: 'قراءة' },
@@ -199,6 +208,7 @@ const META: Record<string, PermissionMeta> = {
   'broker_payouts:process': { label: 'بدء معالجة مدفوعات الوسطاء', description: 'بدء تنفيذ دفعة الوسيط.', category: 'عمولات الوسطاء', type: 'مالي' },
   'broker_payouts:pay': { label: 'تعليم مدفوعات الوسطاء كمدفوعة', description: 'تأكيد صرف دفعة الوسيط.', category: 'عمولات الوسطاء', type: 'مالي' },
   'broker_payouts:cancel': { label: 'إلغاء مدفوعات الوسطاء', description: 'إلغاء دفعة وسيط.', category: 'عمولات الوسطاء', type: 'اعتماد' },
+  'broker-commissions:clawback:resolve': { label: 'تسوية استرداد عمولات الوسطاء', description: 'تحصيل أو إعفاء مستحق مسترد من عمولة ملغاة.', category: 'عمولات الوسطاء', type: 'مالي' },
 
   // ── عمولات المبيعات ──────────────────────────────────────────────────────
   'bonus:rules:manage': { label: 'إدارة قواعد العمولات', description: 'إنشاء وتعديل قواعد عمولات المبيعات.', category: 'عمولات المبيعات', type: 'إداري' },
@@ -206,6 +216,7 @@ const META: Record<string, PermissionMeta> = {
   'bonus:entries:create': { label: 'إنشاء مستحقات المبيعات', description: 'تسجيل مستحق عمولة يدوياً.', category: 'عمولات المبيعات', type: 'تعديل' },
   'bonus:entries:approve': { label: 'اعتماد مستحقات المبيعات', description: 'اعتماد مستحقات أو عمولات مندوبي المبيعات.', category: 'عمولات المبيعات', type: 'اعتماد' },
   'bonus:entries:pay': { label: 'صرف مستحقات المبيعات', description: 'تعليم مستحق العمولة كمدفوع.', category: 'عمولات المبيعات', type: 'مالي' },
+  'bonus:clawback:resolve': { label: 'تسوية استرداد مكافآت المبيعات', description: 'تحصيل أو إعفاء مستحق مسترد من مكافأة ملغاة.', category: 'عمولات المبيعات', type: 'مالي' },
   'targets:read': { label: 'عرض أهداف المبيعات', description: 'الاطلاع على أهداف وأداء المبيعات.', category: 'عمولات المبيعات', type: 'قراءة' },
   'targets:manage': { label: 'إدارة أهداف المبيعات', description: 'تحديد وتعديل أهداف المبيعات.', category: 'عمولات المبيعات', type: 'إداري' },
 
@@ -220,11 +231,14 @@ const META: Record<string, PermissionMeta> = {
   'users:update': { label: 'تعديل المستخدمين', description: 'تحديث بيانات المستخدم.', category: 'المستخدمون والصلاحيات', type: 'إداري' },
   'users:activate': { label: 'تفعيل المستخدمين', description: 'تفعيل حساب مستخدم.', category: 'المستخدمون والصلاحيات', type: 'إداري' },
   'users:deactivate': { label: 'إيقاف المستخدمين', description: 'تعطيل حساب مستخدم.', category: 'المستخدمون والصلاحيات', type: 'إداري' },
+  'users:delete': { label: 'حذف المستخدمين', description: 'حذف حساب مستخدم.', category: 'المستخدمون والصلاحيات', type: 'حذف' },
+  'users:restore': { label: 'استعادة المستخدمين', description: 'استعادة حساب مستخدم محذوف.', category: 'المستخدمون والصلاحيات', type: 'إداري' },
   'permissions:manage': { label: 'إدارة الصلاحيات', description: 'منح وسحب الصلاحيات للمستخدمين.', category: 'المستخدمون والصلاحيات', type: 'إداري' },
 
   // ── النظام والأمان ───────────────────────────────────────────────────────
   'audit:read': { label: 'عرض سجلات التدقيق', description: 'يسمح بمراجعة عمليات المستخدمين والتغييرات المهمة في النظام.', category: 'النظام والأمان', type: 'قراءة' },
   'settings:read': { label: 'عرض الإعدادات', description: 'الاطلاع على إعدادات النظام.', category: 'النظام والأمان', type: 'قراءة' },
+  'company_branding:manage': { label: 'إدارة الهوية البصرية', description: 'تعديل شعار الشركة وألوانها وبيانات التواصل.', category: 'النظام والأمان', type: 'إداري' },
   'settings:write': { label: 'تعديل الإعدادات', description: 'تغيير إعدادات النظام.', category: 'النظام والأمان', type: 'إداري' },
 
   // ── أخرى (محتوى/إشعارات) ─────────────────────────────────────────────────

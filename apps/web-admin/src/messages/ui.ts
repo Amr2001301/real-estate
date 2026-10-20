@@ -1223,6 +1223,8 @@ const UI = {
           inactiveNone: 'كل الحسابات مفعّلة',
           inactiveSome: 'لا يستطيعون الدخول',
           adminSub: 'مدير النظام ومدير المبيعات',
+          rolesSub: (n: number) => (n === 1 ? 'في دور واحد' : n === 2 ? 'في دورين' : `موزّعون على ${n} أدوار`),
+          allRoles: 'الكل',
         },
         change: 'تغيير',
         roleLabels: {
@@ -6834,6 +6836,8 @@ const UI = {
           inactiveNone: 'Every account is active',
           inactiveSome: 'Cannot sign in',
           adminSub: 'Admins and sales managers',
+          rolesSub: (n: number) => `Across ${n} role${n !== 1 ? 's' : ''}`,
+          allRoles: 'All',
         },
         change: 'Change',
         roleLabels: {

@@ -36,13 +36,13 @@ interface Search { q?: string }
 type EnrichedPermission = PermissionItem & { meta: PermissionMeta };
 
 const ROLE_BADGE_CLS: Record<UserRole, string> = {
-  ADMIN:                  'bg-purple-100 text-purple-700',
-  SALES_MANAGER:          'bg-blue-100 text-blue-700',
-  SALES:                  'bg-brand-100 text-brand-700',
-  MAINTENANCE_SUPERVISOR: 'bg-orange-100 text-orange-700',
-  CLIENT:                 'bg-slate-100 text-slate-600',
-  CUSTOMER:               'bg-teal-100 text-teal-700',
-  BROKER:                 'bg-indigo-100 text-indigo-700',
+  ADMIN:                  'bg-brand-500/12 text-brand-700',
+  SALES_MANAGER:          'bg-sky-500/12 text-sky-600',
+  SALES:                  'bg-emerald-500/12 text-emerald-600',
+  MAINTENANCE_SUPERVISOR: 'bg-orange-500/12 text-orange-600',
+  CLIENT:                 'bg-slate-500/10 text-slate-600',
+  CUSTOMER:               'bg-teal-500/12 text-teal-600',
+  BROKER:                 'bg-indigo-500/12 text-indigo-600',
 };
 
 const CATEGORY_ICON: Record<PermissionCategory, ReactNode> = {
@@ -124,7 +124,11 @@ export default async function PermissionsPage({
       .sort((a, b) => a.meta.label.localeCompare(b.meta.label, 'ar')),
   })).filter((s) => s.items.length > 0);
 
-  const users = usersRes.data?.data ?? [];
+  // Staff first (they are who permissions are for), then the rest.
+  const STAFF: UserRole[] = ['ADMIN', 'SALES_MANAGER', 'SALES', 'MAINTENANCE_SUPERVISOR'];
+  const users = (usersRes.data?.data ?? [])
+    .slice()
+    .sort((a, b) => Number(!STAFF.includes(a.role)) - Number(!STAFF.includes(b.role)));
 
   const totalGroups = PERMISSION_CATEGORIES.filter((cat) =>
     all.some((p) => p.meta.category === cat),
@@ -257,47 +261,30 @@ export default async function PermissionsPage({
                   }
                   padded={false}
                 >
-                  <ul className="divide-y divide-hairline">
+                  <ul className="grid grid-cols-1 gap-px bg-hairline md:grid-cols-2 [&>li:last-child:nth-child(odd)]:md:col-span-2">
                     {section.items.map((p) => (
-                      <li
-                        key={p.id}
-                        className="flex items-start gap-4 px-5 py-4 hover:bg-canvas/40 transition-colors"
-                      >
-                        {/* Label + description + code */}
+                      <li key={p.id} title={p.code} className="flex items-center gap-4 bg-surface px-5 py-3.5 transition-colors hover:bg-surface-muted/50">
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[13px] font-semibold text-slate-900">
-                              {p.meta.label}
-                            </span>
-                            <span
-                              className={cn(
-                                'inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold leading-tight shrink-0',
-                                PERMISSION_TYPE_CLS[p.meta.type],
-                              )}
-                            >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[13.5px] font-semibold leading-tight text-slate-900">{p.meta.label}</span>
+                            <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold leading-tight', PERMISSION_TYPE_CLS[p.meta.type])}>
                               {p.meta.type}
                             </span>
                           </div>
                           {p.meta.description && (
-                            <p className="text-[12px] text-slate-500 mt-1 leading-relaxed">
-                              {p.meta.description}
-                            </p>
+                            <p className="mt-1 text-[12px] leading-relaxed text-slate-500">{p.meta.description}</p>
                           )}
-                          <p
-                            className="font-mono text-[11px] text-slate-400 mt-1.5 select-all"
-                            dir="ltr"
-                          >
-                            {p.code}
-                          </p>
                         </div>
-
-                        {/* User count pill */}
-                        <div className="flex items-center gap-1.5 shrink-0 mt-0.5 rounded-full bg-slate-100 px-2.5 py-1">
-                          <UsersIcon className="h-3 w-3 text-slate-400 shrink-0" />
-                          <span className="text-[11px] font-semibold text-slate-600 tabular-nums">
-                            {p.userCount}
-                          </span>
-                        </div>
+                        <span
+                          className={cn(
+                            'inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-semibold tabular-nums',
+                            p.userCount > 0 ? 'bg-brand-500/12 text-brand-700' : 'bg-slate-500/10 text-slate-400',
+                          )}
+                          title={m.kpiUsers}
+                        >
+                          <UsersIcon className="h-3.5 w-3.5" />
+                          {p.userCount}
+                        </span>
                       </li>
                     ))}
                   </ul>
