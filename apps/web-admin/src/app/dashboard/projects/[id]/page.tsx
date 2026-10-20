@@ -269,13 +269,13 @@ export default async function ProjectDetailPage({
                 {m.emptyPhasesDesc}
               </PremiumEmptyNote>
             ) : (
-              <ol className="relative space-y-4">
+              <div className="space-y-4">
                 {project.phases!.map((ph, idx) => {
                   const buildingsCount = ph.buildings?.length ?? 0;
                   const totalPhaseUnits =
                     ph.buildings?.reduce((s, b) => s + (b._count?.units ?? 0), 0) ?? 0;
                   return (
-                    <li key={ph.id} className="rounded-2xl border border-hairline bg-surface-muted/30 p-5">
+                    <div key={ph.id} className="rounded-2xl border border-hairline bg-surface-muted/30 p-5">
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="flex items-center gap-3.5">
                           <span className="num inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-[18px] font-semibold text-[#1a1408]">
@@ -330,10 +330,10 @@ export default async function ProjectDetailPage({
                           <BuildingCreateForm projectId={project.id} phaseId={ph.id} locale={locale} />
                         </details>
                       )}
-                    </li>
+                    </div>
                   );
                 })}
-              </ol>
+              </div>
             )}
 
             {isAdmin && (
