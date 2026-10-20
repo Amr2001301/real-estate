@@ -74,6 +74,8 @@ export interface PublicUnit {
   price: string;
   /** Set when the unit is priced by the meter. */
   pricePerMeter?: string | null;
+  /** The project's model the unit is of (name in the reader's language). */
+  model?: { code: string; name: string | { ar?: string; en?: string } } | null;
   status: string;
   coverImage: string | null;
   media: PublicMedia[];

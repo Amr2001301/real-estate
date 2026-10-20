@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
 import { AlertCircle, CheckCircle2, X, MapPin, Tag, Ruler, DollarSign, Info } from 'lucide-react';
 import { Field } from '@/components/form/field';
 import { SubmitButton } from '@/components/form/submit-button';
@@ -12,9 +12,9 @@ import { FormFooter } from '@/components/ui/form-footer';
 import { BuildingPicker } from './_building-picker';
 import type { Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
-import type { Project, Unit, UnitTypeOption, UnitUsage } from '@/lib/types';
+import type { Project, Unit, UnitModelOption, UnitTypeOption, UnitUsage } from '@/lib/types';
 import { tx } from '@/lib/format';
-import { createUnitAction, updateUnitAction, type UnitFormState } from './actions';
+import { createUnitAction, getProjectModelsAction, updateUnitAction, type UnitFormState } from './actions';
 
 function PanelHeader({ number, title, description }: { number: string; title: string; description: string }) {
   return (
@@ -69,6 +69,41 @@ export default function UnitForm({ unit, projects, types, locale = 'ar' }: Props
         ? String(Math.round((Number(unit.price) / unit.area) * 100) / 100)
         : '';
   const [pricePerMeter, setPricePerMeter] = useState(initialPpm);
+
+  // The project's models (F10): picking one fills the unit from it; the
+  // unit's fields stay editable.
+  const formRef = useRef<HTMLFormElement>(null);
+  const [projectId, setProjectId] = useState(unit?.building?.phase?.projectId ?? '');
+  const [models, setModels] = useState<UnitModelOption[]>([]);
+  const [modelId, setModelId] = useState(unit?.modelId ?? '');
+  const [fill, setFill] = useState<UnitModelOption | null>(null);
+  const [, startModels] = useTransition();
+  useEffect(() => {
+    if (!projectId) return setModels([]);
+    startModels(async () => setModels(await getProjectModelsAction(projectId)));
+  }, [projectId]);
+  // After the render the model's type brings (bedrooms shown or not).
+  useEffect(() => {
+    if (!fill || !formRef.current) return;
+    const set = (name: string, v: number | string | null) => {
+      const el = formRef.current?.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | null;
+      if (el && el.type !== 'hidden') el.value = v == null ? '' : String(v);
+    };
+    for (const f of ['netArea', 'gardenArea', 'roofArea', 'terraceArea', 'landArea', 'bedrooms', 'bathrooms', 'finishing'] as const) {
+      set(f, fill[f]);
+    }
+    setFill(null);
+  }, [fill]);
+  function pickModel(id: string) {
+    setModelId(id);
+    const model = models.find((x) => x.id === id);
+    if (!model) return;
+    setTypeCode(model.type);
+    setArea(String(model.area));
+    setFill(model);
+  }
+  // Switched-off models are not offered, except the one the unit has.
+  const offeredModels = models.filter((x) => x.active || x.id === unit?.modelId);
   const meterPrice =
     Number(pricePerMeter) > 0 && Number(area) > 0 ? Math.round(Number(pricePerMeter) * Number(area) * 100) / 100 : null;
   const usage: UnitUsage = offered.find((t) => t.code === typeCode)?.usage ?? 'RESIDENTIAL';
@@ -86,7 +121,7 @@ export default function UnitForm({ unit, projects, types, locale = 'ar' }: Props
   ];
 
   return (
-    <form action={formAction}>
+    <form action={formAction} ref={formRef}>
 
       {/* ── Alerts ── */}
       {(state.error || state.ok) && (
@@ -192,6 +227,10 @@ export default function UnitForm({ unit, projects, types, locale = 'ar' }: Props
                 initialPhaseId={unit?.building?.phaseId}
                 initialBuildingId={unit?.buildingId}
                 locale={locale}
+                onProjectChange={(id) => {
+                  setProjectId(id);
+                  setModelId('');
+                }}
               />
             </div>
           </section>
@@ -242,6 +281,23 @@ export default function UnitForm({ unit, projects, types, locale = 'ar' }: Props
                     min={0}
                     defaultValue={unit?.floor ?? 0}
                   />
+                </Field>
+
+                <Field label={m.labelModel} name="modelId" hint={offeredModels.length ? m.hintModel : m.hintNoModels}>
+                  <Select
+                    id="modelId"
+                    name="modelId"
+                    value={modelId}
+                    onChange={(e) => pickModel(e.target.value)}
+                    disabled={!offeredModels.length}
+                  >
+                    <option value="">{m.noModel}</option>
+                    {offeredModels.map((x) => (
+                      <option key={x.id} value={x.id}>
+                        {x.code} — {tx(x.name, locale) || x.code}
+                      </option>
+                    ))}
+                  </Select>
                 </Field>
               </div>
             </div>

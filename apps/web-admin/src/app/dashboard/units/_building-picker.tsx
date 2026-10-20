@@ -18,6 +18,8 @@ interface Props {
   /** Prepopulate for the edit case — pass from unit.buildingId */
   initialBuildingId?: string;
   locale?: Locale;
+  /** Told the picked project (the unit form offers its models). */
+  onProjectChange?: (projectId: string) => void;
 }
 
 export function BuildingPicker({
@@ -26,6 +28,7 @@ export function BuildingPicker({
   initialPhaseId = '',
   initialBuildingId = '',
   locale = 'ar',
+  onProjectChange,
 }: Props) {
   const m = uiT(locale).pages.buildingPicker;
   const [projectId, setProjectId] = useState(initialProjectId);
@@ -46,6 +49,7 @@ export function BuildingPicker({
 
   function handleProjectChange(newProjectId: string) {
     setProjectId(newProjectId);
+    onProjectChange?.(newProjectId);
     setPhaseId('');
     setBuildingId('');
     setPhases([]);

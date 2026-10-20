@@ -139,6 +139,26 @@ export interface UnitTypeOption {
   order: number;
 }
 
+/** One of a project's unit models (F10): the layout a unit is entered from. */
+export interface UnitModelOption {
+  id: string;
+  projectId: string;
+  code: string;
+  name: Translatable;
+  type: string;
+  area: number;
+  netArea: number | null;
+  gardenArea: number | null;
+  roofArea: number | null;
+  terraceArea: number | null;
+  landArea: number | null;
+  bedrooms: number;
+  bathrooms: number;
+  finishing: UnitFinishing | null;
+  active: boolean;
+  _count?: { units: number };
+}
+
 export interface Unit {
   id: string;
   buildingId: string;
@@ -163,6 +183,9 @@ export interface Unit {
   price: string | number;
   /** Set when the unit is priced by the meter (price = this × area). */
   pricePerMeter?: string | number | null;
+  /** The project's model it was entered from (F10). */
+  modelId?: string | null;
+  model?: { id: string; code: string; name: Translatable } | null;
   status: UnitStatus;
   reservationExpiresAt: string | null;
   createdAt: string;

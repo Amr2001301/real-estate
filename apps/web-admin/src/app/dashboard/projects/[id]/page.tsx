@@ -216,6 +216,11 @@ export default async function ProjectDetailPage({
                       {m.btnEditProject}
                     </Button>
                   </Link>
+                  <Link href={`/dashboard/projects/${id}/models` as never}>
+                    <Button variant="outline" size="sm">
+                      {uiT(locale).pages.units.models.manage}
+                    </Button>
+                  </Link>
                   {project.status !== 'PUBLISHED' && (
                     <form action={publishProjectAction.bind(null, id)}>
                       <Button

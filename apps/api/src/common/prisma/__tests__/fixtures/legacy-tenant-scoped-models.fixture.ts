@@ -41,6 +41,7 @@ export const TENANT_SCOPED_MODELS_LEGACY = new Set([
   'presignedupload', // upload slot of a scoped presign (maintenance photos)
   'unithandover', // the unit handed over to the buyer (warranty + maintenance start)
   'unittype', // the company's unit types (F10)
+  'unitmodel', // a project's unit models (F10)
   // Chat
   'chatsession', 'chatmessage', 'chatfeedback',
   // Option B part 2 (docs/audit/13-user-tenancy.md): TENANT_CONTROLLED → TENANT_OWNED

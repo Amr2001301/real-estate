@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 /**
  * F10 — the public unit page showed one area and the bedrooms, even for a
  * shop. It now shows the unit's finishing, its other areas, view and
- * orientation (and its price per meter), and the units list filters by
+ * orientation (and its price per meter and model), and the units list filters by
  * finishing.
  */
 const API_BASE = process.env.E2E_API_BASE_URL ?? 'http://localhost:4000';
@@ -21,7 +21,9 @@ test('a unit page shows its specs and the list filters by finishing', async ({ p
     'X-Tenant-Slug': SLUG,
   };
   const listed = await (await request.get(`${API_BASE}/v1/units?pageSize=100`, { headers })).json();
-  const published = (listed.data as Array<{ buildingId: string; building: { phase: { project: { status: string } } } }>).find(
+  const published = (
+    listed.data as Array<{ buildingId: string; building: { phase: { projectId: string; project: { status: string } } } }>
+  ).find(
     (u) => u.building.phase.project.status === 'PUBLISHED',
   );
   expect(published).toBeTruthy();
@@ -34,7 +36,15 @@ test('a unit page shows its specs and the list filters by finishing', async ({ p
     expect(res.status()).toBe(201);
     return (await res.json()).id as string;
   };
+  // One of the project's models.
+  const model = await request.post(`${API_BASE}/v1/projects/${published!.building.phase.projectId}/unit-models`, {
+    headers,
+    data: { code: `PUB${stamp}`, ar: `نموذج ${stamp}`, en: `Model ${stamp}`, type: '2BR', area: 120, bedrooms: 2 },
+  });
+  expect(model.status()).toBe(201);
+  const modelId = (await model.json()).id as string;
   const furnished = await make(`PUB-SPEC-${stamp}`, {
+    modelId,
     type: '2BR',
     bedrooms: 2,
     pricePerMeter: 20_000,
@@ -49,7 +59,7 @@ test('a unit page shows its specs and the list filters by finishing', async ({ p
   try {
     await page.goto(`/units/${furnished}`, { waitUntil: 'networkidle' });
     const main = page.locator('main');
-    for (const text of ['المساحة الصافية', 'التراس', 'مفروشة', 'بحر', 'قبلي شرقي']) {
+    for (const text of ['المساحة الصافية', 'التراس', 'مفروشة', 'بحر', 'قبلي شرقي', 'النموذج', `نموذج ${stamp}`]) {
       await expect(main.getByText(text, { exact: true }).first()).toBeVisible();
     }
     // Priced by the meter: 20,000 × 120 m².
@@ -68,5 +78,6 @@ test('a unit page shows its specs and the list filters by finishing', async ({ p
   } finally {
     await request.delete(`${API_BASE}/v1/units/${furnished}`, { headers });
     await request.delete(`${API_BASE}/v1/units/${shop}`, { headers });
+    await request.patch(`${API_BASE}/v1/unit-models/${modelId}`, { headers, data: { active: false } });
   }
 });

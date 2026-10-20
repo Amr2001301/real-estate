@@ -23,6 +23,7 @@ import { PlanLimitService } from '../../common/capabilities/plan-limit.service';
 import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { serializePublicUnit } from './public-unit.serializer';
 import { UnitTypesService } from './unit-types.service';
+import { UnitModelsService } from './unit-models.service';
 import { arText, collectPages, isoDate, listCsv, listXlsx, type ListColumn } from '../../common/utils/list-export';
 import { ReportBrandService } from '../company-branding/report-brand.service';
 import { resetUnitWarranties } from '../contracts/unit-warranties';
@@ -100,11 +101,14 @@ export class UnitsService {
     // Optional so unit tests can build the service without it.
     @Optional() private readonly reportBrand?: ReportBrandService,
     @Optional() unitTypes?: UnitTypesService,
+    @Optional() unitModels?: UnitModelsService,
   ) {
     this.unitTypes = unitTypes ?? new UnitTypesService(prisma);
+    this.unitModels = unitModels ?? new UnitModelsService(prisma, this.unitTypes);
   }
 
   private readonly unitTypes: UnitTypesService;
+  private readonly unitModels: UnitModelsService;
 
   // ── List export (the admin units / inventory pages) ─────────────────────
 
@@ -179,6 +183,8 @@ export class UnitsService {
     const pricePerMeter = dto.pricePerMeter ?? null;
     if (pricePerMeter === null && dto.price === undefined) throw new BadRequestException(NOT_PRICED);
     const price = pricePerMeter !== null ? meterPrice(pricePerMeter, dto.area) : new Prisma.Decimal(dto.price!);
+    // Entered from one of its project's models (F10).
+    const model = dto.modelId ? await this.unitModels.forUnit(dto.modelId, dto.buildingId) : null;
     const created = await this.prisma.unit.create({
       data: {
         buildingId: dto.buildingId,
@@ -191,6 +197,7 @@ export class UnitsService {
         floor: dto.floor,
         price,
         pricePerMeter,
+        modelId: model?.id ?? null,
         status: dto.status ?? UnitStatus.AVAILABLE,
         ...specData(dto),
       },
@@ -249,6 +256,7 @@ export class UnitsService {
           ? { type: { equals: query.type, mode: 'insensitive' as const } }
           : {}),
       ...(query.usage ? { usage: query.usage } : {}),
+      ...(query.modelId ? { modelId: query.modelId } : {}),
       ...(query.finishing ? { finishing: query.finishing } : {}),
       ...(query.view ? { view: query.view } : {}),
       ...(query.orientation ? { orientation: query.orientation } : {}),
@@ -282,6 +290,7 @@ export class UnitsService {
         include: {
           media: { orderBy: { order: 'asc' }, take: 1 },
           building: { include: { phase: { include: { project: true } } } },
+          model: { select: { id: true, code: true, name: true } },
         },
       }),
       this.prisma.unit.count({ where }),
@@ -334,6 +343,7 @@ export class UnitsService {
       where: { id },
       include: {
         media: { orderBy: { order: 'asc' } },
+        model: { select: { id: true, code: true, name: true } },
         building: {
           include: {
             phase: {
@@ -431,6 +441,13 @@ export class UnitsService {
     if (dto.floor !== undefined) data.floor = dto.floor;
     if (price !== undefined) data.price = price;
     if (dto.pricePerMeter !== undefined) data.pricePerMeter = dto.pricePerMeter;
+    // The model (F10): one of the unit's project's; the one it has passes
+    // even if switched off since.
+    if (dto.modelId !== undefined && dto.modelId !== unit.modelId) {
+      data.model = dto.modelId
+        ? { connect: { id: (await this.unitModels.forUnit(dto.modelId, unit.buildingId)).id } }
+        : { disconnect: true };
+    }
     Object.assign(data, specData(dto));
     return this.prisma.unit.update({ where: { id }, data });
   }

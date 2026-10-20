@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect, unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
-import type { Phase } from '@/lib/types';
+import type { Phase, UnitModelOption } from '@/lib/types';
 
 export interface UnitFormState {
   error?: string;
@@ -32,6 +32,7 @@ function buildPayload(formData: FormData) {
     floor: Number(formData.get('floor') ?? 0),
     // Priced by the meter: the API computes the total.
     pricePerMeter: optNumber(formData, 'pricePerMeter'),
+    modelId: optEnum(formData, 'modelId'),
     netArea: optNumber(formData, 'netArea'),
     gardenArea: optNumber(formData, 'gardenArea'),
     roofArea: optNumber(formData, 'roofArea'),
@@ -105,6 +106,17 @@ export async function deleteUnitAction(id: string) {
 export async function deleteUnitMediaAction(unitId: string, mediaId: string) {
   await api.delete(`/media/units/${mediaId}`);
   revalidatePath(`/dashboard/units/${unitId}`);
+}
+
+/** A project's unit models (F10), for the unit form. */
+export async function getProjectModelsAction(projectId: string): Promise<UnitModelOption[]> {
+  if (!UUID_RE.test(projectId)) return [];
+  try {
+    return await api.get<UnitModelOption[]>(`/projects/${projectId}/unit-models`);
+  } catch (e) {
+    unstable_rethrow(e);
+    return [];
+  }
 }
 
 /** Fetches a project's phases+buildings server-side (with proper auth). */

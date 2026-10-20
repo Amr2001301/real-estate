@@ -103,6 +103,7 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   Phase: 'TENANT_OWNED',
   Building: 'TENANT_OWNED',
   Unit: 'TENANT_OWNED',
+  UnitModel: 'TENANT_OWNED',
   UnitStatusHistory: 'TENANT_OWNED',
   UnitMaintenanceItem: 'TENANT_OWNED',
 
