@@ -79,9 +79,13 @@ export async function setLateFeeClauseAction(id: string, lateFeesApply: boolean)
   return { ok: true };
 }
 
-export async function signContractAction(id: string, signedAt: string): Promise<ContractFormState> {
+export async function signContractAction(
+  id: string,
+  signedAt: string,
+  deliveryDate?: string,
+): Promise<ContractFormState> {
   try {
-    await api.post(`/contracts/${id}/sign`, { signedAt });
+    await api.post(`/contracts/${id}/sign`, { signedAt, ...(deliveryDate ? { deliveryDate } : {}) });
   } catch (e) {
     unstable_rethrow(e);
     return { error: (e as Error).message };
@@ -89,6 +93,18 @@ export async function signContractAction(id: string, signedAt: string): Promise<
   revalidatePath(`/dashboard/contracts/${id}`);
   revalidatePath('/dashboard/contracts');
   return {};
+}
+
+/** F10 — the handover date the contract promises; empty clears it. */
+export async function setContractDeliveryAction(id: string, deliveryDate: string): Promise<ContractFormState> {
+  try {
+    await api.patch(`/contracts/${id}`, { deliveryDate: deliveryDate || null });
+  } catch (e) {
+    unstable_rethrow(e);
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/dashboard/contracts/${id}`);
+  return { ok: true };
 }
 
 // FG-04 — numbers a contract that has none; empty → the API assigns the next one.

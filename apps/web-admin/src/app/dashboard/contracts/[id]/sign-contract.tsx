@@ -12,15 +12,19 @@ import { signContractAction } from '../actions';
 export function SignContract({
   contractId,
   today,
+  deliveryDefault,
   locale = 'ar',
 }: {
   contractId: string;
   today: string;
+  /** The unit's handover date now — what the contract promises unless changed. */
+  deliveryDefault?: string | null;
   locale?: Locale;
 }) {
   const m = uiT(locale).contractDetailPage;
   const router = useRouter();
   const [date, setDate] = useState(today);
+  const [delivery, setDelivery] = useState(deliveryDefault ?? '');
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -28,7 +32,7 @@ export function SignContract({
     if (!date || !window.confirm(m.signConfirm)) return;
     setError(null);
     startTransition(async () => {
-      const res = await signContractAction(contractId, date);
+      const res = await signContractAction(contractId, date, delivery || undefined);
       if (res.error) setError(res.error);
       else router.refresh();
     });
@@ -42,6 +46,15 @@ export function SignContract({
         value={date}
         max={today}
         onChange={(e) => setDate(e.target.value)}
+        className="h-8 rounded-lg border border-hairline bg-surface px-2 text-xs"
+      />
+      <input
+        type="date"
+        name="deliveryDate"
+        aria-label={m.deliverySignHint}
+        title={m.deliverySignHint}
+        value={delivery}
+        onChange={(e) => setDelivery(e.target.value)}
         className="h-8 rounded-lg border border-hairline bg-surface px-2 text-xs"
       />
       <button
