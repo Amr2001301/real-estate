@@ -30,8 +30,7 @@ function buildPayload(formData: FormData) {
     bedrooms: Number(formData.get('bedrooms') ?? 0),
     bathrooms: Number(formData.get('bathrooms') ?? 0),
     floor: Number(formData.get('floor') ?? 0),
-    // Priced by the meter, no total is sent (the API computes it).
-    price: optNumber(formData, 'price') ?? undefined,
+    // Priced by the meter: the API computes the total.
     pricePerMeter: optNumber(formData, 'pricePerMeter'),
     netArea: optNumber(formData, 'netArea'),
     gardenArea: optNumber(formData, 'gardenArea'),
@@ -72,7 +71,15 @@ export async function updateUnitAction(
   const payload = buildPayload(formData);
   // status is handled separately to track history; only update non-status fields here.
   // The building is not editable (the API refuses it: a unit is not moved).
-  const { status, buildingId: _building, ...rest } = payload;
+  const { status, buildingId: _building, ...fields } = payload;
+  // A unit entered before pricing by the meter, its price ÷ area shown and
+  // left as it was (with its area): no price change is sent — its whole
+  // price stays (and a unit in a deal keeps passing the edit).
+  const untouched =
+    formData.get('pricedByMeter') === '0' &&
+    String(formData.get('pricePerMeter') ?? '') === String(formData.get('pricePerMeterInitial') ?? '') &&
+    String(formData.get('area') ?? '') === String(formData.get('areaInitial') ?? '');
+  const rest = untouched ? { ...fields, pricePerMeter: undefined } : fields;
   try {
     await api.patch(`/units/${id}`, rest);
     const current = await api.get<{ status: string }>(`/units/${id}`);

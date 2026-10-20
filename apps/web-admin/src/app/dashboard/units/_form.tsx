@@ -61,7 +61,14 @@ export default function UnitForm({ unit, projects, types, locale = 'ar' }: Props
   const [typeCode, setTypeCode] = useState(unit?.type ?? offered[0]?.code ?? '');
   // Priced by the meter: the price is the price per meter × the gross area.
   const [area, setArea] = useState(unit?.area != null ? String(unit.area) : '');
-  const [pricePerMeter, setPricePerMeter] = useState(unit?.pricePerMeter != null ? String(unit.pricePerMeter) : '');
+  // A unit entered before pricing by the meter shows its price ÷ area.
+  const initialPpm =
+    unit?.pricePerMeter != null
+      ? String(Number(unit.pricePerMeter))
+      : unit && unit.area > 0
+        ? String(Math.round((Number(unit.price) / unit.area) * 100) / 100)
+        : '';
+  const [pricePerMeter, setPricePerMeter] = useState(initialPpm);
   const meterPrice =
     Number(pricePerMeter) > 0 && Number(area) > 0 ? Math.round(Number(pricePerMeter) * Number(area) * 100) / 100 : null;
   const usage: UnitUsage = offered.find((t) => t.code === typeCode)?.usage ?? 'RESIDENTIAL';
@@ -326,46 +333,35 @@ export default function UnitForm({ unit, projects, types, locale = 'ar' }: Props
             />
             <div className="px-7 sm:px-8 py-7">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label={m.labelPricePerMeter} name="pricePerMeter" hint={m.hintPricePerMeter}>
+                {/* Priced by the meter: the total is price per meter × gross
+                    area, computed — never typed. What the unit had when the
+                    form opened goes along, so an untouched older unit (priced
+                    as a whole) is left as it was. */}
+                <input type="hidden" name="pricePerMeterInitial" value={initialPpm} />
+                <input type="hidden" name="areaInitial" value={unit?.area != null ? String(unit.area) : ''} />
+                <input type="hidden" name="pricedByMeter" value={unit?.pricePerMeter != null ? '1' : '0'} />
+                <Field label={m.labelPricePerMeter} name="pricePerMeter" hint={m.hintPricePerMeter} required>
                   <Input
                     id="pricePerMeter"
                     name="pricePerMeter"
                     type="number"
                     step="any"
                     min={0}
+                    required
                     placeholder="0"
                     value={pricePerMeter}
                     onChange={(e) => setPricePerMeter(e.target.value)}
                   />
                 </Field>
-                {/* Priced by the meter, the total follows (and is not sent). */}
-                <Field
-                  label={m.labelPrice}
-                  name="price"
-                  hint={pricePerMeter ? m.hintPriceFromMeter : m.hintPrice}
-                  required={!pricePerMeter}
-                >
-                  {pricePerMeter ? (
-                    <Input
-                      id="price"
-                      type="number"
-                      readOnly
-                      disabled
-                      value={meterPrice ?? ''}
-                      data-testid="unit-meter-price"
-                    />
-                  ) : (
-                    <Input
-                      id="price"
-                      name="price"
-                      type="number"
-                      step="any"
-                      min={0}
-                      required
-                      placeholder="0"
-                      defaultValue={unit?.price as number | undefined}
-                    />
-                  )}
+                <Field label={m.labelPrice} name="price" hint={m.hintPriceFromMeter}>
+                  <Input
+                    id="price"
+                    type="number"
+                    readOnly
+                    disabled
+                    value={meterPrice ?? ''}
+                    data-testid="unit-meter-price"
+                  />
                 </Field>
                 {/* A unit is sold by a contract and reserved by a reservation,
                     never by hand: a new unit is for sale, and an existing one
