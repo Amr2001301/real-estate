@@ -1,20 +1,17 @@
 import Link from 'next/link';
-import { Eye, ScrollText, Clock, Activity, ShieldAlert } from 'lucide-react';
+import { Activity, Clock, Eye, Pencil, Plus, ScrollText, ShieldAlert, ShieldCheck, Sparkles, Trash2 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { AuditLogItem, Paged, UserRole } from '@/lib/types';
 import { formatDateTime, intlLocale } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
+import { getCompanyTimeZone } from '@/lib/currency';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/ui/pagination';
 import { cn } from '@/lib/cn';
 import { AuditFilterBar } from './_components/audit-filter-bar';
-import {
-  PremiumPageHero,
-  PremiumMetricStrip,
-  PremiumSectionCard,
-  PremiumEmptyState,
-} from '@/components/premium';
+import { areaLabel } from '../operations/_area-label';
+import { PremiumPageHero, PremiumPanel, PremiumEmptyState } from '@/components/premium';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -31,21 +28,16 @@ interface Search {
 
 const PAGE_SIZE = 25;
 
-// ── Role badge colors ─────────────────────────────────────────────────────────
-
-const ROLE_BADGE_CLS: Record<UserRole, string> = {
-  ADMIN:                  'bg-purple-100 text-purple-700',
-  SALES_MANAGER:          'bg-blue-100   text-blue-700',
-  SALES:                  'bg-brand-100  text-brand-700',
-  MAINTENANCE_SUPERVISOR: 'bg-orange-100 text-orange-700',
-  CLIENT:                 'bg-slate-100  text-slate-600',
-  CUSTOMER:               'bg-teal-100   text-teal-700',
-  BROKER:                 'bg-indigo-100 text-indigo-700',
-};
-
 // ── Event / area helpers ──────────────────────────────────────────────────────
 
-function eventLabel(action: string, entityType: string, labels: ReturnType<typeof uiT>['auditLogsPage']['eventLabels']): string {
+function eventLabel(
+  action: string,
+  entityType: string,
+  labels: ReturnType<typeof uiT>['auditLogsPage']['eventLabels'],
+  domain: Record<string, string> = {},
+): string {
+  // A named action ("deposit.reversed") — not an HTTP method.
+  if (action.includes('.')) return domain[action] ?? action.replace(/[._-]+/g, ' ');
   const m  = action.toUpperCase();
   const et = entityType.toLowerCase();
   const c  = (kw: string) => et.includes(kw);
@@ -120,47 +112,6 @@ function eventLabel(action: string, entityType: string, labels: ReturnType<typeo
   return labels.systemAction;
 }
 
-function areaLabel(entityType: string, labels: ReturnType<typeof uiT>['auditLogsPage']['areaLabels']): string {
-  const et = entityType.toLowerCase();
-  if (et.includes('auth'))               return labels.auth;
-  if (et.includes('permission'))         return labels.permission;
-  if (et.includes('broker-lead'))        return labels.brokerLead;
-  if (et.includes('broker-reservation')) return labels.brokerReservation;
-  if (et.includes('broker-contract'))    return labels.brokerContract;
-  if (et.includes('broker-commission'))  return labels.brokerCommission;
-  if (et.includes('broker-payout'))      return labels.brokerPayout;
-  if (et.includes('broker'))             return labels.broker;
-  if (et.includes('user'))               return labels.user;
-  if (et.includes('reservation'))        return labels.reservation;
-  if (et.includes('contract'))           return labels.contract;
-  if (et.includes('payment'))            return labels.payment;
-  if (et.includes('lead'))               return labels.lead;
-  if (et.includes('project'))            return labels.project;
-  if (et.includes('unit'))               return labels.unit;
-  if (et.includes('maintenance'))        return labels.maintenance;
-  if (et.includes('document'))           return labels.document;
-  if (et.includes('visit'))              return labels.visit;
-  if (et.includes('notification'))       return labels.notification;
-  if (et.includes('audit'))             return labels.audit;
-  return entityType;
-}
-
-function areaBadgeCls(entityType: string): string {
-  const et = entityType.toLowerCase();
-  if (et.includes('auth'))        return 'bg-purple-50 text-purple-700 border border-purple-100';
-  if (et.includes('permission'))  return 'bg-brand-50  text-brand-700  border border-brand-100';
-  if (et.includes('user'))        return 'bg-blue-50   text-blue-700   border border-blue-100';
-  if (et.includes('contract'))    return 'bg-emerald-50 text-emerald-700 border border-emerald-100';
-  if (et.includes('payment'))     return 'bg-amber-50  text-amber-700  border border-amber-100';
-  if (et.includes('reservation')) return 'bg-teal-50   text-teal-700   border border-teal-100';
-  if (et.includes('broker'))      return 'bg-indigo-50 text-indigo-700 border border-indigo-100';
-  if (et.includes('maintenance')) return 'bg-orange-50 text-orange-700 border border-orange-100';
-  if (et.includes('document'))    return 'bg-slate-50  text-slate-600  border border-slate-200';
-  if (et.includes('project'))     return 'bg-violet-50 text-violet-700 border border-violet-100';
-  if (et.includes('unit'))        return 'bg-cyan-50   text-cyan-700   border border-cyan-100';
-  if (et.includes('lead'))        return 'bg-rose-50   text-rose-700   border border-rose-100';
-  return 'bg-slate-50 text-slate-600 border border-slate-200';
-}
 
 function formatIpLabel(ip: string | null, localLabel: string): { label: string; isLocal: boolean } {
   if (!ip) return { label: '—', isLocal: false };
@@ -170,34 +121,48 @@ function formatIpLabel(ip: string | null, localLabel: string): { label: string; 
   return { label: ip, isLocal: false };
 }
 
-function methodBadgeCls(action: string): string {
+type Kind = 'create' | 'edit' | 'delete' | 'special';
+function actionKind(action: string): Kind {
   switch (action.toUpperCase()) {
-    case 'POST':   return 'bg-emerald-50 text-emerald-700 border border-emerald-100';
+    case 'POST':   return 'create';
     case 'PATCH':
-    case 'PUT':    return 'bg-amber-50 text-amber-700 border border-amber-100';
-    case 'DELETE': return 'bg-danger-50 text-danger-700 border border-danger-100';
-    default:       return 'bg-slate-50 text-slate-600 border border-slate-200';
+    case 'PUT':    return 'edit';
+    case 'DELETE': return 'delete';
+    default:       return 'special';
   }
 }
 
-function rowBgCls(action: string): string {
-  switch (action.toUpperCase()) {
-    case 'DELETE': return 'bg-danger-50/40  hover:bg-danger-50/60';
-    case 'POST':   return 'bg-success-50/20 hover:bg-success-50/40';
-    case 'PATCH':
-    case 'PUT':    return 'bg-amber-50/20   hover:bg-amber-50/40';
-    default:       return 'hover:bg-canvas/40';
-  }
-}
+const KIND_ICON: Record<Kind, React.ComponentType<{ className?: string }>> = {
+  create: Plus,
+  edit: Pencil,
+  delete: Trash2,
+  special: Sparkles,
+};
+const KIND_RING: Record<Kind, string> = {
+  create:  'bg-emerald-500/12 text-emerald-600 ring-1 ring-inset ring-emerald-500/25',
+  edit:    'bg-amber-500/12 text-amber-600 ring-1 ring-inset ring-amber-500/25',
+  delete:  'bg-danger-500/12 text-danger-600 ring-1 ring-inset ring-danger-500/25',
+  special: 'bg-sky-500/12 text-sky-600 ring-1 ring-inset ring-sky-500/25',
+};
+const KIND_BAR: Record<Kind, string> = {
+  create: 'bg-emerald-500',
+  edit: 'bg-amber-400',
+  delete: 'bg-danger-500',
+  special: 'bg-sky-500',
+};
 
-function rowStartBorderCls(action: string): string {
-  switch (action.toUpperCase()) {
-    case 'DELETE': return 'border-s-2 border-s-danger-400';
-    case 'POST':   return 'border-s-2 border-s-success-500';
-    case 'PATCH':
-    case 'PUT':    return 'border-s-2 border-s-amber-400';
-    default:       return 'border-s-2 border-s-transparent';
-  }
+const ROLE_CHIP: Partial<Record<UserRole, string>> = {
+  ADMIN:                  'bg-brand-500/12 text-brand-700',
+  SALES_MANAGER:          'bg-sky-500/12 text-sky-600',
+  SALES:                  'bg-emerald-500/12 text-emerald-600',
+  MAINTENANCE_SUPERVISOR: 'bg-orange-500/12 text-orange-600',
+  CUSTOMER:               'bg-teal-500/12 text-teal-600',
+  BROKER:                 'bg-indigo-500/12 text-indigo-600',
+};
+
+function initials(name: string | null | undefined): string {
+  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '·';
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -207,8 +172,11 @@ export default async function AuditLogsPage({
 }: {
   searchParams: Promise<Search>;
 }) {
-  const [sp, locale] = await Promise.all([searchParams, getLocale()]);
-  const m = uiT(locale).auditLogsPage;
+  const [sp, locale, timeZone] = await Promise.all([searchParams, getLocale(), getCompanyTimeZone()]);
+  const t = uiT(locale);
+  const m = t.auditLogsPage;
+  const l = m.list;
+  const num = (n: number) => n.toLocaleString(intlLocale(locale));
 
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
@@ -220,21 +188,49 @@ export default async function AuditLogsPage({
   const res  = await safe(api.get<Paged<AuditLogItem>>(`/audit-logs?${qs.toString()}`));
   const rows = res.data?.data ?? [];
   const meta = res.data?.meta;
+  const total = meta?.total ?? rows.length;
 
   const hasFilter = !!(sp.q || sp.action || sp.entityType || sp.actorId || sp.from || sp.to);
 
-  const actionCounts = new Map<string, number>();
-  for (const r of rows) {
-    actionCounts.set(r.action, (actionCounts.get(r.action) ?? 0) + 1);
-  }
-  const topAction = [...actionCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  // The page's actions by kind, and what deserves a look.
+  const kinds: Record<Kind, number> = { create: 0, edit: 0, delete: 0, special: 0 };
+  for (const r of rows) kinds[actionKind(r.action)]++;
+  const kindRows = (Object.keys(kinds) as Kind[]).filter((k) => kinds[k] > 0);
+  const authCount = rows.filter((r) => r.entityType.toLowerCase().includes('auth')).length;
+  const sensitive = kinds.delete + authCount;
 
-  const deleteCount = rows.filter((r) => r.action.toUpperCase() === 'DELETE').length;
-  const authCount   = rows.filter((r) => r.entityType.toLowerCase().includes('auth')).length;
-  const sensitiveCount = deleteCount + authCount;
+  // Days and times in the company's time zone.
+  const dayKey = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' });
+  const dayFmt = new Intl.DateTimeFormat(intlLocale(locale), { timeZone, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const timeFmt = new Intl.DateTimeFormat(intlLocale(locale), { timeZone, hour: 'numeric', minute: '2-digit' });
+  const today = dayKey.format(new Date());
+  const yesterday = dayKey.format(new Date(Date.now() - 86_400_000));
+  const days: Array<{ key: string; label: string; rows: AuditLogItem[] }> = [];
+  for (const r of rows) {
+    const key = dayKey.format(new Date(r.createdAt));
+    const last = days.at(-1);
+    if (last?.key === key) last.rows.push(r);
+    else {
+      const label = key === today ? l.today : key === yesterday ? l.yesterday : dayFmt.format(new Date(r.createdAt));
+      days.push({ key, label, rows: [r] });
+    }
+  }
+
+  const relative = (iso: string): string => {
+    const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
+    const rt = t.operationsPage.relativeTime;
+    if (mins < 1) return rt.now;
+    if (mins < 60) return rt.minutes(mins);
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return rt.hours(hrs);
+    return rt.days(Math.floor(hrs / 24));
+  };
+
+  const from = meta ? (meta.page - 1) * meta.pageSize + 1 : 1;
+  const to = from + rows.length - 1;
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-5 pb-2 lg:gap-6">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <PremiumPageHero
@@ -245,56 +241,66 @@ export default async function AuditLogsPage({
           { label: m.breadcrumbSelf },
         ]}
         meta={
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-1 text-[11px] font-bold text-brand-700">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-500/30 bg-brand-500/10 px-3 py-1 text-[11px] font-bold text-brand-700">
             <ScrollText className="h-3.5 w-3.5" />
             {m.systemLogBadge}
           </span>
         }
       />
 
-      {/* ── Error ───────────────────────────────────────────────────────────── */}
       {res.error && (
-        <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+        <div className="rounded-2xl border border-danger-100 bg-danger-50 p-4 text-sm text-danger-700">
           {m.errorLoad}{res.error}
         </div>
       )}
 
-      {/* ── KPI strip ───────────────────────────────────────────────────────── */}
-      <PremiumMetricStrip
-        variant="dashboard"
-        cols={4}
-        metrics={[
-          {
-            label: m.kpi.total,
-            value: meta
-              ? meta.total.toLocaleString(intlLocale(locale))
-              : rows.length.toLocaleString(intlLocale(locale)),
-            icon: <ScrollText />,
-            tone: 'brand',
-          },
-          {
-            label: m.kpi.lastActivity,
-            value: rows[0] ? formatDateTime(rows[0].createdAt, locale) : '—',
-            icon: <Clock />,
-            tone: 'neutral',
-            valueSize: 'compact',
-          },
-          {
-            label: m.kpi.topAction,
-            value: topAction ? ((m.topActionLabels as Record<string, string>)[topAction] ?? topAction) : '—',
-            icon: <Activity />,
-            tone: 'neutral',
-          },
-          {
-            label: m.kpi.sensitiveEvents,
-            value: sensitiveCount.toLocaleString(intlLocale(locale)),
-            icon: <ShieldAlert />,
-            tone: sensitiveCount > 0 ? 'warning' : 'neutral',
-          },
-        ]}
-      />
+      {/* ── Summary ────────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <SummaryCard testId="audit-total" icon={<ScrollText />} label={l.total}>
+          <p className="num text-[34px] font-semibold leading-none text-slate-900">{num(total)}</p>
+          <p className="mt-2 text-[12px] text-slate-500">{hasFilter ? l.totalFiltered : l.totalAll}</p>
+        </SummaryCard>
 
-      {/* ── Filter bar ──────────────────────────────────────────────────────── */}
+        <SummaryCard testId="audit-last" icon={<Clock />} label={l.lastActivity}>
+          <p className="text-[20px] font-bold leading-tight text-slate-900">{rows[0] ? relative(rows[0].createdAt) : '—'}</p>
+          {rows[0] && <p className="mt-2 truncate text-[12px] text-slate-500">{formatDateTime(rows[0].createdAt, locale, timeZone)}</p>}
+        </SummaryCard>
+
+        <SummaryCard testId="audit-kinds" icon={<Activity />} label={l.onPage}>
+          {kindRows.length === 0 ? (
+            <p className="text-[20px] font-bold text-slate-900">—</p>
+          ) : (
+            <>
+              <div className="flex h-2 overflow-hidden rounded-full bg-surface-muted">
+                {kindRows.map((k) => (
+                  <span key={k} className={cn('h-full', KIND_BAR[k])} style={{ width: `${(kinds[k] / rows.length) * 100}%` }} />
+                ))}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-[12px]">
+                {kindRows.map((k) => (
+                  <span key={k} className="inline-flex items-center gap-1.5 text-slate-600">
+                    <span className={cn('h-2 w-2 rounded-full', KIND_BAR[k])} />
+                    {l.kinds[k]}
+                    <b className="text-slate-900 tabular-nums">{num(kinds[k])}</b>
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
+        </SummaryCard>
+
+        <SummaryCard
+          testId="audit-sensitive"
+          icon={sensitive > 0 ? <ShieldAlert /> : <ShieldCheck />}
+          label={l.sensitive}
+          tone={sensitive > 0 ? 'warn' : 'good'}
+        >
+          <p className="num text-[34px] font-semibold leading-none text-slate-900">{num(sensitive)}</p>
+          <p className="mt-2 text-[12px] text-slate-500">{sensitive > 0 ? l.sensitiveSub : l.sensitiveNone}</p>
+        </SummaryCard>
+      </div>
+
+      {/* ── Filters ────────────────────────────────────────────────────────── */}
       <AuditFilterBar
         defaultQ={sp.q ?? ''}
         defaultAction={sp.action ?? ''}
@@ -305,18 +311,17 @@ export default async function AuditLogsPage({
         locale={locale}
       />
 
-      {/* ── Audit log table ─────────────────────────────────────────────────── */}
-      <PremiumSectionCard
-        icon={<ScrollText />}
+      {/* ── The log, by day ────────────────────────────────────────────────── */}
+      <PremiumPanel
         title={m.sectionTitle}
         trailing={
-          meta ? (
-            <span className="text-[11px] font-semibold tabular-nums text-slate-400">
-              {meta.total.toLocaleString(intlLocale(locale))} {m.recordSuffix}
+          rows.length > 0 ? (
+            <span className="rounded-full border border-hairline px-3 py-1 text-[12px] font-semibold text-slate-500 tabular-nums">
+              {l.showing(from, to, total)}
             </span>
           ) : undefined
         }
-        padded={false}
+        padding="none"
       >
         {rows.length === 0 ? (
           <PremiumEmptyState
@@ -332,161 +337,75 @@ export default async function AuditLogsPage({
             }
           />
         ) : (
-          <>
-            {/* Legend row */}
-            <div className="flex items-center gap-4 px-5 py-2.5 border-b border-hairline">
-              <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{m.legend.label}</span>
-              <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
-                <span className="h-2 w-2 rounded-full bg-success-500 shrink-0" />{m.legend.create}
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
-                <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />{m.legend.edit}
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
-                <span className="h-2 w-2 rounded-full bg-danger-500 shrink-0" />{m.legend.delete}
-              </span>
-            </div>
-
-            <div className="overflow-x-auto scrollbar-thin">
-              <table className="w-full text-sm">
-                <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">
-                  <tr>
-                    <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">{m.cols.time}</th>
-                    <th className="text-start py-3 px-4">{m.cols.user}</th>
-                    <th className="text-start py-3 px-4">{m.cols.event}</th>
-                    <th className="text-start py-3 px-4">{m.cols.area}</th>
-                    <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.entityId}</th>
-                    <th className="text-start py-3 px-4">{m.cols.ip}</th>
-                    <th className="text-end py-3 ps-4 pe-5" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-hairline">
-                  {rows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className={cn(
-                        'transition-colors duration-100 align-middle',
-                        rowBgCls(row.action),
-                      )}
-                    >
-                      {/* Timestamp + start-border stripe */}
-                      <td className={cn(
-                        'py-3 ps-5 pe-4 whitespace-nowrap',
-                        rowStartBorderCls(row.action),
-                      )}>
-                        <span className="text-[12px] text-slate-700 font-medium tabular-nums" dir="ltr">
-                          {formatDateTime(row.createdAt, locale)}
-                        </span>
-                      </td>
-
-                      {/* Actor */}
-                      <td className="py-3 px-4 max-w-[160px]">
-                        {row.actor ? (
-                          <div className="min-w-0">
-                            <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">
-                              {row.actor.fullName}
-                            </p>
-                            <span
-                              className={cn(
-                                'inline-block mt-0.5 px-1.5 py-px rounded-full text-[10px] font-medium leading-tight whitespace-nowrap',
-                                ROLE_BADGE_CLS[row.actor.role] ?? 'bg-slate-100 text-slate-600',
-                              )}
-                            >
-                              {m.roleLabels[row.actor.role] ?? row.actor.role}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[12px] text-slate-400 italic">
-                            {m.systemActor}
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Event */}
-                      <td className="py-3 px-4">
-                        <div className="min-w-0">
-                          <p className="text-[13px] font-semibold text-slate-900 leading-tight whitespace-nowrap">
-                            {eventLabel(row.action, row.entityType, m.eventLabels)}
-                          </p>
-                          <span
-                            className={cn(
-                              'inline-block mt-1 px-1.5 py-px rounded font-mono text-[10px] font-semibold leading-tight',
-                              methodBadgeCls(row.action),
-                            )}
-                            dir="ltr"
-                          >
-                            {row.action}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Area — colored badge */}
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <span
-                          className={cn(
-                            'inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold leading-tight cursor-default',
-                            areaBadgeCls(row.entityType),
-                          )}
-                          title={row.entityType}
+          <div data-testid="audit-days">
+            {days.map((day) => (
+              <section key={day.key} className="border-t border-hairline">
+                <header className="flex items-center justify-between gap-3 bg-surface-muted/50 px-6 py-2.5">
+                  <h3 className="text-[13px] font-bold text-slate-800">{day.label}</h3>
+                  <span className="text-[11.5px] text-slate-500">{l.events(day.rows.length)}</span>
+                </header>
+                <ul className="divide-y divide-hairline">
+                  {day.rows.map((row) => {
+                    const kind = actionKind(row.action);
+                    const Icon = KIND_ICON[kind];
+                    const ip = formatIpLabel(row.ip, m.localIp);
+                    return (
+                      <li key={row.id} data-testid="audit-row">
+                        <Link
+                          href={`/dashboard/audit-logs/${row.id}`}
+                          aria-label={m.viewEventAriaLabel}
+                          className="group flex items-center gap-4 px-6 py-3.5 transition-colors hover:bg-brand-500/[0.04]"
                         >
-                          {areaLabel(row.entityType, m.areaLabels)}
-                        </span>
-                      </td>
-
-                      {/* Entity ID — truncated, full on hover */}
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        {row.entityId ? (
-                          <span
-                            className="font-mono text-[11px] text-slate-500 cursor-help"
-                            dir="ltr"
-                            title={row.entityId}
-                          >
-                            {row.entityId.length > 8
-                              ? `${row.entityId.slice(0, 8)}…`
-                              : row.entityId}
+                          <span className={cn('inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full', KIND_RING[kind])}>
+                            <Icon className="h-4 w-4" />
                           </span>
-                        ) : (
-                          <span className="text-slate-300 text-xs">—</span>
-                        )}
-                      </td>
 
-                      {/* IP */}
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        {(() => {
-                          const { label, isLocal } = formatIpLabel(row.ip, m.localIp);
-                          return isLocal ? (
-                            <span
-                              className="inline-block px-1.5 py-px rounded text-[10px] font-medium bg-slate-100 text-slate-500"
-                              title={row.ip ?? ''}
-                            >
-                              {label}
-                            </span>
-                          ) : (
-                            <span className="font-mono text-[11px] text-slate-400" dir="ltr">
-                              {label}
-                            </span>
-                          );
-                        })()}
-                      </td>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="truncate text-[14px] font-semibold text-slate-900">
+                                {eventLabel(row.action, row.entityType, m.eventLabels, t.operationsPage.domainActions)}
+                              </p>
+                              <span className="rounded-full border border-hairline px-2 py-0.5 text-[11px] text-slate-500" title={row.entityType}>
+                                {areaLabel(row.entityType, t.operationsPage.areaLabels)}
+                              </span>
+                            </div>
+                            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-slate-500">
+                              <span
+                                aria-hidden
+                                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-400/30 to-brand-600/20 text-[9px] font-bold text-brand-700 ring-1 ring-inset ring-brand-500/30"
+                              >
+                                {initials(row.actor?.fullName ?? l.system)}
+                              </span>
+                              <span className="font-medium text-slate-700">{row.actor?.fullName ?? l.system}</span>
+                              {row.actor && (
+                                <span className={cn('rounded-full px-2 py-px text-[10.5px] font-semibold', ROLE_CHIP[row.actor.role] ?? 'bg-slate-500/10 text-slate-600')}>
+                                  {m.roleLabels[row.actor.role] ?? row.actor.role}
+                                </span>
+                              )}
+                            </div>
+                          </div>
 
-                      {/* View action */}
-                      <td className="py-3 ps-4 pe-5 text-end">
-                        <Link href={`/dashboard/audit-logs/${row.id}`} aria-label={m.viewEventAriaLabel}>
-                          <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-hairline bg-surface text-slate-500 shadow-xs hover:bg-canvas hover:text-slate-700 transition-colors">
-                            <Eye className="h-3.5 w-3.5" />
-                          </span>
+                          <div className="hidden shrink-0 flex-col items-end gap-1 sm:flex">
+                            <span className="text-[13px] font-semibold text-slate-700 tabular-nums">{timeFmt.format(new Date(row.createdAt))}</span>
+                            {ip.label !== '—' && (
+                              <span className="rounded-md bg-surface-muted px-1.5 py-px font-mono text-[10.5px] text-slate-500" dir="ltr" title={row.ip ?? ''}>
+                                {ip.label}
+                              </span>
+                            )}
+                          </div>
+                          <span className="sm:hidden text-[12px] text-slate-500 tabular-nums">{timeFmt.format(new Date(row.createdAt))}</span>
+                          <Eye className="h-4 w-4 shrink-0 text-slate-300 transition-colors group-hover:text-brand-600" />
                         </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
         )}
-      </PremiumSectionCard>
+      </PremiumPanel>
 
-      {/* ── Pagination ──────────────────────────────────────────────────────── */}
       {meta && meta.total > meta.pageSize && (
         <Pagination
           basePath="/dashboard/audit-logs"
@@ -503,7 +422,37 @@ export default async function AuditLogsPage({
           }}
         />
       )}
+    </div>
+  );
+}
 
+function SummaryCard({
+  icon, label, children, tone = 'neutral', testId,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+  tone?: 'neutral' | 'good' | 'warn';
+  testId?: string;
+}) {
+  return (
+    <div
+      data-testid={testId}
+      className={cn(
+        'flex flex-col gap-4 rounded-[20px] border bg-surface p-5',
+        tone === 'warn' ? 'border-amber-500/40' : tone === 'good' ? 'border-emerald-500/25' : 'border-hairline',
+      )}
+    >
+      <div className="flex items-center gap-2 text-[12px] font-semibold text-slate-500">
+        <span className={cn(
+          'inline-flex h-7 w-7 items-center justify-center rounded-lg [&_svg]:h-3.5 [&_svg]:w-3.5',
+          tone === 'warn' ? 'bg-amber-500/15 text-amber-600' : tone === 'good' ? 'bg-emerald-500/12 text-emerald-600' : 'bg-brand-500/12 text-brand-700',
+        )}>
+          {icon}
+        </span>
+        {label}
+      </div>
+      <div>{children}</div>
     </div>
   );
 }

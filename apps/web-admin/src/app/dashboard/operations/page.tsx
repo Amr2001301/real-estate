@@ -1,25 +1,18 @@
 import Link from 'next/link';
 import {
-  ArrowLeft,
   ArrowDownRight,
   ArrowUpRight,
-  BadgePercent,
-  BarChart3,
-  Bell,
-  Briefcase,
   Eye,
   Layers,
   KeyRound,
   Pencil,
   Plus,
   ScrollText,
-  Settings,
   ShieldCheck,
   ShieldAlert,
   Sparkles,
   Trash2,
   Users as UsersIcon,
-  Wallet,
   Zap,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
@@ -31,48 +24,16 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/cn';
 import { intlLocale } from '@/lib/format';
 import { ActivityTrendChart } from './_trend-chart';
+import { areaLabel } from './_area-label';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 // ── Area / event helpers ──────────────────────────────────────────────────────
 
-type AreaLabels = ReturnType<typeof uiT>['operationsPage']['areaLabels'];
 type EventLabels = ReturnType<typeof uiT>['operationsPage']['eventLabels'];
 type MethodLabels = ReturnType<typeof uiT>['operationsPage']['methodLabels'];
 
-function areaLabel(entityType: string, labels: AreaLabels): string {
-  const et = entityType.toLowerCase();
-  if (et.includes('auth'))               return labels.auth;
-  if (et.includes('permission'))         return labels.permission;
-  if (et.includes('broker-lead'))        return labels.brokerLead;
-  if (et.includes('broker-reservation')) return labels.brokerReservation;
-  if (et.includes('broker-contract'))    return labels.brokerContract;
-  if (et.includes('broker-commission'))  return labels.brokerCommission;
-  if (et.includes('broker-payout'))      return labels.brokerPayout;
-  if (et.includes('broker'))             return labels.broker;
-  if (et.includes('user'))               return labels.user;
-  if (et.includes('reservation'))        return labels.reservation;
-  if (et.includes('contract'))           return labels.contract;
-  if (et.includes('payment'))            return labels.payment;
-  if (et.includes('lead'))               return labels.lead;
-  if (et.includes('project'))            return labels.project;
-  if (et.includes('unit'))               return labels.unit;
-  if (et.includes('maintenance'))        return labels.maintenance;
-  if (et.includes('document'))           return labels.document;
-  if (et.includes('visit'))              return labels.visit;
-  if (et.includes('notification'))       return labels.notification;
-  if (et.includes('audit'))              return labels.auditLog;
-  if (et.includes('setting'))            return labels.setting;
-  if (et.includes('sales-target'))       return labels.salesTarget;
-  if (et.includes('bonus'))              return labels.bonus;
-  if (et.includes('report'))             return labels.report;
-  if (et.includes('installment'))        return labels.installment;
-  if (et.includes('deposit'))            return labels.deposit;
-  if (et.includes('balance'))            return labels.balance;
-  if (et.includes('target'))             return labels.target;
-  return labels.unclassified;
-}
 
 function eventLabel(
   action: string,
@@ -341,12 +302,12 @@ export default async function OperationsCenterPage() {
 
   const [summaryRes, recentRes] = await Promise.all([
     safe(api.get<OperationsSummary>('/operations/summary')),
-    safe(api.get<Paged<AuditLogItem>>('/audit-logs?pageSize=12')),
+    safe(api.get<Paged<AuditLogItem>>('/audit-logs?pageSize=30')),
   ]);
 
   const summary = summaryRes.data;
   const recent = recentRes.data?.data ?? [];
-  const recentGroups = groupRecentEvents(recent).slice(0, 8);
+  const recentGroups = groupRecentEvents(recent).slice(0, 10);
   const week = summary?.totals.last7Days ?? 0;
   const prevWeek = summary?.totals.previous7Days ?? null;
   const weekDelta = prevWeek ? Math.round(((week - prevWeek) / prevWeek) * 100) : null;
@@ -380,16 +341,6 @@ export default async function OperationsCenterPage() {
   const permCount = summary?.topEntities.filter((e) => e.entityType.toLowerCase().includes('permission')).reduce((s, e) => s + e.count, 0) ?? 0;
   const sensitive = deleteCount + permCount;
   const pct = (n: number) => (week > 0 ? Math.round((n / week) * 100) : 0);
-
-  const QUICK_LINKS = [
-    { href: '/dashboard/audit-logs',         key: 'auditLogs'        as const, icon: ScrollText   },
-    { href: '/dashboard/notifications',      key: 'notifications'    as const, icon: Bell         },
-    { href: '/dashboard/broker-reports',     key: 'brokerReports'    as const, icon: BarChart3    },
-    { href: '/dashboard/broker-payouts',     key: 'brokerPayouts'    as const, icon: Wallet       },
-    { href: '/dashboard/broker-commissions', key: 'brokerCommissions' as const, icon: BadgePercent },
-    { href: '/dashboard/broker-leads',       key: 'brokerLeads'      as const, icon: Briefcase    },
-    { href: '/dashboard/settings',           key: 'settings'         as const, icon: Settings     },
-  ] satisfies Array<{ href: string; key: keyof typeof m.quickLinks; icon: LucideIcon }>;
 
   return (
     <div className="flex flex-col gap-5 pb-2 lg:gap-6">
@@ -532,7 +483,7 @@ export default async function OperationsCenterPage() {
           </div>
 
           {/* ── Timeline + breakdown ─────────────────────────────────────────── */}
-          <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-3 lg:gap-6">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
             <PremiumPanel
               className="lg:col-span-2"
               title={m.timeline.title}
@@ -645,14 +596,14 @@ export default async function OperationsCenterPage() {
                 )}
               </PremiumPanel>
 
-              <PremiumPanel title={m.security.title} sub={m.security.sub} padding="none">
-                <ul className="divide-y divide-hairline border-t border-hairline" data-testid="ops-security-list">
+              <PremiumPanel className="flex-1" title={m.security.title} sub={m.security.sub} padding="none" bodyClassName="flex flex-col">
+                <ul className="flex flex-1 flex-col divide-y divide-hairline border-t border-hairline" data-testid="ops-security-list">
                   {[
                     { label: m.sensitiveRows.deletions, count: deleteCount, flag: deleteCount > 0, icon: <Trash2 className="h-4 w-4" /> },
                     { label: m.sensitiveRows.permChanges, count: permCount, flag: permCount > 0, icon: <KeyRound className="h-4 w-4" /> },
                     { label: m.sensitiveRows.authEvents, count: authCount, flag: false, icon: <ShieldCheck className="h-4 w-4" /> },
                   ].map((r) => (
-                    <li key={r.label} className="flex items-center gap-3 px-6 py-3.5">
+                    <li key={r.label} className="flex flex-1 items-center gap-3 px-6 py-3.5">
                       <span
                         className={cn(
                           'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
@@ -678,31 +629,6 @@ export default async function OperationsCenterPage() {
             </div>
           </div>
 
-          {/* ── Shortcuts ────────────────────────────────────────────────────── */}
-          <PremiumPanel title={m.shortcuts}>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
-              {QUICK_LINKS.map((q) => {
-                const ql = m.quickLinks[q.key];
-                return (
-                  <Link
-                    key={q.href}
-                    href={q.href as never}
-                    title={ql.desc}
-                    className="group flex items-center gap-3 rounded-2xl border border-hairline px-3.5 py-3 transition-all hover:-translate-y-0.5 hover:border-brand-500/40 hover:bg-brand-500/[0.05]"
-                  >
-                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-500/12 text-brand-700">
-                      <q.icon className="h-4 w-4" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13px] font-semibold text-slate-800">{ql.label}</span>
-                      <span className="block truncate text-[11px] text-slate-500">{ql.desc}</span>
-                    </span>
-                    <ArrowLeft className="h-3.5 w-3.5 shrink-0 text-slate-300 transition-colors group-hover:text-brand-600 ltr:rotate-180" />
-                  </Link>
-                );
-              })}
-            </div>
-          </PremiumPanel>
         </>
       )}
     </div>
