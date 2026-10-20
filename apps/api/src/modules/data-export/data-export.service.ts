@@ -127,7 +127,7 @@ export class DataExportService {
         where: { companyId },
         select: {
           code: true, type: true, floor: true, area: true,
-          bedrooms: true, bathrooms: true, price: true, status: true, createdAt: true,
+          bedrooms: true, bathrooms: true, price: true, pricePerMeter: true, status: true, createdAt: true,
           netArea: true, gardenArea: true, roofArea: true, terraceArea: true, landArea: true,
           finishing: true, view: true, orientation: true,
           building: {
@@ -533,7 +533,7 @@ export class DataExportService {
     wb: Workbook,
     rows: Array<{
       code: string; type: string; floor: number; area: number;
-      bedrooms: number; bathrooms: number; price: Prisma.Decimal;
+      bedrooms: number; bathrooms: number; price: Prisma.Decimal; pricePerMeter: Prisma.Decimal | null;
       netArea: number | null; gardenArea: number | null; roofArea: number | null;
       terraceArea: number | null; landArea: number | null;
       finishing: UnitFinishing | null; view: UnitView | null; orientation: UnitOrientation | null;
@@ -569,6 +569,7 @@ export class DataExportService {
         { t: 'text',     v: r.view ? VIEW_AR[r.view] : null },
         { t: 'text',     v: r.orientation ? ORIENTATION_AR[r.orientation] : null },
         { t: 'amount',   v: r.price },
+        { t: 'amount',   v: r.pricePerMeter },
         { t: 'text',     v: r.status },
         { t: 'datetime', v: r.createdAt },
       ]);

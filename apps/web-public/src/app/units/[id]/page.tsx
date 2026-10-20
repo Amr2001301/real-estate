@@ -224,6 +224,11 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                   <span className="font-display text-2xl font-bold text-gold-200">
                     <Price value={unit.price} />
                   </span>
+                  {unit.pricePerMeter && (
+                    <span className="text-sm font-medium text-white/80" data-testid="unit-price-per-meter">
+                      (<Price value={unit.pricePerMeter} /> {m.unitDetail.perMeter})
+                    </span>
+                  )}
                   {unit.code && (
                     <span className="rounded-full bg-black/25 px-2.5 py-0.5 text-[11px] font-medium text-white/75 backdrop-blur-md ring-1 ring-white/10">
                       {unit.code}

@@ -45,9 +45,14 @@ export class CreateUnitDto {
   @Min(0)
   floor!: number;
 
+  /** The whole price — or leave it out and give the price per meter. */
+  @IsOptional()
   @IsNumber()
   @IsPositive()
-  price!: number;
+  price?: number;
+
+  /** Priced by the meter: the price is this × the gross area. */
+  @IsOptional() @IsNumber() @IsPositive() pricePerMeter?: number | null;
 
   @IsOptional()
   @IsEnum(UnitStatus)
@@ -72,6 +77,8 @@ export class UpdateUnitDto {
   @IsOptional() @IsInt() @Min(0) bathrooms?: number;
   @IsOptional() @IsInt() @Min(0) floor?: number;
   @IsOptional() @IsNumber() @IsPositive() price?: number;
+  /** Set → the price follows it (× the gross area); null → priced as a whole. */
+  @IsOptional() @IsNumber() @IsPositive() pricePerMeter?: number | null;
   @IsOptional() @IsNumber() @IsPositive() netArea?: number | null;
   @IsOptional() @IsNumber() @IsPositive() gardenArea?: number | null;
   @IsOptional() @IsNumber() @IsPositive() roofArea?: number | null;
@@ -122,6 +129,21 @@ export class UnitQueryDto {
   @IsOptional() @IsInt() page?: number;
   @IsOptional() @IsInt() @Max(MAX_PAGE_SIZE) pageSize?: number;
   @IsOptional() @IsBoolean() withoutPlan?: boolean;
+}
+
+/**
+ * Reprice by the meter every unit for sale in a project, phase or building
+ * (optionally one type). Reserved and sold units keep their price.
+ */
+export class RepriceUnitsDto {
+  @IsOptional() @IsUUID() projectId?: string;
+  @IsOptional() @IsUUID() phaseId?: string;
+  @IsOptional() @IsUUID() buildingId?: string;
+  /** One of the company's unit types (code). */
+  @IsOptional() @IsString() type?: string;
+  @IsNumber() @IsPositive() pricePerMeter!: number;
+  /** Count only — nothing is changed. */
+  @IsOptional() @IsBoolean() dryRun?: boolean;
 }
 
 export class UpdateUnitStatusDto {

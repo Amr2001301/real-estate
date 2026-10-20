@@ -161,6 +161,8 @@ export interface Unit {
   bathrooms: number;
   floor: number;
   price: string | number;
+  /** Set when the unit is priced by the meter (price = this × area). */
+  pricePerMeter?: string | number | null;
   status: UnitStatus;
   reservationExpiresAt: string | null;
   createdAt: string;

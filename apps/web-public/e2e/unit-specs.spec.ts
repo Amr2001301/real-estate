@@ -3,7 +3,8 @@ import { test, expect } from '@playwright/test';
 /**
  * F10 — the public unit page showed one area and the bedrooms, even for a
  * shop. It now shows the unit's finishing, its other areas, view and
- * orientation, and the units list filters by finishing.
+ * orientation (and its price per meter), and the units list filters by
+ * finishing.
  */
 const API_BASE = process.env.E2E_API_BASE_URL ?? 'http://localhost:4000';
 const SLUG = process.env.E2E_COMPANY_SLUG ?? 'default';
@@ -36,6 +37,7 @@ test('a unit page shows its specs and the list filters by finishing', async ({ p
   const furnished = await make(`PUB-SPEC-${stamp}`, {
     type: '2BR',
     bedrooms: 2,
+    pricePerMeter: 20_000,
     netArea: 105,
     terraceArea: 18,
     finishing: 'FURNISHED',
@@ -50,6 +52,9 @@ test('a unit page shows its specs and the list filters by finishing', async ({ p
     for (const text of ['المساحة الصافية', 'التراس', 'مفروشة', 'بحر', 'قبلي شرقي']) {
       await expect(main.getByText(text, { exact: true }).first()).toBeVisible();
     }
+    // Priced by the meter: 20,000 × 120 m².
+    await expect(page.getByTestId('unit-price-per-meter')).toContainText('للمتر');
+    await expect(page.getByTestId('unit-price-per-meter')).toContainText('٢٠٬٠٠٠');
 
     // A shop has no bedrooms.
     await page.goto(`/units/${shop}`, { waitUntil: 'networkidle' });

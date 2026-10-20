@@ -160,6 +160,9 @@ export default async function UnitsPage({
               <Link href={'/dashboard/units/types' as never}>
                 <Button variant="outline" size="md">{m.manageTypes}</Button>
               </Link>
+              <Link href={'/dashboard/units/reprice' as never}>
+                <Button variant="outline" size="md">{m.reprice}</Button>
+              </Link>
               <Link href={'/dashboard/units/new' as never}>
                 <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
                   {m.addBtn}

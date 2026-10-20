@@ -72,6 +72,8 @@ export interface PublicUnit {
   bathrooms: number;
   floor: number;
   price: string;
+  /** Set when the unit is priced by the meter. */
+  pricePerMeter?: string | null;
   status: string;
   coverImage: string | null;
   media: PublicMedia[];

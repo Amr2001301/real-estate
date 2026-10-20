@@ -30,7 +30,9 @@ function buildPayload(formData: FormData) {
     bedrooms: Number(formData.get('bedrooms') ?? 0),
     bathrooms: Number(formData.get('bathrooms') ?? 0),
     floor: Number(formData.get('floor') ?? 0),
-    price: Number(formData.get('price') ?? 0),
+    // Priced by the meter, no total is sent (the API computes it).
+    price: optNumber(formData, 'price') ?? undefined,
+    pricePerMeter: optNumber(formData, 'pricePerMeter'),
     netArea: optNumber(formData, 'netArea'),
     gardenArea: optNumber(formData, 'gardenArea'),
     roofArea: optNumber(formData, 'roofArea'),

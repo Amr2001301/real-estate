@@ -90,6 +90,7 @@ interface DbUnit {
   view?: UnitView | null;
   orientation?: UnitOrientation | null;
   price: number;
+  pricePerMeter?: number | null;
   status: UnitStatus;
   updatedAt: Date;
 }
@@ -263,7 +264,7 @@ export class DataImportService {
           id: true, code: true, buildingId: true, type: true, floor: true, area: true, bedrooms: true, bathrooms: true,
           netArea: true, gardenArea: true, roofArea: true, terraceArea: true, landArea: true,
           finishing: true, view: true, orientation: true,
-          price: true, status: true, updatedAt: true,
+          price: true, pricePerMeter: true, status: true, updatedAt: true,
         },
       }),
       this.prisma.contract.findMany({
@@ -372,7 +373,9 @@ export class DataImportService {
         floor: u.floor, area: u.area, bedrooms: u.bedrooms, bathrooms: u.bathrooms,
         netArea: u.netArea, gardenArea: u.gardenArea, roofArea: u.roofArea, terraceArea: u.terraceArea, landArea: u.landArea,
         finishing: u.finishing, view: u.view, orientation: u.orientation,
-        price: parseFloat(String(u.price)), status: u.status, updatedAt: u.updatedAt,
+        price: parseFloat(String(u.price)),
+        pricePerMeter: u.pricePerMeter != null ? parseFloat(String(u.pricePerMeter)) : null,
+        status: u.status, updatedAt: u.updatedAt,
       };
       unitByKey.set(`${bldInfo.projectCode}:${bldInfo.phaseCode}:${bldInfo.code}:${u.code}`, dbUnit);
       const existing = unitByCode.get(u.code);
@@ -959,6 +962,7 @@ export class DataImportService {
     const bathroomsColIdx = colMap.get(UNITS_SHEET.fields.bathrooms);
     const priceColIdx     = colMap.get(UNITS_SHEET.fields.price);
     const statusColIdx    = colMap.get(UNITS_SHEET.fields.status);
+    const ppmColIdx       = colMap.get(UNITS_SHEET.fields.pricePerMeter);
     const specAreaCols = (['netArea', 'gardenArea', 'roofArea', 'terraceArea', 'landArea'] as const).map(
       (f) => [f, colMap.get(UNITS_SHEET.fields[f])] as const,
     );
@@ -1027,13 +1031,15 @@ export class DataImportService {
       const area      = readDecimalCell(row, areaColIdx);
       const bedrooms  = readIntCell(row, bedroomsColIdx);
       const bathrooms = readIntCell(row, bathroomsColIdx);
-      const price     = readDecimalCell(row, priceColIdx);
+      let price       = readDecimalCell(row, priceColIdx);
+      const pricePerMeter = readDecimalCell(row, ppmColIdx);
       // Same bounds as the unit form: a zero or negative price/area fed unit
       // valuations and quotes.
       const bad = (
         [
           ['area', area, (v: number) => v > 0, 'must be greater than 0'],
           ['price', price, (v: number) => v > 0, 'must be greater than 0'],
+          ['pricePerMeter', pricePerMeter, (v: number) => v > 0, 'must be greater than 0'],
           ['floor', floor, (v: number) => v >= 0, 'must be 0 or more'],
           ['bedrooms', bedrooms, (v: number) => v >= 0, 'must be 0 or more'],
           ['bathrooms', bathrooms, (v: number) => v >= 0, 'must be 0 or more'],
@@ -1091,6 +1097,11 @@ export class DataImportService {
       let id: string | undefined;
 
       const existing = buildingId ? unitByKey.get(unitKey) : undefined;
+      // Priced by the meter (this row's, or the unit's own): the price is
+      // the price per meter × the gross area — the price cell is not read.
+      const ppm = pricePerMeter ?? existing?.pricePerMeter ?? undefined;
+      const grossArea = area ?? existing?.area;
+      if (ppm != null && grossArea != null) price = Math.round(ppm * grossArea * 100) / 100;
       let type: string | undefined;
       let usage: UnitUsage | undefined;
       if (typeCell !== undefined) {
@@ -1147,6 +1158,7 @@ export class DataImportService {
           (bathrooms !== undefined && bathrooms !== existing.bathrooms) ||
           (Object.keys(specs) as Array<keyof typeof specs>).some((f) => specs[f] !== existing[f]) ||
           (price     !== undefined && Math.abs(price - existing.price) > 0.005) ||
+          (pricePerMeter !== undefined && pricePerMeter !== existing.pricePerMeter) ||
           (status    !== undefined && status    !== existing.status);
         op = changed ? 'update' : 'unchanged';
       }
@@ -1170,7 +1182,7 @@ export class DataImportService {
         id, buildingId, type, usage, floor, area,
         // Only a residential unit has bedrooms.
         bedrooms: usage !== undefined && usage !== UnitUsage.RESIDENTIAL ? 0 : bedrooms,
-        bathrooms, price, status,
+        bathrooms, price, pricePerMeter, status,
         ...specs,
       });
     });
@@ -1862,6 +1874,7 @@ export class DataImportService {
           if (u.bathrooms !== undefined) updateData.bathrooms = u.bathrooms;
           if (u.price     !== undefined) updateData.price = u.price;
           if (u.status    !== undefined) updateData.status = u.status;
+          if (u.pricePerMeter !== undefined) updateData.pricePerMeter = u.pricePerMeter;
           const specs = {
             netArea: u.netArea, gardenArea: u.gardenArea, roofArea: u.roofArea, terraceArea: u.terraceArea, landArea: u.landArea,
             finishing: u.finishing, view: u.view, orientation: u.orientation,
@@ -1897,6 +1910,7 @@ export class DataImportService {
               bedrooms: u.bedrooms ?? 0,
               bathrooms: u.bathrooms ?? 0,
               price: u.price!,
+              pricePerMeter: u.pricePerMeter ?? null,
               status: u.status ?? UnitStatus.AVAILABLE,
               ...Object.fromEntries(Object.entries(specs).filter(([, v]) => v !== undefined)),
             },

@@ -35,6 +35,7 @@ interface UnitInput extends Pick<
   | 'bathrooms'
   | 'floor'
   | 'price'
+  | 'pricePerMeter'
   | 'status'
   | 'updatedAt'
 > {
@@ -84,6 +85,7 @@ export function serializePublicUnit(unit: UnitInput) {
     bathrooms: unit.bathrooms,
     floor: unit.floor,
     price: price(unit.price),
+    pricePerMeter: unit.pricePerMeter != null ? price(unit.pricePerMeter) : null,
     status: unit.status as UnitStatus,
     coverImage: media[0]?.url ?? null,
     media,
