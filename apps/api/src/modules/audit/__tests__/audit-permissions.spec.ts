@@ -24,6 +24,12 @@ import {
  * so we discover it through the module's `controllers` metadata.
  */
 
+// The summary reads the company's time zone and daily series for the request's company.
+jest.mock('../../../common/tenant/tenant-context', () => ({
+  ...jest.requireActual('../../../common/tenant/tenant-context'),
+  getRequiredCompanyId: () => 'c0000000-0000-4000-8000-000000000001',
+}));
+
 interface FakeUser {
   sub: string;
   role: UserRole;
@@ -65,6 +71,8 @@ function makePrismaMock() {
     user: {
       findMany: jest.fn().mockResolvedValue([]),
     },
+    setting: { findMany: jest.fn().mockResolvedValue([]) },
+    $queryRaw: jest.fn().mockResolvedValue([]),
     // AuditService.list / .summary both use $transaction([…]).
     $transaction: jest.fn().mockImplementation(async (ops: unknown) => {
       if (Array.isArray(ops)) return Promise.all(ops);

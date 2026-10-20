@@ -2084,7 +2084,9 @@ export interface AuditLogItem {
 }
 
 export interface OperationsSummary {
-  totals: { today: number; last7Days: number; last30Days: number };
+  totals: { today: number; last7Days: number; last30Days: number; previous7Days?: number };
+  /** Events per day, oldest first (company time zone). */
+  daily?: Array<{ date: string; count: number }>;
   topActors: Array<{
     actor: { id: string; fullName: string; email: string | null; role: UserRole } | null;
     count: number;
