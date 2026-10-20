@@ -74,12 +74,13 @@ const ROLE_CHIP: Partial<Record<UserRole, string>> = {
   BROKER:                 'bg-indigo-500/12 text-indigo-600',
 };
 
-/** The roles in the summary bar, each with its colour. */
-const ROLE_BAR: Partial<Record<UserRole, string>> = {
+/** The role chips under the summary, in this order, each with its colour. */
+const ROLE_DOT: Partial<Record<UserRole, string>> = {
   ADMIN:                  'bg-brand-500',
   SALES_MANAGER:          'bg-sky-500',
   SALES:                  'bg-emerald-500',
   MAINTENANCE_SUPERVISOR: 'bg-orange-500',
+  BROKER:                 'bg-indigo-500',
   CUSTOMER:               'bg-teal-500',
   CLIENT:                 'bg-slate-400',
 };
@@ -160,10 +161,12 @@ export default async function UsersPage({
   const kpiQs = new URLSearchParams({ pageSize: '1' });
   if (sp.role) kpiQs.set('role', sp.role);
 
-  const [usersRes, kpiRes, managersRes] = await Promise.all([
+  const [usersRes, kpiRes, managersRes, allRolesRes] = await Promise.all([
     safe(api.get<Paged<User>>(`/users?${listQs}`)),
     safe(api.get<Paged<User>>(`/users?${kpiQs}`)),
     safe(staffOptions(['SALES_MANAGER'])),
+    // The role chips count every role, whichever one is picked.
+    sp.role ? safe(api.get<Paged<User>>('/users?pageSize=1')) : Promise.resolve(null),
   ]);
 
   const paged    = usersRes.data;
@@ -215,8 +218,11 @@ export default async function UsersPage({
     if (days < 7) return rt.days(days);
     return formatDate(iso, locale);
   };
-  const roleMix = (Object.keys(ROLE_BAR) as UserRole[])
-    .map((r) => [r, byRole[r] ?? 0] as const)
+  const allFacets = (allRolesRes ?? kpiRes).data?.meta;
+  const allByRole = allFacets?.facets?.counts?.role ?? {};
+  const allTotal = allFacets?.total ?? total;
+  const roleMix = (Object.keys(ROLE_DOT) as UserRole[])
+    .map((r) => [r, allByRole[r] ?? 0] as const)
     .filter(([, n]) => n > 0);
 
   return (
@@ -245,23 +251,7 @@ export default async function UsersPage({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard testId="users-total" icon={<Users />} label={m.kpi.total}>
           <p className="num text-[34px] font-semibold leading-none text-slate-900">{num(total)}</p>
-          {roleMix.length > 0 && (
-            <>
-              <div className="mt-3 flex h-1.5 overflow-hidden rounded-full bg-surface-muted">
-                {roleMix.map(([r, n]) => (
-                  <span key={r} className={cn('h-full', ROLE_BAR[r])} style={{ width: `${(n / Math.max(1, total)) * 100}%` }} title={`${ROLE_LABEL[r]}: ${n}`} />
-                ))}
-              </div>
-              <div className="mt-2.5 flex flex-wrap gap-x-3 gap-y-1 text-[11.5px] text-slate-500">
-                {roleMix.map(([r, n]) => (
-                  <span key={r} className="inline-flex items-center gap-1.5">
-                    <span className={cn('h-2 w-2 rounded-full', ROLE_BAR[r])} />
-                    {ROLE_LABEL[r]} <b className="text-slate-800 tabular-nums">{num(n)}</b>
-                  </span>
-                ))}
-              </div>
-            </>
-          )}
+          <p className="mt-2 text-[12px] text-slate-500">{m.kpi.rolesSub(Object.values(byRole).filter((n) => (n ?? 0) > 0).length)}</p>
         </SummaryCard>
         <SummaryCard testId="users-active" icon={<UserCheck />} label={m.kpi.active} tone="good">
           <p className="num text-[34px] font-semibold leading-none text-slate-900">{num(active)}</p>
@@ -278,6 +268,35 @@ export default async function UsersPage({
           </p>
         </SummaryCard>
       </div>
+
+      {/* ── Roles: a chip per role, each a filter ─────────────────────────── */}
+      {roleMix.length > 0 && (
+        <nav className="flex flex-wrap items-center gap-2" data-testid="users-roles">
+          {[['', allTotal] as const, ...roleMix].map(([r, n]) => {
+            const on = (sp.role ?? '') === r;
+            const p = new URLSearchParams();
+            if (r) p.set('role', r);
+            if (sp.status) p.set('status', sp.status);
+            const qs = p.toString();
+            return (
+              <Link
+                key={r || 'all'}
+                href={`/dashboard/users${qs ? `?${qs}` : ''}` as never}
+                className={cn(
+                  'inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors',
+                  on
+                    ? 'border-brand-500/50 bg-brand-500/12 text-brand-700'
+                    : 'border-hairline bg-surface text-slate-600 hover:border-brand-500/30 hover:text-slate-900',
+                )}
+              >
+                {r && <span className={cn('h-2 w-2 rounded-full', ROLE_DOT[r as UserRole])} />}
+                {r ? ROLE_LABEL[r as UserRole] : m.kpi.allRoles}
+                <span className={cn('tabular-nums', on ? 'text-brand-700' : 'text-slate-400')}>{num(n)}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
 
       {/* ── Create user (collapsible via showCreate=1) ──────────────────── */}
       {showCreate && (

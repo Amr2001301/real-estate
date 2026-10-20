@@ -13,6 +13,13 @@ test('the users page summarises the team and changes a manager on demand', async
   for (const id of ['users-total', 'users-active', 'users-inactive', 'users-admins']) {
     await expect(page.getByTestId(id)).toBeVisible();
   }
+  // A chip per role filters the list.
+  const roles = page.getByTestId('users-roles');
+  await roles.getByRole('link', { name: /مبيعات/ }).first().click();
+  await expect(page).toHaveURL(/role=/);
+  await expect(page.getByTestId('users-roles').getByRole('link')).not.toHaveCount(1);
+  await gotoReady(page, '/dashboard/users');
+
   const table = page.getByTestId('users-table');
   await expect(table.locator('select[name="managerId"]').first()).toBeHidden();
   const change = table.getByText('تغيير').first();

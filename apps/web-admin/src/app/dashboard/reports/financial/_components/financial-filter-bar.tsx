@@ -34,6 +34,9 @@ export interface FinancialFilterBarProps {
   locale?: Locale;
 }
 
+/** A field that fills its grid column, its value at the far end. */
+const FIELD = 'w-full justify-between [&_select]:flex-1 [&_select]:text-end [&_input]:flex-1';
+
 export function FinancialFilterBar({
   defaultMode, defaultMonth, defaultYear, defaultQuarter,
   defaultDateFrom, defaultDateTo, defaultCompare,
@@ -103,8 +106,8 @@ export function FinancialFilterBar({
     <div className="overflow-hidden rounded-[28px] border border-hairline bg-surface shadow-[0_10px_30px_-18px_rgb(20_26_38/0.25)]">
       <form onSubmit={(e) => e.preventDefault()}>
 
-        {/* ── Main filter row ──────────────────────────────────────────── */}
-        <div className="flex flex-wrap items-center gap-2.5 p-2 sm:p-2.5">
+        {/* ── The period, and the advanced filters ───────────────────── */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 p-2.5">
           <div role="radiogroup" aria-label={fb.periodLabel} className="inline-flex items-center gap-1 rounded-full bg-surface-sunken/60 p-1">
             {(Object.keys(fb.periodModes) as PeriodMode[]).map((pm) => (
               <button
@@ -124,47 +127,7 @@ export function FinancialFilterBar({
             ))}
           </div>
 
-          {mode !== 'custom' && (
-            <PremiumFilterField neutral label={fb.yearLabel} htmlFor="ff-year">
-              <Select id="ff-year" inputSize="sm" value={year} onChange={(e) => setYear(Number(e.target.value))}>
-                {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-              </Select>
-            </PremiumFilterField>
-          )}
-          {mode === 'monthly' && (
-            <PremiumFilterField neutral label={fb.monthLabel} htmlFor="ff-month">
-              <Select id="ff-month" inputSize="sm" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
-                {fb.months.map((mo) => <option key={mo.v} value={mo.v}>{mo.l}</option>)}
-              </Select>
-            </PremiumFilterField>
-          )}
-          {mode === 'quarterly' && (
-            <PremiumFilterField neutral label={fb.quarterLabel} htmlFor="ff-quarter">
-              <Select id="ff-quarter" inputSize="sm" value={quarter} onChange={(e) => setQuarter(Number(e.target.value))}>
-                {fb.quarters.map((qr) => <option key={qr.v} value={qr.v}>{qr.l}</option>)}
-              </Select>
-            </PremiumFilterField>
-          )}
-          {mode === 'custom' && (
-            <>
-              <PremiumFilterField neutral label={fb.fromLabel} htmlFor="ff-from">
-                <input id="ff-from" type="date" value={dateFrom} onChange={(e) => setFrom(e.target.value)} aria-label={fb.fromAriaLabel} />
-              </PremiumFilterField>
-              <PremiumFilterField neutral label={fb.toLabel} htmlFor="ff-to">
-                <input id="ff-to" type="date" value={dateTo} onChange={(e) => setTo(e.target.value)} aria-label={fb.toAriaLabel} />
-              </PremiumFilterField>
-            </>
-          )}
-          <PremiumFilterField neutral label={fb.compareLabel} htmlFor="ff-compare">
-            <Select id="ff-compare" inputSize="sm" value={compare} onChange={(e) => setCompare(e.target.value as CompareMode)}>
-              <option value="none">{fb.compareOptions.none}</option>
-              <option value="previous-period">{fb.compareOptions.prevPeriod}</option>
-              <option value="previous-month">{fb.compareOptions.prevMonth}</option>
-              <option value="yoy">{fb.compareOptions.yoy}</option>
-            </Select>
-          </PremiumFilterField>
-
-          <div className="ms-auto flex items-center gap-2">
+          <div className="flex items-center gap-2">
             {hasAdvanced && (
               <Button type="button" variant="ghost" size="sm" onClick={handleClear}>{fb.clearBtn}</Button>
             )}
@@ -182,6 +145,50 @@ export function FinancialFilterBar({
               {showFilters ? fb.hideFilters : fb.showFilters}
             </button>
           </div>
+        </div>
+
+        {/* ── The dates and the comparison, in equal columns ───────────── */}
+        <div className="grid grid-cols-1 gap-2.5 border-t border-hairline p-2.5 sm:auto-cols-fr sm:grid-flow-col sm:grid-cols-none">
+          {mode !== 'custom' && (
+            <PremiumFilterField neutral className={FIELD} label={fb.yearLabel} htmlFor="ff-year">
+              <Select id="ff-year" inputSize="sm" value={year} onChange={(e) => setYear(Number(e.target.value))}>
+                {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+              </Select>
+            </PremiumFilterField>
+          )}
+          {mode === 'monthly' && (
+            <PremiumFilterField neutral className={FIELD} label={fb.monthLabel} htmlFor="ff-month">
+              <Select id="ff-month" inputSize="sm" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+                {fb.months.map((mo) => <option key={mo.v} value={mo.v}>{mo.l}</option>)}
+              </Select>
+            </PremiumFilterField>
+          )}
+          {mode === 'quarterly' && (
+            <PremiumFilterField neutral className={FIELD} label={fb.quarterLabel} htmlFor="ff-quarter">
+              <Select id="ff-quarter" inputSize="sm" value={quarter} onChange={(e) => setQuarter(Number(e.target.value))}>
+                {fb.quarters.map((qr) => <option key={qr.v} value={qr.v}>{qr.l}</option>)}
+              </Select>
+            </PremiumFilterField>
+          )}
+          {mode === 'custom' && (
+            <>
+              <PremiumFilterField neutral className={FIELD} label={fb.fromLabel} htmlFor="ff-from">
+                <input id="ff-from" type="date" value={dateFrom} onChange={(e) => setFrom(e.target.value)} aria-label={fb.fromAriaLabel} />
+              </PremiumFilterField>
+              <PremiumFilterField neutral className={FIELD} label={fb.toLabel} htmlFor="ff-to">
+                <input id="ff-to" type="date" value={dateTo} onChange={(e) => setTo(e.target.value)} aria-label={fb.toAriaLabel} />
+              </PremiumFilterField>
+            </>
+          )}
+          <PremiumFilterField neutral className={FIELD} label={fb.compareLabel} htmlFor="ff-compare">
+            <Select id="ff-compare" inputSize="sm" value={compare} onChange={(e) => setCompare(e.target.value as CompareMode)}>
+              <option value="none">{fb.compareOptions.none}</option>
+              <option value="previous-period">{fb.compareOptions.prevPeriod}</option>
+              <option value="previous-month">{fb.compareOptions.prevMonth}</option>
+              <option value="yoy">{fb.compareOptions.yoy}</option>
+            </Select>
+          </PremiumFilterField>
+
         </div>
 
         {/* ── Advanced panel — expands inside same card ─────────────────── */}
