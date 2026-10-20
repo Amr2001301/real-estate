@@ -5278,6 +5278,17 @@ const UI = {
         paid: 'صُرف',
         owed: 'المتبقي',
       },
+      hero: {
+        rate: 'نسبة التحصيل',
+        rateSub: 'من المستحق حتى اليوم',
+        fees: 'غرامات ورسوم',
+        vsCompare: 'مقارنة بفترة المقارنة',
+      },
+      attention: {
+        allClear: 'لا متأخرات',
+        allClearSub: 'كل ما استحق حتى اليوم محصّل — لا يوجد قسط متأخر.',
+      },
+      refundsTitle: 'المستردات',
       collectionEfficiency: {
         title: 'كفاءة التحصيل',
         overdueLabel: 'متأخر',
@@ -5314,7 +5325,8 @@ const UI = {
       },
       forecast: {
         title: 'توقعات التحصيل القادمة',
-        description: 'الأقساط PENDING المستحقة في الفترات القادمة',
+        description: 'الأقساط غير المدفوعة التي تستحق في الأشهر الثلاثة القادمة',
+        empty: 'لا أقساط مستحقة في الأشهر الثلاثة القادمة',
         next30: 'خلال 30 يومًا',
         next3160: '31 – 60 يومًا',
         next6190: '61 – 90 يومًا',
@@ -5350,6 +5362,8 @@ const UI = {
         thisMonthTitle: 'بقية مستحقات الشهر',
         thisWeekEmpty: 'لا توجد مستحقات هذا الأسبوع',
         thisMonthEmpty: 'لا توجد مستحقات إضافية هذا الشهر',
+        title: 'المستحقات القادمة',
+        sub: 'ما يستحق هذا الأسبوع وبقية الشهر',
       },
       collectionByType: {
         title: 'التحصيل حسب نوع الدفعة',
@@ -5359,6 +5373,7 @@ const UI = {
         colVerified: 'مؤكد',
         colUnverified: 'غير مؤكد',
         depositSuffix: 'دفعة',
+        empty: 'لا توجد دفعات في الفترة المختارة',
       },
       booking: {
         title: 'خط الحجوزات',
@@ -5367,6 +5382,7 @@ const UI = {
         approvedReservations: 'حجوزات معتمدة',
         bookingCollected: 'مبالغ الحجز المؤكدة',
         bookingUncollected: 'تقدير غير المحصّل',
+        count: (n: number) => `${n} حجز`,
       },
       liabilities: {
         title: 'الالتزامات غير المدفوعة',
@@ -10841,6 +10857,17 @@ const UI = {
         paid: 'Paid',
         owed: 'Still owed',
       },
+      hero: {
+        rate: 'Collection rate',
+        rateSub: 'of what is due by today',
+        fees: 'Fees & penalties',
+        vsCompare: 'vs the comparison period',
+      },
+      attention: {
+        allClear: 'Nothing overdue',
+        allClearSub: 'Everything due by today is collected — no overdue installment.',
+      },
+      refundsTitle: 'Refunds',
       collectionEfficiency: {
         title: 'Collection Efficiency',
         overdueLabel: 'Overdue',
@@ -10877,7 +10904,8 @@ const UI = {
       },
       forecast: {
         title: 'Upcoming Collection Forecast',
-        description: 'PENDING installments due in upcoming periods',
+        description: 'Unpaid installments falling due in the next three months',
+        empty: 'Nothing falls due in the next three months',
         next30: 'Within 30 days',
         next3160: '31 – 60 days',
         next6190: '61 – 90 days',
@@ -10913,6 +10941,8 @@ const UI = {
         thisMonthTitle: 'Remaining Month Dues',
         thisWeekEmpty: 'No dues this week',
         thisMonthEmpty: 'No additional dues this month',
+        title: 'Upcoming dues',
+        sub: 'Falling due this week and in the rest of the month',
       },
       collectionByType: {
         title: 'Collection by Payment Type',
@@ -10922,6 +10952,7 @@ const UI = {
         colVerified: 'Verified',
         colUnverified: 'Unverified',
         depositSuffix: 'payment',
+        empty: 'No payments in the selected period',
       },
       booking: {
         title: 'Booking Pipeline',
@@ -10930,6 +10961,7 @@ const UI = {
         approvedReservations: 'Approved reservations',
         bookingCollected: 'Verified booking amounts',
         bookingUncollected: 'Uncollected estimate',
+        count: (n: number) => `${n} reservation${n !== 1 ? 's' : ''}`,
       },
       liabilities: {
         title: 'Unpaid Liabilities',
