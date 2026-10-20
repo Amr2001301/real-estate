@@ -1,20 +1,23 @@
 import Link from 'next/link';
 import {
-  Activity,
+  ArrowLeft,
+  ArrowDownRight,
+  ArrowUpRight,
   BadgePercent,
   BarChart3,
   Bell,
   Briefcase,
-  Clock,
-  ExternalLink,
   Eye,
+  Layers,
+  KeyRound,
   Pencil,
   Plus,
   ScrollText,
   Settings,
-  Shield,
+  ShieldCheck,
+  ShieldAlert,
+  Sparkles,
   Trash2,
-  TrendingUp,
   Users as UsersIcon,
   Wallet,
   Zap,
@@ -23,12 +26,12 @@ import { api, safe } from '@/lib/api';
 import { getLocale, type Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import type { AuditLogItem, OperationsSummary, Paged } from '@/lib/types';
-import { Button } from '@/components/ui/button';
-import { PremiumMetricStrip, PremiumPageHero, PremiumSectionCard } from '@/components/premium';
+import { PremiumPageHero, PremiumPanel } from '@/components/premium';
 import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/cn';
-
 import { intlLocale } from '@/lib/format';
+import { ActivityTrendChart } from './_trend-chart';
+
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
@@ -71,7 +74,14 @@ function areaLabel(entityType: string, labels: AreaLabels): string {
   return labels.unclassified;
 }
 
-function eventLabel(action: string, entityType: string, labels: EventLabels): string {
+function eventLabel(
+  action: string,
+  entityType: string,
+  labels: EventLabels,
+  domain: Record<string, string> = {},
+): string {
+  // A named action ("deposit.reversed") — not an HTTP method.
+  if (action.includes('.')) return domainActionLabel(action, domain);
   const m  = action.toUpperCase();
   const et = entityType.toLowerCase();
   const c  = (kw: string) => et.includes(kw);
@@ -149,33 +159,29 @@ function eventLabel(action: string, entityType: string, labels: EventLabels): st
   return labels.systemAction;
 }
 
-function methodBadgeCls(action: string): string {
+/** A named action's label; an unknown one is shown readably ("deposit reversed"). */
+function domainActionLabel(action: string, domain: Record<string, string>): string {
+  return domain[action] ?? action.replace(/[._-]+/g, ' ');
+}
+
+type ActionKind = 'create' | 'edit' | 'delete' | 'special';
+function actionKind(action: string): ActionKind {
   switch (action.toUpperCase()) {
-    case 'POST':   return 'bg-emerald-50 text-emerald-700 border border-emerald-100';
+    case 'POST':   return 'create';
     case 'PATCH':
-    case 'PUT':    return 'bg-amber-50 text-amber-700 border border-amber-100';
-    case 'DELETE': return 'bg-danger-50 text-danger-700 border border-danger-100';
-    default:       return 'bg-slate-50 text-slate-600 border border-slate-200';
+    case 'PUT':    return 'edit';
+    case 'DELETE': return 'delete';
+    default:       return 'special';
   }
 }
 
 function methodIconCls(action: string): string {
   switch (action.toUpperCase()) {
-    case 'POST':   return 'bg-emerald-100 text-emerald-700';
+    case 'POST':   return 'bg-emerald-500/12 text-emerald-600 ring-1 ring-inset ring-emerald-500/25';
     case 'PATCH':
-    case 'PUT':    return 'bg-amber-100 text-amber-700';
-    case 'DELETE': return 'bg-danger-100 text-danger-700';
-    default:       return 'bg-slate-100 text-slate-600';
-  }
-}
-
-function methodBarCls(action: string): string {
-  switch (action.toUpperCase()) {
-    case 'POST':   return 'bg-emerald-400';
-    case 'PATCH':
-    case 'PUT':    return 'bg-amber-400';
-    case 'DELETE': return 'bg-danger-500';
-    default:       return 'bg-slate-400';
+    case 'PUT':    return 'bg-amber-500/12 text-amber-600 ring-1 ring-inset ring-amber-500/25';
+    case 'DELETE': return 'bg-danger-500/12 text-danger-600 ring-1 ring-inset ring-danger-500/25';
+    default:       return 'bg-sky-500/12 text-sky-600 ring-1 ring-inset ring-sky-500/25';
   }
 }
 
@@ -191,7 +197,7 @@ function methodIcon(action: string): LucideIcon {
     case 'PATCH':
     case 'PUT':    return Pencil;
     case 'DELETE': return Trash2;
-    default:       return Eye;
+    default:       return Sparkles;
   }
 }
 
@@ -247,30 +253,133 @@ function groupRecentEvents(events: AuditLogItem[]): EventGroup[] {
   return groups;
 }
 
+// ── Small building blocks ─────────────────────────────────────────────────────
+
+const AREA_COLORS = ['bg-brand-500', 'bg-sky-500', 'bg-emerald-500', 'bg-violet-500', 'bg-rose-400', 'bg-slate-400'];
+const KIND_COLORS: Record<ActionKind, string> = {
+  create: 'bg-emerald-500',
+  edit: 'bg-amber-400',
+  delete: 'bg-danger-500',
+  special: 'bg-sky-500',
+};
+
+function initials(name: string | null | undefined): string {
+  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '·';
+}
+
+function Avatar({ name, size = 'md' }: { name: string | null | undefined; size?: 'sm' | 'md' }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'inline-flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-400/30 to-brand-600/20 font-bold text-brand-700 ring-1 ring-inset ring-brand-500/30',
+        size === 'sm' ? 'h-5 w-5 text-[9px]' : 'h-10 w-10 text-[13px]',
+      )}
+    >
+      {initials(name)}
+    </span>
+  );
+}
+
+/** One of the four insight cards under the hero. */
+function InsightCard({
+  icon,
+  label,
+  value,
+  sub,
+  lead,
+  tone = 'neutral',
+  testId,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+  sub?: React.ReactNode;
+  lead?: React.ReactNode;
+  tone?: 'neutral' | 'good' | 'warn';
+  testId?: string;
+}) {
+  return (
+    <div
+      data-testid={testId}
+      className={cn(
+        'group relative flex flex-col gap-3 overflow-hidden rounded-[20px] border bg-surface p-5 transition-colors',
+        tone === 'good' && 'border-emerald-500/25',
+        tone === 'warn' && 'border-amber-500/40',
+        tone === 'neutral' && 'border-hairline hover:border-brand-500/30',
+      )}
+    >
+      <div className="flex items-center gap-2 text-[12px] font-semibold text-slate-500">
+        <span
+          className={cn(
+            'inline-flex h-7 w-7 items-center justify-center rounded-lg [&_svg]:h-3.5 [&_svg]:w-3.5',
+            tone === 'good' ? 'bg-emerald-500/12 text-emerald-600' : tone === 'warn' ? 'bg-amber-500/15 text-amber-600' : 'bg-brand-500/12 text-brand-700',
+          )}
+        >
+          {icon}
+        </span>
+        {label}
+      </div>
+      <div className="flex min-w-0 items-center gap-3">
+        {lead}
+        <div className="min-w-0">
+          <p className="truncate text-[19px] font-bold leading-tight text-slate-900">{value}</p>
+          {sub && <p className="mt-1 truncate text-[12px] text-slate-500">{sub}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function OperationsCenterPage() {
   const locale = await getLocale();
   const m = uiT(locale).operationsPage;
+  const num = (n: number) => n.toLocaleString(intlLocale(locale));
 
   const [summaryRes, recentRes] = await Promise.all([
     safe(api.get<OperationsSummary>('/operations/summary')),
-    safe(api.get<Paged<AuditLogItem>>('/audit-logs?pageSize=10')),
+    safe(api.get<Paged<AuditLogItem>>('/audit-logs?pageSize=12')),
   ]);
 
-  const summary        = summaryRes.data;
-  const recent         = recentRes.data?.data ?? [];
-  const topActor       = summary?.topActors[0]?.actor ?? null;
-  const topEntityEntry = summary?.topEntities[0];
+  const summary = summaryRes.data;
+  const recent = recentRes.data?.data ?? [];
+  const recentGroups = groupRecentEvents(recent).slice(0, 8);
+  const week = summary?.totals.last7Days ?? 0;
+  const prevWeek = summary?.totals.previous7Days ?? null;
+  const weekDelta = prevWeek ? Math.round(((week - prevWeek) / prevWeek) * 100) : null;
+  const daily = summary?.daily ?? [];
+  const peak = daily.reduce<{ date: string; count: number } | null>((p, d) => (!p || d.count > p.count ? d : p), null);
+  const dayFmt = new Intl.DateTimeFormat(intlLocale(locale), { day: 'numeric', month: 'short' });
+  const dayLabel = (iso: string) => dayFmt.format(new Date(`${iso}T12:00:00Z`));
+
+  // Areas: entity types that read the same ("deposits", "deposit-reviews")
+  // are one area; the rest of the week is "other".
+  const areaTotals = new Map<string, number>();
+  for (const e of summary?.topEntities ?? []) {
+    const label = areaLabel(e.entityType, m.areaLabels);
+    areaTotals.set(label, (areaTotals.get(label) ?? 0) + e.count);
+  }
+  const areas = [...areaTotals.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const otherAreas = Math.max(0, week - areas.reduce((s, [, n]) => s + n, 0));
+  const areaRows = [...areas, ...(otherAreas > 0 ? [[m.distribution.others, otherAreas] as [string, number]] : [])];
+
+  // Kinds of actions: create / edit / delete / named ("special") actions.
+  const kinds: Record<ActionKind, number> = { create: 0, edit: 0, delete: 0, special: 0 };
+  for (const a of summary?.topActions ?? []) kinds[actionKind(a.action)] += a.count;
+  kinds.special += Math.max(0, week - Object.values(kinds).reduce((s, n) => s + n, 0));
+  const kindRows = (Object.keys(kinds) as ActionKind[]).filter((k) => kinds[k] > 0);
+
+  const topActor = summary?.topActors[0] ?? null;
+  const topArea = areas[0] ?? null;
   const topActionEntry = summary?.topActions[0];
-
-  const maxEntity = Math.max(...(summary?.topEntities.map((e) => e.count) ?? [1]), 1);
-  const maxAction = Math.max(...(summary?.topActions.map((a) => a.count) ?? [1]), 1);
-
-  const deleteCount   = summary?.topActions.find((a) => a.action.toUpperCase() === 'DELETE')?.count ?? 0;
-  const authCount     = summary?.topEntities.find((e) => e.entityType.toLowerCase().includes('auth'))?.count ?? 0;
-  const permCount     = summary?.topEntities.find((e) => e.entityType.toLowerCase().includes('permission'))?.count ?? 0;
-  const recentGroups  = groupRecentEvents(recent);
+  const deleteCount = summary?.topActions.find((a) => a.action.toUpperCase() === 'DELETE')?.count ?? 0;
+  const authCount = summary?.topEntities.filter((e) => e.entityType.toLowerCase().includes('auth')).reduce((s, e) => s + e.count, 0) ?? 0;
+  const permCount = summary?.topEntities.filter((e) => e.entityType.toLowerCase().includes('permission')).reduce((s, e) => s + e.count, 0) ?? 0;
+  const sensitive = deleteCount + permCount;
+  const pct = (n: number) => (week > 0 ? Math.round((n / week) * 100) : 0);
 
   const QUICK_LINKS = [
     { href: '/dashboard/audit-logs',         key: 'auditLogs'        as const, icon: ScrollText   },
@@ -280,405 +389,320 @@ export default async function OperationsCenterPage() {
     { href: '/dashboard/broker-commissions', key: 'brokerCommissions' as const, icon: BadgePercent },
     { href: '/dashboard/broker-leads',       key: 'brokerLeads'      as const, icon: Briefcase    },
     { href: '/dashboard/settings',           key: 'settings'         as const, icon: Settings     },
-  ] satisfies Array<{
-    href: string;
-    key: keyof typeof m.quickLinks;
-    icon: LucideIcon;
-  }>;
+  ] satisfies Array<{ href: string; key: keyof typeof m.quickLinks; icon: LucideIcon }>;
 
   return (
-    <div className="flex flex-col gap-5 pb-2">
-
-      {/* ── Header ─────────────────────────────────────────────────────── */}
+    <div className="flex flex-col gap-5 pb-2 lg:gap-6">
       <PremiumPageHero
         title={m.title}
         description={m.description}
-        breadcrumbs={[
-          { label: m.breadcrumbHome, href: '/dashboard' },
-          { label: m.breadcrumbSelf },
-        ]}
+        breadcrumbs={[{ label: m.breadcrumbHome, href: '/dashboard' }, { label: m.breadcrumbSelf }]}
         meta={
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-1 text-[11px] font-bold text-brand-700">
-            <Activity className="h-3.5 w-3.5" />
+          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold text-emerald-600">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
             {m.liveBadge}
           </span>
         }
       />
 
       {(summaryRes.error || recentRes.error) && (
-        <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+        <div className="rounded-2xl border border-danger-100 bg-danger-50 p-4 text-sm text-danger-700">
           {m.errorPartial} {summaryRes.error ?? recentRes.error}
         </div>
       )}
 
       {summary && (
         <>
-          {/* ── KPI strip ────────────────────────────────────────────────── */}
-          <PremiumMetricStrip
-            variant="dashboard"
-            cols={4}
-            metrics={[
-              {
-                label: m.kpi.todayEvents,
-                value: summary.totals.today.toLocaleString(intlLocale(locale)),
-                icon: <Activity />,
-                tone: 'brand',
-                sub: m.kpi.todayEventsSub,
-              },
-              {
-                label: m.kpi.weekEvents,
-                value: summary.totals.last7Days.toLocaleString(intlLocale(locale)),
-                icon: <TrendingUp />,
-                tone: 'info',
-                sub: m.kpi.weekEventsSub,
-              },
-              {
-                label: m.kpi.topUser,
-                value: topActor?.fullName ?? '—',
-                icon: <UsersIcon />,
-                tone: 'success',
-                valueSize: 'compact',
-                sub: topActor ? (m.roleLabels[topActor.role as keyof typeof m.roleLabels] ?? topActor.role) : undefined,
-              },
-              {
-                label: m.kpi.topArea,
-                value: topEntityEntry ? areaLabel(topEntityEntry.entityType, m.areaLabels) : '—',
-                icon: <Activity />,
-                tone: 'purple',
-                valueSize: 'compact',
-                sub: topEntityEntry ? m.kpi.topAreaSub(topEntityEntry.count) : undefined,
-              },
-            ]}
-          />
+          {/* ── Hero: today, the trend, the totals ─────────────────────────── */}
+          <section
+            data-testid="ops-hero"
+            className="relative overflow-hidden rounded-[26px] border border-hairline bg-surface"
+          >
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-brand-500/[0.09] via-transparent to-transparent" />
+            <div className="pointer-events-none absolute -top-24 start-1/3 h-56 w-56 rounded-full bg-brand-500/10 blur-3xl" />
+            <div className="relative grid grid-cols-1 gap-6 p-6 sm:p-8 lg:grid-cols-[minmax(0,300px)_1fr] lg:gap-10">
+              <div className="flex flex-col justify-between gap-6">
+                <div>
+                  <p className="text-[13px] font-semibold text-slate-500">{m.hero.today}</p>
+                  <p className="mt-2 text-[64px] font-bold leading-none tracking-tight text-slate-900 tabular-nums" data-testid="ops-today">
+                    {num(summary.totals.today)}
+                  </p>
+                  {weekDelta !== null && (
+                    <span
+                      className={cn(
+                        'mt-4 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-bold',
+                        weekDelta > 0 && 'bg-emerald-500/12 text-emerald-600',
+                        weekDelta < 0 && 'bg-danger-500/10 text-danger-600',
+                        weekDelta === 0 && 'bg-surface-muted text-slate-500',
+                      )}
+                    >
+                      {weekDelta > 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : weekDelta < 0 ? <ArrowDownRight className="h-3.5 w-3.5" /> : null}
+                      {weekDelta === 0 ? m.hero.flat : m.hero.vsLastWeek(weekDelta)}
+                    </span>
+                  )}
+                </div>
+                <dl className="grid grid-cols-3 gap-4 border-t border-hairline pt-5">
+                  {[
+                    { label: m.hero.week, value: num(week) },
+                    { label: m.hero.month, value: num(summary.totals.last30Days) },
+                    { label: m.hero.last, value: recent[0] ? relativeTime(recent[0].createdAt, m.relativeTime, locale) : '—' },
+                  ].map((s) => (
+                    <div key={s.label} className="min-w-0">
+                      <dt className="truncate text-[11px] font-medium text-slate-500">{s.label}</dt>
+                      <dd className="mt-1 truncate text-[16px] font-bold text-slate-900 tabular-nums">{s.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
 
-          {/* ── Secondary insights strip ─────────────────────────────────── */}
-          <PremiumMetricStrip
-            variant="compact"
-            cols={4}
-            metrics={[
-              {
-                label: m.kpi.topAction,
-                value: topActionEntry
-                  ? `${methodLabel(topActionEntry.action, m.methodLabels)} · ${topActionEntry.action}`
-                  : '—',
-                icon: <Zap />,
-                tone: 'warning',
-                sub: topActionEntry ? m.kpi.topActionSub(topActionEntry.count) : undefined,
-              },
-              {
-                label: m.kpi.lastActivity,
-                value: recent[0] ? relativeTime(recent[0].createdAt, m.relativeTime, locale) : '—',
-                icon: <Clock />,
-                tone: 'brand',
-              },
-              {
-                label: m.kpi.total30,
-                value: summary.totals.last30Days.toLocaleString(intlLocale(locale)),
-                icon: <TrendingUp />,
-                tone: 'success',
-              },
-              {
-                label: m.kpi.deletions,
-                value: deleteCount === 0 ? m.kpi.deletionsNone : deleteCount.toLocaleString(intlLocale(locale)),
-                icon: <Shield />,
-                tone: deleteCount > 0 ? 'danger' : 'neutral',
-              },
-            ]}
-          />
+              <div className="flex min-w-0 flex-col gap-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="font-heading text-[17px] font-bold text-slate-900">{m.hero.trend}</p>
+                  {peak && peak.count > 0 && (
+                    <p className="text-[12px] text-slate-500">{m.hero.peak(peak.count, dayLabel(peak.date))}</p>
+                  )}
+                </div>
+                {daily.length > 1 ? (
+                  <>
+                    <ActivityTrendChart
+                      days={daily}
+                      label={m.hero.trend}
+                      format={(n, d) => m.hero.eventsOn(n, dayLabel(d))}
+                    />
+                    <div className="flex justify-between text-[11px] text-slate-400" dir="ltr">
+                      <span>{dayLabel(daily[0]!.date)}</span>
+                      <span>{dayLabel(daily[Math.floor(daily.length / 2)]!.date)}</span>
+                      <span>{dayLabel(daily.at(-1)!.date)}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-hairline py-12 text-[13px] text-slate-500">
+                    {m.sections.noData}
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
 
-          {/* ── Main two-column section ────────────────────────────────────── */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
-
-            {/* ── Latest events (2/3) ──────────────────────────────────────── */}
-            <PremiumSectionCard
-              className="lg:col-span-2"
-              icon={<ScrollText />}
-              title={m.sections.latestEvents}
-              description={m.sections.latestEventsDesc}
-              trailing={
-                <Link href="/dashboard/audit-logs">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    leftIcon={<ExternalLink className="h-3.5 w-3.5" />}
-                  >
-                    {m.sections.openAuditLog}
-                  </Button>
-                </Link>
+          {/* ── Insights ─────────────────────────────────────────────────────── */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <InsightCard
+              testId="ops-top-user"
+              icon={<UsersIcon />}
+              label={m.insights.topUser}
+              lead={topActor?.actor ? <Avatar name={topActor.actor.fullName} /> : undefined}
+              value={topActor?.actor?.fullName ?? m.insights.none}
+              sub={
+                topActor?.actor
+                  ? `${m.roleLabels[topActor.actor.role as keyof typeof m.roleLabels] ?? topActor.actor.role} · ${m.insights.topUserSub(topActor.count)}`
+                  : undefined
               }
-              padded={false}
+            />
+            <InsightCard
+              testId="ops-top-area"
+              icon={<Layers />}
+              label={m.insights.topArea}
+              value={topArea?.[0] ?? m.insights.none}
+              sub={topArea ? m.insights.share(pct(topArea[1])) : undefined}
+            />
+            <InsightCard
+              testId="ops-top-action"
+              icon={<Zap />}
+              label={m.insights.topAction}
+              value={
+                topActionEntry
+                  ? topActionEntry.action.includes('.')
+                    ? domainActionLabel(topActionEntry.action, m.domainActions)
+                    : methodLabel(topActionEntry.action, m.methodLabels)
+                  : m.insights.none
+              }
+              sub={topActionEntry ? m.insights.times(topActionEntry.count) : undefined}
+            />
+            <InsightCard
+              testId="ops-security"
+              icon={sensitive > 0 ? <ShieldAlert /> : <ShieldCheck />}
+              tone={sensitive > 0 ? 'warn' : 'good'}
+              label={m.insights.security}
+              value={sensitive > 0 ? m.insights.securityItems(sensitive) : m.insights.securityClear}
+              sub={m.security.sub}
+            />
+          </div>
+
+          {/* ── Timeline + breakdown ─────────────────────────────────────────── */}
+          <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-3 lg:gap-6">
+            <PremiumPanel
+              className="lg:col-span-2"
+              title={m.timeline.title}
+              sub={m.timeline.sub}
+              link={{ href: '/dashboard/audit-logs', label: m.timeline.viewAll }}
             >
-              {recentGroups.length === 0 && summary.topEntities.length === 0 ? (
-                <div className="py-12">
-                  <EmptyState
-                    icon={<ScrollText />}
-                    title={m.emptyEvents}
-                    description={m.emptyEventsDesc}
-                  />
+              {recentGroups.length === 0 ? (
+                <div className="py-10">
+                  <EmptyState icon={<ScrollText />} title={m.emptyEvents} description={m.emptyEventsDesc} />
                 </div>
               ) : (
-                <>
-                  {/* Grouped recent events */}
-                  {recentGroups.length > 0 && (
-                    <>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-5 py-2.5 border-b border-hairline">
-                        {m.sections.recentActivity}
-                      </p>
-                      <ul className="divide-y divide-hairline">
-                        {recentGroups.map((g) => {
-                          const Icon = methodIcon(g.action);
-                          const href = g.count === 1
-                            ? `/dashboard/audit-logs/${g.firstId}`
-                            : `/dashboard/audit-logs?entityType=${encodeURIComponent(g.entityType)}&action=${encodeURIComponent(g.action)}`;
-                          return (
-                            <li key={g.firstId}>
-                              <Link
-                                href={href}
-                                className="group flex items-center gap-4 px-5 py-3.5 hover:bg-canvas/40 transition-colors"
-                              >
-                                {/* Method icon */}
-                                <span className={cn(
-                                  'shrink-0 inline-flex items-center justify-center h-9 w-9 rounded-xl',
-                                  methodIconCls(g.action),
-                                )}>
-                                  <Icon className="h-4 w-4" />
-                                </span>
-
-                                {/* Content */}
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-[13px] font-semibold text-slate-900 truncate">
-                                      {eventLabel(g.action, g.entityType, m.eventLabels)}
-                                    </p>
-                                    {g.count > 1 && (
-                                      <span className="shrink-0 text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full tabular-nums whitespace-nowrap">
-                                        {m.timesCount(g.count)}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-[12px] text-slate-500 mt-0.5 truncate">
-                                    {m.byLabel}{' '}
-                                    <span className="font-medium text-slate-700">
-                                      {g.actor?.fullName ?? m.systemActor}
-                                    </span>
-                                    {' · '}
-                                    {areaLabel(g.entityType, m.areaLabels)}
-                                    {' · '}
-                                    {relativeTime(g.latestAt, m.relativeTime, locale)}
-                                  </p>
-                                </div>
-
-                                {/* Method badge + eye */}
-                                <div className="shrink-0 flex items-center gap-2">
-                                  <span
-                                    className={cn(
-                                      'hidden sm:inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold font-mono',
-                                      methodBadgeCls(g.action),
-                                    )}
-                                    dir="ltr"
-                                  >
-                                    {g.action}
-                                  </span>
-                                  <span className="inline-flex items-center justify-center h-7 w-7 rounded-full text-slate-300 group-hover:text-brand-700 group-hover:border border-brand-400/50 transition-colors">
-                                    <Eye className="h-3.5 w-3.5" />
-                                  </span>
-                                </div>
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </>
-                  )}
-
-                  {/* Weekly entity activity */}
-                  {summary.topEntities.length > 0 && (
-                    <>
-                      <p className={cn(
-                        'text-[10px] font-bold uppercase tracking-widest text-slate-400 px-5 py-2.5 border-b border-hairline',
-                        recentGroups.length > 0 && 'border-t',
-                      )}>
-                        {m.sections.weekByArea}
-                      </p>
-                      <ul className="divide-y divide-hairline">
-                        {summary.topEntities.map((e) => (
-                          <li key={e.entityType}>
-                            <Link
-                              href={`/dashboard/audit-logs?entityType=${encodeURIComponent(e.entityType)}`}
-                              className="group flex items-center gap-4 px-5 py-3.5 hover:bg-canvas/40 transition-colors"
-                            >
-                              <span className="shrink-0 inline-flex items-center justify-center h-9 w-9 rounded-full border border-brand-400/50 text-brand-700">
-                                <Activity className="h-4 w-4" />
-                              </span>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[13px] font-semibold text-slate-900 truncate">
-                                  {areaLabel(e.entityType, m.areaLabels)}
-                                </p>
-                                <p className="text-[12px] text-slate-500 mt-0.5">
-                                  {m.sections.weekByAreaSub(e.count)}
-                                </p>
-                              </div>
-                              <span className="shrink-0 text-[13px] font-bold tabular-nums bg-slate-100 text-slate-700 px-3 py-1 rounded-full">
-                                {e.count}
-                              </span>
-                              <span className="shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-full text-slate-300 group-hover:text-brand-700 group-hover:border border-brand-400/50 transition-colors">
-                                <Eye className="h-3.5 w-3.5" />
-                              </span>
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                </>
-              )}
-            </PremiumSectionCard>
-
-            {/* ── Side column ──────────────────────────────────────────────── */}
-            <div className="flex flex-col gap-5">
-
-              {/* Quick links */}
-              <PremiumSectionCard
-                icon={<Zap />}
-                title={m.sections.quickLinks}
-                padded={false}
-              >
-                <div className="grid grid-cols-2 gap-3 p-4">
-                  {QUICK_LINKS.map((q) => {
-                    const ql = m.quickLinks[q.key];
+                <ol className="flex flex-col" data-testid="ops-timeline">
+                  {recentGroups.map((g, i) => {
+                    const Icon = methodIcon(g.action);
+                    const href =
+                      g.count === 1
+                        ? `/dashboard/audit-logs/${g.firstId}`
+                        : `/dashboard/audit-logs?entityType=${encodeURIComponent(g.entityType)}&action=${encodeURIComponent(g.action)}`;
+                    const last = i === recentGroups.length - 1;
                     return (
-                      <Link key={q.href} href={q.href} className="flex">
-                        <div className="flex flex-col gap-2 p-3.5 rounded-xl border border-hairline hover:border-brand-200 hover:bg-brand-50/40 transition-all duration-150 flex-1">
-                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-surface-muted text-brand-600 [&_svg]:h-4 [&_svg]:w-4">
-                            <q.icon className="h-4 w-4" />
+                      <li key={g.firstId} className="flex gap-4">
+                        <div className="flex flex-col items-center">
+                          <span className={cn('inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full', methodIconCls(g.action))}>
+                            <Icon className="h-4 w-4" />
                           </span>
-                          <div>
-                            <p className="text-[12px] font-semibold text-slate-900 leading-tight">{ql.label}</p>
-                            <p className="text-[11px] text-slate-500 leading-snug mt-0.5">{ql.desc}</p>
-                          </div>
+                          {!last && <span className="my-1 w-px flex-1 bg-hairline" />}
                         </div>
-                      </Link>
+                        <Link
+                          href={href as never}
+                          className={cn(
+                            'group -mt-0.5 flex min-w-0 flex-1 items-start justify-between gap-3 rounded-2xl px-3 py-2 transition-colors hover:bg-surface-muted/60',
+                            !last && 'mb-2',
+                          )}
+                        >
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="truncate text-[14px] font-semibold text-slate-900">
+                                {eventLabel(g.action, g.entityType, m.eventLabels, m.domainActions)}
+                              </p>
+                              {g.count > 1 && (
+                                <span className="shrink-0 rounded-full bg-brand-500/12 px-2 py-0.5 text-[10px] font-bold text-brand-700 tabular-nums">
+                                  ×{num(g.count)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-slate-500">
+                              <span className="inline-flex items-center gap-1.5">
+                                <Avatar name={g.actor?.fullName ?? m.systemActor} size="sm" />
+                                <span className="font-medium text-slate-700">{g.actor?.fullName ?? m.systemActor}</span>
+                              </span>
+                              <span className="rounded-full border border-hairline px-2 py-0.5 text-[11px]">
+                                {areaLabel(g.entityType, m.areaLabels)}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap pt-0.5 text-[11.5px] text-slate-400">
+                            {relativeTime(g.latestAt, m.relativeTime, locale)}
+                            <Eye className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+                          </span>
+                        </Link>
+                      </li>
                     );
                   })}
-                </div>
-              </PremiumSectionCard>
+                </ol>
+              )}
+            </PremiumPanel>
 
+            <div className="flex flex-col gap-5 lg:gap-6">
+              <PremiumPanel title={m.distribution.title} sub={m.distribution.sub}>
+                {areaRows.length === 0 ? (
+                  <p className="py-6 text-center text-[13px] text-slate-500">{m.sections.noData}</p>
+                ) : (
+                  <div className="flex flex-col gap-5" data-testid="ops-areas">
+                    <div className="flex h-2.5 overflow-hidden rounded-full bg-surface-muted" dir="ltr">
+                      {areaRows.map(([label, n], i) => (
+                        <span key={label} className={cn('h-full', AREA_COLORS[i % AREA_COLORS.length])} style={{ width: `${pct(n)}%` }} />
+                      ))}
+                    </div>
+                    <ul className="flex flex-col gap-3">
+                      {areaRows.map(([label, n], i) => (
+                        <li key={label} className="flex items-center gap-3 text-[13px]">
+                          <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', AREA_COLORS[i % AREA_COLORS.length])} />
+                          <span className="min-w-0 flex-1 truncate font-medium text-slate-700">{label}</span>
+                          <span className="font-bold text-slate-900 tabular-nums">{num(n)}</span>
+                          <span className="w-10 text-end text-[12px] text-slate-400 tabular-nums">{pct(n)}%</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {kindRows.length > 0 && (
+                      <div className="border-t border-hairline pt-4">
+                        <p className="mb-3 text-[12px] font-semibold text-slate-500">{m.distribution.kinds}</p>
+                        <div className="flex h-2 overflow-hidden rounded-full bg-surface-muted" dir="ltr">
+                          {kindRows.map((k) => (
+                            <span key={k} className={cn('h-full', KIND_COLORS[k])} style={{ width: `${pct(kinds[k])}%` }} />
+                          ))}
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[12px]">
+                          {kindRows.map((k) => (
+                            <span key={k} className="inline-flex items-center gap-1.5 text-slate-600">
+                              <span className={cn('h-2 w-2 rounded-full', KIND_COLORS[k])} />
+                              {m.distribution.kindLabels[k]}
+                              <b className="text-slate-900 tabular-nums">{num(kinds[k])}</b>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </PremiumPanel>
+
+              <PremiumPanel title={m.security.title} sub={m.security.sub} padding="none">
+                <ul className="divide-y divide-hairline border-t border-hairline" data-testid="ops-security-list">
+                  {[
+                    { label: m.sensitiveRows.deletions, count: deleteCount, flag: deleteCount > 0, icon: <Trash2 className="h-4 w-4" /> },
+                    { label: m.sensitiveRows.permChanges, count: permCount, flag: permCount > 0, icon: <KeyRound className="h-4 w-4" /> },
+                    { label: m.sensitiveRows.authEvents, count: authCount, flag: false, icon: <ShieldCheck className="h-4 w-4" /> },
+                  ].map((r) => (
+                    <li key={r.label} className="flex items-center gap-3 px-6 py-3.5">
+                      <span
+                        className={cn(
+                          'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+                          r.flag ? 'bg-amber-500/15 text-amber-600' : 'bg-surface-muted text-slate-500',
+                        )}
+                      >
+                        {r.icon}
+                      </span>
+                      <span className="flex-1 text-[13px] font-medium text-slate-700">{r.label}</span>
+                      <span className="text-[15px] font-bold text-slate-900 tabular-nums">{num(r.count)}</span>
+                      <span
+                        className={cn(
+                          'rounded-full px-2 py-0.5 text-[10.5px] font-bold',
+                          r.flag ? 'bg-amber-500/15 text-amber-600' : 'bg-emerald-500/12 text-emerald-600',
+                        )}
+                      >
+                        {r.flag ? m.security.review : m.security.clear}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </PremiumPanel>
             </div>
           </div>
 
-          {/* ── Bottom row: sensitive activity + distributions (3-col) ────── */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
-
-            {/* Sensitive activity */}
-            <PremiumSectionCard
-              icon={<Shield />}
-              title={m.sections.sensitiveActivity}
-              tone="warning"
-              padded={false}
-            >
-              <div className="divide-y divide-hairline">
-                {[
-                  { label: m.sensitiveRows.deletions,  count: deleteCount, warn: deleteCount > 0, icon: <Trash2 className="h-4 w-4" /> },
-                  { label: m.sensitiveRows.authEvents,  count: authCount,   warn: false,           icon: <Shield className="h-4 w-4" /> },
-                  { label: m.sensitiveRows.permChanges, count: permCount,   warn: permCount > 0,   icon: <UsersIcon className="h-4 w-4" /> },
-                ].map(({ label, count, warn, icon }) => (
-                  <div key={label} className="flex items-center gap-3.5 px-5 py-4">
-                    <span className={cn(
-                      'inline-flex h-9 w-9 items-center justify-center rounded-xl shrink-0',
-                      warn ? 'bg-danger-50 text-danger-600' : 'bg-slate-100 text-slate-500',
-                    )}>
-                      {icon}
+          {/* ── Shortcuts ────────────────────────────────────────────────────── */}
+          <PremiumPanel title={m.shortcuts}>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
+              {QUICK_LINKS.map((q) => {
+                const ql = m.quickLinks[q.key];
+                return (
+                  <Link
+                    key={q.href}
+                    href={q.href as never}
+                    title={ql.desc}
+                    className="group flex items-center gap-3 rounded-2xl border border-hairline px-3.5 py-3 transition-all hover:-translate-y-0.5 hover:border-brand-500/40 hover:bg-brand-500/[0.05]"
+                  >
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-500/12 text-brand-700">
+                      <q.icon className="h-4 w-4" />
                     </span>
-                    <span className="flex-1 text-[13px] font-medium text-slate-700">{label}</span>
-                    <span className={cn(
-                      'text-[20px] font-black tabular-nums shrink-0',
-                      warn ? 'text-danger-700' : 'text-slate-400',
-                    )}>
-                      {count}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13px] font-semibold text-slate-800">{ql.label}</span>
+                      <span className="block truncate text-[11px] text-slate-500">{ql.desc}</span>
                     </span>
-                  </div>
-                ))}
-              </div>
-            </PremiumSectionCard>
-
-            {/* By action */}
-            <PremiumSectionCard
-              icon={<Activity />}
-              title={m.sections.byAction}
-              padded={false}
-            >
-              {summary.topActions.length === 0 ? (
-                <p className="text-[12px] text-slate-400 px-5 py-8 text-center">{m.sections.noData}</p>
-              ) : (
-                <div className="divide-y divide-hairline">
-                  {summary.topActions.map((a) => {
-                    const pct = Math.round((a.count / maxAction) * 100);
-                    return (
-                      <div key={a.action} className="flex items-center gap-4 px-5 py-4">
-                        <div className="flex items-center gap-2.5 shrink-0 w-28">
-                          <span className="text-[13px] font-semibold text-slate-800">
-                            {methodLabel(a.action, m.methodLabels)}
-                          </span>
-                          <span
-                            className={cn(
-                              'text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md',
-                              methodBadgeCls(a.action),
-                            )}
-                            dir="ltr"
-                          >
-                            {a.action}
-                          </span>
-                        </div>
-                        <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className={cn('h-full rounded-full transition-all', methodBarCls(a.action))}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <span className="text-[13px] font-bold tabular-nums text-slate-900 w-8 text-right shrink-0">
-                          {a.count}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </PremiumSectionCard>
-
-            {/* By area */}
-            <PremiumSectionCard
-              icon={<BarChart3 />}
-              title={m.sections.byArea}
-              padded={false}
-            >
-              {summary.topEntities.length === 0 ? (
-                <p className="text-[12px] text-slate-400 px-5 py-8 text-center">{m.sections.noData}</p>
-              ) : (
-                <div className="divide-y divide-hairline">
-                  {summary.topEntities.map((e) => {
-                    const pct = Math.round((e.count / maxEntity) * 100);
-                    return (
-                      <div key={e.entityType} className="flex items-center gap-4 px-5 py-4">
-                        <span className="text-[13px] font-semibold text-slate-800 shrink-0 w-28 truncate">
-                          {areaLabel(e.entityType, m.areaLabels)}
-                        </span>
-                        <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-brand-400 rounded-full transition-all"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <span className="text-[13px] font-bold tabular-nums text-slate-900 w-8 text-right shrink-0">
-                          {e.count}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </PremiumSectionCard>
-
-          </div>
+                    <ArrowLeft className="h-3.5 w-3.5 shrink-0 text-slate-300 transition-colors group-hover:text-brand-600 ltr:rotate-180" />
+                  </Link>
+                );
+              })}
+            </div>
+          </PremiumPanel>
         </>
       )}
     </div>

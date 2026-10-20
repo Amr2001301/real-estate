@@ -17,6 +17,9 @@ import { scopedUserFindMany } from '../../common/tenant/resolve-tenant-entity';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { paginate, takeSkip } from '../../common/utils/pagination';
+import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
+import { companyTimeZone } from '../../common/time/company-timezone';
+import { localMidnight } from '../../common/time/report-range';
 
 const AUDIT_LOG_INCLUDE = {
   actor: {
@@ -87,7 +90,10 @@ class AuditService {
   // docs/phase-15-admin-operations-report.md for the full list of caveats.
 
   async summary() {
-    const today = startOfDay(new Date());
+    // "Today" is the company's day — the same one the daily series counts.
+    const tz = await companyTimeZone(this.prisma, getRequiredCompanyId());
+    const todayKey = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const today = localMidnight(todayKey, tz);
     const weekAgo = daysAgo(7);
     const monthAgo = daysAgo(30);
 
@@ -143,13 +149,21 @@ class AuditService {
     // "brokers", "broker-payouts", "reservations"); we match by `contains`
     // so versioned prefixes don't lose data.
     const entityCounts = await this.entityCounts(weekAgo);
+    const [daily, countPrevWeek] = await Promise.all([
+      this.dailyCounts(14, tz),
+      this.prisma.auditLog.count({ where: { createdAt: { gte: daysAgo(14), lt: weekAgo } } }),
+    ]);
 
     return {
       totals: {
         today: countToday,
         last7Days: countWeek,
         last30Days: countMonth,
+        /** The 7 days before the last 7 — the week-on-week change. */
+        previous7Days: countPrevWeek,
       },
+      /** Events per day over the last `days` days, in the company's time zone, oldest first. */
+      daily,
       topActors: topActorsRaw.map((r) => ({
         actor: r.actorId ? actorMap.get(r.actorId) ?? null : null,
         count: countOf(r._count),
@@ -164,6 +178,24 @@ class AuditService {
       })),
       entityCounts,
     };
+  }
+
+  /** Events per calendar day (company time zone) for the last `days` days, zero-filled. */
+  private async dailyCounts(days: number, tz: string): Promise<Array<{ date: string; count: number }>> {
+    const companyId = getRequiredCompanyId();
+    const rows = await this.prisma.$queryRaw<Array<{ day: string; count: bigint }>>`
+      SELECT to_char(("createdAt" AT TIME ZONE 'UTC') AT TIME ZONE ${tz}, 'YYYY-MM-DD') AS day, count(*) AS count
+      FROM "AuditLog"
+      WHERE "companyId" = ${companyId}::uuid AND "createdAt" >= ${daysAgo(days + 1)}
+      GROUP BY 1`;
+    const byDay = new Map(rows.map((r) => [r.day, Number(r.count)]));
+    const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+    const out: Array<{ date: string; count: number }> = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const date = fmt.format(new Date(Date.now() - i * 86_400_000));
+      out.push({ date, count: byDay.get(date) ?? 0 });
+    }
+    return out;
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────
@@ -229,12 +261,6 @@ function countOf(c: unknown): number {
     if (typeof v === 'number') return v;
   }
   return 0;
-}
-
-function startOfDay(d: Date): Date {
-  const out = new Date(d);
-  out.setHours(0, 0, 0, 0);
-  return out;
 }
 
 function daysAgo(days: number): Date {
