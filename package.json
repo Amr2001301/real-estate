@@ -16,6 +16,7 @@
     "db:status": "pnpm --filter @rep/api exec prisma migrate status",
     "db:schema-check": "pnpm --filter @rep/api prisma:schema-check",
     "db:seed": "pnpm --filter @rep/api prisma:seed",
+    "db:seed:full-demo": "pnpm --filter @rep/api prisma:seed:full-demo",
     "db:studio": "pnpm --filter @rep/api prisma:studio",
     "db:backup": "DATABASE_URL=\"${DATABASE_URL:?}\" ./scripts/db-backup.sh",
     "db:restore:test": "DUMP_FILE=\"${DUMP_FILE:?}\" TARGET_DATABASE_URL=\"${TARGET_DATABASE_URL:?}\" ./scripts/db-restore-test.sh"
