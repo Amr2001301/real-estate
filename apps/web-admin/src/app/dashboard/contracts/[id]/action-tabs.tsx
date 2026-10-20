@@ -7,12 +7,23 @@ import { cn } from '@/lib/cn';
  * One action at a time: a row of pills over the chosen form, so forms of
  * different heights never sit side by side with empty space under them.
  */
-export function ActionTabs({ labels, children, testId }: { labels: string[]; children: ReactNode; testId?: string }) {
+export function ActionTabs({
+  labels,
+  children,
+  testId,
+}: {
+  labels: string[];
+  children: ReactNode;
+  testId?: string;
+}) {
   const [active, setActive] = useState(0);
   const panes = Children.toArray(children);
   return (
     <div data-testid={testId}>
-      <div role="tablist" className="flex gap-1.5 overflow-x-auto rounded-2xl border border-hairline bg-surface-muted/50 p-1.5">
+      <div
+        role="tablist"
+        className="flex gap-1.5 overflow-x-auto rounded-2xl border border-hairline bg-surface-muted/50 p-1.5"
+      >
         {labels.map((label, i) => (
           <button
             key={label}

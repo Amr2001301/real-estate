@@ -13,13 +13,18 @@ const API_BASE = process.env.E2E_API_BASE_URL ?? 'http://localhost:4000';
  * offer the plan changes one at a time in tabs.
  */
 test.describe('reservation and contract detail pages', () => {
-  test('a reservation shows its figures, journey and parties', async ({ page, request, context }) => {
+  test('a reservation shows its figures, journey and parties', async ({
+    page,
+    request,
+    context,
+  }) => {
     const token = (await context.cookies()).find((c) => c.name === 'access_token')?.value;
     const headers = { Authorization: `Bearer ${token}`, 'X-Tenant-Slug': COMPANY_SLUG };
     // A fresh DB has no reservation: book an available unit for a client.
-    const get = async (path: string) => (await (await request.get(`${API_BASE}/v1${path}`, { headers })).json());
+    const get = async (path: string) =>
+      await (await request.get(`${API_BASE}/v1${path}`, { headers })).json();
     const first = (body: { data?: { id: string }[] } | { id: string }[]) =>
-      (Array.isArray(body) ? body : body.data ?? [])[0]!;
+      (Array.isArray(body) ? body : (body.data ?? []))[0]!;
     const unit = first(await get('/units?status=AVAILABLE&pageSize=1'));
     const client = first(await get('/users?role=CLIENT,CUSTOMER&limit=1'));
     const sales = first(await get('/users?role=SALES&limit=1'));
@@ -38,10 +43,17 @@ test.describe('reservation and contract detail pages', () => {
     await expect(page.getByText('إجراءات سريعة')).toHaveCount(0);
 
     // Give the unit back for the other specs.
-    await request.post(`${API_BASE}/v1/reservations/${id}/cancel`, { headers, data: { reason: 'PW cleanup' } });
+    await request.post(`${API_BASE}/v1/reservations/${id}/cancel`, {
+      headers,
+      data: { reason: 'PW cleanup' },
+    });
   });
 
-  test('a contract shows its figures and the plan changes as tabs', async ({ page, request, context }) => {
+  test('a contract shows its figures and the plan changes as tabs', async ({
+    page,
+    request,
+    context,
+  }) => {
     const token = (await context.cookies()).find((c) => c.name === 'access_token')?.value;
     const headers = { Authorization: `Bearer ${token}`, 'X-Tenant-Slug': COMPANY_SLUG };
     const list = await request.get(`${API_BASE}/v1/contracts?q=E2E-CHQ-0001`, { headers });
