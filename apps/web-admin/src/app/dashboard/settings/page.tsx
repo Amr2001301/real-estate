@@ -1,26 +1,23 @@
 import { type ReactNode } from 'react';
 import Link from 'next/link';
 import {
-  Settings, Database, Layers, ShieldAlert, Clock, Info, Search,
-  Building2, Users, TrendingUp, CreditCard, Bell, Shield, BarChart3,
-  Globe, Wrench,
+  Settings, Info, Search, Building2, Users, TrendingUp, CreditCard, Bell, Shield, BarChart3,
+  Globe, Wrench, Ban, Receipt, Clock, Percent, ArrowLeftRight,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { SettingItem } from '@/lib/types';
-import { formatDateTime, intlLocale } from '@/lib/format';
+import { formatDate } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { SettingCard } from './_components/setting-row';
+import { SettingRow, type SettingType } from './_components/setting-row';
 import { AddSettingPanel } from './_components/add-setting-panel';
-import { KNOWN_SETTING_KEYS } from './_components/known-settings';
-import {
-  PremiumPageHero,
-  PremiumMetricStrip,
-  PremiumSectionCard,
-} from '@/components/premium';
+import { KNOWN_SETTINGS, KNOWN_SETTING_KEYS } from './_components/known-settings';
+import { PremiumPageHero } from '@/components/premium';
+
+const KNOWN_BY_KEY = new Map(KNOWN_SETTINGS.map((k) => [k.key, k]));
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -34,7 +31,7 @@ interface Search {
 
 // ── Group metadata ─────────────────────────────────────────────────────────────
 
-const GROUP_ORDER = ['company', 'broker', 'sales', 'notifications', 'reports', 'security'];
+const GROUP_ORDER = ['company', 'pricing', 'lateFee', 'fees', 'transferFee', 'cancellation', 'cheque', 'broker', 'sales', 'notifications', 'reports', 'security'];
 
 // GROUP_LABEL is built lazily in the page body using m.groupLabels
 
@@ -51,6 +48,12 @@ const GROUP_ICON_NODE: Record<string, ReactNode> = {
   reports:       <BarChart3 />,
   localization:  <Globe />,
   system:        <Wrench />,
+  cancellation:  <Ban />,
+  cheque:        <Receipt />,
+  lateFee:       <Clock />,
+  fees:          <Receipt />,
+  pricing:       <Percent />,
+  transferFee:   <ArrowLeftRight />,
 };
 
 function groupIcon(g: string): ReactNode { return GROUP_ICON_NODE[g] ?? <Settings />; }
@@ -58,13 +61,6 @@ function groupIcon(g: string): ReactNode { return GROUP_ICON_NODE[g] ?? <Setting
 // ── Value helpers ─────────────────────────────────────────────────────────────
 
 type TypeKey = 'text' | 'number' | 'boolean' | 'json';
-
-const TYPE_CLS: Record<TypeKey, string> = {
-  text:    'bg-sky-50    text-sky-700    border border-sky-100',
-  number:  'bg-purple-50 text-purple-700 border border-purple-100',
-  boolean: 'bg-teal-50   text-teal-700   border border-teal-100',
-  json:    'bg-amber-50  text-amber-700  border border-amber-100',
-};
 
 function valuePreview(s: SettingItem): string {
   if (s.sensitive) return '••••••••';
@@ -147,17 +143,27 @@ export default async function SettingsPage({
   ];
 
   // ── KPI ─────────────────────────────────────────────────────────────────────
-  const sensitiveCount = items.filter((i) => i.sensitive).length;
   const lastUpdated    = items.length > 0
     ? items.reduce((a, b) => (a.updatedAt > b.updatedAt ? a : b)).updatedAt
     : null;
 
   const hasFilter = !!(sp.q || sp.group);
 
-  const pillGroups = GROUP_ORDER.filter((g) => grouped.has(g));
+
+  const relative = (iso: string): string => {
+    const rt = uiT(locale).operationsPage.relativeTime;
+    const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
+    if (mins < 1) return rt.now;
+    if (mins < 60) return rt.minutes(mins);
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return rt.hours(hrs);
+    const days = Math.floor(hrs / 24);
+    if (days < 7) return rt.days(days);
+    return formatDate(iso, locale);
+  };
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-5 pb-2 lg:gap-6">
 
       {/* ── Header ──────────────────────────────────────────────────── */}
       <PremiumPageHero
@@ -168,9 +174,10 @@ export default async function SettingsPage({
           { label: m.breadcrumb },
         ]}
         meta={
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-1 text-[11px] font-bold text-brand-700">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-500/30 bg-brand-500/10 px-3 py-1 text-[11px] font-bold text-brand-700">
             <Settings className="h-3.5 w-3.5" />
-            {m.badge}
+            {m.count(items.length)}
+            {lastUpdated && <span className="font-medium opacity-80">· {m.updated(relative(lastUpdated))}</span>}
           </span>
         }
         actions={<AddSettingPanel locale={locale} existingKeys={existingKeys} />}
@@ -178,65 +185,23 @@ export default async function SettingsPage({
 
       {/* ── Toast banners ───────────────────────────────────────────────── */}
       {sp.err && (
-        <div className="rounded-[20px] bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm">
-          {sp.err}
-        </div>
+        <div className="rounded-[20px] border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-700">{sp.err}</div>
       )}
       {sp.ok && (
-        <div className="rounded-[20px] bg-success-50 border border-success-100 text-success-700 px-4 py-3 text-sm">
-          {m.savedToast.replace('{key}', sp.ok)}
+        <div className="rounded-[20px] border border-success-100 bg-success-50 px-4 py-3 text-sm text-success-700">
+          {m.savedToast.replace('{key}', keyLabel(sp.ok))}
         </div>
       )}
       {res.error && (
-        <div className="rounded-[20px] bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm">
+        <div className="rounded-[20px] border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-700">
           {m.errorPrefix} {res.error}
         </div>
       )}
 
-      {/* ── KPI strip ───────────────────────────────────────────────────── */}
-      <PremiumMetricStrip
-        variant="dashboard"
-        cols={4}
-        metrics={[
-          {
-            label: m.kpi.total,
-            value: items.length.toLocaleString(intlLocale(locale)),
-            icon: <Database />,
-            tone: 'brand',
-          },
-          {
-            label: m.kpi.groups,
-            value: grouped.size.toLocaleString(intlLocale(locale)),
-            icon: <Layers />,
-            tone: 'neutral',
-          },
-          {
-            label: m.kpi.sensitive,
-            value: sensitiveCount.toLocaleString(intlLocale(locale)),
-            icon: <ShieldAlert />,
-            tone: sensitiveCount > 0 ? 'warning' : 'neutral',
-          },
-          {
-            label: m.kpi.lastUpdated,
-            value: lastUpdated ? formatDateTime(lastUpdated, locale) : '—',
-            icon: <Clock />,
-            tone: 'neutral',
-            valueSize: 'compact',
-          },
-        ]}
-      />
-
-      {/* ── Info banner ─────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2.5 rounded-[20px] border border-brand-100 bg-brand-50/40 px-4 py-3 text-[12px] text-brand-800">
-        <Info className="h-4 w-4 shrink-0 text-brand-600" />
-        <p>{m.infoBanner}</p>
-      </div>
-
-      {/* ── Search + group filter ────────────────────────────────────────── */}
-      <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
-        <form method="get" action="/dashboard/settings" className="flex items-center gap-2 px-4 py-3">
-          {/* Search input */}
-          <div className="flex-1 min-w-0">
+      {/* ── Search + sections ───────────────────────────────────────────── */}
+      <section className="rounded-[22px] border border-hairline bg-surface">
+        <form method="get" action="/dashboard/settings" className="flex flex-wrap items-center gap-2 px-4 py-3">
+          <div className="min-w-[200px] flex-1">
             <Input
               name="q"
               inputSize="sm"
@@ -245,25 +210,12 @@ export default async function SettingsPage({
               leftAddon={<Search className="h-3.5 w-3.5" />}
             />
           </div>
-
-          {/* Group filter dropdown */}
-          <Select
-            name="group"
-            inputSize="sm"
-            defaultValue={sp.group ?? ''}
-            className="w-44 shrink-0"
-            aria-label={m.filter.groupAriaLabel}
-          >
+          <Select name="group" inputSize="sm" defaultValue={sp.group ?? ''} className="w-44 shrink-0" aria-label={m.filter.groupAriaLabel}>
             <option value="">{m.filter.allGroups}</option>
-            {pillGroups.map((g) => (
-              <option key={g} value={g}>
-                {groupLabel(g)} ({grouped.get(g)!.length})
-              </option>
+            {orderedGroups.map(([g, rows]) => (
+              <option key={g} value={g}>{groupLabel(g)} ({rows.length})</option>
             ))}
           </Select>
-
-          <span className="h-5 w-px bg-hairline shrink-0" aria-hidden />
-
           <Button type="submit" variant="primary" size="sm">{uiT(locale).common.searchBtn}</Button>
           {hasFilter && (
             <Link href="/dashboard/settings">
@@ -271,21 +223,36 @@ export default async function SettingsPage({
             </Link>
           )}
         </form>
-      </div>
+        {orderedGroups.length > 1 && (
+          <nav aria-label={m.jump} className="flex flex-wrap items-center gap-2 border-t border-hairline px-4 py-3" data-testid="settings-sections">
+            {orderedGroups.map(([g, rows]) => (
+              <a
+                key={g}
+                href={`#group-${g}`}
+                className="inline-flex items-center gap-2 rounded-full border border-hairline px-3 py-1.5 text-[12.5px] font-semibold text-slate-700 transition-colors hover:border-brand-500/40 hover:text-brand-700"
+              >
+                <span className="text-brand-600 [&_svg]:h-3.5 [&_svg]:w-3.5">{groupIcon(g)}</span>
+                {groupLabel(g)}
+                <span className="text-[11px] font-medium text-slate-400 tabular-nums">{rows.length}</span>
+              </a>
+            ))}
+          </nav>
+        )}
+        <p className="flex items-center gap-2 border-t border-hairline px-4 py-2.5 text-[12px] text-slate-500">
+          <Info className="h-3.5 w-3.5 shrink-0 text-brand-600" />
+          {m.infoBanner}
+        </p>
+      </section>
 
       {/* ── Empty state ──────────────────────────────────────────────────── */}
       {items.length === 0 && (
-        <div className="rounded-[20px] border border-hairline bg-surface shadow-soft px-5 py-12 flex flex-col items-center text-center gap-3">
-          <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+        <div className="flex flex-col items-center gap-3 rounded-[22px] border border-hairline bg-surface px-5 py-12 text-center">
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-muted text-slate-400">
             <Settings className="h-6 w-6" />
           </span>
           <div>
-            <p className="text-[14px] font-semibold text-slate-900">
-              {hasFilter ? m.empty.filteredTitle : m.empty.emptyTitle}
-            </p>
-            <p className="text-[12px] text-slate-500 mt-1 max-w-sm">
-              {hasFilter ? m.empty.filteredDesc : m.empty.emptyDesc}
-            </p>
+            <p className="text-[14px] font-semibold text-slate-900">{hasFilter ? m.empty.filteredTitle : m.empty.emptyTitle}</p>
+            <p className="mt-1 max-w-sm text-[12px] text-slate-500">{hasFilter ? m.empty.filteredDesc : m.empty.emptyDesc}</p>
           </div>
           {hasFilter && (
             <Link href="/dashboard/settings">
@@ -295,45 +262,44 @@ export default async function SettingsPage({
         </div>
       )}
 
-      {/* ── Group cards ──────────────────────────────────────────────────── */}
+      {/* ── Groups ──────────────────────────────────────────────────────── */}
       {orderedGroups.map(([group, rows]) => (
-        <PremiumSectionCard
+        <section
           key={group}
-          icon={groupIcon(group)}
-          title={groupLabel(group)}
-          description={`${group}.*`}
-          trailing={
-            <span className="inline-flex h-5 min-w-[22px] px-1.5 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-500 tabular-nums">
-              {rows.length}
-            </span>
-          }
-          padded={false}
+          id={`group-${group}`}
+          data-testid="settings-group"
+          className="scroll-mt-24 overflow-hidden rounded-[22px] border border-hairline bg-surface"
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
+          <header className="flex items-center gap-3 px-6 pb-4 pt-5">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-500/12 text-brand-700 [&_svg]:h-[18px] [&_svg]:w-[18px]">
+              {groupIcon(group)}
+            </span>
+            <div className="min-w-0">
+              <h2 className="font-heading text-[19px] font-bold leading-snug text-slate-900">{groupLabel(group)}</h2>
+              <p className="text-[12.5px] text-slate-500">{m.count(rows.length)}</p>
+            </div>
+          </header>
+          <ul className="divide-y divide-hairline border-t border-hairline">
             {rows.map((row) => {
-              const label    = keyLabel(row.key);
-              const type     = detectType(row.value);
-              const preview  = valuePreview(row);
-              const hasLabel = label !== row.key;
+              const known = KNOWN_BY_KEY.get(row.key);
+              const type: SettingType = known?.type === 'enum' ? 'enum' : detectType(row.value);
               return (
-                <SettingCard
+                <SettingRow
                   key={row.key}
                   settingKey={row.key}
-                  label={label}
-                  hasLabel={hasLabel}
+                  label={keyLabel(row.key)}
                   type={type}
-                  typeLabel={m.typeLabels[type]}
-                  typeCls={TYPE_CLS[type]}
-                  preview={preview}
+                  options={known?.options?.map((o) => ({ value: o, label: m.optionLabels[o] ?? o }))}
+                  preview={valuePreview(row)}
                   sensitive={row.sensitive}
                   unused={!KNOWN_SETTING_KEYS.has(row.key)}
-                  updatedAt={formatDateTime(row.updatedAt, locale)}
+                  updated={m.updated(relative(row.updatedAt))}
                   locale={locale}
                 />
               );
             })}
-          </div>
-        </PremiumSectionCard>
+          </ul>
+        </section>
       ))}
 
     </div>
