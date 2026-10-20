@@ -21,6 +21,15 @@ test.describe('admin', () => {
 
     await gotoReady(page, '/dashboard/notifications/broadcast');
     await expect(page.locator('main')).not.toContainText(/IN_APP|CUSTOMER|UUID|Firebase/);
+    // No back button: the breadcrumb already leads back.
+    await expect(page.getByRole('link', { name: 'العودة للإشعارات' })).toHaveCount(0);
+    // The title shows in the preview as it is typed.
+    await page.locator('#title_ar').fill('تجربة المعاينة');
+    await expect(page.getByTestId('broadcast-preview')).toContainText('تجربة المعاينة');
+    // The linked record is searched by number or name, not pasted as an id.
+    await expect(page.getByPlaceholder('ابحث بالرقم أو الاسم…')).toHaveCount(0);
+    await page.getByTestId('broadcast-link-types').getByRole('button', { name: 'عقد' }).click();
+    await expect(page.getByPlaceholder('ابحث بالرقم أو الاسم…')).toBeVisible();
   });
 });
 

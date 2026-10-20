@@ -20,14 +20,13 @@ export function UnitMediaPanel({ unit, locale = 'ar' }: { unit: Unit; locale?: L
   const floorplans = media.filter((item) => item.type === 'FLOORPLAN');
 
   return (
-    <Card className="p-5">
+    <Card className="rounded-[22px] p-6">
       <div className="flex items-center gap-2">
-        <ImageIcon className="h-4 w-4 text-brand-600" />
-        <h3 className="text-sm font-semibold text-slate-900 tracking-tight">
+        <h3 className="font-heading text-[19px] font-bold leading-snug text-slate-900">
           {m.title}
         </h3>
       </div>
-      <p className="mt-1 text-xs text-slate-500">
+      <p className="mt-0.5 text-[13px] text-slate-500">
         {m.description}
       </p>
 
@@ -56,8 +55,8 @@ export function UnitMediaPanel({ unit, locale = 'ar' }: { unit: Unit; locale?: L
 
       <div className="mt-6 border-t border-hairline pt-5">
         <div className="flex items-center gap-2">
-          <MapIcon className="h-4 w-4 text-info-600" />
-          <h4 className="text-sm font-semibold text-slate-900 tracking-tight">
+          <MapIcon className="h-4 w-4 text-brand-600" />
+          <h4 className="text-[14px] font-bold text-slate-900">
             {m.floorplanTitle}
           </h4>
         </div>

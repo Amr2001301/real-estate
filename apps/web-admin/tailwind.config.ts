@@ -21,6 +21,9 @@ const config: Config = {
   darkMode: 'class',
   theme: {
     extend: {
+      // `bg-x-500/12` (soft chips) needs the step: Tailwind only builds the
+      // opacity modifiers listed here.
+      opacity: { 12: '0.12' },
       colors: {
         ...themedHues,
         // Warm-luxe palette aligned with the public website ("Warm Luxe").
