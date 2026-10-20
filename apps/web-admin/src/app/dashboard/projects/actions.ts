@@ -116,7 +116,25 @@ export async function createPhaseAction(
         en: String(formData.get('name_en') ?? ''),
       },
       order: Number(formData.get('order') ?? 0),
+      deliveryDate: String(formData.get('deliveryDate') ?? '') || undefined,
     });
+  } catch (e) {
+    unstable_rethrow(e);
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  return { ok: true };
+}
+
+/** A phase's handover date (F10); empty clears it. */
+export async function updatePhaseDeliveryAction(
+  projectId: string,
+  phaseId: string,
+  _prev: ProjectFormState,
+  formData: FormData,
+): Promise<ProjectFormState> {
+  try {
+    await api.patch(`/phases/${phaseId}`, { deliveryDate: String(formData.get('deliveryDate') ?? '') || null });
   } catch (e) {
     unstable_rethrow(e);
     return { error: (e as Error).message };

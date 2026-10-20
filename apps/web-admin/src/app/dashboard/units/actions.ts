@@ -33,6 +33,8 @@ function buildPayload(formData: FormData) {
     // Priced by the meter: the API computes the total.
     pricePerMeter: optNumber(formData, 'pricePerMeter'),
     modelId: optEnum(formData, 'modelId'),
+    // Empty → the phase's date.
+    deliveryDate: optEnum(formData, 'deliveryDate'),
     netArea: optNumber(formData, 'netArea'),
     gardenArea: optNumber(formData, 'gardenArea'),
     roofArea: optNumber(formData, 'roofArea'),

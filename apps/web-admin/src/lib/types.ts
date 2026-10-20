@@ -97,6 +97,8 @@ export interface Phase {
   code?: string | null;
   name: Translatable;
   order: number;
+  /** When its units are handed over (F10). */
+  deliveryDate?: string | null;
   buildings?: Building[];
 }
 
@@ -185,6 +187,9 @@ export interface Unit {
   pricePerMeter?: string | number | null;
   /** The project's model it was entered from (F10). */
   modelId?: string | null;
+  /** Its own handover date; effectiveDeliveryDate is this or its phase's. */
+  deliveryDate?: string | null;
+  effectiveDeliveryDate?: string | null;
   model?: { id: string; code: string; name: Translatable } | null;
   status: UnitStatus;
   reservationExpiresAt: string | null;

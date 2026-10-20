@@ -74,6 +74,8 @@ export interface PublicUnit {
   price: string;
   /** Set when the unit is priced by the meter. */
   pricePerMeter?: string | null;
+  /** When it is handed over (YYYY-MM-DD): its own date, or its phase's. */
+  deliveryDate?: string | null;
   /** The project's model the unit is of (name in the reader's language). */
   model?: { code: string; name: string | { ar?: string; en?: string } } | null;
   status: string;

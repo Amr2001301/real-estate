@@ -1,4 +1,4 @@
-import { Maximize, BedDouble, Bath, Building2, Home, BadgeCheck, Trees, Paintbrush, Eye, Compass, LayoutTemplate } from 'lucide-react';
+import { Maximize, BedDouble, Bath, Building2, Home, BadgeCheck, Trees, Paintbrush, Eye, Compass, LayoutTemplate, CalendarCheck } from 'lucide-react';
 import { formatArea, formatNumber, unitTypeLabel } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -41,6 +41,15 @@ export async function UnitSpecs({ unit }: { unit: PublicUnit }) {
     specs.push({ icon: LayoutTemplate, label: s.model, value: name || unit.model.code });
   }
   specs.push({ icon: BadgeCheck, label: s.status,     value: statusValue });
+  if (unit.deliveryDate) {
+    // Already due → ready to move in; else the month it is handed over.
+    const due = new Date(`${unit.deliveryDate}T00:00:00Z`);
+    const value =
+      due.getTime() <= Date.now()
+        ? s.deliveryNow
+        : new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(due);
+    specs.push({ icon: CalendarCheck, label: s.delivery, value });
+  }
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

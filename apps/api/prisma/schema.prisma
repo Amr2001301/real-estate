@@ -640,16 +640,18 @@ model ProjectMedia {
 }
 
 model Phase {
-  id        String     @id @default(uuid()) @db.Uuid
-  projectId String     @db.Uuid
-  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  code      String?
-  name      Json // Translatable
-  order     Int        @default(0)
-  createdAt DateTime   @default(now())
+  id           String     @id @default(uuid()) @db.Uuid
+  projectId    String     @db.Uuid
+  project      Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  code         String?
+  name         Json // Translatable
+  order        Int        @default(0)
+  /// When the phase's units are handed over (F10); a unit may have its own.
+  deliveryDate DateTime?  @db.Date
+  createdAt    DateTime   @default(now())
   // FG-15 — existing rows were backfilled with createdAt.
-  updatedAt DateTime   @updatedAt
-  buildings Building[]
+  updatedAt    DateTime   @updatedAt
+  buildings    Building[]
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -700,6 +702,8 @@ model Unit {
   finishing            UnitFinishing?
   view                 UnitView?
   orientation          UnitOrientation?
+  /// Its own handover date (F10); none → the phase's.
+  deliveryDate         DateTime?        @db.Date
   /// The project's model the unit was entered from (F10), if any.
   modelId              String?          @db.Uuid
   model                UnitModel?       @relation(fields: [modelId], references: [id], onDelete: SetNull)

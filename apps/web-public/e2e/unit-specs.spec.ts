@@ -45,6 +45,7 @@ test('a unit page shows its specs and the list filters by finishing', async ({ p
   const modelId = (await model.json()).id as string;
   const furnished = await make(`PUB-SPEC-${stamp}`, {
     modelId,
+    deliveryDate: '2025-01-01',
     type: '2BR',
     bedrooms: 2,
     pricePerMeter: 20_000,
@@ -59,7 +60,7 @@ test('a unit page shows its specs and the list filters by finishing', async ({ p
   try {
     await page.goto(`/units/${furnished}`, { waitUntil: 'networkidle' });
     const main = page.locator('main');
-    for (const text of ['المساحة الصافية', 'التراس', 'مفروشة', 'بحر', 'قبلي شرقي', 'النموذج', `نموذج ${stamp}`]) {
+    for (const text of ['المساحة الصافية', 'التراس', 'مفروشة', 'بحر', 'قبلي شرقي', 'النموذج', `نموذج ${stamp}`, 'استلام فوري']) {
       await expect(main.getByText(text, { exact: true }).first()).toBeVisible();
     }
     // Priced by the meter: 20,000 × 120 m².
@@ -75,6 +76,11 @@ test('a unit page shows its specs and the list filters by finishing', async ({ p
     await expect(page.getByRole('combobox', { name: 'التشطيب' })).toHaveValue('FURNISHED');
     await expect(page.locator(`main a[href="/units/${furnished}"]`).first()).toBeVisible();
     await expect(page.locator(`main a[href="/units/${shop}"]`)).toHaveCount(0);
+
+    // Ready now: the shop has no handover date.
+    await page.goto(`/units?delivery=now&finishing=FURNISHED`, { waitUntil: 'networkidle' });
+    await expect(page.getByRole('combobox', { name: 'التسليم' })).toHaveValue('now');
+    await expect(page.locator(`main a[href="/units/${furnished}"]`).first()).toBeVisible();
   } finally {
     await request.delete(`${API_BASE}/v1/units/${furnished}`, { headers });
     await request.delete(`${API_BASE}/v1/units/${shop}`, { headers });

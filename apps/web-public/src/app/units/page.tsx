@@ -47,6 +47,18 @@ function parseCompareIds(raw: string): string[] {
   return [...seen].slice(0, COMPARE_MAX);
 }
 
+/** The "handed over by" date for a delivery choice ('now' | years ahead). */
+function deliveryByDate(choice: string): string | null {
+  if (!choice) return null;
+  const d = new Date();
+  if (choice !== 'now') {
+    const years = Number(choice);
+    if (!Number.isInteger(years) || years < 1 || years > 10) return null;
+    d.setUTCFullYear(d.getUTCFullYear() + years);
+  }
+  return d.toISOString().slice(0, 10);
+}
+
 export default async function UnitsPage({ searchParams }: { searchParams: SearchParams }) {
   const [tenant, sp] = await Promise.all([getResolvedTenant(), searchParams]);
   if (!tenant) notFound();
@@ -55,6 +67,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
   const type = firstStr(sp.type);
   const usage = firstStr(sp.usage);
   const finishing = firstStr(sp.finishing);
+  const delivery = firstStr(sp.delivery);
   const bedrooms = firstStr(sp.bedrooms);
   const bathrooms = firstStr(sp.bathrooms);
   const status = firstStr(sp.status);
@@ -72,6 +85,9 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
   if (type) apiParams.set('type', type);
   if (usage) apiParams.set('usage', usage);
   if (finishing) apiParams.set('finishing', finishing);
+  // Handover: ready now (by today), or within N years.
+  const deliveryBy = deliveryByDate(delivery);
+  if (deliveryBy) apiParams.set('deliveryBy', deliveryBy);
   if (bedrooms) apiParams.set('bedrooms', bedrooms);
   if (bathrooms) apiParams.set('bathrooms', bathrooms);
   if (status) apiParams.set('status', status);
@@ -98,7 +114,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
   const units = result.ok ? result.data.data : [];
   const meta = result.ok ? result.data.meta : null;
   const hasFilters = Boolean(
-    type || usage || finishing || bedrooms || bathrooms || status || priceMin || priceMax || areaMin || areaMax || city || projectId,
+    type || usage || finishing || delivery || bedrooms || bathrooms || status || priceMin || priceMax || areaMin || areaMax || city || projectId,
   );
 
   const initialFilters: UnitsFilterValues = {
@@ -111,6 +127,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
     price: derivePriceValue(priceMin, priceMax),
     area: deriveAreaValue(areaMin, areaMax),
     finishing,
+    delivery,
     status,
     sort,
   };

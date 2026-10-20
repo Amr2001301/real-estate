@@ -4,7 +4,7 @@ import { useActionState } from 'react';
 import { Button } from '@/components/ui/button';
 import type { Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
-import { createBuildingAction, createPhaseAction, type ProjectFormState } from '../actions';
+import { createBuildingAction, createPhaseAction, updatePhaseDeliveryAction, type ProjectFormState } from '../actions';
 
 // The project page's inline "add phase" / "add building" forms. A refused
 // create (a missing or taken code) shows its message under the form instead
@@ -41,7 +41,7 @@ export function PhaseCreateForm({
     <form
       action={formAction}
       data-testid="phase-create-form"
-      className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_1fr_10rem_auto_auto] gap-2"
+      className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_1fr_10rem_10rem_auto_auto] gap-2"
     >
       <input
         name="name_ar"
@@ -66,10 +66,52 @@ export function PhaseCreateForm({
         placeholder={m.phaseCodePlaceholder}
         className={`${input} uppercase`}
       />
+      <input
+        name="deliveryDate"
+        type="date"
+        aria-label={m.phaseDeliveryLabel}
+        title={m.phaseDeliveryLabel}
+        className={input}
+      />
       <input name="order" type="number" defaultValue={nextOrder} className={`w-20 ${input}`} />
       <Button type="submit" variant="primary" size="sm">
         {m.btnAdd}
       </Button>
+      <FormError state={state} />
+    </form>
+  );
+}
+
+/** A phase's handover date, set or changed from its card (F10). */
+export function PhaseDeliveryForm({
+  projectId,
+  phaseId,
+  deliveryDate,
+  locale = 'ar',
+}: {
+  projectId: string;
+  phaseId: string;
+  deliveryDate?: string | null;
+  locale?: Locale;
+}) {
+  const m = uiT(locale).projectDetailPage;
+  const [state, formAction] = useActionState<ProjectFormState, FormData>(
+    updatePhaseDeliveryAction.bind(null, projectId, phaseId),
+    {},
+  );
+  return (
+    <form action={formAction} data-testid="phase-delivery-form" data-phase-id={phaseId} className="mt-2 flex flex-wrap items-center gap-2">
+      <label className="text-xs text-slate-500">{m.phaseDeliveryLabel}</label>
+      <input
+        name="deliveryDate"
+        type="date"
+        defaultValue={deliveryDate?.slice(0, 10) ?? ''}
+        className="text-xs h-8 rounded-lg border border-hairline bg-surface px-2.5 focus:outline-none focus:border-brand-500"
+      />
+      <Button type="submit" variant="outline" size="sm">
+        {m.btnSave}
+      </Button>
+      {state.ok && <span className="text-xs text-success-700">{m.phaseDeliverySaved}</span>}
       <FormError state={state} />
     </form>
   );

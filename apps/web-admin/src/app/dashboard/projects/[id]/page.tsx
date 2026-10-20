@@ -37,7 +37,7 @@ import {
   deleteProjectAction,
 } from '../actions';
 import { ProjectMediaPanel } from './media-panel';
-import { BuildingCreateForm, PhaseCreateForm } from './structure-forms';
+import { BuildingCreateForm, PhaseCreateForm, PhaseDeliveryForm } from './structure-forms';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 
@@ -352,6 +352,20 @@ export default async function ProjectDetailPage({
                           <p className="text-xs text-slate-500 mt-1">
                             {m.phaseBuildingsUnitsLabel(buildingsCount, totalPhaseUnits)}
                           </p>
+                          {isAdmin ? (
+                            <PhaseDeliveryForm
+                              projectId={project.id}
+                              phaseId={ph.id}
+                              deliveryDate={ph.deliveryDate}
+                              locale={locale}
+                            />
+                          ) : (
+                            ph.deliveryDate && (
+                              <p className="text-xs text-slate-500 mt-1">
+                                {m.phaseDeliveryLabel}: {ph.deliveryDate.slice(0, 10)}
+                              </p>
+                            )
+                          )}
                           {ph.buildings && ph.buildings.length > 0 && (
                             <ul className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                               {ph.buildings.map((b) => (

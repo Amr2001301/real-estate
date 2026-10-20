@@ -1,6 +1,7 @@
 import {
   IsArray,
   IsBoolean,
+  IsDateString,
   IsEnum,
   IsInt,
   IsNumber,
@@ -57,6 +58,9 @@ export class CreateUnitDto {
   /** The project's model the unit is entered from (F10). */
   @IsOptional() @IsUUID() modelId?: string | null;
 
+  /** Its own handover date (YYYY-MM-DD); none → the phase's. */
+  @IsOptional() @IsDateString() deliveryDate?: string | null;
+
   @IsOptional()
   @IsEnum(UnitStatus)
   status?: UnitStatus;
@@ -84,6 +88,8 @@ export class UpdateUnitDto {
   @IsOptional() @IsNumber() @IsPositive() pricePerMeter?: number | null;
   /** The project's model (F10); null → none. */
   @IsOptional() @IsUUID() modelId?: string | null;
+  /** Its own handover date; null → the phase's. */
+  @IsOptional() @IsDateString() deliveryDate?: string | null;
   @IsOptional() @IsNumber() @IsPositive() netArea?: number | null;
   @IsOptional() @IsNumber() @IsPositive() gardenArea?: number | null;
   @IsOptional() @IsNumber() @IsPositive() roofArea?: number | null;
@@ -123,6 +129,8 @@ export class UnitQueryDto {
   @IsOptional() @IsEnum(UnitUsage) usage?: UnitUsage;
   /** The units of one of the project's models. */
   @IsOptional() @IsUUID() modelId?: string;
+  /** Handed over by this date (YYYY-MM-DD): the unit's own date, or its phase's. */
+  @IsOptional() @IsDateString() deliveryBy?: string;
   @IsOptional() @IsEnum(UnitFinishing) finishing?: UnitFinishing;
   @IsOptional() @IsEnum(UnitView) view?: UnitView;
   @IsOptional() @IsEnum(UnitOrientation) orientation?: UnitOrientation;
