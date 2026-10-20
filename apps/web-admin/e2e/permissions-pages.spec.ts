@@ -26,6 +26,13 @@ test("a user's permission is switched on and off from its tile", async ({ page }
   await expect(page.getByRole('link', { name: 'العودة للصلاحيات' })).toHaveCount(0);
   await expect(page.locator('main')).not.toContainText('buildings:manage');
 
+  // The section filter beside the search shows one section.
+  const filter = page.getByTestId('permission-section-filter');
+  const value = await filter.locator('option').nth(1).getAttribute('value');
+  await filter.selectOption(value!);
+  await expect(page.locator('section[id^="perm-"]')).toHaveCount(1);
+  await filter.selectOption('');
+
   const tile = page.getByTestId('permission-toggle').filter({ hasText: 'إدارة المباني' });
   const before = await tile.getAttribute('aria-checked');
   await tile.click();

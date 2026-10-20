@@ -10,6 +10,7 @@ import {
   CircleDollarSign, Users as UsersIcon,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import {
   getPermissionMeta,
   PERMISSION_CATEGORIES,
@@ -74,6 +75,7 @@ export function PermissionPicker({ userId, userName, assigned, available, locale
   const m = uiT(locale).userPermissionsPage;
   const router = useRouter();
   const [query, setQuery]       = useState('');
+  const [section, setSection]   = useState('');
   const [pending, startTransition] = useTransition();
   const [error, setError]       = useState<string | null>(null);
   const [busyCode, setBusyCode] = useState<string | null>(null);
@@ -101,7 +103,8 @@ export function PermissionPicker({ userId, userName, assigned, available, locale
     );
   }, [allRows, query]);
 
-  const groups = useMemo(() => {
+  // Every section (for the filter), then the one picked.
+  const allGroups = useMemo(() => {
     const map = new Map<string, Row[]>();
     for (const r of filtered) {
       const list = map.get(r.group) ?? [];
@@ -112,6 +115,8 @@ export function PermissionPicker({ userId, userName, assigned, available, locale
       (a, b) => (CATEGORY_ORDER.get(a[0]) ?? 99) - (CATEGORY_ORDER.get(b[0]) ?? 99),
     );
   }, [filtered]);
+  const groups = section ? allGroups.filter(([g]) => g === section) : allGroups;
+  const visible = groups.flatMap(([, rows]) => rows);
 
   function run(add: string[], remove: string[], busy: string | null) {
     setError(null);
@@ -129,8 +134,8 @@ export function PermissionPicker({ userId, userName, assigned, available, locale
     else              run([row.code], [], row.code);
   }
 
-  const matchUnassigned = filtered.filter((r) => !r.assigned).map((r) => r.code);
-  const matchAssigned   = filtered.filter((r) =>  r.assigned).map((r) => r.code);
+  const matchUnassigned = visible.filter((r) => !r.assigned).map((r) => r.code);
+  const matchAssigned   = visible.filter((r) =>  r.assigned).map((r) => r.code);
 
   return (
     <div className="flex flex-col gap-5">
@@ -154,6 +159,21 @@ export function PermissionPicker({ userId, userName, assigned, available, locale
               leftAddon={<Search />}
             />
           </div>
+          <Select
+            inputSize="sm"
+            value={section}
+            onChange={(e) => setSection(e.target.value)}
+            aria-label={m.sectionFilter}
+            className="w-52 shrink-0"
+            data-testid="permission-section-filter"
+          >
+            <option value="">{m.allSections}</option>
+            {allGroups.map(([group, rows]) => (
+              <option key={group} value={group}>
+                {m.categoryNames[group] ?? group} ({rows.filter((r) => r.assigned).length}/{rows.length})
+              </option>
+            ))}
+          </Select>
           {pending && (
             <span className="inline-flex items-center gap-1.5 text-[12px] text-slate-500">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -179,26 +199,6 @@ export function PermissionPicker({ userId, userName, assigned, available, locale
             {m.deselectAllBtn}{matchAssigned.length > 0 ? ` (${matchAssigned.length})` : ''}
           </button>
         </div>
-        {groups.length > 1 && (
-          <nav className="flex gap-2 overflow-x-auto border-t border-hairline px-4 py-2.5 scrollbar-thin" data-testid="permission-sections">
-            {groups.map(([group, rows]) => {
-              const granted = rows.filter((r) => r.assigned).length;
-              return (
-                <a
-                  key={group}
-                  href={`#perm-${group}`}
-                  className={cn(
-                    'inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-[12px] font-semibold transition-colors',
-                    granted > 0 ? 'border-brand-500/40 text-brand-700' : 'border-hairline text-slate-600 hover:border-brand-500/30',
-                  )}
-                >
-                  {m.categoryNames[group] ?? group}
-                  <span className="tabular-nums text-[11px] opacity-70">{granted}/{rows.length}</span>
-                </a>
-              );
-            })}
-          </nav>
-        )}
       </div>
 
       {/* ── Sections ──────────────────────────────────────────────────────── */}
