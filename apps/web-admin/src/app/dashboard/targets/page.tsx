@@ -7,7 +7,6 @@ import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import {
   PremiumPageHero,
-  PremiumMetricStrip,
   PremiumFilterBar,
   PremiumFilterField,
 } from '@/components/premium';
@@ -15,8 +14,10 @@ import {
   TargetsManagementClient,
   type PerformanceRow,
 } from './targets-management-client';
-import { fmtAmt, num, pctLabel, getMonthOptions, YEAR_OPTIONS } from './utils';
-import { getReportsCurrency, currencySymbol } from '@/lib/currency';
+import { fmtAmt, num, pctLabel, getMonthOptions } from './utils';
+import { cn } from '@/lib/cn';
+import { attainment, targetPhase } from '@/lib/target-pace';
+import { getReportsCurrency, currencySymbol, getCompanyTimeZone, todayIn } from '@/lib/currency';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,11 +53,13 @@ export default async function TargetsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const sp = await searchParams;
-  const [session, locale, currency] = await Promise.all([
+  const [session, locale, currency, tz] = await Promise.all([
     getSession(),
     getLocale(),
     getReportsCurrency(),
+    getCompanyTimeZone(),
   ]);
+  const today = todayIn(tz);
   const m = uiT(locale).targetsPage;
   const symbol = currencySymbol(currency, locale);
 
@@ -132,17 +135,14 @@ export default async function TargetsPage({
   for (const t of targets) {
     if (!t.sales?.id) continue;
     const perf = perfMap.get(`${t.sales.id}|${t.period}`);
-    if (perf?.targetAmountPercent == null) continue;
+    const att = perf ? attainment(perf.targetAmountPercent, perf.targetUnitsPercent) : null;
+    if (att === null || targetPhase(t.period, today) === 'upcoming') continue;
     const existing = perfBySalesId.get(t.sales.id);
     if (existing) {
-      existing.totalPct += perf.targetAmountPercent;
+      existing.totalPct += att;
       existing.count += 1;
     } else {
-      perfBySalesId.set(t.sales.id, {
-        name: t.sales.fullName,
-        totalPct: perf.targetAmountPercent,
-        count: 1,
-      });
+      perfBySalesId.set(t.sales.id, { name: t.sales.fullName, totalPct: att, count: 1 });
     }
   }
   const sortedInsights = [...perfBySalesId.values()]
@@ -163,7 +163,7 @@ export default async function TargetsPage({
   const monthOptions = getMonthOptions(locale);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <PremiumPageHero
         title={m.title}
@@ -239,95 +239,59 @@ export default async function TargetsPage({
         </PremiumFilterField>
       </PremiumFilterBar>
 
-      {/* ── KPI strip ─────────────────────────────────────────────────────── */}
-      <PremiumMetricStrip
-        variant="compact"
-        metrics={[
-          {
-            label: m.metricTargetsCount,
-            value: String(targets.length),
-            icon: <Target />,
-            tone: 'neutral',
-          },
-          {
-            label: m.metricAmountTarget,
-            value: totalAmountTarget === 0 ? '—' : fmtAmt(totalAmountTarget, symbol),
-            icon: <Banknote />,
-            tone: 'brand',
-            valueSize: 'compact',
-          },
+      {/* ── Key figures ───────────────────────────────────────────────────── */}
+      <div data-testid="targets-kpis" className="grid grid-cols-2 overflow-hidden rounded-[22px] border border-hairline bg-surface lg:grid-cols-4">
+        {[
+          { label: m.metricTargetsCount, value: String(targets.length), sub: undefined, icon: <Target /> },
+          { label: m.metricAmountTarget, value: totalAmountTarget === 0 ? '—' : fmtAmt(totalAmountTarget, symbol), sub: undefined, icon: <Banknote /> },
           {
             label: m.metricAchievedAmount,
             value: fmtAmt(totalAchievedAmount, symbol),
             sub: overallPct !== null ? `${overallPct}% ${m.metricOfTarget}` : undefined,
             icon: <TrendingUp />,
-            tone: totalAchievedAmount > 0 ? 'success' : 'neutral',
-            valueSize: 'compact',
           },
           {
             label: m.metricUnitsTarget,
             value: num(totalUnitsTarget),
-            sub: totalAchievedUnits > 0 ? `${num(totalAchievedUnits)} ${m.metricAchievedUnits}` : undefined,
+            sub: `${num(totalAchievedUnits)} ${m.metricAchievedUnits}`,
             icon: <Building2 />,
-            tone: 'info',
           },
-        ]}
-      />
-
-      {/* ── Performance insights strip ────────────────────────────────────── */}
-      {hasMeaningfulPerf ? (
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 bg-surface border border-hairline rounded-[22px] px-5 py-3">
-          <div className="flex items-center gap-2">
-            <Award className="h-4 w-4 text-brand-500 shrink-0" />
-            <span className="text-2xs text-slate-400">{m.insightTop}</span>
-            <span className="text-sm font-semibold text-slate-800">{topPerformer!.name}</span>
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-2xs font-bold tabular-nums">
-              {pctLabel(topPerformer!.pct)}
+        ].map((k, i) => (
+          <div
+            key={k.label}
+            className={cn(
+              'flex items-center gap-4 p-5',
+              i > 0 && 'lg:border-s lg:border-hairline',
+              i % 2 === 1 && 'max-lg:border-s max-lg:border-hairline',
+              i >= 2 && 'max-lg:border-t max-lg:border-hairline',
+            )}
+          >
+            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-500/12 text-brand-700 [&_svg]:h-5 [&_svg]:w-5">
+              {k.icon}
             </span>
+            <div className="min-w-0">
+              <p className="text-[12.5px] font-semibold text-slate-500">{k.label}</p>
+              <p className="num truncate text-[26px] font-semibold leading-tight text-slate-900">{k.value}</p>
+              {k.sub && <p className="text-[11.5px] text-slate-500">{k.sub}</p>}
+            </div>
           </div>
-          {avgPct !== null && (
-            <>
-              <div className="hidden sm:block w-px h-4 bg-hairline" />
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-slate-400 shrink-0" />
-                <span className="text-2xs text-slate-400">{m.insightAvg}</span>
-                <span className="text-sm font-medium text-slate-700 tabular-nums">
-                  {pctLabel(avgPct)}
-                </span>
-              </div>
-            </>
-          )}
+        ))}
+      </div>
+
+      {/* ── Insights ──────────────────────────────────────────────────────── */}
+      {hasMeaningfulPerf ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Insight icon={<Award />} label={m.insightTop} name={topPerformer!.name} pct={topPerformer!.pct} tone="good" />
+          {avgPct !== null && <Insight icon={<TrendingUp />} label={m.insightAvg} name={uiT(locale).common.targetAttainmentHint} pct={avgPct} />}
           {lowPerformer && lowPerformer.name !== topPerformer!.name && (
-            <>
-              <div className="hidden sm:block w-px h-4 bg-hairline" />
-              <div className="flex items-center gap-2">
-                <span className="text-2xs text-slate-400">{m.insightSupport}</span>
-                <span className="text-sm font-medium text-slate-700">{lowPerformer.name}</span>
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 text-2xs font-bold tabular-nums">
-                  {pctLabel(lowPerformer.pct)}
-                </span>
-              </div>
-            </>
-          )}
-          {totalAchievedUnits > 0 && (
-            <>
-              <div className="hidden sm:block w-px h-4 bg-hairline" />
-              <div className="flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-slate-400 shrink-0" />
-                <span className="text-2xs text-slate-400">{m.insightUnits}</span>
-                <span className="text-sm font-semibold text-slate-800 tabular-nums">
-                  {num(totalAchievedUnits)}
-                </span>
-              </div>
-            </>
+            <Insight icon={<Target />} label={m.insightSupport} name={lowPerformer.name} pct={lowPerformer.pct} tone="warn" />
           )}
         </div>
       ) : targets.length > 0 ? (
-        <div className="flex items-center gap-3 bg-surface border border-hairline rounded-[22px] px-5 py-3">
-          <TrendingUp className="h-4 w-4 text-slate-300 shrink-0" />
-          <p className="text-xs text-slate-500">
-            {m.noAchievedYet}{' '}
-            <span className="text-slate-400">{m.noAchievedSub}</span>
+        <div className="flex items-center gap-3 rounded-[22px] border border-dashed border-hairline px-5 py-4">
+          <TrendingUp className="h-4 w-4 shrink-0 text-slate-400" />
+          <p className="text-[13px] text-slate-500">
+            {m.noAchievedYet} <span className="text-slate-400">{m.noAchievedSub}</span>
           </p>
         </div>
       ) : null}
@@ -341,8 +305,41 @@ export default async function TargetsPage({
         hasFilters={hasFilters}
         error={targetsRes.error ?? undefined}
         symbol={symbol}
+        today={today}
         locale={locale}
       />
+    </div>
+  );
+}
+
+function Insight({
+  icon,
+  label,
+  name,
+  pct,
+  tone,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  name: string;
+  pct: number;
+  tone?: 'good' | 'warn';
+}) {
+  return (
+    <div className="flex items-center gap-4 rounded-[22px] border border-hairline bg-surface p-5">
+      <span
+        className={cn(
+          'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full [&_svg]:h-5 [&_svg]:w-5',
+          tone === 'good' ? 'bg-emerald-500/12 text-emerald-600' : tone === 'warn' ? 'bg-amber-500/12 text-amber-600' : 'bg-brand-500/12 text-brand-700',
+        )}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[12px] font-semibold text-slate-500">{label}</p>
+        <p className="truncate text-[14px] font-bold text-slate-900">{name}</p>
+      </div>
+      <span className="num text-[26px] font-semibold text-slate-900">{pctLabel(pct)}</span>
     </div>
   );
 }
