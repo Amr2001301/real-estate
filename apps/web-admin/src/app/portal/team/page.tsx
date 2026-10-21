@@ -11,8 +11,6 @@ import {
   UserCheck,
   UserMinus,
   UserX,
-  UserPlus,
-  PauseCircle,
   AlertCircle,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
@@ -29,11 +27,12 @@ import { BrokerUserStatusBadge } from '@/components/badges';
 import { ConfirmingForm } from '@/components/confirming-form';
 import {
   PremiumPageHero,
-  PremiumMetricStrip,
   PremiumFilterBar,
   PremiumFilterField,
   PremiumSectionCard,
 } from '@/components/premium';
+import { Avatar, FigureBar } from '@/components/cockpit/cockpit';
+import { RowMenu, MenuItem } from '@/components/premium/row-menu';
 import { setTeamMemberStatusAction } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -48,33 +47,6 @@ interface Search {
 
 const PAGE_SIZE = 25;
 
-const AVATAR_COLORS = [
-  'bg-blue-100 text-blue-700',
-  'bg-emerald-100 text-emerald-700',
-  'bg-violet-100 text-violet-700',
-  'bg-amber-100 text-amber-700',
-  'bg-rose-100 text-rose-700',
-  'bg-cyan-100 text-cyan-700',
-  'bg-teal-100 text-teal-700',
-  'bg-indigo-100 text-indigo-700',
-];
-
-function avatarColor(name: string): string {
-  if (!name) return AVATAR_COLORS[0]!;
-  const code = name.charCodeAt(0) + (name.charCodeAt(1) || 0);
-  return AVATAR_COLORS[code % AVATAR_COLORS.length]!;
-}
-
-function initials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase();
-}
-
 function PermissionPill({
   icon: Icon,
   label,
@@ -86,7 +58,7 @@ function PermissionPill({
 }) {
   if (!on) return null;
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-2xs font-medium text-brand-700 ring-1 ring-inset ring-brand-100">
+    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-[#C9A24E]/12 px-2.5 py-1 text-[11.5px] font-semibold text-brand-700">
       <Icon className="h-3 w-3" />
       {label}
     </span>
@@ -154,15 +126,18 @@ export default async function PortalTeamPage({
         </div>
       )}
 
-      <PremiumMetricStrip
-        variant="compact"
-        metrics={[
-          { label: t.metrics.total, value: totalAll,       icon: <Users />,       tone: 'brand'   },
-          { label: t.metrics.active, value: activeCount,    icon: <UserCheck />,   tone: 'success' },
-          { label: t.metrics.invited, value: invitedCount,   icon: <UserPlus />,    tone: 'warning' },
-          { label: t.metrics.suspended, value: suspendedCount, icon: <PauseCircle />, tone: 'danger'  },
-        ]}
-      />
+      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <FigureBar
+          bare
+          cols={4}
+          figures={[
+            { label: t.metrics.total, value: totalAll, href: '/portal/team' },
+            { label: t.metrics.active, value: activeCount, href: '/portal/team?status=ACTIVE' },
+            { label: t.metrics.invited, value: invitedCount, href: '/portal/team?status=INVITED', warn: invitedCount > 0 },
+            { label: t.metrics.suspended, value: suspendedCount, href: '/portal/team?status=SUSPENDED', warn: suspendedCount > 0 },
+          ]}
+        />
+      </section>
 
       <PremiumFilterBar
         method="get"
@@ -202,6 +177,13 @@ export default async function PortalTeamPage({
         icon={<Users />}
         title={t.tableTitle}
         padded={false}
+        trailing={
+          meta ? (
+            <span className="text-xs tabular-nums text-slate-400">
+              {meta.total} {t.countUnit}
+            </span>
+          ) : undefined
+        }
       >
         {items.length === 0 ? (
           <EmptyState
@@ -210,146 +192,103 @@ export default async function PortalTeamPage({
             description={t.emptyDescription}
           />
         ) : (
-          <>
-            {meta && (
-              <div className="flex items-center gap-2 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
-                <span className="font-bold text-slate-700">{meta.total}</span>
-                <span>{t.countUnit}</span>
-              </div>
-            )}
-            <div className="overflow-x-auto scrollbar-thin">
-              <table className="w-full text-sm">
-                <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th className="text-start font-semibold py-3 ps-5 pe-4">{t.cols.member}</th>
-                    <th className="text-start font-semibold py-3 px-4">{t.cols.status}</th>
-                    <th className="text-start font-semibold py-3 px-4">{t.cols.permissions}</th>
-                    <th className="text-start font-semibold py-3 px-4">{t.cols.joined}</th>
-                    <th className="text-end font-semibold py-3 ps-4 pe-5">{t.cols.actions}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((m) => (
-                    <tr
-                      key={m.id}
-                      className="border-t border-hairline align-middle hover:bg-surface-muted/40 transition-colors"
-                    >
-                      <td className="py-3 ps-5 pe-4">
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className={`h-9 w-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${avatarColor(m.user.fullName)}`}
-                          >
-                            {initials(m.user.fullName)}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-slate-900 truncate">{m.user.fullName}</p>
-                            {m.jobTitle && (
-                              <p className="text-2xs text-slate-500 mt-0.5 truncate">{m.jobTitle}</p>
-                            )}
-                            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-2xs text-slate-400" dir="ltr">
-                              {m.user.email && (
-                                <a
-                                  href={`mailto:${m.user.email}`}
-                                  className="inline-flex items-center gap-1 hover:text-brand-700 transition-colors"
-                                >
-                                  <Mail className="h-3 w-3" />
-                                  <span className="truncate max-w-[140px]">{m.user.email}</span>
-                                </a>
-                              )}
-                              {m.user.phone && (
-                                <a
-                                  href={`tel:${m.user.phone}`}
-                                  className="inline-flex items-center gap-1 hover:text-brand-700 transition-colors"
-                                >
-                                  <Phone className="h-3 w-3" />
-                                  {m.user.phone}
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
+          <ul className="divide-y divide-hairline" data-testid="team-rows">
+            {items.map((m) => (
+              <li
+                key={m.id}
+                data-testid="team-row"
+                className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[auto_minmax(0,1.4fr)_110px_minmax(0,1.3fr)_130px_auto]"
+              >
+                <Avatar name={m.user.fullName} />
 
-                      <td className="py-3 px-4">
-                        <BrokerUserStatusBadge status={m.status} locale={locale} />
-                      </td>
+                {/* Member: name, job title, contact */}
+                <div className="min-w-0">
+                  <p className="truncate text-[14.5px] font-bold text-slate-900">{m.user.fullName}</p>
+                  {m.jobTitle && <p className="mt-0.5 truncate text-[12px] text-slate-500">{m.jobTitle}</p>}
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-slate-500">
+                    {m.user.phone && (
+                      <a href={`tel:${m.user.phone}`} className="inline-flex items-center gap-1 tabular-nums hover:text-brand-700">
+                        <Phone className="h-3 w-3 shrink-0" />
+                        <span dir="ltr">{m.user.phone}</span>
+                      </a>
+                    )}
+                    {m.user.email && (
+                      <a href={`mailto:${m.user.email}`} className="inline-flex min-w-0 items-center gap-1 hover:text-brand-700">
+                        <Mail className="h-3 w-3 shrink-0" />
+                        <bdi className="truncate">{m.user.email}</bdi>
+                      </a>
+                    )}
+                  </div>
+                </div>
 
-                      <td className="py-3 px-4">
-                        <div className="flex flex-wrap items-center gap-1">
-                          <PermissionPill icon={Crown}        label={t.perms.primaryContact} on={m.isPrimaryContact} />
-                          <PermissionPill icon={ShieldCheck}  label={t.perms.manageTeam} on={m.canManageBrokerUsers} />
-                          <PermissionPill icon={BadgePercent} label={t.perms.viewCommissions} on={m.canViewCommissions} />
-                          {!m.isPrimaryContact && !m.canManageBrokerUsers && !m.canViewCommissions && (
-                            <span className="text-2xs text-slate-400">{t.perms.none}</span>
-                          )}
-                        </div>
-                      </td>
+                {/* Status */}
+                <div className="hidden lg:block">
+                  <BrokerUserStatusBadge status={m.status} locale={locale} />
+                </div>
 
-                      <td className="py-3 px-4 text-xs text-slate-600 whitespace-nowrap">
-                        {m.joinedAt ? (
-                          formatDate(m.joinedAt, locale)
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-amber-600 text-2xs">
-                            <Mail className="h-3 w-3" />
-                            {t.pendingInvite}
-                          </span>
-                        )}
-                      </td>
+                {/* Permissions */}
+                <div className="hidden flex-wrap items-center gap-1.5 lg:flex">
+                  <PermissionPill icon={Crown}        label={t.perms.primaryContact} on={m.isPrimaryContact} />
+                  <PermissionPill icon={ShieldCheck}  label={t.perms.manageTeam} on={m.canManageBrokerUsers} />
+                  <PermissionPill icon={BadgePercent} label={t.perms.viewCommissions} on={m.canViewCommissions} />
+                  {!m.isPrimaryContact && !m.canManageBrokerUsers && !m.canViewCommissions && (
+                    <span className="text-[12px] text-slate-400">{t.perms.none}</span>
+                  )}
+                </div>
 
-                      <td className="py-3 ps-4 pe-5">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Link href={`/portal/team/${m.id}/edit`}>
-                            <Button variant="ghost" size="sm" leftIcon={<Pencil className="h-3.5 w-3.5" />}>
-                              {t.edit}
-                            </Button>
-                          </Link>
+                {/* Joined */}
+                <div className="hidden text-[12.5px] lg:block">
+                  <p className="text-[11px] text-slate-400">{t.cols.joined}</p>
+                  {m.joinedAt ? (
+                    <p className="mt-0.5 whitespace-nowrap font-semibold tabular-nums text-slate-800">{formatDate(m.joinedAt, locale)}</p>
+                  ) : (
+                    <p className="mt-0.5 inline-flex items-center gap-1 font-semibold text-amber-600">
+                      <Mail className="h-3 w-3" />
+                      {t.pendingInvite}
+                    </p>
+                  )}
+                </div>
 
-                          {m.status !== 'ACTIVE' && (
-                            <form action={setTeamMemberStatusAction}>
-                              <input type="hidden" name="id"     value={m.id} />
-                              <input type="hidden" name="status" value="ACTIVE" />
-                              <Button type="submit" variant="ghost" size="sm" leftIcon={<UserCheck className="h-3.5 w-3.5" />}>
-                                {t.activate}
-                              </Button>
-                            </form>
-                          )}
-
-                          {m.status === 'ACTIVE' && (
-                            <form action={setTeamMemberStatusAction}>
-                              <input type="hidden" name="id"     value={m.id} />
-                              <input type="hidden" name="status" value="SUSPENDED" />
-                              <Button type="submit" variant="ghost" size="sm" leftIcon={<UserMinus className="h-3.5 w-3.5" />}>
-                                {t.suspend}
-                              </Button>
-                            </form>
-                          )}
-
-                          {m.status !== 'REMOVED' && (
-                            <ConfirmingForm
-                              action={setTeamMemberStatusAction}
-                              confirmMessage={t.removeConfirm(m.user.fullName)}
-                            >
-                              <input type="hidden" name="id"     value={m.id} />
-                              <input type="hidden" name="status" value="REMOVED" />
-                              <Button
-                                type="submit"
-                                variant="ghost"
-                                size="sm"
-                                leftIcon={<UserX className="h-3.5 w-3.5" />}
-                                className="text-danger-700 hover:text-danger-800 hover:bg-danger-50"
-                              >
-                                {t.remove}
-                              </Button>
-                            </ConfirmingForm>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
+                {/* Actions: edit stays visible; status changes sit in the menu */}
+                <div className="flex items-center justify-end gap-2">
+                  <Link
+                    href={`/portal/team/${m.id}/edit`}
+                    className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border border-[#C9A24E]/50 bg-[#C9A24E]/10 px-4 text-[13px] font-bold text-brand-700 transition-colors hover:bg-[#C9A24E]/20"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    {t.edit}
+                  </Link>
+                  {/* Every status has at least one change (activate, suspend or remove). */}
+                  <RowMenu label={t.cols.actions}>
+                      {m.status !== 'ACTIVE' && (
+                        <form action={setTeamMemberStatusAction}>
+                          <input type="hidden" name="id"     value={m.id} />
+                          <input type="hidden" name="status" value="ACTIVE" />
+                          <MenuItem type="submit" icon={<UserCheck />}>{t.activate}</MenuItem>
+                        </form>
+                      )}
+                      {m.status === 'ACTIVE' && (
+                        <form action={setTeamMemberStatusAction}>
+                          <input type="hidden" name="id"     value={m.id} />
+                          <input type="hidden" name="status" value="SUSPENDED" />
+                          <MenuItem type="submit" icon={<UserMinus />} tone="warning">{t.suspend}</MenuItem>
+                        </form>
+                      )}
+                      {m.status !== 'REMOVED' && (
+                        <ConfirmingForm
+                          action={setTeamMemberStatusAction}
+                          confirmMessage={t.removeConfirm(m.user.fullName)}
+                        >
+                          <input type="hidden" name="id"     value={m.id} />
+                          <input type="hidden" name="status" value="REMOVED" />
+                          <MenuItem type="submit" icon={<UserX />} tone="danger">{t.remove}</MenuItem>
+                        </ConfirmingForm>
+                      )}
+                  </RowMenu>
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
 
         {meta && meta.total > meta.pageSize && (
