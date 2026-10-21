@@ -189,6 +189,9 @@ export default async function FinancialReportsPage({
   const currencySign =
     new Intl.NumberFormat(intlLocale(locale), { style: 'currency', currency }).formatToParts(0).find((p) => p.type === 'currency')?.value ?? currency;
   const money = (n: number | string) => formatCurrency(n, currency, locale);
+  // Summary figures read in ألف / مليون / مليار (the exact amount on hover);
+  // per-row amounts (an installment, a payment) stay exact.
+  const cmoney = (n: number | string) => compactParts(n, currencySign, locale).join(' ');
   const short = (n: number) => compactParts(n, '', locale).join(' ').trim();
   const count = (n: number) => n.toLocaleString(intlLocale(locale));
 
@@ -261,7 +264,7 @@ export default async function FinancialReportsPage({
               </div>
               <p className="mt-1.5 text-[12px] text-slate-500">
                 {en ? 'of ' : 'من '}
-                <b className="tabular-nums text-slate-700">{money(dueToDate)}</b>
+                <b className="tabular-nums text-slate-700">{cmoney(dueToDate)}</b>
                 {en ? ' due to date' : ' مستحق حتى اليوم'}
               </p>
             </div>
@@ -314,12 +317,12 @@ export default async function FinancialReportsPage({
       {/* ─── This month: what fell due, where each part stands (the parts add
            add up), and apart from it the money that came in — which pays any
            month's rows and bookings, so it is not compared with it. ───── */}
-      <section data-testid="fin-month" className="rounded-[22px] border border-hairline bg-surface px-6 py-5">
+      <section data-testid="fin-month" data-amount={monthDue} className="rounded-[22px] border border-hairline bg-surface px-6 py-5">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:gap-10">
           <div className="min-w-0">
             <div className="flex items-baseline justify-between gap-3">
               <p className="text-[13px] font-semibold text-slate-600">{m.kpi.dueMonth}</p>
-              <p className="text-[18px] font-bold text-slate-900 tabular-nums">{money(monthDue)}</p>
+              <p className="text-[18px] font-bold text-slate-900 tabular-nums">{cmoney(monthDue)}</p>
             </div>
             <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-surface-muted">
               {monthParts.map((x) => (
@@ -328,12 +331,12 @@ export default async function FinancialReportsPage({
             </div>
             <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
               {monthParts.map((x) => (
-                <div key={x.key} className="min-w-0" data-testid={`fin-month-${x.key}`}>
+                <div key={x.key} className="min-w-0" data-testid={`fin-month-${x.key}`} data-amount={x.amount}>
                   <dt className="flex items-center gap-1.5 truncate text-[11.5px] text-slate-500">
                     <span className={cn('h-2 w-2 shrink-0 rounded-full', x.bar)} />
                     {x.label}
                   </dt>
-                  <dd className="mt-0.5 truncate text-[13.5px] font-semibold text-slate-800 tabular-nums">{money(x.amount)}</dd>
+                  <dd className="mt-0.5 truncate text-[13.5px] font-semibold text-slate-800 tabular-nums">{cmoney(x.amount)}</dd>
                 </div>
               ))}
             </dl>
@@ -343,17 +346,17 @@ export default async function FinancialReportsPage({
               <dt className="truncate text-[11.5px] text-slate-500" title={en ? 'Came in this month — any month’s rows and bookings' : 'دخل الخزنة هذا الشهر — لأقساط أي شهر ومبالغ الحجز'}>
                 {en ? 'Came in this month' : 'دخل الخزنة هذا الشهر'}
               </dt>
-              <dd className="mt-1 truncate text-[15px] font-bold text-slate-900 tabular-nums">{money(cashIn)}</dd>
+              <dd className="mt-1 truncate text-[15px] font-bold text-slate-900 tabular-nums">{cmoney(cashIn)}</dd>
             </div>
             <div className="min-w-0">
               <dt className="truncate text-[11.5px] text-slate-500">{m.hero.fees}</dt>
-              <dd className="mt-1 truncate text-[15px] font-bold text-slate-900 tabular-nums">{money(feesCollected)}</dd>
+              <dd className="mt-1 truncate text-[15px] font-bold text-slate-900 tabular-nums">{cmoney(feesCollected)}</dd>
             </div>
             <div className="min-w-0">
               <dt className="truncate text-[11.5px] text-slate-500" title={en ? 'Collected towards the price in the chosen period' : 'المحصّل من ثمن العقود في الفترة المختارة'}>
                 {en ? 'Chosen period' : 'الفترة المختارة'}
               </dt>
-              <dd className="mt-1 truncate text-[15px] font-bold text-slate-900 tabular-nums" data-testid="fin-period-collected">{money(towardsPrice)}</dd>
+              <dd className="mt-1 truncate text-[15px] font-bold text-slate-900 tabular-nums" data-testid="fin-period-collected">{cmoney(towardsPrice)}</dd>
               {collectedDelta && <DeltaChip delta={collectedDelta} label={m.hero.vsCompare} />}
             </div>
           </dl>
@@ -376,7 +379,7 @@ export default async function FinancialReportsPage({
           icon={<Clock />}
           label={m.kpi.outstanding}
           value={<Amount value={outstanding} sign={currencySign} locale={locale} />}
-          sub={m.kpi.outstandingSub(money(dueSoon))}
+          sub={m.kpi.outstandingSub(cmoney(dueSoon))}
           delta={outstandDelta}
           upIsBad
         />
@@ -397,9 +400,9 @@ export default async function FinancialReportsPage({
         <PremiumPanel title={m.refundsTitle} sub={m.refundsOwed.title} padding="none">
           <dl className="grid grid-cols-1 gap-px border-y border-hairline bg-hairline sm:grid-cols-3">
             {[
-              { label: m.kpi.netCollected, value: money(netCollected), cls: 'text-emerald-600' },
-              { label: m.kpi.refundsPaid,  value: money(refundsPaid),  cls: 'text-slate-900' },
-              { label: m.kpi.refundsOwed,  value: money(refundsOwed),  cls: refundsOwed > 0 ? 'text-amber-600' : 'text-slate-900' },
+              { label: m.kpi.netCollected, value: cmoney(netCollected), cls: 'text-emerald-600' },
+              { label: m.kpi.refundsPaid,  value: cmoney(refundsPaid),  cls: 'text-slate-900' },
+              { label: m.kpi.refundsOwed,  value: cmoney(refundsOwed),  cls: refundsOwed > 0 ? 'text-amber-600' : 'text-slate-900' },
             ].map((x) => (
               <div key={x.label} className="bg-surface px-6 py-4">
                 <dt className="text-[12px] text-slate-500">{x.label}</dt>
@@ -455,11 +458,11 @@ export default async function FinancialReportsPage({
                 { key: 'value', label: en ? 'Signed contracts’ value' : 'قيمة العقود الموقّعة', amount: pGross, dot: 'bg-brand-500' },
                 ...portfolioParts,
               ].map((r) => (
-                <li key={r.key} data-testid={`fin-dist-${r.key}`} className="flex items-center gap-3 rounded-2xl border border-hairline px-4 py-3">
+                <li key={r.key} data-testid={`fin-dist-${r.key}`} data-amount={r.amount} title={money(r.amount)} className="flex items-center gap-3 rounded-2xl border border-hairline px-4 py-3">
                   <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', r.dot)} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[12px] text-slate-500">{r.label}</span>
-                    <span className="block truncate text-[15px] font-bold text-slate-900 tabular-nums">{money(r.amount)}</span>
+                    <span className="block truncate text-[15px] font-bold text-slate-900 tabular-nums">{cmoney(r.amount)}</span>
                   </span>
                   <span className="shrink-0 text-[12px] font-semibold text-slate-400 tabular-nums">{pctText(pShare(r.amount))}</span>
                 </li>
@@ -469,9 +472,9 @@ export default async function FinancialReportsPage({
               {pMarkup > 0 && (
                 <p data-testid="fin-dist-markup">
                   {en ? 'Includes instalment markup ' : 'شاملة فوائد تقسيط '}
-                  <b className="tabular-nums text-slate-700">{money(pMarkup)}</b>
+                  <b className="tabular-nums text-slate-700">{cmoney(pMarkup)}</b>
                   {en ? ' — net price ' : ' — القيمة الصافية '}
-                  <b className="tabular-nums text-slate-700">{money(pNet)}</b>
+                  <b className="tabular-nums text-slate-700">{cmoney(pNet)}</b>
                 </p>
               )}
               {(portfolio?.unsigned.count ?? 0) > 0 && (
@@ -479,7 +482,7 @@ export default async function FinancialReportsPage({
                   {en
                     ? `${portfolio!.unsigned.count} contract(s) not signed yet — not in these figures; their schedule holds `
                     : `${portfolio!.unsigned.count} عقد لم يوقّع بعد — خارج هذه الأرقام، وعلى جدولهم `}
-                  <b className="tabular-nums text-slate-700">{money(num(portfolio!.unsigned.open))}</b>
+                  <b className="tabular-nums text-slate-700">{cmoney(num(portfolio!.unsigned.open))}</b>
                 </p>
               )}
             </div>
@@ -499,7 +502,7 @@ export default async function FinancialReportsPage({
                   <li key={b.label}>
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="text-[12.5px] font-medium text-slate-500">{b.label}</span>
-                      <span className="text-[15px] font-bold text-slate-900 tabular-nums">{money(b.amount)}</span>
+                      <span className="text-[15px] font-bold text-slate-900 tabular-nums">{cmoney(b.amount)}</span>
                     </div>
                     <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-muted">
                       <div className={cn('h-full rounded-full', b.bar)} style={{ width: `${pct}%` }} />
@@ -553,7 +556,7 @@ export default async function FinancialReportsPage({
                       </span>
                     </div>
                     <p className={cn('mt-2 text-[17px] font-bold tabular-nums', b.count === 0 ? 'text-slate-400' : late ? 'text-danger-600' : 'text-amber-600')}>
-                      {money(amt)}
+                      {cmoney(amt)}
                     </p>
                     <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-surface-muted">
                       <div className={cn('h-full rounded-full', late ? 'bg-danger-500' : 'bg-amber-400')} style={{ width: `${agingTotal > 0 ? (amt / agingTotal) * 100 : 0}%` }} />
@@ -630,7 +633,7 @@ export default async function FinancialReportsPage({
                   <p className="text-[12.5px] font-bold text-slate-700">{group.title}</p>
                   {group.rows.length > 0 && (
                     <span className="text-[12.5px] font-bold text-brand-700 tabular-nums">
-                      {money(group.rows.reduce((sum, r) => sum + num(r.amount), 0))}
+                      {cmoney(group.rows.reduce((sum, r) => sum + num(r.amount), 0))}
                     </span>
                   )}
                 </div>
@@ -671,7 +674,7 @@ export default async function FinancialReportsPage({
                         <TypeChip cls={DEPOSIT_TYPE_CLS[c.type]}>{DEPOSIT_TYPE_LABELS[c.type] ?? c.type}</TypeChip>
                         <span className="text-[11.5px] text-slate-400 tabular-nums">{count(c.count)} {m.collectionByType.depositSuffix}</span>
                       </span>
-                      <span className="shrink-0 text-[14px] font-bold text-slate-900 tabular-nums">{money(all)}</span>
+                      <span className="shrink-0 text-[14px] font-bold text-slate-900 tabular-nums">{cmoney(all)}</span>
                     </div>
                     <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-surface-muted">
                       <span className="h-full bg-emerald-500" style={{ width: `${(collected / byTypeMax) * 100}%` }} />
@@ -679,9 +682,9 @@ export default async function FinancialReportsPage({
                     </div>
                     {awaiting > 0 && (
                       <p className="mt-1 text-[11px] text-slate-500">
-                        {m.collectionByType.colCollected} <b className="text-emerald-600 tabular-nums">{money(collected)}</b>
+                        {m.collectionByType.colCollected} <b className="text-emerald-600 tabular-nums">{cmoney(collected)}</b>
                         {' · '}
-                        {m.collectionByType.colAwaiting} <b className="text-amber-600 tabular-nums">{money(awaiting)}</b>
+                        {m.collectionByType.colAwaiting} <b className="text-amber-600 tabular-nums">{cmoney(awaiting)}</b>
                       </p>
                     )}
                   </li>
@@ -711,7 +714,7 @@ export default async function FinancialReportsPage({
                         {m.booking.count(row.n)}
                       </span>
                     )}
-                    <span className={cn('shrink-0 text-[14px] font-bold tabular-nums', row.cls)}>{money(row.value)}</span>
+                    <span className={cn('shrink-0 text-[14px] font-bold tabular-nums', row.cls)}>{cmoney(row.value)}</span>
                   </li>
                 ))}
               </ul>
@@ -723,16 +726,16 @@ export default async function FinancialReportsPage({
               <div className="flex items-baseline justify-between gap-3 border-t border-hairline bg-danger-500/[0.04] px-6 py-4">
                 <span className="text-[13px] font-semibold text-slate-700">{m.liabilities.total}</span>
                 <span className={cn('text-[19px] font-bold tabular-nums', num(dash.liabilities.totalUnpaidLiabilities) > 0 ? 'text-danger-600' : 'text-slate-900')}>
-                  {money(dash.liabilities.totalUnpaidLiabilities)}
+                  {cmoney(dash.liabilities.totalUnpaidLiabilities)}
                 </span>
               </div>
               <ul className="divide-y divide-hairline border-t border-hairline">
                 {[
-                  { label: m.liabilities.salesBonus,        value: money(dash.liabilities.salesBonus.unpaidAmount),        cls: 'text-amber-600' },
-                  { label: m.liabilities.brokerCommissions, value: money(dash.liabilities.brokerCommissions.unpaidAmount), cls: 'text-amber-600' },
-                  { label: m.liabilities.paid,              value: money(num(dash.liabilities.salesBonus.paidAmount) + num(dash.liabilities.brokerCommissions.paidAmount)), cls: 'text-emerald-600' },
+                  { label: m.liabilities.salesBonus,        value: cmoney(dash.liabilities.salesBonus.unpaidAmount),        cls: 'text-amber-600' },
+                  { label: m.liabilities.brokerCommissions, value: cmoney(dash.liabilities.brokerCommissions.unpaidAmount), cls: 'text-amber-600' },
+                  { label: m.liabilities.paid,              value: cmoney(num(dash.liabilities.salesBonus.paidAmount) + num(dash.liabilities.brokerCommissions.paidAmount)), cls: 'text-emerald-600' },
                   // Paid out on deals since cancelled, and not recovered yet.
-                  { label: m.liabilities.clawbacksOwed,     value: money(dash.liabilities.clawbacksOwed?.totalAmount ?? 0), cls: 'text-brand-700', testId: 'clawbacks-owed' },
+                  { label: m.liabilities.clawbacksOwed,     value: cmoney(dash.liabilities.clawbacksOwed?.totalAmount ?? 0), cls: 'text-brand-700', testId: 'clawbacks-owed' },
                 ].map((row) => (
                   <li key={row.label} data-testid={'testId' in row ? row.testId : undefined} className="flex items-center justify-between gap-3 px-6 py-3.5">
                     <span className="text-[13px] text-slate-600">{row.label}</span>
@@ -811,12 +814,16 @@ export default async function FinancialReportsPage({
 
 /** An exact amount set as a large number with its currency in small gold. */
 function Amount({ value, sign, locale, size = 'card' }: { value: number; sign: string; locale: Locale; size?: 'hero' | 'card' }) {
-  const n = Math.round(value).toLocaleString(intlLocale(locale));
+  // ألف / مليون / مليار; the exact amount on hover.
+  const [n, unit] = compactParts(value, sign, locale);
+  const exact = `${Math.round(value).toLocaleString(intlLocale(locale))} ${sign}`;
+  const unitCls = cn('font-bold text-brand-700', size === 'hero' ? 'text-[16px]' : 'text-[12px]');
   return (
-    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap" dir="ltr">
-      {locale === 'en' && <span className={cn('font-bold text-brand-700', size === 'hero' ? 'text-[16px]' : 'text-[12px]')}>{sign}</span>}
-      <span className={cn('num font-semibold leading-none text-slate-900', size === 'hero' ? 'text-[54px] tracking-tight' : 'text-[30px]')}>{n}</span>
-      {locale !== 'en' && <span className={cn('font-bold text-brand-700', size === 'hero' ? 'text-[16px]' : 'text-[12px]')}>{sign}</span>}
+    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap" title={exact}>
+      <span className={cn('num font-semibold leading-none text-slate-900', size === 'hero' ? 'text-[54px] tracking-tight' : 'text-[30px]')} dir="ltr">
+        {n}
+      </span>
+      <span className={unitCls}>{unit}</span>
     </span>
   );
 }
