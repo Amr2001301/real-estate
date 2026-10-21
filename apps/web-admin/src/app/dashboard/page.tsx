@@ -157,10 +157,12 @@ function greetingAndDate(locale: Locale, m: ReturnType<typeof uiT>['pages']['das
   return { greeting: hour < 12 ? m.u5.greetingMorning : m.u5.greetingEvening, date };
 }
 
-export default async function DashboardHome() {
+export default async function DashboardHome({ searchParams }: { searchParams: Promise<{ day?: string }> }) {
   const session = await getSession();
-  if (session?.role === 'SALES')         return <SalesDashboard userId={session.id} />;
-  if (session?.role === 'SALES_MANAGER') return <SalesManagerDashboard />;
+  // ?day=YYYY-MM-DD picks the agenda day on the sales homes; anything else reads as today.
+  const { day } = await searchParams;
+  if (session?.role === 'SALES')         return <SalesDashboard userId={session.id} day={day} />;
+  if (session?.role === 'SALES_MANAGER') return <SalesManagerDashboard day={day} />;
 
   const [currency, locale, disabledFeatures] = await Promise.all([
     getReportsCurrency(),

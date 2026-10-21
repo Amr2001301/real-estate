@@ -1,13 +1,16 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, CalendarCheck2, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 /**
- * Building blocks of the sales and manager homes (the "cockpit"): a navy
- * command band with the month's target ring, stat tiles, the lead board and
- * the agenda. The band keeps its navy in both themes, like the KPI strip.
+ * Building blocks of the sales and manager homes, a day planner: a quiet
+ * header with the day and the month's target, one row of figures, the week's
+ * agenda around the selected day, and the day's tasks. Hairlines and one gold
+ * accent; no data dumps.
  */
+
+const GOLD = 'text-[#B8913F] dark:text-[#D8B66A]';
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter((w) => /^\p{L}/u.test(w));
@@ -18,15 +21,12 @@ function initials(name: string): string {
   return (lead(parts[0]!) + lead(parts[parts.length - 1]!)).toUpperCase();
 }
 
-export function Avatar({ name, size = 'md', className }: { name: string; size?: 'sm' | 'md' | 'lg'; className?: string }) {
+export function Avatar({ name, className }: { name: string; className?: string }) {
   return (
     <span
       aria-hidden
       className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-400/30 to-brand-700/15 font-bold text-brand-700 ring-1 ring-brand-500/30',
-        size === 'sm' && 'h-7 w-7 text-[10.5px]',
-        size === 'md' && 'h-9 w-9 text-[12px]',
-        size === 'lg' && 'h-12 w-12 text-[15px]',
+        'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-400/30 to-brand-700/15 text-[12px] font-bold text-brand-700 ring-1 ring-brand-500/30',
         className,
       )}
     >
@@ -35,100 +35,61 @@ export function Avatar({ name, size = 'md', className }: { name: string; size?: 
   );
 }
 
-// ── Target ring ───────────────────────────────────────────────────────────────
+// ── Header ────────────────────────────────────────────────────────────────────
 
-/** A gold ring filled to `pct` (0–100+), the figure in its middle. */
-export function TargetRing({ pct, size = 132, children }: { pct: number | null; size?: number; children: ReactNode }) {
-  const stroke = 9;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const p = Math.max(0, Math.min(100, pct ?? 0));
-  return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg viewBox={`0 0 ${size} ${size}`} className="h-full w-full -rotate-90" aria-hidden>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgb(255 255 255 / 0.10)" strokeWidth={stroke} />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke="url(#cockpit-ring)"
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={`${(p / 100) * c} ${c}`}
-        />
-        <defs>
-          <linearGradient id="cockpit-ring" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#F2D99A" />
-            <stop offset="100%" stopColor="#B8913F" />
-          </linearGradient>
-        </defs>
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">{children}</div>
-    </div>
-  );
-}
-
-// ── Command band ──────────────────────────────────────────────────────────────
-
-export function CommandBand({
+export function DayHeader({
   kicker,
-  greeting,
-  summary,
+  title,
+  date,
   actions,
-  ring,
-  facts,
+  target,
 }: {
+  /** The greeting. */
   kicker: string;
-  greeting: string;
-  summary: string;
+  /** Today's weekday. */
+  title: string;
+  /** Full date · desk name. */
+  date: string;
   actions: ReactNode;
-  /** The target ring and its caption. */
-  ring: ReactNode;
-  /** Small figures along the bottom of the band. */
-  facts?: Array<{ label: string; value: ReactNode }>;
+  /** The month's target, as a slim line under the date. */
+  target: { label: string; pct: number | null; detail: string; note: string };
 }) {
+  const p = Math.max(0, Math.min(100, target.pct ?? 0));
   return (
-    <section
-      data-testid="command-band"
-      className="relative overflow-hidden rounded-[26px] border border-[#D8B66A]/[0.28] bg-navy-band text-[#F4ECD8] shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]"
-    >
-      <div className="pointer-events-none absolute -top-24 start-[-6rem] h-72 w-72 rounded-full bg-[#D8B66A]/[0.10] blur-3xl" />
-      <div className="pointer-events-none absolute bottom-[-7rem] end-[-5rem] h-72 w-72 rounded-full bg-sky-400/[0.06] blur-3xl" />
-      <div className="relative grid gap-8 p-7 sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center">
-        <div className="min-w-0 space-y-4">
-          <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#D8B66A]">{kicker}</p>
-          {/* Explicit colour: the global heading colour is dark in the light theme, the band stays navy. */}
-          <h1 className="font-heading text-[30px] font-bold leading-tight text-[#F4ECD8] sm:text-[34px]">{greeting}</h1>
-          <p className="max-w-xl text-[14px] leading-relaxed text-[#A9B0BD]">{summary}</p>
-          <div className="flex flex-wrap items-center gap-2 pt-1">{actions}</div>
+    <header data-testid="day-header" className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+      <div className="min-w-0 space-y-2">
+        <p className={cn('text-[13px] font-bold tracking-wide', GOLD)}>{kicker}</p>
+        <h1 className="font-heading text-[40px] font-bold leading-[1.1] text-slate-900 sm:text-[46px]">{title}</h1>
+        <p className="text-[14px] text-slate-500">{date}</p>
+        <div className="max-w-md pt-3">
+          <div className="flex items-baseline justify-between gap-4 text-[12.5px]">
+            <span className="font-semibold text-slate-600">
+              {target.label}
+              <span className="ms-2 font-bold tabular-nums text-slate-900">{target.pct === null ? '—' : `${Math.round(target.pct)}%`}</span>
+            </span>
+            <span className="text-slate-500">{target.note}</span>
+          </div>
+          <div className="mt-2 h-[3px] overflow-hidden rounded-full bg-slate-500/15">
+            <div className="h-full rounded-full bg-gradient-to-l from-[#E6C77E] to-[#B8913F]" style={{ width: `${p}%` }} />
+          </div>
+          <p className="mt-1.5 text-[12px] tabular-nums text-slate-500">{target.detail}</p>
         </div>
-        <div className="flex items-center gap-6">{ring}</div>
       </div>
-      {facts && facts.length > 0 && (
-        <dl className="relative grid grid-cols-2 gap-px border-t border-[#D8B66A]/[0.16] bg-[#D8B66A]/[0.16] sm:grid-cols-4">
-          {facts.map((f) => (
-            <div key={f.label} className="bg-navy-band px-7 py-4">
-              <dt className="text-[12px] text-[#A9B0BD]">{f.label}</dt>
-              <dd className="mt-1 text-[20px] font-bold tabular-nums text-[#F4ECD8]">{f.value}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-    </section>
+      <div className="flex flex-wrap items-center gap-2">{actions}</div>
+    </header>
   );
 }
 
-/** A quick action in the band: gold for the main one, glass for the rest. */
-export function BandAction({ href, icon, children, primary }: { href: string; icon: ReactNode; children: ReactNode; primary?: boolean }) {
+/** A header action: gold for the main one, a hairline outline for the rest. */
+export function DayAction({ href, icon, children, primary }: { href: string; icon: ReactNode; children: ReactNode; primary?: boolean }) {
   return (
     <Link
       href={href as never}
       className={cn(
         'inline-flex h-10 items-center gap-2 rounded-full px-4 text-[13px] font-bold transition-colors [&_svg]:h-4 [&_svg]:w-4',
         primary
-          ? 'bg-gradient-to-l from-[#E6C77E] to-[#C9A24E] text-[#1a1408] hover:brightness-105'
-          : 'border border-white/15 bg-white/[0.06] text-[#F4ECD8] hover:bg-white/[0.12]',
+          ? 'bg-gradient-to-l from-[#E6C77E] to-[#C9A24E] text-[#1a1408] shadow-[0_8px_20px_-10px_rgb(184_145_63/0.7)] hover:brightness-105'
+          : 'border border-hairline bg-surface text-slate-700 hover:border-[#C9A24E]/60 hover:text-slate-900',
       )}
     >
       {icon}
@@ -137,61 +98,55 @@ export function BandAction({ href, icon, children, primary }: { href: string; ic
   );
 }
 
-// ── Stat tile ─────────────────────────────────────────────────────────────────
+// ── Figures ───────────────────────────────────────────────────────────────────
 
-const TILE_TONE = {
-  brand:   'bg-brand-500/12 text-brand-700',
-  sky:     'bg-sky-500/12 text-sky-600',
-  violet:  'bg-violet-500/12 text-violet-600',
-  emerald: 'bg-emerald-500/12 text-emerald-600',
-} as const;
-
-export function StatTile({
-  href,
-  icon,
-  label,
-  value,
-  note,
-  noteTone = 'muted',
-  tone = 'brand',
-}: {
-  href: string;
-  icon: ReactNode;
+export interface Figure {
   label: string;
   value: ReactNode;
-  note: string;
-  noteTone?: 'muted' | 'warning' | 'success';
-  tone?: keyof typeof TILE_TONE;
-}) {
+  sub?: string;
+  href?: string;
+  warn?: boolean;
+}
+
+/** One quiet row of figures, hairlines between them. */
+export function FigureBar({ figures }: { figures: Figure[] }) {
   return (
-    <Link
-      href={href as never}
-      data-testid="stat-tile"
-      className="group relative flex flex-col justify-between gap-4 overflow-hidden rounded-[22px] border border-hairline bg-surface p-5 transition-colors hover:border-brand-500/40"
+    <dl
+      data-testid="figure-bar"
+      className="grid grid-cols-2 overflow-hidden rounded-[22px] border border-hairline bg-surface sm:grid-cols-3 xl:grid-cols-6"
     >
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-[13px] font-semibold text-slate-500">{label}</p>
-        <span className={cn('inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full [&_svg]:h-[18px] [&_svg]:w-[18px]', TILE_TONE[tone])}>
-          {icon}
-        </span>
-      </div>
-      <div>
-        <p className="text-[34px] font-bold leading-none tabular-nums text-slate-900">{value}</p>
-        <p
-          className={cn(
-            'mt-2 text-[12px] font-semibold',
-            noteTone === 'warning' ? 'text-amber-600' : noteTone === 'success' ? 'text-emerald-600' : 'text-slate-500',
-          )}
-        >
-          {note}
-        </p>
-      </div>
-      <ArrowUpRight className="absolute bottom-5 end-5 h-4 w-4 text-slate-300 transition-colors group-hover:text-brand-700 rtl:-scale-x-100" />
-    </Link>
+      {figures.map((f) => {
+        const body = (
+          <>
+            <dt className="text-[12px] font-semibold text-slate-500">{f.label}</dt>
+            <dd className="mt-2 whitespace-nowrap text-[26px] font-bold leading-none tabular-nums text-slate-900">{f.value}</dd>
+            {f.sub && <dd className={cn('mt-2 truncate text-[11.5px]', f.warn ? 'font-semibold text-amber-600' : 'text-slate-500')}>{f.sub}</dd>}
+          </>
+        );
+        const cls = 'block border-hairline px-5 py-5 xl:[&:not(:last-child)]:border-e max-xl:border-b';
+        return f.href ? (
+          <Link key={f.label} href={f.href as never} data-testid="figure" className={cn(cls, 'transition-colors hover:bg-surface-muted/40')}>
+            {body}
+          </Link>
+        ) : (
+          <div key={f.label} data-testid="figure" className={cls}>{body}</div>
+        );
+      })}
+    </dl>
   );
 }
 
-// ── Panels ────────────────────────────────────────────────────────────────────
+/** A compact amount: the figure, its unit (ألف / مليون + currency) smaller beside it. */
+export function Amount({ parts }: { parts: [string, string] | string[] }) {
+  return (
+    <>
+      {parts[0]}
+      {parts[1] && <span className="ms-1.5 text-[13px] font-semibold text-slate-500">{parts[1]}</span>}
+    </>
+  );
+}
+
+// ── Panel ─────────────────────────────────────────────────────────────────────
 
 export function Panel({
   title,
@@ -209,7 +164,7 @@ export function Panel({
   testId?: string;
 }) {
   return (
-    <section data-testid={testId} className={cn('flex flex-col overflow-hidden rounded-[22px] border border-hairline bg-surface', className)}>
+    <section data-testid={testId} className={cn('flex flex-col rounded-[22px] border border-hairline bg-surface', className)}>
       <header className="flex items-start justify-between gap-4 px-6 pb-4 pt-5">
         <div className="min-w-0">
           <h2 className="font-heading text-[19px] font-bold leading-snug text-slate-900">{title}</h2>
@@ -227,218 +182,260 @@ export function Panel({
   );
 }
 
-// ── Lead board ────────────────────────────────────────────────────────────────
+// ── Week agenda ───────────────────────────────────────────────────────────────
 
-export const BOARD_STAGES = [
-  { stage: 'NEW',         bar: 'bg-slate-400',  text: 'text-slate-600'  },
-  { stage: 'INTERESTED',  bar: 'bg-sky-400',    text: 'text-sky-600'    },
-  { stage: 'VISIT',       bar: 'bg-violet-400', text: 'text-violet-600' },
-  { stage: 'NEGOTIATION', bar: 'bg-amber-400',  text: 'text-amber-600'  },
-] as const;
-
-export interface BoardCard {
-  id: string;
-  name: string;
-  project?: string;
-  age: string;
-  stale?: boolean;
-  owner?: string;
-}
-
-export function LeadBoard({
-  columns,
-  emptyLabel,
-  viewAllLabel,
-  staleLabel,
-}: {
-  columns: Array<{ stage: string; label: string; count: number; cards: BoardCard[] }>;
-  emptyLabel: string;
-  viewAllLabel: string;
-  staleLabel: string;
-}) {
-  const total = columns.reduce((a, c) => a + c.count, 0);
-  return (
-    <div className="space-y-4 px-6 pb-6">
-      {total > 0 && (
-        <div className="flex h-2 overflow-hidden rounded-full bg-surface-muted" dir="ltr">
-          {columns.filter((c) => c.count > 0).map((c) => {
-            const meta = BOARD_STAGES.find((s) => s.stage === c.stage)!;
-            return <div key={c.stage} className={cn('h-full', meta.bar)} style={{ width: `${(c.count / total) * 100}%` }} />;
-          })}
-        </div>
-      )}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" data-testid="lead-board">
-        {columns.map((col) => {
-          const meta = BOARD_STAGES.find((s) => s.stage === col.stage)!;
-          return (
-            <div key={col.stage} className="flex flex-col rounded-2xl border border-hairline bg-surface-muted/30">
-              <Link
-                href={`/dashboard/leads?stage=${col.stage}` as never}
-                className="flex items-center justify-between gap-2 border-b border-hairline px-4 py-3 hover:text-brand-700"
-              >
-                <span className="flex items-center gap-2 text-[13px] font-bold text-slate-800">
-                  <span className={cn('h-2.5 w-2.5 rounded-full', meta.bar)} />
-                  {col.label}
-                </span>
-                <span className={cn('text-[18px] font-bold tabular-nums', meta.text)}>{col.count}</span>
-              </Link>
-              <ul className="flex-1 space-y-2 p-2.5">
-                {col.cards.length === 0 ? (
-                  <li className="px-2 py-5 text-center text-[12px] text-slate-400">{emptyLabel}</li>
-                ) : (
-                  col.cards.map((card) => (
-                    <li key={card.id}>
-                      <Link
-                        href={`/dashboard/leads/${card.id}` as never}
-                        className="block rounded-xl border border-hairline bg-surface px-3 py-2.5 transition-colors hover:border-brand-500/40"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="truncate text-[13px] font-semibold text-slate-900" dir="auto">{card.name}</p>
-                          {card.stale && (
-                            <span className="shrink-0 rounded-full bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-bold text-amber-600">{staleLabel}</span>
-                          )}
-                        </div>
-                        <p className="mt-0.5 truncate text-[11.5px] text-slate-500">
-                          {card.project ?? '—'} · {card.age}
-                        </p>
-                        {card.owner && (
-                          <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-slate-500">
-                            <Avatar name={card.owner} size="sm" className="h-5 w-5 text-[8.5px]" />
-                            <span className="truncate">{card.owner}</span>
-                          </p>
-                        )}
-                      </Link>
-                    </li>
-                  ))
-                )}
-              </ul>
-              {col.count > col.cards.length && (
-                <Link
-                  href={`/dashboard/leads?stage=${col.stage}` as never}
-                  className="border-t border-hairline px-4 py-2.5 text-center text-[12px] font-bold text-brand-700 hover:text-brand-600"
-                >
-                  {viewAllLabel} ({col.count})
-                </Link>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ── Agenda ────────────────────────────────────────────────────────────────────
-
-export interface AgendaItem {
+export interface DayEvent {
   id: string;
   href: string;
-  /** Day group heading (اليوم / غداً / a date). */
-  day: string;
   time: string;
   title: string;
   sub: string;
-  tone: 'visit' | 'warning' | 'danger';
+  tag: 'visit' | 'expiry';
 }
 
-const AGENDA_DOT = {
-  visit: 'bg-sky-400 ring-sky-400/25',
-  warning: 'bg-amber-400 ring-amber-400/25',
-  danger: 'bg-rose-400 ring-rose-400/25',
+export interface AgendaDay {
+  /** YYYY-MM-DD in the company's zone. */
+  key: string;
+  weekday: string;
+  dayNum: string;
+  events: DayEvent[];
+}
+
+/** Seven days as a strip; each one opens that day (`?day=`). */
+export function DayStrip({ days, selected, countLabel }: { days: AgendaDay[]; selected: string; countLabel: (n: number) => string }) {
+  return (
+    <nav data-testid="day-strip" className="grid grid-cols-7 gap-1.5 px-4 sm:gap-2 sm:px-6">
+      {days.map((d, i) => {
+        const on = d.key === selected;
+        const n = d.events.length;
+        return (
+          <Link
+            key={d.key}
+            href={(i === 0 ? '/dashboard' : `/dashboard?day=${d.key}`) as never}
+            scroll={false}
+            aria-current={on ? 'date' : undefined}
+            title={countLabel(n)}
+            className={cn(
+              'flex flex-col items-center gap-1 rounded-2xl border px-1 py-3 text-center transition-colors',
+              on
+                ? 'border-[#C9A24E]/60 bg-[#D8B66A]/[0.12]'
+                : 'border-transparent hover:border-hairline hover:bg-surface-muted/40',
+            )}
+          >
+            <span className={cn('text-[11.5px] font-semibold', on ? GOLD : 'text-slate-500')}>{d.weekday}</span>
+            <span className={cn('text-[22px] font-bold leading-none tabular-nums', on ? 'text-slate-900' : 'text-slate-700')}>{d.dayNum}</span>
+            <span className="flex h-2 items-center gap-0.5" aria-hidden>
+              {Array.from({ length: Math.min(n, 3) }).map((_, j) => (
+                <span key={j} className={cn('h-1.5 w-1.5 rounded-full', on ? 'bg-[#B8913F]' : 'bg-slate-400/60')} />
+              ))}
+            </span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+const TAG = {
+  visit: 'bg-sky-500/12 text-sky-600',
+  expiry: 'bg-amber-500/12 text-amber-600',
 } as const;
 
-export function Agenda({ items, emptyLabel }: { items: AgendaItem[]; emptyLabel: string }) {
-  if (items.length === 0) {
-    return <p className="mx-6 mb-6 rounded-2xl border border-dashed border-hairline px-4 py-8 text-center text-[13px] text-slate-500">{emptyLabel}</p>;
-  }
-  const days: Array<{ day: string; items: AgendaItem[] }> = [];
-  for (const it of items) {
-    const g = days.find((d) => d.day === it.day);
-    if (g) g.items.push(it);
-    else days.push({ day: it.day, items: [it] });
+/** The selected day hour by hour: time, a gold rail, the item and its tag. */
+export function Timeline({
+  events,
+  tags,
+  empty,
+}: {
+  events: DayEvent[];
+  tags: Record<DayEvent['tag'], string>;
+  empty: { label: string; next?: { href: string; label: string } };
+}) {
+  if (events.length === 0) {
+    return (
+      <div data-testid="timeline-empty" className="mx-6 mb-6 mt-4 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-hairline px-4 py-9 text-center">
+        <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#D8B66A]/[0.14]">
+          <CalendarCheck2 className={cn('h-5 w-5', GOLD)} />
+        </span>
+        <p className="text-[14px] font-semibold text-slate-600">{empty.label}</p>
+        {empty.next && (
+          <Link href={empty.next.href as never} scroll={false} className="text-[13px] font-bold text-brand-700 hover:text-brand-600">
+            {empty.next.label}
+          </Link>
+        )}
+      </div>
+    );
   }
   return (
-    <div className="space-y-5 px-6 pb-6" data-testid="agenda">
-      {days.map((g) => (
-        <div key={g.day}>
-          <p className="mb-2 text-[12px] font-bold text-brand-700">{g.day}</p>
-          <ol className="relative space-y-1 border-s border-hairline ps-4">
-            {g.items.map((it) => (
-              <li key={it.id} className="relative">
-                <span className={cn('absolute -start-[21px] top-3.5 h-2.5 w-2.5 rounded-full ring-4', AGENDA_DOT[it.tone])} />
-                <Link href={it.href as never} className="flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-surface-muted/50">
-                  <span className="w-14 shrink-0 text-[12px] font-bold tabular-nums text-slate-700" dir="ltr">{it.time}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-semibold text-slate-900" dir="auto">{it.title}</span>
-                    <span className="block truncate text-[11.5px] text-slate-500">{it.sub}</span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ol>
-        </div>
+    <ol data-testid="timeline" className="mt-4 px-6 pb-6">
+      {events.map((e, i) => (
+        <li key={e.id} className="grid grid-cols-[64px_20px_1fr] items-stretch">
+          <span className="pt-4 text-[13px] font-bold tabular-nums text-slate-700" dir="ltr">{e.time}</span>
+          <span className="relative flex justify-center" aria-hidden>
+            <span className={cn('absolute inset-y-0 w-px bg-[#D8B66A]/35', i === 0 && 'top-5', i === events.length - 1 && 'bottom-auto h-5')} />
+            <span className="relative mt-[18px] h-2.5 w-2.5 rounded-full bg-[#C9A24E] ring-4 ring-[#D8B66A]/20" />
+          </span>
+          <Link
+            href={e.href as never}
+            className="my-1 ms-2 flex items-center gap-3 rounded-2xl px-3 py-3 transition-colors hover:bg-surface-muted/50"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-2">
+                <span className="truncate text-[14px] font-bold text-slate-900" dir="auto">{e.title}</span>
+                <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-bold', TAG[e.tag])}>{tags[e.tag]}</span>
+              </span>
+              <span className="mt-0.5 block truncate text-[12px] text-slate-500">{e.sub}</span>
+            </span>
+            <ArrowUpRight className="h-4 w-4 shrink-0 text-slate-300 rtl:-scale-x-100" />
+          </Link>
+        </li>
       ))}
+    </ol>
+  );
+}
+
+// ── Tasks ─────────────────────────────────────────────────────────────────────
+
+export interface Task {
+  key: string;
+  icon: ReactNode;
+  tone: 'amber' | 'sky' | 'rose' | 'violet';
+  label: string;
+  desc: string;
+  count: number;
+  href?: string;
+}
+
+const TASK_TONE = {
+  amber:  'bg-amber-500/12 text-amber-600',
+  sky:    'bg-sky-500/12 text-sky-600',
+  rose:   'bg-rose-500/12 text-rose-500',
+  violet: 'bg-violet-500/12 text-violet-600',
+} as const;
+
+/** What needs doing today; only the tasks with something in them. */
+export function TaskList({ tasks, empty }: { tasks: Task[]; empty: string }) {
+  const open = tasks.filter((t) => t.count > 0);
+  if (open.length === 0) {
+    return (
+      <div className="mx-6 mb-6 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-hairline px-4 py-8 text-center">
+        <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+        <p className="text-[13px] text-slate-500">{empty}</p>
+      </div>
+    );
+  }
+  return (
+    <ul data-testid="tasks" className="divide-y divide-hairline border-t border-hairline">
+      {open.map((t) => {
+        const body = (
+          <>
+            <span className={cn('inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full [&_svg]:h-[18px] [&_svg]:w-[18px]', TASK_TONE[t.tone])}>
+              {t.icon}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13.5px] font-bold text-slate-900">{t.label}</span>
+              <span className="block truncate text-[12px] text-slate-500">{t.desc}</span>
+            </span>
+            <span className="text-[22px] font-bold tabular-nums text-slate-900">{t.count}</span>
+          </>
+        );
+        return (
+          <li key={t.key}>
+            {t.href ? (
+              <Link href={t.href as never} className="flex items-center gap-3 px-6 py-4 transition-colors hover:bg-surface-muted/40">{body}</Link>
+            ) : (
+              <div className="flex items-center gap-3 px-6 py-4">{body}</div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+// ── Open leads by stage ───────────────────────────────────────────────────────
+
+export const PIPELINE_STAGES = [
+  { stage: 'NEW',         bar: 'bg-slate-400'  },
+  { stage: 'INTERESTED',  bar: 'bg-sky-400'    },
+  { stage: 'VISIT',       bar: 'bg-violet-400' },
+  { stage: 'NEGOTIATION', bar: 'bg-[#C9A24E]'  },
+] as const;
+
+/** One stacked bar and the four counts; each stage opens its list. */
+export function PipelineSplit({ stages }: { stages: Array<{ stage: string; label: string; count: number }> }) {
+  const total = stages.reduce((a, s) => a + s.count, 0);
+  return (
+    <div data-testid="pipeline" className="px-6 pb-6">
+      <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-surface-muted" dir="ltr">
+        {total > 0 &&
+          stages.filter((s) => s.count > 0).map((s) => (
+            <div
+              key={s.stage}
+              className={cn('h-full', PIPELINE_STAGES.find((p) => p.stage === s.stage)?.bar)}
+              style={{ width: `${(s.count / total) * 100}%` }}
+            />
+          ))}
+      </div>
+      <ul className="mt-4 grid grid-cols-2 gap-2">
+        {stages.map((s) => (
+          <li key={s.stage}>
+            <Link
+              href={`/dashboard/leads?stage=${s.stage}` as never}
+              className="flex items-center justify-between gap-2 rounded-xl px-2.5 py-2 transition-colors hover:bg-surface-muted/50"
+            >
+              <span className="flex items-center gap-2 text-[12.5px] font-semibold text-slate-600">
+                <span className={cn('h-2 w-2 rounded-full', PIPELINE_STAGES.find((p) => p.stage === s.stage)?.bar)} />
+                {s.label}
+              </span>
+              <span className="text-[16px] font-bold tabular-nums text-slate-900">{s.count}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
-// ── Bookings by expiry ────────────────────────────────────────────────────────
+// ── Team ──────────────────────────────────────────────────────────────────────
 
-export interface ExpiryCard {
+export interface TeamRow {
   id: string;
-  href: string;
-  code: string;
-  unit?: string;
-  client: string;
-  owner?: string;
-  /** Whole days until it lapses (0 = today). */
-  daysLeft: number;
-  expiryLabel: string;
-  status: ReactNode;
+  name: string;
+  pct: number | null;
+  contracts: string;
+  realized: string;
+  inactive?: string;
 }
 
-/** Active bookings as cards, the time left as a draining bar (7 days = full). */
-export function ExpiryCards({ items, emptyLabel, cols = 3 }: { items: ExpiryCard[]; emptyLabel: string; cols?: 2 | 3 }) {
-  if (items.length === 0) {
-    return <p className="mx-6 mb-6 rounded-2xl border border-dashed border-hairline px-4 py-8 text-center text-[13px] text-slate-500">{emptyLabel}</p>;
+/** The team in one line each: name, a thin bar to target, the month's figures. */
+export function TeamList({ rows, empty }: { rows: TeamRow[]; empty: string }) {
+  if (rows.length === 0) {
+    return <p className="mx-6 mb-6 rounded-2xl border border-dashed border-hairline px-4 py-8 text-center text-[13px] text-slate-500">{empty}</p>;
   }
   return (
-    <div className={cn('grid grid-cols-1 gap-3 px-6 pb-6 sm:grid-cols-2', cols === 3 && 'xl:grid-cols-3')} data-testid="expiry-cards">
-      {items.map((r) => {
-        const urgent = r.daysLeft <= 1;
-        const soon = r.daysLeft <= 7;
-        const fill = Math.max(4, Math.min(100, (r.daysLeft / 7) * 100));
-        return (
-          <Link
-            key={r.id}
-            href={r.href as never}
-            className="flex flex-col gap-3 rounded-2xl border border-hairline bg-surface-muted/30 p-4 transition-colors hover:border-brand-500/40"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate font-mono text-[12.5px] font-bold text-slate-900" dir="ltr">
-                  {r.code}{r.unit ? ` · ${r.unit}` : ''}
-                </p>
-                <p className="mt-0.5 truncate text-[12px] text-slate-500" dir="auto">
-                  {r.client}{r.owner ? ` · ${r.owner}` : ''}
-                </p>
-              </div>
-              {r.status}
+    <ol data-testid="team" className="divide-y divide-hairline border-t border-hairline">
+      {rows.map((r, i) => (
+        <li key={r.id} className="flex items-center gap-4 px-6 py-3.5">
+          <span className={cn('w-5 shrink-0 text-center text-[13px] font-bold tabular-nums', i === 0 && !r.inactive ? GOLD : 'text-slate-400')}>{i + 1}</span>
+          <Avatar name={r.name} />
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-6">
+            <div className="flex min-w-0 items-center gap-2 sm:w-56 sm:shrink-0">
+              <p className="truncate text-[14px] font-bold text-slate-900" dir="auto">{r.name}</p>
+              {r.inactive && <span className="shrink-0 rounded-full bg-slate-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-slate-500">{r.inactive}</span>}
             </div>
-            <div>
-              <div className="flex items-center justify-between text-[11.5px]">
-                <span className={cn('font-bold', urgent ? 'text-rose-500' : soon ? 'text-amber-600' : 'text-slate-500')}>{r.expiryLabel}</span>
-              </div>
-              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-muted">
-                <div
-                  className={cn('h-full rounded-full', urgent ? 'bg-rose-400' : soon ? 'bg-amber-400' : 'bg-emerald-400')}
-                  style={{ width: `${fill}%` }}
-                />
-              </div>
+            <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-slate-500/15">
+              <div
+                className={cn('h-full rounded-full', r.pct !== null && r.pct >= 100 ? 'bg-emerald-400' : 'bg-gradient-to-l from-[#E6C77E] to-[#B8913F]')}
+                style={{ width: `${Math.min(100, r.pct ?? 0)}%` }}
+              />
             </div>
-          </Link>
-        );
-      })}
-    </div>
+          </div>
+          <span className="w-12 shrink-0 text-end text-[14px] font-bold tabular-nums text-slate-900">{r.pct === null ? '—' : `${Math.round(r.pct)}%`}</span>
+          <span className="hidden w-20 shrink-0 text-end text-[12px] text-slate-500 sm:block">{r.contracts}</span>
+          <span className="w-28 shrink-0 whitespace-nowrap text-end text-[13px] font-bold tabular-nums text-brand-700">{r.realized}</span>
+        </li>
+      ))}
+    </ol>
   );
 }

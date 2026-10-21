@@ -1,4 +1,4 @@
-import { Zap, CalendarClock, BookmarkCheck, Home, Plus, CalendarPlus } from 'lucide-react';
+import { BookmarkCheck, Plus, CalendarPlus, AlertTriangle, Clock, PhoneCall } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getCompanyTimeZone, getReportsCurrency, currencySymbol, todayIn } from '@/lib/currency';
 import type { Paged, Lead, Reservation, VisitAppointment } from '@/lib/types';
@@ -6,18 +6,18 @@ import { compactParts } from '@/lib/format';
 import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
-import { ReservationStatusBadge } from '@/components/badges';
 import {
-  CommandBand,
-  BandAction,
-  TargetRing,
-  StatTile,
+  DayHeader,
+  DayAction,
+  FigureBar,
   Panel,
-  LeadBoard,
-  Agenda,
-  ExpiryCards,
+  DayStrip,
+  Timeline,
+  TaskList,
+  PipelineSplit,
+  Amount,
 } from '@/components/cockpit/cockpit';
-import { STALE_AFTER_DAYS, greeting, daysLeftInMonth, daysUntil, loadBoard, buildAgenda } from './cockpit-data';
+import { STALE_AFTER_DAYS, AGENDA_DAYS, greeting, daysLeftInMonth, dayTitle, buildWeek } from './cockpit-data';
 
 interface PerformanceRow {
   salesId: string;
@@ -31,11 +31,11 @@ interface PerformanceRow {
 }
 
 /**
- * The sales rep's home, a cockpit: the month's target in a navy command band,
- * four live tiles, the lead board (newest leads per stage) beside the agenda,
- * then the active bookings by how soon they lapse.
+ * The sales rep's home, a day planner: the day and the month's target in a
+ * quiet header, one row of figures, the week's agenda around the selected day
+ * (`?day=`), and beside it the day's tasks and the open leads by stage.
  */
-export async function SalesDashboard({ userId }: { userId: string }) {
+export async function SalesDashboard({ userId, day }: { userId: string; day?: string }) {
   const [locale, timeZone, currency, session] = await Promise.all([
     getLocale(), getCompanyTimeZone(), getReportsCurrency(), getSession(),
   ]);
@@ -49,17 +49,19 @@ export async function SalesDashboard({ userId }: { userId: string }) {
   const now = new Date();
   const nowIso = now.toISOString();
   const staleIso = new Date(now.getTime() - STALE_AFTER_DAYS * 86400000).toISOString();
+  // A day back so this morning's visits stay on today; the week is cut by calendar day below.
+  const fromIso = new Date(now.getTime() - 86400000).toISOString();
+  const toIso = new Date(now.getTime() + (AGENDA_DAYS + 1) * 86400000).toISOString();
   const in7Iso = new Date(now.getTime() + 7 * 86400000).toISOString();
 
   // Every count is the server's (meta.total / facets), never a counted page.
-  const [leadsRes, staleRes, resvRes, activeRes, expiringRes, visitsRes, unitsRes, perfRes] = await Promise.all([
+  const [leadsRes, staleRes, resvRes, expiringRes, visitsRes, unconfirmedRes, perfRes] = await Promise.all([
     safe(api.get<Paged<Lead>>('/leads?pageSize=1')),
     safe(api.get<Paged<Lead>>(`/leads?stage=NEW,INTERESTED&createdBefore=${staleIso}&pageSize=1`)),
     safe(api.get<Paged<Reservation>>('/reservations?pageSize=1')),
-    safe(api.get<Paged<Reservation>>('/reservations?status=PENDING,APPROVED&sort=expiresAt&pageSize=6')),
-    safe(api.get<Paged<Reservation>>(`/reservations?status=PENDING,APPROVED&expiresFrom=${nowIso}&expiresTo=${in7Iso}&sort=expiresAt&pageSize=20`)),
-    safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?assignedSalesId=${userId}&scheduledFrom=${nowIso}&open=true&pageSize=12`)),
-    safe(api.get<Paged<unknown>>('/units?status=AVAILABLE&pageSize=1')),
+    safe(api.get<Paged<Reservation>>(`/reservations?status=PENDING,APPROVED&expiresFrom=${nowIso}&expiresTo=${toIso}&sort=expiresAt&pageSize=100`)),
+    safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?assignedSalesId=${userId}&scheduledFrom=${fromIso}&scheduledTo=${toIso}&open=true&pageSize=100`)),
+    safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?assignedSalesId=${userId}&status=SCHEDULED&scheduledFrom=${nowIso}&pageSize=1`)),
     safe(api.get<PerformanceRow[]>(`/sales-targets/performance?period=${period}`)),
   ]);
 
@@ -68,125 +70,97 @@ export async function SalesDashboard({ userId }: { userId: string }) {
   const openLeads = (leadsRes.data?.meta.total ?? 0) - (stages.WON ?? 0) - (stages.LOST ?? 0);
   const stale = staleRes.data?.meta.total ?? 0;
   const activeReservations = (resv.PENDING ?? 0) + (resv.APPROVED ?? 0);
-  const expiring7 = expiringRes.data?.meta.total ?? 0;
-  const availableUnits = unitsRes.data?.meta.total ?? 0;
-  const visits = (visitsRes.data?.data ?? []).slice().sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
-  const upcomingVisits = visitsRes.data?.meta.total ?? 0;
-  const todayVisits = visits.filter((v) => new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date(v.scheduledAt)) === today).length;
+  const expiring = expiringRes.data?.data ?? [];
+  const expiring7 = expiring.filter((r) => r.expiresAt <= in7Iso).length;
   const me = (perfRes.data ?? []).find((r) => r.salesId === userId) ?? (perfRes.data ?? [])[0];
-  const lapsing = (expiringRes.data?.data ?? []).filter((r) => daysUntil(r.expiresAt) <= 2);
 
-  const stageLabels = {
-    NEW: m.stageLabelNew,
-    INTERESTED: m.stageLabelInterested,
-    VISIT: m.stageLabelVisit,
-    NEGOTIATION: m.stageLabelNegotiation,
-  };
-  const board = await loadBoard(stages, c, locale, false, stageLabels);
-  const agenda = buildAgenda(visits, lapsing, c, locale, timeZone, false);
+  const week = buildWeek(today, visitsRes.data?.data ?? [], expiring, locale, timeZone, false);
+  const selected = week.find((d) => d.key === day) ?? week[0]!;
+  const next = week.find((d) => d.key > selected.key && d.events.length > 0);
+  const upcomingVisits = week.reduce((a, d) => a + d.events.filter((e) => e.tag === 'visit').length, 0);
+  const todayVisits = week[0]!.events.filter((e) => e.tag === 'visit').length;
+  const head = dayTitle(today, locale);
 
   const money = (n: number) => compactParts(n, symbol, locale).join(' ');
-  const pct = me?.targetAmountPercent ?? null;
+  const amount = (n: number) => <Amount parts={compactParts(n, symbol, locale)} />;
   const hasTarget = !!me?.targetAmount;
 
   return (
     <div className="space-y-6">
-      <CommandBand
-        kicker={c.repSubtitle}
-        greeting={greeting(c, timeZone, session?.fullName ?? '')}
-        summary={c.todaySummary(todayVisits, stale)}
+      <DayHeader
+        kicker={greeting(c, timeZone, session?.fullName ?? '')}
+        title={head.weekday}
+        date={`${head.date} · ${c.repSubtitle}`}
+        target={{
+          label: c.monthTarget,
+          pct: hasTarget ? (me?.targetAmountPercent ?? 0) : null,
+          detail: hasTarget ? c.ofTarget(money(me!.achievedAmount), money(me!.targetAmount!)) : c.noTarget,
+          note: c.daysLeft(daysLeftInMonth(today)),
+        }}
         actions={
           <>
-            <BandAction primary href="/dashboard/leads/new" icon={<Plus />}>{m.btnAddLead}</BandAction>
-            <BandAction href="/dashboard/visits/new" icon={<CalendarPlus />}>{m.btnScheduleVisit}</BandAction>
-            <BandAction href="/dashboard/reservations/new" icon={<BookmarkCheck />}>{m.btnCreateReservation}</BandAction>
+            <DayAction primary href="/dashboard/leads/new" icon={<Plus />}>{m.btnAddLead}</DayAction>
+            <DayAction href="/dashboard/visits/new" icon={<CalendarPlus />}>{m.btnScheduleVisit}</DayAction>
+            <DayAction href="/dashboard/reservations/new" icon={<BookmarkCheck />}>{m.btnCreateReservation}</DayAction>
           </>
         }
-        ring={
-          <>
-            <TargetRing pct={hasTarget ? pct : 0}>
-              <span className="text-[30px] font-bold leading-none tabular-nums">{hasTarget ? `${Math.round(pct ?? 0)}%` : '—'}</span>
-              <span className="mt-1 text-[11px] text-[#A9B0BD]">{c.monthTarget}</span>
-            </TargetRing>
-            <div className="space-y-1.5 text-[13px]">
-              <p className="font-bold text-[#F4ECD8]">
-                {hasTarget ? c.ofTarget(money(me!.achievedAmount), money(me!.targetAmount!)) : c.noTarget}
-              </p>
-              {me?.targetUnits ? (
-                <p className="text-[#A9B0BD]">{me.achievedUnits} / {me.targetUnits} {c.units}</p>
-              ) : null}
-              <p className="text-[#D8B66A]">{c.daysLeft(daysLeftInMonth(today))}</p>
-            </div>
-          </>
-        }
-        facts={[
-          { label: c.realized, value: money(me?.realizedValue ?? 0) },
-          { label: c.contractsMonth, value: me?.signedContractsCount ?? 0 },
-          { label: c.unitsSold, value: me?.achievedUnits ?? 0 },
+      />
+
+      <FigureBar
+        figures={[
+          { label: c.openLeads, value: openLeads, sub: c.staleHint(stale), warn: stale > 0, href: '/dashboard/leads' },
+          { label: c.upcomingVisits, value: upcomingVisits, sub: c.todayCount(todayVisits), href: '/dashboard/visits?tab=appointments' },
+          { label: c.activeReservations, value: activeReservations, sub: c.expiringSoon(expiring7), warn: expiring7 > 0, href: '/dashboard/reservations' },
+          { label: c.contractsMonth, value: me?.signedContractsCount ?? 0, sub: `${me?.achievedUnits ?? 0} ${c.unitsSold}` },
+          { label: c.realized, value: amount(me?.realizedValue ?? 0) },
           {
             label: c.avgDeal,
-            value: me && me.signedContractsCount > 0 ? money(me.realizedValue / me.signedContractsCount) : '—',
+            value: me && me.signedContractsCount > 0 ? amount(me.realizedValue / me.signedContractsCount) : '—',
           },
         ]}
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile
-          href="/dashboard/leads" icon={<Zap />} tone="brand"
-          label={c.openLeads} value={openLeads}
-          note={c.staleHint(stale)} noteTone={stale > 0 ? 'warning' : 'success'}
-        />
-        <StatTile
-          href="/dashboard/visits?tab=appointments" icon={<CalendarClock />} tone="sky"
-          label={c.upcomingVisits} value={upcomingVisits}
-          note={c.todayCount(todayVisits)}
-        />
-        <StatTile
-          href="/dashboard/reservations" icon={<BookmarkCheck />} tone="violet"
-          label={c.activeReservations} value={activeReservations}
-          note={c.expiringSoon(expiring7)} noteTone={expiring7 > 0 ? 'warning' : 'success'}
-        />
-        <StatTile
-          href="/dashboard/units" icon={<Home />} tone="emerald"
-          label={c.availableUnits} value={availableUnits}
-          note={m.kpiAvailableUnitsSub}
-        />
-      </div>
-
-      <Panel
-        testId="lead-board-panel"
-        title={c.board}
-        sub={c.boardSub}
-        link={{ href: '/dashboard/leads', label: c.viewAll }}
-      >
-        <LeadBoard columns={board} emptyLabel={c.boardEmpty} viewAllLabel={c.viewAll} staleLabel={c.stale} />
-      </Panel>
-
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3 xl:items-start">
-        <Panel title={c.agenda} sub={c.agendaSub} link={{ href: '/dashboard/visits?tab=appointments', label: c.viewAll }}>
-          <Agenda items={agenda} emptyLabel={c.agendaEmpty} />
-        </Panel>
         <Panel
+          testId="agenda"
           className="xl:col-span-2"
-          title={c.reservationsTitle}
-          sub={c.reservationsSub}
-          link={{ href: '/dashboard/reservations', label: c.viewAll }}
+          title={c.agenda}
+          sub={c.dayEvents(selected.events.length)}
+          link={{ href: '/dashboard/visits?tab=appointments', label: c.viewAll }}
         >
-          <ExpiryCards
-            cols={2}
-            emptyLabel={c.reservationsEmpty}
-            items={(activeRes.data?.data ?? []).map((r) => ({
-              id: r.id,
-              href: `/dashboard/reservations/${r.id}`,
-              code: r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`,
-              unit: r.unit?.code,
-              client: r.lead?.fullName ?? r.client?.fullName ?? '—',
-              daysLeft: daysUntil(r.expiresAt),
-              expiryLabel: c.expiresIn(daysUntil(r.expiresAt)),
-              status: <ReservationStatusBadge status={r.status} locale={locale} />,
-            }))}
+          <DayStrip days={week} selected={selected.key} countLabel={c.dayEvents} />
+          <Timeline
+            events={selected.events}
+            tags={{ visit: c.tagVisit, expiry: c.tagExpiry }}
+            empty={{
+              label: c.dayEmpty,
+              next: next ? { href: `/dashboard?day=${next.key}`, label: `${c.nextUp}: ${next.weekday} ${next.dayNum}` } : undefined,
+            }}
           />
         </Panel>
+
+        <div className="space-y-5">
+          <Panel title={c.tasks}>
+            <TaskList
+              empty={c.tasksEmpty}
+              tasks={[
+                { key: 'follow', icon: <AlertTriangle />, tone: 'amber', label: c.followUps, desc: c.followUpsDesc, count: stale, href: '/dashboard/leads?stage=NEW,INTERESTED' },
+                { key: 'lapsing', icon: <Clock />, tone: 'rose', label: c.lapsingWeek, desc: c.lapsingDesc, count: expiring7, href: '/dashboard/reservations' },
+                { key: 'unconfirmed', icon: <PhoneCall />, tone: 'sky', label: c.unconfirmed, desc: c.unconfirmedDesc, count: unconfirmedRes.data?.meta.total ?? 0, href: '/dashboard/visits?tab=appointments' },
+              ]}
+            />
+          </Panel>
+          <Panel title={c.pipeline} link={{ href: '/dashboard/leads', label: c.viewAll }}>
+            <PipelineSplit
+              stages={[
+                { stage: 'NEW', label: m.stageLabelNew, count: stages.NEW ?? 0 },
+                { stage: 'INTERESTED', label: m.stageLabelInterested, count: stages.INTERESTED ?? 0 },
+                { stage: 'VISIT', label: m.stageLabelVisit, count: stages.VISIT ?? 0 },
+                { stage: 'NEGOTIATION', label: m.stageLabelNegotiation, count: stages.NEGOTIATION ?? 0 },
+              ]}
+            />
+          </Panel>
+        </div>
       </div>
     </div>
   );

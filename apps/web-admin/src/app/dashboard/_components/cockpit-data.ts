@@ -1,17 +1,19 @@
-import { api, safe } from '@/lib/api';
-import type { Lead, Paged, Reservation, VisitAppointment } from '@/lib/types';
-import { formatDate, formatTime, tx } from '@/lib/format';
+import type { Reservation, VisitAppointment } from '@/lib/types';
+import { formatTime, intlLocale, tx } from '@/lib/format';
 import type { Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
-import { BOARD_STAGES, type AgendaItem, type BoardCard } from '@/components/cockpit/cockpit';
+import type { AgendaDay, DayEvent } from '@/components/cockpit/cockpit';
 
 /** A NEW or INTERESTED lead this many days old with no visit booked is idle. */
 export const STALE_AFTER_DAYS = 3;
 
+/** Days the agenda strip covers, today first. */
+export const AGENDA_DAYS = 7;
+
 type C = ReturnType<typeof uiT>['pages']['cockpit'];
 
 /** Calendar date (YYYY-MM-DD) of a moment in the company's zone. */
-function dayIn(d: Date, timeZone: string): string {
+export function dayIn(d: Date, timeZone: string): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 }
 
@@ -32,65 +34,72 @@ export function daysUntil(iso: string): number {
   return Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000));
 }
 
-/** Newest three leads in each open stage, with the stage totals from the facets. */
-export async function loadBoard(stageCounts: Record<string, number>, c: C, locale: Locale, withOwner: boolean, stageLabels: Record<string, string>) {
-  const pages = await Promise.all(
-    BOARD_STAGES.map((s) => safe(api.get<Paged<Lead>>(`/leads?stage=${s.stage}&pageSize=3`))),
-  );
-  return BOARD_STAGES.map((s, i) => {
-    const rows = pages[i]?.data?.data ?? [];
-    const cards: BoardCard[] = rows.map((l) => {
-      const age = Math.floor((Date.now() - new Date(l.createdAt).getTime()) / 86400000);
-      return {
-        id: l.id,
-        name: l.client?.fullName ?? l.fullName,
-        project: l.projectInterest ? tx(l.projectInterest.name, locale) : undefined,
-        age: c.age(age),
-        stale: (s.stage === 'NEW' || s.stage === 'INTERESTED') && !l.upcomingVisit && age >= STALE_AFTER_DAYS,
-        owner: withOwner ? l.assignedSales?.fullName : undefined,
-      };
-    });
-    return { stage: s.stage, label: stageLabels[s.stage] ?? s.stage, count: stageCounts[s.stage] ?? 0, cards };
-  });
+/** Noon UTC on a calendar day: formats as that same day in any zone within ±11h. */
+function noonOf(key: string, plusDays = 0): Date {
+  const [y, m, d] = key.split('-').map(Number) as [number, number, number];
+  return new Date(Date.UTC(y, m - 1, d + plusDays, 12));
 }
 
-/** Upcoming visits and the bookings lapsing within two days, grouped by day. */
-export function buildAgenda(
+/** The weekday and the full date of a calendar day, for the header. */
+export function dayTitle(key: string, locale: Locale): { weekday: string; date: string } {
+  const at = noonOf(key);
+  const loc = intlLocale(locale);
+  return {
+    weekday: new Intl.DateTimeFormat(loc, { weekday: 'long', timeZone: 'UTC' }).format(at),
+    date: new Intl.DateTimeFormat(loc, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(at),
+  };
+}
+
+/**
+ * The week from today, each day with its visits and the bookings that lapse
+ * on it, in time order. Days are the company's calendar days.
+ */
+export function buildWeek(
+  today: string,
   visits: VisitAppointment[],
-  lapsing: Reservation[],
-  c: C,
+  expiring: Reservation[],
   locale: Locale,
   timeZone: string,
   withOwner: boolean,
-): AgendaItem[] {
-  const today = dayIn(new Date(), timeZone);
-  const tomorrow = dayIn(new Date(Date.now() + 86400000), timeZone);
-  const label = (iso: string) => {
-    const d = dayIn(new Date(iso), timeZone);
-    return d === today ? c.today : d === tomorrow ? c.tomorrow : formatDate(iso, locale, timeZone);
-  };
-  const items: Array<AgendaItem & { at: number }> = [
+): AgendaDay[] {
+  const loc = intlLocale(locale);
+  const days: AgendaDay[] = Array.from({ length: AGENDA_DAYS }, (_, i) => {
+    const at = noonOf(today, i);
+    return {
+      key: at.toISOString().slice(0, 10),
+      weekday: new Intl.DateTimeFormat(loc, { weekday: 'short', timeZone: 'UTC' }).format(at),
+      dayNum: new Intl.DateTimeFormat(loc, { day: 'numeric', timeZone: 'UTC' }).format(at),
+      events: [],
+    };
+  });
+  const byKey = new Map(days.map((d) => [d.key, d]));
+  const timed: Array<{ key: string; at: number; ev: DayEvent }> = [
     ...visits.map((v) => ({
-      id: `v-${v.id}`,
-      href: `/dashboard/visits/appointments/${v.id}`,
-      day: label(v.scheduledAt),
-      time: formatTime(v.scheduledAt, locale, timeZone),
-      title: v.lead?.fullName ?? v.client?.fullName ?? v.visitNumber,
-      sub: [v.project ? tx(v.project.name, locale) : null, withOwner ? v.assignedSales?.fullName : null]
-        .filter(Boolean).join(' · ') || v.visitNumber,
-      tone: 'visit' as const,
+      key: dayIn(new Date(v.scheduledAt), timeZone),
       at: new Date(v.scheduledAt).getTime(),
+      ev: {
+        id: `v-${v.id}`,
+        href: `/dashboard/visits/appointments/${v.id}`,
+        time: formatTime(v.scheduledAt, locale, timeZone),
+        title: v.lead?.fullName ?? v.client?.fullName ?? v.visitNumber,
+        sub: [v.project ? tx(v.project.name, locale) : null, withOwner ? v.assignedSales?.fullName : null]
+          .filter(Boolean).join(' · ') || v.visitNumber,
+        tag: 'visit' as const,
+      },
     })),
-    ...lapsing.map((r) => ({
-      id: `r-${r.id}`,
-      href: `/dashboard/reservations/${r.id}`,
-      day: label(r.expiresAt),
-      time: formatTime(r.expiresAt, locale, timeZone),
-      title: `${r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}${r.unit?.code ? ` · ${r.unit.code}` : ''}`,
-      sub: c.expiresIn(daysUntil(r.expiresAt)),
-      tone: daysUntil(r.expiresAt) <= 0 ? ('danger' as const) : ('warning' as const),
+    ...expiring.map((r) => ({
+      key: dayIn(new Date(r.expiresAt), timeZone),
       at: new Date(r.expiresAt).getTime(),
+      ev: {
+        id: `r-${r.id}`,
+        href: `/dashboard/reservations/${r.id}`,
+        time: formatTime(r.expiresAt, locale, timeZone),
+        title: r.lead?.fullName ?? r.client?.fullName ?? r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`,
+        sub: [r.reservationNumber, r.unit?.code, withOwner ? r.sales?.fullName : null].filter(Boolean).join(' · '),
+        tag: 'expiry' as const,
+      },
     })),
   ];
-  return items.sort((a, b) => a.at - b.at).slice(0, 5).map(({ at: _at, ...it }) => it);
+  for (const t of timed.sort((a, b) => a.at - b.at)) byKey.get(t.key)?.events.push(t.ev);
+  return days;
 }
