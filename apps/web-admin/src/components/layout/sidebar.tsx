@@ -32,7 +32,12 @@ export function SidebarContent({ user, locale, sections, onNavigate }: Props) {
 
       {/* Brand header — matches topbar height (72px) for visual alignment */}
       <div className="px-5 h-[84px] flex items-center shrink-0">
-        <Brand theme="dark" />
+        {/* A broker signs in to the brokers' portal, not the admins'. */}
+        {user.role === 'BROKER' ? (
+          <Brand theme="dark" href="/portal" subtitle={locale === 'en' ? 'Broker portal' : 'بوابة الوسطاء'} />
+        ) : (
+          <Brand theme="dark" />
+        )}
       </div>
 
       {/* Navigation */}
