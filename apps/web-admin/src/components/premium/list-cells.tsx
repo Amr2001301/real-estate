@@ -18,26 +18,50 @@ function initials(name: string): string {
 }
 
 /** Record number link; `muted` marks a short id shown when the record has no number. */
-export function CodeCell({ href, code, muted, title }: { href: string; code: string; muted?: boolean; title?: string }) {
+export function CodeCell({
+  href,
+  code,
+  muted,
+  title,
+  kind,
+}: {
+  href: string;
+  code: string;
+  muted?: boolean;
+  title?: string;
+  /** Arabic word shown before the code (عقد / حجز) when the column mixes kinds. */
+  kind?: string;
+}) {
   return (
     <Link
       href={href as never}
       title={title}
-      dir="ltr"
       data-testid="list-code"
       className={cn(
-        'inline-flex whitespace-nowrap rounded-lg px-2 py-1 font-mono text-[12px] font-bold transition-colors',
+        'inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 text-[12px] font-bold transition-colors',
         muted
           ? 'bg-surface-muted text-slate-500 hover:text-brand-700'
           : 'bg-brand-500/[0.08] text-brand-700 hover:bg-brand-500/15',
       )}
     >
-      {code}
+      {kind && <span className="font-sans text-[11px] font-semibold opacity-75">{kind}</span>}
+      <span dir="ltr" className="font-mono">{code}</span>
     </Link>
   );
 }
 
-export function PersonCell({ name, sub, muted }: { name: string; sub?: string | null; muted?: boolean }) {
+export function PersonCell({
+  name,
+  sub,
+  subLabel,
+  muted,
+}: {
+  name: string;
+  sub?: string | null;
+  /** Arabic word before the sub line (e.g. وحدة before a unit code). */
+  subLabel?: string;
+  muted?: boolean;
+}) {
   return (
     <div className="flex min-w-[160px] max-w-[210px] items-center gap-3" title={name}>
       <span
@@ -48,7 +72,12 @@ export function PersonCell({ name, sub, muted }: { name: string; sub?: string | 
       </span>
       <div className="min-w-0">
         <p dir="auto" className={cn('truncate font-semibold', muted ? 'text-[12px] italic text-slate-400' : 'text-slate-900')}>{name}</p>
-        {sub && <p className="whitespace-nowrap text-[11.5px] tabular-nums text-slate-500" dir="ltr">{sub}</p>}
+        {sub && (
+          <p className="whitespace-nowrap text-[11.5px] tabular-nums text-slate-500">
+            {subLabel && <span className="me-1 text-slate-400">{subLabel}</span>}
+            <span dir="ltr">{sub}</span>
+          </p>
+        )}
       </div>
     </div>
   );

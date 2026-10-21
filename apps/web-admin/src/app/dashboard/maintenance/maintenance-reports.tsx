@@ -73,7 +73,7 @@ export function MaintenanceReports({
   return (
     <div className="space-y-4">
       {/* Analytics panels */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
         {/* Top requested categories */}
         <PremiumSectionCard
           title={m.sectionCategories}
@@ -86,6 +86,7 @@ export function MaintenanceReports({
             ) : undefined
           }
           padded={false}
+          className="h-full"
         >
           {r.byCategory.length === 0 ? (
             <div className="py-10 flex flex-col items-center gap-2">
@@ -136,6 +137,7 @@ export function MaintenanceReports({
             ) : undefined
           }
           padded={false}
+          className="h-full"
         >
           {r.byAssignee.length === 0 ? (
             <div className="py-10 flex flex-col items-center gap-2">

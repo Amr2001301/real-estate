@@ -300,7 +300,7 @@ export default async function ReservationsPage({
               return (
                 <StackCell
                   main={project ? tx(project.name) : '—'}
-                  sub={r.unit ? <span dir="ltr">{r.unit.code}</span> : undefined}
+                  sub={r.unit ? <>{m.unitPrefix} <span dir="ltr">{r.unit.code}</span></> : undefined}
                 />
               );
             },

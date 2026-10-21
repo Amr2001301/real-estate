@@ -256,6 +256,7 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
                             href={`/dashboard/contracts/${d.contract.id}`}
                             code={d.contract.contractNumber ?? `#${d.contract.id.slice(0, 8).toUpperCase()}`}
                             muted={!d.contract.contractNumber}
+                            kind={common.codeKind.contract}
                           />
                         ) : d?.reservation ? (
                           // A booking-amount cheque: it pays the reservation.
@@ -263,6 +264,7 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
                             href={`/dashboard/reservations/${d.reservation.id}`}
                             code={d.reservation.reservationNumber ?? `#${d.reservation.id.slice(0, 8).toUpperCase()}`}
                             muted={!d.reservation.reservationNumber}
+                            kind={common.codeKind.reservation}
                           />
                         ) : (
                           '—'

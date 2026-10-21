@@ -82,6 +82,8 @@ const UI = {
       },
     },
     common: {
+      // Small Arabic word before a record code, so the code reads as what it is.
+      codeKind: { unit: 'وحدة', contract: 'عقد', reservation: 'حجز' },
       targetStatus: {
         none: 'بدون هدف',
         upcoming: 'لم يبدأ',
@@ -5845,6 +5847,7 @@ const UI = {
       },
     },
     common: {
+      codeKind: { unit: 'Unit', contract: 'Contract', reservation: 'Booking' },
       targetStatus: {
         none: 'No target',
         upcoming: 'Not started',

@@ -392,7 +392,7 @@ export default async function DepositsPage({
 
                       <td className="px-4 py-3">
                         {/* The unit rides under the client: one column instead of two */}
-                        <PersonCell name={getCustomerName(d)} sub={getUnitCode(d)} />
+                        <PersonCell name={getCustomerName(d)} sub={getUnitCode(d)} subLabel={uiT(locale).common.codeKind.unit} />
                       </td>
 
                       <td className="px-4 py-3 whitespace-nowrap">
@@ -401,12 +401,14 @@ export default async function DepositsPage({
                             href={`/dashboard/contracts/${d.contractId}`}
                             code={d.contract.contractNumber ?? `#${d.contractId.slice(0, 8).toUpperCase()}`}
                             muted={!d.contract.contractNumber}
+                            kind={uiT(locale).common.codeKind.contract}
                           />
                         ) : d.reservationId && d.reservation ? (
                           <CodeCell
                             href={`/dashboard/reservations/${d.reservationId}`}
                             code={d.reservation.reservationNumber ?? `#${d.reservationId.slice(0, 8).toUpperCase()}`}
                             muted={!d.reservation.reservationNumber}
+                            kind={uiT(locale).common.codeKind.reservation}
                           />
                         ) : (
                           <span className="text-slate-300 text-xs">—</span>

@@ -348,7 +348,7 @@ export default async function MaintenancePage({
                     >
                       <td className="ps-5 pe-4 py-3.5">
                         {/* The unit rides under the client: one column instead of two */}
-                        <PersonCell name={row.customer?.fullName ?? '—'} sub={row.unit?.code} />
+                        <PersonCell name={row.customer?.fullName ?? '—'} sub={row.unit?.code} subLabel={uiT(locale).common.codeKind.unit} />
                       </td>
                       <td className="px-4 py-3.5">
                         <div className="min-w-[200px] max-w-[320px]">
