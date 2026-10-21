@@ -1,24 +1,34 @@
 import Link from 'next/link';
-import {
-  MapPin,
-  CalendarRange,
-  Star,
-  Layers,
-  CheckCircle2,
-  Clock,
-} from 'lucide-react';
+import { MapPin, CalendarRange, Star, Layers, Building2, ArrowUpRight } from 'lucide-react';
 import type { PortalProject } from '@/lib/types';
 import type { Locale } from '@/lib/locale';
 import { portalSharedT } from '@/messages/portal/shared';
 import { tx, formatDate, intlLocale } from '@/lib/format';
-import { Button } from '@/components/ui/button';
-import { ProjectStatusBadge } from '@/components/badges';
 import { ProjectImageLightbox } from '@/components/broker/project-image-lightbox';
 import { cn } from '@/lib/cn';
 
-export function ProjectCard({ p, symbol, locale = 'ar' }: { p: PortalProject; symbol: string; locale?: Locale }) {
+/**
+ * One project the broker may market: a cover (or a quiet navy/gold leaf when
+ * there is none), the essentials, and the broker's own figures — commission
+ * and units still available — beside a single "browse units" action.
+ */
+export function ProjectCard({
+  p,
+  symbol,
+  locale = 'ar',
+  defaultPct,
+  available,
+}: {
+  p: PortalProject;
+  symbol: string;
+  locale?: Locale;
+  /** The firm's default commission %, used when the project sets none. */
+  defaultPct?: number | null;
+  /** Units still AVAILABLE in this project, when known. */
+  available?: number | null;
+}) {
   const t = portalSharedT(locale).projectCard;
-  const currency = symbol;
+  const en = locale === 'en';
   const commissionPct =
     p.access.commissionPct !== null && p.access.commissionPct !== undefined
       ? Number(p.access.commissionPct) : null;
@@ -26,146 +36,128 @@ export function ProjectCard({ p, symbol, locale = 'ar' }: { p: PortalProject; sy
     p.access.fixedAmountPerUnit !== null && p.access.fixedAmountPerUnit !== undefined
       ? Number(p.access.fixedAmountPerUnit) : null;
 
-  const commissionLabel = commissionPct !== null
+  // The project's own terms first; otherwise the firm's default rate applies.
+  const usesDefault = commissionPct === null && fixedAmount === null;
+  const commission = commissionPct !== null
     ? `${commissionPct.toFixed(2)}%`
     : fixedAmount !== null
-      ? `${fixedAmount.toLocaleString(intlLocale(locale))} ${currency}`
-      : null;
+      ? `${fixedAmount.toLocaleString(intlLocale(locale))} ${symbol}`
+      : defaultPct !== null && defaultPct !== undefined
+        ? `${defaultPct.toFixed(2)}%`
+        : null;
 
-  const description  = tx(p.project.description, locale);
-  const services     = (p.project.services ?? []).map((s) => tx(s, locale)).filter(Boolean);
-  const hasDateRange = p.access.startsAt || p.access.endsAt;
-  const isPublished  = p.project.status === 'PUBLISHED';
+  const name        = tx(p.project.name, locale);
+  const description = tx(p.project.description, locale);
+  const services    = (p.project.services ?? []).map((s) => tx(s, locale)).filter(Boolean);
+  const media       = p.project.media ?? [];
+  const hasDates    = p.access.startsAt || p.access.endsAt;
 
   return (
-    <div className="relative bg-surface border border-hairline rounded-[22px] overflow-hidden flex flex-col sm:flex-row group hover:shadow-md transition-shadow duration-200">
-
-      {/* Gold top bar for published */}
-      <div className={cn(
-        'absolute inset-x-0 top-0 h-[3px] z-10',
-        isPublished
-          ? 'bg-gradient-to-l from-brand-300 via-brand-500 to-brand-300'
-          : 'bg-slate-200',
-      )} />
-
-      {/* Zone 1: Image */}
-      <div className="relative sm:w-52 lg:w-60 shrink-0 h-44 sm:h-auto self-stretch overflow-hidden bg-gradient-to-br from-brand-50 to-amber-50/60">
-        <ProjectImageLightbox
-          media={p.project.media ?? []}
-          projectName={tx(p.project.name, locale)}
-        />
-        {/* Badges */}
-        <div className="absolute top-3 start-3 z-20 flex flex-col gap-1.5 items-start pointer-events-none">
-          <ProjectStatusBadge status={p.project.status} locale={locale} />
+    <article
+      data-testid="portal-project-card"
+      className="group flex flex-col overflow-hidden rounded-[22px] border border-hairline bg-surface transition-colors hover:border-[#C9A24E]/50"
+    >
+      {/* Cover */}
+      <div className="relative h-52 shrink-0 overflow-hidden bg-navy-band">
+        {media.length > 0 ? (
+          <ProjectImageLightbox media={media} projectName={name} />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_30%_20%,rgba(216,182,106,0.22),transparent_60%)]">
+            <span className="inline-flex h-16 w-16 items-center justify-center rounded-2xl border border-[#D8B66A]/40 text-[#D8B66A]">
+              <Building2 className="h-7 w-7 stroke-[1.4]" />
+            </span>
+          </div>
+        )}
+        {/* Name over a soft fade, like a brochure */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/75 via-black/30 to-transparent px-5 pb-4 pt-12">
+          <h3 className="font-heading text-[20px] font-bold leading-snug text-white">{name}</h3>
+          <p className="mt-1 flex items-center gap-1.5 text-[12.5px] text-white/80">
+            <MapPin className="h-3.5 w-3.5 shrink-0" />
+            {p.project.city}
+          </p>
+        </div>
+        <div className="pointer-events-none absolute start-4 top-4 z-20 flex items-center gap-1.5">
           {p.project.featured && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/90 text-white px-2 py-0.5 text-2xs font-bold backdrop-blur-sm shadow-sm">
-              <Star className="h-2.5 w-2.5 fill-current" />
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#C9A24E] px-2.5 py-1 text-[11px] font-bold text-[#1A1408]">
+              <Star className="h-3 w-3 fill-current" />
               {t.featured}
             </span>
           )}
+          <span
+            className={cn(
+              'rounded-full px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm',
+              p.access.active ? 'bg-emerald-500/85 text-white' : 'bg-black/55 text-white/80',
+            )}
+          >
+            {p.access.active ? t.active : t.paused}
+          </span>
         </div>
-        {(p.project.media?.length ?? 0) > 1 && (
-          <span className="absolute bottom-3 start-3 z-20 inline-flex items-center gap-1 rounded-lg bg-black/50 text-white px-2 py-1 text-2xs backdrop-blur-sm pointer-events-none">
-            <Layers className="h-2.5 w-2.5" />
-            {p.project.media!.length}
+        {media.length > 1 && (
+          <span className="pointer-events-none absolute end-4 top-4 z-20 inline-flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
+            <Layers className="h-3 w-3" />
+            {media.length}
           </span>
         )}
       </div>
 
-      {/* Zone 2: Main content */}
-      <div className="flex flex-col justify-center gap-2.5 flex-1 min-w-0 px-6 py-5">
-
-        {/* Title + meta */}
-        <div>
-          <h3 className="text-[16px] font-extrabold text-navy leading-snug">
-            {tx(p.project.name, locale)}
-          </h3>
-          {description && (
-            <p className="mt-1.5 text-[12px] text-slate-500 line-clamp-2 leading-relaxed">
-              {description}
-            </p>
-          )}
-        </div>
-
-        {/* City + date range */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-          <span className="inline-flex items-center gap-1.5 text-[12px] text-slate-600 font-medium">
-            <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-            {p.project.city}
-          </span>
-          {hasDateRange && (
-            <span className="inline-flex items-center gap-1.5 text-2xs text-slate-400" dir="ltr">
-              <CalendarRange className="h-3 w-3 shrink-0" />
-              <span className="tabular-nums">
-                {p.access.startsAt ? formatDate(p.access.startsAt, locale) : '—'}
-                {' – '}
-                {p.access.endsAt ? formatDate(p.access.endsAt, locale) : '—'}
-              </span>
-            </span>
-          )}
-        </div>
-
-        {/* Service chips */}
+      {/* Body */}
+      <div className="flex flex-1 flex-col gap-3 px-5 py-4">
+        {description && (
+          <p className="line-clamp-2 text-[13px] leading-relaxed text-slate-500">{description}</p>
+        )}
         {services.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
-            {services.slice(0, 6).map((s, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center rounded-lg bg-slate-100 text-slate-600 text-[11px] font-medium px-2.5 py-1"
-              >
+            {services.slice(0, 3).map((s, i) => (
+              <span key={i} className="rounded-full border border-hairline px-2.5 py-1 text-[11.5px] font-medium text-slate-600">
                 {s}
               </span>
             ))}
-            {services.length > 6 && (
-              <span className="inline-flex items-center rounded-lg bg-slate-100 text-slate-400 text-[11px] px-2.5 py-1">
-                +{services.length - 6}
+            {services.length > 3 && (
+              <span className="rounded-full border border-hairline px-2.5 py-1 text-[11.5px] text-slate-400">
+                <bdi dir="ltr">+{services.length - 3}</bdi>
               </span>
             )}
           </div>
         )}
+        {hasDates && (
+          <p className="flex items-center gap-1.5 text-[12px] tabular-nums text-slate-500">
+            <CalendarRange className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+            <bdi>{p.access.startsAt ? formatDate(p.access.startsAt, locale) : '—'}</bdi>
+            {' – '}
+            <bdi>{p.access.endsAt ? formatDate(p.access.endsAt, locale) : '—'}</bdi>
+          </p>
+        )}
       </div>
 
-      {/* Zone 3: Action column */}
-      <div className={cn(
-        'flex shrink-0 flex-col items-center justify-center gap-3',
-        'border-t sm:border-t-0 sm:border-s border-hairline',
-        'px-5 py-4 sm:py-5 sm:w-36 lg:w-40',
-        'bg-canvas/50',
-      )}>
-        {/* Commission box */}
-        <div className="w-full rounded-[14px] bg-amber-50 border border-amber-100 px-3 py-3 text-center">
-          <p className="text-[10px] font-semibold text-amber-500 uppercase tracking-wide leading-none mb-1.5">
-            {t.brokerCommission}
-          </p>
-          {commissionLabel ? (
-            <p className="text-[24px] font-black text-amber-700 tabular-nums leading-none">
-              {commissionLabel}
+      {/* Figures + action */}
+      <div className="mt-auto grid grid-cols-[1fr_1fr_auto] items-center gap-4 border-t border-hairline px-5 py-4">
+        <div className="min-w-0">
+          <p className="text-[11.5px] font-semibold text-slate-500">{t.brokerCommission}</p>
+          {commission ? (
+            <p className="mt-1 whitespace-nowrap text-[22px] font-bold leading-none tabular-nums text-brand-700">
+              {commission}
+              {usesDefault && (
+                <span className="ms-1.5 text-[11px] font-semibold text-slate-400">{en ? 'default' : 'افتراضية'}</span>
+              )}
             </p>
           ) : (
-            <p className="text-xs text-slate-400 font-medium">{t.defaultLabel}</p>
+            <p className="mt-1 text-[13px] text-slate-400">—</p>
           )}
         </div>
-
-        {/* CTA */}
-        <Link href={`/portal/units?projectId=${p.project.id}` as never} className="w-full">
-          <Button variant="primary" size="sm" className="w-full">
-            {t.browseUnits}
-          </Button>
+        <div className="min-w-0 border-s border-hairline ps-4">
+          <p className="text-[11.5px] font-semibold text-slate-500">{en ? 'Available units' : 'وحدات متاحة'}</p>
+          <p className="mt-1 text-[22px] font-bold leading-none tabular-nums text-slate-900">
+            {available ?? '—'}
+          </p>
+        </div>
+        <Link
+          href={`/portal/units?projectId=${p.project.id}` as never}
+          className="inline-flex h-10 items-center gap-1.5 whitespace-nowrap rounded-full bg-gradient-to-b from-[#D8B66A] to-[#B38B3A] px-5 text-[13px] font-bold text-[#1A1408] shadow-[0_8px_20px_-10px_rgba(201,162,78,0.8)] transition-opacity hover:opacity-90"
+        >
+          {t.browseUnits}
+          <ArrowUpRight className="h-4 w-4" />
         </Link>
-
-        {/* Status indicator */}
-        <span className={cn(
-          'inline-flex items-center gap-1.5 text-[11px] font-semibold',
-          p.access.active ? 'text-emerald-600' : 'text-slate-400',
-        )}>
-          {p.access.active
-            ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-            : <Clock className="h-3.5 w-3.5 shrink-0" />
-          }
-          {p.access.active ? t.active : t.paused}
-        </span>
       </div>
-
-    </div>
+    </article>
   );
 }

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import {
   Building2,
+  Phone,
   UserPlus,
   BookmarkCheck,
   FileText,
@@ -33,6 +34,7 @@ import type {
   PortalProject,
   PortalUnit,
 } from '@/lib/types';
+import { Avatar } from '@/components/cockpit/cockpit';
 import { tx, formatDate, formatDateTime, formatCompact, compactParts } from '@/lib/format';
 import { PremiumMetricStrip } from '@/components/premium';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
@@ -58,20 +60,6 @@ function convPct(num: number, denom: number): string | null {
 
 function initials(name: string): string {
   return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-}
-
-const AVATAR_COLORS = [
-  'bg-brand-100 text-brand-700',
-  'bg-blue-100 text-blue-700',
-  'bg-violet-100 text-violet-700',
-  'bg-emerald-100 text-emerald-700',
-  'bg-amber-100 text-amber-700',
-  'bg-rose-100 text-rose-700',
-];
-
-function avatarColor(name: string): string {
-  const code = name.charCodeAt(0) + (name.charCodeAt(1) || 0);
-  return AVATAR_COLORS[code % AVATAR_COLORS.length]!;
 }
 
 function SectionLabel({ children, icon }: { children: ReactNode; icon?: ReactNode }) {
@@ -441,10 +429,12 @@ export default async function PortalDashboard() {
                   {hasContract && (
                     <>
                       <span className="text-slate-200 select-none hidden sm:inline">·</span>
-                      <span className="inline-flex items-center gap-1 text-xs text-slate-500" dir="ltr">
+                      {/* Each date isolated: a dir="ltr" wrapper around Arabic dates
+                          scrambled them ("222028/02/22 – 2026/02/"). */}
+                      <span className="inline-flex items-center gap-1 text-xs text-slate-500">
                         <FileText className="h-3 w-3 text-slate-400 shrink-0" />
                         <span className="tabular-nums">
-                          {formatDate(me.broker.contractStartAt, locale)} – {formatDate(me.broker.contractEndAt, locale)}
+                          <bdi>{formatDate(me.broker.contractStartAt, locale)}</bdi> – <bdi>{formatDate(me.broker.contractEndAt, locale)}</bdi>
                         </span>
                       </span>
                     </>
@@ -512,75 +502,48 @@ export default async function PortalDashboard() {
               }
             />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-hairline">
-                    <th className="text-start py-2.5 ps-5 pe-3 text-[11px] font-bold text-slate-500 whitespace-nowrap">{m.home.leads.cols.client}</th>
-                    <th className="text-start py-2.5 px-3 text-[11px] font-bold text-slate-500 whitespace-nowrap">{m.home.leads.cols.project}</th>
-                    <th className="text-start py-2.5 px-3 text-[11px] font-bold text-slate-500 whitespace-nowrap">{m.home.leads.cols.status}</th>
-                    <th className="text-start py-2.5 px-3 text-[11px] font-bold text-slate-500 whitespace-nowrap hidden md:table-cell">{m.home.leads.cols.submitted}</th>
-                    <th className="py-2.5 ps-3 pe-5 w-px" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-hairline">
-                  {recentLeads.map((lead) => (
-                    <tr key={lead.id} className="hover:bg-canvas/40 transition-colors align-middle">
-                      <td className="py-3.5 ps-5 pe-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className={cn(
-                            'h-8 w-8 rounded-full flex items-center justify-center font-extrabold text-xs shrink-0',
-                            avatarColor(lead.fullName),
-                          )}>
-                            {initials(lead.fullName)}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-slate-900 truncate">{lead.fullName}</p>
-                            {lead.phone && (
-                              <p className="text-2xs text-slate-400 tabular-nums mt-0.5" dir="ltr">
-                                {lead.phone}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-3">
-                        {lead.projectInterest ? (
-                          <div>
-                            <p className="text-xs font-semibold text-slate-700 truncate">
-                              {tx(lead.projectInterest.name, locale)}
-                            </p>
-                            <p className="text-2xs text-slate-400 mt-0.5 flex items-center gap-1">
-                              <MapPin className="h-2.5 w-2.5 shrink-0" />
-                              {lead.projectInterest.city}
-                            </p>
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 text-xs">—</span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-3">
-                        {lead.brokerApprovalStatus ? (
-                          <BrokerLeadStatusBadge status={lead.brokerApprovalStatus} locale={locale} />
-                        ) : (
-                          <span className="inline-flex items-center text-2xs font-semibold text-slate-600 bg-slate-100 rounded-full px-2 py-0.5">
-                            {m.home.leads.statusNew}
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-3 text-2xs text-slate-400 whitespace-nowrap hidden md:table-cell tabular-nums">
-                        {formatDate(lead.createdAt, locale)}
-                      </td>
-                      <td className="py-3.5 ps-3 pe-5">
-                        <Link href={`/portal/leads/${lead.id}` as never}>
-                          <Button variant="ghost" size="sm">{m.home.leads.view}</Button>
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ul className="divide-y divide-hairline" data-testid="portal-recent-leads">
+              {recentLeads.map((lead) => (
+                <li key={lead.id}>
+                  <Link
+                    href={`/portal/leads/${lead.id}` as never}
+                    className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 px-5 py-3.5 transition-colors hover:bg-surface-muted/30 md:grid-cols-[auto_minmax(0,1.2fr)_minmax(0,1.2fr)_120px_90px]"
+                  >
+                    <Avatar name={lead.fullName} />
+                    <div className="min-w-0">
+                      <p className="truncate text-[14px] font-bold text-slate-900">{lead.fullName}</p>
+                      {lead.phone && (
+                        <p className="mt-0.5 flex items-center gap-1 text-[12px] tabular-nums text-slate-500">
+                          <Phone className="h-3 w-3 shrink-0" />
+                          <span dir="ltr">{lead.phone}</span>
+                        </p>
+                      )}
+                    </div>
+                    <div className="hidden min-w-0 items-start gap-2 text-[12.5px] md:flex">
+                      <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A24E]" />
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-slate-800">
+                          {lead.projectInterest ? tx(lead.projectInterest.name, locale) : '—'}
+                        </p>
+                        {lead.projectInterest?.city && <p className="mt-0.5 truncate text-slate-500">{lead.projectInterest.city}</p>}
+                      </div>
+                    </div>
+                    <div>
+                      {lead.brokerApprovalStatus ? (
+                        <BrokerLeadStatusBadge status={lead.brokerApprovalStatus} locale={locale} />
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-slate-500/12 px-2.5 py-1 text-[11.5px] font-semibold text-slate-600">
+                          {m.home.leads.statusNew}
+                        </span>
+                      )}
+                    </div>
+                    <span className="hidden whitespace-nowrap text-end text-[12px] tabular-nums text-slate-500 md:block">
+                      {formatDate(lead.createdAt, locale)}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 
@@ -638,8 +601,12 @@ export default async function PortalDashboard() {
                         )}
                       </p>
                     </div>
-                    <Link href={`/portal/units?projectId=${p.project.id}` as never} className="shrink-0">
-                      <Button variant="ghost" size="sm">{m.home.projects.units}</Button>
+                    <Link
+                      href={`/portal/units?projectId=${p.project.id}` as never}
+                      className="inline-flex shrink-0 items-center gap-1 text-[12.5px] font-bold text-brand-700 hover:text-brand-600"
+                    >
+                      {m.home.projects.units}
+                      <ArrowUpRight className="h-3.5 w-3.5" />
                     </Link>
                   </div>
                 );
@@ -709,7 +676,7 @@ export default async function PortalDashboard() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-xs font-bold text-slate-900 leading-snug truncate">{m.activityType[item.type]}</p>
-                        <time className="text-2xs text-slate-400 tabular-nums whitespace-nowrap shrink-0" dir="ltr">
+                        <time className="text-2xs text-slate-400 tabular-nums whitespace-nowrap shrink-0">
                           {formatDateTime(item.createdAt, locale)}
                         </time>
                       </div>

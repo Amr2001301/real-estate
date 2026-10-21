@@ -3,30 +3,27 @@ import {
   FileText,
   Eye,
   CheckCircle2,
-  Clock,
   FilePen,
-  BadgePercent,
   AlertCircle,
   Phone,
   Search,
+  Building2,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalContract, PortalProject } from '@/lib/types';
-import { tx, formatDate, formatCurrency } from '@/lib/format';
-import { getReportsCurrency } from '@/lib/currency';
+import { tx, formatDate, compactParts } from '@/lib/format';
+import { getReportsCurrency, currencySymbol } from '@/lib/currency';
+import { Avatar, Amount, FigureBar } from '@/components/cockpit/cockpit';
 import { cn } from '@/lib/cn';
 import { getLocale } from '@/lib/locale';
 import { portalReservationsContractsT } from '@/messages/portal/reservations-contracts';
 import { Button } from '@/components/ui/button';
-import { IconButton } from '@/components/ui/icon-button';
-import { CodeText } from '@/components/ui/code-text';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
   PremiumPageHero,
-  PremiumMetricStrip,
   PremiumFilterBar,
   PremiumFilterField,
   PremiumSectionCard,
@@ -44,25 +41,6 @@ interface Search {
 
 const PAGE_SIZE = 20;
 
-const AVATAR_COLORS = [
-  'bg-slate-100 text-slate-700',
-  'bg-blue-100 text-blue-700',
-  'bg-emerald-100 text-emerald-700',
-  'bg-violet-100 text-violet-700',
-  'bg-amber-100 text-amber-700',
-  'bg-rose-100 text-rose-700',
-];
-
-function avatarColor(name: string): string {
-  if (!name) return AVATAR_COLORS[0]!;
-  const code = name.charCodeAt(0) + (name.charCodeAt(1) || 0);
-  return AVATAR_COLORS[code % AVATAR_COLORS.length]!;
-}
-
-function initials(name: string): string {
-  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-}
-
 export default async function PortalContractsPage({
   searchParams,
 }: {
@@ -73,6 +51,7 @@ export default async function PortalContractsPage({
   const m = portalReservationsContractsT(locale);
   const t = m.contracts.list;
   const currency = await getReportsCurrency();
+  const symbol = currencySymbol(currency, locale);
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
@@ -118,14 +97,21 @@ export default async function PortalContractsPage({
         </div>
       )}
 
-      <PremiumMetricStrip
-        variant="compact"
-        metrics={[
-          { label: t.metrics.total, value: totalAll,     icon: <FileText />,     tone: 'brand'   },
-          { label: t.metrics.signed, value: signedCount,  icon: <CheckCircle2 />, tone: 'success' },
-          { label: t.metrics.pending, value: pendingCount, icon: <Clock />,        tone: 'warning' },
-        ]}
-      />
+      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <FigureBar
+          bare
+          cols={4}
+          figures={[
+            { label: t.metrics.total, value: totalAll, href: '/portal/contracts' },
+            { label: t.metrics.signed, value: signedCount, href: '/portal/contracts?signed=yes' },
+            { label: t.metrics.pending, value: pendingCount, href: '/portal/contracts?signed=no', warn: pendingCount > 0 },
+            {
+              label: t.pageValue.replace(/:\s*$/, ''),
+              value: <Amount parts={compactParts(pageValue, symbol, locale)} />,
+            },
+          ]}
+        />
+      </section>
 
       <PremiumFilterBar
         method="get"
@@ -175,182 +161,124 @@ export default async function PortalContractsPage({
         title={t.tableTitle}
         padded={false}
       >
-        {rows.length > 0 && (
-          <div className="flex items-center gap-4 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
-              <span>{t.countUnit}</span>
-            </div>
-            {pageValue > 0 && (
-              <>
-                <div className="w-px h-4 bg-hairline" />
-                <span>
-                  {t.pageValue}{' '}
-                  <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(pageValue, currency, locale)}</span>
-                </span>
-              </>
-            )}
-          </div>
-        )}
+        {rows.length === 0 ? (
+          <EmptyState icon={<FileText />} title={t.emptyTitle} description={t.emptyDescription} />
+        ) : (
+          <ul className="divide-y divide-hairline" data-testid="portal-contract-rows">
+            {rows.map((c) => {
+              const clientName = c.customer?.fullName ?? c.reservation?.lead?.fullName ?? '—';
+              const phone = c.customer?.phone ?? c.reservation?.lead?.phone;
+              const isSigned = !!c.signedAt;
+              const href = `/portal/contracts/${c.id}`;
+              // Prefer the materialized commission (signed contracts); else the
+              // reservation's locked snapshot.
+              const comm = c.brokerCommission;
+              const pct = comm?.commissionPct ?? c.reservation?.commissionLockedPct;
+              const amt = comm?.netAmount ?? c.reservation?.commissionLockedAmount;
+              return (
+                <li
+                  key={c.id}
+                  data-testid="portal-contract-row"
+                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[auto_minmax(0,1.3fr)_minmax(0,1.1fr)_150px_160px_150px_36px]"
+                >
+                  <Avatar name={clientName} />
 
-        <div className="overflow-x-auto scrollbar-thin">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">{m.common.client}</th>
-                <th className="text-start font-semibold py-3 px-4">{m.common.unitProject}</th>
-                <th className="text-start font-semibold py-3 px-4">{m.common.status}</th>
-                <th className="text-start font-semibold py-3 px-4">{m.common.lockedCommission}</th>
-                <th className="text-start font-semibold py-3 px-4">{t.cols.totalValue}</th>
-                <th className="text-start font-semibold py-3 px-4">{t.cols.contractNumber}</th>
-                <th className="text-start font-semibold py-3 px-4">{m.common.date}</th>
-                <th className="py-3 ps-4 pe-5 w-px"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="p-0">
-                    <EmptyState
-                      icon={<FileText />}
-                      title={t.emptyTitle}
-                      description={t.emptyDescription}
-                    />
-                  </td>
-                </tr>
-              )}
-              {rows.map((c) => {
-                const clientName = c.customer?.fullName ?? c.reservation?.lead?.fullName;
-                const isSigned   = !!c.signedAt;
-
-                return (
-                  <tr
-                    key={c.id}
-                    className={cn(
-                      'border-t border-hairline transition-colors align-top',
-                      isSigned
-                        ? 'bg-emerald-50/25 hover:bg-emerald-50/50'
-                        : 'hover:bg-surface-muted/40',
-                    )}
-                  >
-                    <td className="py-3 ps-5 pe-4">
-                      {clientName ? (
-                        <div className="flex items-start gap-2">
-                          <span
-                            className={cn(
-                              'h-8 w-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0',
-                              avatarColor(clientName),
-                            )}
-                          >
-                            {initials(clientName)}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-slate-900 text-xs truncate max-w-[140px]">
-                              {clientName}
-                            </p>
-                            {(c.customer?.phone ?? c.reservation?.lead?.phone) && (
-                              <a
-                                href={`tel:${c.customer?.phone ?? c.reservation?.lead?.phone}`}
-                                className="text-2xs text-slate-500 mt-0.5 inline-flex items-center gap-1 hover:text-brand-700 transition-colors"
-                                dir="ltr"
-                              >
-                                <Phone className="h-3 w-3 text-slate-400 shrink-0" />
-                                {c.customer?.phone ?? c.reservation?.lead?.phone}
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 text-xs">—</span>
+                  {/* Client + contract code */}
+                  <div className="min-w-0">
+                    <Link href={href as never} className="block truncate text-[14.5px] font-bold text-slate-900 hover:text-brand-700">
+                      {clientName}
+                    </Link>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-slate-500">
+                      <Link href={href as never} className="whitespace-nowrap hover:text-brand-700">
+                        <span className="me-1 text-slate-400">{locale === 'en' ? 'Contract' : 'عقد'}</span>
+                        <span className="font-mono font-semibold text-brand-700" dir="ltr">
+                          {c.contractNumber ?? `#${c.id.slice(0, 8).toUpperCase()}`}
+                        </span>
+                      </Link>
+                      {phone && (
+                        <a href={`tel:${phone}`} className="inline-flex items-center gap-1 tabular-nums hover:text-brand-700">
+                          <Phone className="h-3 w-3 shrink-0" />
+                          <span dir="ltr">{phone}</span>
+                        </a>
                       )}
-                    </td>
+                    </div>
+                  </div>
 
-                    <td className="py-3 px-4">
-                      <CodeText className="text-xs font-semibold text-slate-800">{c.unit?.code ?? '—'}</CodeText>
-                      <p className="text-2xs text-slate-500 mt-0.5">
+                  {/* Project + unit */}
+                  <div className="hidden min-w-0 items-start gap-2 text-[12.5px] lg:flex">
+                    <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A24E]" />
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-slate-800">
                         {c.unit?.building ? tx(c.unit.building.phase.project.name, locale) : '—'}
                       </p>
-                    </td>
-
-                    <td className="py-3 px-4">
-                      {isSigned ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-semibold">
-                          <CheckCircle2 className="h-3 w-3" />
-                          {t.signed}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-xs font-semibold">
-                          <FilePen className="h-3 w-3" />
-                          {t.pending}
-                        </span>
+                      {c.unit && (
+                        <p className="mt-0.5 text-slate-500">
+                          <span className="me-1 text-slate-400">{locale === 'en' ? 'Unit' : 'وحدة'}</span>
+                          <span className="whitespace-nowrap font-mono" dir="ltr">{c.unit.code}</span>
+                        </p>
                       )}
-                    </td>
+                    </div>
+                  </div>
 
-                    <td className="py-3 px-4">
-                      {(() => {
-                        // Priority: use the materialized BrokerCommission record when it
-                        // exists (signed contracts). Fall back to the reservation snapshot
-                        // for unsigned contracts or admin-CRM deals without a commission record.
-                        const comm = c.brokerCommission;
-                        const pct  = comm?.commissionPct ?? c.reservation?.commissionLockedPct;
-                        const amt  = comm?.netAmount      ?? c.reservation?.commissionLockedAmount;
-                        if (pct != null) {
-                          return (
-                            <>
-                              <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ring-amber-100">
-                                <BadgePercent className="h-3 w-3" />
-                                {Number(pct).toFixed(2)}%
-                              </div>
-                              {amt != null && (
-                                <p className="text-2xs text-slate-500 mt-1 tabular-nums">
-                                  {formatCurrency(amt, currency, locale)}
-                                </p>
-                              )}
-                            </>
-                          );
-                        }
-                        if (amt != null) {
-                          return (
-                            <>
-                              <div className="inline-flex items-center gap-1 rounded-full bg-teal-50 text-teal-700 px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ring-teal-100">
-                                <BadgePercent className="h-3 w-3" />
-                                {t.fixedAmount}
-                              </div>
-                              <p className="text-2xs text-slate-500 mt-1 tabular-nums">
-                                {formatCurrency(amt, currency, locale)}
-                              </p>
-                            </>
-                          );
-                        }
-                        return <span className="text-slate-400 text-xs">{t.notSet}</span>;
-                      })()}
-                    </td>
+                  {/* Contract value */}
+                  <div className="hidden text-[12.5px] lg:block">
+                    <p className="text-[11px] text-slate-400">{t.cols.totalValue}</p>
+                    <p className="mt-0.5 whitespace-nowrap text-[15px] font-bold tabular-nums text-slate-900">
+                      <Amount parts={compactParts(Number(c.totalAmount || 0), symbol, locale)} />
+                    </p>
+                  </div>
 
-                    <td className="py-3 px-4 tabular-nums font-semibold text-slate-900 text-xs">
-                      {formatCurrency(c.totalAmount, currency, locale)}
-                    </td>
+                  {/* Commission */}
+                  <div className="hidden text-[12.5px] lg:block">
+                    <p className="text-[11px] text-slate-400">{m.common.lockedCommission}</p>
+                    {pct != null ? (
+                      <p className="mt-0.5 whitespace-nowrap font-bold tabular-nums text-brand-700">
+                        {Number(pct).toFixed(2)}%
+                        {amt != null && (
+                          <span className="ms-2 text-[12px] font-semibold text-slate-600">
+                            <Amount parts={compactParts(Number(amt), symbol, locale)} />
+                          </span>
+                        )}
+                      </p>
+                    ) : amt != null ? (
+                      <p className="mt-0.5 whitespace-nowrap font-semibold tabular-nums text-slate-700">
+                        <span className="me-1 text-[11px] text-slate-400">{t.fixedAmount}</span>
+                        <Amount parts={compactParts(Number(amt), symbol, locale)} />
+                      </p>
+                    ) : (
+                      <p className="mt-0.5 text-slate-400">{t.notSet}</p>
+                    )}
+                  </div>
 
-                    <td className="py-3 px-4">
-                      <CodeText className="text-2xs text-slate-500">{c.contractNumber ?? '—'}</CodeText>
-                    </td>
+                  {/* Signature + created */}
+                  <div className="hidden flex-col items-start gap-1 lg:flex">
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-semibold',
+                        isSigned ? 'bg-emerald-500/12 text-emerald-600' : 'bg-amber-500/12 text-amber-600',
+                      )}
+                    >
+                      {isSigned ? <CheckCircle2 className="h-3 w-3" /> : <FilePen className="h-3 w-3" />}
+                      {isSigned ? t.signed : t.pending}
+                    </span>
+                    <span className="whitespace-nowrap text-[11.5px] tabular-nums text-slate-500">
+                      <bdi>{formatDate(c.createdAt, locale)}</bdi>
+                    </span>
+                  </div>
 
-                    <td className="py-3 px-4 text-2xs text-slate-500 whitespace-nowrap">
-                      {formatDate(c.createdAt, locale)}
-                    </td>
-
-                    <td className="py-3 ps-4 pe-5">
-                      <Link href={`/portal/contracts/${c.id}` as never}>
-                        <IconButton label={m.common.view} variant="ghost" size="sm">
-                          <Eye />
-                        </IconButton>
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                  <Link
+                    href={href as never}
+                    aria-label={m.common.view}
+                    title={m.common.view}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
         {paged && paged.meta.total > PAGE_SIZE && (
           <Pagination

@@ -29,11 +29,14 @@ const C = {
 // ── Formatters ────────────────────────────────────────────────────────────────
 // "140 ألف" / "1.5 مليون" (Arabic words, not single letters that read as noise);
 // "140K" / "1.5M" in English.
-function fmtAxisMoney(v: number, million: string, thousand: string): string {
-  const sep = million.length > 1 ? ' ' : '';
-  if (v >= 1_000_000) return `${Number((v / 1_000_000).toFixed(1))}${sep}${million}`;
-  if (v >= 1_000)     return `${Math.round(v / 1_000)}${sep}${thousand}`;
-  return String(v);
+function axisScale(max: number): number {
+  return max >= 1_000_000 ? 1_000_000 : max >= 1_000 ? 1_000 : 1;
+}
+
+// Ticks carry the number alone; the unit (ألف / مليون) sits once above the
+// chart. "140 ألف" inside the SVG rendered reversed ("ألف 140") on RTL pages.
+function fmtAxisScaled(v: number, scale: number): string {
+  return String(Number((v / scale).toFixed(scale === 1 ? 0 : 1)));
 }
 
 // ── Tooltip ───────────────────────────────────────────────────────────────────
@@ -163,12 +166,21 @@ export function MonthlyTrendChart({ data, currency, locale = 'ar' }: Props) {
   }
 
   const points = data.map(mapPoint);
+  const moneyMax = Math.max(0, ...points.map((p) => Math.max(p.commissionsNet, p.payoutsNet)));
+  const scale = axisScale(moneyMax);
+  const scaleNote =
+    scale === 1
+      ? null
+      : locale === 'en'
+        ? `Values in ${scale === 1_000_000 ? 'millions' : 'thousands'}`
+        : `القيم ${scale === 1_000_000 ? 'بالمليون' : 'بالألف'}`;
 
   return (
     <div className="flex flex-col gap-3">
 
-      {/* Tab toggle */}
-      <div className="flex items-center gap-1 self-start">
+      {/* Tab toggle + the axis unit */}
+      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-1">
         {tabs.map(({ key, label }) => (
           <button
             key={key}
@@ -184,6 +196,10 @@ export function MonthlyTrendChart({ data, currency, locale = 'ar' }: Props) {
             {label}
           </button>
         ))}
+      </div>
+      {mode === 'financial' && scaleNote && (
+        <span className="text-[11px] font-semibold text-slate-400" data-testid="trend-axis-unit">{scaleNote}</span>
+      )}
       </div>
 
       {/* ── Financial: area chart ──────────────────────────────────────── */}
@@ -213,8 +229,8 @@ export function MonthlyTrendChart({ data, currency, locale = 'ar' }: Props) {
               tick={TICK_STYLE}
               axisLine={false}
               tickLine={false}
-              tickFormatter={(v: number) => fmtAxisMoney(v, t.axisMillion, t.axisThousand)}
-              width={64}
+              tickFormatter={(v: number) => fmtAxisScaled(v, scale)}
+              width={44}
             />
 
             <Tooltip

@@ -8,6 +8,8 @@ interface Props {
   compact?: boolean;
   /** "dark" = on navy sidebar; "light" = on white surfaces (login). */
   theme?: 'dark' | 'light';
+  /** Line under the name (defaults to the admin portal's). */
+  subtitle?: string;
 }
 
 export function Brand({
@@ -15,6 +17,7 @@ export function Brand({
   href = '/dashboard',
   compact = false,
   theme = 'dark',
+  subtitle = 'بوابة المسؤولين',
 }: Props) {
   const isDark = theme === 'dark';
 
@@ -50,7 +53,7 @@ export function Brand({
               isDark ? 'text-sidebar-text-muted/70' : 'text-slate-500',
             )}
           >
-            بوابة المسؤولين
+            {subtitle}
           </span>
         </span>
       )}

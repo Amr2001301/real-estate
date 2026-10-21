@@ -2,14 +2,13 @@ import Link from 'next/link';
 import {
   TrendingUp,
   UserPlus,
+  ShieldCheck,
   BookmarkCheck,
-  Banknote,
-  BadgePercent,
+  FileText,
   Wallet,
   Users as UsersIcon,
   Building2,
   FilePen,
-  CircleDollarSign,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { api, safe } from '@/lib/api';
@@ -17,7 +16,11 @@ import type {
   PortalPerformanceResponse,
   PortalProject,
 } from '@/lib/types';
-import { tx, formatCurrency, formatCompact } from '@/lib/format';
+import { tx, compactParts } from '@/lib/format';
+import { Avatar, Amount, FigureBar } from '@/components/cockpit/cockpit';
+import type { Locale } from '@/lib/locale';
+import { portalSharedT } from '@/messages/portal/shared';
+import type { BrokerReportsSummary } from '@/lib/types';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { getLocale } from '@/lib/locale';
@@ -27,7 +30,6 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MonthlyTrendChart } from '@/components/broker/monthly-trend-chart';
-import { FunnelCard } from '@/components/broker/funnel-card';
 import { ExportMenu } from '@/components/export-menu';
 import {
   PremiumPageHero,
@@ -45,10 +47,6 @@ interface Search {
   brokerAgentId?: string;
 }
 
-function initials(name: string): string {
-  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-}
-
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
     <div className="flex items-center gap-2.5">
@@ -61,55 +59,99 @@ function SectionLabel({ children }: { children: ReactNode }) {
   );
 }
 
-// ── KPI tiles (replaces PremiumMetricStrip) ───────────────────────────────────
+// ── Funnel ────────────────────────────────────────────────────────────────────
 
-interface KpiTile {
-  label:    string;
-  value:    string;
-  icon:     ReactNode;
-  iconCls:  string;
-  topBar:   string;
-  valueCls: string;
+const STAGES: Array<{ key: keyof BrokerReportsSummary; Icon: React.ComponentType<{ className?: string }>; tone: string }> = [
+  { key: 'leadsSubmitted',      Icon: UserPlus,      tone: 'bg-brand-500/12 text-brand-700' },
+  { key: 'leadsApproved',       Icon: ShieldCheck,   tone: 'bg-sky-500/12 text-sky-600' },
+  { key: 'reservationsCreated', Icon: BookmarkCheck, tone: 'bg-violet-500/12 text-violet-600' },
+  { key: 'contractsCreated',    Icon: FilePen,       tone: 'bg-amber-500/12 text-amber-600' },
+  { key: 'contractsSigned',     Icon: FileText,      tone: 'bg-emerald-500/12 text-emerald-600' },
+  { key: 'payoutsPaid',         Icon: Wallet,        tone: 'bg-teal-500/12 text-teal-600' },
+];
+
+/**
+ * One row per stage: the bar grows from the start edge, scaled to the largest
+ * stage; the step's conversion from the stage before sits at the row's end.
+ */
+function FunnelPanel({ summary, title, locale }: { summary: BrokerReportsSummary; title: string; locale: Locale }) {
+  const t = portalSharedT(locale).funnel;
+  const stages = STAGES.map((s) => ({ ...s, label: t.stages[s.key] ?? String(s.key), value: Number(summary[s.key] ?? 0) }));
+  const max = Math.max(1, ...stages.map((s) => s.value));
+  return (
+    <section className="flex flex-col rounded-[22px] border border-hairline bg-surface" data-testid="portal-funnel">
+      <header className="flex items-start justify-between gap-4 px-6 pb-4 pt-5">
+        <div>
+          <h2 className="font-heading text-[19px] font-bold leading-snug text-slate-900">{title}</h2>
+          <p className="mt-0.5 text-[12.5px] text-slate-500">{t.stagesCount(stages.length)}</p>
+        </div>
+      </header>
+      <ul className="flex-1 space-y-4 px-6 pb-5">
+        {stages.map((s, i) => {
+          const prev = i === 0 ? null : stages[i - 1]!.value;
+          const conv = prev ? Math.round((s.value / prev) * 100) : null;
+          return (
+            <li key={s.key} className="grid grid-cols-[36px_minmax(0,1fr)_56px] items-center gap-3">
+              <span className={cn('inline-flex h-9 w-9 items-center justify-center rounded-xl [&_svg]:h-4 [&_svg]:w-4', s.tone)}>
+                <s.Icon />
+              </span>
+              <div className="min-w-0">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="truncate text-[13.5px] font-bold text-slate-900">{s.label}</span>
+                  <span className="text-[17px] font-bold tabular-nums text-slate-900">{s.value}</span>
+                </div>
+                <div className="mt-1.5 h-[5px] rounded-full bg-slate-500/15">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-l from-[#D8B66A] to-[#B38B3A]"
+                    style={{ width: `${s.value === 0 ? 0 : Math.max((s.value / max) * 100, 3)}%` }}
+                  />
+                </div>
+              </div>
+              <span className="justify-self-end">
+                {i > 0 && (
+                  <span
+                    className={cn(
+                      'inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums',
+                      conv === null ? 'bg-slate-500/10 text-slate-400' : 'bg-[#C9A24E]/12 text-brand-700',
+                    )}
+                    title={locale === 'en' ? 'From the stage before' : 'من المرحلة السابقة'}
+                  >
+                    {conv === null ? '—' : `${conv}%`}
+                  </span>
+                )}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="border-t border-hairline px-6 py-3.5 text-[11.5px] leading-relaxed text-slate-500">{t.footnote}</p>
+    </section>
+  );
 }
 
-function KpiStrip({ tiles }: { tiles: KpiTile[] }) {
+function PanelHead({ icon, title, sub }: { icon: ReactNode; title: string; sub?: string }) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-      {tiles.map((tile) => {
-        const isLong = tile.value.length > 8;
-        return (
-          <div
-            key={tile.label}
-            className="relative flex flex-col overflow-hidden rounded-2xl border border-hairline bg-surface shadow-xs"
-          >
-            <div className={cn('h-[3px] w-full shrink-0 bg-gradient-to-l', tile.topBar)} />
-            <div className="flex flex-1 flex-col px-4 py-3.5">
-              <div className="flex items-start justify-between gap-2">
-                <span className={cn(
-                  'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl [&_svg]:h-[15px] [&_svg]:w-[15px]',
-                  tile.iconCls,
-                )}>
-                  {tile.icon}
-                </span>
-                <p className="text-[11px] font-semibold text-slate-400 text-end leading-snug line-clamp-2">
-                  {tile.label}
-                </p>
-              </div>
-              <p className={cn(
-                'mt-3 font-black tabular-nums leading-none tracking-tight',
-                isLong ? 'text-[16px]' : 'text-[24px]',
-                tile.valueCls,
-              )}>
-                {tile.value}
-              </p>
-            </div>
-          </div>
-        );
-      })}
+    <div className="flex items-center gap-3 px-6 pb-4 pt-5">
+      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-4 [&_svg]:w-4">
+        {icon}
+      </span>
+      <div>
+        <h2 className="font-heading text-[19px] font-bold leading-snug text-slate-900">{title}</h2>
+        {sub && <p className="mt-0.5 text-[12.5px] text-slate-500">{sub}</p>}
+      </div>
     </div>
   );
 }
 
+/** A labelled figure inside a row: small grey label over the value. */
+function Cell({ label, children, className }: { label: string; children: ReactNode; className?: string }) {
+  return (
+    <div className={cn('min-w-0', className)}>
+      <p className="text-[11px] font-semibold text-slate-400">{label}</p>
+      <p className="mt-1 whitespace-nowrap text-[15px] font-bold tabular-nums text-slate-900">{children}</p>
+    </div>
+  );
+}
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -154,14 +196,7 @@ export default async function PortalPerformancePage({
 
   const isFiltered = !!(sp.from || sp.to || sp.projectId);
 
-  const kpiTiles: KpiTile[] = [
-    { label: t.kpi.leadsSubmitted,     value: String(summary.leadsSubmitted),                       icon: <UserPlus />,      iconCls: 'bg-brand-50 text-brand-600 ring-1 ring-brand-100',     topBar: 'from-brand-300 via-brand-500 to-brand-300',   valueCls: 'text-brand-700'   },
-    { label: t.kpi.reservations,          value: String(summary.reservationsCreated),                  icon: <BookmarkCheck />, iconCls: 'bg-sky-50 text-sky-600 ring-1 ring-sky-100',           topBar: 'from-sky-300 via-sky-500 to-sky-300',         valueCls: 'text-sky-700'     },
-    { label: t.kpi.contractsSigned,     value: String(summary.contractsSigned),                      icon: <FilePen />,       iconCls: 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100', topBar: 'from-emerald-300 via-emerald-500 to-emerald-300', valueCls: 'text-emerald-700' },
-    { label: t.kpi.salesGross, value: formatCompact(Number(summary.salesGross), symbol, locale),     icon: <Banknote />,      iconCls: 'bg-slate-100 text-slate-600 ring-1 ring-slate-200',    topBar: 'from-slate-300 via-slate-400 to-slate-300',   valueCls: 'text-slate-900'   },
-    { label: t.kpi.commissionsNet,   value: formatCompact(Number(summary.commissionsNet), symbol, locale), icon: <BadgePercent />,  iconCls: 'bg-amber-50 text-amber-600 ring-1 ring-amber-100',     topBar: 'from-amber-300 via-amber-500 to-amber-300',   valueCls: 'text-amber-700'   },
-    { label: t.kpi.paid,           value: formatCompact(Number(summary.payoutsTotalNet), symbol, locale),icon: <CircleDollarSign />,iconCls: 'bg-teal-50 text-teal-600 ring-1 ring-teal-100',       topBar: 'from-teal-300 via-teal-500 to-teal-300',     valueCls: 'text-teal-700'    },
-  ];
+  const money = (n: number | string | null | undefined) => <Amount parts={compactParts(Number(n ?? 0), symbol, locale)} />;
 
   return (
     <div className="space-y-5">
@@ -219,29 +254,32 @@ export default async function PortalPerformancePage({
         </PremiumFilterField>
       </PremiumFilterBar>
 
-      {/* ── KPI tiles ──────────────────────────────────────────────────────── */}
-      <KpiStrip tiles={kpiTiles} />
+      {/* ── Figures ────────────────────────────────────────────────────────── */}
+      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <FigureBar
+          bare
+          cols={6}
+          figures={[
+            { label: t.kpi.leadsSubmitted, value: summary.leadsSubmitted },
+            { label: t.kpi.reservations, value: summary.reservationsCreated },
+            { label: t.kpi.contractsSigned, value: summary.contractsSigned },
+            { label: t.kpi.salesGross, value: money(summary.salesGross) },
+            { label: t.kpi.commissionsNet, value: money(summary.commissionsNet) },
+            { label: t.kpi.paid, value: money(summary.payoutsTotalNet) },
+          ]}
+        />
+      </section>
 
 
       {/* ── Funnel + Monthly trend ──────────────────────────────────────────── */}
       <div className="space-y-3">
         <SectionLabel>{t.funnelSection}</SectionLabel>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <FunnelCard summary={summary} title={t.funnelTitle} locale={locale} />
+          <FunnelPanel summary={summary} title={t.funnelTitle} locale={locale} />
 
           <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0">
-                  <TrendingUp className="h-4 w-4 text-brand-600" />
-                </div>
-                <div>
-                  <h2 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{t.trendTitle}</h2>
-                  <p className="text-[11px] text-slate-400 mt-0.5">{t.trendSubtitle}</p>
-                </div>
-              </div>
-            </div>
-            <div className="flex-1 p-5">
+            <PanelHead icon={<TrendingUp />} title={t.trendTitle} sub={t.trendSubtitle} />
+            <div className="flex-1 px-5 pb-5">
               <MonthlyTrendChart data={perf.monthlyTrend} currency={currency} locale={locale} />
             </div>
           </div>
@@ -251,71 +289,45 @@ export default async function PortalPerformancePage({
       {/* ── Project breakdown ───────────────────────────────────────────────── */}
       <div className="space-y-3">
         <SectionLabel>{t.projects.title}</SectionLabel>
-        <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
-          <div className="flex items-center gap-3 px-6 py-4 border-b border-hairline">
-            <div className="h-8 w-8 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0">
-              <Building2 className="h-4 w-4 text-brand-600" />
-            </div>
-            <div>
-              <h2 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{t.projects.title}</h2>
-              <p className="text-[11px] text-slate-400 mt-0.5">{t.projects.countFn(perf.projectBreakdown.length)}</p>
-            </div>
-          </div>
-
+        <div className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+          <PanelHead icon={<Building2 />} title={t.projects.title} sub={t.projects.countFn(perf.projectBreakdown.length)} />
           {perf.projectBreakdown.length === 0 ? (
             <EmptyState icon={<Building2 />} title={t.projects.empty} description="—" />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-hairline">
-                    <th className="text-start py-3 ps-6 pe-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.projects.cols.project}</th>
-                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.projects.cols.contracts}</th>
-                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.projects.cols.sales}</th>
-                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.projects.cols.commissionsNet}</th>
-                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.projects.cols.paid}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-hairline">
-                  {perf.projectBreakdown.map((p) => {
-                    const barPct = Math.max((Number(p.salesGross || 0) / maxSales) * 100, 2);
-                    return (
-                      <tr key={p.projectId} className="hover:bg-canvas/40 transition-colors">
-                        <td className="py-4 ps-6 pe-4">
-                          <p className="text-[13px] font-bold text-slate-900">{p.projectName ? tx(p.projectName, locale) : '—'}</p>
-                          {p.city && <p className="text-[11px] text-slate-400 mt-0.5">{p.city}</p>}
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-baseline gap-1 tabular-nums">
-                            <span className="text-[15px] font-bold text-slate-900">{p.contractsSigned}</span>
-                            <span className="text-[11px] text-slate-400">{t.projects.ofTotalFn(p.contracts)}</span>
-                          </div>
-                          <p className="text-[10px] text-slate-400 mt-0.5">{t.projects.signedOverTotal}</p>
-                        </td>
-                        <td className="py-4 px-4">
-                          <p className="text-[13px] font-bold text-slate-900 tabular-nums">
-                            {formatCompact(Number(p.salesGross), symbol, locale)}
-                          </p>
-                          <div className="mt-1.5 h-1.5 w-24 rounded-full bg-slate-100 overflow-hidden">
-                            <div className="h-full bg-brand-400 rounded-full" style={{ width: `${barPct}%` }} />
-                          </div>
-                        </td>
-                        <td className="py-4 px-4 tabular-nums">
-                          <span className="text-[13px] font-bold text-amber-700">
-                            {formatCompact(Number(p.commissionNet), symbol, locale)}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4 tabular-nums">
-                          <span className="text-[13px] font-semibold text-teal-700">
-                            {formatCompact(Number(p.payoutNet), symbol, locale)}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <ul className="divide-y divide-hairline border-t border-hairline" data-testid="perf-project-rows">
+              {perf.projectBreakdown.map((p) => {
+                const barPct = Math.max((Number(p.salesGross || 0) / maxSales) * 100, 2);
+                return (
+                  <li
+                    key={p.projectId}
+                    className="grid grid-cols-2 items-center gap-x-6 gap-y-3 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[minmax(0,1.4fr)_110px_minmax(0,1.2fr)_150px_130px]"
+                  >
+                    <div className="col-span-2 flex min-w-0 items-center gap-3 lg:col-span-1">
+                      <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-navy-band text-[#D8B66A] [&_svg]:h-4 [&_svg]:w-4">
+                        <Building2 />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-[14.5px] font-bold text-slate-900">{p.projectName ? tx(p.projectName, locale) : '—'}</p>
+                        {p.city && <p className="mt-0.5 truncate text-[12px] text-slate-500">{p.city}</p>}
+                      </div>
+                    </div>
+                    <Cell label={t.projects.signedOverTotal}>
+                      {p.contractsSigned}
+                      <span className="ms-1 text-[12px] font-semibold text-slate-400">/ {p.contracts}</span>
+                    </Cell>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold text-slate-400">{t.projects.cols.sales}</p>
+                      <p className="mt-1 whitespace-nowrap text-[15px] font-bold tabular-nums text-slate-900">{money(p.salesGross)}</p>
+                      <div className="mt-1.5 h-[5px] rounded-full bg-slate-500/15">
+                        <div className="h-full rounded-full bg-gradient-to-l from-[#D8B66A] to-[#B38B3A]" style={{ width: `${barPct}%` }} />
+                      </div>
+                    </div>
+                    <Cell label={t.projects.cols.commissionsNet}>{money(p.commissionNet)}</Cell>
+                    <Cell label={t.projects.cols.paid}>{money(p.payoutNet)}</Cell>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
       </div>
@@ -324,56 +336,29 @@ export default async function PortalPerformancePage({
       {perf.canSeeAllAgents && perf.agentBreakdown.length > 0 && (
         <div className="space-y-3">
           <SectionLabel>{t.agents.title}</SectionLabel>
-          <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
-            <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-xl bg-violet-50 ring-1 ring-violet-100 flex items-center justify-center shrink-0">
-                  <UsersIcon className="h-4 w-4 text-violet-600" />
-                </div>
-                <div>
-                  <h2 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{t.agents.title}</h2>
-                  <p className="text-[11px] text-slate-400 mt-0.5">{t.agents.countFn(perf.agentBreakdown.length)}</p>
-                </div>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-hairline">
-                    <th className="text-start py-3 ps-6 pe-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.agents.cols.agent}</th>
-                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.agents.cols.leads}</th>
-                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.agents.cols.reservations}</th>
-                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.agents.cols.contractsSigned}</th>
-                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.agents.cols.sales}</th>
-                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">{t.agents.cols.commissionsNet}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-hairline">
-                  {perf.agentBreakdown.map((a) => (
-                    <tr key={a.brokerAgentId} className="hover:bg-canvas/40 transition-colors">
-                      <td className="py-4 ps-6 pe-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-xs shrink-0">
-                            {initials(a.fullName)}
-                          </div>
-                          <div>
-                            <p className="text-[13px] font-bold text-slate-900">{a.fullName}</p>
-                            <p className="text-[11px] text-slate-400 mt-0.5" dir="ltr">
-                              {a.email ?? a.phone ?? '—'}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 tabular-nums text-[13px] font-semibold text-brand-700">{a.leadsSubmitted}</td>
-                      <td className="py-4 px-4 tabular-nums text-[13px] font-semibold text-sky-700">{a.reservations}</td>
-                      <td className="py-4 px-4 tabular-nums text-[13px] font-semibold text-emerald-700">{a.contractsSigned}</td>
-                      <td className="py-4 px-4 tabular-nums text-[13px] font-semibold text-slate-700">{formatCompact(Number(a.salesGross), symbol, locale)}</td>
-                      <td className="py-4 px-4 tabular-nums text-[13px] font-bold text-amber-700">{formatCompact(Number(a.commissionNet), symbol, locale)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+            <PanelHead icon={<UsersIcon />} title={t.agents.title} sub={t.agents.countFn(perf.agentBreakdown.length)} />
+            <ul className="divide-y divide-hairline border-t border-hairline" data-testid="perf-agent-rows">
+              {perf.agentBreakdown.map((a) => (
+                <li
+                  key={a.brokerAgentId}
+                  className="grid grid-cols-3 items-center gap-x-6 gap-y-3 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[minmax(0,1.5fr)_80px_80px_100px_140px_140px]"
+                >
+                  <div className="col-span-3 flex min-w-0 items-center gap-3 lg:col-span-1">
+                    <Avatar name={a.fullName} />
+                    <div className="min-w-0">
+                      <p className="truncate text-[14.5px] font-bold text-slate-900">{a.fullName}</p>
+                      <p className="mt-0.5 truncate text-[12px] text-slate-500"><bdi>{a.email ?? a.phone ?? '—'}</bdi></p>
+                    </div>
+                  </div>
+                  <Cell label={t.agents.cols.leads}>{a.leadsSubmitted}</Cell>
+                  <Cell label={t.agents.cols.reservations}>{a.reservations}</Cell>
+                  <Cell label={t.agents.cols.contractsSigned}>{a.contractsSigned}</Cell>
+                  <Cell label={t.agents.cols.sales}>{money(a.salesGross)}</Cell>
+                  <Cell label={t.agents.cols.commissionsNet}>{money(a.commissionNet)}</Cell>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       )}

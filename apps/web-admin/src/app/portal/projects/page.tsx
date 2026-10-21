@@ -1,5 +1,5 @@
 import { api, safe } from '@/lib/api';
-import type { PortalProject } from '@/lib/types';
+import type { Paged, PortalMe, PortalProject, PortalUnit } from '@/lib/types';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
 import { portalDashboardT } from '@/messages/portal/dashboard';
@@ -13,11 +13,24 @@ export default async function PortalProjectsPage() {
   const locale = await getLocale();
   const m = portalDashboardT(locale);
   const t = m.projects;
-  const [r, currency] = await Promise.all([
+  const [r, currency, meRes] = await Promise.all([
     safe(api.get<PortalProject[]>('/portal/projects')),
     getReportsCurrency(),
+    safe(api.get<PortalMe>('/portal/me')),
   ]);
   const projects = r.data ?? [];
+  // Units still on sale per project (one count each; a firm sees a handful of projects).
+  const counts = await Promise.all(
+    projects.map((p) =>
+      safe(api.get<Paged<PortalUnit>>(`/portal/units?status=AVAILABLE&pageSize=1&projectId=${p.project.id}`)),
+    ),
+  );
+  const available: Record<string, number> = {};
+  projects.forEach((p, i) => {
+    const total = counts[i]?.data?.meta.total;
+    if (total !== undefined) available[p.project.id] = total;
+  });
+  const defaultPct = meRes.data ? Number(meRes.data.broker.defaultCommissionPct) : null;
   const symbol = currencySymbol(currency, locale);
 
   return (
@@ -37,7 +50,7 @@ export default async function PortalProjectsPage() {
         </div>
       )}
 
-      <ProjectsPanel projects={projects} symbol={symbol} locale={locale} />
+      <ProjectsPanel projects={projects} symbol={symbol} locale={locale} defaultPct={defaultPct} available={available} />
     </div>
   );
 }

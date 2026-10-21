@@ -15,6 +15,8 @@ import {
   CalendarDays,
   BadgePercent,
   Users,
+  Check,
+  Minus,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { PortalMe } from '@/lib/types';
@@ -22,25 +24,10 @@ import { formatDate } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { portalMoneyTeamT } from '@/messages/portal/money-team';
 import { cn } from '@/lib/cn';
-import { CodeText } from '@/components/ui/code-text';
 import { BrokerStatusBadge, BrokerUserStatusBadge } from '@/components/badges';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
-
-const AVATAR_PALETTE = [
-  'bg-emerald-100 text-emerald-800',
-  'bg-violet-100 text-violet-800',
-  'bg-amber-100 text-amber-800',
-  'bg-slate-100 text-slate-700',
-  'bg-brand-100 text-brand-800',   // index 4 → warm gold (covers "NB" char-sum)
-];
-
-function avatarColor(name: string): string {
-  if (!name) return AVATAR_PALETTE[0]!;
-  const code = name.charCodeAt(0) + (name.charCodeAt(1) || 0);
-  return AVATAR_PALETTE[code % AVATAR_PALETTE.length]!;
-}
 
 function initials(name: string): string {
   return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
@@ -53,69 +40,42 @@ function contractDaysLeft(endAt: string | null | undefined): number | null {
   return Math.ceil((end.getTime() - Date.now()) / 86_400_000);
 }
 
-/** Muted empty-state placeholder for missing values */
+/** Muted placeholder for a missing value. */
 function Empty({ text }: { text: string }) {
-  return <span className="text-slate-300 text-xs font-normal">{text}</span>;
+  return <span className="text-[13px] font-normal text-slate-400">{text}</span>;
 }
 
-/** Label + value cell used in the identity grid. Value paragraph stays in RTL
- *  so label and value share the same edge. Use dir="ltr" on inner <a>/<span>
- *  for LTR content (email, phone) instead. */
-function IdentityCell({
-  icon,
-  label,
-  value,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: ReactNode;
-}) {
+/** Label above value, the label quiet and the value the thing to read. */
+function Field({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {
   return (
-    <div>
-      <p className="text-2xs font-medium text-slate-400 mb-1 flex items-center gap-1.5">
-        <span className="[&_svg]:h-3 [&_svg]:w-3 text-slate-300 shrink-0">{icon}</span>
+    <div className="min-w-0">
+      <dt className="flex items-center gap-1.5 text-[11.5px] font-semibold text-slate-500 [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:text-[#C9A24E]">
+        {icon}
         {label}
-      </p>
-      <p className="text-sm font-medium text-slate-800 leading-snug">
-        {value}
-      </p>
+      </dt>
+      <dd className="mt-1.5 truncate text-[14.5px] font-semibold text-slate-900">{children}</dd>
     </div>
   );
 }
 
-/** Compact info row used in company card */
-function CompanyRow({
-  icon,
-  label,
-  value,
-  dir,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: ReactNode;
-  dir?: 'ltr';
-}) {
+function PanelHead({ icon, title, sub, trailing }: { icon: ReactNode; title: ReactNode; sub?: ReactNode; trailing?: ReactNode }) {
   return (
-    <div className="flex items-start gap-2.5 py-2.5 border-b border-hairline last:border-0">
-      <span className="mt-0.5 text-slate-300 shrink-0 [&_svg]:h-3.5 [&_svg]:w-3.5">{icon}</span>
-      <div className="min-w-0 flex-1 flex items-baseline justify-between gap-4">
-        <p className="text-2xs text-slate-400 shrink-0">{label}</p>
-        <p className="text-sm text-slate-800 font-medium text-end leading-snug" dir={dir}>
-          {value}
-        </p>
+    <header className="flex items-start justify-between gap-4 border-b border-hairline px-6 pb-4 pt-5">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#C9A24E]/50 text-[#C9A24E] [&_svg]:h-4 [&_svg]:w-4">
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <h2 className="font-heading text-[18px] font-bold leading-snug text-slate-900">{title}</h2>
+          {sub && <p className="mt-0.5 text-[12.5px] text-slate-500">{sub}</p>}
+        </div>
       </div>
-    </div>
+      {trailing}
+    </header>
   );
 }
 
-/** Compact permission row */
-function PermissionRow({
-  icon,
-  label,
-  allowed,
-  allowedText,
-  deniedText,
-}: {
+function PermissionRow({ icon, label, allowed, allowedText, deniedText }: {
   icon: ReactNode;
   label: string;
   allowed: boolean;
@@ -123,22 +83,23 @@ function PermissionRow({
   deniedText: string;
 }) {
   return (
-    <li className="flex items-center gap-3 py-2.5 border-b border-hairline last:border-0">
+    <li className="flex items-center gap-3 px-6 py-3.5">
       <span
         className={cn(
-          'h-7 w-7 rounded-lg flex items-center justify-center shrink-0 [&_svg]:h-3.5 [&_svg]:w-3.5',
-          allowed ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-300',
+          'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border [&_svg]:h-4 [&_svg]:w-4',
+          allowed ? 'border-emerald-500/40 text-emerald-600' : 'border-hairline text-slate-400',
         )}
       >
         {icon}
       </span>
-      <span className="text-sm font-medium text-slate-700 flex-1">{label}</span>
+      <span className={cn('flex-1 text-[14px] font-semibold', allowed ? 'text-slate-900' : 'text-slate-500')}>{label}</span>
       <span
         className={cn(
-          'text-2xs font-semibold rounded-full px-2 py-0.5',
-          allowed ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-50 text-slate-400',
+          'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-bold',
+          allowed ? 'bg-emerald-500/12 text-emerald-600' : 'bg-slate-500/12 text-slate-500',
         )}
       >
+        {allowed ? <Check className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
         {allowed ? allowedText : deniedText}
       </span>
     </li>
@@ -167,8 +128,17 @@ export default async function PortalProfilePage() {
   const hasContractDates     = me.broker.contractStartAt || me.broker.contractEndAt;
   const userName             = me.user.fullName ?? me.user.email ?? '';
 
+  // Share of the agreement term already behind us, for the term bar.
+  const termPct = (() => {
+    const a = me.broker.contractStartAt ? new Date(me.broker.contractStartAt).getTime() : NaN;
+    const b = me.broker.contractEndAt ? new Date(me.broker.contractEndAt).getTime() : NaN;
+    if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) return null;
+    return Math.min(100, Math.max(0, Math.round(((Date.now() - a) / (b - a)) * 100)));
+  })();
+  const en = locale === 'en';
+
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-5 lg:gap-6">
 
       {/* ── Contract alerts ─────────────────────────────────────────── */}
       {contractExpired && (
@@ -190,205 +160,139 @@ export default async function PortalProfilePage() {
         </div>
       )}
 
-      {/* ── Identity hero ────────────────────────────────────────────── */}
-      <div
-        className="bg-surface border border-hairline rounded-[22px] overflow-hidden"
-        style={{ borderTopWidth: 3, borderTopColor: '#C8A24B' }}
-      >
-        <div className="p-5 sm:p-6">
-          {/* Avatar + name row */}
-          <div className="flex items-start gap-4 sm:gap-5">
-            <div
-              className={cn(
-                'h-16 w-16 sm:h-20 sm:w-20 rounded-2xl flex items-center justify-center shrink-0',
-                'text-xl sm:text-2xl font-black',
-                avatarColor(userName),
-              )}
-            >
-              {userName ? initials(userName) : <UserCircle className="h-8 w-8" />}
-            </div>
-            <div className="min-w-0 flex-1 pt-0.5">
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 truncate">
-                  {me.user.fullName ?? <Empty text={t.noName} />}
-                </h1>
-                <BrokerUserStatusBadge status={me.brokerUser.status} locale={locale} />
-                {me.brokerUser.isPrimaryContact && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-xs font-semibold">
-                    <Star className="h-3 w-3 fill-current" />
-                    {t.primaryContact}
-                  </span>
-                )}
-              </div>
-              {me.brokerUser.jobTitle && (
-                <p className="text-sm text-slate-500 mb-0.5">{me.brokerUser.jobTitle}</p>
-              )}
-              <p className="text-xs text-slate-400 flex items-center gap-1.5 flex-wrap">
-                <Building2 className="h-3 w-3 shrink-0" />
-                <span className="font-medium text-slate-600">{me.broker.companyName}</span>
-                <span className="text-slate-200">·</span>
-                <CodeText className="text-2xs text-slate-400">{me.broker.code}</CodeText>
-              </p>
-            </div>
-          </div>
-
-          {/* Info strip — user account fields only */}
-          <div className="mt-4 pt-4 border-t border-hairline">
-            <p className="text-2xs font-semibold uppercase tracking-wide text-slate-300 mb-3">{t.accountSection}</p>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
-              <IdentityCell
-                icon={<Mail />}
-                label={t.accountEmail}
-                value={me.user.email ? (
-                  <a href={`mailto:${me.user.email}`} className="hover:text-brand-700 transition-colors" dir="ltr">
-                    {me.user.email}
-                  </a>
-                ) : <Empty text={t.notAvailable} />}
-              />
-              <IdentityCell
-                icon={<Phone />}
-                label={t.userPhone}
-                value={me.user.phone
-                  ? <a href={`tel:${me.user.phone}`} className="hover:text-brand-700 transition-colors" dir="ltr">{me.user.phone}</a>
-                  : <Empty text={t.notSet} />
-                }
-              />
-              <IdentityCell
-                icon={<CalendarRange />}
-                label={t.joinedAt}
-                value={me.brokerUser.joinedAt ?? me.brokerUser.invitedAt
-                  ? formatDate(me.brokerUser.joinedAt ?? me.brokerUser.invitedAt, locale)
-                  : <Empty text={t.notAvailable} />
-                }
-              />
-              <IdentityCell
-                icon={<CalendarDays />}
-                label={t.lastLogin}
-                value={me.user.lastLoginAt
-                  ? formatDate(me.user.lastLoginAt, locale)
-                  : <span className="text-slate-400 text-xs font-normal">{t.neverLoggedIn}</span>
-                }
-              />
-            </div>
-          </div>
+      {/* ── Identity: on the page ground, like the other portal heroes ── */}
+      <section className="flex flex-wrap items-center gap-5 pt-2">
+        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#D8B66A] to-[#B38B3A] text-[22px] font-extrabold text-[#1A1408]">
+          {userName ? initials(userName) : <UserCircle className="h-9 w-9" />}
         </div>
-      </div>
-
-      {/* ── Bottom grid ──────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-        {/* Company card */}
-        <div className="lg:col-span-2 bg-surface border border-hairline rounded-[22px] overflow-hidden">
-          {/* Company header */}
-          <div className="flex items-start gap-3 p-5 pb-4 border-b border-hairline">
-            {me.broker.logoUrl ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={me.broker.logoUrl}
-                alt={me.broker.companyName}
-                className="h-11 w-11 rounded-xl object-contain bg-slate-50 border border-hairline shrink-0"
-              />
-            ) : (
-              <span className="h-11 w-11 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">
-                <Building2 className="h-5 w-5" />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="font-heading text-[30px] font-bold leading-[1.3] text-slate-900 sm:text-[34px]">
+              {me.user.fullName ?? <Empty text={t.noName} />}
+            </h1>
+            <BrokerUserStatusBadge status={me.brokerUser.status} locale={locale} />
+            {me.brokerUser.isPrimaryContact && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#C9A24E]/12 px-2.5 py-1 text-[11.5px] font-bold text-brand-700">
+                <Star className="h-3 w-3 fill-current" />
+                {t.primaryContact}
               </span>
             )}
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                <h2 className="text-base font-bold text-slate-900">{me.broker.companyName}</h2>
+          </div>
+          <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px] text-slate-500">
+            {me.brokerUser.jobTitle && (
+              <>
+                <span className="font-semibold text-slate-700">{me.brokerUser.jobTitle}</span>
+                <span className="text-slate-300">·</span>
+              </>
+            )}
+            <Building2 className="h-3.5 w-3.5 shrink-0 text-[#C9A24E]" />
+            <span>{me.broker.companyName}</span>
+            <span className="text-slate-300">·</span>
+            <span className="font-mono text-[12px] text-slate-400" dir="ltr">{me.broker.code}</span>
+          </p>
+        </div>
+      </section>
+
+      {/* ── Account ───────────────────────────────────────────────────── */}
+      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface" data-testid="profile-account">
+        <PanelHead icon={<UserCircle />} title={t.accountSection} />
+        <dl className="grid grid-cols-1 gap-x-8 gap-y-5 px-6 py-5 sm:grid-cols-2 xl:grid-cols-4">
+          <Field icon={<Mail />} label={t.accountEmail}>
+            {me.user.email ? (
+              <a href={`mailto:${me.user.email}`} className="hover:text-brand-700"><bdi>{me.user.email}</bdi></a>
+            ) : <Empty text={t.notAvailable} />}
+          </Field>
+          <Field icon={<Phone />} label={t.userPhone}>
+            {me.user.phone ? (
+              <a href={`tel:${me.user.phone}`} className="tabular-nums hover:text-brand-700"><bdi>{me.user.phone}</bdi></a>
+            ) : <Empty text={t.notSet} />}
+          </Field>
+          <Field icon={<CalendarRange />} label={t.joinedAt}>
+            {me.brokerUser.joinedAt ?? me.brokerUser.invitedAt
+              ? <bdi className="tabular-nums">{formatDate(me.brokerUser.joinedAt ?? me.brokerUser.invitedAt, locale)}</bdi>
+              : <Empty text={t.notAvailable} />}
+          </Field>
+          <Field icon={<CalendarDays />} label={t.lastLogin}>
+            {me.user.lastLoginAt
+              ? <bdi className="tabular-nums">{formatDate(me.user.lastLoginAt, locale)}</bdi>
+              : <Empty text={t.neverLoggedIn} />}
+          </Field>
+        </dl>
+      </section>
+
+      <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-3 lg:gap-6">
+
+        {/* ── Firm ────────────────────────────────────────────────────── */}
+        <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface lg:col-span-2" data-testid="profile-firm">
+          <PanelHead
+            icon={
+              me.broker.logoUrl
+                /* eslint-disable-next-line @next/next/no-img-element */
+                ? <img src={me.broker.logoUrl} alt={me.broker.companyName} className="h-full w-full rounded-full object-cover" />
+                : <Building2 />
+            }
+            title={
+              <span className="flex flex-wrap items-center gap-2">
+                {me.broker.companyName}
                 <BrokerStatusBadge status={me.broker.status} locale={locale} />
-              </div>
-              <p className="flex items-center gap-1.5 text-2xs text-slate-400">
-                <CodeText className="text-2xs font-medium text-slate-500">{me.broker.code}</CodeText>
-                {me.broker.commercialName && (
-                  <>
-                    <span className="text-slate-200">·</span>
-                    <span>{me.broker.commercialName}</span>
-                  </>
-                )}
+              </span>
+            }
+            sub={
+              <span className="flex flex-wrap items-center gap-x-2">
+                {me.broker.commercialName && <bdi>{me.broker.commercialName}</bdi>}
+                {me.broker.commercialName && <span className="text-slate-300">·</span>}
+                <span className="font-mono text-[12px]" dir="ltr">{me.broker.code}</span>
+              </span>
+            }
+          />
+
+          <dl className="grid grid-cols-1 gap-x-8 gap-y-5 px-6 py-5 sm:grid-cols-2">
+            <Field icon={<Mail />} label={t.companyEmail}>
+              {me.broker.email
+                ? <a href={`mailto:${me.broker.email}`} className="hover:text-brand-700"><bdi>{me.broker.email}</bdi></a>
+                : <Empty text={t.notAvailable} />}
+            </Field>
+            <Field icon={<Phone />} label={t.companyPhone}>
+              {me.broker.phone
+                ? <a href={`tel:${me.broker.phone}`} className="tabular-nums hover:text-brand-700"><bdi>{me.broker.phone}</bdi></a>
+                : <Empty text={t.notAvailable} />}
+            </Field>
+            <Field icon={<MapPin />} label={t.city}>
+              {me.broker.city ?? <Empty text={t.notSetFem} />}
+            </Field>
+            <Field icon={<MapPin />} label={t.address}>
+              {me.broker.address ?? <Empty text={t.notSet} />}
+            </Field>
+          </dl>
+
+          {/* Commission: the rate as the page's one big figure */}
+          <div className="grid grid-cols-1 border-t border-hairline sm:grid-cols-2">
+            <div className="px-6 py-5 sm:border-e sm:border-hairline">
+              <p className="flex items-center gap-1.5 text-[11.5px] font-semibold text-slate-500">
+                <BadgePercent className="h-3.5 w-3.5 text-[#C9A24E]" />
+                {t.defaultRate}
               </p>
+              <p className="mt-2 text-[38px] font-bold leading-none tabular-nums text-[#C9A24E]" data-testid="profile-commission">
+                {Number(me.broker.defaultCommissionPct ?? 0).toFixed(2)}
+                <span className="ms-1 text-[20px] font-semibold">%</span>
+              </p>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-[11.5px] font-semibold text-slate-500">{t.commissionModelLabel}</p>
+              <p className="mt-2 text-[15px] font-bold text-slate-900">{commissionModel}</p>
             </div>
           </div>
 
-          <div className="p-5 space-y-0">
-            {/* Contact + location */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
-              <CompanyRow icon={<Mail />}   label={t.companyEmail} dir="ltr"
-                value={me.broker.email
-                  ? <a href={`mailto:${me.broker.email}`} className="hover:text-brand-700 transition-colors">{me.broker.email}</a>
-                  : <Empty text={t.notAvailable} />}
-              />
-              <CompanyRow icon={<Phone />}  label={t.companyPhone} dir="ltr"
-                value={me.broker.phone
-                  ? <a href={`tel:${me.broker.phone}`} className="hover:text-brand-700 transition-colors">{me.broker.phone}</a>
-                  : <Empty text={t.notAvailable} />}
-              />
-              <CompanyRow icon={<MapPin />} label={t.city}
-                value={me.broker.city ?? <Empty text={t.notSetFem} />}
-              />
-              <CompanyRow icon={<MapPin />} label={t.address}
-                value={me.broker.address ?? <Empty text={t.notSet} />}
-              />
-            </div>
-
-            {/* Commission highlight */}
-            <div className="mt-4 pt-4 border-t border-hairline grid grid-cols-2 gap-3">
-              <div className="rounded-xl bg-brand-50/50 border border-brand-100/60 px-4 py-3">
-                <p className="text-2xs font-semibold text-brand-600/80 mb-1.5">{t.commissionModelLabel}</p>
-                <p className="text-sm font-bold text-brand-800 leading-snug">{commissionModel}</p>
-              </div>
-              <div className="rounded-xl bg-brand-50/50 border border-brand-100/60 px-4 py-3">
-                <p className="text-2xs font-semibold text-brand-600/80 mb-1.5">{t.defaultRate}</p>
-                <p className="text-2xl font-black text-brand-700 tabular-nums leading-none">
-                  {Number(me.broker.defaultCommissionPct ?? 0).toFixed(2)}
-                  <span className="text-base font-bold ms-0.5">%</span>
-                </p>
-              </div>
-            </div>
-
-            {/* Contract dates */}
-            <div className="mt-4 pt-4 border-t border-hairline">
-              <p className="text-2xs font-semibold uppercase tracking-wide text-slate-400 mb-3">{t.agreementTerm}</p>
-              {hasContractDates ? (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-2xs text-slate-400 mb-1">{t.contractStart}</p>
-                    <p className="text-sm font-medium text-slate-800">
-                      {me.broker.contractStartAt ? formatDate(me.broker.contractStartAt, locale) : <Empty text={t.notAvailable} />}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-2xs text-slate-400 mb-1">{t.contractEnd}</p>
-                    <p className={cn(
-                      'text-sm font-medium flex items-center gap-2 flex-wrap',
-                      contractExpired ? 'text-red-600' : contractExpiringSoon ? 'text-amber-700' : 'text-slate-800',
-                    )}>
-                      {me.broker.contractEndAt
-                        ? formatDate(me.broker.contractEndAt, locale)
-                        : <Empty text={t.notAvailable} />
-                      }
-                      {contractExpired && (
-                        <span className="text-2xs font-bold bg-red-100 text-red-700 rounded-full px-2 py-0.5">{t.expired}</span>
-                      )}
-                      {contractExpiringSoon && !contractExpired && (
-                        <span className="text-2xs font-bold bg-amber-100 text-amber-700 rounded-full px-2 py-0.5">{t.daysLeft(daysLeft!)}</span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-slate-300">
-                  <CalendarRange className="h-4 w-4 shrink-0" />
-                  <p className="text-sm">{t.noContractDates}</p>
-                </div>
-              )}
+          {/* Agreement term: two dates, each isolated so RTL never scrambles them */}
+          <div className="border-t border-hairline px-6 py-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[11.5px] font-semibold text-slate-500">{t.agreementTerm}</p>
               {me.broker.contractPdfUrl && (
                 <a
                   href={me.broker.contractPdfUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-3 inline-flex items-center gap-1.5 text-xs text-brand-700 hover:text-brand-800 font-semibold"
-                  dir="ltr"
+                  className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-brand-700 hover:text-brand-600"
                 >
                   <FileText className="h-3.5 w-3.5" />
                   {t.openContract}
@@ -396,48 +300,64 @@ export default async function PortalProfilePage() {
                 </a>
               )}
             </div>
+            {hasContractDates ? (
+              <>
+                <div className="mt-3 flex items-end justify-between gap-4" data-testid="profile-term">
+                  <div>
+                    <p className="text-[11px] text-slate-400">{t.contractStart}</p>
+                    <p className="mt-0.5 text-[15px] font-bold tabular-nums text-slate-900">
+                      {me.broker.contractStartAt ? <bdi>{formatDate(me.broker.contractStartAt, locale)}</bdi> : <Empty text={t.notAvailable} />}
+                    </p>
+                  </div>
+                  <div className="text-end">
+                    <p className="text-[11px] text-slate-400">{t.contractEnd}</p>
+                    <p className={cn(
+                      'mt-0.5 flex flex-wrap items-center justify-end gap-2 text-[15px] font-bold tabular-nums',
+                      contractExpired ? 'text-danger-600' : contractExpiringSoon ? 'text-amber-600' : 'text-slate-900',
+                    )}>
+                      {me.broker.contractEndAt ? <bdi>{formatDate(me.broker.contractEndAt, locale)}</bdi> : <Empty text={t.notAvailable} />}
+                      {contractExpired && (
+                        <span className="rounded-full bg-danger-500/12 px-2 py-0.5 text-[11px] font-bold text-danger-600">{t.expired}</span>
+                      )}
+                      {contractExpiringSoon && !contractExpired && (
+                        <span className="rounded-full bg-amber-500/12 px-2 py-0.5 text-[11px] font-bold text-amber-600">{t.daysLeft(daysLeft!)}</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                {termPct !== null && (
+                  <div className="mt-3">
+                    <div className="h-1.5 rounded-full bg-slate-500/15">
+                      <div className="h-full rounded-full bg-gradient-to-l from-[#D8B66A] to-[#B38B3A]" style={{ width: `${termPct}%` }} />
+                    </div>
+                    <p className="mt-1.5 text-[11.5px] tabular-nums text-slate-500">
+                      {en ? `${termPct}% of the term elapsed` : `مضى ${termPct}% من مدة الاتفاقية`}
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="mt-3 flex items-center gap-2 text-[13px] text-slate-400">
+                <CalendarRange className="h-4 w-4 shrink-0" />
+                {t.noContractDates}
+              </p>
+            )}
           </div>
-        </div>
+        </section>
 
-        {/* Permissions card */}
-        <div className="bg-surface border border-hairline rounded-[22px] p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <ShieldCheck className="h-4 w-4 text-brand-600 shrink-0" />
-            <h2 className="text-sm font-bold text-slate-900">{t.permissionsTitle}</h2>
-          </div>
-          <p className="text-2xs text-slate-400 mb-4 leading-relaxed">
-            {t.permissionsDescription}
-          </p>
-
-          <ul>
-            <PermissionRow
-              icon={<Star />}
-              label={t.perms.primaryContact}
-              allowed={me.permissions.isPrimaryContact}
-              allowedText={t.allowed}
-              deniedText={t.denied}
-            />
-            <PermissionRow
-              icon={<Users />}
-              label={t.perms.manageTeam}
-              allowed={me.permissions.canManageBrokerUsers}
-              allowedText={t.allowed}
-              deniedText={t.denied}
-            />
-            <PermissionRow
-              icon={<BadgePercent />}
-              label={t.perms.viewCommissions}
-              allowed={me.permissions.canViewCommissions}
-              allowedText={t.allowed}
-              deniedText={t.denied}
-            />
+        {/* ── Permissions ─────────────────────────────────────────────── */}
+        <section className="flex flex-col overflow-hidden rounded-[22px] border border-hairline bg-surface" data-testid="profile-permissions">
+          <PanelHead icon={<ShieldCheck />} title={t.permissionsTitle} sub={t.permissionsDescription} />
+          <ul className="divide-y divide-hairline">
+            <PermissionRow icon={<Star />} label={t.perms.primaryContact} allowed={me.permissions.isPrimaryContact} allowedText={t.allowed} deniedText={t.denied} />
+            <PermissionRow icon={<Users />} label={t.perms.manageTeam} allowed={me.permissions.canManageBrokerUsers} allowedText={t.allowed} deniedText={t.denied} />
+            <PermissionRow icon={<BadgePercent />} label={t.perms.viewCommissions} allowed={me.permissions.canViewCommissions} allowedText={t.allowed} deniedText={t.denied} />
           </ul>
-
-          <div className="mt-4 pt-4 border-t border-hairline flex items-start gap-2 text-2xs text-slate-400 leading-relaxed">
-            <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-slate-300" />
+          <div className="mt-auto flex items-start gap-2 border-t border-hairline px-6 py-4 text-[12px] leading-relaxed text-slate-500">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
             <p>{t.footer}</p>
           </div>
-        </div>
+        </section>
 
       </div>
     </div>

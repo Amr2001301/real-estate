@@ -1,29 +1,19 @@
 import Link from 'next/link';
-import {
-  Wallet,
-  Eye,
-  Clock,
-  CircleDollarSign,
-  Loader2,
-  AlertCircle,
-  CheckCircle2,
-} from 'lucide-react';
-import { CodeText } from '@/components/ui/code-text';
+import { Wallet, Eye, Clock, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalPayout } from '@/lib/types';
-import { formatDate, formatCurrency } from '@/lib/format';
-import { getReportsCurrency } from '@/lib/currency';
-import { getLocale } from '@/lib/locale';
+import { formatDate, formatCurrency, compactParts, intlLocale } from '@/lib/format';
+import { Amount, FigureBar } from '@/components/cockpit/cockpit';
+import { getReportsCurrency, currencySymbol } from '@/lib/currency';
+import { getLocale, type Locale } from '@/lib/locale';
 import { portalMoneyTeamT } from '@/messages/portal/money-team';
 import { cn } from '@/lib/cn';
-import { IconButton } from '@/components/ui/icon-button';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
 import { BrokerPayoutStatusBadge } from '@/components/badges';
 import { PayoutsFilterBar } from '@/components/broker/payouts-filter-bar';
 import {
   PremiumPageHero,
-  PremiumMetricStrip,
   PremiumSectionCard,
 } from '@/components/premium';
 
@@ -51,6 +41,8 @@ export default async function PortalPayoutsPage({
   const m = portalMoneyTeamT(locale);
   const t = m.payouts.list;
   const currency = await getReportsCurrency();
+  const symbol = currencySymbol(currency, locale);
+  const word = (ar: string, en: string) => (locale === 'en' ? en : ar);
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
@@ -96,15 +88,25 @@ export default async function PortalPayoutsPage({
         </div>
       )}
 
-      <PremiumMetricStrip
-        variant="compact"
-        metrics={[
-          { label: t.metrics.total, value: paged?.meta.total ?? 0, icon: <Wallet />,          tone: 'brand'   },
-          { label: t.metrics.paid, value: paidCount,              icon: <CircleDollarSign />, tone: 'success' },
-          { label: t.metrics.processing, value: processingCount,        icon: <Loader2 />,          tone: 'warning' },
-          { label: t.metrics.approved, value: approvedCount,           icon: <Clock />,            tone: 'info'    },
-        ]}
-      />
+      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <FigureBar
+          bare
+          cols={5}
+          figures={[
+            { label: t.metrics.total, value: paged?.meta.total ?? 0 },
+            { label: t.metrics.paid, value: paidCount },
+            { label: t.metrics.processing, value: processingCount, warn: processingCount > 0 },
+            { label: t.metrics.approved, value: approvedCount },
+            {
+              label: word('المدفوع', 'Paid out'),
+              value: paidNet > 0 ? <Amount parts={compactParts(paidNet, symbol, locale)} /> : '—',
+              sub: pageNet > 0
+                ? `${word('من', 'of')} ${compactParts(pageNet, symbol, locale).join(' ')} · ${word('هذه الصفحة', 'this page')}`
+                : word('هذه الصفحة', 'This page'),
+            },
+          ]}
+        />
+      </section>
 
       <PayoutsFilterBar locale={locale} sp={{ q: sp.q, status: sp.status, period: sp.period, from: sp.from, to: sp.to }} />
 
@@ -113,158 +115,110 @@ export default async function PortalPayoutsPage({
         title={t.tableTitle}
         padded={false}
       >
-        {rows.length > 0 && (
-          <div className="flex items-center gap-4 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
-              <span>{t.countUnit}</span>
-            </div>
-            {pageNet > 0 && (
-              <>
-                <div className="w-px h-4 bg-hairline" />
-                <span>
-                  {t.pageNet}{' '}
-                  <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(pageNet, currency, locale)}</span>
-                </span>
-              </>
-            )}
-            {paidNet > 0 && (
-              <>
-                <div className="w-px h-4 bg-hairline" />
-                <span>
-                  {t.paidOf}{' '}
-                  <span className="font-semibold text-success-700 tabular-nums">{formatCurrency(paidNet, currency, locale)}</span>
-                </span>
-              </>
-            )}
-          </div>
-        )}
+        {rows.length === 0 ? (
+          <EmptyState icon={<Wallet />} title={t.emptyTitle} description={t.emptyDescription} />
+        ) : (
+          <ul className="divide-y divide-hairline" data-testid="portal-payout-rows">
+            {rows.map((p) => {
+              const isCancelled = p.status === 'CANCELLED';
+              const isPaid = p.status === 'PAID';
+              const isProcessing = p.status === 'PROCESSING';
+              return (
+                <li
+                  key={p.id}
+                  data-testid="portal-payout-row"
+                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-5 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[44px_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_130px_180px_36px]"
+                >
+                  <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#D8B66A]/[0.14] text-[#B8913F] dark:text-[#D8B66A]">
+                    <Wallet className="h-[18px] w-[18px]" />
+                  </span>
 
-        <div className="overflow-x-auto scrollbar-thin">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">{t.cols.payoutPeriod}</th>
-                <th className="text-start font-semibold py-3 px-4">{t.cols.net}</th>
-                <th className="text-start font-semibold py-3 px-4">{t.cols.status}</th>
-                <th className="text-start font-semibold py-3 px-4">{t.cols.method}</th>
-                <th className="text-start font-semibold py-3 px-4">{t.cols.reference}</th>
-                <th className="py-3 ps-4 pe-5 w-px"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="p-0">
-                    <EmptyState
-                      icon={<Wallet />}
-                      title={t.emptyTitle}
-                      description={t.emptyDescription}
-                    />
-                  </td>
-                </tr>
-              )}
-              {rows.map((p) => {
-                const isCancelled  = p.status === 'CANCELLED';
-                const isPaid       = p.status === 'PAID';
-                const isProcessing = p.status === 'PROCESSING';
+                  {/* Payout code + period */}
+                  <div className="min-w-0">
+                    <Link
+                      href={`/portal/payouts/${p.id}` as never}
+                      className="block truncate text-[14.5px] font-bold text-slate-900 hover:text-brand-700"
+                    >
+                      <span className="me-1.5 text-[12px] font-semibold text-slate-400">{word('دفعة', 'Payout')}</span>
+                      <span className="whitespace-nowrap font-mono" dir="ltr">{p.payoutNumber}</span>
+                    </Link>
+                    <p className="mt-0.5 truncate text-[12px] text-slate-500">
+                      {p.period ? <>{word('عن', 'For')} {periodLabel(p.period, locale)}</> : '—'}
+                    </p>
+                  </div>
 
-                return (
-                  <tr
-                    key={p.id}
-                    className={cn(
-                      'border-t border-hairline transition-colors align-top',
-                      isPaid
-                        ? 'bg-emerald-50/30 hover:bg-emerald-50/60'
-                        : isCancelled
-                          ? 'bg-slate-50/60 hover:bg-slate-100/40'
-                          : 'hover:bg-surface-muted/40',
-                    )}
-                  >
-                    <td className="py-3 ps-5 pe-4">
-                      <span className="inline-flex items-center gap-1.5 text-xs text-brand-700 font-semibold">
-                        <Wallet className="h-3 w-3 text-brand-500 shrink-0" />
-                        <CodeText>{p.payoutNumber}</CodeText>
-                      </span>
-                      {p.period && (
-                        <p className="mt-0.5">
-                          <CodeText className="text-2xs text-slate-400">{p.period}</CodeText>
-                        </p>
+                  {/* Method + paid date */}
+                  <div className="hidden text-[12.5px] lg:block">
+                    <p className="text-[11px] text-slate-500">{t.cols.method}</p>
+                    <p className="font-semibold text-slate-800">
+                      {p.paymentMethod ? (m.payouts.method[p.paymentMethod] ?? p.paymentMethod) : '—'}
+                    </p>
+                    <p className="mt-0.5 whitespace-nowrap text-[12px] text-slate-500">
+                      {p.paidAt ? (
+                        <bdi>{formatDate(p.paidAt, locale)}</bdi>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-slate-400">
+                          <Clock className="h-3 w-3" />
+                          {t.notPaidYet}
+                        </span>
                       )}
-                    </td>
+                    </p>
+                  </div>
 
-                    <td className="py-3 px-4">
+                  {/* Reference */}
+                  <div className="hidden min-w-0 text-[12.5px] lg:block">
+                    <p className="text-[11px] text-slate-500">{t.cols.reference}</p>
+                    {p.paymentReference ? (
+                      <p className="truncate font-mono text-slate-700" dir="ltr">{p.paymentReference}</p>
+                    ) : (
+                      <p className="text-slate-400">—</p>
+                    )}
+                  </div>
+
+                  <div className="hidden lg:block">
+                    <BrokerPayoutStatusBadge status={p.status} locale={locale} />
+                  </div>
+
+                  {/* Net */}
+                  <div className="flex items-center gap-3 justify-self-end">
+                    <span className="lg:hidden"><BrokerPayoutStatusBadge status={p.status} locale={locale} /></span>
+                    <div className="text-end">
                       <p
                         className={cn(
-                          'text-sm font-bold tabular-nums',
-                          isCancelled
-                            ? 'text-slate-400 line-through'
-                            : isPaid
-                              ? 'text-success-700'
-                              : 'text-slate-900',
+                          'whitespace-nowrap text-[15px] font-bold tabular-nums',
+                          isCancelled ? 'text-slate-400 line-through' : isPaid ? 'text-success-700' : 'text-slate-900',
                         )}
                       >
                         {formatCurrency(p.totalNet, currency, locale)}
                       </p>
                       {isPaid && (
-                        <p className="text-2xs text-success-600 mt-0.5 flex items-center gap-0.5 font-medium">
+                        <p className="mt-0.5 inline-flex items-center gap-1 text-[11.5px] font-medium text-success-600">
                           <CheckCircle2 className="h-3 w-3 shrink-0" />
                           {t.paidOut}
                         </p>
                       )}
                       {isProcessing && (
-                        <p className="text-2xs text-amber-600 mt-0.5 flex items-center gap-0.5 font-medium">
+                        <p className="mt-0.5 inline-flex items-center gap-1 text-[11.5px] font-medium text-amber-600">
                           <Loader2 className="h-3 w-3 shrink-0" />
                           {t.processing}
                         </p>
                       )}
-                    </td>
+                    </div>
+                  </div>
 
-                    <td className="py-3 px-4">
-                      <BrokerPayoutStatusBadge status={p.status} locale={locale} />
-                    </td>
-
-                    <td className="py-3 px-4">
-                      <p className="text-xs text-slate-700">
-                        {p.paymentMethod ? (
-                          m.payouts.method[p.paymentMethod] ?? p.paymentMethod
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </p>
-                      <p className="text-2xs text-slate-500 mt-0.5 whitespace-nowrap">
-                        {p.paidAt ? (
-                          formatDate(p.paidAt, locale)
-                        ) : (
-                          <span className="text-slate-400 inline-flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {t.notPaidYet}
-                          </span>
-                        )}
-                      </p>
-                    </td>
-
-                    <td className="py-3 px-4">
-                      {p.paymentReference ? (
-                        <CodeText className="text-2xs text-slate-500">{p.paymentReference}</CodeText>
-                      ) : (
-                        <span className="text-slate-400 text-2xs">—</span>
-                      )}
-                    </td>
-
-                    <td className="py-3 ps-4 pe-5">
-                      <Link href={`/portal/payouts/${p.id}` as never}>
-                        <IconButton label={m.common.view} variant="ghost" size="sm">
-                          <Eye />
-                        </IconButton>
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                  <Link
+                    href={`/portal/payouts/${p.id}` as never}
+                    aria-label={m.common.view}
+                    title={m.common.view}
+                    className="hidden h-9 w-9 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900 lg:inline-flex"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
         {paged && paged.meta.total > PAGE_SIZE && (
           <Pagination
@@ -283,4 +237,12 @@ export default async function PortalPayoutsPage({
       </p>
     </div>
   );
+}
+
+/** "2026-09" → "سبتمبر 2026" / "September 2026"; anything else as given. */
+function periodLabel(period: string, locale: Locale): string {
+  const m = /^(\d{4})-(\d{2})$/.exec(period);
+  if (!m) return period;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, 1));
+  return new Intl.DateTimeFormat(intlLocale(locale), { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(d);
 }

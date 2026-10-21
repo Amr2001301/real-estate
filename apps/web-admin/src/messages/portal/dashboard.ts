@@ -36,7 +36,7 @@ const ar = {
     greetingFn: (name: string) => `أهلاً، ${name}`,
     commission: 'عمولة',
     primaryContact: 'جهة الاتصال الرئيسية',
-    newLeadCta: '+ فرصة جديدة',
+    newLeadCta: 'فرصة جديدة',
     kpi: {
       leadsSubmitted: 'فرص مُرسلة',
       leadsSubFn: (approved: number, rate: number) => `${approved} معتمدة · ${rate}% قبول`,
@@ -260,7 +260,7 @@ const en: typeof ar = {
     greetingFn: (name: string) => `Welcome, ${name}`,
     commission: 'commission',
     primaryContact: 'Primary contact',
-    newLeadCta: '+ New lead',
+    newLeadCta: 'New lead',
     kpi: {
       leadsSubmitted: 'Leads submitted',
       leadsSubFn: (approved: number, rate: number) => `${approved} approved · ${rate}% acceptance`,
