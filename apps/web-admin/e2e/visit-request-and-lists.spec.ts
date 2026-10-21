@@ -59,3 +59,19 @@ test('KPI strips show large figures compactly', async ({ page }) => {
     await expect(strip, path).not.toContainText(/\d{1,3}(,\d{3}){2,}/);
   }
 });
+
+/**
+ * Maintenance: the KPI strip comes before the filters, the unit rides under the
+ * client (no separate unit or review column), categories carry icons.
+ */
+test('maintenance page: KPIs first, merged columns, category cards', async ({ page }) => {
+  await gotoReady(page, '/dashboard/maintenance');
+  const strip = page.getByTestId('metric-strip').first();
+  const filters = page.locator('form[action="/dashboard/maintenance"]').first();
+  const stripBox = await strip.boundingBox();
+  const filterBox = await filters.boundingBox();
+  expect(stripBox!.y).toBeLessThan(filterBox!.y);
+  const heads = page.getByTestId('maintenance-table').locator('thead th');
+  await expect(heads).toHaveCount(7);
+  await expect(page.getByTestId('maintenance-category-form')).toBeVisible();
+});
