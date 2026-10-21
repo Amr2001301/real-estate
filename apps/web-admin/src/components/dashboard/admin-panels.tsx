@@ -439,14 +439,21 @@ export function LeadSourcesPanel({
   centerSub,
   empty,
   slices,
+  otherLabel,
 }: {
   title: string;
   sub: string;
   centerSub: string;
   empty: string;
   slices: Array<{ label: string; value: number }>;
+  /** Label for the sources folded together past the top four. */
+  otherLabel: string;
 }) {
   const total = slices.reduce((a, s) => a + s.value, 0);
+  // Five rows at most beside the ring: the top four, the rest as one.
+  const sorted = [...slices].sort((a, b) => b.value - a.value);
+  const rest = sorted.slice(4).reduce((a, s) => a + s.value, 0);
+  const rows = sorted.length > 5 ? [...sorted.slice(0, 4), { label: otherLabel, value: rest }] : sorted;
   return (
     <PremiumPanel title={title} sub={sub}>
       {total === 0 ? (
@@ -460,7 +467,7 @@ export function LeadSourcesPanel({
             <span className="mt-1 text-[11px] text-slate-500">{centerSub}</span>
           </div>
           <ul className="min-w-0 flex-1 space-y-3">
-            {slices.map((s) => {
+            {rows.map((s) => {
               const pct = Math.round((s.value / total) * 100);
               return (
                 <li key={s.label}>

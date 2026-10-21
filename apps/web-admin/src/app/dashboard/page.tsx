@@ -403,6 +403,7 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
           centerSub={m.charts.donutSub}
           empty={m.charts.empty}
           slices={(summary?.leadSources ?? []).map((s) => ({ label: s.source, value: s.count }))}
+          otherLabel={locale === 'en' ? 'Other' : 'أخرى'}
         />
       </div>
 
