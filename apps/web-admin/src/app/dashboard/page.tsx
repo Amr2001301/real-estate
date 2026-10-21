@@ -73,6 +73,18 @@ interface AdminSummary {
     next3160: number;
     next6190: number;
   };
+  /** Signed contracts' value split, as on the financial report. */
+  portfolio?: {
+    grossValue: number;
+    netValue: number;
+    paid: number;
+    awaiting: number;
+    overdue: number;
+    overdueCount: number;
+    notYetDue: number;
+    unscheduled: number;
+    unsignedCount: number;
+  };
   topProjects?: Array<{
     id:              string;
     name:            string;
@@ -394,6 +406,7 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
               collected={collected}
               overdue={overdue}
               fees={fees}
+              portfolio={summary?.portfolio}
               labels={m.u5.health}
               money={money}
             />
@@ -413,7 +426,7 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
         <CashFlowPanel
           title={m.cashFlow.title}
           sub={<>{m.u5.next90} · {m.cashFlow.totalSub} {compactParts(forecastTotal, symbol, locale).join(' ')}</>}
-          link={{ href: '/dashboard/financial-dashboard', label: m.cashFlow.detailLink }}
+          link={{ href: '/dashboard/reports/financial', label: m.cashFlow.detailLink }}
           pctOfTotal={m.pctOfTotal}
           money={money}
           slots={[

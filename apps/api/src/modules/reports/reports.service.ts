@@ -78,6 +78,7 @@ import {
   RECORDED_DEPOSIT_WHERE,
   TOWARDS_PRICE_DEPOSIT_WHERE,
 } from '../../common/finance/collected';
+import { portfolioSplit } from './portfolio-split';
 import { commissionBasis, MARKUP_SNAPSHOT_SELECT, NET_PRICE_SQL, netContractValue } from '../../common/finance/commission-basis';
 import {
   BILLABLE_PLAN_WHERE,
@@ -417,9 +418,26 @@ export class ReportsService {
     const expiringHorizon = new Date(now.getTime() +  7 * 24 * 60 * 60 * 1000);
     const prevMonthStart  = localMonth(year, month - 1, tz).start;
     const prevMonthSameDay = new Date(Math.min(startOfMonth.getTime(), prevMonthStart.getTime() + (now.getTime() - startOfMonth.getTime())));
-    const in30            = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-    const in60            = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
-    const in90            = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+    // From today in the company's time zone, as the financial report.
+    const in30            = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const in60            = new Date(today.getTime() + 60 * 24 * 60 * 60 * 1000);
+    const in90            = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000);
+    // Signed contracts only, as the financial report: an unsigned contract
+    // has nothing due yet and is not in the contract value — counting its
+    // rows lowered the collection rate and raised the forecast.
+    const SIGNED_PLAN = {
+      ...LIVE_PLAN_WHERE,
+      contract: { ...LIVE_CONTRACT_WHERE, signedAt: { not: null } },
+    } satisfies Prisma.InstallmentPlanWhereInput;
+    const signedContractWhere: Prisma.ContractWhereInput = { signedAt: { not: null }, ...LIVE_CONTRACT_WHERE };
+    // Late: past its due day, nothing on its way — not only what the nightly
+    // sweep has marked (the dashboard read 144k late where the report read 1.27m).
+    const lateWhere: Prisma.InstallmentWhereInput = {
+      status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] },
+      plan: { ...BILLABLE_PLAN_WHERE, contract: { ...BILLABLE_PLAN_WHERE.contract, signedAt: { not: null } } },
+      deposits: { none: PAYMENT_ON_ITS_WAY },
+      dueDate: { lt: today },
+    };
 
     const [
       // ── original 11 operational counts ──
@@ -507,10 +525,7 @@ export class ReportsService {
       this.prisma.contract.count({ where: { signedAt: { not: null }, ...LIVE_CONTRACT_WHERE } }),
       // ── financial aggregates ──
       this.prisma.deposit.aggregate({ where: COLLECTED_DEPOSIT_WHERE, _sum: { amount: true } }),
-      this.prisma.installment.aggregate({
-        where: { status: InstallmentStatus.OVERDUE, plan: LIVE_PLAN_WHERE },
-        _sum: { amount: true },
-      }),
+      this.prisma.installment.aggregate({ where: lateWhere, _sum: { amount: true } }),
       this.prisma.bonusEntry.aggregate({
         where: { status: BonusEntryStatus.PENDING },
         _sum: { amount: true },
@@ -537,15 +552,15 @@ export class ReportsService {
       this.prisma.lead.count({ where: { createdAt: { gte: prevMonthStart, lt: startOfMonth } } }),
       // ── Cash flow forecast (next 30 / 31-60 / 61-90 days) ──
       this.prisma.installment.aggregate({
-        where: { status: InstallmentStatus.PENDING, dueDate: { gte: today, lte: in30 }, plan: LIVE_PLAN_WHERE },
+        where: { status: InstallmentStatus.PENDING, dueDate: { gte: today, lte: in30 }, plan: SIGNED_PLAN },
         _sum: { amount: true },
       }),
       this.prisma.installment.aggregate({
-        where: { status: InstallmentStatus.PENDING, dueDate: { gt: in30, lte: in60 }, plan: LIVE_PLAN_WHERE },
+        where: { status: InstallmentStatus.PENDING, dueDate: { gt: in30, lte: in60 }, plan: SIGNED_PLAN },
         _sum: { amount: true },
       }),
       this.prisma.installment.aggregate({
-        where: { status: InstallmentStatus.PENDING, dueDate: { gt: in60, lte: in90 }, plan: LIVE_PLAN_WHERE },
+        where: { status: InstallmentStatus.PENDING, dueDate: { gt: in60, lte: in90 }, plan: SIGNED_PLAN },
         _sum: { amount: true },
       }),
     ]);
@@ -564,7 +579,7 @@ export class ReportsService {
         _sum: { amount: true },
       }),
       this.prisma.installment.aggregate({
-        where: { status: InstallmentStatus.OVERDUE, type: { notIn: SURCHARGE_PAYMENT_TYPES }, plan: LIVE_PLAN_WHERE },
+        where: { ...lateWhere, type: { notIn: SURCHARGE_PAYMENT_TYPES } },
         _sum: { amount: true },
       }),
       this.prisma.deposit.aggregate({
@@ -576,12 +591,12 @@ export class ReportsService {
           status: { not: InstallmentStatus.CANCELLED },
           type: { notIn: SURCHARGE_PAYMENT_TYPES },
           dueDate: { lte: today },
-          plan: LIVE_PLAN_WHERE,
+          plan: SIGNED_PLAN,
         },
         _sum: { amount: true },
       }),
       this.prisma.reservation.aggregate({
-        where: { contract: { is: LIVE_CONTRACT_WHERE } },
+        where: { contract: { is: signedContractWhere } },
         _sum: { bookingAmount: true },
       }),
       // The collection rate's numerator: collected against what is due by
@@ -591,7 +606,16 @@ export class ReportsService {
         _sum: { amount: true },
       }),
       // Contract value: signed contracts at their net price (decided 2026-10-17).
-      netContractValue(this.prisma, { signedAt: { not: null }, ...LIVE_CONTRACT_WHERE }),
+      netContractValue(this.prisma, signedContractWhere),
+    ]);
+    // The contract value split, the same as the financial report's.
+    const [split, unsignedCount] = await Promise.all([
+      portfolioSplit(this.prisma, {
+        signedContractWhere,
+        instWhere: (extra) => ({ AND: [{ plan: SIGNED_PLAN }, extra] }),
+        today,
+      }),
+      this.prisma.contract.count({ where: { signedAt: null, ...LIVE_CONTRACT_WHERE } }),
     ]);
 
     const [reservationTrend, leadSources, recentActivity, topProjects] = await Promise.all([
@@ -643,6 +667,19 @@ export class ReportsService {
         next30:   Number(next30Agg._sum.amount   ?? 0),
         next3160: Number(next3160Agg._sum.amount ?? 0),
         next6190: Number(next6190Agg._sum.amount ?? 0),
+      },
+      // Signed contracts' value split (paid + awaiting + late + not due yet +
+      // not on a schedule = gross value), as on the financial report.
+      portfolio: {
+        grossValue: Number(split.grossValue),
+        netValue: totalContractValue,
+        paid: Number(split.paid),
+        awaiting: Number(split.awaiting),
+        overdue: Number(split.overdue),
+        overdueCount: split.overdueCount,
+        notYetDue: Number(split.notYetDue),
+        unscheduled: Number(split.unscheduled),
+        unsignedCount,
       },
       reservationTrend,
       leadSources,
@@ -1601,7 +1638,7 @@ export class ReportsService {
         where: instWhere({ status: { not: InstallmentStatus.CANCELLED }, type: { notIn: SURCHARGE_PAYMENT_TYPES }, dueDate: { lte: todayUTC } }),
         _sum: { amount: true },
       }),
-      this.prisma.reservation.aggregate({ where: { contract: { is: contractWhere } }, _sum: { bookingAmount: true } }),
+      this.prisma.reservation.aggregate({ where: { contract: { is: signedContractWhere } }, _sum: { bookingAmount: true } }),
       this.prisma.deposit.aggregate({
         where: baseDepWhere({ AND: [COLLECTED_DEPOSIT_WHERE, TOWARDS_PRICE_DEPOSIT_WHERE, againstDueDepositWhere(todayUTC)] }),
         _sum: { amount: true },
@@ -1974,21 +2011,9 @@ export class ReportsService {
     // 102%".
     const onItsWay: Prisma.InstallmentWhereInput = { ...unpaid, deposits: { some: PAYMENT_ON_ITS_WAY } };
     const unsignedContractWhere: Prisma.ContractWhereInput = { AND: [contractWhere, { signedAt: null }] };
-    const [grossAgg, paidRowsAgg, paidBookingAgg, awaitingRowsAgg, unsignedCount, unsignedOpenAgg, monthRows, unsignedRows] =
+    const [split, unsignedCount, unsignedOpenAgg, monthRows, unsignedRows] =
       await Promise.all([
-        this.prisma.contract.aggregate({ where: signedContractWhere, _sum: { totalAmount: true } }),
-        this.prisma.installment.aggregate({
-          where: instWhere({ status: InstallmentStatus.PAID, type: { notIn: SURCHARGE_PAYMENT_TYPES } }),
-          _sum: { amount: true },
-        }),
-        this.prisma.reservation.aggregate({
-          where: {
-            contract: { is: signedContractWhere },
-            bookingPaymentStatus: { in: [ReservationBookingPaymentStatus.PAID, ReservationBookingPaymentStatus.WAIVED] },
-          },
-          _sum: { bookingAmount: true },
-        }),
-        this.prisma.installment.aggregate({ where: instWhere(onItsWay), _sum: { amount: true } }),
+        portfolioSplit(this.prisma, { signedContractWhere, instWhere, today: todayUTC }),
         this.prisma.contract.count({ where: unsignedContractWhere }),
         this.prisma.installment.aggregate({
           where: {
@@ -2040,23 +2065,16 @@ export class ReportsService {
           },
         }),
       ]);
-    const gross = D(grossAgg._sum.totalAmount);
-    const openAll = D(outstandingAgg._sum.amount);
-    const awaitingAll = D(awaitingRowsAgg._sum.amount);
-    const lateAll = D(overdueComputedAgg._sum.amount);
-    const paidAll = D(paidRowsAgg._sum.amount).plus(D(paidBookingAgg._sum.bookingAmount));
-    const notYetDueAll = Prisma.Decimal.max(zero, openAll.minus(awaitingAll).minus(lateAll));
-    const unscheduledAll = Prisma.Decimal.max(zero, gross.minus(paidAll).minus(openAll));
     const net = new Prisma.Decimal(totalContractValue).toDecimalPlaces(2);
     const portfolio = {
-      grossValue: gross.toString(),
+      grossValue: split.grossValue.toString(),
       netValue: net.toString(),
-      markup: Prisma.Decimal.max(zero, gross.minus(net)).toString(),
-      paid: paidAll.toString(),
-      awaiting: awaitingAll.toString(),
-      overdue: lateAll.toString(),
-      notYetDue: notYetDueAll.toString(),
-      unscheduled: unscheduledAll.toString(),
+      markup: Prisma.Decimal.max(zero, split.grossValue.minus(net)).toString(),
+      paid: split.paid.toString(),
+      awaiting: split.awaiting.toString(),
+      overdue: split.overdue.toString(),
+      notYetDue: split.notYetDue.toString(),
+      unscheduled: split.unscheduled.toString(),
       unsigned: {
         count: unsignedCount,
         open: D(unsignedOpenAgg._sum.amount).toString(),
