@@ -42,7 +42,7 @@ function makePrismaMock() {
     setting: { findMany: jest.fn().mockResolvedValue([]) },
     contract: {
       count: jest.fn().mockResolvedValue(0),
-      aggregate: jest.fn().mockResolvedValue({ _sum: { totalAmount: 0 } }),
+      aggregate: jest.fn().mockResolvedValue({ _sum: { totalAmount: 5000 } }),
       findMany: jest.fn().mockResolvedValue([]),
     },
     // Refunds: 50 paid in total, 200 agreed → 150 still owed.
@@ -198,6 +198,25 @@ describe('Reports · financial-dashboard summary correctness (F1)', () => {
     expect(body.summary.refundsPaid).toBe('50');
     expect(body.summary.refundsOwed).toBe('150');
     expect(body.summary.netCollected).toBe('550');
+  });
+
+  it('counts signed contracts only, and gives a portfolio and a month whose parts add up', () => {
+    // Every installment figure is on signed contracts: an unsigned one has
+    // nothing due and is not in the contract value.
+    expect(captured.installmentWheres.length).toBeGreaterThan(0);
+    // …except the one query that sizes the unsigned contracts' schedule.
+    const wheres = captured.installmentWheres.map((w) => JSON.stringify(w));
+    expect(wheres.filter((w) => w.includes('"signedAt":null'))).toHaveLength(1);
+    for (const w of wheres.filter((x) => !x.includes('"signedAt":null'))) expect(w).toContain('"signedAt":{"not":null}');
+    const p = (body as unknown as { portfolio: Record<string, string> }).portfolio;
+    // (The mock returns one amount for every row query, so the parts cannot
+    // add up here; the identity is checked against real data.)
+    for (const k of ['grossValue', 'netValue', 'markup', 'paid', 'awaiting', 'overdue', 'notYetDue', 'unscheduled']) {
+      expect(Number(p[k])).toBeGreaterThanOrEqual(0);
+    }
+    expect(p.grossValue).toBe('5000');
+    const m = (body as unknown as { month: Record<string, string> }).month;
+    expect(m.due).toBe(String(body.summary.dueThisMonth));
   });
 
   it('breaks collection down by deposit type into collected / awaiting', () => {

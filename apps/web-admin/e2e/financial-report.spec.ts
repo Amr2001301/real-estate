@@ -14,6 +14,8 @@ test('the financial report leads with collections, the rate and the months', asy
   await gotoReady(page, '/dashboard/reports/financial');
   await expect(page.getByTestId('fin-hero')).toBeVisible();
   await expect(page.getByTestId('fin-collected')).toHaveText(/\d/);
+  // Summary figures read in ألف / مليون / مليار, the exact amount on hover.
+  await expect(page.getByTestId('fin-collected').locator('[title]').first()).toHaveAttribute('title', /\d{1,3}(,\d{3})*/);
   await expect(page.getByTestId('fin-rate')).toHaveText(/^\d+%$/);
   for (const id of ['fin-kpi-contracts', 'fin-kpi-outstanding', 'fin-kpi-overdue', 'fin-distribution', 'fin-upcoming']) {
     await expect(page.getByTestId(id)).toBeVisible();
@@ -36,4 +38,31 @@ test('the financial report leads with collections, the rate and the months', asy
   const compare = await page.locator('label[for="ff-compare"]').boundingBox();
   expect(Math.abs(year!.y - compare!.y)).toBeLessThan(2);
   expect(Math.abs(year!.width - compare!.width)).toBeLessThan(4);
+});
+
+/**
+ * The figures add up: the contract-value split (signed contracts, lifetime)
+ * sums to the value, and this month's parts sum to what fell due this month.
+ * It mixed the period's collections with lifetime totals ("collected 2.6%,
+ * not due 102%").
+ */
+test('the contract-value split and the month add up', async ({ page }) => {
+  await gotoReady(page, '/dashboard/reports/financial');
+  // Figures read in ألف / مليون; the exact amount is on data-amount.
+  const amount = async (id: string) => {
+    const el = page.getByTestId(id);
+    if ((await el.count()) === 0) return 0;
+    return Number((await el.getAttribute('data-amount')) ?? '0');
+  };
+  const value = await amount('fin-dist-value');
+  const parts = await Promise.all(
+    ['paid', 'awaiting', 'overdue', 'notYetDue', 'unscheduled'].map((k) => amount(`fin-dist-${k}`)),
+  );
+  expect(Math.abs(parts.reduce((a, b) => a + b, 0) - value)).toBeLessThanOrEqual(0.05);
+
+  const month = page.getByTestId('fin-month');
+  await expect(month).toBeVisible();
+  const due = await amount('fin-month');
+  const monthParts = await Promise.all(['paid', 'awaiting', 'overdue', 'upcoming'].map((k) => amount(`fin-month-${k}`)));
+  expect(Math.abs(monthParts.reduce((a, b) => a + b, 0) - due)).toBeLessThanOrEqual(0.05);
 });

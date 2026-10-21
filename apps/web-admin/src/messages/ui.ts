@@ -5637,7 +5637,7 @@ const UI = {
         title: 'أعمار المتأخرات',
         description: 'توزيع المبالغ المتأخرة حسب عمر الدين',
         totalSuffix: 'إجمالي',
-        labels: { '1-30': '1–30 يوم', '31-60': '31–60 يوم', '61-90': '61–90 يوم', '90+': '+90 يوم' },
+        labels: { '1-30': 'متأخر 1–30 يوم', '31-60': 'متأخر 31–60 يوم', '61-90': 'متأخر 61–90 يوم', '90+': 'متأخر أكثر من 90 يوم' },
       },
       overdueTable: {
         title: 'الأقساط المتأخرة',
@@ -11516,7 +11516,7 @@ const UI = {
         title: 'Overdue Aging',
         description: 'Distribution of overdue amounts by debt age',
         totalSuffix: 'total',
-        labels: { '1-30': '1–30 days', '31-60': '31–60 days', '61-90': '61–90 days', '90+': '90+ days' },
+        labels: { '1-30': 'Late 1–30 days', '31-60': 'Late 31–60 days', '61-90': 'Late 61–90 days', '90+': 'Late over 90 days' },
       },
       overdueTable: {
         title: 'Overdue Installments',

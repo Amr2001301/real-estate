@@ -53,6 +53,12 @@ describe('D1-REG — CANCELLED installment regression (real Postgres)', () => {
     const companyAId = secFixture.companies.aId;
     const adminAId = secFixture.users.adminA.id;
     const planId = secFixture.resources.a.installmentPlanId;
+    // The financial report counts signed contracts only (an unsigned one has
+    // nothing due yet); the fixture's contract is entered unsigned.
+    await testApp.rawPrisma.contract.update({
+      where: { id: secFixture.resources.a.contractId },
+      data: { signedAt: new Date('2020-01-01T00:00:00Z') },
+    });
 
     // Grant permissions needed for D1-REG-1 and D1-REG-4
     const perms = await testApp.rawPrisma.permission.findMany({
