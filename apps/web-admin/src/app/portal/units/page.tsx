@@ -119,7 +119,7 @@ export default async function PortalUnitsPage({
               <li
                 key={u.id}
                 data-testid="portal-unit-row"
-                className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-5 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[44px_minmax(140px,1fr)_minmax(0,1.3fr)_minmax(0,1.1fr)_150px_150px_120px]"
+                className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-6 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[44px_minmax(150px,1.1fr)_minmax(0,1.4fr)_minmax(0,1.1fr)_minmax(130px,1fr)_minmax(150px,1fr)_auto]"
               >
                 <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#D8B66A]/[0.14] text-[#B8913F] dark:text-[#D8B66A]">
                   <Home className="h-[18px] w-[18px]" />
