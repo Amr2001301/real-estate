@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Banknote, Bookmark, CalendarCheck2, FileText, MessageSquare, Receipt, UserPlus, Wrench } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { compactParts } from '@/lib/format';
+import { compactParts, shareText, sharesOf } from '@/lib/format';
 import type { Locale } from '@/lib/locale';
 import { PremiumPanel, PremiumEmptyNote, PremiumBars } from '@/components/premium';
 import { NumCell, UnitsBar } from '@/components/premium/data-table';
@@ -445,23 +445,19 @@ export function FinancialHealthPanel({
           { key: 'overdue', label: labels.overdue, value: overdue, dot: 'border border-danger-600 bg-transparent', bar: 'bg-danger-600' },
         ]
   );
-  // A small share reads "0.4%", not "0%" beside a real amount.
-  const share = (n: number) => (base > 0 ? (n / base) * 100 : 0);
-  const pctText = (n: number) => {
-    const v = share(n);
-    return `${v > 0 && v < 1 ? v.toFixed(1) : Math.round(v)}%`;
-  };
-  const paid = cols[0]!.value;
+  // The parts' shares add up to 100% (rounded together, not one by one).
+  const shares = sharesOf(cols.map((c) => c.value), base);
+  const pctAt = (i: number) => shareText(shares[i] ?? 0);
   const markup = portfolio ? Math.max(0, portfolio.grossValue - portfolio.netValue) : 0;
   return (
     <PremiumPanel title={title} sub={sub} className={className}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <Money value={base} money={money} size="lg" />
         <p className="text-[13px] text-slate-500">
-          {labels.ofValue} <span className="num text-[22px] font-semibold text-slate-900">{pctText(paid)}</span>
+          {labels.ofValue} <span className="num text-[22px] font-semibold text-slate-900">{pctAt(0)}</span>
         </p>
       </div>
-      <div className="mt-4 flex h-2 gap-1" role="img" aria-label={cols.map((c) => `${c.label} ${pctText(c.value)}`).join('، ')}>
+      <div className="mt-4 flex h-2 gap-1" role="img" aria-label={cols.map((c, i) => `${c.label} ${pctAt(i)}`).join('، ')}>
         {cols.map((c) =>
           c.value > 0 ? <span key={c.key} className={cn('rounded-full', c.bar)} style={{ flexGrow: c.value, flexBasis: 0 }} /> : null,
         )}
@@ -474,14 +470,14 @@ export function FinancialHealthPanel({
         )}
         data-testid="health-parts"
       >
-        {cols.map((c) => (
+        {cols.map((c, i) => (
           <div key={c.key} className="px-4 first:ps-0" data-testid={`health-${c.key}`} data-amount={c.value}>
             <p className="flex items-center gap-1.5 text-[12.5px] text-slate-500">
               <span className={cn('h-2 w-2 shrink-0 rounded-full', c.dot)} aria-hidden />
               {c.label}
             </p>
             <div className="mt-1"><Money value={c.value} money={money} size={cols.length >= 5 ? 'sm' : 'md'} /></div>
-            <p className="text-[12px] text-slate-500">{pctText(c.value)}</p>
+            <p className="text-[12px] text-slate-500">{pctAt(i)}</p>
           </div>
         ))}
       </div>

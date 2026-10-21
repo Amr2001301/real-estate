@@ -2009,7 +2009,7 @@ export class ReportsService {
     // 102%".
     const onItsWay: Prisma.InstallmentWhereInput = { ...unpaid, deposits: { some: PAYMENT_ON_ITS_WAY } };
     const unsignedContractWhere: Prisma.ContractWhereInput = { AND: [contractWhere, { signedAt: null }] };
-    const [split, unsignedCount, unsignedOpenAgg, monthRows, unsignedRows] =
+    const [split, unsignedCount, unsignedOpenAgg, monthRows, unsignedRows, paidEarlyAgg, cashInOnMonthAgg] =
       await Promise.all([
         portfolioSplit(this.prisma, { signedContractWhere, instWhere, today: todayUTC }),
         this.prisma.contract.count({ where: unsignedContractWhere }),
@@ -2062,6 +2062,29 @@ export class ReportsService {
             },
           },
         }),
+        // "Paid" this month counts this month's rows however early they were
+        // paid; "cash in" counts this month's money whatever row it paid.
+        // These two say how far apart they are and why.
+        this.prisma.installment.aggregate({
+          where: instWhere({
+            status: InstallmentStatus.PAID,
+            type: { notIn: SURCHARGE_PAYMENT_TYPES },
+            dueDate: { gte: monthStart, lt: monthEnd },
+            paidAt: { lt: thisMonth.start },
+          }),
+          _sum: { amount: true },
+        }),
+        this.prisma.deposit.aggregate({
+          where: baseDepWhere({
+            AND: [
+              COLLECTED_DEPOSIT_WHERE,
+              TOWARDS_PRICE_DEPOSIT_WHERE,
+              { paidAt: { gte: thisMonth.start, lt: thisMonth.end } },
+              { installment: { is: { dueDate: { gte: monthStart, lt: monthEnd } } } },
+            ],
+          }),
+          _sum: { amount: true },
+        }),
       ]);
     const net = new Prisma.Decimal(totalContractValue).toDecimalPlaces(2);
     const portfolio = {
@@ -2095,6 +2118,13 @@ export class ReportsService {
       // Money that came in this month, whatever it paid (earlier rows, the
       // booking) — not comparable with "due this month".
       cashIn: (collectedThisMonthAgg._sum.amount ?? zero).toString(),
+      /** Of "paid": rows paid before the month began. */
+      paidEarly: D(paidEarlyAgg._sum.amount).toString(),
+      /** Of "cash in": money for other rows — earlier months, the booking, ahead. */
+      cashInOther: Prisma.Decimal.max(
+        zero,
+        D(collectedThisMonthAgg._sum.amount).minus(D(cashInOnMonthAgg._sum.amount)),
+      ).toString(),
     };
 
     // ── Refunds on cancelled contracts (money going back out) ────────────────

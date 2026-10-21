@@ -2038,6 +2038,10 @@ export interface FinancialMonth {
   overdue: string;
   upcoming: string;
   cashIn: string;
+  /** Of `paid`: this month's rows paid before the month began. */
+  paidEarly?: string;
+  /** Of `cashIn`: money for rows of other months, bookings. */
+  cashInOther?: string;
 }
 
 export interface FinancialDashboard {

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { CalendarClock, History } from 'lucide-react';
 import { DepositStateChip } from '@/components/payments/payment-state';
 import {
   AlertTriangle,
@@ -23,7 +24,7 @@ import type {
 } from '@/lib/types';
 import { CollapsibleRows } from '@/components/premium/collapsible-rows';
 import { CollapsibleList } from '@/components/premium/collapsible-list';
-import { compactParts, formatCurrency, formatDate, tx, intlLocale } from '@/lib/format';
+import { compactParts, formatCurrency, formatDate, tx, intlLocale, shareText, sharesOf } from '@/lib/format';
 import { getReportsCurrency, getCompanyTimeZone, todayIn } from '@/lib/currency';
 import {
   resolveReportDateRange,
@@ -160,7 +161,7 @@ export default async function FinancialReportsPage({
   const pNet = num(portfolio?.netValue);
   const pMarkup = num(portfolio?.markup);
   const pShare = (v: number) => (pGross > 0 ? (v / pGross) * 100 : 0);
-  const pctText = (v: number) => `${v.toFixed(v === 100 || v === 0 || v >= 10 ? 0 : 1)}%`;
+
   const portfolioParts = [
     { key: 'paid', label: en ? 'Paid' : 'المسدد', hint: en ? 'money received' : 'اتدفع فعلًا', amount: num(portfolio?.paid), dot: 'bg-emerald-500' },
     { key: 'awaiting', label: en ? 'Awaiting confirmation' : 'بانتظار التأكيد', hint: en ? 'a proof or cheque under review' : 'إيصال أو شيك لسه بيتراجع', amount: num(portfolio?.awaiting), dot: 'bg-sky-500' },
@@ -168,14 +169,26 @@ export default async function FinancialReportsPage({
     { key: 'notYetDue', label: en ? 'Not due yet' : 'لم يستحق بعد', hint: en ? 'its date has not come' : 'ميعاده لسه مجاش', amount: num(portfolio?.notYetDue), dot: 'bg-slate-400/60' },
     { key: 'unscheduled', label: en ? 'Not on a schedule' : 'غير مجدول', hint: en ? 'no row on the schedule' : 'مالوش قسط في الجدول', amount: num(portfolio?.unscheduled), dot: 'bg-amber-400' },
   ].filter((r) => r.key !== 'unscheduled' && r.key !== 'awaiting' ? true : r.amount > 0);
+  // The parts' shares add up to 100% (rounded together, not one by one).
+  const portfolioShare = Object.fromEntries(
+    sharesOf(portfolioParts.map((r) => r.amount), pGross).map((v, i) => [portfolioParts[i]!.key, v]),
+  ) as Record<string, number>;
   const monthData = dash?.month;
   const monthDue = num(monthData?.due ?? s?.dueThisMonth);
   const cashIn = num(monthData?.cashIn ?? s?.collectedThisMonth);
+  const paidEarly = num(monthData?.paidEarly);
+  const cashInOther = num(monthData?.cashInOther);
   const monthParts = [
-    { key: 'paid', label: en ? 'Paid' : 'اتسدد', amount: num(monthData?.paid), bar: 'bg-emerald-500' },
-    { key: 'awaiting', label: en ? 'Awaiting confirmation' : 'بانتظار التأكيد', amount: num(monthData?.awaiting), bar: 'bg-sky-500' },
-    { key: 'overdue', label: en ? 'Late' : 'متأخر', amount: num(monthData?.overdue), bar: 'bg-danger-500' },
-    { key: 'upcoming', label: en ? 'Still to come' : 'لم يحن موعده', amount: num(monthData?.upcoming), bar: 'bg-slate-400/60' },
+    {
+      key: 'paid',
+      label: en ? 'Paid' : 'اتسدد',
+      amount: num(monthData?.paid),
+      bar: 'bg-emerald-500',
+      early: paidEarly,
+    },
+    { key: 'awaiting', label: en ? 'Awaiting confirmation' : 'بانتظار التأكيد', amount: num(monthData?.awaiting), bar: 'bg-sky-500', early: 0 },
+    { key: 'overdue', label: en ? 'Late' : 'متأخر', amount: num(monthData?.overdue), bar: 'bg-danger-500', early: 0 },
+    { key: 'upcoming', label: en ? 'Still to come' : 'لم يحن موعده', amount: num(monthData?.upcoming), bar: 'bg-slate-400/60', early: 0 },
   ];
 
   // Comparison deltas
@@ -199,6 +212,8 @@ export default async function FinancialReportsPage({
   // Summary figures read in ألف / مليون / مليار (the exact amount on hover);
   // per-row amounts (an installment, a payment) stay exact.
   const cmoney = (n: number | string) => compactParts(n, currencySign, locale).join(' ');
+  // Without the currency, for a short badge beside a figure that has it.
+  const cnum = (n: number | string) => compactParts(n, '', locale).join(' ').trim();
   const short = (n: number) => compactParts(n, '', locale).join(' ').trim();
   const count = (n: number) => n.toLocaleString(intlLocale(locale));
 
@@ -346,6 +361,18 @@ export default async function FinancialReportsPage({
                     {x.label}
                   </dt>
                   <dd className="mt-0.5 truncate text-[13.5px] font-semibold text-slate-800 tabular-nums">{cmoney(x.amount)}</dd>
+                  {x.early > 0 && (
+                    <dd className="mt-1.5">
+                      <span
+                        className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600"
+                        title={en ? 'This month’s rows paid ahead, before the month began' : 'أقساط الشهر ده اتدفعت مقدمًا، قبل ما الشهر يبدأ'}
+                        data-testid={`fin-month-${x.key}-early`}
+                      >
+                        <History className="h-3 w-3" aria-hidden />
+                        {en ? `${cnum(x.early)} paid ahead` : `منه ${cnum(x.early)} مدفوع مقدمًا`}
+                      </span>
+                    </dd>
+                  )}
                 </div>
               ))}
             </dl>
@@ -356,6 +383,18 @@ export default async function FinancialReportsPage({
                 {en ? 'Came in this month' : 'دخل الخزنة هذا الشهر'}
               </dt>
               <dd className="mt-1 truncate text-[15px] font-bold text-slate-900 tabular-nums">{cmoney(cashIn)}</dd>
+              {cashInOther > 0 && (
+                <dd className="mt-1.5">
+                  <span
+                    className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-brand-400/40 bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700"
+                    title={en ? 'Money that came in this month for other months’ rows or bookings' : 'فلوس دخلت الشهر ده عن أقساط شهور تانية أو مقدمات حجز'}
+                    data-testid="fin-cashin-other"
+                  >
+                    <CalendarClock className="h-3 w-3" aria-hidden />
+                    {en ? `${cnum(cashInOther)} for other months` : `منه ${cnum(cashInOther)} لشهور تانية`}
+                  </span>
+                </dd>
+              )}
             </div>
             <div className="min-w-0">
               <dt className="truncate text-[11.5px] text-slate-500">{m.hero.fees}</dt>
@@ -467,14 +506,14 @@ export default async function FinancialReportsPage({
                 { key: 'value', label: en ? 'Signed contracts’ value' : 'قيمة العقود الموقّعة', hint: en ? 'the parts below add up to it' : 'الأجزاء دي مجموعها = القيمة', amount: pGross, dot: 'bg-brand-500' },
                 ...portfolioParts,
               ].map((r) => (
-                <li key={r.key} data-testid={`fin-dist-${r.key}`} data-amount={r.amount} title={money(r.amount)} className="flex items-center gap-3 rounded-2xl border border-hairline px-4 py-3">
+                <li key={r.key} data-testid={`fin-dist-${r.key}`} data-amount={r.amount} data-share={r.key === 'value' ? 100 : (portfolioShare[r.key] ?? 0)} title={money(r.amount)} className="flex items-center gap-3 rounded-2xl border border-hairline px-4 py-3">
                   <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', r.dot)} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[12px] text-slate-500">{r.label}</span>
                     <span className="block truncate text-[10.5px] text-slate-400">{r.hint}</span>
                     <span className="block truncate text-[15px] font-bold text-slate-900 tabular-nums">{cmoney(r.amount)}</span>
                   </span>
-                  <span className="shrink-0 text-[12px] font-semibold text-slate-400 tabular-nums">{pctText(pShare(r.amount))}</span>
+                  <span className="shrink-0 text-[12px] font-semibold text-slate-400 tabular-nums">{shareText(r.key === 'value' ? 100 : (portfolioShare[r.key] ?? 0))}</span>
                 </li>
               ))}
             </ul>
