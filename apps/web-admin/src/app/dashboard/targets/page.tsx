@@ -1,4 +1,4 @@
-import { Banknote, Building2, Target, TrendingUp, Award } from 'lucide-react';
+import { Target, TrendingUp, Award } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
@@ -14,7 +14,9 @@ import {
   TargetsManagementClient,
   type PerformanceRow,
 } from './targets-management-client';
-import { fmtAmt, num, pctLabel, getMonthOptions } from './utils';
+import { pctLabel, getMonthOptions } from './utils';
+import { compactParts } from '@/lib/format';
+import { Amount, FigureBar, PaceBar } from '@/components/cockpit/cockpit';
 import { cn } from '@/lib/cn';
 import { attainment, targetPhase } from '@/lib/target-pace';
 import { getReportsCurrency, currencySymbol, getCompanyTimeZone, todayIn } from '@/lib/currency';
@@ -240,43 +242,27 @@ export default async function TargetsPage({
       </PremiumFilterBar>
 
       {/* ── Key figures ───────────────────────────────────────────────────── */}
-      <div data-testid="targets-kpis" className="grid grid-cols-2 overflow-hidden rounded-[22px] border border-hairline bg-surface lg:grid-cols-4">
-        {[
-          { label: m.metricTargetsCount, value: String(targets.length), sub: undefined, icon: <Target /> },
-          { label: m.metricAmountTarget, value: totalAmountTarget === 0 ? '—' : fmtAmt(totalAmountTarget, symbol), sub: undefined, icon: <Banknote /> },
-          {
-            label: m.metricAchievedAmount,
-            value: fmtAmt(totalAchievedAmount, symbol),
-            sub: overallPct !== null ? `${overallPct}% ${m.metricOfTarget}` : undefined,
-            icon: <TrendingUp />,
-          },
-          {
-            label: m.metricUnitsTarget,
-            value: num(totalUnitsTarget),
-            sub: `${num(totalAchievedUnits)} ${m.metricAchievedUnits}`,
-            icon: <Building2 />,
-          },
-        ].map((k, i) => (
-          <div
-            key={k.label}
-            className={cn(
-              'flex items-center gap-4 p-5',
-              i > 0 && 'lg:border-s lg:border-hairline',
-              i % 2 === 1 && 'max-lg:border-s max-lg:border-hairline',
-              i >= 2 && 'max-lg:border-t max-lg:border-hairline',
-            )}
-          >
-            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-500/12 text-brand-700 [&_svg]:h-5 [&_svg]:w-5">
-              {k.icon}
-            </span>
-            <div className="min-w-0">
-              <p className="text-[12.5px] font-semibold text-slate-500">{k.label}</p>
-              <p className="num truncate text-[26px] font-semibold leading-tight text-slate-900">{k.value}</p>
-              {k.sub && <p className="text-[11.5px] text-slate-500">{k.sub}</p>}
-            </div>
+      <section data-testid="targets-kpis" className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <FigureBar
+          bare
+          cols={4}
+          figures={[
+            { label: m.metricTargetsCount, value: targets.length },
+            { label: m.metricAmountTarget, value: totalAmountTarget === 0 ? '—' : <Amount parts={compactParts(totalAmountTarget, symbol, locale)} /> },
+            {
+              label: m.metricAchievedAmount,
+              value: <Amount parts={compactParts(totalAchievedAmount, symbol, locale)} />,
+              sub: overallPct !== null ? `${overallPct}% ${m.metricOfTarget}` : undefined,
+            },
+            { label: m.metricUnitsTarget, value: totalUnitsTarget, sub: `${totalAchievedUnits} ${m.metricAchievedUnits}` },
+          ]}
+        />
+        {overallPct !== null && (
+          <div className="border-t border-hairline px-5 py-4">
+            <PaceBar pct={overallPct} tone="bg-gradient-to-l from-[#E6C77E] to-[#B8913F]" />
           </div>
-        ))}
-      </div>
+        )}
+      </section>
 
       {/* ── Insights ──────────────────────────────────────────────────────── */}
       {hasMeaningfulPerf ? (
@@ -339,7 +325,7 @@ function Insight({
         <p className="text-[12px] font-semibold text-slate-500">{label}</p>
         <p className="truncate text-[14px] font-bold text-slate-900">{name}</p>
       </div>
-      <span className="num text-[26px] font-semibold text-slate-900">{pctLabel(pct)}</span>
+      <span className="text-[26px] font-bold tabular-nums text-slate-900">{pctLabel(pct)}</span>
     </div>
   );
 }

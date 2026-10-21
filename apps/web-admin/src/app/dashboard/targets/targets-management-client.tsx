@@ -11,8 +11,10 @@ import { Target } from 'lucide-react';
 import type { Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { TargetFormDialog, type SalesUser, type SalesTarget } from './target-form-dialog';
-import { fmtAmt, num, periodLabel } from './utils';
-import { attainment, expectedPct, STATUS_BAR, STATUS_CHIP, targetPhase, targetStatus, type TargetStatus } from '@/lib/target-pace';
+import { num, periodLabel } from './utils';
+import { compactParts } from '@/lib/format';
+import { Avatar, PaceBar } from '@/components/cockpit/cockpit';
+import { attainment, expectedPct, STATUS_BAR, STATUS_CHIP, targetPhase, targetStatus } from '@/lib/target-pace';
 
 export interface PerformanceRow {
   salesId: string;
@@ -37,33 +39,6 @@ interface Props {
 }
 
 // ── Inline sub-components ──────────────────────────────────────────────────
-
-function PctCell({ pct, expected, status }: { pct: number | null; expected: number | null; status: TargetStatus }) {
-  if (pct === null) return <span className="text-xs text-slate-400">—</span>;
-  const display = pct > 999 ? '+999%' : `${pct}%`;
-  return (
-    <div className="flex min-w-[84px] flex-col gap-1.5">
-      <span className="text-[13px] font-semibold tabular-nums text-slate-900">{display}</span>
-      <div className="relative h-1.5 w-20 rounded-full bg-surface-muted">
-        <span
-          className={cn('absolute inset-y-0 start-0 rounded-full', STATUS_BAR[status])}
-          style={{ width: `${Math.min(Math.max(pct, 0), 100)}%` }}
-        />
-        {expected !== null && expected > 0 && expected < 100 && (
-          <span aria-hidden className="absolute -top-1 h-3.5 w-0.5 rounded-full bg-slate-900/70" style={{ insetInlineStart: `calc(${expected}% - 1px)` }} />
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Initials({ name }: { name: string }) {
-  return (
-    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-400/35 to-brand-700/20 font-heading text-[14px] font-bold text-brand-700 ring-1 ring-brand-500/40">
-      {name.charAt(0)}
-    </span>
-  );
-}
 
 // ── Main component ──────────────────────────────────────────────────────────
 
@@ -105,6 +80,8 @@ export function TargetsManagementClient({
     });
     router.refresh();
   }, [dialog, toast, router, m]);
+
+  const money = (n: number | string) => compactParts(n, symbol, locale).join(' ');
 
   // Build perfMap from the serializable perfRows array
   const perfMap = new Map<string, PerformanceRow>(
@@ -165,123 +142,76 @@ export function TargetsManagementClient({
               }
             />
           ) : (
-            <div className="overflow-x-auto scrollbar-thin">
-              <table className="w-full text-sm min-w-[860px]">
-                <thead className="border-b border-hairline text-[11.5px] font-semibold text-slate-500">
-                  <tr>
-                    <th className="px-6 py-3.5 text-start whitespace-nowrap">{m.colAgent}</th>
-                    <th className="px-4 py-3.5 text-start whitespace-nowrap">{m.colMonth}</th>
-                    <th className="px-4 py-3.5 text-end whitespace-nowrap">{m.colAmountTarget}</th>
-                    <th className="px-4 py-3.5 text-end whitespace-nowrap">{m.colAchieved}</th>
-                    <th className="px-4 py-3.5 text-start whitespace-nowrap">{m.colAmountPct}</th>
-                    <th className="px-4 py-3.5 text-center whitespace-nowrap">{m.colUnits}</th>
-                    <th className="px-4 py-3.5 text-start whitespace-nowrap">{m.colUnitsPct}</th>
-                    <th className="px-4 py-3.5 text-start whitespace-nowrap">{m.colPerformance}</th>
-                    {canManage && <th className="px-4 py-3.5" />}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-hairline">
-                  {targets.map((t) => {
-                    const perf = t.sales?.id
-                      ? perfMap.get(`${t.sales.id}|${t.period}`)
-                      : undefined;
-                    const amtPct = perf?.targetAmountPercent ?? null;
-                    const unitPct = perf?.targetUnitsPercent ?? null;
-                    const status = targetStatus(attainment(amtPct, unitPct), t.period, today);
-                    const exp = targetPhase(t.period, today) === 'current' ? expectedPct(t.period, today) : null;
-                    const name = t.sales?.fullName ?? '';
+            <>
+              <ul>
+                {targets.map((t) => {
+                  const perf = t.sales?.id ? perfMap.get(`${t.sales.id}|${t.period}`) : undefined;
+                  const amtPct = perf?.targetAmountPercent ?? null;
+                  const unitPct = perf?.targetUnitsPercent ?? null;
+                  const status = targetStatus(attainment(amtPct, unitPct), t.period, today);
+                  const exp = targetPhase(t.period, today) === 'current' ? expectedPct(t.period, today) : null;
+                  const name = t.sales?.fullName ?? '';
+                  const pct = (p: number | null) => (p === null ? '—' : p > 999 ? '+999%' : `${p}%`);
 
-                    return (
-                      <tr
-                        key={t.id}
-                        data-testid="target-row"
-                        className="transition-colors hover:bg-surface-muted/40"
-                      >
-                        <td className="px-6 py-3.5 whitespace-nowrap">
-                          <div className="flex items-center gap-2.5">
-                            {name && <Initials name={name} />}
-                            <span className="font-medium text-slate-800 text-sm">
-                              {name || <span className="text-slate-300">—</span>}
-                            </span>
-                          </div>
-                        </td>
+                  return (
+                    <li
+                      key={t.id}
+                      data-testid="target-row"
+                      className="grid grid-cols-1 items-center gap-4 border-b border-hairline px-6 py-4 transition-colors last:border-b-0 hover:bg-surface-muted/30 lg:grid-cols-[minmax(200px,1.1fr)_1.4fr_1fr_auto_auto]"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        {name && <Avatar name={name} />}
+                        <div className="min-w-0">
+                          <p className="truncate text-[14px] font-bold text-slate-900" dir="auto">{name || '—'}</p>
+                          <p className="text-[12px] text-slate-500">{periodLabel(t.period, locale)}</p>
+                        </div>
+                      </div>
 
-                        <td className="px-4 py-3.5 whitespace-nowrap">
-                          <span className="text-xs font-medium text-slate-600">
-                            {periodLabel(t.period, locale)}
+                      <div>
+                        <div className="flex items-baseline justify-between gap-2 text-[12px]">
+                          <span className="text-slate-500">{m.colAmountTarget}</span>
+                          <span className="whitespace-nowrap tabular-nums text-slate-600">
+                            <b className="font-bold text-slate-900">{pct(amtPct)}</b>
+                            {' · '}{money(perf?.achievedAmount ?? 0)} / {money(t.amountTarget)}
                           </span>
-                        </td>
+                        </div>
+                        <PaceBar className="mt-2" pct={amtPct} expected={exp} tone={STATUS_BAR[status]} />
+                      </div>
 
-                        <td className="px-4 py-3.5 whitespace-nowrap text-end">
-                          <span className="tabular-nums font-semibold text-slate-800 text-xs">
-                            {fmtAmt(t.amountTarget, symbol)}
+                      <div>
+                        <div className="flex items-baseline justify-between gap-2 text-[12px]">
+                          <span className="text-slate-500">{m.colUnits}</span>
+                          <span className="whitespace-nowrap tabular-nums text-slate-600">
+                            <b className="font-bold text-slate-900">{pct(unitPct)}</b>
+                            {' · '}{num(perf?.achievedUnits ?? 0)} / {num(t.unitsTarget)}
                           </span>
-                        </td>
+                        </div>
+                        <PaceBar className="mt-2" pct={unitPct} expected={exp} tone={STATUS_BAR[status]} />
+                      </div>
 
-                        <td className="px-4 py-3.5 whitespace-nowrap text-end">
-                          {perf ? (
-                            <span
-                              className={cn(
-                                'tabular-nums text-xs',
-                                perf.achievedAmount > 0
-                                  ? 'font-semibold text-slate-900'
-                                  : 'text-slate-400',
-                              )}
-                            >
-                              {fmtAmt(perf.achievedAmount, symbol)}
-                            </span>
-                          ) : (
-                            <span className="text-slate-300 text-xs">—</span>
-                          )}
-                        </td>
+                      <span data-testid="target-status" className={cn('justify-self-start whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-bold', STATUS_CHIP[status])}>
+                        {ts.targetStatus[status]}
+                      </span>
 
-                        <td className="px-4 py-3.5 whitespace-nowrap">
-                          <PctCell pct={amtPct} expected={exp} status={status} />
-                        </td>
-
-                        <td className="px-4 py-3.5 whitespace-nowrap text-center">
-                          <span className="tabular-nums text-xs">
-                            <span className={cn(perf && perf.achievedUnits > 0 ? 'font-semibold text-slate-900' : 'text-slate-400')}>
-                              {num(perf?.achievedUnits ?? 0)}
-                            </span>
-                            <span className="text-slate-500"> / {num(t.unitsTarget)}</span>
-                          </span>
-                        </td>
-
-                        <td className="px-4 py-3.5 whitespace-nowrap">
-                          <PctCell pct={unitPct} expected={exp} status={status} />
-                        </td>
-
-                        <td className="px-4 py-3.5 whitespace-nowrap">
-                          <span data-testid="target-status" className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-semibold', STATUS_CHIP[status])}>
-                            {ts.targetStatus[status]}
-                          </span>
-                        </td>
-
-                        {canManage && (
-                          <td className="px-4 py-3.5 whitespace-nowrap">
-                            {t.salesId && (
-                              <button
-                                type="button"
-                                onClick={() => openEdit(t)}
-                                aria-label={m.ariaEdit}
-                                className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-brand-700 transition-colors"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                                <span>{m.btnEdit}</span>
-                              </button>
-                            )}
-                          </td>
-                        )}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                      {canManage && t.salesId ? (
+                        <button
+                          type="button"
+                          onClick={() => openEdit(t)}
+                          aria-label={m.ariaEdit}
+                          title={m.btnEdit}
+                          className="inline-flex h-9 w-9 items-center justify-center justify-self-start rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      ) : <span />}
+                    </li>
+                  );
+                })}
+              </ul>
               <p className="border-t border-hairline px-6 py-3.5 text-[12px] text-slate-500">
                 {m.tableFootnote}
               </p>
-            </div>
+            </>
           )}
         </div>
       </section>

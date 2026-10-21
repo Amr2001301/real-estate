@@ -109,11 +109,15 @@ export interface Figure {
 }
 
 /** One quiet row of figures, hairlines between them. */
-export function FigureBar({ figures }: { figures: Figure[] }) {
+export function FigureBar({ figures, cols = 6, bare }: { figures: Figure[]; cols?: 4 | 6; bare?: boolean }) {
   return (
     <dl
       data-testid="figure-bar"
-      className="grid grid-cols-2 overflow-hidden rounded-[22px] border border-hairline bg-surface sm:grid-cols-3 xl:grid-cols-6"
+      className={cn(
+        'grid grid-cols-2 overflow-hidden',
+        !bare && 'rounded-[22px] border border-hairline bg-surface',
+        cols === 6 ? 'sm:grid-cols-3 xl:grid-cols-6' : 'xl:grid-cols-4',
+      )}
     >
       {figures.map((f) => {
         const body = (
@@ -143,6 +147,21 @@ export function Amount({ parts }: { parts: [string, string] | string[] }) {
       {parts[0]}
       {parts[1] && <span className="ms-1.5 text-[13px] font-semibold text-slate-500">{parts[1]}</span>}
     </>
+  );
+}
+
+/**
+ * A slim progress line to 100%, with a tick where an even pace would be by
+ * today (`expected`), coloured by the target's status.
+ */
+export function PaceBar({ pct, expected, tone, className }: { pct: number | null; expected?: number | null; tone: string; className?: string }) {
+  return (
+    <div className={cn('relative h-1.5 rounded-full bg-slate-500/15', className)}>
+      <span className={cn('absolute inset-y-0 start-0 rounded-full', tone)} style={{ width: `${Math.min(Math.max(pct ?? 0, 0), 100)}%` }} />
+      {expected !== null && expected !== undefined && expected > 0 && expected < 100 && (
+        <span aria-hidden className="absolute -top-1 h-3.5 w-0.5 rounded-full bg-slate-900/60" style={{ insetInlineStart: `calc(${expected}% - 1px)` }} />
+      )}
+    </div>
   );
 }
 
