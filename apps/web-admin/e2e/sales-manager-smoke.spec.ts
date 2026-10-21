@@ -34,17 +34,14 @@ test.describe('SALES_MANAGER smoke', () => {
   test('lands on the manager dashboard home', async ({ page }) => {
     await page.goto('/dashboard');
     await expect(page).not.toHaveURL(/\/login(\?|$)/);
-    await expect(page.getByText('لوحة مدير المبيعات').first()).toBeVisible();
+    // The manager home is the sales command center (redesigned 2026-10).
+    await expect(page.getByText('مركز قيادة المبيعات').first()).toBeVisible();
     // Neither the SALES home nor the admin home.
     await expect(page.getByText('مرحباً بك في المجلس الرقمي')).toHaveCount(0);
 
-    // Either the team table (seeded team) or the no-team empty state is
-    // shown. Phase 7E — actual section header is "أداء فريق المبيعات" and
-    // the empty state is "لا يوجد مندوبو مبيعات بعد"; the previous
-    // assertion strings were stale and masked by the login throttler.
-    const teamTable = page.getByText('أداء فريق المبيعات');
-    const emptyState = page.getByText('لا يوجد مندوبو مبيعات بعد');
-    await expect(teamTable.or(emptyState).first()).toBeVisible();
+    // The team ranking panel shows, with reps or its empty state.
+    await expect(page.getByTestId('leaderboard')).toBeVisible();
+    await expect(page.getByText('ترتيب الفريق').first()).toBeVisible();
   });
 
   // One test per route — see the note in dashboard-smoke.spec.ts. Nine

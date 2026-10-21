@@ -3,28 +3,29 @@ import { SALES_STORAGE, MANAGER_STORAGE } from './global-setup';
 import { gotoReady } from './helpers/pickers';
 
 /**
- * The sales and manager homes show where the open leads sit as stage cards
- * (the step row that repeated the KPI counts is gone), and the KPI band has
- * room for its labels.
+ * The sales and manager homes, redesigned as a cockpit: the navy command band
+ * with the month's target, the lead board (newest leads per open stage) and
+ * the agenda; the manager adds the team ranking and what needs attention.
  */
-test.describe('sales home', () => {
+test.describe('sales desk', () => {
   test.use({ storageState: SALES_STORAGE });
-  test('stage cards, no repeated step row', async ({ page }) => {
+  test('command band, four tiles, lead board with the four open stages', async ({ page }) => {
     await gotoReady(page, '/dashboard');
-    await expect(page.getByTestId('stage-pipeline')).toBeVisible();
-    await expect(page.getByTestId('stage-pipeline')).toContainText('جديد');
+    await expect(page.getByTestId('command-band')).toBeVisible();
+    await expect(page.getByTestId('stat-tile')).toHaveCount(4);
+    const board = page.getByTestId('lead-board');
+    await expect(board).toBeVisible();
+    for (const stage of ['جديد', 'مهتم', 'زيارة', 'تفاوض']) await expect(board).toContainText(stage);
   });
 });
 
-test.describe('manager home', () => {
+test.describe('manager command center', () => {
   test.use({ storageState: MANAGER_STORAGE });
-  test('stage cards and readable team alerts', async ({ page }) => {
+  test('team ranking, attention panel and the team lead board', async ({ page }) => {
     await gotoReady(page, '/dashboard');
-    await expect(page.getByTestId('stage-pipeline')).toBeVisible();
-    const alerts = page.getByTestId('team-alerts');
-    if ((await alerts.count()) > 0) {
-      // the alert count badge carries its number
-      await expect(alerts.locator('header, div').first()).toContainText(/\d/);
-    }
+    await expect(page.getByTestId('command-band')).toBeVisible();
+    await expect(page.getByTestId('leaderboard')).toBeVisible();
+    await expect(page.getByTestId('attention')).toBeVisible();
+    await expect(page.getByTestId('lead-board')).toBeVisible();
   });
 });
