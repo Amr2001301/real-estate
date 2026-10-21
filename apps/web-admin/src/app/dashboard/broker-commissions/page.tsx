@@ -257,7 +257,7 @@ export default async function AdminBrokerCommissionsPage({
               <li
                 key={c.id}
                 data-testid="commission-row"
-                className="grid grid-cols-[auto_1fr_auto] items-center gap-x-4 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[auto_minmax(0,1.3fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_290px_auto]"
+                className="grid grid-cols-[auto_1fr_auto] items-center gap-x-6 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[44px_minmax(0,1.3fr)_minmax(200px,1.1fr)_110px_120px_160px_36px]"
               >
                 <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#D8B66A]/[0.14] text-[#B8913F] dark:text-[#D8B66A]">
                   <BadgePercent className="h-[18px] w-[18px]" />
@@ -301,8 +301,12 @@ export default async function AdminBrokerCommissionsPage({
                   <p className="font-semibold text-slate-800">{formatDate(c.earnedAt, locale)}</p>
                 </div>
 
-                <div className="flex items-center gap-3 justify-self-end">
+                <div className="hidden lg:block">
                   <BrokerCommissionStatusBadge status={c.status} locale={locale} />
+                </div>
+
+                <div className="flex items-center gap-3 justify-self-end">
+                  <span className="lg:hidden"><BrokerCommissionStatusBadge status={c.status} locale={locale} /></span>
                   <div className="text-end">
                     <p className="whitespace-nowrap text-[15px] font-bold tabular-nums text-slate-900">{formatCurrency(c.netAmount, currency, locale)}</p>
                     <p className="whitespace-nowrap text-[11.5px] tabular-nums text-slate-500">
