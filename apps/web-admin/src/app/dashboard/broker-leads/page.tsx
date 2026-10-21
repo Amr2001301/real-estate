@@ -1,21 +1,17 @@
 import Link from 'next/link';
-import { Users, Eye, Phone, Briefcase, AlertCircle, Search, SlidersHorizontal } from 'lucide-react';
+import { Users, Eye, Phone, AlertCircle, Search, SlidersHorizontal } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { projectOptions, brokerOptions } from '@/lib/options';
 import type { AdminBrokerLead, Paged } from '@/lib/types';
 import { tx, formatDate, intlLocale } from '@/lib/format';
 import { Button } from '@/components/ui/button';
-import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
-import {
-  BrokerLeadStatusBadge,
-  LeadStageBadge,
-} from '@/components/badges';
+import { cn } from '@/lib/cn';
+import { Avatar, FigureBar } from '@/components/cockpit/cockpit';
 import {
   PremiumPageHero,
-  PremiumMetricStrip,
   PremiumFilterBar,
   PremiumSectionCard,
   PremiumEmptyState,
@@ -37,6 +33,22 @@ interface Search {
 }
 
 const PAGE_SIZE = 20;
+
+const REVIEW_CHIP: Record<string, string> = {
+  PENDING: 'bg-amber-500/12 text-amber-600',
+  APPROVED: 'bg-emerald-500/12 text-emerald-600',
+  REJECTED: 'bg-rose-500/12 text-rose-500',
+  DUPLICATE: 'bg-slate-500/12 text-slate-500',
+};
+
+const STAGE_CHIP: Record<string, string> = {
+  NEW: 'bg-slate-500/12 text-slate-500',
+  INTERESTED: 'bg-sky-500/12 text-sky-600',
+  VISIT: 'bg-violet-500/12 text-violet-600',
+  NEGOTIATION: 'bg-amber-500/12 text-amber-600',
+  WON: 'bg-emerald-500/12 text-emerald-600',
+  LOST: 'bg-rose-500/12 text-rose-500',
+};
 
 export default async function AdminBrokerLeadsPage({
   searchParams,
@@ -86,6 +98,21 @@ export default async function AdminBrokerLeadsPage({
 
   const totalLeads = paged?.meta.total ?? 0;
 
+  const reviewLabel: Record<string, string> = {
+    PENDING: m.filterStatusPending,
+    APPROVED: m.filterStatusApproved,
+    REJECTED: m.filterStatusRejected,
+    DUPLICATE: m.filterStatusDuplicate,
+  };
+  const stageLabel: Record<string, string> = {
+    NEW: m.filterStageNew,
+    INTERESTED: m.filterStageInterested,
+    VISIT: m.filterStageVisit,
+    NEGOTIATION: m.filterStageNegotiation,
+    WON: m.filterStageWon,
+    LOST: m.filterStageLost,
+  };
+
   // Advanced filter state — URL-based toggle, auto-opens when advanced filters are active
   const hasAdvancedFilters = !!(sp.brokerId || sp.brokerApprovalStatus || sp.stage || sp.projectId);
   const showFilters = hasAdvancedFilters || sp.showFilters === '1';
@@ -126,40 +153,18 @@ export default async function AdminBrokerLeadsPage({
       />
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
-      <PremiumMetricStrip
-        variant="compact"
-        cols={4}
-        metrics={[
-          {
-            label: m.kpiTotal,
-            value: totalLeads,
-            icon: <Users />,
-            tone: 'brand',
-            primary: true,
-          },
-          {
-            label: m.kpiPending,
-            value: counts.pending,
-            icon: <Users />,
-            tone: 'warning',
-            sub: m.kpiThisPage,
-          },
-          {
-            label: m.kpiApproved,
-            value: counts.approved,
-            icon: <Users />,
-            tone: 'success',
-            sub: m.kpiThisPage,
-          },
-          {
-            label: m.kpiRejected,
-            value: counts.rejected,
-            icon: <Users />,
-            tone: 'danger',
-            sub: m.kpiThisPage,
-          },
-        ]}
-      />
+      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <FigureBar
+          bare
+          cols={4}
+          figures={[
+            { label: m.kpiTotal, value: totalLeads },
+            { label: m.kpiPending, value: counts.pending, sub: m.kpiThisPage, warn: counts.pending > 0 },
+            { label: m.kpiApproved, value: counts.approved, sub: m.kpiThisPage },
+            { label: m.kpiRejected, value: counts.rejected, sub: m.kpiThisPage },
+          ]}
+        />
+      </section>
 
       {/* ── Error ────────────────────────────────────────────────────────────── */}
       {leadsRes.error && (
@@ -287,122 +292,85 @@ export default async function AdminBrokerLeadsPage({
             className="py-12"
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
-                <tr>
-                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">{m.colClient}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colBroker}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colProject}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colReview}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colStage}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colSales}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colDate}</th>
-                  <th className="text-start py-3 ps-4 pe-5 w-px" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                {rows.map((l) => (
-                  <tr
-                    key={l.id}
-                    className="align-middle hover:bg-canvas/40 transition-colors duration-100"
+          <ul className="divide-y divide-hairline">
+            {rows.map((l) => (
+              <li
+                key={l.id}
+                data-testid="broker-lead-row"
+                className="grid grid-cols-[auto_1fr_auto] items-center gap-x-4 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[auto_minmax(0,1.2fr)_minmax(0,1.1fr)_minmax(0,1.1fr)_190px_minmax(0,0.8fr)_auto]"
+              >
+                <Avatar name={l.fullName} />
+
+                {/* Client */}
+                <div className="min-w-0">
+                  <Link
+                    href={`/dashboard/broker-leads/${l.id}` as never}
+                    data-testid="broker-lead-link"
+                    className="block truncate text-[14.5px] font-bold text-slate-900 hover:text-brand-700"
                   >
-                    {/* Client */}
-                    <td className="py-3.5 ps-5 pe-4">
-                      <Link
-                        href={`/dashboard/broker-leads/${l.id}` as never}
-                        className="block font-semibold text-slate-900 truncate max-w-[180px] hover:text-brand-700"
-                      >
-                        {l.fullName}
-                      </Link>
-                      <span
-                        className="mt-0.5 inline-flex items-center gap-1 text-2xs text-slate-400"
-                        dir="ltr"
-                      >
-                        <Phone className="h-3 w-3 shrink-0" />
-                        {l.phone}
-                      </span>
-                    </td>
+                    {l.fullName}
+                  </Link>
+                  <p className="mt-0.5 flex items-center gap-1 text-[12px] tabular-nums text-slate-500">
+                    <Phone className="h-3 w-3 shrink-0" />
+                    <span dir="ltr">{l.phone}</span>
+                  </p>
+                </div>
 
-                    {/* Broker */}
-                    <td className="py-3.5 px-4">
-                      <Link
-                        href={`/dashboard/brokers/${l.brokerId}` as never}
-                        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-brand-700 transition-colors"
-                      >
-                        <Briefcase className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate max-w-[160px]">
-                          {l.broker?.companyName ?? '—'}
-                        </span>
-                      </Link>
-                      {l.brokerAgent && (
-                        <p className="text-2xs text-slate-400 mt-0.5 truncate max-w-[180px] ps-5">
-                          {l.brokerAgent.fullName}
-                        </p>
-                      )}
-                    </td>
+                {/* Broker */}
+                <div className="hidden min-w-0 text-[12.5px] lg:block">
+                  <Link
+                    href={`/dashboard/brokers/${l.brokerId}` as never}
+                    className="block truncate font-semibold text-slate-800 hover:text-brand-700"
+                  >
+                    {l.broker?.companyName ?? '—'}
+                  </Link>
+                  {l.brokerAgent && <p className="mt-0.5 truncate text-slate-500">{l.brokerAgent.fullName}</p>}
+                </div>
 
-                    {/* Project */}
-                    <td className="py-3.5 px-4">
-                      <p className="text-slate-600 text-sm truncate max-w-[180px]">
-                        {l.projectInterest ? (
-                          tx(l.projectInterest.name)
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </p>
-                      {l.unitInterest && (
-                        <p className="text-2xs text-slate-400 font-mono mt-0.5" dir="ltr">
-                          {l.unitInterest.code}
-                        </p>
-                      )}
-                    </td>
+                {/* Project */}
+                <div className="hidden min-w-0 text-[12.5px] lg:block">
+                  <p className="truncate font-semibold text-slate-800">
+                    {l.projectInterest ? tx(l.projectInterest.name) : <span className="text-slate-400">—</span>}
+                  </p>
+                  {l.unitInterest && (
+                    <p className="mt-0.5 text-slate-500">
+                      <span className="me-1 text-slate-400">{locale === 'en' ? 'Unit' : 'وحدة'}</span>
+                      <span className="whitespace-nowrap font-mono" dir="ltr">{l.unitInterest.code}</span>
+                    </p>
+                  )}
+                </div>
 
-                    {/* Review status */}
-                    <td className="py-3.5 px-4">
-                      {l.brokerApprovalStatus ? (
-                        <BrokerLeadStatusBadge status={l.brokerApprovalStatus} />
-                      ) : (
-                        <span className="text-slate-400 text-xs">—</span>
-                      )}
-                    </td>
+                {/* Review status + stage */}
+                <div className="hidden items-center gap-1.5 lg:flex">
+                  {l.brokerApprovalStatus && (
+                    <span className={cn('whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-bold', REVIEW_CHIP[l.brokerApprovalStatus])}>
+                      {reviewLabel[l.brokerApprovalStatus]}
+                    </span>
+                  )}
+                  <span className={cn('whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-bold', STAGE_CHIP[l.stage])}>
+                    {stageLabel[l.stage]}
+                  </span>
+                </div>
 
-                    {/* Stage */}
-                    <td className="py-3.5 px-4">
-                      <LeadStageBadge stage={l.stage} />
-                    </td>
+                {/* Assigned sales + date */}
+                <div className="hidden min-w-0 text-[12.5px] lg:block">
+                  <p className={cn('truncate font-semibold', l.assignedSales ? 'text-slate-800' : 'text-slate-400')}>
+                    {l.assignedSales ? l.assignedSales.fullName : m.unassigned}
+                  </p>
+                  <p className="mt-0.5 whitespace-nowrap text-slate-500">{formatDate(l.brokerSubmittedAt ?? l.createdAt, locale)}</p>
+                </div>
 
-                    {/* Assigned sales */}
-                    <td className="py-3.5 px-4">
-                      {l.assignedSales ? (
-                        <span className="block text-xs text-slate-700 truncate max-w-[140px]">
-                          {l.assignedSales.fullName}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-2xs font-medium text-slate-400">
-                          {m.unassigned}
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Date */}
-                    <td className="py-3.5 px-4 text-2xs text-slate-400 whitespace-nowrap">
-                      {formatDate(l.brokerSubmittedAt ?? l.createdAt, locale)}
-                    </td>
-
-                    {/* Action */}
-                    <td className="py-3.5 ps-4 pe-5">
-                      <Link href={`/dashboard/broker-leads/${l.id}` as never}>
-                        <IconButton label={m.actionView} variant="ghost" size="sm">
-                          <Eye />
-                        </IconButton>
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                <Link
+                  href={`/dashboard/broker-leads/${l.id}` as never}
+                  aria-label={m.actionView}
+                  title={m.actionView}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900"
+                >
+                  <Eye className="h-4 w-4" />
+                </Link>
+              </li>
+            ))}
+          </ul>
         )}
       </PremiumSectionCard>
 

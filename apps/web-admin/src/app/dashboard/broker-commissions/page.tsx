@@ -279,27 +279,20 @@ export default async function AdminBrokerCommissionsPage({
                 </div>
 
                 <div className="hidden min-w-0 text-[12.5px] lg:block">
-                  <p className="truncate font-semibold text-slate-800">
-                    {c.unit?.code ? (
-                      <>
-                        <span className="me-1 font-normal text-slate-400">{word('وحدة', 'Unit')}</span>
-                        <span className="whitespace-nowrap font-mono" dir="ltr">{c.unit.code}</span>
-                      </>
-                    ) : '—'}
-                    {c.project && <span className="ms-1.5 font-normal text-slate-500">· {tx(c.project.name)}</span>}
-                  </p>
-                  <p className="mt-0.5 truncate text-[12px] text-slate-500">
-                    <span className="me-1 text-slate-400">{word('عقد', 'Contract')}</span>
-                    <Link href={`/dashboard/contracts/${c.contractId}` as never} className="whitespace-nowrap font-mono hover:text-brand-700" dir="ltr">
-                      {c.contract?.contractNumber ?? '—'}
-                    </Link>
-                    {c.reservation?.reservationNumber && (
-                      <>
-                        <span className="mx-1.5 text-slate-300">·</span>
-                        <span className="me-1 text-slate-400">{word('حجز', 'Booking')}</span>
-                        <span className="whitespace-nowrap font-mono" dir="ltr">{c.reservation.reservationNumber}</span>
-                      </>
+                  <p className="truncate font-semibold text-slate-800">{c.project ? tx(c.project.name) : '—'}</p>
+                  <p className="mt-0.5 flex flex-col text-[12px] text-slate-500">
+                    {c.unit?.code && (
+                      <span className="whitespace-nowrap">
+                        <span className="me-1 text-slate-400">{word('وحدة', 'Unit')}</span>
+                        <span className="font-mono" dir="ltr">{c.unit.code}</span>
+                      </span>
                     )}
+                    <span className="whitespace-nowrap">
+                      <span className="me-1 text-slate-400">{word('عقد', 'Contract')}</span>
+                      <Link href={`/dashboard/contracts/${c.contractId}` as never} className="font-mono hover:text-brand-700" dir="ltr">
+                        {c.contract?.contractNumber ?? '—'}
+                      </Link>
+                    </span>
                   </p>
                 </div>
 
