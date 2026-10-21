@@ -8,6 +8,7 @@ import {
   type FormHTMLAttributes,
   type ReactNode,
 } from 'react';
+import { ArrowLeft, CalendarRange } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 export interface PremiumFilterBarProps extends FormHTMLAttributes<HTMLFormElement> {
@@ -236,6 +237,37 @@ export function PremiumViewToggle({ options, current }: { options: ViewOption[];
           </a>
         );
       })}
+    </div>
+  );
+}
+
+/** A date range as one pill: "label  [from] → [to]", gold when either end is set. */
+export function PremiumRangeField({
+  label,
+  from,
+  to,
+}: {
+  label: string;
+  from: { id: string; value?: string; label: string };
+  to: { id: string; value?: string; label: string };
+}) {
+  const set = !!(from.value || to.value);
+  const input =
+    'h-9 w-[132px] rounded-full border-0 bg-surface-sunken/60 px-3 text-[13px] font-bold tabular-nums text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-400/40';
+  return (
+    <div
+      className={cn(
+        'flex h-11 items-center gap-2 rounded-full border ps-4 pe-1 text-[13.5px] text-slate-500',
+        set ? 'border-brand-400/70 bg-brand-50' : 'border-hairline bg-surface',
+      )}
+    >
+      <CalendarRange className="h-4 w-4 shrink-0 text-brand-700" />
+      <span className="whitespace-nowrap">{label}</span>
+      <label htmlFor={from.id} className="sr-only">{from.label}</label>
+      <input id={from.id} name={from.id} type="date" defaultValue={from.value ?? ''} className={input} />
+      <ArrowLeft className="h-3.5 w-3.5 shrink-0 text-slate-400 ltr:rotate-180" aria-hidden />
+      <label htmlFor={to.id} className="sr-only">{to.label}</label>
+      <input id={to.id} name={to.id} type="date" defaultValue={to.value ?? ''} className={input} />
     </div>
   );
 }

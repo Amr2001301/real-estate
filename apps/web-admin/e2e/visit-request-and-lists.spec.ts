@@ -84,3 +84,19 @@ test('commissions page: records table first, month as a word', async ({ page }) 
   await expect(table.locator('thead th')).toHaveCount(5);
   await expect(table.locator('tbody')).not.toContainText(/\b20\d\d-\d\d\b/);
 });
+
+/** Broker reports: the funnel is one row of stage cards; a name in the KPI strip stays short. */
+test('broker reports: funnel row and a compact top-broker card', async ({ page }) => {
+  await gotoReady(page, '/dashboard/broker-reports');
+  const strip = page.getByTestId('metric-strip').first();
+  await expect(strip).toBeVisible();
+  await expect(strip).not.toContainText(/\d{1,3}(,\d{3}){2,}/);
+  const funnel = page.getByTestId('broker-funnel');
+  if ((await funnel.count()) > 0) {
+    const cards = funnel.locator(':scope > div');
+    const first = await cards.first().boundingBox();
+    const second = await cards.nth(1).boundingBox();
+    // side by side, not stacked
+    expect(Math.abs(first!.y - second!.y)).toBeLessThan(4);
+  }
+});

@@ -28,6 +28,7 @@ export type { PremiumEmptyStateProps } from './empty-state';
 export {
   PremiumFilterBar,
   PremiumFilterField,
+  PremiumRangeField,
   PremiumFilterChips,
   PremiumFilterDivider,
   PremiumViewToggle,

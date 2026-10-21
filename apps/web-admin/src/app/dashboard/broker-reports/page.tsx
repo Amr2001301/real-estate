@@ -22,12 +22,12 @@ import { uiT } from '@/messages/ui';
 import { ExportMenu } from '@/components/export-menu';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import {
   PremiumPageHero,
   PremiumMetricStrip,
   PremiumFilterBar,
+  PremiumRangeField,
   PremiumFilterField,
   PremiumSectionCard,
 } from '@/components/premium';
@@ -220,12 +220,11 @@ export default async function AdminBrokerReportsPage({
             ))}
           </Select>
         </PremiumFilterField>
-        <PremiumFilterField label={m.filterFrom} htmlFor="br-from">
-          <Input id="br-from" name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} className="w-36" />
-        </PremiumFilterField>
-        <PremiumFilterField label={m.filterTo} htmlFor="br-to">
-          <Input id="br-to" name="to" inputSize="sm" type="date" defaultValue={sp.to ?? ''} className="w-36" />
-        </PremiumFilterField>
+        <PremiumRangeField
+          label={m.filterFrom}
+          from={{ id: 'from', value: sp.from, label: m.filterFrom }}
+          to={{ id: 'to', value: sp.to, label: m.filterTo }}
+        />
       </PremiumFilterBar>
 
       {s && (
@@ -281,85 +280,64 @@ export default async function AdminBrokerReportsPage({
           MAIN GRID — Charts (RIGHT) | Rankings sticky (LEFT)
           RTL: DOM first = visual right, DOM second = visual left
       ════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-
-        {/* Charts column — visual RIGHT (DOM first in RTL) */}
-        {s ? (
-          <div className="space-y-5">
-            <PremiumSectionCard
-              title={m.chartTrendTitle}
-              description={m.chartTrendDesc}
-              icon={<BarChart3 />}
-              trailing={
-                <div className="text-end">
-                  <p className="text-[13px] font-black tabular-nums text-slate-900 leading-none">
-                    {totalTrendContracts.toLocaleString(intlLocale(locale))} {m.chartTrendContractSuffix}
-                  </p>
-                  <p className="text-[11px] text-slate-400 mt-0.5" dir="ltr">
-                    {formatCurrency(trend.reduce((acc, b) => acc + Number(b.commissionsNet), 0), currency, locale)}
-                  </p>
-                </div>
-              }
-            >
-              <div className="h-[230px]">
-                <BrokerTrendChart
-                  data={trend.map((b) => ({
-                    label: shortMonth(b.label, locale),
-                    commissionsNet: Number(b.commissionsNet),
-                    payoutsNet: Number(b.payoutsNet),
-                    contractsSigned: b.contractsSigned,
-                  }))}
-                  height={230}
-                  currency={currency}
-                  locale={locale}
-                  tooltipContracts={m.tooltipContracts}
-                  tooltipCommissions={m.tooltipCommissions}
-                  tooltipPayouts={m.tooltipPayouts}
-                  noDataLabel={m.chartNoCommissions}
-                />
+      {/* Row one: the trend beside the two rankings (stacked, close to the chart's
+          height); row two: the conversion funnel across the full width. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
+        {s && (
+          <PremiumSectionCard
+            className="h-full"
+            title={m.chartTrendTitle}
+            description={m.chartTrendDesc}
+            icon={<BarChart3 />}
+            trailing={
+              <div className="text-end">
+                <p className="text-[13px] font-black tabular-nums text-slate-900 leading-none">
+                  {totalTrendContracts.toLocaleString(intlLocale(locale))} {m.chartTrendContractSuffix}
+                </p>
+                <p className="text-[11px] text-slate-400 mt-0.5" dir="ltr">
+                  {formatCurrency(trend.reduce((acc, b) => acc + Number(b.commissionsNet), 0), currency, locale)}
+                </p>
               </div>
-              <div className="flex items-center gap-5 mt-3 pt-3 border-t border-hairline">
-                <div className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-5 rounded-sm bg-amber-300 inline-block" />
-                  <span className="text-[10px] text-slate-400">{m.legendCommissions}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="h-2.5 w-5 rounded-sm bg-emerald-400 inline-block" />
-                  <span className="text-[10px] text-slate-400">{m.legendPayouts}</span>
-                </div>
-                <span className="text-[10px] text-slate-300 ms-auto">{m.legendContractNote}</span>
-              </div>
-            </PremiumSectionCard>
-
-            <PremiumSectionCard
-              title={m.chartFunnelTitle}
-              description={m.chartFunnelDesc}
-              icon={<TrendingUp />}
-            >
-              <BrokerFunnelChart
+            }
+          >
+            <div className="h-[230px]">
+              <BrokerTrendChart
+                data={trend.map((b) => ({
+                  label: shortMonth(b.label, locale),
+                  commissionsNet: Number(b.commissionsNet),
+                  payoutsNet: Number(b.payoutsNet),
+                  contractsSigned: b.contractsSigned,
+                }))}
+                height={230}
+                currency={currency}
                 locale={locale}
-                stages={funnelStages}
-                overallConv={overallConv}
-                overallLabel={m.funnelOverallLabel}
-                noDataLabel={m.chartNoData}
+                tooltipContracts={m.tooltipContracts}
+                tooltipCommissions={m.tooltipCommissions}
+                tooltipPayouts={m.tooltipPayouts}
+                noDataLabel={m.chartNoCommissions}
               />
-            </PremiumSectionCard>
-          </div>
-        ) : (
-          <div />
+            </div>
+            <div className="flex items-center gap-5 mt-3 pt-3 border-t border-hairline">
+              <div className="flex items-center gap-1.5">
+                <span className="h-2.5 w-5 rounded-sm bg-[#D8B66A] inline-block" />
+                <span className="text-[10px] text-slate-400">{m.legendCommissions}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="h-2.5 w-5 rounded-sm bg-emerald-400 inline-block" />
+                <span className="text-[10px] text-slate-400">{m.legendPayouts}</span>
+              </div>
+              <span className="text-[10px] text-slate-500 ms-auto">{m.legendContractNote}</span>
+            </div>
+          </PremiumSectionCard>
         )}
-
-        {/* Rankings column — visual LEFT (DOM second in RTL), sticky */}
-        <div className="sticky top-5 self-start space-y-5">
-
-          {/* Top Brokers */}
+        <div className="flex flex-col gap-5">
           <PremiumSectionCard
             title={m.sectionTopBrokersTitle}
             description={m.sectionTopBrokersDesc(m.metricLabels[sp.metric ?? 'salesGross'] ?? '')}
             icon={<TrendingUp />}
             trailing={
               (top?.data.length ?? 0) > 0 ? (
-                <span className="inline-flex items-center rounded-lg bg-canvas px-2.5 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-inset ring-hairline">
+                <span className="inline-flex items-center rounded-lg bg-surface-muted px-2.5 py-1 text-[11px] font-semibold text-slate-500">
                   {top?.data.length} {m.sectionTopBrokersBrokerSuffix}
                 </span>
               ) : undefined
@@ -376,7 +354,7 @@ export default async function AdminBrokerReportsPage({
                   const maxSales = Number(top?.data?.[0]?.salesGross ?? 1);
                   const barW     = maxSales > 0 ? (Number(r.salesGross) / maxSales) * 100 : 0;
                   return (
-                    <div key={r.brokerId} className={cn('flex items-center gap-3 px-5 py-3.5 hover:bg-canvas/40 transition-colors duration-100', idx === 0 && 'bg-amber-50/20')}>
+                    <div key={r.brokerId} className={cn('flex items-center gap-3 px-5 py-3.5 hover:bg-brand-500/[0.04] transition-colors duration-100', idx === 0 && 'bg-brand-500/[0.05]')}>
                       <RankBadge rank={idx + 1} />
                       <div className="min-w-0 flex-1">
                         <Link
@@ -386,14 +364,14 @@ export default async function AdminBrokerReportsPage({
                           {r.companyName}
                         </Link>
                         <div className="flex items-center gap-2 mt-1.5">
-                          <div className="flex-1 max-w-[80px] h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                          <div className="flex-1 max-w-[80px] h-1.5 rounded-full bg-surface-muted overflow-hidden">
                             <div
-                              className={cn('h-full rounded-full transition-all', idx === 0 ? 'bg-amber-400' : 'bg-slate-300')}
+                              className={cn('h-full rounded-full transition-all', idx === 0 ? 'bg-gradient-to-l from-brand-400 to-brand-600' : 'bg-slate-400/60')}
                               style={{ width: `${barW}%` }}
                             />
                           </div>
                           <span className="text-[10px] text-slate-400">{r.contractsSigned} {m.brokerContractSuffix}</span>
-                          <span className="font-mono text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md" dir="ltr">
+                          <span className="font-mono text-[10px] font-bold text-slate-500 bg-surface-muted px-1.5 py-0.5 rounded-md" dir="ltr">
                             {r.code}
                           </span>
                         </div>
@@ -412,15 +390,14 @@ export default async function AdminBrokerReportsPage({
               </div>
             )}
           </PremiumSectionCard>
-
-          {/* Project Performance */}
           <PremiumSectionCard
+            className="flex-1"
             title={m.sectionProjectsTitle}
             description={m.sectionProjectsDesc}
             icon={<BarChart3 />}
             trailing={
               projects.length > 0 ? (
-                <span className="inline-flex items-center rounded-lg bg-canvas px-2.5 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-inset ring-hairline">
+                <span className="inline-flex items-center rounded-lg bg-surface-muted px-2.5 py-1 text-[11px] font-semibold text-slate-500">
                   {projects.length} {m.sectionProjectsSuffix}
                 </span>
               ) : undefined
@@ -438,7 +415,7 @@ export default async function AdminBrokerReportsPage({
                   const barW         = maxProjSales > 0 ? (Number(p.salesGross) / maxProjSales) * 100 : 0;
                   const projName     = p.projectName ? tx(p.projectName) : '—';
                   return (
-                    <div key={p.projectId} className={cn('flex items-center gap-3 px-5 py-3.5 hover:bg-canvas/40 transition-colors duration-100', idx === 0 && 'bg-amber-50/20')}>
+                    <div key={p.projectId} className={cn('flex items-center gap-3 px-5 py-3.5 hover:bg-brand-500/[0.04] transition-colors duration-100', idx === 0 && 'bg-brand-500/[0.05]')}>
                       <RankBadge rank={idx + 1} />
                       <div className="min-w-0 flex-1">
                         <Link
@@ -448,9 +425,9 @@ export default async function AdminBrokerReportsPage({
                           {projName}
                         </Link>
                         <div className="flex items-center gap-2 mt-1.5">
-                          <div className="flex-1 max-w-[80px] h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                          <div className="flex-1 max-w-[80px] h-1.5 rounded-full bg-surface-muted overflow-hidden">
                             <div
-                              className={cn('h-full rounded-full transition-all', idx === 0 ? 'bg-amber-400' : 'bg-slate-300')}
+                              className={cn('h-full rounded-full transition-all', idx === 0 ? 'bg-gradient-to-l from-brand-400 to-brand-600' : 'bg-slate-400/60')}
                               style={{ width: `${barW}%` }}
                             />
                           </div>
@@ -474,10 +451,24 @@ export default async function AdminBrokerReportsPage({
               </div>
             )}
           </PremiumSectionCard>
-
         </div>
-
       </div>
+
+      {s && (
+        <PremiumSectionCard
+          title={m.chartFunnelTitle}
+          description={m.chartFunnelDesc}
+          icon={<TrendingUp />}
+        >
+          <BrokerFunnelChart
+            locale={locale}
+            stages={funnelStages}
+            overallConv={overallConv}
+            overallLabel={m.funnelOverallLabel}
+            noDataLabel={m.chartNoData}
+          />
+        </PremiumSectionCard>
+      )}
 
     </div>
   );
@@ -491,7 +482,7 @@ function RankBadge({ rank }: { rank: number }) {
   return (
     <div className={cn(
       'h-7 w-7 rounded-full flex items-center justify-center shrink-0',
-      rank === 1 ? 'bg-amber-100' : rank <= 3 ? 'bg-slate-100' : 'bg-slate-50',
+      rank === 1 ? 'bg-brand-500/15 ring-1 ring-brand-500/30' : 'bg-surface-muted',
     )}>
       {medal
         ? <span className="text-base leading-none">{medal}</span>

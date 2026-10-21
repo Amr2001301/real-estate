@@ -24,19 +24,19 @@ const HEX_MAP: Record<string, string> = {
 };
 
 function ConvBadge({ rate }: { rate: number }) {
+  // Above 100%: a later stage outran the one before it (e.g. direct bookings).
   const cls =
-    rate > 1    ? 'text-amber-700 bg-amber-50 ring-1 ring-amber-200' :
-    rate >= 0.4 ? 'text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200' :
-                  'text-slate-500 bg-slate-100';
+    rate > 1    ? 'text-amber-600 bg-amber-500/12' :
+    rate >= 0.4 ? 'text-emerald-600 bg-emerald-500/12' :
+                  'text-slate-500 bg-surface-muted';
   return (
-    <div className="flex items-center justify-center py-0.5">
-      <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-bold', cls)}>
-        ↓ {(rate * 100).toFixed(0)}%
-      </span>
-    </div>
+    <span className={cn('inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums', cls)} dir="ltr">
+      {(rate * 100).toFixed(0)}%
+    </span>
   );
 }
 
+/** The funnel as one row of stage cards: count, share of the first stage, and the step's conversion. */
 export function BrokerFunnelChart({
   stages,
   overallConv,
@@ -60,61 +60,38 @@ export function BrokerFunnelChart({
 
   return (
     <div className="w-full">
-      {stages.map((stage, i) => {
-        const hex = HEX_MAP[stage.dot] ?? '#94a3b8';
-
-        return (
-          <div key={stage.label}>
-            {i > 0 && stage.convFromPrev !== null && (
-              <ConvBadge rate={stage.convFromPrev} />
-            )}
-
-            {/* Stage card */}
-            <div className="relative flex items-center gap-2.5 rounded-xl border border-slate-100 bg-white px-3 py-2 overflow-hidden">
-              {/* Start accent stripe */}
-              <div
-                className="absolute inset-y-0 start-0 w-[3px] rounded-s-xl"
-                style={{ backgroundColor: hex }}
-              />
-
-              {/* Count */}
-              <span
-                className="text-[20px] font-black tabular-nums leading-none shrink-0 ps-1"
-                style={{ color: hex }}
-              >
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6" data-testid="broker-funnel">
+        {stages.map((stage, i) => {
+          const hex = HEX_MAP[stage.dot] ?? '#94a3b8';
+          const pct = i === 0 ? 100 : stage.pctOfFirst;
+          return (
+            <div
+              key={stage.label}
+              className="relative overflow-hidden rounded-2xl border border-hairline bg-surface-muted/30 px-4 py-3.5"
+            >
+              <span className="absolute inset-x-0 top-0 h-[3px]" style={{ backgroundColor: hex }} />
+              <div className="flex items-center justify-between gap-2">
+                <p className="truncate text-[12px] font-semibold text-slate-600">{stage.label}</p>
+                {i > 0 && stage.convFromPrev !== null && <ConvBadge rate={stage.convFromPrev} />}
+              </div>
+              <p className="mt-2 text-[30px] font-bold leading-none tabular-nums" style={{ color: hex }}>
                 {stage.value.toLocaleString(intlLocale(locale))}
-              </span>
-
-              {/* Label + progress */}
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-semibold text-slate-700 truncate leading-snug">
-                  {stage.label}
-                </p>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="flex-1 h-1 rounded-full bg-slate-100 overflow-hidden">
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${i === 0 ? 100 : stage.pctOfFirst}%`,
-                        backgroundColor: hex,
-                        opacity: 0.7,
-                      }}
-                    />
-                  </div>
-                  <span className="text-[9px] font-bold text-slate-400 tabular-nums shrink-0">
-                    {i === 0 ? '100%' : `${stage.pctOfFirst.toFixed(0)}%`}
-                  </span>
+              </p>
+              <div className="mt-3 flex items-center gap-2">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-muted" dir="ltr">
+                  <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: hex }} />
                 </div>
+                <span className="shrink-0 text-[10px] font-bold tabular-nums text-slate-500">{pct.toFixed(0)}%</span>
               </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
 
       {overallConv !== null && (
-        <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-          <span className="text-[10px] text-slate-400">{overallLabel}</span>
-          <span className="text-[11px] font-black text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full tabular-nums">
+        <div className="mt-4 flex items-center justify-between gap-2 border-t border-hairline pt-3">
+          <span className="text-[12px] text-slate-500">{overallLabel}</span>
+          <span className="rounded-full bg-brand-500/12 px-3 py-1 text-[12px] font-bold tabular-nums text-brand-700">
             {(overallConv * 100).toFixed(1)}%
           </span>
         </div>

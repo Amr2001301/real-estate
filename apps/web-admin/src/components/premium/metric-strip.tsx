@@ -160,6 +160,8 @@ export function PremiumMetricStrip({
             ? [String(m.value), m.unit]
             : compactFigure(...splitAny(m.value), /[\u0600-\u06FF]/.test(m.label));
           const long = m.valueSize === 'compact' || (m.valueSize !== 'normal' && num.length > 7);
+          // A name, not a figure (e.g. the top broker): smaller type, at most two lines.
+          const isText = !/\d/.test(num) && num !== '—';
           return (
             <div
               key={i}
@@ -176,9 +178,12 @@ export function PremiumMetricStrip({
                 <p className="flex flex-wrap items-baseline gap-x-1.5 leading-none">
                   <span
                     className={cn(
-                      'num font-semibold text-[#F4ECD8]',
-                      long ? 'text-[30px]' : compact ? 'text-[38px]' : 'text-[44px]',
+                      isText
+                        ? 'line-clamp-2 font-heading text-[19px] font-bold leading-snug text-[#F4ECD8]'
+                        : 'num font-semibold text-[#F4ECD8]',
+                      !isText && (long ? 'text-[30px]' : compact ? 'text-[38px]' : 'text-[44px]'),
                     )}
+                    title={isText ? num : undefined}
                   >
                     {num}
                   </span>
