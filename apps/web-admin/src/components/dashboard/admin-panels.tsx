@@ -407,43 +407,41 @@ export function FinancialHealthPanel({
     fees: string;
     awaiting?: string;
     unscheduled?: string;
-    ofWhich?: string;
     markupNote?: (markup: string, net: string) => string;
   };
   money: Money;
   className?: string;
 }) {
   const base = portfolio ? portfolio.grossValue : total;
-  // Three columns, as before: what is neither paid nor late (on its way, not
-  // due yet, not on a schedule) reads as "not yet due", with the parts noted.
-  const later = portfolio
-    ? portfolio.awaiting + portfolio.notYetDue + portfolio.unscheduled
-    : Math.max(0, total - collected - overdue);
-  const cols = [
-    { key: 'paid', label: labels.collected, value: portfolio ? portfolio.paid : collected, dot: 'bg-unit-sold', bar: 'bg-unit-sold' },
-    { key: 'notYetDue', label: labels.notYetDue, value: later, dot: 'bg-unit-reserved', bar: 'bg-unit-reserved' },
-    { key: 'overdue', label: labels.overdue, value: portfolio ? portfolio.overdue : overdue, dot: 'border border-danger-600 bg-transparent', bar: 'bg-danger-600' },
-  ];
+  const cols = (
+    portfolio
+      ? [
+          { key: 'paid', label: labels.collected, value: portfolio.paid, dot: 'bg-unit-sold', bar: 'bg-unit-sold' },
+          { key: 'awaiting', label: labels.awaiting ?? '', value: portfolio.awaiting, dot: 'bg-sky-500', bar: 'bg-sky-500' },
+          { key: 'notYetDue', label: labels.notYetDue, value: portfolio.notYetDue, dot: 'bg-unit-reserved', bar: 'bg-unit-reserved' },
+          { key: 'overdue', label: labels.overdue, value: portfolio.overdue, dot: 'border border-danger-600 bg-transparent', bar: 'bg-danger-600' },
+          { key: 'unscheduled', label: labels.unscheduled ?? '', value: portfolio.unscheduled, dot: 'bg-amber-400', bar: 'bg-amber-400' },
+        ].filter((c) => c.key === 'paid' || c.key === 'notYetDue' || c.key === 'overdue' || c.value > 0)
+      : [
+          { key: 'paid', label: labels.collected, value: collected, dot: 'bg-unit-sold', bar: 'bg-unit-sold' },
+          { key: 'notYetDue', label: labels.notYetDue, value: Math.max(0, total - collected - overdue), dot: 'bg-unit-reserved', bar: 'bg-unit-reserved' },
+          { key: 'overdue', label: labels.overdue, value: overdue, dot: 'border border-danger-600 bg-transparent', bar: 'bg-danger-600' },
+        ]
+  );
   // A small share reads "0.4%", not "0%" beside a real amount.
   const share = (n: number) => (base > 0 ? (n / base) * 100 : 0);
   const pctText = (n: number) => {
     const v = share(n);
     return `${v > 0 && v < 1 ? v.toFixed(1) : Math.round(v)}%`;
   };
-  const short = (n: number) => compactParts(n, money.symbol, money.locale).join(' ');
-  const laterNote = portfolio
-    ? [
-        portfolio.awaiting > 0 && labels.awaiting ? `${labels.awaiting} ${short(portfolio.awaiting)}` : null,
-        portfolio.unscheduled > 0 && labels.unscheduled ? `${labels.unscheduled} ${short(portfolio.unscheduled)}` : null,
-      ].filter(Boolean)
-    : [];
+  const paid = cols[0]!.value;
   const markup = portfolio ? Math.max(0, portfolio.grossValue - portfolio.netValue) : 0;
   return (
     <PremiumPanel title={title} sub={sub} className={className}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <Money value={base} money={money} size="lg" />
         <p className="text-[13px] text-slate-500">
-          {labels.ofValue} <span className="num text-[22px] font-semibold text-slate-900">{pctText(cols[0]!.value)}</span>
+          {labels.ofValue} <span className="num text-[22px] font-semibold text-slate-900">{pctText(paid)}</span>
         </p>
       </div>
       <div className="mt-4 flex h-2 gap-1" role="img" aria-label={cols.map((c) => `${c.label} ${pctText(c.value)}`).join('، ')}>
@@ -452,27 +450,30 @@ export function FinancialHealthPanel({
         )}
         {base === 0 && <span className="flex-1 rounded-full bg-surface-sunken" />}
       </div>
-      <div className="mt-5 grid grid-cols-3 divide-x divide-hairline rtl:divide-x-reverse" data-testid="health-parts">
+      <div
+        className={cn(
+          'mt-5 grid grid-cols-2 gap-y-4 sm:divide-x sm:divide-hairline sm:rtl:divide-x-reverse',
+          cols.length >= 5 ? 'sm:grid-cols-5' : cols.length === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-3',
+        )}
+        data-testid="health-parts"
+      >
         {cols.map((c) => (
           <div key={c.key} className="px-4 first:ps-0" data-testid={`health-${c.key}`} data-amount={c.value}>
             <p className="flex items-center gap-1.5 text-[12.5px] text-slate-500">
-              <span className={cn('h-2 w-2 rounded-full', c.dot)} aria-hidden />
+              <span className={cn('h-2 w-2 shrink-0 rounded-full', c.dot)} aria-hidden />
               {c.label}
             </p>
             <div className="mt-1"><Money value={c.value} money={money} /></div>
             <p className="text-[12px] text-slate-500">{pctText(c.value)}</p>
-            {c.key === 'notYetDue' && laterNote.length > 0 && (
-              <p className="mt-0.5 text-[11px] text-slate-400" data-testid="health-later-note">
-                {labels.ofWhich ? `${labels.ofWhich} ` : ''}
-                {laterNote.join(' · ')}
-              </p>
-            )}
           </div>
         ))}
       </div>
       {portfolio && markup > 0 && labels.markupNote && (
         <p className="mt-3 text-[12px] text-slate-500" data-testid="health-markup">
-          {labels.markupNote(short(markup), short(portfolio.netValue))}
+          {labels.markupNote(
+            compactParts(markup, money.symbol, money.locale).join(' '),
+            compactParts(portfolio.netValue, money.symbol, money.locale).join(' '),
+          )}
         </p>
       )}
       {fees > 0 && (
