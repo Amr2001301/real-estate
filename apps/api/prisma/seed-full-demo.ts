@@ -10,7 +10,7 @@
  *   • Aborts when NODE_ENV === "production".
  *   • Everything it creates is tagged so a re-run skips it and --cleanup
  *     removes exactly it:
- *       - project / broker codes, contract-free numbers and notes: "DEMO-FULL-"
+ *       - project / broker codes and contract-free numbers: "DEMO-FULL-"
  *       - people: e-mail "@demo-full.devora" and phone "+20100990xxxx"
  *       - CMS slugs "demo-full-<company>-…", document URLs "?src=DEMO-FULL"
  *       - audit-log rows (before._seed) and notifications (payload._seed)
@@ -774,7 +774,7 @@ async function ensureBrokers(ctx: Ctx): Promise<void> {
         commissionModel: 'PERCENT_OF_SALE',
         contractStartAt: ymd(addDays(NOW, -240)),
         contractEndAt: ymd(addDays(NOW, 490)),
-        notes: `${TAG} — شريك تسويق معتمد`,
+        notes: `شريك تسويق معتمد`,
       });
       count('brokers');
     }
@@ -1081,7 +1081,7 @@ async function runDeal(ctx: Ctx, spec: DealSpec): Promise<DealResult | null> {
         installmentPlanTemplateId: tpl.id,
         installmentPlanDurationOptionId: option.id,
         expiresInHours: 168,
-        notes: `${TAG} — حجز وحدة ${spec.project === 'NG' ? 'سكنية' : 'ساحلية'}`,
+        notes: `حجز وحدة ${spec.project === 'NG' ? 'سكنية' : 'ساحلية'}`,
       });
     }
     count('reservations');
@@ -1272,7 +1272,7 @@ async function runOpenReservation(ctx: Ctx, spec: OpenResSpec): Promise<{ leadId
       installmentPlanTemplateId: tpl.id,
       installmentPlanDurationOptionId: option.id,
       expiresInHours: 240,
-      notes: `${TAG} — العميل طلب مهلة لتجهيز مبلغ الحجز`,
+      notes: `العميل طلب مهلة لتجهيز مبلغ الحجز`,
     });
     count('reservations');
     res = { id: created.id, status: 'PENDING' };
@@ -1547,7 +1547,7 @@ async function ensureBrokerMoney(ctx: Ctx, deals: DealResult[]): Promise<void> {
       ctx.admin.post('/broker-payouts', {
         brokerId: br.id,
         period: period(addDays(NOW, -30)),
-        notes: `${TAG} — دفعة عمولات ${key === 'BR1' ? 'الربع الحالي' : 'الشهر الماضي'}`,
+        notes: `دفعة عمولات ${key === 'BR1' ? 'الربع الحالي' : 'الشهر الماضي'}`,
         commissionIds: eligible.map((e) => e.id),
       }),
     );

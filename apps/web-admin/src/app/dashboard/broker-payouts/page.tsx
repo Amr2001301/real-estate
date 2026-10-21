@@ -268,7 +268,7 @@ export default async function AdminBrokerPayoutsPage({
               <li
                 key={p.id}
                 data-testid="payout-row"
-                className="grid grid-cols-[auto_1fr_auto] items-center gap-x-4 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[auto_minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,1fr)_auto_auto]"
+                className="grid grid-cols-[auto_1fr_auto] items-center gap-x-4 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[auto_minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,1fr)_270px_auto]"
               >
                 <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#D8B66A]/[0.14] text-[#B8913F] dark:text-[#D8B66A]">
                   <Wallet className="h-[18px] w-[18px]" />
@@ -278,7 +278,10 @@ export default async function AdminBrokerPayoutsPage({
                   <Link href={`/dashboard/broker-payouts/${p.id}` as never} className="block truncate text-[14.5px] font-bold text-slate-900 hover:text-brand-700">
                     {p.broker?.companyName ?? '—'}
                   </Link>
-                  <p className="mt-0.5 font-mono text-[11.5px] text-slate-500" dir="ltr">{p.payoutNumber}</p>
+                  <p className="mt-0.5 text-[12px] text-slate-500">
+                    <span className="me-1 text-slate-400">{m.payoutWord}</span>
+                    <span className="font-mono" dir="ltr">{p.payoutNumber}</span>
+                  </p>
                 </div>
 
                 <div className="hidden text-[12.5px] lg:block">
