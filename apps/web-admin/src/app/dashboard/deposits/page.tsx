@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import {
   DollarSign, CreditCard, Landmark, Hash,
-  SlidersHorizontal, ReceiptText, Search,
-  ExternalLink, Plus, AlertCircle,
+  SlidersHorizontal, ReceiptText,
+  ExternalLink, Plus, AlertCircle, RotateCcw, CalendarRange, ArrowLeft,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { projectOptions } from '@/lib/options';
@@ -120,6 +120,7 @@ export default async function DepositsPage({
     sp.ref || sp.paidAtFrom || sp.paidAtTo || sp.dueDateFrom || sp.dueDateTo || sp.verified
   );
   const showFilters = hasAdvancedFilters || sp.showFilters === '1';
+  const hasAnyFilter = hasAdvancedFilters || !!(sp.type || sp.reviewStatus || sp.projectId || sp.q);
 
   // URL builder for the advanced toggle link (preserves all active params)
   function pageUrl(overrides: Record<string, string | undefined>): string {
@@ -216,121 +217,107 @@ export default async function DepositsPage({
         {!showFilters && sp.dueDateTo  && <input type="hidden" name="dueDateTo"  value={sp.dueDateTo} />}
         {!showFilters && sp.verified   && <input type="hidden" name="verified"   value={sp.verified} />}
 
-        {/* Type */}
-        <PremiumFilterField label={m.filter.typeLabel} htmlFor="dep-type">
-          <Select id="dep-type" name="type" inputSize="sm" defaultValue={sp.type ?? ''} className="w-36 shrink-0">
-            <option value="">{m.filter.allTypes}</option>
-            <option value="BOOKING_AMOUNT">{m.typeLabels.RESERVATION}</option>
-            <option value="DOWN_PAYMENT">{m.typeLabels.DOWN_PAYMENT}</option>
-            <option value="INSTALLMENT">{m.typeLabels.INSTALLMENT}</option>
-            <option value="FINAL_PAYMENT">{m.typeLabels.FINAL_PAYMENT}</option>
-            <option value="FEE">{m.typeLabels.FEE}</option>
-          </Select>
-        </PremiumFilterField>
-
-        {/* Review status */}
-        <PremiumFilterField label={m.filter.reviewLabel} htmlFor="dep-reviewStatus">
-          <Select id="dep-reviewStatus" name="reviewStatus" inputSize="sm" defaultValue={sp.reviewStatus ?? ''} className="w-40 shrink-0">
-            <option value="">{m.filter.allReviews}</option>
-            <option value="PENDING_REVIEW">{m.filter.underReview}</option>
-            <option value="APPROVED">{m.filter.approved}</option>
-            <option value="REJECTED">{m.filter.rejected}</option>
-            <option value="NO_PROOF">{m.filter.noProof}</option>
-          </Select>
-        </PremiumFilterField>
-
-        {/* Project */}
-        <PremiumFilterField label={uiT(locale).pages.units.filter.projectLabel} htmlFor="dep-projectId">
-          <Select id="dep-projectId" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40 shrink-0">
-            <option value="">{uiT(locale).common.allProjects}</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>{tx(p.name)}</option>
-            ))}
-          </Select>
-        </PremiumFilterField>
-
-        {/* Search — grows to fill available space */}
-        <div className="flex-1 min-w-[180px]">
-          <label htmlFor="dep-q" className="sr-only">{uiT(locale).common.searchBtn}</label>
+        {/* Search first: the inset field the bar is built around */}
+        <PremiumFilterField label={uiT(locale).common.searchBtn} htmlFor="dep-q">
           <Input
             id="dep-q"
             name="q"
             inputSize="sm"
             placeholder={m.filter.searchPlaceholder}
             defaultValue={sp.q ?? ''}
-            leftAddon={<Search />}
-            className="w-full"
           />
-        </div>
+        </PremiumFilterField>
 
-        {/* Action buttons — before advanced panel so they stay in row 1 */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Row 1 ends with the actions; reset shows only when something is set */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
-          <Link href="/dashboard/deposits">
-            <Button type="button" variant="secondary" size="sm">{m.filter.resetBtn}</Button>
-          </Link>
-          <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
           <Link
             href={toggleFiltersUrl as never}
             className={cn(
-              'hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold shrink-0 rounded-lg px-2.5 py-1.5 border transition-colors',
+              'relative inline-flex h-10 items-center gap-1.5 rounded-full border px-3.5 text-[12.5px] font-semibold transition-colors',
               showFilters
-                ? 'bg-brand-50 border-brand-200 text-brand-700'
-                : 'bg-transparent border-transparent text-slate-500 hover:bg-slate-50 hover:border-hairline hover:text-slate-700',
+                ? 'border-brand-500/50 bg-brand-500/10 text-brand-700'
+                : 'border-hairline text-slate-500 hover:border-brand-500/30 hover:text-slate-800',
             )}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
             {showFilters ? m.filter.advancedHide : m.filter.advancedShow}
             {hasAdvancedFilters && !showFilters && (
-              <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">
-                !
-              </span>
+              <span className="absolute -top-0.5 -end-0.5 h-2.5 w-2.5 rounded-full bg-brand-500 ring-2 ring-surface" />
             )}
           </Link>
+          {hasAnyFilter && (
+            <Link
+              href="/dashboard/deposits"
+              title={m.filter.resetBtn}
+              aria-label={m.filter.resetBtn}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-danger-500/40 hover:text-danger-600"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Link>
+          )}
         </div>
 
-        {/* Advanced filters — basis-full forces row 2 */}
-        {showFilters && (
-          <div className="w-full basis-full border-t border-hairline pt-3.5 mt-0.5">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {/* Row 2: every filter as a pill; advanced ones join the same row */}
+        <div className="flex w-full basis-full flex-wrap items-center gap-2 border-t border-hairline px-0.5 pt-2.5">
+          {/* Type */}
+          <PremiumFilterField label={m.filter.typeLabel} htmlFor="dep-type">
+            <Select id="dep-type" name="type" inputSize="sm" defaultValue={sp.type ?? ''} className="w-28 shrink-0">
+              <option value="">{m.filter.allTypes}</option>
+              <option value="BOOKING_AMOUNT">{m.typeLabels.RESERVATION}</option>
+              <option value="DOWN_PAYMENT">{m.typeLabels.DOWN_PAYMENT}</option>
+              <option value="INSTALLMENT">{m.typeLabels.INSTALLMENT}</option>
+              <option value="FINAL_PAYMENT">{m.typeLabels.FINAL_PAYMENT}</option>
+              <option value="FEE">{m.typeLabels.FEE}</option>
+            </Select>
+          </PremiumFilterField>
 
-              <div className="flex flex-col gap-1">
-                <label htmlFor="paidAtFrom" className="text-[11px] font-medium text-slate-400">{m.filter.dateFrom}</label>
-                <Input id="paidAtFrom" name="paidAtFrom" type="date" inputSize="sm" defaultValue={sp.paidAtFrom ?? ''} />
-              </div>
+          {/* Review status */}
+          <PremiumFilterField label={m.filter.reviewLabel} htmlFor="dep-reviewStatus">
+            <Select id="dep-reviewStatus" name="reviewStatus" inputSize="sm" defaultValue={sp.reviewStatus ?? ''} className="w-32 shrink-0">
+              <option value="">{m.filter.allReviews}</option>
+              <option value="PENDING_REVIEW">{m.filter.underReview}</option>
+              <option value="APPROVED">{m.filter.approved}</option>
+              <option value="REJECTED">{m.filter.rejected}</option>
+              <option value="NO_PROOF">{m.filter.noProof}</option>
+            </Select>
+          </PremiumFilterField>
 
-              <div className="flex flex-col gap-1">
-                <label htmlFor="paidAtTo" className="text-[11px] font-medium text-slate-400">{m.filter.dateTo}</label>
-                <Input id="paidAtTo" name="paidAtTo" type="date" inputSize="sm" defaultValue={sp.paidAtTo ?? ''} />
-              </div>
+          {/* Project */}
+          <PremiumFilterField label={uiT(locale).pages.units.filter.projectLabel} htmlFor="dep-projectId">
+            <Select id="dep-projectId" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-32 shrink-0">
+              <option value="">{uiT(locale).common.allProjects}</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{tx(p.name)}</option>
+              ))}
+            </Select>
+          </PremiumFilterField>
 
-              <div className="flex flex-col gap-1">
-                <label htmlFor="dueDateFrom" className="text-[11px] font-medium text-slate-400">{m.filter.dueFrom}</label>
-                <Input id="dueDateFrom" name="dueDateFrom" type="date" inputSize="sm" defaultValue={sp.dueDateFrom ?? ''} />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label htmlFor="dueDateTo" className="text-[11px] font-medium text-slate-400">{m.filter.dueTo}</label>
-                <Input id="dueDateTo" name="dueDateTo" type="date" inputSize="sm" defaultValue={sp.dueDateTo ?? ''} />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label htmlFor="ref" className="text-[11px] font-medium text-slate-400">{m.filter.refLabel}</label>
-                <Input id="ref" name="ref" inputSize="sm" placeholder={m.filter.refPlaceholder} defaultValue={sp.ref ?? ''} />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label htmlFor="verified" className="text-[11px] font-medium text-slate-400">{m.filter.verifiedLabel}</label>
+          {showFilters && (
+            <>
+              <RangePill
+                label={m.filter.paidRangeLabel}
+                from={{ id: 'paidAtFrom', value: sp.paidAtFrom, label: m.filter.dateFrom }}
+                to={{ id: 'paidAtTo', value: sp.paidAtTo, label: m.filter.dateTo }}
+              />
+              <RangePill
+                label={m.filter.dueRangeLabel}
+                from={{ id: 'dueDateFrom', value: sp.dueDateFrom, label: m.filter.dueFrom }}
+                to={{ id: 'dueDateTo', value: sp.dueDateTo, label: m.filter.dueTo }}
+              />
+              <PremiumFilterField label={m.filter.refLabel} htmlFor="ref" className="[&>span:last-child>svg]:hidden">
+                <Input id="ref" name="ref" inputSize="sm" placeholder={m.filter.refPlaceholder} defaultValue={sp.ref ?? ''} className="w-40" />
+              </PremiumFilterField>
+              <PremiumFilterField label={m.filter.verifiedLabel} htmlFor="verified">
                 <Select id="verified" name="verified" inputSize="sm" defaultValue={sp.verified ?? ''}>
                   <option value="">{m.filter.allVerified}</option>
                   <option value="true">{m.filter.verified}</option>
                   <option value="false">{m.filter.notVerified}</option>
                 </Select>
-              </div>
-
-            </div>
-          </div>
-        )}
+              </PremiumFilterField>
+            </>
+          )}
+        </div>
       </PremiumFilterBar>
 
       {/* ── Error ────────────────────────────────────────────────────────────── */}
@@ -502,6 +489,37 @@ export default async function DepositsPage({
           locale={locale}
         />
       )}
+    </div>
+  );
+}
+
+/** A date range as one pill: "label  [from] → [to]", gold when either end is set. */
+function RangePill({
+  label,
+  from,
+  to,
+}: {
+  label: string;
+  from: { id: string; value?: string; label: string };
+  to: { id: string; value?: string; label: string };
+}) {
+  const set = !!(from.value || to.value);
+  const input =
+    'h-9 w-[132px] rounded-full border-0 bg-surface-sunken/60 px-3 text-[13px] font-bold tabular-nums text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-400/40';
+  return (
+    <div
+      className={cn(
+        'flex h-11 items-center gap-2 rounded-full border ps-4 pe-1 text-[13.5px] text-slate-500',
+        set ? 'border-brand-400/70 bg-brand-50' : 'border-hairline bg-surface',
+      )}
+    >
+      <CalendarRange className="h-4 w-4 shrink-0 text-brand-700" />
+      <span className="whitespace-nowrap">{label}</span>
+      <label htmlFor={from.id} className="sr-only">{from.label}</label>
+      <input id={from.id} name={from.id} type="date" defaultValue={from.value ?? ''} className={input} />
+      <ArrowLeft className="h-3.5 w-3.5 shrink-0 text-slate-400 ltr:rotate-180" aria-hidden />
+      <label htmlFor={to.id} className="sr-only">{to.label}</label>
+      <input id={to.id} name={to.id} type="date" defaultValue={to.value ?? ''} className={input} />
     </div>
   );
 }

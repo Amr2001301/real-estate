@@ -49,3 +49,13 @@ test('cheques page: status cards with counts', async ({ page }) => {
   await expect(all).toHaveAttribute('aria-current', 'page');
   await expect(all).toContainText(/\d/);
 });
+
+/** KPI figures from 100,000 up read as a short number and a word (ألف / مليون / مليار). */
+test('KPI strips show large figures compactly', async ({ page }) => {
+  for (const path of ['/dashboard/deposits', '/dashboard']) {
+    await gotoReady(page, path);
+    const strip = page.getByTestId('metric-strip').first();
+    await expect(strip).toBeVisible();
+    await expect(strip, path).not.toContainText(/\d{1,3}(,\d{3}){2,}/);
+  }
+});

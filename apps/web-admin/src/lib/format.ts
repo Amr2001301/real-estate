@@ -43,7 +43,8 @@ export function compactParts(
   if (Number.isNaN(n)) return ['—', ''];
   const abs = Math.abs(n);
   const trim = (x: number, digits: number) => String(Number(x.toFixed(digits)));
-  const [million, thousand] = locale === 'en' ? ['M', 'K'] : ['مليون', 'ألف'];
+  const [billion, million, thousand] = locale === 'en' ? ['B', 'M', 'K'] : ['مليار', 'مليون', 'ألف'];
+  if (abs >= 1_000_000_000) return [trim(n / 1_000_000_000, 2), `${billion} ${symbol}`];
   if (abs >= 1_000_000) return [trim(n / 1_000_000, 2), `${million} ${symbol}`];
   if (abs >= 1_000) return [trim(n / 1_000, 1), `${thousand} ${symbol}`];
   return [Math.round(n).toLocaleString(INTL[locale]), symbol];
