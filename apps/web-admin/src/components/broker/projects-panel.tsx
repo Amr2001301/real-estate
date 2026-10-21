@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, Building2, CheckCircle2, Star, Sparkles, LayoutGrid } from 'lucide-react';
+import { Search, Building2, Star } from 'lucide-react';
 import type { PortalProject } from '@/lib/types';
 import { tx } from '@/lib/format';
 import { Card } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/cn';
 import { ProjectCard } from '@/components/broker/project-card';
+import { FigureBar } from '@/components/cockpit/cockpit';
 import type { Locale } from '@/lib/locale';
 import { portalSharedT } from '@/messages/portal/shared';
 
@@ -69,36 +70,6 @@ function isDefault(f: Filters) {
   );
 }
 
-// ── KPI Tile ──────────────────────────────────────────────────────────────────
-interface KpiTileProps {
-  label:    string;
-  value:    number;
-  icon:     React.ReactNode;
-  topBar:   string;
-  iconCls:  string;
-  valueCls: string;
-}
-
-function KpiTile({ label, value, icon, topBar, iconCls, valueCls }: KpiTileProps) {
-  return (
-    <div className="relative bg-surface rounded-[18px] border border-hairline shadow-soft overflow-hidden">
-      <div className={cn('h-[3px] bg-gradient-to-l', topBar)} />
-      <div className="flex items-center gap-3 px-5 py-4">
-        <span className={cn(
-          'h-8 w-8 rounded-xl flex items-center justify-center shrink-0 [&>svg]:h-4 [&>svg]:w-4',
-          iconCls,
-        )}>
-          {icon}
-        </span>
-        <div className="min-w-0">
-          <p className={cn('text-xl font-black tabular-nums leading-none', valueCls)}>{value}</p>
-          <p className="text-[11px] text-slate-400 font-medium mt-1 truncate">{label}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Section label ─────────────────────────────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -115,11 +86,17 @@ export function ProjectsPanel({
   projects,
   symbol,
   locale = 'ar',
+  defaultPct,
+  available,
 }: {
   projects: PortalProject[];
   /** The company currency's symbol (currencySymbol(getReportsCurrency())). */
   symbol: string;
   locale?: Locale;
+  /** The firm's default commission %, shown where a project sets none. */
+  defaultPct?: number | null;
+  /** AVAILABLE units per project id. */
+  available?: Record<string, number>;
 }) {
   const t = portalSharedT(locale).projectsPanel;
   const currencySymbol = symbol;
@@ -162,44 +139,22 @@ export function ProjectsPanel({
   return (
     <div className="flex flex-col gap-5">
 
-      {/* ── KPI strip ─────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiTile
-          label={t.kpiTotal}
-          value={totalCount}
-          icon={<Building2 />}
-          topBar="from-brand-300 via-brand-500 to-brand-300"
-          iconCls="bg-brand-50 text-brand-600 ring-1 ring-brand-100"
-          valueCls="text-brand-700"
+      {/* ── Figures ───────────────────────────────────────────────────────── */}
+      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <FigureBar
+          bare
+          cols={4}
+          figures={[
+            { label: t.kpiTotal, value: totalCount },
+            { label: t.kpiPublished, value: publishedCount },
+            { label: t.kpiReady, value: readyCount },
+            { label: t.kpiFeatured, value: featuredCount },
+          ]}
         />
-        <KpiTile
-          label={t.kpiPublished}
-          value={publishedCount}
-          icon={<CheckCircle2 />}
-          topBar="from-emerald-300 via-emerald-500 to-emerald-300"
-          iconCls="bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100"
-          valueCls="text-emerald-700"
-        />
-        <KpiTile
-          label={t.kpiReady}
-          value={readyCount}
-          icon={<LayoutGrid />}
-          topBar="from-sky-300 via-sky-500 to-sky-300"
-          iconCls="bg-sky-50 text-sky-600 ring-1 ring-sky-100"
-          valueCls="text-sky-700"
-        />
-        <KpiTile
-          label={t.kpiFeatured}
-          value={featuredCount}
-          icon={<Sparkles />}
-          topBar="from-amber-300 via-amber-500 to-amber-300"
-          iconCls="bg-amber-50 text-amber-600 ring-1 ring-amber-100"
-          valueCls="text-amber-700"
-        />
-      </div>
+      </section>
 
       {/* ── Filter bar ────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-surface px-4 py-3 shadow-soft">
+      <div className="flex flex-wrap items-center gap-2 rounded-[22px] border border-hairline bg-surface px-4 py-3">
 
         {/* Search */}
         <Input
@@ -292,9 +247,16 @@ export function ProjectsPanel({
               </span>
             )}
           </div>
-          <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
             {filtered.map((p) => (
-              <ProjectCard key={p.project.id} p={p} symbol={currencySymbol} locale={locale} />
+              <ProjectCard
+                key={p.project.id}
+                p={p}
+                symbol={currencySymbol}
+                locale={locale}
+                defaultPct={defaultPct}
+                available={available?.[p.project.id]}
+              />
             ))}
           </div>
         </div>
