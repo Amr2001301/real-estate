@@ -75,3 +75,12 @@ test('maintenance page: KPIs first, merged columns, category cards', async ({ pa
   await expect(heads).toHaveCount(7);
   await expect(page.getByTestId('maintenance-category-form')).toBeVisible();
 });
+
+/** Commissions: records come right after the filters; the month reads as a word. */
+test('commissions page: records table first, month as a word', async ({ page }) => {
+  await gotoReady(page, '/dashboard/bonus');
+  const table = page.getByTestId('bonus-table');
+  if ((await table.count()) === 0) return; // no entries seeded
+  await expect(table.locator('thead th')).toHaveCount(5);
+  await expect(table.locator('tbody')).not.toContainText(/\b20\d\d-\d\d\b/);
+});

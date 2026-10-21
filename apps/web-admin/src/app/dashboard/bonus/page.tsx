@@ -11,7 +11,6 @@ import type { Paged } from '@/lib/types';
 import { formatCurrency, formatDate, intlLocale } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { cn } from '@/lib/cn';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -25,6 +24,7 @@ import {
   PremiumEmptyState,
 } from '@/components/premium';
 import { getLocale } from '@/lib/locale';
+import { PersonCell } from '@/components/premium/list-cells';
 import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
@@ -150,10 +150,22 @@ export default async function BonusPage({
     APPROVED: m.statusApproved,
     PAID: m.statusPaid,
   };
-  const STATUS_TONE: Record<EntryStatus, 'warning' | 'info' | 'success'> = {
-    PENDING: 'warning',
-    APPROVED: 'info',
-    PAID: 'success',
+  const STATUS_CHIP: Record<EntryStatus, string> = {
+    PENDING: 'bg-amber-500/12 text-amber-600',
+    APPROVED: 'bg-sky-500/12 text-sky-600',
+    PAID: 'bg-emerald-500/12 text-emerald-600',
+  };
+  const STATUS_DOT: Record<EntryStatus, string> = {
+    PENDING: 'bg-amber-400',
+    APPROVED: 'bg-sky-400',
+    PAID: 'bg-emerald-400',
+  };
+  // "2026-10" → "أكتوبر 2026": the month reads as a word, not a code.
+  const monthLabel = (period: string) => {
+    const d = new Date(`${period}-01T00:00:00Z`);
+    return Number.isNaN(d.getTime())
+      ? period
+      : new Intl.DateTimeFormat(intlLocale(locale), { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(d);
   };
   const SOURCE_LABEL: Record<EntrySource, string> = {
     MANUAL: m.sourceManual,
@@ -274,146 +286,6 @@ export default async function BonusPage({
         </PremiumFilterField>
       </PremiumFilterBar>
 
-      {/* Manual entry */}
-      <PremiumSectionCard title={m.sectionManualEntry} icon={<Plus />}>
-        {rules.length === 0 || salesUsers.length === 0 ? (
-          <p className="text-[12px] text-slate-400">
-            {m.manualEntryNoData}
-          </p>
-        ) : (
-          <form action={createEntryAction}>
-            <input type="hidden" name="returnTo" value={returnTo} />
-            <div className="grid grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-4 items-end">
-              <FormField label={m.fieldAgent}>
-                <Select id="be-salesId" name="salesId" inputSize="sm" required className="w-full">
-                  {salesUsers.map((u) => (
-                    <option key={u.id} value={u.id}>{salesActorLabel(u)}</option>
-                  ))}
-                </Select>
-              </FormField>
-              <FormField label={m.fieldRule}>
-                <Select id="be-ruleId" name="ruleId" inputSize="sm" required className="w-full">
-                  {rules.map((r) => (
-                    <option key={r.id} value={r.id}>{r.name}</option>
-                  ))}
-                </Select>
-              </FormField>
-              <FormField label={`${m.metricPaid} (${symbol})`}>
-                <Input id="be-amount" name="amount" type="number" step="any" min={0} required inputSize="sm" className="w-full" placeholder="0" />
-              </FormField>
-              <FormField label={m.fieldMonth}>
-                <Input id="be-period" name="period" type="month" required inputSize="sm" className="w-full" />
-              </FormField>
-              <Button type="submit" variant="primary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />} className="shrink-0">
-                {m.btnAddEntry}
-              </Button>
-            </div>
-          </form>
-        )}
-      </PremiumSectionCard>
-
-      {/* Commission rules */}
-      <PremiumSectionCard
-        title={m.sectionRules}
-        icon={<BadgePercent />}
-        trailing={<span className="text-xs text-slate-400 tabular-nums">{rules.length} {m.rulesCount}</span>}
-        padded={false}
-      >
-        {/* Auto-rule status banner */}
-        <div className={cn(
-          'mx-5 mt-4 rounded-xl px-3.5 py-2.5 text-[12px] border flex items-center gap-2',
-          activeAutoRules.length === 0
-            ? 'bg-warning-50 border-warning-100 text-warning-700'
-            : activeAutoRules.length === 1
-              ? 'bg-success-50 border-success-100 text-success-700'
-              : 'bg-danger-50 border-danger-100 text-danger-700',
-        )}>
-          {activeAutoRules.length === 1
-            ? <Info className="h-3.5 w-3.5 shrink-0" />
-            : <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-          }
-          <span>
-            {activeAutoRules.length === 0
-              ? m.autoRuleNone
-              : activeAutoRules.length === 1
-                ? `${m.autoRuleOk}: ${activeAutoRules[0]!.name}`
-                : m.autoRuleMultiple}
-          </span>
-        </div>
-
-        {/* Rules list */}
-        {rules.length > 0 ? (
-          <ul className="mt-3 px-5 divide-y divide-hairline">
-            {rules.map((r) => {
-              const isAmbiguous = activeAutoRules.length > 1 && r.active && r.autoApplyOnSignedContract;
-              return (
-                <li
-                  key={r.id}
-                  className={cn(
-                    'flex flex-wrap items-center justify-between gap-3 py-3.5 transition-opacity',
-                    !r.active && 'opacity-50',
-                    isAmbiguous && 'bg-danger-50/40 -mx-2 px-2 rounded-xl',
-                  )}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="inline-flex items-center rounded-lg bg-brand-50 border border-brand-100 text-brand-700 text-[11px] font-black tabular-nums font-mono px-2 py-0.5 shrink-0">
-                      {r.percentage}%
-                    </span>
-                    <span className="text-[13px] font-semibold text-slate-900 truncate">{r.name}</span>
-                    {r.autoApplyOnSignedContract && (
-                      <Badge tone="info" size="sm" className="shrink-0">{m.badgeAutoSign}</Badge>
-                    )}
-                    {!r.active && (
-                      <Badge tone="gray" size="sm" className="shrink-0">{m.badgeStopped}</Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <form action={toggleRuleAction.bind(null, r.id, 'active', !r.active)}>
-                      <input type="hidden" name="returnTo" value={returnTo} />
-                      <Button type="submit" variant="outline" size="sm">
-                        {r.active ? m.btnStop : m.btnActivate}
-                      </Button>
-                    </form>
-                    <form action={toggleRuleAction.bind(null, r.id, 'autoApplyOnSignedContract', !r.autoApplyOnSignedContract)}>
-                      <input type="hidden" name="returnTo" value={returnTo} />
-                      <Button type="submit" variant={r.autoApplyOnSignedContract ? 'secondary' : 'outline'} size="sm">
-                        {r.autoApplyOnSignedContract ? m.btnCancelAuto : m.btnActivateAuto}
-                      </Button>
-                    </form>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <p className="px-5 py-4 text-[12px] text-slate-400">{m.noRules}</p>
-        )}
-
-        {/* Add rule footer */}
-        <div className="border-t border-hairline bg-canvas/30 px-5 py-4 mt-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-3">
-            {m.addRuleTitle}
-          </p>
-          <form action={createRuleAction}>
-            <input type="hidden" name="returnTo" value={returnTo} />
-            <div className="flex flex-wrap items-center gap-2">
-              <Input name="name" required placeholder={m.addRuleNamePlaceholder} inputSize="sm" className="flex-1 min-w-[160px]" />
-              <Input name="percentage" type="number" step="any" min={0} required inputSize="sm" placeholder={m.addRulePercentPlaceholder} className="w-28" />
-              <Button type="submit" variant="primary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />}>
-                {m.btnAddRule}
-              </Button>
-            </div>
-            <label className="flex items-center gap-2 text-[12px] text-slate-600 mt-2.5 cursor-pointer">
-              <input type="checkbox" name="autoApplyOnSignedContract" className="rounded border-hairline" />
-              {m.addRuleAutoLabel}
-            </label>
-          </form>
-          <p className="text-[11px] text-slate-400 mt-2.5">
-            {m.addRuleNote}
-          </p>
-        </div>
-      </PremiumSectionCard>
-
       {/* Entries table */}
       <PremiumSectionCard
         title={m.sectionEntries}
@@ -440,102 +312,89 @@ export default async function BonusPage({
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[820px]">
-              <thead className="bg-canvas/50 border-b border-hairline">
+            <table className="w-full text-sm min-w-[760px]" data-testid="bonus-table">
+              <thead className="bg-surface-muted/50 border-b border-hairline">
                 <tr>
-                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">{m.colAgent}</th>
-                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">{m.colPeriod}</th>
-                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">{m.colRule}</th>
-                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">{m.colSource}</th>
-                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">{m.colAmount}</th>
-                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">{m.colStatus}</th>
-                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">{m.colPaidAt}</th>
-                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">{m.colActions}</th>
+                  <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500 whitespace-nowrap ps-5">{m.colAgent}</th>
+                  <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500 whitespace-nowrap">{m.colRule}</th>
+                  <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500 whitespace-nowrap">{m.colAmount}</th>
+                  <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500 whitespace-nowrap">{m.colStatus}</th>
+                  <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500 whitespace-nowrap pe-5 text-end">{m.colActions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
                 {entries.map((e) => (
-                  <tr key={e.id} className="group hover:bg-canvas/40 transition-colors duration-100">
-                    <td className="px-5 py-3.5 whitespace-nowrap">
-                      <span className="text-[13px] font-semibold text-slate-900">
-                        {e.sales?.fullName ?? '—'}
-                      </span>
+                  <tr key={e.id} className="group hover:bg-brand-500/[0.04] transition-colors duration-100">
+                    <td className="ps-5 pe-4 py-3.5">
+                      {/* The month rides under the name, as a word */}
+                      <PersonCell name={e.sales?.fullName ?? '—'} sub={monthLabel(e.period)} />
                     </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap">
-                      <span className="font-mono text-[12px] font-semibold text-brand-700">
-                        {e.period}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap">
-                      <span className="text-[12px] text-slate-600">
-                        {e.rule?.name ?? '—'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          tone={e.source === 'CONTRACT_AUTO' ? 'info' : 'gray'}
-                          size="sm"
-                        >
-                          {SOURCE_LABEL[e.source ?? 'MANUAL']}
-                        </Badge>
-                        {e.contractId && (
-                          <Link
-                            href={`/dashboard/contracts/${e.contractId}` as never}
-                            className="text-[11px] font-semibold text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
-                          >
-                            {m.viewContract}
-                          </Link>
-                        )}
+                    <td className="px-4 py-3.5">
+                      <div className="min-w-[200px] max-w-[300px]">
+                        <p className="truncate text-[13px] font-semibold text-slate-800" title={e.rule?.name}>{e.rule?.name ?? '—'}</p>
+                        <div className="mt-1 flex items-center gap-2">
+                          <span className={cn(
+                            'rounded-full px-2 py-0.5 text-[10.5px] font-semibold',
+                            e.source === 'CONTRACT_AUTO' ? 'bg-sky-500/12 text-sky-600' : 'bg-slate-500/10 text-slate-500',
+                          )}>
+                            {SOURCE_LABEL[e.source ?? 'MANUAL']}
+                          </span>
+                          {e.contractId && (
+                            <Link
+                              href={`/dashboard/contracts/${e.contractId}` as never}
+                              className="text-[11px] font-semibold text-brand-700 hover:underline underline-offset-2"
+                            >
+                              {m.viewContract}
+                            </Link>
+                          )}
+                        </div>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap">
-                      <span className="text-[13px] font-bold tabular-nums text-slate-900">
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      <span className="text-[14px] font-bold tabular-nums text-slate-900">
                         {formatCurrency(e.amount, currency, locale)}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap">
-                      <Badge tone={STATUS_TONE[e.status]} size="sm">
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-semibold', STATUS_CHIP[e.status])}>
+                        <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT[e.status])} />
                         {STATUS_LABEL[e.status]}
-                      </Badge>
-                    </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap">
-                      <span className="text-[12px] text-slate-400 tabular-nums">
-                        {e.paidAt ? formatDate(e.paidAt, locale) : '—'}
                       </span>
+                      {e.paidAt && (
+                        <p className="mt-1 text-[11px] tabular-nums text-slate-500">{formatDate(e.paidAt, locale)}</p>
+                      )}
                     </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5">
+                    <td className="ps-4 pe-5 py-3.5 whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1.5">
                         {e.status === 'PENDING' && (
                           <form action={entryTransitionAction.bind(null, e.id, 'approve')}>
                             <input type="hidden" name="returnTo" value={returnTo} />
-                            <Button type="submit" variant="primary" size="sm" leftIcon={<CheckCircle2 className="h-3.5 w-3.5" />}>
+                            <button type="submit" className={pill('brand')}>
+                              <CheckCircle2 className="h-3.5 w-3.5" />
                               {m.btnApprove}
-                            </Button>
+                            </button>
                           </form>
                         )}
                         {e.status === 'APPROVED' && (
-                          <>
-                            <form action={entryTransitionAction.bind(null, e.id, 'pay')}>
-                              <input type="hidden" name="returnTo" value={returnTo} />
-                              <Button type="submit" variant="primary" size="sm" leftIcon={<Banknote className="h-3.5 w-3.5" />}>
-                                {m.btnMarkPaid}
-                              </Button>
-                            </form>
-                            <form action={entryTransitionAction.bind(null, e.id, 'revert')}>
-                              <input type="hidden" name="returnTo" value={returnTo} />
-                              <Button type="submit" variant="outline" size="sm" leftIcon={<Undo2 className="h-3.5 w-3.5" />}>
-                                {m.btnRevertPending}
-                              </Button>
-                            </form>
-                          </>
+                          <form action={entryTransitionAction.bind(null, e.id, 'pay')}>
+                            <input type="hidden" name="returnTo" value={returnTo} />
+                            <button type="submit" className={pill('success')}>
+                              <Banknote className="h-3.5 w-3.5" />
+                              {m.btnMarkPaid}
+                            </button>
+                          </form>
                         )}
-                        {e.status === 'PAID' && (
+                        {e.status !== 'PENDING' && (
                           <form action={entryTransitionAction.bind(null, e.id, 'revert')}>
                             <input type="hidden" name="returnTo" value={returnTo} />
-                            <Button type="submit" variant="outline" size="sm" leftIcon={<RotateCcw className="h-3.5 w-3.5" />}>
-                              {m.btnRevertPending}
-                            </Button>
+                            <button
+                              type="submit"
+                              title={m.btnRevertPending}
+                              aria-label={m.btnRevertPending}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-amber-500/10 hover:text-amber-600"
+                            >
+                              {e.status === 'PAID' ? <RotateCcw className="h-4 w-4" /> : <Undo2 className="h-4 w-4" />}
+                            </button>
                           </form>
                         )}
                       </div>
@@ -547,14 +406,168 @@ export default async function BonusPage({
           </div>
         )}
       </PremiumSectionCard>
+      {/* Rules and manual entry side by side, under the records */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1.4fr_1fr] gap-5 items-stretch">
+        {/* Commission rules */}
+        <PremiumSectionCard
+          title={m.sectionRules}
+          icon={<BadgePercent />}
+          trailing={<span className="text-xs text-slate-400 tabular-nums">{rules.length} {m.rulesCount}</span>}
+          padded={false}
+          className="h-full"
+        >
+          {/* Auto-rule status banner */}
+          <div className={cn(
+            'mx-5 mt-4 rounded-xl px-3.5 py-2.5 text-[12px] border flex items-center gap-2',
+            activeAutoRules.length === 0
+              ? 'bg-amber-500/10 border-amber-500/25 text-amber-600'
+              : activeAutoRules.length === 1
+                ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-600'
+                : 'bg-danger-500/10 border-danger-500/25 text-danger-600',
+          )}>
+            {activeAutoRules.length === 1
+              ? <Info className="h-3.5 w-3.5 shrink-0" />
+              : <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+            }
+            <span>
+              {activeAutoRules.length === 0
+                ? m.autoRuleNone
+                : activeAutoRules.length === 1
+                  ? `${m.autoRuleOk}: ${activeAutoRules[0]!.name}`
+                  : m.autoRuleMultiple}
+            </span>
+          </div>
+
+          {/* Rules list */}
+          {rules.length > 0 ? (
+            <ul className="mt-3 px-5 divide-y divide-hairline">
+              {rules.map((r) => {
+                const isAmbiguous = activeAutoRules.length > 1 && r.active && r.autoApplyOnSignedContract;
+                return (
+                  <li
+                    key={r.id}
+                    className={cn(
+                      'flex flex-wrap items-center justify-between gap-3 py-3.5 transition-opacity',
+                      !r.active && 'opacity-50',
+                      isAmbiguous && 'bg-danger-500/[0.06] -mx-2 px-2 rounded-xl',
+                    )}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-400/30 to-brand-700/15 text-[13px] font-bold tabular-nums text-brand-700 ring-1 ring-brand-500/30" dir="ltr">
+                        {Number(r.percentage)}%
+                      </span>
+                      <span className="text-[14px] font-bold text-slate-900 truncate">{r.name}</span>
+                      {r.autoApplyOnSignedContract && (
+                        <span className="shrink-0 rounded-full bg-sky-500/12 px-2.5 py-0.5 text-[11px] font-semibold text-sky-600">{m.badgeAutoSign}</span>
+                      )}
+                      {!r.active && (
+                        <span className="shrink-0 rounded-full bg-slate-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-slate-500">{m.badgeStopped}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <form action={toggleRuleAction.bind(null, r.id, 'active', !r.active)}>
+                        <input type="hidden" name="returnTo" value={returnTo} />
+                        <button type="submit" className={pill(r.active ? 'ghost' : 'success')}>
+                          {r.active ? m.btnStop : m.btnActivate}
+                        </button>
+                      </form>
+                      <form action={toggleRuleAction.bind(null, r.id, 'autoApplyOnSignedContract', !r.autoApplyOnSignedContract)}>
+                        <input type="hidden" name="returnTo" value={returnTo} />
+                        <button type="submit" className={pill(r.autoApplyOnSignedContract ? 'ghost' : 'brand')}>
+                          {r.autoApplyOnSignedContract ? m.btnCancelAuto : m.btnActivateAuto}
+                        </button>
+                      </form>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="px-5 py-4 text-[12px] text-slate-400">{m.noRules}</p>
+          )}
+
+          {/* Add rule footer */}
+          <div className="border-t border-hairline bg-surface-muted/30 px-5 py-4 mt-1">
+            <p className="mb-3 flex items-center gap-2 text-[13px] font-bold text-slate-800">
+              <Plus className="h-4 w-4 text-brand-700" />
+              {m.addRuleTitle}
+            </p>
+            <form action={createRuleAction}>
+              <input type="hidden" name="returnTo" value={returnTo} />
+              <div className="flex flex-wrap items-center gap-2">
+                <Input name="name" required placeholder={m.addRuleNamePlaceholder} inputSize="sm" className="flex-1 min-w-[160px]" />
+                <Input name="percentage" type="number" step="any" min={0} required inputSize="sm" placeholder={m.addRulePercentPlaceholder} className="w-28" />
+                <Button type="submit" variant="primary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />}>
+                  {m.btnAddRule}
+                </Button>
+              </div>
+              <label className="flex items-center gap-2 text-[12px] text-slate-600 mt-2.5 cursor-pointer">
+                <input type="checkbox" name="autoApplyOnSignedContract" className="rounded border-hairline" />
+                {m.addRuleAutoLabel}
+              </label>
+            </form>
+            <p className="text-[11px] text-slate-400 mt-2.5">
+              {m.addRuleNote}
+            </p>
+          </div>
+        </PremiumSectionCard>
+        {/* Manual entry */}
+        <PremiumSectionCard title={m.sectionManualEntry} icon={<Plus />} className="h-full">
+          {rules.length === 0 || salesUsers.length === 0 ? (
+            <p className="text-[12px] text-slate-400">
+              {m.manualEntryNoData}
+            </p>
+          ) : (
+            <form action={createEntryAction}>
+              <input type="hidden" name="returnTo" value={returnTo} />
+              <div className="grid grid-cols-2 gap-4 items-end">
+                <FormField label={m.fieldAgent}>
+                  <Select id="be-salesId" name="salesId" inputSize="sm" required className="w-full">
+                    {salesUsers.map((u) => (
+                      <option key={u.id} value={u.id}>{salesActorLabel(u)}</option>
+                    ))}
+                  </Select>
+                </FormField>
+                <FormField label={m.fieldRule}>
+                  <Select id="be-ruleId" name="ruleId" inputSize="sm" required className="w-full">
+                    {rules.map((r) => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
+                  </Select>
+                </FormField>
+                <FormField label={`${m.colAmount} (${symbol})`}>
+                  <Input id="be-amount" name="amount" type="number" step="any" min={0} required inputSize="sm" className="w-full" placeholder="0" />
+                </FormField>
+                <FormField label={m.fieldMonth}>
+                  <Input id="be-period" name="period" type="month" required inputSize="sm" className="w-full" />
+                </FormField>
+                <Button type="submit" variant="primary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />} className="col-span-2 justify-center">
+                  {m.btnAddEntry}
+                </Button>
+              </div>
+            </form>
+          )}
+        </PremiumSectionCard>
+      </div>
     </div>
   );
+}
+
+const PILL_TONE = {
+  brand:   'border-brand-500/40 bg-brand-500/10 text-brand-700 hover:bg-brand-500/20',
+  success: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20',
+  ghost:   'border-hairline text-slate-500 hover:text-slate-800',
+} as const;
+
+/** Compact row action: the table stays calm, the next step still stands out. */
+function pill(tone: keyof typeof PILL_TONE): string {
+  return `inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-[12px] font-semibold transition-colors ${PILL_TONE[tone]}`;
 }
 
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">{label}</p>
+      <p className="text-[12px] font-semibold text-slate-500">{label}</p>
       {children}
     </div>
   );
