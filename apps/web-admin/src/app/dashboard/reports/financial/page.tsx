@@ -252,7 +252,7 @@ export default async function FinancialReportsPage({
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-brand-500/[0.09] via-transparent to-transparent" />
         <div className="pointer-events-none absolute -top-24 start-1/3 h-56 w-56 rounded-full bg-brand-500/10 blur-3xl" />
         <div className="relative grid grid-cols-1 gap-8 p-6 sm:p-8 lg:grid-cols-[minmax(0,340px)_1fr] lg:gap-10">
-          <div className="flex flex-col justify-between gap-7">
+          <div className="flex flex-col justify-center gap-8">
             {/* Collected against what has fallen due by today — the same base as the ring beside it. */}
             <div>
               <p className="text-[13px] font-semibold text-slate-500">{en ? 'Collected of what is due to date' : 'المحصّل من المستحق حتى اليوم'}</p>
@@ -284,46 +284,6 @@ export default async function FinancialReportsPage({
               </div>
             </div>
 
-            {/* This month: what fell due and where each part stands (the parts add up),
-                then the money that came in — which pays any month, so it is not compared. */}
-            <div className="border-t border-hairline pt-5" data-testid="fin-month">
-              <div className="flex items-baseline justify-between gap-3">
-                <p className="text-[12px] font-semibold text-slate-500">{m.kpi.dueMonth}</p>
-                <p className="text-[15px] font-bold text-slate-900 tabular-nums">{money(monthDue)}</p>
-              </div>
-              <div className="mt-2.5 flex h-2 overflow-hidden rounded-full bg-surface-muted">
-                {monthParts.map((x) => (
-                  <span key={x.key} className={cn('h-full', x.bar)} style={{ width: `${monthDue > 0 ? (x.amount / monthDue) * 100 : 0}%` }} />
-                ))}
-              </div>
-              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2">
-                {monthParts.map((x) => (
-                  <div key={x.key} className="flex min-w-0 items-center justify-between gap-2" data-testid={`fin-month-${x.key}`}>
-                    <dt className="flex min-w-0 items-center gap-1.5 truncate text-[11.5px] text-slate-500">
-                      <span className={cn('h-2 w-2 shrink-0 rounded-full', x.bar)} />
-                      {x.label}
-                    </dt>
-                    <dd className="shrink-0 text-[12.5px] font-semibold text-slate-800 tabular-nums">{money(x.amount)}</dd>
-                  </div>
-                ))}
-              </dl>
-              <div className="mt-4 grid grid-cols-2 gap-4 rounded-2xl bg-surface-muted/50 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-[11px] text-slate-500">{en ? 'Came in this month' : 'دخل الخزنة هذا الشهر'}</p>
-                  <p className="mt-0.5 truncate text-[14px] font-bold text-slate-900 tabular-nums">{money(cashIn)}</p>
-                  <p className="text-[10.5px] text-slate-400">{en ? 'any month’s rows and bookings' : 'لأقساط أي شهر ومبالغ الحجز'}</p>
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-[11px] text-slate-500">{m.hero.fees}</p>
-                  <p className="mt-0.5 truncate text-[14px] font-bold text-slate-900 tabular-nums">{money(feesCollected)}</p>
-                </div>
-              </div>
-              <p className="mt-3 flex flex-wrap items-center gap-2 text-[11.5px] text-slate-500">
-                {en ? 'Collected in the chosen period:' : 'المحصّل من ثمن العقود في الفترة المختارة:'}{' '}
-                <b className="tabular-nums text-slate-800" data-testid="fin-period-collected">{money(towardsPrice)}</b>
-                {collectedDelta && <DeltaChip delta={collectedDelta} label={m.hero.vsCompare} />}
-              </p>
-            </div>
           </div>
 
           <div className="flex min-w-0 flex-col gap-4">
@@ -350,6 +310,56 @@ export default async function FinancialReportsPage({
           </div>
         </div>
       </section>
+
+      {/* ─── This month: what fell due, where each part stands (the parts add
+           add up), and apart from it the money that came in — which pays any
+           month's rows and bookings, so it is not compared with it. ───── */}
+      <section data-testid="fin-month" className="rounded-[22px] border border-hairline bg-surface px-6 py-5">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:gap-10">
+          <div className="min-w-0">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="text-[13px] font-semibold text-slate-600">{m.kpi.dueMonth}</p>
+              <p className="text-[18px] font-bold text-slate-900 tabular-nums">{money(monthDue)}</p>
+            </div>
+            <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-surface-muted">
+              {monthParts.map((x) => (
+                <span key={x.key} className={cn('h-full', x.bar)} style={{ width: `${monthDue > 0 ? (x.amount / monthDue) * 100 : 0}%` }} />
+              ))}
+            </div>
+            <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
+              {monthParts.map((x) => (
+                <div key={x.key} className="min-w-0" data-testid={`fin-month-${x.key}`}>
+                  <dt className="flex items-center gap-1.5 truncate text-[11.5px] text-slate-500">
+                    <span className={cn('h-2 w-2 shrink-0 rounded-full', x.bar)} />
+                    {x.label}
+                  </dt>
+                  <dd className="mt-0.5 truncate text-[13.5px] font-semibold text-slate-800 tabular-nums">{money(x.amount)}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+          <dl className="grid grid-cols-3 gap-4 border-hairline max-lg:border-t max-lg:pt-5 lg:border-s lg:ps-8">
+            <div className="min-w-0">
+              <dt className="truncate text-[11.5px] text-slate-500" title={en ? 'Came in this month — any month’s rows and bookings' : 'دخل الخزنة هذا الشهر — لأقساط أي شهر ومبالغ الحجز'}>
+                {en ? 'Came in this month' : 'دخل الخزنة هذا الشهر'}
+              </dt>
+              <dd className="mt-1 truncate text-[15px] font-bold text-slate-900 tabular-nums">{money(cashIn)}</dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="truncate text-[11.5px] text-slate-500">{m.hero.fees}</dt>
+              <dd className="mt-1 truncate text-[15px] font-bold text-slate-900 tabular-nums">{money(feesCollected)}</dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="truncate text-[11.5px] text-slate-500" title={en ? 'Collected towards the price in the chosen period' : 'المحصّل من ثمن العقود في الفترة المختارة'}>
+                {en ? 'Chosen period' : 'الفترة المختارة'}
+              </dt>
+              <dd className="mt-1 truncate text-[15px] font-bold text-slate-900 tabular-nums" data-testid="fin-period-collected">{money(towardsPrice)}</dd>
+              {collectedDelta && <DeltaChip delta={collectedDelta} label={m.hero.vsCompare} />}
+            </div>
+          </dl>
+        </div>
+      </section>
+
 
       {/* ─── Key figures ───────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
