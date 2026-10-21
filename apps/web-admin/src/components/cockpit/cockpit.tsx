@@ -109,14 +109,14 @@ export interface Figure {
 }
 
 /** One quiet row of figures, hairlines between them. */
-export function FigureBar({ figures, cols = 6, bare }: { figures: Figure[]; cols?: 4 | 6; bare?: boolean }) {
+export function FigureBar({ figures, cols = 6, bare }: { figures: Figure[]; cols?: 4 | 5 | 6; bare?: boolean }) {
   return (
     <dl
       data-testid="figure-bar"
       className={cn(
         'grid grid-cols-2 overflow-hidden',
         !bare && 'rounded-[22px] border border-hairline bg-surface',
-        cols === 6 ? 'sm:grid-cols-3 xl:grid-cols-6' : 'xl:grid-cols-4',
+        cols === 6 ? 'sm:grid-cols-3 xl:grid-cols-6' : cols === 5 ? 'sm:grid-cols-3 xl:grid-cols-5' : 'xl:grid-cols-4',
       )}
     >
       {figures.map((f) => {

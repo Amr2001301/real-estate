@@ -5,8 +5,7 @@ import Link from 'next/link';
 import { Eye, CheckCircle2, X, Ban } from 'lucide-react';
 import type { Reservation } from '@/lib/types';
 import type { Locale } from '@/lib/locale';
-import { Button } from '@/components/ui/button';
-import { IconButton } from '@/components/ui/icon-button';
+import { RowMenu, MenuItem, PrimaryAction } from '@/components/premium/row-menu';
 import { uiT } from '@/messages/ui';
 import { StatusDialog } from './status-dialog';
 import {
@@ -40,55 +39,35 @@ export function ReservationActions({ reservation, canDecide = false, locale = 'a
   }
 
   return (
-    <div className="flex items-center gap-1">
-      {/* View */}
-      <Link href={`/dashboard/reservations/${reservation.id}`}>
-        <IconButton label={m.listViewLabel} variant="outline" size="sm">
-          <Eye />
-        </IconButton>
-      </Link>
+    <div className="flex items-center justify-end gap-2">
+      {/* Approve is the row's one main action; reject and cancel sit in the menu. */}
+      {isPending && canDecide && (
+        <PrimaryAction icon={<CheckCircle2 />} onClick={handleApprove} disabled={approvePending}>
+          {m.listApproveShort}
+        </PrimaryAction>
+      )}
 
       {canCancel && (
-        <>
-          <span className="w-px h-4 bg-hairline shrink-0 mx-0.5" aria-hidden />
-
-          {/* Approve + Reject as icon-only buttons to keep PENDING rows compact */}
+        <RowMenu label={m.listMoreLabel}>
           {isPending && canDecide && (
-            <>
-              <IconButton
-                label={m.listApproveLabel}
-                variant="ghost"
-                size="sm"
-                disabled={approvePending}
-                onClick={handleApprove}
-                className="text-success-600 hover:bg-success-50 disabled:opacity-40"
-              >
-                <CheckCircle2 />
-              </IconButton>
-              <IconButton
-                label={m.listRejectLabel}
-                variant="ghost"
-                size="sm"
-                onClick={() => setRejectOpen(true)}
-                className="text-danger-500 hover:bg-danger-50"
-              >
-                <X />
-              </IconButton>
-              <span className="w-px h-4 bg-hairline shrink-0 mx-0.5" aria-hidden />
-            </>
+            <MenuItem icon={<X />} tone="danger" onClick={() => setRejectOpen(true)}>
+              {m.listRejectLabel}
+            </MenuItem>
           )}
-
-          {/* Cancel — subtle danger text button, always stays on same row */}
-          <button
-            type="button"
-            onClick={() => setCancelOpen(true)}
-            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-slate-400 hover:text-danger-600 hover:bg-danger-50 transition-colors duration-100 whitespace-nowrap shrink-0"
-          >
-            <Ban className="h-3 w-3 shrink-0" />
+          <MenuItem icon={<Ban />} onClick={() => setCancelOpen(true)}>
             {m.listCancelLabel}
-          </button>
-        </>
+          </MenuItem>
+        </RowMenu>
       )}
+
+      <Link
+        href={`/dashboard/reservations/${reservation.id}` as never}
+        aria-label={m.listViewLabel}
+        title={m.listViewLabel}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900"
+      >
+        <Eye className="h-4 w-4" />
+      </Link>
 
       <StatusDialog
         open={rejectOpen}

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Eye, RefreshCw, UserCheck, CheckCircle, CheckCheck, X, UserX } from 'lucide-react';
 import type { VisitAppointment, AppointmentStatus } from '@/lib/types';
 import { RescheduleModal } from './reschedule-modal';
-import { RowMenu, MenuItem, PrimaryAction } from './row-menu';
+import { RowMenu, MenuItem, PrimaryAction } from '@/components/premium/row-menu';
 import { AssignSalesModal } from './assign-sales-modal';
 import { updateAppointmentStatusAction } from '../actions';
 import { uiT } from '@/messages/ui';

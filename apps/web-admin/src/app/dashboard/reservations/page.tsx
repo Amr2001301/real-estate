@@ -1,8 +1,5 @@
 import Link from 'next/link';
-import {
-  Plus, BookmarkCheck, Clock, CheckCircle2,
-  XCircle, CalendarX2, AlertCircle, SlidersHorizontal,
-} from 'lucide-react';
+import { Plus, BookmarkCheck, AlertCircle, SlidersHorizontal, Phone, Building2 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { projectOptions, staffOptions } from '@/lib/options';
 import { getLocale } from '@/lib/locale';
@@ -14,17 +11,18 @@ import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { salesActorLabel } from '@/lib/sales-actor';
 import { Pagination } from '@/components/ui/pagination';
-import { DataTable } from '@/components/table';
 import { ReservationStatusBadge, ReservationBookingPaymentBadge } from '@/components/badges';
 import { ReservationActions } from './_components/reservation-actions';
 import { getSession } from '@/lib/session';
 import {
   PremiumPageHero,
-  PremiumMetricStrip,
   PremiumFilterBar,
   PremiumFilterField,
+  PremiumSectionCard,
+  PremiumEmptyState,
 } from '@/components/premium';
-import { CodeCell, PersonCell, StackCell } from '@/components/premium/list-cells';
+import { Avatar, FigureBar } from '@/components/cockpit/cockpit';
+import { cn } from '@/lib/cn';
 import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
@@ -138,18 +136,20 @@ export default async function ReservationsPage({
         }
       />
 
-      {/* ── KPI strip ────────────────────────────────────────────────────────── */}
-      <PremiumMetricStrip
-        variant="compact"
-        cols={5}
-        metrics={[
-          { label: m.kpi.total,           value: stats?.total   ?? '—', icon: <BookmarkCheck />, tone: 'neutral', primary: true },
-          { label: m.kpi.underReview,     value: stats?.pending  ?? '—', icon: <Clock />,         tone: 'warning' },
-          { label: m.kpi.approved,        value: stats?.approved ?? '—', icon: <CheckCircle2 />,  tone: 'success' },
-          { label: m.kpi.rejected,        value: stats?.rejected ?? '—', icon: <XCircle />,       tone: 'danger'  },
-          { label: m.kpi.cancelledExpired, value: (stats?.expired ?? 0) + (stats?.cancelled ?? 0), icon: <CalendarX2 />, tone: 'info' },
-        ]}
-      />
+      {/* ── Figures ──────────────────────────────────────────────────────────── */}
+      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <FigureBar
+          bare
+          cols={5}
+          figures={[
+            { label: m.kpi.total, value: stats?.total ?? '—', href: '/dashboard/reservations' },
+            { label: m.kpi.underReview, value: stats?.pending ?? '—', href: '/dashboard/reservations?status=PENDING', warn: (stats?.pending ?? 0) > 0 },
+            { label: m.kpi.approved, value: stats?.approved ?? '—', href: '/dashboard/reservations?status=APPROVED' },
+            { label: m.kpi.rejected, value: stats?.rejected ?? '—', href: '/dashboard/reservations?status=REJECTED' },
+            { label: m.kpi.cancelledExpired, value: stats ? (stats.expired ?? 0) + (stats.cancelled ?? 0) : '—' },
+          ]}
+        />
+      </section>
 
       {(stats?.overdue ?? 0) > 0 && sp.status !== 'OVERDUE' && (
         <div
@@ -266,100 +266,107 @@ export default async function ReservationsPage({
         </div>
       )}
 
-      {/* ── Table ────────────────────────────────────────────────────────────── */}
-      <DataTable
-        rowKey={(r) => r.id}
-        rows={reservations}
-        emptyMessage={m.empty}
-        columns={[
-          {
-            key: 'number',
-            header: m.cols.id,
-            cell: (r) => (
-              <CodeCell
-                href={`/dashboard/reservations/${r.id}`}
-                title={m.detailTitle}
-                code={r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
-                muted={!r.reservationNumber}
-              />
-            ),
-          },
-          {
-            key: 'client',
-            header: m.cols.client,
-            cell: (r) => {
+      {/* ── Rows ─────────────────────────────────────────────────────────────── */}
+      <PremiumSectionCard
+        title={m.title}
+        padded={false}
+        trailing={
+          <span className="text-xs text-slate-400 tabular-nums">
+            {(paginationMeta?.total ?? reservations.length).toLocaleString(intlLocale(locale))} {m.countSuffix}
+          </span>
+        }
+      >
+        {reservations.length === 0 ? (
+          <PremiumEmptyState icon={<BookmarkCheck />} title={m.empty} />
+        ) : (
+          <ul className="divide-y divide-hairline" data-testid="reservation-rows">
+            {reservations.map((r) => {
               const name = r.client?.fullName ?? r.lead?.fullName ?? '—';
-              return <PersonCell name={name} sub={r.client?.phone ?? r.lead?.phone} />;
-            },
-          },
-          {
-            key: 'project',
-            header: m.cols.project,
-            cell: (r) => {
               const project = r.unit?.building?.phase?.project;
-              return (
-                <StackCell
-                  main={project ? tx(project.name) : '—'}
-                  sub={r.unit ? <>{m.unitPrefix} <span dir="ltr">{r.unit.code}</span></> : undefined}
-                />
-              );
-            },
-          },
-          {
-            key: 'sales',
-            header: m.cols.agent,
-            cell: (r) => <span className="whitespace-nowrap text-slate-700">{r.sales?.fullName ?? '—'}</span>,
-          },
-          {
-            key: 'booking',
-            header: m.cols.amount,
-            cell: (r) => {
               const amount = Number(r.bookingAmount);
+              const href = `/dashboard/reservations/${r.id}`;
               return (
-                <div className="flex flex-col items-start gap-1">
-                  <span className="whitespace-nowrap font-bold tabular-nums text-slate-900">
-                    {Number.isFinite(amount)
-                      ? <>{amount.toLocaleString(intlLocale(locale))} <span className="text-[11px] font-semibold text-slate-500">{symbol}</span></>
-                      : '—'}
-                  </span>
-                  <ReservationBookingPaymentBadge status={r.bookingPaymentStatus} locale={locale} />
-                </div>
+                <li
+                  key={r.id}
+                  data-testid="reservation-row"
+                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[auto_minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,0.9fr)_130px_190px_170px]"
+                >
+                  <Avatar name={name} />
+
+                  {/* Client + reservation code */}
+                  <div className="min-w-0">
+                    <Link href={href as never} className="block truncate text-[14.5px] font-bold text-slate-900 hover:text-brand-700">
+                      {name}
+                    </Link>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-slate-500">
+                      <Link href={href as never} data-testid="list-code" className="whitespace-nowrap hover:text-brand-700">
+                        <span className="me-1 text-slate-400">{m.reservationWord}</span>
+                        <span className="font-mono font-semibold text-brand-700" dir="ltr">
+                          {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
+                        </span>
+                      </Link>
+                      {(r.client?.phone ?? r.lead?.phone) && (
+                        <span className="inline-flex items-center gap-1 tabular-nums">
+                          <Phone className="h-3 w-3 shrink-0" />
+                          <span dir="ltr">{r.client?.phone ?? r.lead?.phone}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Project + unit */}
+                  <div className="hidden min-w-0 items-start gap-2 text-[12.5px] lg:flex">
+                    <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A24E]" />
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-slate-800">{project ? tx(project.name) : '—'}</p>
+                      {r.unit && (
+                        <p className="mt-0.5 text-slate-500">
+                          <span className="me-1 text-slate-400">{m.unitWord}</span>
+                          <span className="whitespace-nowrap font-mono" dir="ltr">{r.unit.code}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Agent + created */}
+                  <div className="hidden min-w-0 text-[12.5px] lg:block">
+                    <p className={cn('truncate font-semibold', r.sales ? 'text-slate-800' : 'text-slate-400')}>
+                      {r.sales?.fullName ?? m.noAgent}
+                    </p>
+                    <p className="mt-0.5 whitespace-nowrap text-slate-500">
+                      {m.createdOn} {formatDate(r.createdAt, locale)}
+                    </p>
+                  </div>
+
+                  {/* Booking amount + payment */}
+                  <div className="hidden flex-col items-start gap-1 lg:flex">
+                    <span className="whitespace-nowrap text-[15px] font-bold tabular-nums text-slate-900">
+                      {Number.isFinite(amount)
+                        ? <>{amount.toLocaleString(intlLocale(locale))} <span className="text-[11px] font-semibold text-slate-500">{symbol}</span></>
+                        : '—'}
+                    </span>
+                    <ReservationBookingPaymentBadge status={r.bookingPaymentStatus} locale={locale} />
+                  </div>
+
+                  {/* Status + expiry */}
+                  <div className="hidden flex-col items-start gap-1 lg:flex">
+                    <ReservationStatusBadge status={r.status} locale={locale} />
+                    <span className="whitespace-nowrap text-[11.5px] tabular-nums text-slate-500">
+                      {m.expiresOn} {formatDate(r.expiresAt, locale, DEFAULT_TIME_ZONE)} · <span dir="ltr">{formatTime(r.expiresAt, locale)}</span>
+                    </span>
+                  </div>
+
+                  <ReservationActions
+                    reservation={r}
+                    canDecide={isAdmin || (isManager && r.salesId !== session?.id)}
+                    locale={locale}
+                  />
+                </li>
               );
-            },
-          },
-          {
-            key: 'status',
-            header: m.cols.status,
-            cell: (r) => <ReservationStatusBadge status={r.status} locale={locale} />,
-          },
-          {
-            key: 'expires',
-            header: m.cols.expiresAt,
-            cell: (r) => (
-              <StackCell
-                main={<span className="tabular-nums">{formatDate(r.expiresAt, locale, DEFAULT_TIME_ZONE)}</span>}
-                sub={<span className="tabular-nums">{formatTime(r.expiresAt, locale)}</span>}
-              />
-            ),
-          },
-          {
-            key: 'created',
-            header: m.cols.created,
-            cell: (r) => <span className="whitespace-nowrap tabular-nums text-slate-600">{formatDate(r.createdAt, locale)}</span>,
-          },
-          {
-            key: 'actions',
-            header: '',
-            cell: (r) => (
-              <ReservationActions
-                reservation={r}
-                canDecide={isAdmin || (isManager && r.salesId !== session?.id)}
-                locale={locale}
-              />
-            ),
-          },
-        ]}
-      />
+            })}
+          </ul>
+        )}
+      </PremiumSectionCard>
 
       {/* ── Pagination ───────────────────────────────────────────────────────── */}
       {paginationMeta && paginationMeta.totalPages > 1 && (

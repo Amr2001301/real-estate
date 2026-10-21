@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Eye, CalendarPlus, X, Ban } from 'lucide-react';
 import type { VisitRequest, VisitRequestStatus } from '@/lib/types';
 import { ScheduleModal } from './schedule-modal';
-import { RowMenu, MenuItem, PrimaryAction } from './row-menu';
+import { RowMenu, MenuItem, PrimaryAction } from '@/components/premium/row-menu';
 import { updateRequestStatusAction } from '../actions';
 import { uiT } from '@/messages/ui';
 import type { Locale } from '@/lib/locale';

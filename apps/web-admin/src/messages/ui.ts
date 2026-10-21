@@ -801,6 +801,12 @@ const UI = {
         actionRejectIconLabel: 'رفض الحجز',
         actionCancelBtn: 'إلغاء',
         empty: 'لا توجد حجوزات',
+        reservationWord: 'حجز',
+        unitWord: 'وحدة',
+        expiresOn: 'ينتهي',
+        createdOn: 'أُنشئ',
+        noAgent: 'بدون مندوب',
+        countSuffix: 'حجز',
       },
       settings: {
         title: 'إعدادات النظام',
@@ -1931,6 +1937,8 @@ const UI = {
         listApproveLabel: 'موافقة على الحجز',
         listRejectLabel: 'رفض الحجز',
         listCancelLabel: 'إلغاء',
+        listMoreLabel: 'إجراءات أخرى',
+        listApproveShort: 'موافقة',
         areaSuffix: 'م²',
       },
       projectsNew: {
@@ -6661,6 +6669,12 @@ const UI = {
         unitPrefix: 'Unit:',
         detailTitle: 'View Reservation Details',
         empty: 'No reservations',
+        reservationWord: 'Reservation',
+        unitWord: 'Unit',
+        expiresOn: 'Expires',
+        createdOn: 'Created',
+        noAgent: 'No agent',
+        countSuffix: 'reservations',
       },
       settings: {
         title: 'System Settings',
@@ -7790,6 +7804,8 @@ const UI = {
         listApproveLabel: 'Approve reservation',
         listRejectLabel: 'Reject reservation',
         listCancelLabel: 'Cancel',
+        listMoreLabel: 'More actions',
+        listApproveShort: 'Approve',
         areaSuffix: 'm²',
       },
       projectsNew: {

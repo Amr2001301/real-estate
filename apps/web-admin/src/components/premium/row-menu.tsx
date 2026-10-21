@@ -30,7 +30,7 @@ export function RowMenu({ label, children }: { label: string; children: ReactNod
         aria-label={label}
         title={label}
         aria-expanded={open}
-        data-testid="visit-row-menu"
+        data-testid="row-menu"
         onClick={() => setOpen((v) => !v)}
         className={cn(
           'inline-flex h-9 w-9 items-center justify-center rounded-full border text-slate-500 transition-colors',
@@ -95,19 +95,22 @@ export function PrimaryAction({
   type = 'button',
   onClick,
   tone = 'brand',
+  disabled,
 }: {
   icon: ReactNode;
   children: ReactNode;
   type?: 'button' | 'submit';
   onClick?: () => void;
   tone?: 'brand' | 'success';
+  disabled?: boolean;
 }) {
   return (
     <button
       type={type}
       onClick={onClick}
+      disabled={disabled}
       className={cn(
-        'inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border px-4 text-[13px] font-bold transition-colors [&_svg]:h-4 [&_svg]:w-4',
+        'inline-flex h-9 items-center disabled:opacity-50 gap-1.5 whitespace-nowrap rounded-full border px-4 text-[13px] font-bold transition-colors [&_svg]:h-4 [&_svg]:w-4',
         tone === 'brand'
           ? 'border-[#C9A24E]/50 bg-[#C9A24E]/10 text-brand-700 hover:bg-[#C9A24E]/20'
           : 'border-success-500/40 bg-success-500/10 text-success-700 hover:bg-success-500/20',
