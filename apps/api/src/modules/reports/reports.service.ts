@@ -1137,7 +1137,15 @@ export class ReportsService {
 
     // ── Installment filter blocks ──────────────────────────────────────────
     // Installments of live contracts only (not cancelled, not deleted).
-    const instAnd: Prisma.InstallmentWhereInput[] = [{ plan: LIVE_PLAN_WHERE }];
+    // Signed contracts only: an unsigned one has nothing due yet (it is not
+    // chased) and is not in the contract value — counting its rows in "due"
+    // and "remaining" made the report's figures not add up. It is reported
+    // apart (portfolio.unsigned).
+    const SIGNED_PLAN_WHERE = {
+      ...LIVE_PLAN_WHERE,
+      contract: { ...LIVE_CONTRACT_WHERE, signedAt: { not: null } },
+    } satisfies Prisma.InstallmentPlanWhereInput;
+    const instAnd: Prisma.InstallmentWhereInput[] = [{ plan: SIGNED_PLAN_WHERE }];
     if (opts.projectId) {
       instAnd.push({
         plan: {
@@ -1954,6 +1962,87 @@ export class ReportsService {
       ),
     ]);
 
+    // ── Portfolio: where the signed contracts' value stands today ───────────
+    // Lifetime (the period filter does not apply) and on one base, so the
+    // parts add up to the value: paid + awaiting confirmation + late + not
+    // due yet + not on the schedule = the signed contracts' total (with the
+    // instalment markup, which is shown apart). It mixed the period's
+    // collections with lifetime totals and read "collected 2.6%, not due
+    // 102%".
+    const onItsWay: Prisma.InstallmentWhereInput = { ...unpaid, deposits: { some: PAYMENT_ON_ITS_WAY } };
+    const unsignedContractWhere: Prisma.ContractWhereInput = { AND: [contractWhere, { signedAt: null }] };
+    const [grossAgg, paidRowsAgg, paidBookingAgg, awaitingRowsAgg, unsignedCount, unsignedOpenAgg, monthRows] =
+      await Promise.all([
+        this.prisma.contract.aggregate({ where: signedContractWhere, _sum: { totalAmount: true } }),
+        this.prisma.installment.aggregate({
+          where: instWhere({ status: InstallmentStatus.PAID, type: { notIn: SURCHARGE_PAYMENT_TYPES } }),
+          _sum: { amount: true },
+        }),
+        this.prisma.reservation.aggregate({
+          where: {
+            contract: { is: signedContractWhere },
+            bookingPaymentStatus: { in: [ReservationBookingPaymentStatus.PAID, ReservationBookingPaymentStatus.WAIVED] },
+          },
+          _sum: { bookingAmount: true },
+        }),
+        this.prisma.installment.aggregate({ where: instWhere(onItsWay), _sum: { amount: true } }),
+        this.prisma.contract.count({ where: unsignedContractWhere }),
+        this.prisma.installment.aggregate({
+          where: {
+            AND: [
+              ...instAnd.slice(1),
+              { plan: { ...LIVE_PLAN_WHERE, contract: { ...LIVE_CONTRACT_WHERE, signedAt: null } } },
+              unpaid,
+            ],
+          },
+          _sum: { amount: true },
+        }),
+        // This month's rows: paid / on its way / late / still to come.
+        Promise.all([
+          { status: InstallmentStatus.PAID },
+          onItsWay,
+          { ...overdueUnpaid, dueDate: { lt: todayUTC } },
+          { ...overdueUnpaid, dueDate: { gte: todayUTC } },
+        ].map((w) =>
+          this.prisma.installment.aggregate({
+            where: instWhere({
+              AND: [w, { dueDate: { gte: monthStart, lt: monthEnd }, type: { notIn: SURCHARGE_PAYMENT_TYPES } }],
+            }),
+            _sum: { amount: true },
+          }),
+        )),
+      ]);
+    const gross = D(grossAgg._sum.totalAmount);
+    const openAll = D(outstandingAgg._sum.amount);
+    const awaitingAll = D(awaitingRowsAgg._sum.amount);
+    const lateAll = D(overdueComputedAgg._sum.amount);
+    const paidAll = D(paidRowsAgg._sum.amount).plus(D(paidBookingAgg._sum.bookingAmount));
+    const notYetDueAll = Prisma.Decimal.max(zero, openAll.minus(awaitingAll).minus(lateAll));
+    const unscheduledAll = Prisma.Decimal.max(zero, gross.minus(paidAll).minus(openAll));
+    const net = new Prisma.Decimal(totalContractValue).toDecimalPlaces(2);
+    const portfolio = {
+      grossValue: gross.toString(),
+      netValue: net.toString(),
+      markup: Prisma.Decimal.max(zero, gross.minus(net)).toString(),
+      paid: paidAll.toString(),
+      awaiting: awaitingAll.toString(),
+      overdue: lateAll.toString(),
+      notYetDue: notYetDueAll.toString(),
+      unscheduled: unscheduledAll.toString(),
+      unsigned: { count: unsignedCount, open: D(unsignedOpenAgg._sum.amount).toString() },
+    };
+    const [mPaid, mAwaiting, mLate, mUpcoming] = monthRows.map((a) => D(a._sum.amount).toString());
+    const month = {
+      due: (dueThisMonthAgg._sum.amount ?? zero).toString(),
+      paid: mPaid!,
+      awaiting: mAwaiting!,
+      overdue: mLate!,
+      upcoming: mUpcoming!,
+      // Money that came in this month, whatever it paid (earlier rows, the
+      // booking) — not comparable with "due this month".
+      cashIn: (collectedThisMonthAgg._sum.amount ?? zero).toString(),
+    };
+
     // ── Refunds on cancelled contracts (money going back out) ────────────────
     // Same project / customer filters, but cancelled contracts are exactly
     // the ones that matter here, so LIVE_CONTRACT_WHERE is not applied.
@@ -2034,6 +2123,8 @@ export class ReportsService {
         overdueAmountComputed: (overdueComputedAgg._sum.amount ?? zero).toString(),
         overdueInstallmentCountComputed: overdueComputedAgg._count?._all ?? 0,
       },
+      portfolio,
+      month,
       collectionByType,
       aging,
       booking,

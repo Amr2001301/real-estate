@@ -130,8 +130,6 @@ export default async function FinancialReportsPage({
   const overdueAmt     = num(s?.overdueAmountComputed ?? s?.totalOverdue);
   const overdueCount   = s?.overdueInstallmentCountComputed ?? s?.overdueInstallmentCount ?? 0;
   const dueSoon        = num(s?.dueSoonAmount);
-  const collectedMonth = num(s?.collectedThisMonth);
-  const dueMonth       = num(s?.dueThisMonth);
   const contractCount  = s?.contractCount ?? 0;
   const depositCount   = s?.depositCount  ?? 0;
   const refundsPaid    = num(s?.refundsPaid);
@@ -149,7 +147,29 @@ export default async function FinancialReportsPage({
   const againstDue     = num(s?.collectedAgainstDue ?? s?.collectedTowardsPrice);
   const collectionRate = dueToDate > 0 ? Math.min(100, Math.round((againstDue / dueToDate) * 100)) : 0;
   const overdueRate    = dueToDate > 0 ? parseFloat(((overdueAmt / dueToDate) * 100).toFixed(1)) : 0;
-  const notYetDue      = Math.max(0, outstanding - overdueAmt);
+  const en = locale === 'en';
+  const portfolio = dash?.portfolio;
+  const pGross = num(portfolio?.grossValue);
+  const pNet = num(portfolio?.netValue);
+  const pMarkup = num(portfolio?.markup);
+  const pShare = (v: number) => (pGross > 0 ? (v / pGross) * 100 : 0);
+  const pctText = (v: number) => `${v.toFixed(v === 100 || v === 0 || v >= 10 ? 0 : 1)}%`;
+  const portfolioParts = [
+    { key: 'paid', label: en ? 'Paid' : 'المسدد', amount: num(portfolio?.paid), dot: 'bg-emerald-500' },
+    { key: 'awaiting', label: en ? 'Awaiting confirmation' : 'بانتظار التأكيد', amount: num(portfolio?.awaiting), dot: 'bg-sky-500' },
+    { key: 'overdue', label: en ? 'Late' : 'متأخر', amount: num(portfolio?.overdue), dot: 'bg-danger-500' },
+    { key: 'notYetDue', label: en ? 'Not due yet' : 'لم يستحق بعد', amount: num(portfolio?.notYetDue), dot: 'bg-slate-400/60' },
+    { key: 'unscheduled', label: en ? 'Not on a schedule' : 'غير مجدول', amount: num(portfolio?.unscheduled), dot: 'bg-amber-400' },
+  ].filter((r) => r.key !== 'unscheduled' && r.key !== 'awaiting' ? true : r.amount > 0);
+  const monthData = dash?.month;
+  const monthDue = num(monthData?.due ?? s?.dueThisMonth);
+  const cashIn = num(monthData?.cashIn ?? s?.collectedThisMonth);
+  const monthParts = [
+    { key: 'paid', label: en ? 'Paid' : 'اتسدد', amount: num(monthData?.paid), bar: 'bg-emerald-500' },
+    { key: 'awaiting', label: en ? 'Awaiting confirmation' : 'بانتظار التأكيد', amount: num(monthData?.awaiting), bar: 'bg-sky-500' },
+    { key: 'overdue', label: en ? 'Late' : 'متأخر', amount: num(monthData?.overdue), bar: 'bg-danger-500' },
+    { key: 'upcoming', label: en ? 'Still to come' : 'لم يحن موعده', amount: num(monthData?.upcoming), bar: 'bg-slate-400/60' },
+  ];
 
   // Comparison deltas
   const contractDelta  = cmpS ? computeDelta(contractVal,   num(cmpS.totalContractValue))                         : undefined;
@@ -178,7 +198,6 @@ export default async function FinancialReportsPage({
   const allClear = !!dash && overdueAmt === 0 && overdueRows.length === 0;
   const byType = (dash?.collectionByType ?? []).filter((c) => c.count > 0 || num(c.totalAll) > 0);
   const byTypeMax = Math.max(1, ...byType.map((c) => num(c.totalAll)));
-  const share = (n: number) => (contractVal > 0 ? (n / contractVal) * 100 : 0);
   const rateTone = collectionRate >= 75 ? 'good' : collectionRate >= 40 ? 'mid' : 'low';
 
   return (
@@ -234,12 +253,17 @@ export default async function FinancialReportsPage({
         <div className="pointer-events-none absolute -top-24 start-1/3 h-56 w-56 rounded-full bg-brand-500/10 blur-3xl" />
         <div className="relative grid grid-cols-1 gap-8 p-6 sm:p-8 lg:grid-cols-[minmax(0,340px)_1fr] lg:gap-10">
           <div className="flex flex-col justify-between gap-7">
+            {/* Collected against what has fallen due by today — the same base as the ring beside it. */}
             <div>
-              <p className="text-[13px] font-semibold text-slate-500">{m.kpi.collected}</p>
+              <p className="text-[13px] font-semibold text-slate-500">{en ? 'Collected of what is due to date' : 'المحصّل من المستحق حتى اليوم'}</p>
               <div className="mt-2" data-testid="fin-collected">
-                <Amount value={towardsPrice} sign={currencySign} locale={locale} size="hero" />
+                <Amount value={againstDue} sign={currencySign} locale={locale} size="hero" />
               </div>
-              {collectedDelta && <DeltaChip delta={collectedDelta} label={m.hero.vsCompare} />}
+              <p className="mt-1.5 text-[12px] text-slate-500">
+                {en ? 'of ' : 'من '}
+                <b className="tabular-nums text-slate-700">{money(dueToDate)}</b>
+                {en ? ' due to date' : ' مستحق حتى اليوم'}
+              </p>
             </div>
 
             <div className="flex items-center gap-5">
@@ -260,18 +284,46 @@ export default async function FinancialReportsPage({
               </div>
             </div>
 
-            <dl className="grid grid-cols-3 gap-4 border-t border-hairline pt-5">
-              {[
-                { label: m.kpi.collectedMonth, value: money(collectedMonth) },
-                { label: m.kpi.dueMonth,       value: money(dueMonth) },
-                { label: m.hero.fees,          value: money(feesCollected) },
-              ].map((x) => (
-                <div key={x.label} className="min-w-0">
-                  <dt className="truncate text-[11px] font-medium text-slate-500" title={x.label}>{x.label}</dt>
-                  <dd className="mt-1 truncate text-[14px] font-bold text-slate-900 tabular-nums" title={x.value}>{x.value}</dd>
+            {/* This month: what fell due and where each part stands (the parts add up),
+                then the money that came in — which pays any month, so it is not compared. */}
+            <div className="border-t border-hairline pt-5" data-testid="fin-month">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-[12px] font-semibold text-slate-500">{m.kpi.dueMonth}</p>
+                <p className="text-[15px] font-bold text-slate-900 tabular-nums">{money(monthDue)}</p>
+              </div>
+              <div className="mt-2.5 flex h-2 overflow-hidden rounded-full bg-surface-muted">
+                {monthParts.map((x) => (
+                  <span key={x.key} className={cn('h-full', x.bar)} style={{ width: `${monthDue > 0 ? (x.amount / monthDue) * 100 : 0}%` }} />
+                ))}
+              </div>
+              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2">
+                {monthParts.map((x) => (
+                  <div key={x.key} className="flex min-w-0 items-center justify-between gap-2" data-testid={`fin-month-${x.key}`}>
+                    <dt className="flex min-w-0 items-center gap-1.5 truncate text-[11.5px] text-slate-500">
+                      <span className={cn('h-2 w-2 shrink-0 rounded-full', x.bar)} />
+                      {x.label}
+                    </dt>
+                    <dd className="shrink-0 text-[12.5px] font-semibold text-slate-800 tabular-nums">{money(x.amount)}</dd>
+                  </div>
+                ))}
+              </dl>
+              <div className="mt-4 grid grid-cols-2 gap-4 rounded-2xl bg-surface-muted/50 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-[11px] text-slate-500">{en ? 'Came in this month' : 'دخل الخزنة هذا الشهر'}</p>
+                  <p className="mt-0.5 truncate text-[14px] font-bold text-slate-900 tabular-nums">{money(cashIn)}</p>
+                  <p className="text-[10.5px] text-slate-400">{en ? 'any month’s rows and bookings' : 'لأقساط أي شهر ومبالغ الحجز'}</p>
                 </div>
-              ))}
-            </dl>
+                <div className="min-w-0">
+                  <p className="truncate text-[11px] text-slate-500">{m.hero.fees}</p>
+                  <p className="mt-0.5 truncate text-[14px] font-bold text-slate-900 tabular-nums">{money(feesCollected)}</p>
+                </div>
+              </div>
+              <p className="mt-3 flex flex-wrap items-center gap-2 text-[11.5px] text-slate-500">
+                {en ? 'Collected in the chosen period:' : 'المحصّل من ثمن العقود في الفترة المختارة:'}{' '}
+                <b className="tabular-nums text-slate-800" data-testid="fin-period-collected">{money(towardsPrice)}</b>
+                {collectedDelta && <DeltaChip delta={collectedDelta} label={m.hero.vsCompare} />}
+              </p>
+            </div>
           </div>
 
           <div className="flex min-w-0 flex-col gap-4">
@@ -382,30 +434,45 @@ export default async function FinancialReportsPage({
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-5 lg:gap-6">
         <PremiumPanel className="lg:col-span-3" title={m.distribution.title} sub={m.distribution.description} bodyClassName="flex flex-col justify-center">
           <div className="flex flex-col gap-5" data-testid="fin-distribution">
+            {/* Signed contracts, lifetime, one base: the parts add up to the value. */}
             <div className="flex h-3 overflow-hidden rounded-full bg-surface-muted">
-              <span className="h-full bg-emerald-500" style={{ width: `${share(towardsPrice)}%` }} />
-              <span className="h-full bg-danger-500" style={{ width: `${share(overdueAmt)}%` }} />
-              <span className="h-full bg-slate-400/40" style={{ width: `${share(notYetDue)}%` }} />
+              {portfolioParts.map((r) => (
+                <span key={r.key} className={cn('h-full', r.dot)} style={{ width: `${pShare(r.amount)}%` }} />
+              ))}
             </div>
             <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {[
-                { label: m.distribution.rows.contractValue, amount: contractVal,  dot: 'bg-brand-500',    pct: contractVal > 0 ? 100 : 0 },
-                // Each a share of the value: collected, overdue, and not yet due
-                // (outstanding already holds the overdue — they summed past 100%).
-                { label: m.distribution.rows.collected,     amount: towardsPrice, dot: 'bg-emerald-500',  pct: share(towardsPrice) },
-                { label: m.distribution.rows.overdue,       amount: overdueAmt,   dot: 'bg-danger-500',   pct: share(overdueAmt) },
-                { label: m.distribution.rows.outstanding,   amount: notYetDue,    dot: 'bg-slate-400/60', pct: share(notYetDue) },
+                { key: 'value', label: en ? 'Signed contracts’ value' : 'قيمة العقود الموقّعة', amount: pGross, dot: 'bg-brand-500' },
+                ...portfolioParts,
               ].map((r) => (
-                <li key={r.label} className="flex items-center gap-3 rounded-2xl border border-hairline px-4 py-3">
+                <li key={r.key} data-testid={`fin-dist-${r.key}`} className="flex items-center gap-3 rounded-2xl border border-hairline px-4 py-3">
                   <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', r.dot)} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[12px] text-slate-500">{r.label}</span>
                     <span className="block truncate text-[15px] font-bold text-slate-900 tabular-nums">{money(r.amount)}</span>
                   </span>
-                  <span className="shrink-0 text-[12px] font-semibold text-slate-400 tabular-nums">{r.pct.toFixed(r.pct === 100 || r.pct === 0 ? 0 : 1)}%</span>
+                  <span className="shrink-0 text-[12px] font-semibold text-slate-400 tabular-nums">{pctText(pShare(r.amount))}</span>
                 </li>
               ))}
             </ul>
+            <div className="space-y-1 text-[11.5px] text-slate-500">
+              {pMarkup > 0 && (
+                <p data-testid="fin-dist-markup">
+                  {en ? 'Includes instalment markup ' : 'شاملة فوائد تقسيط '}
+                  <b className="tabular-nums text-slate-700">{money(pMarkup)}</b>
+                  {en ? ' — net price ' : ' — القيمة الصافية '}
+                  <b className="tabular-nums text-slate-700">{money(pNet)}</b>
+                </p>
+              )}
+              {(portfolio?.unsigned.count ?? 0) > 0 && (
+                <p data-testid="fin-dist-unsigned">
+                  {en
+                    ? `${portfolio!.unsigned.count} contract(s) not signed yet — not in these figures; their schedule holds `
+                    : `${portfolio!.unsigned.count} عقد لم يوقّع بعد — خارج هذه الأرقام، وعلى جدولهم `}
+                  <b className="tabular-nums text-slate-700">{money(num(portfolio!.unsigned.open))}</b>
+                </p>
+              )}
+            </div>
           </div>
         </PremiumPanel>
 

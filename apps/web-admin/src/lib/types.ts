@@ -2005,8 +2005,33 @@ export interface CashflowTrendPoint {
   due: number;
 }
 
+/** Signed contracts' value today: the parts add up to grossValue. */
+export interface FinancialPortfolio {
+  grossValue: string;
+  netValue: string;
+  markup: string;
+  paid: string;
+  awaiting: string;
+  overdue: string;
+  notYetDue: string;
+  unscheduled: string;
+  unsigned: { count: number; open: string };
+}
+
+/** This month's rows (paid + awaiting + overdue + upcoming = due) and the money that came in. */
+export interface FinancialMonth {
+  due: string;
+  paid: string;
+  awaiting: string;
+  overdue: string;
+  upcoming: string;
+  cashIn: string;
+}
+
 export interface FinancialDashboard {
   summary: FinancialSummary;
+  portfolio?: FinancialPortfolio;
+  month?: FinancialMonth;
   // F1 additions (optional for back-compat with older API responses).
   collectionByType?: FinancialCollectionByType[];
   aging?: FinancialAgingBucket[];
