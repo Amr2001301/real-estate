@@ -14,6 +14,9 @@ import {
   Wallet,
   CircleDollarSign,
   Clock,
+  Phone,
+  Building2,
+  ChevronLeft,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type {
@@ -21,8 +24,8 @@ import type {
   PortalActivityItem,
   PortalActivityType,
 } from '@/lib/types';
-import { tx, formatDateTime } from '@/lib/format';
-import { getLocale } from '@/lib/locale';
+import { tx, formatTime, intlLocale, DEFAULT_TIME_ZONE } from '@/lib/format';
+import { getLocale, type Locale } from '@/lib/locale';
 import { portalDashboardT } from '@/messages/portal/dashboard';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
@@ -222,8 +225,17 @@ export default async function PortalActivityPage({
             description={t.emptyDescription}
           />
         ) : (
-          <ol className="divide-y divide-hairline">
-            {rows.map((item) => {
+          // A timeline grouped by day (company time): the day once as a header,
+          // each event with its time alone.
+          <div data-testid="portal-activity-timeline">
+            {groupByDay(rows, locale).map((day) => (
+              <section key={day.key}>
+                <h3 className="sticky top-0 z-10 border-b border-hairline bg-surface/95 px-6 py-2.5 text-[12px] font-bold text-slate-500 backdrop-blur">
+                  {day.label}
+                  <span className="ms-2 font-semibold text-slate-400 tabular-nums">· {day.items.length}</span>
+                </h3>
+                <ol className="relative px-6 py-2 before:absolute before:inset-y-0 before:start-[121px] before:w-px before:bg-hairline">
+            {day.items.map((item) => {
               const linkHref =
                 item.entityType === 'VisitRequest'
                   ? '/portal/visits'
@@ -238,64 +250,63 @@ export default async function PortalActivityPage({
                           : item.lead
                             ? `/portal/leads/${item.lead.id}`
                             : '/portal/activity';
+              const summary = payloadSummary(item, m);
               return (
-                <li key={item.id} className="px-5 py-3.5 hover:bg-slate-50 transition-colors">
-                  <div className="flex items-start gap-3">
+                <li key={item.id} data-testid="portal-activity-row">
+                  <Link
+                    href={linkHref as never}
+                    className="group grid grid-cols-[72px_36px_minmax(0,1fr)_auto] items-start gap-x-4 rounded-2xl px-2 py-3 transition-colors hover:bg-surface-muted/40"
+                  >
+                    <time className="pt-2 text-end text-[12px] font-semibold tabular-nums text-slate-500">
+                      {formatTime(item.createdAt, locale)}
+                    </time>
                     <span
-                      className={`inline-flex h-9 w-9 items-center justify-center rounded-xl shrink-0 mt-0.5 ${TONE[item.type]}`}
+                      className={`relative z-[1] inline-flex h-9 w-9 items-center justify-center rounded-full ring-4 ring-surface ${TONE[item.type]}`}
                     >
                       <ActivityIcon type={item.type} />
                     </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline justify-between gap-3">
-                        <Link
-                          href={linkHref as never}
-                          className="font-bold text-slate-900 hover:text-brand-700 text-sm"
-                        >
-                          {m.activityType[item.type]}
-                        </Link>
-                        <time className="text-2xs text-slate-500 tabular-nums whitespace-nowrap shrink-0" dir="ltr">
-                          {formatDateTime(item.createdAt, locale)}
-                        </time>
-                      </div>
+                    <div className="min-w-0 pt-0.5">
+                      <p className="text-[14px] font-bold text-slate-900 group-hover:text-brand-700">
+                        {m.activityType[item.type]}
+                      </p>
                       {item.lead ? (
-                        <>
-                          <p className="mt-0.5 text-sm text-slate-700">
-                            {item.lead.fullName}{' '}
-                            <span className="text-2xs text-slate-400" dir="ltr">
-                              {item.lead.phone}
+                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-slate-600">
+                          <span className="font-semibold text-slate-800">{item.lead.fullName}</span>
+                          {item.lead.phone && (
+                            <span className="inline-flex items-center gap-1 tabular-nums text-slate-500">
+                              <Phone className="h-3 w-3 shrink-0" />
+                              <span dir="ltr">{item.lead.phone}</span>
                             </span>
-                          </p>
-                          <p className="text-2xs text-slate-500 mt-0.5">
-                            {item.lead.projectInterest
-                              ? tx(item.lead.projectInterest.name, locale)
-                              : t.noProject}
-                            {item.lead.unitInterest && (
-                              <>
-                                {' • '}
-                                <span className="font-mono" dir="ltr">
-                                  {item.lead.unitInterest.code}
-                                </span>
-                              </>
-                            )}
-                          </p>
-                        </>
+                          )}
+                          <span className="inline-flex items-center gap-1 text-slate-500">
+                            <Building2 className="h-3.5 w-3.5 shrink-0 text-[#C9A24E]" />
+                            {item.lead.projectInterest ? tx(item.lead.projectInterest.name, locale) : t.noProject}
+                          </span>
+                          {item.lead.unitInterest && (
+                            <span className="text-slate-500">
+                              <span className="me-1 text-slate-400">{locale === 'en' ? 'Unit' : 'وحدة'}</span>
+                              <span className="whitespace-nowrap font-mono" dir="ltr">{item.lead.unitInterest.code}</span>
+                            </span>
+                          )}
+                        </div>
                       ) : (
-                        <p className="mt-0.5 text-2xs text-slate-500">
-                          {t.companyLevel}
-                        </p>
+                        <p className="mt-1 text-[12.5px] text-slate-500">{t.companyLevel}</p>
                       )}
-                      {payloadSummary(item, m) && (
-                        <p className="mt-1.5 text-xs text-slate-700 rounded-lg bg-surface-muted border border-hairline px-2.5 py-1.5">
-                          {payloadSummary(item, m)}
+                      {summary && (
+                        <p className="mt-2 inline-block rounded-xl border border-hairline bg-surface-muted/60 px-3 py-1.5 text-[12px] text-slate-700">
+                          {summary}
                         </p>
                       )}
                     </div>
-                  </div>
+                    <ChevronLeft className="mt-2.5 h-4 w-4 text-slate-400 transition-colors group-hover:text-brand-700 ltr:rotate-180" />
+                  </Link>
                 </li>
               );
             })}
-          </ol>
+                </ol>
+              </section>
+            ))}
+          </div>
         )}
         {paged && paged.meta.total > PAGE_SIZE && (
           <Pagination
@@ -310,4 +321,19 @@ export default async function PortalActivityPage({
       </PremiumSectionCard>
     </div>
   );
+}
+
+/** Events grouped by their day in the company's time zone, newest first as given. */
+function groupByDay<T extends { createdAt: string }>(items: T[], locale: Locale): Array<{ key: string; label: string; items: T[] }> {
+  const keyFmt = new Intl.DateTimeFormat('en-CA', { timeZone: DEFAULT_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit' });
+  const labelFmt = new Intl.DateTimeFormat(intlLocale(locale), { timeZone: DEFAULT_TIME_ZONE, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const out: Array<{ key: string; label: string; items: T[] }> = [];
+  for (const it of items) {
+    const d = new Date(it.createdAt);
+    const key = keyFmt.format(d);
+    const last = out[out.length - 1];
+    if (last && last.key === key) last.items.push(it);
+    else out.push({ key, label: labelFmt.format(d), items: [it] });
+  }
+  return out;
 }
