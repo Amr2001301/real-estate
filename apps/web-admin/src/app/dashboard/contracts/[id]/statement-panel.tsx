@@ -2,6 +2,7 @@ import { formatCurrency, formatDate } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import type { Locale } from '@/lib/locale';
 import type { ContractStatement } from '@/lib/types';
+import { CollapsibleRows } from '@/components/premium/collapsible-rows';
 import { statementLineLabel, statementLineNote } from '@/components/payments/statement';
 
 /**
@@ -94,36 +95,47 @@ export function StatementPanel({
             </tr>
           </thead>
           <tbody className="divide-y divide-hairline">
-            {s.lines.map((l, i) => {
-              const note = statementLineNote(l, locale);
-              return (
-                <tr
-                  key={i}
-                  data-testid="statement-line"
-                  data-kind={l.kind}
-                  className={cn(l.kind === 'REVERSAL' && 'bg-danger-500/[0.04]')}
-                >
-                  <td className="whitespace-nowrap px-5 py-2.5 tabular-nums text-slate-600">
-                    {fmt(l.date)}
-                  </td>
-                  <td className="px-4 py-2.5 text-slate-700">
-                    {statementLineLabel(l, fmt, locale)}
-                    {note && (
-                      <span className="mt-0.5 block text-[11.5px] text-slate-400">{note}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5 text-end tabular-nums text-slate-700">
-                    {Number(l.debit) ? money(l.debit) : ''}
-                  </td>
-                  <td className="px-4 py-2.5 text-end tabular-nums text-emerald-600">
-                    {Number(l.credit) ? money(l.credit) : ''}
-                  </td>
-                  <td className="px-5 py-2.5 text-end font-semibold tabular-nums text-slate-900">
-                    {money(l.balance)}
-                  </td>
-                </tr>
-              );
-            })}
+            {/* The latest movements; the rest one click away. */}
+            <CollapsibleRows
+              from={s.lines.length - 12}
+              to={s.lines.length}
+              colSpan={5}
+              showAllLabel={
+                en ? `Show all ${s.lines.length} movements` : `عرض كل الحركات (${s.lines.length})`
+              }
+              showLessLabel={en ? 'Show fewer' : 'عرض أقل'}
+            >
+              {s.lines.map((l, i) => {
+                const note = statementLineNote(l, locale);
+                return (
+                  <tr
+                    key={i}
+                    data-testid="statement-line"
+                    data-kind={l.kind}
+                    className={cn(l.kind === 'REVERSAL' && 'bg-danger-500/[0.04]')}
+                  >
+                    <td className="whitespace-nowrap px-5 py-2.5 tabular-nums text-slate-600">
+                      {fmt(l.date)}
+                    </td>
+                    <td className="px-4 py-2.5 text-slate-700">
+                      {statementLineLabel(l, fmt, locale)}
+                      {note && (
+                        <span className="mt-0.5 block text-[11.5px] text-slate-400">{note}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-end tabular-nums text-slate-700">
+                      {Number(l.debit) ? money(l.debit) : ''}
+                    </td>
+                    <td className="px-4 py-2.5 text-end tabular-nums text-emerald-600">
+                      {Number(l.credit) ? money(l.credit) : ''}
+                    </td>
+                    <td className="px-5 py-2.5 text-end font-semibold tabular-nums text-slate-900">
+                      {money(l.balance)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </CollapsibleRows>
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-hairline font-bold">

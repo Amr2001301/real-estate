@@ -52,6 +52,8 @@ import { CancelContract } from './cancel-contract';
 import { CancellationPanel } from './cancellation-panel';
 import { HandoverPanel } from './handover-panel';
 import { StatementPanel } from './statement-panel';
+import { ContractTabs } from './contract-tabs';
+import { CollapsibleRows } from '@/components/premium/collapsible-rows';
 import { handoverT } from '@/messages/handover';
 import { PrintButton } from '@/components/print/PrintButton';
 import {
@@ -65,10 +67,13 @@ export const dynamic = 'force-dynamic';
 
 export default async function ContractDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = await params;
+  const { tab } = await searchParams;
   const locale = await getLocale();
   const m = uiT(locale).contractDetailPage;
 
@@ -121,7 +126,10 @@ export default async function ContractDetailPage({
     if (due > today) return { label: m.instNotDueYet, cls: 'bg-slate-500/10 text-slate-600' };
     if (due === today) return { label: m.instDueToday, cls: 'bg-amber-500/12 text-amber-600' };
     const days = Math.round((Date.parse(today) - Date.parse(due)) / 86_400_000);
-    return { label: m.instLateDays.replace('{n}', String(days)), cls: 'bg-danger-500/12 text-danger-600' };
+    return {
+      label: m.instLateDays.replace('{n}', String(days)),
+      cls: 'bg-danger-500/12 text-danger-600',
+    };
   };
   // What the customer still owes on the schedule — shown before a handover.
   // (fees included; the "remaining" figure below shows the price part.)
@@ -142,8 +150,7 @@ export default async function ContractDetailPage({
           i.dueDate.slice(0, 10) < enteredDay,
       )
     : [];
-  const projectName =
-    tx(contract.unit?.building?.phase?.project?.name) || '—';
+  const projectName = tx(contract.unit?.building?.phase?.project?.name) || '—';
   const displayNumber = contract.contractNumber ?? contract.id.slice(0, 8);
   const customerEmail = (contract.customer as { email?: string | null } | undefined)?.email;
   // A cancelled contract shows its cancellation and refunds; an admin sees
@@ -157,7 +164,9 @@ export default async function ContractDetailPage({
       ? safe(api.get<ContractCancellationView>(`/contracts/${id}/cancellation`)).then((x) => x.data)
       : Promise.resolve(null),
     !isCancelled && isAdmin
-      ? safe(api.get<CancellationSuggestion>(`/contracts/${id}/cancellation-suggestion`)).then((x) => x.data)
+      ? safe(api.get<CancellationSuggestion>(`/contracts/${id}/cancellation-suggestion`)).then(
+          (x) => x.data,
+        )
       : Promise.resolve(null),
     safe(api.get<ContractStatement>(`/contracts/${id}/statement`)).then((x) => x.data),
   ]);
@@ -166,10 +175,12 @@ export default async function ContractDetailPage({
   const PRICE_TYPES = ['RESERVATION', 'DOWN_PAYMENT', 'INSTALLMENT', 'FINAL_PAYMENT'];
   const rows = plan?.installments ?? [];
   const priceRows = rows.filter((i) => PRICE_TYPES.includes(i.type ?? 'INSTALLMENT'));
-  const sumCents = (xs: typeof rows) => xs.reduce((a, i) => a + Math.round(Number(i.amount) * 100), 0);
+  const sumCents = (xs: typeof rows) =>
+    xs.reduce((a, i) => a + Math.round(Number(i.amount) * 100), 0);
   // Collected = the contract value less the price rows still open, so a
   // down payment settled outside the schedule still counts.
-  const schedOpenPrice = sumCents(priceRows.filter((i) => i.status === 'PENDING' || i.status === 'OVERDUE')) / 100;
+  const schedOpenPrice =
+    sumCents(priceRows.filter((i) => i.status === 'PENDING' || i.status === 'OVERDUE')) / 100;
   const contractTotal = Number(contract.totalAmount);
   // From the statement when there is one: what is left counts value with no
   // schedule row and no payment (a contract with no plan, a down payment
@@ -179,14 +190,725 @@ export default async function ContractDetailPage({
     ? Math.round((Number(statement.totals.balance) - openFees) * 100) / 100
     : schedOpenPrice;
   const unscheduled = statement ? Number(statement.totals.unscheduled) : 0;
-  const collected = statement || plan ? Math.max(0, Math.round((contractTotal - openPrice) * 100) / 100) : 0;
-  const collectedPct = contractTotal > 0 ? Math.min(100, Math.round((collected / contractTotal) * 100)) : 0;
+  const collected =
+    statement || plan ? Math.max(0, Math.round((contractTotal - openPrice) * 100) / 100) : 0;
+  const collectedPct =
+    contractTotal > 0 ? Math.min(100, Math.round((collected / contractTotal) * 100)) : 0;
   const openRows = rows
     .filter((i) => i.status === 'PENDING' || i.status === 'OVERDUE')
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   // Late from the day after the due day, before the nightly sweep marks it.
-  const overdueCount = openRows.filter((i) => i.dueDate.slice(0, 10) < today).length;
   const next = openRows[0];
+  // The schedule opens on the next row due: two before it, ten after.
+  const nextIndex = next ? rows.findIndex((i) => i.id === next.id) : -1;
+  const rowWindow: [number, number] =
+    nextIndex >= 0 ? [nextIndex - 2, nextIndex + 10] : [rows.length - 12, rows.length];
+  const overdueCount = openRows.filter((i) => i.dueDate.slice(0, 10) < today).length;
+
+  // One tab per job: overview, the schedule, the statement, payments, and the
+  // actions done once in a contract's life (handover, plan changes, cancel).
+  const overviewPane = (
+    <PremiumDetailLayout
+      main={
+        <>
+          {cancellation && (
+            <PremiumPanel title={m.cancellationTitle}>
+              <CancellationPanel
+                id={contract.id}
+                cancellation={cancellation}
+                currency={currency}
+                canManage={isAdmin}
+                locale={locale}
+              />
+            </PremiumPanel>
+          )}
+
+          {/* Contract key info */}
+          <PremiumPanel title={m.sectionContractData}>
+            <div className="grid grid-cols-1 overflow-hidden rounded-2xl border border-hairline sm:grid-cols-2">
+              <Cell label={m.fieldContractNumber}>
+                {contract.contractNumber ? (
+                  <span className="font-mono text-[16px] font-bold text-brand-700">
+                    {displayNumber}
+                  </span>
+                ) : isAdmin ? (
+                  <AssignContractNumber id={contract.id} locale={locale} />
+                ) : (
+                  <span className="font-mono text-[16px] font-bold text-slate-400">
+                    {displayNumber}
+                  </span>
+                )}
+              </Cell>
+              <Cell label={m.fieldCreatedAt}>
+                <span className="text-[13.5px] font-semibold text-slate-900 tabular-nums">
+                  {formatDateTime(contract.createdAt, locale)}
+                </span>
+              </Cell>
+              <Cell label={m.fieldSignedAt}>
+                {contract.signedAt ? (
+                  <span className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-emerald-600 tabular-nums">
+                    <CheckCircle2 className="h-4 w-4" />
+                    {formatDateTime(contract.signedAt, locale)}
+                  </span>
+                ) : (
+                  <>
+                    <span className="text-[13px] text-slate-500">{m.notSigned}</span>
+                    {isAdmin && !isCancelled && (
+                      <SignContract
+                        contractId={contract.id}
+                        today={todayIn(timeZone)}
+                        deliveryDefault={contract.expectedDeliveryDate}
+                        locale={locale}
+                      />
+                    )}
+                  </>
+                )}
+              </Cell>
+              <Cell label={m.fieldDelivery}>
+                <ContractDeliveryDate
+                  contractId={contract.id}
+                  deliveryDate={contract.deliveryDate ?? null}
+                  expected={contract.expectedDeliveryDate ?? null}
+                  delayDays={contract.deliveryDelayDays ?? 0}
+                  editable={isAdmin && !isCancelled && !!contract.signedAt}
+                  locale={locale}
+                />
+              </Cell>
+              <Cell label={uiT(locale).common.lateFeeClause.label} wide>
+                <LateFeeClause
+                  contractId={contract.id}
+                  applies={contract.lateFeesApply ?? false}
+                  editable={isAdmin && !isCancelled}
+                  locale={locale}
+                />
+              </Cell>
+            </div>
+          </PremiumPanel>
+
+          {/* Broker attribution */}
+          {contract.broker && (
+            <PremiumPanel title={m.sectionBroker}>
+              <div className="grid grid-cols-1 overflow-hidden rounded-2xl border border-hairline sm:grid-cols-2">
+                <Cell label={m.fieldBrokerCompany}>
+                  <Link
+                    href={`/dashboard/brokers/${contract.broker.id}`}
+                    className="text-[14px] font-bold text-brand-700 hover:text-brand-600"
+                  >
+                    {contract.broker.companyName}
+                  </Link>
+                  {contract.broker.commercialName && (
+                    <p className="mt-0.5 text-[12px] text-slate-500">
+                      {contract.broker.commercialName}
+                    </p>
+                  )}
+                  <p className="mt-0.5 font-mono text-[11.5px] text-slate-500" dir="ltr">
+                    {contract.broker.code}
+                  </p>
+                </Cell>
+                {contract.brokerAgent && (
+                  <Cell label={m.fieldBrokerContact}>
+                    <p className="text-[13.5px] font-semibold text-slate-900">
+                      {contract.brokerAgent.fullName}
+                    </p>
+                    <p className="mt-0.5 text-[12px] text-slate-500" dir="ltr">
+                      {contract.brokerAgent.email ?? contract.brokerAgent.phone ?? '—'}
+                    </p>
+                  </Cell>
+                )}
+                {contract.reservation &&
+                  (contract.reservation.commissionLockedPct != null ||
+                    contract.reservation.commissionLockedAmount != null) && (
+                    <Cell label={m.commissionSnapshot} wide>
+                      <div className="flex flex-wrap gap-x-8 gap-y-1 text-[13px]">
+                        {contract.reservation.commissionLockedPct != null && (
+                          <span>
+                            <span className="text-slate-500">{m.commissionPct}: </span>
+                            <span className="font-semibold tabular-nums text-slate-900">
+                              {Number(contract.reservation.commissionLockedPct).toFixed(2)}%
+                            </span>
+                          </span>
+                        )}
+                        {contract.reservation.commissionLockedAmount != null && (
+                          <span>
+                            <span className="text-slate-500">{m.commissionAmount}: </span>
+                            <span className="font-semibold tabular-nums text-slate-900">
+                              {String(contract.reservation.commissionLockedAmount)}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                    </Cell>
+                  )}
+              </div>
+            </PremiumPanel>
+          )}
+        </>
+      }
+      side={
+        <>
+          {/* Parties */}
+          <PremiumPanel title={m.sectionParties} sub={m.partiesSub} padding="none">
+            <div
+              data-testid="contract-parties"
+              className="divide-y divide-hairline border-t border-hairline"
+            >
+              <div className="px-6 py-5">
+                <PartyLabel>{m.partyCustomer}</PartyLabel>
+                {contract.customer ? (
+                  <>
+                    <div className="flex items-center gap-3.5">
+                      <Avatar name={contract.customer.fullName} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[15px] font-bold text-slate-900">
+                          {contract.customer.fullName}
+                        </p>
+                        <Link
+                          href={`/dashboard/customers/${contract.customer.id}`}
+                          className="mt-0.5 inline-flex items-center gap-1 text-[12.5px] font-bold text-brand-700 hover:text-brand-600"
+                        >
+                          {m.linkViewClientProfile}
+                          <ArrowUpLeft className="h-3.5 w-3.5 ltr:rotate-90" />
+                        </Link>
+                      </div>
+                    </div>
+                    {(contract.customer.phone || customerEmail) && (
+                      <div className="mt-4 flex flex-col gap-2">
+                        {contract.customer.phone && (
+                          <ContactRow href={`tel:${contract.customer.phone}`} icon={<Phone />}>
+                            {contract.customer.phone}
+                          </ContactRow>
+                        )}
+                        {customerEmail && (
+                          <ContactRow href={`mailto:${customerEmail}`} icon={<Mail />}>
+                            {customerEmail}
+                          </ContactRow>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-slate-500">—</p>
+                )}
+              </div>
+
+              {contract.unit && (
+                <Link
+                  href={`/dashboard/units/${contract.unit.id}`}
+                  className="group flex items-center gap-3.5 px-6 py-4 transition-colors hover:bg-surface-muted/50"
+                >
+                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-500/12 text-brand-700 [&_svg]:h-[18px] [&_svg]:w-[18px]">
+                    <Building2 />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11.5px] text-slate-500">{m.partyUnit}</p>
+                    <p className="flex items-center gap-2">
+                      <span className="font-mono text-[15px] font-bold text-slate-900">
+                        {contract.unit.code}
+                      </span>
+                      {contract.unit.type && (
+                        <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-semibold text-slate-500">
+                          {contract.unit.type}
+                        </span>
+                      )}
+                    </p>
+                    <p className="truncate text-[12px] text-slate-500">{projectName}</p>
+                  </div>
+                  <ArrowUpLeft className="h-4 w-4 text-slate-400 transition-colors group-hover:text-brand-600 ltr:rotate-90" />
+                </Link>
+              )}
+
+              {contract.reservation && (
+                <Link
+                  href={`/dashboard/reservations/${contract.reservation.id}`}
+                  className="group flex items-center gap-3.5 px-6 py-4 transition-colors hover:bg-surface-muted/50"
+                >
+                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-muted text-slate-500 [&_svg]:h-[18px] [&_svg]:w-[18px]">
+                    <Link2 />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11.5px] text-slate-500">{m.partyReservation}</p>
+                    <p className="font-mono text-[14px] font-bold text-slate-900">
+                      {contract.reservation.reservationNumber ??
+                        contract.reservation.id.slice(0, 8)}
+                    </p>
+                  </div>
+                  <ArrowUpLeft className="h-4 w-4 text-slate-400 transition-colors group-hover:text-brand-600 ltr:rotate-90" />
+                </Link>
+              )}
+            </div>
+          </PremiumPanel>
+
+          {/* PDF panel */}
+          <ContractPdfPanel contract={contract} locale={locale} />
+
+          {/* Contract documents */}
+          <div className="space-y-1.5">
+            <p className="px-1 text-[11.5px] text-slate-500">{m.contractDocsNote}</p>
+            <OwnerDocumentsCard
+              ownerType="CONTRACT"
+              ownerId={contract.id}
+              title={m.contractDocsTitle}
+              legacy={
+                contract.pdfUrl
+                  ? [
+                      {
+                        label: m.contractDocsLegacyLabel,
+                        href: contract.pdfUrl,
+                        hint: m.contractDocsLegacyHint,
+                      },
+                    ]
+                  : undefined
+              }
+            />
+          </div>
+        </>
+      }
+    />
+  );
+  const installmentsPane = (
+    <>
+      {/* Installment plan */}
+      <PremiumPanel
+        title={m.sectionInstallmentPlan}
+        sub={
+          plan
+            ? m.planProgress(rows.filter((i) => i.status === 'PAID').length, rows.length)
+            : undefined
+        }
+        padding={plan ? 'none' : 'normal'}
+        trailing={
+          // The schedule as a branded workbook — the API allows ADMIN and SALES_MANAGER.
+          plan && (isAdmin || session?.role === 'SALES_MANAGER') ? (
+            <ExportMenu
+              locale={locale}
+              filenameBase={`installments-${contract.contractNumber ?? contract.id.slice(0, 8)}`}
+              pdfPath={`/installment-plans/${plan.id}/export.pdf`}
+              xlsxPath={`/installment-plans/${plan.id}/export.xlsx`}
+            />
+          ) : undefined
+        }
+      >
+        {plan ? (
+          <div>
+            <div className="mx-6 mb-5 grid grid-cols-2 overflow-hidden rounded-2xl border border-hairline sm:grid-cols-4">
+              <PlanStat
+                label={m.fieldInstallmentMonths}
+                value={`${plan.totalMonths} ${m.monthSuffix}`}
+              />
+              <PlanStat
+                label={m.fieldMonthlyAmount}
+                value={formatCurrency(plan.monthlyAmount, currency, locale)}
+                gold
+              />
+              <PlanStat label={m.fieldStartsAt} value={formatDate(plan.startsAt, locale)} />
+              <PlanStat
+                label={m.fieldFrequency}
+                value={FREQ_LABELS[plan.frequency] ?? plan.frequency}
+              />
+            </div>
+
+            {rows.length > 0 && (
+              <div className="overflow-x-auto border-t border-hairline">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 z-10 bg-surface">
+                    <tr className="border-b border-hairline">
+                      <th className={TH}>#</th>
+                      <th className={TH}>{m.colType}</th>
+                      <th className={TH}>{m.colDueDate}</th>
+                      <th className={TH}>{m.colAmount}</th>
+                      <th className={TH}>{m.colStatus}</th>
+                      <th className={TH}>{locale === 'en' ? 'Payment' : 'تفاصيل الدفع'}</th>
+                      <th className="px-4 py-3" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-hairline">
+                    <CollapsibleRows
+                      from={rowWindow[0]}
+                      to={rowWindow[1]}
+                      colSpan={7}
+                      showAllLabel={
+                        locale === 'en'
+                          ? `Show all ${rows.length} rows`
+                          : `عرض كل الأقساط (${rows.length})`
+                      }
+                      showLessLabel={locale === 'en' ? 'Show fewer' : 'عرض أقل'}
+                    >
+                      {(() => {
+                        let installmentCounter = 0;
+                        return rows.map((inst) => {
+                          const s = inst.waivedAt
+                            ? WAIVED
+                            : inst.status === 'PENDING' || inst.status === 'OVERDUE'
+                              ? dueLabel(inst.dueDate)
+                              : (INST_STATUS[inst.status] ?? INST_STATUS['PENDING']!);
+                          const waiting =
+                            inst.awaitingPayment &&
+                            inst.payment &&
+                            (inst.payment.state === 'PENDING_REVIEW' ||
+                              inst.payment.state === 'CHEQUE_PENDING')
+                              ? inst.payment.state
+                              : null;
+                          const note = rowPaymentNote(
+                            inst.status,
+                            inst.payment,
+                            (d) => formatDate(d, locale),
+                            locale,
+                          );
+                          // Not while a proof or a cheque is waiting: the API refuses a second payment.
+                          const canPay =
+                            isAdmin &&
+                            !inst.awaitingPayment &&
+                            (inst.status === 'PENDING' || inst.status === 'OVERDUE');
+                          const isInstallment = !inst.type || inst.type === 'INSTALLMENT';
+                          if (isInstallment) installmentCounter++;
+                          const isNext = next?.id === inst.id;
+                          return (
+                            <tr
+                              key={inst.id}
+                              className={cn(
+                                'transition-colors duration-100 hover:bg-surface-muted/40',
+                                isNext && 'bg-brand-500/[0.06]',
+                              )}
+                            >
+                              <td className="px-5 py-3.5">
+                                <span
+                                  className={cn(
+                                    'inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[11.5px] font-semibold tabular-nums',
+                                    inst.status === 'PAID'
+                                      ? 'bg-emerald-500/12 text-emerald-600'
+                                      : isNext
+                                        ? 'bg-brand-500/15 text-brand-700'
+                                        : 'bg-surface-muted text-slate-500',
+                                  )}
+                                >
+                                  {isInstallment ? installmentCounter : '•'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 text-[12.5px] font-medium text-slate-600">
+                                {PAYMENT_TYPE_LABELS[inst.type] ?? m.payInstallment}
+                              </td>
+                              <td className="px-4 py-3.5 text-[13px] text-slate-700 tabular-nums">
+                                {formatDate(inst.dueDate, locale)}
+                              </td>
+                              <td className="px-4 py-3.5 text-[13.5px] font-bold tabular-nums text-slate-900">
+                                {formatCurrency(inst.amount, currency, locale)}
+                              </td>
+                              <td className="px-4 py-3.5">
+                                {/* A row with a proof or cheque waiting says so instead of a bare "pending". */}
+                                {waiting ? (
+                                  <DepositStateChip state={waiting} locale={locale} />
+                                ) : (
+                                  <span
+                                    className={cn(
+                                      'inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold',
+                                      s.cls,
+                                    )}
+                                  >
+                                    {s.label}
+                                  </span>
+                                )}
+                              </td>
+                              <td
+                                className="px-4 py-3.5 text-[12px] text-slate-500"
+                                data-testid="row-payment-note"
+                              >
+                                {note ??
+                                  (inst.status === 'PAID' && inst.paidAt
+                                    ? formatDate(inst.paidAt, locale)
+                                    : '—')}
+                                {inst.payment?.state === 'REVERSED' &&
+                                  inst.payment.reversalReason && (
+                                    <span
+                                      className="mt-0.5 block text-[11.5px] text-slate-400"
+                                      data-testid="row-reversal-reason"
+                                    >
+                                      {locale === 'en' ? 'Reason: ' : 'السبب: '}
+                                      {inst.payment.reversalReason}
+                                    </span>
+                                  )}
+                              </td>
+                              <td className="px-4 py-3.5 text-end">
+                                {canPay && inst.type === 'LATE_FEE' && (
+                                  <span className="me-2">
+                                    <WaiveLateFeeButton
+                                      contractId={contract.id}
+                                      installmentId={inst.id}
+                                      locale={locale}
+                                    />
+                                  </span>
+                                )}
+                                {isAdmin && waiting === 'PENDING_REVIEW' && inst.payment && (
+                                  <Link
+                                    href={`/dashboard/deposits/${inst.payment.depositId}` as never}
+                                    data-testid="review-proof-link"
+                                    className="inline-flex items-center gap-1 whitespace-nowrap text-[12.5px] font-bold text-amber-600 hover:text-amber-500"
+                                  >
+                                    {locale === 'en' ? 'Review proof' : 'راجِع الإيصال'}
+                                  </Link>
+                                )}
+                                {isAdmin && waiting === 'CHEQUE_PENDING' && (
+                                  <Link
+                                    href={'/dashboard/cheques' as never}
+                                    className="inline-flex items-center gap-1 whitespace-nowrap text-[12.5px] font-bold text-sky-600 hover:text-sky-500"
+                                  >
+                                    {locale === 'en' ? 'Cheques' : 'صفحة الشيكات'}
+                                  </Link>
+                                )}
+                                {canPay && (
+                                  <RecordPaymentButton
+                                    contractId={contract.id}
+                                    installmentId={inst.id}
+                                    amount={inst.amount}
+                                    dueDate={inst.dueDate}
+                                    installmentType={inst.type}
+                                    currency={currency}
+                                    locale={locale}
+                                  />
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })()}
+                    </CollapsibleRows>
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {contract.reservationId ? (
+              <div className="flex items-start gap-2 rounded-2xl bg-danger-500/10 p-4 text-sm text-danger-600">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>{m.noInstallmentFromReservation}</p>
+              </div>
+            ) : (
+              <PremiumEmptyNote>{m.noInstallmentManual}</PremiumEmptyNote>
+            )}
+            {isAdmin && (
+              <CreatePlanForm
+                contractId={contract.id}
+                labels={{
+                  months: m.formMonthsPlaceholder,
+                  monthly: m.formMonthlyAmountPlaceholder,
+                  submit: m.btnCreatePlan,
+                  backdated: contract.preSystem ? m.planBackdatedPreSystem : m.planBackdated,
+                }}
+                today={todayIn(timeZone)}
+              />
+            )}
+          </div>
+        )}
+      </PremiumPanel>
+
+      {isAdmin && !isCancelled && paidBeforeRows.length > 0 && (
+        <PremiumPanel title={m.paidBeforeTitle}>
+          <PaidBeforeSystem
+            id={contract.id}
+            count={paidBeforeRows.length}
+            total={formatCurrency(
+              paidBeforeRows.reduce((a, i) => a + Math.round(Number(i.amount) * 100), 0) / 100,
+              currency,
+              locale,
+            )}
+            enteredOn={formatDate(contract.createdAt, locale)}
+            locale={locale}
+          />
+        </PremiumPanel>
+      )}
+    </>
+  );
+  const statementPane = statement ? (
+    <>
+      {/* Statement of account */}
+      {statement && (
+        <PremiumPanel
+          title={locale === 'en' ? 'Statement of account' : 'كشف الحساب'}
+          sub={
+            locale === 'en'
+              ? 'Every charge, payment and reversal, with the balance after each'
+              : 'كل مستحق ودفعة وعكس، والرصيد بعد كل حركة'
+          }
+          padding="none"
+          trailing={
+            <PrintButton
+              path="statements"
+              id={contract.id}
+              label={locale === 'en' ? 'Print statement' : 'طباعة الكشف'}
+            />
+          }
+        >
+          <div className="pb-5">
+            <StatementPanel statement={statement} currency={currency} locale={locale} />
+          </div>
+        </PremiumPanel>
+      )}
+    </>
+  ) : (
+    <PremiumEmptyNote>
+      {locale === 'en' ? 'The statement could not be loaded.' : 'تعذّر تحميل كشف الحساب.'}
+    </PremiumEmptyNote>
+  );
+  const paymentsPane = (
+    <>
+      {/* Deposits */}
+      <PremiumPanel
+        title={m.sectionDeposits}
+        trailing={
+          isAdmin ? (
+            <Link href={`/dashboard/deposits/new?contractId=${contract.id}`}>
+              <Button
+                variant="secondary"
+                size="sm"
+                type="button"
+                leftIcon={<CreditCard className="h-3.5 w-3.5" />}
+              >
+                {m.btnRegisterDeposit}
+              </Button>
+            </Link>
+          ) : contract.deposits?.length ? (
+            <CountPill n={contract.deposits.length} />
+          ) : undefined
+        }
+      >
+        {contract.deposits && contract.deposits.length > 0 ? (
+          <ul className="divide-y divide-hairline rounded-2xl border border-hairline">
+            {contract.deposits.map((d) => (
+              <li
+                key={d.id}
+                className="flex items-center gap-4 px-5 py-3.5 transition-colors duration-100 hover:bg-surface-muted/40"
+              >
+                <span
+                  className={cn(
+                    'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full [&_svg]:h-[17px] [&_svg]:w-[17px]',
+                    d.state === 'COLLECTED' || !d.state
+                      ? 'bg-emerald-500/12 text-emerald-600'
+                      : 'bg-amber-500/12 text-amber-600',
+                  )}
+                >
+                  {d.state === 'COLLECTED' || !d.state ? <BadgeCheck /> : <Banknote />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  {isAdmin ? (
+                    <Link
+                      href={`/dashboard/deposits/${d.id}`}
+                      className="text-[15px] font-bold tabular-nums text-slate-900 hover:text-brand-700"
+                    >
+                      {formatCurrency(d.amount, currency, locale)}
+                    </Link>
+                  ) : (
+                    <span className="text-[15px] font-bold tabular-nums text-slate-900">
+                      {formatCurrency(d.amount, currency, locale)}
+                    </span>
+                  )}
+                  <p className="mt-0.5 text-[12px] text-slate-500 tabular-nums">
+                    {formatDate(d.paidAt, locale)}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  {d.receiptUrl && (
+                    <a
+                      href={d.receiptUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[12px] text-slate-500 hover:text-brand-700"
+                    >
+                      <ExternalLink className="h-3 w-3" /> {m.receiptLabel}
+                    </a>
+                  )}
+                  <DepositStateChip state={d.state} locale={locale} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <PremiumEmptyNote>{m.emptyDeposits}</PremiumEmptyNote>
+        )}
+      </PremiumPanel>
+    </>
+  );
+  const hasActions = !isCancelled || isAdmin || !!suggestion;
+  const actionsPane = (
+    <>
+      {!isCancelled && (
+        <PremiumPanel title={handoverT(locale).title}>
+          <HandoverPanel
+            id={contract.id}
+            handover={contract.handover ?? null}
+            signed={!!contract.signedAt}
+            canRecord={isAdmin}
+            unpaid={unpaid > 0 ? formatCurrency(unpaid, currency, locale) : null}
+            locale={locale}
+          />
+        </PremiumPanel>
+      )}
+
+      {isAdmin && !isCancelled && plan && (
+        <PremiumPanel title={m.planChangesTitle} sub={m.planChangesSub}>
+          <PlanChangesPanel
+            contractId={contract.id}
+            totalAmount={contract.totalAmount}
+            open={(plan.installments ?? []).filter(
+              (i) => i.status === 'PENDING' || i.status === 'OVERDUE',
+            )}
+            currency={currency}
+            locale={locale}
+          />
+        </PremiumPanel>
+      )}
+
+      {isAdmin && (
+        <PremiumPanel title={m.amendmentsTitle} sub={m.amendmentsSub}>
+          <AmendmentsPanel
+            contractId={contract.id}
+            live={!isCancelled}
+            history={amendments}
+            currency={currency}
+            markupLeft={Number(contract.markupLeft ?? 0)}
+            locale={locale}
+          />
+        </PremiumPanel>
+      )}
+
+      {suggestion && (
+        <PremiumPanel title={m.cancelTitle} sub={m.cancelSub} className="border-danger-500/25">
+          <CancelContract
+            id={contract.id}
+            suggestion={suggestion}
+            currency={currency}
+            locale={locale}
+          />
+        </PremiumPanel>
+      )}
+    </>
+  );
+  const tabs: Array<{
+    key: string;
+    label: string;
+    badge?: number;
+    alert?: boolean;
+    pane: React.ReactNode;
+  }> = [
+    { key: 'overview', label: locale === 'en' ? 'Overview' : 'نظرة عامة', pane: overviewPane },
+    {
+      key: 'installments',
+      label: locale === 'en' ? 'Installments' : 'الأقساط',
+      badge: overdueCount || undefined,
+      alert: overdueCount > 0,
+      pane: installmentsPane,
+    },
+    { key: 'statement', label: locale === 'en' ? 'Statement' : 'كشف الحساب', pane: statementPane },
+    {
+      key: 'payments',
+      label: locale === 'en' ? 'Payments' : 'الدفعات',
+      badge: contract.deposits?.length || undefined,
+      pane: paymentsPane,
+    },
+    ...(hasActions
+      ? [{ key: 'actions', label: locale === 'en' ? 'Actions' : 'الإجراءات', pane: actionsPane }]
+      : []),
+  ];
 
   return (
     <div className="space-y-6 pb-2">
@@ -226,7 +948,9 @@ export default async function ContractDetailPage({
             )}
           </span>
         }
-        actions={<PrintButton path="contracts" id={contract.id} label={printT(locale).common.print} />}
+        actions={
+          <PrintButton path="contracts" id={contract.id} label={printT(locale).common.print} />
+        }
       >
         {/* Key figures */}
         <div
@@ -236,7 +960,10 @@ export default async function ContractDetailPage({
           <Kpi label={m.kpiTotal} icon={<FileText />}>
             <Money value={formatCurrency(contract.totalAmount, currency, locale)} />
             <p className="text-[12px] text-slate-500">
-              {m.fieldDownPayment}: <span className="tabular-nums">{formatCurrency(contract.downPayment, currency, locale)}</span>
+              {m.fieldDownPayment}:{' '}
+              <span className="tabular-nums">
+                {formatCurrency(contract.downPayment, currency, locale)}
+              </span>
             </p>
           </Kpi>
           <Kpi label={m.kpiCollected} icon={<Wallet />}>
@@ -248,7 +975,9 @@ export default async function ContractDetailPage({
                   style={{ width: `${collectedPct}%` }}
                 />
               </div>
-              <span className="text-[11.5px] text-slate-500 tabular-nums">{m.kpiCollectedPct(collectedPct)}</span>
+              <span className="text-[11.5px] text-slate-500 tabular-nums">
+                {m.kpiCollectedPct(collectedPct)}
+              </span>
             </div>
           </Kpi>
           {/* Remaining on the price, so collected + remaining = the contract
@@ -264,16 +993,25 @@ export default async function ContractDetailPage({
             {unscheduled > 0.005 && (
               <span className="text-[11.5px] text-amber-600" data-testid="kpi-unscheduled">
                 {locale === 'en' ? 'of which not on the schedule' : 'منها غير مجدول'}{' '}
-                <span className="tabular-nums">{formatCurrency(unscheduled, currency, locale)}</span>
+                <span className="tabular-nums">
+                  {formatCurrency(unscheduled, currency, locale)}
+                </span>
               </span>
             )}
             <span
               className={cn(
                 'inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold',
-                overdueCount > 0 ? 'bg-danger-500/12 text-danger-600' : 'bg-emerald-500/12 text-emerald-600',
+                overdueCount > 0
+                  ? 'bg-danger-500/12 text-danger-600'
+                  : 'bg-emerald-500/12 text-emerald-600',
               )}
             >
-              <span className={cn('h-1.5 w-1.5 rounded-full', overdueCount > 0 ? 'bg-danger-500' : 'bg-emerald-500')} />
+              <span
+                className={cn(
+                  'h-1.5 w-1.5 rounded-full',
+                  overdueCount > 0 ? 'bg-danger-500' : 'bg-emerald-500',
+                )}
+              />
               {overdueCount > 0 ? m.kpiOverdue(overdueCount) : m.kpiNoOverdue}
             </span>
           </Kpi>
@@ -281,8 +1019,14 @@ export default async function ContractDetailPage({
             {next ? (
               <>
                 <Money value={formatCurrency(next.amount, currency, locale)} />
-                <p className={cn('text-[12px] tabular-nums', next.status === 'OVERDUE' ? 'text-danger-600' : 'text-slate-500')}>
-                  {formatDate(next.dueDate, locale)} · {PAYMENT_TYPE_LABELS[next.type] ?? m.payInstallment}
+                <p
+                  className={cn(
+                    'text-[12px] tabular-nums',
+                    next.status === 'OVERDUE' ? 'text-danger-600' : 'text-slate-500',
+                  )}
+                >
+                  {formatDate(next.dueDate, locale)} ·{' '}
+                  {PAYMENT_TYPE_LABELS[next.type] ?? m.payInstallment}
                 </p>
               </>
             ) : (
@@ -296,597 +1040,32 @@ export default async function ContractDetailPage({
         <SignFollowupsAlert id={contract.id} locale={locale} />
       )}
 
-      <PremiumDetailLayout
-        main={
-          <>
-            {cancellation && (
-              <PremiumPanel title={m.cancellationTitle}>
-                <CancellationPanel
-                  id={contract.id}
-                  cancellation={cancellation}
-                  currency={currency}
-                  canManage={isAdmin}
-                  locale={locale}
-                />
-              </PremiumPanel>
-            )}
-
-            {/* Contract key info */}
-            <PremiumPanel title={m.sectionContractData}>
-              <div className="grid grid-cols-1 overflow-hidden rounded-2xl border border-hairline sm:grid-cols-2">
-                <Cell label={m.fieldContractNumber}>
-                  {contract.contractNumber ? (
-                    <span className="font-mono text-[16px] font-bold text-brand-700">{displayNumber}</span>
-                  ) : isAdmin ? (
-                    <AssignContractNumber id={contract.id} locale={locale} />
-                  ) : (
-                    <span className="font-mono text-[16px] font-bold text-slate-400">{displayNumber}</span>
-                  )}
-                </Cell>
-                <Cell label={m.fieldCreatedAt}>
-                  <span className="text-[13.5px] font-semibold text-slate-900 tabular-nums">{formatDateTime(contract.createdAt, locale)}</span>
-                </Cell>
-                <Cell label={m.fieldSignedAt}>
-                  {contract.signedAt ? (
-                    <span className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-emerald-600 tabular-nums">
-                      <CheckCircle2 className="h-4 w-4" />
-                      {formatDateTime(contract.signedAt, locale)}
-                    </span>
-                  ) : (
-                    <>
-                      <span className="text-[13px] text-slate-500">{m.notSigned}</span>
-                      {isAdmin && !isCancelled && (
-                        <SignContract
-                          contractId={contract.id}
-                          today={todayIn(timeZone)}
-                          deliveryDefault={contract.expectedDeliveryDate}
-                          locale={locale}
-                        />
-                      )}
-                    </>
-                  )}
-                </Cell>
-                <Cell label={m.fieldDelivery}>
-                  <ContractDeliveryDate
-                    contractId={contract.id}
-                    deliveryDate={contract.deliveryDate ?? null}
-                    expected={contract.expectedDeliveryDate ?? null}
-                    delayDays={contract.deliveryDelayDays ?? 0}
-                    editable={isAdmin && !isCancelled && !!contract.signedAt}
-                    locale={locale}
-                  />
-                </Cell>
-                <Cell label={uiT(locale).common.lateFeeClause.label} wide>
-                  <LateFeeClause
-                    contractId={contract.id}
-                    applies={contract.lateFeesApply ?? false}
-                    editable={isAdmin && !isCancelled}
-                    locale={locale}
-                  />
-                </Cell>
-              </div>
-            </PremiumPanel>
-
-            {/* Installment plan */}
-            <PremiumPanel
-              title={m.sectionInstallmentPlan}
-              sub={
-                plan
-                  ? m.planProgress(
-                      rows.filter((i) => i.status === 'PAID').length,
-                      rows.length,
-                    )
-                  : undefined
-              }
-              padding={plan ? 'none' : 'normal'}
-              trailing={
-                // The schedule as a branded workbook — the API allows ADMIN and SALES_MANAGER.
-                plan && (isAdmin || session?.role === 'SALES_MANAGER') ? (
-                  <ExportMenu
-                    locale={locale}
-                    filenameBase={`installments-${contract.contractNumber ?? contract.id.slice(0, 8)}`}
-                    pdfPath={`/installment-plans/${plan.id}/export.pdf`}
-                    xlsxPath={`/installment-plans/${plan.id}/export.xlsx`}
-                  />
-                ) : undefined
-              }
-            >
-              {plan ? (
-                <div>
-                  <div className="mx-6 mb-5 grid grid-cols-2 overflow-hidden rounded-2xl border border-hairline sm:grid-cols-4">
-                    <PlanStat label={m.fieldInstallmentMonths} value={`${plan.totalMonths} ${m.monthSuffix}`} />
-                    <PlanStat label={m.fieldMonthlyAmount} value={formatCurrency(plan.monthlyAmount, currency, locale)} gold />
-                    <PlanStat label={m.fieldStartsAt} value={formatDate(plan.startsAt, locale)} />
-                    <PlanStat label={m.fieldFrequency} value={FREQ_LABELS[plan.frequency] ?? plan.frequency} />
-                  </div>
-
-                  {rows.length > 0 && (
-                    <div className="max-h-[460px] overflow-auto border-t border-hairline">
-                      <table className="w-full text-sm">
-                        <thead className="sticky top-0 z-10 bg-surface">
-                          <tr className="border-b border-hairline">
-                            <th className={TH}>#</th>
-                            <th className={TH}>{m.colType}</th>
-                            <th className={TH}>{m.colDueDate}</th>
-                            <th className={TH}>{m.colAmount}</th>
-                            <th className={TH}>{m.colStatus}</th>
-                            <th className={TH}>{locale === 'en' ? 'Payment' : 'تفاصيل الدفع'}</th>
-                            <th className="px-4 py-3" />
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-hairline">
-                          {(() => {
-                            let installmentCounter = 0;
-                            return rows.map((inst) => {
-                              const s = inst.waivedAt
-                                ? WAIVED
-                                : inst.status === 'PENDING' || inst.status === 'OVERDUE'
-                                  ? dueLabel(inst.dueDate)
-                                  : INST_STATUS[inst.status] ?? INST_STATUS['PENDING']!;
-                              const waiting =
-                                inst.awaitingPayment && inst.payment &&
-                                (inst.payment.state === 'PENDING_REVIEW' || inst.payment.state === 'CHEQUE_PENDING')
-                                  ? inst.payment.state
-                                  : null;
-                              const note = rowPaymentNote(inst.status, inst.payment, (d) => formatDate(d, locale), locale);
-                              // Not while a proof or a cheque is waiting: the API refuses a second payment.
-                              const canPay =
-                                isAdmin &&
-                                !inst.awaitingPayment &&
-                                (inst.status === 'PENDING' || inst.status === 'OVERDUE');
-                              const isInstallment =
-                                !inst.type || inst.type === 'INSTALLMENT';
-                              if (isInstallment) installmentCounter++;
-                              const isNext = next?.id === inst.id;
-                              return (
-                                <tr
-                                  key={inst.id}
-                                  className={cn(
-                                    'transition-colors duration-100 hover:bg-surface-muted/40',
-                                    isNext && 'bg-brand-500/[0.06]',
-                                  )}
-                                >
-                                  <td className="px-5 py-3.5">
-                                    <span
-                                      className={cn(
-                                        'inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-[11.5px] font-semibold tabular-nums',
-                                        inst.status === 'PAID'
-                                          ? 'bg-emerald-500/12 text-emerald-600'
-                                          : isNext
-                                            ? 'bg-brand-500/15 text-brand-700'
-                                            : 'bg-surface-muted text-slate-500',
-                                      )}
-                                    >
-                                      {isInstallment ? installmentCounter : '•'}
-                                    </span>
-                                  </td>
-                                  <td className="px-4 py-3.5 text-[12.5px] font-medium text-slate-600">
-                                    {PAYMENT_TYPE_LABELS[inst.type] ?? m.payInstallment}
-                                  </td>
-                                  <td className="px-4 py-3.5 text-[13px] text-slate-700 tabular-nums">
-                                    {formatDate(inst.dueDate, locale)}
-                                  </td>
-                                  <td className="px-4 py-3.5 text-[13.5px] font-bold tabular-nums text-slate-900">
-                                    {formatCurrency(inst.amount, currency, locale)}
-                                  </td>
-                                  <td className="px-4 py-3.5">
-                                    {/* A row with a proof or cheque waiting says so instead of a bare "pending". */}
-                                    {waiting ? (
-                                      <DepositStateChip state={waiting} locale={locale} />
-                                    ) : (
-                                      <span className={cn('inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold', s.cls)}>
-                                        {s.label}
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="px-4 py-3.5 text-[12px] text-slate-500" data-testid="row-payment-note">
-                                    {note ??
-                                      (inst.status === 'PAID' && inst.paidAt ? formatDate(inst.paidAt, locale) : '—')}
-                                    {inst.payment?.state === 'REVERSED' && inst.payment.reversalReason && (
-                                      <span className="mt-0.5 block text-[11.5px] text-slate-400" data-testid="row-reversal-reason">
-                                        {locale === 'en' ? 'Reason: ' : 'السبب: '}
-                                        {inst.payment.reversalReason}
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="px-4 py-3.5 text-end">
-                                    {canPay && inst.type === 'LATE_FEE' && (
-                                      <span className="me-2">
-                                        <WaiveLateFeeButton contractId={contract.id} installmentId={inst.id} locale={locale} />
-                                      </span>
-                                    )}
-                                    {isAdmin && waiting === 'PENDING_REVIEW' && inst.payment && (
-                                      <Link
-                                        href={`/dashboard/deposits/${inst.payment.depositId}` as never}
-                                        data-testid="review-proof-link"
-                                        className="inline-flex items-center gap-1 whitespace-nowrap text-[12.5px] font-bold text-amber-600 hover:text-amber-500"
-                                      >
-                                        {locale === 'en' ? 'Review proof' : 'راجِع الإيصال'}
-                                      </Link>
-                                    )}
-                                    {isAdmin && waiting === 'CHEQUE_PENDING' && (
-                                      <Link
-                                        href={'/dashboard/cheques' as never}
-                                        className="inline-flex items-center gap-1 whitespace-nowrap text-[12.5px] font-bold text-sky-600 hover:text-sky-500"
-                                      >
-                                        {locale === 'en' ? 'Cheques' : 'صفحة الشيكات'}
-                                      </Link>
-                                    )}
-                                    {canPay && (
-                                      <RecordPaymentButton
-                                        contractId={contract.id}
-                                        installmentId={inst.id}
-                                        amount={inst.amount}
-                                        dueDate={inst.dueDate}
-                                        installmentType={inst.type}
-                                        currency={currency}
-                                        locale={locale}
-                                      />
-                                    )}
-                                  </td>
-                                </tr>
-                              );
-                            });
-                          })()}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {contract.reservationId ? (
-                    <div className="flex items-start gap-2 rounded-2xl bg-danger-500/10 p-4 text-sm text-danger-600">
-                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                      <p>{m.noInstallmentFromReservation}</p>
-                    </div>
-                  ) : (
-                    <PremiumEmptyNote>{m.noInstallmentManual}</PremiumEmptyNote>
-                  )}
-                  {isAdmin && (
-                    <CreatePlanForm
-                      contractId={contract.id}
-                      labels={{
-                        months: m.formMonthsPlaceholder,
-                        monthly: m.formMonthlyAmountPlaceholder,
-                        submit: m.btnCreatePlan,
-                        backdated: contract.preSystem ? m.planBackdatedPreSystem : m.planBackdated,
-                      }}
-                      today={todayIn(timeZone)}
-                    />
-                  )}
-                </div>
-              )}
-            </PremiumPanel>
-
-            {/* Statement of account */}
-            {statement && (
-              <PremiumPanel
-                title={locale === 'en' ? 'Statement of account' : 'كشف الحساب'}
-                sub={
-                  locale === 'en'
-                    ? 'Every charge, payment and reversal, with the balance after each'
-                    : 'كل مستحق ودفعة وعكس، والرصيد بعد كل حركة'
-                }
-                padding="none"
-                trailing={
-                  <PrintButton
-                    path="statements"
-                    id={contract.id}
-                    label={locale === 'en' ? 'Print statement' : 'طباعة الكشف'}
-                  />
-                }
-              >
-                <div className="pb-5">
-                  <StatementPanel statement={statement} currency={currency} locale={locale} />
-                </div>
-              </PremiumPanel>
-            )}
-
-            {/* Deposits */}
-            <PremiumPanel
-              title={m.sectionDeposits}
-              trailing={
-                isAdmin ? (
-                  <Link href={`/dashboard/deposits/new?contractId=${contract.id}`}>
-                    <Button variant="secondary" size="sm" type="button" leftIcon={<CreditCard className="h-3.5 w-3.5" />}>
-                      {m.btnRegisterDeposit}
-                    </Button>
-                  </Link>
-                ) : contract.deposits?.length ? (
-                  <CountPill n={contract.deposits.length} />
-                ) : undefined
-              }
-            >
-              {contract.deposits && contract.deposits.length > 0 ? (
-                <ul className="max-h-[420px] divide-y divide-hairline overflow-y-auto rounded-2xl border border-hairline">
-                  {contract.deposits.map((d) => (
-                    <li
-                      key={d.id}
-                      className="flex items-center gap-4 px-5 py-3.5 transition-colors duration-100 hover:bg-surface-muted/40"
-                    >
-                      <span
-                        className={cn(
-                          'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full [&_svg]:h-[17px] [&_svg]:w-[17px]',
-                          d.state === 'COLLECTED' || !d.state ? 'bg-emerald-500/12 text-emerald-600' : 'bg-amber-500/12 text-amber-600',
-                        )}
-                      >
-                        {d.state === 'COLLECTED' || !d.state ? <BadgeCheck /> : <Banknote />}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        {isAdmin ? (
-                          <Link
-                            href={`/dashboard/deposits/${d.id}`}
-                            className="text-[15px] font-bold tabular-nums text-slate-900 hover:text-brand-700"
-                          >
-                            {formatCurrency(d.amount, currency, locale)}
-                          </Link>
-                        ) : (
-                          <span className="text-[15px] font-bold tabular-nums text-slate-900">
-                            {formatCurrency(d.amount, currency, locale)}
-                          </span>
-                        )}
-                        <p className="mt-0.5 text-[12px] text-slate-500 tabular-nums">{formatDate(d.paidAt, locale)}</p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-3">
-                        {d.receiptUrl && (
-                          <a
-                            href={d.receiptUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[12px] text-slate-500 hover:text-brand-700"
-                          >
-                            <ExternalLink className="h-3 w-3" /> {m.receiptLabel}
-                          </a>
-                        )}
-                        <DepositStateChip state={d.state} locale={locale} />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <PremiumEmptyNote>{m.emptyDeposits}</PremiumEmptyNote>
-              )}
-            </PremiumPanel>
-
-            {!isCancelled && (
-              <PremiumPanel title={handoverT(locale).title}>
-                <HandoverPanel
-                  id={contract.id}
-                  handover={contract.handover ?? null}
-                  signed={!!contract.signedAt}
-                  canRecord={isAdmin}
-                  unpaid={unpaid > 0 ? formatCurrency(unpaid, currency, locale) : null}
-                  locale={locale}
-                />
-              </PremiumPanel>
-            )}
-
-            {/* Broker attribution */}
-            {contract.broker && (
-              <PremiumPanel title={m.sectionBroker}>
-                <div className="grid grid-cols-1 overflow-hidden rounded-2xl border border-hairline sm:grid-cols-2">
-                  <Cell label={m.fieldBrokerCompany}>
-                    <Link
-                      href={`/dashboard/brokers/${contract.broker.id}`}
-                      className="text-[14px] font-bold text-brand-700 hover:text-brand-600"
-                    >
-                      {contract.broker.companyName}
-                    </Link>
-                    {contract.broker.commercialName && (
-                      <p className="mt-0.5 text-[12px] text-slate-500">{contract.broker.commercialName}</p>
-                    )}
-                    <p className="mt-0.5 font-mono text-[11.5px] text-slate-500" dir="ltr">
-                      {contract.broker.code}
-                    </p>
-                  </Cell>
-                  {contract.brokerAgent && (
-                    <Cell label={m.fieldBrokerContact}>
-                      <p className="text-[13.5px] font-semibold text-slate-900">{contract.brokerAgent.fullName}</p>
-                      <p className="mt-0.5 text-[12px] text-slate-500" dir="ltr">
-                        {contract.brokerAgent.email ?? contract.brokerAgent.phone ?? '—'}
-                      </p>
-                    </Cell>
-                  )}
-                  {contract.reservation &&
-                    (contract.reservation.commissionLockedPct != null ||
-                      contract.reservation.commissionLockedAmount != null) && (
-                      <Cell label={m.commissionSnapshot} wide>
-                        <div className="flex flex-wrap gap-x-8 gap-y-1 text-[13px]">
-                          {contract.reservation.commissionLockedPct != null && (
-                            <span>
-                              <span className="text-slate-500">{m.commissionPct}: </span>
-                              <span className="font-semibold tabular-nums text-slate-900">
-                                {Number(contract.reservation.commissionLockedPct).toFixed(2)}%
-                              </span>
-                            </span>
-                          )}
-                          {contract.reservation.commissionLockedAmount != null && (
-                            <span>
-                              <span className="text-slate-500">{m.commissionAmount}: </span>
-                              <span className="font-semibold tabular-nums text-slate-900">
-                                {String(contract.reservation.commissionLockedAmount)}
-                              </span>
-                            </span>
-                          )}
-                        </div>
-                      </Cell>
-                    )}
-                </div>
-              </PremiumPanel>
-            )}
-
-            {isAdmin && !isCancelled && paidBeforeRows.length > 0 && (
-              <PremiumPanel title={m.paidBeforeTitle}>
-                <PaidBeforeSystem
-                  id={contract.id}
-                  count={paidBeforeRows.length}
-                  total={formatCurrency(
-                    paidBeforeRows.reduce((a, i) => a + Math.round(Number(i.amount) * 100), 0) / 100,
-                    currency,
-                    locale,
-                  )}
-                  enteredOn={formatDate(contract.createdAt, locale)}
-                  locale={locale}
-                />
-              </PremiumPanel>
-            )}
-
-            {isAdmin && !isCancelled && plan && (
-              <PremiumPanel title={m.planChangesTitle} sub={m.planChangesSub}>
-                <PlanChangesPanel
-                  contractId={contract.id}
-                  totalAmount={contract.totalAmount}
-                  open={(plan.installments ?? []).filter((i) => i.status === 'PENDING' || i.status === 'OVERDUE')}
-                  currency={currency}
-                  locale={locale}
-                />
-              </PremiumPanel>
-            )}
-
-            {isAdmin && (
-              <PremiumPanel title={m.amendmentsTitle} sub={m.amendmentsSub}>
-                <AmendmentsPanel
-                  contractId={contract.id}
-                  live={!isCancelled}
-                  history={amendments}
-                  currency={currency}
-                  markupLeft={Number(contract.markupLeft ?? 0)}
-                  locale={locale}
-                />
-              </PremiumPanel>
-            )}
-
-            {suggestion && (
-              <PremiumPanel
-                title={m.cancelTitle}
-                sub={m.cancelSub}
-                className="border-danger-500/25"
-              >
-                <CancelContract id={contract.id} suggestion={suggestion} currency={currency} locale={locale} />
-              </PremiumPanel>
-            )}
-          </>
-        }
-        side={
-          <>
-            {/* Parties */}
-            <PremiumPanel title={m.sectionParties} sub={m.partiesSub} padding="none">
-              <div data-testid="contract-parties" className="divide-y divide-hairline border-t border-hairline">
-                <div className="px-6 py-5">
-                  <PartyLabel>{m.partyCustomer}</PartyLabel>
-                  {contract.customer ? (
-                    <>
-                      <div className="flex items-center gap-3.5">
-                        <Avatar name={contract.customer.fullName} />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[15px] font-bold text-slate-900">{contract.customer.fullName}</p>
-                          <Link
-                            href={`/dashboard/customers/${contract.customer.id}`}
-                            className="mt-0.5 inline-flex items-center gap-1 text-[12.5px] font-bold text-brand-700 hover:text-brand-600"
-                          >
-                            {m.linkViewClientProfile}
-                            <ArrowUpLeft className="h-3.5 w-3.5 ltr:rotate-90" />
-                          </Link>
-                        </div>
-                      </div>
-                      {(contract.customer.phone || customerEmail) && (
-                        <div className="mt-4 flex flex-col gap-2">
-                          {contract.customer.phone && (
-                            <ContactRow href={`tel:${contract.customer.phone}`} icon={<Phone />}>
-                              {contract.customer.phone}
-                            </ContactRow>
-                          )}
-                          {customerEmail && (
-                            <ContactRow href={`mailto:${customerEmail}`} icon={<Mail />}>
-                              {customerEmail}
-                            </ContactRow>
-                          )}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-sm text-slate-500">—</p>
-                  )}
-                </div>
-
-                {contract.unit && (
-                  <Link
-                    href={`/dashboard/units/${contract.unit.id}`}
-                    className="group flex items-center gap-3.5 px-6 py-4 transition-colors hover:bg-surface-muted/50"
-                  >
-                    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-500/12 text-brand-700 [&_svg]:h-[18px] [&_svg]:w-[18px]">
-                      <Building2 />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11.5px] text-slate-500">{m.partyUnit}</p>
-                      <p className="flex items-center gap-2">
-                        <span className="font-mono text-[15px] font-bold text-slate-900">{contract.unit.code}</span>
-                        {contract.unit.type && (
-                          <span className="rounded-full bg-surface-muted px-2 py-0.5 text-[11px] font-semibold text-slate-500">
-                            {contract.unit.type}
-                          </span>
-                        )}
-                      </p>
-                      <p className="truncate text-[12px] text-slate-500">{projectName}</p>
-                    </div>
-                    <ArrowUpLeft className="h-4 w-4 text-slate-400 transition-colors group-hover:text-brand-600 ltr:rotate-90" />
-                  </Link>
-                )}
-
-                {contract.reservation && (
-                  <Link
-                    href={`/dashboard/reservations/${contract.reservation.id}`}
-                    className="group flex items-center gap-3.5 px-6 py-4 transition-colors hover:bg-surface-muted/50"
-                  >
-                    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-muted text-slate-500 [&_svg]:h-[18px] [&_svg]:w-[18px]">
-                      <Link2 />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11.5px] text-slate-500">{m.partyReservation}</p>
-                      <p className="font-mono text-[14px] font-bold text-slate-900">
-                        {contract.reservation.reservationNumber ?? contract.reservation.id.slice(0, 8)}
-                      </p>
-                    </div>
-                    <ArrowUpLeft className="h-4 w-4 text-slate-400 transition-colors group-hover:text-brand-600 ltr:rotate-90" />
-                  </Link>
-                )}
-              </div>
-            </PremiumPanel>
-
-            {/* PDF panel */}
-            <ContractPdfPanel contract={contract} locale={locale} />
-
-            {/* Contract documents */}
-            <div className="space-y-1.5">
-              <p className="px-1 text-[11.5px] text-slate-500">{m.contractDocsNote}</p>
-              <OwnerDocumentsCard
-                ownerType="CONTRACT"
-                ownerId={contract.id}
-                title={m.contractDocsTitle}
-                legacy={
-                  contract.pdfUrl
-                    ? [
-                        {
-                          label: m.contractDocsLegacyLabel,
-                          href: contract.pdfUrl,
-                          hint: m.contractDocsLegacyHint,
-                        },
-                      ]
-                    : undefined
-                }
-              />
-            </div>
-          </>
-        }
-      />
+      <ContractTabs
+        initial={tab ?? 'overview'}
+        tabs={tabs.map(({ key, label, badge, alert }) => ({ key, label, badge, alert }))}
+      >
+        {tabs.map((t) => (
+          <div key={t.key} className="space-y-6">
+            {t.pane}
+          </div>
+        ))}
+      </ContractTabs>
     </div>
   );
 }
 
-const TH = 'px-4 py-3 text-start text-[11.5px] font-semibold text-slate-500 whitespace-nowrap first:ps-5';
+const TH =
+  'px-4 py-3 text-start text-[11.5px] font-semibold text-slate-500 whitespace-nowrap first:ps-5';
 
-function Kpi({ label, icon, children }: { label: string; icon: React.ReactNode; children: React.ReactNode }) {
+function Kpi({
+  label,
+  icon,
+  children,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-2.5 border-hairline p-5 [&:not(:first-child)]:border-s max-lg:[&:nth-child(3)]:border-s-0 max-lg:[&:nth-child(n+3)]:border-t">
       <div className="flex items-center gap-2 text-[12.5px] font-semibold text-slate-500">
@@ -903,13 +1082,26 @@ function Kpi({ label, icon, children }: { label: string; icon: React.ReactNode; 
 /** A formatted amount ("1,850,000 ج.م") with the number in the display face. */
 function Money({ value, gold }: { value: string; gold?: boolean }) {
   return (
-    <span className={cn('num text-[26px] font-semibold leading-none', gold ? 'text-brand-700' : 'text-slate-900')}>
+    <span
+      className={cn(
+        'num text-[26px] font-semibold leading-none',
+        gold ? 'text-brand-700' : 'text-slate-900',
+      )}
+    >
       {value}
     </span>
   );
 }
 
-function Cell({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
+function Cell({
+  label,
+  children,
+  wide,
+}: {
+  label: string;
+  children: React.ReactNode;
+  wide?: boolean;
+}) {
   return (
     <div
       className={cn(
@@ -927,7 +1119,14 @@ function PlanStat({ label, value, gold }: { label: string; value: string; gold?:
   return (
     <div className="border-hairline px-4 py-3.5 [&:not(:first-child)]:border-s max-sm:[&:nth-child(3)]:border-s-0 max-sm:[&:nth-child(n+3)]:border-t">
       <p className="text-[11.5px] font-semibold text-slate-500">{label}</p>
-      <p className={cn('mt-1 text-[15px] font-bold tabular-nums', gold ? 'text-brand-700' : 'text-slate-900')}>{value}</p>
+      <p
+        className={cn(
+          'mt-1 text-[15px] font-bold tabular-nums',
+          gold ? 'text-brand-700' : 'text-slate-900',
+        )}
+      >
+        {value}
+      </p>
     </div>
   );
 }
@@ -961,7 +1160,15 @@ function Avatar({ name }: { name: string }) {
   );
 }
 
-function ContactRow({ href, icon, children }: { href: string; icon: React.ReactNode; children: React.ReactNode }) {
+function ContactRow({
+  href,
+  icon,
+  children,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <a
       href={href}
@@ -970,7 +1177,9 @@ function ContactRow({ href, icon, children }: { href: string; icon: React.ReactN
       <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-muted text-slate-500 group-hover:text-brand-700 [&_svg]:h-3.5 [&_svg]:w-3.5">
         {icon}
       </span>
-      <span className="truncate text-[13px] font-medium text-slate-700" dir="ltr">{children}</span>
+      <span className="truncate text-[13px] font-medium text-slate-700" dir="ltr">
+        {children}
+      </span>
     </a>
   );
 }

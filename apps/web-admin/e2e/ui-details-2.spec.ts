@@ -57,7 +57,7 @@ test.describe('admin', () => {
       ).ok(),
     ).toBeTruthy();
 
-    await gotoReady(page, `/dashboard/contracts/${contractId}`);
+    await gotoReady(page, `/dashboard/contracts/${contractId}?tab=actions`);
     const form = page.getByTestId('handover-form');
     await expect(form).toBeVisible();
 

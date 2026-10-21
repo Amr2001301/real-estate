@@ -71,7 +71,7 @@ test('instalments paid before the contract was entered are marked in one go', as
     ).ok(),
   ).toBeTruthy();
 
-  await gotoReady(page, `/dashboard/contracts/${contractId}`);
+  await gotoReady(page, `/dashboard/contracts/${contractId}?tab=installments`);
   await expect(page.getByTestId('pre-system-badge')).toBeVisible();
   const panel = page.getByTestId('paid-before-system');
   await expect(panel).toBeVisible();

@@ -49,7 +49,7 @@ test.describe('payment states', () => {
     });
     expect(rev.ok()).toBeTruthy();
     try {
-      await gotoReady(page, `/dashboard/contracts/${dep.contractId}`);
+      await gotoReady(page, `/dashboard/contracts/${dep.contractId}?tab=installments`);
       // The row says what happened instead of "pending" beside a paid date.
       // (The seed may hold other reversed rows on the same contract.)
       await expect
@@ -57,6 +57,10 @@ test.describe('payment states', () => {
         .toBeGreaterThan(0);
       // …with the reason given, on the row and in the statement of account.
       await expect(page.getByTestId('row-reversal-reason').filter({ hasText: 'e2e: payment-states' }).first()).toBeVisible();
+      await page.locator('[data-tab="statement"]').click();
+      await expect(page).toHaveURL(/tab=statement/);
+      const more = page.getByTestId('contract-pane-statement').getByTestId('rows-toggle');
+      if ((await more.count()) > 0) await more.first().click();
       await expect(
         page.locator('[data-testid="statement-line"][data-kind="REVERSAL"]', { hasText: 'e2e: payment-states' }).first(),
       ).toBeVisible();
@@ -84,12 +88,17 @@ test.describe('payment states', () => {
     if (!c) test.skip(true, 'no active contract seeded');
     const st = await (await request.get(`${API_BASE}/v1/contracts/${c.id}/statement`, { headers })).json();
 
-    await gotoReady(page, `/dashboard/contracts/${c.id}`);
+    await gotoReady(page, `/dashboard/contracts/${c.id}?tab=statement`);
     await expect(page.getByTestId('statement')).toBeVisible();
+    // The latest movements show; the full list is one click away.
+    const more = page.getByTestId('contract-pane-statement').getByTestId('rows-toggle');
+    if ((await more.count()) > 0) await more.first().click();
     await expect(page.getByTestId('statement-line').first()).toHaveAttribute('data-kind', 'CONTRACT');
     const closing = (await page.getByTestId('statement-closing').innerText()).match(/[\d,]+(\.\d+)?/)?.[0] ?? '';
     expect(Number(closing.replace(/,/g, ''))).toBe(Number(st.totals.balance));
     // Open rows say where they stand against today, never a bare "pending".
+    await page.locator('[data-tab="installments"]').click();
+    await expect(page.getByTestId('contract-pane-installments')).toBeVisible();
     await expect(page.locator('main')).not.toContainText('قيد الانتظار');
   });
 });

@@ -68,6 +68,8 @@ test.describe('reservation and contract detail pages', () => {
     await expect(page.getByText('إجراءات سريعة')).toHaveCount(0);
 
     // One plan change at a time: early settlement replaces the bulk payment.
+    // Plan changes live under the actions tab.
+    await page.locator('[data-tab="actions"]').click();
     const changes = page.getByTestId('plan-changes');
     await expect(changes.getByTestId('pay-many-submit')).toBeVisible();
     await expect(changes.getByTestId('settle-submit')).toHaveCount(0);
