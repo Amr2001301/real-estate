@@ -90,6 +90,35 @@ export function splitValue(value: string | number): [string, string] {
   return m ? [m[1]!, m[2]!] : [value, ''];
 }
 
+/**
+ * Large figures read as a short number and a word: 4,850,000 ج.م →
+ * ["4.85", "مليون ج.م"]; in English "4.85" + "M EGP". Below 100,000 the full
+ * figure is kept. Used for string values the caller did not split itself.
+ */
+export function compactFigure(num: string, unit: string, arabic: boolean): [string, string] {
+  const n = Number(num.replace(/,/g, ''));
+  if (!Number.isFinite(n) || Math.abs(n) < 100_000) return [num, unit];
+  const trim = (x: number) => String(Number(x.toFixed(2)));
+  const scales: Array<[number, string, string]> = [
+    [1e9, 'مليار', 'B'],
+    [1e6, 'مليون', 'M'],
+    [1e3, 'ألف', 'K'],
+  ];
+  const [div, ar, en] = scales.find(([d]) => Math.abs(n) >= d)!;
+  return [trim(n / div), [arabic ? ar : en, unit].filter(Boolean).join(' ')];
+}
+
+/** "EGP 4,850,000" (English currency comes first) → ["4,850,000", "EGP"]. */
+function splitAny(value: string | number): [string, string] {
+  // Intl's Arabic currency output carries direction marks (U+200F) and a
+  // no-break space; drop them or the figure never parses as a number.
+  if (typeof value === 'string') value = value.replace(/[\u200e\u200f\u061c]/g, '').replace(/\u00a0/g, ' ').trim();
+  const [num, unit] = splitValue(value);
+  if (typeof value === 'number' || /^[-+]?[\d.,]+$/.test(num)) return [num, unit];
+  const m = /^(\D+?)\s*([-+]?[\d.,]+)$/.exec(String(value).trim());
+  return m ? [m[2]!, m[1]!] : [num, unit];
+}
+
 /** Trend text on navy: green / red when the caller marked it so, otherwise muted. */
 function trendColour(cls?: string): string {
   if (!cls) return 'text-[#A9B0BD]';
@@ -118,6 +147,7 @@ export function PremiumMetricStrip({
 
   return (
     <section
+      data-testid="metric-strip"
       className={cn(
         'overflow-hidden rounded-[22px] border border-[#D8B66A]/[0.28] bg-navy-band text-[#F4ECD8]',
         'shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]',
@@ -126,8 +156,12 @@ export function PremiumMetricStrip({
     >
       <div className={cn('grid gap-px bg-[#D8B66A]/[0.16]', COLS[effectiveCols] ?? COLS[4])}>
         {metrics.map((m, i) => {
-          const [num, autoUnit] = m.unit !== undefined ? [String(m.value), m.unit] : splitValue(m.value);
+          const [num, autoUnit] = m.unit !== undefined
+            ? [String(m.value), m.unit]
+            : compactFigure(...splitAny(m.value), /[\u0600-\u06FF]/.test(m.label));
           const long = m.valueSize === 'compact' || (m.valueSize !== 'normal' && num.length > 7);
+          // A name, not a figure (e.g. the top broker): smaller type, at most two lines.
+          const isText = !/\d/.test(num) && num !== '—';
           return (
             <div
               key={i}
@@ -144,9 +178,12 @@ export function PremiumMetricStrip({
                 <p className="flex flex-wrap items-baseline gap-x-1.5 leading-none">
                   <span
                     className={cn(
-                      'num font-semibold text-[#F4ECD8]',
-                      long ? 'text-[30px]' : compact ? 'text-[38px]' : 'text-[44px]',
+                      isText
+                        ? 'line-clamp-2 font-heading text-[19px] font-bold leading-snug text-[#F4ECD8]'
+                        : 'num font-semibold text-[#F4ECD8]',
+                      !isText && (long ? 'text-[30px]' : compact ? 'text-[38px]' : 'text-[44px]'),
                     )}
+                    title={isText ? num : undefined}
                   >
                     {num}
                   </span>

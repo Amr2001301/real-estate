@@ -9,7 +9,6 @@ import {
   ShieldCheck,
   ShieldAlert,
   Activity,
-  ArrowLeft,
   Hash,
   Power,
   PowerOff,
@@ -17,7 +16,6 @@ import {
   BookmarkCheck,
   CalendarClock,
   Plus,
-  UserCog,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { User, Lead, Paged, Reservation, VisitAppointment } from '@/lib/types';
@@ -25,18 +23,11 @@ import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { getLocale, type Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { ConfirmButton } from '@/components/confirm-button';
 import { LeadStageBadge, ReservationStatusBadge, AppointmentStatusBadge } from '@/components/badges';
 import { cn } from '@/lib/cn';
 import { activateClientAction, deactivateClientAction } from '../actions';
-import {
-  PremiumPageHero,
-  PremiumDetailLayout,
-  PremiumSectionCard,
-  PremiumCommandPanel,
-  PremiumEmptyState,
-} from '@/components/premium';
+import { PremiumDetailLayout, PremiumPanel, PremiumEmptyNote } from '@/components/premium';
 
 interface AuditLog {
   id: string;
@@ -70,30 +61,12 @@ interface ReservationActivityEntry {
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
-const PALETTE = [
-  'bg-brand-50 text-brand-700',
-  'bg-info-50 text-info-700',
-  'bg-success-50 text-success-700',
-  'bg-purple-50 text-purple-700',
-  'bg-accent-50 text-accent-700',
-  'bg-warning-50 text-warning-700',
-];
-
-function paletteFor(s: string): string {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return PALETTE[Math.abs(h) % PALETTE.length]!;
-}
-
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 0) return '·';
-  if (parts.length === 1) return parts[0]!.slice(0, 2);
+  if (parts.length === 1) return parts[0]!.slice(0, 1);
   return parts[0]![0]! + parts[parts.length - 1]![0]!;
 }
-
-const CMD_LINK = 'group flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 hover:bg-canvas/40 transition-colors duration-150';
-const CMD_ICON = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[15px] [&_svg]:w-[15px]';
 
 export default async function ClientDetailPage({
   params,
@@ -115,7 +88,7 @@ export default async function ClientDetailPage({
 
   if (userRes.error || !userRes.data) {
     return (
-      <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-6 text-sm">
+      <div className="rounded-2xl bg-danger-500/10 text-danger-600 p-6 text-sm">
         {m.errorLoad} {userRes.error ?? m.errorNotFound}
       </div>
     );
@@ -138,317 +111,186 @@ export default async function ClientDetailPage({
     DELETE: m.activityActionDelete,
   };
 
+  const isOwner = role === 'CUSTOMER';
+  const kpis = [
+    { label: m.sectionLeads, value: String(leads.length), icon: <Briefcase /> },
+    { label: m.sectionReservations, value: String(reservations.length), icon: <BookmarkCheck /> },
+    { label: m.sectionVisits, value: String(visits.length), icon: <CalendarClock /> },
+    { label: m.labelLastLogin, value: u.lastLoginAt ? formatDate(u.lastLoginAt, locale) : '—', icon: <Clock /> },
+  ];
+
   return (
-    <div className="space-y-5">
-      <PremiumPageHero
-        title={u.fullName}
-        breadcrumbs={[
-          { label: m.breadcrumbDashboard, href: '/dashboard' },
-          { label: m.breadcrumbClients, href: `/dashboard/clients?role=${role}` },
-          { label: u.fullName },
-        ]}
-        meta={
-          <>
-            <Badge tone={role === 'CUSTOMER' ? 'success' : 'info'} variant="soft">
-              {role === 'CUSTOMER' ? m.roleBadgeOwner : m.roleBadgeBrowser}
-            </Badge>
-            <Badge tone={u.active ? 'success' : 'gray'} variant="soft" dot>
-              {u.active ? m.statusBadgeActive : m.statusBadgeSuspended}
-            </Badge>
-            <span className="text-2xs font-mono text-slate-400">
-              ID: #{u.id.slice(0, 8).toUpperCase()}
-            </span>
-          </>
-        }
-        actions={
-          <>
-            {u.phone && (
-              <a href={`tel:${u.phone}`}>
-                <Button type="button" variant="outline" size="md" leftIcon={<Phone className="h-4 w-4" />}>
-                  {m.btnCall}
-                </Button>
-              </a>
+    <div className="space-y-6">
+      {/* ── Hero ──────────────────────────────────────────────────── */}
+      <section data-testid="client-hero" className="relative overflow-hidden rounded-[26px] border border-hairline bg-surface">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-brand-500/[0.10] via-transparent to-transparent" />
+        <div className="relative space-y-6 p-6 sm:p-8">
+          <nav aria-label="breadcrumb">
+            <ol className="flex flex-wrap items-center gap-1.5 text-[13px] text-slate-500">
+              <li><Link href={'/dashboard' as never} className="hover:text-brand-700">{m.breadcrumbDashboard}</Link></li>
+              <li aria-hidden>›</li>
+              <li><Link href={`/dashboard/clients?role=${role}` as never} className="hover:text-brand-700">{m.breadcrumbClients}</Link></li>
+              <li aria-hidden>›</li>
+              <li className="font-semibold text-brand-700">{u.fullName}</li>
+            </ol>
+          </nav>
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-5">
+              <span aria-hidden className="inline-flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-400/35 to-brand-700/20 font-heading text-[26px] font-bold text-brand-700 ring-2 ring-brand-500/40 ring-offset-4 ring-offset-surface">
+                {initials(u.fullName)}
+              </span>
+              <div className="min-w-0">
+                <h1 className="truncate font-heading text-[30px] font-bold leading-tight text-slate-900">{u.fullName}</h1>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className={cn('rounded-full px-3 py-1 text-[12px] font-semibold', isOwner ? 'bg-emerald-500/12 text-emerald-600' : 'bg-sky-500/12 text-sky-600')}>
+                    {isOwner ? m.roleBadgeOwner : m.roleBadgeBrowser}
+                  </span>
+                  <span className={cn('inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold', u.active ? 'bg-emerald-500/12 text-emerald-600' : 'bg-slate-500/10 text-slate-500')}>
+                    <span className={cn('h-1.5 w-1.5 rounded-full', u.active ? 'bg-emerald-500' : 'bg-slate-400')} />
+                    {u.active ? m.statusBadgeActive : m.statusBadgeSuspended}
+                  </span>
+                  <span className="rounded-full bg-surface-muted px-3 py-1 font-mono text-[11.5px] text-slate-500">#{u.id.slice(0, 8).toUpperCase()}</span>
+                </div>
+                <p className="mt-2 text-[13px] text-slate-500">{isOwner ? m.roleDescOwner : m.roleDescBrowser}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-[13px] text-slate-500">
+                  {u.phone && <span className="inline-flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /><span dir="ltr">{u.phone}</span></span>}
+                  {u.email && <span className="inline-flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /><span dir="ltr">{u.email}</span></span>}
+                  <span className="inline-flex items-center gap-1.5"><Languages className="h-3.5 w-3.5" />{u.locale === 'en' ? m.localeEn : m.localeAr}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {u.phone && (
+                <a href={`tel:${u.phone}`}>
+                  <Button type="button" variant="outline" size="md" leftIcon={<Phone className="h-4 w-4" />}>{m.btnCall}</Button>
+                </a>
+              )}
+              <Link href={`/dashboard/clients/${id}/edit` as never}>
+                <Button variant="primary" size="md" leftIcon={<Pencil className="h-4 w-4" />}>{m.btnEdit}</Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Key figures ───────────────────────────────────────────── */}
+      <div data-testid="client-kpis" className="grid grid-cols-2 overflow-hidden rounded-[22px] border border-hairline bg-surface lg:grid-cols-4">
+        {kpis.map((k, i) => (
+          <div
+            key={k.label}
+            className={cn(
+              'flex items-center gap-4 p-5',
+              i > 0 && 'lg:border-s lg:border-hairline',
+              i % 2 === 1 && 'max-lg:border-s max-lg:border-hairline',
+              i >= 2 && 'max-lg:border-t max-lg:border-hairline',
             )}
-            <Link href={`/dashboard/clients/${id}/edit` as never}>
-              <Button variant="primary" size="md" leftIcon={<Pencil className="h-4 w-4" />}>
-                {m.btnEdit}
-              </Button>
-            </Link>
-          </>
-        }
-      />
+          >
+            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-500/12 text-brand-700 [&_svg]:h-5 [&_svg]:w-5">{k.icon}</span>
+            <div className="min-w-0">
+              <p className="text-[12.5px] font-semibold text-slate-500">{k.label}</p>
+              <p className="num truncate text-[26px] font-semibold leading-tight text-slate-900">{k.value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
 
       <PremiumDetailLayout
         main={
-          <div className="space-y-5">
-            <PremiumSectionCard title={m.sectionProfile}>
-              <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-5">
-                <span
-                  className={cn(
-                    'inline-flex h-20 w-20 items-center justify-center rounded-2xl text-2xl font-bold ring-2 ring-white shadow-sm uppercase tabular-nums',
-                    paletteFor(u.fullName ?? u.id),
-                  )}
-                  aria-hidden
-                >
-                  {initials(u.fullName)}
-                </span>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <h2 className="text-xl font-semibold text-navy tracking-tight truncate">
-                      {u.fullName}
-                    </h2>
-                    <Badge tone={role === 'CUSTOMER' ? 'success' : 'info'} variant="soft" size="sm">
-                      {role === 'CUSTOMER' ? m.roleBadgeOwner : m.roleBadgeBrowser}
-                    </Badge>
-                  </div>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {role === 'CUSTOMER' ? m.roleDescOwner : m.roleDescBrowser}
-                  </p>
-                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    <ContactCell
-                      icon={<Mail className="h-4 w-4" />}
-                      tone="info"
-                      label={m.labelEmail}
-                      value={u.email}
-                      href={u.email ? `mailto:${u.email}` : undefined}
-                      isLtr
-                    />
-                    <ContactCell
-                      icon={<Phone className="h-4 w-4" />}
-                      tone="brand"
-                      label={m.labelPhone}
-                      value={u.phone}
-                      href={u.phone ? `tel:${u.phone}` : undefined}
-                      isLtr
-                    />
-                    <ContactCell
-                      icon={<Languages className="h-4 w-4" />}
-                      tone="purple"
-                      label={m.labelLocale}
-                      value={u.locale === 'en' ? m.localeEn : m.localeAr}
-                    />
-                  </div>
-                </div>
-              </div>
-            </PremiumSectionCard>
-
-            <PremiumSectionCard
+          <>
+            {/* Leads */}
+            <PremiumPanel
               title={m.sectionLeads}
-              icon={<Briefcase className="h-4 w-4" />}
               trailing={
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-slate-400 tabular-nums">{leads.length}</span>
-                  <Link href={`/dashboard/leads/new?clientId=${u.id}` as never}>
-                    <Button type="button" variant="primary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />}>
-                      {m.btnNewLead}
-                    </Button>
-                  </Link>
-                </div>
-              }
-              padded={false}
-            >
-              {leads.length === 0 ? (
-                <PremiumEmptyState
-                  icon={<Briefcase />}
-                  title={m.emptyLeadsTitle}
-                  description={m.emptyLeadsDesc}
-                  action={
-                    <Link href={`/dashboard/leads/new?clientId=${u.id}` as never}>
-                      <Button type="button" variant="primary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />}>
-                        {m.btnCreateLead}
-                      </Button>
-                    </Link>
-                  }
-                />
-              ) : (
-                <ul className="flex flex-col divide-y divide-hairline">
-                  {leads.map((l) => (
-                    <li key={l.id}>
-                      <Link
-                        href={`/dashboard/leads/${l.id}` as never}
-                        className="flex items-center gap-3 px-5 py-3.5 hover:bg-canvas/40 transition-colors"
-                      >
-                        <span className="font-mono text-2xs text-slate-400 shrink-0">
-                          #{l.id.slice(0, 8).toUpperCase()}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-medium text-slate-900">
-                              {l.projectInterest ? tx(l.projectInterest.name) : 'CRM'}
-                            </p>
-                            <LeadStageBadge stage={l.stage} />
-                          </div>
-                          <p className="text-2xs text-slate-500 mt-0.5 inline-flex items-center gap-2">
-                            {l.assignedSales?.fullName ? (
-                              <span className="inline-flex items-center gap-1">
-                                <UserCog className="h-3 w-3" />
-                                {l.assignedSales.fullName}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400">{m.unassigned}</span>
-                            )}
-                            <span className="text-slate-300">·</span>
-                            <span>{formatDate(l.createdAt, locale)}</span>
-                          </p>
-                        </div>
-                        <ArrowLeft className="h-4 w-4 text-slate-300 rtl:rotate-180" />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </PremiumSectionCard>
-
-            <PremiumSectionCard
-              title={m.sectionReservations}
-              icon={<BookmarkCheck className="h-4 w-4" />}
-              trailing={
-                reservations.length > 0 ? (
-                  <Link
-                    href={`/dashboard/reservations?clientId=${u.id}` as never}
-                    className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
-                  >
-                    {m.linkViewAllReservations}
-                    <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
-                  </Link>
-                ) : undefined
-              }
-              padded={false}
-            >
-              {reservations.length === 0 ? (
-                <PremiumEmptyState
-                  icon={<BookmarkCheck />}
-                  title={m.emptyReservationsTitle}
-                  description={m.emptyReservationsDesc}
-                />
-              ) : (
-                <ul className="flex flex-col divide-y divide-hairline">
-                  {reservations.map((r) => {
-                    const projectName = r.unit?.building?.phase?.project?.name
-                      ? tx(r.unit.building.phase.project.name)
-                      : null;
-                    return (
-                      <li key={r.id}>
-                        <Link
-                          href={`/dashboard/reservations/${r.id}` as never}
-                          className="flex items-center gap-3 px-5 py-3.5 hover:bg-canvas/40 transition-colors"
-                        >
-                          <span className="font-mono text-2xs text-slate-400 shrink-0">
-                            {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="text-sm font-medium text-slate-900 truncate">
-                                {projectName ? `${projectName} · ` : ''}
-                                {m.unitPrefix} {r.unit?.code ?? '—'}
-                              </p>
-                              <ReservationStatusBadge status={r.status} />
-                            </div>
-                            <p className="text-2xs text-slate-500 mt-0.5 inline-flex items-center gap-2 flex-wrap">
-                              {r.sales?.fullName && (
-                                <>
-                                  <span className="inline-flex items-center gap-1">
-                                    <UserCog className="h-3 w-3" />
-                                    {r.sales.fullName}
-                                  </span>
-                                  <span className="text-slate-300">·</span>
-                                </>
-                              )}
-                              <span>{m.expiresLabel} {formatDate(r.expiresAt, locale)}</span>
-                            </p>
-                          </div>
-                          <ArrowLeft className="h-4 w-4 text-slate-300 rtl:rotate-180" />
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </PremiumSectionCard>
-
-            <PremiumSectionCard
-              title={m.sectionVisits}
-              icon={<CalendarClock className="h-4 w-4" />}
-              trailing={
-                visits.length > 0 ? (
-                  <Link
-                    href={`/dashboard/visits?clientId=${u.id}` as never}
-                    className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
-                  >
-                    {m.linkViewAllVisits}
-                    <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
-                  </Link>
-                ) : undefined
-              }
-              padded={false}
-            >
-              {visits.length === 0 ? (
-                <PremiumEmptyState
-                  icon={<CalendarClock />}
-                  title={m.emptyVisitsTitle}
-                  description={m.emptyVisitsDesc}
-                />
-              ) : (
-                <ul className="flex flex-col divide-y divide-hairline">
-                  {visits.map((v) => (
-                    <li key={v.id}>
-                      <Link
-                        href={`/dashboard/visits/appointments/${v.id}` as never}
-                        className="flex items-center gap-3 px-5 py-3.5 hover:bg-canvas/40 transition-colors"
-                      >
-                        <span className="font-mono text-2xs text-slate-400 shrink-0">
-                          {v.visitNumber}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-medium text-slate-900 truncate">
-                              {v.project ? tx(v.project.name) : '—'}
-                              {v.unit ? ` · ${m.unitPrefix} ${v.unit.code}` : ''}
-                            </p>
-                            <AppointmentStatusBadge status={v.status} />
-                          </div>
-                          <p className="text-2xs text-slate-500 mt-0.5 inline-flex items-center gap-2 flex-wrap">
-                            {v.assignedSales && (
-                              <>
-                                <span className="inline-flex items-center gap-1">
-                                  <UserCog className="h-3 w-3" />
-                                  {v.assignedSales.fullName}
-                                </span>
-                                <span className="text-slate-300">·</span>
-                              </>
-                            )}
-                            <span>{formatDateTime(v.scheduledAt, locale)}</span>
-                          </p>
-                        </div>
-                        <ArrowLeft className="h-4 w-4 text-slate-300 rtl:rotate-180" />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </PremiumSectionCard>
-
-            <PremiumSectionCard
-              title={m.sectionActivity}
-              icon={<Activity className="h-4 w-4" />}
-              trailing={
-                <Link
-                  href={`/dashboard/clients/${id}/activity` as never}
-                  className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
-                >
-                  {m.linkFullActivity}
-                  <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
+                <Link href={`/dashboard/leads/new?clientId=${u.id}` as never}>
+                  <Button type="button" variant="primary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />}>{m.btnNewLead}</Button>
                 </Link>
               }
             >
-              {recentActivity.length === 0 && reservationActivities.length === 0 ? (
-                <PremiumEmptyState
-                  icon={<Activity />}
-                  title={m.emptyActivityTitle}
-                  description={m.emptyActivityDesc}
-                />
+              {leads.length === 0 ? (
+                <PremiumEmptyNote>
+                  <span className="block font-semibold text-slate-700">{m.emptyLeadsTitle}</span>
+                  {m.emptyLeadsDesc}
+                </PremiumEmptyNote>
               ) : (
-                <ol className="relative ms-4 border-s-2 border-hairline ps-6 space-y-5">
+                <ul className="flex flex-col gap-2">
+                  {leads.map((l) => (
+                    <RecordRow
+                      key={l.id}
+                      href={`/dashboard/leads/${l.id}`}
+                      title={l.projectInterest ? tx(l.projectInterest.name) : 'CRM'}
+                      meta={`${l.assignedSales?.fullName ?? m.unassigned} · ${formatDate(l.createdAt, locale)}`}
+                      badge={<LeadStageBadge stage={l.stage} locale={locale} />}
+                    />
+                  ))}
+                </ul>
+              )}
+            </PremiumPanel>
+
+            {/* Reservations + visits */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <PremiumPanel
+                title={m.sectionReservations}
+                link={reservations.length > 0 ? { href: `/dashboard/reservations?clientId=${u.id}`, label: m.linkViewAllReservations } : undefined}
+              >
+                {reservations.length === 0 ? (
+                  <PremiumEmptyNote>
+                    <span className="block font-semibold text-slate-700">{m.emptyReservationsTitle}</span>
+                    {m.emptyReservationsDesc}
+                  </PremiumEmptyNote>
+                ) : (
+                  <ul data-testid="client-reservations" className="flex flex-col gap-2">
+                    {reservations.map((r) => {
+                      const projectName = r.unit?.building?.phase?.project?.name ? tx(r.unit.building.phase.project.name) : null;
+                      return (
+                        <RecordRow
+                          key={r.id}
+                          href={`/dashboard/reservations/${r.id}`}
+                          title={r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
+                          mono
+                          meta={`${projectName ? `${projectName} · ` : ''}${m.unitPrefix} ${r.unit?.code ?? '—'}`}
+                          badge={<ReservationStatusBadge status={r.status} locale={locale} />}
+                        />
+                      );
+                    })}
+                  </ul>
+                )}
+              </PremiumPanel>
+
+              <PremiumPanel
+                title={m.sectionVisits}
+                link={visits.length > 0 ? { href: `/dashboard/visits?clientId=${u.id}`, label: m.linkViewAllVisits } : undefined}
+              >
+                {visits.length === 0 ? (
+                  <PremiumEmptyNote>
+                    <span className="block font-semibold text-slate-700">{m.emptyVisitsTitle}</span>
+                    {m.emptyVisitsDesc}
+                  </PremiumEmptyNote>
+                ) : (
+                  <ul className="flex flex-col gap-2">
+                    {visits.map((v) => (
+                      <RecordRow
+                        key={v.id}
+                        href={`/dashboard/visits/appointments/${v.id}`}
+                        title={v.visitNumber}
+                        mono
+                        meta={`${v.project ? tx(v.project.name) : '—'} · ${formatDateTime(v.scheduledAt, locale)}`}
+                        badge={<AppointmentStatusBadge status={v.status} locale={locale} />}
+                      />
+                    ))}
+                  </ul>
+                )}
+              </PremiumPanel>
+            </div>
+
+            {/* Activity */}
+            <PremiumPanel title={m.sectionActivity} link={{ href: `/dashboard/clients/${id}/activity`, label: m.linkFullActivity }}>
+              {recentActivity.length === 0 && reservationActivities.length === 0 ? (
+                <PremiumEmptyNote>
+                  <span className="block font-semibold text-slate-700">{m.emptyActivityTitle}</span>
+                  {m.emptyActivityDesc}
+                </PremiumEmptyNote>
+              ) : (
+                <ol className="relative ms-4 space-y-5 border-s-2 border-hairline ps-6">
                   {reservationActivities.map((a) => (
                     <ReservationActivityItem key={a.id} entry={a} labels={m.reservationActivityLabels} byLabel={m.activityByLabel} systemLabel={m.activitySystem} locale={locale} />
                   ))}
@@ -457,90 +299,69 @@ export default async function ClientDetailPage({
                   ))}
                 </ol>
               )}
-            </PremiumSectionCard>
-          </div>
+            </PremiumPanel>
+          </>
         }
         side={
-          <div className="space-y-5">
-            <PremiumCommandPanel title={m.sectionQuickActions}>
-              {u.phone && (
-                <a href={`tel:${u.phone}`} className={CMD_LINK}>
-                  <span className={CMD_ICON}><Phone /></span>
-                  {m.cmdCall}
-                </a>
-              )}
-              <Link href={`/dashboard/clients/${id}/edit` as never} className={CMD_LINK}>
-                <span className={CMD_ICON}><Pencil /></span>
-                {m.cmdEdit}
-              </Link>
-              <Link href={`/dashboard/clients/${id}/activity` as never} className={CMD_LINK}>
-                <span className={CMD_ICON}><Activity /></span>
-                {m.cmdActivity}
-              </Link>
-              <Link href={`/dashboard/clients?role=${role}` as never} className={CMD_LINK}>
-                <span className={CMD_ICON}><ArrowLeft /></span>
-                {m.cmdClientsList}
-              </Link>
-            </PremiumCommandPanel>
-
-            <PremiumSectionCard title={m.sectionAccountInfo}>
-              <dl className="flex flex-col gap-3 text-sm">
+          <>
+            <PremiumPanel title={m.sectionAccountInfo} padding="none">
+              <dl className="divide-y divide-hairline border-t border-hairline">
                 <Row label={m.labelAccountStatus} icon={<ShieldCheck className="h-3.5 w-3.5" />}>
-                  {u.active ? (
-                    <Badge tone="success" variant="soft" dot size="sm">{m.statusBadgeActive}</Badge>
-                  ) : (
-                    <Badge tone="gray" variant="soft" dot size="sm">{m.statusBadgeSuspended}</Badge>
-                  )}
+                  <span className={cn('rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold', u.active ? 'bg-emerald-500/12 text-emerald-600' : 'bg-slate-500/10 text-slate-500')}>
+                    {u.active ? m.statusBadgeActive : m.statusBadgeSuspended}
+                  </span>
                 </Row>
                 <Row label={m.labelClientType} icon={<ShieldAlert className="h-3.5 w-3.5" />}>
-                  <Badge tone={role === 'CUSTOMER' ? 'success' : 'info'} variant="soft" size="sm">
-                    {role === 'CUSTOMER' ? m.roleBadgeOwner : m.roleBadgeBrowser}
-                  </Badge>
+                  <span className={cn('rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold', isOwner ? 'bg-emerald-500/12 text-emerald-600' : 'bg-sky-500/12 text-sky-600')}>
+                    {isOwner ? m.roleBadgeOwner : m.roleBadgeBrowser}
+                  </span>
                 </Row>
                 <Row label={m.labelRegistered} icon={<Calendar className="h-3.5 w-3.5" />}>
-                  <span className="text-slate-700">{formatDate(u.createdAt, locale)}</span>
+                  <span className="text-[13px] font-semibold text-slate-900 tabular-nums">{formatDate(u.createdAt, locale)}</span>
                 </Row>
                 <Row label={m.labelLastLogin} icon={<Clock className="h-3.5 w-3.5" />}>
-                  <span className="text-slate-700">
-                    {u.lastLoginAt ? formatDateTime(u.lastLoginAt, locale) : m.noLoginYet}
-                  </span>
+                  <span className="text-[13px] font-semibold text-slate-900">{u.lastLoginAt ? formatDateTime(u.lastLoginAt, locale) : m.noLoginYet}</span>
                 </Row>
                 <Row label={m.labelClientId} icon={<Hash className="h-3.5 w-3.5" />}>
-                  <span className="font-mono text-2xs text-slate-500">
-                    #{u.id.slice(0, 8).toUpperCase()}
-                  </span>
+                  <span className="font-mono text-[12px] text-slate-500">#{u.id.slice(0, 8).toUpperCase()}</span>
                 </Row>
               </dl>
-            </PremiumSectionCard>
+            </PremiumPanel>
 
-            <PremiumSectionCard title={m.sectionAccountStatus}>
-              <p className="text-xs text-slate-500 mb-4">
-                {u.active ? m.statusDescActive : m.statusDescSuspended}
-              </p>
+            <PremiumPanel title={m.sectionAccountStatus} className={u.active ? 'border-danger-500/25' : undefined}>
+              <p className="mb-4 text-[12.5px] leading-relaxed text-slate-500">{u.active ? m.statusDescActive : m.statusDescSuspended}</p>
               {u.active ? (
-                <ConfirmButton
-                  label={m.btnDeactivate}
-                  confirm={m.confirmDeactivate}
-                  action={deactivateClientAction.bind(null, id)}
-                />
+                <ConfirmButton label={m.btnDeactivate} confirm={m.confirmDeactivate} action={deactivateClientAction.bind(null, id)} />
               ) : (
                 <form action={activateClientAction.bind(null, id)}>
-                  <Button type="submit" variant="primary" size="sm" leftIcon={<Power className="h-4 w-4" />}>
-                    {m.btnActivate}
-                  </Button>
+                  <Button type="submit" variant="primary" size="sm" leftIcon={<Power className="h-4 w-4" />}>{m.btnActivate}</Button>
                 </form>
               )}
               {!u.active && (
-                <p className="mt-3 inline-flex items-center gap-1.5 text-2xs text-slate-500">
+                <p className="mt-3 inline-flex items-center gap-1.5 text-[12px] text-slate-500">
                   <PowerOff className="h-3 w-3 text-slate-400" />
                   {m.suspendedSince} {formatDate(u.updatedAt ?? u.createdAt, locale)}
                 </p>
               )}
-            </PremiumSectionCard>
-          </div>
+            </PremiumPanel>
+          </>
         }
       />
     </div>
+  );
+}
+
+function RecordRow({ href, title, meta, badge, mono }: { href: string; title: string; meta: string; badge: React.ReactNode; mono?: boolean }) {
+  return (
+    <li>
+      <Link href={href as never} className="flex items-center gap-3 rounded-2xl border border-hairline px-4 py-3 transition-colors hover:border-brand-500/40 hover:bg-surface-muted/40">
+        <div className="min-w-0 flex-1">
+          <p className={cn('truncate text-[13.5px] font-bold text-slate-900', mono && 'font-mono')}>{title}</p>
+          <p className="truncate text-[11.5px] text-slate-500">{meta}</p>
+        </div>
+        {badge}
+      </Link>
+    </li>
   );
 }
 
@@ -554,71 +375,14 @@ function Row({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <dt className="inline-flex items-center gap-1.5 text-2xs uppercase tracking-wide text-slate-500 font-semibold">
+    <div className="flex items-center justify-between gap-3 px-6 py-3.5">
+      <dt className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-slate-500">
         <span className="text-slate-400">{icon}</span>
         {label}
       </dt>
       <dd className="text-end">{children}</dd>
     </div>
   );
-}
-
-function ContactCell({
-  icon,
-  label,
-  value,
-  href,
-  tone,
-  isLtr,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string | null;
-  href?: string;
-  tone: 'brand' | 'info' | 'purple';
-  isLtr?: boolean;
-}) {
-  const ICON_TONE: Record<typeof tone, string> = {
-    brand: 'bg-brand-50 text-brand-600',
-    info: 'bg-info-50 text-info-600',
-    purple: 'bg-purple-50 text-purple-600',
-  };
-  const inner = (
-    <>
-      <span
-        className={cn(
-          'inline-flex h-9 w-9 items-center justify-center rounded-xl shrink-0',
-          ICON_TONE[tone],
-        )}
-      >
-        {icon}
-      </span>
-      <div className="min-w-0">
-        <p className="text-2xs font-medium uppercase tracking-wide text-slate-500">
-          {label}
-        </p>
-        <p
-          className="text-sm font-medium text-slate-900 truncate"
-          dir={isLtr ? 'ltr' : undefined}
-        >
-          {value ?? <span className="text-slate-400">—</span>}
-        </p>
-      </div>
-    </>
-  );
-
-  const className =
-    'flex items-center gap-3 rounded-xl bg-canvas/60 px-3 py-2.5 ring-1 ring-inset ring-hairline';
-
-  if (href && value) {
-    return (
-      <a href={href} className={cn(className, 'hover:bg-canvas transition-colors')}>
-        {inner}
-      </a>
-    );
-  }
-  return <div className={className}>{inner}</div>;
 }
 
 function ReservationActivityItem({
@@ -644,10 +408,10 @@ function ReservationActivityItem({
   };
   const tone = RESERVATION_ACTIVITY_TONE[entry.type] ?? 'brand';
   const dotClass = {
-    success: 'bg-success-100 text-success-700 ring-success-200',
-    danger: 'bg-danger-100 text-danger-700 ring-danger-200',
-    warning: 'bg-warning-100 text-warning-700 ring-warning-200',
-    brand: 'bg-brand-100 text-brand-700 ring-brand-200',
+    success: 'bg-emerald-500/12 text-emerald-600 ring-emerald-500/30',
+    danger: 'bg-danger-500/12 text-danger-600 ring-danger-500/30',
+    warning: 'bg-amber-500/12 text-amber-600 ring-amber-500/30',
+    brand: 'bg-brand-500/12 text-brand-700 ring-brand-500/30',
   }[tone];
   const label = labels[entry.type] ?? entry.type;
   const unitCode = entry.reservation?.unit?.code;
@@ -708,9 +472,9 @@ function ActivityItem({
         ? 'danger'
         : 'brand';
   const dotClass: Record<typeof tone, string> = {
-    success: 'bg-success-100 text-success-700 ring-success-200',
-    danger: 'bg-danger-100 text-danger-700 ring-danger-200',
-    brand: 'bg-brand-100 text-brand-700 ring-brand-200',
+    success: 'bg-emerald-500/12 text-emerald-600 ring-emerald-500/30',
+    danger: 'bg-danger-500/12 text-danger-600 ring-danger-500/30',
+    brand: 'bg-brand-500/12 text-brand-700 ring-brand-500/30',
   };
   const label = actionLabels[entry.action] ?? entry.action;
   return (

@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import {
   DollarSign, CreditCard, Landmark, Hash,
-  SlidersHorizontal, ReceiptText, Search,
-  ExternalLink, Plus, AlertCircle,
+  SlidersHorizontal, ReceiptText,
+  ExternalLink, Plus, AlertCircle, RotateCcw,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { projectOptions } from '@/lib/options';
@@ -22,9 +22,11 @@ import {
   PremiumMetricStrip,
   PremiumFilterBar,
   PremiumFilterField,
+  PremiumRangeField,
   PremiumSectionCard,
   PremiumEmptyState,
 } from '@/components/premium';
+import { CodeCell, PersonCell } from '@/components/premium/list-cells';
 import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
@@ -36,11 +38,11 @@ interface ProjectOption { id: string; name: { ar: string; en: string } }
 // ── Maps ──────────────────────────────────────────────────────────────────────
 
 const DEPOSIT_TYPE_CLS: Record<DepositType, string> = {
-  BOOKING_AMOUNT: 'bg-info-50 text-info-700',
-  DOWN_PAYMENT:   'bg-brand-50 text-brand-700',
-  INSTALLMENT:    'bg-slate-100 text-slate-600',
-  FINAL_PAYMENT:  'bg-success-50 text-success-700',
-  FEE:            'bg-danger-50 text-danger-700',
+  BOOKING_AMOUNT: 'bg-sky-500/12 text-sky-600',
+  DOWN_PAYMENT:   'bg-brand-500/12 text-brand-700',
+  INSTALLMENT:    'bg-violet-500/12 text-violet-600',
+  FINAL_PAYMENT:  'bg-emerald-500/12 text-emerald-600',
+  FEE:            'bg-danger-500/12 text-danger-600',
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -119,6 +121,7 @@ export default async function DepositsPage({
     sp.ref || sp.paidAtFrom || sp.paidAtTo || sp.dueDateFrom || sp.dueDateTo || sp.verified
   );
   const showFilters = hasAdvancedFilters || sp.showFilters === '1';
+  const hasAnyFilter = hasAdvancedFilters || !!(sp.type || sp.reviewStatus || sp.projectId || sp.q);
 
   // URL builder for the advanced toggle link (preserves all active params)
   function pageUrl(overrides: Record<string, string | undefined>): string {
@@ -215,121 +218,107 @@ export default async function DepositsPage({
         {!showFilters && sp.dueDateTo  && <input type="hidden" name="dueDateTo"  value={sp.dueDateTo} />}
         {!showFilters && sp.verified   && <input type="hidden" name="verified"   value={sp.verified} />}
 
-        {/* Type */}
-        <PremiumFilterField label={m.filter.typeLabel} htmlFor="dep-type">
-          <Select id="dep-type" name="type" inputSize="sm" defaultValue={sp.type ?? ''} className="w-36 shrink-0">
-            <option value="">{m.filter.allTypes}</option>
-            <option value="BOOKING_AMOUNT">{m.typeLabels.RESERVATION}</option>
-            <option value="DOWN_PAYMENT">{m.typeLabels.DOWN_PAYMENT}</option>
-            <option value="INSTALLMENT">{m.typeLabels.INSTALLMENT}</option>
-            <option value="FINAL_PAYMENT">{m.typeLabels.FINAL_PAYMENT}</option>
-            <option value="FEE">{m.typeLabels.FEE}</option>
-          </Select>
-        </PremiumFilterField>
-
-        {/* Review status */}
-        <PremiumFilterField label={m.filter.reviewLabel} htmlFor="dep-reviewStatus">
-          <Select id="dep-reviewStatus" name="reviewStatus" inputSize="sm" defaultValue={sp.reviewStatus ?? ''} className="w-40 shrink-0">
-            <option value="">{m.filter.allReviews}</option>
-            <option value="PENDING_REVIEW">{m.filter.underReview}</option>
-            <option value="APPROVED">{m.filter.approved}</option>
-            <option value="REJECTED">{m.filter.rejected}</option>
-            <option value="NO_PROOF">{m.filter.noProof}</option>
-          </Select>
-        </PremiumFilterField>
-
-        {/* Project */}
-        <PremiumFilterField label={uiT(locale).pages.units.filter.projectLabel} htmlFor="dep-projectId">
-          <Select id="dep-projectId" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40 shrink-0">
-            <option value="">{uiT(locale).common.allProjects}</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>{tx(p.name)}</option>
-            ))}
-          </Select>
-        </PremiumFilterField>
-
-        {/* Search — grows to fill available space */}
-        <div className="flex-1 min-w-[180px]">
-          <label htmlFor="dep-q" className="sr-only">{uiT(locale).common.searchBtn}</label>
+        {/* Search first: the inset field the bar is built around */}
+        <PremiumFilterField label={uiT(locale).common.searchBtn} htmlFor="dep-q">
           <Input
             id="dep-q"
             name="q"
             inputSize="sm"
             placeholder={m.filter.searchPlaceholder}
             defaultValue={sp.q ?? ''}
-            leftAddon={<Search />}
-            className="w-full"
           />
-        </div>
+        </PremiumFilterField>
 
-        {/* Action buttons — before advanced panel so they stay in row 1 */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Row 1 ends with the actions; reset shows only when something is set */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
-          <Link href="/dashboard/deposits">
-            <Button type="button" variant="secondary" size="sm">{m.filter.resetBtn}</Button>
-          </Link>
-          <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
           <Link
             href={toggleFiltersUrl as never}
             className={cn(
-              'hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold shrink-0 rounded-lg px-2.5 py-1.5 border transition-colors',
+              'relative inline-flex h-10 items-center gap-1.5 rounded-full border px-3.5 text-[12.5px] font-semibold transition-colors',
               showFilters
-                ? 'bg-brand-50 border-brand-200 text-brand-700'
-                : 'bg-transparent border-transparent text-slate-500 hover:bg-slate-50 hover:border-hairline hover:text-slate-700',
+                ? 'border-brand-500/50 bg-brand-500/10 text-brand-700'
+                : 'border-hairline text-slate-500 hover:border-brand-500/30 hover:text-slate-800',
             )}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
             {showFilters ? m.filter.advancedHide : m.filter.advancedShow}
             {hasAdvancedFilters && !showFilters && (
-              <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">
-                !
-              </span>
+              <span className="absolute -top-0.5 -end-0.5 h-2.5 w-2.5 rounded-full bg-brand-500 ring-2 ring-surface" />
             )}
           </Link>
+          {hasAnyFilter && (
+            <Link
+              href="/dashboard/deposits"
+              title={m.filter.resetBtn}
+              aria-label={m.filter.resetBtn}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-danger-500/40 hover:text-danger-600"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Link>
+          )}
         </div>
 
-        {/* Advanced filters — basis-full forces row 2 */}
-        {showFilters && (
-          <div className="w-full basis-full border-t border-hairline pt-3.5 mt-0.5">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {/* Row 2: every filter as a pill; advanced ones join the same row */}
+        <div className="flex w-full basis-full flex-wrap items-center gap-2 border-t border-hairline px-0.5 pt-2.5">
+          {/* Type */}
+          <PremiumFilterField label={m.filter.typeLabel} htmlFor="dep-type">
+            <Select id="dep-type" name="type" inputSize="sm" defaultValue={sp.type ?? ''} className="w-28 shrink-0">
+              <option value="">{m.filter.allTypes}</option>
+              <option value="BOOKING_AMOUNT">{m.typeLabels.RESERVATION}</option>
+              <option value="DOWN_PAYMENT">{m.typeLabels.DOWN_PAYMENT}</option>
+              <option value="INSTALLMENT">{m.typeLabels.INSTALLMENT}</option>
+              <option value="FINAL_PAYMENT">{m.typeLabels.FINAL_PAYMENT}</option>
+              <option value="FEE">{m.typeLabels.FEE}</option>
+            </Select>
+          </PremiumFilterField>
 
-              <div className="flex flex-col gap-1">
-                <label htmlFor="paidAtFrom" className="text-[11px] font-medium text-slate-400">{m.filter.dateFrom}</label>
-                <Input id="paidAtFrom" name="paidAtFrom" type="date" inputSize="sm" defaultValue={sp.paidAtFrom ?? ''} />
-              </div>
+          {/* Review status */}
+          <PremiumFilterField label={m.filter.reviewLabel} htmlFor="dep-reviewStatus">
+            <Select id="dep-reviewStatus" name="reviewStatus" inputSize="sm" defaultValue={sp.reviewStatus ?? ''} className="w-32 shrink-0">
+              <option value="">{m.filter.allReviews}</option>
+              <option value="PENDING_REVIEW">{m.filter.underReview}</option>
+              <option value="APPROVED">{m.filter.approved}</option>
+              <option value="REJECTED">{m.filter.rejected}</option>
+              <option value="NO_PROOF">{m.filter.noProof}</option>
+            </Select>
+          </PremiumFilterField>
 
-              <div className="flex flex-col gap-1">
-                <label htmlFor="paidAtTo" className="text-[11px] font-medium text-slate-400">{m.filter.dateTo}</label>
-                <Input id="paidAtTo" name="paidAtTo" type="date" inputSize="sm" defaultValue={sp.paidAtTo ?? ''} />
-              </div>
+          {/* Project */}
+          <PremiumFilterField label={uiT(locale).pages.units.filter.projectLabel} htmlFor="dep-projectId">
+            <Select id="dep-projectId" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-32 shrink-0">
+              <option value="">{uiT(locale).common.allProjects}</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{tx(p.name)}</option>
+              ))}
+            </Select>
+          </PremiumFilterField>
 
-              <div className="flex flex-col gap-1">
-                <label htmlFor="dueDateFrom" className="text-[11px] font-medium text-slate-400">{m.filter.dueFrom}</label>
-                <Input id="dueDateFrom" name="dueDateFrom" type="date" inputSize="sm" defaultValue={sp.dueDateFrom ?? ''} />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label htmlFor="dueDateTo" className="text-[11px] font-medium text-slate-400">{m.filter.dueTo}</label>
-                <Input id="dueDateTo" name="dueDateTo" type="date" inputSize="sm" defaultValue={sp.dueDateTo ?? ''} />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label htmlFor="ref" className="text-[11px] font-medium text-slate-400">{m.filter.refLabel}</label>
-                <Input id="ref" name="ref" inputSize="sm" placeholder={m.filter.refPlaceholder} defaultValue={sp.ref ?? ''} />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label htmlFor="verified" className="text-[11px] font-medium text-slate-400">{m.filter.verifiedLabel}</label>
+          {showFilters && (
+            <>
+              <PremiumRangeField
+                label={m.filter.paidRangeLabel}
+                from={{ id: 'paidAtFrom', value: sp.paidAtFrom, label: m.filter.dateFrom }}
+                to={{ id: 'paidAtTo', value: sp.paidAtTo, label: m.filter.dateTo }}
+              />
+              <PremiumRangeField
+                label={m.filter.dueRangeLabel}
+                from={{ id: 'dueDateFrom', value: sp.dueDateFrom, label: m.filter.dueFrom }}
+                to={{ id: 'dueDateTo', value: sp.dueDateTo, label: m.filter.dueTo }}
+              />
+              <PremiumFilterField label={m.filter.refLabel} htmlFor="ref" className="[&>span:last-child>svg]:hidden">
+                <Input id="ref" name="ref" inputSize="sm" placeholder={m.filter.refPlaceholder} defaultValue={sp.ref ?? ''} className="w-40" />
+              </PremiumFilterField>
+              <PremiumFilterField label={m.filter.verifiedLabel} htmlFor="verified">
                 <Select id="verified" name="verified" inputSize="sm" defaultValue={sp.verified ?? ''}>
                   <option value="">{m.filter.allVerified}</option>
                   <option value="true">{m.filter.verified}</option>
                   <option value="false">{m.filter.notVerified}</option>
                 </Select>
-              </div>
-
-            </div>
-          </div>
-        )}
+              </PremiumFilterField>
+            </>
+          )}
+        </div>
       </PremiumFilterBar>
 
       {/* ── Error ────────────────────────────────────────────────────────────── */}
@@ -362,17 +351,15 @@ export default async function DepositsPage({
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[800px]">
+            <table className="w-full text-sm min-w-[800px]" data-testid="deposits-table">
               <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                 <tr>
                   <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.type}</th>
                   <th className="text-start py-3 px-4">{m.cols.client}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.unit}</th>
                   <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.ref}</th>
                   <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.due}</th>
                   <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.amount}</th>
                   <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.paidAt}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.receipt}</th>
                   <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.verified}</th>
                 </tr>
               </thead>
@@ -380,9 +367,9 @@ export default async function DepositsPage({
                 {deposits.data.map((d) => {
                   const dueDate = getDueDate(d);
                   return (
-                    <tr key={d.id} className="hover:bg-canvas/40 transition-colors duration-100">
+                    <tr key={d.id} className="hover:bg-brand-500/[0.04] transition-colors duration-100">
 
-                      <td className="px-4 py-2.5 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {isAdmin ? (
                           <Link
                             href={`/dashboard/deposits/${d.id}`}
@@ -404,35 +391,32 @@ export default async function DepositsPage({
                         )}
                       </td>
 
-                      <td className="px-4 py-2.5 font-medium text-slate-800 max-w-[160px] truncate">
-                        {getCustomerName(d)}
+                      <td className="px-4 py-3">
+                        {/* The unit rides under the client: one column instead of two */}
+                        <PersonCell name={getCustomerName(d)} sub={getUnitCode(d)} subLabel={uiT(locale).common.codeKind.unit} />
                       </td>
 
-                      <td className="px-4 py-2.5 font-mono text-xs text-slate-500 whitespace-nowrap">
-                        {getUnitCode(d)}
-                      </td>
-
-                      <td className="px-4 py-2.5 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {d.contractId && d.contract ? (
-                          <Link
+                          <CodeCell
                             href={`/dashboard/contracts/${d.contractId}`}
-                            className="font-mono text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
-                          >
-                            {d.contract.contractNumber ?? `#${d.contractId.slice(0, 8)}`}
-                          </Link>
+                            code={d.contract.contractNumber ?? `#${d.contractId.slice(0, 8).toUpperCase()}`}
+                            muted={!d.contract.contractNumber}
+                            kind={uiT(locale).common.codeKind.contract}
+                          />
                         ) : d.reservationId && d.reservation ? (
-                          <Link
+                          <CodeCell
                             href={`/dashboard/reservations/${d.reservationId}`}
-                            className="font-mono text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
-                          >
-                            {d.reservation.reservationNumber ?? `#${d.reservationId.slice(0, 8)}`}
-                          </Link>
+                            code={d.reservation.reservationNumber ?? `#${d.reservationId.slice(0, 8).toUpperCase()}`}
+                            muted={!d.reservation.reservationNumber}
+                            kind={uiT(locale).common.codeKind.reservation}
+                          />
                         ) : (
                           <span className="text-slate-300 text-xs">—</span>
                         )}
                       </td>
 
-                      <td className="px-4 py-2.5 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {dueDate ? (
                           <span className="text-xs text-slate-500 tabular-nums" title={getDueDateTitle(d, m)}>
                             {formatDate(dueDate, locale)}
@@ -442,39 +426,34 @@ export default async function DepositsPage({
                         )}
                       </td>
 
-                      <td className="px-4 py-2.5 font-semibold tabular-nums whitespace-nowrap text-slate-800">
-                        {formatCurrency(d.amount, currency, locale)}
-                      </td>
-
-                      <td className="px-4 py-2.5 text-xs text-slate-500 whitespace-nowrap tabular-nums">
-                        {formatDate(d.paidAt, locale)}
-                      </td>
-
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        {d.receiptUrl ? (
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className="font-bold tabular-nums text-slate-900">{formatCurrency(d.amount, currency, locale)}</span>
+                        {d.receiptUrl && (
                           <a
                             href={d.receiptUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-brand-600 hover:underline"
+                            className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold text-brand-700 hover:underline"
                           >
                             <ExternalLink className="h-3 w-3 shrink-0" />
                             {m.receiptView}
                           </a>
-                        ) : (
-                          <span className="text-slate-300 text-xs">—</span>
                         )}
                       </td>
 
-                      <td className="px-4 py-2.5 whitespace-nowrap">
+                      <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap tabular-nums">
+                        {formatDate(d.paidAt, locale)}
+                      </td>
+
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {isAdmin ? (
                           <VerifyToggle id={d.id} contractId={d.contractId ?? null} verified={d.verified} locale={locale} />
                         ) : (
                           <span
-                            className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${
                               d.verified
-                                ? 'bg-success-100 text-success-700'
-                                : 'bg-amber-100 text-amber-700'
+                                ? 'bg-emerald-500/12 text-emerald-600'
+                                : 'bg-amber-500/12 text-amber-600'
                             }`}
                           >
                             {d.verified ? m.verifiedBadge : m.notVerifiedBadge}

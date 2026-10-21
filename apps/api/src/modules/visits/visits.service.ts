@@ -795,7 +795,6 @@ export class VisitsService {
       ...(dto.projectId ? { projectId: dto.projectId } : {}),
       ...(dto.assignedSalesId ? { assignedSalesId: dto.assignedSalesId } : {}),
       ...(dto.leadId ? { leadId: dto.leadId } : {}),
-      ...(dto.clientId ? { clientId: dto.clientId } : {}),
       ...(dto.today
         ? { scheduledAt: { gte: todayStart, lt: todayEnd } }
         : dto.scheduledFrom || dto.scheduledTo
@@ -817,6 +816,11 @@ export class VisitsService {
           }
         : {}),
     };
+
+    // A client's visits include those booked on one of their leads.
+    if (dto.clientId) {
+      where.AND = [{ OR: [{ clientId: dto.clientId }, { lead: { is: { clientId: dto.clientId } } }] }];
+    }
 
     if (user.role === UserRole.SALES) {
       where.assignedSalesId = user.sub;

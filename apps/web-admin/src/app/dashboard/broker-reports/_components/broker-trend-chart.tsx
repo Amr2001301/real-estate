@@ -30,10 +30,10 @@ function CustomTooltip({ active, payload, label, fmt, tooltipContracts, tooltipC
   if (!active || !payload?.length) return null;
   const contracts = (payload[0] as { payload?: { contractsSigned: number } })?.payload?.contractsSigned ?? 0;
   return (
-    <div dir="rtl" className="bg-white rounded-2xl border border-slate-100 shadow-xl px-4 py-3 text-xs min-w-[170px]">
+    <div dir="rtl" className="bg-surface rounded-2xl border border-hairline shadow-xl px-4 py-3 text-xs min-w-[170px]">
       <p className="font-bold text-slate-800 mb-2 text-[13px]">{label}</p>
       {contracts > 0 && (
-        <div className="flex items-center justify-between gap-4 pb-2 mb-2 border-b border-slate-100">
+        <div className="flex items-center justify-between gap-4 pb-2 mb-2 border-b border-hairline">
           <span className="text-slate-400">{tooltipContracts ?? 'عقود موقّعة'}</span>
           <span className="font-black text-slate-900 tabular-nums">{contracts}</span>
         </div>
@@ -105,6 +105,8 @@ export function BrokerTrendChart({
   }
 
   return (
+    // LTR inside: in an RTL page recharts flips the axis text over the grid lines.
+    <div dir="ltr" className="h-full w-full">
     <ResponsiveContainer width="100%" height={height}>
       <BarChart
         data={data}
@@ -112,7 +114,7 @@ export function BrokerTrendChart({
         barCategoryGap="28%"
         margin={{ top: 20, right: 4, left: 0, bottom: 0 }}
       >
-        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="rgb(148 163 184 / 0.18)" vertical={false} />
         <XAxis
           dataKey="label"
           tick={{ fontSize: 11, fill: '#94a3b8', fontFamily: 'inherit' }}
@@ -124,30 +126,31 @@ export function BrokerTrendChart({
           tick={{ fontSize: 10, fill: '#94a3b8', fontFamily: 'inherit' }}
           axisLine={false}
           tickLine={false}
-          width={32}
+          width={44}
         />
-        <Tooltip content={<CustomTooltip fmt={fmt} tooltipContracts={tooltipContracts} tooltipCommissions={tooltipCommissions} tooltipPayouts={tooltipPayouts} />} cursor={{ fill: '#f8fafc', radius: 6 }} />
+        <Tooltip content={<CustomTooltip fmt={fmt} tooltipContracts={tooltipContracts} tooltipCommissions={tooltipCommissions} tooltipPayouts={tooltipPayouts} />} cursor={{ fill: 'rgb(216 182 106 / 0.08)', radius: 6 }} />
 
         {/* Commissions Net — amber */}
         <Bar dataKey="commissionsNet" name="commissionsNet" radius={[6, 6, 0, 0]} maxBarSize={26} minPointSize={3}>
           {data.map((entry, i) => (
-            <Cell key={i} fill={entry.commissionsNet > 0 ? '#f59e0b' : '#fef3c7'} />
+            <Cell key={i} fill={entry.commissionsNet > 0 ? '#D8B66A' : 'rgb(216 182 106 / 0.18)'} />
           ))}
           <LabelList
             dataKey="contractsSigned"
             position="top"
             formatter={(v: unknown) => typeof v === 'number' && v > 0 ? String(v) : ''}
-            style={{ fontSize: 9, fill: '#78350f', fontWeight: 700, fontFamily: 'inherit' }}
+            style={{ fontSize: 10, fill: '#D8B66A', fontWeight: 700, fontFamily: 'inherit' }}
           />
         </Bar>
 
         {/* Payouts Net — emerald */}
         <Bar dataKey="payoutsNet" name="payoutsNet" radius={[6, 6, 0, 0]} maxBarSize={26} minPointSize={3}>
           {data.map((entry, i) => (
-            <Cell key={i} fill={entry.payoutsNet > 0 ? '#10b981' : '#d1fae5'} />
+            <Cell key={i} fill={entry.payoutsNet > 0 ? '#34d399' : 'rgb(52 211 153 / 0.18)'} />
           ))}
         </Bar>
       </BarChart>
     </ResponsiveContainer>
+    </div>
   );
 }

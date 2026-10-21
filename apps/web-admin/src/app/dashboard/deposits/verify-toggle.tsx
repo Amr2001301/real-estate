@@ -20,10 +20,10 @@ export function VerifyToggle({ id, contractId, verified, locale = 'ar' }: Props)
       type="button"
       disabled={pending}
       onClick={() => start(() => verifyDepositAction(id, contractId, !verified))}
-      className={`rounded-full px-2 py-0.5 text-xs font-medium transition disabled:opacity-60 ${
+      className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-semibold transition disabled:opacity-60 ${
         verified
-          ? 'bg-success-50 text-success-700 hover:bg-success-100'
-          : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+          ? 'bg-emerald-500/12 text-emerald-600 hover:bg-emerald-500/20'
+          : 'bg-amber-500/12 text-amber-600 hover:bg-amber-500/20'
       }`}
     >
       {pending ? '…' : verified ? `✓ ${m.verifiedBadge}` : m.notVerifiedBadge}

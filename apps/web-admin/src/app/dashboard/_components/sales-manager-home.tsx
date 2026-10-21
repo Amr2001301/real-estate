@@ -11,7 +11,6 @@ import {
   Plus,
   CalendarPlus,
   Wallet,
-  TrendingUp,
   ArrowUpRight,
   Bell,
   Star,
@@ -24,6 +23,7 @@ import { compactParts, formatCompact, formatCurrency, formatDate, formatDateTime
 import { getReportsCurrency, currencySymbol, getCompanyTimeZone, todayIn } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { PremiumPageHero, PremiumMetricStrip } from '@/components/premium';
+import { StagePipeline } from '@/components/crm/stage-pipeline';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
@@ -63,12 +63,6 @@ interface ManagerAlert {
   tone:  'warning' | 'danger' | 'info';
 }
 
-const STAGE_META = [
-  { stage: 'NEW',         barCls: 'bg-slate-300',  dotCls: 'bg-slate-400' },
-  { stage: 'INTERESTED',  barCls: 'bg-brand-200',  dotCls: 'bg-brand-400' },
-  { stage: 'VISIT',       barCls: 'bg-sky-300',    dotCls: 'bg-sky-500'   },
-  { stage: 'NEGOTIATION', barCls: 'bg-brand-500',  dotCls: 'bg-brand-600' },
-] as const;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function pctDisplay(value: number | null, m: ReturnType<typeof uiT>['pages']['salesManagerHome']): string {
@@ -201,7 +195,6 @@ export async function SalesManagerDashboard() {
   const upcomingVisitsCount    = visitsRes.data?.meta.total ?? 0;
   // Funnel: use direct-fetch counts (not monthly perf which can be 0 mid-month)
   const funnelReservations     = (resvStatus.PENDING ?? 0) + (resvStatus.APPROVED ?? 0);
-  const funnelContracts        = Math.max(teamSigned, resvStatus.CONVERTED ?? 0);
   const pipelineStageCount: Record<string, number> = Object.fromEntries(
     Object.entries(leadStages).filter(([stage]) => stage !== 'WON' && stage !== 'LOST'),
   );
@@ -348,12 +341,7 @@ export async function SalesManagerDashboard() {
       {/* ── Team Conversion Funnel ────────────────────────────────────────── */}
       {!leadsRes.error && (
         <TeamFunnel
-          teamLeads={openLeadsCount}
-          teamVisits={upcomingVisitsCount}
-          teamReservations={funnelReservations}
-          teamContracts={funnelContracts}
           topPerformer={topPerformer}
-          currency={currency}
           symbol={symbol}
           m={m}
           locale={locale}
@@ -362,11 +350,24 @@ export async function SalesManagerDashboard() {
 
       {/* ── Pipeline + Alerts ─────────────────────────────────────────────── */}
       {(!leadsRes.error || managerAlerts.length > 0) && (
-        <div className={cn('grid grid-cols-1 gap-5 items-start', managerAlerts.length > 0 ? 'lg:grid-cols-3' : '')}>
+        <div className={cn('grid grid-cols-1 gap-5 items-stretch', managerAlerts.length > 0 ? 'lg:grid-cols-3' : '')}>
           {!leadsRes.error && (
-            <div className={managerAlerts.length > 0 ? 'lg:col-span-2' : ''}>
-              <PipelineCard stageCount={pipelineStageCount} total={pipelineTotal} m={m} />
-            </div>
+            <StagePipeline
+              className={managerAlerts.length > 0 ? 'lg:col-span-2' : ''}
+              title={m.pipelineTitle}
+              sub={pipelineTotal > 0
+                ? m.pipelineTotal(pipelineTotal, Object.values(pipelineStageCount).filter((n) => n > 0).length)
+                : m.pipelineEmpty}
+              labels={{
+                NEW: m.stageLabelNew,
+                INTERESTED: m.stageLabelInterested,
+                VISIT: m.stageLabelVisit,
+                NEGOTIATION: m.stageLabelNegotiation,
+              }}
+              counts={pipelineStageCount}
+              link={{ href: '/dashboard/leads', label: m.pipelineOpenLink }}
+              emptyNote={m.pipelineEmptyNote}
+            />
           )}
           {managerAlerts.length > 0 && (
             <AlertCard alerts={managerAlerts} m={m} />
@@ -610,108 +611,56 @@ export async function SalesManagerDashboard() {
 
 // ── Team Conversion Funnel ────────────────────────────────────────────────────
 function TeamFunnel({
-  teamLeads, teamVisits, teamReservations, teamContracts, topPerformer, currency, symbol, m, locale = 'ar',
+  topPerformer, symbol, m, locale = 'ar',
 }: {
-  teamLeads:        number;
-  teamVisits:       number;
-  teamReservations: number;
-  teamContracts:    number;
   topPerformer:     PerformanceRow | null;
-  currency:         string;
   symbol:           string;
   m: ReturnType<typeof uiT>['pages']['salesManagerHome'];
   locale?:          Locale;
 }) {
-  const stages = [
-    { label: m.funnelStageOpenLeads,         value: teamLeads,        icon: <Zap />,           bg: 'bg-brand-50   text-brand-600   ring-brand-100'   },
-    { label: m.funnelStageUpcomingVisits,     value: teamVisits,        icon: <CalendarClock />, bg: 'bg-sky-50     text-sky-600     ring-sky-100'     },
-    { label: m.funnelStageActiveReservations, value: teamReservations,  icon: <BookmarkCheck />, bg: 'bg-emerald-50 text-emerald-600 ring-emerald-100' },
-    { label: m.funnelStageSignedContracts,    value: teamContracts,     icon: <FileText />,      bg: 'bg-violet-50  text-violet-600  ring-violet-100'  },
-  ] as const;
-
+  // The stage counts are the KPIs above; this card keeps only the month's top performer.
+  if (!topPerformer) return null;
   return (
-    <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-hairline">
-        <span className="h-8 w-8 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0 text-brand-700 [&>svg]:h-4 [&>svg]:w-4">
-          <TrendingUp />
+    <section
+      data-testid="top-performer"
+      className="relative overflow-hidden rounded-[22px] border border-brand-500/30 bg-surface"
+    >
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-l from-brand-500/[0.10] via-transparent to-transparent" />
+      <div className="relative flex flex-wrap items-center gap-5 px-6 py-5">
+        <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-400/35 to-brand-700/20 text-brand-700 ring-2 ring-brand-500/40">
+          <Star className="h-6 w-6" />
         </span>
-        <div>
-          <h3 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{m.funnelTitle}</h3>
-          <p className="text-[11px] text-slate-400 mt-0.5">{m.funnelDesc}</p>
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] font-bold text-brand-700">{m.topPerformerLabel}</p>
+          <p className="mt-0.5 truncate font-heading text-[22px] font-bold text-slate-900">{topPerformer.salesName}</p>
         </div>
-      </div>
-
-      <div className="p-5">
-        {/* Funnel stages */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-          {/* No rate between stages: they are counts at this moment (open
-              leads, upcoming visits, active reservations, signed contracts),
-              not one group of leads moving on, and a ratio between them read
-              "200% conversion". */}
-          {stages.map((s, i) => {
-            return (
-              <div key={s.label} className="flex flex-col items-center text-center gap-2">
-                <div className="flex items-center gap-2 w-full justify-center">
-                  {i > 0 && <div className="hidden sm:block h-px flex-1 bg-hairline" />}
-                  <span className={cn(
-                    'h-10 w-10 rounded-full flex items-center justify-center shrink-0 [&>svg]:h-4 [&>svg]:w-4 ring-1',
-                    s.bg,
-                  )}>
-                    {s.icon}
-                  </span>
-                  {i < stages.length - 1 && <div className="hidden sm:block h-px flex-1 bg-hairline" />}
-                </div>
-                <div>
-                  <p className="text-2xl font-black text-slate-900 tabular-nums leading-none">{s.value}</p>
-                  <p className="text-[11px] text-slate-500 font-medium mt-0.5">{s.label}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Top performer strip */}
-        {topPerformer && (
-          <div className="border-t border-hairline pt-4">
-            <div className="flex items-center gap-3 rounded-xl bg-amber-50/60 border border-amber-100 px-4 py-3">
-              <span className="h-8 w-8 rounded-full shrink-0 flex items-center justify-center bg-amber-100 text-amber-700">
-                <Star className="h-4 w-4" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-bold text-amber-600 uppercase tracking-widest leading-none">{m.topPerformerLabel}</p>
-                <p className="text-sm font-bold text-slate-900 mt-0.5 leading-tight">{topPerformer.salesName}</p>
-              </div>
-              <div className="flex items-center gap-4 shrink-0">
-                <div className="text-end">
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wide">{m.topPerformerContracts}</p>
-                  <p className="text-lg font-black text-emerald-700 tabular-nums leading-tight">{topPerformer.signedContractsCount}</p>
-                </div>
-                {topPerformer.achievedAmount > 0 && (
-                  <div className="text-end">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wide">{m.topPerformerAchieved}</p>
-                    <p className="text-sm font-black text-brand-700 tabular-nums leading-tight">{formatCompact(topPerformer.achievedAmount, symbol, locale)}</p>
-                  </div>
-                )}
-                {topPerformer.targetAmountPercent !== null && (
-                  <div className="text-end">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wide">{m.topPerformerCompletion}</p>
-                    <p className={cn(
-                      'text-sm font-black tabular-nums leading-tight',
-                      topPerformer.targetAmountPercent >= 80 ? 'text-emerald-700'
-                      : topPerformer.targetAmountPercent >= 50 ? 'text-amber-700'
-                      : 'text-slate-600',
-                    )}>
-                      {Math.round(topPerformer.targetAmountPercent)}%
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
+        <dl className="flex items-center gap-px overflow-hidden rounded-2xl border border-hairline bg-hairline">
+          <div className="bg-surface px-5 py-2.5 text-center">
+            <dt className="text-[11px] text-slate-500">{m.topPerformerContracts}</dt>
+            <dd className="mt-0.5 text-[20px] font-bold tabular-nums text-emerald-600">{topPerformer.signedContractsCount}</dd>
           </div>
-        )}
+          {topPerformer.achievedAmount > 0 && (
+            <div className="bg-surface px-5 py-2.5 text-center">
+              <dt className="text-[11px] text-slate-500">{m.topPerformerAchieved}</dt>
+              <dd className="mt-0.5 text-[20px] font-bold tabular-nums text-brand-700">{formatCompact(topPerformer.achievedAmount, symbol, locale)}</dd>
+            </div>
+          )}
+          {topPerformer.targetAmountPercent !== null && (
+            <div className="bg-surface px-5 py-2.5 text-center">
+              <dt className="text-[11px] text-slate-500">{m.topPerformerCompletion}</dt>
+              <dd className={cn(
+                'mt-0.5 text-[20px] font-bold tabular-nums',
+                topPerformer.targetAmountPercent >= 80 ? 'text-emerald-600'
+                : topPerformer.targetAmountPercent >= 50 ? 'text-amber-600'
+                : 'text-slate-600',
+              )}>
+                {Math.round(topPerformer.targetAmountPercent)}%
+              </dd>
+            </div>
+          )}
+        </dl>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -864,98 +813,6 @@ function TeamPerformanceTable({
 }
 
 // ── Pipeline Card ─────────────────────────────────────────────────────────────
-const STAGE_TILE: Record<string, { topBar: string; valueCls: string; tileCls: string }> = {
-  NEW:         { topBar: 'from-slate-200 via-slate-300 to-slate-200',  valueCls: 'text-slate-700',  tileCls: 'bg-slate-50/60'  },
-  INTERESTED:  { topBar: 'from-brand-200 via-brand-400 to-brand-200',  valueCls: 'text-brand-700',  tileCls: 'bg-brand-50/60'  },
-  VISIT:       { topBar: 'from-sky-200 via-sky-400 to-sky-200',        valueCls: 'text-sky-700',    tileCls: 'bg-sky-50/60'    },
-  NEGOTIATION: { topBar: 'from-brand-400 via-brand-600 to-brand-400',  valueCls: 'text-brand-800',  tileCls: 'bg-brand-50/80'  },
-};
-
-function PipelineCard({
-  stageCount, total, m,
-}: {
-  stageCount: Record<string, number>;
-  total: number;
-  m: ReturnType<typeof uiT>['pages']['salesManagerHome'];
-}) {
-  const stageLabels: Record<string, string> = {
-    NEW:         m.stageLabelNew,
-    INTERESTED:  m.stageLabelInterested,
-    VISIT:       m.stageLabelVisit,
-    NEGOTIATION: m.stageLabelNegotiation,
-  };
-  const items = STAGE_META.map((s) => ({ ...s, count: stageCount[s.stage] ?? 0, label: stageLabels[s.stage] ?? s.stage }));
-  const activeCount = items.filter((s) => s.count > 0).length;
-
-  return (
-    <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-hairline">
-        <div className="flex items-center gap-3">
-          <span className="h-8 w-8 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0 text-brand-700 [&>svg]:h-4 [&>svg]:w-4">
-            <TrendingUp />
-          </span>
-          <div>
-            <h3 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{m.pipelineTitle}</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              {total > 0
-                ? m.pipelineTotal(total, activeCount)
-                : m.pipelineEmpty}
-            </p>
-          </div>
-        </div>
-        <Link href="/dashboard/leads"
-          className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-800 transition-colors">
-          {m.pipelineOpenLink}
-          <ArrowUpRight className="h-3.5 w-3.5" />
-        </Link>
-      </div>
-
-      <div className="px-5 pb-5 pt-4 space-y-3">
-        {total > 0 ? (
-          <>
-            {/* Connected stage grid — shared borders, no gaps */}
-            <div className="grid grid-cols-4 border border-hairline rounded-[14px] overflow-hidden divide-x divide-hairline rtl:divide-x-reverse">
-              {items.map((s) => {
-                const tile = STAGE_TILE[s.stage] ?? STAGE_TILE['NEW']!;
-                const pct  = total > 0 ? Math.round((s.count / total) * 100) : 0;
-                return (
-                  <div key={s.stage}
-                    className={cn('relative py-4 px-3 text-center', s.count === 0 && 'opacity-40')}>
-                    <div className={cn('absolute top-0 inset-x-0 h-[3px] bg-gradient-to-l', tile.topBar)} />
-                    <p className={cn('text-2xl font-black tabular-nums leading-none mt-0.5', tile.valueCls)}>
-                      {s.count}
-                    </p>
-                    <p className="text-[11px] text-slate-600 font-medium mt-1.5 leading-tight">{s.label}</p>
-                    {pct > 0 && (
-                      <p className="text-[10px] text-slate-400 tabular-nums mt-0.5">{pct}%</p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Progress bar */}
-            <div className="flex rounded-full overflow-hidden h-1.5 bg-slate-100">
-              {items.filter((s) => s.count > 0).map((s) => (
-                <div key={s.stage}
-                  className={cn('h-full first:rounded-s-full last:rounded-e-full', s.barCls)}
-                  style={{ width: `${(s.count / total) * 100}%` }}
-                />
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="flex items-center gap-2.5 py-2">
-            <AlertCircle className="h-4 w-4 text-slate-300 shrink-0" />
-            <p className="text-xs text-slate-400">{m.pipelineEmptyNote}</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ── Alert Card ────────────────────────────────────────────────────────────────
 function AlertCard({
   alerts, m,
@@ -968,42 +825,41 @@ function AlertCard({
   }> = {
     warning: {
       icon:     <AlertTriangle className="h-4 w-4" />,
-      ringCls:  'bg-amber-50  ring-1 ring-amber-200  text-amber-600',
+      ringCls:  'bg-amber-500/12 text-amber-600',
       iconCls:  '',
-      countCls: 'bg-amber-100  text-amber-800',
-      titleCls: 'text-amber-900',
+      countCls: 'bg-amber-500/15 text-amber-600',
+      titleCls: 'text-slate-900',
     },
     danger: {
       icon:     <AlertCircle className="h-4 w-4" />,
-      ringCls:  'bg-red-50    ring-1 ring-red-200    text-red-500',
+      ringCls:  'bg-danger-500/12 text-danger-600',
       iconCls:  '',
-      countCls: 'bg-red-100    text-red-800',
-      titleCls: 'text-red-900',
+      countCls: 'bg-danger-500/15 text-danger-600',
+      titleCls: 'text-slate-900',
     },
     info: {
       icon:     <Info className="h-4 w-4" />,
-      ringCls:  'bg-brand-50  ring-1 ring-brand-200  text-brand-600',
+      ringCls:  'bg-brand-500/12 text-brand-700',
       iconCls:  '',
-      countCls: 'bg-brand-100  text-brand-800',
-      titleCls: 'text-navy',
+      countCls: 'bg-brand-500/15 text-brand-700',
+      titleCls: 'text-slate-900',
     },
   };
 
   return (
-    <div className="bg-surface border border-amber-100 rounded-[22px] overflow-hidden">
+    <div data-testid="team-alerts" className="h-full bg-surface border border-amber-500/30 rounded-[22px] overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-amber-100 bg-amber-50/40">
+      <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-amber-500/20 bg-amber-500/[0.06]">
         <div className="flex items-center gap-3">
-          <div className="relative h-8 w-8 rounded-xl bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center shrink-0">
+          <div className="relative h-10 w-10 rounded-full bg-amber-500/12 flex items-center justify-center shrink-0">
             <Bell className="h-4 w-4 text-amber-600" />
-            <span className="absolute -top-0.5 -end-0.5 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white" />
           </div>
           <div>
-            <h3 className="text-[13.5px] font-bold text-amber-900 leading-none">{m.alertCardTitle}</h3>
-            <p className="text-[11px] text-amber-600 mt-0.5">{m.alertCardItemsNeedReview(alerts.length)}</p>
+            <h3 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{m.alertCardTitle}</h3>
+            <p className="text-[12px] text-amber-600 mt-0.5">{m.alertCardItemsNeedReview(alerts.length)}</p>
           </div>
         </div>
-        <span className="inline-flex items-center justify-center h-6 min-w-6 rounded-full bg-amber-200 text-amber-900 text-xs font-black px-2 tabular-nums">
+        <span className="inline-flex items-center justify-center h-7 min-w-7 rounded-full bg-amber-500/15 text-amber-600 text-[13px] font-bold px-2 tabular-nums">
           {alerts.length}
         </span>
       </div>
@@ -1016,7 +872,7 @@ function AlertCard({
             <div key={i} className="flex items-start gap-3.5 px-5 py-4">
               {/* Icon ring */}
               <span className={cn(
-                'h-9 w-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5',
+                'h-9 w-9 rounded-full flex items-center justify-center shrink-0 mt-0.5',
                 cfg.ringCls,
               )}>
                 {cfg.icon}

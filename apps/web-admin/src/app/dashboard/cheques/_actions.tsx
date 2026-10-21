@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useEffect, useState, useTransition } from 'react';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Landmark, Undo2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { inputClass } from '@/components/form/field';
@@ -26,6 +26,17 @@ interface Props {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+const PILL_TONE = {
+  brand:   'border-brand-500/40 bg-brand-500/10 text-brand-700 hover:bg-brand-500/20',
+  success: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20',
+  danger:  'border-danger-500/40 bg-danger-500/10 text-danger-600 hover:bg-danger-500/20',
+} as const;
+
+/** Compact row action: the table stays calm, the next step still stands out. */
+function pill(tone: keyof typeof PILL_TONE): string {
+  return `inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-[12px] font-semibold transition-colors disabled:opacity-60 ${PILL_TONE[tone]}`;
+}
+
 /** The next step for one cheque: deposit or cancel it, then cleared or bounced. */
 export function ChequeActions({ id, status, canBounce, locale = 'ar' }: Props) {
   const m = uiT(locale).chequesPage.actions;
@@ -46,40 +57,42 @@ export function ChequeActions({ id, status, canBounce, locale = 'ar' }: Props) {
 
   return (
     <div className="inline-flex flex-col items-end gap-1">
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex items-center justify-end gap-1.5">
         {status === 'PENDING_CLEARANCE' ? (
           <>
-            <Button
+            <button
               type="button"
-              variant="primary"
-              size="sm"
-              loading={pending}
+              className={pill('brand')}
               disabled={pending}
               onClick={() => act(() => depositChequeAction(id))}
             >
-              {m.deposit}
-            </Button>
-            <Button
+              <Landmark className="h-3.5 w-3.5" />
+              {pending ? '…' : m.deposit}
+            </button>
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-danger-500/10 hover:text-danger-600 disabled:opacity-60"
               disabled={pending}
+              title={m.cancel}
+              aria-label={m.cancel}
               onClick={() => {
                 if (confirm(m.cancelConfirm)) act(() => cancelChequeAction(id));
               }}
             >
-              {m.cancel}
-            </Button>
+              <XCircle className="h-4 w-4" />
+            </button>
           </>
         ) : (
           <>
-            <Button type="button" variant="primary" size="sm" onClick={() => setDialog('clear')}>
+            <button type="button" className={pill('success')} onClick={() => setDialog('clear')}>
+              <CheckCircle2 className="h-3.5 w-3.5" />
               {m.clear}
-            </Button>
+            </button>
             {canBounce && (
-              <Button type="button" variant="danger" size="sm" onClick={() => setDialog('bounce')}>
+              <button type="button" className={pill('danger')} onClick={() => setDialog('bounce')}>
+                <Undo2 className="h-3.5 w-3.5" />
                 {m.bounce}
-              </Button>
+              </button>
             )}
           </>
         )}

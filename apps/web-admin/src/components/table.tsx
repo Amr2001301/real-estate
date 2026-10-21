@@ -25,12 +25,12 @@ export function DataTable<T>({ columns, rows, rowKey, emptyMessage = 'No data', 
       )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-surface-muted/50 text-xs font-medium text-slate-500 border-b border-hairline">
+          <thead className="bg-surface-muted/50 text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500 border-b border-hairline">
             <tr>
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className={`text-start px-5 py-3 font-semibold whitespace-nowrap ${col.className ?? ''}`}
+                  className={`text-start px-4 py-3 font-semibold whitespace-nowrap ${col.className ?? ''}`}
                 >
                   {col.header}
                 </th>
@@ -46,9 +46,9 @@ export function DataTable<T>({ columns, rows, rowKey, emptyMessage = 'No data', 
               </tr>
             )}
             {rows.map((row) => (
-              <tr key={rowKey(row)} className="hover:bg-brand-50/40 transition-colors duration-100">
+              <tr key={rowKey(row)} className="hover:bg-brand-500/[0.04] transition-colors duration-100">
                 {columns.map((col) => (
-                  <td key={col.key} className={`px-5 py-3 align-middle ${col.className ?? ''}`}>
+                  <td key={col.key} className={`px-4 py-3.5 align-middle ${col.className ?? ''}`}>
                     {col.cell(row)}
                   </td>
                 ))}

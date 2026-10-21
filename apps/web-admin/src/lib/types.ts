@@ -1462,6 +1462,8 @@ export interface BrokerReportsSummary {
   reservationsCancelled: number;
   contractsCreated: number;
   contractsSigned: number;
+  /** Signed contracts whose broker commission is in a PAID payout (subset of contractsSigned). */
+  contractsCommissionPaid?: number;
   salesGross: string;
   commissionsPending: number;
   commissionsApproved: number;
