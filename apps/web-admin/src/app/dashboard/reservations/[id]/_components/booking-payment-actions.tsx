@@ -73,8 +73,16 @@ export function BookingPaymentActions({
           <span>{error}</span>
         </div>
       )}
+      {bookingPaymentStatus === 'PENDING' && (
+        // A proof or a cheque is already on its way: settle it, don't record another.
+        <p data-testid="booking-payment-waiting" className="rounded-xl bg-amber-500/10 px-3 py-2 text-[12.5px] text-amber-700">
+          {locale === 'en'
+            ? 'A payment proof or cheque for this booking is waiting — review it in the payments below (or on the Cheques page).'
+            : 'يوجد إيصال أو شيك لمبلغ الحجز بانتظار الحسم — راجِعه من الدفعات أدناه (أو من صفحة الشيكات).'}
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-2">
-        {bookingPaymentStatus !== 'PAID' && (
+        {bookingPaymentStatus === 'UNPAID' && (
           <select
             aria-label={m.bookingPaymentMethodLabel}
             value={method}
@@ -92,7 +100,7 @@ export function BookingPaymentActions({
             ))}
           </select>
         )}
-        {bookingPaymentStatus !== 'PAID' && (
+        {bookingPaymentStatus === 'UNPAID' && (
           <Button
             type="button"
             variant="primary"
@@ -121,7 +129,7 @@ export function BookingPaymentActions({
           </Button>
         )}
       </div>
-      {method === 'CHEQUE' && bookingPaymentStatus !== 'PAID' && (
+      {method === 'CHEQUE' && bookingPaymentStatus === 'UNPAID' && (
         <div data-testid="booking-cheque-fields" className="flex flex-col gap-2">
           <p className="text-xs text-amber-700">{m.bookingPaymentChequeHint}</p>
           <div className="flex flex-wrap gap-2">
@@ -145,7 +153,7 @@ export function BookingPaymentActions({
           </div>
         </div>
       )}
-      {bookingAmount <= 0 && bookingPaymentStatus !== 'PAID' && (
+      {bookingAmount <= 0 && bookingPaymentStatus === 'UNPAID' && (
         <p className="text-xs text-amber-700">
           {m.bookingPaymentAmountRequired}
         </p>

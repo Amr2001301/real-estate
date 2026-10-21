@@ -11,7 +11,8 @@ import { getReportsCurrency } from '@/lib/currency';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { OwnerDocumentsCard } from '@/components/documents/owner-documents-card';
-import { VerifyToggle } from '../verify-toggle';
+import { ReapproveButton } from '../reapprove-button';
+import { DepositStateChip } from '@/components/payments/payment-state';
 import { DepositManage } from './manage';
 import { PrintButton } from '@/components/print/PrintButton';
 import {
@@ -84,13 +85,7 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
         actions={
           <div className="flex items-center gap-2">
             <PrintButton path="deposits" id={d.id} label={printT(locale).common.print} />
-            <span
-              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                d.verified ? 'bg-success-100 text-success-700' : 'bg-amber-100 text-amber-700'
-              }`}
-            >
-              {d.verified ? `✓ ${uiT(locale).pages.deposits.verifiedBadge}` : uiT(locale).pages.deposits.notVerifiedBadge}
-            </span>
+            <DepositStateChip state={d.state} locale={locale} />
           </div>
         }
       />
@@ -164,7 +159,14 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
                     {m.approvedNote}
                   </p>
                 )}
-                {isAdmin && d.reviewStatus === 'PENDING_REVIEW' && (
+                {/* A cheque payment is settled by clearing or bouncing the cheque, never here. */}
+                {isAdmin && d.state === 'CHEQUE_PENDING' && (
+                  <p className="text-xs text-sky-600">
+                    {locale === 'en' ? 'Paid by a cheque not cleared yet — settle it from ' : 'مدفوعة بشيك لم يُصرف بعد — تُحسم من '}
+                    <Link href="/dashboard/cheques" className="font-semibold underline">{locale === 'en' ? 'Cheques' : 'صفحة الشيكات'}</Link>
+                  </p>
+                )}
+                {isAdmin && d.state === 'PENDING_REVIEW' && (
                   <div className="flex items-center gap-2 pt-1">
                     <ApproveDepositButton depositId={d.id} contractId={d.contractId ?? null} />
                     <RejectDepositDialog depositId={d.id} contractId={d.contractId ?? null} />
@@ -183,10 +185,25 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
                 />
               </div>
             )}
-            {isAdmin && !d.deletedAt && (!d.reviewStatus || d.reviewStatus === 'NO_PROOF') && (
-              <div className="pt-2 border-t border-hairline flex items-center gap-2">
-                <span className="text-[11px] font-medium text-slate-400">{m.verifyStatusLabel}</span>
-                <VerifyToggle id={d.id} contractId={d.contractId ?? null} verified={d.verified} locale={locale} />
+            {/* A reversed payment can be counted again — on purpose, behind a confirmation. */}
+            {d.state === 'REVERSED' && (
+              <div className="rounded-xl bg-slate-500/[0.06] px-3 py-2.5 text-xs text-slate-600" data-testid="reversal-details">
+                <p className="font-semibold text-slate-700">
+                  {locale === 'en' ? 'Reversed' : 'عُكست'}
+                  {d.reversedAt ? (locale === 'en' ? ` on ${formatDate(d.reversedAt, locale)}` : ` يوم ${formatDate(d.reversedAt, locale)}`) : ''}
+                  {d.reversedBy ? (locale === 'en' ? ` by ${d.reversedBy}` : ` بواسطة ${d.reversedBy}`) : ''}
+                </p>
+                {d.reversalReason && (
+                  <p className="mt-1">
+                    {locale === 'en' ? 'Reason: ' : 'السبب: '}
+                    {d.reversalReason}
+                  </p>
+                )}
+              </div>
+            )}
+            {isAdmin && d.state === 'REVERSED' && (
+              <div className="pt-2 border-t border-hairline">
+                <ReapproveButton id={d.id} contractId={d.contractId ?? null} locale={locale} />
               </div>
             )}
           </CardBody>

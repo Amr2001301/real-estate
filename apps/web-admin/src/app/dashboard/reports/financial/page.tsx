@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { DepositStateChip } from '@/components/payments/payment-state';
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -7,7 +8,6 @@ import {
   CheckCircle2,
   Clock,
   FileText,
-  XCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
@@ -585,8 +585,8 @@ export default async function FinancialReportsPage({
             <ul className="flex flex-col gap-4" data-testid="fin-by-type">
               {byType.map((c) => {
                 const all = num(c.totalAll);
-                const verified = num(c.totalVerified);
-                const unverified = num(c.totalUnverified);
+                const collected = num(c.totalCollected);
+                const awaiting = num(c.totalAwaiting);
                 return (
                   <li key={c.type}>
                     <div className="flex items-center justify-between gap-3">
@@ -597,14 +597,14 @@ export default async function FinancialReportsPage({
                       <span className="shrink-0 text-[14px] font-bold text-slate-900 tabular-nums">{money(all)}</span>
                     </div>
                     <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-surface-muted">
-                      <span className="h-full bg-emerald-500" style={{ width: `${(verified / byTypeMax) * 100}%` }} />
-                      <span className="h-full bg-amber-400" style={{ width: `${(unverified / byTypeMax) * 100}%` }} />
+                      <span className="h-full bg-emerald-500" style={{ width: `${(collected / byTypeMax) * 100}%` }} />
+                      <span className="h-full bg-amber-400" style={{ width: `${(awaiting / byTypeMax) * 100}%` }} />
                     </div>
-                    {unverified > 0 && (
+                    {awaiting > 0 && (
                       <p className="mt-1 text-[11px] text-slate-500">
-                        {m.collectionByType.colVerified} <b className="text-emerald-600 tabular-nums">{money(verified)}</b>
+                        {m.collectionByType.colCollected} <b className="text-emerald-600 tabular-nums">{money(collected)}</b>
                         {' · '}
-                        {m.collectionByType.colUnverified} <b className="text-amber-600 tabular-nums">{money(unverified)}</b>
+                        {m.collectionByType.colAwaiting} <b className="text-amber-600 tabular-nums">{money(awaiting)}</b>
                       </p>
                     )}
                   </li>
@@ -717,15 +717,7 @@ export default async function FinancialReportsPage({
                     <td className="whitespace-nowrap px-4 py-3 text-[12px] text-slate-500 tabular-nums">{formatDate(d.paidAt, locale)}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-end font-bold text-slate-900 tabular-nums">{money(d.amount)}</td>
                     <td className="whitespace-nowrap py-3 ps-4 pe-6">
-                      {d.verified ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
-                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />{m.recentDeposits.verifiedLabel}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-amber-600">
-                          <XCircle className="h-3.5 w-3.5 shrink-0" />{m.recentDeposits.pendingLabel}
-                        </span>
-                      )}
+                      <DepositStateChip state={d.state} locale={locale} />
                     </td>
                   </tr>
                 ))}

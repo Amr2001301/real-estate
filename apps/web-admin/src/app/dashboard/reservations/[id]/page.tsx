@@ -38,6 +38,7 @@ import { ReservationTimeline } from '../_components/reservation-timeline';
 import { ReservationDetailActions } from './_components/detail-actions';
 import { AddNoteForm } from './_components/add-note-form';
 import { BookingPaymentActions } from './_components/booking-payment-actions';
+import { DepositStateChip } from '@/components/payments/payment-state';
 import { ConvertReservationForm } from './_components/convert-reservation-form';
 import { PrintButton } from '@/components/print/PrintButton';
 import {
@@ -317,10 +318,10 @@ export default async function ReservationDetailPage({
                         <span
                           className={cn(
                             'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full [&_svg]:h-[18px] [&_svg]:w-[18px]',
-                            dep.verified ? 'bg-emerald-500/12 text-emerald-600' : 'bg-amber-500/12 text-amber-600',
+                            dep.state === 'COLLECTED' ? 'bg-emerald-500/12 text-emerald-600' : 'bg-amber-500/12 text-amber-600',
                           )}
                         >
-                          {dep.verified ? <BadgeCheck /> : <Banknote />}
+                          {dep.state === 'COLLECTED' ? <BadgeCheck /> : <Banknote />}
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="text-[11.5px] text-slate-500">{m.depositLabel}</p>
@@ -328,15 +329,7 @@ export default async function ReservationDetailPage({
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="text-end">
-                            <span
-                              className={cn(
-                                'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold',
-                                dep.verified ? 'bg-emerald-500/12 text-emerald-600' : 'bg-amber-500/12 text-amber-600',
-                              )}
-                            >
-                              <span className={cn('h-1.5 w-1.5 rounded-full', dep.verified ? 'bg-emerald-500' : 'bg-amber-500')} />
-                              {dep.verified ? m.depositVerified : m.depositNotVerified}
-                            </span>
+                            <DepositStateChip state={dep.state} locale={locale} />
                             <p className="mt-1 text-[12px] text-slate-500 tabular-nums">{formatDate(dep.paidAt, locale)}</p>
                           </div>
                           <span className="h-9 w-px bg-hairline" aria-hidden />

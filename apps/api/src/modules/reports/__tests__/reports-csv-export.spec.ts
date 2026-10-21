@@ -408,7 +408,7 @@ describe('Reports module · CSV export', () => {
       expect(res.text).toContain('# سلامة المستندات والإيصالات');
       // Stable metric keys + an Arabic label appear in the summary section.
       expect(res.text).toContain('totalCollectedVerified');
-      expect(res.text).toContain('المحصّل المؤكد');
+      expect(res.text).toContain('تم التحصيل (الكل)');
     });
 
     it('forwards the same filters to financialDashboard (projectId)', async () => {

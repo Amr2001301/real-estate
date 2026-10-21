@@ -495,8 +495,8 @@ export interface FinancialDashboardReportData {
     type: string;
     count: number;
     totalAll: Amount;
-    totalVerified: Amount;
-    totalUnverified: Amount;
+    totalCollected: Amount;
+    totalAwaiting: Amount;
   }>;
   aging: Array<{ label: string; count: number; amount: Amount }>;
   /** Applied filters, already labelled ("المشروع: …"). */
@@ -543,7 +543,7 @@ export function financialDashboardReportHtml(
             tone: 'good',
           },
           { label: 'الرسوم والغرامات', value: moneyText(n(s.feesCollected), c) },
-          { label: 'المحصّل غير المؤكد', value: moneyText(n(s.totalCollectedUnverified), c) },
+          { label: 'بانتظار التأكيد (إيصال/شيك)', value: moneyText(n(s.totalCollectedUnverified), c) },
           { label: 'المتبقي للتحصيل', value: moneyText(n(s.totalOutstanding), c) },
           { label: 'المحصّل هذا الشهر', value: moneyText(n(s.collectedThisMonth), c) },
           { label: 'المستحق هذا الشهر', value: moneyText(n(s.dueThisMonth), c) },
@@ -598,15 +598,15 @@ export function financialDashboardReportHtml(
             { label: 'النوع', width: 1.6 },
             { label: 'العدد', numeric: true, width: 0.7 },
             { label: 'الإجمالي', numeric: true, width: 1.4 },
-            { label: 'المؤكد', numeric: true, width: 1.4 },
-            { label: 'غير المؤكد', numeric: true, width: 1.4 },
+            { label: 'تم التحصيل', numeric: true, width: 1.4 },
+            { label: 'بانتظار التأكيد', numeric: true, width: 1.4 },
           ],
           byType.map((t) => [
             t.label,
             countText(t.count),
             moneyText(n(t.totalAll), c),
-            moneyText(n(t.totalVerified), c),
-            moneyText(n(t.totalUnverified), c),
+            moneyText(n(t.totalCollected), c),
+            moneyText(n(t.totalAwaiting), c),
           ]),
           {
             totals: [
@@ -614,11 +614,11 @@ export function financialDashboardReportHtml(
               countText(byType.reduce((a, t) => a + t.count, 0)),
               moneyText(typeTotal, c),
               moneyText(
-                byType.reduce((a, t) => a + n(t.totalVerified), 0),
+                byType.reduce((a, t) => a + n(t.totalCollected), 0),
                 c,
               ),
               moneyText(
-                byType.reduce((a, t) => a + n(t.totalUnverified), 0),
+                byType.reduce((a, t) => a + n(t.totalAwaiting), 0),
                 c,
               ),
             ],

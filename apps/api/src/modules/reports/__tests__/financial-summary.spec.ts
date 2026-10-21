@@ -59,16 +59,17 @@ function makePrismaMock() {
         const amount = booking ? (collected ? 250 : 400) : collected ? 600 : 1000;
         return { _sum: { amount } };
       }),
+      // Per type: collected (accepts NO_PROOF) and on its way (cheque
+      // pending clearance / proof to review).
       groupBy: jest.fn().mockImplementation(async ({ where }: { where: unknown }) =>
         has(where, '"NO_PROOF"')
           ? [
-              { type: 'BOOKING_AMOUNT', _sum: { amount: 250 } },
-              { type: 'INSTALLMENT', _sum: { amount: 350 } },
-            ]
-          : [
-              { type: 'BOOKING_AMOUNT', _sum: { amount: 400 }, _count: { _all: 3 } },
+              { type: 'BOOKING_AMOUNT', _sum: { amount: 250 }, _count: { _all: 2 } },
               { type: 'INSTALLMENT', _sum: { amount: 350 }, _count: { _all: 3 } },
-            ],
+            ]
+          : has(where, '"PENDING_CLEARANCE"')
+            ? [{ type: 'BOOKING_AMOUNT', _sum: { amount: 150 }, _count: { _all: 1 } }]
+            : [],
       ),
     },
     installment: {
@@ -164,7 +165,7 @@ describe('Reports · financial-dashboard summary correctness (F1)', () => {
 
   let body: {
     summary: Record<string, string | number>;
-    collectionByType: Array<{ type: string; count: number; totalAll: string; totalVerified: string; totalUnverified: string }>;
+    collectionByType: Array<{ type: string; count: number; totalAll: string; totalCollected: string; totalAwaiting: string }>;
     aging: Array<{ label: string; count: number; amount: string }>;
     booking: Record<string, string | number>;
     liabilities: {
@@ -188,7 +189,8 @@ describe('Reports · financial-dashboard summary correctness (F1)', () => {
   it('splits collection into collected ("verified") / recorded ("all") / waiting', () => {
     expect(body.summary.totalCollectedAll).toBe('1000');
     expect(body.summary.totalCollectedVerified).toBe('600');
-    expect(body.summary.totalCollectedUnverified).toBe('400');
+    // On its way: proofs to review and uncleared cheques only.
+    expect(body.summary.totalCollectedUnverified).toBe('150');
     // The headline is the collected amount (one definition everywhere), not
     // everything recorded.
     expect(body.summary.totalCollected).toBe('600');
@@ -198,11 +200,11 @@ describe('Reports · financial-dashboard summary correctness (F1)', () => {
     expect(body.summary.netCollected).toBe('550');
   });
 
-  it('breaks collection down by deposit type with verified/unverified split', () => {
+  it('breaks collection down by deposit type into collected / awaiting', () => {
     const booking = body.collectionByType.find((c) => c.type === 'BOOKING_AMOUNT')!;
-    expect(booking).toMatchObject({ count: 3, totalAll: '400', totalVerified: '250', totalUnverified: '150' });
+    expect(booking).toMatchObject({ count: 3, totalAll: '400', totalCollected: '250', totalAwaiting: '150' });
     const installment = body.collectionByType.find((c) => c.type === 'INSTALLMENT')!;
-    expect(installment).toMatchObject({ count: 3, totalAll: '350', totalVerified: '350', totalUnverified: '0' });
+    expect(installment).toMatchObject({ count: 3, totalAll: '350', totalCollected: '350', totalAwaiting: '0' });
     // Every enum type is represented (zero-filled when absent).
     expect(body.collectionByType.map((c) => c.type).sort()).toEqual(
       ['BOOKING_AMOUNT', 'DOWN_PAYMENT', 'FEE', 'FINAL_PAYMENT', 'INSTALLMENT'],

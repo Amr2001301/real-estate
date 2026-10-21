@@ -1,3 +1,4 @@
+import { DEPOSIT_STATE_SELECT, withDepositState } from '../../common/finance/deposit-state';
 import { Injectable, Optional } from '@nestjs/common';
 import {
   AppointmentStatus,
@@ -71,6 +72,7 @@ import {
 } from '../../common/utils/xlsx-chart';
 import {
   againstDueDepositWhere,
+  AWAITING_DEPOSIT_WHERE,
   COLLECTED_DEPOSIT_WHERE,
   FEES_DEPOSIT_WHERE,
   RECORDED_DEPOSIT_WHERE,
@@ -1386,6 +1388,9 @@ export class ReportsService {
           amount: true,
           paidAt: true,
           verified: true,
+          deletedAt: true,
+          reviewStatus: true,
+          ...DEPOSIT_STATE_SELECT,
           contract: {
             select: {
               id: true,
@@ -1513,7 +1518,7 @@ export class ReportsService {
       this.prisma.deposit.aggregate({ where: filteredDepWhere(), _sum: { amount: true } }),
       this.prisma.deposit.groupBy({
         by: ['type'],
-        where: filteredDepWhere(),
+        where: filteredDepWhere(AWAITING_DEPOSIT_WHERE),
         _sum: { amount: true },
         _count: { _all: true },
       }),
@@ -1521,6 +1526,7 @@ export class ReportsService {
         by: ['type'],
         where: filteredDepWhere(COLLECTED_DEPOSIT_WHERE),
         _sum: { amount: true },
+        _count: { _all: true },
       }),
       this.prisma.installment.aggregate({ where: instWhere(unpaid), _sum: { amount: true } }),
       this.prisma.installment.aggregate({
@@ -1594,34 +1600,38 @@ export class ReportsService {
     const collectedAgainstDue = D(againstDueAgg._sum.amount);
     const collectedAll = D(recordedAgg._sum.amount);
     const collectedVerified = D(totalCollectedAgg._sum.amount);
-    const collectedUnverified = collectedAll.minus(collectedVerified);
+    // On its way (proof to review / cheque not cleared) — not "recorded minus
+    // collected", which also held bounced cheques.
+    const collectedUnverified = byTypeGroups.reduce((a, g) => a.plus(D(g._sum.amount)), zero);
 
     // Per-DepositType breakdown (respects active filters, incl. the user type
-    // filter if set), split into verified/unverified.
-    type TypeAcc = { count: number; all: Prisma.Decimal; verified: Prisma.Decimal; unverified: Prisma.Decimal };
+    // filter if set): collected, and on its way (proof to review / cheque not
+    // cleared). Rejected, bounced and reversed payments are in neither.
+    type TypeAcc = { count: number; collected: Prisma.Decimal; awaiting: Prisma.Decimal };
     const byType = new Map<DepositType, TypeAcc>();
     for (const t of Object.values(DepositType)) {
-      byType.set(t, { count: 0, all: zero, verified: zero, unverified: zero });
+      byType.set(t, { count: 0, collected: zero, awaiting: zero });
     }
     for (const g of byTypeGroups) {
       const acc = byType.get(g.type);
       if (!acc) continue;
       acc.count += g._count?._all ?? 0;
-      acc.all = acc.all.plus(D(g._sum.amount));
+      acc.awaiting = acc.awaiting.plus(D(g._sum.amount));
     }
     for (const g of byTypeCollectedGroups) {
       const acc = byType.get(g.type);
-      if (acc) acc.verified = acc.verified.plus(D(g._sum.amount));
+      if (!acc) continue;
+      acc.count += g._count?._all ?? 0;
+      acc.collected = acc.collected.plus(D(g._sum.amount));
     }
-    for (const acc of byType.values()) acc.unverified = acc.all.minus(acc.verified);
     const collectionByType = Object.values(DepositType).map((t) => {
       const acc = byType.get(t)!;
       return {
         type: t,
         count: acc.count,
-        totalAll: acc.all.toString(),
-        totalVerified: acc.verified.toString(),
-        totalUnverified: acc.unverified.toString(),
+        totalAll: acc.collected.plus(acc.awaiting).toString(),
+        totalCollected: acc.collected.toString(),
+        totalAwaiting: acc.awaiting.toString(),
       };
     });
 
@@ -2032,7 +2042,7 @@ export class ReportsService {
       overdue: overdueRows,
       upcomingThisWeek: upcomingWeekRows,
       upcomingThisMonth: upcomingMonthRows,
-      recentDeposits,
+      recentDeposits: recentDeposits.map(withDepositState),
       cashflowTrend,
       cashflowForecast: {
         next30:   Number(forecast30Agg._sum.amount   ?? 0),
@@ -2285,9 +2295,9 @@ export class ReportsService {
       ['feesCollected', 'الرسوم والغرامات', s.feesCollected],
       ['dueToDate', 'المستحق حتى اليوم', s.dueToDate],
       ['collectedAgainstDue', 'المحصّل من المستحق', s.collectedAgainstDue],
-      ['totalCollectedVerified', 'المحصّل المؤكد (الكل)', s.totalCollectedVerified],
+      ['totalCollectedVerified', 'تم التحصيل (الكل)', s.totalCollectedVerified],
       ['totalCollectedAll', 'إجمالي المحصّل المسجل', s.totalCollectedAll],
-      ['totalCollectedUnverified', 'المحصّل غير المؤكد', s.totalCollectedUnverified],
+      ['totalCollectedUnverified', 'بانتظار التأكيد (إيصال/شيك)', s.totalCollectedUnverified],
       ['totalOutstanding', 'المتبقي للتحصيل', s.totalOutstanding],
       ['dueSoonAmount', 'مستحق خلال 7 أيام', s.dueSoonAmount],
       ['overdueAmountComputed', 'المتأخر المحسوب', s.overdueAmountComputed],
@@ -2324,8 +2334,8 @@ export class ReportsService {
       DEP_TYPE_LABEL[c.type] ?? c.type,
       c.count,
       c.totalAll,
-      c.totalVerified,
-      c.totalUnverified,
+      c.totalCollected,
+      c.totalAwaiting,
     ]);
 
     // C. Aging buckets.
@@ -2472,7 +2482,7 @@ export class ReportsService {
       toCsv(['المؤشر', 'البيان', 'القيمة'], summaryRows),
       '',
       '# التحصيل حسب النوع',
-      toCsv(['النوع', 'البيان', 'العدد', 'إجمالي مسجل', 'مؤكد', 'غير مؤكد'], byTypeRows),
+      toCsv(['النوع', 'البيان', 'العدد', 'الإجمالي', 'تم التحصيل', 'بانتظار التأكيد (إيصال/شيك)'], byTypeRows),
       '',
       '# أعمار المتأخرات',
       toCsv(['الفئة', 'العدد', 'المبلغ'], agingRows),
@@ -2552,7 +2562,7 @@ export class ReportsService {
         { label: 'قيمة العقود الموقّعة', value: Number(s.totalContractValue), currency },
         { label: 'المحصّل من السعر', value: Number(s.collectedTowardsPrice), currency },
         { label: 'الرسوم والغرامات', value: Number(s.feesCollected), currency },
-        { label: 'المحصّل غير المؤكد', value: Number(s.totalCollectedUnverified), currency },
+        { label: 'بانتظار التأكيد (إيصال/شيك)', value: Number(s.totalCollectedUnverified), currency },
         { label: 'المتبقي للتحصيل', value: Number(s.totalOutstanding), currency },
         { label: 'المحصّل هذا الشهر', value: Number(s.collectedThisMonth), currency },
         { label: 'المستحق هذا الشهر', value: Number(s.dueThisMonth), currency },
@@ -2591,10 +2601,10 @@ export class ReportsService {
     const byType = wb.addWorksheet('التحصيل حسب النوع');
     addTable(
       byType,
-      ['النوع', 'العدد', 'الإجمالي', 'المؤكد', 'غير المؤكد'],
+      ['النوع', 'العدد', 'الإجمالي', 'تم التحصيل', 'بانتظار التأكيد (إيصال/شيك)'],
       data.collectionByType.map((c) => [
         DEP_TYPE_LABEL[c.type] ?? c.type, c.count,
-        Number(c.totalAll), Number(c.totalVerified), Number(c.totalUnverified),
+        Number(c.totalAll), Number(c.totalCollected), Number(c.totalAwaiting),
       ]),
       [20, 12, 16, 16, 16],
     );

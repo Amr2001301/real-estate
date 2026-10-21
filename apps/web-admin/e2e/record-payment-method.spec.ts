@@ -19,7 +19,7 @@ test('a payment recorded from the contract page has its payment method', async (
   const list = await request.get(`${API_BASE}/v1/contracts?q=E2E-CHQ-0001`, { headers });
   const contractId = (await list.json()).data[0].id as string;
 
-  await gotoReady(page, `/dashboard/contracts/${contractId}`);
+  await gotoReady(page, `/dashboard/contracts/${contractId}?tab=installments`);
   await page.getByRole('button', { name: 'سجّل دفعة' }).first().click();
   const form = page.getByTestId('record-payment-form');
   await form.locator('select[name="paymentMethod"]').selectOption('BANK_TRANSFER');

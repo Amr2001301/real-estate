@@ -50,6 +50,28 @@ export const RECORDED_DEPOSIT_WHERE = {
 } satisfies Prisma.DepositWhereInput;
 
 /**
+ * Money on its way: a proof the customer sent that awaits review, or a cheque
+ * the bank has not cleared yet (depositState PENDING_REVIEW / CHEQUE_PENDING).
+ * Disjoint from COLLECTED_DEPOSIT_WHERE.
+ */
+export const AWAITING_DEPOSIT_WHERE = {
+  deletedAt: null,
+  reviewStatus: { not: DepositReviewStatus.REJECTED },
+  paymentCorrections: { none: { type: PaymentCorrectionType.REVERSAL, supersededAt: null } },
+  OR: [
+    {
+      paymentInstrument: {
+        status: { in: [PaymentInstrumentStatus.PENDING_CLEARANCE, PaymentInstrumentStatus.DEPOSITED] },
+      },
+    },
+    {
+      reviewStatus: DepositReviewStatus.PENDING_REVIEW,
+      OR: [{ paymentInstrumentId: null }, { paymentInstrument: { status: PaymentInstrumentStatus.CLEARED } }],
+    },
+  ],
+} satisfies Prisma.DepositWhereInput;
+
+/**
  * Decided 2026-10-16: "collected" is shown as two figures.
  *
  * Towards the price — the money paid against the price of live contracts:

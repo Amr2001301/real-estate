@@ -290,6 +290,8 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
         title={m.actionBar.header}
         allClear={m.actionBar.allClear}
         items={[
+          // Customers' payment proofs come first: money waiting on the admin.
+          { key: 'payments', label: m.actionBar.pendingProofs, value: summary?.alerts.depositsPendingReview ?? 0, href: '/dashboard/payments/review', icon: 'payments' },
           { key: 'contracts', label: m.actionBar.pendingContracts, value: summary?.alerts.contractsAwaitingSignature ?? 0, href: '/dashboard/contracts', icon: 'contracts' },
           // Off the plan, maintenance has no page to open (F36).
           ...(disabledFeatures.has('feature.maintenance')
