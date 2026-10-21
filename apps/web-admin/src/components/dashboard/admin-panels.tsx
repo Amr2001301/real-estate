@@ -328,14 +328,6 @@ export interface ProjectHealth {
   value: number;
 }
 
-function xlSpan(i: number, n: number): string {
-  const rest = n % 3;
-  const inLastRow = i >= n - rest;
-  if (rest === 2 && inLastRow) return 'xl:col-span-3';
-  if (rest === 1 && inLastRow) return 'xl:col-span-6';
-  return 'xl:col-span-2';
-}
-
 export function ProjectHealthPanel({
   title,
   sub,
@@ -353,17 +345,12 @@ export function ProjectHealthPanel({
 }) {
   return (
     <PremiumPanel title={title} sub={sub} link={link}>
-      {/* Six tracks at xl: three cards a row, and a short last row widens
-          (two → halves, one → full) instead of leaving a hole. */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-        {projects.map((p, i) => (
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {projects.map((p) => (
           <Link
             key={p.id}
             href={`/dashboard/projects/${p.id}` as never}
-            className={cn(
-              'rounded-[18px] border border-hairline bg-surface-muted p-5 transition-colors hover:border-brand-400/50',
-              xlSpan(i, projects.length),
-            )}
+            className="rounded-[18px] border border-hairline bg-surface-muted p-5 transition-colors hover:border-brand-400/50"
           >
             <div className="flex items-start justify-between gap-3">
               <span className="font-heading text-[16px] font-bold text-slate-900">{p.name}</span>

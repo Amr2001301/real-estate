@@ -382,38 +382,18 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
       )}
 
       <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3">
-        {/* Money on the wide side (health, then the 90-day forecast), sources
-            beside it; the health panel grows so both columns end together. */}
-        {(fin || forecast) && (
-          <div className="flex flex-col gap-6 lg:col-span-2">
-            {fin && (
-              <FinancialHealthPanel
-                className="flex-1"
-                title={m.u5.healthTitle}
-                sub={m.u5.healthSub}
-                total={total}
-                collected={collected}
-                overdue={overdue}
-                fees={fees}
-                labels={m.u5.health}
-                money={money}
-              />
-            )}
-            {forecast && (
-              <CashFlowPanel
-                title={m.cashFlow.title}
-                sub={<>{m.u5.next90} · {m.cashFlow.totalSub} {compactParts(forecastTotal, symbol, locale).join(' ')}</>}
-                link={{ href: '/dashboard/financial-dashboard', label: m.cashFlow.detailLink }}
-                pctOfTotal={m.pctOfTotal}
-                money={money}
-                slots={[
-                  { label: m.cashFlow.slot30, value: forecast.next30 },
-                  { label: m.cashFlow.slot60, value: forecast.next3160 },
-                  { label: m.cashFlow.slot90, value: forecast.next6190 },
-                  { label: m.cashFlow.slotOverdue, value: overdue, overdue: true },
-                ]}
-              />
-            )}
+        {fin && (
+          <div className="lg:col-span-2">
+            <FinancialHealthPanel
+              title={m.u5.healthTitle}
+              sub={m.u5.healthSub}
+              total={total}
+              collected={collected}
+              overdue={overdue}
+              fees={fees}
+              labels={m.u5.health}
+              money={money}
+            />
           </div>
         )}
         <LeadSourcesPanel
@@ -424,6 +404,22 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
           slices={(summary?.leadSources ?? []).map((s) => ({ label: s.source, value: s.count }))}
         />
       </div>
+
+      {forecast && (
+        <CashFlowPanel
+          title={m.cashFlow.title}
+          sub={<>{m.u5.next90} · {m.cashFlow.totalSub} {compactParts(forecastTotal, symbol, locale).join(' ')}</>}
+          link={{ href: '/dashboard/financial-dashboard', label: m.cashFlow.detailLink }}
+          pctOfTotal={m.pctOfTotal}
+          money={money}
+          slots={[
+            { label: m.cashFlow.slot30, value: forecast.next30 },
+            { label: m.cashFlow.slot60, value: forecast.next3160 },
+            { label: m.cashFlow.slot90, value: forecast.next6190 },
+            { label: m.cashFlow.slotOverdue, value: overdue, overdue: true },
+          ]}
+        />
+      )}
     </div>
   );
 }
