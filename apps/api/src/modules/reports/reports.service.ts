@@ -1,3 +1,4 @@
+import { DEPOSIT_STATE_SELECT, withDepositState } from '../../common/finance/deposit-state';
 import { Injectable, Optional } from '@nestjs/common';
 import {
   AppointmentStatus,
@@ -1386,6 +1387,9 @@ export class ReportsService {
           amount: true,
           paidAt: true,
           verified: true,
+          deletedAt: true,
+          reviewStatus: true,
+          ...DEPOSIT_STATE_SELECT,
           contract: {
             select: {
               id: true,
@@ -2032,7 +2036,7 @@ export class ReportsService {
       overdue: overdueRows,
       upcomingThisWeek: upcomingWeekRows,
       upcomingThisMonth: upcomingMonthRows,
-      recentDeposits,
+      recentDeposits: recentDeposits.map(withDepositState),
       cashflowTrend,
       cashflowForecast: {
         next30:   Number(forecast30Agg._sum.amount   ?? 0),

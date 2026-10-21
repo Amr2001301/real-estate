@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { DepositStateChip } from '@/components/payments/payment-state';
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -7,7 +8,6 @@ import {
   CheckCircle2,
   Clock,
   FileText,
-  XCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
@@ -717,15 +717,7 @@ export default async function FinancialReportsPage({
                     <td className="whitespace-nowrap px-4 py-3 text-[12px] text-slate-500 tabular-nums">{formatDate(d.paidAt, locale)}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-end font-bold text-slate-900 tabular-nums">{money(d.amount)}</td>
                     <td className="whitespace-nowrap py-3 ps-4 pe-6">
-                      {d.verified ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
-                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />{m.recentDeposits.verifiedLabel}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-amber-600">
-                          <XCircle className="h-3.5 w-3.5 shrink-0" />{m.recentDeposits.pendingLabel}
-                        </span>
-                      )}
+                      <DepositStateChip state={d.state} locale={locale} />
                     </td>
                   </tr>
                 ))}

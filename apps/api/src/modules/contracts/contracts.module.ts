@@ -15,6 +15,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { DEPOSIT_STATE_SELECT, withDepositState } from '../../common/finance/deposit-state';
 import { dateOnlyString, toDateOnly } from '../../common/time/date-only';
 import { ApiTags } from '@nestjs/swagger';
 import {
@@ -773,7 +774,7 @@ export class ContractsService {
           },
         },
         installmentPlan: { include: { installments: { orderBy: { dueDate: 'asc' } } } },
-        deposits: { orderBy: { paidAt: 'desc' } },
+        deposits: { orderBy: { paidAt: 'desc' }, include: DEPOSIT_STATE_SELECT },
         broker: {
           select: {
             id: true,
@@ -800,8 +801,22 @@ export class ContractsService {
       promised && expectedDeliveryDate && expectedDeliveryDate > promised
         ? Math.round((Date.parse(expectedDeliveryDate) - Date.parse(promised)) / 86_400_000)
         : 0;
+    // Each payment says plainly whether the money arrived, and each schedule
+    // row carries the payment that explains it (paid how and when, a proof
+    // or a cheque waiting, or a reversal) — the page showed only the row's
+    // status, so a reversed down payment read "pending" beside a paid date.
+    const deposits = contract.deposits.map(withDepositState);
+    const installmentPlan = contract.installmentPlan && {
+      ...contract.installmentPlan,
+      installments: contract.installmentPlan.installments.map((i) => ({
+        ...i,
+        ...rowPayment(deposits.filter((d) => d.installmentId === i.id && !d.deletedAt)),
+      })),
+    };
     return {
       ...contract,
+      deposits,
+      installmentPlan,
       expectedDeliveryDate,
       deliveryDelayDays,
       // The instalment markup still in the total (the swap form adds it to
@@ -1606,3 +1621,32 @@ class ContractsController {
   exports: [ContractsService, CancellationPolicyService, ContractCancellationService],
 })
 export class ContractsModule {}
+
+type StatedDeposit = ReturnType<typeof withDepositState<
+  Prisma.DepositGetPayload<{ include: typeof DEPOSIT_STATE_SELECT }>
+>>;
+
+/**
+ * The payment that explains a schedule row: one waiting (proof under review,
+ * cheque not cleared) first, else the one that paid it, else the latest that
+ * failed (reversed, bounced, rejected). `awaitingPayment` stops the admin
+ * recording a second payment on the row (the API refuses it).
+ */
+function rowPayment(ds: StatedDeposit[]) {
+  const pick =
+    ds.find((d) => d.state === 'PENDING_REVIEW' || d.state === 'CHEQUE_PENDING') ??
+    ds.find((d) => d.state === 'COLLECTED') ??
+    ds[0];
+  return {
+    awaitingPayment: ds.some((d) => d.state === 'PENDING_REVIEW' || d.state === 'CHEQUE_PENDING'),
+    payment: pick
+      ? {
+          depositId: pick.id,
+          state: pick.state,
+          method: pick.paymentInstrument?.type ?? pick.paymentMethod ?? null,
+          paidAt: pick.paidAt,
+          reversedAt: pick.reversedAt,
+        }
+      : null,
+  };
+}

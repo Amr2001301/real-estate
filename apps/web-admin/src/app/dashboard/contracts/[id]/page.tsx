@@ -32,6 +32,7 @@ import { ContractPdfPanel } from './pdf-panel';
 import { OwnerDocumentsCard } from '@/components/documents/owner-documents-card';
 import { CreatePlanForm } from './create-plan-form';
 import { RecordPaymentButton } from './record-payment-button';
+import { DepositStateChip, rowPaymentNote } from '@/components/payments/payment-state';
 import { WaiveLateFeeButton } from './waive-late-fee';
 import { AmendmentsPanel } from './amendments-panel';
 import { PlanChangesPanel } from './plan-changes-panel';
@@ -105,6 +106,7 @@ export default async function ContractDetailPage({
   const isAdmin = session?.role === 'ADMIN';
   const plan = contract.installmentPlan;
   // What the customer still owes on the schedule — shown before a handover.
+  // (fees included; the "remaining" figure below shows the price part.)
   const unpaid =
     Math.round(
       (plan?.installments ?? [])
@@ -221,8 +223,16 @@ export default async function ContractDetailPage({
               <span className="text-[11.5px] text-slate-500 tabular-nums">{m.kpiCollectedPct(collectedPct)}</span>
             </div>
           </Kpi>
+          {/* Remaining on the price, so collected + remaining = the contract
+              value; open fees (late, transfer, penalty) are noted apart. */}
           <Kpi label={m.kpiRemaining} icon={<Hourglass />}>
-            <Money value={formatCurrency(unpaid, currency, locale)} />
+            <Money value={formatCurrency(openPrice, currency, locale)} />
+            {unpaid - openPrice > 0.005 && (
+              <span className="text-[11.5px] text-slate-500" data-testid="kpi-open-fees">
+                {locale === 'en' ? '+ fees' : '+ رسوم وغرامات'}{' '}
+                <span className="tabular-nums">{formatCurrency(unpaid - openPrice, currency, locale)}</span>
+              </span>
+            )}
             <span
               className={cn(
                 'inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold',
@@ -366,7 +376,7 @@ export default async function ContractDetailPage({
                             <th className={TH}>{m.colDueDate}</th>
                             <th className={TH}>{m.colAmount}</th>
                             <th className={TH}>{m.colStatus}</th>
-                            <th className={TH}>{m.colPaidAt}</th>
+                            <th className={TH}>{locale === 'en' ? 'Payment' : 'تفاصيل الدفع'}</th>
                             <th className="px-4 py-3" />
                           </tr>
                         </thead>
@@ -377,8 +387,16 @@ export default async function ContractDetailPage({
                               const s = inst.waivedAt
                                 ? WAIVED
                                 : INST_STATUS[inst.status] ?? INST_STATUS['PENDING']!;
+                              const waiting =
+                                inst.awaitingPayment && inst.payment &&
+                                (inst.payment.state === 'PENDING_REVIEW' || inst.payment.state === 'CHEQUE_PENDING')
+                                  ? inst.payment.state
+                                  : null;
+                              const note = rowPaymentNote(inst.status, inst.payment, (d) => formatDate(d, locale), locale);
+                              // Not while a proof or a cheque is waiting: the API refuses a second payment.
                               const canPay =
                                 isAdmin &&
+                                !inst.awaitingPayment &&
                                 (inst.status === 'PENDING' || inst.status === 'OVERDUE');
                               const isInstallment =
                                 !inst.type || inst.type === 'INSTALLMENT';
@@ -416,18 +434,41 @@ export default async function ContractDetailPage({
                                     {formatCurrency(inst.amount, currency, locale)}
                                   </td>
                                   <td className="px-4 py-3.5">
-                                    <span className={cn('inline-block rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold', s.cls)}>
-                                      {s.label}
-                                    </span>
+                                    {/* A row with a proof or cheque waiting says so instead of a bare "pending". */}
+                                    {waiting ? (
+                                      <DepositStateChip state={waiting} locale={locale} />
+                                    ) : (
+                                      <span className={cn('inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold', s.cls)}>
+                                        {s.label}
+                                      </span>
+                                    )}
                                   </td>
-                                  <td className="px-4 py-3.5 text-[12.5px] text-slate-500 tabular-nums">
-                                    {inst.paidAt ? formatDate(inst.paidAt, locale) : '—'}
+                                  <td className="px-4 py-3.5 text-[12px] text-slate-500" data-testid="row-payment-note">
+                                    {note ??
+                                      (inst.status === 'PAID' && inst.paidAt ? formatDate(inst.paidAt, locale) : '—')}
                                   </td>
                                   <td className="px-4 py-3.5 text-end">
-                                    {canPay && inst.type === 'LATE_FEE' && !inst.awaitingCheque && (
+                                    {canPay && inst.type === 'LATE_FEE' && (
                                       <span className="me-2">
                                         <WaiveLateFeeButton contractId={contract.id} installmentId={inst.id} locale={locale} />
                                       </span>
+                                    )}
+                                    {isAdmin && waiting === 'PENDING_REVIEW' && inst.payment && (
+                                      <Link
+                                        href={`/dashboard/deposits/${inst.payment.depositId}` as never}
+                                        data-testid="review-proof-link"
+                                        className="inline-flex items-center gap-1 whitespace-nowrap text-[12.5px] font-bold text-amber-600 hover:text-amber-500"
+                                      >
+                                        {locale === 'en' ? 'Review proof' : 'راجِع الإيصال'}
+                                      </Link>
+                                    )}
+                                    {isAdmin && waiting === 'CHEQUE_PENDING' && (
+                                      <Link
+                                        href={'/dashboard/cheques' as never}
+                                        className="inline-flex items-center gap-1 whitespace-nowrap text-[12.5px] font-bold text-sky-600 hover:text-sky-500"
+                                      >
+                                        {locale === 'en' ? 'Cheques' : 'صفحة الشيكات'}
+                                      </Link>
                                     )}
                                     {canPay && (
                                       <RecordPaymentButton
@@ -501,10 +542,10 @@ export default async function ContractDetailPage({
                       <span
                         className={cn(
                           'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full [&_svg]:h-[17px] [&_svg]:w-[17px]',
-                          d.verified ? 'bg-emerald-500/12 text-emerald-600' : 'bg-amber-500/12 text-amber-600',
+                          d.state === 'COLLECTED' || !d.state ? 'bg-emerald-500/12 text-emerald-600' : 'bg-amber-500/12 text-amber-600',
                         )}
                       >
-                        {d.verified ? <BadgeCheck /> : <Banknote />}
+                        {d.state === 'COLLECTED' || !d.state ? <BadgeCheck /> : <Banknote />}
                       </span>
                       <div className="min-w-0 flex-1">
                         {isAdmin ? (
@@ -532,15 +573,7 @@ export default async function ContractDetailPage({
                             <ExternalLink className="h-3 w-3" /> {m.receiptLabel}
                           </a>
                         )}
-                        <span
-                          className={cn(
-                            'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold',
-                            d.verified ? 'bg-emerald-500/12 text-emerald-600' : 'bg-amber-500/12 text-amber-600',
-                          )}
-                        >
-                          <span className={cn('h-1.5 w-1.5 rounded-full', d.verified ? 'bg-emerald-500' : 'bg-amber-500')} />
-                          {d.verified ? m.depositVerified : m.depositUnverified}
-                        </span>
+                        <DepositStateChip state={d.state} locale={locale} />
                       </div>
                     </li>
                   ))}

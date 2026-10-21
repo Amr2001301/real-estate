@@ -43,7 +43,7 @@ export function PlanChangesPanel({
   const [pending, startTransition] = useTransition();
   const [picked, setPicked] = useState<string[]>([]);
   const [method, setMethod] = useState<'CASH' | 'BANK_TRANSFER'>('CASH');
-  const payable = open.filter((i) => !i.awaitingCheque);
+  const payable = open.filter((i) => !i.awaitingCheque && !i.awaitingPayment);
   const pickedTotal = useMemo(
     () => payable.filter((i) => picked.includes(i.id)).reduce((a, i) => a + cents(i.amount), 0) / 100,
     [payable, picked],

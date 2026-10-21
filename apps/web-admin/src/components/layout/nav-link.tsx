@@ -10,9 +10,11 @@ interface Props {
   label: string;
   icon?: ReactNode;
   onNavigate?: () => void;
+  /** Items waiting (e.g. payment proofs to review); hidden at 0. */
+  badge?: number;
 }
 
-export function NavLink({ href, label, icon, onNavigate }: Props) {
+export function NavLink({ href, label, icon, onNavigate, badge }: Props) {
   const pathname = usePathname() ?? '';
   const isExact = pathname === href;
   const isWorkspaceRoot = href === '/dashboard' || href === '/portal' || href === '/dashboard/super-admin';
@@ -46,6 +48,14 @@ export function NavLink({ href, label, icon, onNavigate }: Props) {
         </span>
       )}
       <span className="truncate flex-1">{label}</span>
+      {!!badge && badge > 0 && (
+        <span
+          data-testid="nav-badge"
+          className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#D8B66A] px-1.5 text-[11px] font-bold tabular-nums text-[#1A1408]"
+        >
+          {badge}
+        </span>
+      )}
       {/* U5: a ring per item; the active one is a filled gold dot. */}
       <span
         aria-hidden

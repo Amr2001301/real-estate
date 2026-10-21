@@ -17,6 +17,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { DEPOSIT_STATE_SELECT, withDepositState } from '../../common/finance/deposit-state';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ApiTags } from '@nestjs/swagger';
 import {
@@ -241,6 +242,9 @@ const FULL_INCLUDE = {
       verified: true,
       receiptUrl: true,
       createdAt: true,
+      deletedAt: true,
+      reviewStatus: true,
+      ...DEPOSIT_STATE_SELECT,
     },
   },
   reservationNotes: {
@@ -1220,7 +1224,8 @@ export class ReservationsService {
       include: FULL_INCLUDE,
     });
     if (!reservation) throw new NotFoundException('Reservation not found');
-    return reservation;
+    // Each booking payment says whether the money arrived (see deposit-state).
+    return { ...reservation, deposits: (reservation.deposits ?? []).map(withDepositState) };
   }
 
   async softDelete(id: string) {

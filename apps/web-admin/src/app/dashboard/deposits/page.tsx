@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/ui/pagination';
-import { VerifyToggle } from './verify-toggle';
+import { DepositStateChip } from '@/components/payments/payment-state';
 import {
   PremiumPageHero,
   PremiumMetricStrip,
@@ -309,13 +309,6 @@ export default async function DepositsPage({
               <PremiumFilterField label={m.filter.refLabel} htmlFor="ref" className="[&>span:last-child>svg]:hidden">
                 <Input id="ref" name="ref" inputSize="sm" placeholder={m.filter.refPlaceholder} defaultValue={sp.ref ?? ''} className="w-40" />
               </PremiumFilterField>
-              <PremiumFilterField label={m.filter.verifiedLabel} htmlFor="verified">
-                <Select id="verified" name="verified" inputSize="sm" defaultValue={sp.verified ?? ''}>
-                  <option value="">{m.filter.allVerified}</option>
-                  <option value="true">{m.filter.verified}</option>
-                  <option value="false">{m.filter.notVerified}</option>
-                </Select>
-              </PremiumFilterField>
             </>
           )}
         </div>
@@ -446,19 +439,9 @@ export default async function DepositsPage({
                       </td>
 
                       <td className="px-4 py-3 whitespace-nowrap">
-                        {isAdmin ? (
-                          <VerifyToggle id={d.id} contractId={d.contractId ?? null} verified={d.verified} locale={locale} />
-                        ) : (
-                          <span
-                            className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${
-                              d.verified
-                                ? 'bg-emerald-500/12 text-emerald-600'
-                                : 'bg-amber-500/12 text-amber-600'
-                            }`}
-                          >
-                            {d.verified ? m.verifiedBadge : m.notVerifiedBadge}
-                          </span>
-                        )}
+                        {/* The state, not a toggle: the old one-click "verified"
+                            chip reversed or approved a payment with no warning. */}
+                        <DepositStateChip state={d.state} locale={locale} />
                       </td>
 
                     </tr>

@@ -55,6 +55,7 @@ export function SidebarContent({ user, locale, sections, onNavigate }: Props) {
                     key={item.href}
                     href={item.href}
                     label={m.nav.items[item.labelKey]}
+                    badge={item.badge}
                     onNavigate={onNavigate}
                   />
                 );

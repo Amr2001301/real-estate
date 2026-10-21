@@ -45,6 +45,7 @@ import {
 } from './deposits.dto';
 import { reportFailure } from '../../common/observability/report-failure';
 import { CONTRACT_CANCELLED_MESSAGE, depositTypeForInstallment, isDeadContract } from '../installments/live-contract';
+import { DEPOSIT_STATE_SELECT, withDepositState } from '../../common/finance/deposit-state';
 import { COLLECTED_DEPOSIT_WHERE } from '../../common/finance/collected';
 import { companyTimeZone, localDayAfter, startOfLocalToday } from '../../common/time/company-timezone';
 
@@ -108,6 +109,7 @@ const DEPOSIT_INCLUDE = {
     select: { id: true, fileName: true, mimeType: true, sizeBytes: true, createdAt: true },
   },
   reviewedBy: { select: { id: true, fullName: true } },
+  ...DEPOSIT_STATE_SELECT,
 } as const;
 
 /** FG-05 — the fields a reversal decision and its audit entry read. */
@@ -206,7 +208,7 @@ export class DepositsService {
     // Lets the admin page offer "reverse" only when POST /reverse would succeed.
     const d = await this.prisma.deposit.findUnique({ where: { id }, select: REVERSAL_SELECT });
     const reversible = !!d && !d.deletedAt && (await this.stillPays(d));
-    return { ...deposit, reversible };
+    return { ...withDepositState(deposit), reversible };
   }
 
   /** The deposit is what keeps its installment PAID (FG-05). */
@@ -764,7 +766,7 @@ export class DepositsService {
     );
 
     return {
-      data,
+      data: data.map(withDepositState),
       meta: {
         page: opts.page,
         pageSize: opts.pageSize,

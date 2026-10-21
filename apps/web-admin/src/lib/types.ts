@@ -308,6 +308,28 @@ export interface ContractInstallment {
   awaitingCheque?: boolean;
   /** LATE_FEE rows: set when the company waived the fee. */
   waivedAt?: string | null;
+  /** Contract detail: a proof or a cheque is waiting on this row. */
+  awaitingPayment?: boolean;
+  /** Contract detail: the payment that explains the row (see rowPayment in the API). */
+  payment?: RowPayment | null;
+}
+
+/** What a recorded payment amounts to — one answer on every admin screen. */
+export type DepositState =
+  | 'COLLECTED'
+  | 'PENDING_REVIEW'
+  | 'CHEQUE_PENDING'
+  | 'REJECTED'
+  | 'BOUNCED'
+  | 'REVERSED'
+  | 'DELETED';
+
+export interface RowPayment {
+  depositId: string;
+  state: DepositState;
+  method: 'CASH' | 'BANK_TRANSFER' | 'CHEQUE' | 'OTHER' | null;
+  paidAt: string;
+  reversedAt: string | null;
 }
 
 export interface ContractInstallmentPlan {
@@ -564,6 +586,10 @@ export interface Deposit {
   reviewedAt?: string | null;
   reviewedBy?: { id: string; fullName: string } | null;
   paymentMethod?: 'CASH' | 'BANK_TRANSFER' | 'CHEQUE' | 'OTHER' | null;
+  /** Whether the money arrived — use this, not `verified` (see DepositState). */
+  state?: DepositState;
+  reversedAt?: string | null;
+  paymentInstrument?: { status: string; type: 'BANK_TRANSFER' | 'CHEQUE'; chequeNumber: string | null } | null;
   proofDocument?: {
     id: string;
     fileName: string | null;
@@ -767,6 +793,8 @@ export interface Reservation {
     verified: boolean;
     receiptUrl: string | null;
     createdAt: string;
+    /** Whether the money arrived (see DepositState). */
+    state?: DepositState;
   }>;
 }
 
@@ -1948,6 +1976,7 @@ export interface FinancialDepositRow {
   amount: string | number;
   paidAt: string;
   verified: boolean;
+  state?: DepositState;
   contract: {
     id: string;
     contractNumber: string | null;

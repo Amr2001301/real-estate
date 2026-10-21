@@ -101,6 +101,8 @@ export interface NavItem {
   /** Plan feature the page needs (CapabilityService key). Hidden when the
    *  company's plan switches it off — the API would refuse the page. */
   feature?: string;
+  /** A count shown beside the label (set per request, e.g. proofs waiting). */
+  badge?: number;
 }
 
 export interface NavSection {
@@ -149,6 +151,8 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/dashboard/installments', label: 'خطط التقسيط', labelKey: 'installments', iconKey: 'Wallet' },
       { href: '/dashboard/deposits', label: 'الدفعات', labelKey: 'deposits', iconKey: 'Receipt', admin: true },
+      // Customers' payment proofs waiting for an admin (approve / reject).
+      { href: '/dashboard/payments/review', label: 'إيصالات الدفع', labelKey: 'paymentProofs', iconKey: 'Receipt', admin: true },
       // FG-01 — GET /payment-instruments is ADMIN + SALES_MANAGER.
       { href: '/dashboard/cheques', label: 'الشيكات', labelKey: 'cheques', iconKey: 'Landmark', admin: true, manager: true },
       { href: '/dashboard/maintenance', label: 'الصيانة', labelKey: 'maintenance', iconKey: 'Wrench', admin: true, feature: 'feature.maintenance' },

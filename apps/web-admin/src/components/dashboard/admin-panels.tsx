@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { Banknote, Bookmark, CalendarCheck2, FileText, MessageSquare, UserPlus, Wrench } from 'lucide-react';
+import { Banknote, Bookmark, CalendarCheck2, FileText, MessageSquare, Receipt, UserPlus, Wrench } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { compactParts } from '@/lib/format';
 import type { Locale } from '@/lib/locale';
@@ -26,7 +26,7 @@ export interface ActionItem {
   label: string;
   value: number;
   href: string;
-  icon: 'contracts' | 'maintenance' | 'visits' | 'requests';
+  icon: 'contracts' | 'maintenance' | 'visits' | 'requests' | 'payments';
 }
 
 const ACTION_ICON: Record<ActionItem['icon'], ReactNode> = {
@@ -34,6 +34,7 @@ const ACTION_ICON: Record<ActionItem['icon'], ReactNode> = {
   maintenance: <Wrench />,
   visits: <CalendarCheck2 />,
   requests: <MessageSquare />,
+  payments: <Receipt />,
 };
 
 /** "Needs action": a status line, then four hairline-divided tiles. */
@@ -52,7 +53,7 @@ export function NeedsActionPanel({ title, allClear, items }: { title: string; al
           <span className="num rounded-full bg-danger-50 px-2.5 text-[18px] font-semibold text-danger-700">{total}</span>
         )}
       </header>
-      <div className="grid grid-cols-2 gap-px border-t border-hairline bg-hairline lg:grid-cols-4">
+      <div className={cn('grid grid-cols-2 gap-px border-t border-hairline bg-hairline', items.length > 4 ? 'lg:grid-cols-5' : 'lg:grid-cols-4')}>
         {items.map((it) => (
           <Link
             key={it.key}
