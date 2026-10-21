@@ -22,6 +22,7 @@ import type {
   OutstandingRefunds,
 } from '@/lib/types';
 import { CollapsibleRows } from '@/components/premium/collapsible-rows';
+import { CollapsibleList } from '@/components/premium/collapsible-list';
 import { compactParts, formatCurrency, formatDate, tx, intlLocale } from '@/lib/format';
 import { getReportsCurrency, getCompanyTimeZone, todayIn } from '@/lib/currency';
 import {
@@ -701,45 +702,51 @@ export default async function FinancialReportsPage({
         </PremiumPanel>
       )}
 
-      {/* ─── Upcoming + by payment type ────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
-        <PremiumPanel title={m.upcoming.title} sub={m.upcoming.sub}>
-          <div className="flex flex-col gap-5" data-testid="fin-upcoming">
-            {[
-              { title: m.upcoming.thisWeekTitle,  rows: dash?.upcomingThisWeek  ?? [], empty: m.upcoming.thisWeekEmpty },
-              { title: m.upcoming.thisMonthTitle, rows: dash?.upcomingThisMonth ?? [], empty: m.upcoming.thisMonthEmpty },
-            ].map((group) => (
-              <div key={group.title}>
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <p className="text-[12.5px] font-bold text-slate-700">{group.title}</p>
-                  {group.rows.length > 0 && (
-                    <span className="text-[12.5px] font-bold text-brand-700 tabular-nums">
-                      {cmoney(group.rows.reduce((sum, r) => sum + num(r.amount), 0))}
-                    </span>
-                  )}
-                </div>
-                {group.rows.length === 0 ? (
-                  <p className="flex items-center gap-2 rounded-2xl border border-dashed border-hairline px-4 py-3 text-[12.5px] text-slate-500">
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                    {group.empty}
-                  </p>
-                ) : (
-                  <ul className="divide-y divide-hairline rounded-2xl border border-hairline">
-                    {group.rows.map((row) => (
-                      <li key={row.id} className="flex items-center gap-3 px-4 py-2.5">
-                        <span className="w-20 shrink-0 text-[11.5px] text-slate-500 tabular-nums">{formatDate(row.dueDate, locale)}</span>
-                        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-800">{row.plan.contract.customer.fullName}</span>
-                        <span className="shrink-0 text-[13px] font-bold text-slate-900 tabular-nums">{money(row.amount)}</span>
-                      </li>
-                    ))}
-                  </ul>
+      {/* ─── Upcoming: this week and the rest of the month side by side ── */}
+      <PremiumPanel title={m.upcoming.title} sub={m.upcoming.sub}>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2" data-testid="fin-upcoming">
+          {[
+            { title: m.upcoming.thisWeekTitle,  rows: dash?.upcomingThisWeek  ?? [], empty: m.upcoming.thisWeekEmpty },
+            { title: m.upcoming.thisMonthTitle, rows: dash?.upcomingThisMonth ?? [], empty: m.upcoming.thisMonthEmpty },
+          ].map((group) => (
+            <div key={group.title}>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <p className="text-[12.5px] font-bold text-slate-700">{group.title}</p>
+                {group.rows.length > 0 && (
+                  <span className="text-[12.5px] font-bold text-brand-700 tabular-nums">
+                    {cmoney(group.rows.reduce((sum, r) => sum + num(r.amount), 0))}
+                  </span>
                 )}
               </div>
-            ))}
-          </div>
-        </PremiumPanel>
+              {group.rows.length === 0 ? (
+                <p className="flex items-center gap-2 rounded-2xl border border-dashed border-hairline px-4 py-3 text-[12.5px] text-slate-500">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                  {group.empty}
+                </p>
+              ) : (
+                <CollapsibleList
+                  limit={6}
+                  className="divide-y divide-hairline rounded-2xl border border-hairline"
+                  showAllLabel={en ? `Show all ${group.rows.length}` : `عرض الكل (${group.rows.length})`}
+                  showLessLabel={en ? 'Show fewer' : 'عرض أقل'}
+                >
+                  {group.rows.map((row) => (
+                    <li key={row.id} className="flex items-center gap-3 px-4 py-2.5">
+                      <span className="w-20 shrink-0 text-[11.5px] text-slate-500 tabular-nums">{formatDate(row.dueDate, locale)}</span>
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-800">{row.plan.contract.customer.fullName}</span>
+                      <span className="shrink-0 text-[13px] font-bold text-slate-900 tabular-nums">{money(row.amount)}</span>
+                    </li>
+                  ))}
+                </CollapsibleList>
+              )}
+            </div>
+          ))}
+        </div>
+      </PremiumPanel>
 
-        <PremiumPanel title={m.collectionByType.title} sub={m.collectionByType.description} bodyClassName="flex flex-col justify-center">
+      {/* ─── Three equal cards: by payment type, bookings, liabilities ─── */}
+      <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-3 lg:gap-6">
+        <PremiumPanel title={m.collectionByType.title} sub={m.collectionByType.description} className="h-full">
           {byType.length === 0 ? (
             <PremiumEmptyNote>{m.collectionByType.empty}</PremiumEmptyNote>
           ) : (
@@ -774,60 +781,55 @@ export default async function FinancialReportsPage({
             </ul>
           )}
         </PremiumPanel>
+
+        {dash?.booking && (
+          <PremiumPanel title={m.booking.title} sub={m.booking.description} padding="none" className="h-full">
+            <ul className="divide-y divide-hairline border-t border-hairline">
+              {[
+                { label: m.booking.pendingReservations,  n: dash.booking.pendingReservationsCount,  value: dash.booking.pendingReservationsBookingAmount,  cls: 'text-amber-600' },
+                { label: m.booking.approvedReservations, n: dash.booking.approvedReservationsCount, value: dash.booking.approvedReservationsBookingAmount, cls: 'text-slate-900' },
+                { label: m.booking.bookingCollected,     value: dash.booking.bookingCollectedVerified,   cls: 'text-emerald-600' },
+                { label: m.booking.bookingUncollected,   value: dash.booking.bookingUncollectedEstimate, cls: 'text-slate-700' },
+              ].map((row) => (
+                <li key={row.label} className="flex items-center gap-3 px-6 py-3.5">
+                  <span className="min-w-0 flex-1 text-[13px] text-slate-600">{row.label}</span>
+                  {'n' in row && row.n !== undefined && (
+                    <span className="shrink-0 rounded-full bg-surface-muted px-2.5 py-0.5 text-[11px] font-semibold text-slate-600 tabular-nums">
+                      {m.booking.count(row.n)}
+                    </span>
+                  )}
+                  <span className={cn('shrink-0 text-[14px] font-bold tabular-nums', row.cls)}>{cmoney(row.value)}</span>
+                </li>
+              ))}
+            </ul>
+          </PremiumPanel>
+        )}
+
+        {dash?.liabilities && (
+          <PremiumPanel title={m.liabilities.title} sub={m.liabilities.description} padding="none" className="h-full">
+            <div className="flex items-baseline justify-between gap-3 border-t border-hairline bg-danger-500/[0.04] px-6 py-4">
+              <span className="text-[13px] font-semibold text-slate-700">{m.liabilities.total}</span>
+              <span className={cn('text-[19px] font-bold tabular-nums', num(dash.liabilities.totalUnpaidLiabilities) > 0 ? 'text-danger-600' : 'text-slate-900')}>
+                {cmoney(dash.liabilities.totalUnpaidLiabilities)}
+              </span>
+            </div>
+            <ul className="divide-y divide-hairline border-t border-hairline">
+              {[
+                { label: m.liabilities.salesBonus,        value: cmoney(dash.liabilities.salesBonus.unpaidAmount),        cls: 'text-amber-600' },
+                { label: m.liabilities.brokerCommissions, value: cmoney(dash.liabilities.brokerCommissions.unpaidAmount), cls: 'text-amber-600' },
+                { label: m.liabilities.paid,              value: cmoney(num(dash.liabilities.salesBonus.paidAmount) + num(dash.liabilities.brokerCommissions.paidAmount)), cls: 'text-emerald-600' },
+                // Paid out on deals since cancelled, and not recovered yet.
+                { label: m.liabilities.clawbacksOwed,     value: cmoney(dash.liabilities.clawbacksOwed?.totalAmount ?? 0), cls: 'text-brand-700', testId: 'clawbacks-owed' },
+              ].map((row) => (
+                <li key={row.label} data-testid={'testId' in row ? row.testId : undefined} className="flex items-center justify-between gap-3 px-6 py-3.5">
+                  <span className="text-[13px] text-slate-600">{row.label}</span>
+                  <span className={cn('whitespace-nowrap text-[14px] font-bold tabular-nums', row.cls)}>{row.value}</span>
+                </li>
+              ))}
+            </ul>
+          </PremiumPanel>
+        )}
       </div>
-
-      {/* ─── Bookings + liabilities ────────────────────────────────────── */}
-      {(dash?.booking || dash?.liabilities) && (
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
-          {dash?.booking && (
-            <PremiumPanel title={m.booking.title} sub={m.booking.description} padding="none" bodyClassName="flex flex-col">
-              <ul className="flex flex-1 flex-col divide-y divide-hairline border-t border-hairline">
-                {[
-                  { label: m.booking.pendingReservations,  n: dash.booking.pendingReservationsCount,  value: dash.booking.pendingReservationsBookingAmount,  cls: 'text-amber-600' },
-                  { label: m.booking.approvedReservations, n: dash.booking.approvedReservationsCount, value: dash.booking.approvedReservationsBookingAmount, cls: 'text-slate-900' },
-                  { label: m.booking.bookingCollected,     value: dash.booking.bookingCollectedVerified,   cls: 'text-emerald-600' },
-                  { label: m.booking.bookingUncollected,   value: dash.booking.bookingUncollectedEstimate, cls: 'text-slate-700' },
-                ].map((row) => (
-                  <li key={row.label} className="flex flex-1 items-center gap-3 px-6 py-3.5">
-                    <span className="min-w-0 flex-1 text-[13px] text-slate-600">{row.label}</span>
-                    {'n' in row && row.n !== undefined && (
-                      <span className="shrink-0 rounded-full bg-surface-muted px-2.5 py-0.5 text-[11px] font-semibold text-slate-600 tabular-nums">
-                        {m.booking.count(row.n)}
-                      </span>
-                    )}
-                    <span className={cn('shrink-0 text-[14px] font-bold tabular-nums', row.cls)}>{cmoney(row.value)}</span>
-                  </li>
-                ))}
-              </ul>
-            </PremiumPanel>
-          )}
-
-          {dash?.liabilities && (
-            <PremiumPanel title={m.liabilities.title} sub={m.liabilities.description} padding="none">
-              <div className="flex items-baseline justify-between gap-3 border-t border-hairline bg-danger-500/[0.04] px-6 py-4">
-                <span className="text-[13px] font-semibold text-slate-700">{m.liabilities.total}</span>
-                <span className={cn('text-[19px] font-bold tabular-nums', num(dash.liabilities.totalUnpaidLiabilities) > 0 ? 'text-danger-600' : 'text-slate-900')}>
-                  {cmoney(dash.liabilities.totalUnpaidLiabilities)}
-                </span>
-              </div>
-              <ul className="divide-y divide-hairline border-t border-hairline">
-                {[
-                  { label: m.liabilities.salesBonus,        value: cmoney(dash.liabilities.salesBonus.unpaidAmount),        cls: 'text-amber-600' },
-                  { label: m.liabilities.brokerCommissions, value: cmoney(dash.liabilities.brokerCommissions.unpaidAmount), cls: 'text-amber-600' },
-                  { label: m.liabilities.paid,              value: cmoney(num(dash.liabilities.salesBonus.paidAmount) + num(dash.liabilities.brokerCommissions.paidAmount)), cls: 'text-emerald-600' },
-                  // Paid out on deals since cancelled, and not recovered yet.
-                  { label: m.liabilities.clawbacksOwed,     value: cmoney(dash.liabilities.clawbacksOwed?.totalAmount ?? 0), cls: 'text-brand-700', testId: 'clawbacks-owed' },
-                ].map((row) => (
-                  <li key={row.label} data-testid={'testId' in row ? row.testId : undefined} className="flex items-center justify-between gap-3 px-6 py-3.5">
-                    <span className="text-[13px] text-slate-600">{row.label}</span>
-                    <span className={cn('whitespace-nowrap text-[14px] font-bold tabular-nums', row.cls)}>{row.value}</span>
-                  </li>
-                ))}
-              </ul>
-            </PremiumPanel>
-          )}
-        </div>
-      )}
 
       {/* ─── Recent payments ───────────────────────────────────────────── */}
       <PremiumPanel
