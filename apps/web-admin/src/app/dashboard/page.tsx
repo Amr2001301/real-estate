@@ -300,15 +300,25 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
         ]}
       />
 
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3">
+        {/* Both columns stretch to one height and their last panel fills the
+            rest, so neither side leaves an empty gap under it. */}
+        <div className="flex flex-col gap-6 lg:col-span-2">
           <ActivityPanel
+            className="flex-1"
             title={m.activityFeed.title}
             sub={m.activityCount(summary?.recentActivity.length ?? 0)}
             link={{ href: '/dashboard/audit', label: m.viewAllFull }}
             empty={m.activityFeed.empty}
             items={activity}
             money={money}
+          />
+          <MonthlyBarsPanel
+            title={m.charts.reservationTrend}
+            sub={m.charts.reservationDesc}
+            badge={m.charts.reservationBadge}
+            empty={m.charts.empty}
+            data={(summary?.reservationTrend ?? []).map((t) => ({ label: t.label, value: t.value }))}
           />
         </div>
         <div className="flex flex-col gap-6">
@@ -333,39 +343,28 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
               .slice(0, 5)
               .map((b) => ({ id: b.brokerId, name: b.companyName, sub: `${b.contractsSigned} ${m.topBrokers.contractSuffix}`, value: Number(b.salesGross) }))}
           />
+          {funnel && (
+            <FunnelPanel
+              className="flex-1"
+              title={m.u5.funnel.title}
+              sub={m.u5.funnel.sub}
+              footnote={m.u5.funnelNote}
+              stages={[
+                { label: m.u5.funnel.leads, value: funnel.leads },
+                { label: m.u5.funnel.visits, value: funnel.visits },
+                { label: m.u5.funnel.reservations, value: funnel.reservations },
+                {
+                  label: m.u5.funnel.contracts,
+                  value: funnel.contracts,
+                  // Contracts come from bookings, so this rate means something.
+                  note: funnel.reservations > 0
+                    ? m.u5.funnelConversion(Math.round((funnel.contracts / funnel.reservations) * 100))
+                    : undefined,
+                },
+              ]}
+            />
+          )}
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <MonthlyBarsPanel
-            title={m.charts.reservationTrend}
-            sub={m.charts.reservationDesc}
-            badge={m.charts.reservationBadge}
-            empty={m.charts.empty}
-            data={(summary?.reservationTrend ?? []).map((t) => ({ label: t.label, value: t.value }))}
-          />
-        </div>
-        {funnel && (
-          <FunnelPanel
-            title={m.u5.funnel.title}
-            sub={m.u5.funnel.sub}
-            footnote={m.u5.funnelNote}
-            stages={[
-              { label: m.u5.funnel.leads, value: funnel.leads },
-              { label: m.u5.funnel.visits, value: funnel.visits },
-              { label: m.u5.funnel.reservations, value: funnel.reservations },
-              {
-                label: m.u5.funnel.contracts,
-                value: funnel.contracts,
-                // Contracts come from bookings, so this rate means something.
-                note: funnel.reservations > 0
-                  ? m.u5.funnelConversion(Math.round((funnel.contracts / funnel.reservations) * 100))
-                  : undefined,
-              },
-            ]}
-          />
-        )}
       </div>
 
       {topProjects.length > 0 && (
@@ -386,6 +385,7 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
         {fin && (
           <div className="lg:col-span-2">
             <FinancialHealthPanel
+              className="h-full"
               title={m.u5.healthTitle}
               sub={m.u5.healthSub}
               total={total}
@@ -403,6 +403,7 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
           centerSub={m.charts.donutSub}
           empty={m.charts.empty}
           slices={(summary?.leadSources ?? []).map((s) => ({ label: s.source, value: s.count }))}
+          otherLabel={locale === 'en' ? 'Other' : 'أخرى'}
         />
       </div>
 

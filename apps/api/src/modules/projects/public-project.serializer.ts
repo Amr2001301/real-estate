@@ -38,6 +38,8 @@ interface ProjectListInput extends Pick<
   | 'updatedAt'
 > {
   media?: MediaLike[];
+  /** Staff-only: the company's own project code. */
+  code?: string | null;
 }
 
 interface ProjectDetailInput extends ProjectListInput {
@@ -87,6 +89,7 @@ export function serializeStaffProjectListItem(
   const media = serializeMedia(project.media);
   return {
     id: project.id,
+    code: project.code ?? null,
     name: project.name,
     city: project.city,
     type: project.type ?? null,

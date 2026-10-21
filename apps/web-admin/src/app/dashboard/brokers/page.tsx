@@ -3,9 +3,6 @@ import Link from 'next/link';
 import {
   Plus,
   Briefcase,
-  CheckCircle2,
-  PauseCircle,
-  Hourglass,
   Eye,
   Pencil,
   Users as UsersIcon,
@@ -21,19 +18,18 @@ import { brokerOptions } from '@/lib/options';
 import type { Broker, BrokerStatus, Paged } from '@/lib/types';
 import { formatDate, intlLocale } from '@/lib/format';
 import { Button } from '@/components/ui/button';
-import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { BrokerStatusBadge } from '@/components/badges';
 import {
   PremiumPageHero,
-  PremiumMetricStrip,
   PremiumFilterBar,
   PremiumFilterField,
   PremiumSectionCard,
   PremiumEmptyState,
 } from '@/components/premium';
+import { FigureBar, Avatar } from '@/components/cockpit/cockpit';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 
@@ -116,37 +112,18 @@ export default async function BrokersPage({
       />
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
-      <PremiumMetricStrip
-        variant="compact"
-        cols={4}
-        metrics={[
-          {
-            label: m.kpi.total,
-            value: total,
-            icon: <Briefcase />,
-            tone: 'brand',
-            primary: true,
-          },
-          {
-            label: m.kpi.active,
-            value: active,
-            icon: <CheckCircle2 />,
-            tone: 'success',
-          },
-          {
-            label: m.kpi.pending,
-            value: pending,
-            icon: <Hourglass />,
-            tone: 'warning',
-          },
-          {
-            label: m.kpi.suspended,
-            value: suspended,
-            icon: <PauseCircle />,
-            tone: 'danger',
-          },
-        ]}
-      />
+      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <FigureBar
+          bare
+          cols={4}
+          figures={[
+            { label: m.kpi.total, value: total },
+            { label: m.kpi.active, value: active },
+            { label: m.kpi.pending, value: pending, warn: pending > 0 },
+            { label: m.kpi.suspended, value: suspended },
+          ]}
+        />
+      </section>
 
       {/* ── Error ────────────────────────────────────────────────────────────── */}
       {pagedRes.error && (
@@ -225,111 +202,82 @@ export default async function BrokersPage({
             className="py-12"
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
-                <tr>
-                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">{m.cols.company}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.status}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.city}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.staff}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.projects}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.units}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.added}</th>
-                  <th className="text-start py-3 ps-4 pe-5 w-px" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                {rows.map((b) => {
-                  const counts = b._count ?? { brokerUsers: 0, projectAccess: 0, unitAccess: 0 };
-                  return (
-                    <tr
-                      key={b.id}
-                      className="hover:bg-canvas/40 transition-colors duration-100 align-middle"
+          <ul className="divide-y divide-hairline">
+            {rows.map((b) => {
+              const counts = b._count ?? { brokerUsers: 0, projectAccess: 0, unitAccess: 0 };
+              return (
+                <li
+                  key={b.id}
+                  data-testid="broker-row"
+                  className="grid grid-cols-[auto_1fr_auto] items-center gap-x-4 gap-y-3 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[auto_minmax(0,1.5fr)_minmax(0,0.7fr)_200px_120px_minmax(0,0.6fr)_auto]"
+                >
+                  <Avatar name={b.companyName} className="h-11 w-11 text-[14px]" />
+
+                  <div className="min-w-0">
+                    <Link
+                      href={`/dashboard/brokers/${b.id}` as never}
+                      className="block truncate text-[14.5px] font-bold text-slate-900 transition-colors hover:text-brand-700"
                     >
-                      <td className="py-3.5 ps-5 pe-4">
-                        <div className="min-w-0">
-                          <Link
-                            href={`/dashboard/brokers/${b.id}` as never}
-                            className="font-semibold text-slate-900 hover:text-brand-700 transition-colors block truncate max-w-[260px]"
-                          >
-                            {b.companyName}
-                          </Link>
-                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                            {b.commercialName && (
-                              <span className="text-2xs text-slate-400 truncate max-w-[200px]">
-                                {b.commercialName}
-                              </span>
-                            )}
-                            <span
-                              className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-px font-mono text-2xs text-slate-500 shrink-0 leading-none"
-                              dir="ltr"
-                            >
-                              {b.code}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
+                      {b.companyName}
+                    </Link>
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[12px] text-slate-500">
+                      {b.commercialName && <span className="truncate" dir="auto">{b.commercialName}</span>}
+                      <span>
+                        <span className="me-1 text-slate-400">{locale === 'en' ? 'Code' : 'كود'}</span>
+                        <span className="whitespace-nowrap font-mono" dir="ltr">{b.code}</span>
+                      </span>
+                    </p>
+                  </div>
 
-                      <td className="py-3.5 px-4">
-                        <BrokerStatusBadge status={b.status as BrokerStatus} locale={locale} />
-                      </td>
+                  <div className="hidden text-[12.5px] lg:block">
+                    <p className="text-[11px] text-slate-500">{m.cols.city}</p>
+                    {b.city ? (
+                      <p className="inline-flex items-center gap-1 font-semibold text-slate-800">
+                        <MapPin className="h-3 w-3 shrink-0 text-slate-400" />
+                        {b.city}
+                      </p>
+                    ) : (
+                      <p className="text-slate-400">—</p>
+                    )}
+                  </div>
 
-                      <td className="py-3.5 px-4">
-                        {b.city ? (
-                          <span className="inline-flex items-center gap-1 text-xs text-slate-600">
-                            <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
-                            {b.city}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 text-xs">—</span>
-                        )}
-                      </td>
+                  <div className="hidden items-center gap-1.5 lg:flex">
+                    <MetricChip icon={<UsersIcon />} label={m.cols.staff} value={counts.brokerUsers} />
+                    <MetricChip icon={<Building2 />} label={m.cols.projects} value={counts.projectAccess} />
+                    <MetricChip icon={<Home />} label={m.cols.units} value={counts.unitAccess} />
+                  </div>
 
-                      <td className="py-3.5 px-4">
-                        <MetricChip icon={<UsersIcon />} value={counts.brokerUsers} />
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <MetricChip icon={<Building2 />} value={counts.projectAccess} />
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <MetricChip icon={<Home />} value={counts.unitAccess} />
-                      </td>
+                  <div className="justify-self-end lg:justify-self-start">
+                    <BrokerStatusBadge status={b.status as BrokerStatus} locale={locale} />
+                  </div>
 
-                      <td className="py-3.5 px-4 text-2xs text-slate-400 whitespace-nowrap">
-                        {formatDate(b.createdAt, locale)}
-                      </td>
+                  <div className="hidden text-[12.5px] lg:block">
+                    <p className="text-[11px] text-slate-500">{m.cols.added}</p>
+                    <p className="whitespace-nowrap font-semibold text-slate-800">{formatDate(b.createdAt, locale)}</p>
+                  </div>
 
-                      <td className="py-3.5 ps-4 pe-5">
-                        <div className="flex items-center gap-0.5">
-                          <Link href={`/dashboard/brokers/${b.id}` as never}>
-                            <IconButton label={m.actionBtns.view} variant="ghost" size="sm">
-                              <Eye />
-                            </IconButton>
-                          </Link>
-                          <Link href={`/dashboard/brokers/${b.id}/edit` as never}>
-                            <IconButton label={m.actionBtns.edit} variant="ghost" size="sm">
-                              <Pencil />
-                            </IconButton>
-                          </Link>
-                          <Link href={`/dashboard/brokers/${b.id}/users` as never}>
-                            <IconButton label={m.actionBtns.staff} variant="ghost" size="sm">
-                              <UsersIcon />
-                            </IconButton>
-                          </Link>
-                          <Link href={`/dashboard/brokers/${b.id}/access` as never}>
-                            <IconButton label={m.actionBtns.access} variant="ghost" size="sm">
-                              <ShieldCheck />
-                            </IconButton>
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  <div className="col-span-3 flex items-center gap-1.5 lg:col-span-1">
+                    {[
+                      { href: `/dashboard/brokers/${b.id}`, label: m.actionBtns.view, icon: <Eye /> },
+                      { href: `/dashboard/brokers/${b.id}/edit`, label: m.actionBtns.edit, icon: <Pencil /> },
+                      { href: `/dashboard/brokers/${b.id}/users`, label: m.actionBtns.staff, icon: <UsersIcon /> },
+                      { href: `/dashboard/brokers/${b.id}/access`, label: m.actionBtns.access, icon: <ShieldCheck /> },
+                    ].map((a) => (
+                      <Link
+                        key={a.href}
+                        href={a.href as never}
+                        aria-label={a.label}
+                        title={a.label}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900 [&_svg]:h-4 [&_svg]:w-4"
+                      >
+                        {a.icon}
+                      </Link>
+                    ))}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </PremiumSectionCard>
 
@@ -350,11 +298,15 @@ export default async function BrokersPage({
 
 // ── Internal helpers ───────────────────────────────────────────────────────
 
-function MetricChip({ icon, value }: { icon: ReactNode; value: number }) {
+function MetricChip({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-lg bg-canvas px-2 py-1 text-xs font-medium tabular-nums text-slate-700 [&_svg]:h-3 [&_svg]:w-3 [&_svg]:text-slate-400">
+    <span
+      title={label}
+      className="inline-flex items-center gap-1 rounded-full bg-surface-muted px-2.5 py-1 text-[12px] font-semibold tabular-nums text-slate-700 [&_svg]:h-3 [&_svg]:w-3 [&_svg]:text-slate-400"
+    >
       {icon}
       {value}
+      <span className="sr-only">{label}</span>
     </span>
   );
 }

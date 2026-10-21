@@ -23,7 +23,20 @@ export function PremiumTableCard({ children, footer, className }: { children: Re
 export const PREMIUM_ROW = 'border-t border-hairline transition-colors duration-100 hover:bg-surface-muted';
 
 /** A row title: Naskh, with an optional muted code underneath. */
-export function RowTitle({ title, href, code, icon }: { title: ReactNode; href?: string; code?: ReactNode; icon?: ReactNode }) {
+export function RowTitle({
+  title,
+  href,
+  code,
+  codeLabel,
+  icon,
+}: {
+  title: ReactNode;
+  href?: string;
+  code?: ReactNode;
+  /** Arabic word before the code (كود), so a bare Latin code never stands alone. */
+  codeLabel?: string;
+  icon?: ReactNode;
+}) {
   const name = href ? (
     <Link href={href as never} className="hover:text-brand-700 transition-colors">
       {title}
@@ -36,7 +49,14 @@ export function RowTitle({ title, href, code, icon }: { title: ReactNode; href?:
       {icon}
       <div className="min-w-0">
         <p className="font-heading text-[16px] font-bold leading-snug text-slate-900">{name}</p>
-        {code && <p className="mt-0.5 font-mono text-[12px] text-slate-500" dir="ltr">{code}</p>}
+        {/* The code sits inline at the start edge, under the name: a dir="ltr"
+            block would push it to the opposite edge in RTL. */}
+        {code && (
+          <p className="mt-0.5 text-start text-[12px] text-slate-500">
+            {codeLabel && <span className="me-1 text-slate-400">{codeLabel}</span>}
+            <span className="whitespace-nowrap font-mono" dir="ltr">{code}</span>
+          </p>
+        )}
       </div>
     </div>
   );

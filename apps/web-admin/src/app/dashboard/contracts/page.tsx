@@ -1,24 +1,24 @@
 import Link from 'next/link';
-import { Plus, FileText, CheckCircle2, Link2, Unlink, Eye } from 'lucide-react';
+import { Plus, FileText, Eye, Phone, Building2 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import type { Paged } from '@/lib/types';
-import { formatCurrency, formatDate, tx } from '@/lib/format';
+import { formatCurrency, formatDate, intlLocale, tx } from '@/lib/format';
+import { cn } from '@/lib/cn';
+import { Avatar, FigureBar } from '@/components/cockpit/cockpit';
 import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
-import { CodeCell, PersonCell, StackCell } from '@/components/premium/list-cells';
 import { uiT } from '@/messages/ui';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { IconButton } from '@/components/ui/icon-button';
 import { Pagination } from '@/components/ui/pagination';
-import { DataTable } from '@/components/table';
 import {
   PremiumPageHero,
-  PremiumMetricStrip,
   PremiumFilterBar,
   PremiumFilterField,
+  PremiumSectionCard,
+  PremiumEmptyState,
 } from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
@@ -76,10 +76,13 @@ export default async function ContractsPage({
   // getSession() after them, so a render that needs no ordering at all cost
   // three sequential round trips. Nothing here depends on anything else here:
   // currency and session only feed display and a role check.
-  const [currency, contractsRes, allRes, session] = await Promise.all([
+  const [currency, contractsRes, allRes, signedRes, delayedRes, session] = await Promise.all([
     getReportsCurrency(),
     safe(api.get<Paged<ContractRow>>(`/contracts?${qs}`)),
     safe(api.get<Paged<ContractRow>>('/contracts?pageSize=1')),
+    // Company-wide counts (the old strip counted only the current page).
+    safe(api.get<Paged<ContractRow>>('/contracts?pageSize=1&signed=yes')),
+    safe(api.get<Paged<ContractRow>>('/contracts?pageSize=1&deliveryDelayed=true')),
     getSession(),
   ]);
 
@@ -87,10 +90,8 @@ export default async function ContractsPage({
   const meta = contractsRes.data?.meta;
   const totalContracts = allRes.data?.meta.total ?? 0;
 
-  // Derive KPI counts from current filtered set for signed / reservation stats
-  // (approximate — full count would need a dedicated stats endpoint)
-  const signedCount = contracts.filter((c) => c.signedAt).length;
-  const withReservationCount = contracts.filter((c) => c.reservation).length;
+  const signedCount = signedRes.data?.meta.total;
+  const delayedCount = delayedRes.data?.meta.total;
 
   // Manual contract creation (contracts:upload) is ADMIN-only; SALES reads.
   const isAdmin = session?.role === 'ADMIN';
@@ -117,34 +118,24 @@ export default async function ContractsPage({
         }
       />
 
-      {/* ── KPI strip ────────────────────────────────────────────────────────── */}
-      <PremiumMetricStrip
-        variant="compact"
-        cols={3}
-        metrics={[
-          {
-            label: m.kpi.total,
-            value: totalContracts,
-            icon: <FileText />,
-            tone: 'brand',
-            primary: true,
-          },
-          {
-            label: m.kpi.signed,
-            value: signedCount,
-            icon: <CheckCircle2 />,
-            tone: 'success',
-            sub: m.kpi.signedSub.replace('{n}', String(contracts.length)),
-          },
-          {
-            label: m.kpi.fromReservation,
-            value: withReservationCount,
-            icon: <Link2 />,
-            tone: 'info',
-            sub: m.kpi.signedSub.replace('{n}', String(contracts.length)),
-          },
-        ]}
-      />
+      {/* ── Figures ──────────────────────────────────────────────────────────── */}
+      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <FigureBar
+          bare
+          cols={4}
+          figures={[
+            { label: m.figures.total, value: totalContracts, href: '/dashboard/contracts' },
+            { label: m.figures.signed, value: signedCount ?? '—', href: '/dashboard/contracts?signed=yes' },
+            {
+              label: m.figures.unsigned,
+              value: signedCount === undefined ? '—' : totalContracts - signedCount,
+              href: '/dashboard/contracts?signed=no',
+              warn: signedCount !== undefined && totalContracts - signedCount > 0,
+            },
+            { label: m.figures.delayed, value: delayedCount ?? '—', href: '/dashboard/contracts?deliveryDelayed=true', warn: (delayedCount ?? 0) > 0 },
+          ]}
+        />
+      </section>
 
       {/* ── Filter bar ───────────────────────────────────────────────────────── */}
       <PremiumFilterBar method="get" action="/dashboard/contracts">
@@ -201,114 +192,120 @@ export default async function ContractsPage({
         </div>
       )}
 
-      {/* ── Table ────────────────────────────────────────────────────────────── */}
-      <DataTable
-        rowKey={(c) => c.id}
-        rows={contracts}
-        emptyMessage={m.empty}
-        columns={[
-          {
-            key: 'number',
-            header: m.cols.id,
-            cell: (c) => (
-              <CodeCell
-                href={`/dashboard/contracts/${c.id}`}
-                title={m.viewBtn}
-                code={c.contractNumber ?? `#${c.id.slice(0, 8).toUpperCase()}`}
-                muted={!c.contractNumber}
-              />
-            ),
-          },
-          {
-            key: 'customer',
-            header: m.cols.client,
-            cell: (c) => (
-              <PersonCell name={c.customer?.fullName ?? '—'} sub={c.customer?.phone} />
-            ),
-          },
-          {
-            key: 'unit',
-            header: m.cols.unit,
-            cell: (c) => (
-              <StackCell
-                main={<><span dir="ltr">{c.unit?.code ?? '—'}</span>{c.unit?.type ? ` · ${c.unit.type}` : ''}</>}
-                sub={tx(c.unit?.building?.phase?.project?.name) || '—'}
-              />
-            ),
-          },
-          {
-            key: 'amounts',
-            header: m.cols.total,
-            cell: (c) => (
-              <div className="tabular-nums text-sm">
-                <p className="whitespace-nowrap font-bold text-slate-900">{formatCurrency(c.totalAmount, currency, locale)}</p>
-                {Number(c.downPayment) > 0 && (
-                  <p className="whitespace-nowrap text-[11.5px] text-slate-500">{m.downPaymentPrefix} {formatCurrency(c.downPayment, currency, locale)}</p>
-                )}
-              </div>
-            ),
-          },
-          {
-            key: 'plan',
-            header: m.cols.plan,
-            cell: (c) =>
-              c.installmentPlan ? (
-                <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-emerald-500/12 px-2.5 py-1 text-[11.5px] font-semibold text-emerald-600">
-                  <CheckCircle2 className="h-3 w-3" />
-                  {c.installmentPlan.totalMonths} {m.monthsSuffix}
-                </span>
-              ) : (
-                <span className="text-xs text-slate-400">—</span>
-              ),
-          },
-          {
-            key: 'source',
-            header: m.cols.source,
-            cell: (c) =>
-              c.reservation ? (
-                <Link
-                  href={`/dashboard/reservations/${c.reservation.id}`}
-                  className="inline-flex items-center gap-1 whitespace-nowrap font-mono text-[11.5px] font-semibold text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
-                  dir="ltr"
+      {/* ── Rows ─────────────────────────────────────────────────────────────── */}
+      <PremiumSectionCard
+        title={m.title}
+        padded={false}
+        trailing={
+          <span className="text-xs text-slate-400 tabular-nums">
+            {(meta?.total ?? contracts.length).toLocaleString(intlLocale(locale))} {m.countSuffix}
+          </span>
+        }
+      >
+        {contracts.length === 0 ? (
+          <PremiumEmptyState icon={<FileText />} title={m.empty} />
+        ) : (
+          <ul className="divide-y divide-hairline" data-testid="contract-rows">
+            {contracts.map((c) => {
+              const name = c.customer?.fullName ?? '—';
+              const href = `/dashboard/contracts/${c.id}`;
+              const project = c.unit?.building?.phase?.project;
+              return (
+                <li
+                  key={c.id}
+                  data-testid="contract-row"
+                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[auto_minmax(0,1.3fr)_minmax(0,1.1fr)_170px_minmax(0,1fr)_150px_36px]"
                 >
-                  <Link2 className="h-3 w-3" />
-                  {c.reservation.reservationNumber ?? c.reservation.id.slice(0, 8)}
-                </Link>
-              ) : (
-                <span className="inline-flex items-center gap-1 text-xs text-slate-400">
-                  <Unlink className="h-3 w-3" />
-                  {m.manualBadge}
-                </span>
-              ),
-          },
-          {
-            key: 'signed',
-            header: m.cols.signed,
-            cell: (c) =>
-              c.signedAt ? (
-                <span className="whitespace-nowrap rounded-full bg-emerald-500/12 px-2.5 py-1 text-[11.5px] font-semibold tabular-nums text-emerald-600">{formatDate(c.signedAt, locale)}</span>
-              ) : (
-                <span className="whitespace-nowrap rounded-full bg-amber-500/12 px-2.5 py-1 text-[11.5px] font-semibold text-amber-600">{m.unsignedLabel}</span>
-              ),
-          },
-          {
-            key: 'created',
-            header: m.cols.created,
-            cell: (c) => <span className="text-xs text-slate-500">{formatDate(c.createdAt, locale)}</span>,
-          },
-          {
-            key: 'actions',
-            header: '',
-            cell: (c) => (
-              <Link href={`/dashboard/contracts/${c.id}`}>
-                <IconButton label={m.viewBtn} variant="outline" size="sm">
-                  <Eye />
-                </IconButton>
-              </Link>
-            ),
-          },
-        ]}
-      />
+                  <Avatar name={name} />
+
+                  {/* Client + contract code */}
+                  <div className="min-w-0">
+                    <Link href={href as never} className="block truncate text-[14.5px] font-bold text-slate-900 hover:text-brand-700">
+                      {name}
+                    </Link>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-slate-500">
+                      <Link href={href as never} data-testid="list-code" className="whitespace-nowrap hover:text-brand-700">
+                        <span className="me-1 text-slate-400">{m.contractWord}</span>
+                        <span className="font-mono font-semibold text-brand-700" dir="ltr">
+                          {c.contractNumber ?? `#${c.id.slice(0, 8).toUpperCase()}`}
+                        </span>
+                      </Link>
+                      {c.customer?.phone && (
+                        <span className="inline-flex items-center gap-1 tabular-nums">
+                          <Phone className="h-3 w-3 shrink-0" />
+                          <span dir="ltr">{c.customer.phone}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Project + unit */}
+                  <div className="hidden min-w-0 items-start gap-2 text-[12.5px] lg:flex">
+                    <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A24E]" />
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-slate-800">{project ? tx(project.name) : '—'}</p>
+                      {c.unit && (
+                        <p className="mt-0.5 text-slate-500">
+                          <span className="me-1 text-slate-400">{m.unitWord}</span>
+                          <span className="whitespace-nowrap font-mono" dir="ltr">{c.unit.code}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Total + down payment */}
+                  <div className="hidden text-[12.5px] tabular-nums lg:block">
+                    <p className="whitespace-nowrap text-[15px] font-bold text-slate-900">{formatCurrency(c.totalAmount, currency, locale)}</p>
+                    {Number(c.downPayment) > 0 && (
+                      <p className="mt-0.5 whitespace-nowrap text-slate-500">{m.downPaymentPrefix} {formatCurrency(c.downPayment, currency, locale)}</p>
+                    )}
+                  </div>
+
+                  {/* Plan + source */}
+                  <div className="hidden min-w-0 text-[12.5px] lg:block">
+                    <p className={cn('truncate font-semibold', c.installmentPlan ? 'text-slate-800' : 'text-slate-400')}>
+                      {c.installmentPlan
+                        ? <>{c.installmentPlan.totalMonths} {m.monthsSuffix} · <span className="tabular-nums">{formatCurrency(c.installmentPlan.monthlyAmount, currency, locale)}</span> {m.perMonth}</>
+                        : m.noPlan}
+                    </p>
+                    <p className="mt-0.5 text-slate-500">
+                      {c.reservation ? (
+                        <Link href={`/dashboard/reservations/${c.reservation.id}` as never} className="whitespace-nowrap hover:text-brand-700">
+                          <span className="me-1 text-slate-400">{m.reservationWord}</span>
+                          <span className="font-mono" dir="ltr">{c.reservation.reservationNumber ?? c.reservation.id.slice(0, 8)}</span>
+                        </Link>
+                      ) : (
+                        m.manualBadge
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Signature */}
+                  <div className="hidden flex-col items-start gap-1 lg:flex">
+                    {c.signedAt ? (
+                      <span className="whitespace-nowrap rounded-full bg-emerald-500/12 px-2.5 py-1 text-[11.5px] font-semibold text-emerald-600">
+                        {m.signedOn} {formatDate(c.signedAt, locale)}
+                      </span>
+                    ) : (
+                      <span className="whitespace-nowrap rounded-full bg-amber-500/12 px-2.5 py-1 text-[11.5px] font-semibold text-amber-600">{m.unsignedLabel}</span>
+                    )}
+                    <span className="whitespace-nowrap text-[11.5px] text-slate-500">{m.createdOn} {formatDate(c.createdAt, locale)}</span>
+                  </div>
+
+                  <Link
+                    href={href as never}
+                    aria-label={m.viewBtn}
+                    title={m.viewBtn}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </PremiumSectionCard>
 
       {/* ── Pagination ───────────────────────────────────────────────────────── */}
       {meta && (
@@ -317,7 +314,7 @@ export default async function ContractsPage({
           pageSize={meta.pageSize}
           total={meta.total}
           basePath="/dashboard/contracts"
-          params={{ q: sp.q, signed: sp.signed, hasReservation: sp.hasReservation }}
+          params={{ q: sp.q, signed: sp.signed, hasReservation: sp.hasReservation, deliveryDelayed: sp.deliveryDelayed }}
           locale={locale}
         />
       )}

@@ -86,7 +86,7 @@ test.describe('admin', () => {
 
   test('F26: a broker lead row links to the lead', async ({ page }) => {
     await gotoReady(page, '/dashboard/broker-leads');
-    const name = page.locator('tbody tr td:first-child a[href^="/dashboard/broker-leads/"]').first();
+    const name = page.getByTestId('broker-lead-link').first();
     await expect(name).toBeVisible();
     await name.click();
     await expect(page).toHaveURL(/\/dashboard\/broker-leads\/[0-9a-f-]{36}$/);

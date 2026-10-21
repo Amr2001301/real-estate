@@ -1,6 +1,5 @@
 export const dynamic = 'force-dynamic';
 
-import { Palette } from 'lucide-react';
 import { unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
 import { PremiumPageHero } from '@/components/premium';
@@ -27,12 +26,6 @@ export default async function BrandingPage() {
           { label: 'الإدارة' },
           { label: 'الهوية البصرية' },
         ]}
-        actions={
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 ring-1 ring-brand-200">
-            <Palette className="h-3 w-3" />
-            إعدادات المظهر
-          </span>
-        }
       />
       <BrandingForm initial={branding as Parameters<typeof BrandingForm>[0]['initial']} />
     </div>

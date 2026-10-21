@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Clock, ExternalLink, Eye, FileText, List, Plus } from 'lucide-react';
+import { ExternalLink, Eye, FileText, Plus } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type {
   DocumentCategory,
@@ -7,8 +7,8 @@ import type {
   DocumentOwnerType,
   Paged,
 } from '@/lib/types';
-import { formatDateTime, formatDate, intlLocale } from '@/lib/format';
-import { Badge, type BadgeTone } from '@/components/ui/badge';
+import { formatDateTime, formatDate } from '@/lib/format';
+import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -21,12 +21,12 @@ import {
 } from '@/components/documents/labels';
 import {
   PremiumPageHero,
-  PremiumMetricStrip,
   PremiumFilterBar,
   PremiumFilterField,
-  PremiumSectionCard,
   PremiumEmptyState,
 } from '@/components/premium';
+import { FileKindTile, fileKind } from '@/components/documents/file-kind';
+import { Avatar, Panel } from '@/components/cockpit/cockpit';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 
@@ -74,39 +74,22 @@ const CATEGORIES: DocumentCategory[] = [
   'OTHER',
 ];
 
-// ── Badge tone maps (display-only — do not affect backend enums) ──────────────
-
-const CATEGORY_TONE: Record<DocumentCategory, BadgeTone> = {
-  IMAGE:                'gray',
-  CONTRACT:             'info',
-  RECEIPT:              'success',
-  INVOICE:              'success',
-  BROKER_AGREEMENT:     'purple',
-  COMMISSION_STATEMENT: 'purple',
-  PAYOUT_RECEIPT:       'success',
-  ID_DOCUMENT:          'warning',
-  LEGAL:                'info',
-  FINANCIAL:            'success',
-  OTHER:                'gray',
-};
-
-const OWNER_TYPE_TONE: Record<DocumentOwnerType, BadgeTone> = {
-  PROJECT:             'brand',
-  UNIT:                'brand',
-  LEAD:                'info',
-  RESERVATION:         'brand',
-  CONTRACT:            'info',
-  DEPOSIT:             'success',
-  BROKER:              'purple',
-  BROKER_COMMISSION:   'purple',
-  BROKER_PAYOUT:       'success',
-  MAINTENANCE_REQUEST: 'warning',
-  USER:                'gray',
-  OTHER:               'gray',
+const CATEGORY_CHIP: Record<DocumentCategory, string> = {
+  IMAGE:                'bg-sky-500/12 text-sky-600',
+  CONTRACT:             'bg-[#D8B66A]/[0.16] text-[#9A7A2E] dark:text-[#D8B66A]',
+  RECEIPT:              'bg-emerald-500/12 text-emerald-600',
+  INVOICE:              'bg-emerald-500/12 text-emerald-600',
+  BROKER_AGREEMENT:     'bg-violet-500/12 text-violet-600',
+  COMMISSION_STATEMENT: 'bg-violet-500/12 text-violet-600',
+  PAYOUT_RECEIPT:       'bg-emerald-500/12 text-emerald-600',
+  ID_DOCUMENT:          'bg-amber-500/12 text-amber-600',
+  LEGAL:                'bg-indigo-500/12 text-indigo-500',
+  FINANCIAL:            'bg-emerald-500/12 text-emerald-600',
+  OTHER:                'bg-slate-500/12 text-slate-500',
 };
 
 const ACTION_BTN =
-  'inline-flex h-8 w-8 items-center justify-center rounded-lg border border-hairline bg-surface text-slate-500 transition-colors hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700';
+  'inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline bg-surface text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900';
 
 export default async function DocumentsPage({
   searchParams,
@@ -122,15 +105,16 @@ export default async function DocumentsPage({
   for (const k of ['ownerType', 'category', 'q', 'sortOrder'] as const) {
     if (sp[k]) qs.set(k, sp[k]!);
   }
-  if (!sp.sortOrder) qs.set('sortOrder', 'asc');
+  // Newest first unless asked otherwise (the API's own default is oldest first).
+  if (!sp.sortOrder) qs.set('sortOrder', 'desc');
 
   const res = await safe(api.get<Paged<DocumentItem>>(`/documents?${qs.toString()}`));
   const items = res.data?.data ?? [];
   const meta = res.data?.meta;
 
   const totalCount = meta?.total ?? items.length;
-  const totalPages = meta ? Math.ceil(meta.total / PAGE_SIZE) : 1;
-  const lastDate = items.length > 0 ? (items[0]?.createdAt ?? null) : null;
+  const newestFirst = (sp.sortOrder ?? 'desc') === 'desc';
+  const lastDate = newestFirst && page === 1 ? (items[0]?.createdAt ?? null) : null;
 
   const hasFilters = !!(sp.q || sp.ownerType || sp.category);
 
@@ -167,37 +151,6 @@ export default async function DocumentsPage({
           {m.loadError}: {res.error}
         </div>
       )}
-
-      <PremiumMetricStrip
-        variant="compact"
-        metrics={[
-          {
-            label: hasFilters ? m.metricFiltered : m.metricTotal,
-            value: totalCount,
-            icon: <FileText className="h-4 w-4" />,
-            primary: true,
-            tone: 'brand',
-          },
-          {
-            label: m.metricLastUpload,
-            value: lastDate ? formatDate(lastDate, locale) : '—',
-            icon: <Clock className="h-4 w-4" />,
-            tone: 'neutral',
-            valueSize: 'compact',
-          },
-          ...(totalPages > 1
-            ? [
-                {
-                  label: m.metricPage,
-                  value: `${page} / ${totalPages}`,
-                  icon: <List className="h-4 w-4" />,
-                  tone: 'neutral' as const,
-                },
-              ]
-            : []),
-        ]}
-        cols={totalPages > 1 ? 3 : 2}
-      />
 
       <PremiumFilterBar
         method="get"
@@ -239,144 +192,83 @@ export default async function DocumentsPage({
           </Select>
         </PremiumFilterField>
         <PremiumFilterField label={m.filterSort}>
-          <Select name="sortOrder" inputSize="sm" defaultValue={sp.sortOrder ?? 'asc'} className="w-36">
-            <option value="asc">{m.filterSortAsc}</option>
+          <Select name="sortOrder" inputSize="sm" defaultValue={sp.sortOrder ?? 'desc'} className="w-36">
             <option value="desc">{m.filterSortDesc}</option>
+            <option value="asc">{m.filterSortAsc}</option>
           </Select>
         </PremiumFilterField>
       </PremiumFilterBar>
 
-      <PremiumSectionCard
-        title={m.sectionTitle}
-        trailing={
-          meta ? (
-            <span className="text-xs text-slate-400 tabular-nums">
-              {meta.total.toLocaleString(intlLocale(locale))} {m.sectionCount}
-            </span>
-          ) : undefined
-        }
-        padded={false}
+      <Panel
+        testId="documents"
+        title={hasFilters ? m.metricFiltered : m.sectionTitle}
+        sub={m.countSub(totalCount, lastDate ? formatDate(lastDate, locale) : null)}
       >
         {items.length === 0 ? (
-          <PremiumEmptyState
-            icon={<FileText />}
-            title={m.emptyTitle}
-            description={m.emptyDescription}
-          />
+          <PremiumEmptyState icon={<FileText />} title={m.emptyTitle} description={m.emptyDescription} />
         ) : (
-          <div className="overflow-x-auto scrollbar-thin">
-            <table className="w-full text-sm">
-              <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
-                <tr>
-                  <th className="text-start py-3 ps-5 pe-4 w-[35%]">{m.colTitle}</th>
-                  <th className="text-start py-3 px-4">{m.colCategory}</th>
-                  <th className="text-start py-3 px-4">{m.colOwner}</th>
-                  <th className="text-start py-3 px-4">{m.colSize}</th>
-                  <th className="text-start py-3 px-4">{m.colUploadedBy}</th>
-                  <th className="text-start py-3 px-4">{m.colTime}</th>
-                  <th className="text-end py-3 ps-4 pe-5">{m.colActions}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                {items.map((row) => {
-                  const oHref = ownerHref(row.ownerType, row.ownerId);
-                  return (
-                    <tr
-                      key={row.id}
-                      className="hover:bg-canvas/40 transition-colors duration-100 align-middle"
+          <ul className="divide-y divide-hairline border-t border-hairline">
+            {items.map((row) => {
+              const oHref = ownerHref(row.ownerType, row.ownerId);
+              const uploader = row.uploadedBy?.fullName;
+              return (
+                <li
+                  key={row.id}
+                  data-testid="document-row"
+                  className="group grid grid-cols-[auto_1fr_auto] items-center gap-x-4 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[auto_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
+                >
+                  <FileKindTile kind={fileKind(row.mimeType, row.fileName)} />
+
+                  <div className="min-w-0">
+                    <Link
+                      href={`/dashboard/documents/${row.id}`}
+                      className="block truncate text-[14px] font-bold text-slate-900 hover:text-brand-700"
+                      dir="auto"
+                      title={row.title || undefined}
                     >
-                      <td className="py-3 ps-5 pe-4">
-                        <div className="max-w-[280px]">
-                          <Link
-                            href={`/dashboard/documents/${row.id}`}
-                            className="block truncate text-sm font-medium text-slate-900 hover:text-brand-700"
-                            dir="auto"
-                            title={row.title || undefined}
-                          >
-                            {row.title || (
-                              <span className="text-slate-400">{m.noTitle}</span>
-                            )}
-                          </Link>
-                          {row.fileName && (
-                            <p
-                              className="mt-0.5 truncate text-2xs text-slate-400 font-mono"
-                              dir="ltr"
-                            >
-                              {row.fileName}
-                            </p>
-                          )}
-                        </div>
-                      </td>
+                      {row.title || <span className="text-slate-400">{m.noTitle}</span>}
+                    </Link>
+                    <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-slate-500">
+                      <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-bold', CATEGORY_CHIP[row.category])}>
+                        {CATEGORY_LABEL[row.category]}
+                      </span>
+                      <span className="tabular-nums">{formatFileSize(row.sizeBytes)}</span>
+                    </p>
+                  </div>
 
-                      <td className="py-3 px-4">
-                        <Badge tone={CATEGORY_TONE[row.category]} size="sm">
-                          {CATEGORY_LABEL[row.category]}
-                        </Badge>
-                      </td>
+                  <div className="hidden min-w-0 text-[12.5px] lg:block">
+                    <p className="text-[11px] text-slate-500">{m.linkedTo}</p>
+                    {oHref ? (
+                      <Link href={oHref as never} className="font-semibold text-slate-800 hover:text-brand-700" title={row.ownerId}>
+                        {OWNER_TYPE_LABEL[row.ownerType]}
+                      </Link>
+                    ) : (
+                      <span className="font-semibold text-slate-800">{OWNER_TYPE_LABEL[row.ownerType]}</span>
+                    )}
+                  </div>
 
-                      <td className="py-3 px-4">
-                        {oHref ? (
-                          <Link
-                            href={oHref as never}
-                            className="inline-flex hover:opacity-75 transition-opacity"
-                            title={row.ownerId}
-                          >
-                            <Badge tone={OWNER_TYPE_TONE[row.ownerType]} size="sm">
-                              {OWNER_TYPE_LABEL[row.ownerType]}
-                            </Badge>
-                          </Link>
-                        ) : (
-                          <Badge tone={OWNER_TYPE_TONE[row.ownerType]} size="sm">
-                            {OWNER_TYPE_LABEL[row.ownerType]}
-                          </Badge>
-                        )}
-                      </td>
+                  <div className="hidden min-w-0 items-center gap-2.5 lg:flex">
+                    {uploader && <Avatar name={uploader} className="h-8 w-8 text-[11px]" />}
+                    <div className="min-w-0">
+                      <p className="truncate text-[12.5px] font-semibold text-slate-800">{uploader ?? '—'}</p>
+                      <p className="whitespace-nowrap text-[11.5px] text-slate-500">{formatDateTime(row.createdAt, locale)}</p>
+                    </div>
+                  </div>
 
-                      <td className="py-3 px-4 text-xs tabular-nums text-slate-500 whitespace-nowrap">
-                        {formatFileSize(row.sizeBytes)}
-                      </td>
-
-                      <td className="py-3 px-4">
-                        <p className="text-xs text-slate-800">{row.uploadedBy?.fullName ?? '—'}</p>
-                        {row.uploadedBy?.email && (
-                          <p className="mt-0.5 truncate text-2xs text-slate-400 max-w-[140px]">
-                            {row.uploadedBy.email}
-                          </p>
-                        )}
-                      </td>
-
-                      <td className="py-3 px-4 text-xs text-slate-500 whitespace-nowrap">
-                        {formatDateTime(row.createdAt, locale)}
-                      </td>
-
-                      <td className="py-3 ps-4 pe-5 text-end">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <a
-                            href={row.fileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={ACTION_BTN}
-                            aria-label={m.ariaOpenFile}
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                          <Link
-                            href={`/dashboard/documents/${row.id}`}
-                            className={ACTION_BTN}
-                            aria-label={m.ariaDocDetails}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  <div className="flex items-center gap-1.5">
+                    <a href={row.fileUrl} target="_blank" rel="noopener noreferrer" className={ACTION_BTN} aria-label={m.ariaOpenFile} title={m.ariaOpenFile}>
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                    <Link href={`/dashboard/documents/${row.id}`} className={ACTION_BTN} aria-label={m.ariaDocDetails} title={m.ariaDocDetails}>
+                      <Eye className="h-4 w-4" />
+                    </Link>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         )}
-      </PremiumSectionCard>
+      </Panel>
 
       {meta && meta.total > meta.pageSize && (
         <Pagination
@@ -388,7 +280,7 @@ export default async function DocumentsPage({
             ownerType: sp.ownerType,
             category: sp.category,
             q: sp.q,
-            sortOrder: sp.sortOrder ?? 'asc',
+            sortOrder: sp.sortOrder ?? 'desc',
           }}
         />
       )}

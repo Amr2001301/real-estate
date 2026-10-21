@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Palette, Phone, Globe, Building2, Check, Coins } from 'lucide-react';
+import { Palette, Phone, Globe, Building2, Check, Coins, Mail, MessageCircle, MapPin, Clock, ImageIcon, Eye, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { cn } from '@/lib/cn';
 import { MediaUploader } from '@/components/media-uploader';
-import { PremiumSectionCard } from '@/components/premium';
 import { patchBrandingAction, type BrandingPayload } from '../actions';
 import { CURRENCY_OPTIONS, currencySymbol } from '@/lib/currency-format';
 
@@ -63,16 +64,18 @@ function Field({
   label,
   hint,
   children,
+  className,
 }: {
   label: string;
   hint?: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="grid gap-1.5">
-      <label className="text-[12.5px] font-semibold text-navy/80">{label}</label>
-      {hint && <p className="text-[11px] text-slate-400 -mt-0.5">{hint}</p>}
+    <div className={cn('grid gap-1.5', className)}>
+      <label className="text-[12.5px] font-semibold text-slate-700">{label}</label>
       {children}
+      {hint && <p className="text-[11.5px] text-slate-500">{hint}</p>}
     </div>
   );
 }
@@ -92,19 +95,73 @@ function ColourSwatch({
     <button
       type="button"
       title={name}
+      aria-pressed={selected}
       onClick={onClick}
-      className={`relative h-8 w-8 rounded-lg transition-all ring-offset-1 ${
-        selected ? 'ring-2 ring-brand-600 scale-110' : 'ring-0 hover:scale-105'
-      }`}
+      className={cn(
+        'relative h-8 w-8 rounded-full ring-offset-2 ring-offset-surface transition-transform',
+        selected ? 'ring-2 ring-[#C9A24E]' : 'ring-1 ring-black/10 hover:scale-110 dark:ring-white/10',
+      )}
       style={{ backgroundColor: hex }}
     >
-      {selected && (
-        <Check className="absolute inset-0 m-auto h-3.5 w-3.5 text-white drop-shadow" />
-      )}
+      {selected && <Check className="absolute inset-0 m-auto h-4 w-4 text-white drop-shadow" />}
       <span className="sr-only">{name}</span>
     </button>
   );
 }
+
+/** A card per brand asset: its preview, its spec and the upload button. */
+function AssetTile({
+  title,
+  spec,
+  url,
+  previewClass,
+  children,
+}: {
+  title: string;
+  spec: string;
+  url: string;
+  previewClass: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-hairline bg-surface-muted/30 p-4">
+      <div className="flex h-28 items-center justify-center rounded-xl border border-dashed border-hairline bg-surface">
+        {url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt={title} className={cn('object-contain', previewClass)} />
+        ) : (
+          <ImageIcon className="h-7 w-7 text-slate-300" />
+        )}
+      </div>
+      <div>
+        <p className="text-[13.5px] font-bold text-slate-900">{title}</p>
+        <p className="mt-0.5 text-[11.5px] text-slate-500">{spec}</p>
+      </div>
+      <div className="[&_button]:w-full">{children}</div>
+    </div>
+  );
+}
+
+function Section({ icon, title, description, children }: { icon: React.ReactNode; title: string; description: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-[22px] border border-hairline bg-surface">
+      <header className="flex items-center gap-3 border-b border-hairline px-6 py-5">
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#D8B66A]/[0.14] text-[#B8913F] dark:text-[#D8B66A] [&_svg]:h-[18px] [&_svg]:w-[18px]">
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <h2 className="font-heading text-[18px] font-bold text-slate-900">{title}</h2>
+          <p className="text-[12.5px] text-slate-500">{description}</p>
+        </div>
+      </header>
+      <div className="p-6">{children}</div>
+    </section>
+  );
+}
+
+const Monogram = ({ children }: { children: string }) => (
+  <span className="text-[10.5px] font-bold tracking-wide text-slate-500">{children}</span>
+);
 
 // ── Main form ───────────────────────────────────────────────────────────────
 
@@ -189,261 +246,242 @@ export function BrandingForm({ initial }: { initial: RawBranding }) {
     });
   }
 
+  const shownPrimary = HEX_RE.test(primaryColor) ? primaryColor : '#1E3A5F';
+  const shownAccent = HEX_RE.test(accentColor) ? accentColor : '#C8A24B';
+  const shownName = displayName || 'اسم الشركة';
+
   return (
-    <div className="space-y-6">
-      {/* Identity */}
-      <PremiumSectionCard
-        title="الهوية"
-        description="اسم الشركة والشعار والعلامة التجارية"
-        icon={<Building2 />}
-      >
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="الاسم المعروض">
-            <Input
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="اسم الشركة للعرض العام"
-              dir="rtl"
-            />
-          </Field>
-          <Field label="رقم السجل التجاري">
-            <Input
-              value={regNumber}
-              onChange={(e) => setRegNumber(e.target.value)}
-              placeholder="رقم الترخيص"
-              dir="ltr"
-            />
-          </Field>
-          <Field label="الشعار الرئيسي" hint="PNG / WebP · مربع 1:1 · حد 512 كيلوبايت">
-            <div className="flex items-center gap-3">
-              {logoUrl && (
-                <img src={logoUrl} alt="logo preview" className="h-10 w-10 rounded-lg object-cover border border-hairline" />
-              )}
-              <MediaUploader
-                folder="branding"
-                accept="image/png,image/webp,image/jpeg"
-                buttonLabel="رفع الشعار"
-                presignExtra={{ brandingAsset: 'logo' }}
-                onUploaded={(url) => setLogoUrl(url)}
-              />
-            </div>
-          </Field>
-          <Field label="الفافيكون" hint="PNG / WebP · 64×64 · حد 128 كيلوبايت">
-            <div className="flex items-center gap-3">
-              {faviconUrl && (
-                <img src={faviconUrl} alt="favicon preview" className="h-8 w-8 rounded object-cover border border-hairline" />
-              )}
-              <MediaUploader
-                folder="branding"
-                accept="image/png,image/webp,image/jpeg"
-                buttonLabel="رفع الفافيكون"
-                presignExtra={{ brandingAsset: 'favicon' }}
-                onUploaded={(url) => setFaviconUrl(url)}
-              />
-            </div>
-          </Field>
-          <div className="sm:col-span-2">
-            <Field label="صورة المشاركة الاجتماعية (OG Image)" hint="1200×630 · PNG / WebP · حد 1 ميجابايت (لا يُقبل SVG)">
-              <div className="flex items-center gap-3">
-                {ogImageUrl && (
-                  <img src={ogImageUrl} alt="og preview" className="h-12 w-20 rounded object-cover border border-hairline" />
-                )}
-                <MediaUploader
-                  folder="branding"
-                  accept="image/png,image/webp,image/jpeg"
-                  buttonLabel="رفع صورة OG"
-                  presignExtra={{ brandingAsset: 'og' }}
-                  onUploaded={(url) => setOgImageUrl(url)}
-                />
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-3 xl:items-start">
+      <div className="space-y-6 xl:col-span-2">
+        {/* Identity */}
+        <Section title="الهوية" description="اسم الشركة والشعار والعلامة التجارية" icon={<Building2 />}>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="الاسم المعروض">
+              <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="اسم الشركة للعرض العام" dir="rtl" />
+            </Field>
+            <Field label="رقم السجل التجاري">
+              <Input value={regNumber} onChange={(e) => setRegNumber(e.target.value)} placeholder="رقم الترخيص" dir="ltr" />
+            </Field>
+            <Field label="الشعار النصي (عربي)">
+              <Input value={taglineAr} onChange={(e) => setTaglineAr(e.target.value)} placeholder="وصف قصير بالعربية" dir="rtl" />
+            </Field>
+            <Field label="الشعار النصي (إنجليزي)">
+              <Input value={taglineEn} onChange={(e) => setTaglineEn(e.target.value)} placeholder="Short tagline in English" dir="ltr" />
+            </Field>
+          </div>
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            <AssetTile title="الشعار الرئيسي" spec="PNG / WebP · مربع 1:1 · حد 512 كيلوبايت" url={logoUrl} previewClass="h-20 w-20 rounded-xl">
+              <MediaUploader folder="branding" accept="image/png,image/webp,image/jpeg" buttonLabel="رفع الشعار" presignExtra={{ brandingAsset: 'logo' }} onUploaded={(url) => setLogoUrl(url)} />
+            </AssetTile>
+            <AssetTile title="أيقونة المتصفح" spec="PNG / WebP · 64×64 · حد 128 كيلوبايت" url={faviconUrl} previewClass="h-12 w-12 rounded-lg">
+              <MediaUploader folder="branding" accept="image/png,image/webp,image/jpeg" buttonLabel="رفع الأيقونة" presignExtra={{ brandingAsset: 'favicon' }} onUploaded={(url) => setFaviconUrl(url)} />
+            </AssetTile>
+            <AssetTile title="صورة المشاركة (OG)" spec="1200×630 · PNG / WebP · حد 1 ميجابايت" url={ogImageUrl} previewClass="h-full w-full rounded-xl object-cover">
+              <MediaUploader folder="branding" accept="image/png,image/webp,image/jpeg" buttonLabel="رفع صورة OG" presignExtra={{ brandingAsset: 'og' }} onUploaded={(url) => setOgImageUrl(url)} />
+            </AssetTile>
+          </div>
+        </Section>
+
+        {/* Colours */}
+        <Section title="الألوان" description="اختر من اللوحة المعتمدة أو أدخل كود لون مخصص" icon={<Palette />}>
+          <div className="space-y-7">
+            {([
+              ['اللون الرئيسي', 'للأزرار والعناوين وشريط الموقع — التباين مع الأبيض ≥ 3:1', PALETTE, primaryColor, primaryHex, setPrimaryHex, setPrimaryColor, handlePrimaryPalette, primaryHexError, '#1E3A5F', shownPrimary],
+              ['لون التمييز', 'للمسات الصغيرة: الروابط والشارات والخطوط', ACCENT_PALETTE, accentColor, accentHex, setAccentHex, setAccentColor, handleAccentPalette, accentHexError, '#C8A24B', shownAccent],
+            ] as const).map(([label, hint, palette, chosen, hex, setHex, setColour, pick, err, ph, shown]) => (
+              <div key={label} className="grid gap-4 md:grid-cols-[220px_1fr] md:items-start">
+                <div className="flex items-center gap-3">
+                  <span className="h-12 w-12 shrink-0 rounded-2xl shadow-inner ring-1 ring-black/10 dark:ring-white/10" style={{ backgroundColor: shown }} />
+                  <div className="min-w-0">
+                    <p className="text-[13.5px] font-bold text-slate-900">{label}</p>
+                    <p className="text-[11.5px] leading-snug text-slate-500">{hint}</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2.5">
+                    {palette.map(({ hex: h, name }) => (
+                      <ColourSwatch key={h} hex={h} name={name} selected={chosen === h} onClick={() => pick(h)} />
+                    ))}
+                  </div>
+                  <div className="max-w-[220px]">
+                    <Input
+                      value={hex}
+                      onChange={(e) => {
+                        setHex(e.target.value);
+                        if (HEX_RE.test(e.target.value)) setColour(e.target.value);
+                      }}
+                      placeholder={ph}
+                      dir="ltr"
+                      inputSize="sm"
+                      aria-label={`${label} — كود مخصص`}
+                      invalid={!!err}
+                      leftAddon={<span className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: shown }} />}
+                    />
+                    {err && <p className="mt-1 text-[11px] text-danger-600">{err}</p>}
+                  </div>
+                </div>
               </div>
+            ))}
+          </div>
+        </Section>
+
+        {/* Contact */}
+        <Section title="بيانات التواصل" description="تظهر في الموقع العام والتطبيق" icon={<Phone />}>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="البريد الإلكتروني">
+              <Input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="info@company.com" dir="ltr" leftAddon={<Mail />} />
+            </Field>
+            <Field label="رقم الهاتف">
+              <Input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="+201001234567" dir="ltr" leftAddon={<Phone />} />
+            </Field>
+            <Field label="واتساب">
+              <Input value={contactWhatsApp} onChange={(e) => setContactWhatsApp(e.target.value)} placeholder="201001234567" dir="ltr" leftAddon={<MessageCircle />} />
+            </Field>
+            <div className="hidden sm:block" />
+            <Field label="العنوان (عربي)">
+              <Input value={addressAr} onChange={(e) => setAddressAr(e.target.value)} placeholder="القاهرة الجديدة، التجمع الخامس" dir="rtl" leftAddon={<MapPin />} />
+            </Field>
+            <Field label="العنوان (إنجليزي)">
+              <Input value={addressEn} onChange={(e) => setAddressEn(e.target.value)} placeholder="Fifth Settlement, New Cairo" dir="ltr" leftAddon={<MapPin />} />
+            </Field>
+            <Field label="ساعات العمل (عربي)">
+              <Input value={hoursAr} onChange={(e) => setHoursAr(e.target.value)} placeholder="الأحد–الخميس 9ص–6م" dir="rtl" leftAddon={<Clock />} />
+            </Field>
+            <Field label="ساعات العمل (إنجليزي)">
+              <Input value={hoursEn} onChange={(e) => setHoursEn(e.target.value)} placeholder="Sun–Thu 9am–6pm" dir="ltr" leftAddon={<Clock />} />
             </Field>
           </div>
-          <Field label="الشعار النصي (عربي)">
-            <Input
-              value={taglineAr}
-              onChange={(e) => setTaglineAr(e.target.value)}
-              placeholder="وصف قصير بالعربية"
-              dir="rtl"
-            />
-          </Field>
-          <Field label="الشعار النصي (إنجليزي)">
-            <Input
-              value={taglineEn}
-              onChange={(e) => setTaglineEn(e.target.value)}
-              placeholder="Short tagline in English"
-              dir="ltr"
-            />
-          </Field>
-        </div>
-      </PremiumSectionCard>
+        </Section>
 
-      {/* Colours */}
-      <PremiumSectionCard
-        title="الألوان"
-        description="اختر من اللوحة المعتمدة أو أدخل كود لون مخصص"
-        icon={<Palette />}
-      >
-        <div className="grid gap-6 sm:grid-cols-2">
-          <div className="space-y-3">
-            <p className="text-[12.5px] font-semibold text-navy/80">اللون الرئيسي</p>
-            <div className="flex flex-wrap gap-2">
-              {PALETTE.map(({ hex, name }) => (
-                <ColourSwatch
-                  key={hex}
-                  hex={hex}
-                  name={name}
-                  selected={primaryColor === hex}
-                  onClick={() => handlePrimaryPalette(hex)}
-                />
-              ))}
-            </div>
-            <Field label="كود مخصص" hint="صيغة #RRGGBB — يجب أن يكون التباين ≥ 3:1 مع الأبيض">
-              <Input
-                value={primaryHex}
-                onChange={(e) => {
-                  setPrimaryHex(e.target.value);
-                  if (HEX_RE.test(e.target.value)) {
-                    setPrimaryColor(e.target.value);
-                  }
-                }}
-                placeholder="#1E3A5F"
-                dir="ltr"
-                invalid={!!primaryHexError}
-              />
-              {primaryHexError && <p className="text-[11px] text-red-500 mt-0.5">{primaryHexError}</p>}
-            </Field>
+        {/* Social */}
+        <Section title="روابط التواصل الاجتماعي" description="ادخل الرابط الكامل لكل منصة" icon={<Globe />}>
+          <div className="grid gap-5 sm:grid-cols-2">
+            {([
+              ['إنستغرام', 'IG', instagram, setInstagram, 'https://instagram.com/yourpage'],
+              ['فيسبوك', 'FB', facebook, setFacebook, 'https://facebook.com/yourpage'],
+              ['تويتر / X', 'X', twitter, setTwitter, 'https://x.com/yourpage'],
+              ['لينكد إن', 'in', linkedin, setLinkedin, 'https://linkedin.com/company/yourco'],
+              ['يوتيوب', 'YT', youtube, setYoutube, 'https://youtube.com/@yourpage'],
+              ['تيك توك', 'TT', tiktok, setTiktok, 'https://tiktok.com/@yourpage'],
+            ] as [string, string, string, (v: string) => void, string][]).map(([label, mono, val, setter, ph]) => (
+              <Field key={label} label={label}>
+                <Input value={val} onChange={(e) => setter(e.target.value)} placeholder={ph} dir="ltr" leftAddon={<Monogram>{mono}</Monogram>} />
+              </Field>
+            ))}
           </div>
-          <div className="space-y-3">
-            <p className="text-[12.5px] font-semibold text-navy/80">لون التمييز</p>
-            <div className="flex flex-wrap gap-2">
-              {ACCENT_PALETTE.map(({ hex, name }) => (
-                <ColourSwatch
-                  key={hex}
-                  hex={hex}
-                  name={name}
-                  selected={accentColor === hex}
-                  onClick={() => handleAccentPalette(hex)}
-                />
-              ))}
-            </div>
-            <Field label="كود مخصص" hint="صيغة #RRGGBB">
-              <Input
-                value={accentHex}
-                onChange={(e) => {
-                  setAccentHex(e.target.value);
-                  if (HEX_RE.test(e.target.value)) {
-                    setAccentColor(e.target.value);
-                  }
-                }}
-                placeholder="#C8A24B"
-                dir="ltr"
-                invalid={!!accentHexError}
-              />
-              {accentHexError && <p className="text-[11px] text-red-500 mt-0.5">{accentHexError}</p>}
-            </Field>
-          </div>
-        </div>
-      </PremiumSectionCard>
+        </Section>
 
-      {/* Contact */}
-      <PremiumSectionCard
-        title="بيانات التواصل"
-        description="تظهر في الموقع العام والتطبيق"
-        icon={<Phone />}
-      >
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="البريد الإلكتروني">
-            <Input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="info@company.com" dir="ltr" />
-          </Field>
-          <Field label="رقم الهاتف">
-            <Input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="+201001234567" dir="ltr" />
-          </Field>
-          <Field label="واتساب">
-            <Input value={contactWhatsApp} onChange={(e) => setContactWhatsApp(e.target.value)} placeholder="201001234567" dir="ltr" />
-          </Field>
-          <Field label="العنوان (عربي)">
-            <Input value={addressAr} onChange={(e) => setAddressAr(e.target.value)} placeholder="الرياض، حي العليا" dir="rtl" />
-          </Field>
-          <Field label="العنوان (إنجليزي)">
-            <Input value={addressEn} onChange={(e) => setAddressEn(e.target.value)} placeholder="Riyadh, Al Olaya" dir="ltr" />
-          </Field>
-          <Field label="ساعات العمل (عربي)">
-            <Input value={hoursAr} onChange={(e) => setHoursAr(e.target.value)} placeholder="الأحد–الخميس 9ص–6م" dir="rtl" />
-          </Field>
-          <Field label="ساعات العمل (إنجليزي)">
-            <Input value={hoursEn} onChange={(e) => setHoursEn(e.target.value)} placeholder="Sun–Thu 9am–6pm" dir="ltr" />
-          </Field>
-        </div>
-      </PremiumSectionCard>
-
-      {/* Social */}
-      <PremiumSectionCard
-        title="روابط التواصل الاجتماعي"
-        description="ادخل الرابط الكامل لكل منصة"
-        icon={<Globe />}
-      >
-        <div className="grid gap-5 sm:grid-cols-2">
-          {([
-            ['إنستغرام', instagram, setInstagram, 'https://instagram.com/yourpage'],
-            ['فيسبوك', facebook, setFacebook, 'https://facebook.com/yourpage'],
-            ['تويتر / X', twitter, setTwitter, 'https://twitter.com/yourpage'],
-            ['لينكد إن', linkedin, setLinkedin, 'https://linkedin.com/company/yourco'],
-            ['يوتيوب', youtube, setYoutube, 'https://youtube.com/@yourpage'],
-            ['تيك توك', tiktok, setTiktok, 'https://tiktok.com/@yourpage'],
-          ] as [string, string, (v: string) => void, string][]).map(([label, val, setter, ph]) => (
-            <Field key={label} label={label}>
-              <Input value={val} onChange={(e) => setter(e.target.value)} placeholder={ph} dir="ltr" />
-            </Field>
-          ))}
-        </div>
-      </PremiumSectionCard>
-
-      {/* Currency — one value for the whole platform */}
-      <PremiumSectionCard
-        title="العملة"
-        description="العملة التي تظهر بها كل المبالغ: لوحة التحكم لكل الأدوار، بوابة الوسطاء، الموقع، تطبيق العملاء والموظفين، والإشعارات."
-        icon={<Coins />}
-      >
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="عملة الشركة">
-            <select
-              name="currency"
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              className="h-10 rounded-xl border border-hairline bg-white px-3 text-sm"
-              data-testid="company-currency"
-            >
+        {/* Currency — one value for the whole platform */}
+        <Section
+          title="العملة"
+          description="العملة التي تظهر بها كل المبالغ: لوحة التحكم لكل الأدوار، بوابة الوسطاء، الموقع، تطبيق العملاء والموظفين، والإشعارات."
+          icon={<Coins />}
+        >
+          <Field label="عملة الشركة" className="max-w-sm">
+            <Select name="currency" value={currency} onChange={(e) => setCurrency(e.target.value)} data-testid="company-currency">
               {CURRENCY_OPTIONS.map((c) => (
                 <option key={c.code} value={c.code}>
                   {c.ar} ({c.code} · {currencySymbol(c.code)})
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
-        </div>
-      </PremiumSectionCard>
-
-      {/* Save bar */}
-      {result?.ok === false && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-          {result.error}
-        </p>
-      )}
-      {result?.ok === true && (
-        <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-          ✓ تم حفظ الهوية البصرية
-        </p>
-      )}
-      <div className="flex justify-end">
-        <Button
-          variant="primary"
-          size="md"
-          onClick={handleSubmit}
-          disabled={pending || !!primaryHexError || !!accentHexError}
-        >
-          {pending ? 'جاري الحفظ…' : 'حفظ التغييرات'}
-        </Button>
+        </Section>
       </div>
+
+      {/* Live preview + save, kept in view */}
+      <aside className="space-y-4 xl:sticky xl:top-24">
+        <section data-testid="brand-preview" className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+          <header className="flex items-center gap-2 px-5 pb-3 pt-4">
+            <Eye className="h-4 w-4 text-[#B8913F] dark:text-[#D8B66A]" />
+            <p className="text-[13px] font-bold text-slate-900">معاينة مباشرة</p>
+          </header>
+          <div className="mx-4 mb-4 overflow-hidden rounded-2xl border border-hairline">
+            {/* Browser tab */}
+            <div className="flex items-center gap-2 bg-surface-muted px-3 py-2">
+              <span className="flex gap-1">
+                <span className="h-2 w-2 rounded-full bg-rose-400/70" />
+                <span className="h-2 w-2 rounded-full bg-amber-400/70" />
+                <span className="h-2 w-2 rounded-full bg-emerald-400/70" />
+              </span>
+              <span className="flex min-w-0 items-center gap-1.5 rounded-md bg-surface px-2 py-0.5 text-[10.5px] text-slate-600">
+                {faviconUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={faviconUrl} alt="" className="h-3 w-3 rounded-sm" />
+                ) : (
+                  <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: shownAccent }} />
+                )}
+                <span className="truncate">{shownName}</span>
+              </span>
+            </div>
+            {/* Site hero */}
+            <div className="relative px-5 pb-6 pt-4 text-white" style={{ background: `linear-gradient(160deg, ${shownPrimary}, ${shownPrimary}cc)` }}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  {logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={logoUrl} alt="" className="h-7 w-7 rounded-lg bg-white/10 object-contain" />
+                  ) : (
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[12px] font-bold" style={{ backgroundColor: shownAccent }}>
+                      {shownName.charAt(0)}
+                    </span>
+                  )}
+                  <span className="truncate text-[13px] font-bold">{shownName}</span>
+                </div>
+                <span className="flex gap-1.5 opacity-70">
+                  <span className="h-1 w-5 rounded-full bg-white/60" />
+                  <span className="h-1 w-5 rounded-full bg-white/60" />
+                  <span className="h-1 w-5 rounded-full bg-white/60" />
+                </span>
+              </div>
+              <p className="mt-6 font-heading text-[19px] font-bold leading-snug">{taglineAr || 'شعارك النصي يظهر هنا'}</p>
+              {taglineEn && <p className="mt-1 text-[11.5px] opacity-75" dir="ltr">{taglineEn}</p>}
+              <span className="mt-4 inline-flex rounded-full px-3.5 py-1.5 text-[11.5px] font-bold text-[#1a1408]" style={{ backgroundColor: shownAccent }}>
+                احجز زيارة
+              </span>
+            </div>
+            {/* Contact footer */}
+            <div className="space-y-1.5 bg-surface px-5 py-3.5 text-[11.5px] text-slate-600">
+              {[
+                [<Phone key="p" />, contactPhone],
+                [<Mail key="m" />, contactEmail],
+                [<MapPin key="a" />, addressAr],
+              ].filter(([, v]) => v).map(([icon, v], i) => (
+                <p key={i} className="flex items-center gap-2 truncate [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0">
+                  <span style={{ color: shownAccent }}>{icon}</span>
+                  <span className="truncate" dir="auto">{v as string}</span>
+                </p>
+              ))}
+              {!contactPhone && !contactEmail && !addressAr && <p className="text-slate-400">بيانات التواصل تظهر هنا</p>}
+            </div>
+          </div>
+        </section>
+
+        <div className="space-y-3 rounded-[22px] border border-hairline bg-surface p-4">
+          {result?.ok === false && (
+            <p className="flex items-start gap-2 rounded-xl bg-danger-500/10 px-3 py-2.5 text-[12.5px] text-danger-600">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              {result.error}
+            </p>
+          )}
+          {result?.ok === true && (
+            <p className="flex items-center gap-2 rounded-xl bg-emerald-500/12 px-3 py-2.5 text-[12.5px] font-semibold text-emerald-600">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              تم حفظ الهوية البصرية
+            </p>
+          )}
+          <Button
+            variant="primary"
+            size="md"
+            className="w-full"
+            onClick={handleSubmit}
+            disabled={pending || !!primaryHexError || !!accentHexError}
+          >
+            {pending ? 'جاري الحفظ…' : 'حفظ التغييرات'}
+          </Button>
+          <p className="text-center text-[11.5px] text-slate-500">التغييرات تظهر في الموقع والتطبيق بعد الحفظ</p>
+        </div>
+      </aside>
     </div>
   );
 }

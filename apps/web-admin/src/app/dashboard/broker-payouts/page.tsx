@@ -1,19 +1,19 @@
 import Link from 'next/link';
-import { Wallet, Plus, Eye, Briefcase, AlertCircle, SlidersHorizontal } from 'lucide-react';
+import { Wallet, Plus, Eye, AlertCircle, SlidersHorizontal } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { brokerOptions } from '@/lib/options';
 import type { AdminBrokerPayout, Paged } from '@/lib/types';
-import { formatDate, formatCurrency, intlLocale } from '@/lib/format';
-import { getReportsCurrency } from '@/lib/currency';
+import { formatDate, formatCurrency, intlLocale, compactParts } from '@/lib/format';
+import { getReportsCurrency, currencySymbol } from '@/lib/currency';
+import { Amount, FigureBar } from '@/components/cockpit/cockpit';
+import { periodLabel } from '../targets/utils';
 import { Button } from '@/components/ui/button';
-import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { BrokerPayoutStatusBadge } from '@/components/badges';
 import {
   PremiumPageHero,
-  PremiumMetricStrip,
   PremiumFilterBar,
   PremiumFilterField,
   PremiumSectionCard,
@@ -47,6 +47,7 @@ export default async function AdminBrokerPayoutsPage({
 
   const sp = await searchParams;
   const currency = await getReportsCurrency();
+  const symbol = currencySymbol(currency, locale);
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
@@ -130,40 +131,18 @@ export default async function AdminBrokerPayoutsPage({
       />
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
-      <PremiumMetricStrip
-        variant="compact"
-        cols={4}
-        metrics={[
-          {
-            label: m.kpiTotal,
-            value: totalPayouts,
-            icon: <Wallet />,
-            tone: 'brand',
-            primary: true,
-          },
-          {
-            label: m.kpiPaid,
-            value: counts.paid,
-            icon: <Wallet />,
-            tone: 'success',
-            sub: m.kpiThisPage,
-          },
-          {
-            label: m.kpiTotalPaid,
-            value: totalNetPaid > 0 ? formatCurrency(totalNetPaid, currency, locale) : '—',
-            icon: <Wallet />,
-            tone: 'neutral',
-            sub: m.kpiThisPage,
-          },
-          {
-            label: m.kpiPending,
-            value: totalNetPending > 0 ? formatCurrency(totalNetPending, currency, locale) : '—',
-            icon: <Wallet />,
-            tone: 'warning',
-            sub: m.kpiThisPage,
-          },
-        ]}
-      />
+      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <FigureBar
+          bare
+          cols={4}
+          figures={[
+            { label: m.kpiTotal, value: totalPayouts },
+            { label: m.kpiPaid, value: counts.paid, sub: m.kpiThisPage },
+            { label: m.kpiTotalPaid, value: totalNetPaid > 0 ? <Amount parts={compactParts(totalNetPaid, symbol, locale)} /> : '—', sub: m.kpiThisPage },
+            { label: m.kpiPending, value: totalNetPending > 0 ? <Amount parts={compactParts(totalNetPending, symbol, locale)} /> : '—', sub: m.kpiThisPage, warn: totalNetPending > 0 },
+          ]}
+        />
+      </section>
 
       {/* ── Error ────────────────────────────────────────────────────────────── */}
       {payoutsRes.error && (
@@ -284,118 +263,58 @@ export default async function AdminBrokerPayoutsPage({
             className="py-12"
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
-                <tr>
-                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">{m.colPayoutNumber}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colBroker}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colPeriod}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colGross}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colNet}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colStatus}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colCreatedAt}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colPaidAt}</th>
-                  <th className="text-start py-3 ps-4 pe-5 w-px" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                {rows.map((p) => (
-                  <tr
-                    key={p.id}
-                    className="align-middle hover:bg-canvas/40 transition-colors duration-100"
-                  >
-                    {/* Payout number — mono chip */}
-                    <td className="py-3 ps-5 pe-4">
-                      <span
-                        className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600 leading-none whitespace-nowrap"
-                        dir="ltr"
-                      >
-                        {p.payoutNumber}
-                      </span>
-                    </td>
+          <ul className="divide-y divide-hairline">
+            {rows.map((p) => (
+              <li
+                key={p.id}
+                data-testid="payout-row"
+                className="grid grid-cols-[auto_1fr_auto] items-center gap-x-4 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[auto_minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,1fr)_270px_auto]"
+              >
+                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#D8B66A]/[0.14] text-[#B8913F] dark:text-[#D8B66A]">
+                  <Wallet className="h-[18px] w-[18px]" />
+                </span>
 
-                    {/* Broker — company primary */}
-                    <td className="py-3 px-4">
-                      {p.broker ? (
-                        <Link
-                          href={`/dashboard/brokers/${p.broker.id}` as never}
-                          className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-brand-700 transition-colors"
-                        >
-                          <Briefcase className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                          <span className="truncate max-w-[180px]">{p.broker.companyName}</span>
-                        </Link>
-                      ) : (
-                        <span className="text-slate-400 text-xs">—</span>
-                      )}
-                    </td>
+                <div className="min-w-0">
+                  <Link href={`/dashboard/broker-payouts/${p.id}` as never} className="block truncate text-[14.5px] font-bold text-slate-900 hover:text-brand-700">
+                    {p.broker?.companyName ?? '—'}
+                  </Link>
+                  <p className="mt-0.5 text-[12px] text-slate-500">
+                    <span className="me-1 text-slate-400">{m.payoutWord}</span>
+                    <span className="font-mono" dir="ltr">{p.payoutNumber}</span>
+                  </p>
+                </div>
 
-                    {/* Period — compact mono chip */}
-                    <td className="py-3 px-4">
-                      {p.period ? (
-                        <span
-                          className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600 leading-none whitespace-nowrap"
-                          dir="ltr"
-                        >
-                          {p.period}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-2xs font-medium text-slate-400">
-                          {m.periodUnset}
-                        </span>
-                      )}
-                    </td>
+                <div className="hidden text-[12.5px] lg:block">
+                  <p className="text-[11px] text-slate-500">{m.colPeriod}</p>
+                  <p className="font-semibold text-slate-800">{p.period ? periodLabel(p.period, locale) : m.periodUnset}</p>
+                </div>
 
-                    {/* Gross amount */}
-                    <td className="py-3 px-4">
-                      <span className="text-xs font-medium text-slate-700 tabular-nums whitespace-nowrap" dir="ltr">
-                        {formatCurrency(p.totalGross, currency, locale)}
-                      </span>
-                    </td>
+                <div className="hidden text-[12.5px] lg:block">
+                  <p className="text-[11px] text-slate-500">{p.paidAt ? m.colPaidAt : m.colCreatedAt}</p>
+                  <p className="font-semibold text-slate-800">{formatDate(p.paidAt ?? p.createdAt, locale)}</p>
+                </div>
 
-                    {/* Net amount — strongest payout figure */}
-                    <td className="py-3 px-4">
-                      <span className="text-sm font-semibold text-slate-900 tabular-nums whitespace-nowrap" dir="ltr">
-                        {formatCurrency(p.totalNet, currency, locale)}
-                      </span>
-                    </td>
+                <div className="flex items-center gap-3 justify-self-end">
+                  <BrokerPayoutStatusBadge status={p.status} locale={locale} />
+                  <div className="text-end">
+                    <p className="whitespace-nowrap text-[15px] font-bold tabular-nums text-slate-900">{formatCurrency(p.totalNet, currency, locale)}</p>
+                    {Number(p.totalGross) !== Number(p.totalNet) && (
+                      <p className="whitespace-nowrap text-[11.5px] tabular-nums text-slate-500">{m.colGross} {formatCurrency(p.totalGross, currency, locale)}</p>
+                    )}
+                  </div>
+                </div>
 
-                    {/* Status badge */}
-                    <td className="py-3 px-4">
-                      <BrokerPayoutStatusBadge status={p.status} />
-                    </td>
-
-                    {/* Creation date */}
-                    <td className="py-3 px-4 text-2xs text-slate-400 whitespace-nowrap">
-                      {formatDate(p.createdAt, locale)}
-                    </td>
-
-                    {/* Paid date */}
-                    <td className="py-3 px-4">
-                      {p.paidAt ? (
-                        <span className="text-2xs text-slate-500 whitespace-nowrap">
-                          {formatDate(p.paidAt, locale)}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-2xs font-medium text-slate-400">
-                          {m.notPaidYet}
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Action */}
-                    <td className="py-3 ps-4 pe-5">
-                      <Link href={`/dashboard/broker-payouts/${p.id}` as never}>
-                        <IconButton label={m.actionView} variant="ghost" size="sm">
-                          <Eye />
-                        </IconButton>
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                <Link
+                  href={`/dashboard/broker-payouts/${p.id}` as never}
+                  aria-label={m.actionView}
+                  title={m.actionView}
+                  className="hidden h-9 w-9 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900 lg:inline-flex"
+                >
+                  <Eye className="h-4 w-4" />
+                </Link>
+              </li>
+            ))}
+          </ul>
         )}
       </PremiumSectionCard>
 

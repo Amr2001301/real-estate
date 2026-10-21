@@ -1,19 +1,18 @@
 import Link from 'next/link';
-import { BadgePercent, Eye, Briefcase, AlertCircle, SlidersHorizontal } from 'lucide-react';
+import { BadgePercent, Eye, AlertCircle, SlidersHorizontal } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { projectOptions, brokerOptions } from '@/lib/options';
 import type { AdminBrokerCommission, Paged } from '@/lib/types';
-import { tx, formatDate, formatCurrency, intlLocale } from '@/lib/format';
-import { getReportsCurrency } from '@/lib/currency';
+import { tx, formatDate, formatCurrency, intlLocale, compactParts } from '@/lib/format';
+import { getReportsCurrency, currencySymbol } from '@/lib/currency';
+import { Amount, FigureBar } from '@/components/cockpit/cockpit';
 import { Button } from '@/components/ui/button';
-import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { BrokerCommissionStatusBadge } from '@/components/badges';
 import {
   PremiumPageHero,
-  PremiumMetricStrip,
   PremiumFilterBar,
   PremiumFilterField,
   PremiumSectionCard,
@@ -47,6 +46,8 @@ export default async function AdminBrokerCommissionsPage({
 
   const sp = await searchParams;
   const currency = await getReportsCurrency();
+  const symbol = currencySymbol(currency, locale);
+  const word = (ar: string, en: string) => (locale === 'en' ? en : ar);
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({
@@ -123,40 +124,18 @@ export default async function AdminBrokerCommissionsPage({
       />
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
-      <PremiumMetricStrip
-        variant="compact"
-        cols={4}
-        metrics={[
-          {
-            label: m.kpiTotal,
-            value: totalCommissions,
-            icon: <BadgePercent />,
-            tone: 'brand',
-            primary: true,
-          },
-          {
-            label: m.kpiPending,
-            value: counts.pending,
-            icon: <BadgePercent />,
-            tone: 'warning',
-            sub: m.kpiThisPage,
-          },
-          {
-            label: m.kpiApproved,
-            value: counts.approved,
-            icon: <BadgePercent />,
-            tone: 'success',
-            sub: m.kpiThisPage,
-          },
-          {
-            label: m.kpiNetTotal,
-            value: totalNet > 0 ? formatCurrency(totalNet, currency, locale) : '—',
-            icon: <BadgePercent />,
-            tone: 'neutral',
-            sub: m.kpiThisPage,
-          },
-        ]}
-      />
+      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <FigureBar
+          bare
+          cols={4}
+          figures={[
+            { label: m.kpiTotal, value: totalCommissions },
+            { label: m.kpiPending, value: counts.pending, sub: m.kpiThisPage, warn: counts.pending > 0 },
+            { label: m.kpiApproved, value: counts.approved, sub: m.kpiThisPage },
+            { label: m.kpiNetTotal, value: totalNet > 0 ? <Amount parts={compactParts(totalNet, symbol, locale)} /> : '—', sub: m.kpiThisPage },
+          ]}
+        />
+      </section>
 
       {/* ── Error ────────────────────────────────────────────────────────────── */}
       {commRes.error && (
@@ -273,156 +252,84 @@ export default async function AdminBrokerCommissionsPage({
             className="py-12"
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
-                <tr>
-                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">{m.colCommissionNumber}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colBroker}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colContract}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colUnit}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colBasis}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colRate}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colGross}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colNet}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colStatus}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colDueDate}</th>
-                  <th className="text-start py-3 ps-4 pe-5 w-px" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                {rows.map((c) => (
-                  <tr
-                    key={c.id}
-                    className="align-middle hover:bg-canvas/40 transition-colors duration-100"
-                  >
-                    {/* Commission number — mono chip */}
-                    <td className="py-3 ps-5 pe-4">
-                      <span
-                        className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600 leading-none whitespace-nowrap"
-                        dir="ltr"
-                      >
-                        {c.commissionNumber}
+          <ul className="divide-y divide-hairline">
+            {rows.map((c) => (
+              <li
+                key={c.id}
+                data-testid="commission-row"
+                className="grid grid-cols-[auto_1fr_auto] items-center gap-x-6 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[44px_minmax(0,1.3fr)_minmax(200px,1.1fr)_110px_120px_160px_36px]"
+              >
+                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#D8B66A]/[0.14] text-[#B8913F] dark:text-[#D8B66A]">
+                  <BadgePercent className="h-[18px] w-[18px]" />
+                </span>
+
+                <div className="min-w-0">
+                  {c.broker ? (
+                    <Link href={`/dashboard/brokers/${c.broker.id}` as never} className="block truncate text-[14.5px] font-bold text-slate-900 hover:text-brand-700">
+                      {c.broker.companyName}
+                    </Link>
+                  ) : (
+                    <p className="text-[14.5px] font-bold text-slate-400">—</p>
+                  )}
+                  <p className="mt-0.5 truncate text-[12px] text-slate-500">
+                    <span className="me-1 text-slate-400">{word('عمولة', 'Commission')}</span>
+                    <span className="whitespace-nowrap font-mono" dir="ltr">{c.commissionNumber}</span>
+                    {c.brokerAgent && <span className="ms-1.5">· {c.brokerAgent.fullName}</span>}
+                  </p>
+                </div>
+
+                <div className="hidden min-w-0 text-[12.5px] lg:block">
+                  <p className="truncate font-semibold text-slate-800">{c.project ? tx(c.project.name) : '—'}</p>
+                  <p className="mt-0.5 flex flex-col text-[12px] text-slate-500">
+                    {c.unit?.code && (
+                      <span className="whitespace-nowrap">
+                        <span className="me-1 text-slate-400">{word('وحدة', 'Unit')}</span>
+                        <span className="font-mono" dir="ltr">{c.unit.code}</span>
                       </span>
-                    </td>
-
-                    {/* Broker — company primary + agent secondary */}
-                    <td className="py-3 px-4">
-                      {c.broker ? (
-                        <Link
-                          href={`/dashboard/brokers/${c.broker.id}` as never}
-                          className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-brand-700 transition-colors"
-                        >
-                          <Briefcase className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                          <span className="truncate max-w-[160px]">{c.broker.companyName}</span>
-                        </Link>
-                      ) : (
-                        <span className="text-slate-400 text-xs">—</span>
-                      )}
-                      {c.brokerAgent && (
-                        <p className="text-2xs text-slate-400 mt-0.5 truncate max-w-[180px] ps-5">
-                          {c.brokerAgent.fullName}
-                        </p>
-                      )}
-                    </td>
-
-                    {/* Contract — mono chip link + reservation secondary */}
-                    <td className="py-3 px-4">
-                      {c.contract?.contractNumber ? (
-                        <Link
-                          href={`/dashboard/contracts/${c.contractId}` as never}
-                          className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600 leading-none whitespace-nowrap hover:bg-slate-200 transition-colors"
-                          dir="ltr"
-                        >
-                          {c.contract.contractNumber}
-                        </Link>
-                      ) : (
-                        <Link
-                          href={`/dashboard/contracts/${c.contractId}` as never}
-                          className="text-xs text-slate-500 hover:text-brand-700 transition-colors"
-                        >
-                          —
-                        </Link>
-                      )}
-                      {c.reservation?.reservationNumber && (
-                        <p className="text-2xs text-slate-400 mt-0.5 font-mono whitespace-nowrap" dir="ltr">
-                          {c.reservation.reservationNumber}
-                        </p>
-                      )}
-                    </td>
-
-                    {/* Unit / Project — code chip + project muted */}
-                    <td className="py-3 px-4">
-                      {c.unit?.code ? (
-                        <span
-                          className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600 leading-none whitespace-nowrap"
-                          dir="ltr"
-                        >
-                          {c.unit.code}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 text-xs">—</span>
-                      )}
-                      {c.project && (
-                        <p className="text-2xs text-slate-400 mt-1 truncate max-w-[160px]">
-                          {tx(c.project.name)}
-                        </p>
-                      )}
-                    </td>
-
-                    {/* Basis amount */}
-                    <td className="py-3 px-4">
-                      <span className="text-xs text-slate-500 tabular-nums whitespace-nowrap" dir="ltr">
-                        {formatCurrency(c.basisAmount, currency, locale)}
-                      </span>
-                    </td>
-
-                    {/* Commission percentage */}
-                    <td className="py-3 px-4">
-                      <span className="text-xs font-medium text-slate-600 tabular-nums">
-                        {c.commissionPct != null
-                          ? `${Number(c.commissionPct).toFixed(2)}%`
-                          : '—'}
-                      </span>
-                    </td>
-
-                    {/* Gross amount */}
-                    <td className="py-3 px-4">
-                      <span className="text-xs font-medium text-slate-700 tabular-nums whitespace-nowrap" dir="ltr">
-                        {formatCurrency(c.grossAmount, currency, locale)}
-                      </span>
-                    </td>
-
-                    {/* Net amount — strongest, the approval-critical payout figure */}
-                    <td className="py-3 px-4">
-                      <span className="text-sm font-semibold text-slate-900 tabular-nums whitespace-nowrap" dir="ltr">
-                        {formatCurrency(c.netAmount, currency, locale)}
-                      </span>
-                    </td>
-
-                    {/* Status badge */}
-                    <td className="py-3 px-4">
-                      <BrokerCommissionStatusBadge status={c.status} />
-                    </td>
-
-                    {/* Due date */}
-                    <td className="py-3.5 px-4 text-2xs text-slate-400 whitespace-nowrap">
-                      {formatDate(c.earnedAt, locale)}
-                    </td>
-
-                    {/* Action */}
-                    <td className="py-3 ps-4 pe-5">
-                      <Link href={`/dashboard/broker-commissions/${c.id}` as never}>
-                        <IconButton label={m.actionView} variant="ghost" size="sm">
-                          <Eye />
-                        </IconButton>
+                    )}
+                    <span className="whitespace-nowrap">
+                      <span className="me-1 text-slate-400">{word('عقد', 'Contract')}</span>
+                      <Link href={`/dashboard/contracts/${c.contractId}` as never} className="font-mono hover:text-brand-700" dir="ltr">
+                        {c.contract?.contractNumber ?? '—'}
                       </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </span>
+                  </p>
+                </div>
+
+                <div className="hidden text-[12.5px] lg:block">
+                  <p className="text-[11px] text-slate-500">{m.colDueDate}</p>
+                  <p className="font-semibold text-slate-800">{formatDate(c.earnedAt, locale)}</p>
+                </div>
+
+                <div className="hidden lg:block">
+                  <BrokerCommissionStatusBadge status={c.status} locale={locale} />
+                </div>
+
+                <div className="flex items-center gap-3 justify-self-end">
+                  <span className="lg:hidden"><BrokerCommissionStatusBadge status={c.status} locale={locale} /></span>
+                  <div className="text-end">
+                    <p className="whitespace-nowrap text-[15px] font-bold tabular-nums text-slate-900">{formatCurrency(c.netAmount, currency, locale)}</p>
+                    <p className="whitespace-nowrap text-[11.5px] tabular-nums text-slate-500">
+                      {c.commissionPct != null ? `${Number(c.commissionPct).toFixed(2)}% · ` : ''}
+                      {word('من', 'of')} {formatCurrency(c.basisAmount, currency, locale)}
+                    </p>
+                    {Number(c.grossAmount) !== Number(c.netAmount) && (
+                      <p className="whitespace-nowrap text-[11.5px] tabular-nums text-slate-500">{m.colGross} {formatCurrency(c.grossAmount, currency, locale)}</p>
+                    )}
+                  </div>
+                </div>
+
+                <Link
+                  href={`/dashboard/broker-commissions/${c.id}` as never}
+                  aria-label={m.actionView}
+                  title={m.actionView}
+                  className="hidden h-9 w-9 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900 lg:inline-flex"
+                >
+                  <Eye className="h-4 w-4" />
+                </Link>
+              </li>
+            ))}
+          </ul>
         )}
       </PremiumSectionCard>
 

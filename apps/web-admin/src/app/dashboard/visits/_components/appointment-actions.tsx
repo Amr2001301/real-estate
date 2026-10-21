@@ -2,11 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Eye, RefreshCw, UserCheck, CheckCircle, X, UserX } from 'lucide-react';
+import { Eye, RefreshCw, UserCheck, CheckCircle, CheckCheck, X, UserX } from 'lucide-react';
 import type { VisitAppointment, AppointmentStatus } from '@/lib/types';
-import { Button } from '@/components/ui/button';
-import { IconButton } from '@/components/ui/icon-button';
 import { RescheduleModal } from './reschedule-modal';
+import { RowMenu, MenuItem, PrimaryAction } from '@/components/premium/row-menu';
 import { AssignSalesModal } from './assign-sales-modal';
 import { updateAppointmentStatusAction } from '../actions';
 import { uiT } from '@/messages/ui';
@@ -27,86 +26,52 @@ export function AppointmentActions({ appointment, salesOptions, locale = 'ar' }:
 
   const isFinal = FINAL.includes(appointment.status);
 
-  return (
-    <div className="flex items-center gap-1.5 flex-wrap">
-      <Link href={`/dashboard/visits/appointments/${appointment.id}` as never}>
-        <IconButton label={m.ariaViewVisit} variant="outline" size="sm">
-          <Eye />
-        </IconButton>
-      </Link>
+  const canNoShow = new Date(appointment.scheduledAt).getTime() <= Date.now();
 
+  return (
+    <div className="flex items-center justify-end gap-2">
       {!isFinal && (
         <>
-          <span className="w-px h-4 bg-hairline shrink-0" aria-hidden />
-
-          {/* Admin-side confirm. Available only for SCHEDULED rows. */}
+          {/* Admin-side confirm for SCHEDULED; complete needs CONFIRMED (backend guard). */}
           {appointment.status === 'SCHEDULED' && (
-            <form action={updateAppointmentStatusAction.bind(null, appointment.id)} className="contents">
+            <form action={updateAppointmentStatusAction.bind(null, appointment.id)}>
               <input type="hidden" name="status" value="CONFIRMED" />
-              <Button type="submit" variant="subtle" size="sm" leftIcon={<CheckCircle className="h-3.5 w-3.5" />}>
-                {m.confirmBtn}
-              </Button>
+              <PrimaryAction type="submit" icon={<CheckCircle />}>{m.confirmBtn}</PrimaryAction>
             </form>
           )}
-
-          {/* Complete — backend guard requires CONFIRMED. */}
           {appointment.status === 'CONFIRMED' && (
-            <form action={updateAppointmentStatusAction.bind(null, appointment.id)} className="contents">
+            <form action={updateAppointmentStatusAction.bind(null, appointment.id)}>
               <input type="hidden" name="status" value="COMPLETED" />
-              <Button type="submit" variant="ghost" size="sm" className="text-success-700 hover:bg-success-50">
-                {m.completeBtn}
-              </Button>
+              <PrimaryAction type="submit" icon={<CheckCheck />} tone="success">{m.completeBtn}</PrimaryAction>
             </form>
           )}
 
-          <Button
-            variant="ghost"
-            size="sm"
-            leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
-            onClick={() => setRescheduleOpen(true)}
-          >
-            {m.rescheduleBtn}
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            leftIcon={<UserCheck className="h-3.5 w-3.5" />}
-            onClick={() => setAssignOpen(true)}
-          >
-            {m.salesRepBtn}
-          </Button>
-
-          {/* No-show — backend guard rejects before scheduledAt. */}
-          {new Date(appointment.scheduledAt).getTime() <= Date.now() && (
-            <form action={updateAppointmentStatusAction.bind(null, appointment.id)} className="contents">
-              <input type="hidden" name="status" value="NO_SHOW" />
-              <Button
-                type="submit"
-                variant="ghost"
-                size="sm"
-                leftIcon={<UserX className="h-3.5 w-3.5" />}
-                className="text-amber-600 hover:bg-amber-50"
-              >
-                {m.noShowBtn}
-              </Button>
+          <RowMenu label={m.moreActions}>
+            <MenuItem icon={<RefreshCw />} onClick={() => setRescheduleOpen(true)}>{m.rescheduleBtn}</MenuItem>
+            <MenuItem icon={<UserCheck />} onClick={() => setAssignOpen(true)}>{m.changeSalesRepBtn}</MenuItem>
+            {/* No-show — backend guard rejects before scheduledAt. */}
+            {canNoShow && (
+              <form action={updateAppointmentStatusAction.bind(null, appointment.id)}>
+                <input type="hidden" name="status" value="NO_SHOW" />
+                <MenuItem type="submit" icon={<UserX />} tone="warning">{m.noShowBtn}</MenuItem>
+              </form>
+            )}
+            <form action={updateAppointmentStatusAction.bind(null, appointment.id)}>
+              <input type="hidden" name="status" value="CANCELLED" />
+              <MenuItem type="submit" icon={<X />} tone="danger">{m.cancelBtn}</MenuItem>
             </form>
-          )}
-
-          <form action={updateAppointmentStatusAction.bind(null, appointment.id)} className="contents">
-            <input type="hidden" name="status" value="CANCELLED" />
-            <Button
-              type="submit"
-              variant="ghost"
-              size="sm"
-              leftIcon={<X className="h-3.5 w-3.5" />}
-              className="text-danger-600 hover:bg-danger-50"
-            >
-              {m.cancelBtn}
-            </Button>
-          </form>
+          </RowMenu>
         </>
       )}
+
+      <Link
+        href={`/dashboard/visits/appointments/${appointment.id}` as never}
+        aria-label={m.ariaViewVisit}
+        title={m.ariaViewVisit}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900"
+      >
+        <Eye className="h-4 w-4" />
+      </Link>
 
       <RescheduleModal
         appointmentId={appointment.id}
