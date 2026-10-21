@@ -3844,6 +3844,8 @@ const UI = {
       noTitle: 'مستند بدون عنوان',
       ariaOpenFile: 'فتح الملف',
       ariaDocDetails: 'تفاصيل المستند',
+      countSub: (n: number, last: string | null) => (last ? `${n} مستند · آخر رفع ${last}` : `${n} مستند`),
+      linkedTo: 'مرتبط بـ',
     },
     bonusPage: {
       title: 'عمولات ومكافآت المبيعات',
@@ -4122,6 +4124,12 @@ const UI = {
       panelDanger: 'إجراءات',
       deleteConfirm: (title: string) => `سيتم حذف المستند «${title}». الحذف لين فقط (soft) ويبقى السجل لأغراض التدقيق. هل أنت متأكد؟`,
       deleteButton: 'حذف المستند',
+      sectionDetails: 'التفاصيل',
+      fieldLinked: 'مرتبط بـ',
+      openLinked: 'فتح السجل',
+      downloadButton: 'تنزيل',
+      dangerTitle: 'حذف المستند',
+      dangerDesc: 'حذف ليّن: يختفي من القوائم ويبقى في سجل التدقيق.',
     },
     paymentReviewPage: {
       title: 'مراجعة إثباتات الدفع',
@@ -9673,6 +9681,8 @@ const UI = {
       noTitle: 'Untitled Document',
       ariaOpenFile: 'Open File',
       ariaDocDetails: 'Document Details',
+      countSub: (n: number, last: string | null) => (last ? `${n} document${n === 1 ? '' : 's'} · last upload ${last}` : `${n} document${n === 1 ? '' : 's'}`),
+      linkedTo: 'Linked to',
     },
     bonusPage: {
       title: 'Sales Commissions & Bonuses',
@@ -9951,6 +9961,12 @@ const UI = {
       panelDanger: 'Actions',
       deleteConfirm: (title: string) => `Document «${title}» will be deleted. Deletion is soft-only and the record is kept for audit purposes. Are you sure?`,
       deleteButton: 'Delete Document',
+      sectionDetails: 'Details',
+      fieldLinked: 'Linked to',
+      openLinked: 'Open record',
+      downloadButton: 'Download',
+      dangerTitle: 'Delete document',
+      dangerDesc: 'Soft delete: hidden from lists, kept in the audit trail.',
     },
     paymentReviewPage: {
       title: 'Payment Proof Review',
