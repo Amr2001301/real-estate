@@ -646,6 +646,10 @@ const UI = {
           past: 'الزيارات السابقة',
         },
         requestSuffix: 'طلب',
+        requestWord: 'طلب',
+        visitWord: 'زيارة',
+        createdOn: 'أُنشئ',
+        noAgent: 'بدون مندوب',
         visitSuffix: 'زيارة',
         sourceLabels: {
           WEBSITE: 'الموقع',
@@ -3670,6 +3674,7 @@ const UI = {
       visitComponents: {
         // appointment-actions & appointment-detail-actions
         ariaViewVisit: 'عرض تفاصيل الزيارة',
+        moreActions: 'إجراءات أخرى',
         confirmBtn: 'تأكيد',
         confirmVisitBtn: 'تأكيد الزيارة',
         completeBtn: 'تمت',
@@ -6504,6 +6509,10 @@ const UI = {
           past: 'Past Visits',
         },
         requestSuffix: 'requests',
+        requestWord: 'Request',
+        visitWord: 'Visit',
+        createdOn: 'Created',
+        noAgent: 'No agent',
         visitSuffix: 'visits',
         sourceLabels: {
           WEBSITE: 'Website',
@@ -9524,6 +9533,7 @@ const UI = {
       visitComponents: {
         // appointment-actions & appointment-detail-actions
         ariaViewVisit: 'View visit details',
+        moreActions: 'More actions',
         confirmBtn: 'Confirm',
         confirmVisitBtn: 'Confirm Visit',
         completeBtn: 'Done',

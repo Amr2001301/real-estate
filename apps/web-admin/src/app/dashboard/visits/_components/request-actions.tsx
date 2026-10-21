@@ -4,9 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Eye, CalendarPlus, X, Ban } from 'lucide-react';
 import type { VisitRequest, VisitRequestStatus } from '@/lib/types';
-import { Button } from '@/components/ui/button';
-import { IconButton } from '@/components/ui/icon-button';
 import { ScheduleModal } from './schedule-modal';
+import { RowMenu, MenuItem, PrimaryAction } from './row-menu';
 import { updateRequestStatusAction } from '../actions';
 import { uiT } from '@/messages/ui';
 import type { Locale } from '@/lib/locale';
@@ -27,59 +26,33 @@ export function RequestActions({ request, salesOptions, locale = 'ar' }: Props) 
   const isFinal = status !== null && FINAL.includes(status);
 
   return (
-    <div className="flex items-center gap-1.5">
-      <Link href={`/dashboard/visits/requests/${request.id}` as never}>
-        <IconButton label={m.ariaViewVisit} variant="outline" size="sm">
-          <Eye />
-        </IconButton>
-      </Link>
-
+    <div className="flex items-center justify-end gap-2">
       {!isFinal && (
         <>
-          <span className="w-px h-4 bg-hairline shrink-0" aria-hidden />
-
-          <Button
-            variant="subtle"
-            size="sm"
-            leftIcon={<CalendarPlus className="h-3.5 w-3.5" />}
-            onClick={() => setScheduleOpen(true)}
-          >
+          <PrimaryAction icon={<CalendarPlus />} onClick={() => setScheduleOpen(true)}>
             {m.scheduleBtn}
-          </Button>
-
-          <form
-            action={updateRequestStatusAction.bind(null, request.id)}
-            className="contents"
-          >
-            <input type="hidden" name="status" value="REJECTED" />
-            <Button
-              type="submit"
-              variant="ghost"
-              size="sm"
-              leftIcon={<X className="h-3.5 w-3.5" />}
-              className="text-danger-600 hover:text-danger-700 hover:bg-danger-50"
-            >
-              {m.rejectBtn}
-            </Button>
-          </form>
-
-          <form
-            action={updateRequestStatusAction.bind(null, request.id)}
-            className="contents"
-          >
-            <input type="hidden" name="status" value="CANCELLED" />
-            <Button
-              type="submit"
-              variant="ghost"
-              size="sm"
-              leftIcon={<Ban className="h-3.5 w-3.5" />}
-              className="text-slate-500 hover:text-slate-700"
-            >
-              {m.cancelBtn}
-            </Button>
-          </form>
+          </PrimaryAction>
+          <RowMenu label={m.moreActions}>
+            <form action={updateRequestStatusAction.bind(null, request.id)}>
+              <input type="hidden" name="status" value="REJECTED" />
+              <MenuItem type="submit" icon={<X />} tone="danger">{m.rejectBtn}</MenuItem>
+            </form>
+            <form action={updateRequestStatusAction.bind(null, request.id)}>
+              <input type="hidden" name="status" value="CANCELLED" />
+              <MenuItem type="submit" icon={<Ban />}>{m.cancelBtn}</MenuItem>
+            </form>
+          </RowMenu>
         </>
       )}
+
+      <Link
+        href={`/dashboard/visits/requests/${request.id}` as never}
+        aria-label={m.ariaViewVisit}
+        title={m.ariaViewVisit}
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900"
+      >
+        <Eye className="h-4 w-4" />
+      </Link>
 
       <ScheduleModal
         requestId={request.id}

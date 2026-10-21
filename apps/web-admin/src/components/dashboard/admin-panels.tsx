@@ -128,6 +128,7 @@ export function ActivityPanel({
   empty,
   items,
   money,
+  className,
 }: {
   title: string;
   sub: string;
@@ -135,9 +136,10 @@ export function ActivityPanel({
   empty: string;
   items: Array<ActivityItem & { count: number }>;
   money: Money;
+  className?: string;
 }) {
   return (
-    <PremiumPanel title={title} sub={sub} link={link} padding="none">
+    <PremiumPanel title={title} sub={sub} link={link} padding="none" className={className}>
       {items.length === 0 ? (
         <div className="px-6 pb-6"><PremiumEmptyNote>{empty}</PremiumEmptyNote></div>
       ) : (
@@ -194,6 +196,7 @@ export function LeaderboardPanel({
   empty,
   rows,
   money,
+  className,
 }: {
   title: string;
   sub: string;
@@ -201,10 +204,11 @@ export function LeaderboardPanel({
   empty: string;
   rows: LeaderRow[];
   money: Money;
+  className?: string;
 }) {
   const ranked = rows.filter((r) => r.value > 0);
   return (
-    <PremiumPanel title={title} sub={sub} link={link}>
+    <PremiumPanel title={title} sub={sub} link={link} className={className}>
       {ranked.length === 0 ? (
         <PremiumEmptyNote>{empty}</PremiumEmptyNote>
       ) : (
@@ -274,10 +278,22 @@ export interface FunnelStage {
 }
 
 /** Slim bars scaled to the largest stage. */
-export function FunnelPanel({ title, sub, stages, footnote }: { title: string; sub: string; stages: FunnelStage[]; footnote?: string }) {
+export function FunnelPanel({
+  title,
+  sub,
+  stages,
+  footnote,
+  className,
+}: {
+  title: string;
+  sub: string;
+  stages: FunnelStage[];
+  footnote?: string;
+  className?: string;
+}) {
   const max = Math.max(1, ...stages.map((s) => s.value));
   return (
-    <PremiumPanel title={title} sub={sub}>
+    <PremiumPanel title={title} sub={sub} className={className}>
       <div className="space-y-4">
         {stages.map((s) => (
           <div key={s.label}>
@@ -312,6 +328,14 @@ export interface ProjectHealth {
   value: number;
 }
 
+function xlSpan(i: number, n: number): string {
+  const rest = n % 3;
+  const inLastRow = i >= n - rest;
+  if (rest === 2 && inLastRow) return 'xl:col-span-3';
+  if (rest === 1 && inLastRow) return 'xl:col-span-6';
+  return 'xl:col-span-2';
+}
+
 export function ProjectHealthPanel({
   title,
   sub,
@@ -329,12 +353,17 @@ export function ProjectHealthPanel({
 }) {
   return (
     <PremiumPanel title={title} sub={sub} link={link}>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {projects.map((p) => (
+      {/* Six tracks at xl: three cards a row, and a short last row widens
+          (two → halves, one → full) instead of leaving a hole. */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+        {projects.map((p, i) => (
           <Link
             key={p.id}
             href={`/dashboard/projects/${p.id}` as never}
-            className="rounded-[18px] border border-hairline bg-surface-muted p-5 transition-colors hover:border-brand-400/50"
+            className={cn(
+              'rounded-[18px] border border-hairline bg-surface-muted p-5 transition-colors hover:border-brand-400/50',
+              xlSpan(i, projects.length),
+            )}
           >
             <div className="flex items-start justify-between gap-3">
               <span className="font-heading text-[16px] font-bold text-slate-900">{p.name}</span>
@@ -360,6 +389,7 @@ export function FinancialHealthPanel({
   fees,
   labels,
   money,
+  className,
 }: {
   title: string;
   sub: string;
@@ -369,6 +399,7 @@ export function FinancialHealthPanel({
   fees: number;
   labels: { ofValue: string; collected: string; notYetDue: string; overdue: string; fees: string };
   money: Money;
+  className?: string;
 }) {
   const notYetDue = Math.max(0, total - collected - overdue);
   const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
@@ -378,7 +409,7 @@ export function FinancialHealthPanel({
     { label: labels.overdue, value: overdue, dot: 'border border-danger-600 bg-transparent' },
   ];
   return (
-    <PremiumPanel title={title} sub={sub}>
+    <PremiumPanel title={title} sub={sub} className={className}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <Money value={total} money={money} size="lg" />
         <p className="text-[13px] text-slate-500">
@@ -473,6 +504,7 @@ export function CashFlowPanel({
   slots,
   pctOfTotal,
   money,
+  className,
 }: {
   title: string;
   sub: ReactNode;
@@ -480,10 +512,11 @@ export function CashFlowPanel({
   slots: Array<{ label: string; value: number; overdue?: boolean }>;
   pctOfTotal: (pct: number) => string;
   money: Money;
+  className?: string;
 }) {
   const total = slots.reduce((a, s) => a + s.value, 0);
   return (
-    <PremiumPanel title={title} sub={sub} link={link} padding="none">
+    <PremiumPanel title={title} sub={sub} link={link} padding="none" className={className}>
       <div className="grid grid-cols-2 gap-px border-t border-hairline bg-hairline lg:grid-cols-4">
         {slots.map((s) => {
           const pct = total > 0 ? Math.round((s.value / total) * 100) : 0;

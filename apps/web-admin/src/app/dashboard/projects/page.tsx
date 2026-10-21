@@ -268,7 +268,8 @@ export default async function ProjectsPage({
                     <RowTitle
                       title={tx(p.name)}
                       href={`/dashboard/projects/${p.id}`}
-                      code={`PJ-${p.id.slice(0, 8).toUpperCase()}`}
+                      code={p.code || undefined}
+                      codeLabel={locale === 'en' ? 'Code' : 'كود'}
                       icon={
                         cover ? (
                           <ProjectThumbnail src={cover} alt={tx(p.name)} size="md" />

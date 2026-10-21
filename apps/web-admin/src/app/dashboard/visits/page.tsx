@@ -1,29 +1,18 @@
 import Link from 'next/link';
-import {
-  CalendarClock,
-  CalendarCheck,
-  CalendarDays,
-  Clock,
-  AlertCircle,
-  Plus,
-} from 'lucide-react';
+import { CalendarClock, CalendarDays, AlertCircle, Plus, Phone, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { api, safe } from '@/lib/api';
 import { staffOptions } from '@/lib/options';
-import { getLocale } from '@/lib/locale';
+import { getLocale, type Locale } from '@/lib/locale';
 import type { Paged, VisitRequest, VisitAppointment } from '@/lib/types';
-import { formatDate, formatDateTime, tx } from '@/lib/format';
+import { formatDate, formatTime, intlLocale, tx, DEFAULT_TIME_ZONE } from '@/lib/format';
+import { cn } from '@/lib/cn';
+import { Avatar, FigureBar } from '@/components/cockpit/cockpit';
 import { Tabs } from '@/components/ui/tabs';
 import { VisitRequestStatusBadge, AppointmentStatusBadge } from '@/components/badges';
 import { RequestActions } from './_components/request-actions';
 import { AppointmentActions } from './_components/appointment-actions';
-import {
-  PremiumPageHero,
-  PremiumMetricStrip,
-  PremiumSectionCard,
-  PremiumEmptyState,
-} from '@/components/premium';
-import { CodeCell, PersonCell, StackCell } from '@/components/premium/list-cells';
+import { PremiumPageHero, PremiumSectionCard, PremiumEmptyState } from '@/components/premium';
 import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
@@ -154,36 +143,18 @@ export default async function VisitsPage({
         }
       />
 
-      <PremiumMetricStrip
-        variant="compact"
-        metrics={[
-          {
-            label: m.kpi.newRequests,
-            value: stats?.newRequests ?? '—',
-            icon: <CalendarClock className="h-4 w-4" />,
-            tone: 'info',
-          },
-          {
-            label: m.kpi.today,
-            value: stats?.todayVisits ?? '—',
-            icon: <CalendarDays className="h-4 w-4" />,
-            primary: true,
-            tone: 'brand',
-          },
-          {
-            label: m.kpi.thisWeek,
-            value: stats?.weekVisits ?? '—',
-            icon: <CalendarCheck className="h-4 w-4" />,
-            tone: 'success',
-          },
-          {
-            label: m.kpi.needConfirm,
-            value: stats?.pendingConfirmation ?? '—',
-            icon: <Clock className="h-4 w-4" />,
-            tone: 'warning',
-          },
-        ]}
-      />
+      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <FigureBar
+          bare
+          cols={4}
+          figures={[
+            { label: m.kpi.newRequests, value: stats?.newRequests ?? '—', href: '/dashboard/visits?tab=requests', warn: (stats?.newRequests ?? 0) > 0 },
+            { label: m.kpi.today, value: stats?.todayVisits ?? '—', href: '/dashboard/visits?tab=today' },
+            { label: m.kpi.thisWeek, value: stats?.weekVisits ?? '—' },
+            { label: m.kpi.needConfirm, value: stats?.pendingConfirmation ?? '—', href: '/dashboard/visits?tab=appointments', warn: (stats?.pendingConfirmation ?? 0) > 0 },
+          ]}
+        />
+      </section>
 
       <Tabs items={tabs} activeHref={activeHref} />
 
@@ -205,90 +176,49 @@ export default async function VisitsPage({
           padded={false}
         >
           {requestsData.length === 0 ? (
-            <PremiumEmptyState
-              icon={<CalendarClock />}
-              title={m.empty.noRequests}
-            />
+            <PremiumEmptyState icon={<CalendarClock />} title={m.empty.noRequests} />
           ) : (
-            <div className="overflow-x-auto scrollbar-thin">
-              <table className="w-full text-sm">
-                <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
-                  <tr>
-                    <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">{m.requestCols.id}</th>
-                    <th className="text-start py-3 px-4">{m.requestCols.client}</th>
-                    <th className="text-start py-3 px-4">{m.requestCols.project}</th>
-                    <th className="text-start py-3 px-4 whitespace-nowrap">{m.requestCols.preferredDate}</th>
-                    <th className="text-start py-3 px-4">{m.requestCols.source}</th>
-                    <th className="text-start py-3 px-4">{m.requestCols.status}</th>
-                    <th className="text-start py-3 px-4 whitespace-nowrap">{m.requestCols.created}</th>
-                    <th className="py-3 ps-4 pe-5" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-hairline">
-                  {requestsData.map((r) => {
-                    const { name, isFallback } = resolvedName(
-                      m.noClientName,
-                      r.customerName,
-                      r.user?.fullName,
-                      r.lead?.fullName,
-                    );
-                    return (
-                      <tr
-                        key={r.id}
-                        className="hover:bg-brand-500/[0.04] transition-colors duration-100 align-middle"
-                      >
-                        <td className="py-3.5 ps-5 pe-4">
-                          <CodeCell
-                            href={`/dashboard/visits/requests/${r.id}`}
-                            code={r.requestNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
-                            muted={!r.requestNumber}
-                          />
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <PersonCell
-                            name={name}
-                            muted={isFallback}
-                            sub={r.customerPhone ?? r.user?.phone ?? r.lead?.phone}
-                          />
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <StackCell
-                            main={tx(r.project?.name) || '—'}
-                            sub={r.unit ? `${m.unitPrefix} ${r.unit.code}` : undefined}
-                          />
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <StackCell
-                            main={<span className="tabular-nums">{formatDate(r.preferredDate, locale)}</span>}
-                            sub={r.preferredTime ? <span className="tabular-nums" dir="ltr">{r.preferredTime}</span> : undefined}
-                          />
-                        </td>
-                        <td className="py-3.5 px-4 whitespace-nowrap">
-                          {r.source ? (
-                            <span className="rounded-full bg-sky-500/12 px-2.5 py-1 text-[11.5px] font-semibold text-sky-600">
-                              {SOURCE_LABEL[r.source] ?? r.source}
-                            </span>
-                          ) : '—'}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          {r.requestStatus ? (
-                            <VisitRequestStatusBadge status={r.requestStatus} locale={locale} />
-                          ) : (
-                            <span className="text-xs text-slate-400">—</span>
-                          )}
-                        </td>
-                        <td className="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">
-                          {formatDate(r.createdAt, locale)}
-                        </td>
-                        <td className="py-3.5 ps-4 pe-5 text-end whitespace-nowrap">
-                          <RequestActions request={r} salesOptions={salesOptions} locale={locale} />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <ul className="divide-y divide-hairline" data-testid="visit-rows">
+              {requestsData.map((r) => {
+                const { name, isFallback } = resolvedName(
+                  m.noClientName,
+                  r.customerName,
+                  r.user?.fullName,
+                  r.lead?.fullName,
+                );
+                return (
+                  <li key={r.id} data-testid="visit-row" className={ROW}>
+                    {/* Date-only: stored as midnight UTC, so read in UTC. */}
+                    <DateTile value={r.preferredDate} time={r.preferredTime} timeZone="UTC" locale={locale} />
+                    <ClientCell
+                      name={name}
+                      muted={isFallback}
+                      phone={r.customerPhone ?? r.user?.phone ?? r.lead?.phone}
+                      href={`/dashboard/visits/requests/${r.id}`}
+                      kind={m.requestWord}
+                      code={r.requestNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
+                    />
+                    <PlaceCell project={tx(r.project?.name)} unit={r.unit?.code} unitWord={m.unitPrefix.replace(':', '')} />
+                    <div className="hidden min-w-0 text-[12.5px] lg:block">
+                      <p className="truncate font-semibold text-slate-800">
+                        {r.source ? SOURCE_LABEL[r.source] ?? r.source : '—'}
+                      </p>
+                      <p className="mt-0.5 whitespace-nowrap text-slate-500">
+                        {m.createdOn} {formatDate(r.createdAt, locale)}
+                      </p>
+                    </div>
+                    <div className="hidden lg:block">
+                      {r.requestStatus ? (
+                        <VisitRequestStatusBadge status={r.requestStatus} locale={locale} />
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
+                    </div>
+                    <RequestActions request={r} salesOptions={salesOptions} locale={locale} />
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </PremiumSectionCard>
       )}
@@ -304,74 +234,151 @@ export default async function VisitsPage({
           padded={false}
         >
           {appointmentsData.length === 0 ? (
-            <PremiumEmptyState
-              icon={<CalendarDays />}
-              title={m.empty.noVisits}
-            />
+            <PremiumEmptyState icon={<CalendarDays />} title={m.empty.noVisits} />
           ) : (
-            <div className="overflow-x-auto scrollbar-thin">
-              <table className="w-full text-sm">
-                <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
-                  <tr>
-                    <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">{m.appointmentCols.id}</th>
-                    <th className="text-start py-3 px-4">{m.appointmentCols.client}</th>
-                    <th className="text-start py-3 px-4">{m.appointmentCols.project}</th>
-                    <th className="text-start py-3 px-4">{m.appointmentCols.scheduled}</th>
-                    <th className="text-start py-3 px-4">{m.appointmentCols.agent}</th>
-                    <th className="text-start py-3 px-4">{m.appointmentCols.status}</th>
-                    <th className="py-3 ps-4 pe-5" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-hairline">
-                  {appointmentsData.map((a) => {
-                    const { name, isFallback } = resolvedName(
-                      m.noClientName,
-                      a.client?.fullName,
-                      a.lead?.fullName,
-                      a.visitRequest?.customerName,
-                    );
-                    return (
-                      <tr
-                        key={a.id}
-                        className="hover:bg-brand-500/[0.04] transition-colors duration-100 align-middle"
-                      >
-                        <td className="py-3.5 ps-5 pe-4">
-                          <CodeCell href={`/dashboard/visits/appointments/${a.id}`} code={a.visitNumber} />
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <PersonCell
-                            name={name}
-                            muted={isFallback}
-                            sub={a.client?.phone ?? a.lead?.phone ?? a.visitRequest?.customerPhone}
-                          />
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <StackCell
-                            main={tx(a.project?.name) || '—'}
-                            sub={a.unit ? `${m.unitPrefix} ${a.unit.code}` : undefined}
-                          />
-                        </td>
-                        <td className="py-3.5 px-4 text-xs text-slate-700 whitespace-nowrap">
-                          {formatDateTime(a.scheduledAt, locale)}
-                        </td>
-                        <td className="py-3.5 px-4 text-sm text-slate-700 whitespace-nowrap">
-                          {a.assignedSales?.fullName ?? '—'}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <AppointmentStatusBadge status={a.status} locale={locale} />
-                        </td>
-                        <td className="py-3.5 ps-4 pe-5 text-end whitespace-nowrap">
-                          <AppointmentActions appointment={a} salesOptions={salesOptions} locale={locale} />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <ul className="divide-y divide-hairline" data-testid="visit-rows">
+              {appointmentsData.map((a) => {
+                const { name, isFallback } = resolvedName(
+                  m.noClientName,
+                  a.client?.fullName,
+                  a.lead?.fullName,
+                  a.visitRequest?.customerName,
+                );
+                return (
+                  <li key={a.id} data-testid="visit-row" className={ROW}>
+                    <DateTile
+                      value={a.scheduledAt}
+                      time={formatTime(a.scheduledAt, locale)}
+                      timeZone={DEFAULT_TIME_ZONE}
+                      locale={locale}
+                    />
+                    <ClientCell
+                      name={name}
+                      muted={isFallback}
+                      phone={a.client?.phone ?? a.lead?.phone ?? a.visitRequest?.customerPhone}
+                      href={`/dashboard/visits/appointments/${a.id}`}
+                      kind={m.visitWord}
+                      code={a.visitNumber}
+                    />
+                    <PlaceCell project={tx(a.project?.name)} unit={a.unit?.code} unitWord={m.unitPrefix.replace(':', '')} />
+                    <div className="hidden min-w-0 items-center gap-2.5 lg:flex">
+                      {a.assignedSales ? (
+                        <>
+                          <Avatar name={a.assignedSales.fullName} className="h-8 w-8 text-[11px]" />
+                          <div className="min-w-0 text-[12.5px]">
+                            <p className="text-[11px] text-slate-400">{m.appointmentCols.agent}</p>
+                            <p className="truncate font-semibold text-slate-800">{a.assignedSales.fullName}</p>
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-[12.5px] text-slate-400">{m.noAgent}</span>
+                      )}
+                    </div>
+                    <div className="hidden lg:block">
+                      <AppointmentStatusBadge status={a.status} locale={locale} />
+                    </div>
+                    <AppointmentActions appointment={a} salesOptions={salesOptions} locale={locale} />
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </PremiumSectionCard>
       )}
+    </div>
+  );
+}
+
+const ROW =
+  'grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[64px_minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,1fr)_190px_170px]';
+
+/** A small calendar leaf: weekday, day number, month; the time beneath. */
+function DateTile({
+  value,
+  time,
+  timeZone,
+  locale,
+}: {
+  value: string | null | undefined;
+  time?: string | null;
+  timeZone: string;
+  locale: Locale;
+}) {
+  const d = value ? new Date(value) : null;
+  if (!d || Number.isNaN(d.getTime())) {
+    return <div className="h-[68px] w-16 rounded-2xl border border-dashed border-hairline" />;
+  }
+  const loc = intlLocale(locale);
+  const part = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(loc, { ...o, timeZone }).format(d);
+  return (
+    <div className="flex w-16 flex-col items-center overflow-hidden rounded-2xl border border-hairline bg-surface-muted/40 text-center">
+      <span className="w-full bg-[#C9A24E]/12 py-0.5 text-[10.5px] font-bold text-brand-700">{part({ weekday: 'short' })}</span>
+      <span className="pt-1 text-[22px] font-bold leading-none tabular-nums text-slate-900">{part({ day: 'numeric' })}</span>
+      <span className="pb-1 text-[11px] font-semibold text-slate-500">{part({ month: 'short' })}</span>
+      {time && (
+        <span dir="ltr" className="w-full border-t border-hairline py-0.5 text-[10.5px] font-semibold tabular-nums text-slate-600">
+          {time}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function ClientCell({
+  name,
+  muted,
+  phone,
+  href,
+  kind,
+  code,
+}: {
+  name: string;
+  muted?: boolean;
+  phone?: string | null;
+  href: string;
+  kind: string;
+  code: string;
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-3">
+      <Avatar name={name} />
+      <div className="min-w-0">
+        <Link
+          href={href as never}
+          className={cn('block truncate text-[14.5px] font-bold hover:text-brand-700', muted ? 'text-slate-400' : 'text-slate-900')}
+        >
+          {name}
+        </Link>
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-slate-500">
+          <Link href={href as never} data-testid="list-code" className="whitespace-nowrap hover:text-brand-700">
+            <span className="me-1 text-slate-400">{kind}</span>
+            <span className="font-mono font-semibold text-brand-700" dir="ltr">{code}</span>
+          </Link>
+          {phone && (
+            <span className="inline-flex items-center gap-1 tabular-nums">
+              <Phone className="h-3 w-3 shrink-0" />
+              <span dir="ltr">{phone}</span>
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PlaceCell({ project, unit, unitWord }: { project: string; unit?: string | null; unitWord: string }) {
+  return (
+    <div className="hidden min-w-0 items-start gap-2 text-[12.5px] lg:flex">
+      <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A24E]" />
+      <div className="min-w-0">
+        <p className="truncate font-semibold text-slate-800">{project || '—'}</p>
+        {unit && (
+          <p className="mt-0.5 text-slate-500">
+            <span className="me-1 text-slate-400">{unitWord}</span>
+            <span className="whitespace-nowrap font-mono" dir="ltr">{unit}</span>
+          </p>
+        )}
+      </div>
     </div>
   );
 }
