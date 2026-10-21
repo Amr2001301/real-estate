@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useActionState, type ReactNode } from 'react';
 import { AlertCircle, CheckCircle2, X } from 'lucide-react';
 import { Field } from '@/components/form/field';
 import { SubmitButton } from '@/components/form/submit-button';
@@ -23,6 +23,10 @@ import {
 interface Props {
   broker?: Broker;
   locale?: Locale;
+  /** Extra steps after the form's own (edit page: status, payout hold). */
+  extraNav?: Array<{ id: string; num: string; label: string; sub: string }>;
+  /** Their panels; they submit through their own forms (the `form` attribute), not this one. */
+  extraPanels?: ReactNode;
 }
 
 function dateInputValue(value: string | null | undefined): string | undefined {
@@ -35,7 +39,7 @@ function pctValue(value: string | number | null | undefined): string | number | 
   return typeof value === 'string' ? value : value;
 }
 
-export default function BrokerForm({ broker, locale = 'ar' }: Props) {
+export default function BrokerForm({ broker, locale = 'ar', extraNav = [], extraPanels }: Props) {
   const m = uiT(locale).pages.brokersForm;
   const action = broker
     ? updateBrokerAction.bind(null, broker.id)
@@ -51,6 +55,7 @@ export default function BrokerForm({ broker, locale = 'ar' }: Props) {
     { id: 'section-legal',      num: '03', label: m.navLegal.label,      sub: m.navLegal.sub },
     { id: 'section-commission', num: '04', label: m.navCommission.label, sub: m.navCommission.sub },
     { id: 'section-notes',      num: '05', label: m.navNotes.label,      sub: m.navNotes.sub },
+    ...extraNav,
   ];
 
   return (
@@ -273,6 +278,8 @@ export default function BrokerForm({ broker, locale = 'ar' }: Props) {
             />
           </Field>
         </PremiumFormPanel>
+
+        {extraPanels}
       </PremiumFormLayout>
 
       <FormFooter
