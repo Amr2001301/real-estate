@@ -119,7 +119,10 @@ function makePrismaMock() {
       findMany: jest.fn().mockResolvedValue([]),
     },
     contract: {
-      count: jest.fn().mockResolvedValue(2),
+      // An unsigned contract with a payment already due is counted apart.
+      count: jest.fn().mockImplementation(async (args?: { where?: { installmentPlan?: unknown } }) =>
+        args?.where?.installmentPlan ? 1 : 2,
+      ),
       aggregate: jest.fn().mockResolvedValue(ZERO_AGG),
       findMany: jest.fn().mockResolvedValue([
         { id: 'c1', contractNumber: 'CON-9', createdAt: new Date('2026-05-31T08:00:00Z'), customer: { fullName: 'سارة' } },
@@ -261,6 +264,7 @@ describe('GET /reports/admin-summary (P14)', () => {
     const res = await request(app.getHttpServer()).get('/reports/admin-summary').expect(200);
     expect(res.body.alerts).toEqual({
       contractsAwaitingSignature: 2,
+      contractsDueBeforeSigning: 1,
       depositsPendingReview: 3,
       openMaintenance: 5,
       reservationsExpiringSoon: 1,

@@ -40,9 +40,14 @@ describe('Y1 — due dates are days (e2e)', () => {
       dueToDate: number;
       collectedAgainstDue: number;
     };
+  const alerts = async () =>
+    (await asAdmin(http().get('/v1/reports/admin-summary')).expect(200)).body.alerts as {
+      contractsAwaitingSignature: number;
+      contractsDueBeforeSigning: number;
+    };
 
   /** A 1,000,000 unit on a 12-month plan (50,000 booking, 200,000 down), converted from `startsAt`. */
-  const sell = async (n: number, startsAt: string): Promise<Sale> => {
+  const sell = async (n: number, startsAt: string, sign = true): Promise<Sale> => {
     const raw = testApp.rawPrisma;
     const unitId = (
       await raw.unit.create({
@@ -100,9 +105,11 @@ describe('Y1 — due dates are days (e2e)', () => {
     sale.contractId = (
       await raw.contract.findFirstOrThrow({ where: { reservationId }, select: { id: true } })
     ).id;
-    await asAdmin(http().post(`/v1/contracts/${sale.contractId}/sign`))
-      .send({ signedAt: new Date().toISOString() })
-      .expect(201);
+    if (sign) {
+      await asAdmin(http().post(`/v1/contracts/${sale.contractId}/sign`))
+        .send({ signedAt: new Date().toISOString() })
+        .expect(201);
+    }
     return sale;
   };
   const rowsOf = async (s: Sale) =>
@@ -207,5 +214,18 @@ describe('Y1 — due dates are days (e2e)', () => {
     const first = rows.find((r) => r.type === PlanPaymentType.INSTALLMENT)!;
     expect(day(down.dueDate)).toBe(day(startsAt));
     expect(down.dueDate.getTime()).toBeLessThanOrEqual(first.dueDate.getTime());
+  });
+
+  it('Y1-3: an unsigned contract whose down payment is due shows in the dashboard\'s needs-action', async () => {
+    const before = await alerts();
+    const sale = await sell(3, day(new Date(Date.now() + 40 * DAY)), false);
+    const unsigned = await alerts();
+    expect(unsigned.contractsAwaitingSignature - before.contractsAwaitingSignature).toBe(1);
+    expect(unsigned.contractsDueBeforeSigning - before.contractsDueBeforeSigning).toBe(1);
+
+    await asAdmin(http().post(`/v1/contracts/${sale.contractId}/sign`))
+      .send({ signedAt: new Date().toISOString() })
+      .expect(201);
+    expect(await alerts()).toMatchObject(before);
   });
 });
