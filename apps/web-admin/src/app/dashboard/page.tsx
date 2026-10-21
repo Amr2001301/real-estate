@@ -385,6 +385,7 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
         {fin && (
           <div className="lg:col-span-2">
             <FinancialHealthPanel
+              className="h-full"
               title={m.u5.healthTitle}
               sub={m.u5.healthSub}
               total={total}

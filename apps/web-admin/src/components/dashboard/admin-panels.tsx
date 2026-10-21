@@ -452,12 +452,14 @@ export function LeadSourcesPanel({
       {total === 0 ? (
         <PremiumEmptyNote>{empty}</PremiumEmptyNote>
       ) : (
-        <div className="flex flex-wrap items-center gap-6">
-          <div className="flex h-32 w-32 shrink-0 flex-col items-center justify-center rounded-full border-[6px] border-[#C79A3B]">
+        // Ring and list stay side by side at any width (they used to wrap
+        // the ring above the list in a narrow column).
+        <div className="flex items-center gap-5">
+          <div className="flex h-28 w-28 shrink-0 flex-col items-center justify-center rounded-full border-[6px] border-[#C79A3B]">
             <span className="num text-[38px] font-semibold leading-none text-slate-900">{total}</span>
             <span className="mt-1 text-[11px] text-slate-500">{centerSub}</span>
           </div>
-          <ul className="min-w-[160px] flex-1 space-y-3">
+          <ul className="min-w-0 flex-1 space-y-3">
             {slices.map((s) => {
               const pct = Math.round((s.value / total) * 100);
               return (
