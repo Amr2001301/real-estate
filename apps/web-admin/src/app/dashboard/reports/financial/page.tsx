@@ -149,6 +149,11 @@ export default async function FinancialReportsPage({
   const againstDue     = num(s?.collectedAgainstDue ?? s?.collectedTowardsPrice);
   const collectionRate = dueToDate > 0 ? Math.min(100, Math.round((againstDue / dueToDate) * 100)) : 0;
   const overdueRate    = dueToDate > 0 ? parseFloat(((overdueAmt / dueToDate) * 100).toFixed(1)) : 0;
+  // The rest of what is left of the due: not late — a payment awaiting
+  // confirmation, or a row falling due today. Late + this = what is left.
+  const notLateAmt     = Math.max(0, dueToDate - againstDue - overdueAmt);
+  // Taken from the two shown figures so the three read 100% exactly.
+  const notLateRate    = notLateAmt > 0 ? Math.max(0, parseFloat((100 - collectionRate - overdueRate).toFixed(1))) : 0;
   const en = locale === 'en';
   const portfolio = dash?.portfolio;
   const pGross = num(portfolio?.grossValue);
@@ -281,10 +286,12 @@ export default async function FinancialReportsPage({
                     {m.collectionEfficiency.overdueLabel}{' '}
                     <b className={cn('tabular-nums', overdueRate > 0 ? 'text-danger-600' : 'text-slate-700')}>{overdueRate}%</b>
                   </span>
-                  <span className="text-slate-500">
-                    {m.collectionEfficiency.remainingLabel}{' '}
-                    <b className="text-slate-700 tabular-nums">{dueToDate > 0 ? 100 - collectionRate : 0}%</b>
-                  </span>
+                  {notLateRate > 0 && (
+                    <span className="text-slate-500" data-testid="fin-not-late">
+                      {en ? 'Awaiting confirmation / due today' : 'بانتظار التأكيد أو مستحق اليوم'}{' '}
+                      <b className="text-sky-600 tabular-nums">{notLateRate}%</b>
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
