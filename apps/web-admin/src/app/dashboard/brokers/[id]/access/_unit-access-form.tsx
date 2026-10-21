@@ -21,9 +21,9 @@ function FormField({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">{label}</p>
+      <p className="text-[12.5px] font-semibold text-slate-700">{label}</p>
       {children}
-      {hint && <p className="text-[11px] text-slate-400 mt-0.5">{hint}</p>}
+      {hint && <p className="text-[11.5px] text-slate-500">{hint}</p>}
     </div>
   );
 }
@@ -48,7 +48,7 @@ export function UnitAccessGrantForm({ action, projects, locale = 'ar' }: Props) 
   }`;
 
   return (
-    <form action={action} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <form action={action} className="grid grid-cols-1 md:grid-cols-2 gap-5">
       <FormField label={m.unitProject}>
         <Select
           id="_project"
@@ -88,13 +88,14 @@ export function UnitAccessGrantForm({ action, projects, locale = 'ar' }: Props) 
       </FormField>
 
       {/* Checkboxes + submit on the same row */}
-      <div className="md:col-span-2 flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-hairline">
+      <div className="md:col-span-2 flex flex-wrap items-center justify-between gap-4 border-t border-hairline pt-5">
         <div className="flex flex-wrap items-center gap-5">
-          <label className="inline-flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer select-none">
-            <Checkbox name="active" defaultChecked />
-            <span>{m.activeLabel}</span>
+          <label className="inline-flex cursor-pointer select-none items-center gap-3">
+            <input type="checkbox" name="active" defaultChecked className="peer sr-only" />
+            <span className="relative h-6 w-11 shrink-0 rounded-full bg-slate-500/25 transition-colors after:absolute after:start-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-[#C9A24E] peer-checked:after:translate-x-5 rtl:peer-checked:after:-translate-x-5" />
+            <span className="text-[13px] font-semibold text-slate-700">{m.activeLabel}</span>
           </label>
-          <label className="inline-flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer select-none">
+          <label className="inline-flex items-center gap-2 text-[13px] text-slate-600 cursor-pointer select-none">
             <Checkbox
               checked={showAll}
               onChange={(e) => setShowAll(e.currentTarget.checked)}
