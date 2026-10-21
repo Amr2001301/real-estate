@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowUpRight, ChevronLeft, Download, ExternalLink, Trash2 } from 'lucide-react';
+import { ArrowUpRight, Download, ExternalLink, Trash2 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { DocumentItem } from '@/lib/types';
 import { formatDateTime } from '@/lib/format';
@@ -63,13 +63,6 @@ export default async function DocumentDetailPage({
           { label: m.breadcrumbDocuments, href: '/dashboard/documents' },
           { label: doc.title },
         ]}
-        actions={
-          <Link href="/dashboard/documents">
-            <Button variant="ghost" size="md" leftIcon={<ChevronLeft className="h-4 w-4 rtl:rotate-180" />}>
-              {m.backButton}
-            </Button>
-          </Link>
-        }
       />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3 xl:items-start">
