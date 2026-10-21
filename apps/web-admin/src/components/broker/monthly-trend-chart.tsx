@@ -27,9 +27,12 @@ const C = {
 };
 
 // ── Formatters ────────────────────────────────────────────────────────────────
+// "140 ألف" / "1.5 مليون" (Arabic words, not single letters that read as noise);
+// "140K" / "1.5M" in English.
 function fmtAxisMoney(v: number, million: string, thousand: string): string {
-  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}${million}`;
-  if (v >= 1_000)     return `${(v / 1_000).toFixed(0)}${thousand}`;
+  const sep = million.length > 1 ? ' ' : '';
+  if (v >= 1_000_000) return `${Number((v / 1_000_000).toFixed(1))}${sep}${million}`;
+  if (v >= 1_000)     return `${Math.round(v / 1_000)}${sep}${thousand}`;
   return String(v);
 }
 
@@ -211,7 +214,7 @@ export function MonthlyTrendChart({ data, currency, locale = 'ar' }: Props) {
               axisLine={false}
               tickLine={false}
               tickFormatter={(v: number) => fmtAxisMoney(v, t.axisMillion, t.axisThousand)}
-              width={40}
+              width={64}
             />
 
             <Tooltip

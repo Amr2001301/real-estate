@@ -100,8 +100,8 @@ const ar = {
   trend: {
     numberLocale: 'ar-EG-u-nu-latn',
     currencyLocale: 'ar-SA-u-nu-latn',
-    axisMillion: 'م',
-    axisThousand: 'ك',
+    axisMillion: 'مليون',
+    axisThousand: 'ألف',
     tabFinancial: 'المالية',
     tabActivity: 'النشاط',
     emptyTitle: 'لا توجد بيانات شهرية في هذا النطاق.',
