@@ -3352,6 +3352,11 @@ const UI = {
         confirmCancel: 'سيتم إلغاء الدفعة وفصل جميع العمولات المرتبطة بها. هل أنت متأكد؟',
         selectMethodPlaceholder: 'اختر',
         savedOk: 'تم الحفظ',
+        netHeadline: 'صافي المستحق للوسيط',
+        nextStep: 'الخطوة التالية',
+        steps: { DRAFT: 'مسودة', APPROVED: 'معتمدة', PROCESSING: 'قيد الصرف', PAID: 'مدفوعة' } as Record<string, string>,
+        cancelToggle: 'إلغاء هذه الدفعة',
+        commissionsCount: (n: number) => (n === 1 ? 'عمولة واحدة' : `${n} عمولات`),
       },
       brokerReportsPage: {
         heroTitle: 'تقارير الوسطاء',
@@ -9189,6 +9194,11 @@ const UI = {
         confirmCancel: 'The payout will be cancelled and all linked commissions will be detached. Are you sure?',
         selectMethodPlaceholder: 'Select',
         savedOk: 'Saved',
+        netHeadline: 'Net due to the broker',
+        nextStep: 'Next step',
+        steps: { DRAFT: 'Draft', APPROVED: 'Approved', PROCESSING: 'Processing', PAID: 'Paid' } as Record<string, string>,
+        cancelToggle: 'Cancel this payout',
+        commissionsCount: (n: number) => `${n} commission${n === 1 ? '' : 's'}`,
       },
       brokerReportsPage: {
         heroTitle: 'Broker Reports',
