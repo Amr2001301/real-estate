@@ -21,7 +21,7 @@ test('payout detail: net first, steps, no back button, raw note tags hidden', as
   await row.getByRole('link').first().click();
   await expect(page.getByTestId('payout-statement')).toBeVisible();
   await expect(page.getByTestId('payout-net')).toBeVisible();
-  await expect(page.getByTestId('payout-status')).toBeVisible();
+  await expect(page.getByTestId('payout-summary')).toBeVisible();
   await expect(page.getByTestId('payout-commissions')).toBeVisible();
   await expect(page.getByRole('button', { name: 'العودة للقائمة' })).toHaveCount(0);
   await expect(page.locator('main')).not.toContainText(/\[\d{4}-\d{2}-\d{2}T/);
