@@ -14,9 +14,15 @@ import { NumCell, UnitsBar } from '@/components/premium/data-table';
 
 type Money = { symbol: string; locale: Locale };
 
-function Money({ value, money, size = 'md' }: { value: number; money: Money; size?: 'md' | 'lg' }) {
+function Money({ value, money, size = 'md' }: { value: number; money: Money; size?: 'sm' | 'md' | 'lg' }) {
   const [num, unit] = compactParts(value, money.symbol, money.locale);
-  return <NumCell value={num} unit={unit} className={size === 'lg' ? '[&>span:first-child]:text-[34px]' : '[&>span:first-child]:text-[26px]'} />;
+  const cls =
+    size === 'lg'
+      ? '[&>span:first-child]:text-[34px]'
+      : size === 'sm'
+        ? 'whitespace-nowrap [&>span:first-child]:text-[21px]'
+        : '[&>span:first-child]:text-[26px]';
+  return <NumCell value={num} unit={unit} className={cls} />;
 }
 
 // ── Needs action ─────────────────────────────────────────────────────────────
@@ -375,6 +381,7 @@ export function FinancialHealthPanel({
   collected,
   overdue,
   fees,
+  portfolio,
   labels,
   money,
   className,
@@ -385,43 +392,96 @@ export function FinancialHealthPanel({
   collected: number;
   overdue: number;
   fees: number;
-  labels: { ofValue: string; collected: string; notYetDue: string; overdue: string; fees: string };
+  /**
+   * The signed contracts' value split, as on the financial report (the parts
+   * add up to its gross value). Without it, the older net-value view.
+   */
+  portfolio?: {
+    grossValue: number;
+    netValue: number;
+    paid: number;
+    awaiting: number;
+    overdue: number;
+    notYetDue: number;
+    unscheduled: number;
+  };
+  labels: {
+    ofValue: string;
+    collected: string;
+    notYetDue: string;
+    overdue: string;
+    fees: string;
+    awaiting?: string;
+    unscheduled?: string;
+    markupNote?: (markup: string, net: string) => string;
+  };
   money: Money;
   className?: string;
 }) {
-  const notYetDue = Math.max(0, total - collected - overdue);
-  const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
-  const cols = [
-    { label: labels.collected, value: collected, dot: 'bg-unit-sold' },
-    { label: labels.notYetDue, value: notYetDue, dot: 'bg-unit-reserved' },
-    { label: labels.overdue, value: overdue, dot: 'border border-danger-600 bg-transparent' },
-  ];
+  const base = portfolio ? portfolio.grossValue : total;
+  const cols = (
+    portfolio
+      ? [
+          { key: 'paid', label: labels.collected, value: portfolio.paid, dot: 'bg-unit-sold', bar: 'bg-unit-sold' },
+          { key: 'awaiting', label: labels.awaiting ?? '', value: portfolio.awaiting, dot: 'bg-sky-500', bar: 'bg-sky-500' },
+          { key: 'notYetDue', label: labels.notYetDue, value: portfolio.notYetDue, dot: 'bg-unit-reserved', bar: 'bg-unit-reserved' },
+          { key: 'overdue', label: labels.overdue, value: portfolio.overdue, dot: 'border border-danger-600 bg-transparent', bar: 'bg-danger-600' },
+          { key: 'unscheduled', label: labels.unscheduled ?? '', value: portfolio.unscheduled, dot: 'bg-amber-400', bar: 'bg-amber-400' },
+        ].filter((c) => c.key === 'paid' || c.key === 'notYetDue' || c.key === 'overdue' || c.value > 0)
+      : [
+          { key: 'paid', label: labels.collected, value: collected, dot: 'bg-unit-sold', bar: 'bg-unit-sold' },
+          { key: 'notYetDue', label: labels.notYetDue, value: Math.max(0, total - collected - overdue), dot: 'bg-unit-reserved', bar: 'bg-unit-reserved' },
+          { key: 'overdue', label: labels.overdue, value: overdue, dot: 'border border-danger-600 bg-transparent', bar: 'bg-danger-600' },
+        ]
+  );
+  // A small share reads "0.4%", not "0%" beside a real amount.
+  const share = (n: number) => (base > 0 ? (n / base) * 100 : 0);
+  const pctText = (n: number) => {
+    const v = share(n);
+    return `${v > 0 && v < 1 ? v.toFixed(1) : Math.round(v)}%`;
+  };
+  const paid = cols[0]!.value;
+  const markup = portfolio ? Math.max(0, portfolio.grossValue - portfolio.netValue) : 0;
   return (
     <PremiumPanel title={title} sub={sub} className={className}>
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <Money value={total} money={money} size="lg" />
+        <Money value={base} money={money} size="lg" />
         <p className="text-[13px] text-slate-500">
-          {labels.ofValue} <span className="num text-[22px] font-semibold text-slate-900">{pct(collected)}%</span>
+          {labels.ofValue} <span className="num text-[22px] font-semibold text-slate-900">{pctText(paid)}</span>
         </p>
       </div>
-      <div className="mt-4 flex h-2 gap-1" role="img" aria-label={cols.map((c) => `${c.label} ${pct(c.value)}%`).join('، ')}>
-        {collected > 0 && <span className="rounded-full bg-unit-sold" style={{ flexGrow: collected, flexBasis: 0 }} />}
-        {notYetDue > 0 && <span className="rounded-full bg-unit-reserved" style={{ flexGrow: notYetDue, flexBasis: 0 }} />}
-        {overdue > 0 && <span className="rounded-full bg-danger-600" style={{ flexGrow: overdue, flexBasis: 0 }} />}
-        {total === 0 && <span className="flex-1 rounded-full bg-surface-sunken" />}
+      <div className="mt-4 flex h-2 gap-1" role="img" aria-label={cols.map((c) => `${c.label} ${pctText(c.value)}`).join('، ')}>
+        {cols.map((c) =>
+          c.value > 0 ? <span key={c.key} className={cn('rounded-full', c.bar)} style={{ flexGrow: c.value, flexBasis: 0 }} /> : null,
+        )}
+        {base === 0 && <span className="flex-1 rounded-full bg-surface-sunken" />}
       </div>
-      <div className="mt-5 grid grid-cols-3 divide-x divide-hairline rtl:divide-x-reverse">
+      <div
+        className={cn(
+          'mt-5 grid grid-cols-2 gap-y-4 sm:divide-x sm:divide-hairline sm:rtl:divide-x-reverse',
+          cols.length >= 5 ? 'sm:grid-cols-5' : cols.length === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-3',
+        )}
+        data-testid="health-parts"
+      >
         {cols.map((c) => (
-          <div key={c.label} className="px-4 first:ps-0">
+          <div key={c.key} className="px-4 first:ps-0" data-testid={`health-${c.key}`} data-amount={c.value}>
             <p className="flex items-center gap-1.5 text-[12.5px] text-slate-500">
-              <span className={cn('h-2 w-2 rounded-full', c.dot)} aria-hidden />
+              <span className={cn('h-2 w-2 shrink-0 rounded-full', c.dot)} aria-hidden />
               {c.label}
             </p>
-            <div className="mt-1"><Money value={c.value} money={money} /></div>
-            <p className="text-[12px] text-slate-500">{pct(c.value)}%</p>
+            <div className="mt-1"><Money value={c.value} money={money} size={cols.length >= 5 ? 'sm' : 'md'} /></div>
+            <p className="text-[12px] text-slate-500">{pctText(c.value)}</p>
           </div>
         ))}
       </div>
+      {portfolio && markup > 0 && labels.markupNote && (
+        <p className="mt-3 text-[12px] text-slate-500" data-testid="health-markup">
+          {labels.markupNote(
+            compactParts(markup, money.symbol, money.locale).join(' '),
+            compactParts(portfolio.netValue, money.symbol, money.locale).join(' '),
+          )}
+        </p>
+      )}
       {fees > 0 && (
         <p className="mt-4 flex items-center justify-between border-t border-hairline pt-3 text-[13px] text-slate-500">
           {labels.fees}

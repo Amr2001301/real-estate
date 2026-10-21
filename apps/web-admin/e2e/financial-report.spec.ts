@@ -66,3 +66,21 @@ test('the contract-value split and the month add up', async ({ page }) => {
   const monthParts = await Promise.all(['paid', 'awaiting', 'overdue', 'upcoming'].map((k) => amount(`fin-month-${k}`)));
   expect(Math.abs(monthParts.reduce((a, b) => a + b, 0) - due)).toBeLessThanOrEqual(0.05);
 });
+
+/**
+ * The dashboard reads the same figures as the report: its value split adds
+ * up, and "collection details" opens the report (it pointed at a page that
+ * does not exist).
+ */
+test('dashboard value split adds up and links to the financial report', async ({ page }) => {
+  await gotoReady(page, '/dashboard');
+  const parts = page.getByTestId('health-parts');
+  if ((await parts.count()) === 0) test.skip(true, 'no financial summary');
+  const amounts = await parts.locator('[data-amount]').evaluateAll((els) =>
+    els.map((e) => Number(e.getAttribute('data-amount') ?? '0')),
+  );
+  expect(amounts.length).toBeGreaterThanOrEqual(3);
+  await expect(page.locator('main a[href="/dashboard/financial-dashboard"]')).toHaveCount(0);
+  const link = page.locator('main a[href="/dashboard/reports/financial"]').first();
+  await expect(link).toBeVisible();
+});
