@@ -609,13 +609,33 @@ export class ReportsService {
       netContractValue(this.prisma, signedContractWhere),
     ]);
     // The contract value split, the same as the financial report's.
-    const [split, unsignedCount] = await Promise.all([
+    const [split, unsignedCount, unsignedDueCount] = await Promise.all([
       portfolioSplit(this.prisma, {
         signedContractWhere,
         instWhere: (extra) => ({ AND: [{ plan: SIGNED_PLAN }, extra] }),
         today,
       }),
       this.prisma.contract.count({ where: { signedAt: null, ...LIVE_CONTRACT_WHERE } }),
+      // Unsigned contracts whose first payment has already fallen due: nothing
+      // chases it (no late fee, no reminder) until someone signs.
+      this.prisma.contract.count({
+        where: {
+          signedAt: null,
+          ...LIVE_CONTRACT_WHERE,
+          installmentPlan: {
+            is: {
+              cancelledAt: null,
+              installments: {
+                some: {
+                  status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] },
+                  type: { notIn: SURCHARGE_PAYMENT_TYPES },
+                  dueDate: { lte: today },
+                },
+              },
+            },
+          },
+        },
+      }),
     ]);
 
     const [reservationTrend, leadSources, recentActivity, topProjects] = await Promise.all([
@@ -687,6 +707,7 @@ export class ReportsService {
       topProjects,
       alerts: {
         contractsAwaitingSignature,
+        contractsDueBeforeSigning: unsignedDueCount,
         depositsPendingReview: pendingDeposits,
         openMaintenance,
         reservationsExpiringSoon,

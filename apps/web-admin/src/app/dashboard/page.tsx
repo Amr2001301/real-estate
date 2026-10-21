@@ -108,6 +108,8 @@ interface AdminSummary {
   }>;
   alerts: {
     contractsAwaitingSignature:  number;
+    /** Unsigned contracts whose first payment has already fallen due. */
+    contractsDueBeforeSigning?:  number;
     depositsPendingReview:       number;
     openMaintenance:             number;
     reservationsExpiringSoon:    number;
@@ -304,7 +306,17 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
         items={[
           // Customers' payment proofs come first: money waiting on the admin.
           { key: 'payments', label: m.actionBar.pendingProofs, value: summary?.alerts.depositsPendingReview ?? 0, href: '/dashboard/payments/review', icon: 'payments' },
-          { key: 'contracts', label: m.actionBar.pendingContracts, value: summary?.alerts.contractsAwaitingSignature ?? 0, href: '/dashboard/contracts', icon: 'contracts' },
+          {
+            key: 'contracts',
+            label: m.actionBar.pendingContracts,
+            value: summary?.alerts.contractsAwaitingSignature ?? 0,
+            href: '/dashboard/contracts?signed=no',
+            icon: 'contracts',
+            // Their first payment is due and nothing chases it until signing.
+            note: summary?.alerts.contractsDueBeforeSigning
+              ? m.actionBar.dueBeforeSigning(summary.alerts.contractsDueBeforeSigning)
+              : undefined,
+          },
           // Off the plan, maintenance has no page to open (F36).
           ...(disabledFeatures.has('feature.maintenance')
             ? []

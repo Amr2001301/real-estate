@@ -33,6 +33,8 @@ export interface ActionItem {
   value: number;
   href: string;
   icon: 'contracts' | 'maintenance' | 'visits' | 'requests' | 'payments';
+  /** A line under the label, in amber, for what in it needs doing first. */
+  note?: string;
 }
 
 const ACTION_ICON: Record<ActionItem['icon'], ReactNode> = {
@@ -69,7 +71,11 @@ export function NeedsActionPanel({ title, allClear, items }: { title: string; al
             <span
               className={cn(
                 'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border [&_svg]:h-4 [&_svg]:w-4',
-                it.value > 0 ? 'border-brand-400/50 bg-brand-50 text-brand-700' : 'border-hairline text-slate-500',
+                it.note
+                  ? 'border-amber-500/60 bg-amber-500/12 text-amber-600'
+                  : it.value > 0
+                    ? 'border-brand-400/50 bg-brand-50 text-brand-700'
+                    : 'border-hairline text-slate-500',
               )}
             >
               {ACTION_ICON[it.icon]}
@@ -79,6 +85,11 @@ export function NeedsActionPanel({ title, allClear, items }: { title: string; al
                 {it.value}
               </span>
               <span className="mt-1 block truncate text-[13px] text-slate-600">{it.label}</span>
+              {it.note && (
+                <span className="mt-0.5 block whitespace-nowrap text-[11.5px] font-semibold text-amber-600" title={it.note} data-testid={`action-note-${it.key}`}>
+                  {it.note}
+                </span>
+              )}
             </span>
           </Link>
         ))}
