@@ -1,12 +1,12 @@
 import Link from 'next/link';
-import { AlertCircle, Landmark, Search } from 'lucide-react';
+import { AlertCircle, Landmark, Search, Hash } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
 import type { Paged, PaymentInstrument, PaymentInstrumentStatus } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
-import { Badge, type BadgeTone } from '@/components/ui/badge';
+import { cn } from '@/lib/cn';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ import {
   PremiumSectionCard,
   PremiumEmptyState,
 } from '@/components/premium';
+import { CodeCell, PersonCell } from '@/components/premium/list-cells';
 import { uiT } from '@/messages/ui';
 import { ChequeActions } from './_actions';
 
@@ -36,14 +37,26 @@ const STATUSES: PaymentInstrumentStatus[] = [
   'CANCELLED',
 ];
 
-const STATUS_TONE: Record<PaymentInstrumentStatus, BadgeTone> = {
-  PENDING_CLEARANCE: 'warning',
-  DEPOSITED: 'info',
-  CLEARED: 'success',
-  BOUNCED: 'danger',
-  REPLACED: 'gray',
-  CANCELLED: 'gray',
+const STATUS_CHIP: Record<PaymentInstrumentStatus, string> = {
+  PENDING_CLEARANCE: 'bg-amber-500/12 text-amber-600',
+  DEPOSITED: 'bg-sky-500/12 text-sky-600',
+  CLEARED: 'bg-emerald-500/12 text-emerald-600',
+  BOUNCED: 'bg-danger-500/12 text-danger-600',
+  REPLACED: 'bg-slate-500/10 text-slate-500',
+  CANCELLED: 'bg-slate-500/10 text-slate-500',
 };
+
+const STATUS_DOT: Record<PaymentInstrumentStatus, string> = {
+  PENDING_CLEARANCE: 'bg-amber-400',
+  DEPOSITED: 'bg-sky-400',
+  CLEARED: 'bg-emerald-400',
+  BOUNCED: 'bg-rose-400',
+  REPLACED: 'bg-slate-400',
+  CANCELLED: 'bg-slate-400',
+};
+
+// The statuses the treasurer works through, shown as cards above the table.
+const STRIP: PaymentInstrumentStatus[] = ['PENDING_CLEARANCE', 'DEPOSITED', 'CLEARED', 'BOUNCED'];
 
 type SearchParams = Promise<Record<string, string | undefined>>;
 
@@ -61,8 +74,42 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
   if (sp.dueFrom) qs.set('dueFrom', sp.dueFrom);
   if (sp.dueTo) qs.set('dueTo', sp.dueTo);
   if (sp.q?.trim()) qs.set('q', sp.q.trim());
-  const res = await safe(api.get<Paged<PaymentInstrument>>(`/payment-instruments?${qs}`));
+  // Status counts honour the other filters, so the cards match what a click shows.
+  const countQs = (st?: string) => {
+    const q = new URLSearchParams(qs);
+    q.delete('status');
+    q.set('page', '1');
+    q.set('pageSize', '1');
+    if (st) q.set('status', st);
+    return `/payment-instruments?${q}`;
+  };
+  const [res, allRes, ...stripRes] = await Promise.all([
+    safe(api.get<Paged<PaymentInstrument>>(`/payment-instruments?${qs}`)),
+    safe(api.get<Paged<PaymentInstrument>>(countQs())),
+    ...STRIP.map((st) => safe(api.get<Paged<PaymentInstrument>>(countQs(st)))),
+  ]);
   const list = res.data;
+  const stripHref = (st?: string) => {
+    const q = new URLSearchParams();
+    if (st) q.set('status', st);
+    if (sp.dueFrom) q.set('dueFrom', sp.dueFrom);
+    if (sp.dueTo) q.set('dueTo', sp.dueTo);
+    if (sp.q?.trim()) q.set('q', sp.q.trim());
+    const s2 = q.toString();
+    return `/dashboard/cheques${s2 ? `?${s2}` : ''}`;
+  };
+  const cards = [
+    { key: 'ALL', label: m.statusAll, count: allRes.data?.meta.total, href: stripHref(), active: !status, dot: 'bg-brand-400' },
+    ...STRIP.map((st, i) => ({
+      key: st,
+      label: m.statusLabels[st],
+      count: stripRes[i]?.data?.meta.total,
+      href: stripHref(st),
+      active: status === st,
+      dot: STATUS_DOT[st],
+    })),
+  ];
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="flex flex-col gap-5 lg:gap-6">
@@ -110,6 +157,30 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
         </div>
       </PremiumFilterBar>
 
+      <nav data-testid="cheque-status-strip" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {cards.map((c) => (
+          <Link
+            key={c.key}
+            href={c.href as never}
+            aria-current={c.active ? 'page' : undefined}
+            className={cn(
+              'group rounded-2xl border px-4 py-3.5 transition-colors',
+              c.active
+                ? 'border-brand-500/50 bg-gradient-to-br from-brand-500/[0.14] to-brand-700/[0.04]'
+                : 'border-hairline bg-surface hover:border-brand-500/30',
+            )}
+          >
+            <span className="flex items-center gap-2 text-[12px] font-semibold text-slate-500">
+              <span className={cn('h-2 w-2 rounded-full', c.dot)} />
+              {c.label}
+            </span>
+            <span className={cn('mt-1.5 block text-[26px] font-bold leading-none tabular-nums', c.active ? 'text-brand-700' : 'text-slate-900')}>
+              {c.count ?? '—'}
+            </span>
+          </Link>
+        ))}
+      </nav>
+
       <PremiumSectionCard
         icon={<Landmark />}
         title={list ? m.listTitle(list.meta.total) : m.title}
@@ -148,39 +219,61 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
                   const d = pi.deposits[0];
                   const amount = pi.deposits.reduce((sum, x) => sum + Number(x.amount), 0);
                   return (
-                    <tr key={pi.id} className="hover:bg-canvas/40 transition-colors duration-100">
-                      <td className="px-4 py-3 font-medium text-slate-800 tabular-nums">
-                        {pi.chequeNumber ?? pi.referenceNumber ?? '—'}
+                    <tr key={pi.id} className="hover:bg-brand-500/[0.04] transition-colors duration-100">
+                      <td className="px-4 py-3.5">
+                        <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-surface-muted px-2 py-1 font-mono text-[12px] font-bold text-slate-700" dir="ltr">
+                          <Hash className="h-3 w-3 text-slate-400" />
+                          {pi.chequeNumber ?? pi.referenceNumber ?? '—'}
+                        </span>
                       </td>
-                      <td className="px-4 py-3 text-slate-600">{pi.drawerBankName ?? pi.bankName ?? '—'}</td>
-                      <td className="px-4 py-3 text-slate-600">{pi.chequeDueDate ? formatDate(pi.chequeDueDate, locale) : '—'}</td>
-                      <td className="px-4 py-3 text-slate-800">
-                        {d?.contract?.customer?.fullName ?? d?.reservation?.client?.fullName ?? '—'}
+                      <td className="px-4 py-3.5">
+                        <span className="inline-flex items-center gap-2 whitespace-nowrap text-slate-700">
+                          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-500/10 text-brand-700">
+                            <Landmark className="h-3.5 w-3.5" />
+                          </span>
+                          {pi.drawerBankName ?? pi.bankName ?? '—'}
+                        </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        <p className="tabular-nums text-slate-800">{pi.chequeDueDate ? formatDate(pi.chequeDueDate, locale) : '—'}</p>
+                        {pi.status === 'PENDING_CLEARANCE' && pi.chequeDueDate && pi.chequeDueDate.slice(0, 10) <= todayIso && (
+                          <p className="text-[11px] font-semibold text-amber-600">{m.dueNow}</p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <PersonCell name={d?.contract?.customer?.fullName ?? d?.reservation?.client?.fullName ?? '—'} />
+                      </td>
+                      <td className="px-4 py-3.5">
                         {d?.contract ? (
-                          <Link href={`/dashboard/contracts/${d.contract.id}`} className="text-brand-600 hover:underline">
-                            {d.contract.contractNumber ?? `#${d.contract.id.slice(0, 8)}`}
-                          </Link>
+                          <CodeCell
+                            href={`/dashboard/contracts/${d.contract.id}`}
+                            code={d.contract.contractNumber ?? `#${d.contract.id.slice(0, 8).toUpperCase()}`}
+                            muted={!d.contract.contractNumber}
+                          />
                         ) : d?.reservation ? (
                           // A booking-amount cheque: it pays the reservation.
-                          <Link href={`/dashboard/reservations/${d.reservation.id}`} className="text-brand-600 hover:underline">
-                            {d.reservation.reservationNumber ?? `#${d.reservation.id.slice(0, 8)}`}
-                          </Link>
+                          <CodeCell
+                            href={`/dashboard/reservations/${d.reservation.id}`}
+                            code={d.reservation.reservationNumber ?? `#${d.reservation.id.slice(0, 8).toUpperCase()}`}
+                            muted={!d.reservation.reservationNumber}
+                          />
                         ) : (
                           '—'
                         )}
                       </td>
-                      <td className="px-4 py-3 tabular-nums font-semibold text-slate-800">
+                      <td className="px-4 py-3.5 whitespace-nowrap tabular-nums font-bold text-slate-900">
                         {pi.deposits.length > 0 ? formatCurrency(amount, currency, locale) : '—'}
                       </td>
-                      <td className="px-4 py-3">
-                        <Badge tone={STATUS_TONE[pi.status]} size="sm">{m.statusLabels[pi.status]}</Badge>
+                      <td className="px-4 py-3.5">
+                        <span className={cn('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-semibold', STATUS_CHIP[pi.status])}>
+                          <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT[pi.status])} />
+                          {m.statusLabels[pi.status]}
+                        </span>
                         {pi.status === 'BOUNCED' && pi.bounceReason && (
-                          <p className="mt-1 text-xs text-slate-500">{pi.bounceReason}</p>
+                          <p className="mt-1 max-w-[180px] truncate text-[11px] text-slate-500" title={pi.bounceReason}>{pi.bounceReason}</p>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-end">
+                      <td className="px-4 py-3.5 text-end">
                         <ChequeActions
                           id={pi.id}
                           status={pi.status}

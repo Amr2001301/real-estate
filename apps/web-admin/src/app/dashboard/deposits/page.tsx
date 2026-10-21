@@ -25,6 +25,7 @@ import {
   PremiumSectionCard,
   PremiumEmptyState,
 } from '@/components/premium';
+import { CodeCell, PersonCell } from '@/components/premium/list-cells';
 import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
@@ -36,11 +37,11 @@ interface ProjectOption { id: string; name: { ar: string; en: string } }
 // ── Maps ──────────────────────────────────────────────────────────────────────
 
 const DEPOSIT_TYPE_CLS: Record<DepositType, string> = {
-  BOOKING_AMOUNT: 'bg-info-50 text-info-700',
-  DOWN_PAYMENT:   'bg-brand-50 text-brand-700',
-  INSTALLMENT:    'bg-slate-100 text-slate-600',
-  FINAL_PAYMENT:  'bg-success-50 text-success-700',
-  FEE:            'bg-danger-50 text-danger-700',
+  BOOKING_AMOUNT: 'bg-sky-500/12 text-sky-600',
+  DOWN_PAYMENT:   'bg-brand-500/12 text-brand-700',
+  INSTALLMENT:    'bg-violet-500/12 text-violet-600',
+  FINAL_PAYMENT:  'bg-emerald-500/12 text-emerald-600',
+  FEE:            'bg-danger-500/12 text-danger-600',
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -362,17 +363,15 @@ export default async function DepositsPage({
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[800px]">
+            <table className="w-full text-sm min-w-[800px]" data-testid="deposits-table">
               <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                 <tr>
                   <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.type}</th>
                   <th className="text-start py-3 px-4">{m.cols.client}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.unit}</th>
                   <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.ref}</th>
                   <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.due}</th>
                   <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.amount}</th>
                   <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.paidAt}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.receipt}</th>
                   <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.verified}</th>
                 </tr>
               </thead>
@@ -380,9 +379,9 @@ export default async function DepositsPage({
                 {deposits.data.map((d) => {
                   const dueDate = getDueDate(d);
                   return (
-                    <tr key={d.id} className="hover:bg-canvas/40 transition-colors duration-100">
+                    <tr key={d.id} className="hover:bg-brand-500/[0.04] transition-colors duration-100">
 
-                      <td className="px-4 py-2.5 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {isAdmin ? (
                           <Link
                             href={`/dashboard/deposits/${d.id}`}
@@ -404,35 +403,30 @@ export default async function DepositsPage({
                         )}
                       </td>
 
-                      <td className="px-4 py-2.5 font-medium text-slate-800 max-w-[160px] truncate">
-                        {getCustomerName(d)}
+                      <td className="px-4 py-3">
+                        {/* The unit rides under the client: one column instead of two */}
+                        <PersonCell name={getCustomerName(d)} sub={getUnitCode(d)} />
                       </td>
 
-                      <td className="px-4 py-2.5 font-mono text-xs text-slate-500 whitespace-nowrap">
-                        {getUnitCode(d)}
-                      </td>
-
-                      <td className="px-4 py-2.5 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {d.contractId && d.contract ? (
-                          <Link
+                          <CodeCell
                             href={`/dashboard/contracts/${d.contractId}`}
-                            className="font-mono text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
-                          >
-                            {d.contract.contractNumber ?? `#${d.contractId.slice(0, 8)}`}
-                          </Link>
+                            code={d.contract.contractNumber ?? `#${d.contractId.slice(0, 8).toUpperCase()}`}
+                            muted={!d.contract.contractNumber}
+                          />
                         ) : d.reservationId && d.reservation ? (
-                          <Link
+                          <CodeCell
                             href={`/dashboard/reservations/${d.reservationId}`}
-                            className="font-mono text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
-                          >
-                            {d.reservation.reservationNumber ?? `#${d.reservationId.slice(0, 8)}`}
-                          </Link>
+                            code={d.reservation.reservationNumber ?? `#${d.reservationId.slice(0, 8).toUpperCase()}`}
+                            muted={!d.reservation.reservationNumber}
+                          />
                         ) : (
                           <span className="text-slate-300 text-xs">—</span>
                         )}
                       </td>
 
-                      <td className="px-4 py-2.5 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {dueDate ? (
                           <span className="text-xs text-slate-500 tabular-nums" title={getDueDateTitle(d, m)}>
                             {formatDate(dueDate, locale)}
@@ -442,39 +436,34 @@ export default async function DepositsPage({
                         )}
                       </td>
 
-                      <td className="px-4 py-2.5 font-semibold tabular-nums whitespace-nowrap text-slate-800">
-                        {formatCurrency(d.amount, currency, locale)}
-                      </td>
-
-                      <td className="px-4 py-2.5 text-xs text-slate-500 whitespace-nowrap tabular-nums">
-                        {formatDate(d.paidAt, locale)}
-                      </td>
-
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        {d.receiptUrl ? (
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className="font-bold tabular-nums text-slate-900">{formatCurrency(d.amount, currency, locale)}</span>
+                        {d.receiptUrl && (
                           <a
                             href={d.receiptUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-brand-600 hover:underline"
+                            className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold text-brand-700 hover:underline"
                           >
                             <ExternalLink className="h-3 w-3 shrink-0" />
                             {m.receiptView}
                           </a>
-                        ) : (
-                          <span className="text-slate-300 text-xs">—</span>
                         )}
                       </td>
 
-                      <td className="px-4 py-2.5 whitespace-nowrap">
+                      <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap tabular-nums">
+                        {formatDate(d.paidAt, locale)}
+                      </td>
+
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {isAdmin ? (
                           <VerifyToggle id={d.id} contractId={d.contractId ?? null} verified={d.verified} locale={locale} />
                         ) : (
                           <span
-                            className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${
                               d.verified
-                                ? 'bg-success-100 text-success-700'
-                                : 'bg-amber-100 text-amber-700'
+                                ? 'bg-emerald-500/12 text-emerald-600'
+                                : 'bg-amber-500/12 text-amber-600'
                             }`}
                           >
                             {d.verified ? m.verifiedBadge : m.notVerifiedBadge}

@@ -4125,6 +4125,8 @@ const UI = {
       colAmount: 'المبلغ',
       colStatus: 'الحالة',
       colActions: 'إجراءات',
+      statusAll: 'الكل',
+      dueNow: 'حان موعد الإيداع',
       actions: {
         deposit: 'إيداع بالبنك',
         clear: 'تم الصرف',
@@ -9880,6 +9882,8 @@ const UI = {
       colAmount: 'Amount',
       colStatus: 'Status',
       colActions: 'Actions',
+      statusAll: 'All',
+      dueNow: 'Due for deposit',
       actions: {
         deposit: 'Deposit at bank',
         clear: 'Cleared',

@@ -29,7 +29,7 @@ test('visit request page: customer-led hero and a single event-log heading', asy
 /** Record numbers in the list tables stay on one line. */
 test('list tables keep record numbers on one line', async ({ page }) => {
   let checked = 0;
-  for (const path of ['/dashboard/visits', '/dashboard/reservations', '/dashboard/contracts']) {
+  for (const path of ['/dashboard/visits', '/dashboard/reservations', '/dashboard/contracts', '/dashboard/deposits', '/dashboard/cheques']) {
     await gotoReady(page, path);
     const codes = page.getByTestId('list-code');
     if ((await codes.count()) === 0) continue;
@@ -38,4 +38,14 @@ test('list tables keep record numbers on one line', async ({ page }) => {
     checked++;
   }
   expect(checked).toBeGreaterThan(0);
+});
+
+/** Cheques open on a status strip whose "all" card matches the list total. */
+test('cheques page: status cards with counts', async ({ page }) => {
+  await gotoReady(page, '/dashboard/cheques');
+  const strip = page.getByTestId('cheque-status-strip');
+  await expect(strip.getByRole('link')).toHaveCount(5);
+  const all = strip.getByRole('link').first();
+  await expect(all).toHaveAttribute('aria-current', 'page');
+  await expect(all).toContainText(/\d/);
 });
