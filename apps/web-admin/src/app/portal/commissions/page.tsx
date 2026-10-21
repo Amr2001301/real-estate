@@ -1,28 +1,18 @@
 import Link from 'next/link';
-import {
-  BadgePercent,
-  Eye,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-} from 'lucide-react';
+import { BadgePercent, Eye, AlertCircle, Building2 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalCommission, PortalProject } from '@/lib/types';
-import { tx, formatDate, formatCurrency } from '@/lib/format';
-import { getReportsCurrency } from '@/lib/currency';
+import { tx, formatDate, formatCurrency, compactParts } from '@/lib/format';
+import { Amount, FigureBar } from '@/components/cockpit/cockpit';
+import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
 import { portalMoneyTeamT } from '@/messages/portal/money-team';
-import { cn } from '@/lib/cn';
-import { IconButton } from '@/components/ui/icon-button';
-import { CodeText } from '@/components/ui/code-text';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
 import { BrokerCommissionStatusBadge } from '@/components/badges';
 import { CommissionsFilterBar } from '@/components/broker/commissions-filter-bar';
 import {
   PremiumPageHero,
-  PremiumMetricStrip,
   PremiumSectionCard,
 } from '@/components/premium';
 
@@ -50,6 +40,8 @@ export default async function PortalCommissionsPage({
   const m = portalMoneyTeamT(locale);
   const t = m.commissions.list;
   const currency = await getReportsCurrency();
+  const symbol = currencySymbol(currency, locale);
+  const word = (ar: string, en: string) => (locale === 'en' ? en : ar);
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
@@ -73,7 +65,6 @@ export default async function PortalCommissionsPage({
   const approvedCount = rApproved.data?.meta.total ?? 0;
   const rejectedCount = rRejected.data?.meta.total ?? 0;
 
-  const pageGross = rows.reduce((sum, r) => sum + Number(r.grossAmount || 0), 0);
   const pageNet   = rows.reduce((sum, r) => sum + Number(r.netAmount   || 0), 0);
 
   return (
@@ -95,15 +86,23 @@ export default async function PortalCommissionsPage({
         </div>
       )}
 
-      <PremiumMetricStrip
-        variant="compact"
-        metrics={[
-          { label: t.metrics.total, value: paged?.meta.total ?? 0, icon: <BadgePercent />, tone: 'brand'   },
-          { label: t.metrics.pending, value: pendingCount,           icon: <Clock />,        tone: 'warning' },
-          { label: t.metrics.approved, value: approvedCount,          icon: <CheckCircle2 />, tone: 'success' },
-          { label: t.metrics.rejected, value: rejectedCount,          icon: <XCircle />,      tone: 'danger'  },
-        ]}
-      />
+      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <FigureBar
+          bare
+          cols={5}
+          figures={[
+            { label: t.metrics.total, value: paged?.meta.total ?? 0 },
+            { label: t.metrics.pending, value: pendingCount, warn: pendingCount > 0 },
+            { label: t.metrics.approved, value: approvedCount },
+            { label: t.metrics.rejected, value: rejectedCount },
+            {
+              label: word('صافي العمولات', 'Net commissions'),
+              value: pageNet > 0 ? <Amount parts={compactParts(pageNet, symbol, locale)} /> : '—',
+              sub: locale === 'en' ? 'This page' : 'هذه الصفحة',
+            },
+          ]}
+        />
+      </section>
 
       <CommissionsFilterBar projects={projects} locale={locale} sp={{ q: sp.q, status: sp.status, projectId: sp.projectId, from: sp.from, to: sp.to }} />
 
@@ -112,119 +111,96 @@ export default async function PortalCommissionsPage({
         title={t.tableTitle}
         padded={false}
       >
-        {rows.length > 0 && (
-          <div className="flex items-center gap-4 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
-              <span>{t.countUnit}</span>
-            </div>
-            {pageGross > 0 && (
-              <>
-                <div className="w-px h-4 bg-hairline" />
-                <span>
-                  {t.grossLabel}{' '}
-                  <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(pageGross, currency, locale)}</span>
-                </span>
-                <div className="w-px h-4 bg-hairline" />
-                <span>
-                  {t.netLabel}{' '}
-                  <span className="font-semibold text-success-700 tabular-nums">{formatCurrency(pageNet, currency, locale)}</span>
-                </span>
-              </>
-            )}
-          </div>
-        )}
+        {rows.length === 0 ? (
+          <EmptyState icon={<BadgePercent />} title={t.emptyTitle} description={t.emptyDescription} />
+        ) : (
+          <ul className="divide-y divide-hairline" data-testid="portal-commission-rows">
+            {rows.map((c) => {
+              const netAmt = Number(c.netAmount || 0);
+              const grossAmt = Number(c.grossAmount || 0);
+              const deduction = grossAmt > 0 ? ((grossAmt - netAmt) / grossAmt) * 100 : 0;
+              const client = c.contract?.customer?.fullName ?? c.reservation?.lead?.fullName;
+              return (
+                <li
+                  key={c.id}
+                  data-testid="portal-commission-row"
+                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-5 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[44px_minmax(0,1.2fr)_minmax(0,1.2fr)_120px_130px_180px_36px]"
+                >
+                  <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#D8B66A]/[0.14] text-[#B8913F] dark:text-[#D8B66A]">
+                    <BadgePercent className="h-[18px] w-[18px]" />
+                  </span>
 
-        <div className="overflow-x-auto scrollbar-thin">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">{t.cols.unitProject}</th>
-                <th className="text-start font-semibold py-3 px-4">{t.cols.status}</th>
-                <th className="text-start font-semibold py-3 px-4">{t.cols.net}</th>
-                <th className="text-start font-semibold py-3 px-4">{t.cols.reference}</th>
-                <th className="text-start font-semibold py-3 px-4">{t.cols.earnedAt}</th>
-                <th className="py-3 ps-4 pe-5 w-px"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="p-0">
-                    <EmptyState
-                      icon={<BadgePercent />}
-                      title={t.emptyTitle}
-                      description={t.emptyDescription}
-                    />
-                  </td>
-                </tr>
-              )}
-              {rows.map((c) => {
-                const netAmt    = Number(c.netAmount   || 0);
-                const grossAmt  = Number(c.grossAmount || 0);
-                const deduction = grossAmt > 0 ? ((grossAmt - netAmt) / grossAmt) * 100 : 0;
-                const isApproved = c.status === 'APPROVED';
+                  {/* Commission code + client */}
+                  <div className="min-w-0">
+                    <Link
+                      href={`/portal/commissions/${c.id}` as never}
+                      className="block truncate text-[14.5px] font-bold text-slate-900 hover:text-brand-700"
+                    >
+                      <span className="me-1.5 text-[12px] font-semibold text-slate-400">{word('عمولة', 'Commission')}</span>
+                      <span className="whitespace-nowrap font-mono" dir="ltr">{c.commissionNumber}</span>
+                    </Link>
+                    <p className="mt-0.5 truncate text-[12px] text-slate-500">{client ?? '—'}</p>
+                  </div>
 
-                return (
-                  <tr
-                    key={c.id}
-                    className={cn(
-                      'border-t border-hairline transition-colors align-top',
-                      isApproved
-                        ? 'bg-emerald-50/30 hover:bg-emerald-50/60'
-                        : 'hover:bg-surface-muted/40',
-                    )}
-                  >
-                    <td className="py-3 ps-5 pe-4">
-                      <CodeText className="text-xs font-semibold text-slate-800">{c.unit?.code ?? '—'}</CodeText>
-                      <p className="text-2xs text-slate-500 mt-0.5">
-                        {c.project ? tx(c.project.name, locale) : '—'}
+                  {/* Project + unit + contract */}
+                  <div className="hidden min-w-0 items-start gap-2 text-[12.5px] lg:flex">
+                    <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A24E]" />
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-slate-800">{c.project ? tx(c.project.name, locale) : '—'}</p>
+                      <p className="mt-0.5 flex flex-col text-[12px] text-slate-500">
+                        {c.unit?.code && (
+                          <span className="whitespace-nowrap">
+                            <span className="me-1 text-slate-400">{word('وحدة', 'Unit')}</span>
+                            <span className="font-mono" dir="ltr">{c.unit.code}</span>
+                          </span>
+                        )}
+                        {c.contract?.contractNumber && (
+                          <span className="whitespace-nowrap">
+                            <span className="me-1 text-slate-400">{word('عقد', 'Contract')}</span>
+                            <span className="font-mono" dir="ltr">{c.contract.contractNumber}</span>
+                          </span>
+                        )}
                       </p>
-                    </td>
+                    </div>
+                  </div>
 
-                    <td className="py-3 px-4">
-                      <BrokerCommissionStatusBadge status={c.status} locale={locale} />
-                    </td>
+                  {/* Earned */}
+                  <div className="hidden text-[12.5px] lg:block">
+                    <p className="text-[11px] text-slate-500">{t.cols.earnedAt}</p>
+                    <p className="font-semibold text-slate-800"><bdi>{formatDate(c.earnedAt, locale)}</bdi></p>
+                  </div>
 
-                    <td className="py-3 px-4">
-                      <p className="text-sm font-bold text-slate-900 tabular-nums">
+                  <div className="hidden lg:block">
+                    <BrokerCommissionStatusBadge status={c.status} locale={locale} />
+                  </div>
+
+                  {/* Net (gross below) */}
+                  <div className="flex items-center gap-3 justify-self-end">
+                    <span className="lg:hidden"><BrokerCommissionStatusBadge status={c.status} locale={locale} /></span>
+                    <div className="text-end">
+                      <p className="whitespace-nowrap text-[15px] font-bold tabular-nums text-slate-900">
                         {formatCurrency(c.netAmount, currency, locale)}
                       </p>
-                      <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">
+                      <p className="whitespace-nowrap text-[11.5px] tabular-nums text-slate-500">
                         {t.fromGross(formatCurrency(c.grossAmount, currency, locale))}
                         {deduction > 0.1 && t.deduction(deduction.toFixed(1))}
                       </p>
-                    </td>
+                    </div>
+                  </div>
 
-                    <td className="py-3 px-4">
-                      <span className="inline-flex items-center gap-1 text-2xs text-brand-700">
-                        <BadgePercent className="h-3 w-3 shrink-0" />
-                        <CodeText>{c.commissionNumber}</CodeText>
-                      </span>
-                      {c.contract?.contractNumber && (
-                        <p className="mt-0.5">
-                          <CodeText className="text-2xs text-slate-400">{c.contract.contractNumber}</CodeText>
-                        </p>
-                      )}
-                    </td>
-
-                    <td className="py-3 px-4 text-2xs text-slate-500 whitespace-nowrap">
-                      {formatDate(c.earnedAt, locale)}
-                    </td>
-
-                    <td className="py-3 ps-4 pe-5">
-                      <Link href={`/portal/commissions/${c.id}` as never}>
-                        <IconButton label={m.common.view} variant="ghost" size="sm">
-                          <Eye />
-                        </IconButton>
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                  <Link
+                    href={`/portal/commissions/${c.id}` as never}
+                    aria-label={m.common.view}
+                    title={m.common.view}
+                    className="hidden h-9 w-9 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900 lg:inline-flex"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
         {paged && paged.meta.total > PAGE_SIZE && (
           <Pagination

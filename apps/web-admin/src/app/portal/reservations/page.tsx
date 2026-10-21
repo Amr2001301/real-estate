@@ -1,32 +1,19 @@
 import Link from 'next/link';
-import {
-  Plus,
-  BookmarkCheck,
-  Eye,
-  Clock,
-  CheckCircle2,
-  ArrowRightLeft,
-  BadgePercent,
-  Phone,
-  AlertCircle,
-} from 'lucide-react';
+import { Plus, BookmarkCheck, Eye, Phone, AlertCircle, Building2 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalProject, PortalReservation } from '@/lib/types';
-import { tx, formatDate, formatCurrency } from '@/lib/format';
-import { getReportsCurrency } from '@/lib/currency';
-import { cn } from '@/lib/cn';
+import { tx, formatDate, compactParts } from '@/lib/format';
+import { getReportsCurrency, currencySymbol } from '@/lib/currency';
+import { Avatar, Amount, FigureBar } from '@/components/cockpit/cockpit';
 import { getLocale } from '@/lib/locale';
 import { portalReservationsContractsT } from '@/messages/portal/reservations-contracts';
 import { Button } from '@/components/ui/button';
-import { IconButton } from '@/components/ui/icon-button';
-import { CodeText } from '@/components/ui/code-text';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ReservationsFilterBar } from '@/components/broker/reservations-filter-bar';
 import { ReservationStatusBadge } from '@/components/badges';
 import {
   PremiumPageHero,
-  PremiumMetricStrip,
   PremiumSectionCard,
 } from '@/components/premium';
 
@@ -44,25 +31,6 @@ interface Search {
 
 const PAGE_SIZE = 20;
 
-const AVATAR_COLORS = [
-  'bg-slate-100 text-slate-700',
-  'bg-blue-100 text-blue-700',
-  'bg-emerald-100 text-emerald-700',
-  'bg-violet-100 text-violet-700',
-  'bg-amber-100 text-amber-700',
-  'bg-rose-100 text-rose-700',
-];
-
-function avatarColor(name: string): string {
-  if (!name) return AVATAR_COLORS[0]!;
-  const code = name.charCodeAt(0) + (name.charCodeAt(1) || 0);
-  return AVATAR_COLORS[code % AVATAR_COLORS.length]!;
-}
-
-function initials(name: string): string {
-  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-}
-
 export default async function PortalReservationsPage({
   searchParams,
 }: {
@@ -73,6 +41,7 @@ export default async function PortalReservationsPage({
   const m = portalReservationsContractsT(locale);
   const t = m.reservations.list;
   const currency = await getReportsCurrency();
+  const symbol = currencySymbol(currency, locale);
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
@@ -123,15 +92,18 @@ export default async function PortalReservationsPage({
         </div>
       )}
 
-      <PremiumMetricStrip
-        variant="compact"
-        metrics={[
-          { label: t.metrics.total, value: paged?.meta.total ?? 0, icon: <BookmarkCheck />,  tone: 'brand'   },
-          { label: t.metrics.pending, value: pendingCount,            icon: <Clock />,          tone: 'warning' },
-          { label: t.metrics.approved, value: approvedCount,           icon: <CheckCircle2 />,   tone: 'success' },
-          { label: t.metrics.converted, value: convertedCount,          icon: <ArrowRightLeft />, tone: 'info'    },
-        ]}
-      />
+      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <FigureBar
+          bare
+          cols={4}
+          figures={[
+            { label: t.metrics.total, value: paged?.meta.total ?? 0, href: '/portal/reservations' },
+            { label: t.metrics.pending, value: pendingCount, href: '/portal/reservations?status=PENDING', warn: pendingCount > 0 },
+            { label: t.metrics.approved, value: approvedCount, href: '/portal/reservations?status=APPROVED' },
+            { label: t.metrics.converted, value: convertedCount, href: '/portal/reservations?status=CONVERTED' },
+          ]}
+        />
+      </section>
 
       <ReservationsFilterBar
         projects={projects}
@@ -151,138 +123,113 @@ export default async function PortalReservationsPage({
           </div>
         )}
 
-        <div className="overflow-x-auto scrollbar-thin">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">{m.common.client}</th>
-                <th className="text-start font-semibold py-3 px-4">{m.common.unitProject}</th>
-                <th className="text-start font-semibold py-3 px-4">{m.common.status}</th>
-                <th className="text-start font-semibold py-3 px-4">{m.common.lockedCommission}</th>
-                <th className="text-start font-semibold py-3 px-4">{t.cols.reservationNumber}</th>
-                <th className="text-start font-semibold py-3 px-4">{m.common.date}</th>
-                <th className="py-3 ps-4 pe-5 w-px"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="p-0">
-                    <EmptyState
-                      icon={<BookmarkCheck />}
-                      title={t.emptyTitle}
-                      description={t.emptyDescription}
-                      action={
-                        <Link href="/portal/reservations/new">
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            leftIcon={<Plus className="h-4 w-4" />}
-                          >
-                            {t.newReservation}
-                          </Button>
-                        </Link>
-                      }
-                    />
-                  </td>
-                </tr>
-              )}
-              {rows.map((r) => {
-                const clientName  = r.lead?.fullName ?? r.client?.fullName;
-                const clientPhone = r.lead?.phone ?? r.client?.phone ?? undefined;
-                const isConverted = r.status === 'CONVERTED';
-                const isApproved  = r.status === 'APPROVED';
+        {rows.length === 0 ? (
+          <EmptyState
+            icon={<BookmarkCheck />}
+            title={t.emptyTitle}
+            description={t.emptyDescription}
+            action={
+              <Link href="/portal/reservations/new">
+                <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />}>
+                  {t.newReservation}
+                </Button>
+              </Link>
+            }
+          />
+        ) : (
+          <ul className="divide-y divide-hairline" data-testid="portal-reservation-rows">
+            {rows.map((r) => {
+              const clientName  = r.lead?.fullName ?? r.client?.fullName ?? '—';
+              const clientPhone = r.lead?.phone ?? r.client?.phone ?? undefined;
+              const href = `/portal/reservations/${r.id}`;
+              const commissionParts = r.commissionLockedAmount != null
+                ? compactParts(Number(r.commissionLockedAmount), symbol, locale)
+                : null;
+              return (
+                <li
+                  key={r.id}
+                  data-testid="portal-reservation-row"
+                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[auto_minmax(0,1.3fr)_minmax(0,1.1fr)_150px_150px_110px_36px]"
+                >
+                  <Avatar name={clientName} />
 
-                return (
-                  <tr
-                    key={r.id}
-                    className={cn(
-                      'border-t border-hairline transition-colors align-top',
-                      isConverted
-                        ? 'bg-emerald-50/25 hover:bg-emerald-50/50'
-                        : isApproved
-                          ? 'bg-blue-50/20 hover:bg-blue-50/40'
-                          : 'hover:bg-surface-muted/40',
-                    )}
-                  >
-                    <td className="py-3 ps-5 pe-4">
-                      {clientName ? (
-                        <div className="flex items-start gap-2.5">
-                          <span
-                            className={cn(
-                              'h-8 w-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0',
-                              avatarColor(clientName),
-                            )}
-                          >
-                            {initials(clientName)}
-                          </span>
-                          <div>
-                            <p className="font-semibold text-slate-900 text-xs">{clientName}</p>
-                            {clientPhone && (
-                              <a
-                                href={`tel:${clientPhone}`}
-                                className="text-2xs text-slate-500 mt-0.5 inline-flex items-center gap-1 hover:text-brand-700 transition-colors"
-                                dir="ltr"
-                              >
-                                <Phone className="h-3 w-3 text-slate-400 shrink-0" />
-                                {clientPhone}
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 text-xs">—</span>
+                  {/* Client + reservation code */}
+                  <div className="min-w-0">
+                    <Link href={href as never} className="block truncate text-[14.5px] font-bold text-slate-900 hover:text-brand-700">
+                      {clientName}
+                    </Link>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-slate-500">
+                      <Link href={href as never} className="whitespace-nowrap hover:text-brand-700">
+                        <span className="me-1 text-slate-400">{locale === 'en' ? 'Reservation' : 'حجز'}</span>
+                        <span className="font-mono font-semibold text-brand-700" dir="ltr">
+                          {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
+                        </span>
+                      </Link>
+                      {clientPhone && (
+                        <a href={`tel:${clientPhone}`} className="inline-flex items-center gap-1 tabular-nums hover:text-brand-700">
+                          <Phone className="h-3 w-3 shrink-0" />
+                          <span dir="ltr">{clientPhone}</span>
+                        </a>
                       )}
-                    </td>
+                    </div>
+                  </div>
 
-                    <td className="py-3 px-4">
-                      <CodeText className="text-xs font-semibold text-slate-800">{r.unit?.code ?? '—'}</CodeText>
-                      <p className="text-2xs text-slate-500 mt-0.5">
+                  {/* Project + unit */}
+                  <div className="hidden min-w-0 items-start gap-2 text-[12.5px] lg:flex">
+                    <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A24E]" />
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-slate-800">
                         {r.unit?.building ? tx(r.unit.building.phase.project.name, locale) : '—'}
                       </p>
-                    </td>
-
-                    <td className="py-3 px-4">
-                      <ReservationStatusBadge status={r.status} locale={locale} />
-                    </td>
-
-                    <td className="py-3 px-4">
-                      {r.commissionLockedPct != null ? (
-                        <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ring-amber-100">
-                          <BadgePercent className="h-3 w-3" />
-                          {Number(r.commissionLockedPct).toFixed(2)}%
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 text-xs">—</span>
-                      )}
-                      {r.commissionLockedAmount != null && (
-                        <p className="text-2xs text-slate-500 mt-1 tabular-nums">
-                          {formatCurrency(r.commissionLockedAmount, currency, locale)}
+                      {r.unit && (
+                        <p className="mt-0.5 text-slate-500">
+                          <span className="me-1 text-slate-400">{locale === 'en' ? 'Unit' : 'وحدة'}</span>
+                          <span className="whitespace-nowrap font-mono" dir="ltr">{r.unit.code}</span>
                         </p>
                       )}
-                    </td>
+                    </div>
+                  </div>
 
-                    <td className="py-3 px-4">
-                      <CodeText className="text-2xs text-slate-500">{r.reservationNumber ?? '—'}</CodeText>
-                    </td>
+                  {/* Locked commission */}
+                  <div className="hidden text-[12.5px] lg:block">
+                    <p className="text-[11px] text-slate-400">{m.common.lockedCommission}</p>
+                    {r.commissionLockedPct != null ? (
+                      <p className="mt-0.5 whitespace-nowrap font-bold tabular-nums text-brand-700">
+                        {Number(r.commissionLockedPct).toFixed(2)}%
+                        {commissionParts && (
+                          <span className="ms-2 text-[12px] font-semibold text-slate-600">
+                            <Amount parts={commissionParts} />
+                          </span>
+                        )}
+                      </p>
+                    ) : (
+                      <p className="mt-0.5 text-slate-400">—</p>
+                    )}
+                  </div>
 
-                    <td className="py-3 px-4 text-2xs text-slate-500 whitespace-nowrap">
-                      {formatDate(r.createdAt, locale)}
-                    </td>
+                  {/* Status */}
+                  <div className="hidden lg:block">
+                    <ReservationStatusBadge status={r.status} locale={locale} />
+                  </div>
 
-                    <td className="py-3 ps-4 pe-5">
-                      <Link href={`/portal/reservations/${r.id}` as never}>
-                        <IconButton label={m.common.view} variant="ghost" size="sm">
-                          <Eye />
-                        </IconButton>
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                  {/* Created */}
+                  <span className="hidden whitespace-nowrap text-[12px] tabular-nums text-slate-500 lg:block">
+                    <bdi>{formatDate(r.createdAt, locale)}</bdi>
+                  </span>
+
+                  <Link
+                    href={href as never}
+                    aria-label={m.common.view}
+                    title={m.common.view}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
         {paged && paged.meta.total > PAGE_SIZE && (
           <Pagination

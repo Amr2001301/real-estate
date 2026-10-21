@@ -4,19 +4,16 @@ import {
   CalendarClock,
   Phone,
   Clock,
-  XCircle,
-  CalendarCheck2,
   AlertCircle,
   Building2,
-  Home,
   Search,
 } from 'lucide-react';
-import { CodeText } from '@/components/ui/code-text';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalVisitRequest } from '@/lib/types';
-import { tx, formatDate, formatDateTime } from '@/lib/format';
+import { tx, formatDate, formatTime, intlLocale, DEFAULT_TIME_ZONE } from '@/lib/format';
+import { Avatar, FigureBar } from '@/components/cockpit/cockpit';
 import { cn } from '@/lib/cn';
-import { getLocale } from '@/lib/locale';
+import { getLocale, type Locale } from '@/lib/locale';
 import { portalLeadsVisitsT } from '@/messages/portal/leads-visits';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +23,6 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { VisitRequestStatusBadge, AppointmentStatusBadge } from '@/components/badges';
 import {
   PremiumPageHero,
-  PremiumMetricStrip,
   PremiumFilterBar,
   PremiumFilterField,
   PremiumSectionCard,
@@ -42,25 +38,6 @@ interface Search {
 }
 
 const PAGE_SIZE = 20;
-
-function initials(name: string): string {
-  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-}
-
-const AVATAR_COLORS = [
-  'bg-violet-100 text-violet-700',
-  'bg-brand-100 text-brand-700',
-  'bg-emerald-100 text-emerald-700',
-  'bg-blue-100 text-blue-700',
-  'bg-rose-100 text-rose-700',
-  'bg-amber-100 text-amber-700',
-];
-
-function avatarColor(name: string): string {
-  if (!name) return AVATAR_COLORS[0]!;
-  const code = name.charCodeAt(0) + (name.charCodeAt(1) || 0);
-  return AVATAR_COLORS[code % AVATAR_COLORS.length]!;
-}
 
 function appointmentUrgency(
   iso: string | null | undefined,
@@ -96,8 +73,9 @@ export default async function PortalVisitsPage({
   if (sp.requestStatus) qs.set('requestStatus', sp.requestStatus);
   if (sp.q) qs.set('q', sp.q);
 
-  const [r, rNew, rUnderReview, rConverted, rRejected] = await Promise.all([
+  const [r, rAll, rNew, rUnderReview, rConverted, rRejected] = await Promise.all([
     safe(api.get<Paged<PortalVisitRequest>>(`/portal/visits?${qs.toString()}`)),
+    safe(api.get<Paged<PortalVisitRequest>>('/portal/visits?page=1&pageSize=1')),
     safe(api.get<Paged<PortalVisitRequest>>('/portal/visits?page=1&pageSize=1&requestStatus=NEW')),
     safe(api.get<Paged<PortalVisitRequest>>('/portal/visits?page=1&pageSize=1&requestStatus=UNDER_REVIEW')),
     safe(api.get<Paged<PortalVisitRequest>>('/portal/visits?page=1&pageSize=1&requestStatus=CONVERTED')),
@@ -106,6 +84,7 @@ export default async function PortalVisitsPage({
 
   const paged        = r.data;
   const rows         = paged?.data ?? [];
+  const totalCount     = rAll.data?.meta.total ?? paged?.meta.total ?? 0;
   const pendingCount   = (rNew.data?.meta.total ?? 0) + (rUnderReview.data?.meta.total ?? 0);
   const scheduledCount = rConverted.data?.meta.total ?? 0;
   const rejectedCount  = rRejected.data?.meta.total  ?? 0;
@@ -136,15 +115,18 @@ export default async function PortalVisitsPage({
         </div>
       )}
 
-      <PremiumMetricStrip
-        variant="compact"
-        metrics={[
-          { label: t.metrics.total, value: paged?.meta.total ?? 0, icon: <CalendarClock />, tone: 'brand'   },
-          { label: t.metrics.pending, value: pendingCount,            icon: <Clock />,          tone: 'warning' },
-          { label: t.metrics.scheduled, value: scheduledCount,          icon: <CalendarCheck2 />, tone: 'success' },
-          { label: t.metrics.rejected, value: rejectedCount,           icon: <XCircle />,        tone: 'danger'  },
-        ]}
-      />
+      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <FigureBar
+          bare
+          cols={4}
+          figures={[
+            { label: t.metrics.total, value: totalCount, href: '/portal/visits' },
+            { label: t.metrics.pending, value: pendingCount, href: '/portal/visits?requestStatus=NEW', warn: pendingCount > 0 },
+            { label: t.metrics.scheduled, value: scheduledCount, href: '/portal/visits?requestStatus=CONVERTED' },
+            { label: t.metrics.rejected, value: rejectedCount, href: '/portal/visits?requestStatus=REJECTED' },
+          ]}
+        />
+      </section>
 
       <PremiumFilterBar
         method="get"
@@ -199,149 +181,105 @@ export default async function PortalVisitsPage({
           </div>
         )}
 
-        <div className="overflow-x-auto scrollbar-thin">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">{t.cols.client}</th>
-                <th className="text-start font-semibold py-3 px-4">{t.cols.projectUnit}</th>
-                <th className="text-start font-semibold py-3 px-4">{t.cols.scheduledAppointment}</th>
-                <th className="text-start font-semibold py-3 px-4">{t.cols.requestStatus}</th>
-                <th className="text-start font-semibold py-3 px-4">{t.cols.preferredDate}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="p-0">
-                    <EmptyState
-                      icon={<CalendarClock />}
-                      title={t.emptyTitle}
-                      description={t.emptyDescription}
-                      action={
-                        <Link href="/portal/visits/new">
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            leftIcon={<Plus className="h-4 w-4" />}
-                          >
-                            {t.newRequest}
-                          </Button>
-                        </Link>
-                      }
-                    />
-                  </td>
-                </tr>
-              )}
-              {rows.map((v) => {
-                const clientName  = v.lead?.fullName ?? v.customerName;
-                const clientPhone = v.lead?.phone ?? v.customerPhone;
-                const appt        = v.appointments?.[0];
-                const urgency     = appointmentUrgency(appt?.scheduledAt, t.urgency);
-                const isToday     = urgency?.key === 'today';
+        {rows.length === 0 ? (
+          <EmptyState
+            icon={<CalendarClock />}
+            title={t.emptyTitle}
+            description={t.emptyDescription}
+            action={
+              <Link href="/portal/visits/new">
+                <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />}>
+                  {t.newRequest}
+                </Button>
+              </Link>
+            }
+          />
+        ) : (
+          <ul className="divide-y divide-hairline" data-testid="portal-visit-rows">
+            {rows.map((v) => {
+              const clientName  = v.lead?.fullName ?? v.customerName;
+              const clientPhone = v.lead?.phone ?? v.customerPhone;
+              const appt        = v.appointments?.[0];
+              const urgency     = appointmentUrgency(appt?.scheduledAt, t.urgency);
+              const isToday     = urgency?.key === 'today';
 
-                return (
-                  <tr
-                    key={v.id}
-                    className={cn(
-                      'border-t border-hairline align-top transition-colors',
-                      isToday
-                        ? 'bg-amber-50/40 hover:bg-amber-50/70'
-                        : 'hover:bg-surface-muted/40',
-                    )}
-                  >
-                    <td className="py-3 ps-5 pe-4">
-                      {clientName ? (
-                        <div className="flex items-center gap-2.5">
-                          <span
-                            className={cn(
-                              'h-8 w-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0',
-                              avatarColor(clientName),
-                            )}
-                          >
-                            {initials(clientName)}
+              return (
+                <li
+                  key={v.id}
+                  data-testid="portal-visit-row"
+                  className={cn(
+                    'grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-2 px-6 py-4 transition-colors lg:grid-cols-[64px_minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,1.2fr)_170px]',
+                    isToday ? 'bg-amber-500/[0.06] hover:bg-amber-500/10' : 'hover:bg-surface-muted/30',
+                  )}
+                >
+                  {/* The appointment once booked, else the preferred day (date-only, UTC). */}
+                  {appt ? (
+                    <DateTile value={appt.scheduledAt} time={formatTime(appt.scheduledAt, locale)} timeZone={DEFAULT_TIME_ZONE} locale={locale} />
+                  ) : (
+                    <DateTile value={v.preferredDate} timeZone="UTC" locale={locale} />
+                  )}
+
+                  {/* Client */}
+                  <div className="flex min-w-0 items-center gap-3">
+                    {clientName && <Avatar name={clientName} />}
+                    <div className="min-w-0">
+                      <p className={cn('truncate text-[14.5px] font-bold', clientName ? 'text-slate-900' : 'text-slate-400')}>
+                        {clientName ?? '—'}
+                      </p>
+                      {clientPhone && (
+                        <a href={`tel:${clientPhone}`} className="mt-1 inline-flex items-center gap-1 text-[12px] tabular-nums text-slate-500 hover:text-brand-700">
+                          <Phone className="h-3 w-3 shrink-0" />
+                          <span dir="ltr">{clientPhone}</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Project + unit */}
+                  <div className="hidden min-w-0 items-start gap-2 text-[12.5px] lg:flex">
+                    <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A24E]" />
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-slate-800">{v.project ? tx(v.project.name, locale) : '—'}</p>
+                      {v.unit?.code && (
+                        <p className="mt-0.5 text-slate-500">
+                          <span className="me-1 text-slate-400">{locale === 'en' ? 'Unit' : 'وحدة'}</span>
+                          <span className="whitespace-nowrap font-mono" dir="ltr">{v.unit.code}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Appointment */}
+                  <div className="hidden min-w-0 text-[12.5px] lg:block">
+                    {appt ? (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {urgency && (
+                          <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-bold', URGENCY_CHIP[urgency.key])}>
+                            {urgency.label}
                           </span>
-                          <div>
-                            <p className="font-semibold text-slate-900 text-xs">{clientName}</p>
-                            {clientPhone && (
-                              <a
-                                href={`tel:${clientPhone}`}
-                                className="text-2xs text-slate-500 mt-0.5 inline-flex items-center gap-1 hover:text-brand-700 transition-colors"
-                                dir="ltr"
-                              >
-                                <Phone className="h-3 w-3 text-slate-400 shrink-0" />
-                                {clientPhone}
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 text-xs">—</span>
-                      )}
-                    </td>
-
-                    <td className="py-3 px-4">
-                      <div className="flex items-start gap-1.5">
-                        <Building2 className="h-3.5 w-3.5 text-brand-500 shrink-0 mt-px" />
-                        <div>
-                          <p className="text-xs font-semibold text-slate-800">
-                            {v.project ? tx(v.project.name, locale) : '—'}
-                          </p>
-                          {v.unit?.code && (
-                            <p className="text-2xs text-slate-500 mt-0.5 inline-flex items-center gap-1">
-                              <Home className="h-2.5 w-2.5 text-slate-400 shrink-0" />
-                              <CodeText>{v.unit.code}</CodeText>
-                            </p>
-                          )}
-                        </div>
+                        )}
+                        <AppointmentStatusBadge status={appt.status} locale={locale} />
                       </div>
-                    </td>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-slate-400">
+                        <Clock className="h-3.5 w-3.5" />
+                        {t.awaitingScheduling}
+                      </span>
+                    )}
+                    <p className="mt-1 whitespace-nowrap text-[11.5px] text-slate-500">
+                      {t.cols.preferredDate}: <bdi>{formatDate(v.preferredDate, locale, 'UTC')}</bdi>
+                    </p>
+                  </div>
 
-                    <td className="py-3 px-4">
-                      {appt ? (
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {urgency && (
-                              <span
-                                className={cn(
-                                  'text-2xs font-bold px-1.5 py-0.5 rounded-md',
-                                  urgency.className,
-                                )}
-                              >
-                                {urgency.label}
-                              </span>
-                            )}
-                            <CodeText className="text-xs text-slate-800 font-semibold tabular-nums">
-                              {formatDateTime(appt.scheduledAt, locale)}
-                            </CodeText>
-                          </div>
-                          <AppointmentStatusBadge status={appt.status} locale={locale} />
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 text-xs inline-flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {t.awaitingScheduling}
-                        </span>
-                      )}
-                    </td>
-
-                    <td className="py-3 px-4">
-                      {v.requestStatus ? (
-                        <VisitRequestStatusBadge status={v.requestStatus} locale={locale} />
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-
-                    <td className="py-3 px-4 text-xs text-slate-500 whitespace-nowrap">
-                      {formatDate(v.preferredDate, locale)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                  {/* Request status */}
+                  <div className="hidden lg:block">
+                    {v.requestStatus ? <VisitRequestStatusBadge status={v.requestStatus} locale={locale} /> : <span className="text-slate-400">—</span>}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
         {paged && paged.meta.total > PAGE_SIZE && (
           <Pagination
@@ -354,6 +292,44 @@ export default async function PortalVisitsPage({
           />
         )}
       </PremiumSectionCard>
+    </div>
+  );
+}
+
+const URGENCY_CHIP: Record<'today' | 'tomorrow' | 'past', string> = {
+  today: 'bg-amber-500/15 text-amber-600',
+  tomorrow: 'bg-sky-500/12 text-sky-600',
+  past: 'bg-slate-500/12 text-slate-500',
+};
+
+/** A small calendar leaf: weekday, day number, month; the time beneath. */
+function DateTile({
+  value,
+  time,
+  timeZone,
+  locale,
+}: {
+  value: string | null | undefined;
+  time?: string | null;
+  timeZone: string;
+  locale: Locale;
+}) {
+  const d = value ? new Date(value) : null;
+  if (!d || Number.isNaN(d.getTime())) {
+    return <div className="h-[68px] w-16 rounded-2xl border border-dashed border-hairline" />;
+  }
+  const loc = intlLocale(locale);
+  const part = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(loc, { ...o, timeZone }).format(d);
+  return (
+    <div className="flex w-16 flex-col items-center overflow-hidden rounded-2xl border border-hairline bg-surface-muted/40 text-center">
+      <span className="w-full bg-[#C9A24E]/12 py-0.5 text-[10.5px] font-bold text-brand-700">{part({ weekday: 'short' })}</span>
+      <span className="pt-1 text-[22px] font-bold leading-none tabular-nums text-slate-900">{part({ day: 'numeric' })}</span>
+      <span className="pb-1 text-[11px] font-semibold text-slate-500">{part({ month: 'short' })}</span>
+      {time && (
+        <span dir="ltr" className="w-full border-t border-hairline py-0.5 text-[10.5px] font-semibold tabular-nums text-slate-600">
+          {time}
+        </span>
+      )}
     </div>
   );
 }

@@ -31,3 +31,17 @@ test('portal projects: figures strip and a numeric commission on each card', asy
   await expect(page.getByTestId('figure-bar')).toBeVisible();
   await expect(page.locator('main')).not.toContainText(/الافتراضية\s*$/m);
 });
+
+for (const path of ['/portal/leads', '/portal/visits', '/portal/reservations', '/portal/contracts', '/portal/commissions', '/portal/payouts', '/portal/units', '/portal/team']) {
+  test(`${path}: figures strip and rows, no table`, async ({ page }) => {
+    await gotoReady(page, path);
+    await expect(page.getByTestId('figure-bar')).toBeVisible();
+    await expect(page.locator('main table')).toHaveCount(0);
+  });
+}
+
+test('portal activity: grouped by day, times not scrambled', async ({ page }) => {
+  await gotoReady(page, '/portal/activity');
+  await expect(page.locator('main')).not.toContainText(/\d{2}[صم] \d/);
+  await expect(page.locator('main table')).toHaveCount(0);
+});
