@@ -246,14 +246,16 @@ export function PremiumRangeField({
   label,
   from,
   to,
+  hideLabel,
 }: {
   label: string;
+  hideLabel?: boolean;
   from: { id: string; value?: string; label: string };
   to: { id: string; value?: string; label: string };
 }) {
   const set = !!(from.value || to.value);
   const input =
-    'h-9 w-[132px] rounded-full border-0 bg-surface-sunken/60 px-3 text-[13px] font-bold tabular-nums text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-400/40';
+    'h-9 w-[124px] rounded-full border-0 bg-surface-sunken/60 px-3 text-[13px] font-bold tabular-nums text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-400/40';
   return (
     <div
       className={cn(
@@ -262,7 +264,8 @@ export function PremiumRangeField({
       )}
     >
       <CalendarRange className="h-4 w-4 shrink-0 text-brand-700" />
-      <span className="whitespace-nowrap">{label}</span>
+      {/* With a single range on the page the calendar icon says it; the label stays for screen readers. */}
+      <span className={hideLabel ? 'sr-only' : 'whitespace-nowrap'}>{label}</span>
       <label htmlFor={from.id} className="sr-only">{from.label}</label>
       <input id={from.id} name={from.id} type="date" defaultValue={from.value ?? ''} className={input} />
       <ArrowLeft className="h-3.5 w-3.5 shrink-0 text-slate-400 ltr:rotate-180" aria-hidden />

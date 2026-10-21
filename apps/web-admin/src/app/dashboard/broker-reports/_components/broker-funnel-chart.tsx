@@ -12,6 +12,8 @@ export interface FunnelStage {
   bg: string;
   text: string;
   dot: string;
+  /** Tooltip explaining what the stage counts. */
+  hint?: string;
 }
 
 const HEX_MAP: Record<string, string> = {
@@ -42,12 +44,15 @@ export function BrokerFunnelChart({
   overallConv,
   overallLabel = 'فرصة → دفعة مُنجزة',
   noDataLabel = 'لا توجد بيانات',
+  note,
   locale = 'ar',
 }: {
   stages: FunnelStage[];
   overallConv: number | null;
   overallLabel?: string;
   noDataLabel?: string;
+  /** Under the cards: why a step shows no rate. */
+  note?: string;
   locale?: Locale;
 }) {
   if (!stages.length) {
@@ -67,6 +72,7 @@ export function BrokerFunnelChart({
           return (
             <div
               key={stage.label}
+              title={stage.hint}
               className="relative overflow-hidden rounded-2xl border border-hairline bg-surface-muted/30 px-4 py-3.5"
             >
               <span className="absolute inset-x-0 top-0 h-[3px]" style={{ backgroundColor: hex }} />
@@ -89,8 +95,11 @@ export function BrokerFunnelChart({
       </div>
 
       {overallConv !== null && (
-        <div className="mt-4 flex items-center justify-between gap-2 border-t border-hairline pt-3">
-          <span className="text-[12px] text-slate-500">{overallLabel}</span>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-hairline pt-3">
+          <span className="text-[12px] text-slate-500">
+            {overallLabel}
+            {note && <span className="ms-3 text-[11.5px] text-slate-400">· {note}</span>}
+          </span>
           <span className="rounded-full bg-brand-500/12 px-3 py-1 text-[12px] font-bold tabular-nums text-brand-700">
             {(overallConv * 100).toFixed(1)}%
           </span>

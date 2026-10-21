@@ -120,20 +120,22 @@ export default async function AdminBrokerReportsPage({
       { label: m.funnelStageReservations,    value: s.reservationsCreated, color: 'bg-violet-500',  bg: 'bg-violet-100',  text: 'text-violet-700',  dot: 'bg-violet-500' },
       { label: m.funnelStageContracts,       value: s.contractsCreated,    color: 'bg-amber-500',   bg: 'bg-amber-100',   text: 'text-amber-700',   dot: 'bg-amber-500' },
       { label: m.funnelStageContractsSigned, value: s.contractsSigned,     color: 'bg-emerald-500', bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500' },
-      { label: m.funnelStagePayoutsPaid,     value: s.payoutsPaid,         color: 'bg-teal-500',    bg: 'bg-teal-100',    text: 'text-teal-700',    dot: 'bg-teal-500' },
+      { label: m.funnelStagePayoutsPaid,     hint: m.funnelStagePayoutsPaidHint, value: s.contractsCommissionPaid ?? 0,         color: 'bg-teal-500',    bg: 'bg-teal-100',    text: 'text-teal-700',    dot: 'bg-teal-500' },
     ];
     const first = raw[0]?.value ?? 1;
     return raw.map((r, i) => ({
       ...r,
       pctOfFirst: first > 0 ? Math.min((r.value / first) * 100, 100) : 0,
-      convFromPrev: i > 0 && (raw[i - 1]?.value ?? 0) > 0
+      // Stages are counted on their own over the period, not as one cohort:
+      // a booking can come without a lead, so no rate is drawn into bookings.
+      convFromPrev: i > 0 && i !== 2 && (raw[i - 1]?.value ?? 0) > 0
         ? r.value / (raw[i - 1]!.value)
         : null,
     }));
   })() : [];
 
   const overallConv = s && s.leadsSubmitted > 0
-    ? s.payoutsPaid / s.leadsSubmitted
+    ? (s.contractsCommissionPaid ?? 0) / s.leadsSubmitted
     : null;
 
   // ── Top broker for strip ──────────────────────────────────────────────────
@@ -198,7 +200,7 @@ export default async function AdminBrokerReportsPage({
         }
       >
         <PremiumFilterField label={m.filterBroker} htmlFor="br-broker">
-          <Select id="br-broker" name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''} className="w-44">
+          <Select id="br-broker" name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''} className="w-32">
             <option value="">{m.filterAllBrokers}</option>
             {brokers.map((b) => (
               <option key={b.id} value={b.id}>{b.companyName}</option>
@@ -206,7 +208,7 @@ export default async function AdminBrokerReportsPage({
           </Select>
         </PremiumFilterField>
         <PremiumFilterField label={m.filterProject} htmlFor="br-project">
-          <Select id="br-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40">
+          <Select id="br-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-32">
             <option value="">{m.filterAllProjects}</option>
             {projList.map((p) => (
               <option key={p.id} value={p.id}>{tx(p.name)}</option>
@@ -214,13 +216,14 @@ export default async function AdminBrokerReportsPage({
           </Select>
         </PremiumFilterField>
         <PremiumFilterField label={m.filterRankBy} htmlFor="br-metric">
-          <Select id="br-metric" name="metric" inputSize="sm" defaultValue={sp.metric ?? 'salesGross'} className="w-48">
+          <Select id="br-metric" name="metric" inputSize="sm" defaultValue={sp.metric ?? 'salesGross'} className="w-32">
             {Object.entries(m.metricLabels).map(([v, l]) => (
               <option key={v} value={v}>{l}</option>
             ))}
           </Select>
         </PremiumFilterField>
         <PremiumRangeField
+          hideLabel
           label={m.filterFrom}
           from={{ id: 'from', value: sp.from, label: m.filterFrom }}
           to={{ id: 'to', value: sp.to, label: m.filterTo }}
@@ -466,6 +469,7 @@ export default async function AdminBrokerReportsPage({
             overallConv={overallConv}
             overallLabel={m.funnelOverallLabel}
             noDataLabel={m.chartNoData}
+            note={m.funnelNoLeadRate}
           />
         </PremiumSectionCard>
       )}

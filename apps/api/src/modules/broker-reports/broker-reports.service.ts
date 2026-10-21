@@ -1228,11 +1228,20 @@ export class BrokerReportsService {
         };
       },
       contractStats: async () => {
-        const [created, signed] = await Promise.all([
+        const [created, signed, commissionPaid] = await Promise.all([
           this.prisma.contract.count({ where: conCreatedW }),
           this.prisma.contract.count({ where: conSignedW }),
+          // The funnel's last step: signed contracts whose broker commission
+          // sits in a PAID payout — a subset of the signed ones. (A payout
+          // bundles several commissions, so payouts can't be that step.)
+          this.prisma.contract.count({
+            where: {
+              ...conSignedW,
+              brokerCommission: { is: { payout: { is: { status: BrokerPayoutStatus.PAID } } } },
+            },
+          }),
         ]);
-        return { contractsCreated: created, contractsSigned: signed };
+        return { contractsCreated: created, contractsSigned: signed, contractsCommissionPaid: commissionPaid };
       },
       salesGross: async () => {
         // Signed contracts only — see service-level comment for rationale —

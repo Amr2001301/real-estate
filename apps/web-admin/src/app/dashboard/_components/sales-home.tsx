@@ -13,7 +13,6 @@ import {
   Bell,
   CheckCircle2,
   ArrowUpRight,
-  TrendingUp,
   Target,
   Users,
   ArrowRight,
@@ -29,6 +28,7 @@ import {
   AppointmentStatusBadge,
 } from '@/components/badges';
 import { PremiumPageHero, PremiumMetricStrip } from '@/components/premium';
+import { StagePipeline } from '@/components/crm/stage-pipeline';
 import { getLocale, type Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 
@@ -64,106 +64,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
       <span className="h-1.5 w-1.5 rounded-full bg-brand-500 shrink-0" />
       <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{children}</span>
       <span className="flex-1 h-px bg-hairline" />
-    </div>
-  );
-}
-
-// ── Sales Pipeline ────────────────────────────────────────────────────────────
-function SalesPipeline({
-  openLeads, visitsCount, reservationsCount, contractsCount, stageGroups, m,
-}: {
-  openLeads: number; visitsCount: number; reservationsCount: number; contractsCount: number;
-  stageGroups: Record<string, number>;
-  m: ReturnType<typeof uiT>['pages']['salesHome'];
-}) {
-  const stages = [
-    { label: m.stageOpenLeads,         value: openLeads,         icon: <Zap />,           clr: 'brand',   bg: 'bg-brand-50   text-brand-600   ring-brand-100'   },
-    { label: m.stageUpcomingVisits,     value: visitsCount,        icon: <CalendarClock />, clr: 'sky',     bg: 'bg-sky-50     text-sky-600     ring-sky-100'     },
-    { label: m.stageActiveReservations, value: reservationsCount,  icon: <BookmarkCheck />, clr: 'emerald', bg: 'bg-emerald-50 text-emerald-600 ring-emerald-100' },
-    { label: m.stageMonthContracts,     value: contractsCount,     icon: <FileText />,      clr: 'violet',  bg: 'bg-violet-50  text-violet-600  ring-violet-100'  },
-  ] as const;
-
-  const pipelineStages = [
-    { key: 'NEW',         label: m.stageLabelNew         },
-    { key: 'INTERESTED',  label: m.stageLabelInterested  },
-    { key: 'VISIT',       label: m.stageLabelVisit       },
-    { key: 'NEGOTIATION', label: m.stageLabelNegotiation },
-  ];
-
-  const stageColors: Record<string, { color: string; bg: string }> = {
-    NEW:         { color: 'text-slate-600',   bg: 'bg-slate-100'  },
-    INTERESTED:  { color: 'text-blue-700',    bg: 'bg-blue-50'    },
-    VISIT:       { color: 'text-brand-700',   bg: 'bg-brand-50'   },
-    NEGOTIATION: { color: 'text-amber-700',   bg: 'bg-amber-50'   },
-    WON:         { color: 'text-emerald-700', bg: 'bg-emerald-50' },
-    LOST:        { color: 'text-red-700',     bg: 'bg-red-50'     },
-  };
-
-  const maxStage = Math.max(...pipelineStages.map((s) => stageGroups[s.key] ?? 0), 1);
-
-  return (
-    <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-hairline">
-        <span className="h-8 w-8 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0 [&>svg]:h-4 [&>svg]:w-4 text-brand-700">
-          <TrendingUp />
-        </span>
-        <div>
-          <h3 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{m.pipelineTitle}</h3>
-          <p className="text-[11px] text-slate-400 mt-0.5">{m.pipelineDesc}</p>
-        </div>
-      </div>
-
-      <div className="p-5 space-y-5">
-        {/* Pipeline stages row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {/* No rate between stages: they are counts at this moment, not one
-              group of leads moving on (see the manager home). */}
-          {stages.map((s, i) => {
-            return (
-              <div key={s.label} className="flex flex-col items-center text-center gap-2">
-                <div className="flex items-center gap-2 w-full justify-center">
-                  {i > 0 && <div className="hidden sm:block h-px flex-1 bg-hairline" />}
-                  <div className={cn(
-                    'h-10 w-10 rounded-full flex items-center justify-center shrink-0 [&>svg]:h-4 [&>svg]:w-4 ring-1',
-                    s.bg,
-                  )}>
-                    {s.icon}
-                  </div>
-                  {i < stages.length - 1 && <div className="hidden sm:block h-px flex-1 bg-hairline" />}
-                </div>
-                <div>
-                  <p className="text-2xl font-black text-slate-900 tabular-nums leading-none">{s.value}</p>
-                  <p className="text-[11px] text-slate-500 font-medium mt-0.5">{s.label}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Stage distribution bar */}
-        {openLeads > 0 && (
-          <div className="border-t border-hairline pt-4">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">{m.pipelineStageDistLabel}</p>
-            <div className="space-y-2">
-              {pipelineStages.map((s) => {
-                const count = stageGroups[s.key] ?? 0;
-                const pct   = Math.round((count / maxStage) * 100);
-                const cfg   = stageColors[s.key]!;
-                return count > 0 ? (
-                  <div key={s.key} className="flex items-center gap-3">
-                    <span className={cn('text-[11px] font-medium w-[80px] shrink-0 text-end', cfg.color)}>{s.label}</span>
-                    <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                      <div className={cn('h-full rounded-full', cfg.bg)} style={{ width: `${pct}%` }} />
-                    </div>
-                    <span className="text-[11px] font-bold text-slate-700 tabular-nums w-4 shrink-0">{count}</span>
-                  </div>
-                ) : null;
-              })}
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
@@ -282,7 +182,7 @@ export async function SalesDashboard({ userId }: { userId: string }) {
       {/* ── KPI band (U5): one navy band; warnings as a coloured line, not coloured cards ── */}
       <PremiumMetricStrip
         variant="compact"
-        cols={6}
+        cols={3}
         metrics={[
           { label: m.kpiOpenLeads, value: openLeadsCount, icon: <Zap />, sub: m.kpiOpenLeadsSub(wonLeads, lostLeads) },
           {
@@ -308,13 +208,22 @@ export async function SalesDashboard({ userId }: { userId: string }) {
       />
 
       {/* ── Sales pipeline ────────────────────────────────────────────────── */}
-      <SalesPipeline
-        openLeads={openLeadsCount}
-        visitsCount={upcomingVisitsCount}
-        reservationsCount={activeReservationsCount}
-        contractsCount={closedDeals}
-        stageGroups={stageGroups}
-        m={m}
+      {/* Where my open leads sit (the counts above are not repeated here) */}
+      <StagePipeline
+        title={m.pipelineTitle}
+        sub={uiT(locale).pages.salesManagerHome.pipelineTotal(
+          openLeadsCount,
+          ['NEW', 'INTERESTED', 'VISIT', 'NEGOTIATION'].filter((k) => (stageGroups[k] ?? 0) > 0).length,
+        )}
+        labels={{
+          NEW: m.stageLabelNew,
+          INTERESTED: m.stageLabelInterested,
+          VISIT: m.stageLabelVisit,
+          NEGOTIATION: m.stageLabelNegotiation,
+        }}
+        counts={stageGroups}
+        link={{ href: '/dashboard/leads', label: uiT(locale).pages.salesManagerHome.pipelineOpenLink }}
+        emptyNote={uiT(locale).pages.salesManagerHome.pipelineEmptyNote}
       />
 
       {/* ── Today priorities ──────────────────────────────────────────────── */}
