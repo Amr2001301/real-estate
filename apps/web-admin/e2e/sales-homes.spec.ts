@@ -3,28 +3,57 @@ import { SALES_STORAGE, MANAGER_STORAGE } from './global-setup';
 import { gotoReady } from './helpers/pickers';
 
 /**
- * The sales and manager homes show where the open leads sit as stage cards
- * (the step row that repeated the KPI counts is gone), and the KPI band has
- * room for its labels.
+ * The sales and manager homes as a day planner: a quiet header with the day
+ * and the month's target, one row of six figures, the week's agenda around
+ * the selected day (`?day=`), the day's tasks and the open leads by stage.
+ * The old lead board and booking cards are gone.
  */
-test.describe('sales home', () => {
+test.describe('sales desk', () => {
   test.use({ storageState: SALES_STORAGE });
-  test('stage cards, no repeated step row', async ({ page }) => {
+
+  test('day header, six figures, the week strip and the open leads split', async ({ page }) => {
     await gotoReady(page, '/dashboard');
-    await expect(page.getByTestId('stage-pipeline')).toBeVisible();
-    await expect(page.getByTestId('stage-pipeline')).toContainText('جديد');
+    await expect(page.getByTestId('day-header')).toBeVisible();
+    await expect(page.getByTestId('figure')).toHaveCount(6);
+    const strip = page.getByTestId('day-strip');
+    await expect(strip.getByRole('link')).toHaveCount(7);
+    // Today is the selected day when none is asked for.
+    await expect(strip.getByRole('link').first()).toHaveAttribute('aria-current', 'date');
+    const pipeline = page.getByTestId('pipeline');
+    for (const stage of ['جديد', 'مهتم', 'زيارة', 'تفاوض']) await expect(pipeline).toContainText(stage);
+    await expect(page.getByTestId('lead-board')).toHaveCount(0);
+    await expect(page.getByTestId('expiry-cards')).toHaveCount(0);
+  });
+
+  test('picking a day in the strip opens that day', async ({ page }) => {
+    await gotoReady(page, '/dashboard');
+    const third = page.getByTestId('day-strip').getByRole('link').nth(2);
+    const href = await third.getAttribute('href');
+    expect(href).toMatch(/\?day=\d{4}-\d{2}-\d{2}$/);
+    await third.click();
+    await expect(page).toHaveURL(/\?day=\d{4}-\d{2}-\d{2}$/);
+    await expect(page.getByTestId('day-strip').getByRole('link').nth(2)).toHaveAttribute('aria-current', 'date');
+    await expect(page.getByTestId('day-strip').getByRole('link').first()).not.toHaveAttribute('aria-current', 'date');
+    await expect(page.getByTestId('timeline').or(page.getByTestId('timeline-empty'))).toBeVisible();
+  });
+
+  test('a day outside the week falls back to today', async ({ page }) => {
+    await gotoReady(page, '/dashboard?day=1999-01-01');
+    await expect(page.getByTestId('day-strip').getByRole('link').first()).toHaveAttribute('aria-current', 'date');
   });
 });
 
-test.describe('manager home', () => {
+test.describe('manager day', () => {
   test.use({ storageState: MANAGER_STORAGE });
-  test('stage cards and readable team alerts', async ({ page }) => {
+
+  test('team agenda, attention, team ranking and the open leads split', async ({ page }) => {
     await gotoReady(page, '/dashboard');
-    await expect(page.getByTestId('stage-pipeline')).toBeVisible();
-    const alerts = page.getByTestId('team-alerts');
-    if ((await alerts.count()) > 0) {
-      // the alert count badge carries its number
-      await expect(alerts.locator('header, div').first()).toContainText(/\d/);
-    }
+    await expect(page.getByTestId('day-header')).toBeVisible();
+    await expect(page.getByTestId('figure')).toHaveCount(6);
+    await expect(page.getByTestId('day-strip').getByRole('link')).toHaveCount(7);
+    await expect(page.getByTestId('attention')).toBeVisible();
+    await expect(page.getByTestId('leaderboard')).toBeVisible();
+    await expect(page.getByTestId('pipeline')).toBeVisible();
+    await expect(page.getByTestId('lead-board')).toHaveCount(0);
   });
 });

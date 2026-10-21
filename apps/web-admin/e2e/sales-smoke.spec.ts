@@ -35,7 +35,8 @@ test.describe('SALES smoke', () => {
     await page.goto('/dashboard');
     await expect(page).not.toHaveURL(/\/login(\?|$)/);
     // Sales-focused home (not the admin "المجلس الرقمي" dashboard).
-    await expect(page.getByText('لوحة المبيعات').first()).toBeVisible();
+    // The rep's home is the sales desk (redesigned 2026-10).
+    await expect(page.getByText('مكتب المبيعات').first()).toBeVisible();
     await expect(page.getByText('مرحباً بك في المجلس الرقمي')).toHaveCount(0);
   });
 
