@@ -14,9 +14,15 @@ import { NumCell, UnitsBar } from '@/components/premium/data-table';
 
 type Money = { symbol: string; locale: Locale };
 
-function Money({ value, money, size = 'md' }: { value: number; money: Money; size?: 'md' | 'lg' }) {
+function Money({ value, money, size = 'md' }: { value: number; money: Money; size?: 'sm' | 'md' | 'lg' }) {
   const [num, unit] = compactParts(value, money.symbol, money.locale);
-  return <NumCell value={num} unit={unit} className={size === 'lg' ? '[&>span:first-child]:text-[34px]' : '[&>span:first-child]:text-[26px]'} />;
+  const cls =
+    size === 'lg'
+      ? '[&>span:first-child]:text-[34px]'
+      : size === 'sm'
+        ? 'whitespace-nowrap [&>span:first-child]:text-[21px]'
+        : '[&>span:first-child]:text-[26px]';
+  return <NumCell value={num} unit={unit} className={cls} />;
 }
 
 // ── Needs action ─────────────────────────────────────────────────────────────
@@ -463,7 +469,7 @@ export function FinancialHealthPanel({
               <span className={cn('h-2 w-2 shrink-0 rounded-full', c.dot)} aria-hidden />
               {c.label}
             </p>
-            <div className="mt-1"><Money value={c.value} money={money} /></div>
+            <div className="mt-1"><Money value={c.value} money={money} size={cols.length >= 5 ? 'sm' : 'md'} /></div>
             <p className="text-[12px] text-slate-500">{pctText(c.value)}</p>
           </div>
         ))}
