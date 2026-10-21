@@ -27,3 +27,15 @@ test('payout detail: net first, steps, no back button, raw note tags hidden', as
   await expect(page.locator('main')).not.toContainText(/\[\d{4}-\d{2}-\d{2}T/);
   await expect(page.locator('main')).not.toContainText('[approve]');
 });
+
+for (const path of ['/dashboard/broker-payouts/new', '/dashboard/broker-reservations/new']) {
+  test(`${path}: creation summary beside the steps, sticky save bar`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await gotoReady(page, path);
+    const aside = page.locator('main aside');
+    await expect(aside).toBeVisible();
+    await expect(aside).toContainText('ملخص الإنشاء');
+    await expect(aside.locator('a[href="#broker"]')).toBeVisible();
+    await expect(page.locator('main button[type="submit"]')).toHaveCount(1);
+  });
+}

@@ -6,7 +6,9 @@ import { Save, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PremiumFormPanel } from '@/components/premium';
+import Link from 'next/link';
+import { FormFooter } from '@/components/ui/form-footer';
+import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import { SearchSelect } from '@/components/form/search-select';
 import type { AdminBrokerLead, Unit } from '@/lib/types';
 import { tx } from '@/lib/format';
@@ -68,7 +70,9 @@ function FormField({
       </p>
       {children}
       {hint && (
-        <p className={`text-[11px] mt-0.5 leading-snug ${hintTone === 'warning' ? 'text-amber-600' : 'text-slate-400'}`}>
+        <p
+          className={`text-[11px] mt-0.5 leading-snug ${hintTone === 'warning' ? 'text-amber-600' : 'text-slate-400'}`}
+        >
           {hint}
         </p>
       )}
@@ -104,9 +108,37 @@ export function AdminBrokerReservationForm({
   }
 
   const broker = brokers.find((b) => b.id === selectedBrokerId);
+  const agent = brokerAgents.find((a) => a.id === selectedBrokerAgentId);
+  const project = projects.find((p) => p.id === selectedProjectId);
+  const ar = locale === 'ar';
+  const navSections = [
+    {
+      id: 'broker',
+      num: '01',
+      label: m.panel01Title,
+      sub: broker
+        ? `${broker.companyName}${agent ? ` · ${agent.fullName}` : ''}`
+        : ar
+          ? 'شركة الوساطة والوكيل'
+          : 'Brokerage and agent',
+    },
+    {
+      id: 'lead',
+      num: '02',
+      label: m.panel02Title,
+      sub: ar ? 'فرصة معتمدة للوسيط' : 'Approved broker lead',
+    },
+    {
+      id: 'unit',
+      num: '03',
+      label: m.panel03Title,
+      sub: project?.name ?? (ar ? 'المشروع والوحدة' : 'Project and unit'),
+    },
+    { id: 'notes', num: '04', label: m.panel04Title, sub: ar ? 'تفاصيل إضافية' : 'Extra details' },
+  ];
 
   return (
-    <form action={formAction} className="space-y-5">
+    <form action={formAction} className="flex flex-col gap-4 lg:gap-5">
       {state?.error && (
         <div className="flex items-start gap-2.5 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
@@ -114,200 +146,188 @@ export function AdminBrokerReservationForm({
         </div>
       )}
 
-      {/* ── Panel 01 — Broker + Agent ─────────────────────────────────────── */}
-      <PremiumFormPanel
-        id="broker"
-        number="01"
-        title={m.panel01Title}
-        description={m.panel01Desc}
+      <PremiumFormLayout
+        navSections={navSections}
+        sidebarInfo={
+          broker
+            ? `${m.hintBrokerCommission} ${broker.defaultCommissionPct.toFixed(2)}%`
+            : m.footerNote
+        }
+        locale={locale}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            label={m.labelBroker}
-            required
-            hint={
-              broker
-                ? `${m.hintBrokerCommission} ${broker.defaultCommissionPct.toFixed(2)}%`
-                : undefined
-            }
-          >
-            <Select
-              name="brokerId"
+        {/* ── Panel 01 — Broker + Agent ─────────────────────────────────────── */}
+        <PremiumFormPanel
+          id="broker"
+          number="01"
+          title={m.panel01Title}
+          description={m.panel01Desc}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              label={m.labelBroker}
               required
-              value={selectedBrokerId}
-              onChange={(e) => pushSearch({ brokerId: e.target.value })}
-            >
-              <option value="" disabled>{m.optionChooseBroker}</option>
-              {brokers.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.companyName} ({b.code})
-                </option>
-              ))}
-            </Select>
-          </FormField>
-
-          <FormField
-            label={m.labelAgent}
-            hint={m.hintAgent}
-          >
-            <Select
-              name="brokerAgentId"
-              value={selectedBrokerAgentId}
-              onChange={(e) =>
-                pushSearch({
-                  brokerId: selectedBrokerId,
-                  brokerAgentId: e.target.value,
-                  projectId: selectedProjectId,
-                })
+              hint={
+                broker
+                  ? `${m.hintBrokerCommission} ${broker.defaultCommissionPct.toFixed(2)}%`
+                  : undefined
               }
-              disabled={!selectedBrokerId}
             >
-              <option value="">{m.optionNoAgent}</option>
-              {brokerAgents.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.fullName}{a.email ? ` — ${a.email}` : ''}
+              <Select
+                name="brokerId"
+                required
+                value={selectedBrokerId}
+                onChange={(e) => pushSearch({ brokerId: e.target.value })}
+              >
+                <option value="" disabled>
+                  {m.optionChooseBroker}
                 </option>
-              ))}
-            </Select>
-          </FormField>
-        </div>
-      </PremiumFormPanel>
+                {brokers.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.companyName} ({b.code})
+                  </option>
+                ))}
+              </Select>
+            </FormField>
 
-      {/* ── Panel 02 — Approved Lead ──────────────────────────────────────── */}
-      <PremiumFormPanel
-        id="lead"
-        number="02"
-        title={m.panel02Title}
-        description={m.panel02Desc}
-      >
-        {!selectedBrokerId ? (
-          <p className="text-sm text-slate-400 py-1">
-            {m.noBrokerMsg}
-          </p>
-        ) : !hasApprovedLeads ? (
-          <div className="flex items-start gap-2.5 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3.5 text-sm">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <p>{m.noLeadsMsg}</p>
+            <FormField label={m.labelAgent} hint={m.hintAgent}>
+              <Select
+                name="brokerAgentId"
+                value={selectedBrokerAgentId}
+                onChange={(e) =>
+                  pushSearch({
+                    brokerId: selectedBrokerId,
+                    brokerAgentId: e.target.value,
+                    projectId: selectedProjectId,
+                  })
+                }
+                disabled={!selectedBrokerId}
+              >
+                <option value="">{m.optionNoAgent}</option>
+                {brokerAgents.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.fullName}
+                    {a.email ? ` — ${a.email}` : ''}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
           </div>
-        ) : (
-          <FormField
-            label={m.labelLead}
-            required
-            hint={m.hintLead}
-          >
-            {/* Searched on the server: this used to preload ?pageSize=100
+        </PremiumFormPanel>
+
+        {/* ── Panel 02 — Approved Lead ──────────────────────────────────────── */}
+        <PremiumFormPanel id="lead" number="02" title={m.panel02Title} description={m.panel02Desc}>
+          {!selectedBrokerId ? (
+            <p className="text-sm text-slate-400 py-1">{m.noBrokerMsg}</p>
+          ) : !hasApprovedLeads ? (
+            <div className="flex items-start gap-2.5 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3.5 text-sm">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <p>{m.noLeadsMsg}</p>
+            </div>
+          ) : (
+            <FormField label={m.labelLead} required hint={m.hintLead}>
+              {/* Searched on the server: this used to preload ?pageSize=100
                 of the broker's approved leads. */}
-            <SearchSelect<AdminBrokerLead>
-              key={selectedBrokerId}
-              name="leadId"
-              required
-              endpoint={`/api-proxy/broker-leads?brokerId=${encodeURIComponent(
-                selectedBrokerId,
-              )}&brokerApprovalStatus=APPROVED&assigned=true`}
-              toOption={(l) => ({
-                id: l.id,
-                label: `${l.fullName} — ${l.phone}${
-                  l.projectInterest ? ` • ${tx(l.projectInterest.name)}` : ''
-                }`,
-                raw: l,
-              })}
-              placeholder={c.searchBrokerLeadPlaceholder}
-              locale={locale}
-            />
-          </FormField>
-        )}
-      </PremiumFormPanel>
+              <SearchSelect<AdminBrokerLead>
+                key={selectedBrokerId}
+                name="leadId"
+                required
+                endpoint={`/api-proxy/broker-leads?brokerId=${encodeURIComponent(
+                  selectedBrokerId,
+                )}&brokerApprovalStatus=APPROVED&assigned=true`}
+                toOption={(l) => ({
+                  id: l.id,
+                  label: `${l.fullName} — ${l.phone}${
+                    l.projectInterest ? ` • ${tx(l.projectInterest.name)}` : ''
+                  }`,
+                  raw: l,
+                })}
+                placeholder={c.searchBrokerLeadPlaceholder}
+                locale={locale}
+              />
+            </FormField>
+          )}
+        </PremiumFormPanel>
 
-      {/* ── Panel 03 — Project + Unit ─────────────────────────────────────── */}
-      <PremiumFormPanel
-        id="unit"
-        number="03"
-        title={m.panel03Title}
-        description={m.panel03Desc}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField label={m.labelProject} required>
-            <Select
-              value={selectedProjectId}
-              onChange={(e) =>
-                pushSearch({
-                  brokerId: selectedBrokerId,
-                  brokerAgentId: selectedBrokerAgentId,
-                  projectId: e.target.value,
-                })
-              }
-              required
-            >
-              <option value="" disabled>{m.optionChooseProject}</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}{p.city ? ` — ${p.city}` : ''}
+        {/* ── Panel 03 — Project + Unit ─────────────────────────────────────── */}
+        <PremiumFormPanel id="unit" number="03" title={m.panel03Title} description={m.panel03Desc}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField label={m.labelProject} required>
+              <Select
+                value={selectedProjectId}
+                onChange={(e) =>
+                  pushSearch({
+                    brokerId: selectedBrokerId,
+                    brokerAgentId: selectedBrokerAgentId,
+                    projectId: e.target.value,
+                  })
+                }
+                required
+              >
+                <option value="" disabled>
+                  {m.optionChooseProject}
                 </option>
-              ))}
-            </Select>
-          </FormField>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                    {p.city ? ` — ${p.city}` : ''}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
 
-          <FormField
-            label={m.labelUnit}
-            required
-            hint={m.hintUnitAccess}
-          >
-            {/* Searched on the server: this used to preload ?pageSize=200
+            <FormField label={m.labelUnit} required hint={m.hintUnitAccess}>
+              {/* Searched on the server: this used to preload ?pageSize=200
                 available units of the project. */}
-            <SearchSelect<Unit>
-              key={selectedProjectId}
-              name="unitId"
-              required
-              disabled={!selectedProjectId}
-              endpoint={`/api-proxy/units?projectId=${encodeURIComponent(
-                selectedProjectId,
-              )}&status=AVAILABLE`}
-              toOption={(u) => ({
-                id: u.id,
-                label: `${u.code} — ${u.type}${u.building?.name ? ` (${u.building.name})` : ''} — ${Number(
-                  u.price,
-                ).toLocaleString()} ${symbol}`,
-                raw: u,
-              })}
-              placeholder={selectedProjectId ? c.searchUnitPlaceholder : m.optionChooseProjectFirst}
-              locale={locale}
-            />
-          </FormField>
-        </div>
-      </PremiumFormPanel>
-
-      {/* ── Panel 04 — Notes + Submit ─────────────────────────────────────── */}
-      <PremiumFormPanel
-        id="notes"
-        number="04"
-        title={m.panel04Title}
-        description={m.panel04Desc}
-      >
-        <div className="space-y-6">
-          <FormField label={m.labelNotes} hint={m.hintNotes}>
-            <Textarea
-              name="notes"
-              rows={3}
-              maxLength={2000}
-              placeholder={m.notesPlaceholder}
-            />
-          </FormField>
-
-          <div className="flex items-center justify-between gap-4 pt-5 border-t border-hairline">
-            <p className="text-[11px] text-slate-400 leading-snug max-w-sm">
-              {m.footerNote}
-            </p>
-            <Button
-              type="submit"
-              variant="primary"
-              size="md"
-              leftIcon={<Save className="h-4 w-4" />}
-            >
-              {m.submitBtn}
-            </Button>
+              <SearchSelect<Unit>
+                key={selectedProjectId}
+                name="unitId"
+                required
+                disabled={!selectedProjectId}
+                endpoint={`/api-proxy/units?projectId=${encodeURIComponent(
+                  selectedProjectId,
+                )}&status=AVAILABLE`}
+                toOption={(u) => ({
+                  id: u.id,
+                  label: `${u.code} — ${u.type}${u.building?.name ? ` (${u.building.name})` : ''} — ${Number(
+                    u.price,
+                  ).toLocaleString()} ${symbol}`,
+                  raw: u,
+                })}
+                placeholder={
+                  selectedProjectId ? c.searchUnitPlaceholder : m.optionChooseProjectFirst
+                }
+                locale={locale}
+              />
+            </FormField>
           </div>
-        </div>
-      </PremiumFormPanel>
+        </PremiumFormPanel>
+
+        {/* ── Panel 04 — Notes + Submit ─────────────────────────────────────── */}
+        <PremiumFormPanel id="notes" number="04" title={m.panel04Title} description={m.panel04Desc}>
+          <div>
+            <FormField label={m.labelNotes} hint={m.hintNotes}>
+              <Textarea name="notes" rows={3} maxLength={2000} placeholder={m.notesPlaceholder} />
+            </FormField>
+          </div>
+        </PremiumFormPanel>
+      </PremiumFormLayout>
+
+      <FormFooter
+        sticky
+        helper={m.footerNote}
+        secondary={
+          <Link href="/dashboard/broker-reservations">
+            <Button type="button" variant="ghost" size="md">
+              {ar ? 'إلغاء' : 'Cancel'}
+            </Button>
+          </Link>
+        }
+        primary={
+          <Button type="submit" variant="primary" size="md" leftIcon={<Save className="h-4 w-4" />}>
+            {m.submitBtn}
+          </Button>
+        }
+      />
     </form>
   );
 }
