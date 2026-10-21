@@ -42,3 +42,13 @@ test('reservations read as rows; the approve pill never covers the expiry', asyn
   if ((await row.count()) === 0) test.skip(true, 'no reservations seeded');
   await expect(row.getByTestId('list-code')).toBeVisible();
 });
+
+test('contracts read as rows with company-wide counts', async ({ page }) => {
+  await gotoReady(page, '/dashboard/contracts');
+  await expect(page.locator('main table')).toHaveCount(0);
+  await expect(page.getByTestId('figure')).toHaveCount(4);
+  await expect(page.locator('main')).not.toContainText('الصفحة الحالية');
+  const row = page.getByTestId('contract-row').first();
+  if ((await row.count()) === 0) test.skip(true, 'no contracts seeded');
+  await expect(row.getByTestId('list-code')).toBeVisible();
+});
