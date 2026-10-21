@@ -2015,7 +2015,19 @@ export interface FinancialPortfolio {
   overdue: string;
   notYetDue: string;
   unscheduled: string;
-  unsigned: { count: number; open: string };
+  unsigned: {
+    count: number;
+    open: string;
+    contracts?: Array<{
+      id: string;
+      contractNumber: string | null;
+      createdAt: string;
+      totalAmount: string;
+      customer: { id: string; fullName: string } | null;
+      unit: { id: string; code: string } | null;
+      firstDue: { id: string; type: string; amount: string; dueDate: string } | null;
+    }>;
+  };
 }
 
 /** This month's rows (paid + awaiting + overdue + upcoming = due) and the money that came in. */

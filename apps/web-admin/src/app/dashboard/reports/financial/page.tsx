@@ -21,6 +21,7 @@ import type {
   PlanPaymentType,
   OutstandingRefunds,
 } from '@/lib/types';
+import { CollapsibleRows } from '@/components/premium/collapsible-rows';
 import { compactParts, formatCurrency, formatDate, tx, intlLocale } from '@/lib/format';
 import { getReportsCurrency, getCompanyTimeZone, todayIn } from '@/lib/currency';
 import {
@@ -155,11 +156,11 @@ export default async function FinancialReportsPage({
   const pShare = (v: number) => (pGross > 0 ? (v / pGross) * 100 : 0);
   const pctText = (v: number) => `${v.toFixed(v === 100 || v === 0 || v >= 10 ? 0 : 1)}%`;
   const portfolioParts = [
-    { key: 'paid', label: en ? 'Paid' : 'المسدد', amount: num(portfolio?.paid), dot: 'bg-emerald-500' },
-    { key: 'awaiting', label: en ? 'Awaiting confirmation' : 'بانتظار التأكيد', amount: num(portfolio?.awaiting), dot: 'bg-sky-500' },
-    { key: 'overdue', label: en ? 'Late' : 'متأخر', amount: num(portfolio?.overdue), dot: 'bg-danger-500' },
-    { key: 'notYetDue', label: en ? 'Not due yet' : 'لم يستحق بعد', amount: num(portfolio?.notYetDue), dot: 'bg-slate-400/60' },
-    { key: 'unscheduled', label: en ? 'Not on a schedule' : 'غير مجدول', amount: num(portfolio?.unscheduled), dot: 'bg-amber-400' },
+    { key: 'paid', label: en ? 'Paid' : 'المسدد', hint: en ? 'money received' : 'اتدفع فعلًا', amount: num(portfolio?.paid), dot: 'bg-emerald-500' },
+    { key: 'awaiting', label: en ? 'Awaiting confirmation' : 'بانتظار التأكيد', hint: en ? 'a proof or cheque under review' : 'إيصال أو شيك لسه بيتراجع', amount: num(portfolio?.awaiting), dot: 'bg-sky-500' },
+    { key: 'overdue', label: en ? 'Late' : 'متأخر', hint: en ? 'past its due date, unpaid' : 'عدّى ميعاده ومتدفعش', amount: num(portfolio?.overdue), dot: 'bg-danger-500' },
+    { key: 'notYetDue', label: en ? 'Not due yet' : 'لم يستحق بعد', hint: en ? 'its date has not come' : 'ميعاده لسه مجاش', amount: num(portfolio?.notYetDue), dot: 'bg-slate-400/60' },
+    { key: 'unscheduled', label: en ? 'Not on a schedule' : 'غير مجدول', hint: en ? 'no row on the schedule' : 'مالوش قسط في الجدول', amount: num(portfolio?.unscheduled), dot: 'bg-amber-400' },
   ].filter((r) => r.key !== 'unscheduled' && r.key !== 'awaiting' ? true : r.amount > 0);
   const monthData = dash?.month;
   const monthDue = num(monthData?.due ?? s?.dueThisMonth);
@@ -455,13 +456,14 @@ export default async function FinancialReportsPage({
             </div>
             <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {[
-                { key: 'value', label: en ? 'Signed contracts’ value' : 'قيمة العقود الموقّعة', amount: pGross, dot: 'bg-brand-500' },
+                { key: 'value', label: en ? 'Signed contracts’ value' : 'قيمة العقود الموقّعة', hint: en ? 'the parts below add up to it' : 'الأجزاء دي مجموعها = القيمة', amount: pGross, dot: 'bg-brand-500' },
                 ...portfolioParts,
               ].map((r) => (
                 <li key={r.key} data-testid={`fin-dist-${r.key}`} data-amount={r.amount} title={money(r.amount)} className="flex items-center gap-3 rounded-2xl border border-hairline px-4 py-3">
                   <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', r.dot)} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[12px] text-slate-500">{r.label}</span>
+                    <span className="block truncate text-[10.5px] text-slate-400">{r.hint}</span>
                     <span className="block truncate text-[15px] font-bold text-slate-900 tabular-nums">{cmoney(r.amount)}</span>
                   </span>
                   <span className="shrink-0 text-[12px] font-semibold text-slate-400 tabular-nums">{pctText(pShare(r.amount))}</span>
@@ -536,9 +538,15 @@ export default async function FinancialReportsPage({
         <PremiumPanel
           title={m.overdueTable.title}
           sub={overdueCount > 0 ? m.overdueTable.overdueSuffix(overdueCount) : undefined}
-          link={{ href: '/dashboard/deposits', label: m.overdueTable.viewAll }}
           padding="none"
         >
+          {aging.length > 0 && (
+            <p className="px-6 pb-3 text-[12px] text-slate-500">
+              {en
+                ? 'Grouped by how long they have been late: the count of rows and their amount in each group.'
+                : 'مقسّمة حسب مدة التأخير: في كل خانة عدد الأقساط ومبلغها — مثلًا «متأخر 1–30 يوم» يعني عدّى ميعادها من يوم لحد شهر.'}
+            </p>
+          )}
           {aging.length > 0 && (
             <div className="grid grid-cols-2 gap-px border-y border-hairline bg-hairline lg:grid-cols-4" data-testid="fin-aging">
               {aging.map((b) => {
@@ -584,7 +592,14 @@ export default async function FinancialReportsPage({
                     <th className="py-3 ps-4 pe-6 text-start font-semibold">{m.overdueTable.cols.delay}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-hairline border-t border-hairline">
+                <tbody className="divide-y divide-hairline border-t border-hairline" data-testid="fin-overdue-rows">
+                  <CollapsibleRows
+                    from={0}
+                    to={5}
+                    colSpan={7}
+                    showAllLabel={en ? `Show all ${overdueRows.length} late rows` : `عرض كل الأقساط المتأخرة (${overdueRows.length})`}
+                    showLessLabel={en ? 'Show fewer' : 'عرض أقل'}
+                  >
                   {overdueRows.map((row) => {
                     const c    = row.plan.contract;
                     const days = daysOverdue(row.dueDate);
@@ -613,10 +628,76 @@ export default async function FinancialReportsPage({
                       </tr>
                     );
                   })}
+                  </CollapsibleRows>
                 </tbody>
               </table>
             </div>
           )}
+        </PremiumPanel>
+      )}
+
+      {/* ─── Unsigned contracts: their first payment can fall due before
+           anyone signs, and nothing chases it (no late fee, no reminder),
+           so they are listed here to be signed or followed up. ─────── */}
+      {(portfolio?.unsigned.contracts?.length ?? 0) > 0 && (
+        <PremiumPanel
+          title={en ? 'Contracts not signed yet' : 'عقود لم توقّع بعد'}
+          sub={
+            en
+              ? 'Outside the figures above until signed. Sign them, or collect the first payment at signing.'
+              : 'خارج أرقام التقرير لحد ما تتوقّع — وقّعها أو حصّل الدفعة الأولى وقت التوقيع.'
+          }
+          padding="none"
+        >
+          <ul className="divide-y divide-hairline border-t border-hairline" data-testid="fin-unsigned">
+            {portfolio!.unsigned.contracts!.map((c) => {
+              const due = c.firstDue;
+              const late = due ? daysOverdue(due.dueDate) : 0;
+              return (
+                <li key={c.id} className="flex flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3.5">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13px] font-semibold text-slate-900">{c.customer?.fullName ?? '—'}</span>
+                    <span className="text-[11.5px] text-slate-500">
+                      <Link href={`/dashboard/contracts/${c.id}`} className="font-mono text-brand-700 hover:underline">
+                        {c.contractNumber ?? `#${c.id.slice(0, 8)}`}
+                      </Link>
+                      {c.unit?.code ? ` · ${c.unit.code}` : ''}
+                    </span>
+                  </span>
+                  {due ? (
+                    <span className="text-[12px] text-slate-500">
+                      {PAYMENT_TYPE_LABELS[due.type as keyof typeof PAYMENT_TYPE_LABELS] ?? due.type}{' '}
+                      <b className="tabular-nums text-slate-800">{money(due.amount)}</b>{' '}
+                      {en ? 'due ' : 'مستحقة '}
+                      <span className="tabular-nums">{formatDate(due.dueDate, locale)}</span>
+                    </span>
+                  ) : (
+                    <span className="text-[12px] text-slate-400">{en ? 'No schedule yet' : 'لا يوجد جدول بعد'}</span>
+                  )}
+                  <span
+                    className={cn(
+                      'inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-bold',
+                      late > 0 ? 'bg-amber-500/15 text-amber-600' : 'bg-surface-muted text-slate-500',
+                    )}
+                  >
+                    {late > 0
+                      ? en
+                        ? `Due ${late} day(s) ago — awaiting signature`
+                        : `مستحقة من ${late} يوم — بانتظار التوقيع`
+                      : en
+                        ? 'Awaiting signature'
+                        : 'بانتظار التوقيع'}
+                  </span>
+                  <Link
+                    href={`/dashboard/contracts/${c.id}`}
+                    className="whitespace-nowrap text-[12.5px] font-bold text-brand-700 hover:text-brand-600"
+                  >
+                    {en ? 'Open to sign' : 'افتح للتوقيع'}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </PremiumPanel>
       )}
 

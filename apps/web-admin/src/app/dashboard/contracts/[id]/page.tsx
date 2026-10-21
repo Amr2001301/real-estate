@@ -125,6 +125,14 @@ export default async function ContractDetailPage({
     const due = dueDate.slice(0, 10);
     if (due > today) return { label: m.instNotDueYet, cls: 'bg-slate-500/10 text-slate-600' };
     if (due === today) return { label: m.instDueToday, cls: 'bg-amber-500/12 text-amber-600' };
+    // Unsigned: nothing is chased yet (no late fee, no reminder) — it waits
+    // for the signature, which is when the first payment is usually taken.
+    if (!contract.signedAt) {
+      return {
+        label: locale === 'en' ? 'Due — awaiting signature' : 'مستحق — بانتظار التوقيع',
+        cls: 'bg-amber-500/12 text-amber-600',
+      };
+    }
     const days = Math.round((Date.parse(today) - Date.parse(due)) / 86_400_000);
     return {
       label: m.instLateDays.replace('{n}', String(days)),
@@ -203,7 +211,8 @@ export default async function ContractDetailPage({
   const nextIndex = next ? rows.findIndex((i) => i.id === next.id) : -1;
   const rowWindow: [number, number] =
     nextIndex >= 0 ? [nextIndex - 2, nextIndex + 10] : [rows.length - 12, rows.length];
-  const overdueCount = openRows.filter((i) => i.dueDate.slice(0, 10) < today).length;
+  const overdueCount = contract.signedAt ? openRows.filter((i) => i.dueDate.slice(0, 10) < today).length : 0;
+  const dueUnsigned = !contract.signedAt && openRows.some((i) => i.dueDate.slice(0, 10) <= today);
 
   // One tab per job: overview, the schedule, the statement, payments, and the
   // actions done once in a contract's life (handover, plan changes, cancel).
@@ -1003,16 +1012,25 @@ export default async function ContractDetailPage({
                 'inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold',
                 overdueCount > 0
                   ? 'bg-danger-500/12 text-danger-600'
-                  : 'bg-emerald-500/12 text-emerald-600',
+                  : dueUnsigned
+                    ? 'bg-amber-500/12 text-amber-600'
+                    : 'bg-emerald-500/12 text-emerald-600',
               )}
+              data-testid="kpi-late-badge"
             >
               <span
                 className={cn(
                   'h-1.5 w-1.5 rounded-full',
-                  overdueCount > 0 ? 'bg-danger-500' : 'bg-emerald-500',
+                  overdueCount > 0 ? 'bg-danger-500' : dueUnsigned ? 'bg-amber-500' : 'bg-emerald-500',
                 )}
               />
-              {overdueCount > 0 ? m.kpiOverdue(overdueCount) : m.kpiNoOverdue}
+              {overdueCount > 0
+                ? m.kpiOverdue(overdueCount)
+                : dueUnsigned
+                  ? locale === 'en'
+                    ? 'Payment due — sign the contract'
+                    : 'دفعة مستحقة — وقّع العقد'
+                  : m.kpiNoOverdue}
             </span>
           </Kpi>
           <Kpi label={m.kpiNext} icon={<CalendarDays />}>
