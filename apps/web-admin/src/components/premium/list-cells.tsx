@@ -12,7 +12,9 @@ function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter((w) => /^\p{L}/u.test(w));
   if (!parts.length || name === '—') return '؟';
   if (parts.length === 1) return parts[0]!.charAt(0).toUpperCase();
-  return (parts[0]!.charAt(0) + parts[parts.length - 1]!.charAt(0)).toUpperCase();
+  // Skip the Arabic article: "رامي الشريف" reads رش, not را.
+  const lead = (w: string) => (w.length > 3 && w.startsWith('ال') ? w.charAt(2) : w.charAt(0));
+  return (lead(parts[0]!) + lead(parts[parts.length - 1]!)).toUpperCase();
 }
 
 /** Record number link; `muted` marks a short id shown when the record has no number. */

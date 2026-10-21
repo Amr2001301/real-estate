@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { AlertCircle, Landmark, Search, Hash } from 'lucide-react';
+import { AlertCircle, Landmark, Search, Hash, RotateCcw } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
@@ -151,9 +151,16 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Button type="submit" variant="primary" size="sm">{common.filterBtn}</Button>
-          <Link href="/dashboard/cheques">
-            <Button type="button" variant="secondary" size="sm">{m.filter.resetBtn}</Button>
-          </Link>
+          {(status || sp.dueFrom || sp.dueTo || sp.q) && (
+            <Link
+              href="/dashboard/cheques"
+              title={m.filter.resetBtn}
+              aria-label={m.filter.resetBtn}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-danger-500/40 hover:text-danger-600"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Link>
+          )}
         </div>
       </PremiumFilterBar>
 
@@ -200,7 +207,7 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[900px]" data-testid="cheques-table">
+            <table className="w-full text-sm min-w-[860px]" data-testid="cheques-table">
               <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                 <tr>
                   <th className="text-start py-3 px-4 whitespace-nowrap">{m.colNumber}</th>
@@ -220,13 +227,13 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
                   const amount = pi.deposits.reduce((sum, x) => sum + Number(x.amount), 0);
                   return (
                     <tr key={pi.id} className="hover:bg-brand-500/[0.04] transition-colors duration-100">
-                      <td className="px-4 py-3.5">
+                      <td className="px-3 py-3.5">
                         <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-surface-muted px-2 py-1 font-mono text-[12px] font-bold text-slate-700" dir="ltr">
                           <Hash className="h-3 w-3 text-slate-400" />
                           {pi.chequeNumber ?? pi.referenceNumber ?? '—'}
                         </span>
                       </td>
-                      <td className="px-4 py-3.5">
+                      <td className="px-3 py-3.5">
                         <span className="inline-flex items-center gap-2 whitespace-nowrap text-slate-700">
                           <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-500/10 text-brand-700">
                             <Landmark className="h-3.5 w-3.5" />
@@ -234,16 +241,16 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
                           {pi.drawerBankName ?? pi.bankName ?? '—'}
                         </span>
                       </td>
-                      <td className="px-4 py-3.5 whitespace-nowrap">
+                      <td className="px-3 py-3.5 whitespace-nowrap">
                         <p className="tabular-nums text-slate-800">{pi.chequeDueDate ? formatDate(pi.chequeDueDate, locale) : '—'}</p>
                         {pi.status === 'PENDING_CLEARANCE' && pi.chequeDueDate && pi.chequeDueDate.slice(0, 10) <= todayIso && (
                           <p className="text-[11px] font-semibold text-amber-600">{m.dueNow}</p>
                         )}
                       </td>
-                      <td className="px-4 py-3.5">
+                      <td className="px-3 py-3.5">
                         <PersonCell name={d?.contract?.customer?.fullName ?? d?.reservation?.client?.fullName ?? '—'} />
                       </td>
-                      <td className="px-4 py-3.5">
+                      <td className="px-3 py-3.5">
                         {d?.contract ? (
                           <CodeCell
                             href={`/dashboard/contracts/${d.contract.id}`}
@@ -261,10 +268,10 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
                           '—'
                         )}
                       </td>
-                      <td className="px-4 py-3.5 whitespace-nowrap tabular-nums font-bold text-slate-900">
+                      <td className="px-3 py-3.5 whitespace-nowrap tabular-nums font-bold text-slate-900">
                         {pi.deposits.length > 0 ? formatCurrency(amount, currency, locale) : '—'}
                       </td>
-                      <td className="px-4 py-3.5">
+                      <td className="px-3 py-3.5">
                         <span className={cn('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-semibold', STATUS_CHIP[pi.status])}>
                           <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT[pi.status])} />
                           {m.statusLabels[pi.status]}
@@ -273,7 +280,7 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
                           <p className="mt-1 max-w-[180px] truncate text-[11px] text-slate-500" title={pi.bounceReason}>{pi.bounceReason}</p>
                         )}
                       </td>
-                      <td className="px-4 py-3.5 text-end">
+                      <td className="px-3 py-3.5 text-end">
                         <ChequeActions
                           id={pi.id}
                           status={pi.status}

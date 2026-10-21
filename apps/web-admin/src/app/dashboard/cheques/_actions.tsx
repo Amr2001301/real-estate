@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useEffect, useState, useTransition } from 'react';
-import { AlertCircle, CheckCircle2, Landmark, Undo2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Landmark, Undo2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { inputClass } from '@/components/form/field';
@@ -30,7 +30,6 @@ const PILL_TONE = {
   brand:   'border-brand-500/40 bg-brand-500/10 text-brand-700 hover:bg-brand-500/20',
   success: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20',
   danger:  'border-danger-500/40 bg-danger-500/10 text-danger-600 hover:bg-danger-500/20',
-  ghost:   'border-transparent text-slate-500 hover:text-danger-600',
 } as const;
 
 /** Compact row action: the table stays calm, the next step still stands out. */
@@ -72,13 +71,15 @@ export function ChequeActions({ id, status, canBounce, locale = 'ar' }: Props) {
             </button>
             <button
               type="button"
-              className={pill('ghost')}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-danger-500/10 hover:text-danger-600 disabled:opacity-60"
               disabled={pending}
+              title={m.cancel}
+              aria-label={m.cancel}
               onClick={() => {
                 if (confirm(m.cancelConfirm)) act(() => cancelChequeAction(id));
               }}
             >
-              {m.cancel}
+              <XCircle className="h-4 w-4" />
             </button>
           </>
         ) : (
