@@ -74,10 +74,11 @@ export function rowPaymentNote(
   }
   if (p.state === 'PENDING_REVIEW') return en ? `Customer sent a proof on ${fmtDate(p.paidAt)}` : `العميل أرسل إيصالًا يوم ${fmtDate(p.paidAt)}`;
   if (p.state === 'CHEQUE_PENDING') return en ? 'Cheque received, not cleared yet' : 'استُلم شيك ولم يُصرف بعد';
-  if (p.state === 'REVERSED')
-    return en
-      ? `A payment was reversed${p.reversedAt ? ` on ${fmtDate(p.reversedAt)}` : ''} — open again`
-      : `عُكست دفعة${p.reversedAt ? ` يوم ${fmtDate(p.reversedAt)}` : ''} — القسط مفتوح مجددًا`;
+  if (p.state === 'REVERSED') {
+    const on = p.reversedAt ? (en ? ` on ${fmtDate(p.reversedAt)}` : ` يوم ${fmtDate(p.reversedAt)}`) : '';
+    const by = p.reversedBy ? (en ? ` by ${p.reversedBy}` : ` بواسطة ${p.reversedBy}`) : '';
+    return en ? `A payment was reversed${on}${by} — open again` : `عُكست دفعة${on}${by} — القسط مفتوح مجددًا`;
+  }
   if (p.state === 'BOUNCED') return en ? 'Cheque bounced — open again' : 'ارتد الشيك — القسط مفتوح مجددًا';
   if (p.state === 'REJECTED') return en ? 'Last proof was rejected' : 'رُفض آخر إيصال';
   return null;

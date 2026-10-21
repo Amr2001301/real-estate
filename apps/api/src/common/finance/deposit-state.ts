@@ -33,7 +33,13 @@ export const DEPOSIT_STATE_SELECT = {
   paymentInstrument: { select: { status: true, type: true, chequeNumber: true } },
   paymentCorrections: {
     where: { type: PaymentCorrectionType.REVERSAL },
-    select: { type: true, supersededAt: true, createdAt: true },
+    select: {
+      type: true,
+      supersededAt: true,
+      createdAt: true,
+      reason: true,
+      performedBy: { select: { fullName: true } },
+    },
     orderBy: { createdAt: 'desc' },
   },
 } satisfies Prisma.DepositInclude;
@@ -42,7 +48,13 @@ export interface DepositStateInput {
   deletedAt: Date | null;
   reviewStatus: DepositReviewStatus;
   paymentInstrument?: { status: PaymentInstrumentStatus } | null;
-  paymentCorrections?: Array<{ type: PaymentCorrectionType; supersededAt: Date | null; createdAt: Date }>;
+  paymentCorrections?: Array<{
+    type: PaymentCorrectionType;
+    supersededAt: Date | null;
+    createdAt: Date;
+    reason?: string;
+    performedBy?: { fullName: string } | null;
+  }>;
 }
 
 const UNCLEARED: PaymentInstrumentStatus[] = [
@@ -55,12 +67,15 @@ const DEAD: PaymentInstrumentStatus[] = [
   PaymentInstrumentStatus.CANCELLED,
 ];
 
-/** When the standing reversal was written (null when there is none). */
-export function activeReversalAt(d: DepositStateInput): Date | null {
-  const r = (d.paymentCorrections ?? []).find(
+function activeReversal(d: DepositStateInput) {
+  return (d.paymentCorrections ?? []).find(
     (c) => c.type === PaymentCorrectionType.REVERSAL && c.supersededAt === null,
   );
-  return r ? r.createdAt : null;
+}
+
+/** When the standing reversal was written (null when there is none). */
+export function activeReversalAt(d: DepositStateInput): Date | null {
+  return activeReversal(d)?.createdAt ?? null;
 }
 
 export function depositState(d: DepositStateInput): DepositState {
@@ -75,7 +90,22 @@ export function depositState(d: DepositStateInput): DepositState {
   return 'COLLECTED';
 }
 
-/** Adds `state` (and `reversedAt`) to a deposit read with DEPOSIT_STATE_SELECT. */
-export function withDepositState<T extends DepositStateInput>(d: T): T & { state: DepositState; reversedAt: Date | null } {
-  return { ...d, state: depositState(d), reversedAt: activeReversalAt(d) };
+export interface DepositStateFields {
+  state: DepositState;
+  reversedAt: Date | null;
+  /** Why the standing reversal was made, and who made it. */
+  reversalReason: string | null;
+  reversedBy: string | null;
+}
+
+/** Adds `state` (and the standing reversal, if any) to a deposit read with DEPOSIT_STATE_SELECT. */
+export function withDepositState<T extends DepositStateInput>(d: T): T & DepositStateFields {
+  const r = activeReversal(d);
+  return {
+    ...d,
+    state: depositState(d),
+    reversedAt: r?.createdAt ?? null,
+    reversalReason: r?.reason ?? null,
+    reversedBy: r?.performedBy?.fullName ?? null,
+  };
 }

@@ -186,6 +186,21 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
               </div>
             )}
             {/* A reversed payment can be counted again — on purpose, behind a confirmation. */}
+            {d.state === 'REVERSED' && (
+              <div className="rounded-xl bg-slate-500/[0.06] px-3 py-2.5 text-xs text-slate-600" data-testid="reversal-details">
+                <p className="font-semibold text-slate-700">
+                  {locale === 'en' ? 'Reversed' : 'عُكست'}
+                  {d.reversedAt ? (locale === 'en' ? ` on ${formatDate(d.reversedAt, locale)}` : ` يوم ${formatDate(d.reversedAt, locale)}`) : ''}
+                  {d.reversedBy ? (locale === 'en' ? ` by ${d.reversedBy}` : ` بواسطة ${d.reversedBy}`) : ''}
+                </p>
+                {d.reversalReason && (
+                  <p className="mt-1">
+                    {locale === 'en' ? 'Reason: ' : 'السبب: '}
+                    {d.reversalReason}
+                  </p>
+                )}
+              </div>
+            )}
             {isAdmin && d.state === 'REVERSED' && (
               <div className="pt-2 border-t border-hairline">
                 <ReapproveButton id={d.id} contractId={d.contractId ?? null} locale={locale} />

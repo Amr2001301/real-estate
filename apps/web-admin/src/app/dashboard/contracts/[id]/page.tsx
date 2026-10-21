@@ -20,7 +20,13 @@ import {
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import { ExportMenu } from '@/components/export-menu';
-import type { CancellationSuggestion, Contract, ContractAmendment, ContractCancellationView } from '@/lib/types';
+import type {
+  CancellationSuggestion,
+  Contract,
+  ContractAmendment,
+  ContractCancellationView,
+  ContractStatement,
+} from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
 import { getCompanyTimeZone, getReportsCurrency, todayIn } from '@/lib/currency';
 import { cn } from '@/lib/cn';
@@ -45,6 +51,7 @@ import { LateFeeClause } from './late-fee-clause';
 import { CancelContract } from './cancel-contract';
 import { CancellationPanel } from './cancellation-panel';
 import { HandoverPanel } from './handover-panel';
+import { StatementPanel } from './statement-panel';
 import { handoverT } from '@/messages/handover';
 import { PrintButton } from '@/components/print/PrintButton';
 import {
@@ -105,6 +112,17 @@ export default async function ContractDetailPage({
   const session = await getSession();
   const isAdmin = session?.role === 'ADMIN';
   const plan = contract.installmentPlan;
+  // An open row says where it stands against today (company time zone),
+  // not a bare "pending" — and reads late from the day after it was due,
+  // before the nightly sweep flips it to OVERDUE.
+  const today = todayIn(timeZone);
+  const dueLabel = (dueDate: string): { label: string; cls: string } => {
+    const due = dueDate.slice(0, 10);
+    if (due > today) return { label: m.instNotDueYet, cls: 'bg-slate-500/10 text-slate-600' };
+    if (due === today) return { label: m.instDueToday, cls: 'bg-amber-500/12 text-amber-600' };
+    const days = Math.round((Date.parse(today) - Date.parse(due)) / 86_400_000);
+    return { label: m.instLateDays.replace('{n}', String(days)), cls: 'bg-danger-500/12 text-danger-600' };
+  };
   // What the customer still owes on the schedule — shown before a handover.
   // (fees included; the "remaining" figure below shows the price part.)
   const unpaid =
@@ -134,13 +152,14 @@ export default async function ContractDetailPage({
   const amendments = isAdmin
     ? ((await safe(api.get<ContractAmendment[]>(`/contracts/${id}/amendments`))).data ?? [])
     : [];
-  const [cancellation, suggestion] = await Promise.all([
+  const [cancellation, suggestion, statement] = await Promise.all([
     isCancelled && isAdmin
       ? safe(api.get<ContractCancellationView>(`/contracts/${id}/cancellation`)).then((x) => x.data)
       : Promise.resolve(null),
     !isCancelled && isAdmin
       ? safe(api.get<CancellationSuggestion>(`/contracts/${id}/cancellation-suggestion`)).then((x) => x.data)
       : Promise.resolve(null),
+    safe(api.get<ContractStatement>(`/contracts/${id}/statement`)).then((x) => x.data),
   ]);
 
   // Money on the schedule (price rows only — fees and penalties aside).
@@ -150,14 +169,23 @@ export default async function ContractDetailPage({
   const sumCents = (xs: typeof rows) => xs.reduce((a, i) => a + Math.round(Number(i.amount) * 100), 0);
   // Collected = the contract value less the price rows still open, so a
   // down payment settled outside the schedule still counts.
-  const openPrice = sumCents(priceRows.filter((i) => i.status === 'PENDING' || i.status === 'OVERDUE')) / 100;
+  const schedOpenPrice = sumCents(priceRows.filter((i) => i.status === 'PENDING' || i.status === 'OVERDUE')) / 100;
   const contractTotal = Number(contract.totalAmount);
-  const collected = plan ? Math.max(0, Math.round((contractTotal - openPrice) * 100) / 100) : 0;
+  // From the statement when there is one: what is left counts value with no
+  // schedule row and no payment (a contract with no plan, a down payment
+  // outside the schedule never recorded) instead of assuming it was paid.
+  const openFees = statement ? Number(statement.totals.openFees) : unpaid - schedOpenPrice;
+  const openPrice = statement
+    ? Math.round((Number(statement.totals.balance) - openFees) * 100) / 100
+    : schedOpenPrice;
+  const unscheduled = statement ? Number(statement.totals.unscheduled) : 0;
+  const collected = statement || plan ? Math.max(0, Math.round((contractTotal - openPrice) * 100) / 100) : 0;
   const collectedPct = contractTotal > 0 ? Math.min(100, Math.round((collected / contractTotal) * 100)) : 0;
   const openRows = rows
     .filter((i) => i.status === 'PENDING' || i.status === 'OVERDUE')
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-  const overdueCount = rows.filter((i) => i.status === 'OVERDUE').length;
+  // Late from the day after the due day, before the nightly sweep marks it.
+  const overdueCount = openRows.filter((i) => i.dueDate.slice(0, 10) < today).length;
   const next = openRows[0];
 
   return (
@@ -227,10 +255,16 @@ export default async function ContractDetailPage({
               value; open fees (late, transfer, penalty) are noted apart. */}
           <Kpi label={m.kpiRemaining} icon={<Hourglass />}>
             <Money value={formatCurrency(openPrice, currency, locale)} />
-            {unpaid - openPrice > 0.005 && (
+            {openFees > 0.005 && (
               <span className="text-[11.5px] text-slate-500" data-testid="kpi-open-fees">
                 {locale === 'en' ? '+ fees' : '+ رسوم وغرامات'}{' '}
-                <span className="tabular-nums">{formatCurrency(unpaid - openPrice, currency, locale)}</span>
+                <span className="tabular-nums">{formatCurrency(openFees, currency, locale)}</span>
+              </span>
+            )}
+            {unscheduled > 0.005 && (
+              <span className="text-[11.5px] text-amber-600" data-testid="kpi-unscheduled">
+                {locale === 'en' ? 'of which not on the schedule' : 'منها غير مجدول'}{' '}
+                <span className="tabular-nums">{formatCurrency(unscheduled, currency, locale)}</span>
               </span>
             )}
             <span
@@ -386,7 +420,9 @@ export default async function ContractDetailPage({
                             return rows.map((inst) => {
                               const s = inst.waivedAt
                                 ? WAIVED
-                                : INST_STATUS[inst.status] ?? INST_STATUS['PENDING']!;
+                                : inst.status === 'PENDING' || inst.status === 'OVERDUE'
+                                  ? dueLabel(inst.dueDate)
+                                  : INST_STATUS[inst.status] ?? INST_STATUS['PENDING']!;
                               const waiting =
                                 inst.awaitingPayment && inst.payment &&
                                 (inst.payment.state === 'PENDING_REVIEW' || inst.payment.state === 'CHEQUE_PENDING')
@@ -446,6 +482,12 @@ export default async function ContractDetailPage({
                                   <td className="px-4 py-3.5 text-[12px] text-slate-500" data-testid="row-payment-note">
                                     {note ??
                                       (inst.status === 'PAID' && inst.paidAt ? formatDate(inst.paidAt, locale) : '—')}
+                                    {inst.payment?.state === 'REVERSED' && inst.payment.reversalReason && (
+                                      <span className="mt-0.5 block text-[11.5px] text-slate-400" data-testid="row-reversal-reason">
+                                        {locale === 'en' ? 'Reason: ' : 'السبب: '}
+                                        {inst.payment.reversalReason}
+                                      </span>
+                                    )}
                                   </td>
                                   <td className="px-4 py-3.5 text-end">
                                     {canPay && inst.type === 'LATE_FEE' && (
@@ -516,6 +558,30 @@ export default async function ContractDetailPage({
                 </div>
               )}
             </PremiumPanel>
+
+            {/* Statement of account */}
+            {statement && (
+              <PremiumPanel
+                title={locale === 'en' ? 'Statement of account' : 'كشف الحساب'}
+                sub={
+                  locale === 'en'
+                    ? 'Every charge, payment and reversal, with the balance after each'
+                    : 'كل مستحق ودفعة وعكس، والرصيد بعد كل حركة'
+                }
+                padding="none"
+                trailing={
+                  <PrintButton
+                    path="statements"
+                    id={contract.id}
+                    label={locale === 'en' ? 'Print statement' : 'طباعة الكشف'}
+                  />
+                }
+              >
+                <div className="pb-5">
+                  <StatementPanel statement={statement} currency={currency} locale={locale} />
+                </div>
+              </PremiumPanel>
+            )}
 
             {/* Deposits */}
             <PremiumPanel

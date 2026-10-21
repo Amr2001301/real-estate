@@ -55,9 +55,15 @@ test.describe('payment states', () => {
       await expect
         .poll(() => page.getByTestId('row-payment-note').filter({ hasText: 'عُكست دفعة' }).count())
         .toBeGreaterThan(0);
+      // …with the reason given, on the row and in the statement of account.
+      await expect(page.getByTestId('row-reversal-reason').filter({ hasText: 'e2e: payment-states' }).first()).toBeVisible();
+      await expect(
+        page.locator('[data-testid="statement-line"][data-kind="REVERSAL"]', { hasText: 'e2e: payment-states' }).first(),
+      ).toBeVisible();
 
       await gotoReady(page, `/dashboard/deposits/${dep.id}`);
       await expect(page.getByTestId('deposit-state').first()).toHaveAttribute('data-state', 'REVERSED');
+      await expect(page.getByTestId('reversal-details')).toContainText('e2e: payment-states');
       page.once('dialog', (d) => void d.accept());
       await page.getByRole('button', { name: 'إعادة احتساب الدفعة' }).click();
       await expect(page.getByTestId('deposit-state').first()).toHaveAttribute('data-state', 'COLLECTED');
@@ -68,5 +74,22 @@ test.describe('payment states', () => {
         await request.patch(`${API_BASE}/v1/deposits/${dep.id}/verify`, { headers, data: { verified: true } });
       }
     }
+  });
+
+  test('contract shows a statement of account whose balance is what is left', async ({ page, request, context }) => {
+    const token = (await context.cookies()).find((c) => c.name === 'access_token')?.value;
+    const headers = { Authorization: `Bearer ${token}`, 'X-Tenant-Slug': COMPANY_SLUG };
+    const list = await (await request.get(`${API_BASE}/v1/contracts?pageSize=50`, { headers })).json();
+    const c = (list.data ?? []).find((x: { installmentPlan?: unknown; status?: string }) => x.status === 'ACTIVE');
+    if (!c) test.skip(true, 'no active contract seeded');
+    const st = await (await request.get(`${API_BASE}/v1/contracts/${c.id}/statement`, { headers })).json();
+
+    await gotoReady(page, `/dashboard/contracts/${c.id}`);
+    await expect(page.getByTestId('statement')).toBeVisible();
+    await expect(page.getByTestId('statement-line').first()).toHaveAttribute('data-kind', 'CONTRACT');
+    const closing = (await page.getByTestId('statement-closing').innerText()).match(/[\d,]+(\.\d+)?/)?.[0] ?? '';
+    expect(Number(closing.replace(/,/g, ''))).toBe(Number(st.totals.balance));
+    // Open rows say where they stand against today, never a bare "pending".
+    await expect(page.locator('main')).not.toContainText('قيد الانتظار');
   });
 });

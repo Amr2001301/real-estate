@@ -17,6 +17,8 @@ import {
 } from '@nestjs/common';
 import { DEPOSIT_STATE_SELECT, withDepositState } from '../../common/finance/deposit-state';
 import { dateOnlyString, toDateOnly } from '../../common/time/date-only';
+import { COMPANY_TIMEZONE_DEFAULT, companyTimeZone, startOfLocalToday } from '../../common/time/company-timezone';
+import { buildStatement } from './contract-statement';
 import { ApiTags } from '@nestjs/swagger';
 import {
   IsBoolean,
@@ -826,6 +828,70 @@ export class ContractsService {
     };
   }
 
+  /** Statement of account (كشف حساب) — see contract-statement.ts. */
+  async statement(id: string) {
+    const contract = await this.prisma.contract.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        companyId: true,
+        totalAmount: true,
+        signedAt: true,
+        createdAt: true,
+        preSystem: true,
+        reservationId: true,
+        reservation: {
+          select: { bookingAmount: true, bookingPaymentStatus: true, bookingPaidAt: true, createdAt: true },
+        },
+        installmentPlan: {
+          select: {
+            installments: {
+              orderBy: { dueDate: 'asc' },
+              select: { id: true, type: true, amount: true, dueDate: true, status: true, paidAt: true, waivedAt: true },
+            },
+          },
+        },
+      },
+    });
+    if (!contract) throw new NotFoundException('Contract not found');
+    const deposits = await this.prisma.deposit.findMany({
+      where: {
+        companyId: contract.companyId,
+        deletedAt: null,
+        OR: [
+          { contractId: id },
+          { installment: { plan: { contractId: id } } },
+          ...(contract.reservationId ? [{ reservationId: contract.reservationId, contractId: null }] : []),
+        ],
+      },
+      orderBy: { paidAt: 'asc' },
+      select: {
+        id: true,
+        type: true,
+        installmentId: true,
+        amount: true,
+        paidAt: true,
+        paymentMethod: true,
+        deletedAt: true,
+        reviewStatus: true,
+        ...DEPOSIT_STATE_SELECT,
+      },
+    });
+    const today = startOfLocalToday(
+      contract.companyId ? await companyTimeZone(this.prisma, contract.companyId) : COMPANY_TIMEZONE_DEFAULT,
+    )
+      .toISOString()
+      .slice(0, 10);
+    return buildStatement(
+      {
+        ...contract,
+        installments: contract.installmentPlan?.installments ?? [],
+        deposits: deposits.map(withDepositState),
+      },
+      today,
+    );
+  }
+
   /**
    * Deleting is for a contract entered by mistake: unsigned, no payment
    * recorded, still live. Anything else is ended through cancellation, which
@@ -1407,6 +1473,20 @@ class ContractsController {
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('contracts:read')
+  @Get(':id/statement')
+  async statement(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
+    if (user.role === UserRole.SALES_MANAGER) {
+      const contract = await this.prisma.contract.findUnique({
+        where: { id },
+        select: { reservation: { select: { salesId: true } } },
+      });
+      await assertSalesRecordInScope(this.prisma, user, contract?.reservation?.salesId ?? null);
+    }
+    return this.svc.statement(id);
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
+  @Permissions('contracts:read')
   @Get(':id')
   async get(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
     // SALES_MANAGER may only read a contract owned by a team rep (via the linked
@@ -1636,7 +1716,8 @@ function rowPayment(ds: StatedDeposit[]) {
   const pick =
     ds.find((d) => d.state === 'PENDING_REVIEW' || d.state === 'CHEQUE_PENDING') ??
     ds.find((d) => d.state === 'COLLECTED') ??
-    ds[0];
+    // The latest thing that happened to the row (a fresh reversal over an old one).
+    [...ds].sort((a, b) => +(b.reversedAt ?? b.paidAt) - +(a.reversedAt ?? a.paidAt))[0];
   return {
     awaitingPayment: ds.some((d) => d.state === 'PENDING_REVIEW' || d.state === 'CHEQUE_PENDING'),
     payment: pick
@@ -1646,6 +1727,8 @@ function rowPayment(ds: StatedDeposit[]) {
           method: pick.paymentInstrument?.type ?? pick.paymentMethod ?? null,
           paidAt: pick.paidAt,
           reversedAt: pick.reversedAt,
+          reversalReason: pick.reversalReason,
+          reversedBy: pick.reversedBy,
         }
       : null,
   };
