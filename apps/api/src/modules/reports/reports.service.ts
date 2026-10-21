@@ -71,14 +71,13 @@ import {
   renderShareChartPng,
 } from '../../common/utils/xlsx-chart';
 import {
-  againstDueDepositWhere,
   AWAITING_DEPOSIT_WHERE,
   COLLECTED_DEPOSIT_WHERE,
   FEES_DEPOSIT_WHERE,
   RECORDED_DEPOSIT_WHERE,
   TOWARDS_PRICE_DEPOSIT_WHERE,
 } from '../../common/finance/collected';
-import { portfolioSplit } from './portfolio-split';
+import { dueToDateSplit, portfolioSplit } from './portfolio-split';
 import { commissionBasis, MARKUP_SNAPSHOT_SELECT, NET_PRICE_SQL, netContractValue } from '../../common/finance/commission-basis';
 import {
   BILLABLE_PLAN_WHERE,
@@ -573,7 +572,10 @@ export class ReportsService {
     // live contracts plus their payment rows due up to today (fees and
     // cancelled rows out). The collection rate is measured against this, not
     // against the whole contract value — most of that is not due yet (U5).
-    const [collectedTowardsPriceAgg, overdueTowardsPriceAgg, feesCollectedAgg, dueRowsAgg, dueBookingAgg, collectedAgainstDueAgg, totalContractValue] = await Promise.all([
+    const signedInstWhere = (extra: Prisma.InstallmentWhereInput): Prisma.InstallmentWhereInput => ({
+      AND: [{ plan: SIGNED_PLAN }, extra],
+    });
+    const [collectedTowardsPriceAgg, overdueTowardsPriceAgg, feesCollectedAgg, dueSplit, totalContractValue] = await Promise.all([
       this.prisma.deposit.aggregate({
         where: { AND: [COLLECTED_DEPOSIT_WHERE, TOWARDS_PRICE_DEPOSIT_WHERE] },
         _sum: { amount: true },
@@ -586,25 +588,9 @@ export class ReportsService {
         where: { AND: [COLLECTED_DEPOSIT_WHERE, FEES_DEPOSIT_WHERE] },
         _sum: { amount: true },
       }),
-      this.prisma.installment.aggregate({
-        where: {
-          status: { not: InstallmentStatus.CANCELLED },
-          type: { notIn: SURCHARGE_PAYMENT_TYPES },
-          dueDate: { lte: today },
-          plan: SIGNED_PLAN,
-        },
-        _sum: { amount: true },
-      }),
-      this.prisma.reservation.aggregate({
-        where: { contract: { is: signedContractWhere } },
-        _sum: { bookingAmount: true },
-      }),
-      // The collection rate's numerator: collected against what is due by
-      // today (decided 2026-10-17) — early payments don't count.
-      this.prisma.deposit.aggregate({
-        where: { AND: [COLLECTED_DEPOSIT_WHERE, TOWARDS_PRICE_DEPOSIT_WHERE, againstDueDepositWhere(today)] },
-        _sum: { amount: true },
-      }),
+      // The collection rate: settled against what is due by today (decided
+      // 2026-10-17), on the schedule rows — early payments don't count.
+      dueToDateSplit(this.prisma, { signedContractWhere, instWhere: signedInstWhere, today }),
       // Contract value: signed contracts at their net price (decided 2026-10-17).
       netContractValue(this.prisma, signedContractWhere),
     ]);
@@ -612,7 +598,7 @@ export class ReportsService {
     const [split, unsignedCount, unsignedDueCount] = await Promise.all([
       portfolioSplit(this.prisma, {
         signedContractWhere,
-        instWhere: (extra) => ({ AND: [{ plan: SIGNED_PLAN }, extra] }),
+        instWhere: signedInstWhere,
         today,
       }),
       this.prisma.contract.count({ where: { signedAt: null, ...LIVE_CONTRACT_WHERE } }),
@@ -672,9 +658,8 @@ export class ReportsService {
         collectedTowardsPrice:    Number(collectedTowardsPriceAgg._sum.amount       ?? 0),
         overdueTowardsPrice:      Number(overdueTowardsPriceAgg._sum.amount         ?? 0),
         feesCollected:            Number(feesCollectedAgg._sum.amount               ?? 0),
-        dueToDate:
-          Number(dueRowsAgg._sum.amount ?? 0) + Number(dueBookingAgg._sum.bookingAmount ?? 0),
-        collectedAgainstDue:      Number(collectedAgainstDueAgg._sum.amount         ?? 0),
+        dueToDate:                Number(dueSplit.due),
+        collectedAgainstDue:      Number(dueSplit.collected),
         pendingBonus:             Number(pendingBonusAgg._sum.amount                ?? 0),
         pendingBrokerPayouts:     Number(pendingPayoutsAgg._sum.totalNet            ?? 0),
         collectedThisMonth:       Number(collectedThisMonthAgg._sum.amount          ?? 0),
@@ -1653,20 +1638,12 @@ export class ReportsService {
     // price; the collection rate is collected against what is due by today
     // (the booking and the rows due up to today), as on the dashboard.
     const signedContractWhere: Prisma.ContractWhereInput = { AND: [contractWhere, { signedAt: { not: null } }] };
-    const [totalContractValue, dueRowsAgg, dueBookingAgg, againstDueAgg] = await Promise.all([
+    const [totalContractValue, dueSplit] = await Promise.all([
       netContractValue(this.prisma, signedContractWhere),
-      this.prisma.installment.aggregate({
-        where: instWhere({ status: { not: InstallmentStatus.CANCELLED }, type: { notIn: SURCHARGE_PAYMENT_TYPES }, dueDate: { lte: todayUTC } }),
-        _sum: { amount: true },
-      }),
-      this.prisma.reservation.aggregate({ where: { contract: { is: signedContractWhere } }, _sum: { bookingAmount: true } }),
-      this.prisma.deposit.aggregate({
-        where: baseDepWhere({ AND: [COLLECTED_DEPOSIT_WHERE, TOWARDS_PRICE_DEPOSIT_WHERE, againstDueDepositWhere(todayUTC)] }),
-        _sum: { amount: true },
-      }),
+      dueToDateSplit(this.prisma, { signedContractWhere, instWhere, today: todayUTC }),
     ]);
-    const dueToDate = D(dueRowsAgg._sum.amount).plus(D(dueBookingAgg._sum.bookingAmount));
-    const collectedAgainstDue = D(againstDueAgg._sum.amount);
+    const dueToDate = dueSplit.due;
+    const collectedAgainstDue = dueSplit.collected;
     const collectedAll = D(recordedAgg._sum.amount);
     const collectedVerified = D(totalCollectedAgg._sum.amount);
     // On its way (proof to review / cheque not cleared) — not "recorded minus

@@ -70,3 +70,55 @@ export async function portfolioSplit(
     unscheduled: Prisma.Decimal.max(zero, gross.minus(paid).minus(open)),
   };
 }
+
+/**
+ * What has fallen due by today and how much of it is settled, counted on the
+ * schedule rows (and the booking) like the split above: due = the rows due up
+ * to today + the bookings; collected = those of them paid (a waived booking
+ * counts as settled). What is left is then exactly the open rows due — late,
+ * awaiting confirmation or due today — so "late" can never be more than it.
+ * Counted from the payments instead, a payment with no row (a down payment
+ * recorded off the schedule) or a booking on an unsigned contract added to
+ * the collected side only, and a row marked paid with no payment behind it (a
+ * pre-system contract) to the due side only.
+ */
+export async function dueToDateSplit(
+  db: Pick<PrismaClient, 'installment' | 'reservation'>,
+  opts: {
+    signedContractWhere: Prisma.ContractWhereInput;
+    instWhere: (extra: Prisma.InstallmentWhereInput) => Prisma.InstallmentWhereInput;
+    today: Date;
+  },
+) {
+  const { signedContractWhere, instWhere, today } = opts;
+  const dueRow: Prisma.InstallmentWhereInput = {
+    type: { notIn: SURCHARGE_PAYMENT_TYPES },
+    dueDate: { lte: today },
+  };
+  const [dueRowsAgg, paidRowsAgg, bookingAgg, paidBookingAgg] = await Promise.all([
+    db.installment.aggregate({
+      where: instWhere({ ...dueRow, status: { not: InstallmentStatus.CANCELLED } }),
+      _sum: { amount: true },
+    }),
+    db.installment.aggregate({
+      where: instWhere({ ...dueRow, status: InstallmentStatus.PAID }),
+      _sum: { amount: true },
+    }),
+    db.reservation.aggregate({
+      where: { contract: { is: signedContractWhere } },
+      _sum: { bookingAmount: true },
+    }),
+    db.reservation.aggregate({
+      where: {
+        contract: { is: signedContractWhere },
+        bookingPaymentStatus: { in: [ReservationBookingPaymentStatus.PAID, ReservationBookingPaymentStatus.WAIVED] },
+      },
+      _sum: { bookingAmount: true },
+    }),
+  ]);
+  const D = (v: Prisma.Decimal | number | null | undefined) => new Prisma.Decimal(v ?? 0);
+  return {
+    due: D(dueRowsAgg._sum.amount).plus(D(bookingAgg._sum.bookingAmount)),
+    collected: D(paidRowsAgg._sum.amount).plus(D(paidBookingAgg._sum.bookingAmount)),
+  };
+}

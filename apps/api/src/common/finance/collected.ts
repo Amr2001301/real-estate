@@ -94,14 +94,3 @@ export const TOWARDS_PRICE_DEPOSIT_WHERE = {
 export const FEES_DEPOSIT_WHERE = {
   OR: [{ type: DepositType.FEE }, { installment: { is: { type: { in: SURCHARGE_PAYMENT_TYPES } } } }],
 } satisfies Prisma.DepositWhereInput;
-
-/**
- * Decided 2026-10-17: the collection rate is money collected against what has
- * fallen due by today — the booking (paid on the reservation, or on the
- * contract with no row) and the rows due up to today. A payment made ahead
- * of its due date is not counted (it lifted the rate past what was owed).
- * Combine with COLLECTED_DEPOSIT_WHERE and TOWARDS_PRICE_DEPOSIT_WHERE.
- */
-export function againstDueDepositWhere(today: Date): Prisma.DepositWhereInput {
-  return { OR: [{ installmentId: null }, { installment: { is: { dueDate: { lte: today } } } }] };
-}
