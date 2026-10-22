@@ -20,7 +20,7 @@ export default async function NewFormPage({ searchParams }: { searchParams: Prom
       />
       <FormDesigner
         layout={null}
-        initialDocument={doc === 'RECEIPT' ? 'RECEIPT' : 'RESERVATION'}
+        initialDocument={doc === 'RECEIPT' || doc === 'CONTRACT' ? doc : 'RESERVATION'}
         customFields={customFields}
         locale={locale} currency={letterhead.currency} company={companyNameOf(letterhead, locale)} />
     </div>

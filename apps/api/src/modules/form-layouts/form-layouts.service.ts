@@ -30,16 +30,17 @@ export class FormLayoutsService {
 
   /**
    * Fields sit on a page that exists, inside it; the paper suits the
-   * document; only a booking form carries the customer's signature (a
-   * receipt is not signed online).
+   * document; a receipt has no customer's signature box (the payer does not
+   * sign it). On a booking form the customer signs online; on a contract the
+   * box is left for the signature in ink.
    */
   private check(dto: SaveFormLayoutDto, documentType: FormDocument) {
     if (!DOCUMENT_PAPER[documentType].includes(dto.paperSize ?? 'A4')) {
       throw new BadRequestException('مقاس الورق غير متاح لهذا المستند');
     }
     for (const f of dto.fields) {
-      if (f.key === 'sign.customer' && documentType !== 'RESERVATION') {
-        throw new BadRequestException('توقيع العميل على استمارة الحجز فقط');
+      if (f.key === 'sign.customer' && documentType === 'RECEIPT') {
+        throw new BadRequestException('لا يوجد توقيع للعميل على الإيصال');
       }
       if (f.page >= dto.pages.length) throw new BadRequestException('خانة على صفحة غير موجودة');
       if (f.x + f.w > 1.0001 || f.y + f.h > 1.0001) throw new BadRequestException('خانة خارج حدود الصفحة');

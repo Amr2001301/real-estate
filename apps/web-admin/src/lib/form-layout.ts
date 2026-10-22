@@ -20,7 +20,10 @@ export interface FormField {
   bold?: boolean;
 }
 
-export type FormDocument = 'RESERVATION' | 'RECEIPT';
+export type FormDocument = 'RESERVATION' | 'RECEIPT' | 'CONTRACT';
+
+/** A form's pages at most: a contract runs to many. */
+export const MAX_FORM_PAGES = 40;
 /** A4, A5, or half an A4 sheet (landscape). */
 export type PaperSize = 'A4' | 'A5' | 'HALF';
 
@@ -31,9 +34,10 @@ export const PAPER: Record<PaperSize, { w: number; h: number; css: string }> = {
   HALF: { w: 210, h: 148.5, css: '210mm 148.5mm' },
 };
 
-/** The sizes each document prints on: a booking form is an A4 form. */
+/** The sizes each document prints on: a booking form and a contract are A4. */
 export const DOCUMENT_PAPER: Record<FormDocument, PaperSize[]> = {
   RESERVATION: ['A4'],
+  CONTRACT: ['A4'],
   RECEIPT: ['A4', 'A5', 'HALF'],
 };
 
@@ -50,9 +54,12 @@ export interface FormLayout {
 
 export const SIGN_KEYS = ['sign.customer', 'sign.company', 'sign.stamp'] as const;
 export type SignKey = (typeof SIGN_KEYS)[number];
-/** The signature boxes a document has: a receipt is not signed by the customer online. */
+/**
+ * The signature boxes a document has: the payer does not sign a receipt. The
+ * customer signs a booking form online; a contract's box is left for ink.
+ */
 export const signKeysFor = (doc: FormDocument): SignKey[] =>
-  doc === 'RESERVATION' ? [...SIGN_KEYS] : ['sign.company', 'sign.stamp'];
+  doc === 'RECEIPT' ? ['sign.company', 'sign.stamp'] : [...SIGN_KEYS];
 export const isSignKey = (k: string): k is SignKey => (SIGN_KEYS as readonly string[]).includes(k);
 
 export const SIGN_LABELS: Record<SignKey, { ar: string; en: string }> = {

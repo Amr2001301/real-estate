@@ -9,6 +9,7 @@ import { sampleValues } from '@/lib/document-samples';
 import type { CustomerFieldDef } from '@/lib/customer-fields';
 import {
   DOCUMENT_PAPER,
+  MAX_FORM_PAGES,
   PAPER,
   fieldLabel,
   fillForm,
@@ -27,9 +28,13 @@ const T = {
   ar: {
     name: 'اسم النموذج',
     namePlaceholder: 'مثال: استمارة الحجز المعتمدة',
-    isDefault: { RESERVATION: 'النموذج الافتراضي لاستمارات الحجز', RECEIPT: 'النموذج الافتراضي لإيصالات الدفع' },
+    isDefault: {
+      RESERVATION: 'النموذج الافتراضي لاستمارات الحجز',
+      RECEIPT: 'النموذج الافتراضي لإيصالات الدفع',
+      CONTRACT: 'النموذج الافتراضي للعقود',
+    },
     document: 'المستند',
-    documents: { RESERVATION: 'استمارة الحجز', RECEIPT: 'إيصال الدفع' },
+    documents: { RESERVATION: 'استمارة الحجز', RECEIPT: 'إيصال الدفع', CONTRACT: 'العقد' },
     paper: 'مقاس الورق',
     papers: { A4: 'A4', A5: 'A5', HALF: 'نص صفحة A4 (بالعرض)' },
     pages: 'صفحات الاستمارة',
@@ -59,9 +64,13 @@ const T = {
   en: {
     name: 'Form name',
     namePlaceholder: 'e.g. Approved booking form',
-    isDefault: { RESERVATION: 'Default form for booking forms', RECEIPT: 'Default form for payment receipts' },
+    isDefault: {
+      RESERVATION: 'Default form for booking forms',
+      RECEIPT: 'Default form for payment receipts',
+      CONTRACT: 'Default form for contracts',
+    },
     document: 'Document',
-    documents: { RESERVATION: 'Booking form', RECEIPT: 'Payment receipt' },
+    documents: { RESERVATION: 'Booking form', RECEIPT: 'Payment receipt', CONTRACT: 'Contract' },
     paper: 'Paper size',
     papers: { A4: 'A4', A5: 'A5', HALF: 'Half A4 (landscape)' },
     pages: 'Form pages',
@@ -338,7 +347,7 @@ export function FormDesigner({
             <PageUploader
               label={t.addPage}
               busyLabel={t.busy}
-              room={10 - pages.length}
+              room={MAX_FORM_PAGES - pages.length}
               onError={(text) => setNote({ ok: false, text })}
               onPages={(urls) => {
                 setNote(null);
