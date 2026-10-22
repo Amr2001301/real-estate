@@ -15,6 +15,7 @@ import {
   PremiumPageHero,
   PremiumSectionCard,
 } from '@/components/premium';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -141,7 +142,11 @@ export default async function PortalCommissionsPage({
                       <span className="me-1.5 text-[12px] font-semibold text-slate-400">{word('عمولة', 'Commission')}</span>
                       <span className="whitespace-nowrap font-mono" dir="ltr">{c.commissionNumber}</span>
                     </Link>
-                    <p className="mt-0.5 truncate text-[12px] text-slate-500">{client ?? '—'}</p>
+                    <p className="mt-0.5 truncate text-[12px] text-slate-500">
+                      {!c.contract?.customer && c.reservation?.lead ? (
+                        <EntityLink kind="lead" id={c.reservation.lead.id} scope="portal" mono={false}>{client ?? '—'}</EntityLink>
+                      ) : (client ?? '—')}
+                    </p>
                   </div>
 
                   {/* Project + unit + contract */}
@@ -159,7 +164,7 @@ export default async function PortalCommissionsPage({
                         {c.contract?.contractNumber && (
                           <span className="whitespace-nowrap">
                             <span className="me-1 text-slate-400">{word('عقد', 'Contract')}</span>
-                            <span className="font-mono" dir="ltr">{c.contract.contractNumber}</span>
+                            <EntityLink kind="contract" id={c.contract.id} scope="portal">{c.contract.contractNumber}</EntityLink>
                           </span>
                         )}
                       </p>

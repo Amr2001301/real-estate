@@ -20,6 +20,7 @@ import {
 } from '@/components/premium';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -273,18 +274,20 @@ export default async function AdminBrokerCommissionsPage({
                   )}
                   <p className="mt-0.5 truncate text-[12px] text-slate-500">
                     <span className="me-1 text-slate-400">{word('عمولة', 'Commission')}</span>
-                    <span className="whitespace-nowrap font-mono" dir="ltr">{c.commissionNumber}</span>
+                    <EntityLink kind="commission" id={c.id} className="whitespace-nowrap">{c.commissionNumber}</EntityLink>
                     {c.brokerAgent && <span className="ms-1.5">· {c.brokerAgent.fullName}</span>}
                   </p>
                 </div>
 
                 <div className="hidden min-w-0 text-[12.5px] lg:block">
-                  <p className="truncate font-semibold text-slate-800">{c.project ? tx(c.project.name) : '—'}</p>
+                  <p className="truncate font-semibold text-slate-800">
+                    {c.project ? <EntityLink kind="project" id={c.project.id} mono={false}>{tx(c.project.name)}</EntityLink> : '—'}
+                  </p>
                   <p className="mt-0.5 flex flex-col text-[12px] text-slate-500">
                     {c.unit?.code && (
                       <span className="whitespace-nowrap">
                         <span className="me-1 text-slate-400">{word('وحدة', 'Unit')}</span>
-                        <span className="font-mono" dir="ltr">{c.unit.code}</span>
+                        <EntityLink kind="unit" id={c.unit.id}>{c.unit.code}</EntityLink>
                       </span>
                     )}
                     <span className="whitespace-nowrap">

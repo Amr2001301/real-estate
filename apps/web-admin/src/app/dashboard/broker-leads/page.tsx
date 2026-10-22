@@ -18,6 +18,7 @@ import {
 } from '@/components/premium';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -330,12 +331,14 @@ export default async function AdminBrokerLeadsPage({
                 {/* Project */}
                 <div className="hidden min-w-0 text-[12.5px] lg:block">
                   <p className="truncate font-semibold text-slate-800">
-                    {l.projectInterest ? tx(l.projectInterest.name) : <span className="text-slate-400">—</span>}
+                    {l.projectInterest ? (
+                      <EntityLink kind="project" id={l.projectInterest.id} mono={false}>{tx(l.projectInterest.name)}</EntityLink>
+                    ) : <span className="text-slate-400">—</span>}
                   </p>
                   {l.unitInterest && (
                     <p className="mt-0.5 text-slate-500">
                       <span className="me-1 text-slate-400">{locale === 'en' ? 'Unit' : 'وحدة'}</span>
-                      <span className="whitespace-nowrap font-mono" dir="ltr">{l.unitInterest.code}</span>
+                      <EntityLink kind="unit" id={l.unitInterest.id} className="whitespace-nowrap">{l.unitInterest.code}</EntityLink>
                     </p>
                   )}
                 </div>

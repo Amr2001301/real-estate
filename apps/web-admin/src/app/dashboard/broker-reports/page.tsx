@@ -31,6 +31,7 @@ import {
   PremiumFilterField,
   PremiumSectionCard,
 } from '@/components/premium';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -374,9 +375,9 @@ export default async function AdminBrokerReportsPage({
                             />
                           </div>
                           <span className="text-[10px] text-slate-400">{r.contractsSigned} {m.brokerContractSuffix}</span>
-                          <span className="font-mono text-[10px] font-bold text-slate-500 bg-surface-muted px-1.5 py-0.5 rounded-md" dir="ltr">
+                          <EntityLink kind="broker" id={r.brokerId} className="text-[10px] font-bold text-slate-500 bg-surface-muted px-1.5 py-0.5 rounded-md">
                             {r.code}
-                          </span>
+                          </EntityLink>
                         </div>
                       </div>
                       <div className="text-end shrink-0">

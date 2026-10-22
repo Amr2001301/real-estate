@@ -32,6 +32,7 @@ import {
 import { FigureBar, Avatar } from '@/components/cockpit/cockpit';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -224,7 +225,7 @@ export default async function BrokersPage({
                       {b.commercialName && <span className="truncate" dir="auto">{b.commercialName}</span>}
                       <span>
                         <span className="me-1 text-slate-400">{locale === 'en' ? 'Code' : 'كود'}</span>
-                        <span className="whitespace-nowrap font-mono" dir="ltr">{b.code}</span>
+                        <EntityLink kind="broker" id={b.id} className="whitespace-nowrap">{b.code}</EntityLink>
                       </span>
                     </p>
                   </div>

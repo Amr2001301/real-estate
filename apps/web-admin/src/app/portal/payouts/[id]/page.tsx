@@ -28,6 +28,7 @@ import {
 } from '@/components/premium';
 import { CodeText } from '@/components/ui/code-text';
 import { BrokerPayoutStatusBadge } from '@/components/badges';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -241,7 +242,13 @@ export default async function PortalPayoutDetailPage({
                           <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">{formatDate(c.earnedAt, locale)}</p>
                         </td>
                         <td className="py-3.5 px-4">
-                          <CodeText className="text-xs text-slate-700">{c.contract.contractNumber ?? '—'}</CodeText>
+                          {c.contract.contractNumber ? (
+                            <EntityLink kind="contract" id={c.contract.id} scope="portal" className="whitespace-nowrap text-xs text-slate-700">
+                              {c.contract.contractNumber}
+                            </EntityLink>
+                          ) : (
+                            <CodeText className="text-xs text-slate-700">—</CodeText>
+                          )}
                         </td>
                         <td className="py-3.5 px-4">
                           <CodeText className="text-xs text-slate-700">{c.unit.code}</CodeText>

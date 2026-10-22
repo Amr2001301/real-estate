@@ -22,6 +22,7 @@ import {
   PremiumSectionCard,
   PremiumEmptyState,
 } from '@/components/premium';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 
@@ -229,8 +230,14 @@ export default async function InstallmentPlansPage({
                     </td>
                     <td className="py-3 px-4">
                       <div>
-                        <p className="text-slate-800">{r.project ? tx(r.project.name) : '—'}</p>
-                        {r.unit && <p className="text-xs text-slate-500">{m.unitPrefix} {r.unit.code}</p>}
+                        <p className="text-slate-800">
+                          {r.project ? <EntityLink kind="project" id={r.project.id ?? r.projectId} mono={false}>{tx(r.project.name)}</EntityLink> : '—'}
+                        </p>
+                        {r.unit && (
+                          <p className="text-xs text-slate-500">
+                            {m.unitPrefix} <EntityLink kind="unit" id={r.unit.id ?? r.unitId}>{r.unit.code}</EntityLink>
+                          </p>
+                        )}
                       </div>
                     </td>
                     <td className="py-3 px-4 tabular-nums font-medium text-slate-800">

@@ -36,6 +36,7 @@ import {
 import { cn } from '@/lib/cn';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -196,7 +197,13 @@ export default async function AdminBrokerCommissionDetailPage({
               />
               <SideRow
                 label={m.labelClient}
-                value={c.contract?.customer?.fullName ?? c.reservation?.lead?.fullName ?? '—'}
+                value={
+                  c.contract?.customer ? (
+                    <EntityLink kind="customer" id={c.contract.customer.id} mono={false}>{c.contract.customer.fullName}</EntityLink>
+                  ) : c.reservation?.lead ? (
+                    <EntityLink kind="lead" id={c.reservation.lead.id} mono={false}>{c.reservation.lead.fullName}</EntityLink>
+                  ) : '—'
+                }
               />
               <SideRow
                 label={m.labelInternalRep}
@@ -206,13 +213,16 @@ export default async function AdminBrokerCommissionDetailPage({
 
             {/* Unit + Project */}
             <PremiumSectionCard title={m.sectionUnit} icon={<Building2 />} padded={false}>
-              <SideRow label={m.labelProject} value={c.project ? tx(c.project.name) : '—'} />
+              <SideRow
+                label={m.labelProject}
+                value={c.project ? <EntityLink kind="project" id={c.project.id} mono={false}>{tx(c.project.name)}</EntityLink> : '—'}
+              />
               <SideRow
                 label={m.labelUnit}
                 value={
                   c.unit ? (
                     <span dir="ltr" className="font-mono">
-                      {c.unit.code} · {c.unit.type}
+                      <EntityLink kind="unit" id={c.unit.id}>{c.unit.code}</EntityLink> · {c.unit.type}
                     </span>
                   ) : '—'
                 }
@@ -269,9 +279,9 @@ export default async function AdminBrokerCommissionDetailPage({
                     </Link>
                     <div className="flex items-center gap-2 mt-1.5">
                       <BrokerStatusBadge status={c.broker.status} />
-                      <span className="font-mono text-[11px] text-slate-400" dir="ltr">
+                      <EntityLink kind="broker" id={c.broker.id} className="text-[11px] text-slate-400">
                         {c.broker.code}
-                      </span>
+                      </EntityLink>
                     </div>
                   </div>
 

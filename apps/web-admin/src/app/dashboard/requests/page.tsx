@@ -30,6 +30,7 @@ import {
 import { getLocale } from '@/lib/locale';
 import { InquiryActions } from './_actions';
 import { uiT } from '@/messages/ui';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -219,7 +220,13 @@ export default async function InfoRequestsPage({
                       {/* Sender */}
                       <td className="py-3.5 ps-5 pe-4 min-w-[160px]">
                         <p className="font-semibold text-[13px] text-slate-900 leading-snug">
-                          {contact.name}
+                          {req.user?.role === 'CUSTOMER' || req.user?.role === 'CLIENT' ? (
+                            <EntityLink kind={req.user.role === 'CUSTOMER' ? 'customer' : 'client'} id={req.user.id} mono={false}>{contact.name}</EntityLink>
+                          ) : !req.user && req.lead ? (
+                            <EntityLink kind="lead" id={req.lead.id} mono={false}>{contact.name}</EntityLink>
+                          ) : (
+                            contact.name
+                          )}
                         </p>
                         <p className="font-mono text-[10px] text-slate-400 mt-0.5 leading-none">
                           #{req.id.slice(0, 8).toUpperCase()}
@@ -290,15 +297,15 @@ export default async function InfoRequestsPage({
                         {projectName ? (
                           <div className="flex items-center gap-1.5 text-xs text-slate-600">
                             <Building2 className="h-3 w-3 text-slate-400 shrink-0" />
-                            <span className="truncate max-w-[140px]">{projectName}</span>
+                            <EntityLink kind="project" id={req.project?.id ?? req.projectId} mono={false} className="truncate max-w-[140px]">{projectName}</EntityLink>
                           </div>
                         ) : null}
                         {req.unit ? (
                           <div className={cn('flex items-center gap-1.5', projectName ? 'mt-1' : '')}>
                             <Home className="h-3 w-3 text-slate-400 shrink-0" />
-                            <span className="font-mono text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
+                            <EntityLink kind="unit" id={req.unit.id} className="text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
                               {req.unit.code}
-                            </span>
+                            </EntityLink>
                           </div>
                         ) : null}
                         {!projectName && !req.unit && (

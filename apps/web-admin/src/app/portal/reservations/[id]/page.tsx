@@ -32,6 +32,7 @@ import { CodeText } from '@/components/ui/code-text';
 import { ReservationStatusBadge } from '@/components/badges';
 import { avatarColor, initials } from '@/components/portal/detail-hero';
 import { MetricGrid, MetricTile } from '@/components/portal/metric-grid';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -167,7 +168,11 @@ export default async function PortalReservationDetailPage({
                 </div>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <h2 className="text-xl font-semibold text-navy tracking-tight truncate">{clientName || '—'}</h2>
+                    <h2 className="text-xl font-semibold text-navy tracking-tight truncate">
+                      {res.lead ? (
+                        <EntityLink kind="lead" id={res.lead.id} scope="portal" mono={false}>{clientName || '—'}</EntityLink>
+                      ) : (clientName || '—')}
+                    </h2>
                   </div>
                   {res.lead && (
                     <Link

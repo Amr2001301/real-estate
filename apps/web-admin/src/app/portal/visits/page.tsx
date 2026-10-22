@@ -27,6 +27,7 @@ import {
   PremiumFilterField,
   PremiumSectionCard,
 } from '@/components/premium';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -224,7 +225,9 @@ export default async function PortalVisitsPage({
                     {clientName && <Avatar name={clientName} />}
                     <div className="min-w-0">
                       <p className={cn('truncate text-[14.5px] font-bold', clientName ? 'text-slate-900' : 'text-slate-400')}>
-                        {clientName ?? '—'}
+                        {v.lead ? (
+                          <EntityLink kind="lead" id={v.lead.id} scope="portal" mono={false}>{clientName}</EntityLink>
+                        ) : (clientName ?? '—')}
                       </p>
                       {clientPhone && (
                         <a href={`tel:${clientPhone}`} className="mt-1 inline-flex items-center gap-1 text-[12px] tabular-nums text-slate-500 hover:text-brand-700">

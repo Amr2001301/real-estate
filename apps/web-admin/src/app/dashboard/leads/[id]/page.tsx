@@ -32,6 +32,7 @@ import { addNoteAction, assignLeadAction } from '../actions';
 import { salesActorLabel } from '@/lib/sales-actor';
 import { PremiumDetailLayout, PremiumPanel, PremiumEmptyNote } from '@/components/premium';
 import { cn } from '@/lib/cn';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -461,12 +462,16 @@ export default async function LeadDetailPage({
             <PremiumPanel title={m.opportunityInfoTitle} padding="none">
               <dl className="divide-y divide-hairline border-t border-hairline">
                 <InfoRow label={m.fieldProjectInterest} icon={<Building2 className="h-3.5 w-3.5" />}>
-                  <span className="text-end text-[13px] font-semibold text-slate-900">{lead.projectInterest ? tx(lead.projectInterest.name) : '—'}</span>
+                  <span className="text-end text-[13px] font-semibold text-slate-900">
+                    {lead.projectInterest ? (
+                      <EntityLink kind="project" id={lead.projectInterest.id} mono={false}>{tx(lead.projectInterest.name)}</EntityLink>
+                    ) : '—'}
+                  </span>
                 </InfoRow>
                 {lead.unitInterest && (
                   <InfoRow label={m.fieldUnit} icon={<DoorOpen className="h-3.5 w-3.5" />}>
-                    <span className="font-mono text-[13px] font-bold text-slate-900">
-                      {lead.unitInterest.code}
+                    <span className="text-[13px] font-bold text-slate-900">
+                      <EntityLink kind="unit" id={lead.unitInterest.id}>{lead.unitInterest.code}</EntityLink>
                       {lead.unitInterest.type && <span className="ms-1.5 font-sans text-[11.5px] font-medium text-slate-500">{lead.unitInterest.type}</span>}
                     </span>
                   </InfoRow>
@@ -484,7 +489,9 @@ export default async function LeadDetailPage({
                       </span>
                       <div className="min-w-0">
                         <p className="text-[11.5px] text-indigo-600">{m.brokerLabel}</p>
-                        <p className="truncate text-[13.5px] font-bold text-slate-900">{brokerName ?? '—'}</p>
+                        <p className="truncate text-[13.5px] font-bold text-slate-900">
+                          <EntityLink kind="broker" id={lead.broker?.id ?? lead.brokerId} mono={false}>{brokerName ?? '—'}</EntityLink>
+                        </p>
                         {lead.brokerAgent?.fullName && (
                           <p className="truncate text-[12px] text-slate-500">{m.brokerAgentLabel}: {lead.brokerAgent.fullName}</p>
                         )}

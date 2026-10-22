@@ -19,6 +19,7 @@ import {
   ApproveDepositButton,
   RejectDepositDialog,
 } from '../../payments/review/_actions';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,6 +72,15 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
   const customerName =
     d.contract?.customer?.fullName ?? d.reservation?.client?.fullName ?? d.reservation?.lead?.fullName ?? '—';
   const unitCode = d.contract?.unit?.code ?? d.reservation?.unit?.code ?? '—';
+  const unitId = d.contract?.unit?.id ?? d.reservation?.unit?.id;
+  // The contract's customer comes without an id: only a booking's client or lead links.
+  const customerLink: { kind: 'client' | 'lead'; id: string } | null = d.contract?.customer?.fullName
+    ? null
+    : d.reservation?.client
+      ? { kind: 'client', id: d.reservation.client.id }
+      : d.reservation?.lead
+        ? { kind: 'lead', id: d.reservation.lead.id }
+        : null;
 
   return (
     <div className="space-y-5">
@@ -104,8 +114,11 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
               <Field label={m.fieldAmount}    value={formatCurrency(d.amount, currency, locale)} />
               <Field label={m.fieldPaidAt}    value={formatDate(d.paidAt, locale)} />
               <Field label={m.fieldCreatedAt} value={formatDateTime(d.createdAt, locale)} />
-              <Field label={m.fieldCustomer}  value={customerName} />
-              <Field label={m.fieldUnit}      value={unitCode} ltr />
+              <Field
+                label={m.fieldCustomer}
+                value={customerLink ? <EntityLink kind={customerLink.kind} id={customerLink.id} mono={false}>{customerName}</EntityLink> : customerName}
+              />
+              <Field label={m.fieldUnit}      value={<EntityLink kind="unit" id={unitId} mono={false}>{unitCode}</EntityLink>} ltr />
             </div>
             <div className="pt-2 border-t border-hairline flex flex-wrap items-center gap-3">
               {d.contractId && (
@@ -233,7 +246,7 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
   );
 }
 
-function Field({ label, value, ltr }: { label: string; value: string; ltr?: boolean }) {
+function Field({ label, value, ltr }: { label: string; value: React.ReactNode; ltr?: boolean }) {
   return (
     <div>
       <p className="text-[11px] font-medium text-slate-400 mb-0.5">{label}</p>

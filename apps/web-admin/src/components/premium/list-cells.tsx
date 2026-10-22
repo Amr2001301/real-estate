@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
+import { EntityLink, type EntityKind } from '@/components/entity-link';
 
 /**
  * Shared table cells for the premium list pages (visits, reservations, contracts).
@@ -55,12 +56,18 @@ export function PersonCell({
   sub,
   subLabel,
   muted,
+  nameLink,
+  subLink,
 }: {
   name: string;
   sub?: string | null;
   /** Arabic word before the sub line (e.g. وحدة before a unit code). */
   subLabel?: string;
   muted?: boolean;
+  /** The name opens its page (customer, client…). Leave unset inside a row link. */
+  nameLink?: { kind: EntityKind; id: string | null | undefined };
+  /** The sub line (e.g. a unit code) opens its page. */
+  subLink?: { kind: EntityKind; id: string | null | undefined };
 }) {
   return (
     <div className="flex min-w-[160px] max-w-[210px] items-center gap-3" title={name}>
@@ -71,11 +78,13 @@ export function PersonCell({
         {muted ? '؟' : initials(name)}
       </span>
       <div className="min-w-0">
-        <p dir="auto" className={cn('truncate font-semibold', muted ? 'text-[12px] italic text-slate-400' : 'text-slate-900')}>{name}</p>
+        <p dir="auto" className={cn('truncate font-semibold', muted ? 'text-[12px] italic text-slate-400' : 'text-slate-900')}>
+          {nameLink ? <EntityLink kind={nameLink.kind} id={nameLink.id} mono={false}>{name}</EntityLink> : name}
+        </p>
         {sub && (
           <p className="whitespace-nowrap text-[11.5px] tabular-nums text-slate-500">
             {subLabel && <span className="me-1 text-slate-400">{subLabel}</span>}
-            <span dir="ltr">{sub}</span>
+            {subLink ? <EntityLink kind={subLink.kind} id={subLink.id} mono={false}><span dir="ltr">{sub}</span></EntityLink> : <span dir="ltr">{sub}</span>}
           </p>
         )}
       </div>

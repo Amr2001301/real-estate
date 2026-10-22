@@ -22,6 +22,7 @@ import {
   CancelPayoutForm,
 } from './_action-forms';
 import { RemoveCommissionButton } from './_remove-commission-button';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -173,15 +174,17 @@ export default async function AdminBrokerPayoutDetailPage({
                         {c.contract.customer?.fullName ?? c.commissionNumber}
                       </Link>
                       <p className="mt-1 text-[12.5px] text-slate-500">
-                        {c.unit.building?.phase?.project ? tx(c.unit.building.phase.project.name) : '—'}
+                        {c.unit.building?.phase?.project ? (
+                          <EntityLink kind="project" id={c.unit.building.phase.project.id} mono={false}>{tx(c.unit.building.phase.project.name)}</EntityLink>
+                        ) : '—'}
                         <span className="mx-1.5 text-slate-300">·</span>
                         <span className="me-1 text-slate-400">{word('وحدة', 'Unit')}</span>
-                        <span className="whitespace-nowrap font-mono" dir="ltr">{c.unit.code}</span>
+                        <EntityLink kind="unit" id={c.unit.id} className="whitespace-nowrap">{c.unit.code}</EntityLink>
                         {c.contract.contractNumber && (
                           <>
                             <span className="mx-1.5 text-slate-300">·</span>
                             <span className="me-1 text-slate-400">{word('عقد', 'Contract')}</span>
-                            <span className="whitespace-nowrap font-mono" dir="ltr">{c.contract.contractNumber}</span>
+                            <EntityLink kind="contract" id={c.contract.id} className="whitespace-nowrap">{c.contract.contractNumber}</EntityLink>
                           </>
                         )}
                       </p>

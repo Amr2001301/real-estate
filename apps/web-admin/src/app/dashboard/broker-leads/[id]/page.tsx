@@ -37,6 +37,7 @@ import {
   RejectBrokerLeadForm,
   MarkDuplicateBrokerLeadForm,
 } from './_review-forms';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -210,8 +211,8 @@ export default async function AdminBrokerLeadDetailPage({
                       </Link>
                       <BrokerStatusBadge status={lead.broker.status} />
                     </div>
-                    <p className="text-[11px] font-mono text-slate-400 tracking-wide" dir="ltr">
-                      {lead.broker.code}
+                    <p className="text-[11px] text-slate-400 tracking-wide">
+                      <EntityLink kind="broker" id={lead.broker.id}>{lead.broker.code}</EntityLink>
                     </p>
                   </div>
                   {lead.brokerAgent && (
@@ -248,14 +249,18 @@ export default async function AdminBrokerLeadDetailPage({
               <div className="divide-y divide-hairline">
                 <SideRow
                   label={m.labelProject}
-                  value={lead.projectInterest ? tx(lead.projectInterest.name) : '—'}
+                  value={
+                    lead.projectInterest ? (
+                      <EntityLink kind="project" id={lead.projectInterest.id} mono={false}>{tx(lead.projectInterest.name)}</EntityLink>
+                    ) : '—'
+                  }
                 />
                 <SideRow
                   label={m.labelUnit}
                   value={
                     lead.unitInterest ? (
                       <span className="font-mono text-[12px]" dir="ltr">
-                        {lead.unitInterest.code} • {lead.unitInterest.type}
+                        <EntityLink kind="unit" id={lead.unitInterest.id}>{lead.unitInterest.code}</EntityLink> • {lead.unitInterest.type}
                       </span>
                     ) : (
                       '—'

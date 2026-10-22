@@ -28,6 +28,7 @@ import { LeadStageBadge, ReservationStatusBadge, AppointmentStatusBadge } from '
 import { cn } from '@/lib/cn';
 import { activateClientAction, deactivateClientAction } from '../actions';
 import { PremiumDetailLayout, PremiumPanel, PremiumEmptyNote } from '@/components/premium';
+import { EntityLink } from '@/components/entity-link';
 
 interface AuditLog {
   id: string;
@@ -52,6 +53,8 @@ interface ReservationActivityEntry {
   actorId: string | null;
   actor?: { id: string; fullName: string } | null;
   createdAt: string;
+  /** Scalar column on the activity row (returned with the include). */
+  reservationId?: string;
   reservation: {
     reservationNumber: string;
     unit: { code: string } | null;
@@ -434,7 +437,9 @@ function ReservationActivityItem({
               <span className="font-mono text-xs text-slate-500"> — {unitCode}</span>
             )}
             {reservationNumber && (
-              <span className="font-mono text-xs text-slate-400"> ({reservationNumber})</span>
+              <span className="text-xs text-slate-400">
+                {' '}(<EntityLink kind="reservation" id={entry.reservationId}>{reservationNumber}</EntityLink>)
+              </span>
             )}
           </p>
           <p className="mt-1 text-2xs text-slate-500">

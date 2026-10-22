@@ -8,6 +8,7 @@ import { api, safe } from '@/lib/api';
 import { projectOptions } from '@/lib/options';
 import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
+import type { EntityKind } from '@/components/entity-link';
 import type { PagedDeposits, Deposit, DepositType } from '@/lib/types';
 import { formatCurrency, formatDate, tx, intlLocale } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
@@ -56,6 +57,18 @@ function getCustomerName(d: Deposit): string {
 
 function getUnitCode(d: Deposit): string {
   return d.contract?.unit?.code ?? d.reservation?.unit?.code ?? '—';
+}
+
+function getUnitId(d: Deposit): string | undefined {
+  return d.contract?.unit?.id ?? d.reservation?.unit?.id;
+}
+
+/** The customer's page; the contract's customer comes without an id, so only a booking's client or lead links. */
+function getCustomerLink(d: Deposit): { kind: EntityKind; id: string } | undefined {
+  if (d.contract?.customer?.fullName) return undefined;
+  if (d.reservation?.client) return { kind: 'client', id: d.reservation.client.id };
+  if (d.reservation?.lead) return { kind: 'lead', id: d.reservation.lead.id };
+  return undefined;
 }
 
 function getDueDate(d: Deposit): string | null {
@@ -386,7 +399,13 @@ export default async function DepositsPage({
 
                       <td className="px-4 py-3">
                         {/* The unit rides under the client: one column instead of two */}
-                        <PersonCell name={getCustomerName(d)} sub={getUnitCode(d)} subLabel={uiT(locale).common.codeKind.unit} />
+                        <PersonCell
+                          name={getCustomerName(d)}
+                          nameLink={getCustomerLink(d)}
+                          sub={getUnitCode(d)}
+                          subLabel={uiT(locale).common.codeKind.unit}
+                          subLink={{ kind: 'unit', id: getUnitId(d) }}
+                        />
                       </td>
 
                       <td className="px-4 py-3 whitespace-nowrap">
