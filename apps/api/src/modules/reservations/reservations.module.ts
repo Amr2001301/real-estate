@@ -1,3 +1,4 @@
+import { CUSTOMER_RECORD_SELECT } from '../users/customer-record';
 import {
   BadRequestException,
   ForbiddenException,
@@ -222,7 +223,7 @@ const FULL_INCLUDE = {
   },
   sales: { select: { id: true, fullName: true } },
   lead: { select: { id: true, fullName: true, phone: true, email: true } },
-  client: { select: { id: true, fullName: true, phone: true, email: true, nationalId: true, address: true } },
+  client: { select: CUSTOMER_RECORD_SELECT },
   installmentPlanTemplate: {
     select: { id: true, name: true, status: true, reservationAmount: true, projectId: true, unitId: true },
   },

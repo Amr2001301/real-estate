@@ -25,6 +25,7 @@ import {
   UpdateUserDto,
   UserOptionsQueryDto,
   ClientSearchQueryDto,
+  CUSTOMER_RECORD_KEYS,
 } from './dto/user.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -102,9 +103,10 @@ export class UsersController {
 
   @Patch('me')
   updateMe(@CurrentUser() user: AuthUser, @Body() dto: UpdateUserDto) {
-    // The identity printed on a contract is the company's record: a buyer
-    // does not change it from their own profile.
-    const { nationalId: _id, address: _address, ...own } = dto;
+    // The identity and details printed on a contract are the company's
+    // record: a buyer does not change them from their own profile.
+    const own: UpdateUserDto = { ...dto };
+    for (const k of CUSTOMER_RECORD_KEYS) delete own[k];
     return this.users.updateSelf(user, own);
   }
 

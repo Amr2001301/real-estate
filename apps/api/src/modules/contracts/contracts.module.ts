@@ -1,3 +1,4 @@
+import { CUSTOMER_RECORD_SELECT } from '../users/customer-record';
 import {
   BadRequestException,
   ConflictException,
@@ -769,7 +770,7 @@ export class ContractsService {
     const contract = await this.prisma.contract.findUnique({
       where: { id },
       include: {
-        customer: { select: { id: true, fullName: true, phone: true, email: true, nationalId: true, address: true } },
+        customer: { select: CUSTOMER_RECORD_SELECT },
         unit: { include: { building: { include: { phase: { include: { project: true } } } } } },
         reservation: {
           select: {

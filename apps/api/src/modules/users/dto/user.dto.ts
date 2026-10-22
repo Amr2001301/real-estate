@@ -4,6 +4,7 @@ import {
   IsEnum,
   IsIn,
   IsInt,
+  IsObject,
   IsOptional,
   IsString,
   IsUUID,
@@ -17,8 +18,96 @@ import {
 import { UserRole, Locale } from '@prisma/client';
 
 const trimOrNull = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() || null : value);
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
-export class CreateUserDto {
+/**
+ * What the company records about a buyer for its contracts and forms: their
+ * identity, personal details, and the company's own extra fields. Filled by
+ * staff; PATCH /users/me drops all of it (CUSTOMER_RECORD_KEYS). null clears
+ * a field; dates are days (YYYY-MM-DD).
+ */
+export abstract class CustomerRecordDto {
+  // The national ID (14 digits in Egypt) or a passport number.
+  @IsOptional()
+  @Transform(trimOrNull)
+  @ValidateIf((_o, v) => v !== null)
+  @Matches(/^[A-Za-z0-9]{5,20}$/, { message: 'رقم الهوية من ٥ إلى ٢٠ حرفاً أو رقماً' })
+  nationalId?: string | null;
+
+  @IsOptional()
+  @Transform(trimOrNull)
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(300)
+  address?: string | null;
+
+  @IsOptional()
+  @Transform(trimOrNull)
+  @ValidateIf((_o, v) => v !== null)
+  @Matches(DAY, { message: 'تاريخ الميلاد غير صالح' })
+  birthDate?: string | null;
+
+  @IsOptional()
+  @Transform(trimOrNull)
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(120)
+  birthPlace?: string | null;
+
+  @IsOptional()
+  @Transform(trimOrNull)
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(120)
+  occupation?: string | null;
+
+  @IsOptional()
+  @Transform(trimOrNull)
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(200)
+  employer?: string | null;
+
+  @IsOptional()
+  @Transform(trimOrNull)
+  @ValidateIf((_o, v) => v !== null)
+  @Matches(DAY, { message: 'تاريخ إصدار الهوية غير صالح' })
+  nationalIdIssueDate?: string | null;
+
+  @IsOptional()
+  @Transform(trimOrNull)
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(120)
+  nationalIdIssuePlace?: string | null;
+
+  @IsOptional()
+  @Transform(trimOrNull)
+  @ValidateIf((_o, v) => v !== null)
+  @Matches(/^[0-9+\-\s()]{5,30}$/, { message: 'رقم التليفون الأرضي غير صالح' })
+  homePhone?: string | null;
+
+  /** The company's own fields (CustomerField), by key; checked by the service. */
+  @IsOptional()
+  @IsObject()
+  customFields?: Record<string, unknown>;
+}
+
+/** The fields of CustomerRecordDto: the company's record, never the buyer's own edit. */
+export const CUSTOMER_RECORD_KEYS = [
+  'nationalId',
+  'address',
+  'birthDate',
+  'birthPlace',
+  'occupation',
+  'employer',
+  'nationalIdIssueDate',
+  'nationalIdIssuePlace',
+  'homePhone',
+  'customFields',
+] as const satisfies readonly (keyof CustomerRecordDto)[];
+
+export class CreateUserDto extends CustomerRecordDto {
   @IsEnum(UserRole)
   role!: UserRole;
 
@@ -48,19 +137,6 @@ export class CreateUserDto {
   @IsUUID()
   managerId?: string;
 
-  // A buyer's identity for the contract (see UpdateUserDto).
-  @IsOptional()
-  @Transform(trimOrNull)
-  @ValidateIf((_o, v) => v !== null)
-  @Matches(/^[A-Za-z0-9]{5,20}$/, { message: 'رقم الهوية من ٥ إلى ٢٠ حرفاً أو رقماً' })
-  nationalId?: string | null;
-
-  @IsOptional()
-  @Transform(trimOrNull)
-  @ValidateIf((_o, v) => v !== null)
-  @IsString()
-  @MaxLength(300)
-  address?: string | null;
 }
 
 // ADMIN-only: assign or clear a SALES user's manager. Kept separate from the
@@ -77,25 +153,10 @@ export class AssignManagerDto {
   managerId?: string | null;
 }
 
-export class UpdateUserDto {
+export class UpdateUserDto extends CustomerRecordDto {
   @IsOptional()
   @IsString()
   fullName?: string;
-
-  // A buyer's identity for the contract: the national ID (14 digits in Egypt)
-  // or a passport number; null clears it.
-  @IsOptional()
-  @Transform(trimOrNull)
-  @ValidateIf((_o, v) => v !== null)
-  @Matches(/^[A-Za-z0-9]{5,20}$/, { message: 'رقم الهوية من ٥ إلى ٢٠ حرفاً أو رقماً' })
-  nationalId?: string | null;
-
-  @IsOptional()
-  @Transform(trimOrNull)
-  @ValidateIf((_o, v) => v !== null)
-  @IsString()
-  @MaxLength(300)
-  address?: string | null;
 
   @IsOptional()
   @IsEnum(Locale)

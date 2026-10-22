@@ -93,6 +93,7 @@ model Company {
   printSettings               PrintSettings?
   documentTemplates           DocumentTemplate[]
   signatureRequests           SignatureRequest[]
+  customerFields              CustomerField[]
   users                       User[]
   projects                    Project[]
   phases                      Phase[]
@@ -342,6 +343,27 @@ model SignatureRequest {
   @@index([companyId, documentType, documentId])
 }
 
+/// A customer field the company adds for its own forms (e.g. marital status):
+/// the staff fill it on the customer, its value prints as {{custom.<key>}}.
+/// The key never changes, so forms and wordings keep working when the label
+/// is edited.
+model CustomerField {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @db.Uuid
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  key       String   @db.VarChar(40)
+  label     Json
+  /// TEXT | NUMBER | DATE | SELECT
+  type      String   @db.VarChar(10)
+  options   String[] @default([])
+  active    Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, key])
+}
+
 model CompanyDomain {
   id        String  @id @default(uuid()) @db.Uuid
   companyId String  @db.Uuid
@@ -389,6 +411,16 @@ model User {
   /// number) and address. Staff and the customer themself only.
   nationalId        String?   @db.VarChar(20)
   address           String?   @db.VarChar(300)
+  /// More of the buyer's identity, as booking forms and contracts ask for it.
+  birthDate            DateTime? @db.Date
+  birthPlace           String?   @db.VarChar(120)
+  occupation           String?   @db.VarChar(120)
+  employer             String?   @db.VarChar(200)
+  nationalIdIssueDate  DateTime? @db.Date
+  nationalIdIssuePlace String?   @db.VarChar(120)
+  homePhone            String?   @db.VarChar(30)
+  /// Values of the company's own customer fields (CustomerField), by key.
+  customFields         Json?
   locale            Locale    @default(ar)
   /// Per-user e-mail / push opt-outs by notification group
   /// ({ email: { finance: false }, push: { sales: false } }). Null = every

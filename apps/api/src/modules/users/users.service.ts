@@ -10,7 +10,8 @@ import * as argon2 from 'argon2';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { phoneForWrite } from '../../common/utils/phone-for-write';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
-import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
+import { CreateUserDto, CUSTOMER_RECORD_KEYS, UpdateUserDto, type CustomerRecordDto } from './dto/user.dto';
+import { mergeCustomValues } from '../customer-fields/custom-values';
 import { MaintenanceStatus, AppointmentStatus, LeadStage, Prisma, ReservationStatus, UserRole, VisitStatus } from '@prisma/client';
 import { assertAssignableSales } from '../../common/utils/assignable-sales';
 import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
@@ -145,8 +146,7 @@ export class UsersService {
         passwordHash,
         locale: dto.locale ?? 'ar',
         managerId: dto.managerId ?? null,
-        nationalId: dto.nationalId ?? null,
-        address: dto.address ?? null,
+        ...(await this.recordData(dto, companyId, null)),
         companyId,
       },
       select: this.publicSelect(),
@@ -495,10 +495,12 @@ export class UsersService {
     // proves it and links the records. A number held by a CRM record still
     // hits the unique constraint, which the controller maps to a clear error.
     const phoneChanged = phone !== undefined && phone !== stored;
+    const { birthDate: _b, nationalIdIssueDate: _i, customFields: _c, ...plain } = dto;
     return this.prisma.user.update({
       where: { id },
       data: {
-        ...dto,
+        ...plain,
+        ...(await this.recordData(dto, companyId, id)),
         ...(phone !== undefined ? { phone } : {}),
         ...(phoneChanged ? { phoneVerifiedAt: null } : {}),
       },
@@ -737,6 +739,42 @@ export class UsersService {
     });
   }
 
+  /**
+   * The customer-record fields of a create or edit as stored: days as dates,
+   * and the company's own fields merged into what the customer holds and
+   * checked against the company's definitions. Only the fields sent.
+   */
+  private async recordData(dto: CustomerRecordDto, companyId: string, userId: string | null) {
+    const today = new Date().toISOString().slice(0, 10);
+    const day = (v: string | null | undefined, label: string) => {
+      if (v === undefined || v === null) return v;
+      const d = new Date(`${v}T00:00:00Z`);
+      if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== v || v < '1900-01-01' || v > today) {
+        throw new BadRequestException(`${label} غير صالح`);
+      }
+      return d;
+    };
+    const data: Pick<Prisma.UserUncheckedCreateInput, (typeof CUSTOMER_RECORD_KEYS)[number]> = {};
+    for (const k of ['nationalId', 'address', 'birthPlace', 'occupation', 'employer', 'nationalIdIssuePlace', 'homePhone'] as const) {
+      if (dto[k] !== undefined) data[k] = dto[k];
+    }
+    if (dto.birthDate !== undefined) data.birthDate = day(dto.birthDate, 'تاريخ الميلاد');
+    if (dto.nationalIdIssueDate !== undefined) data.nationalIdIssueDate = day(dto.nationalIdIssueDate, 'تاريخ إصدار الهوية');
+    if (dto.customFields !== undefined) {
+      const [fields, current] = await Promise.all([
+        this.prisma.customerField.findMany({
+          where: { companyId },
+          select: { key: true, type: true, options: true, active: true, label: true },
+        }),
+        userId
+          ? this.prisma.user.findFirst({ where: { id: userId, companyId }, select: { customFields: true } })
+          : null,
+      ]);
+      data.customFields = mergeCustomValues(fields, current?.customFields ?? null, dto.customFields);
+    }
+    return data;
+  }
+
   private publicSelect() {
     return {
       id: true,
@@ -746,6 +784,14 @@ export class UsersService {
       phone: true,
       nationalId: true,
       address: true,
+      birthDate: true,
+      birthPlace: true,
+      occupation: true,
+      employer: true,
+      nationalIdIssueDate: true,
+      nationalIdIssuePlace: true,
+      homePhone: true,
+      customFields: true,
       locale: true,
       active: true,
       avatarUrl: true,
