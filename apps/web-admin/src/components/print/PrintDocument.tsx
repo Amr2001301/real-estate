@@ -505,8 +505,11 @@ export function PrintSignatures({
   seal,
 }: {
   locale: Locale;
-  /** `company` marks the party the company's signature goes on. */
-  parties: { role: string; name: string; company?: boolean }[];
+  /**
+   * `company` marks the party the company's signature goes on; `signed` is a
+   * party's own electronic signature (the customer's, signed online).
+   */
+  parties: { role: string; name: string; company?: boolean; signed?: { image: string; note: string } }[];
   /** The company's signature and stamp, on its final documents. */
   seal?: Seal | null;
 }) {
@@ -526,7 +529,17 @@ export function PrintSignatures({
                 {t.title}: <span className="text-slate-800">{seal.title}</span>
               </div>
             )}
-            {sealed && seal.signature ? (
+            {p.signed ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={p.signed.image}
+                  alt={t.signature}
+                  data-testid="print-customer-signature"
+                  className="-mb-2 mt-1 h-14 max-w-[150px] object-contain mix-blend-multiply"
+                />
+              </>
+            ) : sealed && seal.signature ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={seal.signature}
@@ -539,6 +552,7 @@ export function PrintSignatures({
             )}
             <div className="border-b border-dashed border-slate-300" />
             <div className="mt-1 text-[10px] text-slate-400">{t.signature}</div>
+            {p.signed && <div className="mt-1 text-[9.5px] leading-snug text-slate-500">{p.signed.note}</div>}
             <div className="mt-5 border-b border-dashed border-slate-300" />
             <div className="mt-1 text-[10px] text-slate-400">{t.date}</div>
           </div>

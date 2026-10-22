@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
+import type { SignatureRequestView } from '@/app/dashboard/reservations/[id]/_components/signature-card';
 import { api, safe } from '@/lib/api';
-import { formatDate, tx } from '@/lib/format';
+import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { getLetterhead } from '@/lib/letterhead';
 import { getLocale } from '@/lib/locale';
 import { getDocumentTemplates, getPrintSettings, pickTemplate, sealFor } from '@/lib/print-settings';
@@ -44,12 +45,13 @@ export default async function ReservationPrintPage({ params, searchParams }: { p
   const { id } = await params;
   const { template: requested } = await searchParams;
 
-  const [resResult, letterhead, locale, paper, templates] = await Promise.all([
+  const [resResult, letterhead, locale, paper, templates, signatures] = await Promise.all([
     safe(api.get<Reservation>(`/reservations/${id}`)),
     getLetterhead(),
     getLocale(),
     getPrintSettings(),
     getDocumentTemplates('RESERVATION'),
+    safe(api.get<SignatureRequestView[]>(`/reservations/${id}/signature-requests`)),
   ]);
 
   if (resResult.error || !resResult.data) notFound();
@@ -69,6 +71,15 @@ export default async function ReservationPrintPage({ params, searchParams }: { p
   const template = pickTemplate(templates, null, requested);
   const clauses = template ? renderTemplate(template.body, reservationValues(r, letterhead, paper, locale)) : [];
   const seal = sealFor(paper, 'RESERVATION', r.status === 'APPROVED' || r.status === 'CONVERTED');
+  // The customer's own signature, signed online — while the booking is as signed.
+  const signedOnline = signatures.data?.find((x) => x.state === 'SIGNED');
+  const customerSigned =
+    signedOnline?.signature && !signedOnline.outdated && signedOnline.signedAt
+      ? {
+          image: signedOnline.signature,
+          note: t.common.signedOnline(formatDateTime(signedOnline.signedAt, locale), signedOnline.snapshotHash.slice(0, 16).toUpperCase()),
+        }
+      : undefined;
 
   return (
     <PrintDocument
@@ -161,7 +172,7 @@ export default async function ReservationPrintPage({ params, searchParams }: { p
         locale={locale}
         seal={seal}
         parties={[
-          { role: m.clientSignature, name: clientName },
+          { role: m.clientSignature, name: signedOnline && customerSigned ? (signedOnline.signerName ?? clientName) : clientName, signed: customerSigned },
           { role: m.companySignature, name: company, company: true },
         ]}
       />

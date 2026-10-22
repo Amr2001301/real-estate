@@ -27,6 +27,6 @@ import { CapabilityModule } from '../../common/capabilities/capability.module';
   providers: [AuthService, JwtStrategy, SmsService, EmailService, TenantResolverService],
   // TenantResolverService exported so TenantContextInterceptor (APP_INTERCEPTOR in
   // AppModule) can inject it for MT-031 authenticated slug mismatch checks.
-  exports: [AuthService, EmailService, TenantResolverService],
+  exports: [AuthService, EmailService, TenantResolverService, SmsService],
 })
 export class AuthModule {}

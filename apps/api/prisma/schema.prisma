@@ -92,6 +92,7 @@ model Company {
   companyDomains              CompanyDomain[]
   printSettings               PrintSettings?
   documentTemplates           DocumentTemplate[]
+  signatureRequests           SignatureRequest[]
   users                       User[]
   projects                    Project[]
   phases                      Phase[]
@@ -300,6 +301,45 @@ model DocumentTemplate {
   updatedAt    DateTime @updatedAt
 
   @@index([companyId, documentType])
+}
+
+/// A customer's electronic signature on a document (P5), booking forms first.
+/// Staff send a link (only its hash is kept); the customer reads the document
+/// as it stood when sent (snapshot), proves the phone on file with a code,
+/// and signs by hand. sourceHash fingerprints the record when sent: when the
+/// record changes after, the signature is on an older version.
+model SignatureRequest {
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String   @db.Uuid
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  /// RESERVATION (CONTRACT later)
+  documentType String   @db.VarChar(20)
+  documentId   String   @db.Uuid
+  tokenHash    String   @unique @db.VarChar(64)
+  /// PENDING | SIGNED | CANCELLED (expired: PENDING past expiresAt)
+  status       String   @default("PENDING") @db.VarChar(20)
+  expiresAt    DateTime
+  phone        String   @db.VarChar(30)
+  snapshot     Json
+  snapshotHash String   @db.VarChar(64)
+  sourceHash   String   @db.VarChar(64)
+  createdById  String   @db.Uuid
+
+  otpHash      String?   @db.VarChar(64)
+  otpExpiresAt DateTime?
+  otpSentAt    DateTime?
+  otpAttempts  Int       @default(0)
+
+  signerName      String?   @db.VarChar(120)
+  signatureImage  Bytes?
+  signedAt        DateTime?
+  signerIp        String?   @db.VarChar(64)
+  signerUserAgent String?   @db.VarChar(300)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId, documentType, documentId])
 }
 
 model CompanyDomain {
