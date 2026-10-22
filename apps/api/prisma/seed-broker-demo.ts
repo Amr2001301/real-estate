@@ -35,9 +35,11 @@ import {
   BrokerUserStatus,
   PrismaClient,
   ReservationStatus,
+  UnitStatus,
   UserRole,
 } from '@prisma/client';
 import * as argon2 from 'argon2';
+import { seedBookingDeposit, seedSchedule } from './seed-schedule';
 import { upsertUserByEmail } from './seed-user-upsert';
 
 const prisma = new PrismaClient();
@@ -65,7 +67,7 @@ async function findUnit(
   projectNameEn: string,
   buildingName: string,
   unitCode: string,
-): Promise<{ id: string; price: { toString(): string } } | null> {
+): Promise<{ id: string; price: { toString(): string }; status: UnitStatus } | null> {
   const project = await prisma.project.findFirst({
     where: { name: { path: ['en'], equals: projectNameEn } },
     select: { id: true },
@@ -80,7 +82,7 @@ async function findUnit(
 
   return prisma.unit.findUnique({
     where: { buildingId_code: { buildingId: building.id, code: unitCode } },
-    select: { id: true, price: true },
+    select: { id: true, price: true, status: true },
   });
 }
 
@@ -148,8 +150,29 @@ async function cleanup(): Promise<void> {
     .map((c) => c.contractNumber)
     .filter((n): n is string => n?.startsWith('DEMO-BCN-') ?? false);
 
+  const demoContracts = await prisma.contract.findMany({
+    where: { contractNumber: { in: demoContractNumbers } },
+    select: { id: true, unitId: true },
+  });
+  const demoReservations = await prisma.reservation.findMany({
+    where: { reservationNumber: { startsWith: 'DEMO-BRN-' } },
+    select: { id: true, unitId: true },
+  });
+  await prisma.deposit.deleteMany({
+    where: {
+      OR: [
+        { contractId: { in: demoContracts.map((c) => c.id) } },
+        { reservationId: { in: demoReservations.map((r) => r.id) } },
+      ],
+    },
+  });
+  // Plans and their rows go with the contract (cascade).
   await prisma.contract.deleteMany({
     where: { contractNumber: { in: demoContractNumbers } },
+  });
+  await prisma.unit.updateMany({
+    where: { id: { in: [...new Set([...demoContracts, ...demoReservations].map((x) => x.unitId))] } },
+    data: { status: UnitStatus.AVAILABLE, reservationExpiresAt: null },
   });
 
   const demoReservationNumbers = (
@@ -212,6 +235,10 @@ async function main(): Promise<void> {
     select: { id: true, companyId: true },
   });
   if (!adminUser) throw new Error('No ADMIN user found — run the dev seed first.');
+  if (!adminUser.companyId) throw new Error('The ADMIN user has no company — run the dev seed first.');
+  // Every record belongs to the admin's company: the API only sees rows of its
+  // own tenant, so a row without one is invisible to every report.
+  const companyId = adminUser.companyId;
 
   const salesUser = await prisma.user.findFirst({
     where: { email: 'sales@example.com' },
@@ -269,6 +296,11 @@ async function main(): Promise<void> {
     requireUnit('Solara Heights', 'Solara Tower One', 'SH-1505'),
   ]);
 
+  const unitById = new Map(
+    [uA101, uA102, uA201, uA301, uNCA101, uNCA102, uNCA201, uNCA305, uPDT01, uPDV01, uPDV02, uSH310, uSH1201, uSH1505]
+      .map((u) => [u.id, u]),
+  );
+
   // ── 1. Broker firms ─────────────────────────────────────────────────────────
   console.log('   Creating broker firms…');
 
@@ -281,7 +313,7 @@ async function main(): Promise<void> {
   const [b1, b2, b3, b4, b5] = await Promise.all([
     prisma.broker.findFirst({ where: { code: BROKER_CODES.B1 }, select: { id: true } }).then(
       (e) => e ?? prisma.broker.create({ data: {
-        code: BROKER_CODES.B1, companyName: 'شركة المهيدب للعقارات', commercialName: 'Al-Muhaidib Real Estate',
+        companyId, code: BROKER_CODES.B1, companyName: 'شركة المهيدب للعقارات', commercialName: 'Al-Muhaidib Real Estate',
         email: 'info@demo-muhaidib.com', phone: '+966112000001', address: 'طريق الملك فهد، حي العليا',
         city: 'الرياض', taxId: 'DEMO-TAX-001', commercialRegistration: 'DEMO-CR-001',
         bankName: 'بنك الرياض', bankAccountName: 'شركة المهيدب للعقارات', bankIban: 'SA0380000000608010167519',
@@ -292,7 +324,7 @@ async function main(): Promise<void> {
     ),
     prisma.broker.findFirst({ where: { code: BROKER_CODES.B2 }, select: { id: true } }).then(
       (e) => e ?? prisma.broker.create({ data: {
-        code: BROKER_CODES.B2, companyName: 'دار المشاريع العقارية', commercialName: 'Dar Al-Mashari Real Estate',
+        companyId, code: BROKER_CODES.B2, companyName: 'دار المشاريع العقارية', commercialName: 'Dar Al-Mashari Real Estate',
         email: 'contact@demo-mashari.com', phone: '+966122000002', address: 'شارع التحلية، جدة',
         city: 'جدة', taxId: 'DEMO-TAX-002', commercialRegistration: 'DEMO-CR-002',
         bankName: 'البنك الأهلي', bankAccountName: 'دار المشاريع العقارية', bankIban: 'SA4420000001234567891234',
@@ -303,7 +335,7 @@ async function main(): Promise<void> {
     ),
     prisma.broker.findFirst({ where: { code: BROKER_CODES.B3 }, select: { id: true } }).then(
       (e) => e ?? prisma.broker.create({ data: {
-        code: BROKER_CODES.B3, companyName: 'مجموعة العثيم العقارية', commercialName: 'Al-Othaim Real Estate Group',
+        companyId, code: BROKER_CODES.B3, companyName: 'مجموعة العثيم العقارية', commercialName: 'Al-Othaim Real Estate Group',
         email: 'hello@demo-othaim.com', phone: '+966133000003', address: 'طريق الملك عبدالعزيز، الدمام',
         city: 'الدمام', taxId: 'DEMO-TAX-003', defaultCommissionPct: 2.0, status: BrokerStatus.ACTIVE,
         contractStartAt: d(6), contractEndAt: new Date(new Date().setFullYear(new Date().getFullYear() + 2)),
@@ -312,7 +344,7 @@ async function main(): Promise<void> {
     ),
     prisma.broker.findFirst({ where: { code: BROKER_CODES.B4 }, select: { id: true } }).then(
       (e) => e ?? prisma.broker.create({ data: {
-        code: BROKER_CODES.B4, companyName: 'شركة الجديدة للتطوير', commercialName: 'Al-Jadeedah Development',
+        companyId, code: BROKER_CODES.B4, companyName: 'شركة الجديدة للتطوير', commercialName: 'Al-Jadeedah Development',
         email: 'info@demo-jadeedah.com', phone: '+966144000004', city: 'الرياض',
         defaultCommissionPct: 2.0, status: BrokerStatus.PENDING,
         createdById: adminUser.id, notes: 'قيد استكمال التوثيق',
@@ -320,7 +352,7 @@ async function main(): Promise<void> {
     ),
     prisma.broker.findFirst({ where: { code: BROKER_CODES.B5 }, select: { id: true } }).then(
       (e) => e ?? prisma.broker.create({ data: {
-        code: BROKER_CODES.B5, companyName: 'مكتب النجم العقاري', commercialName: 'Al-Najm Real Estate Office',
+        companyId, code: BROKER_CODES.B5, companyName: 'مكتب النجم العقاري', commercialName: 'Al-Najm Real Estate Office',
         email: 'office@demo-najm.com', phone: '+966155000005', city: 'جدة',
         defaultCommissionPct: 1.5, status: BrokerStatus.SUSPENDED,
         createdById: adminUser.id, notes: 'موقوف بسبب مخالفة الشروط',
@@ -353,47 +385,47 @@ async function main(): Promise<void> {
   await Promise.all([
     prisma.brokerUser.upsert({
       where: { userId: bu1Owner.id },
-      create: { userId: bu1Owner.id, brokerId: b1.id, jobTitle: 'المدير العام', isPrimaryContact: true, canManageBrokerUsers: true, canViewCommissions: true, status: BrokerUserStatus.ACTIVE, joinedAt: d(12) },
+      create: { companyId, userId: bu1Owner.id, brokerId: b1.id, jobTitle: 'المدير العام', isPrimaryContact: true, canManageBrokerUsers: true, canViewCommissions: true, status: BrokerUserStatus.ACTIVE, joinedAt: d(12) },
       update: {},
     }),
     prisma.brokerUser.upsert({
       where: { userId: bu1Sales.id },
-      create: { userId: bu1Sales.id, brokerId: b1.id, jobTitle: 'مندوب مبيعات', isPrimaryContact: false, canViewCommissions: true, status: BrokerUserStatus.ACTIVE, joinedAt: d(10) },
+      create: { companyId, userId: bu1Sales.id, brokerId: b1.id, jobTitle: 'مندوب مبيعات', isPrimaryContact: false, canViewCommissions: true, status: BrokerUserStatus.ACTIVE, joinedAt: d(10) },
       update: {},
     }),
     prisma.brokerUser.upsert({
       where: { userId: bu1Coord.id },
-      create: { userId: bu1Coord.id, brokerId: b1.id, jobTitle: 'منسق عمليات', isPrimaryContact: false, canViewCommissions: false, status: BrokerUserStatus.ACTIVE, joinedAt: d(9) },
+      create: { companyId, userId: bu1Coord.id, brokerId: b1.id, jobTitle: 'منسق عمليات', isPrimaryContact: false, canViewCommissions: false, status: BrokerUserStatus.ACTIVE, joinedAt: d(9) },
       update: {},
     }),
     prisma.brokerUser.upsert({
       where: { userId: bu2Owner.id },
-      create: { userId: bu2Owner.id, brokerId: b2.id, jobTitle: 'المدير العام', isPrimaryContact: true, canManageBrokerUsers: true, canViewCommissions: true, status: BrokerUserStatus.ACTIVE, joinedAt: d(8) },
+      create: { companyId, userId: bu2Owner.id, brokerId: b2.id, jobTitle: 'المدير العام', isPrimaryContact: true, canManageBrokerUsers: true, canViewCommissions: true, status: BrokerUserStatus.ACTIVE, joinedAt: d(8) },
       update: {},
     }),
     prisma.brokerUser.upsert({
       where: { userId: bu2Sales.id },
-      create: { userId: bu2Sales.id, brokerId: b2.id, jobTitle: 'مستشار مبيعات', isPrimaryContact: false, canViewCommissions: true, status: BrokerUserStatus.ACTIVE, joinedAt: d(7) },
+      create: { companyId, userId: bu2Sales.id, brokerId: b2.id, jobTitle: 'مستشار مبيعات', isPrimaryContact: false, canViewCommissions: true, status: BrokerUserStatus.ACTIVE, joinedAt: d(7) },
       update: {},
     }),
     prisma.brokerUser.upsert({
       where: { userId: bu3Owner.id },
-      create: { userId: bu3Owner.id, brokerId: b3.id, jobTitle: 'المدير العام', isPrimaryContact: true, canManageBrokerUsers: true, canViewCommissions: true, status: BrokerUserStatus.ACTIVE, joinedAt: d(6) },
+      create: { companyId, userId: bu3Owner.id, brokerId: b3.id, jobTitle: 'المدير العام', isPrimaryContact: true, canManageBrokerUsers: true, canViewCommissions: true, status: BrokerUserStatus.ACTIVE, joinedAt: d(6) },
       update: {},
     }),
     prisma.brokerUser.upsert({
       where: { userId: bu3Sales.id },
-      create: { userId: bu3Sales.id, brokerId: b3.id, jobTitle: 'مندوب مبيعات', isPrimaryContact: false, canViewCommissions: true, status: BrokerUserStatus.ACTIVE, joinedAt: d(5) },
+      create: { companyId, userId: bu3Sales.id, brokerId: b3.id, jobTitle: 'مندوب مبيعات', isPrimaryContact: false, canViewCommissions: true, status: BrokerUserStatus.ACTIVE, joinedAt: d(5) },
       update: {},
     }),
     prisma.brokerUser.upsert({
       where: { userId: bu4Owner.id },
-      create: { userId: bu4Owner.id, brokerId: b4.id, jobTitle: 'المالك', isPrimaryContact: true, canViewCommissions: true, status: BrokerUserStatus.INVITED, invitedAt: d(1) },
+      create: { companyId, userId: bu4Owner.id, brokerId: b4.id, jobTitle: 'المالك', isPrimaryContact: true, canViewCommissions: true, status: BrokerUserStatus.INVITED, invitedAt: d(1) },
       update: {},
     }),
     prisma.brokerUser.upsert({
       where: { userId: bu5Owner.id },
-      create: { userId: bu5Owner.id, brokerId: b5.id, jobTitle: 'المالك', isPrimaryContact: true, canViewCommissions: true, status: BrokerUserStatus.SUSPENDED },
+      create: { companyId, userId: bu5Owner.id, brokerId: b5.id, jobTitle: 'المالك', isPrimaryContact: true, canViewCommissions: true, status: BrokerUserStatus.SUSPENDED },
       update: {},
     }),
   ]);
@@ -415,7 +447,7 @@ async function main(): Promise<void> {
     projectGrants.map((g) =>
       prisma.brokerProjectAccess.upsert({
         where: { brokerId_projectId: { brokerId: g.brokerId, projectId: g.projectId } },
-        create: { brokerId: g.brokerId, projectId: g.projectId, commissionPct: g.commissionPct, active: true, startsAt: d(12) },
+        create: { companyId, brokerId: g.brokerId, projectId: g.projectId, commissionPct: g.commissionPct, active: true, startsAt: d(12) },
         update: {},
       }),
     ),
@@ -493,6 +525,7 @@ async function main(): Promise<void> {
     }
     const lead = await prisma.lead.create({
       data: {
+        companyId,
         clientId: spec.clientId,
         fullName: spec.fullName,
         phone: spec.phone,
@@ -557,10 +590,16 @@ async function main(): Promise<void> {
     if (existing) { reservationIds.set(spec.number, existing.id); continue; }
 
     const leadId = leadMap.get(`${spec.brokerId}:${spec.clientId}`);
-    const commissionLockedAmount = Number(uNCA101.price) * spec.commissionLockedPct / 100;
+    const unit = unitById.get(spec.unitId)!;
+    if (unit.status !== UnitStatus.AVAILABLE) {
+      throw new Error(`Unit for ${spec.number} is ${unit.status}, not AVAILABLE — run --cleanup first`);
+    }
+    const commissionLockedAmount = Number(unit.price) * spec.commissionLockedPct / 100;
+    const converted = spec.status === ReservationStatus.CONVERTED;
 
     const res = await prisma.reservation.create({
       data: {
+        companyId,
         reservationNumber: spec.number,
         unitId: spec.unitId,
         salesId: salesUser.id,
@@ -582,6 +621,17 @@ async function main(): Promise<void> {
       select: { id: true },
     });
     reservationIds.set(spec.number, res.id);
+    // A booking marked PAID has the deposit behind it; the unit is held.
+    if (converted) {
+      await seedBookingDeposit(prisma, {
+        companyId, reservationId: res.id, amount: spec.bookingAmount, paidAt: ago(spec.daysAgo - 1), recordedById: adminUser.id,
+      });
+    } else {
+      await prisma.unit.update({
+        where: { id: spec.unitId },
+        data: { status: UnitStatus.RESERVED, reservationExpiresAt: future(30) },
+      });
+    }
   }
 
   // ── 7. Broker contracts ─────────────────────────────────────────────────────
@@ -615,6 +665,7 @@ async function main(): Promise<void> {
     { number: 'DEMO-BCN-010', unitId: uNCA102.id, clientId: clients[11].id, brokerId: b1.id, brokerAgentId: bu1Sales.id, totalAmount: 1450000, downPayment: 290000, signedDaysAgo: 10, createdDaysAgo: 12 },
   ];
 
+  const LATE_PAYERS = new Set(['DEMO-BCN-003', 'DEMO-BCN-006']);
   const contractIds = new Map<string, string>();
   for (const spec of contractSpecs) {
     const existing = await prisma.contract.findFirst({
@@ -624,8 +675,12 @@ async function main(): Promise<void> {
     if (existing) { contractIds.set(spec.number, existing.id); continue; }
 
     const reservationId = spec.reservationNumber ? reservationIds.get(spec.reservationNumber) : undefined;
+    if (!reservationId && unitById.get(spec.unitId)!.status !== UnitStatus.AVAILABLE) {
+      throw new Error(`Unit for ${spec.number} is not AVAILABLE — run --cleanup first`);
+    }
     const contract = await prisma.contract.create({
       data: {
+        companyId,
         contractNumber: spec.number,
         customerId: spec.clientId,
         unitId: spec.unitId,
@@ -641,6 +696,30 @@ async function main(): Promise<void> {
       select: { id: true },
     });
     contractIds.set(spec.number, contract.id);
+    await prisma.unit.update({
+      where: { id: spec.unitId },
+      data: { status: UnitStatus.SOLD, reservationExpiresAt: null },
+    });
+
+    // Booking + down payment + 24 monthly rows = the contract total. Signed
+    // contracts have paid what fell due (two run a month late); an unsigned
+    // one has paid nothing yet.
+    const booking = spec.reservationNumber
+      ? resSpecs.find((r) => r.number === spec.reservationNumber)!.bookingAmount
+      : 0;
+    const base = spec.signedDaysAgo ? ago(spec.signedDaysAgo) : ago(spec.createdDaysAgo);
+    await seedSchedule(prisma, {
+      companyId,
+      contractId: contract.id,
+      recordedById: adminUser.id,
+      totalAmount: spec.totalAmount,
+      booking,
+      downPayment: spec.downPayment,
+      months: 24,
+      signedAt: base,
+      paidBefore: !spec.signedDaysAgo ? new Date(0) : LATE_PAYERS.has(spec.number) ? ago(20) : new Date(),
+      unsigned: !spec.signedDaysAgo,
+    });
   }
 
   // ── 8. Broker commissions ───────────────────────────────────────────────────
@@ -706,6 +785,7 @@ async function main(): Promise<void> {
 
     const commission = await prisma.brokerCommission.create({
       data: {
+        companyId,
         commissionNumber: spec.number,
         brokerId: spec.brokerId,
         brokerAgentId: spec.brokerAgentId,
@@ -832,6 +912,7 @@ async function main(): Promise<void> {
 
     const payout = await prisma.brokerPayout.create({
       data: {
+        companyId,
         payoutNumber: spec.number,
         brokerId: spec.brokerId,
         period: spec.period,

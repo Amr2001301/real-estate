@@ -41,6 +41,7 @@ import {
   UnitStatus,
   UserRole,
 } from '@prisma/client';
+import { seedBookingDeposit, seedSchedule } from './seed-schedule';
 
 const prisma = new PrismaClient();
 
@@ -208,7 +209,8 @@ async function main(): Promise<void> {
   const total = Math.max(Number(uContract.price), 1_000_000);
   const down = round2(total * 0.2);
   const months = 36;
-  const monthly = round2((total - down) / months);
+  const booking = 100_000;
+  const monthly = round2((total - booking - down) / months);
   const signedAt = daysAgo(150);
   const planStart = monthsFrom(signedAt, 1);
 
@@ -220,7 +222,7 @@ async function main(): Promise<void> {
       salesId: sales.id,
       clientId: customer.id,
       status: ReservationStatus.CONVERTED,
-      bookingAmount: 100_000,
+      bookingAmount: booking,
       bookingPaymentStatus: ReservationBookingPaymentStatus.PAID,
       bookingPaidAt: daysAgo(170),
       expiresAt: daysAgo(150),
@@ -228,7 +230,7 @@ async function main(): Promise<void> {
       convertedAt: signedAt,
       selectedDurationMonths: months,
       snapshotDownPaymentAmount: down,
-      snapshotFinancedAmount: total - down,
+      snapshotFinancedAmount: total - booking - down,
       snapshotMonthlyInstallment: monthly,
       snapshotTotalPayable: total,
       createdAt: daysAgo(175),
@@ -253,76 +255,36 @@ async function main(): Promise<void> {
   });
   await prisma.unit.update({ where: { id: uContract.id }, data: { status: UnitStatus.SOLD } });
 
-  const plan = await prisma.installmentPlan.create({
-    data: {
-      companyId,
-      contractId: contract.id,
-      totalMonths: months,
-      monthlyAmount: monthly,
-      startsAt: planStart,
-      createdAt: signedAt,
-    },
-    select: { id: true },
+  // Booking (paid on the reservation) + down payment row + 36 monthly rows
+  // add up to the total; the down payment and the first 4 months are paid.
+  await seedBookingDeposit(prisma, {
+    companyId, reservationId: r2.id, amount: booking, paidAt: daysAgo(170), recordedById: admin.id,
+  });
+  await seedSchedule(prisma, {
+    companyId,
+    contractId: contract.id,
+    recordedById: admin.id,
+    totalAmount: total,
+    booking,
+    downPayment: down,
+    months,
+    signedAt,
+    paidBefore: monthsFrom(planStart, 3),
   });
 
-  const now = Date.now();
-  for (let i = 0; i < months; i++) {
-    const dueDate = monthsFrom(planStart, i);
-    const paid = i < 4;
-    const overdue = !paid && dueDate.getTime() < now;
-    const inst = await prisma.installment.create({
-      data: {
-        companyId,
-        planId: plan.id,
-        dueDate,
-        amount: monthly,
-        status: paid ? InstallmentStatus.PAID : overdue ? InstallmentStatus.OVERDUE : InstallmentStatus.PENDING,
-        paidAt: paid ? new Date(dueDate.getTime() + 2 * DAY) : undefined,
-      },
-      select: { id: true },
-    });
-    if (paid) {
-      await prisma.deposit.create({
-        data: {
-          companyId,
-          type: DepositType.INSTALLMENT,
-          contractId: contract.id,
-          installmentId: inst.id,
-          amount: monthly,
-          paidAt: new Date(dueDate.getTime() + 2 * DAY),
-          paymentMethod: i % 2 ? PaymentMethod.CASH : PaymentMethod.BANK_TRANSFER,
-          recordedById: admin.id,
-          verified: true,
-          reviewStatus: DepositReviewStatus.APPROVED,
-          reviewedAt: new Date(dueDate.getTime() + 3 * DAY),
-          reviewedById: admin.id,
-        },
-      });
-    }
-  }
-
-  // Down payment (bank transfer) + a rejected proof (prints with a watermark).
-  await prisma.deposit.create({
-    data: {
-      companyId,
-      type: DepositType.DOWN_PAYMENT,
-      contractId: contract.id,
-      amount: down,
-      paidAt: signedAt,
-      paymentMethod: PaymentMethod.BANK_TRANSFER,
-      recordedById: admin.id,
-      verified: true,
-      reviewStatus: DepositReviewStatus.APPROVED,
-      reviewedAt: signedAt,
-      reviewedById: admin.id,
-    },
+  // A rejected proof on the first unpaid row (prints with a watermark).
+  const firstOpen = await prisma.installment.findFirstOrThrow({
+    where: { plan: { contractId: contract.id }, status: { not: InstallmentStatus.PAID } },
+    orderBy: { dueDate: 'asc' },
+    select: { id: true, amount: true },
   });
   await prisma.deposit.create({
     data: {
       companyId,
       type: DepositType.INSTALLMENT,
       contractId: contract.id,
-      amount: monthly,
+      installmentId: firstOpen.id,
+      amount: firstOpen.amount,
       paidAt: daysAgo(5),
       paymentMethod: PaymentMethod.BANK_TRANSFER,
       recordedById: admin.id,
@@ -353,25 +315,16 @@ async function main(): Promise<void> {
       approvedAt: daysAgo(2),
       selectedDurationMonths: rMonths,
       snapshotDownPaymentAmount: rDown,
-      snapshotFinancedAmount: rTotal - rDown,
-      snapshotMonthlyInstallment: round2((rTotal - rDown) / rMonths),
+      snapshotFinancedAmount: rTotal - 75_000 - rDown,
+      snapshotMonthlyInstallment: round2((rTotal - 75_000 - rDown) / rMonths),
       snapshotTotalPayable: rTotal,
       createdAt: daysAgo(3),
     },
     select: { id: true },
   });
   await prisma.unit.update({ where: { id: uReserved.id }, data: { status: UnitStatus.RESERVED } });
-  await prisma.deposit.create({
-    data: {
-      companyId,
-      type: DepositType.BOOKING_AMOUNT,
-      reservationId: r1.id,
-      amount: 75_000,
-      paidAt: daysAgo(2),
-      paymentMethod: PaymentMethod.CASH,
-      recordedById: admin.id,
-      verified: true,
-    },
+  await seedBookingDeposit(prisma, {
+    companyId, reservationId: r1.id, amount: 75_000, paidAt: daysAgo(2), recordedById: admin.id,
   });
 
   // ── 6. A cancelled reservation (prints with a watermark) ───────────────────
@@ -394,7 +347,7 @@ async function main(): Promise<void> {
   console.log('   Created:');
   console.log(`     • contract ${C1} on unit ${uContract.code} — ${months} installments, 4 paid`);
   console.log(`     • reservation ${R1} (approved) on unit ${uReserved.code}, ${R2} (converted), ${R3} (cancelled)`);
-  console.log('     • deposits: down payment, 4 installments, booking deposit, 1 rejected proof');
+  console.log('     • deposits: 2 bookings, down payment, 4 installments, 1 rejected proof');
   console.log('   Open in the dashboard: Contracts / Reservations / Deposits → search "PRINT-DEMO" → Print.');
   console.log('   Remove with: pnpm --filter @rep/api prisma:seed:print:cleanup');
 }
