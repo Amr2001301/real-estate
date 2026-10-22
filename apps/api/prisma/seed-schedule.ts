@@ -9,7 +9,14 @@
  * deposit on the row (the down payment is paid on signing); the rest are
  * PENDING, or OVERDUE when their due day has passed.
  */
-import { DepositReviewStatus, DepositType, InstallmentStatus, PaymentMethod, PlanPaymentType, PrismaClient } from '@prisma/client';
+import {
+  DepositReviewStatus,
+  DepositType,
+  InstallmentStatus,
+  PaymentMethod,
+  PlanPaymentType,
+  PrismaClient,
+} from '@prisma/client';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -48,19 +55,37 @@ export async function seedSchedule(
 ): Promise<{ paidRows: number }> {
   const { companyId, contractId, recordedById, signedAt, months } = opts;
   const financed = opts.totalAmount - opts.booking - opts.downPayment;
-  if (financed <= 0) throw new Error(`Contract ${contractId}: booking + down payment exceed the total`);
+  if (financed <= 0)
+    throw new Error(`Contract ${contractId}: booking + down payment exceed the total`);
   const monthly = splitRows(financed, months);
   const startsAt = monthsFrom(signedAt, 1);
   const paidBefore = (opts.paidBefore ?? new Date()).getTime();
   const now = Date.now();
 
   const plan = await prisma.installmentPlan.create({
-    data: { companyId, contractId, totalMonths: months, monthlyAmount: monthly[0], startsAt, createdAt: signedAt },
+    data: {
+      companyId,
+      contractId,
+      totalMonths: months,
+      monthlyAmount: monthly[0],
+      startsAt,
+      createdAt: signedAt,
+    },
     select: { id: true },
   });
 
-  const rows: Array<{ type: PlanPaymentType; dueDate: Date; amount: number; depositType: DepositType }> = [
-    { type: PlanPaymentType.DOWN_PAYMENT, dueDate: signedAt, amount: opts.downPayment, depositType: DepositType.DOWN_PAYMENT },
+  const rows: Array<{
+    type: PlanPaymentType;
+    dueDate: Date;
+    amount: number;
+    depositType: DepositType;
+  }> = [
+    {
+      type: PlanPaymentType.DOWN_PAYMENT,
+      dueDate: signedAt,
+      amount: opts.downPayment,
+      depositType: DepositType.DOWN_PAYMENT,
+    },
     ...monthly.map((amount, i) => ({
       type: PlanPaymentType.INSTALLMENT,
       dueDate: monthsFrom(startsAt, i),
@@ -114,7 +139,13 @@ export async function seedSchedule(
 /** The deposit behind a booking marked PAID (the API never marks it paid without one). */
 export async function seedBookingDeposit(
   prisma: PrismaClient,
-  opts: { companyId: string; reservationId: string; amount: number; paidAt: Date; recordedById: string },
+  opts: {
+    companyId: string;
+    reservationId: string;
+    amount: number;
+    paidAt: Date;
+    recordedById: string;
+  },
 ): Promise<void> {
   await prisma.deposit.create({
     data: {
