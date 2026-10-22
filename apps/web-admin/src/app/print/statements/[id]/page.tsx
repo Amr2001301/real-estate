@@ -3,6 +3,8 @@ import { api, safe } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 import { getLetterhead } from '@/lib/letterhead';
 import { getLocale } from '@/lib/locale';
+import { getPrintSettings, sealFor } from '@/lib/print-settings';
+import { companyNameOf } from '@/components/print/PrintDocument';
 import type { Contract, ContractStatement } from '@/lib/types';
 import { statementLineLabel, statementLineNote } from '@/components/payments/statement';
 import {
@@ -10,6 +12,7 @@ import {
   PrintDocument,
   PrintFields,
   PrintSection,
+  PrintSignatures,
   PrintTable,
   formatMoney,
 } from '@/components/print/PrintDocument';
@@ -22,11 +25,12 @@ type Params = Promise<{ id: string }>;
 export default async function StatementPrintPage({ params }: { params: Params }) {
   const { id } = await params;
 
-  const [contractResult, statementResult, letterhead, locale] = await Promise.all([
+  const [contractResult, statementResult, letterhead, locale, paper] = await Promise.all([
     safe(api.get<Contract>(`/contracts/${id}`)),
     safe(api.get<ContractStatement>(`/contracts/${id}/statement`)),
     getLetterhead(),
     getLocale(),
+    getPrintSettings(),
   ]);
 
   if (!contractResult.data || !statementResult.data) notFound();
@@ -38,6 +42,8 @@ export default async function StatementPrintPage({ params }: { params: Params })
     formatMoney(v, letterhead.currency, locale);
   const date = (v: string) => formatDate(v, locale);
   const t = s.totals;
+  // A statement the company signs and stamps when it chose to.
+  const seal = sealFor(paper, 'STATEMENT', true);
 
   return (
     <PrintDocument
@@ -47,6 +53,7 @@ export default async function StatementPrintPage({ params }: { params: Params })
       title={en ? 'Customer statement of account' : 'كشف حساب عميل'}
       reference={c.contractNumber}
       date={date(s.asOf)}
+      paper={paper}
     >
       <PrintSection title={en ? 'Contract' : 'بيانات العقد'}>
         <PrintFields
@@ -132,6 +139,14 @@ export default async function StatementPrintPage({ params }: { params: Params })
           ]}
         />
       </PrintSection>
+
+      {seal && (
+        <PrintSignatures
+          locale={locale}
+          seal={seal}
+          parties={[{ role: en ? 'For the company' : 'عن الشركة', name: companyNameOf(letterhead, locale), company: true }]}
+        />
+      )}
     </PrintDocument>
   );
 }

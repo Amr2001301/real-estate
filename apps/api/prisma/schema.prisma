@@ -90,6 +90,8 @@ model Company {
   // MT-044: Platform subdomains are provisioned here at company creation time.
   // Custom domains are added by tenant admins post-creation.
   companyDomains              CompanyDomain[]
+  printSettings               PrintSettings?
+  documentTemplates           DocumentTemplate[]
   users                       User[]
   projects                    Project[]
   phases                      Phase[]
@@ -249,6 +251,57 @@ enum DomainType {
 // TENANT_CONTROLLED: companyId is explicit in every query; middleware does not inject.
 // Queried before tenant context exists (DomainResolverService), but writes always
 // enforce explicit ownership check: req.user.companyId must equal companyId.
+/// How the company's printed documents look (P4): its own letterhead paper
+/// (a header and footer, or a whole-page background) with the margins the
+/// text keeps inside it, and the signature and stamp printed on its final
+/// documents. The signature and stamp images are kept here, not in the public
+/// bucket: they are only sent to the company's own signed-in staff.
+model PrintSettings {
+  id        String  @id @default(uuid()) @db.Uuid
+  companyId String  @unique @db.Uuid
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  /// BUILT_IN (the platform's letterhead) | HEADER_FOOTER | FULL_PAGE
+  letterheadMode String  @default("BUILT_IN") @db.VarChar(20)
+  headerImageUrl String?
+  footerImageUrl String?
+  pageImageUrl   String?
+  marginTopMm    Int     @default(14)
+  marginBottomMm Int     @default(16)
+  marginSideMm   Int     @default(16)
+
+  signatoryName  String? @db.VarChar(120)
+  signatoryTitle String? @db.VarChar(120)
+  signatureImage Bytes?
+  signatureType  String? @db.VarChar(20)
+  stampImage     Bytes?
+  stampType      String? @db.VarChar(20)
+  /// Documents the signature and stamp go on: CONTRACT, RESERVATION, RECEIPT, STATEMENT.
+  sealDocuments  String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// A company's wording for a printed document (P4): the contract's clauses or
+/// the booking form's terms, with {{placeholders}} filled from the record.
+/// variant picks the template by the sale: CASH (no instalments),
+/// INSTALLMENT, or ANY.
+model DocumentTemplate {
+  id           String  @id @default(uuid()) @db.Uuid
+  companyId    String  @db.Uuid
+  company      Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  documentType String  @db.VarChar(20)
+  variant      String  @default("ANY") @db.VarChar(20)
+  name         String  @db.VarChar(120)
+  body         String
+  isDefault    Boolean @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([companyId, documentType])
+}
+
 model CompanyDomain {
   id        String  @id @default(uuid()) @db.Uuid
   companyId String  @db.Uuid
@@ -292,6 +345,10 @@ model User {
   phone             String?
   passwordHash      String?
   fullName          String
+  /// A buyer's identity for the contract (P4): national ID (or passport
+  /// number) and address. Staff and the customer themself only.
+  nationalId        String?   @db.VarChar(20)
+  address           String?   @db.VarChar(300)
   locale            Locale    @default(ar)
   /// Per-user e-mail / push opt-outs by notification group
   /// ({ email: { finance: false }, push: { sales: false } }). Null = every

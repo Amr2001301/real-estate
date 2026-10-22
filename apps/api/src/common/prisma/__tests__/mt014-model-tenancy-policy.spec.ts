@@ -65,9 +65,9 @@ describe('MT-014 equivalence: TENANT_SCOPED_MODELS ↔ MODEL_TENANCY TENANT_OWNE
     expect(missing).toEqual([]);
   });
 
-  it('both sets have the same cardinality (56: Step A + Step C + Step D1 + Option B User − FG-26 NotificationTemplate + ContractAmendment + BrokerCommissionAdjustment + PresignedUpload + UnitHandover + UnitType + UnitModel)', () => {
-    expect(TENANT_SCOPED_MODELS.size).toBe(56);
-    expect(ownedFromModelTenancy.size).toBe(56);
+  it('both sets have the same cardinality (58: Step A + Step C + Step D1 + Option B User − FG-26 NotificationTemplate + ContractAmendment + BrokerCommissionAdjustment + PresignedUpload + UnitHandover + UnitType + UnitModel + PrintSettings + DocumentTemplate)', () => {
+    expect(TENANT_SCOPED_MODELS.size).toBe(58);
+    expect(ownedFromModelTenancy.size).toBe(58);
   });
 
   it('MODEL_TIER_BY_LOWERCASE includes all TENANT_OWNED models with correct tier', () => {
@@ -353,9 +353,9 @@ describe('MT-014 MODEL_TIER_BY_LOWERCASE derived set', () => {
     }
   });
 
-  it('TENANT_OWNED count matches TENANT_SCOPED_MODELS count (56 after Option B User, FG-26, ContractAmendment, BrokerCommissionAdjustment, PresignedUpload, UnitHandover, UnitType and UnitModel)', () => {
+  it('TENANT_OWNED count matches TENANT_SCOPED_MODELS count (58 after Option B User, FG-26, ContractAmendment, BrokerCommissionAdjustment, PresignedUpload, UnitHandover, UnitType, UnitModel, PrintSettings and DocumentTemplate)', () => {
     const ownedCount = [...MODEL_TIER_BY_LOWERCASE.values()].filter((t) => t === 'TENANT_OWNED').length;
-    expect(ownedCount).toBe(56);
+    expect(ownedCount).toBe(58);
   });
 });
 

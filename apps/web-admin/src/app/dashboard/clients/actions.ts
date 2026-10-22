@@ -26,6 +26,8 @@ export async function createClientAction(
   const email = pickStr(formData, 'email');
   const phone = pickStr(formData, 'phone');
   const locale = (pickStr(formData, 'locale') as 'ar' | 'en' | undefined) ?? 'ar';
+  const nationalId = pickStr(formData, 'nationalId');
+  const address = pickStr(formData, 'address');
 
   if (!fullName) return { error: 'الاسم مطلوب' };
   if (!email && !phone) return { error: 'يجب إدخال البريد الإلكتروني أو رقم الهاتف' };
@@ -38,6 +40,8 @@ export async function createClientAction(
       email,
       phone,
       locale,
+      nationalId,
+      address,
     });
   } catch (e) {
     unstable_rethrow(e);
@@ -52,15 +56,18 @@ export async function updateClientAction(
   _prev: ClientFormState,
   formData: FormData,
 ): Promise<ClientFormState> {
-  // API only accepts fullName, locale, phone for PATCH /users/:id
+  // PATCH /users/:id takes the name, phone, language and the contract
+  // identity (an emptied identity field is cleared).
   const fullName = String(formData.get('fullName') ?? '').trim();
   const phone = pickStr(formData, 'phone');
   const locale = pickStr(formData, 'locale') as 'ar' | 'en' | undefined;
+  const nationalId = pickStr(formData, 'nationalId') ?? null;
+  const address = pickStr(formData, 'address') ?? null;
 
   if (!fullName) return { error: 'الاسم مطلوب' };
 
   try {
-    await api.patch(`/users/${id}`, { fullName, phone, locale });
+    await api.patch(`/users/${id}`, { fullName, phone, locale, nationalId, address });
   } catch (e) {
     unstable_rethrow(e);
     return { error: (e as Error).message };

@@ -3,6 +3,7 @@ import { api, safe } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 import { getLetterhead } from '@/lib/letterhead';
 import { getLocale } from '@/lib/locale';
+import { getPrintSettings, sealFor } from '@/lib/print-settings';
 import type { Deposit } from '@/lib/types';
 import { printT } from '@/messages/print';
 import {
@@ -29,10 +30,11 @@ const REVIEW_TONE: Record<string, PrintTone> = {
 export default async function DepositPrintPage({ params }: { params: Params }) {
   const { id } = await params;
 
-  const [depositResult, letterhead, locale] = await Promise.all([
+  const [depositResult, letterhead, locale, paper] = await Promise.all([
     safe(api.get<Deposit>(`/deposits/${id}`)),
     getLetterhead(),
     getLocale(),
+    getPrintSettings(),
   ]);
 
   if (depositResult.error || !depositResult.data) notFound();
@@ -58,6 +60,13 @@ export default async function DepositPrintPage({ params }: { params: Params }) {
     ? { label: m.review[d.reviewStatus] ?? d.reviewStatus, tone: REVIEW_TONE[d.reviewStatus] ?? 'neutral' }
     : undefined;
 
+  // The company's signature and stamp on a receipt for money it accepted.
+  const seal = sealFor(
+    paper,
+    'RECEIPT',
+    !d.deletedAt && (d.reviewStatus === 'APPROVED' || d.reviewStatus === 'NO_PROOF'),
+  );
+
   return (
     <PrintDocument
       letterhead={letterhead}
@@ -69,6 +78,7 @@ export default async function DepositPrintPage({ params }: { params: Params }) {
       status={status}
       watermark={watermark}
       note={m.note(company)}
+      paper={paper}
     >
       {/* The receipt sentence, as on a printed receipt book. */}
       <section
@@ -138,9 +148,10 @@ export default async function DepositPrintPage({ params }: { params: Params }) {
 
       <PrintSignatures
         locale={locale}
+        seal={seal}
         parties={[
           { role: m.payerSignature, name: clientName },
-          { role: m.receiverSignature, name: company },
+          { role: m.receiverSignature, name: company, company: true },
         ]}
       />
     </PrintDocument>

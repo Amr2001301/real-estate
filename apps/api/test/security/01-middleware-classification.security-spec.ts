@@ -99,9 +99,9 @@ describe('SEC — Middleware Classification (STEP 2)', () => {
   });
 
   // MC-2
-  it('MC-2: TENANT_OWNED count matches audit-documented 56 (48 + ContractCancellation + Refund + User − NotificationTemplate + ContractAmendment + BrokerCommissionAdjustment + PresignedUpload + UnitHandover + UnitType + UnitModel)', () => {
+  it('MC-2: TENANT_OWNED count matches audit-documented 58 (48 + ContractCancellation + Refund + User − NotificationTemplate + ContractAmendment + BrokerCommissionAdjustment + PresignedUpload + UnitHandover + UnitType + UnitModel + PrintSettings + DocumentTemplate)', () => {
     const owned = Object.entries(MODEL_TENANCY).filter(([, t]) => t === 'TENANT_OWNED');
-    expect(owned.length).toBe(56);
+    expect(owned.length).toBe(58);
   });
 
   // MC-3

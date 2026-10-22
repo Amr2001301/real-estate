@@ -3,10 +3,14 @@ import { api, safe } from '@/lib/api';
 import { formatDate, tx } from '@/lib/format';
 import { getLetterhead } from '@/lib/letterhead';
 import { getLocale } from '@/lib/locale';
+import { getDocumentTemplates, getPrintSettings, pickTemplate, sealFor } from '@/lib/print-settings';
+import { contractValues, contractVariant } from '@/lib/document-values';
+import { renderTemplate } from '@/lib/document-template';
 import type { Contract } from '@/lib/types';
 import { printT } from '@/messages/print';
 import {
   PrintAmounts,
+  PrintClauses,
   PrintDocument,
   PrintFields,
   PrintParties,
@@ -21,14 +25,18 @@ import {
 export const dynamic = 'force-dynamic';
 
 type Params = Promise<{ id: string }>;
+type Search = Promise<{ template?: string }>;
 
-export default async function ContractPrintPage({ params }: { params: Params }) {
+export default async function ContractPrintPage({ params, searchParams }: { params: Params; searchParams: Search }) {
   const { id } = await params;
+  const { template: requested } = await searchParams;
 
-  const [contractResult, letterhead, locale] = await Promise.all([
+  const [contractResult, letterhead, locale, paper, templates] = await Promise.all([
     safe(api.get<Contract>(`/contracts/${id}`)),
     getLetterhead(),
     getLocale(),
+    getPrintSettings(),
+    getDocumentTemplates('CONTRACT'),
   ]);
 
   if (contractResult.error || !contractResult.data) notFound();
@@ -48,6 +56,11 @@ export default async function ContractPrintPage({ params }: { params: Params }) 
   const remaining = Number(c.totalAmount) - Number(c.downPayment);
   const scheduleTotal = installments.reduce((sum, i) => sum + Number(i.amount), 0);
 
+  // The company's wording for this sale, and its signature and stamp once signed.
+  const template = pickTemplate(templates, contractVariant(c), requested);
+  const clauses = template ? renderTemplate(template.body, contractValues(c, letterhead, paper, locale)) : [];
+  const seal = sealFor(paper, 'CONTRACT', !!c.signedAt && c.status !== 'CANCELLED');
+
   const installmentTone = (s: string) =>
     s === 'PAID' ? 'text-emerald-700' : s === 'OVERDUE' ? 'text-red-600' : 'text-slate-600';
 
@@ -61,6 +74,16 @@ export default async function ContractPrintPage({ params }: { params: Params }) 
       date={date(c.signedAt ?? c.createdAt)}
       status={c.signedAt ? { label: m.signed, tone: 'success' } : { label: m.unsigned, tone: 'warning' }}
       note={m.note(company)}
+      paper={paper}
+      switcher={
+        templates.length
+          ? {
+              label: t.common.template,
+              current: template?.id ?? 'none',
+              options: [...templates.map((x) => ({ id: x.id, name: x.name })), { id: 'none', name: t.common.noTemplate }],
+            }
+          : undefined
+      }
     >
       <PrintSection title={m.parties}>
         <PrintParties
@@ -78,6 +101,8 @@ export default async function ContractPrintPage({ params }: { params: Params }) 
               role: m.buyer,
               name: customerName,
               lines: [
+                c.customer?.nationalId && { label: m.fields.nationalId, value: c.customer.nationalId },
+                c.customer?.address && { label: m.fields.address, value: c.customer.address },
                 c.customer?.phone && { label: m.fields.phone, value: c.customer.phone },
                 c.customer?.email && { value: c.customer.email },
               ],
@@ -149,11 +174,14 @@ export default async function ContractPrintPage({ params }: { params: Params }) 
         </PrintSection>
       )}
 
+      <PrintClauses title={t.common.clauses} blocks={clauses} />
+
       <PrintSignatures
         locale={locale}
+        seal={seal}
         parties={[
           { role: m.buyerSignature, name: customerName },
-          { role: m.sellerSignature, name: company },
+          { role: m.sellerSignature, name: company, company: true },
         ]}
       />
     </PrintDocument>

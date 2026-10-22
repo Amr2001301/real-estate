@@ -102,7 +102,10 @@ export class UsersController {
 
   @Patch('me')
   updateMe(@CurrentUser() user: AuthUser, @Body() dto: UpdateUserDto) {
-    return this.users.updateSelf(user, dto);
+    // The identity printed on a contract is the company's record: a buyer
+    // does not change it from their own profile.
+    const { nationalId: _id, address: _address, ...own } = dto;
+    return this.users.updateSelf(user, own);
   }
 
   // "Delete my account" (customer app): deactivated and anonymised; the

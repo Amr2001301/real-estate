@@ -222,7 +222,7 @@ const FULL_INCLUDE = {
   },
   sales: { select: { id: true, fullName: true } },
   lead: { select: { id: true, fullName: true, phone: true, email: true } },
-  client: { select: { id: true, fullName: true, phone: true, email: true } },
+  client: { select: { id: true, fullName: true, phone: true, email: true, nationalId: true, address: true } },
   installmentPlanTemplate: {
     select: { id: true, name: true, status: true, reservationAmount: true, projectId: true, unitId: true },
   },

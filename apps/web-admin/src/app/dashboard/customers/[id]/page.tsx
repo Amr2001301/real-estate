@@ -14,6 +14,8 @@ import {
   Building2,
   UserCog,
   Download,
+  IdCard,
+  MapPin,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type {
@@ -234,6 +236,24 @@ export default async function CustomerDetailPage({
                   label={m.labelLocale}
                   value={u.locale === 'en' ? m.localeEn : m.localeAr}
                 />
+              </div>
+              {/* The buyer's identity printed on the contract. */}
+              <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <ContactCell
+                  icon={<IdCard className="h-4 w-4" />}
+                  tone="info"
+                  label={m.labelNationalId}
+                  value={u.nationalId ?? null}
+                  isLtr
+                />
+                <div className="sm:col-span-2">
+                  <ContactCell
+                    icon={<MapPin className="h-4 w-4" />}
+                    tone="brand"
+                    label={m.labelAddress}
+                    value={u.address ?? null}
+                  />
+                </div>
               </div>
             </PremiumSectionCard>
 

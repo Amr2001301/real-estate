@@ -104,6 +104,9 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   Building: 'TENANT_OWNED',
   Unit: 'TENANT_OWNED',
   UnitModel: 'TENANT_OWNED',
+  // P4 — printed documents: the company's print settings and its wording.
+  PrintSettings: 'TENANT_OWNED',
+  DocumentTemplate: 'TENANT_OWNED',
   UnitStatusHistory: 'TENANT_OWNED',
   UnitMaintenanceItem: 'TENANT_OWNED',
 
