@@ -1,4 +1,7 @@
 import Link from 'next/link';
+import { getLetterhead } from '@/lib/letterhead';
+import { companyNameOf } from '@/components/print/PrintDocument';
+import { SignatureCard, type SignatureRequestView } from './_components/signature-card';
 import {
   Phone,
   Mail,
@@ -60,7 +63,11 @@ export default async function ReservationDetailPage({
   const locale = await getLocale();
   const m = uiT(locale).pages.reservationDetailPage;
 
-  const res = await safe(api.get<Reservation>(`/reservations/${id}`));
+  const [res, signatures, letterhead] = await Promise.all([
+    safe(api.get<Reservation>(`/reservations/${id}`)),
+    safe(api.get<SignatureRequestView[]>(`/reservations/${id}/signature-requests`)),
+    getLetterhead(),
+  ]);
 
   if (res.error || !res.data) {
     return (
@@ -487,6 +494,15 @@ export default async function ReservationDetailPage({
         }
         side={
           <>
+            <SignatureCard
+              reservationId={reservation.id}
+              requests={signatures.data ?? []}
+              canRequest={isLive}
+              customerPhone={clientPhone}
+              company={companyNameOf(letterhead, locale)}
+              locale={locale}
+            />
+
             {/* Convert to contract */}
             {isAdmin && reservation.status === 'APPROVED' && (
               <section

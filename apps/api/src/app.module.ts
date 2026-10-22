@@ -50,6 +50,7 @@ import { CapabilityModule } from './common/capabilities/capability.module';
 import { DomainModule } from './common/domain/domain.module';
 import { CompanyDomainsModule } from './modules/company-domains/company-domains.module';
 import { PrintSettingsModule } from './modules/print-settings/print-settings.module';
+import { ESignModule } from './modules/e-sign/e-sign.module';
 import { BrokersModule } from './modules/brokers/brokers.module';
 import { BrokerUsersModule } from './modules/broker-users/broker-users.module';
 import { BrokerAccessModule } from './modules/broker-access/broker-access.module';
@@ -132,6 +133,7 @@ import { PermissionCatalogBootstrap } from './modules/permissions/permission-cat
     CompanyCapabilitiesModule,
     CompanyDomainsModule,
     PrintSettingsModule,
+    ESignModule,
     PublicCompaniesModule,
     CompanyBrandingModule,
     ReportBrandModule,

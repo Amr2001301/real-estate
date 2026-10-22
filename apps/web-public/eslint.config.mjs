@@ -18,6 +18,7 @@ const REACT_AND_DOM_GLOBALS = {
   HTMLSelectElement: 'readonly',
   HTMLTextAreaElement: 'readonly',
   HTMLImageElement: 'readonly',
+  HTMLCanvasElement: 'readonly',
   Element: 'readonly',
   Event: 'readonly',
   KeyboardEvent: 'readonly',

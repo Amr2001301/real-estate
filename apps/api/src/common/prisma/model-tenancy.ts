@@ -107,6 +107,8 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   // P4 — printed documents: the company's print settings and its wording.
   PrintSettings: 'TENANT_OWNED',
   DocumentTemplate: 'TENANT_OWNED',
+  // P5 — a customer's electronic signature on a document.
+  SignatureRequest: 'TENANT_OWNED',
   UnitStatusHistory: 'TENANT_OWNED',
   UnitMaintenanceItem: 'TENANT_OWNED',
 

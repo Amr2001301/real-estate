@@ -31,6 +31,7 @@ const ar = {
     clauses: 'البنود والشروط',
     template: 'نموذج الصياغة',
     noTemplate: 'بدون بنود',
+    signedOnline: (date: string, proof: string) => `وُقّع إلكترونياً بتاريخ ${date} بعد التحقق من رقم الهاتف · رقم التحقق ${proof}`,
   },
 
   contract: {
@@ -224,6 +225,7 @@ const en: PrintMessages = {
     clauses: 'Terms and conditions',
     template: 'Wording',
     noTemplate: 'No terms',
+    signedOnline: (date: string, proof: string) => `Signed electronically on ${date} after phone verification · verification no. ${proof}`,
   },
 
   contract: {
