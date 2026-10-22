@@ -39,6 +39,8 @@ export const PLACEHOLDER_GROUPS: { ar: string; en: string; items: Placeholder[] 
       { key: 'customer.name', ar: 'اسم العميل', en: 'Customer name', docs: BOTH },
       { key: 'customer.phone', ar: 'هاتف العميل', en: 'Customer phone', docs: BOTH },
       { key: 'customer.email', ar: 'بريد العميل', en: 'Customer e-mail', docs: BOTH },
+      { key: 'customer.nationalId', ar: 'الرقم القومي', en: 'National ID', docs: BOTH },
+      { key: 'customer.address', ar: 'عنوان العميل', en: 'Customer address', docs: BOTH },
     ],
   },
   {

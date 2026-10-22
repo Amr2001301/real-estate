@@ -16,7 +16,7 @@ const PREAMBLE = `إنه في يوم {{contract.date}} تحرر هذا العق�
 
 أولاً: {{company.name}}، سجل تجاري رقم {{company.registration}}، ومقرها {{company.address}}، ويمثلها في التوقيع على هذا العقد السيد/ {{company.signatory}} بصفته {{company.signatoryTitle}} (طرف أول بائع).
 
-ثانياً: السيد/ {{customer.name}}، هاتف {{customer.phone}} (طرف ثانٍ مشترٍ).
+ثانياً: السيد/ {{customer.name}}، رقم قومي {{customer.nationalId}}، والمقيم في {{customer.address}}، هاتف {{customer.phone}} (طرف ثانٍ مشترٍ).
 
 وبعد أن أقر الطرفان بأهليتهما للتعاقد والتصرف، اتفقا على ما يلي:`;
 
@@ -75,7 +75,7 @@ ${DELIVERY}`,
     variant: 'ANY',
     name: 'شروط استمارة الحجز',
     body: `## شروط الحجز
-- يحجز السيد/ {{customer.name}} الوحدة رقم {{unit.code}} بمشروع {{unit.project}} بموجب هذه الاستمارة رقم {{reservation.number}} بتاريخ {{reservation.date}}.
+- يحجز السيد/ {{customer.name}}، رقم قومي {{customer.nationalId}}، الوحدة رقم {{unit.code}} بمشروع {{unit.project}} بموجب هذه الاستمارة رقم {{reservation.number}} بتاريخ {{reservation.date}}.
 - سدد العميل مبلغ حجز قدره {{reservation.amount}} ({{reservation.amountWords}})، يُخصم من مقدم التعاقد عند توقيع العقد.
 - يظل الحجز سارياً حتى {{reservation.expiresAt}}، ويسقط بعدها إذا لم يتم التعاقد، وتعود الوحدة متاحة للبيع.
 - في حالة عدول العميل عن الشراء، يُرد مبلغ الحجز وفقاً لسياسة الشركة المعمول بها.

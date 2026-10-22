@@ -38,7 +38,8 @@ export default function ClientForm({ user, defaultRole = 'CLIENT', locale = 'ar'
   const navSections = [
     { id: 'section-personal',    num: '01', label: m.navPersonal.label,  sub: m.navPersonal.sub },
     { id: 'section-contact',     num: '02', label: m.navContact.label,   sub: m.navContact.sub },
-    { id: 'section-preferences', num: '03', label: m.navPrefs.label,     sub: m.navPrefs.sub },
+    { id: 'section-identity',    num: '03', label: m.navIdentity.label,  sub: m.navIdentity.sub },
+    { id: 'section-preferences', num: '04', label: m.navPrefs.label,     sub: m.navPrefs.sub },
   ];
 
   return (
@@ -143,8 +144,39 @@ export default function ClientForm({ user, defaultRole = 'CLIENT', locale = 'ar'
         </PremiumFormPanel>
 
         <PremiumFormPanel
-          id="section-preferences"
+          id="section-identity"
           number="03"
+          title={m.panelIdentityTitle}
+          description={m.panelIdentityDesc}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field label={m.labelNationalId} name="nationalId" hint={m.hintOptional}>
+              <Input
+                id="nationalId"
+                name="nationalId"
+                dir="ltr"
+                inputMode="numeric"
+                maxLength={20}
+                pattern="[A-Za-z0-9]{5,20}"
+                placeholder={m.placeholderNationalId}
+                defaultValue={user?.nationalId ?? ''}
+              />
+            </Field>
+            <Field label={m.labelAddress} name="address" hint={m.hintOptional}>
+              <Input
+                id="address"
+                name="address"
+                maxLength={300}
+                placeholder={m.placeholderAddress}
+                defaultValue={user?.address ?? ''}
+              />
+            </Field>
+          </div>
+        </PremiumFormPanel>
+
+        <PremiumFormPanel
+          id="section-preferences"
+          number="04"
           title={m.panelPrefsTitle}
           description={m.panelPrefsDesc}
         >

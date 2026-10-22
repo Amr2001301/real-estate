@@ -101,6 +101,8 @@ export default async function ContractPrintPage({ params, searchParams }: { para
               role: m.buyer,
               name: customerName,
               lines: [
+                c.customer?.nationalId && { label: m.fields.nationalId, value: c.customer.nationalId },
+                c.customer?.address && { label: m.fields.address, value: c.customer.address },
                 c.customer?.phone && { label: m.fields.phone, value: c.customer.phone },
                 c.customer?.email && { value: c.customer.email },
               ],

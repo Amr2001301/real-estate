@@ -345,6 +345,10 @@ model User {
   phone             String?
   passwordHash      String?
   fullName          String
+  /// A buyer's identity for the contract (P4): national ID (or passport
+  /// number) and address. Staff and the customer themself only.
+  nationalId        String?   @db.VarChar(20)
+  address           String?   @db.VarChar(300)
   locale            Locale    @default(ar)
   /// Per-user e-mail / push opt-outs by notification group
   /// ({ email: { finance: false }, push: { sales: false } }). Null = every

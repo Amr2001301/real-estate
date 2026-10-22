@@ -36,6 +36,8 @@ function sampleValues(locale: 'ar' | 'en', currency: string, company: string): T
     'customer.name': ar ? 'محمد علي حسن' : 'Mohamed Ali Hassan',
     'customer.phone': '+20 111 222 3333',
     'customer.email': 'client@example.com',
+    'customer.nationalId': '29001011234567',
+    'customer.address': ar ? '12 شارع التسعين، التجمع الخامس، القاهرة الجديدة' : '12 90th Street, Fifth Settlement, New Cairo',
     'unit.code': 'A-1204',
     'unit.type': ar ? 'شقة' : 'Apartment',
     'unit.area': '165',

@@ -96,8 +96,10 @@ export default async function ReservationPrintPage({ params, searchParams }: { p
         <PrintFields
           items={[
             { label: m.fields.name, value: clientName },
+            { label: m.fields.nationalId, value: r.client?.nationalId, ltr: true },
             { label: m.fields.phone, value: r.client?.phone ?? r.lead?.phone, ltr: true },
             { label: m.fields.email, value: r.client?.email ?? r.lead?.email, ltr: true },
+            { label: m.fields.address, value: r.client?.address, wide: true },
           ]}
         />
       </PrintSection>

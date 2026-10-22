@@ -154,4 +154,23 @@ describe('P4 — print settings and document wording (e2e)', () => {
     expect(res.body.stamp).toBeNull();
     expect(res.body.signature).toMatch(/^data:image\/png;base64,/);
   });
+
+  it('P4-8: the buyer’s national ID and address are the company’s record', async () => {
+    const customerId = userIds[1]!; // created second, as the customer
+    const set = await as(http().patch(`/v1/users/${customerId}`), adminToken)
+      .send({ nationalId: ' 29001011234567 ', address: '12 شارع التسعين، القاهرة الجديدة' })
+      .expect(200);
+    expect(set.body).toMatchObject({ nationalId: '29001011234567', address: '12 شارع التسعين، القاهرة الجديدة' });
+
+    await as(http().patch(`/v1/users/${customerId}`), adminToken).send({ nationalId: '12-34' }).expect(400);
+
+    // The buyer cannot change it from their own profile.
+    await as(http().patch('/v1/users/me'), tokens.customer).send({ nationalId: '11111111111111', address: 'x' }).expect(200);
+    const after = await testApp.rawPrisma.user.findUniqueOrThrow({ where: { id: customerId }, select: { nationalId: true, address: true } });
+    expect(after).toEqual({ nationalId: '29001011234567', address: '12 شارع التسعين، القاهرة الجديدة' });
+
+    // An emptied field is cleared.
+    const cleared = await as(http().patch(`/v1/users/${customerId}`), adminToken).send({ address: '' }).expect(200);
+    expect(cleared.body.address).toBeNull();
+  });
 });

@@ -375,7 +375,7 @@ export interface Contract {
   /** Signed before the company used the system (entered afterwards). */
   preSystem?: boolean;
   customerId: string;
-  customer?: { id: string; fullName: string; phone: string | null; email?: string | null };
+  customer?: { id: string; fullName: string; phone: string | null; email?: string | null; nationalId?: string | null; address?: string | null };
   unitId: string;
   unit?: Unit;
   reservationId: string | null;
@@ -744,7 +744,7 @@ export interface Reservation {
   leadId: string | null;
   lead?: { id: string; fullName: string; phone: string; email?: string | null } | null;
   clientId: string | null;
-  client?: { id: string; fullName: string; phone: string | null; email?: string | null } | null;
+  client?: { id: string; fullName: string; phone: string | null; email?: string | null; nationalId?: string | null; address?: string | null } | null;
   status: ReservationStatus;
   notes: string | null;
   reason: string | null;
@@ -957,6 +957,9 @@ export interface User {
   email: string | null;
   phone: string | null;
   fullName: string;
+  /** The buyer's identity printed on contracts. */
+  nationalId?: string | null;
+  address?: string | null;
   locale: 'ar' | 'en';
   active: boolean;
   createdAt: string;

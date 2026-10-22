@@ -47,6 +47,8 @@ const ar = {
     schedule: 'جدول الأقساط',
     fields: {
       phone: 'الهاتف',
+      nationalId: 'الرقم القومي',
+      address: 'العنوان',
       email: 'البريد الإلكتروني',
       registration: 'السجل التجاري',
       project: 'المشروع',
@@ -154,6 +156,8 @@ const ar = {
     fields: {
       name: 'الاسم',
       phone: 'الهاتف',
+      nationalId: 'الرقم القومي',
+      address: 'العنوان',
       email: 'البريد الإلكتروني',
       project: 'المشروع',
       building: 'المبنى',
@@ -236,6 +240,8 @@ const en: PrintMessages = {
     schedule: 'Installment schedule',
     fields: {
       phone: 'Phone',
+      nationalId: 'National ID',
+      address: 'Address',
       email: 'Email',
       registration: 'Commercial registration',
       project: 'Project',
@@ -342,6 +348,8 @@ const en: PrintMessages = {
     fields: {
       name: 'Name',
       phone: 'Phone',
+      nationalId: 'National ID',
+      address: 'Address',
       email: 'Email',
       project: 'Project',
       building: 'Building',

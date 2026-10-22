@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsEmail,
   IsEnum,
@@ -12,8 +12,11 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 import { UserRole, Locale } from '@prisma/client';
+
+const trimOrNull = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() || null : value);
 
 export class CreateUserDto {
   @IsEnum(UserRole)
@@ -44,6 +47,20 @@ export class CreateUserDto {
   @IsOptional()
   @IsUUID()
   managerId?: string;
+
+  // A buyer's identity for the contract (see UpdateUserDto).
+  @IsOptional()
+  @Transform(trimOrNull)
+  @ValidateIf((_o, v) => v !== null)
+  @Matches(/^[A-Za-z0-9]{5,20}$/, { message: 'رقم الهوية من ٥ إلى ٢٠ حرفاً أو رقماً' })
+  nationalId?: string | null;
+
+  @IsOptional()
+  @Transform(trimOrNull)
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(300)
+  address?: string | null;
 }
 
 // ADMIN-only: assign or clear a SALES user's manager. Kept separate from the
@@ -64,6 +81,21 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   fullName?: string;
+
+  // A buyer's identity for the contract: the national ID (14 digits in Egypt)
+  // or a passport number; null clears it.
+  @IsOptional()
+  @Transform(trimOrNull)
+  @ValidateIf((_o, v) => v !== null)
+  @Matches(/^[A-Za-z0-9]{5,20}$/, { message: 'رقم الهوية من ٥ إلى ٢٠ حرفاً أو رقماً' })
+  nationalId?: string | null;
+
+  @IsOptional()
+  @Transform(trimOrNull)
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(300)
+  address?: string | null;
 
   @IsOptional()
   @IsEnum(Locale)
