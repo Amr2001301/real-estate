@@ -209,6 +209,7 @@ describe('FA — financial audit fixes (e2e)', () => {
         }
         await raw.bonusEntry.deleteMany({ where: { contractId: s.contractId } });
         await raw.unitMaintenanceItem.deleteMany({ where: { unitId: s.unitId } });
+        await raw.contractCancellation.deleteMany({ where: { contractId: s.contractId } });
         await raw.contract.deleteMany({ where: { id: s.contractId } });
       }
       await raw.reservationActivity.deleteMany({ where: { reservationId: s.reservationId } });
@@ -474,5 +475,28 @@ describe('FA — financial audit fixes (e2e)', () => {
       }
       await raw.installment.deleteMany({ where: { feeForId: old.id } });
     }
+  });
+
+  // ── FA5: cancellation ───────────────────────────────────────────────────
+  it('FA5: a contract is not cancelled while a customer proof waits for review (it would drop out of the refund)', async () => {
+    const sale = await sell(30);
+    const down = await downPayment(sale);
+    const waiting = await testApp.rawPrisma.deposit.create({
+      data: {
+        companyId, type: DepositType.DOWN_PAYMENT, contractId: sale.contractId, installmentId: down.id,
+        amount: down.amount, paidAt: new Date(), reviewStatus: DepositReviewStatus.PENDING_REVIEW,
+        receiptUrl: 'https://example.invalid/receipts/fa5.pdf', recordedById: fixtures.userIds.customer1UserId,
+      },
+    });
+    const res = await asAdmin(http().post(`/v1/contracts/${sale.contractId}/cancel`))
+      .send({ reason: 'FA5', retainedAmount: 0, refundAmount: 0 });
+    expect(res.status).toBe(409);
+    expect((await testApp.rawPrisma.contract.findUniqueOrThrow({ where: { id: sale.contractId } })).status).not.toBe('CANCELLED');
+
+    // Reviewed (rejected here), the cancellation goes through.
+    await asAdmin(http().post(`/v1/deposits/${waiting.id}/reject`)).send({ reason: 'not received' }).expect(201);
+    await asAdmin(http().post(`/v1/contracts/${sale.contractId}/cancel`))
+      .send({ reason: 'FA5', retainedAmount: 0, refundAmount: 0 })
+      .expect(201);
   });
 });

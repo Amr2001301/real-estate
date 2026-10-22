@@ -107,6 +107,8 @@ function makePrismaMock() {
       count: jest.fn().mockResolvedValue(0),
       update: jest.fn().mockImplementation(async ({ data }) => updated(data.status ?? 'PENDING')),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      // Approve / cancel are conditional updates, then a re-read.
+      findUniqueOrThrow: jest.fn().mockImplementation(async () => ({ ...commissionStore.current })),
     },
     brokerPayout: {
       findUnique: jest.fn().mockImplementation(async () => payoutStore.current),
@@ -173,6 +175,7 @@ describe('Broker-commissions module · permissions enforcement', () => {
     FakeAuthGuard.currentUser = null;
     prismaMock.userPermission.findMany.mockClear();
     prismaMock.brokerCommission.update.mockClear();
+    prismaMock.brokerCommission.updateMany.mockClear();
     prismaMock.brokerPayout.findUnique.mockClear();
     prismaMock.leadActivity.create.mockClear();
     notificationsMock.sendToUsers.mockClear();
@@ -291,7 +294,8 @@ describe('Broker-commissions module · permissions enforcement', () => {
         codes: ['broker_commissions:approve'],
       };
       await request(app.getHttpServer()).patch(PATH).send({}).expect(200);
-      expect(prismaMock.brokerCommission.update).toHaveBeenCalledTimes(1);
+      // Approved by a conditional update (only from the status read).
+      expect(prismaMock.brokerCommission.updateMany).toHaveBeenCalledTimes(1);
       expect(prismaMock.leadActivity.create).toHaveBeenCalledTimes(1);
       expect(notificationsMock.sendToUsers).toHaveBeenCalled();
     });
@@ -384,7 +388,8 @@ describe('Broker-commissions module · permissions enforcement', () => {
         codes: ['broker_commissions:cancel'],
       };
       await request(app.getHttpServer()).patch(PATH).send(BODY).expect(200);
-      expect(prismaMock.brokerCommission.update).toHaveBeenCalledTimes(1);
+      // Cancelled by a conditional update (only while off any payout).
+      expect(prismaMock.brokerCommission.updateMany).toHaveBeenCalledTimes(1);
       expect(prismaMock.leadActivity.create).toHaveBeenCalledTimes(1);
       expect(notificationsMock.sendToUsers).toHaveBeenCalled();
     });

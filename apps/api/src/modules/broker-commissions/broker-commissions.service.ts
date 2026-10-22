@@ -412,8 +412,10 @@ export class BrokerCommissionsService {
       select: { retainedOnCancellation: true, contract: { select: { status: true, deletedAt: true } } },
     });
     if (parent && !isPayableDeal(parent)) throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
-    const updated = await this.prisma.brokerCommission.update({
-      where: { id },
+    // Only from the status read above: a reject or cancel landing meanwhile
+    // was overwritten back to APPROVED, and a dead commission got paid.
+    const claimed = await this.prisma.brokerCommission.updateMany({
+      where: { id, status: existing.status },
       data: {
         status: BrokerCommissionStatus.APPROVED,
         approvedById: actor.sub,
@@ -427,8 +429,11 @@ export class BrokerCommissionsService {
             ? appendNote(existing.notes, `[approve] ${dto.notes.trim()}`)
             : existing.notes,
       },
-      include: COMMISSION_INCLUDE,
     });
+    if (claimed.count === 0) {
+      throw new ConflictException('The commission changed meanwhile — reload and try again');
+    }
+    const updated = await this.prisma.brokerCommission.findUniqueOrThrow({ where: { id }, include: COMMISSION_INCLUDE });
 
     await this.writeActivity(id, 'broker_commission_approved', {
       by: actor.sub,
@@ -529,14 +534,19 @@ export class BrokerCommissionsService {
       }
     }
 
-    const updated = await this.prisma.brokerCommission.update({
-      where: { id },
+    // Only while still off any payout: one added to a payout meanwhile stayed
+    // in its total, cancelled, and was paid with it.
+    const claimed = await this.prisma.brokerCommission.updateMany({
+      where: { id, payoutId: null, status: { not: BrokerCommissionStatus.CANCELLED } },
       data: {
         status: BrokerCommissionStatus.CANCELLED,
         notes: appendNote(existing.notes, `[cancel] ${reason}`),
       },
-      include: COMMISSION_INCLUDE,
     });
+    if (claimed.count === 0) {
+      throw new ConflictException('The commission changed meanwhile (added to a payout?) — reload and try again');
+    }
+    const updated = await this.prisma.brokerCommission.findUniqueOrThrow({ where: { id }, include: COMMISSION_INCLUDE });
 
     await this.writeActivity(id, 'broker_commission_cancelled', {
       by: actor.sub,

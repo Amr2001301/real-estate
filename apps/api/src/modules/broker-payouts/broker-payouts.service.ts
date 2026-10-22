@@ -357,6 +357,9 @@ export class BrokerPayoutsService {
         approvedAt: new Date(),
         notes: dto.notes ? appendNote(payout.notes, `[approve] ${dto.notes.trim()}`) : payout.notes,
       });
+      // The total is what its lines are now, as approved: a commission
+      // cancelled or moved since the last recalculation stays out of it.
+      await rebalancePayout(tx, id, payout.brokerId);
       // Counted with the payout locked: commissions removed meanwhile are seen.
       // A payout of top-ups alone (a paid commission's price went up) is fine.
       const count =

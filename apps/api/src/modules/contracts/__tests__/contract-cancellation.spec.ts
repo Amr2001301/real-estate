@@ -117,6 +117,7 @@ function buildPrisma(overrides: {
   contract?: Record<string, unknown> | null;
   plan?: { id: string } | null;
   depositTotal?: number;
+  proofsWaiting?: number;
   commission?: Record<string, unknown> | null;
   bonusEntry?: Record<string, unknown> | null;
   unit?: { id: string; status: string } | null;
@@ -148,6 +149,8 @@ function buildPrisma(overrides: {
       aggregate: jest.fn().mockResolvedValue({
         _sum: { amount: new Prisma.Decimal(overrides.depositTotal ?? 325_000) },
       }),
+      // No customer proof waiting for review (that blocks a cancellation).
+      count: jest.fn().mockResolvedValue(overrides.proofsWaiting ?? 0),
     },
     installmentPlan: {
       findFirst: jest.fn().mockResolvedValue(

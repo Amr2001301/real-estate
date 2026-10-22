@@ -889,7 +889,7 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
       data: { ...base, type: 'BOOKING_AMOUNT', reservationId: reservation.id, amount: 10_000, verified: true },
     });
     await raw.deposit.create({ data: { ...base, contractId: contract.id, amount: 20_000 } }); // staff cash, NO_PROOF
-    await raw.deposit.create({
+    const waiting = await raw.deposit.create({
       data: { ...base, contractId: contract.id, amount: 70_000, reviewStatus: 'PENDING_REVIEW' },
     }); // not collected
     const http = () => request(testApp.app.getHttpServer());
@@ -905,6 +905,13 @@ describe('SEC — D3: contracts:cancel + contracts:release-unit (Step D3)', () =
       await as(http().post(`/v1/contracts/${contract.id}/refunds`))
         .send({ amount: 100, paymentMethod: 'CASH' })
         .expect(409);
+
+      // A proof still under review may be money that arrived: it is reviewed
+      // before the deal is cancelled (left out, it dropped out of the refund).
+      await as(http().post(`/v1/contracts/${contract.id}/cancel`))
+        .send({ reason: 'D3-13', retainedAmount: 5_000, refundAmount: 25_000 })
+        .expect(409);
+      await raw.deposit.update({ where: { id: waiting.id }, data: { reviewStatus: 'REJECTED' } });
 
       await as(http().post(`/v1/contracts/${contract.id}/cancel`))
         .send({ reason: 'D3-13', retainedAmount: 5_000, refundAmount: 25_000 })
