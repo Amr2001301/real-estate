@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import { AlertTriangle, ArrowDownLeft, ArrowUpRight, PauseCircle, RotateCcw, Scale, Search } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { ArrowDownLeft, ArrowUpRight, PauseCircle, RotateCcw, Scale, Search } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { cn } from '@/lib/cn';
-import { getLocale } from '@/lib/locale';
+import { getLocale, type Locale } from '@/lib/locale';
 import { formatCurrency, formatDate, tx } from '@/lib/format';
 import { getCompanyTimeZone, getReportsCurrency, todayIn } from '@/lib/currency';
 import { projectOptions as fetchProjectOptions } from '@/lib/options';
@@ -11,7 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/ui/pagination';
-import { PremiumFilterBar, PremiumFilterField, PremiumMetricStrip, PremiumPageHero } from '@/components/premium';
+import { PremiumFilterBar, PremiumFilterField, PremiumPageHero } from '@/components/premium';
+import { compactFigure } from '@/components/premium/metric-strip';
 import { EntityLink } from '@/components/entity-link';
 import { ledgerT } from './messages';
 
@@ -21,27 +23,11 @@ export const fetchCache = 'force-no-store';
 // ── API shapes (GET /reports/ledger, /reports/ledger/rows) ───────────────────
 type Fig = { amount: string; count: number };
 type State = 'late' | 'dueToday' | 'upcoming' | 'onItsWay' | 'pendingApproval';
+type GroupFig = Fig & { states?: Partial<Record<State, Fig>> };
 interface LedgerSummary {
   asOf: string;
-  receivables: {
-    total: string;
-    groups: {
-      installments: Fig & { states: Record<'late' | 'dueToday' | 'upcoming' | 'onItsWay', Fig>; types: Record<string, Fig> };
-      bookings: Fig & { states: Record<'late' | 'onItsWay', Fig> };
-      fees: Fig & { states: Record<'late' | 'dueToday' | 'upcoming' | 'onItsWay', Fig> };
-      clawbacks: Fig;
-    };
-  };
-  payables: {
-    total: string;
-    groups: {
-      commissions: Fig & { states: Record<'late' | 'pendingApproval', Fig> };
-      topUps: Fig;
-      bonuses: Fig & { states: Record<'late' | 'pendingApproval', Fig> };
-      refunds: Fig;
-    };
-    onHold: Fig;
-  };
+  receivables: { total: string; groups: Record<'installments' | 'bookings' | 'fees' | 'clawbacks', GroupFig> };
+  payables: { total: string; groups: Record<'commissions' | 'topUps' | 'bonuses' | 'refunds', GroupFig>; onHold: Fig };
   net: string;
 }
 interface LedgerRow {
@@ -58,17 +44,18 @@ interface LedgerRow {
   payout: { id: string; number: string | null } | null;
 }
 
-type Tab = 'receivables' | 'payables';
+type Side = 'receivables' | 'payables';
 type Group = 'installments' | 'bookings' | 'fees' | 'clawbacks' | 'commissions' | 'topUps' | 'bonuses' | 'refunds' | 'onHold';
-const GROUPS: Record<Tab, Group[]> = {
+const GROUPS: Record<Side, Group[]> = {
   receivables: ['installments', 'bookings', 'fees', 'clawbacks'],
-  payables: ['commissions', 'bonuses', 'topUps', 'refunds', 'onHold'],
+  payables: ['commissions', 'bonuses', 'topUps', 'refunds'],
 };
+const sideOf = (g: Group): Side => (GROUPS.receivables.includes(g) ? 'receivables' : 'payables');
 const PERIODS = ['all', 'thisMonth', 'nextMonth', 'quarter', 'year', 'custom'] as const;
 type Period = (typeof PERIODS)[number];
 
 interface Search {
-  tab?: string; group?: string; state?: string; page?: string;
+  group?: string; state?: string; page?: string;
   period?: string; dateFrom?: string; dateTo?: string; projectId?: string; q?: string;
 }
 
@@ -100,13 +87,46 @@ function periodRange(period: Period, today: string, sp: Search): { dateFrom?: st
   }
 }
 
-const STATE_STYLE: Record<State, string> = {
-  late: 'bg-danger-50 text-danger-700 border-danger-100',
-  dueToday: 'bg-warning-50 text-warning-700 border-warning-100',
-  upcoming: 'bg-surface-muted text-slate-600 border-hairline',
-  onItsWay: 'bg-brand-50 text-brand-700 border-brand-400/30',
-  pendingApproval: 'bg-surface-muted text-slate-600 border-hairline',
+/** One colour per state, shared by the bars, the legend and the badges. */
+const STATE_DOT: Record<State, string> = {
+  late: 'bg-danger-500',
+  dueToday: 'bg-warning-500',
+  upcoming: 'bg-slate-300',
+  onItsWay: 'bg-[#C9A24E]',
+  pendingApproval: 'bg-slate-400',
 };
+const STATE_BADGE: Record<State, string> = {
+  late: 'bg-danger-50 text-danger-700 ring-danger-100',
+  dueToday: 'bg-warning-50 text-warning-700 ring-warning-100',
+  upcoming: 'bg-surface-muted text-slate-600 ring-hairline',
+  onItsWay: 'bg-brand-50 text-brand-700 ring-brand-400/30',
+  pendingApproval: 'bg-surface-muted text-slate-600 ring-hairline',
+};
+const SIDE_STATES: Record<Side, State[]> = {
+  receivables: ['late', 'dueToday', 'upcoming', 'onItsWay'],
+  payables: ['late', 'pendingApproval'],
+};
+
+const n = (v: string | number | null | undefined) => {
+  const x = Number(v ?? 0);
+  return Number.isFinite(x) ? x : 0;
+};
+
+/** A large figure as on the metric band: short number, unit beside it, full amount on hover. */
+function Figure({ value, currency, locale, size = 'lg', tone = 'ink' }: {
+  value: number; currency: string; locale: Locale; size?: 'xl' | 'lg'; tone?: 'ink' | 'cream';
+}) {
+  const full = formatCurrency(value, currency, locale);
+  const [num, unit] = compactFigure(String(Math.abs(value).toFixed(2)).replace(/\.00$/, ''), currency === 'EGP' && locale === 'ar' ? 'ج.م' : currency, locale === 'ar');
+  return (
+    <span className="inline-flex items-baseline gap-2" title={full}>
+      <span className={cn('num font-semibold leading-none', size === 'xl' ? 'text-[52px]' : 'text-[40px]', tone === 'cream' ? 'text-[#F4ECD8]' : 'text-slate-900')}>
+        {value < 0 ? '−' : ''}{num}
+      </span>
+      <span className={cn('text-[13px] font-bold', tone === 'cream' ? 'text-[#D8B66A]' : 'text-brand-700')}>{unit}</span>
+    </span>
+  );
+}
 
 export default async function LedgerPage({ searchParams }: { searchParams: Promise<Search> }) {
   const sp = await searchParams;
@@ -116,12 +136,13 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
   const today = todayIn(tz);
   const money = (v: string | number) => formatCurrency(v, currency, locale);
 
-  const tab: Tab = sp.tab === 'payables' ? 'payables' : 'receivables';
   // Dates typed without picking a preset are a custom range.
   const picked: Period = (PERIODS as readonly string[]).includes(sp.period ?? '') ? (sp.period as Period) : 'all';
   const period: Period = picked === 'all' && (sp.dateFrom || sp.dateTo) ? 'custom' : picked;
   const range = periodRange(period, today, sp);
-  const group: Group = GROUPS[tab].includes(sp.group as Group) ? (sp.group as Group) : GROUPS[tab][0]!;
+  const allGroups = [...GROUPS.receivables, ...GROUPS.payables, 'onHold'] as Group[];
+  const group: Group = allGroups.includes(sp.group as Group) ? (sp.group as Group) : 'installments';
+  const side = sideOf(group);
   const state = sp.state as State | undefined;
   const page = Math.max(1, Number(sp.page) || 1);
   const pageSize = 25;
@@ -146,37 +167,138 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
   const rows = rowsRes.data;
   const projects = projectsRes.data?.data ?? [];
 
-  // Links keep the filters; switching tab or group starts the rows over.
+  // Links keep the filters; choosing a group starts its rows over.
   const keep = { period: period === 'all' ? undefined : period, dateFrom: sp.dateFrom, dateTo: sp.dateTo, projectId: sp.projectId, q: sp.q };
   const href = (over: Partial<Search>) => {
     const qs = new URLSearchParams();
-    for (const [k, v] of Object.entries({ ...keep, tab, group, ...over })) if (v) qs.set(k, String(v));
-    return `/dashboard/ledger?${qs.toString()}`;
+    for (const [k, v] of Object.entries({ ...keep, group, ...over })) if (v) qs.set(k, String(v));
+    return `/dashboard/ledger?${qs.toString()}#ledger-detail`;
   };
 
-  const lateReceivable = s
-    ? Number(s.receivables.groups.installments.states.late.amount) +
-      Number(s.receivables.groups.bookings.states.late.amount) +
-      Number(s.receivables.groups.fees.states.late.amount) +
-      Number(s.receivables.groups.clawbacks.amount)
-    : 0;
-  const latePayable = s
-    ? Number(s.payables.groups.commissions.states.late.amount) +
-      Number(s.payables.groups.bonuses.states.late.amount) +
-      Number(s.payables.groups.topUps.amount) +
-      Number(s.payables.groups.refunds.amount)
-    : 0;
-
-  const groupFig = (g: Group): (Fig & { states?: Partial<Record<State, Fig>> }) | null => {
+  const figOf = (g: Group): GroupFig | null => {
     if (!s) return null;
     if (g === 'onHold') return s.payables.onHold;
-    return tab === 'receivables'
-      ? (s.receivables.groups as Record<string, Fig & { states?: Partial<Record<State, Fig>> }>)[g] ?? null
-      : (s.payables.groups as Record<string, Fig & { states?: Partial<Record<State, Fig>> }>)[g] ?? null;
+    return sideOf(g) === 'receivables'
+      ? s.receivables.groups[g as keyof LedgerSummary['receivables']['groups']]
+      : s.payables.groups[g as keyof LedgerSummary['payables']['groups']];
   };
-  const current = groupFig(group);
+  /** A side's money by state, across its groups (a group without states is all overdue). */
+  const sideStates = (sd: Side): Record<State, number> => {
+    const out: Record<State, number> = { late: 0, dueToday: 0, upcoming: 0, onItsWay: 0, pendingApproval: 0 };
+    for (const g of GROUPS[sd]) {
+      const f = figOf(g);
+      if (!f) continue;
+      if (!f.states) out.late += n(f.amount);
+      else for (const [k, v] of Object.entries(f.states) as Array<[State, Fig]>) out[k] += n(v.amount);
+    }
+    return out;
+  };
   const daysSince = (d: string) =>
     Math.max(0, Math.floor((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${d.slice(0, 10)}T00:00:00Z`)) / 86_400_000));
+  const current = figOf(group);
+  const net = n(s?.net);
+
+  /** One side: total, its money by state on one bar, then its groups. */
+  const SideCard = ({ sd }: { sd: Side }) => {
+    const total = n(sd === 'receivables' ? s?.receivables.total : s?.payables.total);
+    const st = sideStates(sd);
+    const icon = sd === 'receivables' ? <ArrowDownLeft /> : <ArrowUpRight />;
+    return (
+      <section
+        data-testid={`ledger-side-${sd}`}
+        className="flex flex-col overflow-hidden rounded-[22px] border border-hairline bg-surface shadow-[0_18px_40px_-28px_rgb(20_26_38/0.35)]"
+      >
+        <header className="flex items-start justify-between gap-4 px-6 pb-5 pt-6">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#C9A24E]/50 text-[#B08A3A] [&_svg]:h-[18px] [&_svg]:w-[18px] [&_svg]:stroke-[1.6]">
+              {icon}
+            </span>
+            <div>
+              <h2 className="font-heading text-[20px] font-bold leading-tight text-slate-900">{t.sides[sd].title}</h2>
+              <p className="text-[12.5px] text-slate-500">{t.sides[sd].sub}</p>
+            </div>
+          </div>
+          {s && <Figure value={total} currency={currency} locale={locale} />}
+        </header>
+
+        {/* Money by state on one bar, with its legend. */}
+        <div className="px-6">
+          <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-surface-sunken" aria-hidden>
+            {total > 0 &&
+              SIDE_STATES[sd].map((k) =>
+                st[k] > 0 ? <span key={k} className={STATE_DOT[k]} style={{ width: `${(st[k] / total) * 100}%` }} /> : null,
+              )}
+          </div>
+          <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
+            {SIDE_STATES[sd].map((k) => (
+              <div key={k} title={t.statesHint[k]}>
+                <dt className="flex items-center gap-1.5 text-[11.5px] text-slate-500">
+                  <span className={cn('h-2 w-2 rounded-full', STATE_DOT[k])} />
+                  {k === 'late' ? t.sides[sd].overdue : t.states[k]}
+                </dt>
+                <dd className={cn('mt-0.5 text-[13.5px] font-semibold tabular-nums', k === 'late' && st[k] > 0 ? 'text-danger-700' : 'text-slate-800')}>
+                  {money(st[k])}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+
+        {/* Its groups: each opens its detail below. */}
+        <ul className="mt-5 divide-y divide-hairline border-t border-hairline">
+          {GROUPS[sd].map((g) => {
+            const f = figOf(g);
+            const amt = n(f?.amount);
+            const active = g === group;
+            return (
+              <li key={g}>
+                <Link
+                  href={href({ group: g, state: undefined, page: undefined }) as never}
+                  aria-current={active ? 'true' : undefined}
+                  data-testid={`ledger-group-${g}`}
+                  className={cn(
+                    'group relative flex items-center gap-4 px-6 py-3.5 transition-colors',
+                    active ? 'bg-brand-50/60' : 'hover:bg-surface-muted/50',
+                  )}
+                >
+                  {active && <span className="absolute inset-y-2 start-0 w-[3px] rounded-full bg-[#C9A24E]" aria-hidden />}
+                  <div className="min-w-0 flex-1">
+                    <p className={cn('truncate text-[14px] font-semibold', active ? 'text-brand-700' : 'text-slate-800')}>{t.groups[g].title}</p>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <span className="h-1 w-24 overflow-hidden rounded-full bg-surface-sunken">
+                        <span className="block h-full rounded-full bg-[#C9A24E]/70" style={{ width: `${total > 0 ? (amt / total) * 100 : 0}%` }} />
+                      </span>
+                      <span className="text-[11px] text-slate-500">{f ? t.count(f.count) : ''}</span>
+                    </div>
+                  </div>
+                  <span className="text-[14.5px] font-semibold tabular-nums text-slate-900">{money(amt)}</span>
+                </Link>
+              </li>
+            );
+          })}
+          {sd === 'payables' && (
+            <li>
+              <Link
+                href={href({ group: 'onHold', state: undefined, page: undefined }) as never}
+                aria-current={group === 'onHold' ? 'true' : undefined}
+                data-testid="ledger-group-onHold"
+                className={cn(
+                  'flex items-center gap-3 px-6 py-3 text-[12.5px] transition-colors',
+                  group === 'onHold' ? 'bg-brand-50/60' : 'hover:bg-surface-muted/50',
+                )}
+              >
+                <PauseCircle className="h-4 w-4 text-slate-400" />
+                <span className="flex-1 text-slate-600">
+                  {t.groups.onHold.title} <span className="text-slate-400">· {t.onHoldNote}</span>
+                </span>
+                <span className="tabular-nums text-slate-600">{money(n(s?.payables.onHold.amount))}</span>
+              </Link>
+            </li>
+          )}
+        </ul>
+      </section>
+    );
+  };
 
   return (
     <div className="flex flex-col gap-5 lg:gap-6">
@@ -184,189 +306,156 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
         title={t.title}
         description={t.description}
         breadcrumbs={[{ label: t.home, href: '/dashboard' }, { label: t.breadcrumb }]}
-      >
-        {s && (
-          <PremiumMetricStrip
-            cols={5}
-            metrics={[
-              { label: t.metrics.receivables, value: money(s.receivables.total), icon: <ArrowDownLeft /> },
-              { label: t.metrics.receivablesLate, value: money(lateReceivable), icon: <AlertTriangle /> },
-              { label: t.metrics.payables, value: money(s.payables.total), icon: <ArrowUpRight /> },
-              { label: t.metrics.payablesLate, value: money(latePayable), icon: <AlertTriangle /> },
-              {
-                label: t.metrics.net,
-                value: money(s.net),
-                icon: <Scale />,
-                sub: `${t.metrics.asOf} ${formatDate(s.asOf, locale)}`,
-              },
-            ]}
-          />
-        )}
-      </PremiumPageHero>
+      />
 
-      <PremiumFilterBar method="get" action="/dashboard/ledger" data-testid="ledger-filters">
-        <input type="hidden" name="tab" value={tab} />
-        <PremiumFilterField label={t.filter.period} htmlFor="lg-period">
-          <Select id="lg-period" name="period" inputSize="sm" defaultValue={period} className="w-44 shrink-0">
-            {PERIODS.map((p) => (
-              <option key={p} value={p}>{t.periods[p]}</option>
-            ))}
-          </Select>
-        </PremiumFilterField>
-        <PremiumFilterField label={t.filter.from} htmlFor="lg-from">
-          <Input id="lg-from" name="dateFrom" type="date" inputSize="sm" defaultValue={sp.dateFrom ?? ''} className="w-40 shrink-0" />
-        </PremiumFilterField>
-        <PremiumFilterField label={t.filter.to} htmlFor="lg-to">
-          <Input id="lg-to" name="dateTo" type="date" inputSize="sm" defaultValue={sp.dateTo ?? ''} className="w-40 shrink-0" />
-        </PremiumFilterField>
-        <PremiumFilterField label={t.filter.project} htmlFor="lg-project">
-          <Select id="lg-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-48 shrink-0">
-            <option value="">{t.filter.allProjects}</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>{tx(p.name, locale)}</option>
-            ))}
-          </Select>
-        </PremiumFilterField>
-        <div className="min-w-[180px] flex-1">
-          <label htmlFor="lg-q" className="sr-only">{t.filter.search}</label>
-          <Input id="lg-q" name="q" inputSize="sm" placeholder={t.filter.search} defaultValue={sp.q ?? ''} leftAddon={<Search />} className="w-full" />
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Button type="submit" variant="primary" size="sm">{t.filter.apply}</Button>
-          {(period !== 'all' || sp.projectId || sp.q) && (
-            <Link
-              href={`/dashboard/ledger?tab=${tab}` as never}
-              title={t.filter.reset}
-              aria-label={t.filter.reset}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-danger-500/40 hover:text-danger-600"
-            >
-              <RotateCcw className="h-4 w-4" />
-            </Link>
+      {/* Position: what is owed to the company, the net, what it owes. */}
+      {s && (
+        <section
+          data-testid="metric-strip"
+          className="overflow-hidden rounded-[22px] border border-[#D8B66A]/[0.28] bg-navy-band text-[#F4ECD8] shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]"
+        >
+          <div className="grid gap-px bg-[#D8B66A]/[0.16] md:grid-cols-3">
+            {(['receivables', 'net', 'payables'] as const).map((k) => {
+              const value = k === 'net' ? net : n(k === 'receivables' ? s.receivables.total : s.payables.total);
+              const overdue = k === 'net' ? 0 : sideStates(k).late;
+              return (
+                <div key={k} className={cn('flex flex-col gap-2 bg-navy-band px-7 py-7', k === 'net' && 'md:items-center md:text-center')}>
+                  <p className="flex items-center gap-2 text-[13px] text-[#A9B0BD]">
+                    {k === 'net' && <Scale className="h-4 w-4 text-[#D8B66A]" />}
+                    {k === 'net' ? t.net.title : t.sides[k].title}
+                  </p>
+                  <Figure value={value} currency={currency} locale={locale} size={k === 'net' ? 'xl' : 'lg'} tone="cream" />
+                  <p className="text-[12px] text-[#A9B0BD]">
+                    {k === 'net'
+                      ? `${net >= 0 ? t.net.positive : t.net.negative} · ${t.net.asOf} ${formatDate(s.asOf, locale)}`
+                      : (
+                        <>
+                          {t.sides[k].overdue}{' '}
+                          <span className={cn('font-semibold tabular-nums', overdue > 0 ? 'text-[#F09687]' : 'text-[#86C9A0]')}>{money(overdue)}</span>
+                        </>
+                      )}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <div className="flex flex-col gap-2">
+        <PremiumFilterBar method="get" action="/dashboard/ledger" data-testid="ledger-filters">
+          {sp.group && <input type="hidden" name="group" value={group} />}
+          <PremiumFilterField label={t.filter.period} htmlFor="lg-period">
+            <Select id="lg-period" name="period" inputSize="sm" defaultValue={period} className="w-44 shrink-0">
+              {PERIODS.map((p) => (
+                <option key={p} value={p}>{t.periods[p]}</option>
+              ))}
+            </Select>
+          </PremiumFilterField>
+          <PremiumFilterField label={t.filter.from} htmlFor="lg-from">
+            <Input id="lg-from" name="dateFrom" type="date" inputSize="sm" defaultValue={sp.dateFrom ?? ''} className="w-40 shrink-0" />
+          </PremiumFilterField>
+          <PremiumFilterField label={t.filter.to} htmlFor="lg-to">
+            <Input id="lg-to" name="dateTo" type="date" inputSize="sm" defaultValue={sp.dateTo ?? ''} className="w-40 shrink-0" />
+          </PremiumFilterField>
+          <PremiumFilterField label={t.filter.project} htmlFor="lg-project">
+            <Select id="lg-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-48 shrink-0">
+              <option value="">{t.filter.allProjects}</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{tx(p.name, locale)}</option>
+              ))}
+            </Select>
+          </PremiumFilterField>
+          <div className="min-w-[200px] flex-1">
+            <label htmlFor="lg-q" className="sr-only">{t.filter.search}</label>
+            <Input id="lg-q" name="q" inputSize="sm" placeholder={t.filter.search} defaultValue={sp.q ?? ''} leftAddon={<Search />} className="w-full" />
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button type="submit" variant="primary" size="sm">{t.filter.apply}</Button>
+            {(period !== 'all' || sp.projectId || sp.q) && (
+              <Link
+                href="/dashboard/ledger"
+                title={t.filter.reset}
+                aria-label={t.filter.reset}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-danger-500/40 hover:text-danger-600"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Link>
+            )}
+          </div>
+        </PremiumFilterBar>
+        <p className="px-3 text-[12px] leading-relaxed text-slate-500">
+          {range.dateFrom && range.dateTo && (
+            <span className="me-2 font-semibold text-slate-700" dir="ltr">{range.dateFrom} — {range.dateTo}</span>
           )}
-        </div>
-      </PremiumFilterBar>
-      <p className="-mt-2 px-2 text-[12px] text-slate-500">
-        {period === 'custom' || period === 'all' ? null : `${range.dateFrom} → ${range.dateTo} · `}
-        {t.periodNote}
-      </p>
-
-      {/* Tabs: ليا / عليا with their totals */}
-      <div className="flex gap-8 border-b border-hairline" role="tablist">
-        {(['receivables', 'payables'] as const).map((k) => (
-          <Link
-            key={k}
-            href={href({ tab: k, group: GROUPS[k][0], state: undefined, page: undefined }) as never}
-            role="tab"
-            aria-selected={tab === k}
-            data-testid={`ledger-tab-${k}`}
-            className={cn(
-              'font-heading -mb-px border-b-2 pb-3 text-[17px] font-bold transition-colors duration-150',
-              tab === k ? 'border-[#C79A3B] text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-800',
-            )}
-          >
-            {t.tabs[k]}
-            {s && (
-              <span className="ms-2 text-[14px] font-semibold tabular-nums text-slate-500">
-                {money(k === 'receivables' ? s.receivables.total : s.payables.total)}
-              </span>
-            )}
-          </Link>
-        ))}
+          {t.periodNote}
+        </p>
       </div>
 
-      {/* Groups of the tab */}
-      <div className={cn('grid gap-3', tab === 'receivables' ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-2 xl:grid-cols-5')}>
-        {GROUPS[tab].map((g) => {
-          const fig = groupFig(g);
-          const active = g === group;
-          return (
-            <Link
-              key={g}
-              href={href({ group: g, state: undefined, page: undefined }) as never}
-              aria-current={active ? 'true' : undefined}
-              data-testid={`ledger-group-${g}`}
-              className={cn(
-                'rounded-2xl border px-4 py-3.5 transition-colors',
-                g === 'onHold' && 'border-dashed',
-                active
-                  ? 'border-brand-500/50 bg-gradient-to-br from-brand-500/[0.14] to-brand-700/[0.04]'
-                  : 'border-hairline bg-surface hover:border-brand-500/30',
-              )}
-            >
-              <span className="flex items-center gap-2 text-[12.5px] font-semibold text-slate-600">
-                {g === 'onHold' && <PauseCircle className="h-3.5 w-3.5 text-slate-400" />}
-                {t.groups[g].title}
-              </span>
-              <span className={cn('mt-1.5 block text-[22px] font-bold leading-none tabular-nums', active ? 'text-brand-700' : 'text-slate-900')}>
-                {fig ? money(fig.amount) : '—'}
-              </span>
-              <span className="mt-1.5 block text-[11.5px] text-slate-500">
-                {fig ? t.count(fig.count) : ''}
-                {g === 'onHold' && ` · ${t.onHoldNote}`}
-              </span>
-            </Link>
-          );
-        })}
+      <div className="grid gap-5 xl:grid-cols-2">
+        <SideCard sd="receivables" />
+        <SideCard sd="payables" />
       </div>
 
-      {/* The selected group: its states, then its rows */}
-      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface" data-testid="ledger-rows">
-        <header className="flex flex-col gap-3 border-b border-hairline px-6 py-4">
+      {/* The chosen group's detail. */}
+      <section
+        id="ledger-detail"
+        data-testid="ledger-rows"
+        className="scroll-mt-6 overflow-hidden rounded-[22px] border border-hairline bg-surface"
+      >
+        <header className="flex flex-col gap-4 border-b border-hairline px-6 py-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h2 className="font-heading text-[18px] font-bold text-slate-900">{t.groups[group].title}</h2>
-            <p className="mt-0.5 text-[12.5px] text-slate-500">{t.groups[group].hint}</p>
+            <p className="text-[12px] font-bold text-brand-700">
+              {t.sides[side].title} · {t.details}
+            </p>
+            <h3 className="font-heading mt-1 text-[22px] font-bold text-slate-900">{t.groups[group].title}</h3>
+            <p className="mt-1 max-w-2xl text-[12.5px] leading-relaxed text-slate-500">{t.groups[group].hint}</p>
           </div>
           {current?.states && (
-            <div className="flex flex-wrap gap-2" data-testid="ledger-states">
-              <Link
-                href={href({ state: undefined, page: undefined }) as never}
-                className={cn('rounded-full border px-3 py-1 text-[12px] font-semibold', !state ? 'border-brand-500/50 bg-brand-50 text-brand-700' : 'border-hairline text-slate-600 hover:border-brand-500/30')}
-              >
-                {t.all} · {money(current.amount)}
-              </Link>
+            <nav
+              data-testid="ledger-states"
+              className="inline-flex shrink-0 flex-wrap items-center gap-1 rounded-full border border-hairline bg-surface-muted/60 p-1"
+            >
+              <SegLink href={href({ state: undefined, page: undefined })} active={!state}>
+                {t.all} <span className="tabular-nums text-slate-500">{money(current.amount)}</span>
+              </SegLink>
               {(Object.entries(current.states) as Array<[State, Fig]>).map(([k, f]) => (
-                <Link
-                  key={k}
-                  href={href({ state: k, page: undefined }) as never}
-                  title={k === 'onItsWay' ? t.statesHint.onItsWay : undefined}
-                  data-testid={`ledger-state-${k}`}
-                  className={cn(
-                    'rounded-full border px-3 py-1 text-[12px] font-semibold tabular-nums',
-                    state === k ? 'border-brand-500/50 bg-brand-50 text-brand-700' : STATE_STYLE[k],
-                  )}
-                >
-                  {t.states[k]} · {money(f.amount)} ({f.count})
-                </Link>
+                <SegLink key={k} href={href({ state: k, page: undefined })} active={state === k} title={t.statesHint[k]} testId={`ledger-state-${k}`}>
+                  <span className={cn('h-1.5 w-1.5 rounded-full', STATE_DOT[k])} />
+                  {t.states[k]} <span className="tabular-nums text-slate-500">{money(f.amount)}</span>
+                </SegLink>
               ))}
-            </div>
+            </nav>
           )}
         </header>
 
         {!rows || rows.data.length === 0 ? (
-          <p className="px-6 py-10 text-center text-[13px] text-slate-500">{rowsRes.error ?? t.empty}</p>
+          <p className="px-6 py-14 text-center text-[13px] text-slate-500">{rowsRes.error ?? t.empty}</p>
         ) : (
           <div className="overflow-x-auto scrollbar-thin">
             <table className="w-full text-[13px]">
-              <thead>
-                <tr className="border-b border-hairline text-start text-[11.5px] font-semibold text-slate-500">
-                  <th className="px-6 py-3 text-start">{t.cols.date}</th>
-                  <th className="px-3 py-3 text-start">{t.cols.item}</th>
-                  <th className="px-3 py-3 text-start">{t.cols.party}</th>
-                  <th className="px-3 py-3 text-start">{t.cols.ref}</th>
-                  <th className="px-3 py-3 text-start">{t.cols.unit}</th>
-                  <th className="px-3 py-3 text-start">{t.cols.state}</th>
-                  <th className="px-6 py-3 text-end">{t.cols.amount}</th>
+              <thead className="bg-transparent">
+                <tr className="border-b border-hairline text-[11.5px] font-semibold text-slate-500 [&>th]:bg-transparent [&>th]:text-slate-500">
+                  <th className="px-6 py-3 text-start font-semibold">{t.cols.date}</th>
+                  <th className="px-3 py-3 text-start font-semibold">{t.cols.item}</th>
+                  <th className="px-3 py-3 text-start font-semibold">{t.cols.party}</th>
+                  <th className="px-3 py-3 text-start font-semibold">{t.cols.ref}</th>
+                  <th className="px-3 py-3 text-start font-semibold">{t.cols.unit}</th>
+                  <th className="px-3 py-3 text-start font-semibold">{t.cols.state}</th>
+                  <th className="px-6 py-3 text-end font-semibold">{t.cols.amount}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
                 {rows.data.map((r) => (
-                  <tr key={`${r.type}-${r.id}`} data-testid="ledger-row" className="transition-colors hover:bg-surface-muted/30">
-                    <td className="whitespace-nowrap px-6 py-3 tabular-nums text-slate-700">{r.date ? formatDate(r.date, locale) : '—'}</td>
-                    <td className="px-3 py-3">
-                      <span className="whitespace-nowrap font-semibold text-slate-800">{t.types[r.type] ?? r.type}</span>
-                      {r.ref && (r.ref.kind === 'commission' || r.ref.kind === 'payout') && r.ref.code && (
-                        <EntityLink kind={r.ref.kind} id={r.ref.id} className="ms-2 whitespace-nowrap text-[12px] text-brand-700">{r.ref.code}</EntityLink>
-                      )}
+                  <tr key={`${r.type}-${r.id}`} data-testid="ledger-row" className="transition-colors hover:bg-surface-muted/40">
+                    <td className="whitespace-nowrap px-6 py-3.5 tabular-nums text-slate-600">{r.date ? formatDate(r.date, locale) : '—'}</td>
+                    <td className="px-3 py-3.5">
+                      <span className="flex flex-wrap items-baseline gap-x-2">
+                        <span className="whitespace-nowrap font-semibold text-slate-800">{t.types[r.type] ?? r.type}</span>
+                        {r.ref && (r.ref.kind === 'commission' || r.ref.kind === 'payout') && r.ref.code && (
+                          <EntityLink kind={r.ref.kind} id={r.ref.id} className="whitespace-nowrap text-[12px] text-brand-700">{r.ref.code}</EntityLink>
+                        )}
+                      </span>
                       {r.payout && (
                         <span className="mt-0.5 block whitespace-nowrap text-[11.5px] text-slate-500">
                           {t.payout}{' '}
@@ -374,7 +463,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3.5">
                       {r.party ? (
                         <EntityLink
                           kind={r.party.kind === 'sales' ? 'client' : r.party.kind}
@@ -386,42 +475,63 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
                         </EntityLink>
                       ) : '—'}
                     </td>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3.5">
                       {r.contract ? (
                         <EntityLink kind="contract" id={r.contract.id} className="whitespace-nowrap text-brand-700">{r.contract.number ?? '—'}</EntityLink>
                       ) : r.reservation ? (
                         <EntityLink kind="reservation" id={r.reservation.id} className="whitespace-nowrap text-brand-700">{r.reservation.number ?? '—'}</EntityLink>
                       ) : '—'}
                     </td>
-                    <td className="px-3 py-3">
-                      {r.unit ? <EntityLink kind="unit" id={r.unit.id} className="whitespace-nowrap">{r.unit.code}</EntityLink> : '—'}
+                    <td className="px-3 py-3.5">
+                      {r.unit ? <EntityLink kind="unit" id={r.unit.id} className="whitespace-nowrap text-slate-700">{r.unit.code}</EntityLink> : '—'}
                     </td>
-                    <td className="px-3 py-3">
-                      <span className={cn('inline-flex whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11.5px] font-semibold', STATE_STYLE[r.state])}>
+                    <td className="px-3 py-3.5">
+                      <span className={cn('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-semibold ring-1 ring-inset', STATE_BADGE[r.state])}>
+                        <span className={cn('h-1.5 w-1.5 rounded-full', STATE_DOT[r.state])} />
                         {t.states[r.state]}
-                        {r.state === 'late' && r.date && <span className="ms-1 font-normal">{t.daysLate(daysSince(r.date))}</span>}
+                        {r.state === 'late' && r.date && <span className="font-normal opacity-80">· {t.daysLate(daysSince(r.date))}</span>}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-6 py-3 text-end font-semibold tabular-nums text-slate-900">{money(r.amount)}</td>
+                    <td className="whitespace-nowrap px-6 py-3.5 text-end text-[14px] font-semibold tabular-nums text-slate-900">{money(r.amount)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-        {rows && (
+        {rows && rows.meta.total > pageSize && (
           <div className="border-t border-hairline px-4 py-3">
             <Pagination
               basePath="/dashboard/ledger"
               page={page}
               pageSize={pageSize}
               total={rows.meta.total}
-              params={{ ...keep, tab, group, state }}
+              params={{ ...keep, group, state }}
               locale={locale}
             />
           </div>
         )}
       </section>
     </div>
+  );
+}
+
+/** One option of the detail's state switch. */
+function SegLink({ href, active, children, title, testId }: {
+  href: string; active: boolean; children: ReactNode; title?: string; testId?: string;
+}) {
+  return (
+    <Link
+      href={href as never}
+      title={title}
+      data-testid={testId}
+      aria-current={active ? 'true' : undefined}
+      className={cn(
+        'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors',
+        active ? 'bg-surface text-slate-900 shadow-[0_2px_8px_-2px_rgb(20_26_38/0.18)]' : 'text-slate-600 hover:text-slate-900',
+      )}
+    >
+      {children}
+    </Link>
   );
 }

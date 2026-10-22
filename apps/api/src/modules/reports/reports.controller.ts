@@ -141,7 +141,7 @@ export class ReportsController {
     });
   }
 
-  // «ليا وعليا» — what the company is owed and what it owes, by group.
+  // Receivables & payables (المستحقات والالتزامات) — what the company is owed and what it owes, by group.
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
   @Get('ledger')

@@ -1,5 +1,5 @@
 /**
- * «ليا وعليا» — what the company is owed and what it owes, on one page.
+ * Receivables & payables (المستحقات والالتزامات) — what the company is owed and what it owes, on one page.
  *
  * Receivables (ليا): open schedule rows of signed live contracts (price rows
  * — down payment, monthly, final, a booking moved into the schedule — and,

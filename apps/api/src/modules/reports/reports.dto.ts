@@ -11,7 +11,7 @@ export class FinancialDashboardQueryDto {
   @IsOptional() @IsDateString() dateTo?: string;
 }
 
-/** «ليا وعليا»: the period (calendar days, company time zone), project and search. */
+/** Receivables & payables (المستحقات والالتزامات): the period (calendar days, company time zone), project and search. */
 export class LedgerQueryDto {
   @IsOptional() @IsDateString() dateFrom?: string;
   @IsOptional() @IsDateString() dateTo?: string;

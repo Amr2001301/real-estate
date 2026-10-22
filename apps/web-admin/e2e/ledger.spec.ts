@@ -5,26 +5,25 @@ import { gotoReady } from './helpers/pickers';
 test.use({ storageState: ADMIN_STORAGE });
 
 /**
- * «ليا وعليا»: the two tabs with their totals, a card per group, and the
- * selected group's rows. Switching tab and group keeps the period filter.
+ * Receivables & payables: the position band, both sides with their groups,
+ * and the chosen group's detail. Choosing a group keeps the period filter.
  */
-test('the receivables/payables page shows both sides by group, with their rows', async ({ page }) => {
+test('the receivables & payables page shows both sides by group, with the detail', async ({ page }) => {
   await gotoReady(page, '/dashboard/ledger');
   await expect(page.getByTestId('metric-strip')).toBeVisible();
-  await expect(page.getByTestId('ledger-tab-receivables')).toHaveAttribute('aria-selected', 'true');
-  for (const g of ['installments', 'bookings', 'fees', 'clawbacks']) {
+  await expect(page.getByTestId('ledger-side-receivables')).toBeVisible();
+  await expect(page.getByTestId('ledger-side-payables')).toBeVisible();
+  for (const g of ['installments', 'bookings', 'fees', 'clawbacks', 'commissions', 'bonuses', 'topUps', 'refunds', 'onHold']) {
     await expect(page.getByTestId(`ledger-group-${g}`)).toBeVisible();
   }
   await expect(page.getByTestId('ledger-rows')).toBeVisible();
 
-  // Payables, this month: the filter carries over to the other tab.
+  // A payables group, this month: the period carries over.
   await gotoReady(page, '/dashboard/ledger?period=thisMonth');
-  await page.getByTestId('ledger-tab-payables').click();
-  await expect(page).toHaveURL(/tab=payables/);
+  await page.getByTestId('ledger-group-commissions').click();
+  await expect(page).toHaveURL(/group=commissions/);
   await expect(page).toHaveURL(/period=thisMonth/);
-  for (const g of ['commissions', 'bonuses', 'topUps', 'refunds', 'onHold']) {
-    await expect(page.getByTestId(`ledger-group-${g}`)).toBeVisible();
-  }
+  await expect(page.getByTestId('ledger-group-commissions')).toHaveAttribute('aria-current', 'true');
   // No raw state or type code reaches the page.
-  await expect(page.getByTestId('ledger-rows')).not.toContainText(/pendingApproval|COMMISSION|INSTALLMENT/);
+  await expect(page.getByTestId('ledger-rows')).not.toContainText(/pendingApproval|COMMISSION|INSTALLMENT|onItsWay/);
 });

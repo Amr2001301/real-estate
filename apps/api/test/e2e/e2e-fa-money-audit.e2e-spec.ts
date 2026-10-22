@@ -633,7 +633,7 @@ describe('FA — financial audit fixes (e2e)', () => {
       .expect(409);
   });
 
-  // ── FA10: «ليا وعليا» agrees with the financial report ─────────────────
+  // ── FA10: Receivables & payables (المستحقات والالتزامات) agrees with the financial report ─────────────────
   it('FA10: the receivables/payables page adds up, and agrees with the financial report', async () => {
     const sale = await sell(70);
     await commissionOn(sale, false); // approved today, not paid: late on us from today
