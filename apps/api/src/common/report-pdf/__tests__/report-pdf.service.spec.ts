@@ -62,7 +62,7 @@ describe('ReportPdfService', () => {
         expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
         expect(hits).toBe(0);
       },
-      60_000,
+      90_000, // above the 60 s Chromium launch timeout
     );
   });
 });
