@@ -13,6 +13,7 @@ import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import type { Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import type { User } from '@/lib/types';
+import { FIXED_DETAILS, dayOf, fieldLabel, type CustomerFieldDef } from '@/lib/customer-fields';
 import {
   createClientAction,
   updateClientAction,
@@ -23,9 +24,11 @@ interface Props {
   user?: User;
   defaultRole?: 'CLIENT' | 'CUSTOMER';
   locale?: Locale;
+  /** The company's own customer fields (the active ones are filled here). */
+  fields?: CustomerFieldDef[];
 }
 
-export default function ClientForm({ user, defaultRole = 'CLIENT', locale = 'ar' }: Props) {
+export default function ClientForm({ user, defaultRole = 'CLIENT', locale = 'ar', fields = [] }: Props) {
   const m = uiT(locale).pages.clientsForm;
   const isEdit = Boolean(user);
   const action = user ? updateClientAction.bind(null, user.id) : createClientAction;
@@ -35,11 +38,16 @@ export default function ClientForm({ user, defaultRole = 'CLIENT', locale = 'ar'
     ? `/dashboard/clients/${user!.id}`
     : `/dashboard/clients?role=${role}`;
 
+  const ownFields = fields.filter((f) => f.active);
+  const stored = user?.customFields ?? {};
+
   const navSections = [
     { id: 'section-personal',    num: '01', label: m.navPersonal.label,  sub: m.navPersonal.sub },
     { id: 'section-contact',     num: '02', label: m.navContact.label,   sub: m.navContact.sub },
     { id: 'section-identity',    num: '03', label: m.navIdentity.label,  sub: m.navIdentity.sub },
-    { id: 'section-preferences', num: '04', label: m.navPrefs.label,     sub: m.navPrefs.sub },
+    { id: 'section-details',     num: '04', label: m.navDetails.label,   sub: m.navDetails.sub },
+    ...(ownFields.length ? [{ id: 'section-custom', num: '05', label: m.navCustom.label, sub: m.navCustom.sub }] : []),
+    { id: 'section-preferences', num: ownFields.length ? '06' : '05', label: m.navPrefs.label, sub: m.navPrefs.sub },
   ];
 
   return (
@@ -175,8 +183,77 @@ export default function ClientForm({ user, defaultRole = 'CLIENT', locale = 'ar'
         </PremiumFormPanel>
 
         <PremiumFormPanel
-          id="section-preferences"
+          id="section-details"
           number="04"
+          title={m.panelDetailsTitle}
+          description={m.panelDetailsDesc}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {FIXED_DETAILS.map((d) => {
+              const isDate = 'date' in d && d.date;
+              const value = (user?.[d.key] as string | null | undefined) ?? '';
+              return (
+                <Field key={d.key} label={locale === 'en' ? d.en : d.ar} name={d.key} hint={m.hintOptional}>
+                  <Input
+                    id={d.key}
+                    name={d.key}
+                    type={isDate ? 'date' : d.key === 'homePhone' ? 'tel' : 'text'}
+                    dir={isDate || d.key === 'homePhone' ? 'ltr' : undefined}
+                    maxLength={d.key === 'employer' ? 200 : d.key === 'homePhone' ? 30 : 120}
+                    defaultValue={isDate ? dayOf(value) : value}
+                  />
+                </Field>
+              );
+            })}
+          </div>
+        </PremiumFormPanel>
+
+        {ownFields.length > 0 && (
+          <PremiumFormPanel
+            id="section-custom"
+            number="05"
+            title={m.panelCustomTitle}
+            description={m.panelCustomDesc}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {ownFields.map((f) => {
+                const name = `custom.${f.key}`;
+                const value = stored[f.key] ?? '';
+                return (
+                  <Field key={f.id} label={fieldLabel(f, locale)} name={name} hint={m.hintOptional}>
+                    {f.type === 'SELECT' ? (
+                      <Select id={name} name={name} defaultValue={String(value)}>
+                        <option value="">—</option>
+                        {f.options.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                        {value !== '' && !f.options.includes(String(value)) && (
+                          <option value={String(value)}>{String(value)}</option>
+                        )}
+                      </Select>
+                    ) : (
+                      <Input
+                        id={name}
+                        name={name}
+                        type={f.type === 'NUMBER' ? 'number' : f.type === 'DATE' ? 'date' : 'text'}
+                        step={f.type === 'NUMBER' ? 'any' : undefined}
+                        dir={f.type === 'TEXT' ? undefined : 'ltr'}
+                        maxLength={f.type === 'TEXT' ? 300 : undefined}
+                        defaultValue={String(value)}
+                      />
+                    )}
+                  </Field>
+                );
+              })}
+            </div>
+          </PremiumFormPanel>
+        )}
+
+        <PremiumFormPanel
+          id="section-preferences"
+          number={ownFields.length ? '06' : '05'}
           title={m.panelPrefsTitle}
           description={m.panelPrefsDesc}
         >

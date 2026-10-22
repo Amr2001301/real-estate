@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { safePost } from '@/lib/api';
 import { cn } from '@/lib/cn';
+import { FormOverlay, type SignFormField } from '@/components/sign/FormOverlay';
 
 interface Block {
   kind: 'heading' | 'paragraph';
@@ -22,6 +23,8 @@ interface Snapshot {
   amounts: { label: string; value: string; emphasis?: boolean }[];
   clausesTitle: string;
   clauses: Block[];
+  /** The company's own paper form, filled in — shown in place of the sections. */
+  form?: { pages: { imageUrl: string }[]; fields: SignFormField[] };
 }
 
 export interface SignView {
@@ -50,6 +53,7 @@ const T = {
     done: 'تم التوقيع بنجاح',
     doneHint: 'شكراً لك. وصلت نسختك الموقعة إلى الشركة.',
     signedBefore: 'تم توقيع هذا المستند',
+    signHere: 'توقيع العميل هنا',
     closed: { CANCELLED: 'تم إلغاء هذا الرابط. اطلب رابطاً جديداً من الشركة.', EXPIRED: 'انتهت صلاحية هذا الرابط. اطلب رابطاً جديداً من الشركة.' },
     proof: 'رقم التحقق',
     errors: {
@@ -77,6 +81,7 @@ const T = {
     done: 'Signed successfully',
     doneHint: 'Thank you. The company has received your signed copy.',
     signedBefore: 'This document has been signed',
+    signHere: 'Customer signs here',
     closed: { CANCELLED: 'This link was cancelled. Ask the company for a new one.', EXPIRED: 'This link has expired. Ask the company for a new one.' },
     proof: 'Verification no.',
     errors: {
@@ -221,7 +226,12 @@ export function SignFlow({ token, view, locale }: { token: string; view: SignVie
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5">
-      {/* ── The document ── */}
+      {/* ── The document: the company's own form, or the standard layout ── */}
+      {s.form ? (
+        <article data-testid="sign-document" className={card}>
+          <FormOverlay pages={s.form.pages} fields={s.form.fields} signHereLabel={t.signHere} signature={signature} />
+        </article>
+      ) : (
       <article data-testid="sign-document" className={card}>
         <header className="flex flex-col gap-4 border-b-2 pb-4 sm:flex-row sm:items-start sm:justify-between" style={{ borderColor: brand }}>
           <div className="flex min-w-0 items-center gap-3">
@@ -299,6 +309,7 @@ export function SignFlow({ token, view, locale }: { token: string; view: SignVie
           </section>
         )}
       </article>
+      )}
 
       {/* ── Signing ── */}
       <section data-testid="sign-panel" className={card}>

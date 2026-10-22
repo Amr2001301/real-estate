@@ -28,6 +28,8 @@ import type {
 import { formatDate, formatDateTime, formatCurrency, tx } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
+import { getCustomerFields } from '@/lib/customer-fields-server';
+import { FIXED_DETAILS, customValueText, fieldLabel, formatDay } from '@/lib/customer-fields';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -81,7 +83,7 @@ export default async function CustomerDetailPage({
   const m = uiT(locale).pages.customerDetailPage;
   const currency = await getReportsCurrency();
 
-  const [userRes, contractsRes, maintenanceRes, documentsRes] = await Promise.all([
+  const [userRes, contractsRes, maintenanceRes, documentsRes, fields] = await Promise.all([
     safe(api.get<User>(`/users/${id}`)),
     safe(api.get<Paged<Contract>>(`/contracts?customerId=${id}&pageSize=20`)),
     safe(
@@ -94,6 +96,7 @@ export default async function CustomerDetailPage({
         `/documents?ownerType=USER&ownerId=${id}&pageSize=20`,
       ),
     ),
+    getCustomerFields(),
   ]);
 
   if (userRes.error || !userRes.data) {
@@ -255,6 +258,31 @@ export default async function CustomerDetailPage({
                   />
                 </div>
               </div>
+              {/* The rest of what the company records: filled ones only. */}
+              {(() => {
+                const rows = [
+                  ...FIXED_DETAILS.map((d) => {
+                    const v = u[d.key] as string | null | undefined;
+                    return { key: d.key, label: locale === 'en' ? d.en : d.ar, value: 'date' in d && d.date ? formatDay(v, locale) : v };
+                  }),
+                  ...fields.map((f) => ({
+                    key: `custom.${f.key}`,
+                    label: fieldLabel(f, locale),
+                    value: customValueText(f, u.customFields?.[f.key], locale),
+                  })),
+                ].filter((r) => r.value);
+                if (!rows.length) return null;
+                return (
+                  <dl data-testid="customer-details" className="mt-2.5 grid grid-cols-1 gap-x-6 gap-y-2.5 rounded-2xl border border-hairline px-4 py-3.5 sm:grid-cols-2">
+                    {rows.map((r) => (
+                      <div key={r.key} className="flex items-baseline justify-between gap-3 text-[13px]">
+                        <dt className="text-slate-500">{r.label}</dt>
+                        <dd className="font-semibold text-slate-800 text-end">{r.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                );
+              })()}
             </PremiumSectionCard>
 
             <PremiumSectionCard

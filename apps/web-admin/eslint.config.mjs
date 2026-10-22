@@ -25,6 +25,8 @@ const REACT_AND_DOM_GLOBALS = {
   Element: 'readonly',
   Event: 'readonly',
   KeyboardEvent: 'readonly',
+  PointerEvent: 'readonly',
+  DOMRect: 'readonly',
   MouseEvent: 'readonly',
   FocusEvent: 'readonly',
   ChangeEvent: 'readonly',

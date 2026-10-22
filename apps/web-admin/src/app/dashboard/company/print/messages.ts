@@ -56,6 +56,18 @@ const ar = {
     updated: 'آخر تعديل',
     edit: 'تعديل',
   },
+  forms: {
+    title: 'استماراتكم الورقية',
+    hint: 'ارفعوا استمارة الحجز أو إيصال الدفع الخاص بكم (صورة أو PDF) وحددوا مكان كل بيان عليه، فيُطبع بنفس شكله — ويوقّع العميل الاستمارة إلكترونياً عليها.',
+    add: 'استمارة جديدة',
+    newTitle: 'استمارة جديدة',
+    empty: 'لا توجد استمارات — تُطبع استمارة الحجز والإيصال بالتصميم القياسي.',
+    doc: { RESERVATION: 'استمارة الحجز', RECEIPT: 'إيصال الدفع' },
+    paper: { A4: 'A4', A5: 'A5', HALF: 'نص صفحة A4' },
+    // Plain text, not functions: the messages also reach client components.
+    page: ['صفحة', 'صفحة'],
+    field: ['خانة', 'خانة'],
+  },
   editor: {
     newTitle: 'نموذج صياغة جديد',
     editTitle: 'تعديل نموذج الصياغة',
@@ -133,6 +145,17 @@ const en: typeof ar = {
     variant: { ANY: 'Any sale', CASH: 'Cash sale', INSTALLMENT: 'Instalment sale' },
     updated: 'Updated',
     edit: 'Edit',
+  },
+  forms: {
+    title: 'Your paper forms',
+    hint: 'Upload your booking form or payment receipt (an image or a PDF) and mark where each value goes; it then prints exactly as your paper — and the customer signs the booking form online on it.',
+    add: 'New form',
+    newTitle: 'New form',
+    empty: 'No forms yet — booking forms and receipts print with the standard layout.',
+    doc: { RESERVATION: 'Booking form', RECEIPT: 'Payment receipt' },
+    paper: { A4: 'A4', A5: 'A5', HALF: 'Half A4' },
+    page: ['page', 'pages'],
+    field: ['field', 'fields'],
   },
   editor: {
     newTitle: 'New wording',

@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { unstable_rethrow } from 'next/navigation';
-import { FileSignature, Plus, Star } from 'lucide-react';
+import { FileImage, FileSignature, Plus, Star } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { DEFAULT_PRINT_SETTINGS, type DocumentTemplate, type PrintSettings } from '@/lib/print-settings';
+import type { FormLayout } from '@/lib/form-layout';
 import { PremiumPageHero } from '@/components/premium';
 import { printSettingsT } from './messages';
 import { PrintSettingsForm } from './_components/print-settings-form';
@@ -21,9 +22,10 @@ async function load<T>(path: string, fallback: T): Promise<T> {
 }
 
 export default async function PrintSettingsPage() {
-  const [settings, templates, locale] = await Promise.all([
+  const [settings, templates, forms, locale] = await Promise.all([
     load<PrintSettings>('/company/print-settings', DEFAULT_PRINT_SETTINGS),
     load<DocumentTemplate[]>('/document-templates', []),
+    load<FormLayout[]>('/form-layouts', []),
     getLocale(),
   ]);
   const m = printSettingsT(locale);
@@ -37,6 +39,65 @@ export default async function PrintSettingsPage() {
       />
 
       <PrintSettingsForm initial={settings} m={m} />
+
+      {/* ── The company's own paper forms ── */}
+      <section
+        data-testid="form-layouts"
+        className="rounded-[22px] border border-hairline bg-surface p-6 shadow-[0_18px_40px_-30px_rgb(20_26_38/0.35)]"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="font-heading text-[17px] font-bold text-slate-900">{m.forms.title}</h2>
+            <p className="mt-1 max-w-2xl text-[12.5px] leading-relaxed text-slate-500">{m.forms.hint}</p>
+          </div>
+          <Link
+            href="/dashboard/company/print/forms/new"
+            data-testid="form-new"
+            className="inline-flex h-10 shrink-0 items-center gap-1.5 self-start rounded-full bg-navy-band px-5 text-[12.5px] font-semibold text-[#F4ECD8]"
+          >
+            <Plus className="h-4 w-4" />
+            {m.forms.add}
+          </Link>
+        </div>
+        {forms.length === 0 ? (
+          <p className="mt-5 rounded-2xl border border-dashed border-hairline px-6 py-8 text-center text-[13px] text-slate-500">{m.forms.empty}</p>
+        ) : (
+          <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {forms.map((f) => (
+              <li key={f.id}>
+                <Link
+                  href={`/dashboard/company/print/forms/${f.id}`}
+                  data-testid="form-row"
+                  className="group flex gap-3 rounded-2xl border border-hairline p-3 transition-colors hover:border-[#C9A24E]/50"
+                >
+                  <span className="relative h-24 w-[68px] shrink-0 overflow-hidden rounded-md bg-surface-muted ring-1 ring-hairline">
+                    {f.pages[0] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={f.pages[0].imageUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <FileImage className="m-auto h-5 w-5 text-slate-300" />
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1 py-1">
+                    <span className="flex items-center gap-2">
+                      <span className="truncate text-[14px] font-bold text-slate-900 group-hover:text-brand-700">{f.name}</span>
+                      {f.isDefault && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700 ring-1 ring-inset ring-brand-400/30">
+                          <Star className="h-3 w-3" />
+                          {m.templates.default}
+                        </span>
+                      )}
+                    </span>
+                    <span className="mt-1 block text-[12px] text-slate-500">
+                      {m.forms.doc[f.documentType]} · {m.forms.paper[f.paperSize]} · {f.pages.length} {m.forms.page[f.pages.length === 1 ? 0 : 1]} · {f.fields.length} {m.forms.field[f.fields.length === 1 ? 0 : 1]}
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {/* ── Wording ── */}
       <section

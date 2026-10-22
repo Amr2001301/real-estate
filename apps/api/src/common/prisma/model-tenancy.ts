@@ -109,6 +109,10 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   DocumentTemplate: 'TENANT_OWNED',
   // P5 — a customer's electronic signature on a document.
   SignatureRequest: 'TENANT_OWNED',
+  // The company's own customer fields.
+  CustomerField: 'TENANT_OWNED',
+  // P4b — the company's own paper form.
+  FormLayout: 'TENANT_OWNED',
   UnitStatusHistory: 'TENANT_OWNED',
   UnitMaintenanceItem: 'TENANT_OWNED',
 

@@ -9,6 +9,8 @@ export interface TemplateSwitcher {
   label: string;
   current: string;
   options: { id: string; name: string }[];
+  /** The URL parameter it sets (default `template`). */
+  param?: string;
 }
 
 /** Screen-only bar above a printed document; opens the print dialog on load. */
@@ -27,8 +29,8 @@ export function PrintToolbar({
 }) {
   const router = useRouter();
   const params = useSearchParams();
-  // Opens the print dialog on load — not again after choosing another wording.
-  const chosen = params.has('template');
+  // Opens the print dialog on load — not again after choosing another wording or form.
+  const chosen = params.has('template') || params.has('form');
   useEffect(() => {
     if (chosen) return;
     const t = setTimeout(() => window.print(), 600);
@@ -51,7 +53,7 @@ export function PrintToolbar({
                 value={switcher.current}
                 onChange={(e) => {
                   const next = new URLSearchParams(params.toString());
-                  next.set('template', e.target.value);
+                  next.set(switcher.param ?? 'template', e.target.value);
                   router.replace(`?${next.toString()}`);
                 }}
                 className="h-9 rounded-lg border border-white/20 bg-slate-800 px-2 text-[12.5px] text-white"

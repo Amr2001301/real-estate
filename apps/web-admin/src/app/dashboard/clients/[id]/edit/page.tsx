@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { api, safe } from '@/lib/api';
 import type { User } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
+import { getCustomerFields } from '@/lib/customer-fields-server';
 import { uiT } from '@/messages/ui';
 import ClientForm from '../../_form';
 
@@ -13,9 +14,10 @@ export default async function EditClientPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [r, locale] = await Promise.all([
+  const [r, locale, fields] = await Promise.all([
     safe(api.get<User>(`/users/${id}`)),
     getLocale(),
+    getCustomerFields(),
   ]);
   const m = uiT(locale);
   const n = m.pages.clientsEdit;
@@ -58,7 +60,7 @@ export default async function EditClientPage({
           </div>
         </div>
       </div>
-      <ClientForm user={user} locale={locale} />
+      <ClientForm user={user} locale={locale} fields={fields} />
     </div>
   );
 }
