@@ -249,8 +249,10 @@ const UI = {
           healthTitle: 'الصحة المالية',
           healthSub: 'توزيع قيمة التعاقدات حسب حالة التحصيل',
           health: {
-            ofValue: 'محصّل من قيمة العقود',
-            collected: 'محصّل',
+            ofValue: 'مسدد من قيمة العقود',
+            // Rows paid (a pre-system contract's included), as the report's
+            // split — not the money received this period, the tile above.
+            collected: 'المسدد',
             notYetDue: 'لم يحن موعده',
             overdue: 'متأخر',
             fees: 'رسوم وغرامات محصّلة',
@@ -5571,7 +5573,7 @@ const UI = {
         contractCount: 'عدد العقود',
         depositCount: 'عدد الدفعات',
         overdueCount: 'أقساط متأخرة',
-        netCollected: 'صافي المحصّل بعد المستردات',
+        netCollected: 'صافي النقدية (كل المحصّل − المسترد)',
         refundsPaid: 'مستردات صُرفت',
         refundsOwed: 'مستردات مستحقة للعملاء',
       },
@@ -6138,8 +6140,8 @@ const UI = {
           healthTitle: 'Financial health',
           healthSub: 'Contract value by collection status',
           health: {
-            ofValue: 'Collected of contract value',
-            collected: 'Collected',
+            ofValue: 'Paid of contract value',
+            collected: 'Paid',
             notYetDue: 'Not yet due',
             overdue: 'Overdue',
             fees: 'Fees & penalties collected',
@@ -11454,7 +11456,7 @@ const UI = {
         contractCount: 'Contracts',
         depositCount: 'Payments',
         overdueCount: 'Overdue Installments',
-        netCollected: 'Collected net of refunds',
+        netCollected: 'Net cash (all collected − refunds)',
         refundsPaid: 'Refunds paid',
         refundsOwed: 'Refunds owed to customers',
       },

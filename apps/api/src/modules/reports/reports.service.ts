@@ -83,6 +83,7 @@ import {
   BILLABLE_PLAN_WHERE,
   LIVE_CONTRACT_WHERE,
   LIVE_PLAN_WHERE,
+  PAYABLE_DEAL_WHERE,
   PAYMENT_ON_ITS_WAY,
   SURCHARGE_PAYMENT_TYPES,
 } from '../installments/live-contract';
@@ -428,7 +429,14 @@ export class ReportsService {
       ...LIVE_PLAN_WHERE,
       contract: { ...LIVE_CONTRACT_WHERE, signedAt: { not: null } },
     } satisfies Prisma.InstallmentPlanWhereInput;
-    const signedContractWhere: Prisma.ContractWhereInput = { signedAt: { not: null }, ...LIVE_CONTRACT_WHERE };
+    // The company is named here, not left to the tenant middleware: reached
+    // through a relation (a reservation's contract, in the booking sums) the
+    // contract is not scoped, and another company's contracts got counted.
+    const signedContractWhere: Prisma.ContractWhereInput = {
+      companyId: getRequiredCompanyId(),
+      signedAt: { not: null },
+      ...LIVE_CONTRACT_WHERE,
+    };
     // Late: past its due day, nothing on its way — not only what the nightly
     // sweep has marked (the dashboard read 144k late where the report read 1.27m).
     const lateWhere: Prisma.InstallmentWhereInput = {
@@ -924,7 +932,8 @@ export class ReportsService {
                   select: {
                     status: true,
                     contracts: {
-                      where: { signedAt: { not: null }, ...LIVE_CONTRACT_WHERE },
+                      // Named: a relation read is not scoped by the middleware.
+                      where: { companyId: getRequiredCompanyId(), signedAt: { not: null }, ...LIVE_CONTRACT_WHERE },
                       select: { totalAmount: true, markupWaived: true, reservation: { select: MARKUP_SNAPSHOT_SELECT } },
                     },
                   },
@@ -1637,7 +1646,10 @@ export class ReportsService {
     // Decisions of 2026-10-17: contract value is signed contracts at their net
     // price; the collection rate is collected against what is due by today
     // (the booking and the rows due up to today), as on the dashboard.
-    const signedContractWhere: Prisma.ContractWhereInput = { AND: [contractWhere, { signedAt: { not: null } }] };
+    // The company named, as on the dashboard: relation filters are not scoped.
+    const signedContractWhere: Prisma.ContractWhereInput = {
+      AND: [contractWhere, { signedAt: { not: null }, companyId: getRequiredCompanyId() }],
+    };
     const [totalContractValue, dueSplit] = await Promise.all([
       netContractValue(this.prisma, signedContractWhere),
       dueToDateSplit(this.prisma, { signedContractWhere, instWhere, today: todayUTC }),
@@ -1724,9 +1736,16 @@ export class ReportsService {
           }
         : {};
 
+    // Owed and payable are on a deal still payable (or kept with RETAIN): a
+    // deal cancelled with MANUAL left its commission APPROVED, and it was
+    // counted as a liability no report or payout would ever pay.
+    const payableBonus: Prisma.BonusEntryWhereInput = {
+      OR: [{ contractId: null }, { contract: LIVE_CONTRACT_WHERE }, { retainedOnCancellation: true }],
+    };
     const bonusWhere = (status: BonusEntryStatus): Prisma.BonusEntryWhereInput => ({
       status,
       ...dateRange('createdAt'),
+      ...(status === BonusEntryStatus.PAID ? {} : payableBonus),
     });
     const bcBase: Prisma.BrokerCommissionWhereInput = {
       ...(opts.projectId ? { projectId: opts.projectId } : {}),
@@ -1738,7 +1757,7 @@ export class ReportsService {
     // "Unpaid" broker commission = APPROVED and not settled through a PAID payout.
     const bcUnpaidStatus: Prisma.BrokerCommissionWhereInput = {
       status: BrokerCommissionStatus.APPROVED,
-      OR: [{ payoutId: null }, { payout: { status: { not: BrokerPayoutStatus.PAID } } }],
+      AND: [PAYABLE_DEAL_WHERE, { OR: [{ payoutId: null }, { payout: { status: { not: BrokerPayoutStatus.PAID } } }] }],
     };
     const bcPaidStatus: Prisma.BrokerCommissionWhereInput = {
       status: BrokerCommissionStatus.APPROVED,
@@ -1758,8 +1777,8 @@ export class ReportsService {
       this.prisma.bonusEntry.aggregate({ where: bonusWhere(BonusEntryStatus.PENDING), _sum: { amount: true }, _count: { _all: true } }),
       this.prisma.bonusEntry.aggregate({ where: bonusWhere(BonusEntryStatus.APPROVED), _sum: { amount: true }, _count: { _all: true } }),
       this.prisma.bonusEntry.aggregate({ where: bonusWhere(BonusEntryStatus.PAID), _sum: { amount: true }, _count: { _all: true } }),
-      this.prisma.brokerCommission.aggregate({ where: bcWhere({ status: BrokerCommissionStatus.PENDING }), _sum: { netAmount: true }, _count: { _all: true } }),
-      this.prisma.brokerCommission.aggregate({ where: bcWhere({ status: BrokerCommissionStatus.APPROVED }), _sum: { netAmount: true }, _count: { _all: true } }),
+      this.prisma.brokerCommission.aggregate({ where: bcWhere({ status: BrokerCommissionStatus.PENDING, ...PAYABLE_DEAL_WHERE }), _sum: { netAmount: true }, _count: { _all: true } }),
+      this.prisma.brokerCommission.aggregate({ where: bcWhere({ status: BrokerCommissionStatus.APPROVED, ...PAYABLE_DEAL_WHERE }), _sum: { netAmount: true }, _count: { _all: true } }),
       this.prisma.brokerCommission.aggregate({ where: bcWhere(bcPaidStatus), _sum: { netAmount: true }, _count: { _all: true } }),
       this.prisma.brokerCommission.aggregate({ where: bcWhere(bcUnpaidStatus), _sum: { netAmount: true }, _count: { _all: true } }),
       this.prisma.brokerPayout.groupBy({
@@ -2482,7 +2501,7 @@ export class ReportsService {
       ['collectedThisMonth', 'المحصّل هذا الشهر', s.collectedThisMonth],
       ['refundsPaid', 'المستردات المصروفة', s.refundsPaid],
       ['refundsOwed', 'المستردات المستحقة للعملاء', s.refundsOwed],
-      ['netCollected', 'صافي المحصّل بعد المستردات', s.netCollected],
+      ['netCollected', 'صافي النقدية (كل المحصّل − المسترد)', s.netCollected],
       ['dueThisMonth', 'المستحق هذا الشهر', s.dueThisMonth],
       ['contractCount', 'عدد العقود', s.contractCount],
       ['depositCount', 'عدد الدفعات', s.depositCount],
@@ -2741,7 +2760,7 @@ export class ReportsService {
         { label: 'المتبقي للتحصيل', value: Number(s.totalOutstanding), currency },
         { label: 'المحصّل هذا الشهر', value: Number(s.collectedThisMonth), currency },
         { label: 'المستحق هذا الشهر', value: Number(s.dueThisMonth), currency },
-        { label: 'صافي المحصّل بعد المستردات', value: Number(s.netCollected), currency },
+        { label: 'صافي النقدية (كل المحصّل − المسترد)', value: Number(s.netCollected), currency },
         { label: 'المستردات المستحقة للعملاء', value: Number(s.refundsOwed), currency },
         { label: 'عدد العقود', value: s.contractCount },
         { label: 'عدد الدفعات', value: s.depositCount },

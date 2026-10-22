@@ -192,12 +192,12 @@ export default async function FinancialReportsPage({
   ];
 
   // Comparison deltas
-  const contractDelta  = cmpS ? computeDelta(contractVal,   num(cmpS.totalContractValue))                         : undefined;
+  // Contract value, what is left and what is late are as of today, whatever
+  // the period: compared with another period they always read 0% — only the
+  // money collected in the period is compared.
   const collectedDelta = cmpS
     ? computeDelta(towardsPrice, num(cmpS.collectedTowardsPrice ?? cmpS.totalCollectedVerified ?? cmpS.totalCollected))
     : undefined;
-  const outstandDelta  = cmpS ? computeDelta(outstanding,   num(cmpS.totalOutstanding ?? cmpS.totalRemaining))    : undefined;
-  const overdueDelta   = cmpS ? computeDelta(overdueAmt,    num(cmpS.overdueAmountComputed ?? cmpS.totalOverdue)) : undefined;
 
   const aging    = dash?.aging   ?? [];
   const forecast = dash?.cashflowForecast;
@@ -420,7 +420,6 @@ export default async function FinancialReportsPage({
           label={m.kpi.contractValue}
           value={<Amount value={contractVal} sign={currencySign} locale={locale} />}
           sub={m.kpi.contractValueSub(contractCount, depositCount)}
-          delta={contractDelta}
         />
         <FigureCard
           testId="fin-kpi-outstanding"
@@ -428,7 +427,6 @@ export default async function FinancialReportsPage({
           label={m.kpi.outstanding}
           value={<Amount value={outstanding} sign={currencySign} locale={locale} />}
           sub={m.kpi.outstandingSub(cmoney(dueSoon))}
-          delta={outstandDelta}
           upIsBad
         />
         <FigureCard
@@ -438,7 +436,6 @@ export default async function FinancialReportsPage({
           label={m.kpi.overdue}
           value={<Amount value={overdueAmt} sign={currencySign} locale={locale} />}
           sub={m.kpi.overdueSub(overdueCount, overdueRate)}
-          delta={overdueDelta}
           upIsBad
         />
       </div>

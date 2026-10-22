@@ -74,19 +74,28 @@ export const AWAITING_DEPOSIT_WHERE = {
 /**
  * Decided 2026-10-16: "collected" is shown as two figures.
  *
- * Towards the price — the money paid against the price of live contracts:
+ * Towards the price — the money paid against the price of signed live contracts:
  * their down payment, booking and installments. Not fee payments (late fee,
  * transfer fee, cheque penalty), not deposits on cancelled deals, not
  * bookings that never became a contract. The collection rate is this over
  * the contracts' value (measured against everything collected it could pass
  * 100%). Combine with COLLECTED_DEPOSIT_WHERE.
  */
+const SIGNED_LIVE_CONTRACT = { ...LIVE_CONTRACT_WHERE, signedAt: { not: null } } satisfies Prisma.ContractWhereInput;
+
+// Signed contracts only, as the contract value and what is due (decided
+// 2026-10-17): an unsigned contract's booking was in "collected" but its
+// price and its dues were not.
 export const TOWARDS_PRICE_DEPOSIT_WHERE = {
   type: { not: DepositType.FEE },
   OR: [
-    { installmentId: null, contract: { is: LIVE_CONTRACT_WHERE } },
-    { installment: { is: { type: { notIn: SURCHARGE_PAYMENT_TYPES }, plan: LIVE_PLAN_WHERE } } },
-    { installmentId: null, contractId: null, reservation: { is: { contract: { is: LIVE_CONTRACT_WHERE } } } },
+    { installmentId: null, contract: { is: SIGNED_LIVE_CONTRACT } },
+    {
+      installment: {
+        is: { type: { notIn: SURCHARGE_PAYMENT_TYPES }, plan: { ...LIVE_PLAN_WHERE, contract: SIGNED_LIVE_CONTRACT } },
+      },
+    },
+    { installmentId: null, contractId: null, reservation: { is: { contract: { is: SIGNED_LIVE_CONTRACT } } } },
   ],
 } satisfies Prisma.DepositWhereInput;
 
