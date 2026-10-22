@@ -109,16 +109,18 @@ async function refreshAdminSession(): Promise<boolean> {
 
 async function doFetch(path: string, token: string | undefined, opts: ApiOptions): Promise<Response> {
   const { noAuth, headers, body, flatten, ...init } = opts;
+  // A file upload goes as multipart; fetch sets its boundary.
+  const form = body instanceof FormData;
   try {
     return await fetch(`${API_BASE}/v1${path}`, {
       ...init,
       headers: {
-        'Content-Type': 'application/json',
+        ...(form ? {} : { 'Content-Type': 'application/json' }),
         ...(noAuth || !token ? {} : { Authorization: `Bearer ${token}` }),
         ...(flatten ? {} : { 'X-Raw-Translatable': '1' }),
         ...headers,
       },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: form ? body : body !== undefined ? JSON.stringify(body) : undefined,
       cache: 'no-store',
     });
   } catch (e) {

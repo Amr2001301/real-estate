@@ -48,10 +48,12 @@ export type AllowedMediaMimeType = (typeof ALLOWED_MEDIA_MIME_TYPES)[number];
 // logo    — raster only; max 512 KB
 // favicon — raster only; max 128 KB
 // og      — raster only (Open Graph crawlers don't render SVG); max 1 MB
+// letterhead — the company's printed paper (header, footer or whole page); max 2 MB
 const BRANDING_ASSET_POLICY = {
   logo:    { maxBytes: 512 * 1024,       allowedMimes: new Set(['image/jpeg', 'image/png', 'image/webp']) },
   favicon: { maxBytes: 128 * 1024,       allowedMimes: new Set(['image/jpeg', 'image/png', 'image/webp']) },
   og:      { maxBytes: 1 * 1024 * 1024,  allowedMimes: new Set(['image/jpeg', 'image/png', 'image/webp']) },
+  letterhead: { maxBytes: 2 * 1024 * 1024, allowedMimes: new Set(['image/jpeg', 'image/png', 'image/webp']) },
 } as const;
 
 type BrandingAsset = keyof typeof BRANDING_ASSET_POLICY;
@@ -76,7 +78,7 @@ class CreatePresignedDto {
   // Required when folder==='branding'; ignored otherwise.
   // Drives per-asset MIME allowlist and size cap (see BRANDING_ASSET_POLICY).
   @ValidateIf((o: CreatePresignedDto) => o.folder === 'branding')
-  @IsIn(['logo', 'favicon', 'og'])
+  @IsIn(['logo', 'favicon', 'og', 'letterhead'])
   brandingAsset?: BrandingAsset;
 }
 

@@ -42,6 +42,8 @@ export const TENANT_SCOPED_MODELS_LEGACY = new Set([
   'unithandover', // the unit handed over to the buyer (warranty + maintenance start)
   'unittype', // the company's unit types (F10)
   'unitmodel', // a project's unit models (F10)
+  'printsettings', // the company's paper, signature and stamp (P4)
+  'documenttemplate', // the wording of its contracts and booking forms (P4)
   // Chat
   'chatsession', 'chatmessage', 'chatfeedback',
   // Option B part 2 (docs/audit/13-user-tenancy.md): TENANT_CONTROLLED → TENANT_OWNED

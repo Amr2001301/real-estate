@@ -2,8 +2,10 @@ import type { CSSProperties, ReactNode } from 'react';
 import { tx } from '@/lib/format';
 import type { Letterhead } from '@/lib/letterhead';
 import type { Locale } from '@/lib/locale';
+import type { PrintSettings, Seal } from '@/lib/print-settings';
+import type { TemplateBlock } from '@/lib/document-template';
 import { printT } from '@/messages/print';
-import { PrintToolbar } from './PrintToolbar';
+import { PrintToolbar, type TemplateSwitcher } from './PrintToolbar';
 
 // A4 company documents: letterhead from the company branding (logo, colours,
 // contact, commercial registration), amounts in the company currency, text in
@@ -74,6 +76,8 @@ export function PrintDocument({
   status,
   watermark,
   note,
+  paper,
+  switcher,
   children,
 }: {
   letterhead: Letterhead;
@@ -87,9 +91,16 @@ export function PrintDocument({
   /** Large faint word across every page — for void / cancelled documents. */
   watermark?: string;
   note?: string;
+  /** The company's own paper and margins; the platform's letterhead without. */
+  paper?: PrintSettings;
+  /** Choose the wording the document prints with. */
+  switcher?: TemplateSwitcher;
   children: ReactNode;
 }) {
   const t = printT(locale).common;
+  // On its own letterhead the company's paper carries its name and contact,
+  // so the platform's header and footer step aside.
+  const ownPaper = !!paper && paper.letterheadMode !== 'BUILT_IN';
   const company = companyNameOf(letterhead, locale);
   const tagline = text(letterhead.tagline, locale);
   const address = text(letterhead.contactAddress, locale);
@@ -107,7 +118,11 @@ export function PrintDocument({
 
   return (
     <div style={brand} className="min-h-screen bg-slate-100 print:bg-white">
-      <PrintToolbar title={title} printLabel={t.print} closeLabel={t.close} hint={t.hint} />
+      <PrintToolbar title={title} printLabel={t.print} closeLabel={t.close} hint={t.hint} switcher={switcher} />
+      {ownPaper && (
+        // The paper fills the sheet edge to edge; its margins are the text's own.
+        <style>{`@media print { @page { size: A4; margin: 0; } }`}</style>
+      )}
 
       {watermark && (
         <div
@@ -124,11 +139,18 @@ export function PrintDocument({
       <div className="px-3 pb-10 pt-20 print:p-0">
         <article
           data-testid="print-document"
-          className="relative z-10 mx-auto max-w-[210mm] bg-white px-[16mm] py-[14mm] shadow-xl ring-1 ring-slate-200 print:max-w-none print:p-0 print:shadow-none print:ring-0"
+          className={
+            ownPaper
+              ? 'relative z-10 mx-auto min-h-[297mm] w-full max-w-[210mm] overflow-hidden bg-white shadow-xl ring-1 ring-slate-200 print:min-h-0 print:max-w-none print:overflow-visible print:shadow-none print:ring-0'
+              : 'relative z-10 mx-auto max-w-[210mm] bg-white px-[16mm] py-[14mm] shadow-xl ring-1 ring-slate-200 print:max-w-none print:p-0 print:shadow-none print:ring-0'
+          }
+          style={ownPaper ? { paddingInline: `${paper!.marginSideMm}mm` } : undefined}
         >
+          {ownPaper && <PaperImages paper={paper!} />}
+          <PaperFrame paper={ownPaper ? paper! : null}>
           {/* ── Letterhead ── */}
           <header className="flex items-start justify-between gap-6">
-            <div className="flex min-w-0 items-center gap-4">
+            <div className={`min-w-0 items-center gap-4 ${ownPaper ? 'hidden' : 'flex'}`}>
               {letterhead.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -205,6 +227,9 @@ export function PrintDocument({
           )}
 
           {/* ── Footer ── */}
+          {ownPaper ? (
+            <div className="mt-8 text-[10px] text-slate-400">{t.generated(date)}</div>
+          ) : (
           <footer className="mt-10 border-t border-slate-200 pt-3 text-[10.5px] text-slate-500">
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
               <span className="font-semibold" style={{ color: 'var(--brand)' }}>{company}</span>
@@ -219,9 +244,78 @@ export function PrintDocument({
             </div>
             <div className="mt-1.5 text-slate-400">{t.generated(date)}</div>
           </footer>
+          )}
+          </PaperFrame>
         </article>
       </div>
     </div>
+  );
+}
+
+/**
+ * The company's paper: a header and footer, or one whole-page image, on every
+ * printed page (fixed elements repeat on each page in print). On screen they
+ * sit on the first sheet.
+ */
+function PaperImages({ paper }: { paper: PrintSettings }) {
+  /* eslint-disable @next/next/no-img-element */
+  if (paper.letterheadMode === 'FULL_PAGE' && paper.pageImageUrl) {
+    return (
+      <img
+        src={paper.pageImageUrl}
+        alt=""
+        data-testid="print-paper"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[297mm] w-full object-fill print:fixed"
+      />
+    );
+  }
+  return (
+    <>
+      {paper.headerImageUrl && (
+        <img
+          src={paper.headerImageUrl}
+          alt=""
+          data-testid="print-paper"
+          className="pointer-events-none absolute inset-x-0 top-0 w-full print:fixed"
+        />
+      )}
+      {paper.footerImageUrl && (
+        <img
+          src={paper.footerImageUrl}
+          alt=""
+          className="pointer-events-none absolute inset-x-0 bottom-0 w-full print:fixed"
+        />
+      )}
+    </>
+  );
+  /* eslint-enable @next/next/no-img-element */
+}
+
+/**
+ * Keeps the text inside the paper's margins on every page: a table's header
+ * and footer rows repeat on each printed page, so their height is the space
+ * the paper's own header and footer take.
+ */
+function PaperFrame({ paper, children }: { paper: PrintSettings | null; children: ReactNode }) {
+  if (!paper) return <>{children}</>;
+  return (
+    <table className="relative w-full border-collapse">
+      <thead>
+        <tr>
+          <td style={{ height: `${paper.marginTopMm}mm`, padding: 0 }} />
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style={{ padding: 0 }}>{children}</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td style={{ height: `${paper.marginBottomMm}mm`, padding: 0 }} />
+        </tr>
+      </tfoot>
+    </table>
   );
 }
 
@@ -408,30 +502,90 @@ export function PrintTable({
 export function PrintSignatures({
   locale,
   parties,
+  seal,
 }: {
   locale: Locale;
-  parties: { role: string; name: string }[];
+  /** `company` marks the party the company's signature goes on. */
+  parties: { role: string; name: string; company?: boolean }[];
+  /** The company's signature and stamp, on its final documents. */
+  seal?: Seal | null;
 }) {
   const t = printT(locale).common;
   return (
-    <section className="mt-12 grid break-inside-avoid grid-cols-3 gap-6">
-      {parties.map((p) => (
-        <div key={p.role}>
-          <div className="text-xs font-bold" style={{ color: 'var(--brand)' }}>{p.role}</div>
-          <div className="mt-1 text-xs text-slate-500">
-            {t.name}: <span className="text-slate-800">{p.name}</span>
+    <section data-testid="print-signatures" className="mt-12 grid break-inside-avoid grid-cols-3 gap-6">
+      {parties.map((p) => {
+        const sealed = p.company && seal;
+        return (
+          <div key={p.role}>
+            <div className="text-xs font-bold" style={{ color: 'var(--brand)' }}>{p.role}</div>
+            <div className="mt-1 text-xs text-slate-500">
+              {t.name}: <span className="text-slate-800">{(sealed && seal.name) || p.name}</span>
+            </div>
+            {sealed && seal.title && (
+              <div className="mt-0.5 text-xs text-slate-500">
+                {t.title}: <span className="text-slate-800">{seal.title}</span>
+              </div>
+            )}
+            {sealed && seal.signature ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={seal.signature}
+                alt={t.signature}
+                data-testid="print-signature"
+                className="-mb-2 mt-1 h-14 max-w-[150px] object-contain mix-blend-multiply"
+              />
+            ) : (
+              <div className="mt-8" />
+            )}
+            <div className="border-b border-dashed border-slate-300" />
+            <div className="mt-1 text-[10px] text-slate-400">{t.signature}</div>
+            <div className="mt-5 border-b border-dashed border-slate-300" />
+            <div className="mt-1 text-[10px] text-slate-400">{t.date}</div>
           </div>
-          <div className="mt-8 border-b border-dashed border-slate-300" />
-          <div className="mt-1 text-[10px] text-slate-400">{t.signature}</div>
-          <div className="mt-5 border-b border-dashed border-slate-300" />
-          <div className="mt-1 text-[10px] text-slate-400">{t.date}</div>
-        </div>
-      ))}
+        );
+      })}
       <div className="flex items-center justify-center">
-        <div className="flex h-28 w-28 items-center justify-center rounded-full border-2 border-dashed border-slate-300 text-center text-[10px] text-slate-400">
-          {t.stamp}
-        </div>
+        {seal?.stamp ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={seal.stamp}
+            alt={t.stamp}
+            data-testid="print-stamp"
+            className="h-32 w-32 -rotate-6 object-contain opacity-90 mix-blend-multiply"
+          />
+        ) : (
+          <div className="flex h-28 w-28 items-center justify-center rounded-full border-2 border-dashed border-slate-300 text-center text-[10px] text-slate-400">
+            {t.stamp}
+          </div>
+        )}
       </div>
     </section>
+  );
+}
+
+/** The document's wording (a company template), with its values filled in. */
+export function PrintClauses({ title, blocks }: { title: string; blocks: TemplateBlock[] }) {
+  if (!blocks.length) return null;
+  return (
+    <PrintSection title={title}>
+      <div data-testid="print-clauses" className="space-y-3 text-[12.5px] leading-[1.9] text-slate-800">
+        {blocks.map((b, i) =>
+          b.kind === 'heading' ? (
+            <h3 key={i} className="break-after-avoid pt-2 text-[13px] font-bold" style={{ color: 'var(--brand)' }}>
+              {b.text}
+            </h3>
+          ) : (
+            <p key={i} className="text-justify">
+              {b.lines.map((l, j) => (
+                <span key={j}>
+                  {j > 0 && <br />}
+                  {l}
+                </span>
+              ))}
+            </p>
+          ),
+        )}
+      </div>
+    </PrintSection>
   );
 }

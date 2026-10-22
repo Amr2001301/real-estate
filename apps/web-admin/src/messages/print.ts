@@ -26,6 +26,11 @@ const ar = {
     months: (n: number) => `${n.toLocaleString('ar-EG-u-nu-latn')} شهر`,
     sqm: 'م²',
     generated: (date: string) => `صدر هذا المستند إلكترونيًا بتاريخ ${date}.`,
+    title: 'الصفة',
+    companySignature: 'توقيع الشركة',
+    clauses: 'البنود والشروط',
+    template: 'نموذج الصياغة',
+    noTemplate: 'بدون بنود',
   },
 
   contract: {
@@ -71,7 +76,7 @@ const ar = {
       MONTHLY: 'شهري',
       QUARTERLY: 'ربع سنوي',
       SEMI_ANNUAL: 'نصف سنوي',
-      ANNUAL: 'سنوي',
+      YEARLY: 'سنوي',
     } as Record<string, string>,
     cols: { no: '#', due: 'تاريخ الاستحقاق', amount: 'المبلغ', status: 'الحالة' },
     installmentStatus: {
@@ -210,6 +215,11 @@ const en: PrintMessages = {
     months: (n: number) => `${n} ${n === 1 ? 'month' : 'months'}`,
     sqm: 'm²',
     generated: (date: string) => `This document was issued electronically on ${date}.`,
+    title: 'Title',
+    companySignature: 'For the company',
+    clauses: 'Terms and conditions',
+    template: 'Wording',
+    noTemplate: 'No terms',
   },
 
   contract: {
@@ -255,7 +265,7 @@ const en: PrintMessages = {
       MONTHLY: 'Monthly',
       QUARTERLY: 'Quarterly',
       SEMI_ANNUAL: 'Semi-annual',
-      ANNUAL: 'Annual',
+      YEARLY: 'Annual',
     },
     cols: { no: '#', due: 'Due date', amount: 'Amount', status: 'Status' },
     installmentStatus: {

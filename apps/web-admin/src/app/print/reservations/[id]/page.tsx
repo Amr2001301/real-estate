@@ -3,11 +3,15 @@ import { api, safe } from '@/lib/api';
 import { formatDate, tx } from '@/lib/format';
 import { getLetterhead } from '@/lib/letterhead';
 import { getLocale } from '@/lib/locale';
+import { getDocumentTemplates, getPrintSettings, pickTemplate, sealFor } from '@/lib/print-settings';
+import { reservationValues } from '@/lib/document-values';
+import { renderTemplate } from '@/lib/document-template';
 import { periodicInstallmentLabel } from '@/lib/installment-frequency';
 import type { Reservation } from '@/lib/types';
 import { printT } from '@/messages/print';
 import {
   PrintAmounts,
+  PrintClauses,
   PrintDocument,
   PrintFields,
   PrintSection,
@@ -34,13 +38,18 @@ const STATUS_TONE: Record<string, PrintTone> = {
 /** Statuses after which the slip no longer holds the unit. */
 const VOID = new Set(['REJECTED', 'CANCELLED', 'EXPIRED']);
 
-export default async function ReservationPrintPage({ params }: { params: Params }) {
-  const { id } = await params;
+type Search = Promise<{ template?: string }>;
 
-  const [resResult, letterhead, locale] = await Promise.all([
+export default async function ReservationPrintPage({ params, searchParams }: { params: Params; searchParams: Search }) {
+  const { id } = await params;
+  const { template: requested } = await searchParams;
+
+  const [resResult, letterhead, locale, paper, templates] = await Promise.all([
     safe(api.get<Reservation>(`/reservations/${id}`)),
     getLetterhead(),
     getLocale(),
+    getPrintSettings(),
+    getDocumentTemplates('RESERVATION'),
   ]);
 
   if (resResult.error || !resResult.data) notFound();
@@ -56,6 +65,10 @@ export default async function ReservationPrintPage({ params }: { params: Params 
   const building = r.unit?.building;
   const project = building?.phase?.project;
   const statusLabel = m.status[r.status] ?? r.status;
+  // The company's booking terms, and its signature and stamp once approved.
+  const template = pickTemplate(templates, null, requested);
+  const clauses = template ? renderTemplate(template.body, reservationValues(r, letterhead, paper, locale)) : [];
+  const seal = sealFor(paper, 'RESERVATION', r.status === 'APPROVED' || r.status === 'CONVERTED');
 
   return (
     <PrintDocument
@@ -68,6 +81,16 @@ export default async function ReservationPrintPage({ params }: { params: Params 
       status={{ label: statusLabel, tone: STATUS_TONE[r.status] ?? 'neutral' }}
       watermark={VOID.has(r.status) ? statusLabel : undefined}
       note={m.note(company)}
+      paper={paper}
+      switcher={
+        templates.length
+          ? {
+              label: t.common.template,
+              current: template?.id ?? 'none',
+              options: [...templates.map((x) => ({ id: x.id, name: x.name })), { id: 'none', name: t.common.noTemplate }],
+            }
+          : undefined
+      }
     >
       <PrintSection title={m.client}>
         <PrintFields
@@ -130,11 +153,14 @@ export default async function ReservationPrintPage({ params }: { params: Params 
         />
       </PrintSection>
 
+      <PrintClauses title={t.common.clauses} blocks={clauses} />
+
       <PrintSignatures
         locale={locale}
+        seal={seal}
         parties={[
           { role: m.clientSignature, name: clientName },
-          { role: m.companySignature, name: company },
+          { role: m.companySignature, name: company, company: true },
         ]}
       />
     </PrintDocument>
