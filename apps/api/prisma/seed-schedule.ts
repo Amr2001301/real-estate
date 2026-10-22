@@ -67,7 +67,7 @@ export async function seedSchedule(
       companyId,
       contractId,
       totalMonths: months,
-      monthlyAmount: monthly[0],
+      monthlyAmount: monthly[0] ?? 0,
       startsAt,
       createdAt: signedAt,
     },
