@@ -10,6 +10,7 @@ import {
   FileText,
   Globe,
   Printer,
+  ListPlus,
   Wallet,
   Receipt,
   Landmark,
@@ -50,6 +51,7 @@ import type { NavItemKey, NavSectionKey } from '@/messages/ui';
 export const NAV_ICONS = {
   Globe,
   Printer,
+  ListPlus,
   Tag,
   LayoutDashboard,
   Building2,
@@ -196,6 +198,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/dashboard/company/branding', label: 'الهوية البصرية', labelKey: 'branding', iconKey: 'Palette', admin: true },
       { href: '/dashboard/company/domains', label: 'النطاقات', labelKey: 'domains', iconKey: 'Globe', admin: true },
       { href: '/dashboard/company/print', label: 'الطباعة والمستندات', labelKey: 'printing', iconKey: 'Printer', admin: true },
+      { href: '/dashboard/company/customer-fields', label: 'بيانات العملاء الإضافية', labelKey: 'customerFields', iconKey: 'ListPlus', admin: true },
       { href: '/dashboard/data-export', label: 'تصدير البيانات', labelKey: 'dataExport', iconKey: 'HardDriveDownload', admin: true },
       { href: '/dashboard/data-import', label: 'استيراد البيانات', labelKey: 'dataImport', iconKey: 'Upload', admin: true },
       { href: '/dashboard/settings', label: 'الإعدادات', labelKey: 'settings', iconKey: 'Settings', admin: true },

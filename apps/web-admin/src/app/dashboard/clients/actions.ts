@@ -16,6 +16,38 @@ function pickStr(formData: FormData, key: string): string | undefined {
   return v ? v : undefined;
 }
 
+const DETAIL_KEYS = [
+  'nationalId',
+  'address',
+  'birthDate',
+  'birthPlace',
+  'occupation',
+  'employer',
+  'nationalIdIssueDate',
+  'nationalIdIssuePlace',
+  'homePhone',
+] as const;
+
+/**
+ * The customer's recorded details and company fields from the form. On an
+ * edit an emptied field is sent as null, which clears it; on a create it is
+ * left out.
+ */
+function recordFrom(formData: FormData, clear: boolean) {
+  const empty = clear ? null : undefined;
+  const out: Record<string, unknown> = {};
+  for (const k of DETAIL_KEYS) out[k] = pickStr(formData, k) ?? empty;
+  const custom: Record<string, string | null> = {};
+  for (const [name, v] of formData.entries()) {
+    if (!name.startsWith('custom.') || typeof v !== 'string') continue;
+    const value = v.trim();
+    if (value) custom[name.slice('custom.'.length)] = value;
+    else if (clear) custom[name.slice('custom.'.length)] = null;
+  }
+  if (Object.keys(custom).length) out.customFields = custom;
+  return out;
+}
+
 export async function createClientAction(
   _prev: ClientFormState,
   formData: FormData,
@@ -26,8 +58,6 @@ export async function createClientAction(
   const email = pickStr(formData, 'email');
   const phone = pickStr(formData, 'phone');
   const locale = (pickStr(formData, 'locale') as 'ar' | 'en' | undefined) ?? 'ar';
-  const nationalId = pickStr(formData, 'nationalId');
-  const address = pickStr(formData, 'address');
 
   if (!fullName) return { error: 'الاسم مطلوب' };
   if (!email && !phone) return { error: 'يجب إدخال البريد الإلكتروني أو رقم الهاتف' };
@@ -40,8 +70,7 @@ export async function createClientAction(
       email,
       phone,
       locale,
-      nationalId,
-      address,
+      ...recordFrom(formData, false),
     });
   } catch (e) {
     unstable_rethrow(e);
@@ -56,18 +85,16 @@ export async function updateClientAction(
   _prev: ClientFormState,
   formData: FormData,
 ): Promise<ClientFormState> {
-  // PATCH /users/:id takes the name, phone, language and the contract
-  // identity (an emptied identity field is cleared).
+  // PATCH /users/:id takes the name, phone, language and the customer's
+  // recorded details (an emptied one is cleared).
   const fullName = String(formData.get('fullName') ?? '').trim();
   const phone = pickStr(formData, 'phone');
   const locale = pickStr(formData, 'locale') as 'ar' | 'en' | undefined;
-  const nationalId = pickStr(formData, 'nationalId') ?? null;
-  const address = pickStr(formData, 'address') ?? null;
 
   if (!fullName) return { error: 'الاسم مطلوب' };
 
   try {
-    await api.patch(`/users/${id}`, { fullName, phone, locale, nationalId, address });
+    await api.patch(`/users/${id}`, { fullName, phone, locale, ...recordFrom(formData, true) });
   } catch (e) {
     unstable_rethrow(e);
     return { error: (e as Error).message };

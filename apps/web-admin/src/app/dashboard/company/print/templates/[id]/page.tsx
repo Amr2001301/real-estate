@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { api, safe } from '@/lib/api';
 import { getLetterhead } from '@/lib/letterhead';
 import { getLocale } from '@/lib/locale';
+import { getCustomerFields } from '@/lib/customer-fields-server';
 import type { DocumentTemplate } from '@/lib/print-settings';
 import { PremiumPageHero } from '@/components/premium';
 import { companyNameOf } from '@/components/print/PrintDocument';
@@ -12,10 +13,11 @@ export const dynamic = 'force-dynamic';
 
 export default async function EditTemplatePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [res, letterhead, locale] = await Promise.all([
+  const [res, letterhead, locale, fields] = await Promise.all([
     safe(api.get<DocumentTemplate>(`/document-templates/${id}`)),
     getLetterhead(),
     getLocale(),
+    getCustomerFields(),
   ]);
   if (!res.data) notFound();
   const m = printSettingsT(locale);
@@ -26,7 +28,7 @@ export default async function EditTemplatePage({ params }: { params: Promise<{ i
         description={m.editor.editTitle}
         breadcrumbs={[{ label: m.breadcrumbAdmin }, { label: m.editor.back, href: '/dashboard/company/print' }, { label: res.data.name }]}
       />
-      <TemplateEditor template={res.data} m={m} locale={locale} currency={letterhead.currency} company={companyNameOf(letterhead, locale)} />
+      <TemplateEditor template={res.data} m={m} locale={locale} currency={letterhead.currency} company={companyNameOf(letterhead, locale)} fields={fields} />
     </div>
   );
 }

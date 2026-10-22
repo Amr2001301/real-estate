@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
 import { getLetterhead } from '@/lib/letterhead';
+import { getCustomerFields } from '@/lib/customer-fields-server';
 import { getLocale } from '@/lib/locale';
 import { getDocumentTemplates, getPrintSettings, pickTemplate } from '@/lib/print-settings';
 import { reservationSnapshot } from '@/lib/sign-snapshot';
@@ -18,14 +19,15 @@ export type SignatureActionResult = { ok: true; url?: string } | { ok: false; er
  */
 export async function requestSignatureAction(reservationId: string): Promise<SignatureActionResult> {
   try {
-    const [r, letterhead, paper, templates, locale] = await Promise.all([
+    const [r, letterhead, paper, templates, locale, fields] = await Promise.all([
       api.get<Reservation>(`/reservations/${reservationId}`),
       getLetterhead(),
       getPrintSettings(),
       getDocumentTemplates('RESERVATION'),
       getLocale(),
+      getCustomerFields(),
     ]);
-    const snapshot = reservationSnapshot(r, letterhead, paper, pickTemplate(templates, null), locale);
+    const snapshot = reservationSnapshot(r, letterhead, paper, pickTemplate(templates, null), locale, fields);
     const res = await api.post<{ url: string }>(`/reservations/${reservationId}/signature-requests`, { snapshot });
     revalidatePath(`/dashboard/reservations/${reservationId}`);
     return { ok: true, url: res.url };

@@ -41,6 +41,13 @@ export const PLACEHOLDER_GROUPS: { ar: string; en: string; items: Placeholder[] 
       { key: 'customer.email', ar: 'بريد العميل', en: 'Customer e-mail', docs: BOTH },
       { key: 'customer.nationalId', ar: 'الرقم القومي', en: 'National ID', docs: BOTH },
       { key: 'customer.address', ar: 'عنوان العميل', en: 'Customer address', docs: BOTH },
+      { key: 'customer.birthDate', ar: 'تاريخ الميلاد', en: 'Date of birth', docs: BOTH },
+      { key: 'customer.birthPlace', ar: 'محل الميلاد', en: 'Place of birth', docs: BOTH },
+      { key: 'customer.occupation', ar: 'الوظيفة / المهنة', en: 'Occupation', docs: BOTH },
+      { key: 'customer.employer', ar: 'جهة العمل', en: 'Employer', docs: BOTH },
+      { key: 'customer.idIssueDate', ar: 'تاريخ إصدار الهوية', en: 'ID issue date', docs: BOTH },
+      { key: 'customer.idIssuePlace', ar: 'جهة إصدار الهوية', en: 'ID issued at', docs: BOTH },
+      { key: 'customer.homePhone', ar: 'التليفون الأرضي', en: 'Home phone', docs: BOTH },
     ],
   },
   {
@@ -104,13 +111,20 @@ const KNOWN = new Set(PLACEHOLDERS.map((p) => p.key));
 
 export type TemplateValues = Partial<Record<string, string | null | undefined>>;
 
-const TOKEN = /\{\{\s*([a-zA-Z.]+)\s*\}\}/g;
+const TOKEN = /\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g;
 export const BLANK = '…………………';
 
-/** Placeholders in the text that the platform does not know (typos). */
-export function unknownPlaceholders(body: string): string[] {
+/** The placeholder of one of the company's own customer fields. */
+export const customPlaceholder = (key: string) => `custom.${key}`;
+
+/**
+ * Placeholders in the text that the platform does not know (typos); the
+ * company's own customer fields are given as `customKeys`.
+ */
+export function unknownPlaceholders(body: string, customKeys: Iterable<string> = []): string[] {
+  const custom = new Set([...customKeys].map(customPlaceholder));
   const out = new Set<string>();
-  for (const m of body.matchAll(TOKEN)) if (!KNOWN.has(m[1]!)) out.add(m[1]!);
+  for (const m of body.matchAll(TOKEN)) if (!KNOWN.has(m[1]!) && !custom.has(m[1]!)) out.add(m[1]!);
   return [...out];
 }
 

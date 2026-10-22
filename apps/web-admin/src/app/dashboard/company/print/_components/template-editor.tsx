@@ -7,11 +7,13 @@ import { cn } from '@/lib/cn';
 import {
   PLACEHOLDER_GROUPS,
   amountInWords,
+  customPlaceholder,
   renderTemplate,
   unknownPlaceholders,
   type TemplateValues,
 } from '@/lib/document-template';
 import { STARTER_WORDINGS } from '@/lib/document-starters';
+import { fieldLabel, type CustomerFieldDef } from '@/lib/customer-fields';
 import type { DocumentTemplate, TemplateDocument, TemplateVariant } from '@/lib/print-settings';
 import type { PrintSettingsMessages } from '../messages';
 import { createTemplateAction, deleteTemplateAction, updateTemplateAction } from '../actions';
@@ -38,6 +40,13 @@ function sampleValues(locale: 'ar' | 'en', currency: string, company: string): T
     'customer.email': 'client@example.com',
     'customer.nationalId': '29001011234567',
     'customer.address': ar ? '12 شارع التسعين، التجمع الخامس، القاهرة الجديدة' : '12 90th Street, Fifth Settlement, New Cairo',
+    'customer.birthDate': ar ? '17 مايو 1990' : '17 May 1990',
+    'customer.birthPlace': ar ? 'المنصورة' : 'Mansoura',
+    'customer.occupation': ar ? 'مهندس مدني' : 'Civil engineer',
+    'customer.employer': ar ? 'شركة النيل للمقاولات' : 'Nile Contracting',
+    'customer.idIssueDate': ar ? '2 يناير 2020' : '2 Jan 2020',
+    'customer.idIssuePlace': ar ? 'سجل مدني مدينة نصر' : 'Nasr City civil registry',
+    'customer.homePhone': '02 2260 1234',
     'unit.code': 'A-1204',
     'unit.type': ar ? 'شقة' : 'Apartment',
     'unit.area': '165',
@@ -73,12 +82,15 @@ export function TemplateEditor({
   locale,
   currency,
   company,
+  fields,
 }: {
   template: DocumentTemplate | null;
   m: PrintSettingsMessages;
   locale: 'ar' | 'en';
   currency: string;
   company: string;
+  /** The company's own customer fields: placeholders of their own. */
+  fields: CustomerFieldDef[];
 }) {
   const router = useRouter();
   const bodyRef = useRef<HTMLTextAreaElement>(null);
@@ -90,12 +102,36 @@ export function TemplateEditor({
   const [pending, start] = useTransition();
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const values = useMemo(() => sampleValues(locale, currency, company), [locale, currency, company]);
-  const blocks = useMemo(() => renderTemplate(body, values), [body, values]);
-  const unknown = useMemo(() => unknownPlaceholders(body), [body]);
-  const groups = PLACEHOLDER_GROUPS.map((g) => ({ ...g, items: g.items.filter((p) => p.docs.includes(documentType)) })).filter(
-    (g) => g.items.length,
+  // A company field previews with its own name in brackets, as a sample.
+  const values = useMemo(
+    () => ({
+      ...sampleValues(locale, currency, company),
+      ...Object.fromEntries(fields.map((f) => [customPlaceholder(f.key), `[${fieldLabel(f, locale)}]`])),
+    }),
+    [locale, currency, company, fields],
   );
+  const blocks = useMemo(() => renderTemplate(body, values), [body, values]);
+  const unknown = useMemo(() => unknownPlaceholders(body, fields.map((f) => f.key)), [body, fields]);
+  const ownFields = fields.filter((f) => f.active);
+  const groups = [
+    ...PLACEHOLDER_GROUPS,
+    ...(ownFields.length
+      ? [
+          {
+            ar: 'خانات الشركة',
+            en: 'Your fields',
+            items: ownFields.map((f) => ({
+              key: customPlaceholder(f.key),
+              ar: fieldLabel(f, 'ar'),
+              en: fieldLabel(f, 'en'),
+              docs: ['CONTRACT', 'RESERVATION'] as TemplateDocument[],
+            })),
+          },
+        ]
+      : []),
+  ]
+    .map((g) => ({ ...g, items: g.items.filter((p) => p.docs.includes(documentType)) }))
+    .filter((g) => g.items.length);
   const starters = STARTER_WORDINGS.filter((s) => s.documentType === documentType);
 
   const insert = (key: string) => {

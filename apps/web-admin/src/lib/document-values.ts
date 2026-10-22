@@ -2,8 +2,9 @@ import { formatDate, tx } from './format';
 import type { Letterhead } from './letterhead';
 import type { Locale } from './locale';
 import type { PrintSettings } from './print-settings';
-import type { Contract, Reservation } from './types';
-import { amountInWords, type TemplateValues } from './document-template';
+import type { Contract, CustomerRecord, Reservation } from './types';
+import { FIXED_DETAILS, customValueText, formatDay, type CustomerFieldDef } from './customer-fields';
+import { amountInWords, customPlaceholder, type TemplateValues } from './document-template';
 import { formatMoney, formatNumber, companyNameOf } from '@/components/print/PrintDocument';
 import { printT } from '@/messages/print';
 
@@ -22,6 +23,20 @@ function companyValues(letterhead: Letterhead, paper: PrintSettings, locale: Loc
   };
 }
 
+/** The buyer's recorded details and the company's own fields. */
+function customerRecordValues(c: CustomerRecord | null | undefined, fields: CustomerFieldDef[], locale: Locale): TemplateValues {
+  const out: TemplateValues = {
+    'customer.nationalId': c?.nationalId,
+    'customer.address': c?.address,
+  };
+  for (const d of FIXED_DETAILS) {
+    const v = c?.[d.key] as string | null | undefined;
+    out[d.placeholder] = 'date' in d && d.date ? formatDay(v, locale) : v;
+  }
+  for (const f of fields) out[customPlaceholder(f.key)] = customValueText(f, c?.customFields?.[f.key], locale);
+  return out;
+}
+
 type UnitLike = Contract['unit'] | Reservation['unit'];
 
 function unitValues(unit: UnitLike, locale: Locale): TemplateValues {
@@ -38,7 +53,13 @@ function unitValues(unit: UnitLike, locale: Locale): TemplateValues {
 }
 
 /** A contract's placeholder values. */
-export function contractValues(c: Contract, letterhead: Letterhead, paper: PrintSettings, locale: Locale): TemplateValues {
+export function contractValues(
+  c: Contract,
+  letterhead: Letterhead,
+  paper: PrintSettings,
+  locale: Locale,
+  fields: CustomerFieldDef[] = [],
+): TemplateValues {
   const money = (v: string | number | null | undefined) => (v == null ? null : formatMoney(v, letterhead.currency, locale));
   const date = (v: string | null | undefined) => (v ? formatDate(v, locale) : null);
   const plan = c.installmentPlan;
@@ -49,8 +70,7 @@ export function contractValues(c: Contract, letterhead: Letterhead, paper: Print
     'customer.name': c.customer?.fullName,
     'customer.phone': c.customer?.phone,
     'customer.email': c.customer?.email,
-    'customer.nationalId': c.customer?.nationalId,
-    'customer.address': c.customer?.address,
+    ...customerRecordValues(c.customer, fields, locale),
     ...unitValues(c.unit, locale),
     'contract.number': c.contractNumber,
     'contract.date': date(c.signedAt ?? c.createdAt),
@@ -71,14 +91,19 @@ export function contractValues(c: Contract, letterhead: Letterhead, paper: Print
 }
 
 /** A booking's placeholder values. */
-export function reservationValues(r: Reservation, letterhead: Letterhead, paper: PrintSettings, locale: Locale): TemplateValues {
+export function reservationValues(
+  r: Reservation,
+  letterhead: Letterhead,
+  paper: PrintSettings,
+  locale: Locale,
+  fields: CustomerFieldDef[] = [],
+): TemplateValues {
   return {
     ...companyValues(letterhead, paper, locale),
     'customer.name': r.client?.fullName ?? r.lead?.fullName,
     'customer.phone': r.client?.phone ?? r.lead?.phone,
     'customer.email': r.client?.email ?? r.lead?.email,
-    'customer.nationalId': r.client?.nationalId,
-    'customer.address': r.client?.address,
+    ...customerRecordValues(r.client, fields, locale),
     ...unitValues(r.unit, locale),
     'reservation.number': r.reservationNumber,
     'reservation.date': formatDate(r.createdAt, locale),

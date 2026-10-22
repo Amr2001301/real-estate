@@ -5,6 +5,7 @@ import { getLetterhead } from '@/lib/letterhead';
 import { getLocale } from '@/lib/locale';
 import { getDocumentTemplates, getPrintSettings, pickTemplate, sealFor } from '@/lib/print-settings';
 import { contractValues, contractVariant } from '@/lib/document-values';
+import { getCustomerFields } from '@/lib/customer-fields-server';
 import { renderTemplate } from '@/lib/document-template';
 import type { Contract } from '@/lib/types';
 import { printT } from '@/messages/print';
@@ -31,12 +32,13 @@ export default async function ContractPrintPage({ params, searchParams }: { para
   const { id } = await params;
   const { template: requested } = await searchParams;
 
-  const [contractResult, letterhead, locale, paper, templates] = await Promise.all([
+  const [contractResult, letterhead, locale, paper, templates, fields] = await Promise.all([
     safe(api.get<Contract>(`/contracts/${id}`)),
     getLetterhead(),
     getLocale(),
     getPrintSettings(),
     getDocumentTemplates('CONTRACT'),
+    getCustomerFields(),
   ]);
 
   if (contractResult.error || !contractResult.data) notFound();
@@ -58,7 +60,7 @@ export default async function ContractPrintPage({ params, searchParams }: { para
 
   // The company's wording for this sale, and its signature and stamp once signed.
   const template = pickTemplate(templates, contractVariant(c), requested);
-  const clauses = template ? renderTemplate(template.body, contractValues(c, letterhead, paper, locale)) : [];
+  const clauses = template ? renderTemplate(template.body, contractValues(c, letterhead, paper, locale, fields)) : [];
   const seal = sealFor(paper, 'CONTRACT', !!c.signedAt && c.status !== 'CANCELLED');
 
   const installmentTone = (s: string) =>

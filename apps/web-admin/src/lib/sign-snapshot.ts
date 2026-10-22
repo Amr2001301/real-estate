@@ -5,6 +5,7 @@ import type { DocumentTemplate, PrintSettings } from './print-settings';
 import type { Reservation } from './types';
 import { renderTemplate, type TemplateBlock } from './document-template';
 import { reservationValues } from './document-values';
+import type { CustomerFieldDef } from './customer-fields';
 import { companyNameOf, formatMoney, formatNumber } from '@/components/print/PrintDocument';
 import { printT } from '@/messages/print';
 
@@ -45,6 +46,7 @@ export function reservationSnapshot(
   paper: PrintSettings,
   template: DocumentTemplate | null,
   locale: Locale,
+  fields: CustomerFieldDef[] = [],
 ): SignSnapshot {
   const t = printT(locale);
   const m = t.reservation;
@@ -107,6 +109,6 @@ export function reservationSnapshot(
       ]),
     ],
     clausesTitle: t.common.clauses,
-    clauses: template ? renderTemplate(template.body, reservationValues(r, letterhead, paper, locale)) : [],
+    clauses: template ? renderTemplate(template.body, reservationValues(r, letterhead, paper, locale, fields)) : [],
   };
 }

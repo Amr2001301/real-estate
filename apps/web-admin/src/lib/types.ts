@@ -375,7 +375,7 @@ export interface Contract {
   /** Signed before the company used the system (entered afterwards). */
   preSystem?: boolean;
   customerId: string;
-  customer?: { id: string; fullName: string; phone: string | null; email?: string | null; nationalId?: string | null; address?: string | null };
+  customer?: { id: string; fullName: string; phone: string | null; email?: string | null } & CustomerRecord;
   unitId: string;
   unit?: Unit;
   reservationId: string | null;
@@ -744,7 +744,7 @@ export interface Reservation {
   leadId: string | null;
   lead?: { id: string; fullName: string; phone: string; email?: string | null } | null;
   clientId: string | null;
-  client?: { id: string; fullName: string; phone: string | null; email?: string | null; nationalId?: string | null; address?: string | null } | null;
+  client?: ({ id: string; fullName: string; phone: string | null; email?: string | null } & CustomerRecord) | null;
   status: ReservationStatus;
   notes: string | null;
   reason: string | null;
@@ -951,15 +951,27 @@ export interface MaintenanceRequest {
   customerRatingSubmittedAt?: string | null;
 }
 
-export interface User {
+/** What the company records about a buyer for its contracts and forms (staff only). */
+export interface CustomerRecord {
+  nationalId?: string | null;
+  address?: string | null;
+  birthDate?: string | null;
+  birthPlace?: string | null;
+  occupation?: string | null;
+  employer?: string | null;
+  nationalIdIssueDate?: string | null;
+  nationalIdIssuePlace?: string | null;
+  homePhone?: string | null;
+  /** The company's own fields, by key (see CustomerFieldDef). */
+  customFields?: Record<string, string | number> | null;
+}
+
+export interface User extends CustomerRecord {
   id: string;
   role: UserRole;
   email: string | null;
   phone: string | null;
   fullName: string;
-  /** The buyer's identity printed on contracts. */
-  nationalId?: string | null;
-  address?: string | null;
   locale: 'ar' | 'en';
   active: boolean;
   createdAt: string;

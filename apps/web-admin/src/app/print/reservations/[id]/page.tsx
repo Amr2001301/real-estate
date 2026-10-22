@@ -6,6 +6,7 @@ import { getLetterhead } from '@/lib/letterhead';
 import { getLocale } from '@/lib/locale';
 import { getDocumentTemplates, getPrintSettings, pickTemplate, sealFor } from '@/lib/print-settings';
 import { reservationValues } from '@/lib/document-values';
+import { getCustomerFields } from '@/lib/customer-fields-server';
 import { renderTemplate } from '@/lib/document-template';
 import { periodicInstallmentLabel } from '@/lib/installment-frequency';
 import type { Reservation } from '@/lib/types';
@@ -45,13 +46,14 @@ export default async function ReservationPrintPage({ params, searchParams }: { p
   const { id } = await params;
   const { template: requested } = await searchParams;
 
-  const [resResult, letterhead, locale, paper, templates, signatures] = await Promise.all([
+  const [resResult, letterhead, locale, paper, templates, signatures, fields] = await Promise.all([
     safe(api.get<Reservation>(`/reservations/${id}`)),
     getLetterhead(),
     getLocale(),
     getPrintSettings(),
     getDocumentTemplates('RESERVATION'),
     safe(api.get<SignatureRequestView[]>(`/reservations/${id}/signature-requests`)),
+    getCustomerFields(),
   ]);
 
   if (resResult.error || !resResult.data) notFound();
@@ -69,7 +71,7 @@ export default async function ReservationPrintPage({ params, searchParams }: { p
   const statusLabel = m.status[r.status] ?? r.status;
   // The company's booking terms, and its signature and stamp once approved.
   const template = pickTemplate(templates, null, requested);
-  const clauses = template ? renderTemplate(template.body, reservationValues(r, letterhead, paper, locale)) : [];
+  const clauses = template ? renderTemplate(template.body, reservationValues(r, letterhead, paper, locale, fields)) : [];
   const seal = sealFor(paper, 'RESERVATION', r.status === 'APPROVED' || r.status === 'CONVERTED');
   // The customer's own signature, signed online — while the booking is as signed.
   const signedOnline = signatures.data?.find((x) => x.state === 'SIGNED');
