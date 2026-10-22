@@ -346,55 +346,6 @@
     font-family: var(--font-numeric);
     font-variant-numeric: lining-nums tabular-nums;
   }
-
-  /* Loading placeholders: a soft band sweeps across each block in the
-     reading direction (right to left in Arabic). Theme-aware; on the navy
-     metric band it sweeps in gold. Still under reduced motion. */
-  .shimmer {
-    position: relative;
-    overflow: hidden;
-    background-color: rgb(var(--tw-surface-sunken) / 0.75);
-  }
-  .shimmer::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    transform: translateX(-100%);
-    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.6), transparent);
-    animation: shimmer-sweep 1.6s ease-in-out infinite;
-  }
-  [dir='rtl'] .shimmer::after {
-    animation-name: shimmer-sweep-rtl;
-  }
-  .dark .shimmer::after {
-    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.07), transparent);
-  }
-  .shimmer-navy {
-    background-color: rgb(216 182 106 / 0.12);
-  }
-  .shimmer-navy::after,
-  .dark .shimmer-navy::after {
-    background: linear-gradient(90deg, transparent, rgb(216 182 106 / 0.22), transparent);
-  }
-  @keyframes shimmer-sweep {
-    to {
-      transform: translateX(100%);
-    }
-  }
-  @keyframes shimmer-sweep-rtl {
-    from {
-      transform: translateX(100%);
-    }
-    to {
-      transform: translateX(-100%);
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .shimmer::after {
-      animation: none;
-      display: none;
-    }
-  }
 }
 
 @layer utilities {

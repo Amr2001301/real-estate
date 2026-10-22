@@ -2,8 +2,8 @@
 // shape of the page it stands in for (U5): the page hero (breadcrumb, large
 // title, actions), the navy metric band, the rounded filter bar and the
 // section card of rows — so the page fills in without anything jumping.
-// The `.shimmer` sweep (globals.css) runs in the reading direction and
-// follows the theme. Layouts are symmetrical, so RTL and LTR both hold.
+// The pulse is the platform's usual one. Layouts are symmetrical, so RTL and
+// LTR both hold.
 
 import { cn } from '@/lib/cn';
 
@@ -13,12 +13,12 @@ interface SkeletonProps {
 
 /** Base block. Use for any rectangular placeholder. */
 export function Skeleton({ className }: SkeletonProps) {
-  return <div aria-hidden className={cn('shimmer rounded-md', className)} />;
+  return <div aria-hidden className={cn('animate-pulse rounded-md bg-slate-200/70', className)} />;
 }
 
 /** A block on the navy metric band. */
 function NavySkeleton({ className }: SkeletonProps) {
-  return <div aria-hidden className={cn('shimmer shimmer-navy rounded-md', className)} />;
+  return <div aria-hidden className={cn('animate-pulse rounded-md bg-[#D8B66A]/15', className)} />;
 }
 
 const card = 'overflow-hidden rounded-[22px] border border-hairline bg-surface';

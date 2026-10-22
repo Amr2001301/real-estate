@@ -5,8 +5,9 @@ export function Skeleton({ className, ...rest }: HTMLAttributes<HTMLDivElement>)
   return (
     <div
       className={cn(
-        // The same sweep as the loading.tsx skeletons (globals.css).
-        'shimmer rounded-lg',
+        'rounded-lg bg-surface-muted animate-shimmer',
+        'bg-gradient-to-r from-surface-muted via-surface-sunken to-surface-muted',
+        'bg-[length:800px_100%]',
         className,
       )}
       {...rest}
