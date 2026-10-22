@@ -679,8 +679,10 @@ describe('FA — financial audit fixes (e2e)', () => {
     }
 
     // The commission is late from its approval: in a period from today, not in one from tomorrow.
-    const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
-    const fromToday = await ledger(`?dateFrom=${today()}&dateTo=${today()}`);
+    // The report's days are the company's (Cairo): late in the UTC evening, Cairo is a day ahead.
+    const cairoDay = (ms: number) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo' }).format(new Date(ms));
+    const tomorrow = cairoDay(Date.now() + 86_400_000);
+    const fromToday = await ledger(`?dateFrom=${cairoDay(Date.now())}&dateTo=${cairoDay(Date.now())}`);
     expect(n(fromToday.payables.groups.commissions.states.late.amount)).toBeGreaterThanOrEqual(20_000);
     const rows = await asAdmin(http().get(`/v1/reports/ledger/rows?group=commissions&dateFrom=${tomorrow}`)).expect(200);
     expect((rows.body.data as Array<{ contract: { id: string } }>).some((r) => r.contract.id === sale.contractId)).toBe(false);
