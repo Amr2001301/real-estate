@@ -2,10 +2,12 @@ import { Module } from '@nestjs/common';
 import { CompanyDomainsController } from './company-domains.controller';
 import { CompanyDomainsService } from './company-domains.service';
 import { PublicDomainsController } from './public-domains.controller';
+import { VercelDomainsClient } from './vercel-domains.client';
+import { DomainCheckCron } from './domain-check.cron';
 
 @Module({
   controllers: [CompanyDomainsController, PublicDomainsController],
-  providers: [CompanyDomainsService],
+  providers: [CompanyDomainsService, VercelDomainsClient, DomainCheckCron],
   exports: [CompanyDomainsService],
 })
 export class CompanyDomainsModule {}

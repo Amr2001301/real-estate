@@ -269,6 +269,15 @@ model CompanyDomain {
   // verification is never required (verifiedAt is set at creation).
   verificationToken String
 
+  // The public website's hosting (Vercel): PENDING until the domain is on the
+  // project and its DNS points there, READY then, ERROR when adding it failed
+  // (hostingError says why). Null when the hosting is not automated.
+  hostingStatus    String?   @db.VarChar(20)
+  hostingError     String?   @db.VarChar(500)
+  hostingCheckedAt DateTime?
+  /// Extra records the hosting asks for (a domain used by another account).
+  hostingRecords   Json?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

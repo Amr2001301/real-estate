@@ -8,7 +8,7 @@
 
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { CompanyDomainsService } from '../company-domains.service';
+import { CompanyDomainsService, dnsRecords, isApexDomain } from '../company-domains.service';
 
 const mockResolveTxt = jest.fn();
 jest.mock('node:dns/promises', () => ({
@@ -57,6 +57,7 @@ function makePrisma(overrides: Record<string, Partial<Record<string, jest.Mock>>
   const companyDomainMock = {
     findMany: jest.fn().mockResolvedValue([]),
     findUnique: jest.fn().mockResolvedValue(null),
+    findUniqueOrThrow: jest.fn(),
     findFirst: jest.fn().mockResolvedValue(null),
     create: jest.fn().mockImplementation((args: { data: Record<string, unknown> }) =>
       Promise.resolve({ ...makeDomain(), ...args.data, id: 'dom-new' }),
@@ -69,6 +70,12 @@ function makePrisma(overrides: Record<string, Partial<Record<string, jest.Mock>>
     upsert: jest.fn().mockResolvedValue({}),
     ...overrides.companyDomain,
   };
+  // The re-check reads the same row the test set up with findUnique.
+  if (!overrides.companyDomain?.findUniqueOrThrow) {
+    companyDomainMock.findUniqueOrThrow.mockImplementation((args: unknown) =>
+      (companyDomainMock.findUnique as jest.Mock)(args),
+    );
+  }
   const prismaObj = {
     companyDomain: companyDomainMock,
     $transaction: jest.fn().mockImplementation((opsOrFn: unknown) => {
@@ -84,12 +91,22 @@ function makePrisma(overrides: Record<string, Partial<Record<string, jest.Mock>>
 function makeService(
   prismaOverrides: Record<string, Partial<Record<string, jest.Mock>>> = {},
   baseDomain: string | undefined = PLATFORM_BASE,
+  vercel?: ReturnType<typeof makeVercel>,
 ) {
   const prisma = makePrisma(prismaOverrides);
   const resolver = makeResolver();
   const config = makeConfig(baseDomain);
-  const service = new CompanyDomainsService(prisma as never, resolver as never, config as never);
+  const service = new CompanyDomainsService(prisma as never, resolver as never, config as never, vercel as never);
   return { service, prisma, resolver, config };
+}
+
+function makeVercel(state = { verified: true, configured: true, verification: [] as unknown[] }) {
+  return {
+    enabled: true,
+    add: jest.fn().mockResolvedValue(undefined),
+    remove: jest.fn().mockResolvedValue(undefined),
+    check: jest.fn().mockResolvedValue(state),
+  };
 }
 
 // ── list ──────────────────────────────────────────────────────────────────────
@@ -376,5 +393,89 @@ describe('CompanyDomainsService.provisionPlatformSubdomain', () => {
 
     expect(txUpsert).toHaveBeenCalledTimes(1);
     expect(prisma.companyDomain.upsert).not.toHaveBeenCalled();
+  });
+});
+
+// ── Hosting (Vercel) and DNS records ─────────────────────────────────────────
+
+describe('dnsRecords / isApexDomain', () => {
+  test('an apex domain points with an A record; a sub-domain with a CNAME', () => {
+    expect(isApexDomain('acme.com')).toBe(true);
+    expect(isApexDomain('acme.com.eg')).toBe(true);
+    expect(isApexDomain('www.acme.com')).toBe(false);
+    expect(isApexDomain('homes.acme.com.eg')).toBe(false);
+    expect(dnsRecords('acme.com', 'tok')[0]).toMatchObject({ type: 'A', value: '76.76.21.21' });
+    expect(dnsRecords('www.acme.com', 'tok')[0]).toMatchObject({ type: 'CNAME', value: 'cname.vercel-dns.com' });
+    expect(dnsRecords('acme.com', 'tok')[1]).toMatchObject({ type: 'CNAME', name: 'www.acme.com' });
+    expect(dnsRecords('www.acme.com', 'tok')).toHaveLength(2);
+    expect(dnsRecords('acme.com', 'tok')[2]).toMatchObject({
+      type: 'TXT',
+      name: '_host-verification.acme.com',
+      value: 'verification=tok',
+    });
+  });
+});
+
+describe('CompanyDomainsService with the hosting automated', () => {
+  test('a new custom domain is added to the hosting and starts PENDING, with its DNS records', async () => {
+    const vercel = makeVercel();
+    const { service, prisma } = makeService({}, PLATFORM_BASE, vercel);
+    const created = await service.createCustom(COMPANY_A, 'acme.com');
+    expect(vercel.add).toHaveBeenCalledWith('acme.com');
+    expect(prisma.companyDomain.create.mock.calls[0][0].data).toMatchObject({ hostingStatus: 'PENDING' });
+    expect(created.dns.map((r: { type: string }) => r.type)).toEqual(['A', 'CNAME', 'TXT']);
+    expect(vercel.add).toHaveBeenCalledWith('www.acme.com');
+  });
+
+  test('when adding it to the hosting fails, the domain is kept with the error', async () => {
+    const vercel = makeVercel();
+    vercel.add.mockRejectedValue(new Error('quota exceeded'));
+    const { service, prisma } = makeService({}, PLATFORM_BASE, vercel);
+    await service.createCustom(COMPANY_A, 'acme.com');
+    expect(prisma.companyDomain.update.mock.calls[0][0].data).toMatchObject({ hostingStatus: 'ERROR', hostingError: 'quota exceeded' });
+  });
+
+  test('verify: TXT found and DNS pointing at the hosting → verified and READY', async () => {
+    mockResolveTxt.mockResolvedValue([['verification=tok123']]);
+    const vercel = makeVercel({ verified: true, configured: true, verification: [] });
+    const { service, prisma, resolver } = makeService({}, PLATFORM_BASE, vercel);
+    prisma.companyDomain.findUnique.mockResolvedValue(makeDomain());
+    const result = await service.verify(COMPANY_A, 'dom-1');
+    expect(result.verified).toBe(true);
+    const data = prisma.companyDomain.update.mock.calls[0][0].data;
+    expect(data.verifiedAt).toBeInstanceOf(Date);
+    expect(data.hostingStatus).toBe('READY');
+    expect(resolver.invalidateHostname).toHaveBeenCalledWith('acme.com');
+  });
+
+  test('verify: DNS not pointing at the hosting yet → PENDING, with the records the hosting asks for', async () => {
+    mockResolveTxt.mockResolvedValue([['verification=tok123']]);
+    const extra = [{ type: 'TXT', domain: '_vercel.acme.com', value: 'vc-domain-verify=acme.com,abc', reason: 'pending_domain_verification' }];
+    const vercel = makeVercel({ verified: false, configured: false, verification: extra });
+    const { service, prisma } = makeService({}, PLATFORM_BASE, vercel);
+    prisma.companyDomain.findUnique.mockResolvedValue(makeDomain());
+    await service.verify(COMPANY_A, 'dom-1');
+    const data = prisma.companyDomain.update.mock.calls[0][0].data;
+    expect(data.hostingStatus).toBe('PENDING');
+    expect(data.hostingRecords).toEqual(extra);
+  });
+
+  test('delete removes the domain from the hosting too', async () => {
+    const vercel = makeVercel();
+    const { service, prisma } = makeService({}, PLATFORM_BASE, vercel);
+    prisma.companyDomain.findUnique.mockResolvedValue(makeDomain());
+    await service.delete(COMPANY_A, 'dom-1');
+    expect(vercel.remove).toHaveBeenCalledWith('acme.com');
+    expect(vercel.remove).toHaveBeenCalledWith('www.acme.com');
+  });
+
+  test('the periodic check verifies a domain whose TXT record has appeared', async () => {
+    mockResolveTxt.mockResolvedValue([['verification=tok123']]);
+    const vercel = makeVercel();
+    const { service, prisma } = makeService({}, PLATFORM_BASE, vercel);
+    prisma.companyDomain.findMany.mockResolvedValue([{ id: 'dom-1', verifiedAt: null, hostingStatus: 'PENDING' }]);
+    prisma.companyDomain.findUnique.mockResolvedValue(makeDomain({ hostingStatus: 'PENDING' }));
+    const result = await service.checkPending();
+    expect(result).toEqual({ checked: 1, verified: 1, ready: 1 });
   });
 });

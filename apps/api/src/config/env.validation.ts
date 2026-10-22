@@ -85,6 +85,13 @@ const EnvSchema = z.object({
   // MT-050: DNS verification timeout in milliseconds (default 5000ms).
   DOMAIN_DNS_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
 
+  // Custom domains on the public website's hosting (Vercel): with a token and
+  // the web-public project id, a company's domain is added to the project and
+  // its DNS checked automatically. Unset → domains are added by hand.
+  VERCEL_API_TOKEN: z.string().min(1).optional(),
+  VERCEL_PROJECT_ID: z.string().min(1).optional(),
+  VERCEL_TEAM_ID: z.string().min(1).optional(),
+
   // ─── Observability (all optional) ───────────────────────────────────────
   // When SENTRY_DSN is unset the SDK is never required at runtime.
   SENTRY_DSN: z.string().url().optional(),
