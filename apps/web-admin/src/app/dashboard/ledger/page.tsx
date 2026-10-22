@@ -319,12 +319,14 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
               const value = k === 'net' ? net : n(k === 'receivables' ? s.receivables.total : s.payables.total);
               const overdue = k === 'net' ? 0 : sideStates(k).late;
               return (
-                <div key={k} className={cn('flex flex-col gap-2 bg-navy-band px-7 py-7', k === 'net' && 'md:items-center md:text-center')}>
-                  <p className="flex items-center gap-2 text-[13px] text-[#A9B0BD]">
-                    {k === 'net' && <Scale className="h-4 w-4 text-[#D8B66A]" />}
+                <div key={k} className="flex flex-col items-center gap-2 bg-navy-band px-7 py-7 text-center">
+                  <p className="flex items-center justify-center gap-2 text-[13px] text-[#A9B0BD]">
+                    <span className="text-[#D8B66A] [&_svg]:h-4 [&_svg]:w-4">
+                      {k === 'net' ? <Scale /> : k === 'receivables' ? <ArrowDownLeft /> : <ArrowUpRight />}
+                    </span>
                     {k === 'net' ? t.net.title : t.sides[k].title}
                   </p>
-                  <Figure value={value} currency={currency} locale={locale} size={k === 'net' ? 'xl' : 'lg'} tone="cream" />
+                  <Figure value={value} currency={currency} locale={locale} size="xl" tone="cream" />
                   <p className="text-[12px] text-[#A9B0BD]">
                     {k === 'net'
                       ? `${net >= 0 ? t.net.positive : t.net.negative} · ${t.net.asOf} ${formatDate(s.asOf, locale)}`
