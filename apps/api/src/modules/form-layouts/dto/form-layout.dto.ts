@@ -18,16 +18,20 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-export const FORM_DOCUMENTS = ['RESERVATION', 'RECEIPT'] as const;
+export const FORM_DOCUMENTS = ['RESERVATION', 'RECEIPT', 'CONTRACT'] as const;
 export type FormDocument = (typeof FORM_DOCUMENTS)[number];
 
 /** A4, A5, or half an A4 sheet (landscape, 210 × 148.5 mm). */
 export const PAPER_SIZES = ['A4', 'A5', 'HALF'] as const;
 export type PaperSize = (typeof PAPER_SIZES)[number];
 
-/** The sizes each document prints on: a booking form is an A4 form. */
+/** A form's pages at most: a contract runs to many. */
+export const MAX_FORM_PAGES = 40;
+
+/** The sizes each document prints on: a booking form and a contract are A4. */
 export const DOCUMENT_PAPER: Record<FormDocument, readonly PaperSize[]> = {
   RESERVATION: ['A4'],
+  CONTRACT: ['A4'],
   RECEIPT: PAPER_SIZES,
 };
 
@@ -54,7 +58,7 @@ export class FormFieldDto {
 
   @IsInt()
   @Min(0)
-  @Max(9)
+  @Max(MAX_FORM_PAGES - 1)
   page!: number;
 
   @IsNumber()
@@ -105,13 +109,13 @@ export class SaveFormLayoutDto {
 
   @IsArray()
   @ArrayMinSize(1)
-  @ArrayMaxSize(10)
+  @ArrayMaxSize(MAX_FORM_PAGES)
   @ValidateNested({ each: true })
   @Type(() => FormPageDto)
   pages!: FormPageDto[];
 
   @IsArray()
-  @ArrayMaxSize(120)
+  @ArrayMaxSize(400)
   @ValidateNested({ each: true })
   @Type(() => FormFieldDto)
   fields!: FormFieldDto[];

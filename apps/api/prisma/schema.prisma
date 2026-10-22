@@ -373,10 +373,10 @@ model FormLayout {
   id           String   @id @default(uuid()) @db.Uuid
   companyId    String   @db.Uuid
   company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  /// RESERVATION | RECEIPT (CONTRACT later)
+  /// RESERVATION | RECEIPT | CONTRACT
   documentType String   @db.VarChar(20)
   name         String   @db.VarChar(120)
-  /// A4 | A5 | HALF (half an A4 sheet, landscape) — a booking form is A4
+  /// A4 | A5 | HALF (half an A4 sheet, landscape) — a booking form and a contract are A4
   paperSize    String   @default("A4") @db.VarChar(10)
   /// [{ imageUrl }] — one per page
   pages        Json

@@ -7,6 +7,9 @@ import { getDocumentTemplates, getPrintSettings, pickTemplate, sealFor } from '@
 import { contractValues, contractVariant } from '@/lib/document-values';
 import { getCustomerFields } from '@/lib/customer-fields-server';
 import { renderTemplate } from '@/lib/document-template';
+import { fillForm } from '@/lib/form-layout';
+import { getFormLayouts, pickForm } from '@/lib/form-layout-server';
+import { FormPrint } from '@/components/print/FormPrint';
 import type { Contract } from '@/lib/types';
 import { printT } from '@/messages/print';
 import {
@@ -26,19 +29,20 @@ import {
 export const dynamic = 'force-dynamic';
 
 type Params = Promise<{ id: string }>;
-type Search = Promise<{ template?: string }>;
+type Search = Promise<{ template?: string; form?: string }>;
 
 export default async function ContractPrintPage({ params, searchParams }: { params: Params; searchParams: Search }) {
   const { id } = await params;
-  const { template: requested } = await searchParams;
+  const { template: requested, form: requestedForm } = await searchParams;
 
-  const [contractResult, letterhead, locale, paper, templates, fields] = await Promise.all([
+  const [contractResult, letterhead, locale, paper, templates, fields, forms] = await Promise.all([
     safe(api.get<Contract>(`/contracts/${id}`)),
     getLetterhead(),
     getLocale(),
     getPrintSettings(),
     getDocumentTemplates('CONTRACT'),
     getCustomerFields(),
+    getFormLayouts('CONTRACT'),
   ]);
 
   if (contractResult.error || !contractResult.data) notFound();
@@ -63,6 +67,35 @@ export default async function ContractPrintPage({ params, searchParams }: { para
   const clauses = template ? renderTemplate(template.body, contractValues(c, letterhead, paper, locale, fields)) : [];
   const seal = sealFor(paper, 'CONTRACT', !!c.signedAt && c.status !== 'CANCELLED');
 
+  // The company's own contract, when it has one: every page of its paper with
+  // the values where it placed them, its signature and stamp once signed. The
+  // customer's box is left for the signature in ink.
+  const form = pickForm(forms, requestedForm);
+  const formSwitcher = forms.length
+    ? {
+        label: t.common.form,
+        param: 'form',
+        current: form?.id ?? 'none',
+        options: [...forms.map((f) => ({ id: f.id, name: f.name })), { id: 'none', name: t.common.standardLayout }],
+      }
+    : undefined;
+  if (form) {
+    return (
+      <FormPrint
+        title={m.title}
+        locale={locale}
+        pages={form.pages}
+        paperSize={form.paperSize}
+        fields={fillForm(form, contractValues(c, letterhead, paper, locale, fields), {
+          'sign.customer': null,
+          'sign.company': seal?.signature ?? null,
+          'sign.stamp': seal?.stamp ?? null,
+        })}
+        switcher={formSwitcher}
+      />
+    );
+  }
+
   const installmentTone = (s: string) =>
     s === 'PAID' ? 'text-emerald-700' : s === 'OVERDUE' ? 'text-red-600' : 'text-slate-600';
 
@@ -78,13 +111,14 @@ export default async function ContractPrintPage({ params, searchParams }: { para
       note={m.note(company)}
       paper={paper}
       switcher={
-        templates.length
+        formSwitcher ??
+        (templates.length
           ? {
               label: t.common.template,
               current: template?.id ?? 'none',
               options: [...templates.map((x) => ({ id: x.id, name: x.name })), { id: 'none', name: t.common.noTemplate }],
             }
-          : undefined
+          : undefined)
       }
     >
       <PrintSection title={m.parties}>

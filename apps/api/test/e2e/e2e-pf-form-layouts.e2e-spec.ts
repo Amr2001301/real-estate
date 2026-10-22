@@ -1,9 +1,9 @@
 /**
- * The company's own paper form. A company uploads its booking form and its
- * receipt and places the values on them; the booking form is A4, a receipt
- * may be A4, A5 or half a sheet; only the booking form carries the customer's
- * signature. Only the admin designs them, the staff read them, and one
- * company never reaches another's.
+ * The company's own paper form. A company uploads its booking form, its
+ * receipt and its contract and places the values on them; the booking form
+ * and the contract are A4, a receipt may be A4, A5 or half a sheet and has
+ * no customer's signature. Only the admin designs them, the staff read them,
+ * and one company never reaches another's.
  */
 import 'reflect-metadata';
 import request from 'supertest';
@@ -11,7 +11,7 @@ import { UserRole } from '@prisma/client';
 import { type TestApp, createE2ETestApp } from '../setup-app';
 import { bearer, loginAs } from '../helpers/login';
 
-describe('Paper forms — the company’s own booking form and receipt (e2e)', () => {
+describe('Paper forms — the company’s own booking form, receipt and contract (e2e)', () => {
   let testApp: TestApp;
   let adminToken: string;
   let companyId = '';
@@ -169,6 +169,33 @@ describe('Paper forms — the company’s own booking form and receipt (e2e)', (
     await as(http().put(`/v1/form-layouts/${ids.second}`), tokens.otherAdmin).send(form()).expect(404);
     await as(http().delete(`/v1/form-layouts/${ids.second}`), tokens.otherAdmin).expect(404);
     expect(await testApp.rawPrisma.formLayout.count({ where: { id: ids.second } })).toBe(1);
+  });
+
+  it('PF-7: a contract is a long A4 form, its customer signature box left for ink', async () => {
+    const pages = Array.from({ length: 40 }, (_, i) => page(10 + i));
+    const r = await as(http().post('/v1/form-layouts'), adminToken)
+      .send(
+        form({
+          documentType: 'CONTRACT',
+          name: `Contract ${stamp}`,
+          pages,
+          fields: [
+            field('n', 'contract.number'),
+            field('t', 'contract.totalWords', { page: 3 }),
+            field('c', 'sign.customer', { page: 39, h: 0.06 }),
+            field('s', 'sign.stamp', { page: 39, h: 0.1 }),
+          ],
+        }),
+      )
+      .expect(201);
+    expect(r.body).toMatchObject({ documentType: 'CONTRACT', paperSize: 'A4' });
+    expect(r.body.pages).toHaveLength(40);
+    await as(http().post('/v1/form-layouts'), adminToken)
+      .send(form({ documentType: 'CONTRACT', pages: [...pages, page(99)], fields: [] }))
+      .expect(400);
+    await as(http().post('/v1/form-layouts'), adminToken)
+      .send(form({ documentType: 'CONTRACT', paperSize: 'A5', pages: [page(1)], fields: [] }))
+      .expect(400);
   });
 
   it('PF-6: the admin deletes a form', async () => {
