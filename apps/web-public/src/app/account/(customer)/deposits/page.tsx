@@ -125,6 +125,8 @@ export default async function AccountDepositsPage() {
                   <TotalItem label={m.catFirst} value={totals.downPayment} />
                   <TotalItem label={m.catInstallment} value={totals.installment} />
                   <TotalItem label={m.catFinal} value={totals.finalPayment} />
+                  {/* So the boxes add up to the total when fees were paid. */}
+                  {Number(totals.fees ?? 0) > 0 && <TotalItem label={m.catFees} value={totals.fees!} />}
                 </div>
               </div>
             </div>

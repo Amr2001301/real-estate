@@ -326,8 +326,11 @@ class _DepositsSummary extends StatelessWidget {
   final List<Deposit> deposits;
   final AppLocalizations l10n;
 
-  static double _sum(Iterable<Deposit> items) =>
-      items.fold(0.0, (acc, d) => acc + (double.tryParse(d.amount) ?? 0.0));
+  // Only money that arrived: summing every row counted proofs under review,
+  // rejected ones, reversed payments and returned cheques as paid.
+  static double _sum(Iterable<Deposit> items) => items
+      .where((d) => d.collected)
+      .fold(0.0, (acc, d) => acc + (double.tryParse(d.amount) ?? 0.0));
 
   @override
   Widget build(BuildContext context) {
@@ -335,7 +338,7 @@ class _DepositsSummary extends StatelessWidget {
     final lang = Localizations.localeOf(context).languageCode;
 
     final total = _sum(deposits);
-    final verified = deposits.where((d) => d.verified).length;
+    final verified = deposits.where((d) => d.collected).length;
     final pending = deposits.length - verified;
 
     return Container(
@@ -388,7 +391,7 @@ class _DepositsSummary extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             PriceFormatter.formatString(
-                              total.toStringAsFixed(0),
+                              total.toStringAsFixed(2),
                               languageCode: lang,
                             ),
                             style: theme.textTheme.titleLarge?.copyWith(
@@ -639,7 +642,7 @@ class _DepositCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                      _VerifiedBadge(verified: deposit.verified, l10n: l10n),
+                      _VerifiedBadge(verified: deposit.collected, l10n: l10n),
                     ],
                   ),
                 ),

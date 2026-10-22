@@ -10,6 +10,7 @@ class DepositDto {
     this.paidAt,
     this.contractNumber,
     this.unitCode,
+    this.state,
   });
 
   final String id;
@@ -19,6 +20,10 @@ class DepositDto {
   final String? paidAt;
   final String? contractNumber;
   final String? unitCode;
+
+  /// Where the money stands (COLLECTED, PENDING_REVIEW, CHEQUE_PENDING,
+  /// REJECTED, REVERSED, BOUNCED). Null from an older API.
+  final String? state;
 
   factory DepositDto.fromJson(Map<String, dynamic> json) {
     final contract = json['contract'] as Map<String, dynamic>?;
@@ -31,6 +36,7 @@ class DepositDto {
       paidAt: json['paidAt'] as String?,
       contractNumber: contract?['contractNumber'] as String?,
       unitCode: unit?['code'] as String?,
+      state: json['state'] as String?,
     );
   }
 }

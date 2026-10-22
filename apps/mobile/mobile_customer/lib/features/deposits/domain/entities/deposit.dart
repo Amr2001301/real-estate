@@ -28,6 +28,7 @@ class Deposit extends Equatable {
     this.paidAt,
     this.contractNumber,
     this.unitCode,
+    this.state,
   });
 
   final String id;
@@ -38,6 +39,15 @@ class Deposit extends Equatable {
   final String? contractNumber;
   final String? unitCode;
 
+  /// Where the money stands, from the API (COLLECTED, PENDING_REVIEW,
+  /// CHEQUE_PENDING, REJECTED, REVERSED, BOUNCED).
+  final String? state;
+
+  /// Counts as paid: collected — not a proof under review, a rejected one, a
+  /// reversed payment or a returned cheque. An older API without `state`
+  /// falls back to `verified`.
+  bool get collected => state != null ? state == 'COLLECTED' : verified;
+
   @override
-  List<Object?> get props => [id, amount, type, verified, paidAt];
+  List<Object?> get props => [id, amount, type, verified, paidAt, state];
 }

@@ -284,7 +284,7 @@ class _DepositSummaryCard extends StatelessWidget {
                         ),
                       ),
                       // Status badge
-                      _StatusBadge(verified: deposit.verified, l10n: l10n, accent: accent),
+                      _StatusBadge(verified: deposit.collected, l10n: l10n, accent: accent),
                     ],
                   ),
                 ),

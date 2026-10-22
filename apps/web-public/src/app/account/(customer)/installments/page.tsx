@@ -71,12 +71,14 @@ function statusIcon(status: MeInstallment['status']) {
   return CalendarClock;
 }
 
-const AMT_FMT = new Intl.NumberFormat('ar-SA', { maximumFractionDigits: 0 });
+// To the piaster, as the statement of account: rounded to the pound, the
+// figures here did not match it (129,222.22 read 129,222).
+const AMT_FMT = new Intl.NumberFormat('ar-SA', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 function fmtAmt(s: string | null | undefined): string {
   if (!s) return '—';
   const n = Number(s);
   if (!Number.isFinite(n)) return '—';
-  return AMT_FMT.format(Math.round(n));
+  return AMT_FMT.format(n);
 }
 
 export default async function AccountInstallmentsPage({ searchParams }: { searchParams: SearchParams }) {
@@ -95,7 +97,8 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
     { key: 'OVERDUE', label: m.filterLate, status: 'OVERDUE' as const },
   ];
 
-  const qs = new URLSearchParams({ page: '1', pageSize: '200' });
+  // The whole schedule (a long plan has more than 200 rows).
+  const qs = new URLSearchParams({ page: '1', pageSize: '500' });
   if (activeStatus) qs.set('status', activeStatus);
   if (activeContractId) qs.set('contractId', activeContractId);
 
@@ -306,7 +309,7 @@ type InstallmentsMessages = ReturnType<typeof siteT>['accountPages']['installmen
 
 /** Single AccountCard containing all four financial KPIs in one horizontal row. */
 function SummaryStrip({ summary, m, symbol }: { summary: NonNullable<MeInstallmentsResponse['summary']>; m: InstallmentsMessages; symbol: string }) {
-  const hasOverdue = Number(summary.overdue) > 0;
+  const hasOverdue = Number(summary.late?.amount ?? summary.overdue) > 0;
   return (
     <AccountCard accent="gold" className="p-5 sm:p-7">
       <div className="grid grid-cols-2 gap-y-6 gap-x-4 sm:grid-cols-4">
@@ -321,15 +324,19 @@ function SummaryStrip({ summary, m, symbol }: { summary: NonNullable<MeInstallme
           icon={Wallet}
           label={m.remaining}
           value={fmtAmt(summary.remaining)}
-          sub={`${summary.counts.pending + summary.counts.overdue} ${m.unpaidCount}`}
+          sub={[
+            `${summary.counts.pending + summary.counts.overdue} ${m.unpaidCount}`,
+            // The remaining includes fees and penalties: said, not hidden.
+            Number(summary.fees?.open ?? 0) > 0 ? m.feesNote(`${fmtAmt(summary.fees!.open)} ${symbol}`) : null,
+          ].filter(Boolean).join(' · ')}
           separator
           currency={symbol}
         />
         <SummaryBlock
           icon={AlertCircle}
           label={m.overdue}
-          value={fmtAmt(summary.overdue)}
-          sub={`${summary.counts.overdue} ${m.overdueCount}`}
+          value={fmtAmt(summary.late?.amount ?? summary.overdue)}
+          sub={`${summary.late?.count ?? summary.counts.overdue} ${m.overdueCount}`}
           separator
           overdue={hasOverdue}
           currency={symbol}
@@ -362,7 +369,11 @@ function InstallmentCard({ installment, m }: { installment: MeInstallment; m: In
   const subtitle = [projectName, unitLabel].filter(Boolean).join(' — ');
   const { label, tone } = STATUS_LABELS[installment.status];
   const Icon = statusIcon(installment.status);
-  const canSubmit = installment.status !== 'PAID';
+  // Not while a proof or cheque waits on it: the API refuses a second one.
+  const waiting = installment.status !== 'PAID' && !!installment.paymentOnItsWay;
+  const canSubmit = installment.status !== 'PAID' && !waiting;
+  // A row reopened by a reversal keeps its old paid date: shown only when paid.
+  const paidOn = installment.status === 'PAID' ? installment.paidAt : null;
   const accent: AccountCardAccent =
     installment.status === 'PAID' ? 'success' : installment.status === 'OVERDUE' ? 'error' : 'gold';
 
@@ -376,7 +387,7 @@ function InstallmentCard({ installment, m }: { installment: MeInstallment; m: In
           </AccountCardIcon>
           <div className="min-w-0">
             <h3 className="line-clamp-1 text-base font-semibold text-ink-strong">
-              {m.installmentLabel} {fmtMonthYear(installment.dueDate)}
+              {m.typeLabels[installment.type] ?? m.installmentLabel} {fmtMonthYear(installment.dueDate)}
             </h3>
             {subtitle && (
               <p className="mt-0.5 line-clamp-1 flex items-center gap-1.5 text-xs text-ink-muted">
@@ -412,10 +423,10 @@ function InstallmentCard({ installment, m }: { installment: MeInstallment; m: In
             {formatDate(installment.dueDate)}
           </div>
         </Block>
-        <Block label={installment.paidAt ? m.paidDateCol : m.statusCol} separator>
-          {installment.paidAt ? (
+        <Block label={paidOn ? m.paidDateCol : m.statusCol} separator>
+          {paidOn ? (
             <div className="text-sm font-semibold text-ink-strong" dir="auto">
-              {formatDate(installment.paidAt)}
+              {formatDate(paidOn)}
             </div>
           ) : (
             <span
@@ -449,6 +460,11 @@ function InstallmentCard({ installment, m }: { installment: MeInstallment; m: In
             <Upload className="h-3.5 w-3.5" aria-hidden />
             {m.submitProof}
           </Link>
+        ) : waiting ? (
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-gold-600" data-testid="installment-proof-waiting">
+            <CalendarClock className="h-3.5 w-3.5" aria-hidden />
+            {m.proofWaiting}
+          </span>
         ) : (
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-success">
             <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />

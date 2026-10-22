@@ -499,4 +499,33 @@ describe('FA — financial audit fixes (e2e)', () => {
       .send({ reason: 'FA5', retainedAmount: 0, refundAmount: 0 })
       .expect(201);
   });
+
+  // ── FA6: what the customer sees ─────────────────────────────────────────
+  it('FA6: the customer sees a proof under review on its row, and a reversed payment as reversed', async () => {
+    const sale = await sell(40);
+    const down = await downPayment(sale);
+    const asCustomer = <T extends request.Test>(r: T) => r.set('Authorization', bearer(customerToken));
+    const rowOf = async (id: string) => {
+      const res = await asCustomer(http().get('/v1/me/installments?pageSize=500')).expect(200);
+      return (res.body.data as Array<{ id: string; paymentOnItsWay: boolean }>).find((r) => r.id === id)!;
+    };
+
+    const waiting = await testApp.rawPrisma.deposit.create({
+      data: {
+        companyId, type: DepositType.DOWN_PAYMENT, contractId: sale.contractId, installmentId: down.id,
+        amount: down.amount, paidAt: new Date(), reviewStatus: DepositReviewStatus.PENDING_REVIEW,
+        receiptUrl: 'https://example.invalid/receipts/fa6.pdf', recordedById: fixtures.userIds.customer1UserId,
+      },
+    });
+    expect((await rowOf(down.id)).paymentOnItsWay).toBe(true);
+
+    // Approved, then reversed: it stays APPROVED, but its state says reversed.
+    await asAdmin(http().post(`/v1/deposits/${waiting.id}/approve`)).send({}).expect(201);
+    await asAdmin(http().post(`/v1/deposits/${waiting.id}/reverse`)).send({ reason: 'FA6' }).expect(201);
+    const mine = await asCustomer(http().get('/v1/me/deposits')).expect(200);
+    const dep = (mine.body.data as Array<{ id: string; reviewStatus: string; state: string }>).find((d) => d.id === waiting.id)!;
+    expect(dep.reviewStatus).toBe('APPROVED');
+    expect(dep.state).toBe('REVERSED');
+    expect((await rowOf(down.id)).paymentOnItsWay).toBe(false);
+  });
 });

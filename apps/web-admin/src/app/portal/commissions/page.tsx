@@ -65,7 +65,9 @@ export default async function PortalCommissionsPage({
   const approvedCount = rApproved.data?.meta.total ?? 0;
   const rejectedCount = rRejected.data?.meta.total ?? 0;
 
-  const pageNet   = rows.reduce((sum, r) => sum + Number(r.netAmount   || 0), 0);
+  // Earned and kept over every matching commission (server-side, as the
+  // reports count it) — not this page's rows, rejected and cancelled included.
+  const earnedNet = Number((paged as { earnedNet?: string } | null)?.earnedNet ?? 0);
 
   return (
     <div className="space-y-5">
@@ -97,8 +99,8 @@ export default async function PortalCommissionsPage({
             { label: t.metrics.rejected, value: rejectedCount },
             {
               label: word('صافي العمولات', 'Net commissions'),
-              value: pageNet > 0 ? <Amount parts={compactParts(pageNet, symbol, locale)} /> : '—',
-              sub: locale === 'en' ? 'This page' : 'هذه الصفحة',
+              value: earnedNet > 0 ? <Amount parts={compactParts(earnedNet, symbol, locale)} /> : '—',
+              sub: locale === 'en' ? 'Earned, after adjustments' : 'المستحقة بعد التعديلات',
             },
           ]}
         />

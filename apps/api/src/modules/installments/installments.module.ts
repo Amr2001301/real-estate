@@ -1744,7 +1744,8 @@ export class InstallmentDueSoonCron {
 // the customer signed-download endpoint just like /me/documents.
 class MeInstallmentsQueryDto {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
-  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(200) pageSize?: number;
+  // A whole long plan in one page (10 years monthly + fees): the apps sum it.
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(500) pageSize?: number;
   @IsOptional() @IsUUID() contractId?: string;
   @IsOptional() @IsEnum(InstallmentStatus) status?: InstallmentStatus;
 }
@@ -1792,6 +1793,9 @@ class MeInstallmentsService {
           status: true,
           paidAt: true,
           type: true,
+          // A payment on its way (a proof under review, a cheque not cleared):
+          // the apps offer no second upload — the API refused it anyway.
+          deposits: { where: PAYMENT_ON_ITS_WAY, select: { id: true }, take: 1 },
           plan: {
             select: {
               contract: {
@@ -1821,6 +1825,28 @@ class MeInstallmentsService {
       this.prisma.installment.count({ where: listWhere }),
     ]);
 
+    // Late as on the home banner: due before today (company time), still
+    // unpaid and nothing on its way — not the stored status, which the nightly
+    // sweep sets and a proof under review does not clear. Fees apart.
+    const today = startOfLocalToday(await companyTimeZone(this.prisma, getRequiredCompanyId()));
+    const priceRow: Prisma.InstallmentWhereInput = { type: { notIn: SURCHARGE_PAYMENT_TYPES } };
+    const unpaidRow: Prisma.InstallmentWhereInput = { status: { in: [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE] } };
+    const [lateAgg, feesOpenAgg, feesPaidAgg] = await Promise.all([
+      this.prisma.installment.aggregate({
+        where: { AND: [summaryWhere, priceRow, unpaidRow, { dueDate: { lt: today }, deposits: { none: PAYMENT_ON_ITS_WAY } }] },
+        _sum: { amount: true },
+        _count: { _all: true },
+      }),
+      this.prisma.installment.aggregate({
+        where: { AND: [summaryWhere, unpaidRow, { type: { in: SURCHARGE_PAYMENT_TYPES } }] },
+        _sum: { amount: true },
+      }),
+      this.prisma.installment.aggregate({
+        where: { AND: [summaryWhere, { status: InstallmentStatus.PAID, type: { in: SURCHARGE_PAYMENT_TYPES } }] },
+        _sum: { amount: true },
+      }),
+    ]);
+
     const [groups, nextDue, contracts] = await Promise.all([
       // Summary buckets over the WHOLE schedule (per contract scope), grouped by
       // status. Installment.status is the authoritative paid/overdue flag — it
@@ -1844,7 +1870,8 @@ class MeInstallmentsService {
       }),
       // Contracts that carry a plan — drives the optional contract filter.
       this.prisma.contract.findMany({
-        where: { customerId: userId, installmentPlan: { isNot: null } },
+        // Live ones: a cancelled contract showed in the filter with an empty list.
+        where: { customerId: userId, installmentPlan: { isNot: null }, ...LIVE_CONTRACT_WHERE },
         orderBy: { createdAt: 'asc' },
         select: { id: true, contractNumber: true },
       }),
@@ -1866,7 +1893,11 @@ class MeInstallmentsService {
     const overdueCount = countByStatus.get(InstallmentStatus.OVERDUE) ?? 0;
 
     return {
-      ...paginate(data, total, opts),
+      ...paginate(
+        data.map(({ deposits, ...row }) => ({ ...row, paymentOnItsWay: deposits.length > 0 })),
+        total,
+        opts,
+      ),
       // Additive, backward-compatible. All money fields are Decimal-as-string.
       // These totals describe the INSTALLMENT SCHEDULE only (not the booking
       // amount) — the UI labels them accordingly.
@@ -1874,6 +1905,14 @@ class MeInstallmentsService {
         totalPaid: paid.toString(),
         remaining: remaining.toString(),
         overdue: overdue.toString(),
+        // Late by the home banner's rule (price rows due before today, unpaid,
+        // nothing on its way), and fees / penalties apart: totalPaid and
+        // remaining include them, so a page shows how much of each is fees.
+        late: { amount: new Prisma.Decimal(lateAgg._sum.amount ?? 0).toString(), count: lateAgg._count._all },
+        fees: {
+          open: new Prisma.Decimal(feesOpenAgg._sum.amount ?? 0).toString(),
+          paid: new Prisma.Decimal(feesPaidAgg._sum.amount ?? 0).toString(),
+        },
         counts: {
           total: paidCount + pendingCount + overdueCount,
           paid: paidCount,
