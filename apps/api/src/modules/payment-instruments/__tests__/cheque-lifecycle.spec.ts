@@ -105,6 +105,8 @@ interface DepositFixture {
   reviewStatus: DepositReviewStatus;
   installmentId: string | null;
   installment: { id: string; status: string; dueDate: Date; planId: string } | null;
+  /** Active reversals (none: the payment still counts). */
+  paymentCorrections?: Array<{ id: string }>;
 }
 
 const installmentPlanMap: Record<string, { contract: { customerId: string } }> = {
@@ -154,12 +156,14 @@ function resetDeposited(depositStatuses: DepositReviewStatus[] = [DepositReviewS
       {
         id: DEP1_ID,
         reviewStatus: depositStatuses[0]!,
+        paymentCorrections: [],
         installmentId: INST1_ID,
         installment: { id: INST1_ID, status: 'PENDING', dueDate: new Date('2026-12-01'), planId: PLAN_ID },
       },
       {
         id: DEP2_ID,
         reviewStatus: depositStatuses[1]!,
+        paymentCorrections: [],
         installmentId: INST2_ID,
         installment: { id: INST2_ID, status: 'PENDING', dueDate: new Date('2027-01-01'), planId: PLAN_ID },
       },
@@ -210,6 +214,10 @@ function makePrismaMock() {
         if (piFixture) Object.assign(piFixture, data);
         return { ...piFixture, ...data };
       }),
+      // Status moves are conditional on the status read (claimTransition):
+      // recorded through `update` so the assertions below still see them.
+      updateMany: jest.fn(),
+      findUniqueOrThrow: jest.fn().mockImplementation(async () => ({ ...piFixture })),
     },
     deposit: {
       updateMany: jest.fn().mockResolvedValue({ count: 2 }),
@@ -256,6 +264,10 @@ function makePrismaMock() {
       return fn;
     }),
   };
+  m.paymentInstrument.updateMany.mockImplementation(async (args: { data: Record<string, unknown> }) => {
+    await m.paymentInstrument.update({ where: {}, data: args.data });
+    return { count: 1 };
+  });
   return m;
 }
 
@@ -634,12 +646,14 @@ describe('Sub-case B bounce — APPROVED deposits get a PaymentCorrection(REVERS
         {
           id: DEP1_ID,
           reviewStatus: statuses[0]!,
+          paymentCorrections: [],
           installmentId: INST1_ID,
           installment: { id: INST1_ID, status: 'PAID', dueDate: new Date('2026-01-01'), planId: PLAN_ID },
         },
         {
           id: DEP2_ID,
           reviewStatus: statuses[1]!,
+          paymentCorrections: [],
           installmentId: INST2_ID,
           installment: { id: INST2_ID, status: 'PAID', dueDate: new Date('2027-01-01'), planId: PLAN_ID },
         },
@@ -710,11 +724,14 @@ describe('Sub-case B bounce — APPROVED deposits get a PaymentCorrection(REVERS
       })
       .expect(200);
 
-    const calls = mock.installment.update.mock.calls as Array<[{ where: unknown; data: { status: string; paidAt?: unknown } }]>;
+    // The row is reopened only while still PAID (a conditional updateMany).
+    const reopens = (mock.installment.updateMany.mock.calls as Array<[{ where: { status?: string }; data: { status: string; paidAt?: unknown } }]>)
+      .filter(([c]) => c.where.status === 'PAID');
     // INST1 dueDate=2026-01-01 → OVERDUE; INST2 dueDate=2027-01-01 → depends on run date
-    expect(calls[0]![0].data.status).toBe('OVERDUE');
-    // Hard Rule 2: paidAt MUST NOT appear in any installment.update call
-    for (const [call] of calls) {
+    expect(reopens[0]![0].data.status).toBe('OVERDUE');
+    // Hard Rule 2: paidAt MUST NOT be cleared by any installment write
+    const calls = mock.installment.update.mock.calls as Array<[{ where: unknown; data: { status?: string; paidAt?: unknown } }]>;
+    for (const [call] of [...reopens, ...calls]) {
       expect(call.data.paidAt).toBeUndefined();
     }
   });
@@ -731,10 +748,12 @@ describe('Sub-case B bounce — APPROVED deposits get a PaymentCorrection(REVERS
       })
       .expect(200);
 
-    const calls = mock.installment.update.mock.calls as Array<[{ where: unknown; data: { status: string; paidAt?: unknown } }]>;
-    for (const [call] of calls) {
+    const reopens = (mock.installment.updateMany.mock.calls as Array<[{ where: { status?: string }; data: { status: string; paidAt?: unknown } }]>)
+      .filter(([c]) => c.where.status === 'PAID');
+    expect(reopens.length).toBe(2);
+    for (const [call] of reopens) {
       expect(call.data.status).toBe('PENDING');
-      // Hard Rule 2: paidAt MUST NOT appear in any installment.update call
+      // Hard Rule 2: paidAt MUST NOT be cleared
       expect(call.data.paidAt).toBeUndefined();
     }
   });

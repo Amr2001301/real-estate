@@ -188,14 +188,17 @@ describe('FA — financial audit fixes (e2e)', () => {
     for (const s of sales) {
       const deposits = await raw.deposit.findMany({
         where: { OR: [{ reservationId: s.reservationId }, ...(s.contractId ? [{ contractId: s.contractId }] : [])] },
-        select: { id: true },
+        select: { id: true, paymentInstrumentId: true },
       });
       const depositIds = deposits.map((d) => d.id);
+      const instrumentIds = deposits.map((d) => d.paymentInstrumentId).filter((x): x is string => !!x);
       await raw.installment.updateMany({ where: { plan: { contractId: s.contractId || undefined } }, data: { lastCorrectionId: null } });
       await raw.paymentCorrection.deleteMany({ where: { depositId: { in: depositIds } } });
       await raw.deposit.updateMany({ where: { id: { in: depositIds } }, data: { proofDocumentId: null } });
       await raw.document.deleteMany({ where: { ownerId: { in: depositIds } } });
       await raw.deposit.deleteMany({ where: { id: { in: depositIds } } });
+      await raw.paymentInstrument.updateMany({ where: { id: { in: instrumentIds } }, data: { replacedById: null } });
+      await raw.paymentInstrument.deleteMany({ where: { id: { in: instrumentIds } } });
       if (s.contractId) {
         const plan = await raw.installmentPlan.findFirst({ where: { contractId: s.contractId }, select: { id: true } });
         if (plan) {
@@ -314,5 +317,95 @@ describe('FA — financial audit fixes (e2e)', () => {
         where: { reservationId: sale.reservationId, reviewStatus: DepositReviewStatus.PENDING_REVIEW },
       }),
     ).toBe(1);
+  });
+
+  // ── FA3: cheques and transfers ─────────────────────────────────────────
+  const pi = (id: string, action: string, body: Record<string, unknown> = {}) =>
+    asAdmin(http().post(`/v1/payment-instruments/${id}/${action}`)).send(body);
+  const bounce = (id: string, penaltyAmount = 0) =>
+    pi(id, 'bounce', {
+      bounceReason: 'returned',
+      bounceDate: today(),
+      penaltyAmount,
+      ...(penaltyAmount ? { penaltyDueDate: today() } : {}),
+    });
+  /** The down payment paid by a cheque that has cleared. */
+  const clearedCheque = async (n: number) => {
+    const sale = await sell(n);
+    const down = await downPayment(sale);
+    const rec = await asAdmin(http().post('/v1/deposits'))
+      .send({
+        contractId: sale.contractId,
+        installmentId: down.id,
+        amount: Number(down.amount),
+        paymentMethod: 'CHEQUE',
+        cheque: { chequeNumber: `FA-${n}-${stamp}`, drawerBankName: 'FA Bank', chequeDueDate: today() },
+      })
+      .expect(201);
+    const instrumentId = rec.body.paymentInstrumentId as string;
+    expect((await pi(instrumentId, 'deposit')).status).toBe(200);
+    expect((await pi(instrumentId, 'clear')).status).toBe(200);
+    expect((await downPayment(sale)).status).toBe(InstallmentStatus.PAID);
+    return { sale, down, depositId: rec.body.id as string, instrumentId };
+  };
+  const penalties = (s: Sale) =>
+    testApp.rawPrisma.installment.count({
+      where: { plan: { contractId: s.contractId }, type: PlanPaymentType.BOUNCE_PENALTY },
+    });
+
+  it('FA3a: a cheque returned twice at once is bounced once — one reversal, one penalty', async () => {
+    const { sale, depositId, instrumentId } = await clearedCheque(10);
+    const results = await Promise.all([bounce(instrumentId, 500), bounce(instrumentId, 500)]);
+    expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
+    expect(await penalties(sale)).toBe(1);
+    expect(await testApp.rawPrisma.paymentCorrection.count({ where: { depositId } })).toBe(1);
+    expect((await downPayment(sale)).status).not.toBe(InstallmentStatus.PAID);
+  });
+
+  it('FA3b: the replacement of a cheque returned after clearing pays the row when it clears', async () => {
+    const { sale, instrumentId } = await clearedCheque(11);
+    expect((await bounce(instrumentId)).status).toBe(200);
+    const rep = await pi(instrumentId, 'replace', {
+      type: 'CHEQUE',
+      chequeNumber: `FA-11R-${stamp}`,
+      drawerBankName: 'FA Bank',
+      chequeDueDate: today(),
+    });
+    expect(rep.status).toBeLessThan(300);
+    const replacementId = rep.body.id as string;
+    expect((await pi(replacementId, 'deposit')).status).toBe(200);
+    expect((await pi(replacementId, 'clear')).status).toBe(200);
+    expect((await downPayment(sale)).status).toBe(InstallmentStatus.PAID);
+  });
+
+  it('FA3c: a returned bank transfer recorded by staff reopens its row', async () => {
+    const sale = await sell(12);
+    const down = await downPayment(sale);
+    const rec = await asAdmin(http().post('/v1/deposits'))
+      .send({
+        contractId: sale.contractId,
+        installmentId: down.id,
+        amount: Number(down.amount),
+        paymentMethod: 'BANK_TRANSFER',
+        transfer: { bankName: 'FA Bank', referenceNumber: `FA-T-${stamp}` },
+      })
+      .expect(201);
+    expect((await downPayment(sale)).status).toBe(InstallmentStatus.PAID);
+    expect((await bounce(rec.body.paymentInstrumentId)).status).toBe(200);
+    expect((await downPayment(sale)).status).not.toBe(InstallmentStatus.PAID);
+    expect(await testApp.rawPrisma.paymentCorrection.count({ where: { depositId: rec.body.id } })).toBe(1);
+  });
+
+  it('FA3d: a cheque returned after its payment was reversed and the row paid in cash leaves the row paid', async () => {
+    const { sale, down, depositId, instrumentId } = await clearedCheque(13);
+    await asAdmin(http().post(`/v1/deposits/${depositId}/reverse`)).send({ reason: 'wrong cheque' }).expect(201);
+    await asAdmin(http().post('/v1/deposits'))
+      .send({ contractId: sale.contractId, installmentId: down.id, amount: Number(down.amount), paymentMethod: 'CASH' })
+      .expect(201);
+    expect((await downPayment(sale)).status).toBe(InstallmentStatus.PAID);
+
+    expect((await bounce(instrumentId)).status).toBe(200);
+    expect((await downPayment(sale)).status).toBe(InstallmentStatus.PAID);
+    expect(await testApp.rawPrisma.paymentCorrection.count({ where: { depositId } })).toBe(1);
   });
 });
