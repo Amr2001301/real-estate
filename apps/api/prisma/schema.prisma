@@ -2035,6 +2035,8 @@ model BonusEntry {
   amount    Decimal          @db.Decimal(14, 2)
   period    String // "2026-05"
   status    BonusEntryStatus @default(PENDING)
+  /// When it was approved — from then it is owed to the sales person.
+  approvedAt DateTime?
   paidAt    DateTime?
   createdAt DateTime         @default(now())
 

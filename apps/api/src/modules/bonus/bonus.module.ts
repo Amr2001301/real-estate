@@ -534,6 +534,13 @@ export class BonusService {
       data: {
         status: dto.status,
         paidAt: dto.status === BonusEntryStatus.PAID ? new Date() : null,
+        // Owed from its approval (the receivables/payables page counts it
+        // late from then); a revert to PENDING clears it, paying keeps it.
+        ...(dto.status === BonusEntryStatus.APPROVED
+          ? { approvedAt: new Date() }
+          : dto.status === BonusEntryStatus.PENDING
+            ? { approvedAt: null }
+            : {}),
       },
     });
     if (moved.count === 0) {

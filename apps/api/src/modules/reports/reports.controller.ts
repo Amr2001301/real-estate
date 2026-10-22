@@ -10,12 +10,16 @@ import { UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { ReportsService } from './reports.service';
-import { FinancialDashboardQueryDto } from './reports.dto';
+import { LedgerService } from './ledger.service';
+import { FinancialDashboardQueryDto, LedgerQueryDto, LedgerRowsQueryDto } from './reports.dto';
 
 @ApiTags('reports')
 @Controller('reports')
 export class ReportsController {
-  constructor(private readonly svc: ReportsService) {}
+  constructor(
+    private readonly svc: ReportsService,
+    private readonly ledger: LedgerService,
+  ) {}
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:operational:read')
@@ -135,6 +139,22 @@ export class ReportsController {
       dateFrom: query.dateFrom,
       dateTo: query.dateTo,
     });
+  }
+
+  // «ليا وعليا» — what the company is owed and what it owes, by group.
+  @Roles(UserRole.ADMIN)
+  @Permissions('reports:financial:read')
+  @Get('ledger')
+  ledgerSummary(@Query() query: LedgerQueryDto) {
+    return this.ledger.summary(query);
+  }
+
+  // The rows of one group of that page, oldest first.
+  @Roles(UserRole.ADMIN)
+  @Permissions('reports:financial:read')
+  @Get('ledger/rows')
+  ledgerRows(@Query() query: LedgerRowsQueryDto) {
+    return this.ledger.rows({ ...query, page: query.page ?? 1, pageSize: query.pageSize ?? 50 });
   }
 
   // ── CSV exports ────────────────────────────────────────────────────────
