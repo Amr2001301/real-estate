@@ -195,6 +195,25 @@ export class ContractCancellationService {
       throw new ConflictException('Contract is already cancelled — CANCELLED is terminal');
     }
 
+    // A customer's proof still under review (a transfer, not a cheque — those
+    // are cancelled with the deal below) is money that may have arrived: left
+    // out of what was collected, then never approvable on a dead contract, it
+    // dropped out of the refund. It is reviewed first.
+    const proofsWaiting = await this.prisma.deposit.count({
+      where: {
+        deletedAt: null,
+        reviewStatus: DepositReviewStatus.PENDING_REVIEW,
+        paymentInstrumentId: null,
+        OR: [
+          { contractId },
+          ...(contract.reservation ? [{ reservationId: contract.reservation.id, contractId: null }] : []),
+        ],
+      },
+    });
+    if (proofsWaiting > 0) {
+      throw new ConflictException('على العقد إثبات دفع قيد المراجعة — راجعه (اعتماد أو رفض) قبل إلغاء العقد');
+    }
+
     // totalCollectedSnapshot — every collected payment of the deal, the
     // booking amount on its reservation included (see collectedForContract).
     const totalCollected = (await this.cancellationPolicy.collectedForContract(contractId)).total;

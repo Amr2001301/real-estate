@@ -1,5 +1,7 @@
-import { CanActivate, ExecutionContext, Global, INestApplication, Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { CallHandler, CanActivate, ExecutionContext, Global, INestApplication, Injectable, Module, NestInterceptor } from '@nestjs/common';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { Observable } from 'rxjs';
+import { enterTenantContext } from '../../../common/tenant/tenant-context';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { UserRole } from '@prisma/client';
@@ -14,6 +16,16 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
  * and the `id.notIn` doc-owner exclusion) against an in-memory dataset so the
  * health counts/amounts reflect real owner+category document existence.
  */
+
+@Injectable()
+class FakeTenantInterceptor implements NestInterceptor {
+  intercept(_ctx: ExecutionContext, next: CallHandler): Observable<unknown> {
+    return new Observable((subscriber) => {
+      enterTenantContext({ companyId: 'aaaaaaaa-0000-4000-8000-000000000001', bypass: false, isPublic: false });
+      next.handle().subscribe(subscriber);
+    });
+  }
+}
 
 class FakeAuthGuard implements CanActivate {
   static currentUser: { sub: string; role: UserRole; codes: string[] } | null = null;
@@ -146,6 +158,8 @@ describe('Reports · documents/receipts health (F5)', () => {
         { provide: APP_GUARD, useClass: FakeAuthGuard },
         { provide: APP_GUARD, useClass: RolesGuard },
         { provide: APP_GUARD, useClass: PermissionsGuard },
+        // A request always runs for a company (the figures name it).
+        { provide: APP_INTERCEPTOR, useClass: FakeTenantInterceptor },
       ],
     }).compile();
 

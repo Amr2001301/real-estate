@@ -1,5 +1,7 @@
-import { CanActivate, ExecutionContext, Global, INestApplication, Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { CallHandler, CanActivate, ExecutionContext, Global, INestApplication, Injectable, Module, NestInterceptor } from '@nestjs/common';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { Observable } from 'rxjs';
+import { enterTenantContext } from '../../../common/tenant/tenant-context';
 import { Test } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import request from 'supertest';
@@ -25,6 +27,16 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
 
 const CUSTOMER_ID = 'cust-1';
 
+@Injectable()
+class FakeTenantInterceptor implements NestInterceptor {
+  intercept(_ctx: ExecutionContext, next: CallHandler): Observable<unknown> {
+    return new Observable((subscriber) => {
+      enterTenantContext({ companyId: 'aaaaaaaa-0000-4000-8000-000000000001', bypass: false, isPublic: false });
+      next.handle().subscribe(subscriber);
+    });
+  }
+}
+
 class FakeAuthGuard implements CanActivate {
   static currentUser: { sub: string; role: UserRole } | null = null;
   canActivate(context: ExecutionContext): boolean {
@@ -40,8 +52,16 @@ function makePrismaMock() {
     userPermission: { findMany: jest.fn().mockResolvedValue([]) },
     installment: {
       findMany: jest.fn().mockResolvedValue([
-        { id: 'i1', dueDate: new Date('2030-01-01'), amount: new Prisma.Decimal(1000), status: 'PAID', paidAt: new Date('2030-01-02'), type: 'INSTALLMENT', plan: { contract: null } },
+        { id: 'i1', dueDate: new Date('2030-01-01'), amount: new Prisma.Decimal(1000), status: 'PAID', paidAt: new Date('2030-01-02'), type: 'INSTALLMENT', plan: { contract: null }, deposits: [] },
+        { id: 'i2', dueDate: new Date('2030-02-01'), amount: new Prisma.Decimal(1000), status: 'PENDING', paidAt: null, type: 'INSTALLMENT', plan: { contract: null }, deposits: [{ id: 'd-waiting' }] },
       ]),
+      // late (price rows due before today), open fees, paid fees.
+      aggregate: jest.fn().mockImplementation(async ({ where }: { where: unknown }) => {
+        const w = JSON.stringify(where);
+        if (w.includes('"dueDate"')) return { _sum: { amount: new Prisma.Decimal(400) }, _count: { _all: 1 } };
+        if (w.includes('"status":"PAID"')) return { _sum: { amount: new Prisma.Decimal(50) } };
+        return { _sum: { amount: new Prisma.Decimal(100) } };
+      }),
       count: jest.fn().mockResolvedValue(1),
       groupBy: jest.fn().mockResolvedValue([
         { status: 'PAID', _sum: { amount: new Prisma.Decimal(3000) }, _count: { _all: 3 } },
@@ -53,6 +73,8 @@ function makePrismaMock() {
     contract: {
       findMany: jest.fn().mockResolvedValue([{ id: 'c1', contractNumber: 'CT-1' }]),
     },
+    // The company's time zone (default when unset) for "late".
+    setting: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn(),
   };
   m.$transaction.mockImplementation(async (ops: unknown) => {
@@ -83,6 +105,8 @@ describe('GET /me/installments · summary + filters (Gap 5)', () => {
         { provide: APP_GUARD, useClass: FakeAuthGuard },
         { provide: APP_GUARD, useClass: RolesGuard },
         { provide: APP_GUARD, useClass: PermissionsGuard },
+        // A request always runs for a company (late is measured in its time zone).
+        { provide: APP_INTERCEPTOR, useClass: FakeTenantInterceptor },
       ],
     }).compile();
 
@@ -119,6 +143,17 @@ describe('GET /me/installments · summary + filters (Gap 5)', () => {
     expect(s.counts).toMatchObject({ total: 6, paid: 3, pending: 2, overdue: 1 });
     expect(s.nextDue).toMatchObject({ amount: '500' });
     expect(s.contracts).toEqual([{ id: 'c1', contractNumber: 'CT-1' }]);
+    // Late by the home banner's rule, and fees apart.
+    expect(s.late).toEqual({ amount: '400', count: 1 });
+    expect(s.fees).toEqual({ open: '100', paid: '50' });
+  });
+
+  it('marks a row with a payment on its way (no second upload offered)', async () => {
+    const res = await request(app.getHttpServer()).get('/me/installments').expect(200);
+    const byId = Object.fromEntries((res.body.data as Array<{ id: string; paymentOnItsWay: boolean }>).map((r) => [r.id, r]));
+    expect(byId.i1!.paymentOnItsWay).toBe(false);
+    expect(byId.i2!.paymentOnItsWay).toBe(true);
+    expect(byId.i2).not.toHaveProperty('deposits');
   });
 
   it('scopes every query to the caller (no cross-customer read)', async () => {

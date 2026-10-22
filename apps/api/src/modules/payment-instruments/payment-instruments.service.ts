@@ -102,6 +102,12 @@ export class ChequeLifecycleService {
             installmentId: true,
             // A booking-amount cheque pays a reservation, not an installment.
             reservationId: true,
+            // Reversed since (by hand, or by an earlier return): it no longer
+            // pays its row, so a bounce must not reopen that row again.
+            paymentCorrections: {
+              where: { type: PaymentCorrectionType.REVERSAL, supersededAt: null },
+              select: { id: true },
+            },
             installment: {
               select: {
                 id: true,
@@ -123,6 +129,24 @@ export class ChequeLifecycleService {
     });
     if (!pi) throw new NotFoundException('PaymentInstrument not found');
     return pi;
+  }
+
+  /**
+   * Moves the instrument only from the status it was read in. Two clicks on
+   * "bounced", or a clear and a bounce at once, both passed the check on the
+   * earlier read and both applied: two reversals and two penalties, or a
+   * bounced cheque left counted as collected.
+   */
+  private async claimTransition(
+    tx: Prisma.TransactionClient,
+    id: string,
+    from: PaymentInstrumentStatus,
+    data: Prisma.PaymentInstrumentUncheckedUpdateManyInput,
+  ) {
+    const moved = await tx.paymentInstrument.updateMany({ where: { id, status: from }, data });
+    if (moved.count !== 1) {
+      throw new ConflictException('تغيّرت حالة هذا الشيك/التحويل للتو — حدّث الصفحة وأعد المحاولة');
+    }
   }
 
   /** Assert a transition is allowed by the state machine. */
@@ -344,6 +368,7 @@ export class ChequeLifecycleService {
       .filter((d) => d.reviewStatus === DepositReviewStatus.PENDING_REVIEW)
       .map((d) => d.id);
     const updated = await this.prisma.$transaction(async (tx) => {
+      await this.claimTransition(tx, id, pi.status, { status: PaymentInstrumentStatus.CANCELLED });
       if (pendingDepositIds.length > 0) {
         await tx.deposit.updateMany({
           where: { id: { in: pendingDepositIds } },
@@ -354,10 +379,7 @@ export class ChequeLifecycleService {
         });
       }
       await reopenBookings(tx, pendingBookingIds(pi.deposits));
-      return tx.paymentInstrument.update({
-        where: { id },
-        data: { status: PaymentInstrumentStatus.CANCELLED },
-      });
+      return tx.paymentInstrument.findUniqueOrThrow({ where: { id } });
     });
     await this.notifyInstrument(id, PaymentInstrumentStatus.CANCELLED, actorId);
     return updated;
@@ -396,10 +418,7 @@ export class ChequeLifecycleService {
       .map((d) => d.installmentId as string);
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.paymentInstrument.update({
-        where: { id },
-        data: { status: PaymentInstrumentStatus.CLEARED, clearingDate },
-      });
+      await this.claimTransition(tx, id, pi.status, { status: PaymentInstrumentStatus.CLEARED, clearingDate });
       if (pendingDepositIds.length > 0) {
         await tx.deposit.updateMany({
           where: { id: { in: pendingDepositIds } },
@@ -409,10 +428,14 @@ export class ChequeLifecycleService {
       if (installmentIds.length > 0) {
         // Only an installment still open is paid — never one cancelled with
         // its contract while the cheque was out.
-        await tx.installment.updateMany({
+        const paid = await tx.installment.updateMany({
           where: { id: { in: installmentIds }, status: { in: ['PENDING', 'OVERDUE'] } },
           data: { status: 'PAID', paidAt: clearingDate },
         });
+        // One paid another way since the check above would be paid twice.
+        if (paid.count !== installmentIds.length) {
+          throw new ConflictException('قسط هذا الشيك مدفوع بالفعل بدفعة أخرى — اعكس الدفعة الأخرى أولاً');
+        }
       }
       // A booking-amount cheque: the booking is paid now, not when recorded.
       const bookings = pendingBookingIds(pi.deposits);
@@ -453,8 +476,13 @@ export class ChequeLifecycleService {
     const pendingDeposits = pi.deposits.filter(
       (d) => d.reviewStatus === DepositReviewStatus.PENDING_REVIEW,
     );
+    // Counted as collected: approved, or recorded by staff (NO_PROOF) — a
+    // returned transfer recorded by staff was never reversed and its row
+    // stayed paid. One already reversed since pays nothing to undo.
     const approvedDeposits = pi.deposits.filter(
-      (d) => d.reviewStatus === DepositReviewStatus.APPROVED,
+      (d) =>
+        (d.reviewStatus === DepositReviewStatus.APPROVED || d.reviewStatus === DepositReviewStatus.NO_PROOF) &&
+        d.paymentCorrections.length === 0,
     );
 
     const affectedDepositIds = pendingDeposits.map((d) => d.id);
@@ -473,13 +501,10 @@ export class ChequeLifecycleService {
     const correctionIds: string[] = [];
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.paymentInstrument.update({
-        where: { id },
-        data: {
-          status: PaymentInstrumentStatus.BOUNCED,
-          bounceDate,
-          bounceReason: dto.bounceReason,
-        },
+      await this.claimTransition(tx, id, pi.status, {
+        status: PaymentInstrumentStatus.BOUNCED,
+        bounceDate,
+        bounceReason: dto.bounceReason,
       });
 
       // ── Sub-case A: PENDING_REVIEW deposits → REJECTED ──────────────────
@@ -518,6 +543,13 @@ export class ChequeLifecycleService {
         // A cancelled deal's installment stays as cancellation left it, and
         // only a PAID installment is reopened.
         if (isDeadPlan(d.installment.plan) || d.installment.status !== 'PAID') continue;
+        // Reopened only while still paid (by this payment): claimed first.
+        const newStatus = computeReopenStatus(d.installment.dueDate, installmentAction);
+        const reopened = await tx.installment.updateMany({
+          where: { id: d.installmentId, status: 'PAID' },
+          data: { status: newStatus },
+        });
+        if (reopened.count === 0) continue;
 
         const correction = await tx.paymentCorrection.create({
           data: {
@@ -532,11 +564,9 @@ export class ChequeLifecycleService {
         correctionIds.push(correction.id);
         correctionRowsWritten += 1;
 
-        const newStatus = computeReopenStatus(d.installment.dueDate, installmentAction);
         await tx.installment.update({
           where: { id: d.installmentId },
           data: {
-            status: newStatus,
             lastCorrectionId: correction.id,
             // paidAt intentionally NOT cleared — Hard Rule 2 / §3.6
           },
@@ -639,13 +669,20 @@ export class ChequeLifecycleService {
     if (pi.deposits.some((d) => isDeadPlan(d.installment?.plan))) {
       throw new ConflictException(CONTRACT_CANCELLED_MESSAGE);
     }
-    // The payments still owed: rejected by the bounce, installment still open.
+    // The payments still owed: rejected by the bounce, or counted then
+    // reversed by it (a cheque returned after clearing) — installment still open.
     const carried = await this.prisma.deposit.findMany({
       where: {
         paymentInstrumentId: id,
         deletedAt: null,
-        reviewStatus: DepositReviewStatus.REJECTED,
         OR: [
+          { reviewStatus: DepositReviewStatus.REJECTED },
+          {
+            reviewStatus: { in: [DepositReviewStatus.APPROVED, DepositReviewStatus.NO_PROOF] },
+            paymentCorrections: { some: { type: PaymentCorrectionType.REVERSAL, supersededAt: null } },
+          },
+        ],
+        AND: [{ OR: [
           { installment: { status: { in: ['PENDING', 'OVERDUE'] } } },
           // A booking still owed on a reservation still open.
           {
@@ -655,7 +692,7 @@ export class ChequeLifecycleService {
               status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
             },
           },
-        ],
+        ] }],
       },
       select: {
         type: true,
@@ -683,12 +720,9 @@ export class ChequeLifecycleService {
           companyId,
         },
       });
-      await tx.paymentInstrument.update({
-        where: { id },
-        data: {
-          status: PaymentInstrumentStatus.REPLACED,
-          replacedById: replacement.id,
-        },
+      await this.claimTransition(tx, id, pi.status, {
+        status: PaymentInstrumentStatus.REPLACED,
+        replacedById: replacement.id,
       });
       for (const d of carried) {
         await tx.deposit.create({

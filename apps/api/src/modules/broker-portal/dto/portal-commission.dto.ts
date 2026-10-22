@@ -4,8 +4,10 @@ import {
   IsEnum,
   IsInt,
   IsOptional,
+  IsString,
   IsUUID,
   Max,
+  MaxLength,
   Min,
 } from 'class-validator';
 import { BrokerCommissionStatus } from '@prisma/client';
@@ -26,6 +28,12 @@ export class PortalCommissionsQueryDto {
   @IsOptional()
   @IsDateString()
   to?: string;
+
+  /** Search: commission number, contract number or unit code (the filter bar sends it; refused, every search 400'd). */
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  q?: string;
 
   @IsOptional()
   @Type(() => Number)

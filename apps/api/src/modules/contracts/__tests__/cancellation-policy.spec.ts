@@ -109,6 +109,7 @@ function buildPrismaStub(opts: {
   settingRows?: Array<{ key: string; value: unknown }>;
   bookingAmount?: number;
   totalAmount?: number;
+  feesAmount?: number;
 }) {
   return {
     contract: {
@@ -118,10 +119,15 @@ function buildPrismaStub(opts: {
       // The booking query is the one filtered on type BOOKING_AMOUNT (nested
       // inside the collected-money filter).
       aggregate: jest.fn().mockImplementation((args: { where: unknown }) => {
-        const isBooking = JSON.stringify(args.where).includes('"type":"BOOKING_AMOUNT"');
+        const where = JSON.stringify(args.where);
+        const isBooking = where.includes('"type":"BOOKING_AMOUNT"');
+        // The fees query: FEE payments and payments of a surcharge row.
+        const isFees = where.includes('"type":"FEE"');
         const amount = isBooking
           ? new Prisma.Decimal(opts.bookingAmount ?? 0)
-          : new Prisma.Decimal(opts.totalAmount ?? 0);
+          : isFees
+            ? new Prisma.Decimal(opts.feesAmount ?? 0)
+            : new Prisma.Decimal(opts.totalAmount ?? 0);
         return Promise.resolve({ _sum: { amount } });
       }),
     },
@@ -194,6 +200,25 @@ describe('CancellationPolicyService — suggestion formula', () => {
     expect(r.suggestedPenalty).toBe('0.00');
     expect(r.suggestedRetained).toBe('10000.00');
     expect(r.suggestedRefund).toBe('110000.00');
+  });
+
+  it('SP-1c: paid late fees are kept, not refunded less the penalty like instalments', async () => {
+    // total collected 120,000 of which 20,000 booking and 2,000 late fees.
+    // penalty 10% on the instalments only: (120,000 − 20,000 − 2,000) × 10% = 9,800
+    // retained = booking 20,000 (0% refunded) + 9,800 + fees 2,000 = 31,800
+    // refund   = 120,000 − 31,800 = 88,200
+    const prisma = buildPrismaStub({
+      contract: { id: 'c-id', companyId: 'co-a' },
+      bookingAmount: 20_000,
+      totalAmount: 120_000,
+      feesAmount: 2_000,
+    });
+    const r = await new CancellationPolicyService(prisma as never).getCancellationSuggestion('c-id');
+    expect(r.feesCollected).toBe('2000.00');
+    expect(r.otherCollected).toBe('98000.00');
+    expect(r.suggestedPenalty).toBe('9800.00');
+    expect(r.suggestedRetained).toBe('31800.00');
+    expect(r.suggestedRefund).toBe('88200.00');
   });
 
   it('SP-2: getBounceSuggestion returns correct policySnapshot', async () => {

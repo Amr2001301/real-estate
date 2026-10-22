@@ -60,6 +60,12 @@ test('the contract-value split and the month add up', async ({ page }) => {
   );
   expect(Math.abs(parts.reduce((a, b) => a + b, 0) - value)).toBeLessThanOrEqual(0.05);
 
+  // The shares shown beside the parts add up to 100% too (not 99.5).
+  const shares = await page
+    .locator('[data-testid^="fin-dist-"][data-share]:not([data-testid="fin-dist-value"])')
+    .evaluateAll((els) => els.map((e) => Number(e.getAttribute('data-share'))));
+  if (value > 0) expect(Math.round(shares.reduce((a, b) => a + b, 0) * 10)).toBe(1000);
+
   const month = page.getByTestId('fin-month');
   await expect(month).toBeVisible();
   const due = await amount('fin-month');

@@ -75,7 +75,9 @@ class InstallmentsRemoteDataSourceImpl implements InstallmentsRemoteDataSource {
   Future<List<InstallmentDto>> listMyInstallments() async {
     final res = await _dio.get<Map<String, dynamic>>(
       '/me/installments',
-      queryParameters: {'page': 1, 'pageSize': 100},
+      // The whole schedule: a long plan has more than 100 rows, and the
+      // screens add them up.
+      queryParameters: {'page': 1, 'pageSize': 500},
     );
     final data = (res.data?['data'] as List?) ?? const [];
     return data

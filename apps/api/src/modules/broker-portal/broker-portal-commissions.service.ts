@@ -5,6 +5,7 @@ import { paginate, takeSkip } from '../../common/utils/pagination';
 import type { BrokerScopeContext } from '../../common/guards/broker-scope.guard';
 import { PortalCommissionsQueryDto } from './dto/portal-commission.dto';
 import { agentFilter, brokerFacingPerson, resolveBrokerViewer } from './broker-viewer';
+import { EARNED_COMMISSION_WHERE, earnedCommissionNet } from '../installments/live-contract';
 
 const PORTAL_COMMISSION_INCLUDE = {
   brokerAgent: { select: { id: true, fullName: true, email: true, phone: true } },
@@ -67,6 +68,15 @@ export class BrokerPortalCommissionsService {
             },
           }
         : {}),
+      ...(query.q?.trim()
+        ? {
+            OR: [
+              { commissionNumber: { contains: query.q.trim(), mode: Prisma.QueryMode.insensitive } },
+              { contract: { contractNumber: { contains: query.q.trim(), mode: Prisma.QueryMode.insensitive } } },
+              { unit: { code: { contains: query.q.trim(), mode: Prisma.QueryMode.insensitive } } },
+            ],
+          }
+        : {}),
     };
 
     const [data, total] = await this.prisma.$transaction([
@@ -78,7 +88,12 @@ export class BrokerPortalCommissionsService {
       }),
       this.prisma.brokerCommission.count({ where }),
     ]);
-    return paginate(data.map(brokerFacing), total, { page, pageSize });
+    // What the broker earns and keeps over every matching commission — as the
+    // admin reports count it (not rejected or cancelled, deal payable, not
+    // clawed back, price-change adjustments included). The page summed its
+    // own rows, rejected and cancelled ones too.
+    const earnedNet = await earnedCommissionNet(this.prisma, { AND: [where, EARNED_COMMISSION_WHERE] });
+    return { ...paginate(data.map(brokerFacing), total, { page, pageSize }), earnedNet: earnedNet.toString() };
   }
 
   async findOne(scope: BrokerScopeContext, id: string) {

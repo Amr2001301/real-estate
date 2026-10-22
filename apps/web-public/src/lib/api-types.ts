@@ -322,6 +322,8 @@ export interface MeDeposit {
   installment: { id: string; dueDate: string | null; amount: string; type: string } | null;
   // P11
   reviewStatus?: MeDepositReviewStatus;
+  /** Where the money stands — a reversed or returned payment keeps reviewStatus APPROVED. */
+  state?: 'COLLECTED' | 'PENDING_REVIEW' | 'CHEQUE_PENDING' | 'REJECTED' | 'REVERSED' | 'BOUNCED' | null;
   rejectionReason?: string | null;
   paymentMethod?: MePaymentMethod | null;
   reviewedAt?: string | null;
@@ -344,6 +346,10 @@ export interface MeInstallmentsSummary {
   totalPaid: string;
   remaining: string;
   overdue: string;
+  /** Late by the home banner's rule: price rows due before today, unpaid, nothing on its way. */
+  late?: { amount: string; count: number };
+  /** Fees and penalties (late fees, transfer fee, cheque penalty), in totalPaid / remaining. */
+  fees?: { open: string; paid: string };
   counts: { total: number; paid: number; pending: number; overdue: number };
   nextDue: { amount: string; dueDate: string } | null;
   contracts: { id: string; contractNumber: string | null }[];
@@ -365,6 +371,8 @@ export interface MeInstallment {
   status: 'PENDING' | 'PAID' | 'OVERDUE';
   paidAt: string | null;
   type: string;
+  /** A proof under review or a cheque not cleared waits on this row. */
+  paymentOnItsWay?: boolean;
   plan: {
     contract: {
       id: string;
@@ -385,6 +393,8 @@ export interface DepositTotals {
   downPayment: string;
   installment: string;
   finalPayment: string;
+  /** Late fees, transfer fees, cheque penalties paid. */
+  fees?: string;
   count: number;
 }
 

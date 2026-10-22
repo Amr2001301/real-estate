@@ -394,7 +394,7 @@ class _InstallmentsSummary extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             PriceFormatter.formatString(
-                              paidTotal.toStringAsFixed(0),
+                              paidTotal.toStringAsFixed(2),
                               languageCode: lang,
                             ),
                             style: theme.textTheme.titleLarge?.copyWith(

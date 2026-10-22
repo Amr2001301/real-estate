@@ -47,10 +47,15 @@ function customerDepositView(row: {
   installment: { id: string; dueDate: Date; amount: unknown; type: string; status: string; paidAt: Date | null } | null;
   reservation: { id: string; reservationNumber: string | null; unit: { id: string; code: string } | null } | null;
   proofDocument: unknown;
+  state?: string;
 }) {
   return {
     id: row.id,
     type: row.type,
+    // Where the money stands (COLLECTED / PENDING_REVIEW / CHEQUE_PENDING /
+    // REJECTED / REVERSED / BOUNCED): a reversed or returned payment keeps
+    // reviewStatus APPROVED, and the apps showed it approved.
+    state: row.state ?? null,
     amount: row.amount,
     paidAt: row.paidAt,
     createdAt: row.createdAt,
@@ -281,7 +286,9 @@ export class DepositsController {
         await this.ownership.bookingDepositWhere(user.sub),
       ],
     };
-    const result = await this.svc.list({ page: 1, pageSize: 100, ownerWhere });
+    // Every payment: the totals cover them all, and a long plan has more
+    // than a hundred (the list stopped there while the totals did not).
+    const result = await this.svc.list({ page: 1, pageSize: 500, ownerWhere });
     return { ...result, data: result.data.map(customerDepositView) };
   }
 

@@ -18,7 +18,7 @@ import {
   type CancellationPolicySnapshot,
   type BouncePolicySnapshot,
 } from './cancellation-settings.constants';
-import { COLLECTED_DEPOSIT_WHERE } from '../../common/finance/collected';
+import { COLLECTED_DEPOSIT_WHERE, FEES_DEPOSIT_WHERE } from '../../common/finance/collected';
 
 // ── Suggestion return types ──────────────────────────────────────────────────
 
@@ -27,6 +27,8 @@ export interface CancellationSuggestion {
   companyId: string;
   bookingCollected: string;
   otherCollected: string;
+  /** Late fees, transfer fees and cheque penalties paid: kept, not refunded. */
+  feesCollected: string;
   totalCollected: string;
   suggestedBookingRefund: string;
   suggestedPenalty: string;
@@ -107,7 +109,7 @@ export class CancellationPolicyService {
    */
   async collectedForContract(
     contractId: string,
-  ): Promise<{ total: Prisma.Decimal; booking: Prisma.Decimal }> {
+  ): Promise<{ total: Prisma.Decimal; booking: Prisma.Decimal; fees: Prisma.Decimal }> {
     const contract = await this.prisma.contract.findFirst({
       where: { id: contractId },
       select: { reservationId: true },
@@ -119,14 +121,19 @@ export class CancellationPolicyService {
     const where = (extra?: Prisma.DepositWhereInput): Prisma.DepositWhereInput => ({
       AND: [COLLECTED_DEPOSIT_WHERE, { OR: own }, ...(extra ? [extra] : [])],
     });
-    const [totalAgg, bookingAgg] = await Promise.all([
+    const [totalAgg, bookingAgg, feesAgg] = await Promise.all([
       this.prisma.deposit.aggregate({ where: where(), _sum: { amount: true } }),
       this.prisma.deposit.aggregate({
         where: where({ type: DepositType.BOOKING_AMOUNT }),
         _sum: { amount: true },
       }),
+      this.prisma.deposit.aggregate({ where: where(FEES_DEPOSIT_WHERE), _sum: { amount: true } }),
     ]);
-    return { total: dec(totalAgg._sum.amount), booking: dec(bookingAgg._sum.amount) };
+    return {
+      total: dec(totalAgg._sum.amount),
+      booking: dec(bookingAgg._sum.amount),
+      fees: dec(feesAgg._sum.amount),
+    };
   }
 
   /**
@@ -149,14 +156,17 @@ export class CancellationPolicyService {
     const collected = await this.collectedForContract(contractId);
     const bookingCollected = collected.booking;
     const totalCollected = collected.total;
-    const otherCollected = totalCollected.minus(bookingCollected);
+    // Fees and penalties are not part of the price: they are kept, not
+    // refunded less the penalty as if they were instalments.
+    const feesCollected = collected.fees;
+    const otherCollected = totalCollected.minus(bookingCollected).minus(feesCollected);
 
     const settings = await this.readSettings();
 
     // § 4.4 formula
     const suggestedBookingRefund = bookingCollected.times(settings.bookingRefundPct).dividedBy(100);
     const suggestedPenalty = otherCollected.times(settings.penaltyPct).dividedBy(100);
-    const suggestedRetained = bookingCollected.minus(suggestedBookingRefund).plus(suggestedPenalty);
+    const suggestedRetained = bookingCollected.minus(suggestedBookingRefund).plus(suggestedPenalty).plus(feesCollected);
     const suggestedRefund = totalCollected.minus(suggestedRetained);
 
     const policySnapshot: CancellationPolicySnapshot = {
@@ -173,6 +183,7 @@ export class CancellationPolicyService {
       companyId: contract.companyId ?? '',
       bookingCollected: toStr(bookingCollected),
       otherCollected: toStr(otherCollected),
+      feesCollected: toStr(feesCollected),
       totalCollected: toStr(totalCollected),
       suggestedBookingRefund: toStr(suggestedBookingRefund),
       suggestedPenalty: toStr(suggestedPenalty),

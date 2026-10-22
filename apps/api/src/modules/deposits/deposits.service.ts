@@ -1,3 +1,4 @@
+import { OwnershipService } from '../../common/ownership/ownership.service';
 import {
   BadRequestException,
   ConflictException,
@@ -160,6 +161,7 @@ export class DepositsService {
     private readonly documents: DocumentsService,
     private readonly notifications: NotificationsService,
     private readonly r2: R2Service,
+    private readonly ownership: OwnershipService,
   ) {}
 
   // Link a payment proof as a first-class RECEIPT document. Idempotent: skips
@@ -211,6 +213,26 @@ export class DepositsService {
     return { ...withDepositState(deposit), reversible };
   }
 
+  /**
+   * A booking payment that is what keeps its booking PAID is undone from the
+   * reservation (unconfirm), which reopens the booking with it. Deleted or
+   * un-verified here it stopped counting while the booking stayed paid — and
+   * conversion then credited a booking nobody paid.
+   */
+  private async assertNotHoldingBooking(id: string) {
+    const d = await this.prisma.deposit.findUnique({
+      where: { id },
+      select: { type: true, reviewStatus: true, reservation: { select: { bookingPaymentStatus: true } } },
+    });
+    if (
+      d?.type === DepositType.BOOKING_AMOUNT &&
+      PAYING_REVIEW_STATUSES.includes(d.reviewStatus) &&
+      d.reservation?.bookingPaymentStatus === ReservationBookingPaymentStatus.PAID
+    ) {
+      throw new ConflictException('هذه دفعة مبلغ الحجز المؤكدة — استخدم «إلغاء تأكيد الدفع» من صفحة الحجز');
+    }
+  }
+
   /** The deposit is what keeps its installment PAID (FG-05). */
   private async stillPays(d: ReversalDeposit): Promise<boolean> {
     return (
@@ -231,6 +253,7 @@ export class DepositsService {
     const d = await this.prisma.deposit.findUnique({ where: { id }, select: REVERSAL_SELECT });
     if (!d) throw new NotFoundException('Deposit not found');
     if (d.deletedAt) throw new NotFoundException('Deposit already deleted');
+    await this.assertNotHoldingBooking(id);
     if (!(await this.stillPays(d))) {
       await this.prisma.deposit.update({ where: { id }, data: { deletedAt: new Date() } });
       return;
@@ -862,6 +885,7 @@ export class DepositsService {
   async verify(id: string, dto: VerifyDepositDto, actor: AuthUser) {
     await this.assertNotAwaitingCheque(id);
     await this.assertMoneyOpen(id, { approving: dto.verified });
+    if (!dto.verified) await this.assertNotHoldingBooking(id);
     // P11 — keep `verified` in lockstep with `reviewStatus`. Toggling
     // verified=true is equivalent to a manual approve action; verified=false
     // resets the row to the pre-review state (NO_PROOF if no receipt exists,
@@ -896,9 +920,14 @@ export class DepositsService {
     // the deposit status goes back to PENDING_REVIEW but the installment stays
     // PAID — an inconsistency that was the root of FG-06. FG-05: not twice —
     // a deposit already reversed since its last review only changes status.
+    // An approved payment un-verified is reversed whatever it goes back to;
+    // so is a staff-recorded one (NO_PROOF, which pays too) that has a receipt
+    // and goes back to review — it left the row paid with nothing behind it.
     const needsReversal =
       !dto.verified &&
-      target.reviewStatus === DepositReviewStatus.APPROVED &&
+      (target.reviewStatus === DepositReviewStatus.APPROVED ||
+        (target.reviewStatus === DepositReviewStatus.NO_PROOF &&
+          !PAYING_REVIEW_STATUSES.includes(nextReviewStatus))) &&
       !!target.installmentId &&
       target.installment?.status === InstallmentStatus.PAID &&
       !(await this.reversedSinceReview(target));
@@ -1279,20 +1308,32 @@ export class DepositsService {
     // Document, back-link it, then reflect PENDING on the reservation. Amount
     // is the reservation's authoritative bookingAmount (client `amount` is
     // ignored here to prevent under/over-statement).
-    const created = await this.prisma.deposit.create({
-      data: {
-        type: DepositType.BOOKING_AMOUNT,
-        reservationId: reservation.id,
-        contractId: null,
-        installmentId: null,
-        amount: reservation.bookingAmount,
-        paidAt: new Date(dto.paidAt),
-        receiptUrl: dto.receiptUrl,
-        recordedById: userId,
-        reviewStatus: DepositReviewStatus.PENDING_REVIEW,
-        paymentMethod: dto.paymentMethod,
-        verified: false,
-      },
+    // Claim the booking first (UNPAID → PENDING, "awaiting review"): of two
+    // proofs sent at once, or a proof sent while a cheque or another payment
+    // is on its way, only one gets in.
+    const created = await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.reservation.updateMany({
+        where: { id: reservation.id, bookingPaymentStatus: ReservationBookingPaymentStatus.UNPAID },
+        data: { bookingPaymentStatus: ReservationBookingPaymentStatus.PENDING },
+      });
+      if (claimed.count === 0) {
+        throw new ConflictException('يوجد دفعة لمبلغ الحجز قيد المراجعة أو مسجلة بالفعل');
+      }
+      return tx.deposit.create({
+        data: {
+          type: DepositType.BOOKING_AMOUNT,
+          reservationId: reservation.id,
+          contractId: null,
+          installmentId: null,
+          amount: reservation.bookingAmount,
+          paidAt: new Date(dto.paidAt),
+          receiptUrl: dto.receiptUrl,
+          recordedById: userId,
+          reviewStatus: DepositReviewStatus.PENDING_REVIEW,
+          paymentMethod: dto.paymentMethod,
+          verified: false,
+        },
+      });
     });
     const document = await this.documents.create(userId, {
       ownerType: DocumentOwnerType.DEPOSIT,
@@ -1308,12 +1349,6 @@ export class DepositsService {
     const deposit = await this.prisma.deposit.update({
       where: { id: created.id },
       data: { proofDocumentId: document.id },
-    });
-    // Reflect "awaiting review" on the reservation so /me/reservations and the
-    // admin reservation view show the pending state without a deposit join.
-    await this.prisma.reservation.update({
-      where: { id: reservation.id },
-      data: { bookingPaymentStatus: ReservationBookingPaymentStatus.PENDING },
     });
 
     const projectId = reservation.unit?.building?.phase?.projectId ?? null;
@@ -1339,11 +1374,25 @@ export class DepositsService {
     depositId: string,
     dto: CustomerResubmitProofDto,
   ) {
-    const deposit = await this.prisma.deposit.findUnique({
-      where: { id: depositId },
-      include: { contract: { select: { customerId: true } }, installment: true },
+    // The same ownership as /me/deposits: an installment payment by who owned
+    // the contract when it was made, a booking payment (no contract) by the
+    // reservation's client. Checking contract.customerId alone 404'd every
+    // booking proof and let a transfer's new owner reopen the previous one's.
+    const deposit = await this.prisma.deposit.findFirst({
+      where: {
+        AND: [
+          { id: depositId },
+          {
+            OR: [
+              await this.ownership.depositOwnershipWhere(userId),
+              await this.ownership.bookingDepositWhere(userId),
+            ],
+          },
+        ],
+      },
+      include: { installment: true, reservation: { select: { status: true, bookingAmount: true } } },
     });
-    if (!deposit || deposit.contract?.customerId !== userId) {
+    if (!deposit) {
       throw new NotFoundException('Deposit not found');
     }
     if (deposit.reviewStatus !== DepositReviewStatus.REJECTED) {
@@ -1360,7 +1409,22 @@ export class DepositsService {
     // amount changed by a price change, since this proof was sent: the old
     // proof then no longer pays it.
     const installmentId = deposit.installmentId;
+    const bookingOf = deposit.type === DepositType.BOOKING_AMOUNT ? deposit.reservationId : null;
     const assertStillPayable = async (tx: Prisma.TransactionClient) => {
+      if (bookingOf) {
+        const [r] = await tx.$queryRaw<Array<{ status: ReservationStatus; bookingAmount: Prisma.Decimal; bookingPaymentStatus: ReservationBookingPaymentStatus }>>`
+          SELECT "status", "bookingAmount", "bookingPaymentStatus" FROM "Reservation" WHERE "id" = ${bookingOf}::uuid FOR UPDATE`;
+        if (!r || !LIVE_RESERVATION_STATUSES.includes(r.status)) {
+          throw new ConflictException(RESERVATION_ENDED_MESSAGE);
+        }
+        if (r.bookingPaymentStatus !== ReservationBookingPaymentStatus.UNPAID) {
+          throw new ConflictException('يوجد دفعة لمبلغ الحجز قيد المراجعة أو مسجلة بالفعل');
+        }
+        if (!new Prisma.Decimal(deposit.amount).equals(r.bookingAmount)) {
+          throw new ConflictException('مبلغ الإثبات لا يطابق مبلغ الحجز الحالي — أرسل إثباتاً جديداً بالمبلغ الصحيح');
+        }
+        return;
+      }
       if (!installmentId) return;
       const row = await this.lockInstallment(tx, installmentId);
       if (row.status === InstallmentStatus.PAID) {
@@ -1394,6 +1458,13 @@ export class DepositsService {
     });
     const updated = await this.prisma.$transaction(async (tx) => {
       await assertStillPayable(tx);
+      // A booking proof back in review puts the booking back in "awaiting review".
+      if (bookingOf) {
+        await tx.reservation.update({
+          where: { id: bookingOf },
+          data: { bookingPaymentStatus: ReservationBookingPaymentStatus.PENDING },
+        });
+      }
       return tx.deposit.update({
         where: { id: depositId },
         data: {
@@ -1503,13 +1574,26 @@ export class DepositsService {
         if (booking && !new Prisma.Decimal(target.amount).equals(booking.bookingAmount)) {
           throw new ConflictException('مبلغ الإثبات لا يطابق مبلغ الحجز الحالي — ارفض الإثبات وأرسل إثباتاً جديداً بالمبلغ الصحيح');
         }
-        await tx.reservation.update({
-          where: { id: target.reservationId },
+        // Pays the booking only if it is still unpaid: one already paid by
+        // another payment (cash confirmed meanwhile, a second proof) must not
+        // be counted twice.
+        const claimed = await tx.reservation.updateMany({
+          where: {
+            id: target.reservationId,
+            bookingPaymentStatus: {
+              in: [ReservationBookingPaymentStatus.UNPAID, ReservationBookingPaymentStatus.PENDING],
+            },
+          },
           data: {
             bookingPaymentStatus: ReservationBookingPaymentStatus.PAID,
             bookingPaidAt: next.paidAt,
           },
         });
+        if (claimed.count === 0) {
+          throw new ConflictException(
+            'مبلغ الحجز مدفوع بالفعل بدفعة أخرى أو معفى — ارفض هذا الإثبات أو اعكس الدفعة الأخرى أولاً',
+          );
+        }
       }
       return next;
     });
@@ -1573,9 +1657,11 @@ export class DepositsService {
       // Booking proofs flip the reservation to PENDING on submit; rejecting one
       // reverts it to UNPAID so the customer can resubmit. (The rejected
       // Deposit row keeps the reason for the customer to see.)
+      // Only while it waits on this proof: a booking paid by another payment
+      // stays paid.
       if (target.type === DepositType.BOOKING_AMOUNT && target.reservationId) {
-        await tx.reservation.update({
-          where: { id: target.reservationId },
+        await tx.reservation.updateMany({
+          where: { id: target.reservationId, bookingPaymentStatus: ReservationBookingPaymentStatus.PENDING },
           data: { bookingPaymentStatus: ReservationBookingPaymentStatus.UNPAID },
         });
       }

@@ -856,6 +856,18 @@ export class ContractAmendmentsService {
 
     const amendment = await this.prisma.$transaction(async (tx) => {
       await this.lockSchedule(tx, contractId, contract.reservationId, companyId);
+      // The rows as they are now, under the lock: a price change, unit swap
+      // or markup waiver that landed after the read above rescaled them, and
+      // rescheduling the old amounts undid it.
+      const now = await tx.installment.findMany({
+        where: { planId: plan.id, status: { in: OPEN_STATUSES }, type: PlanPaymentType.INSTALLMENT },
+        orderBy: { dueDate: 'asc' },
+        select: { id: true, amount: true },
+      });
+      const same =
+        now.length === open.length &&
+        now.every((r, i) => r.id === open[i]!.id && new Prisma.Decimal(r.amount).equals(open[i]!.amount));
+      if (!same) throw new ConflictException('تغيّر جدول الأقساط أثناء التنفيذ — أعد المحاولة');
       const cancelled = await tx.installment.updateMany({
         where: { id: { in: open.map((i) => i.id) }, status: { in: OPEN_STATUSES } },
         data: { status: InstallmentStatus.CANCELLED },
@@ -1071,8 +1083,17 @@ export class ContractAmendmentsService {
         },
       });
 
+      // And only from the price and waiver the new rows were computed on, as
+      // a price change is: a waiver that landed meanwhile was overwritten.
       const moved = await tx.contract.updateMany({
-        where: { id: contractId, companyId, unitId: fromUnitId, ...LIVE_CONTRACT_WHERE },
+        where: {
+          id: contractId,
+          companyId,
+          unitId: fromUnitId,
+          totalAmount: contract.totalAmount,
+          markupWaived: contract.markupWaived,
+          ...LIVE_CONTRACT_WHERE,
+        },
         data: { unitId: unit.id, totalAmount: new Prisma.Decimal(dto.totalAmount) },
       });
       if (moved.count === 0) throw new ConflictException('تغيّر العقد أثناء التنفيذ — أعد المحاولة');

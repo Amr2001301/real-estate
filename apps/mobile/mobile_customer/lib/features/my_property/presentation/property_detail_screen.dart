@@ -14,16 +14,17 @@ const _navy      = Color(0xFF0B1726);
 const _navyCard  = Color(0xFF152236);
 const _navyAccent= Color(0xFF1E3451);
 
-// Compact Arabic monetary display: 119000 → "119 ألف ج.م" (company currency)
+// Money for tight spaces, without losing piasters below a million.
 String _compact(String? raw, String lang) {
   if (raw == null || raw.isEmpty) return '—';
-  final n = (int.tryParse(raw) ?? double.tryParse(raw)?.round()) ?? 0;
+  final n = double.tryParse(raw) ?? 0;
   final sym = PriceFormatter.symbol(lang);
-  if (n >= 1000000) {
-    return lang == 'ar' ? '${(n / 1000000).round()} مليون $sym' : '${(n / 1000000).round()}M $sym';
-  }
-  if (n >= 1000) {
-    return lang == 'ar' ? '${(n / 1000).round()} ألف $sym' : '${(n / 1000).round()}K $sym';
+  // Millions to two decimals ("1.45 مليون"), below a million the exact
+  // amount: rounded to the whole million / thousand, 1,450,000 read
+  // "1 مليون" and 24,500 "25 ألف".
+  if (n.abs() >= 1000000) {
+    final m = (n / 1000000).toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+    return lang == 'ar' ? '$m مليون $sym' : '${m}M $sym';
   }
   return PriceFormatter.formatString(raw, languageCode: lang);
 }
@@ -112,14 +113,11 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen>
             final pendingCount = all.length - paidCount - overdueCount;
             final nextInst     = _nextInstallment(all);
 
-            // Sum of all overdue installment amounts (raw int string)
-            final overdueTotalInt = all
+            // Sum of all overdue installment amounts, to the piaster (each
+            // row was rounded to the pound before adding).
+            final overdueTotal = all
                 .where((i) => i.status == InstallmentStatus.overdue)
-                .fold<int>(0, (sum, i) {
-              final n = int.tryParse(i.amount) ??
-                  double.tryParse(i.amount)?.round() ?? 0;
-              return sum + n;
-            });
+                .fold<double>(0, (sum, i) => sum + (double.tryParse(i.amount) ?? 0));
 
             final displayed = switch (_filter) {
               _Filter.paid    => all.where((i) => i.status == InstallmentStatus.paid).toList(),
@@ -179,7 +177,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen>
                         pending:      pendingCount,
                         overdue:      overdueCount,
                         nextInst:     nextInst,
-                        overdueTotal: overdueTotalInt.toString(),
+                        overdueTotal: overdueTotal.toStringAsFixed(2),
                       ),
                     ],
                   ),

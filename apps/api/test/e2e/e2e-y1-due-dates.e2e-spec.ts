@@ -7,7 +7,7 @@
  */
 import 'reflect-metadata';
 import request from 'supertest';
-import { PlanPaymentType, ProjectStatus, UnitStatus } from '@prisma/client';
+import { DepositType, PlanPaymentType, ProjectStatus, UnitStatus } from '@prisma/client';
 import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
 import { bearer, loginAs } from '../helpers/login';
@@ -218,7 +218,12 @@ describe('Y1 — due dates are days (e2e)', () => {
 
   it('Y1-3: an unsigned contract whose down payment is due shows in the dashboard\'s needs-action', async () => {
     const before = await alerts();
+    const figuresBefore = await summary();
     const sale = await sell(3, day(new Date(Date.now() + 40 * DAY)), false);
+    // Its paid booking is not in the collection rate until it is signed.
+    const figures = await summary();
+    expect(Math.round(figures.dueToDate - figuresBefore.dueToDate)).toBe(0);
+    expect(Math.round(figures.collectedAgainstDue - figuresBefore.collectedAgainstDue)).toBe(0);
     const unsigned = await alerts();
     expect(unsigned.contractsAwaitingSignature - before.contractsAwaitingSignature).toBe(1);
     expect(unsigned.contractsDueBeforeSigning - before.contractsDueBeforeSigning).toBe(1);
@@ -227,5 +232,27 @@ describe('Y1 — due dates are days (e2e)', () => {
       .send({ signedAt: new Date().toISOString() })
       .expect(201);
     expect(await alerts()).toMatchObject(before);
+  });
+
+  it('Y1-4: a payment with no schedule row is not in the rate, so what is left is never less than what is late', async () => {
+    const sale = await sell(4, day(new Date(Date.now() + 40 * DAY)));
+    const before = await summary();
+    await testApp.rawPrisma.deposit.create({
+      data: {
+        companyId,
+        contractId: sale.contractId,
+        type: DepositType.INSTALLMENT,
+        amount: 300_000,
+        paidAt: new Date(),
+        recordedById: fixtures.userIds.adminId,
+      },
+    });
+    const after = await summary();
+    expect(Math.round(after.dueToDate - before.dueToDate)).toBe(0);
+    expect(Math.round(after.collectedAgainstDue - before.collectedAgainstDue)).toBe(0);
+
+    const fin = (await asAdmin(http().get('/v1/reports/financial-dashboard')).expect(200)).body.summary;
+    const left = Number(fin.dueToDate) - Number(fin.collectedAgainstDue);
+    expect(Number(fin.overdueAmountComputed)).toBeLessThanOrEqual(left + 0.01);
   });
 });

@@ -146,3 +146,25 @@ export function warrantyMonthsLabel(months: number | null | undefined, locale: L
   }
   return months === 1 ? 'شهر واحد' : `${months.toLocaleString('ar-EG-u-nu-latn')} شهراً`;
 }
+
+/**
+ * Shares of a whole, in tenths of a percent, rounded so they add up to
+ * exactly 100 (largest remainder): rounded one by one, 13.38% and 84.86%
+ * read "13%" and "85%" and the parts fell short of the whole.
+ */
+export function sharesOf(values: number[], total = values.reduce((a, b) => a + b, 0)): number[] {
+  if (total <= 0) return values.map(() => 0);
+  const raw = values.map((v) => (Math.max(0, v) / total) * 1000);
+  const tenths = raw.map(Math.floor);
+  let left = 1000 - tenths.reduce((a, b) => a + b, 0);
+  const order = raw.map((r, i) => [r - Math.floor(r), i] as const).sort((a, b) => b[0] - a[0]);
+  for (const [, i] of order) {
+    if (left <= 0) break;
+    tenths[i]! += 1;
+    left -= 1;
+  }
+  return tenths.map((t) => t / 10);
+}
+
+/** "13.4%", "85%", "0.2%". */
+export const shareText = (v: number) => `${Number.isInteger(v) ? v : v.toFixed(1)}%`;

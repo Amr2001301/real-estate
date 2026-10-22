@@ -56,10 +56,30 @@ export async function DepositCard({ deposit }: { deposit: MeDeposit }) {
   const typeLabel = TYPE_LABELS[deposit.type] ?? m.typeGeneric;
   const status: MeDepositReviewStatus =
     deposit.reviewStatus ?? (deposit.verified ? 'APPROVED' : 'PENDING_REVIEW');
-  const { label, tone } = REVIEW_STATUS_LABELS[status];
-  const StatusIcon = status === 'APPROVED' ? CheckCircle2 : status === 'REJECTED' ? AlertCircle : Clock;
-  const accent: AccountCardAccent =
-    status === 'APPROVED' ? 'success' : status === 'REJECTED' ? 'error' : status === 'NO_PROOF' ? 'muted' : 'gold';
+  // The money's state wins over the review status: a payment reversed, or a
+  // cheque returned after clearing, stays APPROVED and read «paid — verified».
+  const undone =
+    deposit.state === 'REVERSED'
+      ? { label: m.statusReversed, tone: 'error' as const }
+      : deposit.state === 'BOUNCED'
+        ? { label: m.statusBounced, tone: 'error' as const }
+        : deposit.state === 'CHEQUE_PENDING'
+          ? { label: m.statusChequePending, tone: 'accent' as const }
+          : null;
+  const { label, tone } = undone ?? REVIEW_STATUS_LABELS[status];
+  const failed = tone === 'error';
+  const StatusIcon = failed ? AlertCircle : status === 'APPROVED' && !undone ? CheckCircle2 : Clock;
+  const accent: AccountCardAccent = failed
+    ? 'error'
+    : undone
+      ? 'gold'
+      : status === 'APPROVED'
+        ? 'success'
+        : status === 'NO_PROOF'
+          ? 'muted'
+          : 'gold';
+  // A returned cheque cannot be sent again (a new payment is made instead).
+  const canResubmit = deposit.reviewStatus === 'REJECTED' && deposit.state !== 'BOUNCED';
 
   return (
     <AccountCard accent={accent} className="p-5 sm:p-6">
@@ -128,6 +148,7 @@ export async function DepositCard({ deposit }: { deposit: MeDeposit }) {
               </div>
             </div>
           )}
+          {canResubmit && (
           <Link
             href={
               {
@@ -140,6 +161,7 @@ export async function DepositCard({ deposit }: { deposit: MeDeposit }) {
             <Upload className="h-3.5 w-3.5" aria-hidden />
             {m.resubmit}
           </Link>
+          )}
         </div>
       )}
     </AccountCard>

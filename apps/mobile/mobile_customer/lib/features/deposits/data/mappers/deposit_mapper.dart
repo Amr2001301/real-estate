@@ -10,5 +10,6 @@ extension DepositDtoMapper on DepositDto {
         paidAt: DateTime.tryParse(paidAt ?? ''),
         contractNumber: contractNumber,
         unitCode: unitCode,
+        state: state,
       );
 }

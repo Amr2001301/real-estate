@@ -13,15 +13,16 @@ const _navyDeep = Color(0xFF0B1726);
 const _navyCard = Color(0xFF1A3352);
 const _navyLight = Color(0xFF243F62);
 
-// Compact Arabic monetary format for tight spaces: 119000 → "119 ألف ج.م" (company currency)
+// Money for tight spaces, without losing piasters below a million.
 String _compact(String raw, String lang) {
-  final n = (int.tryParse(raw) ?? double.tryParse(raw)?.round()) ?? 0;
+  final n = double.tryParse(raw) ?? 0;
   final sym = PriceFormatter.symbol(lang);
-  if (n >= 1000000) {
-    return lang == 'ar' ? '${(n / 1000000).round()} مليون $sym' : '${(n / 1000000).round()}M $sym';
-  }
-  if (n >= 1000) {
-    return lang == 'ar' ? '${(n / 1000).round()} ألف $sym' : '${(n / 1000).round()}K $sym';
+  // Millions to two decimals ("1.45 مليون"), below a million the exact
+  // amount: rounded to the whole million / thousand, 1,450,000 read
+  // "1 مليون" and 24,500 "25 ألف".
+  if (n.abs() >= 1000000) {
+    final m = (n / 1000000).toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+    return lang == 'ar' ? '$m مليون $sym' : '${m}M $sym';
   }
   return PriceFormatter.formatString(raw, languageCode: lang);
 }

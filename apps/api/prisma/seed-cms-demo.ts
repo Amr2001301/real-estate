@@ -89,6 +89,13 @@ async function main(): Promise<void> {
     return;
   }
 
+  // Content belongs to a company: the public site only shows its own
+  // tenant's pages, so a row without one is shown nowhere.
+  const slug = process.env.SEED_COMPANY_SLUG ?? 'default';
+  const company = await prisma.company.findUnique({ where: { slug }, select: { id: true } });
+  if (!company) throw new Error(`Company "${slug}" not found — run the dev seed first.`);
+  const companyId = company.id;
+
   console.log('🌱  Seeding CMS demo data…');
 
   // ── CMS Pages ──────────────────────────────────────────────────────────────
@@ -96,6 +103,7 @@ async function main(): Promise<void> {
   await prisma.cmsPage.upsert({
     where: { slug: PAGE_SLUGS.ABOUT },
     create: {
+      companyId,
       slug: PAGE_SLUGS.ABOUT,
       title: { ar: 'من نحن', en: 'About Us' },
       body: {
@@ -110,6 +118,7 @@ async function main(): Promise<void> {
   await prisma.cmsPage.upsert({
     where: { slug: PAGE_SLUGS.PRIVACY },
     create: {
+      companyId,
       slug: PAGE_SLUGS.PRIVACY,
       title: { ar: 'سياسة الخصوصية', en: 'Privacy Policy' },
       body: {
@@ -124,6 +133,7 @@ async function main(): Promise<void> {
   await prisma.cmsPage.upsert({
     where: { slug: PAGE_SLUGS.TERMS },
     create: {
+      companyId,
       slug: PAGE_SLUGS.TERMS,
       title: { ar: 'الشروط والأحكام', en: 'Terms & Conditions' },
       body: {
@@ -174,11 +184,11 @@ async function main(): Promise<void> {
 
   for (const spec of bannerSpecs) {
     const existing = await prisma.banner.findFirst({
-      where: { title: { path: ['ar'], equals: spec.title } },
+      where: { companyId, title: { path: ['ar'], equals: spec.title } },
       select: { id: true },
     });
     if (!existing) {
-      await prisma.banner.create({ data: spec.data });
+      await prisma.banner.create({ data: { ...spec.data, companyId } });
     }
   }
 
@@ -189,6 +199,7 @@ async function main(): Promise<void> {
   await prisma.article.upsert({
     where: { slug: ARTICLE_SLUGS.A1 },
     create: {
+      companyId,
       slug: ARTICLE_SLUGS.A1,
       title:   { ar: 'دليل المشتري: كيف تختار وحدتك السكنية المثالية', en: 'Buyer\'s Guide: How to Choose Your Ideal Residential Unit' },
       excerpt: { ar: 'نرشدك خطوة بخطوة عبر عملية اختيار الوحدة السكنية المناسبة لاحتياجاتك وميزانيتك.', en: 'We guide you step by step through the process of choosing the right residential unit for your needs and budget.' },
@@ -205,6 +216,7 @@ async function main(): Promise<void> {
   await prisma.article.upsert({
     where: { slug: ARTICLE_SLUGS.A2 },
     create: {
+      companyId,
       slug: ARTICLE_SLUGS.A2,
       title:   { ar: 'اتجاهات السوق العقاري السعودي في 2025', en: 'Saudi Real Estate Market Trends in 2025' },
       excerpt: { ar: 'نستعرض أبرز التحولات في سوق العقارات السعودي وفرص الاستثمار الواعدة خلال العام الجاري.', en: 'We review the most significant shifts in the Saudi real estate market and promising investment opportunities this year.' },
@@ -221,6 +233,7 @@ async function main(): Promise<void> {
   await prisma.article.upsert({
     where: { slug: ARTICLE_SLUGS.A3 },
     create: {
+      companyId,
       slug: ARTICLE_SLUGS.A3,
       title:   { ar: 'نصائح الاستثمار العقاري للمبتدئين', en: 'Real Estate Investment Tips for Beginners' },
       excerpt: { ar: 'مسودة — قيد الإعداد', en: 'Draft — work in progress' },

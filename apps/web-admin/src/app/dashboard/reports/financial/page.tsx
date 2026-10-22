@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { CalendarClock, History } from 'lucide-react';
 import { DepositStateChip } from '@/components/payments/payment-state';
 import {
   AlertTriangle,
@@ -23,7 +24,7 @@ import type {
 } from '@/lib/types';
 import { CollapsibleRows } from '@/components/premium/collapsible-rows';
 import { CollapsibleList } from '@/components/premium/collapsible-list';
-import { compactParts, formatCurrency, formatDate, tx, intlLocale } from '@/lib/format';
+import { compactParts, formatCurrency, formatDate, tx, intlLocale, shareText, sharesOf } from '@/lib/format';
 import { getReportsCurrency, getCompanyTimeZone, todayIn } from '@/lib/currency';
 import {
   resolveReportDateRange,
@@ -149,13 +150,18 @@ export default async function FinancialReportsPage({
   const againstDue     = num(s?.collectedAgainstDue ?? s?.collectedTowardsPrice);
   const collectionRate = dueToDate > 0 ? Math.min(100, Math.round((againstDue / dueToDate) * 100)) : 0;
   const overdueRate    = dueToDate > 0 ? parseFloat(((overdueAmt / dueToDate) * 100).toFixed(1)) : 0;
+  // The rest of what is left of the due: not late — a payment awaiting
+  // confirmation, or a row falling due today. Late + this = what is left.
+  const notLateAmt     = Math.max(0, dueToDate - againstDue - overdueAmt);
+  // Taken from the two shown figures so the three read 100% exactly.
+  const notLateRate    = notLateAmt > 0 ? Math.max(0, parseFloat((100 - collectionRate - overdueRate).toFixed(1))) : 0;
   const en = locale === 'en';
   const portfolio = dash?.portfolio;
   const pGross = num(portfolio?.grossValue);
   const pNet = num(portfolio?.netValue);
   const pMarkup = num(portfolio?.markup);
   const pShare = (v: number) => (pGross > 0 ? (v / pGross) * 100 : 0);
-  const pctText = (v: number) => `${v.toFixed(v === 100 || v === 0 || v >= 10 ? 0 : 1)}%`;
+
   const portfolioParts = [
     { key: 'paid', label: en ? 'Paid' : 'المسدد', hint: en ? 'money received' : 'اتدفع فعلًا', amount: num(portfolio?.paid), dot: 'bg-emerald-500' },
     { key: 'awaiting', label: en ? 'Awaiting confirmation' : 'بانتظار التأكيد', hint: en ? 'a proof or cheque under review' : 'إيصال أو شيك لسه بيتراجع', amount: num(portfolio?.awaiting), dot: 'bg-sky-500' },
@@ -163,23 +169,35 @@ export default async function FinancialReportsPage({
     { key: 'notYetDue', label: en ? 'Not due yet' : 'لم يستحق بعد', hint: en ? 'its date has not come' : 'ميعاده لسه مجاش', amount: num(portfolio?.notYetDue), dot: 'bg-slate-400/60' },
     { key: 'unscheduled', label: en ? 'Not on a schedule' : 'غير مجدول', hint: en ? 'no row on the schedule' : 'مالوش قسط في الجدول', amount: num(portfolio?.unscheduled), dot: 'bg-amber-400' },
   ].filter((r) => r.key !== 'unscheduled' && r.key !== 'awaiting' ? true : r.amount > 0);
+  // The parts' shares add up to 100% (rounded together, not one by one).
+  const portfolioShare = Object.fromEntries(
+    sharesOf(portfolioParts.map((r) => r.amount), pGross).map((v, i) => [portfolioParts[i]!.key, v]),
+  ) as Record<string, number>;
   const monthData = dash?.month;
   const monthDue = num(monthData?.due ?? s?.dueThisMonth);
   const cashIn = num(monthData?.cashIn ?? s?.collectedThisMonth);
+  const paidEarly = num(monthData?.paidEarly);
+  const cashInOther = num(monthData?.cashInOther);
   const monthParts = [
-    { key: 'paid', label: en ? 'Paid' : 'اتسدد', amount: num(monthData?.paid), bar: 'bg-emerald-500' },
-    { key: 'awaiting', label: en ? 'Awaiting confirmation' : 'بانتظار التأكيد', amount: num(monthData?.awaiting), bar: 'bg-sky-500' },
-    { key: 'overdue', label: en ? 'Late' : 'متأخر', amount: num(monthData?.overdue), bar: 'bg-danger-500' },
-    { key: 'upcoming', label: en ? 'Still to come' : 'لم يحن موعده', amount: num(monthData?.upcoming), bar: 'bg-slate-400/60' },
+    {
+      key: 'paid',
+      label: en ? 'Paid' : 'اتسدد',
+      amount: num(monthData?.paid),
+      bar: 'bg-emerald-500',
+      early: paidEarly,
+    },
+    { key: 'awaiting', label: en ? 'Awaiting confirmation' : 'بانتظار التأكيد', amount: num(monthData?.awaiting), bar: 'bg-sky-500', early: 0 },
+    { key: 'overdue', label: en ? 'Late' : 'متأخر', amount: num(monthData?.overdue), bar: 'bg-danger-500', early: 0 },
+    { key: 'upcoming', label: en ? 'Still to come' : 'لم يحن موعده', amount: num(monthData?.upcoming), bar: 'bg-slate-400/60', early: 0 },
   ];
 
   // Comparison deltas
-  const contractDelta  = cmpS ? computeDelta(contractVal,   num(cmpS.totalContractValue))                         : undefined;
+  // Contract value, what is left and what is late are as of today, whatever
+  // the period: compared with another period they always read 0% — only the
+  // money collected in the period is compared.
   const collectedDelta = cmpS
     ? computeDelta(towardsPrice, num(cmpS.collectedTowardsPrice ?? cmpS.totalCollectedVerified ?? cmpS.totalCollected))
     : undefined;
-  const outstandDelta  = cmpS ? computeDelta(outstanding,   num(cmpS.totalOutstanding ?? cmpS.totalRemaining))    : undefined;
-  const overdueDelta   = cmpS ? computeDelta(overdueAmt,    num(cmpS.overdueAmountComputed ?? cmpS.totalOverdue)) : undefined;
 
   const aging    = dash?.aging   ?? [];
   const forecast = dash?.cashflowForecast;
@@ -194,6 +212,8 @@ export default async function FinancialReportsPage({
   // Summary figures read in ألف / مليون / مليار (the exact amount on hover);
   // per-row amounts (an installment, a payment) stay exact.
   const cmoney = (n: number | string) => compactParts(n, currencySign, locale).join(' ');
+  // Without the currency, for a short badge beside a figure that has it.
+  const cnum = (n: number | string) => compactParts(n, '', locale).join(' ').trim();
   const short = (n: number) => compactParts(n, '', locale).join(' ').trim();
   const count = (n: number) => n.toLocaleString(intlLocale(locale));
 
@@ -281,10 +301,12 @@ export default async function FinancialReportsPage({
                     {m.collectionEfficiency.overdueLabel}{' '}
                     <b className={cn('tabular-nums', overdueRate > 0 ? 'text-danger-600' : 'text-slate-700')}>{overdueRate}%</b>
                   </span>
-                  <span className="text-slate-500">
-                    {m.collectionEfficiency.remainingLabel}{' '}
-                    <b className="text-slate-700 tabular-nums">{dueToDate > 0 ? 100 - collectionRate : 0}%</b>
-                  </span>
+                  {notLateRate > 0 && (
+                    <span className="text-slate-500" data-testid="fin-not-late">
+                      {en ? 'Awaiting confirmation / due today' : 'بانتظار التأكيد أو مستحق اليوم'}{' '}
+                      <b className="text-sky-600 tabular-nums">{notLateRate}%</b>
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -339,6 +361,18 @@ export default async function FinancialReportsPage({
                     {x.label}
                   </dt>
                   <dd className="mt-0.5 truncate text-[13.5px] font-semibold text-slate-800 tabular-nums">{cmoney(x.amount)}</dd>
+                  {x.early > 0 && (
+                    <dd className="mt-1.5">
+                      <span
+                        className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600"
+                        title={en ? 'This month’s rows paid ahead, before the month began' : 'أقساط الشهر ده اتدفعت مقدمًا، قبل ما الشهر يبدأ'}
+                        data-testid={`fin-month-${x.key}-early`}
+                      >
+                        <History className="h-3 w-3" aria-hidden />
+                        {en ? `${cnum(x.early)} paid ahead` : `منه ${cnum(x.early)} مدفوع مقدمًا`}
+                      </span>
+                    </dd>
+                  )}
                 </div>
               ))}
             </dl>
@@ -349,6 +383,18 @@ export default async function FinancialReportsPage({
                 {en ? 'Came in this month' : 'دخل الخزنة هذا الشهر'}
               </dt>
               <dd className="mt-1 truncate text-[15px] font-bold text-slate-900 tabular-nums">{cmoney(cashIn)}</dd>
+              {cashInOther > 0 && (
+                <dd className="mt-1.5">
+                  <span
+                    className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-brand-400/40 bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700"
+                    title={en ? 'Money that came in this month for other months’ rows or bookings' : 'فلوس دخلت الشهر ده عن أقساط شهور تانية أو مقدمات حجز'}
+                    data-testid="fin-cashin-other"
+                  >
+                    <CalendarClock className="h-3 w-3" aria-hidden />
+                    {en ? `${cnum(cashInOther)} for other months` : `منه ${cnum(cashInOther)} لشهور تانية`}
+                  </span>
+                </dd>
+              )}
             </div>
             <div className="min-w-0">
               <dt className="truncate text-[11.5px] text-slate-500">{m.hero.fees}</dt>
@@ -374,7 +420,6 @@ export default async function FinancialReportsPage({
           label={m.kpi.contractValue}
           value={<Amount value={contractVal} sign={currencySign} locale={locale} />}
           sub={m.kpi.contractValueSub(contractCount, depositCount)}
-          delta={contractDelta}
         />
         <FigureCard
           testId="fin-kpi-outstanding"
@@ -382,7 +427,6 @@ export default async function FinancialReportsPage({
           label={m.kpi.outstanding}
           value={<Amount value={outstanding} sign={currencySign} locale={locale} />}
           sub={m.kpi.outstandingSub(cmoney(dueSoon))}
-          delta={outstandDelta}
           upIsBad
         />
         <FigureCard
@@ -392,7 +436,6 @@ export default async function FinancialReportsPage({
           label={m.kpi.overdue}
           value={<Amount value={overdueAmt} sign={currencySign} locale={locale} />}
           sub={m.kpi.overdueSub(overdueCount, overdueRate)}
-          delta={overdueDelta}
           upIsBad
         />
       </div>
@@ -460,14 +503,14 @@ export default async function FinancialReportsPage({
                 { key: 'value', label: en ? 'Signed contracts’ value' : 'قيمة العقود الموقّعة', hint: en ? 'the parts below add up to it' : 'الأجزاء دي مجموعها = القيمة', amount: pGross, dot: 'bg-brand-500' },
                 ...portfolioParts,
               ].map((r) => (
-                <li key={r.key} data-testid={`fin-dist-${r.key}`} data-amount={r.amount} title={money(r.amount)} className="flex items-center gap-3 rounded-2xl border border-hairline px-4 py-3">
+                <li key={r.key} data-testid={`fin-dist-${r.key}`} data-amount={r.amount} data-share={r.key === 'value' ? 100 : (portfolioShare[r.key] ?? 0)} title={money(r.amount)} className="flex items-center gap-3 rounded-2xl border border-hairline px-4 py-3">
                   <span className={cn('h-2.5 w-2.5 shrink-0 rounded-full', r.dot)} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[12px] text-slate-500">{r.label}</span>
                     <span className="block truncate text-[10.5px] text-slate-400">{r.hint}</span>
                     <span className="block truncate text-[15px] font-bold text-slate-900 tabular-nums">{cmoney(r.amount)}</span>
                   </span>
-                  <span className="shrink-0 text-[12px] font-semibold text-slate-400 tabular-nums">{pctText(pShare(r.amount))}</span>
+                  <span className="shrink-0 text-[12px] font-semibold text-slate-400 tabular-nums">{shareText(r.key === 'value' ? 100 : (portfolioShare[r.key] ?? 0))}</span>
                 </li>
               ))}
             </ul>

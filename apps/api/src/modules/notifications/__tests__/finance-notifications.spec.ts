@@ -195,6 +195,7 @@ describe('deposits', () => {
       {} as never,
       notifications as never,
       {} as never,
+      {} as never,
     );
     jest.spyOn(svc, 'findOne').mockResolvedValue({} as never);
 
@@ -238,7 +239,7 @@ describe('cheques', () => {
       ],
     };
     const tx = {
-      paymentInstrument: { update: jest.fn().mockResolvedValue({}) },
+      paymentInstrument: { update: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
       deposit: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
       installment: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
     };
