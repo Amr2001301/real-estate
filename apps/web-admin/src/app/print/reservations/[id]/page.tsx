@@ -4,6 +4,9 @@ import { api, safe } from '@/lib/api';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { getLetterhead } from '@/lib/letterhead';
 import { getLocale } from '@/lib/locale';
+import { fillForm } from '@/lib/form-layout';
+import { getFormLayouts, pickForm } from '@/lib/form-layout-server';
+import { FormPrint } from '@/components/print/FormPrint';
 import { getDocumentTemplates, getPrintSettings, pickTemplate, sealFor } from '@/lib/print-settings';
 import { reservationValues } from '@/lib/document-values';
 import { getCustomerFields } from '@/lib/customer-fields-server';
@@ -40,19 +43,20 @@ const STATUS_TONE: Record<string, PrintTone> = {
 /** Statuses after which the slip no longer holds the unit. */
 const VOID = new Set(['REJECTED', 'CANCELLED', 'EXPIRED']);
 
-type Search = Promise<{ template?: string }>;
+type Search = Promise<{ template?: string; form?: string }>;
 
 export default async function ReservationPrintPage({ params, searchParams }: { params: Params; searchParams: Search }) {
   const { id } = await params;
-  const { template: requested } = await searchParams;
+  const { template: requested, form: requestedForm } = await searchParams;
 
-  const [resResult, letterhead, locale, paper, templates, signatures, fields] = await Promise.all([
+  const [resResult, letterhead, locale, paper, templates, signatures, forms, fields] = await Promise.all([
     safe(api.get<Reservation>(`/reservations/${id}`)),
     getLetterhead(),
     getLocale(),
     getPrintSettings(),
     getDocumentTemplates('RESERVATION'),
     safe(api.get<SignatureRequestView[]>(`/reservations/${id}/signature-requests`)),
+    getFormLayouts('RESERVATION'),
     getCustomerFields(),
   ]);
 
@@ -83,6 +87,35 @@ export default async function ReservationPrintPage({ params, searchParams }: { p
         }
       : undefined;
 
+  // The company's own paper form, when it has one: the same values, written
+  // where the company placed them, with the signatures in their boxes.
+  const form = pickForm(forms, requestedForm);
+  const formSwitcher = forms.length
+    ? {
+        label: t.common.form,
+        param: 'form',
+        current: form?.id ?? 'none',
+        options: [...forms.map((f) => ({ id: f.id, name: f.name })), { id: 'none', name: t.common.standardLayout }],
+      }
+    : undefined;
+  if (form) {
+    return (
+      <FormPrint
+        title={m.title}
+        locale={locale}
+        pages={form.pages}
+        paperSize={form.paperSize}
+        fields={fillForm(form, reservationValues(r, letterhead, paper, locale, fields), {
+          'sign.customer': customerSigned?.image ?? null,
+          'sign.company': seal?.signature ?? null,
+          'sign.stamp': seal?.stamp ?? null,
+        })}
+        switcher={formSwitcher}
+        watermark={VOID.has(r.status) ? statusLabel : undefined}
+      />
+    );
+  }
+
   return (
     <PrintDocument
       letterhead={letterhead}
@@ -96,13 +129,14 @@ export default async function ReservationPrintPage({ params, searchParams }: { p
       note={m.note(company)}
       paper={paper}
       switcher={
-        templates.length
+        formSwitcher ??
+        (templates.length
           ? {
               label: t.common.template,
               current: template?.id ?? 'none',
               options: [...templates.map((x) => ({ id: x.id, name: x.name })), { id: 'none', name: t.common.noTemplate }],
             }
-          : undefined
+          : undefined)
       }
     >
       <PrintSection title={m.client}>

@@ -561,7 +561,7 @@ export interface Deposit {
   contract?: {
     id: string;
     contractNumber?: string | null;
-    customer?: { fullName: string };
+    customer?: { id: string; fullName: string };
     unit?: { id: string; code: string } | null;
   } | null;
   reservationId?: string | null;

@@ -2,7 +2,7 @@ import { formatDate, tx } from './format';
 import type { Letterhead } from './letterhead';
 import type { Locale } from './locale';
 import type { PrintSettings } from './print-settings';
-import type { Contract, CustomerRecord, Reservation } from './types';
+import type { Contract, CustomerRecord, Deposit, Reservation } from './types';
 import { FIXED_DETAILS, customValueText, formatDay, type CustomerFieldDef } from './customer-fields';
 import { amountInWords, customPlaceholder, type TemplateValues } from './document-template';
 import { formatMoney, formatNumber, companyNameOf } from '@/components/print/PrintDocument';
@@ -116,4 +116,38 @@ export function reservationValues(
 /** A contract with no instalments is a cash sale. */
 export function contractVariant(c: Contract): 'CASH' | 'INSTALLMENT' {
   return (c.installmentPlan?.installments ?? []).some((i) => i.type === 'INSTALLMENT') ? 'INSTALLMENT' : 'CASH';
+}
+
+/** The payer of a receipt, as the customer endpoint returns them (when they have an account). */
+export type ReceiptPayer = { fullName: string; phone?: string | null; email?: string | null } & CustomerRecord;
+
+/** A payment receipt's placeholder values (the receipt prints only on the company's own paper). */
+export function receiptValues(
+  d: Deposit,
+  payer: ReceiptPayer | null,
+  letterhead: Letterhead,
+  paper: PrintSettings,
+  locale: Locale,
+  fields: CustomerFieldDef[] = [],
+): TemplateValues {
+  const m = printT(locale).deposit;
+  const name = payer?.fullName ?? d.reservation?.client?.fullName ?? d.reservation?.lead?.fullName ?? d.contract?.customer?.fullName;
+  return {
+    ...companyValues(letterhead, paper, locale),
+    'customer.name': name,
+    'customer.phone': payer?.phone,
+    'customer.email': payer?.email,
+    ...customerRecordValues(payer, fields, locale),
+    'unit.code': d.reservation?.unit?.code ?? d.contract?.unit?.code,
+    'contract.number': d.contract?.contractNumber,
+    'reservation.number': d.reservation?.reservationNumber,
+    'receipt.number': d.id.slice(-8).toUpperCase(),
+    'receipt.date': formatDate(d.paidAt, locale),
+    'receipt.amount': formatMoney(d.amount, letterhead.currency, locale),
+    'receipt.amountWords': amountInWords(d.amount, letterhead.currency, locale),
+    'receipt.for': m.type[d.type] ?? d.type,
+    'receipt.method': d.paymentMethod ? (m.method[d.paymentMethod] ?? d.paymentMethod) : null,
+    'receipt.chequeNumber': d.paymentInstrument?.chequeNumber,
+    'receipt.installmentDue': d.installment ? formatDate(d.installment.dueDate, locale) : null,
+  };
 }

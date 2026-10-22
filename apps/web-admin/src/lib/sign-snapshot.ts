@@ -4,6 +4,7 @@ import type { Locale } from './locale';
 import type { DocumentTemplate, PrintSettings } from './print-settings';
 import type { Reservation } from './types';
 import { renderTemplate, type TemplateBlock } from './document-template';
+import { fillForm, type FilledField, type FormLayout } from './form-layout';
 import { reservationValues } from './document-values';
 import type { CustomerFieldDef } from './customer-fields';
 import { companyNameOf, formatMoney, formatNumber } from '@/components/print/PrintDocument';
@@ -34,6 +35,12 @@ export interface SignSnapshot {
   amounts: { label: string; value: string; emphasis?: boolean }[];
   clausesTitle: string;
   clauses: TemplateBlock[];
+  /**
+   * The company's own paper form, filled in: the signing page shows it in
+   * place of the sections above. Signature boxes are empty here — the
+   * company's signature and stamp never go to the public page.
+   */
+  form?: { pages: { imageUrl: string }[]; fields: FilledField[] };
 }
 
 const present = (rows: { label: string; value: string | null | undefined | false }[]) =>
@@ -47,7 +54,9 @@ export function reservationSnapshot(
   template: DocumentTemplate | null,
   locale: Locale,
   fields: CustomerFieldDef[] = [],
+  form: FormLayout | null = null,
 ): SignSnapshot {
+  const values = reservationValues(r, letterhead, paper, locale, fields);
   const t = printT(locale);
   const m = t.reservation;
   const money = (v: string | number | null | undefined) => formatMoney(v, letterhead.currency, locale);
@@ -109,6 +118,7 @@ export function reservationSnapshot(
       ]),
     ],
     clausesTitle: t.common.clauses,
-    clauses: template ? renderTemplate(template.body, reservationValues(r, letterhead, paper, locale, fields)) : [],
+    clauses: template ? renderTemplate(template.body, values) : [],
+    ...(form ? { form: { pages: form.pages, fields: fillForm(form, values, {}) } } : {}),
   };
 }

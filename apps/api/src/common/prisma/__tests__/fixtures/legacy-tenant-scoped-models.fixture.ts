@@ -46,6 +46,7 @@ export const TENANT_SCOPED_MODELS_LEGACY = new Set([
   'documenttemplate', // the wording of its contracts and booking forms (P4)
   'signaturerequest', // a customer's electronic signature (P5)
   'customerfield', // the company's own customer fields
+  'formlayout', // the company's own paper form (P4b)
   // Chat
   'chatsession', 'chatmessage', 'chatfeedback',
   // Option B part 2 (docs/audit/13-user-tenancy.md): TENANT_CONTROLLED → TENANT_OWNED

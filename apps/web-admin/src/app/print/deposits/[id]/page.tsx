@@ -5,6 +5,11 @@ import { getLetterhead } from '@/lib/letterhead';
 import { getLocale } from '@/lib/locale';
 import { getPrintSettings, sealFor } from '@/lib/print-settings';
 import type { Deposit } from '@/lib/types';
+import { getCustomerFields } from '@/lib/customer-fields-server';
+import { receiptValues, type ReceiptPayer } from '@/lib/document-values';
+import { fillForm } from '@/lib/form-layout';
+import { getFormLayouts, pickForm } from '@/lib/form-layout-server';
+import { FormPrint } from '@/components/print/FormPrint';
 import { printT } from '@/messages/print';
 import {
   PrintDocument,
@@ -19,6 +24,7 @@ import {
 export const dynamic = 'force-dynamic';
 
 type Params = Promise<{ id: string }>;
+type Search = Promise<{ form?: string }>;
 
 const REVIEW_TONE: Record<string, PrintTone> = {
   APPROVED: 'success',
@@ -27,14 +33,16 @@ const REVIEW_TONE: Record<string, PrintTone> = {
   NO_PROOF: 'success',
 };
 
-export default async function DepositPrintPage({ params }: { params: Params }) {
+export default async function DepositPrintPage({ params, searchParams }: { params: Params; searchParams: Search }) {
   const { id } = await params;
+  const { form: requestedForm } = await searchParams;
 
-  const [depositResult, letterhead, locale, paper] = await Promise.all([
+  const [depositResult, letterhead, locale, paper, forms] = await Promise.all([
     safe(api.get<Deposit>(`/deposits/${id}`)),
     getLetterhead(),
     getLocale(),
     getPrintSettings(),
+    getFormLayouts('RECEIPT'),
   ]);
 
   if (depositResult.error || !depositResult.data) notFound();
@@ -67,8 +75,42 @@ export default async function DepositPrintPage({ params }: { params: Params }) {
     !d.deletedAt && (d.reviewStatus === 'APPROVED' || d.reviewStatus === 'NO_PROOF'),
   );
 
+  // The company's own receipt, when it has one: its paper with the values,
+  // signature and stamp where the company placed them.
+  const form = pickForm(forms, requestedForm);
+  const formSwitcher = forms.length
+    ? {
+        label: t.common.form,
+        param: 'form',
+        current: form?.id ?? 'none',
+        options: [...forms.map((f) => ({ id: f.id, name: f.name })), { id: 'none', name: t.common.standardLayout }],
+      }
+    : undefined;
+  if (form) {
+    const payerId = d.contract?.customer?.id ?? d.reservation?.client?.id;
+    const [payer, fields] = await Promise.all([
+      payerId ? safe(api.get<ReceiptPayer>(`/users/${payerId}`)).then((r) => r.data ?? null) : null,
+      getCustomerFields(),
+    ]);
+    return (
+      <FormPrint
+        title={m.title}
+        locale={locale}
+        pages={form.pages}
+        paperSize={form.paperSize}
+        fields={fillForm(form, receiptValues(d, payer, letterhead, paper, locale, fields), {
+          'sign.company': seal?.signature ?? null,
+          'sign.stamp': seal?.stamp ?? null,
+        })}
+        switcher={formSwitcher}
+        watermark={watermark}
+      />
+    );
+  }
+
   return (
     <PrintDocument
+      switcher={formSwitcher}
       letterhead={letterhead}
       locale={locale}
       eyebrow={m.eyebrow}

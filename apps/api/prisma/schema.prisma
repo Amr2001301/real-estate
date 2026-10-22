@@ -94,6 +94,7 @@ model Company {
   documentTemplates           DocumentTemplate[]
   signatureRequests           SignatureRequest[]
   customerFields              CustomerField[]
+  formLayouts                 FormLayout[]
   users                       User[]
   projects                    Project[]
   phases                      Phase[]
@@ -362,6 +363,30 @@ model CustomerField {
   updatedAt DateTime @updatedAt
 
   @@unique([companyId, key])
+}
+
+/// The company's own paper form: its pages (images) and where each value goes
+/// on them, so a booking form or a receipt prints — and a booking form is
+/// signed online — on the paper the company already uses. Positions are
+/// fractions of the page (0–1), so any scan resolution works.
+model FormLayout {
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String   @db.Uuid
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  /// RESERVATION | RECEIPT (CONTRACT later)
+  documentType String   @db.VarChar(20)
+  name         String   @db.VarChar(120)
+  /// A4 | A5 | HALF (half an A4 sheet, landscape) — a booking form is A4
+  paperSize    String   @default("A4") @db.VarChar(10)
+  /// [{ imageUrl }] — one per page
+  pages        Json
+  /// [{ id, key, page, x, y, w, h, size, align, bold }]
+  fields       Json
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([companyId, documentType])
 }
 
 model CompanyDomain {

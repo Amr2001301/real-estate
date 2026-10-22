@@ -7,66 +7,70 @@ import type { TemplateDocument } from './print-settings';
  * prints as a dotted blank to fill by hand.
  */
 
+/** A document a value can be filled on: a wording's, or a receipt (on the company's own paper). */
+export type PlaceholderDocument = TemplateDocument | 'RECEIPT';
+
 export interface Placeholder {
   key: string;
   ar: string;
   en: string;
   /** The documents it is filled on. */
-  docs: TemplateDocument[];
+  docs: PlaceholderDocument[];
 }
 
-const BOTH: TemplateDocument[] = ['CONTRACT', 'RESERVATION'];
-const CONTRACT: TemplateDocument[] = ['CONTRACT'];
-const RESERVATION: TemplateDocument[] = ['RESERVATION'];
+const ALL: PlaceholderDocument[] = ['CONTRACT', 'RESERVATION', 'RECEIPT'];
+const CONTRACT: PlaceholderDocument[] = ['CONTRACT'];
+const RESERVATION: PlaceholderDocument[] = ['RESERVATION'];
+const RECEIPT: PlaceholderDocument[] = ['RECEIPT'];
 
 export const PLACEHOLDER_GROUPS: { ar: string; en: string; items: Placeholder[] }[] = [
   {
     ar: 'الشركة',
     en: 'Company',
     items: [
-      { key: 'company.name', ar: 'اسم الشركة', en: 'Company name', docs: BOTH },
-      { key: 'company.registration', ar: 'رقم السجل التجاري', en: 'Commercial registration', docs: BOTH },
-      { key: 'company.address', ar: 'عنوان الشركة', en: 'Company address', docs: BOTH },
-      { key: 'company.phone', ar: 'هاتف الشركة', en: 'Company phone', docs: BOTH },
-      { key: 'company.signatory', ar: 'اسم المفوض بالتوقيع', en: 'Authorised signatory', docs: BOTH },
-      { key: 'company.signatoryTitle', ar: 'صفة المفوض بالتوقيع', en: 'Signatory’s title', docs: BOTH },
+      { key: 'company.name', ar: 'اسم الشركة', en: 'Company name', docs: ALL },
+      { key: 'company.registration', ar: 'رقم السجل التجاري', en: 'Commercial registration', docs: ALL },
+      { key: 'company.address', ar: 'عنوان الشركة', en: 'Company address', docs: ALL },
+      { key: 'company.phone', ar: 'هاتف الشركة', en: 'Company phone', docs: ALL },
+      { key: 'company.signatory', ar: 'اسم المفوض بالتوقيع', en: 'Authorised signatory', docs: ALL },
+      { key: 'company.signatoryTitle', ar: 'صفة المفوض بالتوقيع', en: 'Signatory’s title', docs: ALL },
     ],
   },
   {
     ar: 'العميل',
     en: 'Customer',
     items: [
-      { key: 'customer.name', ar: 'اسم العميل', en: 'Customer name', docs: BOTH },
-      { key: 'customer.phone', ar: 'هاتف العميل', en: 'Customer phone', docs: BOTH },
-      { key: 'customer.email', ar: 'بريد العميل', en: 'Customer e-mail', docs: BOTH },
-      { key: 'customer.nationalId', ar: 'الرقم القومي', en: 'National ID', docs: BOTH },
-      { key: 'customer.address', ar: 'عنوان العميل', en: 'Customer address', docs: BOTH },
-      { key: 'customer.birthDate', ar: 'تاريخ الميلاد', en: 'Date of birth', docs: BOTH },
-      { key: 'customer.birthPlace', ar: 'محل الميلاد', en: 'Place of birth', docs: BOTH },
-      { key: 'customer.occupation', ar: 'الوظيفة / المهنة', en: 'Occupation', docs: BOTH },
-      { key: 'customer.employer', ar: 'جهة العمل', en: 'Employer', docs: BOTH },
-      { key: 'customer.idIssueDate', ar: 'تاريخ إصدار الهوية', en: 'ID issue date', docs: BOTH },
-      { key: 'customer.idIssuePlace', ar: 'جهة إصدار الهوية', en: 'ID issued at', docs: BOTH },
-      { key: 'customer.homePhone', ar: 'التليفون الأرضي', en: 'Home phone', docs: BOTH },
+      { key: 'customer.name', ar: 'اسم العميل', en: 'Customer name', docs: ALL },
+      { key: 'customer.phone', ar: 'هاتف العميل', en: 'Customer phone', docs: ALL },
+      { key: 'customer.email', ar: 'بريد العميل', en: 'Customer e-mail', docs: ALL },
+      { key: 'customer.nationalId', ar: 'الرقم القومي', en: 'National ID', docs: ALL },
+      { key: 'customer.address', ar: 'عنوان العميل', en: 'Customer address', docs: ALL },
+      { key: 'customer.birthDate', ar: 'تاريخ الميلاد', en: 'Date of birth', docs: ALL },
+      { key: 'customer.birthPlace', ar: 'محل الميلاد', en: 'Place of birth', docs: ALL },
+      { key: 'customer.occupation', ar: 'الوظيفة / المهنة', en: 'Occupation', docs: ALL },
+      { key: 'customer.employer', ar: 'جهة العمل', en: 'Employer', docs: ALL },
+      { key: 'customer.idIssueDate', ar: 'تاريخ إصدار الهوية', en: 'ID issue date', docs: ALL },
+      { key: 'customer.idIssuePlace', ar: 'جهة إصدار الهوية', en: 'ID issued at', docs: ALL },
+      { key: 'customer.homePhone', ar: 'التليفون الأرضي', en: 'Home phone', docs: ALL },
     ],
   },
   {
     ar: 'الوحدة',
     en: 'Unit',
     items: [
-      { key: 'unit.code', ar: 'كود الوحدة', en: 'Unit code', docs: BOTH },
-      { key: 'unit.type', ar: 'نوع الوحدة', en: 'Unit type', docs: BOTH },
-      { key: 'unit.area', ar: 'المساحة (م²)', en: 'Area (m²)', docs: BOTH },
-      { key: 'unit.floor', ar: 'الدور', en: 'Floor', docs: BOTH },
-      { key: 'unit.building', ar: 'المبنى', en: 'Building', docs: BOTH },
-      { key: 'unit.project', ar: 'المشروع', en: 'Project', docs: BOTH },
+      { key: 'unit.code', ar: 'كود الوحدة', en: 'Unit code', docs: ALL },
+      { key: 'unit.type', ar: 'نوع الوحدة', en: 'Unit type', docs: ALL },
+      { key: 'unit.area', ar: 'المساحة (م²)', en: 'Area (m²)', docs: ALL },
+      { key: 'unit.floor', ar: 'الدور', en: 'Floor', docs: ALL },
+      { key: 'unit.building', ar: 'المبنى', en: 'Building', docs: ALL },
+      { key: 'unit.project', ar: 'المشروع', en: 'Project', docs: ALL },
     ],
   },
   {
     ar: 'العقد',
     en: 'Contract',
     items: [
-      { key: 'contract.number', ar: 'رقم العقد', en: 'Contract number', docs: CONTRACT },
+      { key: 'contract.number', ar: 'رقم العقد', en: 'Contract number', docs: ['CONTRACT', 'RECEIPT'] },
       { key: 'contract.date', ar: 'تاريخ العقد', en: 'Contract date', docs: CONTRACT },
       { key: 'contract.total', ar: 'قيمة العقد', en: 'Contract value', docs: CONTRACT },
       { key: 'contract.totalWords', ar: 'قيمة العقد كتابةً', en: 'Contract value in words', docs: CONTRACT },
@@ -92,7 +96,7 @@ export const PLACEHOLDER_GROUPS: { ar: string; en: string; items: Placeholder[] 
     ar: 'الحجز',
     en: 'Booking',
     items: [
-      { key: 'reservation.number', ar: 'رقم الحجز', en: 'Booking number', docs: BOTH },
+      { key: 'reservation.number', ar: 'رقم الحجز', en: 'Booking number', docs: ALL },
       { key: 'reservation.date', ar: 'تاريخ الحجز', en: 'Booking date', docs: RESERVATION },
       { key: 'reservation.amount', ar: 'مبلغ الحجز', en: 'Booking amount', docs: RESERVATION },
       { key: 'reservation.amountWords', ar: 'مبلغ الحجز كتابةً', en: 'Booking amount in words', docs: RESERVATION },
@@ -100,9 +104,23 @@ export const PLACEHOLDER_GROUPS: { ar: string; en: string; items: Placeholder[] 
     ],
   },
   {
+    ar: 'الإيصال',
+    en: 'Receipt',
+    items: [
+      { key: 'receipt.number', ar: 'رقم الإيصال', en: 'Receipt number', docs: RECEIPT },
+      { key: 'receipt.date', ar: 'تاريخ السداد', en: 'Payment date', docs: RECEIPT },
+      { key: 'receipt.amount', ar: 'المبلغ', en: 'Amount', docs: RECEIPT },
+      { key: 'receipt.amountWords', ar: 'المبلغ كتابةً', en: 'Amount in words', docs: RECEIPT },
+      { key: 'receipt.for', ar: 'وذلك قيمة', en: 'Paid for', docs: RECEIPT },
+      { key: 'receipt.method', ar: 'طريقة الدفع', en: 'Payment method', docs: RECEIPT },
+      { key: 'receipt.chequeNumber', ar: 'رقم الشيك', en: 'Cheque number', docs: RECEIPT },
+      { key: 'receipt.installmentDue', ar: 'استحقاق القسط', en: 'Instalment due date', docs: RECEIPT },
+    ],
+  },
+  {
     ar: 'عام',
     en: 'General',
-    items: [{ key: 'today', ar: 'تاريخ اليوم', en: 'Today’s date', docs: BOTH }],
+    items: [{ key: 'today', ar: 'تاريخ اليوم', en: 'Today’s date', docs: ALL }],
   },
 ];
 
