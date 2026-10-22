@@ -7,7 +7,8 @@ import type { ContractCancellationView } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { inputClass } from '@/components/form/field';
 import { uiT } from '@/messages/ui';
-import { recordRefundAction, releaseContractUnitAction } from '../actions';
+import { CircleCheck, Hourglass } from 'lucide-react';
+import { decideCancellationAction, recordRefundAction, releaseContractUnitAction } from '../actions';
 
 // A cancelled contract: what was agreed, what was paid back, and the two
 // follow-ups — paying the rest of the refund and putting the unit back on sale.
@@ -123,6 +124,70 @@ export function CancellationPanel({
             {m.refundSubmit}
           </button>
         </form>
+      )}
+
+      {(c.decisions?.commission || c.decisions?.bonus) && (
+        <div data-testid="cancellation-decisions" className="space-y-2">
+          <h4 className="text-[13px] font-bold text-slate-800">{m.decisionTitle}</h4>
+          {(['commission', 'bonus'] as const).map((item) => {
+            const d = c.decisions?.[item];
+            if (!d) return null;
+            const settled = d.decision ?? (d.action === 'CLAWBACK' || d.action === 'RETAIN' ? d.action : null);
+            return (
+              <div
+                key={item}
+                data-testid={`decision-${item}`}
+                data-open={d.open ? 'true' : 'false'}
+                className={d.open ? 'rounded-xl border border-warning-500/40 bg-warning-50 p-3' : 'rounded-xl border border-hairline p-3'}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[13px] font-semibold text-slate-800">
+                    {item === 'commission' ? m.decisionCommission : m.decisionBonus}
+                    <span className="ms-2 tabular-nums">{money(d.amount)}</span>
+                  </span>
+                  {d.open ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-warning-100 px-2.5 py-0.5 text-[11px] font-semibold text-warning-700">
+                      <Hourglass className="h-3 w-3" aria-hidden /> {m.decisionOpen}
+                    </span>
+                  ) : settled ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700">
+                      <CircleCheck className="h-3 w-3" aria-hidden />
+                      {d.decision ? m.decisionMade[d.decision] : m.decisionAuto[settled]}
+                    </span>
+                  ) : null}
+                </div>
+                {d.open && (
+                  <>
+                    <p className="mt-1 text-xs text-slate-600">{m.decisionOpenHint}</p>
+                    {d.paid && <p className="mt-1 text-xs text-slate-600">{m.decisionPaidHint}</p>}
+                    {canManage && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {(['CLAWBACK', 'RETAIN'] as const).map((a) => (
+                          <button
+                            key={a}
+                            type="button"
+                            data-testid={`decide-${item}-${a.toLowerCase()}`}
+                            disabled={pending}
+                            onClick={() => {
+                              if (window.confirm(m.decisionConfirm)) run(() => decideCancellationAction(id, item, a));
+                            }}
+                            className={
+                              a === 'CLAWBACK'
+                                ? 'h-8 rounded-lg bg-danger-600 px-3 text-xs font-semibold text-white disabled:opacity-50'
+                                : 'h-8 rounded-lg border border-hairline bg-white px-3 text-xs font-semibold text-slate-700 disabled:opacity-50'
+                            }
+                          >
+                            {a === 'CLAWBACK' ? m.decisionClawback : m.decisionRetain}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {c.unitReleasedAt ? (

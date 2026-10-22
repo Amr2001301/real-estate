@@ -2226,6 +2226,21 @@ export interface ContractCancellationView {
   }>;
   refundedTotal: string;
   refundOutstanding: string;
+  /** How the commission / bonus was settled; `open` = a MANUAL cancellation still waits for the decision. */
+  decisions?: {
+    commission: CancellationDecisionItem | null;
+    bonus: CancellationDecisionItem | null;
+  };
+}
+
+export interface CancellationDecisionItem {
+  action: string;
+  open: boolean;
+  decision: 'CLAWBACK' | 'RETAIN' | null;
+  decidedAt: string | null;
+  amount: string;
+  status: string;
+  paid: boolean;
 }
 
 /** GET /contracts/refunds/outstanding — customers still owed part of a refund. */

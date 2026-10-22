@@ -55,6 +55,12 @@ export interface CancelContractInput {
   clawbackReason?: string;
 }
 
+export interface CancellationDecisionInput {
+  commissionAction?: 'CLAWBACK' | 'RETAIN';
+  bonusAction?: 'CLAWBACK' | 'RETAIN';
+  reason?: string;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const UNSENT_PAYOUT = [BrokerPayoutStatus.DRAFT, BrokerPayoutStatus.APPROVED];
@@ -152,6 +158,119 @@ function isCommissionEffectivelyPaid(commission: {
   if (!commission.payoutId) return false;
   const s = commission.payout?.status ?? '';
   return s === 'PROCESSING' || s === 'PAID';
+}
+
+/** CLAWBACK or RETAIN settle it now; anything else (MANUAL) waits for the admin. */
+function isSettleAction(action: string): action is 'CLAWBACK' | 'RETAIN' {
+  return action === 'CLAWBACK' || action === 'RETAIN';
+}
+
+type SettleContext = { contractId: string; actorId: string; now: Date; reason: string; companyId: string };
+
+type CommissionToSettle = Prisma.BrokerCommissionGetPayload<{ include: { payout: { select: { status: true } } } }>;
+
+/**
+ * A cancelled deal's commission settled with CLAWBACK (cancelled, or clawed
+ * back when already paid) or RETAIN (stays payable). Returns true when a
+ * clawback was opened.
+ */
+async function settleCommission(
+  tx: Prisma.TransactionClient,
+  commission: CommissionToSettle,
+  action: 'CLAWBACK' | 'RETAIN',
+  ctx: SettleContext,
+): Promise<boolean> {
+  const { contractId, actorId, now, reason, companyId } = ctx;
+  if (action === 'RETAIN') {
+    await tx.brokerCommission.update({ where: { id: commission.id }, data: { retainedOnCancellation: true } });
+    return false;
+  }
+  // Price-change top-ups or clawbacks not paid yet are moot on a dead
+  // deal: the one clawback below settles it.
+  await dropOpenAdjustments(tx, commission.id, commission.brokerId);
+  if (isCommissionEffectivelyPaid(commission)) {
+    // What the broker actually received: the commission and the
+    // price-change adjustments already paid out.
+    const clawbackAmount = await paidCommissionAmount(tx, commission.id, commission.netAmount);
+    // Hard Rule 2: status stays; clawback overlay added
+    await tx.brokerCommission.update({
+      where: { id: commission.id },
+      data: {
+        clawbackStatus: ClawbackStatus.OUTSTANDING,
+        clawbackAmount,
+        clawbackReason: reason,
+        clawbackAt: now,
+        clawbackById: actorId,
+      },
+    });
+    // What was paid comes back out of the broker's next payout
+    // (decided 2026-10-17); collecting or waiving it by hand stays possible.
+    if (clawbackAmount.isPositive()) await tx.brokerCommissionAdjustment.create({
+      data: {
+        brokerId: commission.brokerId,
+        commissionId: commission.id,
+        kind: 'CLAWBACK',
+        amount: clawbackAmount,
+        reason,
+        createdById: actorId,
+        settlesClawback: true,
+        companyId,
+      },
+    });
+    return true;
+  }
+  // No effective disbursement (PENDING, APPROVED-no-payout, or APPROVED
+  // with a DRAFT/APPROVED payout) — cancel commission and, if it was
+  // in a non-disbursed payout, recompute that payout atomically.
+  await tx.brokerCommission.update({
+    where: { id: commission.id },
+    data: { status: BrokerCommissionStatus.CANCELLED, payoutId: null },
+  });
+  await leavePayout(tx, commission, contractId, actorId, now);
+  return false;
+}
+
+/** The same for the sales bonus of a cancelled deal. Returns true when a clawback was opened. */
+async function settleBonus(
+  tx: Prisma.TransactionClient,
+  bonusEntry: { id: string; status: BonusEntryStatus; amount: Prisma.Decimal },
+  action: 'CLAWBACK' | 'RETAIN',
+  ctx: SettleContext,
+): Promise<boolean> {
+  if (action === 'RETAIN') {
+    await tx.bonusEntry.update({ where: { id: bonusEntry.id }, data: { retainedOnCancellation: true } });
+    return false;
+  }
+  // Price-change adjustments of a paid bonus: the open ones are moot,
+  // the paid ones are clawed back with it.
+  const adjustments = await tx.bonusEntry.findMany({
+    where: { adjustsEntryId: bonusEntry.id, status: { not: BonusEntryStatus.CANCELLED } },
+    select: { id: true, status: true, amount: true },
+  });
+  const open = adjustments.filter((a) => a.status !== BonusEntryStatus.PAID).map((a) => a.id);
+  if (open.length > 0) {
+    await tx.bonusEntry.updateMany({ where: { id: { in: open } }, data: { status: BonusEntryStatus.CANCELLED } });
+  }
+  if (bonusEntry.status === BonusEntryStatus.PAID) {
+    const clawbackAmount = adjustments
+      .filter((a) => a.status === BonusEntryStatus.PAID)
+      .reduce((sum, a) => sum.add(a.amount), new Prisma.Decimal(bonusEntry.amount));
+    // Hard Rule 2: status stays PAID; clawback overlay added
+    await tx.bonusEntry.update({
+      where: { id: bonusEntry.id },
+      data: {
+        clawbackStatus: ClawbackStatus.OUTSTANDING,
+        clawbackAmount,
+        clawbackReason: ctx.reason,
+        clawbackAt: ctx.now,
+        clawbackById: ctx.actorId,
+      },
+    });
+    return true;
+  }
+  // PENDING or APPROVED — cancel
+  await tx.bonusEntry.update({ where: { id: bonusEntry.id }, data: { status: BonusEntryStatus.CANCELLED } });
+  return false;
 }
 
 export { resetUnitWarranties } from './unit-warranties';
@@ -339,107 +458,25 @@ export class ContractCancellationService {
       }
 
       // 4. Commission handling. CLAWBACK cancels or claws back; RETAIN keeps
-      // it payable (decided 2026-10-16); MANUAL leaves it for the admin.
+      // it payable (decided 2026-10-16); MANUAL leaves it for the admin's
+      // decision (POST /contracts/:id/cancellation-decision).
+      const settle = { contractId, actorId, now, reason: input.clawbackReason ?? input.reason, companyId };
       if (commission && commission.status !== BrokerCommissionStatus.REJECTED && commission.status !== BrokerCommissionStatus.CANCELLED) {
-        if (effectiveCommissionAction === 'RETAIN') {
-          await tx.brokerCommission.update({
-            where: { id: commission.id },
-            data: { retainedOnCancellation: true },
-          });
-        } else if (effectiveCommissionAction === 'CLAWBACK') {
-          // Price-change top-ups or clawbacks not paid yet are moot on a dead
-          // deal: the one clawback below settles it.
-          await dropOpenAdjustments(tx, commission.id, commission.brokerId);
-          if (isCommissionEffectivelyPaid(commission)) {
-            // What the broker actually received: the commission and the
-            // price-change adjustments already paid out.
-            const clawbackAmount = await paidCommissionAmount(tx, commission.id, commission.netAmount);
-            // Hard Rule 2: status stays; clawback overlay added
-            await tx.brokerCommission.update({
-              where: { id: commission.id },
-              data: {
-                clawbackStatus: ClawbackStatus.OUTSTANDING,
-                clawbackAmount,
-                clawbackReason: input.clawbackReason ?? input.reason,
-                clawbackAt: now,
-                clawbackById: actorId,
-              },
-            });
-            // What was paid comes back out of the broker's next payout
-            // (decided 2026-10-17); collecting or waiving it by hand stays possible.
-            if (clawbackAmount.isPositive()) await tx.brokerCommissionAdjustment.create({
-              data: {
-                brokerId: commission.brokerId,
-                commissionId: commission.id,
-                kind: 'CLAWBACK',
-                amount: clawbackAmount,
-                reason: input.clawbackReason ?? input.reason,
-                createdById: actorId,
-                settlesClawback: true,
-                companyId,
-              },
-            });
-            commissionClawbackIds.push(commission.id);
-          } else {
-            // No effective disbursement (PENDING, APPROVED-no-payout, or APPROVED
-            // with a DRAFT/APPROVED payout) — cancel commission and, if it was
-            // in a non-disbursed payout, recompute that payout atomically.
-            await tx.brokerCommission.update({
-              where: { id: commission.id },
-              data: { status: BrokerCommissionStatus.CANCELLED, payoutId: null },
-            });
+        if (!isSettleAction(effectiveCommissionAction)) {
+          if (!isCommissionEffectivelyPaid(commission) && commission.payoutId) {
+            // The admin decides — but a payout not sent yet must not pay it
+            // meanwhile. It leaves the payout and stays APPROVED.
+            await tx.brokerCommission.update({ where: { id: commission.id }, data: { payoutId: null } });
             await leavePayout(tx, commission, contractId, actorId, now);
           }
-        } else if (!isCommissionEffectivelyPaid(commission) && commission.payoutId) {
-          // MANUAL: the admin decides — but a payout not sent yet must not pay
-          // it meanwhile. It leaves the payout and stays APPROVED.
-          await tx.brokerCommission.update({ where: { id: commission.id }, data: { payoutId: null } });
-          await leavePayout(tx, commission, contractId, actorId, now);
+        } else if (await settleCommission(tx, commission, effectiveCommissionAction, settle)) {
+          commissionClawbackIds.push(commission.id);
         }
       }
 
       // 5. Bonus handling (same pattern as commission)
-      if (bonusEntry && bonusEntry.status !== BonusEntryStatus.CANCELLED) {
-        if (effectiveBonusAction === 'RETAIN') {
-          await tx.bonusEntry.update({
-            where: { id: bonusEntry.id },
-            data: { retainedOnCancellation: true },
-          });
-        } else if (effectiveBonusAction === 'CLAWBACK') {
-          // Price-change adjustments of a paid bonus: the open ones are moot,
-          // the paid ones are clawed back with it.
-          const adjustments = await tx.bonusEntry.findMany({
-            where: { adjustsEntryId: bonusEntry.id, status: { not: BonusEntryStatus.CANCELLED } },
-            select: { id: true, status: true, amount: true },
-          });
-          const open = adjustments.filter((a) => a.status !== BonusEntryStatus.PAID).map((a) => a.id);
-          if (open.length > 0) {
-            await tx.bonusEntry.updateMany({ where: { id: { in: open } }, data: { status: BonusEntryStatus.CANCELLED } });
-          }
-          if (bonusEntry.status === BonusEntryStatus.PAID) {
-            const clawbackAmount = adjustments
-              .filter((a) => a.status === BonusEntryStatus.PAID)
-              .reduce((sum, a) => sum.add(a.amount), new Prisma.Decimal(bonusEntry.amount));
-            // Hard Rule 2: status stays PAID; clawback overlay added
-            await tx.bonusEntry.update({
-              where: { id: bonusEntry.id },
-              data: {
-                clawbackStatus: ClawbackStatus.OUTSTANDING,
-                clawbackAmount,
-                clawbackReason: input.clawbackReason ?? input.reason,
-                clawbackAt: now,
-                clawbackById: actorId,
-              },
-            });
-            bonusClawbackIds.push(bonusEntry.id);
-          } else {
-            // PENDING or APPROVED — cancel
-            await tx.bonusEntry.update({
-              where: { id: bonusEntry.id },
-              data: { status: BonusEntryStatus.CANCELLED },
-            });
-          }
-        }
+      if (bonusEntry && bonusEntry.status !== BonusEntryStatus.CANCELLED && isSettleAction(effectiveBonusAction)) {
+        if (await settleBonus(tx, bonusEntry, effectiveBonusAction, settle)) bonusClawbackIds.push(bonusEntry.id);
       }
 
       // 6. AUTO unit release (inside transaction)
@@ -634,6 +671,103 @@ export class ContractCancellationService {
     }
 
     return cancellation;
+  }
+
+  /**
+   * The admin's decision on a commission / bonus left for them by a MANUAL
+   * cancellation: CLAWBACK or RETAIN, applied exactly as the cancellation
+   * would have, once. Until then the commission is neither paid nor owed.
+   */
+  async decide(contractId: string, input: CancellationDecisionInput, actorId: string) {
+    const companyId = getRequiredCompanyId();
+    if (!input.commissionAction && !input.bonusAction) {
+      throw new BadRequestException('اختر قرار العمولة أو البونص');
+    }
+    const contract = await this.prisma.contract.findFirst({
+      where: { id: contractId },
+      select: { id: true, status: true },
+    });
+    if (!contract) throw new NotFoundException('Contract not found');
+    if (contract.status !== ContractStatus.CANCELLED) throw new ConflictException('Contract is not cancelled');
+
+    const now = new Date();
+    return this.prisma.$transaction(async (tx) => {
+      // One decision at a time: a second one waits, then finds it taken.
+      const locked = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+        SELECT "id" FROM "ContractCancellation"
+        WHERE "contractId" = ${contractId}::uuid AND "companyId" = ${companyId}::uuid
+        FOR UPDATE`);
+      if (!locked[0]) throw new NotFoundException('ContractCancellation record not found');
+      const cc = await tx.contractCancellation.findUniqueOrThrow({ where: { id: locked[0].id } });
+      const policy = cc.policySnapshot as unknown as CancellationPolicySnapshot;
+      const settle = { contractId, actorId, now, reason: input.reason?.trim() || cc.reason, companyId };
+      const data: Prisma.ContractCancellationUncheckedUpdateInput = {};
+      const after: Record<string, unknown> = {};
+
+      if (input.commissionAction) {
+        if (isSettleAction(cc.commissionActionOverride ?? policy.commissionAction)) {
+          throw new ConflictException('العمولة اتحسمت وقت الإلغاء');
+        }
+        if (cc.commissionDecision) throw new ConflictException('قرار العمولة اتسجل قبل كده');
+        // Payout before commission — the order the payout paths take.
+        await tx.$queryRaw`
+          SELECT p.id FROM "BrokerPayout" p
+          JOIN "BrokerCommission" c ON c."payoutId" = p.id
+          WHERE c."contractId" = ${contractId}::uuid FOR UPDATE OF p`;
+        await tx.$queryRaw`
+          SELECT id FROM "BrokerCommission" WHERE "contractId" = ${contractId}::uuid FOR UPDATE`;
+        const commission = await tx.brokerCommission.findFirst({
+          where: { contractId, companyId },
+          include: { payout: { select: { status: true } } },
+        });
+        if (
+          !commission ||
+          commission.status === BrokerCommissionStatus.REJECTED ||
+          commission.status === BrokerCommissionStatus.CANCELLED
+        ) {
+          throw new ConflictException('مفيش عمولة مفتوحة على العقد');
+        }
+        const clawback = await settleCommission(tx, commission, input.commissionAction, settle);
+        Object.assign(data, {
+          commissionDecision: input.commissionAction,
+          commissionDecidedAt: now,
+          commissionDecidedById: actorId,
+        });
+        Object.assign(after, { commissionId: commission.id, commissionAction: input.commissionAction, commissionClawback: clawback });
+      }
+
+      if (input.bonusAction) {
+        if (isSettleAction(cc.bonusActionOverride ?? policy.bonusAction)) {
+          throw new ConflictException('البونص اتحسم وقت الإلغاء');
+        }
+        if (cc.bonusDecision) throw new ConflictException('قرار البونص اتسجل قبل كده');
+        await tx.$queryRaw`
+          SELECT id FROM "BonusEntry" WHERE "contractId" = ${contractId}::uuid FOR UPDATE`;
+        const bonusEntry = await tx.bonusEntry.findFirst({
+          where: { contractId, companyId },
+          select: { id: true, status: true, amount: true },
+        });
+        if (!bonusEntry || bonusEntry.status === BonusEntryStatus.CANCELLED) {
+          throw new ConflictException('مفيش بونص مفتوح على العقد');
+        }
+        const clawback = await settleBonus(tx, bonusEntry, input.bonusAction, settle);
+        Object.assign(data, { bonusDecision: input.bonusAction, bonusDecidedAt: now, bonusDecidedById: actorId });
+        Object.assign(after, { bonusEntryId: bonusEntry.id, bonusAction: input.bonusAction, bonusClawback: clawback });
+      }
+
+      const updated = await tx.contractCancellation.update({ where: { id: cc.id }, data });
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: 'contract.cancellation-decided',
+          entityType: 'Contract',
+          entityId: contractId,
+          after: { ...after, reason: settle.reason } as Prisma.InputJsonValue,
+          companyId,
+        },
+      });
+      return updated;
+    });
   }
 
   /**
