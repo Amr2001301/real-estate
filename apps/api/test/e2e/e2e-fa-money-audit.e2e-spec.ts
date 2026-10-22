@@ -633,6 +633,59 @@ describe('FA — financial audit fixes (e2e)', () => {
       .expect(409);
   });
 
+  // ── FA10: Receivables & payables (المستحقات والالتزامات) agrees with the financial report ─────────────────
+  it('FA10: the receivables/payables page adds up, and agrees with the financial report', async () => {
+    const sale = await sell(70);
+    await commissionOn(sale, false); // approved today, not paid: late on us from today
+    const ledger = (qs = '') => asAdmin(http().get(`/v1/reports/ledger${qs}`)).expect(200).then((r) => r.body);
+    const n = (v: string | number) => Number(v);
+    const [l, fd] = await Promise.all([
+      ledger(),
+      asAdmin(http().get('/v1/reports/financial-dashboard')).expect(200).then((r) => r.body),
+    ]);
+
+    // Same figures as the report.
+    const inst = l.receivables.groups.installments;
+    expect(n(inst.amount)).toBeCloseTo(n(fd.summary.totalRemaining), 2);
+    const st = inst.states;
+    expect(n(st.late.amount) + n(st.dueToday.amount) + n(st.upcoming.amount) + n(st.onItsWay.amount)).toBeCloseTo(n(inst.amount), 2);
+    const bc = l.payables.groups.commissions.states;
+    expect(n(bc.late.amount)).toBeCloseTo(n(fd.liabilities.brokerCommissions.unpaidAmount), 2);
+    expect(n(bc.pendingApproval.amount)).toBeCloseTo(n(fd.liabilities.brokerCommissions.pendingAmount), 2);
+    expect(n(bc.late.amount)).toBeGreaterThanOrEqual(20_000);
+    const bonus = l.payables.groups.bonuses.states;
+    expect(n(bonus.late.amount)).toBeCloseTo(n(fd.liabilities.salesBonus.approvedAmount), 2);
+    expect(n(bonus.pendingApproval.amount)).toBeCloseTo(n(fd.liabilities.salesBonus.pendingAmount), 2);
+    expect(n(l.payables.groups.refunds.amount)).toBeCloseTo(n(fd.summary.refundsOwed), 2);
+    // Totals are the sum of their groups; net = receivables − payables.
+    const groupSum = (side: Record<string, { amount: string }>) => Object.values(side).reduce((s, g) => s + n(g.amount), 0);
+    expect(groupSum(l.receivables.groups)).toBeCloseTo(n(l.receivables.total), 2);
+    expect(groupSum(l.payables.groups)).toBeCloseTo(n(l.payables.total), 2);
+    expect(n(l.receivables.total) - n(l.payables.total)).toBeCloseTo(n(l.net), 2);
+
+    // Each group's rows add up to its figure.
+    const rowsSum = async (group: string) => {
+      let total = 0;
+      for (let page = 1; ; page++) {
+        const r = await asAdmin(http().get(`/v1/reports/ledger/rows?group=${group}&page=${page}&pageSize=200`)).expect(200);
+        total += (r.body.data as Array<{ amount: string }>).reduce((s, x) => s + n(x.amount), 0);
+        if (page >= r.body.meta.totalPages) return total;
+      }
+    };
+    for (const [side, groups] of [['receivables', l.receivables.groups], ['payables', l.payables.groups]] as const) {
+      for (const [group, fig] of Object.entries(groups as Record<string, { amount: string }>)) {
+        expect([side, group, await rowsSum(group)]).toEqual([side, group, expect.closeTo(n(fig.amount), 2)]);
+      }
+    }
+
+    // The commission is late from its approval: in a period from today, not in one from tomorrow.
+    const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+    const fromToday = await ledger(`?dateFrom=${today()}&dateTo=${today()}`);
+    expect(n(fromToday.payables.groups.commissions.states.late.amount)).toBeGreaterThanOrEqual(20_000);
+    const rows = await asAdmin(http().get(`/v1/reports/ledger/rows?group=commissions&dateFrom=${tomorrow}`)).expect(200);
+    expect((rows.body.data as Array<{ contract: { id: string } }>).some((r) => r.contract.id === sale.contractId)).toBe(false);
+  });
+
   // ── FA6: what the customer sees ─────────────────────────────────────────
   it('FA6: the customer sees a proof under review on its row, and a reversed payment as reversed', async () => {
     const sale = await sell(40);

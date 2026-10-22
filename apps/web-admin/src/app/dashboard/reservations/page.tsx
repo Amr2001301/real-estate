@@ -24,6 +24,7 @@ import {
 import { Avatar, FigureBar } from '@/components/cockpit/cockpit';
 import { cn } from '@/lib/cn';
 import { uiT } from '@/messages/ui';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 
@@ -318,11 +319,11 @@ export default async function ReservationsPage({
                   <div className="hidden min-w-0 items-start gap-2 text-[12.5px] lg:flex">
                     <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A24E]" />
                     <div className="min-w-0">
-                      <p className="truncate font-semibold text-slate-800">{project ? tx(project.name) : '—'}</p>
+                      <p className="truncate font-semibold text-slate-800">{project ? <EntityLink kind="project" id={project.id} mono={false}>{tx(project.name)}</EntityLink> : '—'}</p>
                       {r.unit && (
                         <p className="mt-0.5 text-slate-500">
                           <span className="me-1 text-slate-400">{m.unitWord}</span>
-                          <span className="whitespace-nowrap font-mono" dir="ltr">{r.unit.code}</span>
+                          <EntityLink kind="unit" id={r.unit.id} className="whitespace-nowrap">{r.unit.code}</EntityLink>
                         </p>
                       )}
                     </div>

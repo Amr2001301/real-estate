@@ -34,6 +34,7 @@ import { getLocale } from '@/lib/locale';
 import { printT } from '@/messages/print';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
+import { EntityLink } from '@/components/entity-link';
 import { ContractPdfPanel } from './pdf-panel';
 import { OwnerDocumentsCard } from '@/components/documents/owner-documents-card';
 import { CreatePlanForm } from './create-plan-form';
@@ -310,8 +311,8 @@ export default async function ContractDetailPage({
                       {contract.broker.commercialName}
                     </p>
                   )}
-                  <p className="mt-0.5 font-mono text-[11.5px] text-slate-500" dir="ltr">
-                    {contract.broker.code}
+                  <p className="mt-0.5 text-[11.5px] text-slate-500">
+                    <EntityLink kind="broker" id={contract.broker.id}>{contract.broker.code}</EntityLink>
                   </p>
                 </Cell>
                 {contract.brokerAgent && (
@@ -369,7 +370,7 @@ export default async function ContractDetailPage({
                       <Avatar name={contract.customer.fullName} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[15px] font-bold text-slate-900">
-                          {contract.customer.fullName}
+                          <EntityLink kind="customer" id={contract.customer.id} mono={false}>{contract.customer.fullName}</EntityLink>
                         </p>
                         <Link
                           href={`/dashboard/customers/${contract.customer.id}`}

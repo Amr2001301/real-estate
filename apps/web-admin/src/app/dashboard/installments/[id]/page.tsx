@@ -18,6 +18,7 @@ import {
   PremiumSectionCard,
   PremiumCommandPanel,
 } from '@/components/premium';
+import { EntityLink } from '@/components/entity-link';
 
 const PAYMENT_TYPE_BADGE: Record<string, string> = {
   RESERVATION: 'bg-blue-50 text-blue-700',
@@ -294,7 +295,9 @@ export default async function InstallmentPlanDetailPage({
                     </span>
                     <div className="min-w-0">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-0.5">{m.labelProject}</p>
-                      <p className="text-[13.5px] font-bold text-slate-900 truncate">{tx(plan.project.name)}</p>
+                      <p className="text-[13.5px] font-bold text-slate-900 truncate">
+                        <EntityLink kind="project" id={plan.project.id ?? plan.projectId} mono={false}>{tx(plan.project.name)}</EntityLink>
+                      </p>
                     </div>
                   </div>
                 )}
@@ -305,7 +308,9 @@ export default async function InstallmentPlanDetailPage({
                     </span>
                     <div className="min-w-0">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-0.5">{m.labelUnit}</p>
-                      <p className="text-[13.5px] font-bold text-slate-900">{plan.unit.code}</p>
+                      <p className="text-[13.5px] font-bold text-slate-900">
+                        <EntityLink kind="unit" id={plan.unit.id ?? plan.unitId}>{plan.unit.code}</EntityLink>
+                      </p>
                       {plan.unit.type && (
                         <p className="text-[11px] text-slate-400 mt-0.5">{plan.unit.type}</p>
                       )}

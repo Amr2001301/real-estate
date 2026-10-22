@@ -47,6 +47,7 @@ import {
   PremiumPanel,
   PremiumEmptyNote,
 } from '@/components/premium';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 
@@ -534,7 +535,15 @@ export default async function ReservationDetailPage({
                   <div className="flex items-center gap-3.5">
                     <Avatar name={clientName} />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[15px] font-bold text-slate-900">{clientName}</p>
+                      <p className="truncate text-[15px] font-bold text-slate-900">
+                        <EntityLink
+                          kind={reservation.client ? 'client' : 'lead'}
+                          id={reservation.client ? reservation.clientId : reservation.lead ? reservation.leadId : null}
+                          mono={false}
+                        >
+                          {clientName}
+                        </EntityLink>
+                      </p>
                       {(reservation.client || reservation.lead) && (
                         <Link
                           href={

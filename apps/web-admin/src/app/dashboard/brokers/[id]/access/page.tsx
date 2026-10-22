@@ -21,6 +21,7 @@ import {
   grantUnitAccessAction,
   revokeUnitAccessAction,
 } from '../../actions';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -313,7 +314,9 @@ export default async function BrokerAccessPage({
                         <Home className="h-4 w-4" />
                       </span>
                       <div className="min-w-0">
-                        <p className="whitespace-nowrap font-mono text-[14px] font-bold text-slate-900" dir="ltr">{ua.unit.code}</p>
+                        <p className="whitespace-nowrap text-[14px] font-bold text-slate-900">
+                          <EntityLink kind="unit" id={ua.unitId}>{ua.unit.code}</EntityLink>
+                        </p>
                         <p className="mt-0.5 text-[12px] text-slate-500">{ua.unit.type}</p>
                       </div>
                     </div>

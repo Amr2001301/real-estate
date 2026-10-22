@@ -13,6 +13,7 @@ import { RequestDetailActions } from './_components/request-detail-actions';
 import { PremiumDetailLayout, PremiumPanel, PremiumEmptyNote } from '@/components/premium';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 
@@ -257,7 +258,9 @@ export default async function VisitRequestDetailPage({
                         <DoorOpen className="h-4 w-4" />
                       </span>
                       <div className="min-w-0">
-                        <p className="font-mono text-[13px] font-bold text-slate-900">{req.unit.code}</p>
+                        <p className="text-[13px] font-bold text-slate-900">
+                          <EntityLink kind="unit" id={req.unit.id}>{req.unit.code}</EntityLink>
+                        </p>
                         <p className="text-[11.5px] text-slate-500">{m.unitLabel} · {req.unit.type}</p>
                       </div>
                     </div>

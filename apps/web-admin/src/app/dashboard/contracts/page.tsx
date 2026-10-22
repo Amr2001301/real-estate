@@ -6,6 +6,7 @@ import type { Paged } from '@/lib/types';
 import { formatCurrency, formatDate, intlLocale, tx } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { Avatar, FigureBar } from '@/components/cockpit/cockpit';
+import { EntityLink } from '@/components/entity-link';
 import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
@@ -243,11 +244,11 @@ export default async function ContractsPage({
                   <div className="hidden min-w-0 items-start gap-2 text-[12.5px] lg:flex">
                     <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A24E]" />
                     <div className="min-w-0">
-                      <p className="truncate font-semibold text-slate-800">{project ? tx(project.name) : '—'}</p>
+                      <p className="truncate font-semibold text-slate-800">{project ? <EntityLink kind="project" id={project.id} mono={false}>{tx(project.name)}</EntityLink> : '—'}</p>
                       {c.unit && (
                         <p className="mt-0.5 text-slate-500">
                           <span className="me-1 text-slate-400">{m.unitWord}</span>
-                          <span className="whitespace-nowrap font-mono" dir="ltr">{c.unit.code}</span>
+                          <EntityLink kind="unit" id={c.unit.id} className="whitespace-nowrap">{c.unit.code}</EntityLink>
                         </p>
                       )}
                     </div>

@@ -13,6 +13,7 @@ import { AppointmentDetailActions } from './_components/appointment-detail-actio
 import { SalesFeedbackForm } from './_components/sales-feedback-form';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
+import { EntityLink } from '@/components/entity-link';
 
 /** Read-only star row for displaying a 1–5 rating. */
 function Stars({ value, ariaLabel }: { value: number; ariaLabel: string }) {
@@ -310,7 +311,9 @@ export default async function AppointmentDetailPage({
                   {tx(appt.project?.name)}
                 </Link>
                 {appt.unit && (
-                  <p className="text-slate-600">{m.unitLabel}: {appt.unit.code} — {appt.unit.type}</p>
+                  <p className="text-slate-600">
+                    {m.unitLabel}: <EntityLink kind="unit" id={appt.unit.id}>{appt.unit.code}</EntityLink> — {appt.unit.type}
+                  </p>
                 )}
               </CardBody>
             </Card>

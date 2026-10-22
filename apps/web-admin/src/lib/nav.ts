@@ -32,6 +32,7 @@ import {
   Palette,
   HardDriveDownload,
   Upload,
+  Scale,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -79,6 +80,7 @@ export const NAV_ICONS = {
   Palette,
   HardDriveDownload,
   Upload,
+  Scale,
 } satisfies Record<string, LucideIcon>;
 
 export type IconKey = keyof typeof NAV_ICONS;
@@ -155,6 +157,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/dashboard/payments/review', label: 'إيصالات الدفع', labelKey: 'paymentProofs', iconKey: 'Receipt', admin: true },
       // FG-01 — GET /payment-instruments is ADMIN + SALES_MANAGER.
       { href: '/dashboard/cheques', label: 'الشيكات', labelKey: 'cheques', iconKey: 'Landmark', admin: true, manager: true },
+      // Receivables and payables (GET /reports/ledger is ADMIN).
+      { href: '/dashboard/ledger', label: 'المستحقات والالتزامات', labelKey: 'ledger', iconKey: 'Scale', admin: true },
       { href: '/dashboard/maintenance', label: 'الصيانة', labelKey: 'maintenance', iconKey: 'Wrench', admin: true, feature: 'feature.maintenance' },
       { href: '/dashboard/bonus', label: 'العمولات', labelKey: 'bonus', iconKey: 'BadgePercent', admin: true },
       { href: '/dashboard/sales/performance', label: 'أداء فريق المبيعات', labelKey: 'salesPerformance', iconKey: 'Target', admin: true, manager: true },

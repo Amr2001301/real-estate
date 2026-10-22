@@ -43,6 +43,7 @@ import {
   PremiumSectionCard,
   PremiumCommandPanel,
 } from '@/components/premium';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 
@@ -551,7 +552,7 @@ export default async function MaintenanceDetailPage({
                     <div className="min-w-0">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-0.5">{m.client.label}</p>
                       <p className="text-[13.5px] font-bold text-slate-900 truncate">
-                        {req.customer?.fullName ?? '—'}
+                        <EntityLink kind="customer" id={req.customer?.id} mono={false}>{req.customer?.fullName ?? '—'}</EntityLink>
                       </p>
                     </div>
                   </div>
@@ -581,8 +582,8 @@ export default async function MaintenanceDetailPage({
                     </span>
                     <div className="min-w-0">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-0.5">{m.client.unit}</p>
-                      <p className="text-[16px] font-black text-brand-700 font-mono leading-none">
-                        {req.unit?.code ?? '—'}
+                      <p className="text-[16px] font-black text-brand-700 leading-none">
+                        <EntityLink kind="unit" id={req.unit?.id}>{req.unit?.code ?? '—'}</EntityLink>
                       </p>
                     </div>
                   </div>

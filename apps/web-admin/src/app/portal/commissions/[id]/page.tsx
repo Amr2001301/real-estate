@@ -30,6 +30,7 @@ import { CodeText } from '@/components/ui/code-text';
 import { BrokerCommissionStatusBadge } from '@/components/badges';
 import { MetricGrid, MetricTile } from '@/components/portal/metric-grid';
 import { avatarColor, initials } from '@/components/portal/detail-hero';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -131,7 +132,9 @@ export default async function PortalCommissionDetailPage({
                 {/* Info */}
                 <div className="min-w-0">
                   <h2 className="text-xl font-semibold text-navy tracking-tight truncate">
-                    {clientName ?? '—'}
+                    {!c.contract?.customer && c.reservation?.lead ? (
+                      <EntityLink kind="lead" id={c.reservation.lead.id} scope="portal" mono={false}>{clientName ?? '—'}</EntityLink>
+                    ) : (clientName ?? '—')}
                   </h2>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {c.contract && (

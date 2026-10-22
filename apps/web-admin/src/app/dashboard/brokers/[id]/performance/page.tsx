@@ -37,6 +37,7 @@ import {
 } from '@/components/badges';
 import { MonthlyTrendChart } from '@/components/broker/monthly-trend-chart';
 import { ExportMenu } from '@/components/export-menu';
+import { EntityLink, type EntityKind } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -60,11 +61,24 @@ const STAGES: Array<{ key: keyof BrokerReportsSummary; icon: ReactNode; tile: st
   { key: 'payoutsPaid',         icon: <Wallet />,        tile: 'bg-teal-500/12 text-teal-600',       bar: 'bg-teal-400' },
 ];
 
-function Code({ label, code }: { label: string; code: string | null | undefined }) {
+function Code({
+  label,
+  code,
+  link,
+}: {
+  label: string;
+  code: string | null | undefined;
+  /** Set when the code is not already inside a link: it opens its page. */
+  link?: { kind: EntityKind; id: string };
+}) {
   return (
     <span className="whitespace-nowrap">
       <span className="me-1 text-slate-400">{label}</span>
-      <span className="font-mono" dir="ltr">{code ?? '—'}</span>
+      {link ? (
+        <EntityLink kind={link.kind} id={link.id}>{code ?? '—'}</EntityLink>
+      ) : (
+        <span className="font-mono" dir="ltr">{code ?? '—'}</span>
+      )}
     </span>
   );
 }
@@ -376,7 +390,7 @@ export default async function BrokerPerformancePage({
                     <Code label={word('حجز', 'Booking')} code={r.reservationNumber} />
                   </Link>
                   <p className="mt-0.5 text-[12px] text-slate-500">
-                    <Code label={word('وحدة', 'Unit')} code={r.unit.code} /> · {formatDate(r.createdAt, locale)}
+                    <Code label={word('وحدة', 'Unit')} code={r.unit.code} link={{ kind: 'unit', id: r.unit.id }} /> · {formatDate(r.createdAt, locale)}
                   </p>
                 </div>
                 <ReservationStatusBadge status={r.status} />
@@ -401,7 +415,7 @@ export default async function BrokerPerformancePage({
                     <Code label={word('عقد', 'Contract')} code={c.contractNumber} />
                   </Link>
                   <p className="mt-0.5 text-[12px] text-slate-500">
-                    <Code label={word('وحدة', 'Unit')} code={c.unit.code} /> ·{' '}
+                    <Code label={word('وحدة', 'Unit')} code={c.unit.code} link={{ kind: 'unit', id: c.unit.id }} /> ·{' '}
                     {c.signedAt
                       ? m.contractSigned(formatDate(c.signedAt, locale) ?? '—')
                       : m.contractPending(formatDate(c.createdAt, locale) ?? '—')}

@@ -248,7 +248,16 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
                         )}
                       </td>
                       <td className="px-3 py-3.5">
-                        <PersonCell name={d?.contract?.customer?.fullName ?? d?.reservation?.client?.fullName ?? '—'} />
+                        <PersonCell
+                          name={d?.contract?.customer?.fullName ?? d?.reservation?.client?.fullName ?? '—'}
+                          nameLink={
+                            d?.contract?.customer
+                              ? { kind: 'customer', id: d.contract.customer.id }
+                              : d?.reservation?.client
+                                ? { kind: 'client', id: d.reservation.client.id }
+                                : undefined
+                          }
+                        />
                       </td>
                       <td className="px-3 py-3.5">
                         {d?.contract ? (

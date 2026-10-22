@@ -39,6 +39,7 @@ import {
   PremiumCommandPanel,
   PremiumEmptyState,
 } from '@/components/premium';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -444,10 +445,12 @@ export default async function CustomerDetailPage({
             {contracts[0]?.unit?.building?.phase?.project && (
               <PremiumSectionCard title={m.lastProjectTitle} icon={<Building2 className="h-4 w-4" />}>
                 <p className="text-sm text-slate-700">
-                  {tx(contracts[0]!.unit!.building!.phase!.project!.name)}
+                  <EntityLink kind="project" id={contracts[0]!.unit!.building!.phase!.project!.id} mono={false}>
+                    {tx(contracts[0]!.unit!.building!.phase!.project!.name)}
+                  </EntityLink>
                 </p>
                 <p className="mt-1 text-2xs text-slate-500">
-                  {m.unitLabel} {contracts[0]!.unit!.code}
+                  {m.unitLabel} <EntityLink kind="unit" id={contracts[0]!.unit!.id}>{contracts[0]!.unit!.code}</EntityLink>
                 </p>
               </PremiumSectionCard>
             )}

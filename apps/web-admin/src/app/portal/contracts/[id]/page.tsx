@@ -32,6 +32,7 @@ import {
 import { CodeText } from '@/components/ui/code-text';
 import { avatarColor, initials } from '@/components/portal/detail-hero';
 import { MetricGrid, MetricTile } from '@/components/portal/metric-grid';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -168,7 +169,11 @@ export default async function PortalContractDetailPage({
                   {clientName ? initials(clientName) : '?'}
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-xl font-semibold text-navy tracking-tight truncate">{clientName || '—'}</h2>
+                  <h2 className="text-xl font-semibold text-navy tracking-tight truncate">
+                    {!contract.customer && contract.reservation?.lead ? (
+                      <EntityLink kind="lead" id={contract.reservation.lead.id} scope="portal" mono={false}>{clientName || '—'}</EntityLink>
+                    ) : (clientName || '—')}
+                  </h2>
                   <p className="mt-1 text-sm text-slate-500">
                     {isSigned ? t.clientSigned : t.clientSigning}
                   </p>

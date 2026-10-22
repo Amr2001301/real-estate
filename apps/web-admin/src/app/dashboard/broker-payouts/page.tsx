@@ -21,6 +21,7 @@ import {
 } from '@/components/premium';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -280,7 +281,7 @@ export default async function AdminBrokerPayoutsPage({
                   </Link>
                   <p className="mt-0.5 text-[12px] text-slate-500">
                     <span className="me-1 text-slate-400">{m.payoutWord}</span>
-                    <span className="font-mono" dir="ltr">{p.payoutNumber}</span>
+                    <EntityLink kind="payout" id={p.id}>{p.payoutNumber}</EntityLink>
                   </p>
                 </div>
 

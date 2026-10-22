@@ -33,6 +33,7 @@ import {
   PremiumEmptyState,
 } from '@/components/premium';
 import { uiT } from '@/messages/ui';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -365,7 +366,9 @@ export default async function UnitsPage({
                       <div className="flex items-start gap-2">
                         <Building2 className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
                         <div className="min-w-0">
-                          <p className="font-medium text-navy truncate">{projectName}</p>
+                          <p className="font-medium text-navy truncate">
+                            <EntityLink kind="project" id={u.building?.phase?.project?.id} mono={false}>{projectName}</EntityLink>
+                          </p>
                           {phaseName !== '—' && (
                             <p className="text-[11px] text-slate-500 truncate">
                               {phaseName}

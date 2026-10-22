@@ -10,6 +10,7 @@ import { Pagination } from '@/components/ui/pagination';
 import { ApproveDepositButton, RejectDepositDialog } from './_actions';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Payment Proof Review' };
@@ -100,6 +101,15 @@ export default async function PaymentReviewQueuePage({ searchParams }: { searchP
                     const unit = d.contract?.unit?.code ?? d.reservation?.unit?.code ?? '—';
                     const contractNum =
                       d.contract?.contractNumber ?? d.reservation?.reservationNumber ?? '—';
+                    const unitId = d.contract?.unit?.id ?? d.reservation?.unit?.id;
+                    // The contract's customer comes without an id: only a booking's client or lead links.
+                    const customerLink = d.contract?.customer?.fullName
+                      ? null
+                      : d.reservation?.client
+                        ? { kind: 'client' as const, id: d.reservation.client.id }
+                        : d.reservation?.lead
+                          ? { kind: 'lead' as const, id: d.reservation.lead.id }
+                          : null;
                     // Which payment the proof is for: two proofs from one
                     // customer for two months otherwise look identical.
                     const paysFor = d.installment
@@ -112,9 +122,18 @@ export default async function PaymentReviewQueuePage({ searchParams }: { searchP
                     const proofDocId = d.proofDocument?.id ?? null;
                     return (
                       <tr key={d.id} className="border-b border-slate-100">
-                        <td className="px-3 py-3 font-medium text-slate-800">{customer}</td>
+                        <td className="px-3 py-3 font-medium text-slate-800">
+                          {customerLink ? <EntityLink kind={customerLink.kind} id={customerLink.id} mono={false}>{customer}</EntityLink> : customer}
+                        </td>
                         <td className="px-3 py-3 text-slate-600">
-                          {contractNum} <span className="text-slate-400">·</span> {unit}
+                          {contractId ? (
+                            <EntityLink kind="contract" id={contractId} mono={false}>{contractNum}</EntityLink>
+                          ) : d.reservation ? (
+                            <EntityLink kind="reservation" id={d.reservation.id} mono={false}>{contractNum}</EntityLink>
+                          ) : (
+                            contractNum
+                          )}{' '}
+                          <span className="text-slate-400">·</span> <EntityLink kind="unit" id={unitId} mono={false}>{unit}</EntityLink>
                         </td>
                         <td className="px-3 py-3 text-slate-600 whitespace-nowrap" data-testid="proof-for">
                           {paysFor}

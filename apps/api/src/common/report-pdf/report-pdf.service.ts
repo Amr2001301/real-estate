@@ -24,6 +24,8 @@ import type { Browser } from 'puppeteer-core';
 const MAX_CONCURRENT = 2;
 const IDLE_MS = 2 * 60 * 1000;
 const RENDER_TIMEOUT_MS = 30_000;
+/** Starting Chromium; generous, as it happens once per process. */
+const LAUNCH_TIMEOUT_MS = 60_000;
 
 /** Where Chromium usually lives: the API image (Alpine), CI runners, dev machines. */
 const CANDIDATES = [
@@ -122,6 +124,9 @@ export class ReportPdfService implements OnModuleDestroy {
           launch({
             executablePath,
             headless: true,
+            // A busy machine (a CI runner running test workers side by side)
+            // can take longer than puppeteer's default 30 s to start Chromium.
+            timeout: LAUNCH_TIMEOUT_MS,
             args: [
               '--no-sandbox',
               '--disable-dev-shm-usage',

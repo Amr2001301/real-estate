@@ -19,6 +19,7 @@ import {
   PremiumSectionCard,
   PremiumEmptyState,
 } from '@/components/premium';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -308,7 +309,7 @@ export default async function AdminBrokerContractsPage({
                       {c.contractNumber && (
                         <>
                           <span className="me-1 text-slate-400">{locale === 'en' ? 'Contract' : 'عقد'}</span>
-                          <span className="whitespace-nowrap font-mono" dir="ltr">{c.contractNumber}</span>
+                          <EntityLink kind="contract" id={c.id} className="whitespace-nowrap">{c.contractNumber}</EntityLink>
                         </>
                       )}
                       {c.contractNumber && phone && <span className="mx-1.5 text-slate-300">·</span>}
@@ -334,12 +335,14 @@ export default async function AdminBrokerContractsPage({
                   {/* Unit + project */}
                   <div className="hidden min-w-0 text-[12.5px] lg:block">
                     <p className="truncate font-semibold text-slate-800">
-                      {c.unit?.building ? tx(c.unit.building.phase.project.name) : '—'}
+                      {c.unit?.building ? (
+                        <EntityLink kind="project" id={c.unit.building.phase.project.id} mono={false}>{tx(c.unit.building.phase.project.name)}</EntityLink>
+                      ) : '—'}
                     </p>
                     {c.unit?.code && (
                       <p className="mt-0.5 truncate text-slate-500">
                         <span className="me-1 text-slate-400">{locale === 'en' ? 'Unit' : 'وحدة'}</span>
-                        <span className="whitespace-nowrap font-mono" dir="ltr">{c.unit.code}</span>
+                        <EntityLink kind="unit" id={c.unit.id} className="whitespace-nowrap">{c.unit.code}</EntityLink>
                       </p>
                     )}
                   </div>

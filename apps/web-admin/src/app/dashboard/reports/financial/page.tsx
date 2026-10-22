@@ -38,6 +38,7 @@ import { ExportMenu } from '@/components/export-menu';
 import { ReportsTabs } from '../_components/reports-tabs';
 import { FinancialFilterBar } from './_components/financial-filter-bar';
 import { CashflowChart } from './_components/cashflow-chart';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -63,6 +64,16 @@ function getDepositLabel(d: FinancialDepositRow): string {
 }
 function getDepositUnit(d: FinancialDepositRow): string {
   return d.contract?.unit?.code ?? d.reservation?.unit?.code ?? '—';
+}
+function getDepositUnitId(d: FinancialDepositRow): string | undefined {
+  return d.contract?.unit?.id ?? d.reservation?.unit?.id;
+}
+/** The payer's page: the contract's customer, else the booking's client or lead. */
+function getDepositPayer(d: FinancialDepositRow): { kind: 'customer' | 'client' | 'lead'; id: string } | null {
+  if (d.contract?.customer) return { kind: 'customer', id: d.contract.customer.id };
+  if (d.reservation?.client) return { kind: 'client', id: d.reservation.client.id };
+  if (d.reservation?.lead) return { kind: 'lead', id: d.reservation.lead.id };
+  return null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -475,7 +486,9 @@ export default async function FinancialReportsPage({
                           {r.contractNumber ?? r.contractId.slice(0, 8)}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 text-slate-700">{r.customer?.fullName ?? '—'}</td>
+                      <td className="px-4 py-3 text-slate-700">
+                        <EntityLink kind="customer" id={r.customer?.id} mono={false}>{r.customer?.fullName ?? '—'}</EntityLink>
+                      </td>
                       <td className="px-4 py-3 text-end tabular-nums">{money(r.refundAmount)}</td>
                       <td className="px-4 py-3 text-end tabular-nums">{money(r.refunded)}</td>
                       <td className="px-6 py-3 text-end font-bold tabular-nums text-amber-600">{money(r.outstanding)}</td>
@@ -649,13 +662,17 @@ export default async function FinancialReportsPage({
                     const days = daysOverdue(row.dueDate);
                     return (
                       <tr key={row.id} className="align-middle transition-colors hover:bg-surface-muted/50">
-                        <td className="max-w-[180px] truncate py-3 ps-6 pe-4 font-semibold text-slate-900">{c.customer.fullName}</td>
+                        <td className="max-w-[180px] truncate py-3 ps-6 pe-4 font-semibold text-slate-900">
+                          <EntityLink kind="customer" id={c.customer.id} mono={false}>{c.customer.fullName}</EntityLink>
+                        </td>
                         <td className="whitespace-nowrap px-4 py-3">
                           <Link href={`/dashboard/contracts/${c.id}`} className="font-mono text-[12px] text-brand-700 hover:underline">
                             {c.contractNumber ?? `#${c.id.slice(0, 8)}`}
                           </Link>
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 font-mono text-[12px] text-slate-500">{c.unit.code}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-[12px] text-slate-500">
+                          <EntityLink kind="unit" id={c.unit.id}>{c.unit.code}</EntityLink>
+                        </td>
                         <td className="px-4 py-3">
                           <TypeChip cls={PAYMENT_TYPE_CLS[row.type]}>{PAYMENT_TYPE_LABELS[row.type] ?? row.type}</TypeChip>
                         </td>
@@ -700,12 +717,19 @@ export default async function FinancialReportsPage({
               return (
                 <li key={c.id} className="flex flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3.5">
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-semibold text-slate-900">{c.customer?.fullName ?? '—'}</span>
+                    <span className="block truncate text-[13px] font-semibold text-slate-900">
+                      <EntityLink kind="customer" id={c.customer?.id} mono={false}>{c.customer?.fullName ?? '—'}</EntityLink>
+                    </span>
                     <span className="text-[11.5px] text-slate-500">
                       <Link href={`/dashboard/contracts/${c.id}`} className="font-mono text-brand-700 hover:underline">
                         {c.contractNumber ?? `#${c.id.slice(0, 8)}`}
                       </Link>
-                      {c.unit?.code ? ` · ${c.unit.code}` : ''}
+                      {c.unit?.code ? (
+                        <>
+                          {' · '}
+                          <EntityLink kind="unit" id={c.unit.id}>{c.unit.code}</EntityLink>
+                        </>
+                      ) : ''}
                     </span>
                   </span>
                   {due ? (
@@ -776,7 +800,9 @@ export default async function FinancialReportsPage({
                   {group.rows.map((row) => (
                     <li key={row.id} className="flex items-center gap-3 px-4 py-2.5">
                       <span className="w-20 shrink-0 text-[11.5px] text-slate-500 tabular-nums">{formatDate(row.dueDate, locale)}</span>
-                      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-800">{row.plan.contract.customer.fullName}</span>
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-800">
+                        <EntityLink kind="customer" id={row.plan.contract.customer.id} mono={false}>{row.plan.contract.customer.fullName}</EntityLink>
+                      </span>
                       <span className="shrink-0 text-[13px] font-bold text-slate-900 tabular-nums">{money(row.amount)}</span>
                     </li>
                   ))}
@@ -905,8 +931,12 @@ export default async function FinancialReportsPage({
                     <td className="whitespace-nowrap py-3 ps-6 pe-4">
                       <TypeChip cls={DEPOSIT_TYPE_CLS[d.type]}>{DEPOSIT_TYPE_LABELS[d.type] ?? d.type}</TypeChip>
                     </td>
-                    <td className="max-w-[180px] truncate px-4 py-3 font-semibold text-slate-900">{getDepositLabel(d)}</td>
-                    <td className="whitespace-nowrap px-4 py-3 font-mono text-[12px] text-slate-500">{getDepositUnit(d)}</td>
+                    <td className="max-w-[180px] truncate px-4 py-3 font-semibold text-slate-900">
+                      <EntityLink kind={getDepositPayer(d)?.kind ?? 'customer'} id={getDepositPayer(d)?.id} mono={false}>{getDepositLabel(d)}</EntityLink>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-[12px] text-slate-500">
+                      <EntityLink kind="unit" id={getDepositUnitId(d)}>{getDepositUnit(d)}</EntityLink>
+                    </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       {d.contract ? (
                         <Link href={`/dashboard/contracts/${d.contract.id}`} className="font-mono text-[12px] text-brand-700 hover:underline">

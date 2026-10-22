@@ -14,6 +14,7 @@ import { RequestActions } from './_components/request-actions';
 import { AppointmentActions } from './_components/appointment-actions';
 import { PremiumPageHero, PremiumSectionCard, PremiumEmptyState } from '@/components/premium';
 import { uiT } from '@/messages/ui';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 
@@ -198,7 +199,13 @@ export default async function VisitsPage({
                       kind={m.requestWord}
                       code={r.requestNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
                     />
-                    <PlaceCell project={tx(r.project?.name)} unit={r.unit?.code} unitWord={m.unitPrefix.replace(':', '')} />
+                    <PlaceCell
+                      project={tx(r.project?.name)}
+                      projectId={r.project?.id}
+                      unit={r.unit?.code}
+                      unitId={r.unit?.id}
+                      unitWord={m.unitPrefix.replace(':', '')}
+                    />
                     <div className="hidden min-w-0 text-[12.5px] lg:block">
                       <p className="truncate font-semibold text-slate-800">
                         {r.source ? SOURCE_LABEL[r.source] ?? r.source : '—'}
@@ -260,7 +267,13 @@ export default async function VisitsPage({
                       kind={m.visitWord}
                       code={a.visitNumber}
                     />
-                    <PlaceCell project={tx(a.project?.name)} unit={a.unit?.code} unitWord={m.unitPrefix.replace(':', '')} />
+                    <PlaceCell
+                      project={tx(a.project?.name)}
+                      projectId={a.project?.id}
+                      unit={a.unit?.code}
+                      unitId={a.unit?.id}
+                      unitWord={m.unitPrefix.replace(':', '')}
+                    />
                     <div className="hidden min-w-0 items-center gap-2.5 lg:flex">
                       {a.assignedSales ? (
                         <>
@@ -366,16 +379,30 @@ function ClientCell({
   );
 }
 
-function PlaceCell({ project, unit, unitWord }: { project: string; unit?: string | null; unitWord: string }) {
+function PlaceCell({
+  project,
+  unit,
+  unitWord,
+  projectId,
+  unitId,
+}: {
+  project: string;
+  unit?: string | null;
+  unitWord: string;
+  projectId?: string | null;
+  unitId?: string | null;
+}) {
   return (
     <div className="hidden min-w-0 items-start gap-2 text-[12.5px] lg:flex">
       <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A24E]" />
       <div className="min-w-0">
-        <p className="truncate font-semibold text-slate-800">{project || '—'}</p>
+        <p className="truncate font-semibold text-slate-800">
+          {project ? <EntityLink kind="project" id={projectId} mono={false}>{project}</EntityLink> : '—'}
+        </p>
         {unit && (
           <p className="mt-0.5 text-slate-500">
             <span className="me-1 text-slate-400">{unitWord}</span>
-            <span className="whitespace-nowrap font-mono" dir="ltr">{unit}</span>
+            <EntityLink kind="unit" id={unitId} className="whitespace-nowrap">{unit}</EntityLink>
           </p>
         )}
       </div>

@@ -20,6 +20,7 @@ import {
   PremiumSectionCard,
   PremiumEmptyState,
 } from '@/components/premium';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -313,12 +314,13 @@ export default async function AdminBrokerReservationsPage({
                     {/* Reservation number — mono chip */}
                     <td className="py-3.5 ps-5 pe-4">
                       {r.reservationNumber ? (
-                        <span
-                          className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600 leading-none"
-                          dir="ltr"
+                        <EntityLink
+                          kind="reservation"
+                          id={r.id}
+                          className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-600 leading-none"
                         >
                           {r.reservationNumber}
-                        </span>
+                        </EntityLink>
                       ) : (
                         <span className="text-slate-400 text-xs">—</span>
                       )}
@@ -347,7 +349,11 @@ export default async function AdminBrokerReservationsPage({
                     {/* Client */}
                     <td className="py-3.5 px-4">
                       <p className="font-semibold text-slate-900 truncate max-w-[180px]">
-                        {r.lead?.fullName ?? r.client?.fullName ?? '—'}
+                        {r.lead ? (
+                          <EntityLink kind="lead" id={r.lead.id} mono={false}>{r.lead.fullName}</EntityLink>
+                        ) : r.client ? (
+                          <EntityLink kind="client" id={r.client.id} mono={false}>{r.client.fullName}</EntityLink>
+                        ) : '—'}
                       </p>
                       <span
                         className="mt-0.5 inline-flex items-center gap-1 text-2xs text-slate-400"
@@ -361,18 +367,19 @@ export default async function AdminBrokerReservationsPage({
                     {/* Unit */}
                     <td className="py-3.5 px-4">
                       {r.unit?.code ? (
-                        <span
-                          className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600 leading-none"
-                          dir="ltr"
+                        <EntityLink
+                          kind="unit"
+                          id={r.unit.id}
+                          className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600 leading-none"
                         >
                           {r.unit.code}
-                        </span>
+                        </EntityLink>
                       ) : (
                         <span className="text-slate-400 text-xs">—</span>
                       )}
                       {r.unit?.building && (
                         <p className="text-2xs text-slate-400 mt-1 truncate max-w-[160px]">
-                          {tx(r.unit.building.phase.project.name)}
+                          <EntityLink kind="project" id={r.unit.building.phase.project.id} mono={false}>{tx(r.unit.building.phase.project.name)}</EntityLink>
                         </p>
                       )}
                     </td>

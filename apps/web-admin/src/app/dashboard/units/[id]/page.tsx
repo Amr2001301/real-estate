@@ -41,6 +41,7 @@ import {
   PremiumPanel,
   PremiumEmptyNote,
 } from '@/components/premium';
+import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 
@@ -245,8 +246,10 @@ export default async function UnitDetailPage({
                       </span>
                       <div>
                         <p className="text-[14px] font-bold text-slate-900">{m.activeReservationTitle}</p>
-                        <p className="font-mono text-[12.5px] text-slate-500">
-                          {activeReservation.reservationNumber ?? `#${activeReservation.id.slice(0, 8).toUpperCase()}`}
+                        <p className="text-[12.5px] text-slate-500">
+                          <EntityLink kind="reservation" id={activeReservation.id}>
+                            {activeReservation.reservationNumber ?? `#${activeReservation.id.slice(0, 8).toUpperCase()}`}
+                          </EntityLink>
                         </p>
                       </div>
                       <ReservationStatusBadge status={activeReservation.status} locale={locale} />
@@ -261,7 +264,13 @@ export default async function UnitDetailPage({
                   </div>
                   <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <Mini icon={<UserIcon />} label={m.fieldClient}>
-                      {activeReservation.client?.fullName ?? activeReservation.lead?.fullName ?? '—'}
+                      <EntityLink
+                        kind={activeReservation.client ? 'client' : 'lead'}
+                        id={activeReservation.client ? activeReservation.clientId : activeReservation.lead ? activeReservation.leadId : null}
+                        mono={false}
+                      >
+                        {activeReservation.client?.fullName ?? activeReservation.lead?.fullName ?? '—'}
+                      </EntityLink>
                     </Mini>
                     <Mini icon={<UserCog />} label={m.fieldSales}>
                       {activeReservation.sales?.fullName ?? '—'}
