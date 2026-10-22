@@ -1,8 +1,9 @@
-// Tiny skeleton primitives used by `loading.tsx` segments in app/.
-// Style follows the same tokens as the rest of the dashboard:
-//   * `bg-surface` + `border-hairline` + `rounded-2xl` + `shadow-xs` for cards
-//   * `animate-pulse` shimmer (built-in Tailwind; no extra deps, GPU-friendly)
-// Layouts are symmetrical so they work in both RTL and LTR.
+// Loading placeholders for `loading.tsx` segments in app/. Each one has the
+// shape of the page it stands in for (U5): the page hero (breadcrumb, large
+// title, actions), the navy metric band, the rounded filter bar and the
+// section card of rows — so the page fills in without anything jumping.
+// The `.shimmer` sweep (globals.css) runs in the reading direction and
+// follows the theme. Layouts are symmetrical, so RTL and LTR both hold.
 
 import { cn } from '@/lib/cn';
 
@@ -12,43 +13,89 @@ interface SkeletonProps {
 
 /** Base block. Use for any rectangular placeholder. */
 export function Skeleton({ className }: SkeletonProps) {
-  return (
-    <div
-      aria-hidden
-      className={cn('animate-pulse rounded-md bg-slate-200/70', className)}
-    />
-  );
+  return <div aria-hidden className={cn('shimmer rounded-md', className)} />;
 }
 
-/** Page title + description placeholder. Mirrors the look of PageHeader. */
-export function PageHeaderSkeleton() {
+/** A block on the navy metric band. */
+function NavySkeleton({ className }: SkeletonProps) {
+  return <div aria-hidden className={cn('shimmer shimmer-navy rounded-md', className)} />;
+}
+
+const card = 'overflow-hidden rounded-[22px] border border-hairline bg-surface';
+
+// ── Page parts ──────────────────────────────────────────────────────────────
+
+/** PremiumPageHero: breadcrumb, large title, a muted line, actions on the same row. */
+export function PageHeaderSkeleton({ actions = 2, breadcrumb = true }: { actions?: number; breadcrumb?: boolean }) {
   return (
-    <header className="mb-8 space-y-3">
-      <Skeleton className="h-7 w-56" />
-      <Skeleton className="h-4 w-80" />
+    <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <div className="min-w-0 space-y-3">
+        {breadcrumb && <Skeleton className="h-3.5 w-36" />}
+        <Skeleton className="h-10 w-64 rounded-lg sm:h-12" />
+        <Skeleton className="h-4 w-80 max-w-full" />
+      </div>
+      {actions > 0 && (
+        <div className="flex shrink-0 gap-3">
+          {Array.from({ length: actions }).map((_, i) => (
+            <Skeleton key={i} className={cn('h-10 rounded-full', i === actions - 1 ? 'w-36' : 'w-28')} />
+          ))}
+        </div>
+      )}
     </header>
   );
 }
 
-/** Row of N KPI card placeholders. Matches PageKpiCard footprint. */
-export function KpiCardsSkeleton({ count = 4 }: { count?: number }) {
+/** PremiumMetricStrip: one navy band, gold hairlines, a ring icon and a large figure per cell. */
+export function MetricStripSkeleton({ count = 4 }: { count?: number }) {
+  if (count <= 0) return null;
+  const cols =
+    count >= 6 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6'
+    : count === 5 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'
+    : count === 3 ? 'grid-cols-2 sm:grid-cols-3'
+    : count === 2 ? 'grid-cols-2'
+    : 'grid-cols-2 lg:grid-cols-4';
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-      {Array.from({ length: count }).map((_, i) => (
-        <div
-          key={i}
-          className="bg-surface border border-hairline rounded-2xl shadow-xs p-5 space-y-3"
-        >
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-7 w-20" />
-          <Skeleton className="h-3 w-32" />
-        </div>
+    <section
+      aria-hidden
+      className="overflow-hidden rounded-[22px] border border-[#D8B66A]/[0.28] bg-navy-band shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]"
+    >
+      <div className={cn('grid gap-px bg-[#D8B66A]/[0.16]', cols)}>
+        {Array.from({ length: count }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 bg-navy-band px-6 py-6">
+            <span className="h-12 w-12 shrink-0 rounded-full border border-[#D8B66A]/45" />
+            <div className="min-w-0 flex-1 space-y-2.5">
+              <NavySkeleton className="h-3 w-24" />
+              <NavySkeleton className="h-9 w-20 rounded-lg" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** Kept for older call sites: the metric band. */
+export function KpiCardsSkeleton({ count = 4 }: { count?: number }) {
+  return <MetricStripSkeleton count={count} />;
+}
+
+/** PremiumFilterBar: one rounded bar with a search field, selects and a trailing action. */
+export function FilterBarSkeleton({ fields = 3 }: { fields?: number }) {
+  return (
+    <div
+      aria-hidden
+      className="flex flex-wrap items-center gap-2.5 rounded-[28px] border border-hairline bg-surface p-2 shadow-[0_10px_30px_-18px_rgb(20_26_38/0.25)] sm:p-2.5"
+    >
+      <Skeleton className="h-11 min-w-[160px] flex-1 rounded-full" />
+      {Array.from({ length: Math.max(0, fields - 1) }).map((_, i) => (
+        <Skeleton key={i} className="h-11 w-36 rounded-full" />
       ))}
+      <Skeleton className="ms-auto h-11 w-24 rounded-full" />
     </div>
   );
 }
 
-/** Table card placeholder. `cols`/`rows` are visual only — no data is rendered. */
+/** PremiumSectionCard of rows: avatar or icon, name with its code, then columns. */
 export function TableCardSkeleton({
   cols = 5,
   rows = 8,
@@ -58,34 +105,70 @@ export function TableCardSkeleton({
   rows?: number;
   title?: boolean;
 }) {
+  const extra = Math.max(0, Math.min(cols, 7) - 2);
   return (
-    <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+    <div aria-hidden className={card}>
       {title && (
-        <div className="px-6 py-4 border-b border-hairline flex items-center justify-between">
+        <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
           <Skeleton className="h-5 w-40" />
-          <Skeleton className="h-8 w-24" />
+          <Skeleton className="h-3.5 w-16" />
         </div>
       )}
-      <div className="p-4 space-y-3">
-        {/* Header row */}
-        <div
-          className="grid gap-3 px-2 pb-3 border-b border-hairline"
-          style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
-        >
-          {Array.from({ length: cols }).map((_, i) => (
-            <Skeleton key={`h-${i}`} className="h-3 w-20" />
-          ))}
-        </div>
-        {/* Data rows */}
+      <ul className="divide-y divide-hairline">
         {Array.from({ length: rows }).map((_, r) => (
-          <div
-            key={`r-${r}`}
-            className="grid gap-3 px-2 py-1.5"
-            style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
-          >
-            {Array.from({ length: cols }).map((__, c) => (
-              <Skeleton key={`r-${r}-${c}`} className="h-4 w-full max-w-[160px]" />
+          <li key={r} className="flex items-center gap-4 px-6 py-4">
+            <Skeleton className="h-11 w-11 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-2 lg:max-w-[28%]">
+              <Skeleton className={cn('h-4', r % 3 === 0 ? 'w-3/4' : r % 3 === 1 ? 'w-2/3' : 'w-1/2')} />
+              <Skeleton className="h-3 w-24" />
+            </div>
+            {Array.from({ length: extra }).map((_, c) => (
+              <div key={c} className="hidden min-w-0 flex-1 space-y-2 lg:block">
+                <Skeleton className="h-3.5 w-4/5" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
             ))}
+            <Skeleton className="h-7 w-20 shrink-0 rounded-full" />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** A card with a title and a chart area. */
+function ChartCardSkeleton({ className, height = 'h-56' }: { className?: string; height?: string }) {
+  return (
+    <div aria-hidden className={cn(card, 'space-y-4 p-6', className)}>
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-5 w-40" />
+        <Skeleton className="h-7 w-24 rounded-full" />
+      </div>
+      <Skeleton className={cn(height, 'w-full rounded-2xl')} />
+    </div>
+  );
+}
+
+/** Two side-by-side cards (chart + side panel). */
+export function ChartsRowSkeleton() {
+  return (
+    <div className="grid gap-5 lg:grid-cols-3">
+      <ChartCardSkeleton className="lg:col-span-2" />
+      <ChartCardSkeleton />
+    </div>
+  );
+}
+
+/** A card of label / value lines (detail side panels, settings sections). */
+function FieldsCardSkeleton({ lines = 5, className }: { lines?: number; className?: string }) {
+  return (
+    <div aria-hidden className={cn(card, 'space-y-5 p-6', className)}>
+      <Skeleton className="h-5 w-36" />
+      <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+        {Array.from({ length: lines }).map((_, i) => (
+          <div key={i} className="space-y-2">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-4 w-3/4" />
           </div>
         ))}
       </div>
@@ -93,1691 +176,158 @@ export function TableCardSkeleton({
   );
 }
 
-/** Two side-by-side card placeholders (e.g. chart + side panel). */
-export function ChartsRowSkeleton() {
-  return (
-    <div className="grid gap-4 lg:grid-cols-3 mb-8">
-      <div className="lg:col-span-2 bg-surface border border-hairline rounded-2xl shadow-xs p-5 space-y-4">
-        <Skeleton className="h-5 w-40" />
-        <Skeleton className="h-56 w-full" />
-      </div>
-      <div className="bg-surface border border-hairline rounded-2xl shadow-xs p-5 space-y-4">
-        <Skeleton className="h-5 w-32" />
-        <Skeleton className="h-56 w-full" />
-      </div>
-    </div>
-  );
-}
+// ── Page compositions ───────────────────────────────────────────────────────
 
-/** Generic list-page composition: header + KPIs + table. Used by most segments. */
+const page = 'flex flex-col gap-5 lg:gap-6';
+
+/** List page: hero, metric band, filter bar, rows. Used by most segments. */
 export function ListPageSkeleton({
   kpis = 4,
   cols = 5,
   rows = 8,
+  filterFields = 3,
 }: {
   kpis?: number;
   cols?: number;
   rows?: number;
+  filterFields?: number;
 }) {
   return (
-    <div>
+    <div className={page} aria-busy="true">
       <PageHeaderSkeleton />
-      <KpiCardsSkeleton count={kpis} />
+      <MetricStripSkeleton count={kpis} />
+      {filterFields > 0 && <FilterBarSkeleton fields={filterFields} />}
       <TableCardSkeleton cols={cols} rows={rows} />
     </div>
   );
 }
 
-// ── Shared primitives for operation-page skeletons ──────────────────────────
-
-/** Compact FilterBar skeleton — matches the single-row filter strip with no visible labels. */
-export function FilterBarSkeleton({ fields = 3 }: { fields?: number }) {
+/** Detail page: hero with its badge, metric band, main column of cards beside a side panel. */
+export function DetailPageSkeleton({ kpis = 4, sections = 2 }: { kpis?: number; sections?: number }) {
   return (
-    <div className="bg-surface border border-hairline rounded-2xl shadow-xs px-3 py-2.5 flex flex-wrap items-center gap-2">
-      {Array.from({ length: fields }).map((_, i) => (
-        <Skeleton key={i} className="h-8 w-36 rounded-lg" />
-      ))}
-      <Skeleton className="h-8 w-20 rounded-lg ms-auto" />
+    <div className={page} aria-busy="true">
+      <PageHeaderSkeleton actions={3} />
+      <MetricStripSkeleton count={kpis} />
+      <div className="grid grid-cols-1 items-start gap-5 lg:gap-6 xl:grid-cols-3">
+        <div className="flex flex-col gap-5 xl:col-span-2">
+          {Array.from({ length: sections }).map((_, i) =>
+            i === 0 ? <FieldsCardSkeleton key={i} lines={6} /> : <TableCardSkeleton key={i} cols={5} rows={5} />,
+          )}
+        </div>
+        <div className="flex flex-col gap-4">
+          <FieldsCardSkeleton lines={4} />
+          <FieldsCardSkeleton lines={2} />
+        </div>
+      </div>
     </div>
   );
 }
 
-/** Section card (list of rows + optional footer form). Used for rules/entries panels. */
-function SectionCardSkeleton({
-  rows = 3,
-  hasFooter = false,
-  gridCols,
-}: {
-  rows?: number;
-  hasFooter?: boolean;
-  gridCols?: number;
-}) {
+/** Report page: hero, filter bar, metric band, charts. */
+export function ReportPageSkeleton({ kpis = 4, charts = 2 }: { kpis?: number; charts?: number }) {
   return (
-    <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-hairline flex items-center justify-between">
-        <Skeleton className="h-4 w-36" />
-        <Skeleton className="h-4 w-14" />
-      </div>
-      {gridCols ? (
-        <div
-          className="px-5 pt-4 pb-3 grid gap-3"
-          style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}
-        >
-          {Array.from({ length: rows }).map((_, i) => (
-            <div key={i} className="rounded-xl border border-hairline overflow-hidden flex">
-              <div className="w-1 bg-slate-200 shrink-0" />
-              <div className="flex-1 px-4 py-3.5 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-5 w-16 rounded-md" />
-                </div>
-                <Skeleton className="h-3 w-28" />
-                <Skeleton className="h-3 w-20" />
-              </div>
-            </div>
-          ))}
+    <div className={page} aria-busy="true">
+      <PageHeaderSkeleton />
+      <FilterBarSkeleton fields={3} />
+      <MetricStripSkeleton count={kpis} />
+      {Array.from({ length: charts }).map((_, i) => (
+        <ChartsRowSkeleton key={i} />
+      ))}
+      <TableCardSkeleton cols={5} rows={5} />
+    </div>
+  );
+}
+
+/** Settings-style page: hero, then cards of fields (with a side panel when asked). */
+export function CardsPageSkeleton({
+  sections = 3,
+  sidePanel = false,
+  kpis = 0,
+}: {
+  sections?: number;
+  sidePanel?: boolean;
+  kpis?: number;
+}) {
+  const cards = Array.from({ length: sections }).map((_, i) => <FieldsCardSkeleton key={i} lines={i % 2 ? 4 : 6} />);
+  return (
+    <div className={page} aria-busy="true">
+      <PageHeaderSkeleton actions={1} />
+      <MetricStripSkeleton count={kpis} />
+      {sidePanel ? (
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-3">
+          <div className="flex flex-col gap-5 lg:col-span-2">{cards}</div>
+          <FieldsCardSkeleton lines={4} />
         </div>
       ) : (
-        <div className="divide-y divide-hairline">
-          {Array.from({ length: rows }).map((_, i) => (
-            <div key={i} className="flex items-center justify-between gap-3 px-5 py-3">
-              <div className="flex items-center gap-3 flex-1">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-5 w-12 rounded-full" />
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <Skeleton className="h-8 w-16 rounded-xl" />
-                <Skeleton className="h-8 w-24 rounded-xl" />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-      {hasFooter && (
-        <div className="border-t border-hairline bg-surface-muted/40 px-5 py-4 space-y-2.5">
-          <Skeleton className="h-3 w-28" />
-          <div className="flex flex-wrap gap-2">
-            <Skeleton className="h-8 flex-1 min-w-[160px] rounded-xl" />
-            <Skeleton className="h-8 w-28 rounded-xl" />
-            <Skeleton className="h-8 w-20 rounded-xl" />
-          </div>
-        </div>
+        <div className="flex flex-col gap-5">{cards}</div>
       )}
     </div>
   );
 }
 
-// ── Page-specific skeletons ─────────────────────────────────────────────────
+// ── Named page skeletons (kept so each loading.tsx stays a one-liner) ──────
 
-/** Full skeleton for /dashboard/maintenance — matches exact section order and card layout. */
-export function MaintenancePageSkeleton() {
-  return (
-    <div className="space-y-5">
-      {/* Page header */}
-      <header className="mb-0 space-y-3">
-        <Skeleton className="h-3 w-52" />
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-24" />
-            <Skeleton className="h-4 w-[420px] max-w-full" />
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Skeleton className="h-10 w-28 rounded-xl" />
-            <Skeleton className="h-10 w-36 rounded-xl" />
-          </div>
-        </div>
-      </header>
-
-      {/* Filter bar */}
-      <FilterBarSkeleton fields={4} />
-
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="relative bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-            <div className="absolute inset-y-0 start-0 w-0.5 bg-slate-200" />
-            <div className="ps-5 pe-4 py-3 flex items-start justify-between gap-3">
-              <div className="space-y-1.5 flex-1">
-                <Skeleton className="h-2 w-16" />
-                <Skeleton className="h-8 w-12" />
-              </div>
-              <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Analytics panels */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <SectionCardSkeleton rows={5} />
-        <SectionCardSkeleton rows={5} />
-      </div>
-
-      {/* Requests table */}
-      <TableCardSkeleton cols={9} rows={6} />
-
-      {/* Category management */}
-      <SectionCardSkeleton rows={3} hasFooter gridCols={3} />
-    </div>
-  );
-}
-
-/** Full skeleton for /dashboard/bonus — matches KPI cards, filter, manual entry, rules, entries table. */
-export function BonusPageSkeleton() {
-  return (
-    <div className="space-y-5">
-      {/* Page header */}
-      <header className="mb-0 space-y-3">
-        <Skeleton className="h-3 w-52" />
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-52" />
-            <Skeleton className="h-4 w-[480px] max-w-full" />
-          </div>
-          <Skeleton className="h-10 w-28 rounded-xl shrink-0" />
-        </div>
-      </header>
-
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="relative bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-            <div className="absolute inset-y-0 start-0 w-0.5 bg-slate-200" />
-            <div className="ps-5 pe-4 py-3 flex items-start justify-between gap-3">
-              <div className="space-y-1.5 flex-1">
-                <Skeleton className="h-2 w-20" />
-                <Skeleton className="h-8 w-28" />
-              </div>
-              <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Filter bar */}
-      <FilterBarSkeleton fields={3} />
-
-      {/* Manual entry card — labeled field pairs */}
-      <div className="bg-surface border border-hairline rounded-2xl shadow-xs">
-        <div className="px-5 py-3.5 border-b border-hairline flex items-center gap-2">
-          <Skeleton className="h-6 w-6 rounded-full" />
-          <Skeleton className="h-4 w-36" />
-        </div>
-        <div className="px-5 py-4">
-          <div className="flex flex-wrap items-end gap-3">
-            {(['w-48', 'w-40', 'w-32', 'w-40'] as const).map((w, i) => (
-              <div key={i} className="flex flex-col gap-1">
-                <Skeleton className="h-2.5 w-16" />
-                <Skeleton className={cn('h-8 rounded-xl', w)} />
-              </div>
-            ))}
-            <Skeleton className="h-8 w-28 rounded-xl" />
-          </div>
-        </div>
-      </div>
-
-      {/* Commission rules card — banner + rows + labeled add-rule footer */}
-      <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-hairline flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-4 w-4 rounded" />
-            <Skeleton className="h-4 w-28" />
-          </div>
-          <Skeleton className="h-4 w-14" />
-        </div>
-        {/* Compact status banner */}
-        <div className="mx-5 mt-3">
-          <Skeleton className="h-7 w-full rounded-lg" />
-        </div>
-        {/* Rules rows */}
-        <div className="px-5 py-2 divide-y divide-hairline">
-          {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="flex items-center justify-between gap-3 py-3">
-              <div className="flex items-center gap-2 flex-1">
-                <Skeleton className="h-5 w-10 rounded-md" />
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-5 w-20 rounded-full" />
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <Skeleton className="h-7 w-14 rounded-xl" />
-                <Skeleton className="h-7 w-24 rounded-xl" />
-              </div>
-            </div>
-          ))}
-        </div>
-        {/* Add rule footer — unlabeled inline inputs */}
-        <div className="border-t border-hairline bg-surface-muted/40 px-5 py-3.5">
-          <div className="flex items-center gap-2 mb-2">
-            <Skeleton className="h-5 w-5 rounded-full" />
-            <Skeleton className="h-3 w-28" />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Skeleton className="h-8 flex-1 min-w-[160px] rounded-xl" />
-            <Skeleton className="h-8 w-28 rounded-xl" />
-            <Skeleton className="h-8 w-16 rounded-xl" />
-          </div>
-          <Skeleton className="h-3 w-52 mt-2" />
-        </div>
-      </div>
-
-      {/* Entries table */}
-      <TableCardSkeleton cols={8} rows={5} />
-    </div>
-  );
-}
-
-// ── Broker section skeletons ────────────────────────────────────────────────
-
-/** Full skeleton for /dashboard/brokers — header + KPI cards + insight strip + filter + table. */
-export function BrokersPageSkeleton() {
-  return (
-    <div className="space-y-5">
-      {/* Page header */}
-      <header className="mb-0 space-y-3">
-        <Skeleton className="h-3 w-52" />
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-32" />
-            <Skeleton className="h-4 w-[440px] max-w-full" />
-          </div>
-          <Skeleton className="h-10 w-36 rounded-xl shrink-0" />
-        </div>
-      </header>
-
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="relative bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-            <div className="absolute inset-y-0 start-0 w-0.5 bg-slate-200" />
-            <div className="ps-5 pe-4 py-3 flex items-start justify-between gap-3">
-              <div className="space-y-1.5 flex-1">
-                <Skeleton className="h-2 w-20" />
-                <Skeleton className="h-8 w-10" />
-              </div>
-              <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Insight strip */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl border border-hairline bg-surface px-5 py-3 shadow-xs">
-        {[28, 36, 40, 20].map((w, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <Skeleton className="h-3.5 w-3.5 rounded-full shrink-0" />
-            <Skeleton className={`h-3 w-${w === 28 ? '24' : w === 36 ? '28' : w === 40 ? '32' : '10'}`} />
-            <Skeleton className="h-4 w-10" />
-          </div>
-        ))}
-      </div>
-
-      {/* Filter bar */}
-      <FilterBarSkeleton fields={3} />
-
-      {/* Table — 8 cols (company+code merged, status, city, employees, projects, units, date, actions) */}
-      <TableCardSkeleton cols={8} rows={7} />
-    </div>
-  );
-}
-
-/**
- * Generic broker list-page skeleton (leads / reservations / contracts /
- * commissions / payouts) — compact header + filter + table.
- */
-export function BrokerListPageSkeleton({
-  cols = 8,
-  filterFields = 4,
-  hasAction = false,
+export const MaintenancePageSkeleton = () => <ListPageSkeleton kpis={4} cols={6} rows={8} />;
+export const BonusPageSkeleton = () => <ListPageSkeleton kpis={4} cols={6} rows={8} />;
+export const BrokersPageSkeleton = () => <ListPageSkeleton kpis={0} cols={6} rows={8} />;
+export const BrokerListPageSkeleton = ({ kpis = 0, cols = 6, rows = 8 }: { kpis?: number; cols?: number; rows?: number }) => (
+  <ListPageSkeleton kpis={kpis} cols={cols} rows={rows} />
+);
+export const BrokerLeadsPageSkeleton = () => <ListPageSkeleton kpis={0} cols={6} rows={8} />;
+export const BrokerReservationsPageSkeleton = () => <ListPageSkeleton kpis={4} cols={6} rows={8} />;
+export const BrokerContractsPageSkeleton = () => <ListPageSkeleton kpis={0} cols={6} rows={8} />;
+export const BrokerCommissionsPageSkeleton = () => <ListPageSkeleton kpis={0} cols={6} rows={8} />;
+export const BrokerPayoutsPageSkeleton = () => <ListPageSkeleton kpis={0} cols={6} rows={8} />;
+export const BrokerReportsPageSkeleton = () => <ReportPageSkeleton kpis={4} charts={1} />;
+export const AdminTablePageSkeleton = ({
+  cols = 6,
+  rows = 10,
+  filterFields = 3,
 }: {
   cols?: number;
-  filterFields?: number;
-  hasAction?: boolean;
-}) {
-  return (
-    <div className="space-y-5">
-      {/* Page header */}
-      <header className="mb-0 space-y-3">
-        <Skeleton className="h-3 w-60" />
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-[420px] max-w-full" />
-          </div>
-          {hasAction && <Skeleton className="h-10 w-44 rounded-xl shrink-0" />}
-        </div>
-      </header>
-
-      {/* Filter bar */}
-      <FilterBarSkeleton fields={filterFields} />
-
-      {/* Table */}
-      <TableCardSkeleton cols={cols} rows={8} />
-    </div>
-  );
-}
-
-/** Full skeleton for /dashboard/broker-leads — header + status summary strip + filter + table. */
-export function BrokerLeadsPageSkeleton() {
-  return (
-    <div className="space-y-5">
-      {/* Page header */}
-      <header className="mb-0 space-y-3">
-        <Skeleton className="h-3 w-64" />
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-[400px] max-w-full" />
-        </div>
-      </header>
-
-      {/* Status summary strip */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-2xl border border-hairline bg-surface px-5 py-3.5 shadow-xs">
-        {/* Total — larger prominent number */}
-        <div className="flex items-baseline gap-1.5 shrink-0">
-          <Skeleton className="h-6 w-8" />
-          <Skeleton className="h-2.5 w-8" />
-        </div>
-        <Skeleton className="w-px h-5" />
-        {/* Status pill chips */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className={`h-6 rounded-full ${['w-28', 'w-24', 'w-16', 'w-16'][i]}`} />
-          ))}
-        </div>
-      </div>
-
-      {/* Filter bar */}
-      <FilterBarSkeleton fields={5} />
-
-      {/* Table — 8 cols (client, broker, project, review, stage, sales, date, action) */}
-      <TableCardSkeleton cols={8} rows={8} />
-    </div>
-  );
-}
-
-/** Full skeleton for /dashboard/broker-reservations — header + action + summary strip + filter + table. */
-export function BrokerReservationsPageSkeleton() {
-  return (
-    <div className="space-y-5">
-      {/* Page header with primary action */}
-      <header className="mb-0 space-y-3">
-        <Skeleton className="h-3 w-72" />
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-52" />
-            <Skeleton className="h-4 w-[440px] max-w-full" />
-          </div>
-          <Skeleton className="h-10 w-52 rounded-xl shrink-0" />
-        </div>
-      </header>
-
-      {/* Status summary strip */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-2xl border border-hairline bg-surface px-5 py-3.5 shadow-xs">
-        {/* Total */}
-        <div className="flex items-baseline gap-1.5 shrink-0">
-          <Skeleton className="h-6 w-8" />
-          <Skeleton className="h-2.5 w-8" />
-        </div>
-        <Skeleton className="w-px h-5" />
-        {/* Status pill chips */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          {(['w-28', 'w-24', 'w-32'] as const).map((w, i) => (
-            <Skeleton key={i} className={`h-6 rounded-full ${w}`} />
-          ))}
-        </div>
-        <Skeleton className="w-px h-5 hidden sm:block" />
-        {/* Commission total */}
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-3 w-28" />
-          <Skeleton className="h-4 w-24" />
-        </div>
-      </div>
-
-      {/* Filter bar — 4 selects */}
-      <FilterBarSkeleton fields={4} />
-
-      {/* Table — 9 cols (number, broker, client, unit, status, sales, commission, date, action) */}
-      <TableCardSkeleton cols={9} rows={8} />
-    </div>
-  );
-}
-
-/** Full skeleton for /dashboard/broker-contracts — header + action + summary strip + filter + table. */
-export function BrokerContractsPageSkeleton() {
-  return (
-    <div className="space-y-5">
-      {/* Page header with primary action */}
-      <header className="mb-0 space-y-3">
-        <Skeleton className="h-3 w-72" />
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-[440px] max-w-full" />
-          </div>
-          <Skeleton className="h-10 w-56 rounded-xl shrink-0" />
-        </div>
-      </header>
-
-      {/* Summary strip */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-2xl border border-hairline bg-surface px-5 py-3.5 shadow-xs">
-        <div className="flex items-baseline gap-1.5 shrink-0">
-          <Skeleton className="h-6 w-8" />
-          <Skeleton className="h-2.5 w-8" />
-        </div>
-        <Skeleton className="w-px h-5" />
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Skeleton className="h-6 rounded-full w-20" />
-          <Skeleton className="h-6 rounded-full w-28" />
-        </div>
-        <Skeleton className="w-px h-5 hidden sm:block" />
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-3 w-32" />
-          <Skeleton className="h-4 w-28" />
-        </div>
-        <Skeleton className="w-px h-5 hidden sm:block" />
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-3 w-28" />
-          <Skeleton className="h-4 w-24" />
-        </div>
-      </div>
-
-      {/* Filter bar — 4 selects + 2 date inputs */}
-      <FilterBarSkeleton fields={6} />
-
-      {/* Table — 10 cols (number, broker, client, unit, value, status, sales, commission, date, action) */}
-      <TableCardSkeleton cols={10} rows={8} />
-    </div>
-  );
-}
-
-/** Full skeleton for /dashboard/broker-commissions — header + summary strip + filter + table. */
-export function BrokerCommissionsPageSkeleton() {
-  return (
-    <div className="space-y-5">
-      {/* Page header — no action button */}
-      <header className="mb-0 space-y-3">
-        <Skeleton className="h-3 w-64" />
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-44" />
-          <Skeleton className="h-4 w-[480px] max-w-full" />
-        </div>
-      </header>
-
-      {/* Summary strip — total + status chips + financial totals */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-2xl border border-hairline bg-surface px-5 py-3.5 shadow-xs">
-        <div className="flex items-baseline gap-1.5 shrink-0">
-          <Skeleton className="h-6 w-8" />
-          <Skeleton className="h-2.5 w-10" />
-        </div>
-        <Skeleton className="w-px h-5" />
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Skeleton className="h-6 rounded-full w-28" />
-          <Skeleton className="h-6 rounded-full w-24" />
-        </div>
-        <Skeleton className="w-px h-5 hidden sm:block" />
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-3 w-20" />
-          <Skeleton className="h-4 w-28" />
-        </div>
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-3 w-28" />
-          <Skeleton className="h-4 w-24" />
-        </div>
-      </div>
-
-      {/* Filter bar — 3 selects + 2 date inputs */}
-      <FilterBarSkeleton fields={5} />
-
-      {/* Table — 11 cols (number, broker, contract, unit/project, basis, %, gross, net, status, date, action) */}
-      <TableCardSkeleton cols={11} rows={8} />
-    </div>
-  );
-}
-
-/** Full skeleton for /dashboard/broker-payouts — header + action + summary strip + filter + table. */
-export function BrokerPayoutsPageSkeleton() {
-  return (
-    <div className="space-y-5">
-      {/* Page header with primary action */}
-      <header className="mb-0 space-y-3">
-        <Skeleton className="h-3 w-64" />
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-44" />
-            <Skeleton className="h-4 w-[400px] max-w-full" />
-          </div>
-          <Skeleton className="h-10 w-36 rounded-xl shrink-0" />
-        </div>
-      </header>
-
-      {/* Summary strip — total + status chips + financial totals */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-2xl border border-hairline bg-surface px-5 py-3.5 shadow-xs">
-        <div className="flex items-baseline gap-1.5 shrink-0">
-          <Skeleton className="h-6 w-8" />
-          <Skeleton className="h-2.5 w-8" />
-        </div>
-        <Skeleton className="w-px h-5" />
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Skeleton className="h-6 rounded-full w-20" />
-          <Skeleton className="h-6 rounded-full w-24" />
-          <Skeleton className="h-6 rounded-full w-20" />
-        </div>
-        <Skeleton className="w-px h-5 hidden sm:block" />
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-3 w-20" />
-          <Skeleton className="h-4 w-28" />
-        </div>
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="h-4 w-24" />
-        </div>
-      </div>
-
-      {/* Filter bar — 2 selects + period input + 2 date inputs */}
-      <FilterBarSkeleton fields={5} />
-
-      {/* Table — 9 cols (number, broker, period, gross, net, status, created, paid, action) */}
-      <TableCardSkeleton cols={9} rows={8} />
-    </div>
-  );
-}
-
-/** Full skeleton for /dashboard/broker-reports — premium enterprise redesign. */
-export function BrokerReportsPageSkeleton() {
-  return (
-    <div className="space-y-5">
-
-      {/* Header — title + description + 2 export buttons */}
-      <header className="mb-0 space-y-3">
-        <Skeleton className="h-3 w-52" />
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-40" />
-            <Skeleton className="h-4 w-[440px] max-w-full" />
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Skeleton className="h-10 w-36 rounded-xl" />
-            <Skeleton className="h-10 w-40 rounded-xl" />
-          </div>
-        </div>
-      </header>
-
-      {/* Report control bar — 5 fields */}
-      <FilterBarSkeleton fields={5} />
-
-      {/* Executive financial overview — hero card + 3 secondary cards in row */}
-      {/* Hero sales card */}
-      <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-        <div className="h-0.5 bg-slate-200 w-full" />
-        <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-x-8 gap-y-3">
-          <div className="space-y-2">
-            <Skeleton className="h-2.5 w-24" />
-            <Skeleton className="h-11 w-72 max-w-full" />
-            <Skeleton className="h-3 w-64 max-w-full" />
-          </div>
-          <div className="flex items-center gap-4 shrink-0">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex flex-col gap-1 items-center">
-                <Skeleton className="h-5 w-8" />
-                <Skeleton className="h-2.5 w-14" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Secondary financial cards — 3-column row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="bg-surface border border-hairline rounded-2xl shadow-xs px-5 py-4 flex items-center justify-between gap-3">
-            <div className="space-y-1.5 flex-1">
-              <Skeleton className="h-2.5 w-20" />
-              <Skeleton className="h-6 w-36" />
-              <Skeleton className="h-2.5 w-28" />
-            </div>
-            <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
-          </div>
-        ))}
-      </div>
-
-      {/* Pipeline summary row — 3 volume tiles */}
-      <div className="grid grid-cols-3 gap-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="bg-surface border border-hairline rounded-2xl shadow-xs px-5 py-3.5 flex items-center gap-3.5">
-            <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
-            <div className="space-y-1.5">
-              <Skeleton className="h-7 w-10" />
-              <Skeleton className="h-2.5 w-20" />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Section label + Conversion Journey card */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-3.5 w-3.5 rounded shrink-0" />
-          <Skeleton className="h-3.5 w-24" />
-          <div className="flex-1 h-px bg-hairline" />
-        </div>
-        <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-          <div className="flex flex-col lg:flex-row">
-            {/* Stepper pane */}
-            <div className="flex-1 px-6 py-5 space-y-3.5">
-              <Skeleton className="h-3.5 w-32" />
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="flex gap-3">
-                  <Skeleton className="h-6 w-6 rounded-full shrink-0 mt-0.5" />
-                  <div className="flex-1 space-y-1.5 pb-1">
-                    <div className="flex justify-between gap-3">
-                      <Skeleton className="h-3.5 w-24" />
-                      <Skeleton className="h-4.5 w-8 shrink-0" />
-                    </div>
-                    {i > 0 && (
-                      <div className="flex items-center gap-2">
-                        <Skeleton className="flex-1 h-1.5 rounded-full" />
-                        <Skeleton className="h-3 w-10 shrink-0" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-            {/* Divider */}
-            <div className="h-px bg-hairline lg:h-auto lg:w-px shrink-0" aria-hidden />
-            {/* Ratios pane */}
-            <div className="lg:w-72 shrink-0 px-6 py-5">
-              <Skeleton className="h-3.5 w-36 mb-3" />
-              <div className="divide-y divide-hairline">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="flex items-center justify-between gap-4 py-3.5 first:pt-0 last:pb-0">
-                    <div className="space-y-1.5 flex-1">
-                      <Skeleton className="h-3 w-28" />
-                      <Skeleton className="h-2.5 w-40" />
-                    </div>
-                    <Skeleton className="h-8 w-14 shrink-0" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Financial realization — Card with header */}
-      <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-        <div className="px-5 pt-4 pb-3 border-b border-hairline flex items-center gap-2">
-          <Skeleton className="h-4 w-4 rounded shrink-0" />
-          <Skeleton className="h-4 w-28" />
-        </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-hairline">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="bg-surface px-5 py-5 space-y-2">
-              <Skeleton className="h-2.5 w-28" />
-              <Skeleton className="h-6 w-36" />
-              <Skeleton className="h-2.5 w-32" />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Top brokers ranking — 9 cols */}
-      <TableCardSkeleton cols={9} rows={5} />
-
-      {/* Project performance — 8 cols */}
-      <TableCardSkeleton cols={8} rows={4} />
-
-    </div>
-  );
-}
-
-// ── Administration section skeletons ────────────────────────────────────────
-
-/**
- * Reusable admin table-page skeleton.
- * Used by: /dashboard/documents, /dashboard/users, /dashboard/audit-logs.
- * Structure: page header · optional action · filter bar · table.
- */
-export function AdminTablePageSkeleton({
-  cols = 7,
-  filterFields = 4,
-  rows = 8,
-  hasAction = false,
-}: {
-  cols?: number;
-  filterFields?: number;
   rows?: number;
+  filterFields?: number;
   hasAction?: boolean;
-}) {
-  return (
-    <div className="space-y-5">
-      <header className="mb-0 space-y-3">
-        <Skeleton className="h-3 w-52" />
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-[420px] max-w-full" />
-          </div>
-          {hasAction && <Skeleton className="h-10 w-44 rounded-xl shrink-0" />}
-        </div>
-      </header>
-
-      <FilterBarSkeleton fields={filterFields} />
-
-      <TableCardSkeleton cols={cols} rows={rows} />
-    </div>
-  );
-}
-
-/**
- * Full page skeleton for /dashboard/documents.
- * Structure: page header with action · summary strip (3 icon-backed pills) ·
- * filter bar (6 fields) · table (7 cols, 8 rows).
- */
-export function AdminDocumentsPageSkeleton() {
-  return (
-    <div className="space-y-5">
-      {/* Header */}
-      <header className="mb-0 space-y-3">
-        <Skeleton className="h-3 w-52" />
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-[460px] max-w-full" />
-          </div>
-          <Skeleton className="h-10 w-40 rounded-xl shrink-0" />
-        </div>
-      </header>
-
-      {/* Summary strip */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border border-hairline bg-surface px-5 py-3.5 shadow-xs">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="flex items-center gap-2.5 shrink-0">
-            <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
-            <div className="space-y-1">
-              <Skeleton className="h-2.5 w-16" />
-              <Skeleton className="h-4 w-10" />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Filter bar — single row */}
-      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-surface px-3 py-3 shadow-xs">
-        <Skeleton className="h-8 flex-1 min-w-[180px] rounded-lg" />
-        <Skeleton className="h-8 w-36 rounded-lg" />
-        <Skeleton className="h-8 w-36 rounded-lg" />
-        <Skeleton className="h-8 w-36 rounded-lg" />
-        <Skeleton className="h-8 w-20 rounded-lg ms-auto" />
-      </div>
-
-      {/* Table */}
-      <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-        {/* Header row */}
-        <div className="grid gap-3 px-5 py-2.5 border-b border-hairline bg-surface-muted/60"
-          style={{ gridTemplateColumns: '2.5fr 1fr 1fr 0.7fr 1.2fr 1fr 0.8fr' }}>
-          {['العنوان','التصنيف','المالك','الحجم','رفع بواسطة','الوقت','إجراءات'].map((_, i) => (
-            <Skeleton key={i} className="h-2.5 w-14" />
-          ))}
-        </div>
-        {/* Data rows */}
-        {Array.from({ length: 7 }).map((_, r) => (
-          <div key={r} className="grid gap-3 px-5 py-3 border-t border-hairline items-center"
-            style={{ gridTemplateColumns: '2.5fr 1fr 1fr 0.7fr 1.2fr 1fr 0.8fr' }}>
-            {/* Title: 2 lines */}
-            <div className="space-y-1.5">
-              <Skeleton className="h-3.5 w-4/5" />
-              <Skeleton className="h-2.5 w-3/5 opacity-60" />
-            </div>
-            {/* Category chip */}
-            <Skeleton className="h-5 w-14 rounded-full" />
-            {/* Owner chip */}
-            <Skeleton className="h-5 w-16 rounded-full" />
-            {/* Size */}
-            <Skeleton className="h-3 w-10" />
-            {/* Uploader: 2 lines */}
-            <div className="space-y-1.5">
-              <Skeleton className="h-3 w-20" />
-              <Skeleton className="h-2.5 w-28 opacity-60" />
-            </div>
-            {/* Date */}
-            <Skeleton className="h-3 w-24" />
-            {/* Two action buttons */}
-            <div className="flex items-center justify-end gap-1.5">
-              <Skeleton className="h-8 w-8 rounded-lg" />
-              <Skeleton className="h-8 w-8 rounded-lg" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/**
- * Reusable admin cards/content-page skeleton.
- * Used by: /dashboard/operations (hasKpiRow=true), /dashboard/permissions (hasSidePanel=true).
- * Structure varies by props — see usage comments.
- */
-export function AdminCardsPageSkeleton({
-  hasKpiRow = false,
-  hasSidePanel = false,
+}) => <ListPageSkeleton kpis={0} cols={cols} rows={rows} filterFields={filterFields} />;
+export const AdminDocumentsPageSkeleton = () => <ListPageSkeleton kpis={0} cols={5} rows={8} />;
+export const AdminCardsPageSkeleton = ({
   sectionCount = 3,
-  infoBanner = false,
+  hasSidePanel = false,
 }: {
-  hasKpiRow?: boolean;
-  hasSidePanel?: boolean;
   sectionCount?: number;
+  hasSidePanel?: boolean;
   infoBanner?: boolean;
-}) {
+}) => <CardsPageSkeleton sections={sectionCount} sidePanel={hasSidePanel} />;
+export const AdminCmsPageSkeleton = () => <CardsPageSkeleton sections={3} />;
+export const AdminSettingsPageSkeleton = () => <CardsPageSkeleton sections={4} sidePanel />;
+export const AdminNotificationsPageSkeleton = () => <ListPageSkeleton kpis={0} cols={4} rows={8} filterFields={0} />;
+export const AdminNotificationsTemplatesPageSkeleton = () => <ListPageSkeleton kpis={0} cols={4} rows={8} filterFields={2} />;
+export const TargetsPageSkeleton = () => <ListPageSkeleton kpis={0} cols={6} rows={8} />;
+export const AdminReportsPageSkeleton = () => <ReportPageSkeleton kpis={4} charts={2} />;
+export const AdminFinancialReportsPageSkeleton = () => <ReportPageSkeleton kpis={5} charts={2} />;
+
+/** Form page (new / edit): hero, then the form card of field pairs and its actions. */
+export function FormPageSkeleton({ sections = 2 }: { sections?: number }) {
   return (
-    <div className="space-y-5">
-      <header className="mb-0 space-y-3">
-        <Skeleton className="h-3 w-52" />
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-[440px] max-w-full" />
-        </div>
-      </header>
-
-      {infoBanner && <Skeleton className="h-12 w-full rounded-2xl" />}
-
-      {hasKpiRow && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="relative bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-              <div className="absolute inset-y-0 start-0 w-0.5 bg-slate-200" />
-              <div className="ps-5 pe-4 py-3.5 space-y-2">
-                <Skeleton className="h-2 w-20" />
-                <Skeleton className="h-7 w-16" />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {hasSidePanel ? (
-        /* Permissions-style: search + grouped cards (2/3) + user panel (1/3) */
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 space-y-4">
-            <div className="rounded-xl border border-hairline bg-surface p-3 shadow-xs flex items-center gap-2">
-              <Skeleton className="h-8 flex-1 rounded-xl" />
-              <Skeleton className="h-8 w-20 rounded-xl shrink-0" />
-            </div>
-            {Array.from({ length: sectionCount }).map((_, i) => (
-              <div key={i} className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-                <div className="px-5 py-2.5 border-b border-hairline bg-surface-muted/40 flex items-center justify-between">
-                  <Skeleton className="h-4 w-28" />
-                  <Skeleton className="h-3 w-6" />
-                </div>
-                <div className="divide-y divide-hairline">
-                  {Array.from({ length: i === 0 ? 4 : 3 }).map((_, j) => (
-                    <div key={j} className="px-5 py-3 flex items-start justify-between gap-3">
-                      <div className="space-y-1.5 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Skeleton className="h-4 w-28" />
-                          <Skeleton className="h-4 w-14 rounded-full" />
-                        </div>
-                        <Skeleton className="h-3 w-48 max-w-full" />
-                        <Skeleton className="h-2.5 w-32" />
-                      </div>
-                      <Skeleton className="h-5 w-16 rounded-full shrink-0" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="bg-surface border border-hairline rounded-2xl shadow-xs p-5 self-start space-y-3">
-            <Skeleton className="h-4 w-36" />
-            <Skeleton className="h-3 w-44" />
-            <div className="divide-y divide-hairline">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="py-2.5 flex items-center justify-between gap-2">
-                  <div className="space-y-1 min-w-0">
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-2.5 w-16" />
-                  </div>
-                  <Skeleton className="h-7 w-14 rounded-xl shrink-0" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : (
-        /* Operations-style: activity + quick-links row, then 2-col analysis */
-        <>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2 bg-surface border border-hairline rounded-2xl shadow-xs p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-7 w-20 rounded-xl" />
-              </div>
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="py-2.5 flex items-start justify-between gap-3 border-b border-hairline last:border-0">
-                  <div className="space-y-1.5 flex-1 min-w-0">
-                    <Skeleton className="h-4 w-64 max-w-full" />
-                    <Skeleton className="h-3 w-32" />
-                  </div>
-                  <Skeleton className="h-7 w-14 rounded-xl shrink-0" />
-                </div>
-              ))}
-            </div>
-            <div className="bg-surface border border-hairline rounded-2xl shadow-xs p-5 space-y-3">
-              <Skeleton className="h-4 w-28" />
-              <div className="flex flex-col gap-2">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-9 w-full rounded-xl" />
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {Array.from({ length: 2 }).map((_, i) => (
-              <div key={i} className="bg-surface border border-hairline rounded-2xl shadow-xs p-5 space-y-3">
-                <Skeleton className="h-4 w-40" />
-                {Array.from({ length: 4 }).map((_, j) => (
-                  <div key={j} className="flex items-center justify-between">
-                    <Skeleton className="h-3 w-32" />
-                    <Skeleton className="h-4 w-8" />
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-/**
- * Full page skeleton for /dashboard/cms.
- * Matches the compact redesign:
- *   page header · summary strip · 3 section cards (header-as-toggle + compact empty/table).
- * Forms are collapsed by default so only the section header rows are shown.
- */
-export function AdminCmsPageSkeleton() {
-  return (
-    <div className="space-y-5">
-      {/* Page header */}
-      <header className="mb-0 space-y-3">
-        <Skeleton className="h-3 w-52" />
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-44" />
-          <Skeleton className="h-4 w-[400px] max-w-full" />
-        </div>
-      </header>
-
-      {/* Summary strip */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-2xl border border-hairline bg-surface px-5 py-3 shadow-xs">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-2 shrink-0">
-            <Skeleton className="h-3.5 w-3.5 rounded shrink-0" />
-            <Skeleton className="h-3 w-16" />
-            <Skeleton className="h-4 w-5" />
-          </div>
-        ))}
-      </div>
-
-      {/* Pages card — clickable header row (collapsed) + compact empty placeholder */}
-      <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-hairline flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-4 w-4 rounded shrink-0" />
-            <Skeleton className="h-4 w-20" />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Skeleton className="h-3 w-20 hidden sm:block" />
-            <Skeleton className="h-6 w-6 rounded-md" />
-          </div>
-        </div>
-        {/* Compact empty state placeholder */}
-        <div className="flex flex-col items-center gap-2 py-8">
-          <Skeleton className="h-9 w-9 rounded-xl" />
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-3 w-56" />
-        </div>
-      </div>
-
-      {/* Banners card — clickable header row (collapsed) + compact empty placeholder */}
-      <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-hairline flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-4 w-4 rounded shrink-0" />
-            <Skeleton className="h-4 w-20" />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Skeleton className="h-3 w-20 hidden sm:block" />
-            <Skeleton className="h-6 w-6 rounded-md" />
-          </div>
-        </div>
-        {/* Compact empty state placeholder */}
-        <div className="flex flex-col items-center gap-2 py-8">
-          <Skeleton className="h-9 w-9 rounded-xl" />
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-3 w-44" />
-        </div>
-      </div>
-
-      {/* Articles card — static header (no toggle) + compact empty placeholder */}
-      <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-hairline flex items-center gap-2">
-          <Skeleton className="h-4 w-4 rounded shrink-0" />
-          <Skeleton className="h-4 w-20" />
-        </div>
-        {/* Compact empty state placeholder */}
-        <div className="flex flex-col items-center gap-2 py-8">
-          <Skeleton className="h-9 w-9 rounded-xl" />
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-3 w-48" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Full page skeleton for /dashboard/settings.
- * Structure: page header · filter bar · grouped KV setting cards · create card.
- */
-export function AdminSettingsPageSkeleton() {
-  return (
-    <div className="space-y-5">
-      <header className="mb-0 space-y-3">
-        <Skeleton className="h-3 w-52" />
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-36" />
-          <Skeleton className="h-4 w-[400px] max-w-full" />
-        </div>
-      </header>
-
-      {/* Filter bar — key search + group select + submit */}
-      <div className="rounded-xl border border-hairline bg-surface px-3 py-2.5 shadow-xs flex flex-wrap items-center gap-2">
-        <Skeleton className="h-8 flex-1 min-w-[180px] rounded-xl" />
-        <Skeleton className="h-8 w-40 rounded-xl" />
-        <Skeleton className="h-8 w-20 rounded-xl" />
-      </div>
-
-      {/* Setting group cards (3 groups with varying row counts) */}
-      {([4, 3, 3] as const).map((rowCount, gi) => (
-        <div key={gi} className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-          <div className="px-5 py-3 border-b border-hairline flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-4 w-28" />
-              <Skeleton className="h-3 w-10 rounded" />
-            </div>
-            <Skeleton className="h-3 w-6" />
-          </div>
-          <div className="divide-y divide-hairline">
-            {Array.from({ length: rowCount }).map((_, si) => (
-              <div key={si} className="px-5 py-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <Skeleton className="h-3.5 w-36" />
-                  <Skeleton className="h-3 w-24" />
-                </div>
-                <Skeleton className="h-16 w-full rounded-xl" />
-                <div className="space-y-2">
-                  <Skeleton className="h-16 w-full rounded-xl" />
-                  <Skeleton className="h-8 w-20 rounded-xl" />
-                </div>
+    <div className={page} aria-busy="true">
+      <PageHeaderSkeleton actions={0} />
+      {Array.from({ length: sections }).map((_, i) => (
+        <div key={i} aria-hidden className={cn(card, 'space-y-5 p-6')}>
+          <Skeleton className="h-5 w-40" />
+          <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
+            {Array.from({ length: i === 0 ? 6 : 4 }).map((__, f) => (
+              <div key={f} className="space-y-2">
+                <Skeleton className="h-3.5 w-24" />
+                <Skeleton className="h-11 w-full rounded-xl" />
               </div>
             ))}
           </div>
         </div>
       ))}
-
-      {/* Create new setting card */}
-      <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-        <div className="px-5 py-3 border-b border-hairline">
-          <Skeleton className="h-4 w-36" />
-        </div>
-        <div className="px-5 py-4 space-y-3">
-          <Skeleton className="h-8 w-full rounded-xl" />
-          <Skeleton className="h-16 w-full rounded-xl" />
-          <Skeleton className="h-8 w-24 rounded-xl" />
-        </div>
+      <div className="flex justify-end gap-3">
+        <Skeleton className="h-10 w-24 rounded-full" />
+        <Skeleton className="h-10 w-32 rounded-full" />
       </div>
-    </div>
-  );
-}
-
-/**
- * Full page skeleton for /dashboard/notifications.
- * Structure: page header · summary strip (4 icon-backed pills) · card with
- * inbox-header bar + compact notification rows (8×8 icon, 2-line content).
- */
-export function AdminNotificationsPageSkeleton() {
-  return (
-    <div className="space-y-5">
-      <header className="mb-0 space-y-3">
-        <Skeleton className="h-3 w-52" />
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-36" />
-            <Skeleton className="h-4 w-[420px] max-w-full" />
-          </div>
-          <Skeleton className="h-9 w-44 rounded-xl shrink-0" />
-        </div>
-      </header>
-
-      {/* Summary strip — 4 icon-backed pills */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border border-hairline bg-surface px-5 py-3.5 shadow-xs">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="flex items-center gap-2.5 shrink-0">
-            <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
-            <div className="space-y-1">
-              <Skeleton className="h-2.5 w-14" />
-              <Skeleton className="h-4 w-8" />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Card: inbox header + compact rows */}
-      <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-        {/* Inbox header (unread bar) */}
-        <div className="border-b border-hairline bg-brand-50/50 px-4 py-2.5 flex items-center justify-between">
-          <Skeleton className="h-3.5 w-28" />
-          <Skeleton className="h-7 w-32 rounded-xl" />
-        </div>
-        {/* Rows */}
-        <div className="divide-y divide-hairline">
-          {(['w-56', 'w-64', 'w-48', 'w-72', 'w-52', 'w-60', 'w-44', 'w-56'] as const).map((w, i) => (
-            <div key={i} className="px-4 py-3 flex items-start gap-3">
-              <Skeleton className="h-8 w-8 rounded-lg shrink-0 mt-0.5" />
-              <div className="flex-1 space-y-1.5">
-                <div className="flex items-start justify-between gap-2">
-                  <Skeleton className={cn('h-4', w)} />
-                  <Skeleton className="h-3 w-12 shrink-0" />
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Skeleton className="h-4 w-10 rounded-full shrink-0" />
-                  <Skeleton className="h-3 w-32" />
-                </div>
-              </div>
-              <Skeleton className="h-2 w-2 rounded-full shrink-0 mt-1.5" />
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Full page skeleton for /dashboard/notifications/templates.
- * Structure: page header · templates list card with form toggle.
- */
-export function AdminNotificationsTemplatesPageSkeleton() {
-  return (
-    <div className="space-y-5">
-      <header className="mb-0 space-y-3">
-        <Skeleton className="h-3 w-64" />
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-80 max-w-full" />
-          </div>
-          <Skeleton className="h-9 w-36 rounded-xl shrink-0" />
-        </div>
-      </header>
-
-      <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-        {/* Card header */}
-        <div className="px-5 py-3.5 border-b border-hairline flex items-center gap-3">
-          <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
-          <Skeleton className="h-4 w-36" />
-          <Skeleton className="h-5 w-8 rounded-full ms-2" />
-        </div>
-        {/* Template rows */}
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="px-5 py-3.5 border-b border-hairline flex items-center gap-4">
-            <Skeleton className="h-3.5 w-36 font-mono" />
-            <Skeleton className="h-5 w-20 rounded-full ms-2" />
-            <Skeleton className="h-3.5 w-32 flex-1" />
-            <Skeleton className="h-5 w-14 rounded-full" />
-            <Skeleton className="h-3 w-20 shrink-0" />
-          </div>
-        ))}
-        {/* Form toggle row */}
-        <div className="px-5 py-3.5 border-t border-hairline flex items-center gap-3">
-          <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
-          <Skeleton className="h-4 w-44" />
-          <Skeleton className="h-4 w-4 rounded ms-auto" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Full skeleton for /dashboard/targets — matches filter, KPI cards, form, insights, table. */
-export function TargetsPageSkeleton() {
-  return (
-    <div className="space-y-5">
-      {/* Page header */}
-      <header className="mb-0 space-y-3">
-        <Skeleton className="h-3 w-52" />
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-52" />
-          <Skeleton className="h-4 w-[520px] max-w-full" />
-        </div>
-      </header>
-
-      {/* Filter bar */}
-      <FilterBarSkeleton fields={2} />
-
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="relative bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-            <div className="absolute inset-y-0 start-0 w-0.5 bg-slate-200" />
-            <div className="ps-5 pe-4 py-3 flex items-start justify-between gap-3">
-              <div className="space-y-1.5 flex-1">
-                <Skeleton className="h-2 w-20" />
-                <Skeleton className="h-8 w-24" />
-              </div>
-              <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Add/edit target form card */}
-      <div className="bg-surface border border-hairline rounded-2xl shadow-xs">
-        <div className="px-5 py-3.5 border-b border-hairline flex items-center gap-2">
-          <Skeleton className="h-6 w-6 rounded-full" />
-          <Skeleton className="h-4 w-40" />
-        </div>
-        <div className="px-5 py-3.5">
-          <div className="flex flex-wrap items-end gap-3">
-            {(['w-44', 'w-40', 'w-36', 'w-28'] as const).map((w, i) => (
-              <div key={i} className="flex flex-col gap-1">
-                <Skeleton className="h-2.5 w-16" />
-                <Skeleton className={cn('h-8 rounded-xl', w)} />
-              </div>
-            ))}
-            <Skeleton className="h-8 w-24 rounded-xl" />
-          </div>
-          <Skeleton className="h-3 w-80 mt-2" />
-        </div>
-      </div>
-
-      {/* Performance insights strip */}
-      <div className="rounded-2xl border border-hairline bg-surface px-5 py-3 shadow-xs flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-4 w-4 rounded" />
-          <Skeleton className="h-3 w-14" />
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-5 w-10 rounded-md" />
-        </div>
-        <Skeleton className="w-px h-4 hidden sm:block" />
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-4 w-4 rounded" />
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-5 w-10 rounded-md" />
-        </div>
-      </div>
-
-      {/* Targets performance table */}
-      <TableCardSkeleton cols={8} rows={5} />
-    </div>
-  );
-}
-
-/**
- * Full page skeleton for /dashboard/reports.
- * Structure: header (with export actions) · tabs · period filter ·
- * 3 KPI cards · two-col lower section (sales table + reservation table).
- */
-export function AdminReportsPageSkeleton() {
-  return (
-    <div className="space-y-5">
-      {/* Header */}
-      <header className="mb-0 space-y-3">
-        <Skeleton className="h-3 w-40" />
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-36" />
-            <Skeleton className="h-4 w-[420px] max-w-full" />
-          </div>
-          <div className="flex gap-2 shrink-0">
-            <Skeleton className="h-9 w-36 rounded-xl" />
-            <Skeleton className="h-9 w-36 rounded-xl" />
-            <Skeleton className="h-9 w-36 rounded-xl" />
-          </div>
-        </div>
-      </header>
-
-      {/* Tabs */}
-      <div className="flex gap-0 border-b border-hairline pb-0">
-        <Skeleton className="h-9 w-36 rounded-none" />
-        <Skeleton className="h-9 w-24 rounded-none" />
-      </div>
-
-      {/* ReportFilterBar */}
-      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-surface px-4 py-3 shadow-xs">
-        <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
-        <div className="w-px h-5 bg-slate-200 shrink-0 hidden sm:block" />
-        <Skeleton className="h-8 w-36 rounded-lg" />
-        <Skeleton className="h-8 w-24 rounded-lg" />
-        <Skeleton className="h-8 w-36 rounded-lg" />
-        <div className="w-px h-5 bg-slate-200 shrink-0 hidden sm:block" />
-        <Skeleton className="h-8 w-48 rounded-lg" />
-        <Skeleton className="h-8 w-20 rounded-lg ms-auto" />
-      </div>
-
-      {/* Hero KPI banner */}
-      <div className="bg-surface border border-hairline rounded-2xl shadow-xs px-6 py-5">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-          <div className="space-y-2">
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-10 w-56" />
-            <Skeleton className="h-3 w-40" />
-          </div>
-          <div className="flex items-center gap-6 shrink-0">
-            <div className="space-y-1.5 text-center">
-              <Skeleton className="h-6 w-10 mx-auto" />
-              <Skeleton className="h-2.5 w-14" />
-            </div>
-            <Skeleton className="w-px h-8" />
-            <div className="space-y-1.5 text-center">
-              <Skeleton className="h-6 w-20 mx-auto" />
-              <Skeleton className="h-2.5 w-20" />
-            </div>
-            <Skeleton className="w-px h-8" />
-            <div className="space-y-1.5 text-center">
-              <Skeleton className="h-5 w-24 mx-auto" />
-              <Skeleton className="h-2.5 w-16" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Secondary KPI cards — 3 col */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="bg-surface border border-hairline rounded-2xl shadow-xs px-5 py-4 flex items-center justify-between gap-3">
-            <div className="space-y-1.5 flex-1">
-              <Skeleton className="h-2.5 w-20" />
-              <Skeleton className="h-6 w-28" />
-              <Skeleton className="h-2.5 w-16" />
-            </div>
-            <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
-          </div>
-        ))}
-      </div>
-
-      {/* Section divider */}
-      <div className="flex items-center gap-2 pt-1">
-        <Skeleton className="h-3.5 w-3.5 rounded" />
-        <Skeleton className="h-3 w-36" />
-        <div className="flex-1 h-px bg-slate-200" />
-      </div>
-
-      {/* Middle: trend + reservations */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
-        {/* Trend card */}
-        <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden lg:col-span-3">
-          <div className="flex items-start gap-2.5 px-5 py-3.5 border-b border-hairline">
-            <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
-            <div className="flex-1 space-y-1.5">
-              <Skeleton className="h-4 w-28" />
-              <Skeleton className="h-3 w-36" />
-            </div>
-            <div className="text-end space-y-1">
-              <Skeleton className="h-4 w-12 ms-auto" />
-              <Skeleton className="h-3 w-20 ms-auto" />
-            </div>
-          </div>
-          <div className="px-5 pt-4 pb-5">
-            <div className="h-44 flex items-end gap-1 sm:gap-1.5">
-              {[30, 55, 45, 70, 40, 80, 60, 50, 65, 35, 75, 45].map((h, i) => (
-                <div
-                  key={i}
-                  className="flex-1 animate-pulse rounded-t-sm bg-slate-200/70"
-                  style={{ height: `${h}%` }}
-                />
-              ))}
-            </div>
-            <div className="mt-2.5 flex gap-1 sm:gap-1.5">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <Skeleton key={i} className="flex-1 h-2.5" />
-              ))}
-            </div>
-          </div>
-        </div>
-        {/* Reservations card */}
-        <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden lg:col-span-2">
-          <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
-            <Skeleton className="h-7 w-7 rounded-lg" />
-            <div className="space-y-1.5 flex-1">
-              <Skeleton className="h-4 w-28" />
-              <Skeleton className="h-3 w-36" />
-            </div>
-            <div className="shrink-0 space-y-1 text-end">
-              <Skeleton className="h-4 w-8 ms-auto" />
-              <Skeleton className="h-2.5 w-10 ms-auto" />
-            </div>
-          </div>
-          <div className="divide-y divide-hairline min-h-[140px]">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex items-center justify-between px-5 py-2.5">
-                <Skeleton className="h-5 w-24 rounded-full" />
-                <Skeleton className="h-4 w-6" />
-              </div>
-            ))}
-            <div className="flex items-center justify-between px-5 py-2 border-t-2 border-slate-100">
-              <Skeleton className="h-3 w-12" />
-              <Skeleton className="h-4 w-8" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Section divider — projects */}
-      <div className="flex items-center gap-2 pt-1">
-        <Skeleton className="h-3.5 w-3.5 rounded" />
-        <Skeleton className="h-3 w-24" />
-        <div className="flex-1 h-px bg-slate-200" />
-      </div>
-
-      {/* Sales by project — full width */}
-      <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-        <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
-          <Skeleton className="h-7 w-7 rounded-lg" />
-          <div className="flex-1 space-y-1.5">
-            <Skeleton className="h-4 w-36" />
-            <Skeleton className="h-3 w-44" />
-          </div>
-          <Skeleton className="h-3 w-12 ms-auto" />
-        </div>
-        <div className="divide-y divide-hairline">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="flex items-center gap-4 px-5 py-3">
-              <Skeleton className="h-3 w-4 shrink-0" />
-              <Skeleton className="h-4 flex-1 max-w-[180px]" />
-              <Skeleton className="h-4 w-14" />
-              <Skeleton className="h-4 w-28" />
-              <div className="flex items-center gap-2 ms-auto">
-                <Skeleton className="h-3 w-8" />
-                <Skeleton className="h-1.5 w-20 rounded-full" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Operational insights strip */}
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-hairline bg-surface px-5 py-4 shadow-xs">
-        <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
-        <Skeleton className="h-3 w-20" />
-        <div className="w-px h-5 bg-slate-200 hidden sm:block" />
-        <div className="space-y-1">
-          <Skeleton className="h-2.5 w-16" />
-          <Skeleton className="h-4 w-28" />
-        </div>
-        <div className="w-px h-5 bg-slate-200 hidden sm:block" />
-        <div className="space-y-1">
-          <Skeleton className="h-2.5 w-20" />
-          <Skeleton className="h-4 w-24" />
-        </div>
-        <div className="w-px h-5 bg-slate-200 hidden sm:block" />
-        <div className="space-y-1">
-          <Skeleton className="h-2.5 w-24" />
-          <Skeleton className="h-4 w-20" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Full page skeleton for /dashboard/reports/financial.
- * Structure: header · tabs · ReportFilterBar · advanced filters strip ·
- * 4 primary KPI cards · 5 secondary stat tiles · section dividers + cards.
- */
-export function AdminFinancialReportsPageSkeleton() {
-  return (
-    <div className="space-y-5">
-      {/* Header */}
-      <header className="mb-0 space-y-3">
-        <Skeleton className="h-3 w-44" />
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-44" />
-            <Skeleton className="h-4 w-[440px] max-w-full" />
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
-            <Skeleton className="h-9 w-36 rounded-xl" />
-          </div>
-        </div>
-      </header>
-
-      {/* Tabs */}
-      <div className="flex gap-0 border-b border-hairline pb-0">
-        <Skeleton className="h-9 w-36 rounded-none" />
-        <Skeleton className="h-9 w-24 rounded-none" />
-      </div>
-
-      {/* ReportFilterBar */}
-      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-surface px-4 py-3 shadow-xs">
-        <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
-        <div className="w-px h-5 bg-slate-200 shrink-0 hidden sm:block" />
-        <Skeleton className="h-8 w-36 rounded-lg" />
-        <Skeleton className="h-8 w-24 rounded-lg" />
-        <Skeleton className="h-8 w-36 rounded-lg" />
-        <div className="w-px h-5 bg-slate-200 shrink-0 hidden sm:block" />
-        <Skeleton className="h-8 w-48 rounded-lg" />
-        <Skeleton className="h-8 w-20 rounded-lg ms-auto" />
-      </div>
-
-      {/* Advanced filters strip */}
-      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-surface px-4 py-2.5 shadow-xs">
-        <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
-        <div className="w-px h-4 bg-slate-200 shrink-0 hidden sm:block" />
-        <Skeleton className="h-8 w-44 rounded-lg" />
-        <div className="w-px h-4 bg-slate-200 shrink-0 hidden sm:block" />
-        <Skeleton className="h-8 w-40 rounded-lg" />
-        <Skeleton className="h-8 w-40 rounded-lg" />
-        <Skeleton className="h-8 w-20 rounded-lg" />
-      </div>
-
-      {/* 4 Primary KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden flex flex-col">
-            <div className="h-0.5 bg-slate-200" />
-            <div className="p-5 flex flex-col gap-3 flex-1">
-              <div className="flex items-start justify-between gap-2">
-                <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
-                <Skeleton className="h-4 w-14 rounded-full" />
-              </div>
-              <div className="space-y-1.5">
-                <Skeleton className="h-2.5 w-24" />
-                <Skeleton className="h-7 w-36" />
-                <Skeleton className="h-2.5 w-40" />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* 5 secondary stat tiles */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="bg-surface rounded-xl border border-hairline shadow-xs px-4 py-3.5">
-            <Skeleton className="h-2.5 w-20 mb-1.5" />
-            <Skeleton className="h-6 w-24" />
-          </div>
-        ))}
-      </div>
-
-      {/* Section divider */}
-      <div className="flex items-center gap-2 pt-1">
-        <Skeleton className="h-3.5 w-3.5 rounded shrink-0" />
-        <Skeleton className="h-3 w-40" />
-        <div className="flex-1 h-px bg-slate-200" />
-      </div>
-
-      {/* Cashflow chart (2/3) + Donut (1/3) */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className="xl:col-span-2 bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-          <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
-            <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
-            <div className="flex-1 space-y-1.5">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-44" />
-            </div>
-          </div>
-          <div className="px-4 pt-2 pb-4">
-            <Skeleton className="h-44 w-full rounded-lg" />
-          </div>
-        </div>
-        <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-          <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
-            <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
-            <div className="flex-1 space-y-1.5">
-              <Skeleton className="h-4 w-28" />
-              <Skeleton className="h-3 w-20" />
-            </div>
-          </div>
-          <div className="px-5 py-4 space-y-3">
-            <Skeleton className="h-36 w-36 rounded-full mx-auto" />
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-2 w-2 rounded-full shrink-0" />
-                  <Skeleton className="h-3 w-20" />
-                </div>
-                <Skeleton className="h-4 w-24" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Section divider — overdue */}
-      <div className="flex items-center gap-2 pt-1">
-        <Skeleton className="h-3.5 w-3.5 rounded shrink-0" />
-        <Skeleton className="h-3 w-36" />
-        <div className="flex-1 h-px bg-slate-200" />
-      </div>
-
-      {/* Receivables tile row */}
-      <div className="bg-surface border border-hairline rounded-2xl shadow-xs px-5 py-4">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="rounded-xl bg-surface-muted/50 px-4 py-3 space-y-1.5">
-              <Skeleton className="h-2.5 w-28" />
-              <Skeleton className="h-6 w-32" />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Overdue table */}
-      <TableCardSkeleton cols={7} rows={5} />
     </div>
   );
 }
