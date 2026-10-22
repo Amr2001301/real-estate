@@ -108,6 +108,8 @@ function makePrismaMock() {
     },
     reservation: {
       update: jest.fn().mockResolvedValue({}),
+      // The approval claims the booking only while it is unpaid.
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     $transaction: jest.fn(),
   };
@@ -186,6 +188,7 @@ describe('Deposits · booking-payment approval propagation + paid totals (Gap 2)
     mock.deposit.groupBy.mockClear();
     mock.installment.update.mockClear();
     mock.reservation.update.mockClear();
+    mock.reservation.updateMany.mockClear();
     notificationsMock.sendToUser.mockClear();
   });
 
@@ -209,12 +212,13 @@ describe('Deposits · booking-payment approval propagation + paid totals (Gap 2)
       .send({})
       .expect(201);
 
-    expect(mock.reservation.update).toHaveBeenCalledTimes(1);
-    const args = mock.reservation.update.mock.calls[0]![0] as {
-      where: { id: string };
+    expect(mock.reservation.updateMany).toHaveBeenCalledTimes(1);
+    const args = mock.reservation.updateMany.mock.calls[0]![0] as {
+      where: { id: string; bookingPaymentStatus: { in: string[] } };
       data: { bookingPaymentStatus: string; bookingPaidAt: Date };
     };
     expect(args.where.id).toBe(RES_ID);
+    expect(args.where.bookingPaymentStatus).toEqual({ in: ['UNPAID', 'PENDING'] });
     expect(args.data.bookingPaymentStatus).toBe('PAID');
     expect(args.data.bookingPaidAt).toEqual(PAID_AT);
     // A booking deposit has no installment — that side effect must not run.

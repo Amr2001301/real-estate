@@ -2009,6 +2009,22 @@ export class ReservationsService {
       dto.bookingPaymentStatus !== undefined &&
       dto.bookingPaymentStatus !== reservation.bookingPaymentStatus
     ) {
+      // Paid / unpaid follow money: confirm / unconfirm, a proof approved or
+      // rejected — each creates or undoes the payment. Set here, PAID credited
+      // a booking nobody paid, and UNPAID left a collected payment behind so
+      // the booking could be paid twice. Only a waiver (and undoing it) is
+      // a plain decision.
+      const waive =
+        dto.bookingPaymentStatus === ReservationBookingPaymentStatus.WAIVED &&
+        reservation.bookingPaymentStatus === ReservationBookingPaymentStatus.UNPAID;
+      const unwaive =
+        dto.bookingPaymentStatus === ReservationBookingPaymentStatus.UNPAID &&
+        reservation.bookingPaymentStatus === ReservationBookingPaymentStatus.WAIVED;
+      if (!waive && !unwaive) {
+        throw new BadRequestException(
+          'حالة سداد الحجز تتغير بتأكيد الدفع أو إلغائه أو بمراجعة الإثبات — هنا يمكن فقط إعفاء حجز غير مدفوع أو إلغاء الإعفاء',
+        );
+      }
       // Validate PAID requires non-zero amount unless WAIVED
       const newAmount = data.bookingAmount
         ? (data.bookingAmount as Prisma.Decimal)

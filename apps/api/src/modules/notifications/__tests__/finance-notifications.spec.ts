@@ -195,6 +195,7 @@ describe('deposits', () => {
       {} as never,
       notifications as never,
       {} as never,
+      {} as never,
     );
     jest.spyOn(svc, 'findOne').mockResolvedValue({} as never);
 

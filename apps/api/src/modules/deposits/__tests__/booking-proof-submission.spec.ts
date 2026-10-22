@@ -95,6 +95,8 @@ function makePrismaMock() {
     reservation: {
       findUnique: jest.fn().mockImplementation(async () => fixture.reservation),
       update: jest.fn().mockResolvedValue({}),
+      // The proof claims the booking (UNPAID → PENDING) as it is created.
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     installment: {
       findFirst: jest.fn().mockImplementation(async () => fixture.installment),
@@ -173,6 +175,7 @@ describe('Deposits · customer booking-amount proof submission (Gap 3)', () => {
     resetFixture();
     mock.reservation.findUnique.mockClear();
     mock.reservation.update.mockClear();
+    mock.reservation.updateMany.mockClear();
     mock.installment.findFirst.mockClear();
     mock.deposit.create.mockClear();
     mock.deposit.update.mockClear();
@@ -201,12 +204,12 @@ describe('Deposits · customer booking-amount proof submission (Gap 3)', () => {
     // Amount is the reservation's authoritative bookingAmount.
     expect(String(createArgs.data.amount)).toBe('50000');
 
-    // Reservation reflects "awaiting review".
-    const resvArgs = mock.reservation.update.mock.calls[0]![0] as {
-      where: { id: string };
+    // Reservation reflects "awaiting review", claimed only while unpaid.
+    const resvArgs = mock.reservation.updateMany.mock.calls[0]![0] as {
+      where: { id: string; bookingPaymentStatus: string };
       data: { bookingPaymentStatus: string };
     };
-    expect(resvArgs.where.id).toBe(RES_ID);
+    expect(resvArgs.where).toEqual({ id: RES_ID, bookingPaymentStatus: 'UNPAID' });
     expect(resvArgs.data.bookingPaymentStatus).toBe('PENDING');
   });
 
@@ -279,5 +282,12 @@ describe('Deposits · customer booking-amount proof submission (Gap 3)', () => {
     expect(createArgs.data.installmentId).toBe(INST_ID);
     // The booking-only reservation write must not run on the installment path.
     expect(mock.reservation.update).not.toHaveBeenCalled();
+    expect(mock.reservation.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('refuses a second proof when the booking was claimed meanwhile (409)', async () => {
+    mock.reservation.updateMany.mockResolvedValueOnce({ count: 0 });
+    await request(app.getHttpServer()).post('/me/deposits').send(bookingBody).expect(409);
+    expect(mock.deposit.create).not.toHaveBeenCalled();
   });
 });
