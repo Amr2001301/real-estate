@@ -256,6 +256,21 @@ export async function releaseContractUnitAction(id: string): Promise<ContractFor
 }
 
 
+export async function decideCancellationAction(
+  id: string,
+  item: 'commission' | 'bonus',
+  action: 'CLAWBACK' | 'RETAIN',
+): Promise<ContractFormState> {
+  try {
+    await api.post(`/contracts/${id}/cancellation-decision`, { [`${item}Action`]: action });
+  } catch (e) {
+    unstable_rethrow(e);
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/dashboard/contracts/${id}`);
+  return { ok: true };
+}
+
 export async function waiveLateFeeAction(contractId: string, installmentId: string): Promise<ContractFormState> {
   try {
     await api.post(`/installments/${installmentId}/waive-late-fee`, {});

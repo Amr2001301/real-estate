@@ -266,11 +266,14 @@ export function buildStatement(c: StatementInput, today: string) {
   }
   // An unpaid booking was due when the unit was booked (a booking with a
   // proof or cheque waiting is PENDING, and shows under "awaiting").
+  // One whose cheque came back after signing moved into the schedule as a
+  // RESERVATION row, and is counted there.
   if (
     r &&
     booking > 0 &&
     !bookingPaid &&
-    r.bookingPaymentStatus === ReservationBookingPaymentStatus.UNPAID
+    r.bookingPaymentStatus === ReservationBookingPaymentStatus.UNPAID &&
+    !c.installments.some((i) => i.type === PlanPaymentType.RESERVATION)
   ) {
     overdue += booking;
   }

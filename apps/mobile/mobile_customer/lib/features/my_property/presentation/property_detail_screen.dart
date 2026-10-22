@@ -793,6 +793,7 @@ class _InstallmentCard extends StatelessWidget {
     final (statusColor, statusLabel) = _statusStyle(inst.status, l10n);
 
     final typeLabel = switch (inst.type) {
+      InstallmentPaymentType.reservation  => 'مبلغ الحجز',
       InstallmentPaymentType.downPayment  => 'دفعة مقدمة',
       InstallmentPaymentType.finalPayment => 'دفعة أخيرة',
       _                                   => null,

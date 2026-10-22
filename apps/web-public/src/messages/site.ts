@@ -771,6 +771,7 @@ const SITE_MESSAGES = {
         installmentLabel: 'قسط',
         // What the row is: a down payment, a fee… was always called «قسط».
         typeLabels: {
+          RESERVATION: 'مبلغ الحجز',
           DOWN_PAYMENT: 'مقدّم',
           INSTALLMENT: 'قسط',
           FINAL_PAYMENT: 'دفعة أخيرة',
@@ -1682,6 +1683,7 @@ const SITE_MESSAGES = {
         noDue: 'None due',
         installmentLabel: 'Installment',
         typeLabels: {
+          RESERVATION: 'Booking amount',
           DOWN_PAYMENT: 'Down payment',
           INSTALLMENT: 'Installment',
           FINAL_PAYMENT: 'Final payment',

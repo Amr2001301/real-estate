@@ -218,6 +218,13 @@ class CancelContractDto {
   @IsOptional() @IsString() @MaxLength(2000) clawbackReason?: string;
 }
 
+// The admin's decision on what a MANUAL cancellation left open.
+class CancellationDecisionDto {
+  @IsOptional() @IsIn(['CLAWBACK', 'RETAIN']) commissionAction?: 'CLAWBACK' | 'RETAIN';
+  @IsOptional() @IsIn(['CLAWBACK', 'RETAIN']) bonusAction?: 'CLAWBACK' | 'RETAIN';
+  @IsOptional() @IsString() @MaxLength(2000) reason?: string;
+}
+
 @Injectable()
 export class ContractsService {
   private readonly logger = new Logger(ContractsService.name);
@@ -1678,6 +1685,19 @@ class ContractsController {
     @Body() dto: CancelContractDto,
   ) {
     return this.cancellationSvc.cancel(id, dto, user.sub);
+  }
+
+  // After a MANUAL cancellation: claw back or keep the commission / bonus.
+  // Same strict permission as cancelling.
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('contracts:cancel')
+  @Post(':id/cancellation-decision')
+  decideCancellation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CancellationDecisionDto,
+  ) {
+    return this.cancellationSvc.decide(id, dto, user.sub);
   }
 
   // Step D3 — Release unit (ADMIN only; contracts:release-unit)

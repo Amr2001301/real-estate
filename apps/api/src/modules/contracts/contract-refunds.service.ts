@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ContractStatus, PaymentMethod, Prisma } from '@prisma/client';
+import { BonusEntryStatus, BrokerCommissionStatus, ContractStatus, PaymentMethod, Prisma } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsDateString,
@@ -14,6 +14,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { reportFailure } from '../../common/observability/report-failure';
 import { NotificationsService } from '../notifications/notifications.module';
+import type { CancellationPolicySnapshot } from './cancellation-settings.constants';
 
 export class RecordRefundDto {
   @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @IsPositive() amount!: number;
@@ -70,6 +71,66 @@ export class ContractRefundsService {
       ...c,
       refundedTotal: refunded.toString(),
       refundOutstanding: Prisma.Decimal.max(0, c.refundAmount.minus(refunded)).toString(),
+      decisions: await this.decisions(contractId, c),
+    };
+  }
+
+  /**
+   * How the commission and the bonus were settled on cancellation: the
+   * action, and — after a MANUAL one — whether the admin's decision is still
+   * owed (`open`) or what it was.
+   */
+  private async decisions(
+    contractId: string,
+    c: {
+      commissionActionOverride: string | null;
+      bonusActionOverride: string | null;
+      policySnapshot: Prisma.JsonValue;
+      commissionDecision: string | null;
+      commissionDecidedAt: Date | null;
+      bonusDecision: string | null;
+      bonusDecidedAt: Date | null;
+    },
+  ) {
+    const companyId = getRequiredCompanyId();
+    const policy = c.policySnapshot as unknown as CancellationPolicySnapshot;
+    const [commission, bonus] = await Promise.all([
+      this.prisma.brokerCommission.findFirst({
+        where: { contractId, companyId },
+        select: { id: true, status: true, netAmount: true, payout: { select: { status: true } } },
+      }),
+      this.prisma.bonusEntry.findFirst({
+        where: { contractId, companyId },
+        select: { id: true, status: true, amount: true },
+      }),
+    ]);
+    const manual = (a: string) => a !== 'CLAWBACK' && a !== 'RETAIN';
+    const commissionAction = c.commissionActionOverride ?? policy.commissionAction;
+    const bonusAction = c.bonusActionOverride ?? policy.bonusAction;
+    const liveCommission =
+      !!commission &&
+      commission.status !== BrokerCommissionStatus.REJECTED &&
+      commission.status !== BrokerCommissionStatus.CANCELLED;
+    const liveBonus = !!bonus && bonus.status !== BonusEntryStatus.CANCELLED;
+    return {
+      commission: commission && {
+        action: commissionAction,
+        open: manual(commissionAction) && !c.commissionDecision && liveCommission,
+        decision: c.commissionDecision,
+        decidedAt: c.commissionDecidedAt,
+        amount: commission.netAmount.toString(),
+        status: commission.status,
+        paid: ['PROCESSING', 'PAID'].includes(commission.payout?.status ?? ''),
+      },
+      bonus: bonus && {
+        action: bonusAction,
+        open: manual(bonusAction) && !c.bonusDecision && liveBonus,
+        decision: c.bonusDecision,
+        decidedAt: c.bonusDecidedAt,
+        amount: bonus.amount.toString(),
+        status: bonus.status,
+        paid: bonus.status === BonusEntryStatus.PAID,
+      },
     };
   }
 

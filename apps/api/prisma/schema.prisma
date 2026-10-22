@@ -1743,6 +1743,17 @@ model ContractCancellation {
   commissionActionOverride String?  @db.VarChar(20)
   bonusActionOverride      String?  @db.VarChar(20)
 
+  // ── Decision after a MANUAL cancellation ───────────────────────────────────
+  // With MANUAL the commission / bonus is left for the admin; their decision
+  // (CLAWBACK or RETAIN) is recorded here once, and applied as the
+  // cancellation would have.
+  commissionDecision    String?   @db.VarChar(20)
+  commissionDecidedAt   DateTime?
+  commissionDecidedById String?   @db.Uuid
+  bonusDecision         String?   @db.VarChar(20)
+  bonusDecidedAt        DateTime?
+  bonusDecidedById      String?   @db.Uuid
+
   // ── Policy snapshot (immutable; never recomputed from current settings) ──
   policySnapshot Json
 

@@ -208,6 +208,12 @@ describe('FA — financial audit fixes (e2e)', () => {
           await raw.installmentPlan.deleteMany({ where: { id: plan.id } });
         }
         await raw.bonusEntry.deleteMany({ where: { contractId: s.contractId } });
+        const commissions = await raw.brokerCommission.findMany({ where: { contractId: s.contractId }, select: { id: true, payoutId: true } });
+        await raw.brokerCommissionAdjustment.deleteMany({ where: { commissionId: { in: commissions.map((c) => c.id) } } });
+        await raw.brokerCommission.deleteMany({ where: { contractId: s.contractId } });
+        await raw.brokerPayout.deleteMany({
+          where: { id: { in: commissions.map((c) => c.payoutId).filter((x): x is string => !!x) } },
+        });
         await raw.unitMaintenanceItem.deleteMany({ where: { unitId: s.unitId } });
         await raw.contractCancellation.deleteMany({ where: { contractId: s.contractId } });
         await raw.contract.deleteMany({ where: { id: s.contractId } });
@@ -350,6 +356,51 @@ describe('FA — financial audit fixes (e2e)', () => {
     expect((await downPayment(sale)).status).toBe(InstallmentStatus.PAID);
     return { sale, down, depositId: rec.body.id as string, instrumentId };
   };
+  it('FA9: a booking cheque returned after the contract was signed moves the booking into the schedule — once', async () => {
+    const sale = await book(60);
+    const raw = testApp.rawPrisma;
+    await asAdmin(http().post(`/v1/reservations/${sale.reservationId}/booking-payment/confirm`))
+      .send({ paymentMethod: 'CHEQUE', cheque: { chequeNumber: `FA9-${stamp}`, chequeDueDate: today() } })
+      .expect(201);
+    const booking = await raw.deposit.findFirstOrThrow({ where: { reservationId: sale.reservationId, type: DepositType.BOOKING_AMOUNT } });
+    const instrumentId = booking.paymentInstrumentId!;
+    expect((await pi(instrumentId, 'deposit')).status).toBe(200);
+    expect((await pi(instrumentId, 'clear')).status).toBe(200);
+    await asAdmin(http().post(`/v1/reservations/${sale.reservationId}/convert`)).send({ startsAt: today() }).expect(201);
+    sale.contractId = (await raw.contract.findFirstOrThrow({ where: { reservationId: sale.reservationId } })).id;
+    await asAdmin(http().post(`/v1/contracts/${sale.contractId}/sign`)).send({ signedAt: new Date().toISOString() }).expect(201);
+
+    expect((await bounce(instrumentId)).status).toBe(200);
+    // The booking no longer counts as paid; a row carries it, due on the return date.
+    const r = await raw.reservation.findUniqueOrThrow({ where: { id: sale.reservationId } });
+    expect(r.bookingPaymentStatus).toBe(ReservationBookingPaymentStatus.UNPAID);
+    const rows = await raw.installment.findMany({ where: { plan: { contractId: sale.contractId }, type: PlanPaymentType.RESERVATION } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.amount.toString()).toBe('50000');
+    expect([InstallmentStatus.PENDING, InstallmentStatus.OVERDUE]).toContain(rows[0]!.status);
+    expect(await collectedBookings(sale)).toBe(1); // the deposit stays, reversed:
+    expect(await raw.paymentCorrection.count({ where: { depositId: booking.id, type: 'REVERSAL', supersededAt: null } })).toBe(1);
+
+    // The contract still adds up: booking (unpaid) moved into rows = total.
+    const c = await raw.contract.findUniqueOrThrow({ where: { id: sale.contractId } });
+    const sum = await raw.installment.aggregate({
+      where: { plan: { contractId: sale.contractId }, type: { notIn: ['LATE_FEE', 'BOUNCE_PENALTY', 'TRANSFER_FEE'] } },
+      _sum: { amount: true },
+    });
+    expect(sum._sum.amount!.toString()).toBe(c.totalAmount.toString());
+    // The statement owes it once, not twice (booking + row).
+    const st = await asAdmin(http().get(`/v1/contracts/${sale.contractId}/statement`)).expect(200);
+    const owed = Number(st.body.totals.overdue) + Number(st.body.totals.dueToday) + Number(st.body.totals.upcoming);
+    expect(Number(st.body.totals.balance)).toBeCloseTo(owed, 2);
+    expect(Number(st.body.totals.unscheduled)).toBe(0);
+
+    // Paying the row settles it like any other.
+    await asAdmin(http().post('/v1/deposits'))
+      .send({ contractId: sale.contractId, installmentId: rows[0]!.id, amount: 50_000, paymentMethod: 'CASH' })
+      .expect(201);
+    expect((await raw.installment.findUniqueOrThrow({ where: { id: rows[0]!.id } })).status).toBe(InstallmentStatus.PAID);
+  });
+
   const penalties = (s: Sale) =>
     testApp.rawPrisma.installment.count({
       where: { plan: { contractId: s.contractId }, type: PlanPaymentType.BOUNCE_PENALTY },
@@ -498,6 +549,88 @@ describe('FA — financial audit fixes (e2e)', () => {
     await asAdmin(http().post(`/v1/contracts/${sale.contractId}/cancel`))
       .send({ reason: 'FA5', retainedAmount: 0, refundAmount: 0 })
       .expect(201);
+  });
+
+  // ── FA8: decision after a MANUAL cancellation ───────────────────────────
+  /** An approved 20,000 broker commission on the sale — in a payout already paid when `paid`. */
+  const commissionOn = async (s: Sale, paid: boolean) => {
+    const raw = testApp.rawPrisma;
+    const broker = await raw.broker.findFirstOrThrow({ where: { code: fixtures.brokerCodes.BROKER_1 } });
+    const payout = paid
+      ? await raw.brokerPayout.create({
+          data: {
+            companyId, payoutNumber: `FA-PO-${s.contractId.slice(0, 8)}`, brokerId: broker.id, period: '2026-10',
+            totalGross: 20_000, totalNet: 20_000, status: 'PAID', paidAt: new Date(),
+          },
+        })
+      : null;
+    return raw.brokerCommission.create({
+      data: {
+        companyId, commissionNumber: `FA-BC-${s.contractId.slice(0, 8)}`, brokerId: broker.id,
+        contractId: s.contractId, unitId: s.unitId, projectId, basisAmount: 1_000_000, commissionPct: 2,
+        grossAmount: 20_000, netAmount: 20_000, status: 'APPROVED', earnedAt: new Date(), approvedAt: new Date(),
+        payoutId: payout?.id,
+      },
+    });
+  };
+  const cancelManual = (s: Sale) =>
+    asAdmin(http().post(`/v1/contracts/${s.contractId}/cancel`))
+      .send({ reason: 'FA8', retainedAmount: 0, refundAmount: 0, commissionActionOverride: 'MANUAL' })
+      .expect(201);
+  const decisions = async (s: Sale) =>
+    (await asAdmin(http().get(`/v1/contracts/${s.contractId}/cancellation`)).expect(200)).body.decisions;
+
+  it('FA8a: a commission left open by a MANUAL cancellation is kept payable once the admin says so — once', async () => {
+    const sale = await sell(50);
+    const commission = await commissionOn(sale, false);
+    await cancelManual(sale);
+    // Waiting: neither paid nor cancelled, and the page says a decision is owed.
+    expect((await testApp.rawPrisma.brokerCommission.findUniqueOrThrow({ where: { id: commission.id } })).status).toBe('APPROVED');
+    expect((await decisions(sale)).commission).toMatchObject({ open: true, decision: null, amount: '20000' });
+
+    await asAdmin(http().post(`/v1/contracts/${sale.contractId}/cancellation-decision`))
+      .send({ commissionAction: 'RETAIN' })
+      .expect(201);
+    const kept = await testApp.rawPrisma.brokerCommission.findUniqueOrThrow({ where: { id: commission.id } });
+    expect(kept.retainedOnCancellation).toBe(true);
+    expect(kept.status).toBe('APPROVED');
+    expect((await decisions(sale)).commission).toMatchObject({ open: false, decision: 'RETAIN' });
+
+    // A second decision is refused — it cannot be flipped to a clawback afterwards.
+    await asAdmin(http().post(`/v1/contracts/${sale.contractId}/cancellation-decision`))
+      .send({ commissionAction: 'CLAWBACK' })
+      .expect(409);
+  });
+
+  it('FA8b: a commission already paid is clawed back out of the next payout when the admin decides so', async () => {
+    const sale = await sell(51);
+    const commission = await commissionOn(sale, true);
+    await cancelManual(sale);
+    expect((await decisions(sale)).commission).toMatchObject({ open: true, paid: true });
+
+    await asAdmin(http().post(`/v1/contracts/${sale.contractId}/cancellation-decision`))
+      .send({ commissionAction: 'CLAWBACK', reason: 'deal fell through' })
+      .expect(201);
+    const after = await testApp.rawPrisma.brokerCommission.findUniqueOrThrow({ where: { id: commission.id } });
+    expect(after.clawbackStatus).toBe('OUTSTANDING');
+    expect(after.clawbackAmount?.toString()).toBe('20000');
+    const adj = await testApp.rawPrisma.brokerCommissionAdjustment.findMany({ where: { commissionId: commission.id } });
+    expect(adj).toHaveLength(1);
+    expect(adj[0]).toMatchObject({ kind: 'CLAWBACK', settlesClawback: true });
+    expect(adj[0]!.amount.toString()).toBe('20000');
+  });
+
+  it('FA8c: a commission settled when the contract was cancelled takes no later decision', async () => {
+    const sale = await sell(52);
+    const commission = await commissionOn(sale, false);
+    await asAdmin(http().post(`/v1/contracts/${sale.contractId}/cancel`))
+      .send({ reason: 'FA8c', retainedAmount: 0, refundAmount: 0, commissionActionOverride: 'CLAWBACK' })
+      .expect(201);
+    expect((await testApp.rawPrisma.brokerCommission.findUniqueOrThrow({ where: { id: commission.id } })).status).toBe('CANCELLED');
+    expect((await decisions(sale)).commission).toMatchObject({ open: false, decision: null, action: 'CLAWBACK' });
+    await asAdmin(http().post(`/v1/contracts/${sale.contractId}/cancellation-decision`))
+      .send({ commissionAction: 'RETAIN' })
+      .expect(409);
   });
 
   // ── FA6: what the customer sees ─────────────────────────────────────────
