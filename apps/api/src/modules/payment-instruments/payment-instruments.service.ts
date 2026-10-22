@@ -28,7 +28,7 @@ import {
 } from './payment-instruments.dto';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { reportFailure } from '../../common/observability/report-failure';
-import { CONTRACT_CANCELLED_MESSAGE } from '../installments/live-contract';
+import { CONTRACT_CANCELLED_MESSAGE, LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 
 /** The installment's plan belongs to a cancelled or deleted contract. */
 function isDeadPlan(
@@ -99,6 +99,7 @@ export class ChequeLifecycleService {
           select: {
             id: true,
             reviewStatus: true,
+            amount: true,
             installmentId: true,
             // A booking-amount cheque pays a reservation, not an installment.
             reservationId: true,
@@ -494,9 +495,10 @@ export class ChequeLifecycleService {
     const firstInstallmentWithPlan = pi.deposits.find(
       (d) => d.installment?.planId && !isDeadPlan(d.installment.plan),
     );
-    const planId = firstInstallmentWithPlan?.installment?.planId ?? null;
+    let planId = firstInstallmentWithPlan?.installment?.planId ?? null;
 
     let penaltyInstallmentId: string | null = null;
+    const bookingRowIds: string[] = [];
     let correctionRowsWritten = 0;
     const correctionIds: string[] = [];
 
@@ -535,9 +537,59 @@ export class ChequeLifecycleService {
         });
       }
 
+      // A booking cheque returned after the reservation became a contract
+      // (decided 2026-10-22): the booking is part of the contract's price, so
+      // it moves into the schedule — a row for it, due on the return date —
+      // and the booking no longer counts as paid. Its payment is reversed.
+      const companyId = getRequiredCompanyId();
+      for (const d of approvedDeposits) {
+        if (!d.reservationId || d.installmentId) continue;
+        const contract = await tx.contract.findFirst({
+          where: { reservationId: d.reservationId, companyId, ...LIVE_CONTRACT_WHERE },
+          select: { installmentPlan: { select: { id: true, cancelledAt: true } } },
+        });
+        const plan = contract?.installmentPlan;
+        if (!plan || plan.cancelledAt) continue;
+        // Moved once: only while the booking still counts as paid.
+        const unpaid = await tx.reservation.updateMany({
+          where: {
+            id: d.reservationId,
+            companyId,
+            status: ReservationStatus.CONVERTED,
+            bookingPaymentStatus: ReservationBookingPaymentStatus.PAID,
+          },
+          data: { bookingPaymentStatus: ReservationBookingPaymentStatus.UNPAID, bookingPaidAt: null },
+        });
+        if (unpaid.count === 0) continue;
+        const row = await tx.installment.create({
+          data: {
+            planId: plan.id,
+            type: PlanPaymentType.RESERVATION,
+            dueDate: bounceDate,
+            amount: d.amount,
+            status: computeReopenStatus(bounceDate, installmentAction),
+            companyId,
+          },
+        });
+        const correction = await tx.paymentCorrection.create({
+          data: {
+            type: PaymentCorrectionType.REVERSAL,
+            depositId: d.id,
+            targetInstallmentId: row.id,
+            reason: dto.bounceReason,
+            performedById,
+            companyId,
+          },
+        });
+        await tx.installment.update({ where: { id: row.id }, data: { lastCorrectionId: correction.id } });
+        correctionIds.push(correction.id);
+        correctionRowsWritten += 1;
+        bookingRowIds.push(row.id);
+        planId ??= plan.id;
+      }
+
       // ── Sub-case B: APPROVED deposits — write correction + reopen installment ──
       // Deposit.reviewStatus stays APPROVED (§3.6). paidAt NOT cleared (§3.6 / Hard Rule 2).
-      const companyId = getRequiredCompanyId();
       for (const d of approvedDeposits) {
         if (!d.installmentId || !d.installment) continue;
         // A cancelled deal's installment stays as cancellation left it, and
@@ -614,6 +666,7 @@ export class ChequeLifecycleService {
             depositsSetToRejected: affectedDepositIds,
             correctionRowsWritten,
             correctionIds,
+            bookingRowIds,
             penaltyInstallmentId,
           },
           companyId,

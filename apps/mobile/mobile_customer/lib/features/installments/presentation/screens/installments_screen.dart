@@ -597,6 +597,7 @@ class _InstallmentCard extends StatelessWidget {
   }
 
   String _paymentTypeLabel(AppLocalizations l10n) => switch (installment.type) {
+    InstallmentPaymentType.reservation => l10n.depositTypeBooking,
     InstallmentPaymentType.downPayment => l10n.depositTypeDownPayment,
     InstallmentPaymentType.finalPayment => l10n.depositTypeFinal,
     _ => l10n.depositTypeInstallment,

@@ -356,6 +356,51 @@ describe('FA — financial audit fixes (e2e)', () => {
     expect((await downPayment(sale)).status).toBe(InstallmentStatus.PAID);
     return { sale, down, depositId: rec.body.id as string, instrumentId };
   };
+  it('FA9: a booking cheque returned after the contract was signed moves the booking into the schedule — once', async () => {
+    const sale = await book(60);
+    const raw = testApp.rawPrisma;
+    await asAdmin(http().post(`/v1/reservations/${sale.reservationId}/booking-payment/confirm`))
+      .send({ paymentMethod: 'CHEQUE', cheque: { chequeNumber: `FA9-${stamp}`, chequeDueDate: today() } })
+      .expect(201);
+    const booking = await raw.deposit.findFirstOrThrow({ where: { reservationId: sale.reservationId, type: DepositType.BOOKING_AMOUNT } });
+    const instrumentId = booking.paymentInstrumentId!;
+    expect((await pi(instrumentId, 'deposit')).status).toBe(200);
+    expect((await pi(instrumentId, 'clear')).status).toBe(200);
+    await asAdmin(http().post(`/v1/reservations/${sale.reservationId}/convert`)).send({ startsAt: today() }).expect(201);
+    sale.contractId = (await raw.contract.findFirstOrThrow({ where: { reservationId: sale.reservationId } })).id;
+    await asAdmin(http().post(`/v1/contracts/${sale.contractId}/sign`)).send({ signedAt: new Date().toISOString() }).expect(201);
+
+    expect((await bounce(instrumentId)).status).toBe(200);
+    // The booking no longer counts as paid; a row carries it, due on the return date.
+    const r = await raw.reservation.findUniqueOrThrow({ where: { id: sale.reservationId } });
+    expect(r.bookingPaymentStatus).toBe(ReservationBookingPaymentStatus.UNPAID);
+    const rows = await raw.installment.findMany({ where: { plan: { contractId: sale.contractId }, type: PlanPaymentType.RESERVATION } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.amount.toString()).toBe('50000');
+    expect([InstallmentStatus.PENDING, InstallmentStatus.OVERDUE]).toContain(rows[0]!.status);
+    expect(await collectedBookings(sale)).toBe(1); // the deposit stays, reversed:
+    expect(await raw.paymentCorrection.count({ where: { depositId: booking.id, type: 'REVERSAL', supersededAt: null } })).toBe(1);
+
+    // The contract still adds up: booking (unpaid) moved into rows = total.
+    const c = await raw.contract.findUniqueOrThrow({ where: { id: sale.contractId } });
+    const sum = await raw.installment.aggregate({
+      where: { plan: { contractId: sale.contractId }, type: { notIn: ['LATE_FEE', 'BOUNCE_PENALTY', 'TRANSFER_FEE'] } },
+      _sum: { amount: true },
+    });
+    expect(sum._sum.amount!.toString()).toBe(c.totalAmount.toString());
+    // The statement owes it once, not twice (booking + row).
+    const st = await asAdmin(http().get(`/v1/contracts/${sale.contractId}/statement`)).expect(200);
+    const owed = Number(st.body.totals.overdue) + Number(st.body.totals.dueToday) + Number(st.body.totals.upcoming);
+    expect(Number(st.body.totals.balance)).toBeCloseTo(owed, 2);
+    expect(Number(st.body.totals.unscheduled)).toBe(0);
+
+    // Paying the row settles it like any other.
+    await asAdmin(http().post('/v1/deposits'))
+      .send({ contractId: sale.contractId, installmentId: rows[0]!.id, amount: 50_000, paymentMethod: 'CASH' })
+      .expect(201);
+    expect((await raw.installment.findUniqueOrThrow({ where: { id: rows[0]!.id } })).status).toBe(InstallmentStatus.PAID);
+  });
+
   const penalties = (s: Sale) =>
     testApp.rawPrisma.installment.count({
       where: { plan: { contractId: s.contractId }, type: PlanPaymentType.BOUNCE_PENALTY },

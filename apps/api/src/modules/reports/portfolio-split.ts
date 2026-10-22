@@ -1,4 +1,4 @@
-import { InstallmentStatus, Prisma, PrismaClient, ReservationBookingPaymentStatus } from '@prisma/client';
+import { InstallmentStatus, PlanPaymentType, Prisma, PrismaClient, ReservationBookingPaymentStatus } from '@prisma/client';
 import { BILLABLE_PLAN_WHERE, PAYMENT_ON_ITS_WAY, SURCHARGE_PAYMENT_TYPES } from '../installments/live-contract';
 
 /**
@@ -72,6 +72,15 @@ export async function portfolioSplit(
 }
 
 /**
+ * A booking that moved into the contract's schedule (its cheque came back
+ * after signing): unpaid, with a RESERVATION row on the plan carrying it.
+ */
+export const BOOKING_MOVED_TO_SCHEDULE: Prisma.ReservationWhereInput = {
+  bookingPaymentStatus: ReservationBookingPaymentStatus.UNPAID,
+  contract: { is: { installmentPlan: { is: { installments: { some: { type: PlanPaymentType.RESERVATION } } } } } },
+};
+
+/**
  * What has fallen due by today and how much of it is settled, counted on the
  * schedule rows (and the booking) like the split above: due = the rows due up
  * to today + the bookings; collected = those of them paid (a waived booking
@@ -105,7 +114,9 @@ export async function dueToDateSplit(
       _sum: { amount: true },
     }),
     db.reservation.aggregate({
-      where: { contract: { is: signedContractWhere } },
+      // A booking whose cheque came back after signing moved into the
+      // schedule as a row: it is due there, not twice.
+      where: { contract: { is: signedContractWhere }, NOT: BOOKING_MOVED_TO_SCHEDULE },
       _sum: { bookingAmount: true },
     }),
     db.reservation.aggregate({

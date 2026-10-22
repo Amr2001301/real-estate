@@ -22,6 +22,9 @@ enum InstallmentStatus {
 /// Plan payment type — drives the "Down payment / Installment / Final payment"
 /// copy in the UI.
 enum InstallmentPaymentType {
+  /// The booking amount, moved into the schedule when its cheque came back
+  /// after the contract was signed.
+  reservation('RESERVATION'),
   downPayment('DOWN_PAYMENT'),
   installment('INSTALLMENT'),
   finalPayment('FINAL_PAYMENT'),

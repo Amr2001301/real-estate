@@ -4192,6 +4192,7 @@ const UI = {
       colFor: 'عن',
       forBooking: 'مبلغ الحجز',
       forType: {
+        RESERVATION: 'مبلغ الحجز',
         DOWN_PAYMENT: 'دفعة أولى',
         INSTALLMENT: 'قسط',
         FINAL_PAYMENT: 'دفعة أخيرة',
@@ -10088,6 +10089,7 @@ const UI = {
       colFor: 'For',
       forBooking: 'Booking amount',
       forType: {
+        RESERVATION: 'Booking amount',
         DOWN_PAYMENT: 'Down payment',
         INSTALLMENT: 'Instalment',
         FINAL_PAYMENT: 'Final payment',

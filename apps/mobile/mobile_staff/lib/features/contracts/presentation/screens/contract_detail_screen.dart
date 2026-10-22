@@ -573,6 +573,7 @@ class _InstallmentList extends StatelessWidget {
   final String Function(DateTime) fmtDate;
 
   String _typeLabel(AppLocalizations l, String type) => switch (type) {
+        'RESERVATION'  => l.depositTypeBooking,
         'DOWN_PAYMENT' => l.depositTypeDownPayment,
         'INSTALLMENT'  => l.depositTypeInstallment,
         'FINAL_PAYMENT' => l.depositTypeFinal,
