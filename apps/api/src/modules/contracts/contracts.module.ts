@@ -1129,8 +1129,11 @@ export class ContractsService {
     // every signed contract stayed UNSIGNED and anything reading `status`
     // (reports, exports, filters) saw signed contracts as unsigned.
     const signedAtDate = new Date(dto.signedAt);
-    const updated = await this.prisma.contract.update({
-      where: { id },
+    // Only a contract still unsigned and not cancelled: a cancel (or another
+    // sign) landing after the checks above must not be undone — signing
+    // brought a cancelled deal back to ACTIVE, with a commission on it.
+    const claimed = await this.prisma.contract.updateMany({
+      where: { id, signedAt: null, status: { not: ContractStatus.CANCELLED }, deletedAt: null },
       data: {
         signedAt: signedAtDate,
         status: ContractStatus.ACTIVE,
@@ -1144,6 +1147,10 @@ export class ContractsService {
           null,
       },
     });
+    if (claimed.count !== 1) {
+      throw new ConflictException('تغيّرت حالة العقد للتو (وُقّع أو أُلغي) — حدّث الصفحة');
+    }
+    const updated = await this.prisma.contract.findUniqueOrThrow({ where: { id } });
 
     // Ensure the existing contract PDF (if any) is linked as a document. No PDF
     // is generated on signing; this only mirrors an already-uploaded pdfUrl.

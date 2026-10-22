@@ -920,12 +920,14 @@ export class DepositsService {
     // the deposit status goes back to PENDING_REVIEW but the installment stays
     // PAID — an inconsistency that was the root of FG-06. FG-05: not twice —
     // a deposit already reversed since its last review only changes status.
-    // A staff-recorded payment (NO_PROOF) pays too: un-verifying one that has
-    // a receipt sends it to review, so it must reopen the row like an approved one.
+    // An approved payment un-verified is reversed whatever it goes back to;
+    // so is a staff-recorded one (NO_PROOF, which pays too) that has a receipt
+    // and goes back to review — it left the row paid with nothing behind it.
     const needsReversal =
       !dto.verified &&
-      PAYING_REVIEW_STATUSES.includes(target.reviewStatus) &&
-      !PAYING_REVIEW_STATUSES.includes(nextReviewStatus) &&
+      (target.reviewStatus === DepositReviewStatus.APPROVED ||
+        (target.reviewStatus === DepositReviewStatus.NO_PROOF &&
+          !PAYING_REVIEW_STATUSES.includes(nextReviewStatus))) &&
       !!target.installmentId &&
       target.installment?.status === InstallmentStatus.PAID &&
       !(await this.reversedSinceReview(target));

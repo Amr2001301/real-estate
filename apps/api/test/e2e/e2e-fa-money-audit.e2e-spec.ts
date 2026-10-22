@@ -19,6 +19,7 @@ import {
 import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
 import { bearer, loginAs } from '../helpers/login';
+import { LATE_FEE_SETTING_DEFAULTS } from '../../src/modules/installments/late-fee';
 
 interface Sale {
   unitId: string;
@@ -407,5 +408,71 @@ describe('FA — financial audit fixes (e2e)', () => {
     expect((await bounce(instrumentId)).status).toBe(200);
     expect((await downPayment(sale)).status).toBe(InstallmentStatus.PAID);
     expect(await testApp.rawPrisma.paymentCorrection.count({ where: { depositId } })).toBe(1);
+  });
+
+  // ── FA4: contract money ────────────────────────────────────────────────
+  it('FA4a: a new booking amount on a cash plan is taken off the price — the contract still adds up', async () => {
+    const raw = testApp.rawPrisma;
+    const unitId = (
+      await raw.unit.create({
+        data: {
+          companyId, buildingId, code: `FA-C-${stamp}`, type: 'APARTMENT', area: 100, bedrooms: 2,
+          bathrooms: 1, floor: 1, price: 1_000_000, status: UnitStatus.AVAILABLE,
+        },
+      })
+    ).id;
+    const tpl = await asAdmin(http().post('/v1/installment-plan-templates')).send({
+      name: 'FA cash', projectId, unitId, totalPrice: 1_000_000, reservationAmount: 50_000,
+      isCash: true, startDateRule: 'AFTER_CONTRACT', status: 'ACTIVE',
+    });
+    expect(tpl.status).toBe(201);
+    const created = await asAdmin(http().post('/v1/reservations'))
+      .send({ unitId, clientId: fixtures.userIds.customer1UserId, installmentPlanTemplateId: tpl.body.id, expiresInHours: 72 })
+      .expect(201);
+    const reservationId = created.body.id ?? created.body.reservation?.id;
+    const sale: Sale = { unitId, templateId: tpl.body.id, reservationId, contractId: '' };
+    sales.push(sale);
+    await asAdmin(http().post(`/v1/reservations/${reservationId}/approve`)).send({}).expect(201);
+    await asAdmin(http().patch(`/v1/reservations/${reservationId}`)).send({ bookingAmount: 100_000 }).expect(200);
+    await asAdmin(http().post(`/v1/reservations/${reservationId}/booking-payment/confirm`)).send({}).expect(201);
+    await asAdmin(http().post(`/v1/reservations/${reservationId}/convert`)).send({ startsAt: today() }).expect(201);
+    const contract = await raw.contract.findFirstOrThrow({ where: { reservationId } });
+    sale.contractId = contract.id;
+    const rows = await raw.installment.aggregate({
+      where: { plan: { contractId: contract.id }, status: { not: InstallmentStatus.CANCELLED } },
+      _sum: { amount: true },
+    });
+    // booking 100,000 + the down payment = the 1,000,000 price, not 1,050,000.
+    expect(Number(contract.totalAmount)).toBe(1_000_000);
+    expect(Number(rows._sum.amount) + 100_000).toBe(1_000_000);
+  });
+
+  it('FA4b: a contract signed late is not charged late fees for the months before it was signed', async () => {
+    const raw = testApp.rawPrisma;
+    const sale = await sell(20);
+    const DAY = 86_400_000;
+    const plan = await raw.installmentPlan.findFirstOrThrow({ where: { contractId: sale.contractId } });
+    // Converted three months ago, signed today; a row due two months ago.
+    await raw.contract.update({
+      where: { id: sale.contractId },
+      data: { createdAt: new Date(Date.now() - 90 * DAY), lateFeesApply: true },
+    });
+    const old = await raw.installment.create({
+      data: {
+        planId: plan.id, companyId, type: PlanPaymentType.INSTALLMENT, amount: 20_000,
+        dueDate: new Date(Date.now() - 60 * DAY), status: InstallmentStatus.OVERDUE,
+      },
+    });
+    await raw.setting.updateMany({ where: { companyId, key: 'lateFee.value' }, data: { value: 2 } });
+    await raw.setting.updateMany({ where: { companyId, key: 'lateFee.repeat' }, data: { value: 'MONTHLY' } });
+    try {
+      await testApp.runCronJob('late-fee');
+      expect(await raw.installment.count({ where: { feeForId: old.id } })).toBe(0);
+    } finally {
+      for (const { key, value } of LATE_FEE_SETTING_DEFAULTS) {
+        await raw.setting.updateMany({ where: { companyId, key }, data: { value } });
+      }
+      await raw.installment.deleteMany({ where: { feeForId: old.id } });
+    }
   });
 });

@@ -258,8 +258,12 @@ export class InstallmentsService {
     }
     const expectedMonthlyCents = Math.floor(remainingCents / dto.totalMonths);
     const monthlyCents = dto.monthlyAmount != null ? toCents(dto.monthlyAmount) : expectedMonthlyCents;
-    // Up to one currency unit a month of rounding is fine; the last row settles it.
-    if (Math.abs(monthlyCents * dto.totalMonths - remainingCents) >= dto.totalMonths * 100) {
+    // Only rounding is fine, and the last row settles it: it must stay a real
+    // instalment, within a piaster a month of the others. A pound a month of
+    // slack let the last row absorb up to n pounds — or go negative when the
+    // typed amount was under n.
+    const lastIfTyped = remainingCents - monthlyCents * (dto.totalMonths - 1);
+    if (lastIfTyped <= 0 || Math.abs(lastIfTyped - monthlyCents) >= dto.totalMonths) {
       throw new BadRequestException(
         `القسط الشهري لا يطابق قيمة العقد — المتبقي بعد الحجز والمقدّم ${(remainingCents / 100).toFixed(2)} على ${dto.totalMonths} شهراً = ${(expectedMonthlyCents / 100).toFixed(2)} شهرياً`,
       );
@@ -647,6 +651,7 @@ export class InstallmentsService {
                 contractNumber: true,
                 customerId: true,
                 createdAt: true,
+                signedAt: true,
                 unit: { select: { code: true } },
               },
             },
@@ -664,10 +669,16 @@ export class InstallmentsService {
       // ones stay overdue (decided 2026-10-18).
       const entered = inst.plan?.contract?.createdAt;
       if (entered && inst.dueDate < startOfLocalToday(timeZone, entered)) continue;
+      // The clock runs from the signing day at the earliest: a contract left
+      // unsigned for months is not chased meanwhile, and signing it charged
+      // every month of that wait at once.
+      const signed = inst.plan?.contract?.signedAt;
+      const signedDay = signed ? startOfLocalToday(timeZone, signed) : null;
+      const clockFrom = signedDay && signedDay > inst.dueDate ? signedDay : inst.dueDate;
       const fees = lateFeesDue(
         {
           amount: Number(inst.amount),
-          dueDate: inst.dueDate,
+          dueDate: clockFrom,
           pausedSeconds: inst.lateFeePausedSeconds,
           pausedSince: inst.lateFeePausedSince,
         },

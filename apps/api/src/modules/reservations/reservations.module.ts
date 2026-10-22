@@ -1993,7 +1993,10 @@ export class ReservationsService {
         data,
         this.planSnapshot(newPlan, dto.installmentPlanDurationOptionId, new Prisma.Decimal(reservation.unit.price), bookingAmount),
       );
-    } else if (data.bookingAmount !== undefined && reservation.installmentPlanTemplateId && reservation.selectedDurationOptionId) {
+    } else if (data.bookingAmount !== undefined && reservation.installmentPlanTemplateId) {
+      // Every kind of plan: a count-priced or cash plan has no duration option,
+      // and skipping it kept the old snapshot — the contract then billed the
+      // price with the old booking taken off (over or under by the change).
       const plan = await this.validateBookingPlan(
         reservation.installmentPlanTemplateId,
         reservation.unitId,
@@ -2001,7 +2004,7 @@ export class ReservationsService {
       );
       Object.assign(
         data,
-        this.planSnapshot(plan, reservation.selectedDurationOptionId, new Prisma.Decimal(reservation.unit.price), bookingAmount),
+        this.planSnapshot(plan, reservation.selectedDurationOptionId ?? undefined, new Prisma.Decimal(reservation.unit.price), bookingAmount),
       );
     }
 

@@ -24,6 +24,7 @@ describe('Late-payment fee (e2e)', () => {
   let freshId: string;
   let contractId: string;
   let contractCreatedAt: Date;
+  let contractSignedAt: Date | null;
   const startedAt = new Date();
 
   const http = () => request(testApp.app.getHttpServer());
@@ -41,15 +42,17 @@ describe('Late-payment fee (e2e)', () => {
     companyId = admin.companyId!;
     const plan = await raw.installmentPlan.findFirstOrThrow({
       where: { contract: { companyId, deletedAt: null, status: { not: 'CANCELLED' } } },
-      select: { id: true, contractId: true, contract: { select: { createdAt: true } } },
+      select: { id: true, contractId: true, contract: { select: { createdAt: true, signedAt: true } } },
     });
     contractId = plan.contractId;
     // The rows below are due 3 and 10 days ago: the contract was in the
     // system before then (a row due before it was entered earns no fee).
     contractCreatedAt = plan.contract.createdAt;
+    contractSignedAt = plan.contract.signedAt;
+    // Signed then too: the fee clock runs from the signing day at the earliest.
     await raw.contract.update({
       where: { id: contractId },
-      data: { createdAt: new Date(Date.now() - 30 * DAY) },
+      data: { createdAt: new Date(Date.now() - 30 * DAY), signedAt: new Date(Date.now() - 30 * DAY) },
     });
     const row = (dueDate: Date, status: InstallmentStatus) =>
       raw.installment.create({
@@ -71,7 +74,7 @@ describe('Late-payment fee (e2e)', () => {
     await raw.installment.deleteMany({ where: { id: { in: [overdueId, freshId] } } });
     await raw.contract.update({
       where: { id: contractId },
-      data: { createdAt: contractCreatedAt, lateFeesApply: false },
+      data: { createdAt: contractCreatedAt, signedAt: contractSignedAt, lateFeesApply: false },
     });
   });
 

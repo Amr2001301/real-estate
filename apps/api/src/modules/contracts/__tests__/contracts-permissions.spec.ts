@@ -129,6 +129,11 @@ function makePrismaMock() {
         contractNumber: contractStore.current.contractNumber,
         ...data,
       })),
+      // Signing is a conditional update (only while unsigned and not
+      // cancelled), then a re-read: routed through `update` so the
+      // assertions on it still see the signing write.
+      updateMany: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
     },
     unit: {
       findUnique: jest.fn().mockResolvedValue({ id: 'unit-1', status: 'AVAILABLE' }),
@@ -182,6 +187,14 @@ function makePrismaMock() {
       return ops;
     }),
   };
+  {
+    let last: unknown = null;
+    mock.contract.updateMany.mockImplementation(async (args: { where: { id: string }; data: Record<string, unknown> }) => {
+      last = await mock.contract.update({ where: { id: args.where.id }, data: args.data });
+      return { count: 1 };
+    });
+    mock.contract.findUniqueOrThrow.mockImplementation(async () => last);
+  }
   return mock;
 }
 
