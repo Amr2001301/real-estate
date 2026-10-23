@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import { Inter, IBM_Plex_Sans_Arabic, Tajawal } from 'next/font/google';
 import { headers } from 'next/headers';
 import Script from 'next/script';
+import './fonts.css';
 import './globals.css';
 import { buildMetadata } from '@/lib/seo';
 import { getLocale } from '@/lib/locale';
@@ -19,26 +19,8 @@ import { PageViewTracker } from '@/components/analytics/PageViewTracker';
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-sans',
-  display: 'swap',
-});
-
-const plexArabic = IBM_Plex_Sans_Arabic({
-  subsets: ['arabic'],
-  weight: ['300', '400', '500', '600', '700'],
-  variable: '--font-arabic',
-  display: 'swap',
-});
-
-// Display face for cinematic headings (premium, geometric Arabic).
-const tajawal = Tajawal({
-  subsets: ['arabic'],
-  weight: ['400', '500', '700', '800'],
-  variable: '--font-display',
-  display: 'swap',
-});
+// Inter (Latin), IBM Plex Sans Arabic, and Tajawal for cinematic headings —
+// served from public/fonts (fonts.css), not downloaded at build time.
 
 async function getResolvedSlug(): Promise<string> {
   const h = await headers();
@@ -74,7 +56,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html
       lang={locale}
       dir={dir}
-      className={`${inter.variable} ${plexArabic.variable} ${tajawal.variable}`}
       suppressHydrationWarning
     >
       <head>

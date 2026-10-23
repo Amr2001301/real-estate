@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    /* Fonts (U5) — set by next/font in app/layout.tsx; these are fallbacks. */
+    /* Fonts (U5) — the faces are in app/fonts.css, served from public/fonts. */
     --font-sans: 'Almarai', system-ui, 'Segoe UI', Tahoma, sans-serif;
     --font-heading: 'Noto Naskh Arabic', 'Almarai', serif;
     --font-numeric: 'Cormorant Garamond', Georgia, serif;
