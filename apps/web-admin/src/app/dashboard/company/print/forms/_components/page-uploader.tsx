@@ -21,10 +21,21 @@ async function storePage(blob: Blob, extension: string): Promise<string> {
       brandingAsset: 'letterhead',
     }),
   });
-  if (!res.ok) throw new Error(`presign ${res.status}`);
+  if (!res.ok) {
+    throw new Error(
+      res.status === 503
+        ? 'تخزين الملفات غير مُعدّ على الخادم — راجع إعدادات R2 أو MinIO'
+        : `تعذّر تجهيز رفع الملف (${res.status})`,
+    );
+  }
   const { uploadUrl, publicUrl } = (await res.json()) as { uploadUrl: string; publicUrl?: string };
-  const put = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': blob.type }, body: blob });
-  if (!put.ok || !publicUrl) throw new Error(`upload ${put.status}`);
+  // The browser sends the file to the storage itself: a network error here
+  // means the storage is not reachable (MinIO not running, or the bucket's
+  // CORS does not allow this site).
+  const put = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': blob.type }, body: blob }).catch(() => {
+    throw new Error(`تعذّر الوصول إلى تخزين الملفات (${new URL(uploadUrl).host}) — تأكد أنه يعمل ويسمح بالرفع من هذا الموقع`);
+  });
+  if (!put.ok || !publicUrl) throw new Error(`رفض تخزين الملفات الصفحة (${put.status})`);
   return publicUrl;
 }
 
