@@ -1,4 +1,4 @@
-import { PAPER, type FilledField, type PaperSize } from '@/lib/form-layout';
+import { PAPER, fitFontSize, type FilledField, type PaperSize } from '@/lib/form-layout';
 
 /**
  * The company's own form: each page with its values written where the
@@ -58,9 +58,9 @@ export function FormOverlay({
                 ) : (
                   <span
                     dir="auto"
-                    className="w-full leading-[1.25] text-[#111827]"
+                    className="w-full whitespace-nowrap leading-[1.2] text-[#111827]"
                     style={{
-                      fontSize: `${f.size * ptCqw}cqw`,
+                      fontSize: `${fitFontSize(f, f.text ?? '', paper) * ptCqw}cqw`,
                       fontWeight: f.bold ? 700 : 500,
                       textAlign: f.align,
                     }}

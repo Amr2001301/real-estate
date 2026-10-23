@@ -21,6 +21,15 @@ export interface SignFormField {
 }
 
 const PT_CQW = (0.3528 / 210) * 100;
+const PAGE = { w: 210, h: 297 };
+
+/** As the dashboard's fitFontSize: smaller when the text is too long for its box. */
+function fitFontSize(f: Pick<SignFormField, 'w' | 'h' | 'size'>, text: string): number {
+  const PT_PER_MM = 72 / 25.4;
+  const byWidth = (f.w * PAGE.w * PT_PER_MM) / Math.max(1, text.length * 0.55);
+  const byHeight = (f.h * PAGE.h * PT_PER_MM) / 1.2;
+  return Math.max(5, Math.min(f.size, byWidth, byHeight));
+}
 
 export function FormOverlay({
   pages,
@@ -75,8 +84,8 @@ export function FormOverlay({
                 ) : f.image !== undefined ? null : (
                   <span
                     dir="auto"
-                    className="w-full leading-[1.25] text-[#111827]"
-                    style={{ fontSize: `${f.size * PT_CQW}cqw`, fontWeight: f.bold ? 700 : 500, textAlign: f.align }}
+                    className="w-full whitespace-nowrap leading-[1.2] text-[#111827]"
+                    style={{ fontSize: `${fitFontSize(f, f.text ?? '') * PT_CQW}cqw`, fontWeight: f.bold ? 700 : 500, textAlign: f.align }}
                   >
                     {f.text}
                   </span>

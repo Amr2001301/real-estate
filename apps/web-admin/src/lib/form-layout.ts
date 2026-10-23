@@ -1,4 +1,4 @@
-import { PLACEHOLDER_GROUPS, BLANK, customPlaceholder, type TemplateValues } from './document-template';
+import { PLACEHOLDER_GROUPS, customPlaceholder, type TemplateValues } from './document-template';
 import { fieldLabel as customFieldLabel, type CustomerFieldDef } from './customer-fields';
 
 /**
@@ -112,6 +112,20 @@ export function fillForm(
   signs: Partial<Record<SignKey, string | null>>,
 ): FilledField[] {
   return layout.fields.map((f) =>
-    isSignKey(f.key) ? { ...f, image: signs[f.key] ?? null } : { ...f, text: values[f.key] || BLANK },
+    // A value the record lacks stays empty: the company's paper has its own line to fill by hand.
+    isSignKey(f.key) ? { ...f, image: signs[f.key] ?? null } : { ...f, text: values[f.key] || '' },
   );
+}
+
+/**
+ * The size a value prints at, in points: the field's own size, made smaller
+ * when the text is too long for its box, so it stays on one line and whole.
+ * Estimated from the length (about half an em a character) — no measuring,
+ * so a server-rendered page and a phone agree.
+ */
+export function fitFontSize(field: Pick<FormField, 'w' | 'h' | 'size'>, text: string, paper: { w: number; h: number }): number {
+  const PT_PER_MM = 72 / 25.4;
+  const byWidth = (field.w * paper.w * PT_PER_MM) / Math.max(1, text.length * 0.55);
+  const byHeight = (field.h * paper.h * PT_PER_MM) / 1.2;
+  return Math.max(5, Math.min(field.size, byWidth, byHeight));
 }
