@@ -59,6 +59,8 @@ const T = {
     delete: 'حذف النموذج',
     confirmDelete: 'حذف هذا النموذج؟ يُطبع المستند بالتصميم القياسي.',
     emptyPages: 'ارفع صورة الصفحة الأولى من الاستمارة للبدء.',
+    needName: 'اكتب اسم النموذج في الأعلى لتتمكن من الحفظ.',
+    needPage: 'ارفع صفحة واحدة على الأقل لتتمكن من الحفظ.',
     nudge: 'الأسهم تحرك الخانة بدقة، و Shift لخطوة أكبر.',
   },
   en: {
@@ -95,6 +97,8 @@ const T = {
     delete: 'Delete form',
     confirmDelete: 'Delete this form? The document will print with the standard layout.',
     emptyPages: 'Upload the first page of your form to begin.',
+    needName: 'Type the form’s name above to save it.',
+    needPage: 'Upload at least one page to save the form.',
     nudge: 'Arrow keys move the field precisely; Shift for a bigger step.',
   },
 };
@@ -124,7 +128,8 @@ export function FormDesigner({
 }) {
   const t = T[locale];
   const router = useRouter();
-  const [name, setName] = useState(layout?.name ?? '');
+  // A new form starts named after its document; the admin can rename it.
+  const [name, setName] = useState(layout?.name ?? t.documents[initialDocument]);
   const [isDefault, setIsDefault] = useState(layout?.isDefault ?? true);
   const [documentType, setDocumentType] = useState<FormDocument>(layout?.documentType ?? initialDocument);
   const [paperSize, setPaperSize] = useState<PaperSize>(layout?.paperSize ?? 'A4');
@@ -139,6 +144,8 @@ export function FormDesigner({
   const pageRef = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null);
 
+  // Why the form cannot be saved yet, shown under the button.
+  const blocked = !name.trim() ? t.needName : pages.length === 0 ? t.needPage : null;
   const selected = fields.find((f) => f.id === selectedId) ?? null;
   const values = useMemo(() => sampleValues(locale, currency, company), [locale, currency, company]);
   const groups = formFieldGroups(documentType, customFields);
@@ -148,6 +155,8 @@ export function FormDesigner({
   // A new form's document decides its papers and its signature boxes.
   const chooseDocument = (doc: FormDocument) => {
     setDocumentType(doc);
+    // A name still the previous document's follows the new one.
+    if (name.trim() === t.documents[documentType]) setName(t.documents[doc]);
     if (!DOCUMENT_PAPER[doc].includes(paperSize)) setPaperSize('A4');
     const allowed = signKeysFor(doc) as string[];
     setFields((fs) => fs.filter((f) => !isSignKey(f.key) || allowed.includes(f.key)));
@@ -551,13 +560,18 @@ export function FormDesigner({
           <button
             type="button"
             onClick={save}
-            disabled={pending || !name.trim() || pages.length === 0}
+            disabled={pending || !!blocked}
             data-testid="form-save"
             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-navy-band text-[13px] font-semibold text-[#F4ECD8] disabled:opacity-60"
           >
             {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             {t.save}
           </button>
+          {blocked && !note && (
+            <p data-testid="form-save-blocked" className="mt-2 text-center text-[12px] text-slate-500">
+              {blocked}
+            </p>
+          )}
           {note && (
             <p role="status" className={cn('mt-2 text-center text-[12.5px]', note.ok ? 'text-success-700' : 'text-danger-600')}>
               {note.text}
