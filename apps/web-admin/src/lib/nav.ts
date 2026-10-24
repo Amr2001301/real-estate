@@ -11,6 +11,7 @@ import {
   Globe,
   Printer,
   ListPlus,
+  Sparkles,
   Wallet,
   Receipt,
   Landmark,
@@ -52,6 +53,7 @@ export const NAV_ICONS = {
   Globe,
   Printer,
   ListPlus,
+  Sparkles,
   Tag,
   LayoutDashboard,
   Building2,
@@ -214,6 +216,7 @@ export const SUPER_ADMIN_NAV_SECTIONS: NavSection[] = [
       { href: '/dashboard/super-admin', label: 'لوحة التحكم', labelKey: 'dashboard', iconKey: 'LayoutDashboard' },
       { href: '/dashboard/super-admin/companies', label: 'الشركات', labelKey: 'companies', iconKey: 'Globe' },
       { href: '/dashboard/super-admin/pricing', label: 'باقات الأسعار', labelKey: 'reports', iconKey: 'Tag' },
+      { href: '/dashboard/super-admin/ai', label: 'المساعد الذكي', labelKey: 'aiAssistant', iconKey: 'Sparkles' },
     ],
   },
 ];

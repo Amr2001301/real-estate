@@ -25,6 +25,7 @@ import {
 import { SalesDashboard } from './_components/sales-home';
 import { SalesManagerDashboard } from './_components/sales-manager-home';
 import type { TopBrokersResponse } from '@/lib/types';
+import { AiUsageCard, type AiUsage } from '@/components/ai/ai-usage-card';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -189,10 +190,12 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
   const now    = new Date();
   const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-  const [r, topSalesRes, topBrokersRes] = await Promise.all([
+  const [r, topSalesRes, topBrokersRes, aiUsageRes] = await Promise.all([
     safe(api.get<AdminSummary>('/reports/admin-summary')),
     safe(api.get<PerformanceRow[]>(`/sales-targets/performance?period=${period}`)),
     safe(api.get<TopBrokersResponse>('/broker-reports/top-brokers?limit=5&metric=salesGross')),
+    // The AI assistant package — shown only when enabled for the company.
+    session?.role === 'ADMIN' ? safe(api.get<AiUsage>('/ai/usage')) : Promise.resolve({ data: null }),
   ]);
 
   const summary = r.data;
@@ -325,6 +328,8 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
           { key: 'requests', label: m.actionBar.openLeads, value: summary?.alerts.infoRequestsOpen ?? 0, href: '/dashboard/requests', icon: 'requests' },
         ]}
       />
+
+      <AiUsageCard usage={aiUsageRes.data ?? null} locale={locale} />
 
       <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3">
         {/* Both columns stretch to one height and their last panel fills the
