@@ -624,12 +624,12 @@ export class SuperAdminService {
   }
 
   /**
-   * A week and a day before the end date, the company's admins are told.
+   * A month, a week and a day before the end date, the company's admins are told.
    * The check runs once a day, so each one-day window is hit once.
    */
   private async warnExpiringSoon(now: Date) {
     const DAY = 24 * 60 * 60 * 1000;
-    for (const daysLeft of [7, 1]) {
+    for (const daysLeft of [30, 7, 1]) {
       const companies = await this.prisma.company.findMany({
         where: {
           subscriptionStatus: { in: ['ACTIVE', 'TRIAL', 'CANCELLING'] },

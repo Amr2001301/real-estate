@@ -56,6 +56,7 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   Company: 'PLATFORM_GLOBAL',
   Permission: 'PLATFORM_GLOBAL',
   PricingPackage: 'PLATFORM_GLOBAL', // nullable companyId; filtered explicitly by callers
+  AiPackage: 'PLATFORM_GLOBAL', // the platform's AI question packages
 
   // ── User ───────────────────────────────────────────────────────────────────
   // Option B part 2 (docs/audit/13-user-tenancy.md): an account belongs to one
@@ -113,6 +114,8 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   CustomerField: 'TENANT_OWNED',
   // P4b — the company's own paper form.
   FormLayout: 'TENANT_OWNED',
+  CompanyAiPlan: 'TENANT_OWNED',
+  AiLedgerEntry: 'TENANT_OWNED',
   UnitStatusHistory: 'TENANT_OWNED',
   UnitMaintenanceItem: 'TENANT_OWNED',
 

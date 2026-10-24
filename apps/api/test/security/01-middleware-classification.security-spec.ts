@@ -36,6 +36,7 @@ const EXPECTED_CLASSIFICATIONS: [string, ModelTenancyTier][] = [
   ['Company', 'PLATFORM_GLOBAL'],
   ['Permission', 'PLATFORM_GLOBAL'],
   ['PricingPackage', 'PLATFORM_GLOBAL'],
+  ['AiPackage', 'PLATFORM_GLOBAL'],
   // TENANT_OWNED since Option B part 2 (docs/audit/13-user-tenancy.md)
   ['User', 'TENANT_OWNED'],
   // TENANT_CONTROLLED
@@ -99,9 +100,9 @@ describe('SEC — Middleware Classification (STEP 2)', () => {
   });
 
   // MC-2
-  it('MC-2: TENANT_OWNED count matches audit-documented 61 (48 + ContractCancellation + Refund + User − NotificationTemplate + ContractAmendment + BrokerCommissionAdjustment + PresignedUpload + UnitHandover + UnitType + UnitModel + PrintSettings + DocumentTemplate + SignatureRequest + CustomerField + FormLayout)', () => {
+  it('MC-2: TENANT_OWNED count matches audit-documented 63 (48 + ContractCancellation + Refund + User − NotificationTemplate + ContractAmendment + BrokerCommissionAdjustment + PresignedUpload + UnitHandover + UnitType + UnitModel + PrintSettings + DocumentTemplate + SignatureRequest + CustomerField + FormLayout + CompanyAiPlan + AiLedgerEntry)', () => {
     const owned = Object.entries(MODEL_TENANCY).filter(([, t]) => t === 'TENANT_OWNED');
-    expect(owned.length).toBe(61);
+    expect(owned.length).toBe(63);
   });
 
   // MC-3
@@ -113,11 +114,11 @@ describe('SEC — Middleware Classification (STEP 2)', () => {
   );
 
   // MC-4
-  it('MC-4: PLATFORM_GLOBAL=3, TENANT_CONTROLLED=3, TENANT_VIA_RELATION≥7', () => {
+  it('MC-4: PLATFORM_GLOBAL=4 (+ AiPackage), TENANT_CONTROLLED=3, TENANT_VIA_RELATION≥7', () => {
     const byTier = (tier: ModelTenancyTier) =>
       Object.values(MODEL_TENANCY).filter((t) => t === tier).length;
 
-    expect(byTier('PLATFORM_GLOBAL')).toBe(3);
+    expect(byTier('PLATFORM_GLOBAL')).toBe(4);
     expect(byTier('TENANT_CONTROLLED')).toBe(3);
     expect(byTier('TENANT_VIA_RELATION')).toBeGreaterThanOrEqual(7);
   });

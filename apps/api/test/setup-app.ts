@@ -57,7 +57,9 @@ import { CapabilityService } from '../src/common/capabilities/capability.service
 import { DateSerializerInterceptor } from '../src/common/interceptors/date-serializer.interceptor';
 import { requestIdMiddleware } from '../src/common/logging/request-id.middleware';
 import { PrismaService } from '../src/common/prisma/prisma.service';
-import { runTenantContext } from '../src/common/tenant/tenant-context';
+import { runInCompany, runTenantContext } from '../src/common/tenant/tenant-context';
+import { AiPlansCron } from '../src/modules/ai/ai-plans.cron';
+import { AiPlansService } from '../src/modules/ai/ai-plans.service';
 import { InstallmentRemindersService, InstallmentsService } from '../src/modules/installments/installments.module';
 import { MaintenanceSlaCheckCron, MaintenanceUnresolvedCron } from '../src/modules/maintenance/maintenance.module';
 import { ReservationExpiryCron } from '../src/modules/reservations/reservations.module';
@@ -102,6 +104,12 @@ export interface TestApp {
    * enable flag and run the work their handler would run.
    */
   runCronJob: (job: CronJob) => Promise<void>;
+  /**
+   * One AI-assistant question for the company, counted as the assistant
+   * counts it (in the company's tenant context). Same vm-context safety as
+   * flushCapabilities.
+   */
+  aiConsume: (companyId: string) => Promise<{ used: number; quota: number; remaining: number }>;
 }
 
 export type CronJob =
@@ -114,7 +122,8 @@ export type CronJob =
   | 'broker-agreement-end'
   | 'subscription-expiry'
   | 'late-fee'
-  | 'installment-overdue';
+  | 'installment-overdue'
+  | 'ai-plans';
 
 function cronRunner(app: INestApplication): (job: CronJob) => Promise<void> {
   const appointments = app.get(AppointmentReminderCron);
@@ -126,6 +135,7 @@ function cronRunner(app: INestApplication): (job: CronJob) => Promise<void> {
   const brokerAgreement = app.get(BrokerAgreementCron);
   const subscriptionExpiry = app.get(SubscriptionExpiryCron);
   const installmentsSvc = app.get(InstallmentsService);
+  const aiPlans = app.get(AiPlansCron);
   const asCron = (fn: () => Promise<unknown>) =>
     runTenantContext({ companyId: null, bypass: true, isPublic: false }, async () => {
       await fn();
@@ -152,8 +162,15 @@ function cronRunner(app: INestApplication): (job: CronJob) => Promise<void> {
         return asCron(() => installmentsSvc.applyLateFees());
       case 'installment-overdue':
         return asCron(() => installmentsSvc.markOverdue());
+      case 'ai-plans':
+        return aiPlans.run();
     }
   };
+}
+
+function aiConsumer(app: INestApplication) {
+  const plans = app.get(AiPlansService);
+  return (companyId: string) => runInCompany(companyId, () => plans.consume(companyId));
 }
 
 export interface CreateTestAppOptions {
@@ -217,6 +234,7 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
     signAccessToken: (userId, role, expiresIn) =>
       jwtService.signAsync({ sub: userId, role }, { secret: jwtSecret, expiresIn: expiresIn ?? jwtDefaultExpiry }),
     runCronJob: cronRunner(app),
+    aiConsume: aiConsumer(app),
     close: async () => {
       await rawPrisma.$disconnect();
       await app.close();
@@ -337,6 +355,7 @@ export async function createE2ETestApp(): Promise<TestApp> {
     signAccessToken: (userId, role, expiresIn) =>
       jwtService.signAsync({ sub: userId, role }, { secret: jwtSecret, expiresIn: expiresIn ?? jwtDefaultExpiry }),
     runCronJob: cronRunner(app),
+    aiConsume: aiConsumer(app),
     close: async () => {},
   };
 
@@ -425,6 +444,7 @@ export async function createSecurityTestApp(): Promise<TestApp> {
     signAccessToken: (userId, role, expiresIn) =>
       jwtService.signAsync({ sub: userId, role }, { secret: jwtSecret, expiresIn: expiresIn ?? jwtDefaultExpiry }),
     runCronJob: cronRunner(app),
+    aiConsume: aiConsumer(app),
     close: async () => {},
   };
 
