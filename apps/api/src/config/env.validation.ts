@@ -92,6 +92,12 @@ const EnvSchema = z.object({
   VERCEL_PROJECT_ID: z.string().min(1).optional(),
   VERCEL_TEAM_ID: z.string().min(1).optional(),
 
+  // AI assistant (phase 6). Unset → the assistant answers 503 and no question
+  // is counted. AI_MODEL / AI_EFFORT override the model and its effort.
+  ANTHROPIC_API_KEY: z.string().min(1).optional(),
+  AI_MODEL: z.string().min(1).optional(),
+  AI_EFFORT: z.enum(['low', 'medium', 'high', 'xhigh', 'max']).optional(),
+
   // ─── Observability (all optional) ───────────────────────────────────────
   // When SENTRY_DSN is unset the SDK is never required at runtime.
   SENTRY_DSN: z.string().url().optional(),
