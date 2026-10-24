@@ -39,6 +39,18 @@ export class AiAssistantService {
     private readonly model: AiModelClient,
   ) {}
 
+  /**
+   * Whether the asker can use the assistant now, and why not — without
+   * counting a question. Only the admin sees the package's numbers (/ai/usage).
+   */
+  async status(): Promise<{ available: boolean; reason: 'NOT_CONFIGURED' | 'NOT_ACTIVE' | 'EXHAUSTED' | null }> {
+    if (!this.model.enabled) return { available: false, reason: 'NOT_CONFIGURED' };
+    const usage = await this.plans.usage(getRequiredCompanyId());
+    if (!usage.enabled || usage.status === 'ENDED') return { available: false, reason: 'NOT_ACTIVE' };
+    if (usage.status === 'EXHAUSTED') return { available: false, reason: 'EXHAUSTED' };
+    return { available: true, reason: null };
+  }
+
   async ask(dto: AiAskDto, user: AuthUser) {
     if (!ASSISTANT_ROLES.includes(user.role)) throw new ForbiddenException();
     if (!this.model.enabled) {

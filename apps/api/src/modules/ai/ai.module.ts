@@ -88,6 +88,12 @@ export class AiUsageController {
   ) {}
 
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER, UserRole.SALES)
+  @Get('status')
+  status() {
+    return this.assistant.status();
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER, UserRole.SALES)
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Post('ask')
   @HttpCode(200)

@@ -79,6 +79,9 @@ describe('AI2 — assistant API (e2e)', () => {
     expect(res.body.code).toBe('AI_NOT_CONFIGURED');
     const plan = await testApp.rawPrisma.companyAiPlan.findUniqueOrThrow({ where: { companyId } });
     expect(plan.used).toBe(0);
+    const status = await http().get('/v1/ai/status').set('Authorization', bearer(salesToken)).expect(200);
+    expect(status.body).toEqual({ available: false, reason: 'NOT_CONFIGURED' });
+    await http().get('/v1/ai/status').set('Authorization', bearer(supervisorToken)).expect(403);
   });
 
   it.each([UserRole.ADMIN, UserRole.SALES_MANAGER, UserRole.SALES])('AI2-3: every tool runs against the schema for %s', async (role) => {

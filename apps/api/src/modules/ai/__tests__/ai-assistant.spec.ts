@@ -16,6 +16,7 @@ function setup(enabled = true) {
   const plans = {
     consume: jest.fn().mockResolvedValue({ used: 1, quota: 10, remaining: 9 }),
     refund: jest.fn().mockResolvedValue(undefined),
+    usage: jest.fn().mockResolvedValue({ enabled: true, status: 'ACTIVE' }),
   };
   const model = { enabled, turn: jest.fn() };
   const service = new AiAssistantService(prisma as never, plans as never, model as never);
@@ -106,6 +107,23 @@ describe('AiAssistantService', () => {
     expect(await errorCode(ask(service))).toEqual({ status: 403, code: 'AI_QUOTA_EXHAUSTED' });
     expect(model.turn).not.toHaveBeenCalled();
     expect(plans.refund).not.toHaveBeenCalled();
+  });
+});
+
+describe('AiAssistantService.status', () => {
+  const status = (service: AiAssistantService) => runInCompany(COMPANY, () => service.status());
+
+  it('says why the assistant is unavailable, without counting', async () => {
+    expect(await status(setup(false).service)).toEqual({ available: false, reason: 'NOT_CONFIGURED' });
+    const s = setup();
+    expect(await status(s.service)).toEqual({ available: true, reason: null });
+    s.plans.usage.mockResolvedValueOnce({ enabled: false });
+    expect(await status(s.service)).toEqual({ available: false, reason: 'NOT_ACTIVE' });
+    s.plans.usage.mockResolvedValueOnce({ enabled: true, status: 'ENDED' });
+    expect(await status(s.service)).toEqual({ available: false, reason: 'NOT_ACTIVE' });
+    s.plans.usage.mockResolvedValueOnce({ enabled: true, status: 'EXHAUSTED' });
+    expect(await status(s.service)).toEqual({ available: false, reason: 'EXHAUSTED' });
+    expect(s.plans.consume).not.toHaveBeenCalled();
   });
 });
 
