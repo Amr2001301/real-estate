@@ -55,6 +55,34 @@ const ar = {
   usageCardEnds: (d: string) => `الباقة تنتهي في ${d}`,
   usageCardFull: 'تم استهلاك كل الأسئلة — تواصلوا مع إدارة المنصة لإضافة أسئلة أو التجديد.',
   usageCardEnded: 'انتهت باقة المساعد — تواصلوا مع إدارة المنصة للتجديد.',
+  chat: {
+    description: 'اسأل عن بيانات شركتك — الأقساط المتأخرة، الوحدات المتاحة، الفرص والحجوزات والزيارات. يقرأ فقط ولا يغيّر أي شيء.',
+    placeholder: 'اكتب سؤالك…',
+    send: 'إرسال',
+    thinking: 'جارٍ البحث في البيانات…',
+    clear: 'محادثة جديدة',
+    you: 'أنت',
+    assistant: 'المساعد',
+    scopeHint: 'يجيب من البيانات المتاحة لك فقط. كل سؤال يُحتسب من باقة الشركة.',
+    suggestions: [
+      'مين العملاء اللي عليهم أقساط متأخرة؟',
+      'إيه الوحدات المتاحة بـ 3 غرف أو أكثر؟',
+      'ملخص سريع للمبيعات والحجوزات',
+      'إيه الزيارات اللي عندي النهارده وبكرة؟',
+    ],
+    unavailable: {
+      NOT_CONFIGURED: 'المساعد الذكي غير متاح على المنصة حاليًا.',
+      NOT_ACTIVE: 'المساعد غير مفعّل لشركتك أو انتهت باقته — تواصل مع مدير الشركة.',
+      EXHAUSTED: 'تم استهلاك كل أسئلة الباقة لهذا الشهر — تواصل مع مدير الشركة.',
+    } as Record<string, string>,
+    errors: {
+      AI_QUOTA_EXHAUSTED: 'تم استهلاك كل أسئلة الباقة لهذا الشهر.',
+      AI_NOT_ACTIVE: 'المساعد غير مفعّل أو انتهت مدة الباقة.',
+      AI_NOT_CONFIGURED: 'المساعد الذكي غير متاح حاليًا.',
+      AI_UNAVAILABLE: 'تعذّر الوصول إلى المساعد — لم يُحتسب السؤال، حاول مرة أخرى.',
+      RATE: 'أسئلة كثيرة في وقت قصير — انتظر دقيقة ثم حاول.',
+    } as Record<string, string>,
+  },
 };
 
 const en: typeof ar = {
@@ -112,6 +140,34 @@ const en: typeof ar = {
   usageCardEnds: (d) => `The package ends on ${d}`,
   usageCardFull: 'All questions are used — contact the platform to add questions or renew.',
   usageCardEnded: 'The assistant package has ended — contact the platform to renew.',
+  chat: {
+    description: "Ask about your company's data — overdue installments, available units, leads, reservations and visits. It only reads; it changes nothing.",
+    placeholder: 'Type your question…',
+    send: 'Send',
+    thinking: 'Looking through the data…',
+    clear: 'New chat',
+    you: 'You',
+    assistant: 'Assistant',
+    scopeHint: "Answers only from the data you can see. Each question counts against the company's package.",
+    suggestions: [
+      'Which customers have overdue installments?',
+      'Which units with 3+ bedrooms are available?',
+      'A quick summary of sales and reservations',
+      'What visits do I have today and tomorrow?',
+    ],
+    unavailable: {
+      NOT_CONFIGURED: 'The AI assistant is not available on the platform right now.',
+      NOT_ACTIVE: "The assistant isn't enabled for your company or its package ended — contact your company admin.",
+      EXHAUSTED: "This month's questions are used up — contact your company admin.",
+    },
+    errors: {
+      AI_QUOTA_EXHAUSTED: "This month's questions are used up.",
+      AI_NOT_ACTIVE: "The assistant isn't enabled or its package ended.",
+      AI_NOT_CONFIGURED: 'The AI assistant is not available right now.',
+      AI_UNAVAILABLE: "Couldn't reach the assistant — the question was not counted; try again.",
+      RATE: 'Too many questions in a short time — wait a minute and try again.',
+    },
+  },
 };
 
 export function aiT(locale: Locale) {

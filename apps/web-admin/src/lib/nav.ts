@@ -130,6 +130,7 @@ export const NAV_SECTIONS: NavSection[] = [
     titleKey: 'overview',
     items: [
       { href: '/dashboard', label: 'لوحة التحكم', labelKey: 'dashboard', iconKey: 'LayoutDashboard' },
+      { href: '/dashboard/assistant', label: 'المساعد الذكي', labelKey: 'aiAssistant', iconKey: 'Sparkles' },
     ],
   },
   {
