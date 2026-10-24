@@ -1,4 +1,4 @@
-# Handoff — where the work stands (2026-10-17, evening)
+# Handoff — where the work stands (2026-10-24)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
@@ -19,9 +19,21 @@
 
 **التصميم الجديد (U5):** خلص كله. اعتمدت شكل جديد للوحة التحكم (أدمن، مبيعات، بروكر): خطوط جديدة، شريط أرقام كحلي، رأس صفحة أبسط، فلتر موحّد، جداول بهيدر كحلي، ووضع داكن — والتصميم نفسه على [هذا اللينك](https://claude.ai/artifact/UPVXRtVxEBMWpmuRMYqb1Z). اتنفّذ في #104 (الأساس والوضع الداكن)، #105 (المكوّنات المشتركة + المشاريع والمخزون والفرص)، #106 (الداشبورد بأرقام صح + صفحة التقارير)، #107 (الألوان القديمة في الداكن، الكروت، تبويب المالي، صفحات المبيعات والبروكر، صفحات التفاصيل، فلاتر البروكر). أي شاشة جديدة تتبني من المكوّنات المشتركة (القسم 3 تحت U5).
 
+**بعد كده (من 18 لـ 23 أكتوبر، #109–#176):** القسم 2b تحت فيه كل PR. باختصار:
+- **صحة الأرقام (الجولة الخامسة):** المبيعات بالسعر الصافي، ونسبة التحصيل على المستحق لحد النهارده، وإعفاء زيادة التقسيط في السداد المبكر.
+- **الوحدات والمشاريع:** أنواع وحدات لكل شركة، ومواصفات الوحدة، والسعر بالمتر وإعادة تسعير مشروع كامل، ونماذج الوحدات، ومواعيد التسليم وتأخيرها.
+- **العقود والدفع:** عقود اتعملت قبل السيستم، وخطة كاش، وبند غرامة التأخير في العقد، والحجز بشيك، ومدير المبيعات بيوافق على حجوزات فريقه، وكشف حساب العميل.
+- **التصميم الجديد على باقي الصفحات** (#150–#160)، وصفحات المبيعات كمخطط يوم.
+- **«المستحقات والالتزامات» (ليا وعليا)**، وكل كود في السيستم بيفتح صفحته.
+- **دومين خاص لكل شركة** بيتربط تلقائي عن طريق Vercel.
+- **الطباعة على ورق الشركة:** العقد واستمارة الحجز والإيصال، بالتوقيع والختم، ومعاها بيانات العميل الإضافية.
+- **توقيع العميل على استمارة الحجز أونلاين** بكود SMS.
+
+**قبل النشر على السيرفر:** فيه متغيرات بيئة جديدة، وmigrations بتعدّل بيانات موجودة. التفاصيل في القسم 2b تحت «Deploy notes».
+
 **حاجات عليك إنت:** الاستضافة، تقييد مفتاح Firebase، حماية الفرع الرئيسي على GitHub، وتسميات الرسوم في تطبيقات الموبايل (محتاجة جهاز عليه Flutter).
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». الجولة الرابعة والتصميم خلصوا؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #176 مدموج و`main` نضيف؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -94,6 +106,88 @@ This session:
 | #84 | T3 sales pipeline | No reassign via general PATCH; `?unassigned=1` queue for ADMIN/SALES_MANAGER; manager assigns within their team; WON only via conversion; no LOST with a live reservation; reservation credited to the lead's rep; returning website visitor with a closed lead gets a new lead; no double-booked visits. |
 | #85 | T4 inventory & pricing | No deleting a building/phase/unit with deals; live-deal units can't change price/details; RESERVED never manual, SOLD needs a reason; **discount cap** setting `pricing.maxDiscountPct` + permission `pricing:approve-discount`; plan template price must equal unit price; archived projects can't be reserved/sold. |
 | #86 | T5 plan changes | `POST contracts/:id/price` (price change; unpaid rows absorb it; discount cap applies), `POST contracts/:id/reschedule` (unpaid monthly rows spread over N months, total unchanged, old rows CANCELLED), `POST deposits/batch` (one cash/transfer payment for several installments), `POST deposits/settle` (early settlement). Contract page has a "Payments & plan changes" section. e2e `e2e-plan-amendments`. |
+
+### 2b. After round 5 (#114–#176, 2026-10-18 → 2026-10-23)
+
+Rounds 4 and 5 (#89–#113) are described in sections 3 and 4b. Everything after them:
+
+| PR(s) | Slice | Summary |
+|---|---|---|
+| #114 | Company time zone on the web | `GET /company/currency` also returns `company.timezone`. The reports' default month, the sales/performance month and the dashboard greeting use it, not UTC. e2e `e2e-w3-company-timezone`. |
+| #115 | Project/phase/building codes | The forms send the required `code`, uppercased. A taken code returns 409, not 500, and validation messages are in Arabic. |
+| #116 | Count-priced plans are sellable | Plans priced by instalment count get a reservation snapshot, with the new `Reservation.snapshotFrequency`. Conversion spaces the rows by that frequency. e2e `e2e-x2-count-plans`. |
+| #117 | Sign from the contract page | Admins can sign a live unsigned contract from its page (`signContractAction`). |
+| #118 | Super-admin company page | The page opens again; it reads `userCount`. |
+| #119 | Due dates are days | The down payment is due on the conversion day in company time (`localDayAfter()`). A migration moves timed due dates to their day. |
+| #120–#121 | Visits and funnel | Upcoming visits leave out final statuses. The sales funnel is a cohort of the period's leads, so no rate goes above 100%. |
+| #122 | Clawbacks owed | `clawbacksOwed` is on the financial dashboard's liabilities and in its CSV. |
+| #123 | Role default permissions | New staff and new companies get their role's permissions (`permissions/role-default-permissions.ts`). |
+| #124 | Broker activation | An invited agent becomes ACTIVE on first portal use. A pending firm says so and has «تفعيل الشركة». |
+| #125 | Payment method on the contract page | `PaymentMethodFields` and `depositPayload`. Instalments are paid in full only. |
+| #126 | Booking paid by cheque | The booking waits in PENDING_CLEARANCE. A cleared cheque pays it; a bounced one leaves it unpaid. |
+| #127 | Typed times are the company's | `wallTimeToIso(value, tz)` and `nowWallTime`. |
+| #128 | Waiver and swap keep the down payment | Changes touch the instalments and final payment only. `markupLeft` feeds the swap form. |
+| #129 | Late-fee clause per contract | `Contract.lateFeesApply` and `PATCH /contracts/:id/late-fee-clause`. Nothing is charged before the contract was entered. `lateFee.enabled` is now only the default for new contracts. |
+| #130 | No manual SOLD | Unit create, status change and import refuse SOLD/RESERVED without a deal. |
+| #131 | Lead sources | Managed from the dashboard («مصادر العملاء»). A lead must use one of the company's active sources; defaults are seeded. |
+| #132 | Expired session | The user goes to `/login?expired=1`. |
+| #133 | Plan features | `GET /capabilities/me` hides maintenance and broker pages the company's plan lacks. |
+| #134 | Known settings | `known-settings.ts` lists the keys the API reads, with Arabic names. The settings API itself still accepts any key. |
+| #135 | Public site contacts and cities | WhatsApp and phone come from branding; `GET /public/projects/cities`. |
+| #136 | Permission catalog in code | `permission-catalog.ts` and `PermissionCatalogBootstrap` write missing codes at startup and create the first SUPER_ADMIN from env. A unit test fails when a controller uses a code missing from the catalog. |
+| #137 | Manager approves reservations | A SALES_MANAGER approves or rejects the team's reservations, never their own. Reps book as themselves. |
+| #138 | Cash plan | A template marked cash has one down-payment row and no instalments. |
+| #139–#140 | UI details (F4–F38) | Paid-plan companies start ACTIVE; permissions link; no fake figures; lead assignment; dates; proof queue; refusal reasons; handover confirm; warranties; broker leads. |
+| #141 | Contracts signed before the system | Entered with their real signing date and no commission, bonus or notifications. Past payments can be marked in one go. |
+| #142–#143 | Unit types and specs | `UnitType` per company with a usage (shops, offices, clinics, garages) and `/unit-types`. Unit specs: finishing, net/garden/roof/terrace/land areas, view and orientation. |
+| #144–#145 | Price per meter | Price = per-meter price × area. `POST /units/reprice` reprices a project, phase or building, with a preview. |
+| #146 | Unit models | `UnitModel` per project; picking a model fills the unit form. |
+| #147–#149 | Handover dates | `Phase.deliveryDate`, `Unit.deliveryDate` and `effectiveDeliveryDate`. The contract keeps the date it promised (`Contract.deliveryDate`). `deliveryDelayDays` and `?deliveryDelayed=true`; the customer gets `delivery_delayed_customer` once per slip. #148 adds project type, district, total area and licence number. |
+| #150–#160 | Premium redesign of the remaining pages | Operations center, financial report, audit log, users, settings, permissions, notifications (send and templates are admin-only), reservation and contract pages, projects/units, sales targets, leads/clients, visits, cheques, payments, maintenance, commissions, broker reports/payouts, CMS, documents, branding and the broker portal. #158: sales and manager homes as a day planner. #156: full demo seed (`pnpm db:seed:full-demo`, tagged DEMO-FULL, `--cleanup`, refuses production). |
+| #161 | Payment states and statement | `depositState()` gives each payment one state. `GET /contracts/:id/statement` and the print page `/print/statements/:id`. The contract page has tabs (`?tab=`). |
+| #162–#164 | Financial report and dashboard add up | Signed contracts only. The portfolio split (paid + awaiting + late + not due + not on a schedule = value) is shared by the report and the dashboard (`portfolio-split.ts`). Unsigned contracts have their own panel, and the needs-action tile counts those with a payment due. |
+| #165 | Finance audit | The collection rate is counted on schedule rows of signed contracts. A booking is paid once (atomic claim). Cheque status changes are conditional, and a cheque clears all its rows or none. Late fees start at signing. Commission approve/cancel are conditional. No cancel while a customer proof waits. Customer and broker views match the ledger (FA6). The seeds add up (`prisma/seed-schedule.ts`). |
+| #166 | Manual cancellation decided later | `POST /contracts/:id/cancellation-decision` applies CLAWBACK/RETAIN to the commission and bonus later. A booking cheque returned after signing reverses the deposit and adds a booking row to the schedule. |
+| #167 | Ledger, links, loaders | «المستحقات والالتزامات» (Receivables & Payables): `GET /reports/ledger` and `/reports/ledger/rows`, page `/dashboard/ledger`; e2e FA10 reconciles it with the report. `EntityLink` makes codes and names open their pages. Shimmer loaders in each page's shape. Chromium gets 60 s to start. |
+| #168 | Custom domains via Vercel | `VercelDomainsClient` adds the domain (and `www` for an apex) to the web-public project and removes it on delete. `DomainCheckCron` runs every 10 minutes. The admin Domains page shows the DNS records. |
+| #169 | Print identity, paper and wording | Customer national ID/passport and address on the contract. Company paper, signature and stamp (PNG/JPEG ≤ 512 KB, stored in the DB). Wording templates with `{{placeholders}}`. `/company/print-settings`, `/document-templates`, page `/dashboard/company/print`. |
+| #170 | E-sign the booking form | `SignatureRequest`: a single-use link valid 72 h (only its hash is stored) and a 6-digit SMS code (10 min, 5 tries). Evidence kept: time, IP, device and document hash. Staff use `/reservations/:id/signature-requests`; customers use web-public `/sign/[token]` (public endpoints are rate-limited). |
+| #171 | Extra customer data and form layouts | Fixed customer details plus company-defined `CustomerField` (`{{custom.<key>}}`). `FormLayout` designer at `/dashboard/company/print/forms` (pdf.js in the browser) for the booking form and the receipt. |
+| #172 | Company contract form | Contracts print on the company's own form (up to 40 pages). The customer's box is left for an ink signature. |
+| #173 | Self-hosted fonts | Both web apps serve fonts from `public/fonts` (`src/app/fonts.css`), not Google Fonts. |
+| #174–#176 | Form designer fixes | Arabic upload errors, a new form is named after its document, the designer says why save is off, values stay on one line, a missing value prints blank. |
+
+**Deploy notes (new since #113):**
+- **API env (optional):**
+  - `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD` (12+ characters), `SUPER_ADMIN_NAME`: create the first platform owner at startup when none exists; an existing one is never changed. Listed in `apps/api/.env.example`.
+  - `VERCEL_API_TOKEN`, `VERCEL_PROJECT_ID` (the web-public project), `VERCEL_TEAM_ID` (team projects): automatic custom domains. **Not yet in `.env.example`.** Without them, domains are added to Vercel by hand as before.
+- **24 migrations** (`20261018120000` … `20261023140000`). Several change existing data:
+  - due dates moved to company days;
+  - role-default permissions for staff with no codes;
+  - the late-fee clause for companies with `lateFee.enabled`;
+  - default lead sources;
+  - manager approve/reject permissions;
+  - paid-plan TRIAL companies moved to ACTIVE;
+  - default unit types, with existing units matched to them;
+  - `BonusEntry.approvedAt` backfilled.
+  
+  Take a backup, then run `pnpm db:deploy` and `pnpm db:schema-check`.
+- **Permission catalog:** written at startup, so production no longer needs the seed for permissions.
+- **Storage (R2/MinIO):** must be reachable from the browser, with CORS allowing the admin site, or form-page uploads fail.
+- **E-sign:** the SMS goes through the existing OTP provider, and the signing link uses the company's primary domain on web-public.
+- **Who can use the new screens:**
+  - Ledger: ADMIN + `reports:financial:read`.
+  - Unit types: ADMIN + `settings:write`.
+  - Customer fields and form layouts: `company_branding:manage`.
+  - Domains: ADMIN.
+  - E-sign requests: ADMIN, SALES_MANAGER or SALES.
+
+**Decisions recorded in this stretch (owner):**
+- Partial instalment payments stay unsupported (2026-10-18).
+- Late fees apply only when the contract has the clause, and never to rows due before the contract was entered (2026-10-18).
+- A unit is SOLD only by a contract; a sale made before the system is entered as a contract (2026-10-18).
+- Owed money is late from the day it became owed (ledger, 2026-10-22).
+- The operations-center shortcuts were removed and the sales/manager homes redesigned from scratch, both at the owner's request.
 
 Shared helpers worth knowing (API): `common/utils/add-months.ts`, `common/time/company-timezone.ts`, `common/finance/*` (`COLLECTED_DEPOSIT_WHERE`, `BILLABLE_PLAN_WHERE`, `LIVE_CONTRACT_WHERE`), `installments/discount-policy.ts`, `projects/inventory-blockers.ts`, `common/ownership/ownership.service.ts`, `contracts/contract-amendments.service.ts` (`rescaleUnpaid`, `followNewPrice`, `liveContract`, `assertNoWaitingPayments`).
 
@@ -301,6 +395,14 @@ Left for the owner, not in V1–V3:
 ## 5. Other open items
 
 - **Old contracts that bill the final payment twice** (converted before #83): the owner chose a script — `scripts/fix-double-final-payment.ts` (logic in `src/modules/contracts/double-final-payment.ts`). Run it on production: take a backup (`scripts/db-backup.sh`), then `pnpm --filter @rep/api contracts:fix-double-final-payment:dry-run` to list them, then `pnpm --filter @rep/api contracts:fix-double-final-payment` to correct them. It takes the excess off the unpaid monthly rows (audit `contract.schedule-corrected`); contracts with a payment waiting, or already paid above the price (a refund), are listed for an admin.
+- **Gaps left by #114–#176:**
+  - `VERCEL_*` variables are missing from `apps/api/.env.example`.
+  - The settings API accepts any key; only the UI is limited.
+  - A MANUAL cancellation's commission and bonus stay out of liabilities and totals until the admin decides.
+  - Only the booking form is e-signed online; the contract is signed in ink.
+  - The broker portal does not get the customer's national ID, address or extra fields.
+  - An unsigned contract's due rows are not chased until it is signed; they only show in the report and the dashboard tile.
+- **Leaderboard share:** a broker's share % is of the top 10 brokers only. This is the owner's call.
 - **Mobile fee labels:** the customer app shows a FEE payment as a normal "payment", the staff app prints `FEE`. Needs Flutter (not available in the cloud container).
 - **Owner's own tasks:** hosting/deployment, restricting the Firebase API key, GitHub branch protection on `main`.
 - Older backlog docs: `docs/BACKLOG.md`, `docs/EXECUTION_BACKLOG.md`, `docs/PROJECT_CURRENT_STATE.md` (may be behind this file).
