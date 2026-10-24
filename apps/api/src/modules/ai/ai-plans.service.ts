@@ -249,6 +249,11 @@ export class AiPlansService {
     return { used: row.used, quota: row.quota, remaining: row.quota - row.used };
   }
 
+  /** Gives back a question the assistant could not answer (the model was unreachable). */
+  async refund(companyId: string): Promise<void> {
+    await this.prisma.companyAiPlan.updateMany({ where: { companyId, used: { gt: 0 } }, data: { used: { decrement: 1 } } });
+  }
+
   // ── Daily sweep ───────────────────────────────────────────────────────────
 
   /** Ending soon → one notice; ended → stopped, with a notice. */

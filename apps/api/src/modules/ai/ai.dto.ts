@@ -1,6 +1,9 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -10,6 +13,7 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 
 export class CreateAiPackageDto {
@@ -44,4 +48,15 @@ export class AiTopUpDto {
   @Type(() => Number) @IsInt() @Min(1) @Max(1_000_000) questions!: number;
   @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) price!: number;
   @IsOptional() @IsString() @MaxLength(500) note?: string;
+}
+
+/** One earlier turn of the chat, sent back by the client (the server keeps none). */
+export class AiTurnDto {
+  @IsIn(['user', 'assistant']) role!: 'user' | 'assistant';
+  @IsString() @Length(1, 8000) content!: string;
+}
+
+export class AiAskDto {
+  @IsString() @Length(1, 2000) message!: string;
+  @IsOptional() @IsArray() @ArrayMaxSize(20) @ValidateNested({ each: true }) @Type(() => AiTurnDto) history?: AiTurnDto[];
 }

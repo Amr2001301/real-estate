@@ -60,6 +60,7 @@ import { PrismaService } from '../src/common/prisma/prisma.service';
 import { runInCompany, runTenantContext } from '../src/common/tenant/tenant-context';
 import { AiPlansCron } from '../src/modules/ai/ai-plans.cron';
 import { AiPlansService } from '../src/modules/ai/ai-plans.service';
+import { AssistantTools, type AssistantActor } from '../src/modules/ai/ai-assistant.tools';
 import { InstallmentRemindersService, InstallmentsService } from '../src/modules/installments/installments.module';
 import { MaintenanceSlaCheckCron, MaintenanceUnresolvedCron } from '../src/modules/maintenance/maintenance.module';
 import { ReservationExpiryCron } from '../src/modules/reservations/reservations.module';
@@ -110,6 +111,11 @@ export interface TestApp {
    * flushCapabilities.
    */
   aiConsume: (companyId: string) => Promise<{ used: number; quota: number; remaining: number }>;
+  /**
+   * Runs one of the AI assistant's read-only tools as `actor` would (in the
+   * actor's company context), returning what the model would be given.
+   */
+  aiTool: (actor: AssistantActor, name: string, input?: Record<string, unknown>) => Promise<unknown>;
 }
 
 export type CronJob =
@@ -166,6 +172,12 @@ function cronRunner(app: INestApplication): (job: CronJob) => Promise<void> {
         return aiPlans.run();
     }
   };
+}
+
+function aiToolRunner(app: INestApplication) {
+  const prisma = app.get(PrismaService);
+  return (actor: AssistantActor, name: string, input: Record<string, unknown> = {}) =>
+    runInCompany(actor.companyId, () => new AssistantTools(prisma, actor).run(name, input));
 }
 
 function aiConsumer(app: INestApplication) {
@@ -235,6 +247,7 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
       jwtService.signAsync({ sub: userId, role }, { secret: jwtSecret, expiresIn: expiresIn ?? jwtDefaultExpiry }),
     runCronJob: cronRunner(app),
     aiConsume: aiConsumer(app),
+    aiTool: aiToolRunner(app),
     close: async () => {
       await rawPrisma.$disconnect();
       await app.close();
@@ -356,6 +369,7 @@ export async function createE2ETestApp(): Promise<TestApp> {
       jwtService.signAsync({ sub: userId, role }, { secret: jwtSecret, expiresIn: expiresIn ?? jwtDefaultExpiry }),
     runCronJob: cronRunner(app),
     aiConsume: aiConsumer(app),
+    aiTool: aiToolRunner(app),
     close: async () => {},
   };
 
@@ -445,6 +459,7 @@ export async function createSecurityTestApp(): Promise<TestApp> {
       jwtService.signAsync({ sub: userId, role }, { secret: jwtSecret, expiresIn: expiresIn ?? jwtDefaultExpiry }),
     runCronJob: cronRunner(app),
     aiConsume: aiConsumer(app),
+    aiTool: aiToolRunner(app),
     close: async () => {},
   };
 

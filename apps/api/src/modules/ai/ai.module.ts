@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Module, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Module, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { SuperAdminGuard } from '../../common/guards/super-admin.guard';
 import { BypassTenant } from '../../common/decorators/bypass-tenant.decorator';
@@ -9,7 +10,9 @@ import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AiPlansService } from './ai-plans.service';
 import { AiPlansCron } from './ai-plans.cron';
-import { AiPeriodDto, AiTopUpDto, CreateAiPackageDto, UpdateAiPackageDto } from './ai.dto';
+import { AiAssistantService } from './ai-assistant.service';
+import { AiModelClient } from './ai-model.client';
+import { AiAskDto, AiPeriodDto, AiTopUpDto, CreateAiPackageDto, UpdateAiPackageDto } from './ai.dto';
 
 /** The platform owner: AI packages and each company's assistant account. */
 @Controller('super-admin/ai')
@@ -72,11 +75,25 @@ export class AiAdminController {
   }
 }
 
-/** The company's admin: questions left this month and when it ends. */
+/**
+ * The company's staff: the assistant (admin, sales manager, sales — each sees
+ * their own scope), and for the admin the questions left this month.
+ */
 @Controller('ai')
 @UseGuards(JwtAuthGuard)
 export class AiUsageController {
-  constructor(private readonly plans: AiPlansService) {}
+  constructor(
+    private readonly plans: AiPlansService,
+    private readonly assistant: AiAssistantService,
+  ) {}
+
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER, UserRole.SALES)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Post('ask')
+  @HttpCode(200)
+  ask(@Body() dto: AiAskDto, @CurrentUser() user: AuthUser) {
+    return this.assistant.ask(dto, user);
+  }
 
   @Roles(UserRole.ADMIN)
   @Get('usage')
@@ -88,7 +105,7 @@ export class AiUsageController {
 @Module({
   imports: [NotificationsModule],
   controllers: [AiAdminController, AiUsageController],
-  providers: [AiPlansService, AiPlansCron],
+  providers: [AiPlansService, AiPlansCron, AiModelClient, AiAssistantService],
   exports: [AiPlansService],
 })
 export class AiModule {}
