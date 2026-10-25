@@ -39,6 +39,7 @@ from xml.sax.saxutils import escape
 APP_DIR = Path(__file__).resolve().parent.parent
 PACKAGE_ID = re.compile(r'^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$')
 SHARED_IDS = {'com.realestate.customer.mobile_customer', 'com.realestate.staff.mobile_staff'}
+SLUG = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$')
 HEX_COLOR = re.compile(r'^#[0-9A-Fa-f]{6}$')
 DEFAULT_BACKGROUND = '#0B1726'
 PNG_SIGNATURE = b'\x89PNG\r\n\x1a\n'
@@ -55,10 +56,10 @@ def load_config(path: Path) -> dict:
     if not app:
         raise ConfigError('This company has no app of its own — set it up on its page in the super-admin dashboard.')
     slug = company.get('slug') or ''
-    if not slug:
-        raise ConfigError('The company has no slug.')
+    if not SLUG.fullmatch(slug):
+        raise ConfigError(f'Invalid company slug: {slug!r}')
     pkg = app.get('packageId') or ''
-    if not PACKAGE_ID.match(pkg) or pkg in SHARED_IDS:
+    if not PACKAGE_ID.fullmatch(pkg) or pkg in SHARED_IDS:
         raise ConfigError(f'Invalid package id: {pkg!r}')
     for key in ('appNameAr', 'appNameEn'):
         if not (app.get(key) or '').strip():
@@ -137,7 +138,7 @@ def splash_yaml(background: str) -> str:
 def prepare(config: dict, app_dir: Path = APP_DIR) -> dict:
     company, app = config['company'], config['app']
     background = company.get('primaryColor') or ''
-    if not HEX_COLOR.match(background):
+    if not HEX_COLOR.fullmatch(background):
         background = DEFAULT_BACKGROUND
 
     icon = fetch(app['iconUrl'])

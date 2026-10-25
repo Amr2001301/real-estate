@@ -72,9 +72,14 @@ class PrepareCompanyAppTest(unittest.TestCase):
     def test_refuses_what_cannot_make_a_store_app(self):
         with self.assertRaisesRegex(tool.ConfigError, 'no app of its own'):
             self.load({'company': {'slug': 'acme'}, 'app': None})
-        for pkg in ('com.realestate.customer.mobile_customer', 'Com.Acme', 'single'):
+        for pkg in ('com.realestate.customer.mobile_customer', 'Com.Acme', 'single', 'com.acme.app\n'):
             with self.assertRaisesRegex(tool.ConfigError, 'package id'):
                 self.load(self.config(packageId=pkg))
+        for slug in ('', 'ac me', 'acme\nEVIL=1', 'acme\n'):
+            data = self.config()
+            data['company']['slug'] = slug
+            with self.assertRaisesRegex(tool.ConfigError, 'slug'):
+                self.load(data)
         with self.assertRaisesRegex(tool.ConfigError, 'icon'):
             self.load(self.config(iconUrl=None))
         with self.assertRaisesRegex(tool.ConfigError, 'appNameEn'):

@@ -453,8 +453,24 @@ without one keep using the shared customer app; the staff app is not affected.
    dart-defines `COMPANY_SLUG` / `COMPANY_NAME` that lock the app
    (`lib/company_lock.dart`). Run it on a throw-away checkout (CI), never on a
    branch you commit from.
-3. **Still to come** — the GitHub Actions build-and-sign workflow (MA3), the
-   iOS bundle id / display name, and a Firebase app (`google-services.json`)
-   per package id for push notifications (MA4). Until a company's package id
-   is registered in Firebase, its build needs that company's
-   `google-services.json` in `android/app/`.
+3. **Build on GitHub (MA3)** — Actions → **Company app build** → Run workflow:
+   paste the company's build file (company page → "تطبيق الشركة" →
+   "نسخ ملف البناء") and the version (e.g. `1.0.0`). The run attaches a signed
+   `.aab` to upload in the Play Console. Its versionCode is the run number,
+   so every build is higher than the last.
+
+   One-time setup (repo Settings → Secrets → Actions):
+
+   | Secret | What |
+   |---|---|
+   | `ANDROID_UPLOAD_KEYSTORE_BASE64` | the Play **upload** keystore, `base64 -w0 upload-keystore.jks` — one upload key serves every company app (Play App Signing keeps each app's signing key) |
+   | `ANDROID_UPLOAD_STORE_PASSWORD` / `ANDROID_UPLOAD_KEY_PASSWORD` / `ANDROID_UPLOAD_KEY_ALIAS` | its passwords and alias |
+   | `FIREBASE_CUSTOMER_GOOGLE_SERVICES_JSON` | `google-services.json` of the customer Firebase project |
+
+   Before a company's first build, add its package id as an **Android app**
+   in the customer Firebase project (Project settings → Add app → Android),
+   download `google-services.json` again (it lists every app) and update the
+   secret — the run stops with that message when the package is missing.
+4. **Still to come (MA4)** — push notifications per app, deep links on the
+   company's domain, store links on its public site, and the iOS bundle id /
+   display name.
