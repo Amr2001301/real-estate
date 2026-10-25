@@ -12,3 +12,6 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# A company build (MA2): written by tool/prepare_company_app.py
+company.properties
