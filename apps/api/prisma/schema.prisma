@@ -97,6 +97,7 @@ model Company {
   formLayouts                 FormLayout[]
   aiPlan                      CompanyAiPlan?
   aiLedger                    AiLedgerEntry[]
+  mobileApp                   CompanyMobileApp?
   users                       User[]
   projects                    Project[]
   phases                      Phase[]
@@ -413,6 +414,29 @@ model AiPackage {
 /// A company's current assistant period: one month from activation or the
 /// last renewal. Unused questions (top-ups included) end with the period; the
 /// platform owner renews by hand once the company has paid.
+/// The company's own customer app in the stores (its name, package id and
+/// icon). Set by the platform owner; the shared customer app serves every
+/// company that has none.
+model CompanyMobileApp {
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String   @unique @db.Uuid
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  appNameAr    String   @db.VarChar(30)
+  appNameEn    String   @db.VarChar(30)
+  /// Android applicationId and iOS bundle id, e.g. com.acme.homes
+  packageId    String   @unique @db.VarChar(150)
+  /// 1024×1024 PNG — the store and launcher icon
+  iconUrl      String?  @db.VarChar(2048)
+  /// The splash-screen image; the icon when unset
+  splashUrl    String?  @db.VarChar(2048)
+  /// DRAFT | IN_REVIEW | PUBLISHED
+  status       String   @default("DRAFT") @db.VarChar(12)
+  playStoreUrl String?  @db.VarChar(2048)
+  appStoreUrl  String?  @db.VarChar(2048)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
 model CompanyAiPlan {
   id              String     @id @default(uuid()) @db.Uuid
   companyId       String     @unique @db.Uuid

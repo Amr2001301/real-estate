@@ -116,6 +116,7 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   FormLayout: 'TENANT_OWNED',
   CompanyAiPlan: 'TENANT_OWNED',
   AiLedgerEntry: 'TENANT_OWNED',
+  CompanyMobileApp: 'TENANT_OWNED',
   UnitStatusHistory: 'TENANT_OWNED',
   UnitMaintenanceItem: 'TENANT_OWNED',
 

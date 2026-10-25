@@ -35,9 +35,11 @@ interface Props {
   buttonLabel?: string;
   /** Extra fields merged into the presign request body (e.g. brandingAsset). */
   presignExtra?: Record<string, string>;
+  /** Another presign endpoint (e.g. the super admin's app-icon upload). */
+  presignUrl?: string;
 }
 
-export function MediaUploader({ folder, onUploaded, attach, accept, buttonLabel, presignExtra }: Props) {
+export function MediaUploader({ folder, onUploaded, attach, accept, buttonLabel, presignExtra, presignUrl }: Props) {
   const [status, setStatus] = useState<'idle' | 'signing' | 'uploading' | 'attaching' | 'done' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
@@ -63,7 +65,7 @@ export function MediaUploader({ folder, onUploaded, attach, accept, buttonLabel,
 
     try {
       // 1) Get presigned URL
-      const res = await fetch('/api-proxy/media/presign', {
+      const res = await fetch(presignUrl ?? '/api-proxy/media/presign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

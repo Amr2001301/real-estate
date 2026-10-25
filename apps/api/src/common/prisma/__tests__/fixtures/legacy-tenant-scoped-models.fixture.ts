@@ -49,6 +49,7 @@ export const TENANT_SCOPED_MODELS_LEGACY = new Set([
   'formlayout', // the company's own paper form (P4b)
   'companyaiplan', // the company's AI assistant period (AI1)
   'ailedgerentry', // the company's AI assistant account (AI1)
+  'companymobileapp', // the company's own customer app in the stores
   // Chat
   'chatsession', 'chatmessage', 'chatfeedback',
   // Option B part 2 (docs/audit/13-user-tenancy.md): TENANT_CONTROLLED → TENANT_OWNED
