@@ -15,12 +15,26 @@ def png(width: int, height: int) -> bytes:
     return tool.PNG_SIGNATURE + struct.pack('>I', 13) + b'IHDR' + struct.pack('>II', width, height) + b'\x08\x06\x00\x00\x00'
 
 
+MANIFEST = '''<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity android:name=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
+'''
+
+
 class PrepareCompanyAppTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.dir = Path(self.tmp.name)
         (self.dir / 'assets' / 'brand').mkdir(parents=True)
         (self.dir / 'android' / 'app' / 'src' / 'main' / 'res' / 'values').mkdir(parents=True)
+        self.manifest = self.dir / 'android' / 'app' / 'src' / 'main' / 'AndroidManifest.xml'
+        self.manifest.write_text(MANIFEST, encoding='utf-8')
         self.icon = self.dir / 'icon.png'
         self.icon.write_bytes(png(1024, 1024))
 
@@ -100,6 +114,28 @@ class PrepareCompanyAppTest(unittest.TestCase):
         path = self.dir / 'config.json'
         path.write_text(json.dumps({'company': {'slug': 'acme'}, 'app': None}), encoding='utf-8')
         self.assertEqual(tool.main(['--config', str(path)]), 2)
+
+
+    def test_app_links_for_verified_domains(self):
+        data = self.config()
+        data['company']['domains'] = ['Acme.example.com', 'acme.com', 'bad host', 'acme.com']
+        result = tool.prepare(self.load(data), self.dir)
+        self.assertEqual(result['hosts'], ['acme.com', 'acme.example.com'])
+        text = self.manifest.read_text(encoding='utf-8')
+        self.assertIn('android:autoVerify="true"', text)
+        self.assertIn('<data android:host="acme.com"/>', text)
+        self.assertIn('<data android:pathPrefix="/projects/"/>', text)
+        self.assertNotIn('bad host', text)
+        # Inside the activity, after the launcher filter.
+        self.assertLess(text.index('android.intent.action.MAIN'), text.index('autoVerify'))
+        self.assertLess(text.index('autoVerify'), text.index('</activity>'))
+        # A second run on the same checkout is refused, not doubled.
+        with self.assertRaisesRegex(tool.ConfigError, 'fresh checkout'):
+            tool.prepare(self.load(data), self.dir)
+
+    def test_no_domains_leaves_the_manifest_alone(self):
+        tool.prepare(self.load(self.config()), self.dir)
+        self.assertEqual(self.manifest.read_text(encoding='utf-8'), MANIFEST)
 
 
 if __name__ == '__main__':

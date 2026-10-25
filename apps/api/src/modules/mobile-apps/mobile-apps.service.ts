@@ -2,7 +2,8 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { R2Service } from '../media/r2.service';
-import type { MobileAppAsset, PresignMobileAppAssetDto, PutCompanyMobileAppDto } from './mobile-apps.dto';
+import { CompanyBrandingService } from '../company-branding/company-branding.service';
+import { parseSha256List, type MobileAppAsset, type PresignMobileAppAssetDto, type PutCompanyMobileAppDto } from './mobile-apps.dto';
 
 /** The shared customer and staff apps: no company's own app may take their ids. */
 export const RESERVED_PACKAGE_IDS = new Set([
@@ -24,6 +25,7 @@ const APP_SELECT = {
   status: true,
   playStoreUrl: true,
   appStoreUrl: true,
+  androidSha256: true,
   updatedAt: true,
 } satisfies Prisma.CompanyMobileAppSelect;
 
@@ -38,6 +40,9 @@ export class MobileAppsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly r2: R2Service,
+    // The public site reads the published app (store links, assetlinks.json)
+    // from the branding, which is cached.
+    private readonly branding: CompanyBrandingService,
   ) {}
 
   /** The company's app, with what a build also needs: its slug and brand colours. */
@@ -52,11 +57,13 @@ export class MobileAppsService {
         primaryColor: true,
         accentColor: true,
         mobileApp: { select: APP_SELECT },
+        // The build opens these hosts' links in the app (Android App Links).
+        companyDomains: { where: { companyId, verifiedAt: { not: null } }, select: { hostname: true } },
       },
     });
     if (!company) throw new NotFoundException('Company not found');
-    const { mobileApp, ...rest } = company;
-    return { company: rest, app: mobileApp };
+    const { mobileApp, companyDomains, ...rest } = company;
+    return { company: { ...rest, domains: companyDomains.map((d) => d.hostname) }, app: mobileApp };
   }
 
   async put(companyId: string, dto: PutCompanyMobileAppDto) {
@@ -80,6 +87,9 @@ export class MobileAppsService {
       ...(dto.status !== undefined ? { status: dto.status } : {}),
       ...(dto.playStoreUrl !== undefined ? { playStoreUrl: dto.playStoreUrl } : {}),
       ...(dto.appStoreUrl !== undefined ? { appStoreUrl: dto.appStoreUrl } : {}),
+      ...(dto.androidSha256 !== undefined
+        ? { androidSha256: parseSha256List(dto.androidSha256).join(',') || null }
+        : {}),
     };
     try {
       await this.prisma.companyMobileApp.upsert({
@@ -94,12 +104,14 @@ export class MobileAppsService {
       }
       throw err;
     }
+    await this.branding.invalidate(companyId);
     return this.get(companyId);
   }
 
   /** The company goes back to the shared customer app. */
   async remove(companyId: string) {
     await this.prisma.companyMobileApp.deleteMany({ where: { companyId } });
+    await this.branding.invalidate(companyId);
     return this.get(companyId);
   }
 

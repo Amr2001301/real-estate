@@ -21,6 +21,8 @@ branch you commit from):
   - assets/brand/flutter_native_splash.png  its splash image (the icon when unset)
   - build/company/*                     icon/splash generator configs and the
                                         dart-defines that lock the app to the company
+  - android/.../AndroidManifest.xml     app links for the company's verified
+                                        domains (/projects/, /units/)
 
 Android only for now; the iOS bundle id and display name come with the build
 workflow.
@@ -40,6 +42,9 @@ APP_DIR = Path(__file__).resolve().parent.parent
 PACKAGE_ID = re.compile(r'^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$')
 SHARED_IDS = {'com.realestate.customer.mobile_customer', 'com.realestate.staff.mobile_staff'}
 SLUG = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$')
+HOSTNAME = re.compile(r'^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$')
+# The site pages the app opens itself (its GoRouter paths match the site's).
+APP_LINK_PATHS = ('/projects/', '/units/')
 HEX_COLOR = re.compile(r'^#[0-9A-Fa-f]{6}$')
 DEFAULT_BACKGROUND = '#0B1726'
 PNG_SIGNATURE = b'\x89PNG\r\n\x1a\n'
@@ -105,6 +110,33 @@ def png_size(data: bytes) -> tuple[int, int]:
     return struct.unpack('>II', data[16:24])
 
 
+def app_links_filter(hosts: list[str]) -> str:
+    """An auto-verified intent filter opening the company's project and unit pages in the app."""
+    data = ''.join(f'                <data android:host="{h}"/>\n' for h in hosts)
+    paths = ''.join(f'                <data android:pathPrefix="{p}"/>\n' for p in APP_LINK_PATHS)
+    return (
+        '            <!-- Company app links (tool/prepare_company_app.py): verified by\n'
+        '                 https://<host>/.well-known/assetlinks.json on the company site. -->\n'
+        '            <intent-filter android:autoVerify="true">\n'
+        '                <action android:name="android.intent.action.VIEW"/>\n'
+        '                <category android:name="android.intent.category.DEFAULT"/>\n'
+        '                <category android:name="android.intent.category.BROWSABLE"/>\n'
+        '                <data android:scheme="https"/>\n'
+        f'{data}{paths}'
+        '            </intent-filter>\n'
+    )
+
+
+def add_app_links(manifest: Path, hosts: list[str]) -> None:
+    text = manifest.read_text(encoding='utf-8')
+    if 'Company app links' in text:
+        raise ConfigError('The manifest already has company app links — run on a fresh checkout.')
+    marker = '        </activity>'
+    if marker not in text:
+        raise ConfigError(f'No </activity> in {manifest}.')
+    manifest.write_text(text.replace(marker, app_links_filter(hosts) + marker, 1), encoding='utf-8')
+
+
 def icons_yaml(background: str) -> str:
     return (
         'flutter_launcher_icons:\n'
@@ -164,13 +196,17 @@ def prepare(config: dict, app_dir: Path = APP_DIR) -> dict:
     (res / 'values' / 'strings.xml').write_text(strings_xml(app['appNameEn']), encoding='utf-8')
     (res / 'values-ar' / 'strings.xml').write_text(strings_xml(app['appNameAr']), encoding='utf-8')
 
+    hosts = sorted({h.lower() for h in company.get('domains') or [] if HOSTNAME.fullmatch(h.lower())})
+    if hosts:
+        add_app_links(android / 'app' / 'src' / 'main' / 'AndroidManifest.xml', hosts)
+
     out = app_dir / 'build' / 'company'
     out.mkdir(parents=True, exist_ok=True)
     (out / 'flutter_launcher_icons.yaml').write_text(icons_yaml(background), encoding='utf-8')
     (out / 'flutter_native_splash.yaml').write_text(splash_yaml(background), encoding='utf-8')
     defines = {'COMPANY_SLUG': company['slug'], 'COMPANY_NAME': app['appNameAr'].strip()}
     (out / 'dart_defines.json').write_text(json.dumps(defines, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-    return {'packageId': app['packageId'], 'slug': company['slug'], 'background': background}
+    return {'packageId': app['packageId'], 'slug': company['slug'], 'background': background, 'hosts': hosts}
 
 
 def main(argv: list[str] | None = None) -> int:

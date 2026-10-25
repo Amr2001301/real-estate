@@ -23,6 +23,7 @@ interface MobileApp {
   status: Status;
   playStoreUrl: string | null;
   appStoreUrl: string | null;
+  androidSha256: string | null;
 }
 
 interface Account {
@@ -52,6 +53,8 @@ const ar = {
   statuses: { DRAFT: 'قيد التجهيز', IN_REVIEW: 'قيد المراجعة في المتجر', PUBLISHED: 'منشور' } as Record<Status, string>,
   playStore: 'رابط Google Play',
   appStore: 'رابط App Store',
+  sha256: 'بصمة مفتاح التوقيع (SHA-256)',
+  sha256Hint: 'من Play Console ← App integrity ← App signing. تجعل روابط مشاريع ووحدات موقع الشركة تفتح في التطبيق مباشرة.',
   save: 'حفظ',
   cancel: 'إلغاء',
   error: 'حدث خطأ',
@@ -82,6 +85,8 @@ const en: typeof ar = {
   statuses: { DRAFT: 'Being prepared', IN_REVIEW: 'In store review', PUBLISHED: 'Published' },
   playStore: 'Google Play link',
   appStore: 'App Store link',
+  sha256: 'Signing-key fingerprint (SHA-256)',
+  sha256Hint: "From Play Console → App integrity → App signing. Lets project and unit links on the company's site open in the app.",
   save: 'Save',
   cancel: 'Cancel',
   error: 'Something went wrong',
@@ -151,6 +156,7 @@ export function CompanyMobileAppPanel({ companyId }: { companyId: string }) {
       status: text('status') as Status,
       playStoreUrl: text('playStoreUrl') || null,
       appStoreUrl: text('appStoreUrl') || null,
+      androidSha256: text('androidSha256') || null,
     };
     startTransition(async () => {
       const res = await fetch(`/api-proxy/super-admin/companies/${companyId}/mobile-app`, {
@@ -281,6 +287,18 @@ export function CompanyMobileAppPanel({ companyId }: { companyId: string }) {
                 <Input name="appStoreUrl" type="url" dir="ltr" placeholder="https://apps.apple.com/…" defaultValue={app?.appStoreUrl ?? ''} />
               </Field>
             </div>
+
+            <Field label={m.sha256} name="androidSha256" hint={m.sha256Hint}>
+              <textarea
+                name="androidSha256"
+                rows={2}
+                dir="ltr"
+                maxLength={1000}
+                placeholder="AB:CD:EF:…"
+                defaultValue={app?.androidSha256 ?? ''}
+                className="w-full rounded-xl border border-hairline bg-surface px-3 py-2 font-mono text-xs text-slate-900 outline-none focus:border-brand-400"
+              />
+            </Field>
 
             <div className="grid gap-4 sm:grid-cols-2">
               {(

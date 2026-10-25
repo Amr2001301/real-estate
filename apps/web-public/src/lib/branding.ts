@@ -28,6 +28,15 @@ export interface BrandingData {
   registrationNumber?: string;
   /** ISO 4217 — every price on the site is shown in it (Company.currency). */
   currency?: string;
+  /** The company's own app, once published in the stores (MA4). */
+  mobileApp?: {
+    /** Flattened to the request's language by the API. */
+    name: string;
+    packageId: string;
+    playStoreUrl?: string;
+    appStoreUrl?: string;
+    androidSha256: string[];
+  };
 }
 
 const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';

@@ -27,3 +27,36 @@ export function detectMobileOS(userAgent: string): MobileOS {
   if (/android/.test(ua)) return 'android';
   return 'other';
 }
+
+/**
+ * The store links to show: the company's own app when it is published,
+ * otherwise the shared app's (null until those exist).
+ */
+export function storeLinks(app?: { playStoreUrl?: string; appStoreUrl?: string } | null): {
+  appStore: string | null;
+  googlePlay: string | null;
+} {
+  if (app && (app.playStoreUrl || app.appStoreUrl)) {
+    return { appStore: app.appStoreUrl ?? null, googlePlay: app.playStoreUrl ?? null };
+  }
+  return { appStore: APP_STORE_URL, googlePlay: GOOGLE_PLAY_URL };
+}
+
+/**
+ * The domain's Digital Asset Links statement (/.well-known/assetlinks.json):
+ * lets the company's own Android app open this site's links. Empty when the
+ * company has no published app or no signing-key fingerprint yet.
+ */
+export function assetLinks(app?: { packageId: string; androidSha256: string[] } | null) {
+  if (!app || app.androidSha256.length === 0) return [];
+  return [
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: app.packageId,
+        sha256_cert_fingerprints: app.androidSha256,
+      },
+    },
+  ];
+}

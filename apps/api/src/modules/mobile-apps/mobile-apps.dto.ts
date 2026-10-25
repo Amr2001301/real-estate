@@ -7,6 +7,16 @@ export type MobileAppStatus = (typeof MOBILE_APP_STATUSES)[number];
 /** Android applicationId / iOS bundle id: two or more lower-case segments. */
 export const PACKAGE_ID_PATTERN = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/;
 
+const SHA256 = '[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){31}';
+/** One or more SHA-256 fingerprints separated by commas, spaces or new lines. */
+export const SHA256_LIST_PATTERN = new RegExp(`^\\s*${SHA256}(?:[\\s,]+${SHA256})*\\s*$`);
+
+/** The fingerprints as assetlinks.json lists them: upper-case, one per entry. */
+export function parseSha256List(value: string | null | undefined): string[] {
+  if (!value) return [];
+  return [...new Set(value.split(/[\s,]+/).filter(Boolean).map((v) => v.toUpperCase()))];
+}
+
 // Local dev storage (MinIO) serves over http without a TLD.
 const ASSET_URL = { protocols: ['https', 'http'], require_protocol: true, require_tld: false };
 const STORE_URL = { protocols: ['https'], require_protocol: true };
@@ -28,6 +38,17 @@ export class PutCompanyMobileAppDto {
 
   @IsOptional() @ValidateIf((_o, v) => v !== null) @IsUrl(STORE_URL) @MaxLength(2048) playStoreUrl?: string | null;
   @IsOptional() @ValidateIf((_o, v) => v !== null) @IsUrl(STORE_URL) @MaxLength(2048) appStoreUrl?: string | null;
+
+  /**
+   * The Play app-signing key's SHA-256 fingerprints (Play Console → App
+   * integrity), one or more, comma- or line-separated: AB:CD:…(32 pairs).
+   */
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(1000)
+  @Matches(SHA256_LIST_PATTERN, { message: 'androidSha256 must be SHA-256 fingerprints like AB:CD:… (32 pairs), comma-separated' })
+  androidSha256?: string | null;
 }
 
 export const MOBILE_APP_ASSETS = ['icon', 'splash'] as const;

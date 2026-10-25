@@ -52,6 +52,18 @@ const BRANDING_SELECT = {
   socialLinks: true,
   registrationNumber: true,
   currency: true,
+  // The company's own app, shown on the site once it is in the stores.
+  mobileApp: {
+    select: {
+      status: true,
+      appNameAr: true,
+      appNameEn: true,
+      packageId: true,
+      playStoreUrl: true,
+      appStoreUrl: true,
+      androidSha256: true,
+    },
+  },
 } as const;
 
 export interface CompanyBrandingResponse {
@@ -73,6 +85,17 @@ export interface CompanyBrandingResponse {
   registrationNumber?: string;
   /** ISO 4217 — the currency every amount on the site and app is shown in. */
   currency: string;
+  /**
+   * The company's own customer app, once PUBLISHED: its store links, and
+   * what the domain's assetlinks.json declares (package + signing key).
+   */
+  mobileApp?: {
+    name: { ar: string; en: string };
+    packageId: string;
+    playStoreUrl?: string;
+    appStoreUrl?: string;
+    androidSha256: string[];
+  };
 }
 
 type BrandingRow = {
@@ -94,6 +117,15 @@ type BrandingRow = {
   socialLinks: unknown;
   registrationNumber: string | null;
   currency: string;
+  mobileApp: {
+    status: string;
+    appNameAr: string;
+    appNameEn: string;
+    packageId: string;
+    playStoreUrl: string | null;
+    appStoreUrl: string | null;
+    androidSha256: string | null;
+  } | null;
 };
 
 function buildResponse(row: BrandingRow): CompanyBrandingResponse {
@@ -112,6 +144,16 @@ function buildResponse(row: BrandingRow): CompanyBrandingResponse {
   if (row.officeHours != null)      res.officeHours      = row.officeHours;
   if (row.socialLinks != null)      res.socialLinks      = row.socialLinks;
   if (row.registrationNumber != null) res.registrationNumber = row.registrationNumber;
+  const app = row.mobileApp;
+  if (app && app.status === 'PUBLISHED') {
+    res.mobileApp = {
+      name: { ar: app.appNameAr, en: app.appNameEn },
+      packageId: app.packageId,
+      ...(app.playStoreUrl ? { playStoreUrl: app.playStoreUrl } : {}),
+      ...(app.appStoreUrl ? { appStoreUrl: app.appStoreUrl } : {}),
+      androidSha256: app.androidSha256 ? app.androidSha256.split(',') : [],
+    };
+  }
   return res;
 }
 

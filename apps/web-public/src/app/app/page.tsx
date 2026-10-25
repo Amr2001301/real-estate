@@ -4,7 +4,8 @@ import { redirect } from 'next/navigation';
 import { Apple, Play, ArrowLeft } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
-import { APP_STORE_URL, GOOGLE_PLAY_URL, detectMobileOS } from '@/lib/app-links';
+import { detectMobileOS, storeLinks } from '@/lib/app-links';
+import { fetchBranding } from '@/lib/branding';
 import { Container } from '@/components/ui/Container';
 import { Badge } from '@/components/ui/Badge';
 import { ButtonLink } from '@/components/ui/Button';
@@ -18,14 +19,18 @@ export const metadata: Metadata = buildMetadata({
 });
 
 export default async function AppLandingPage() {
-  const userAgent = (await headers()).get('user-agent') ?? '';
-  const os = detectMobileOS(userAgent);
+  const h = await headers();
+  const os = detectMobileOS(h.get('user-agent') ?? '');
+  // The company's own app when it is in the stores (MA4), else the shared one.
+  const slug = h.get('x-resolved-tenant-slug') ?? '';
+  const branding = slug ? await fetchBranding(slug) : null;
+  const { appStore: appStoreUrl, googlePlay: googlePlayUrl } = storeLinks(branding?.mobileApp);
 
   // Once real store links exist, send mobile visitors straight to their store.
-  if (os === 'ios' && APP_STORE_URL) redirect(APP_STORE_URL);
-  if (os === 'android' && GOOGLE_PLAY_URL) redirect(GOOGLE_PLAY_URL);
+  if (os === 'ios' && appStoreUrl) redirect(appStoreUrl);
+  if (os === 'android' && googlePlayUrl) redirect(googlePlayUrl);
 
-  const storesReady = Boolean(APP_STORE_URL && GOOGLE_PLAY_URL);
+  const storesReady = Boolean(appStoreUrl || googlePlayUrl);
 
   return (
     <section className="py-16 sm:py-20 lg:py-24">
@@ -40,9 +45,9 @@ export default async function AppLandingPage() {
 
         {storesReady ? (
           <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
-            {APP_STORE_URL && (
+            {appStoreUrl && (
               <a
-                href={APP_STORE_URL}
+                href={appStoreUrl}
                 rel="noopener"
                 className="inline-flex items-center gap-2.5 rounded-full bg-navy px-6 py-3.5 text-[15px] font-medium text-white shadow-soft transition-colors hover:bg-navy-700"
               >
@@ -50,9 +55,9 @@ export default async function AppLandingPage() {
                 App Store
               </a>
             )}
-            {GOOGLE_PLAY_URL && (
+            {googlePlayUrl && (
               <a
-                href={GOOGLE_PLAY_URL}
+                href={googlePlayUrl}
                 rel="noopener"
                 className="inline-flex items-center gap-2.5 rounded-full border border-hairline/20 px-6 py-3.5 text-[15px] font-medium text-ink-strong transition-colors hover:border-hairline/40 hover:bg-navy/[0.03]"
               >
