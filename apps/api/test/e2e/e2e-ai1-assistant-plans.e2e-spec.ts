@@ -16,6 +16,7 @@ import 'reflect-metadata';
 import request from 'supertest';
 import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
+import { listeningUrl } from '../helpers/listen';
 import { bearer, loginAs } from '../helpers/login';
 
 describe('AI1 — assistant packages and company account (e2e)', () => {
@@ -178,8 +179,9 @@ describe('AI1 — assistant packages and company account (e2e)', () => {
   it('AI1-9: two "enable" clicks at once — one period, one ledger entry', async () => {
     await testApp.rawPrisma.aiLedgerEntry.deleteMany({ where: { companyId } });
     await testApp.rawPrisma.companyAiPlan.deleteMany({ where: { companyId } });
+    const base = await listeningUrl(testApp.app);
     const enable = () =>
-      as(platformToken, http().post(`/v1/super-admin/ai/companies/${companyId}/activate`)).send({ packageId });
+      as(platformToken, request(base).post(`/v1/super-admin/ai/companies/${companyId}/activate`)).send({ packageId });
     const codes = (await Promise.all([enable(), enable(), enable()])).map((r) => r.status).sort();
     expect(codes).toEqual([201, 409, 409]);
     expect(await testApp.rawPrisma.aiLedgerEntry.count({ where: { companyId, type: 'ACTIVATE' } })).toBe(1);

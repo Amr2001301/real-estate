@@ -12,6 +12,7 @@ import request from 'supertest';
 import { ReservationStatus, UserRole } from '@prisma/client';
 import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
+import { listeningUrl } from '../helpers/listen';
 import { bearer, loginAs } from '../helpers/login';
 
 /** A 1×1 PNG, as the signing page sends it. */
@@ -155,9 +156,10 @@ describe('P5 — customer e-signature on the booking form (e2e)', () => {
     const id = await newBooking();
     const token = tokenOf((await send(id).expect(201)).body.url);
     await pub(http().post(`/v1/public/e-sign/${token}/code`)).send({}).expect(201);
+    const base = await listeningUrl(testApp.app);
     const res = await Promise.all(
       Array.from({ length: 9 }, () =>
-        pub(http().post(`/v1/public/e-sign/${token}/sign`)).send({ code: '000000', name: 'P5 Buyer', signature: SIGNATURE }),
+        pub(request(base).post(`/v1/public/e-sign/${token}/sign`)).send({ code: '000000', name: 'P5 Buyer', signature: SIGNATURE }),
       ),
     );
     const statuses = res.map((r) => r.status);

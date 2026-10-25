@@ -16,6 +16,7 @@ import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
+import { listeningUrl } from '../helpers/listen';
 import { bearer } from '../helpers/login';
 
 describe('U1 — phone change confirmed by OTP (e2e)', () => {
@@ -136,7 +137,8 @@ describe('U1 — phone change confirmed by OTP (e2e)', () => {
 
   it('U1P-6: sign-in codes — parallel guesses stay within five, a right code signs in once, a sixth code in the hour is refused', async () => {
     const PHONE = `+2013${stamp}4`;
-    const verify = (code: string) => http().post('/v1/auth/tenant/otp/verify').send({ slug, phone: PHONE, code });
+    const base = await listeningUrl(testApp.app);
+    const verify = (code: string) => request(base).post('/v1/auth/tenant/otp/verify').send({ slug, phone: PHONE, code });
     try {
       // Nine wrong guesses at once: five are checked, the rest refused unchecked.
       const otp = await testApp.rawPrisma.otpCode.create({
