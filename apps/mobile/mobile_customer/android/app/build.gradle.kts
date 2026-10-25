@@ -17,6 +17,16 @@ plugins {
 // `flutter run --release` and CI smoke builds keep working without secrets.
 // Real values + the keystore are dropped by the release engineer; see
 // `android/key.properties.example` for the expected shape.
+// A company's own app (MA2): `tool/prepare_company_app.py` writes the
+// UNTRACKED `android/company.properties` with its applicationId. Absent, this
+// is the shared customer app.
+val companyPropertiesFile = rootProject.file("company.properties")
+val companyProperties = Properties().apply {
+    if (companyPropertiesFile.exists()) {
+        load(FileInputStream(companyPropertiesFile))
+    }
+}
+
 val keystorePropertiesFile = rootProject.file("key.properties")
 val keystoreProperties = Properties().apply {
     if (keystorePropertiesFile.exists()) {
@@ -44,7 +54,8 @@ android {
     defaultConfig {
         // TODO(Phase 6 / release): replace with the final production reverse-domain
         // (e.g. `com.<brand>.customer`). Cannot be changed after first Play upload.
-        applicationId = "com.realestate.customer.mobile_customer"
+        applicationId = companyProperties.getProperty("applicationId")
+            ?: "com.realestate.customer.mobile_customer"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

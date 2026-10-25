@@ -621,6 +621,9 @@ jobs:
       - name: Test core
         working-directory: apps/mobile/packages/core
         run: flutter test
+      - name: Test company-app build script
+        working-directory: apps/mobile/mobile_customer
+        run: python3 tool/test_prepare_company_app.py
       - name: Analyze customer
         working-directory: apps/mobile/mobile_customer
         run: flutter analyze

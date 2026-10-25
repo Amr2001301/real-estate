@@ -13,6 +13,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
+import 'company_lock.dart';
 import 'crashlytics_reporter.dart';
 import 'feature_flags.dart';
 import 'firebase_options.dart';
@@ -80,7 +81,9 @@ Future<void> bootstrap(EnvConfig env) async {
   // This is the authoritative security gate — no authenticated request may
   // reach an ineligible tenant's backend.
   if (kEnableCustomerTenantSelection) {
-    final slug = prefs.getString(CustomerTenantStorage.kSlugKey);
+    // A company's own app is locked to its company; the shared app reads the
+    // customer's pick.
+    final slug = kIsCompanyLocked ? kLockedCompanySlug : prefs.getString(CustomerTenantStorage.kSlugKey);
     if (slug == null || slug.isEmpty) {
       customerStartupOutcome.value = TenantStartupOutcome.noSlug;
       debugPrint('[Startup] K2: no persisted slug → noSlug');
@@ -115,7 +118,7 @@ Future<void> bootstrap(EnvConfig env) async {
     // Reads the live storage value at request time so the interceptor always
     // sees the current selection (not a stale value captured at startup).
     readTenantSlug: kEnableCustomerTenantSelection
-        ? () async => prefs.getString(CustomerTenantStorage.kSlugKey)
+        ? () async => kIsCompanyLocked ? kLockedCompanySlug : prefs.getString(CustomerTenantStorage.kSlugKey)
         : null,
   ));
 }

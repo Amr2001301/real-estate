@@ -425,3 +425,36 @@ you handing over an asset / credential / decision:
       Localizations so the existing `en.lproj/ar.lproj/InfoPlist.strings`
       files get bundled (otherwise camera / photo prompts fall back to
       English on the device).
+
+## Company apps — one store app per company (MA1–MA2)
+
+The customer app can be built as **one company's own app**: its name, icon,
+splash and package id, locked to that company (no company picker). Companies
+without one keep using the shared customer app; the staff app is not affected.
+
+1. **Settings** — the platform owner fills "تطبيق الشركة" on the company's page
+   in the super-admin dashboard: app names (AR/EN), package id, 1024×1024 PNG
+   icon, optional splash image, status and store links
+   (`GET/PUT /v1/super-admin/companies/:id/mobile-app`).
+2. **Prepare** — save that GET response as `company.json`, then from
+   `apps/mobile/mobile_customer`:
+
+   ```bash
+   python3 tool/prepare_company_app.py --config company.json
+   dart run flutter_launcher_icons -f build/company/flutter_launcher_icons.yaml
+   dart run flutter_native_splash:create --path=build/company/flutter_native_splash.yaml
+   flutter build appbundle --release -t lib/main_prod.dart \
+     --dart-define-from-file=build/company/dart_defines.json
+   ```
+
+   The script writes the untracked `android/company.properties`
+   (applicationId), the app name in `values/strings.xml` and
+   `values-ar/strings.xml`, the icon and splash under `assets/brand/`, and the
+   dart-defines `COMPANY_SLUG` / `COMPANY_NAME` that lock the app
+   (`lib/company_lock.dart`). Run it on a throw-away checkout (CI), never on a
+   branch you commit from.
+3. **Still to come** — the GitHub Actions build-and-sign workflow (MA3), the
+   iOS bundle id / display name, and a Firebase app (`google-services.json`)
+   per package id for push notifications (MA4). Until a company's package id
+   is registered in Firebase, its build needs that company's
+   `google-services.json` in `android/app/`.

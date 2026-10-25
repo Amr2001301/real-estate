@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The name under the icon. tool/prepare_company_app.py replaces it (and
+     writes values-ar/) when the app is built as one company's own app. -->
+<resources>
+    <string name="app_name">Devora</string>
+</resources>

@@ -205,7 +205,8 @@ GoRouter createCustomerRouter(
         return null;
       }
       if (loc == '/select-company') {
-        return kEnableCustomerTenantSelection ? null : '/home';
+        // A company's own app has no picker: it is that company's.
+        return kEnableCustomerTenantSelection && !tenantStorage.isLocked ? null : '/home';
       }
       if (loc == '/visit-request') return authed ? null : '/login';
       if (loc == '/info-request') return authed ? null : '/login';

@@ -51,4 +51,46 @@ void main() {
       expect(s.selectedCompanySlug, isNull);
     });
   });
+
+  // MA2 — a company's own app is built locked to its company.
+  group('CustomerTenantStorage locked to a company', () {
+    late SharedPreferences prefs;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      prefs = await SharedPreferences.getInstance();
+    });
+
+    test('reports the locked company with nothing stored', () {
+      final s = CustomerTenantStorage(
+        prefs,
+        lockedSlug: 'acme',
+        lockedName: 'Acme Homes',
+      );
+      expect(s.isLocked, isTrue);
+      expect(s.selectedCompanySlug, 'acme');
+      expect(s.selectedCompanyName, 'Acme Homes');
+      expect(s.hasSelectedCompany, isTrue);
+    });
+
+    test('a stored pick of another company does not change it', () async {
+      final s = CustomerTenantStorage(prefs, lockedSlug: 'acme');
+      await s.saveSelectedCompany(slug: 'other', name: 'Other Co');
+      expect(s.selectedCompanySlug, 'acme');
+    });
+
+    test('clearing keeps the locked company', () async {
+      final s = CustomerTenantStorage(prefs, lockedSlug: 'acme');
+      await s.clearSelectedCompany();
+      expect(s.selectedCompanySlug, 'acme');
+      expect(s.hasSelectedCompany, isTrue);
+    });
+
+    test('the shared app (no lock) is unchanged', () {
+      final s = CustomerTenantStorage(prefs, lockedSlug: '', lockedName: 'x');
+      expect(s.isLocked, isFalse);
+      expect(s.selectedCompanySlug, isNull);
+      expect(s.selectedCompanyName, isNull);
+    });
+  });
 }
