@@ -108,6 +108,20 @@ function makeService() {
           return Promise.resolve(row ?? {});
         },
       ),
+      count: jest.fn().mockResolvedValue(0),
+      // Conditional claim/consume (attempts < limit, not yet consumed).
+      updateMany: jest.fn().mockImplementation(
+        (args: { where: { id: string; consumed?: boolean; attempts?: { lt: number } }; data: Record<string, unknown> }) => {
+          const row = otpStore.find((r) => r.id === args.where.id) as Record<string, unknown> | undefined;
+          if (!row) return Promise.resolve({ count: 0 });
+          if (args.where.consumed !== undefined && Boolean(row.consumed) !== args.where.consumed) return Promise.resolve({ count: 0 });
+          if (args.where.attempts && Number(row.attempts ?? 0) >= args.where.attempts.lt) return Promise.resolve({ count: 0 });
+          for (const [k, v] of Object.entries(args.data)) {
+            row[k] = v && typeof v === 'object' && 'increment' in v ? Number(row[k] ?? 0) + Number((v as { increment: number }).increment) : v;
+          }
+          return Promise.resolve({ count: 1 });
+        },
+      ),
     },
     refreshToken: { create: jest.fn().mockResolvedValue({}) },
     emailVerificationToken: {

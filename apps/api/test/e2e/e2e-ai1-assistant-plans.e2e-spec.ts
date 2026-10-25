@@ -16,6 +16,7 @@ import 'reflect-metadata';
 import request from 'supertest';
 import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
+import { listeningUrl } from '../helpers/listen';
 import { bearer, loginAs } from '../helpers/login';
 
 describe('AI1 — assistant packages and company account (e2e)', () => {
@@ -155,5 +156,34 @@ describe('AI1 — assistant packages and company account (e2e)', () => {
     });
     expect(notice).not.toBeNull();
     expect((notice!.payload as { daysLeft?: number }).daysLeft).toBe(30);
+  });
+
+  it('AI1-8: a question given back after 100% re-arms that notice', async () => {
+    // A fresh period on the 5-question package, then all 5 asked.
+    await testApp.rawPrisma.company.update({ where: { id: companyId }, data: { subscriptionStatus: originalStatus as never } });
+    await as(platformToken, http().post(`/v1/super-admin/ai/companies/${companyId}/renew`)).send({ packageId }).expect(201);
+    for (let i = 0; i < 5; i++) await ask();
+    let plan = await testApp.rawPrisma.companyAiPlan.findUniqueOrThrow({ where: { companyId } });
+    expect(plan.alertedFullAt).not.toBeNull();
+    // The model failed on the last one: it is given back.
+    await testApp.aiRefund(companyId);
+    plan = await testApp.rawPrisma.companyAiPlan.findUniqueOrThrow({ where: { companyId } });
+    expect(plan.used).toBe(4);
+    expect(plan.alertedFullAt).toBeNull();
+    expect(plan.alerted80At).not.toBeNull(); // still at 80%
+    const before = await noticeCount('subscription_ai_quota_exhausted');
+    await ask(); // 5 of 5 for real
+    expect(await noticeCount('subscription_ai_quota_exhausted')).toBe(before + 1);
+  });
+
+  it('AI1-9: two "enable" clicks at once — one period, one ledger entry', async () => {
+    await testApp.rawPrisma.aiLedgerEntry.deleteMany({ where: { companyId } });
+    await testApp.rawPrisma.companyAiPlan.deleteMany({ where: { companyId } });
+    const base = await listeningUrl(testApp.app);
+    const enable = () =>
+      as(platformToken, request(base).post(`/v1/super-admin/ai/companies/${companyId}/activate`)).send({ packageId });
+    const codes = (await Promise.all([enable(), enable(), enable()])).map((r) => r.status).sort();
+    expect(codes).toEqual([201, 409, 409]);
+    expect(await testApp.rawPrisma.aiLedgerEntry.count({ where: { companyId, type: 'ACTIVATE' } })).toBe(1);
   });
 });

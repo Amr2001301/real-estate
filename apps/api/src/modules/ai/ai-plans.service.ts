@@ -125,14 +125,7 @@ export class AiPlansService {
     if (!pkg) throw new NotFoundException('الباقة غير موجودة');
     if (!pkg.isActive) throw new BadRequestException('هذه الباقة موقوفة');
 
-    const current = await this.prisma.companyAiPlan.findFirst({ where: { companyId } });
     const now = new Date();
-    if (kind === 'ACTIVATE' && current && this.isLive(current, now)) {
-      throw new ConflictException('المساعد مفعّل لهذه الشركة — استخدم التجديد أو إضافة أسئلة');
-    }
-    if (kind === 'RENEW' && !current) {
-      throw new BadRequestException('المساعد غير مفعّل لهذه الشركة بعد — استخدم التفعيل');
-    }
     const periodEnd = addMonths(now, 1);
     const price = new Prisma.Decimal(dto.price ?? pkg.price);
     const period = {
@@ -147,6 +140,16 @@ export class AiPlansService {
       alertedEndingAt: null,
     };
     return this.prisma.$transaction(async (tx) => {
+      // One period change at a time per company: two clicks on "enable"
+      // would otherwise both pass the check below and both be billed.
+      await tx.$queryRaw(Prisma.sql`SELECT 1 FROM "Company" WHERE "id" = ${companyId}::uuid FOR UPDATE`);
+      const current = await tx.companyAiPlan.findFirst({ where: { companyId } });
+      if (kind === 'ACTIVATE' && current && this.isLive(current, now)) {
+        throw new ConflictException('المساعد مفعّل لهذه الشركة — استخدم التجديد أو إضافة أسئلة');
+      }
+      if (kind === 'RENEW' && !current) {
+        throw new BadRequestException('المساعد غير مفعّل لهذه الشركة بعد — استخدم التفعيل');
+      }
       const plan = await tx.companyAiPlan.upsert({
         where: { companyId },
         create: { companyId, ...period },
@@ -251,7 +254,21 @@ export class AiPlansService {
 
   /** Gives back a question the assistant could not answer (the model was unreachable). */
   async refund(companyId: string): Promise<void> {
-    await this.prisma.companyAiPlan.updateMany({ where: { companyId, used: { gt: 0 } }, data: { used: { decrement: 1 } } });
+    const rows = await this.prisma.$queryRaw<Array<{ id: string; used: number; quota: number }>>(Prisma.sql`
+      UPDATE "CompanyAiPlan" SET "used" = "used" - 1, "updatedAt" = NOW()
+      WHERE "companyId" = ${companyId}::uuid AND "used" > 0
+      RETURNING "id", "used", "quota"`);
+    const row = rows[0];
+    if (!row) return;
+    // Back under a threshold: its notice may go out again when it is reached
+    // for real (the given-back question may have been the one that sent it).
+    await this.prisma.companyAiPlan.update({
+      where: { id: row.id },
+      data: {
+        ...(row.used < warnAt(row.quota) && { alerted80At: null }),
+        ...(row.used < row.quota && { alertedFullAt: null }),
+      },
+    });
   }
 
   // ── Daily sweep ───────────────────────────────────────────────────────────

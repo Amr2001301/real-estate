@@ -30,6 +30,8 @@ export const DEPRECATED_ENDPOINT_HEADER = 'Deprecation';
 
 const OTP_TTL_MIN = 10;
 const OTP_MAX_ATTEMPTS = 5;
+/** Codes a phone can be sent per purpose in an hour — a cap on guesses too. */
+const OTP_MAX_PER_HOUR = 5;
 /** OtpCode.purpose: a code is accepted only for what it was sent for. */
 const OTP_LOGIN = 'LOGIN';
 const OTP_PHONE_CHANGE = 'PHONE_CHANGE';
@@ -757,6 +759,35 @@ export class AuthService {
    * @param country    Company.country — used to parse local phone formats.
    * @param rawPhone   Raw phone from client (E.164 or local/national format).
    */
+  /**
+   * Takes one guess on a code before it is compared, atomically: parallel
+   * guesses each take one, so a code is never checked more than
+   * OTP_MAX_ATTEMPTS times.
+   */
+  private async claimOtpAttempt(otpId: string) {
+    const claimed = await this.prisma.otpCode.updateMany({
+      where: { id: otpId, consumed: false, attempts: { lt: OTP_MAX_ATTEMPTS } },
+      data: { attempts: { increment: 1 } },
+    });
+    if (claimed.count === 0) throw new ForbiddenException('Too many attempts; request a new code');
+  }
+
+  /** A code signs in once: two requests with the same right code get one session. */
+  private async consumeOtp(otpId: string) {
+    const used = await this.prisma.otpCode.updateMany({ where: { id: otpId, consumed: false }, data: { consumed: true } });
+    if (used.count === 0) throw new BadRequestException('Code expired or not found');
+  }
+
+  /** New codes are not new guesses without end: a few per phone per hour. */
+  private async assertOtpHourlyCap(phone: string, companyId: string, purpose: string) {
+    const sent = await this.prisma.otpCode.count({
+      where: { phone, companyId, purpose, createdAt: { gte: new Date(Date.now() - 3600_000) } },
+    });
+    if (sent >= OTP_MAX_PER_HOUR) {
+      throw new HttpException('Too many codes requested — try again in an hour', HttpStatus.TOO_MANY_REQUESTS);
+    }
+  }
+
   /** A suspended, archived or expired company issues no codes and no sessions. */
   private async assertCompanyAccessible(companyId: string) {
     const company = await this.prisma.company.findUnique({
@@ -785,6 +816,7 @@ export class AuthService {
       orderBy: { createdAt: 'desc' },
     });
     if (recent) throw new BadRequestException('Please wait before requesting another code');
+    await this.assertOtpHourlyCap(phone, companyId, OTP_LOGIN);
 
     const code = String(randomInt(100_000, 999_999));
     const codeHash = createHash('sha256').update(code).digest('hex');
@@ -821,6 +853,7 @@ export class AuthService {
       where: { phone, companyId, purpose: OTP_PHONE_CHANGE, createdAt: { gte: new Date(Date.now() - 60_000) } },
     });
     if (recent) throw new BadRequestException('Please wait before requesting another code');
+    await this.assertOtpHourlyCap(phone, companyId, OTP_PHONE_CHANGE);
 
     const code = String(randomInt(100_000, 999_999));
     const codeHash = createHash('sha256').update(code).digest('hex');
@@ -846,12 +879,11 @@ export class AuthService {
       orderBy: { createdAt: 'desc' },
     });
     if (!otp) throw new BadRequestException('Code expired or not found');
-    if (otp.attempts >= OTP_MAX_ATTEMPTS) throw new ForbiddenException('Too many attempts; request a new code');
+    await this.claimOtpAttempt(otp.id);
     if (createHash('sha256').update(code).digest('hex') !== otp.codeHash) {
-      await this.prisma.otpCode.update({ where: { id: otp.id }, data: { attempts: { increment: 1 } } });
       throw new BadRequestException('Invalid code');
     }
-    await this.prisma.otpCode.update({ where: { id: otp.id }, data: { consumed: true } });
+    await this.consumeOtp(otp.id);
     try {
       await this.prisma.user.update({
         where: { id: userId },
@@ -901,19 +933,13 @@ export class AuthService {
       orderBy: { createdAt: 'desc' },
     });
     if (!otp) throw new BadRequestException('Code expired or not found');
-    if (otp.attempts >= OTP_MAX_ATTEMPTS) {
-      throw new ForbiddenException('Too many attempts; request a new code');
-    }
+    await this.claimOtpAttempt(otp.id);
 
     const codeHash = createHash('sha256').update(code).digest('hex');
     if (codeHash !== otp.codeHash) {
-      await this.prisma.otpCode.update({
-        where: { id: otp.id },
-        data: { attempts: { increment: 1 } },
-      });
       throw new UnauthorizedException('Invalid code');
     }
-    await this.prisma.otpCode.update({ where: { id: otp.id }, data: { consumed: true } });
+    await this.consumeOtp(otp.id);
 
     // The code proves the phone: record it, so the account may link to the
     // CRM records that carry this number.

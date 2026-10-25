@@ -16,6 +16,7 @@ import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
+import { listeningUrl } from '../helpers/listen';
 import { bearer } from '../helpers/login';
 
 describe('U1 — phone change confirmed by OTP (e2e)', () => {
@@ -132,5 +133,47 @@ describe('U1 — phone change confirmed by OTP (e2e)', () => {
     const res = await asCustomer(http().post('/v1/auth/me/phone')).send({ phone: TAKEN });
     expect(res.status).toBe(409);
     expect((await testApp.rawPrisma.user.findUniqueOrThrow({ where: { id: customerId } })).pendingPhone).toBeNull();
+  });
+
+  it('U1P-6: sign-in codes — parallel guesses stay within five, a right code signs in once, a sixth code in the hour is refused', async () => {
+    const PHONE = `+2013${stamp}4`;
+    const base = await listeningUrl(testApp.app);
+    const verify = (code: string) => request(base).post('/v1/auth/tenant/otp/verify').send({ slug, phone: PHONE, code });
+    try {
+      // Nine wrong guesses at once: five are checked, the rest refused unchecked.
+      const otp = await testApp.rawPrisma.otpCode.create({
+        data: { phone: PHONE, codeHash: hash(CODE), expiresAt: new Date(Date.now() + 600_000), companyId },
+      });
+      const guesses = await Promise.all(Array.from({ length: 9 }, () => verify('000000')));
+      const statuses = guesses.map((r) => r.status);
+      expect(statuses.filter((s) => s === 401)).toHaveLength(5);
+      expect(statuses.filter((s) => s === 403)).toHaveLength(4);
+      expect((await testApp.rawPrisma.otpCode.findUniqueOrThrow({ where: { id: otp.id } })).attempts).toBe(5);
+      await verify(CODE).expect(403); // even the right code, now
+
+      // The right code twice at once: one session.
+      await testApp.rawPrisma.otpCode.create({
+        data: { phone: PHONE, codeHash: hash('112233'), expiresAt: new Date(Date.now() + 600_000), companyId },
+      });
+      const both = (await Promise.all([verify('112233'), verify('112233')])).map((r) => r.status).sort();
+      expect(both.filter((s) => s === 200 || s === 201)).toHaveLength(1);
+
+      // Five codes already sent this hour: no sixth (older than a minute, so
+      // the per-minute wait is not what refuses it).
+      await testApp.rawPrisma.otpCode.updateMany({ where: { phone: PHONE }, data: { createdAt: new Date(Date.now() - 120_000) } });
+      await testApp.rawPrisma.otpCode.createMany({
+        data: Array.from({ length: 3 }, () => ({
+          phone: PHONE, codeHash: 'x', expiresAt: new Date(), companyId, createdAt: new Date(Date.now() - 300_000),
+        })),
+      });
+      await http().post('/v1/auth/tenant/otp/request').send({ slug, phone: PHONE }).expect(429);
+    } finally {
+      await testApp.rawPrisma.otpCode.deleteMany({ where: { phone: PHONE } });
+      const signedUp = await testApp.rawPrisma.user.findMany({ where: { companyId, phone: PHONE }, select: { id: true } });
+      for (const u of signedUp) {
+        await testApp.rawPrisma.refreshToken.deleteMany({ where: { userId: u.id } });
+        await testApp.rawPrisma.user.delete({ where: { id: u.id } }).catch(() => undefined);
+      }
+    }
   });
 });

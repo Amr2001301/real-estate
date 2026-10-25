@@ -12,6 +12,7 @@ import request from 'supertest';
 import { ReservationStatus, UserRole } from '@prisma/client';
 import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
+import { listeningUrl } from '../helpers/listen';
 import { bearer, loginAs } from '../helpers/login';
 
 /** A 1×1 PNG, as the signing page sends it. */
@@ -149,6 +150,27 @@ describe('P5 — customer e-signature on the booking form (e2e)', () => {
       await pub(http().post(`/v1/public/e-sign/${token}/sign`)).send({ code: '000000', name: 'P5 Buyer', signature: SIGNATURE }).expect(400);
     }
     await pub(http().post(`/v1/public/e-sign/${token}/sign`)).send({ code, name: 'P5 Buyer', signature: SIGNATURE }).expect(403);
+  });
+
+  it('P5-3b: wrong codes sent at once still count — and a new code buys no new guesses', async () => {
+    const id = await newBooking();
+    const token = tokenOf((await send(id).expect(201)).body.url);
+    await pub(http().post(`/v1/public/e-sign/${token}/code`)).send({}).expect(201);
+    const base = await listeningUrl(testApp.app);
+    const res = await Promise.all(
+      Array.from({ length: 9 }, () =>
+        pub(request(base).post(`/v1/public/e-sign/${token}/sign`)).send({ code: '000000', name: 'P5 Buyer', signature: SIGNATURE }),
+      ),
+    );
+    const statuses = res.map((r) => r.status);
+    // Exactly five guesses are checked; the rest are refused unchecked.
+    expect(statuses.filter((s) => s === 400)).toHaveLength(5);
+    expect(statuses.filter((s) => s === 403)).toHaveLength(4);
+    const row = await testApp.rawPrisma.signatureRequest.findFirstOrThrow({ where: { documentId: id, status: 'PENDING' } });
+    expect(row.otpAttempts).toBe(5);
+    // Past the limit no code is sent (and none resets the count).
+    await testApp.rawPrisma.signatureRequest.update({ where: { id: row.id }, data: { otpSentAt: new Date(Date.now() - 120_000) } });
+    await pub(http().post(`/v1/public/e-sign/${token}/code`)).send({}).expect(403);
   });
 
   it('P5-4: another company’s website does not open the link', async () => {

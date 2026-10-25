@@ -111,6 +111,8 @@ export interface TestApp {
    * flushCapabilities.
    */
   aiConsume: (companyId: string) => Promise<{ used: number; quota: number; remaining: number }>;
+  /** Gives one question back, as the assistant does when the model fails. */
+  aiRefund: (companyId: string) => Promise<void>;
   /**
    * Runs one of the AI assistant's read-only tools as `actor` would (in the
    * actor's company context), returning what the model would be given.
@@ -180,6 +182,11 @@ function aiToolRunner(app: INestApplication) {
     runInCompany(actor.companyId, () => new AssistantTools(prisma, actor).run(name, input));
 }
 
+function aiRefunder(app: INestApplication) {
+  const plans = app.get(AiPlansService);
+  return (companyId: string) => runInCompany(companyId, () => plans.refund(companyId));
+}
+
 function aiConsumer(app: INestApplication) {
   const plans = app.get(AiPlansService);
   return (companyId: string) => runInCompany(companyId, () => plans.consume(companyId));
@@ -247,6 +254,7 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
       jwtService.signAsync({ sub: userId, role }, { secret: jwtSecret, expiresIn: expiresIn ?? jwtDefaultExpiry }),
     runCronJob: cronRunner(app),
     aiConsume: aiConsumer(app),
+    aiRefund: aiRefunder(app),
     aiTool: aiToolRunner(app),
     close: async () => {
       await rawPrisma.$disconnect();
@@ -369,6 +377,7 @@ export async function createE2ETestApp(): Promise<TestApp> {
       jwtService.signAsync({ sub: userId, role }, { secret: jwtSecret, expiresIn: expiresIn ?? jwtDefaultExpiry }),
     runCronJob: cronRunner(app),
     aiConsume: aiConsumer(app),
+    aiRefund: aiRefunder(app),
     aiTool: aiToolRunner(app),
     close: async () => {},
   };
@@ -459,6 +468,7 @@ export async function createSecurityTestApp(): Promise<TestApp> {
       jwtService.signAsync({ sub: userId, role }, { secret: jwtSecret, expiresIn: expiresIn ?? jwtDefaultExpiry }),
     runCronJob: cronRunner(app),
     aiConsume: aiConsumer(app),
+    aiRefund: aiRefunder(app),
     aiTool: aiToolRunner(app),
     close: async () => {},
   };
