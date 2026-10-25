@@ -55,6 +55,9 @@ const ar = {
   save: 'حفظ',
   cancel: 'إلغاء',
   error: 'حدث خطأ',
+  copyBuild: 'نسخ ملف البناء',
+  copied: 'تم النسخ — الصقه في GitHub ← Actions ← Company app build',
+  noIcon: 'ارفع الأيقونة أولًا ليمكن بناء التطبيق.',
 };
 
 const en: typeof ar = {
@@ -82,6 +85,9 @@ const en: typeof ar = {
   save: 'Save',
   cancel: 'Cancel',
   error: 'Something went wrong',
+  copyBuild: 'Copy build file',
+  copied: 'Copied — paste it in GitHub → Actions → Company app build',
+  noIcon: 'Upload the icon first so the app can be built.',
 };
 
 const t = (locale: Locale) => (locale === 'en' ? en : ar);
@@ -102,7 +108,20 @@ export function CompanyMobileAppPanel({ companyId }: { companyId: string }) {
   const [iconUrl, setIconUrl] = useState<string | null>(null);
   const [splashUrl, setSplashUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
+
+  // The build workflow takes this read as its input (company-app.yml).
+  async function copyBuildFile() {
+    if (!account) return;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(account));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 4000);
+    } catch {
+      setError(m.error);
+    }
+  }
 
   async function load() {
     const res = await fetch(`/api-proxy/super-admin/companies/${companyId}/mobile-app`);
@@ -198,7 +217,15 @@ export function CompanyMobileAppPanel({ companyId }: { companyId: string }) {
               </span>
               <span className="text-xs font-semibold text-brand-700">{m.statuses[app.status]}</span>
             </div>
-            <div className="flex flex-col gap-1 text-xs">
+            <div className="flex flex-col items-end gap-1 text-xs">
+              {app.iconUrl ? (
+                <Button variant="outline" size="sm" onClick={copyBuildFile} data-testid="mobile-app-copy-build">
+                  {m.copyBuild}
+                </Button>
+              ) : (
+                <span className="text-warning-700">{m.noIcon}</span>
+              )}
+              {copied && <span className="text-success-700" role="status">{m.copied}</span>}
               {app.playStoreUrl && (
                 <a href={app.playStoreUrl} target="_blank" rel="noreferrer" className="text-brand-700 underline">
                   Google Play

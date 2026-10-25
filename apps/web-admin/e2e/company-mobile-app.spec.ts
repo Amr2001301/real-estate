@@ -40,10 +40,24 @@ test('the super admin sets up a company app and removes it', async ({ page }) =>
   await expect(panel).toContainText(packageId);
   await expect(panel).toContainText('بيوت التجربة');
   await expect(panel).toContainText('قيد المراجعة في المتجر');
+  // No icon yet: nothing to build from.
+  await expect(panel).toContainText('ارفع الأيقونة أولًا');
+  await expect(page.getByTestId('mobile-app-copy-build')).toHaveCount(0);
 
-  // Saved on the server, not only on the page.
+  // With an icon (set through the same API the uploader feeds), the build
+  // file can be copied — and the save survived on the server.
+  const put = await page.request.put(`/api-proxy/super-admin/companies/${COMPANY_ID}/mobile-app`, {
+    data: {
+      appNameAr: 'بيوت التجربة',
+      appNameEn: 'Test Homes',
+      packageId,
+      iconUrl: 'https://cdn.example.com/branding/icon.png',
+    },
+  });
+  expect(put.ok()).toBeTruthy();
   await page.reload({ waitUntil: 'networkidle' });
   await expect(page.getByTestId('mobile-app-panel')).toContainText(packageId);
+  await expect(page.getByTestId('mobile-app-copy-build')).toBeVisible();
 
   page.once('dialog', (d) => void d.accept());
   await card.getByRole('button', { name: 'تعديل' }).click();
