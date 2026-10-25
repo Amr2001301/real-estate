@@ -18,6 +18,7 @@ import type { Locale } from '@/lib/locale';
 import { saT, type SaStrings } from '@/messages/super-admin';
 import { CompanyPricingPanel } from './_pricing-panel';
 import { CompanyAiPanel } from './_ai-panel';
+import { CompanyMobileAppPanel } from './_mobile-app-panel';
 import {
   PremiumPageHero,
   PremiumDetailLayout,
@@ -334,6 +335,7 @@ export default function CompanyDetailPage() {
             {/* Company-specific pricing */}
             <CompanyPricingPanel companyId={company.id} />
             <CompanyAiPanel companyId={company.id} />
+            <CompanyMobileAppPanel companyId={company.id} />
           </div>
         }
         side={

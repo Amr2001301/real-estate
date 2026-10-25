@@ -65,9 +65,9 @@ describe('MT-014 equivalence: TENANT_SCOPED_MODELS ↔ MODEL_TENANCY TENANT_OWNE
     expect(missing).toEqual([]);
   });
 
-  it('both sets have the same cardinality (63: Step A + Step C + Step D1 + Option B User − FG-26 NotificationTemplate + ContractAmendment + BrokerCommissionAdjustment + PresignedUpload + UnitHandover + UnitType + UnitModel + PrintSettings + DocumentTemplate + SignatureRequest + CustomerField + FormLayout + CompanyAiPlan + AiLedgerEntry)', () => {
-    expect(TENANT_SCOPED_MODELS.size).toBe(63);
-    expect(ownedFromModelTenancy.size).toBe(63);
+  it('both sets have the same cardinality (64: Step A + Step C + Step D1 + Option B User − FG-26 NotificationTemplate + ContractAmendment + BrokerCommissionAdjustment + PresignedUpload + UnitHandover + UnitType + UnitModel + PrintSettings + DocumentTemplate + SignatureRequest + CustomerField + FormLayout + CompanyAiPlan + AiLedgerEntry + CompanyMobileApp)', () => {
+    expect(TENANT_SCOPED_MODELS.size).toBe(64);
+    expect(ownedFromModelTenancy.size).toBe(64);
   });
 
   it('MODEL_TIER_BY_LOWERCASE includes all TENANT_OWNED models with correct tier', () => {
@@ -353,9 +353,9 @@ describe('MT-014 MODEL_TIER_BY_LOWERCASE derived set', () => {
     }
   });
 
-  it('TENANT_OWNED count matches TENANT_SCOPED_MODELS count (63 after Option B User, FG-26, ContractAmendment, BrokerCommissionAdjustment, PresignedUpload, UnitHandover, UnitType, UnitModel, PrintSettings, DocumentTemplate, SignatureRequest, CustomerField, FormLayout, CompanyAiPlan and AiLedgerEntry)', () => {
+  it('TENANT_OWNED count matches TENANT_SCOPED_MODELS count (64 after Option B User, FG-26, ContractAmendment, BrokerCommissionAdjustment, PresignedUpload, UnitHandover, UnitType, UnitModel, PrintSettings, DocumentTemplate, SignatureRequest, CustomerField, FormLayout, CompanyAiPlan, AiLedgerEntry and CompanyMobileApp)', () => {
     const ownedCount = [...MODEL_TIER_BY_LOWERCASE.values()].filter((t) => t === 'TENANT_OWNED').length;
-    expect(ownedCount).toBe(63);
+    expect(ownedCount).toBe(64);
   });
 });
 
