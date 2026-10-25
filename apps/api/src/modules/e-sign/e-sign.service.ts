@@ -21,7 +21,9 @@ import type { CreateSignatureRequestDto, SignDocumentDto } from './dto/e-sign.dt
 export const LINK_TTL_HOURS = 72;
 const OTP_TTL_MIN = 10;
 const OTP_RESEND_SEC = 60;
+/** Wrong codes a link takes, across every code sent for it — then a new link is needed. */
 const OTP_MAX_ATTEMPTS = 5;
+const TOO_MANY = 'محاولات كثيرة — اطلب رابطاً جديداً من الشركة';
 // Under the API's 100 KB JSON body limit.
 const SNAPSHOT_MAX_BYTES = 80_000;
 const SIGNATURE_MAX_BYTES = 70_000;
@@ -247,6 +249,8 @@ export class ESignService {
   async sendCode(token: string) {
     const r = await this.byToken(token);
     this.assertOpen(r);
+    // A new code does not buy new guesses: the count is the link's.
+    if (r.otpAttempts >= OTP_MAX_ATTEMPTS) throw new ForbiddenException(TOO_MANY);
     if (r.otpSentAt && Date.now() - r.otpSentAt.getTime() < OTP_RESEND_SEC * 1000) {
       throw new BadRequestException('انتظر دقيقة قبل طلب كود جديد');
     }
@@ -257,7 +261,6 @@ export class ESignService {
         otpHash: sha256(code),
         otpSentAt: new Date(),
         otpExpiresAt: new Date(Date.now() + OTP_TTL_MIN * 60_000),
-        otpAttempts: 0,
       },
     });
     await this.sms.sendOtp(r.phone, code);
@@ -271,15 +274,15 @@ export class ESignService {
     if (!r.otpHash || !r.otpExpiresAt || r.otpExpiresAt.getTime() <= Date.now()) {
       throw new BadRequestException('اطلب كود التأكيد أولاً');
     }
-    if (r.otpAttempts >= OTP_MAX_ATTEMPTS) throw new ForbiddenException('محاولات كثيرة — اطلب كوداً جديداً');
+    // Claim the attempt before comparing: parallel guesses each take one,
+    // so no more than OTP_MAX_ATTEMPTS are ever checked.
+    const claimed = await this.prisma.signatureRequest.updateMany({
+      where: { id: r.id, companyId: r.companyId, otpAttempts: { lt: OTP_MAX_ATTEMPTS } },
+      data: { otpAttempts: { increment: 1 } },
+    });
+    if (claimed.count === 0) throw new ForbiddenException(TOO_MANY);
     const ok = timingSafeEqual(Buffer.from(sha256(dto.code)), Buffer.from(r.otpHash));
-    if (!ok) {
-      await this.prisma.signatureRequest.updateMany({
-        where: { id: r.id, companyId: r.companyId },
-        data: { otpAttempts: { increment: 1 } },
-      });
-      throw new BadRequestException('الكود غير صحيح');
-    }
+    if (!ok) throw new BadRequestException('الكود غير صحيح');
 
     const png = Buffer.from(dto.signature.slice(dto.signature.indexOf(',') + 1), 'base64');
     const size = imageSize(png);

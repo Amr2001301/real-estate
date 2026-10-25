@@ -43,6 +43,8 @@ function makeAuthService(overrides: Record<string, unknown> = {}) {
       findFirst: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      count: jest.fn().mockResolvedValue(0),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     // MT-034: registerCustomerV2 and registerCustomerV2 lifecycle check calls prisma.company.findUnique.
     company: { findUnique: jest.fn().mockResolvedValue({ lifecycleStatus: 'ACTIVE' }) },
@@ -536,11 +538,30 @@ describe('AuthService · verifyOtpV2', () => {
     await expect(
       service.verifyOtpV2(COMPANY_A, 'SA', '+966500000001', '000000'),
     ).rejects.toBeInstanceOf(UnauthorizedException);
-    expect(prisma.otpCode.update).toHaveBeenCalledWith(
+    // The guess is claimed before the comparison, only while under the limit.
+    expect(prisma.otpCode.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ attempts: { increment: 1 } }),
+        where: expect.objectContaining({ attempts: { lt: 5 }, consumed: false }),
+        data: { attempts: { increment: 1 } },
       }),
     );
+  });
+
+  it('refuses a guess past the limit without comparing it', async () => {
+    const { service, prisma } = makeAuthService();
+    prisma.otpCode.findFirst.mockResolvedValue(makeOtp('123456'));
+    prisma.otpCode.updateMany.mockResolvedValueOnce({ count: 0 });
+    await expect(
+      service.verifyOtpV2(COMPANY_A, 'SA', '+966500000001', '123456'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('refuses a sixth code within the hour', async () => {
+    const { service, prisma } = makeAuthService();
+    prisma.otpCode.findFirst.mockResolvedValue(null);
+    prisma.otpCode.count.mockResolvedValueOnce(5);
+    await expect(service.requestOtpV2(COMPANY_A, 'SA', '+966500000001')).rejects.toMatchObject({ status: 429 });
+    expect(prisma.otpCode.create).not.toHaveBeenCalled();
   });
 });
 

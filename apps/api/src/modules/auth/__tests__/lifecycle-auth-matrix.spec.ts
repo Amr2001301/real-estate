@@ -51,6 +51,8 @@ function makeAuthService(userRow: Record<string, unknown> | null, overrides: Rec
       findFirst: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue({}),
       update: jest.fn().mockResolvedValue({}),
+      count: jest.fn().mockResolvedValue(0),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     ...overrides,
   };
