@@ -471,6 +471,20 @@ without one keep using the shared customer app; the staff app is not affected.
    in the customer Firebase project (Project settings → Add app → Android),
    download `google-services.json` again (it lists every app) and update the
    secret — the run stops with that message when the package is missing.
-4. **Still to come (MA4)** — push notifications per app, deep links on the
-   company's domain, store links on its public site, and the iOS bundle id /
-   display name.
+4. **Push, store links, app links (MA4)**
+   - **Push** — a company's Android app initialises Firebase from the
+     `google-services.json` it was built with (its own entry in the customer
+     Firebase project), so its FCM token belongs to its package. The API
+     sends through the same project, so nothing changes server-side.
+   - **Store links** — once the app's status is **PUBLISHED**, the public
+     branding carries its store links and the company site's `/app` page
+     sends phones to them (falling back to the shared app's).
+   - **App links** — paste the **app-signing key** SHA-256 fingerprint
+     (Play Console → the app → Test and release → App integrity → App signing)
+     into the company's app panel. The site then serves
+     `/.well-known/assetlinks.json`, and builds add an auto-verified intent
+     filter for the company's verified domains, so `/projects/…` and
+     `/units/…` links open in the app. Rebuild the app after adding a domain.
+5. **Not done yet** — the iOS bundle id / display name and iOS universal
+   links (`apple-app-site-association`); App Store publishing needs each
+   company's own Apple developer account (guideline 4.2.6).

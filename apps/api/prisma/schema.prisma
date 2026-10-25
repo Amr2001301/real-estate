@@ -418,23 +418,26 @@ model AiPackage {
 /// icon). Set by the platform owner; the shared customer app serves every
 /// company that has none.
 model CompanyMobileApp {
-  id           String   @id @default(uuid()) @db.Uuid
-  companyId    String   @unique @db.Uuid
-  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  appNameAr    String   @db.VarChar(30)
-  appNameEn    String   @db.VarChar(30)
+  id            String   @id @default(uuid()) @db.Uuid
+  companyId     String   @unique @db.Uuid
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  appNameAr     String   @db.VarChar(30)
+  appNameEn     String   @db.VarChar(30)
   /// Android applicationId and iOS bundle id, e.g. com.acme.homes
-  packageId    String   @unique @db.VarChar(150)
+  packageId     String   @unique @db.VarChar(150)
   /// 1024×1024 PNG — the store and launcher icon
-  iconUrl      String?  @db.VarChar(2048)
+  iconUrl       String?  @db.VarChar(2048)
   /// The splash-screen image; the icon when unset
-  splashUrl    String?  @db.VarChar(2048)
+  splashUrl     String?  @db.VarChar(2048)
   /// DRAFT | IN_REVIEW | PUBLISHED
-  status       String   @default("DRAFT") @db.VarChar(12)
-  playStoreUrl String?  @db.VarChar(2048)
-  appStoreUrl  String?  @db.VarChar(2048)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  status        String   @default("DRAFT") @db.VarChar(12)
+  playStoreUrl  String?  @db.VarChar(2048)
+  appStoreUrl   String?  @db.VarChar(2048)
+  /// SHA-256 fingerprints of the Play app-signing key, comma-separated — the
+  /// company domain's assetlinks.json lets the app open its links
+  androidSha256 String?  @db.VarChar(1000)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model CompanyAiPlan {

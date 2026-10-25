@@ -3,6 +3,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { SuperAdminGuard } from '../../common/guards/super-admin.guard';
 import { BypassTenant } from '../../common/decorators/bypass-tenant.decorator';
 import { MediaModule } from '../media/media.module';
+import { CompanyBrandingModule } from '../company-branding/company-branding.module';
 import { MobileAppsService } from './mobile-apps.service';
 import { PresignMobileAppAssetDto, PutCompanyMobileAppDto } from './mobile-apps.dto';
 
@@ -36,7 +37,7 @@ export class MobileAppsAdminController {
 }
 
 @Module({
-  imports: [MediaModule],
+  imports: [MediaModule, CompanyBrandingModule],
   controllers: [MobileAppsAdminController],
   providers: [MobileAppsService],
 })

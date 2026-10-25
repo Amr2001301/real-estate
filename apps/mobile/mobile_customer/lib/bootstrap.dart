@@ -6,7 +6,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_performance/firebase_performance.dart';
-import 'package:flutter/foundation.dart' show ValueNotifier, defaultTargetPlatform;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, ValueNotifier, defaultTargetPlatform;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -190,8 +191,14 @@ Future<void> _initLocalNotifications() async {
 
 Future<void> _initFirebase() async {
   try {
+    // A company's own Android app is its own Firebase app: its options come
+    // from the google-services.json it was built with (the Google Services
+    // plugin picks the entry for its package). The shared app and iOS keep
+    // the generated options.
+    final ownAndroidApp =
+        kIsCompanyLocked && defaultTargetPlatform == TargetPlatform.android;
     await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
+      options: ownAndroidApp ? null : DefaultFirebaseOptions.currentPlatform,
     );
 
     // Crashlytics: route all uncaught Flutter errors + set the app error reporter.
