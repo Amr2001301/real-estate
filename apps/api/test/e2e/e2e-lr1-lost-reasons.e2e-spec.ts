@@ -111,7 +111,9 @@ describe('LR1 — lost reasons and report (e2e)', () => {
     await as(salesToken, http().patch(url)).send({ stage: 'LOST', lostReasonId: reason.id, lostNote: 'وجد أرخص' }).expect(200);
     const lost = await testApp.rawPrisma.lead.findUniqueOrThrow({ where: { id: lead.id } });
     expect(lost).toMatchObject({ stage: 'LOST', lostReasonId: reason.id, lostNote: 'وجد أرخص' });
-    expect(lost.lostAt).toBeInstanceOf(Date);
+    // A value check, not instanceof: specs share one app across Jest vm contexts.
+    expect(lost.lostAt).not.toBeNull();
+    expect(Math.abs(Date.now() - new Date(lost.lostAt!).getTime())).toBeLessThan(5 * 60_000);
     const detail = (await as(salesToken, http().get(`/v1/leads/${lead.id}`)).expect(200)).body;
     expect(detail.lostReason).toMatchObject({ id: reason.id });
 
