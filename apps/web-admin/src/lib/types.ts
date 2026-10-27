@@ -306,6 +306,44 @@ export interface CampaignStats {
   cpa: number | null;
 }
 
+/** What a campaign (or a channel, a project, all of them) cost and brought in a period. */
+export interface CampaignFigures {
+  spend: number;
+  leads: number;
+  qualified: number;
+  won: number;
+  lost: number;
+  /** Signed, live contracts credited to it (first touch). */
+  sales: number;
+  /** Their net price. */
+  revenue: number;
+  cpl: number | null;
+  cpa: number | null;
+  /** (revenue − spend) / spend, in %. */
+  roi: number | null;
+  /** Sales per lead, in %. */
+  conversion: number | null;
+}
+
+export interface CampaignReport {
+  period: { from: string | null; to: string | null };
+  totals: CampaignFigures & { campaigns: number; otherLeads: number; leadShare: number | null };
+  campaigns: Array<
+    CampaignFigures & {
+      id: string;
+      name: string;
+      code: string;
+      channel: CampaignChannel;
+      status: CampaignStatus;
+      budget: number | null;
+      project: { id: string; name: Translatable } | null;
+    }
+  >;
+  byChannel: Array<CampaignFigures & { channel: CampaignChannel; campaigns: number }>;
+  byProject: Array<CampaignFigures & { projectId: string | null; name: Translatable | null; campaigns: number }>;
+  trend: Array<{ month: string; spend: number; leads: number; sales: number; revenue: number }>;
+}
+
 export interface Campaign {
   id: string;
   name: string;

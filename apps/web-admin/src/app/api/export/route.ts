@@ -27,6 +27,7 @@ const ALLOWED = [
   /^\/reports\/sales\/export\.xlsx$/,
   /^\/reports\/financial\/export\.xlsx$/,
   /^\/reports\/financial-dashboard\/export\.xlsx$/,
+  /^\/campaigns\/report\/export\.xlsx$/,
   /^\/broker-reports\/export\/summary\.xlsx$/,
   // P15.5 — broker-portal performance (broker-scoped; firm comes from the token)
   /^\/portal\/performance\/export\.xlsx$/,
@@ -39,6 +40,7 @@ const ALLOWED = [
   /^\/reports\/broker-leaderboard\/export\.pdf$/,
   /^\/reports\/operational\/export\.pdf$/,
   /^\/reports\/financial-dashboard\/export\.pdf$/,
+  /^\/campaigns\/report\/export\.pdf$/,
   /^\/broker-reports\/export\/summary\.pdf$/,
   /^\/broker-reports\/export\/top-brokers\.pdf$/,
   /^\/broker-reports\/export\/broker\/[a-f0-9-]{36}\.pdf$/,
