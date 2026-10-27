@@ -106,6 +106,7 @@ model Company {
   unitStatusHistories         UnitStatusHistory[]
   unitMaintenanceItems        UnitMaintenanceItem[]
   leadSources                 LeadSource[]
+  lostReasons                 LostReason[]
   unitTypes                   UnitType[]
   unitModels                  UnitModel[]
   leads                       Lead[]
@@ -1108,6 +1109,12 @@ model Lead {
   nextActionType LeadFollowUpType?
   nextActionNote String?
 
+  // ── Lost: why, set when the lead is marked LOST ────────────────────────
+  lostReasonId String?     @db.Uuid
+  lostReason   LostReason? @relation(fields: [lostReasonId], references: [id])
+  lostNote     String?
+  lostAt       DateTime?
+
   // ── Ad / UTM attribution (first-touch, all nullable) ───────────────────
   utmSource   String?
   utmMedium   String?
@@ -1147,6 +1154,22 @@ model Lead {
   @@index([brokerApprovalStatus])
   @@index([companyId])
   @@index([companyId, nextActionAt])
+  @@index([companyId, lostReasonId])
+}
+
+/// Why a lead was lost — a list each company keeps (price, competitor, …).
+model LostReason {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      Json // Translatable
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  leads     Lead[]
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
 }
 
 /// What a logged activity on a lead was.

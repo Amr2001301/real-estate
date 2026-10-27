@@ -1,10 +1,11 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { Check } from 'lucide-react';
 import type { LeadStage } from '@/lib/types';
 import { cn } from '@/lib/cn';
 import { updateStageAction } from '@/app/dashboard/leads/actions';
+import { LostReasonDialog } from './lost-reason-dialog';
 
 const LABELS: Record<LeadStage, string> = {
   NEW: 'جديد',
@@ -27,14 +28,19 @@ export function StageSegmented({ leadId, currentStage, stages }: Props) {
   const path = stages.filter((s): s is Exclude<LeadStage, 'LOST'> => s !== 'LOST');
   const at = path.indexOf(currentStage as Exclude<LeadStage, 'LOST'>);
   const lost = currentStage === 'LOST';
-  const move = (s: LeadStage) =>
+  // LOST asks why first.
+  const [asking, setAsking] = useState(false);
+  const move = (s: LeadStage, lostWhy?: { lostReasonId: string; lostNote?: string }) => {
+    if (s === 'LOST' && !lostWhy) return setAsking(true);
     start(async () => {
       try {
-        await updateStageAction(leadId, s);
+        await updateStageAction(leadId, s, lostWhy);
+        setAsking(false);
       } catch (e) {
         alert((e as Error).message);
       }
     });
+  };
 
   return (
     <div role="group" data-testid="stage-journey" className="flex flex-wrap items-center gap-3">
@@ -91,6 +97,7 @@ export function StageSegmented({ leadId, currentStage, stages }: Props) {
         <button
           type="button"
           data-active={lost ? 'true' : undefined}
+          data-testid="stage-lost"
           disabled={pending || lost}
           onClick={() => move('LOST')}
           className={cn(
@@ -104,6 +111,12 @@ export function StageSegmented({ leadId, currentStage, stages }: Props) {
           {LABELS.LOST}
         </button>
       )}
+      <LostReasonDialog
+        open={asking}
+        pending={pending}
+        onCancel={() => setAsking(false)}
+        onConfirm={(why) => move('LOST', why)}
+      />
     </div>
   );
 }

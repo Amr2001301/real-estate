@@ -29,11 +29,13 @@ import {
   CreateLeadSourceDto,
   UpdateLeadSourceDto,
   FollowUpBucket,
+  CreateLostReasonDto,
+  UpdateLostReasonDto,
 } from './dto/lead.dto';
 import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { enumFilter } from '../../common/utils/query-filters';
 import { getRequiredCompanyId, getTenantContext } from '../../common/tenant/tenant-context';
-import { currentCompanyTimeZone, endOfLocalTodayInstant } from '../../common/time/company-timezone';
+import { currentCompanyTimeZone, endOfLocalTodayInstant, localDayStartInstant } from '../../common/time/company-timezone';
 import { phoneForWrite } from '../../common/utils/phone-for-write';
 import { assertClientClaimable, clientOwnerScope } from '../../common/utils/client-ownership';
 import type { AuthUser } from '../../common/decorators/current-user.decorator';
@@ -100,6 +102,70 @@ export class LeadsService {
       return norm(n.ar) === norm(name.ar) || norm(n.en) === norm(name.en);
     });
     if (taken) throw new ConflictException('يوجد مصدر بنفس الاسم');
+  }
+
+  // ----- Lost reasons -----
+  /** The company's lost reasons in their order; switched-off ones only when asked (the admin's list). */
+  listLostReasons(includeInactive = false) {
+    return this.prisma.lostReason.findMany({
+      where: { companyId: getRequiredCompanyId(), ...(includeInactive ? {} : { active: true }) },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  async createLostReason(dto: CreateLostReasonDto) {
+    const companyId = getRequiredCompanyId();
+    const name = { ar: dto.ar.trim(), en: dto.en.trim() };
+    await this.assertLostReasonNameFree(companyId, name);
+    const last = await this.prisma.lostReason.findFirst({
+      where: { companyId },
+      orderBy: { sortOrder: 'desc' },
+      select: { sortOrder: true },
+    });
+    return this.prisma.lostReason.create({
+      data: { name: name as Prisma.InputJsonValue, sortOrder: (last?.sortOrder ?? 0) + 1 },
+    });
+  }
+
+  /** Rename, reorder or switch off a reason. A switched-off reason stays on the leads lost for it. */
+  async updateLostReason(id: string, dto: UpdateLostReasonDto) {
+    const companyId = getRequiredCompanyId();
+    const reason = await this.prisma.lostReason.findFirst({ where: { id, companyId } });
+    if (!reason) throw new NotFoundException('Lost reason not found');
+    const current = reason.name as { ar?: string; en?: string };
+    const renamed = dto.ar !== undefined || dto.en !== undefined;
+    const name = { ar: dto.ar?.trim() ?? current.ar ?? '', en: dto.en?.trim() ?? current.en ?? '' };
+    if (renamed) await this.assertLostReasonNameFree(companyId, name, id);
+    return this.prisma.lostReason.update({
+      where: { id },
+      data: {
+        ...(renamed ? { name: name as Prisma.InputJsonValue } : {}),
+        ...(dto.active !== undefined ? { active: dto.active } : {}),
+        ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
+      },
+    });
+  }
+
+  /** Two reasons with one name split the report. */
+  private async assertLostReasonNameFree(companyId: string, name: { ar: string; en: string }, exceptId?: string) {
+    const all = await this.prisma.lostReason.findMany({ where: { companyId }, select: { id: true, name: true } });
+    const norm = (v: unknown) => (typeof v === 'string' ? v.trim().toLowerCase() : '');
+    const taken = all.some((r) => {
+      if (r.id === exceptId) return false;
+      const n = r.name as { ar?: string; en?: string };
+      return norm(n.ar) === norm(name.ar) || norm(n.en) === norm(name.en);
+    });
+    if (taken) throw new ConflictException('يوجد سبب بنفس الاسم');
+  }
+
+  /** A lead is lost for one of the company's active reasons. */
+  private async assertUsableLostReason(lostReasonId: string) {
+    const reason = await this.prisma.lostReason.findFirst({
+      where: { id: lostReasonId, companyId: getRequiredCompanyId() },
+      select: { active: true },
+    });
+    if (!reason) throw new BadRequestException('سبب الخسارة غير موجود');
+    if (!reason.active) throw new BadRequestException('سبب الخسارة موقوف — اختر سببًا آخر');
   }
 
   /** A lead's source must be one of the company's active sources. */
@@ -322,6 +388,8 @@ export class LeadsService {
     createdBefore?: Date;
     /** Only leads nobody owns yet. */
     unassigned?: boolean;
+    /** Lost for this reason (`none`: lost with no reason recorded). */
+    lostReasonId?: string;
   }) {
     const page = opts.page ?? 1;
     const pageSize = opts.pageSize ?? 20;
@@ -339,6 +407,9 @@ export class LeadsService {
       ...(opts.unassigned ? { assignedSalesId: null } : {}),
       ...(opts.clientId ? { clientId: opts.clientId } : {}),
       ...(opts.sourceId ? { sourceId: opts.sourceId } : {}),
+      ...(opts.lostReasonId
+        ? { stage: LeadStage.LOST, lostReasonId: opts.lostReasonId === 'none' ? null : opts.lostReasonId }
+        : {}),
       ...(opts.dateFrom || opts.dateTo || opts.createdBefore
         ? {
             createdAt: {
@@ -377,6 +448,7 @@ export class LeadsService {
             select: { id: true, fullName: true, phone: true, email: true, role: true, passwordHash: true, createdAt: true },
           },
           source: true,
+          lostReason: { select: { id: true, name: true } },
           assignedSales: { select: { id: true, fullName: true } },
           projectInterest: { select: { id: true, name: true } },
           unitInterest: { select: { id: true, code: true, type: true } },
@@ -456,6 +528,7 @@ export class LeadsService {
           },
         },
         source: true,
+        lostReason: { select: { id: true, name: true } },
         assignedSales: { select: { id: true, fullName: true } },
         projectInterest: true,
         // Broker attribution for the lead detail "مصدر الفرصة" section.
@@ -514,7 +587,21 @@ export class LeadsService {
 
   async updateStage(id: string, dto: UpdateLeadStageDto, actorId?: string) {
     const lead = await this.assertExists(id);
-    if (lead.stage === dto.stage) return lead;
+    if (dto.stage !== LeadStage.LOST && (dto.lostReasonId || dto.lostNote)) {
+      throw new BadRequestException('سبب الخسارة يُسجَّل عند اعتبار العميل مفقودًا فقط');
+    }
+    if (dto.lostReasonId) await this.assertUsableLostReason(dto.lostReasonId);
+    const lostWhy = {
+      lostReasonId: dto.lostReasonId ?? null,
+      lostNote: dto.lostNote?.trim() || null,
+    };
+    if (lead.stage === dto.stage) {
+      // Already lost: the reason can still be set or corrected.
+      if (dto.stage === LeadStage.LOST && dto.lostReasonId) {
+        return this.prisma.lead.update({ where: { id }, data: lostWhy });
+      }
+      return lead;
+    }
     // WON is what a converted reservation sets — by hand it marks a sale that
     // never happened (and then blocks the real reservation).
     if (dto.stage === LeadStage.WON) {
@@ -532,14 +619,27 @@ export class LeadsService {
     }
     const updated = await this.prisma.lead.update({
       where: { id },
-      // A lost lead has nothing left to follow up.
-      data: { stage: dto.stage, ...(dto.stage === LeadStage.LOST ? CLEAR_NEXT_ACTION : {}) },
+      data: {
+        stage: dto.stage,
+        // A lost lead has nothing left to follow up, and says why it was lost;
+        // a lead brought back drops the old reason.
+        ...(dto.stage === LeadStage.LOST
+          ? { ...CLEAR_NEXT_ACTION, ...lostWhy, lostAt: new Date() }
+          : lead.stage === LeadStage.LOST
+            ? { lostReasonId: null, lostNote: null, lostAt: null }
+            : {}),
+      },
     });
     await this.prisma.leadActivity.create({
       data: {
         leadId: id,
         type: 'status_change',
-        payload: { from: lead.stage, to: dto.stage, reason: dto.reason ?? null },
+        payload: {
+          from: lead.stage,
+          to: dto.stage,
+          reason: dto.reason ?? null,
+          ...(dto.stage === LeadStage.LOST ? { lostReasonId: lostWhy.lostReasonId, lostNote: lostWhy.lostNote } : {}),
+        },
       },
     });
     // Notify assigned sales rep and managers about the stage change.
@@ -748,6 +848,148 @@ export class LeadsService {
     ]);
     const data = rows.map(({ notes, ...lead }) => ({ ...lead, lastActivity: notes[0] ?? null }));
     return paginate(data, total, { page, pageSize });
+  }
+
+  /**
+   * Why leads were lost: how many, for which reasons, by rep, source, project
+   * and month, against the deals won in the same period. Lost leads count by
+   * when they were lost (`lostAt`); the period is whole company days.
+   */
+  async lostReport(
+    scope: FollowUpScope,
+    /** `from` / `to`: company days (`YYYY-MM-DD`), both included. */
+    opts: { from?: string; to?: string; projectId?: string; sourceId?: string } = {},
+  ) {
+    const companyId = getRequiredCompanyId();
+    const zone = await currentCompanyTimeZone(this.prisma, companyId);
+    const from = opts.from ? localDayStartInstant(zone, opts.from) : undefined;
+    const to = opts.to ? new Date(localDayStartInstant(zone, opts.to).getTime() + 24 * 60 * 60 * 1000) : undefined;
+    const owner: Prisma.LeadWhereInput = scope.salesIds
+      ? { assignedSalesId: { in: scope.salesIds } }
+      : scope.salesId
+        ? { assignedSalesId: scope.salesId }
+        : {};
+    const filters: Prisma.LeadWhereInput = {
+      companyId,
+      ...owner,
+      ...(opts.projectId ? { projectInterestId: opts.projectId } : {}),
+      ...(opts.sourceId ? { sourceId: opts.sourceId } : {}),
+    };
+    const range = from || to ? { ...(from ? { gte: from } : {}), ...(to ? { lt: to } : {}) } : undefined;
+    const lostWhere: Prisma.LeadWhereInput = { ...filters, stage: LeadStage.LOST, ...(range ? { lostAt: range } : {}) };
+
+    const [lost, won, byReasonRaw, bySalesRaw, bySourceRaw, byProjectRaw, months, recent, reasons] = await Promise.all([
+      this.prisma.lead.count({ where: lostWhere }),
+      this.prisma.lead.count({ where: { ...filters, stage: LeadStage.WON, ...(range ? { stageChangedAt: range } : {}) } }),
+      this.prisma.lead.groupBy({ by: ['lostReasonId'], where: lostWhere, _count: true }),
+      this.prisma.lead.groupBy({ by: ['assignedSalesId', 'lostReasonId'], where: lostWhere, _count: true }),
+      this.prisma.lead.groupBy({ by: ['sourceId'], where: lostWhere, _count: true }),
+      this.prisma.lead.groupBy({ by: ['projectInterestId'], where: lostWhere, _count: true }),
+      this.prisma.lead.findMany({ where: lostWhere, select: { lostAt: true, stageChangedAt: true } }),
+      this.prisma.lead.findMany({
+        where: lostWhere,
+        orderBy: [{ lostAt: 'desc' }, { stageChangedAt: 'desc' }],
+        take: 20,
+        select: {
+          id: true,
+          fullName: true,
+          lostAt: true,
+          stageChangedAt: true,
+          lostNote: true,
+          lostReason: { select: { id: true, name: true } },
+          client: { select: { fullName: true } },
+          assignedSales: { select: { id: true, fullName: true } },
+          projectInterest: { select: { id: true, name: true } },
+        },
+      }),
+      this.prisma.lostReason.findMany({ where: { companyId }, select: { id: true, name: true, active: true } }),
+    ]);
+
+    const ids = <T,>(rows: T[], key: (r: T) => string | null) => [...new Set(rows.map(key).filter((v): v is string => !!v))];
+    const [users, sources, projects] = await Promise.all([
+      // The reps' names through their lost leads (users are read through UsersService elsewhere).
+      this.prisma.lead
+        .findMany({
+          where: { ...lostWhere, assignedSalesId: { not: null } },
+          distinct: ['assignedSalesId'],
+          select: { assignedSales: { select: { id: true, fullName: true } } },
+        })
+        .then((rows) => rows.flatMap((r) => (r.assignedSales ? [r.assignedSales] : []))),
+      this.prisma.leadSource.findMany({
+        where: { companyId, id: { in: ids(bySourceRaw, (r) => r.sourceId) } },
+        select: { id: true, name: true },
+      }),
+      this.prisma.project.findMany({
+        where: { companyId, id: { in: ids(byProjectRaw, (r) => r.projectInterestId) } },
+        select: { id: true, name: true },
+      }),
+    ]);
+    const nameOf = <T extends { id: string }>(list: T[], id: string | null) => list.find((x) => x.id === id) ?? null;
+    const share = (n: number) => (lost > 0 ? Math.round((n / lost) * 1000) / 10 : 0);
+
+    const byReason = byReasonRaw
+      .map((r) => {
+        const reason = nameOf(reasons, r.lostReasonId);
+        return { reasonId: r.lostReasonId, name: reason?.name ?? null, active: reason?.active ?? true, count: r._count, share: share(r._count) };
+      })
+      .sort((a, b) => b.count - a.count);
+
+    const salesMap = new Map<string | null, { count: number; reasons: Map<string | null, number> }>();
+    for (const r of bySalesRaw) {
+      const row = salesMap.get(r.assignedSalesId) ?? { count: 0, reasons: new Map() };
+      row.count += r._count;
+      row.reasons.set(r.lostReasonId, (row.reasons.get(r.lostReasonId) ?? 0) + r._count);
+      salesMap.set(r.assignedSalesId, row);
+    }
+    const bySales = [...salesMap.entries()]
+      .map(([salesId, row]) => {
+        const [topId, topCount] = [...row.reasons.entries()].sort((a, b) => b[1] - a[1])[0]!;
+        return {
+          salesId,
+          fullName: nameOf(users, salesId)?.fullName ?? null,
+          count: row.count,
+          share: share(row.count),
+          topReason: { reasonId: topId, name: nameOf(reasons, topId)?.name ?? null, count: topCount },
+        };
+      })
+      .sort((a, b) => b.count - a.count);
+
+    const bySource = bySourceRaw
+      .map((r) => ({ sourceId: r.sourceId, name: nameOf(sources, r.sourceId)?.name ?? null, count: r._count, share: share(r._count) }))
+      .sort((a, b) => b.count - a.count);
+    const byProject = byProjectRaw
+      .map((r) => ({ projectId: r.projectInterestId, name: nameOf(projects, r.projectInterestId)?.name ?? null, count: r._count, share: share(r._count) }))
+      .sort((a, b) => b.count - a.count);
+
+    // By month in the company's time zone.
+    const monthKey = new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit' });
+    const trendMap = new Map<string, number>();
+    for (const m of months) {
+      const key = monthKey.format(m.lostAt ?? m.stageChangedAt).slice(0, 7);
+      trendMap.set(key, (trendMap.get(key) ?? 0) + 1);
+    }
+    const trend = [...trendMap.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([month, count]) => ({ month, count }));
+
+    const unrecorded = byReason.find((r) => r.reasonId === null)?.count ?? 0;
+    return {
+      totals: {
+        lost,
+        won,
+        lossRate: lost + won > 0 ? Math.round((lost / (lost + won)) * 1000) / 10 : null,
+        withReason: lost - unrecorded,
+        unrecorded,
+      },
+      byReason,
+      bySales,
+      bySource,
+      byProject,
+      trend,
+      recent: recent.map(({ client, lostAt, stageChangedAt, ...l }) => ({
+        ...l,
+        fullName: client?.fullName ?? l.fullName,
+        lostAt: lostAt ?? stageChangedAt,
+      })),
+    };
   }
 
   async pipelineCounts(opts: { salesId?: string; salesIds?: string[] } = {}) {

@@ -28,6 +28,8 @@ interface Filters {
   unassigned?: string;
   salesId?: string;
   sourceId?: string;
+  /** From the lost-reasons report: the leads lost for one reason (`none`: no reason). */
+  lostReasonId?: string;
 }
 
 export default async function LeadsPage({ searchParams }: { searchParams: Promise<Filters> }) {
@@ -44,6 +46,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
   if (sp.sourceId) qs.set('sourceId', sp.sourceId);
   if (canRoute && sp.salesId) qs.set('salesId', sp.salesId);
   if (unassignedQueue) qs.set('unassigned', '1');
+  if (sp.lostReasonId) qs.set('lostReasonId', sp.lostReasonId);
 
   const [leadsRes, pipelineRes, sourcesRes, repsRes, unassignedRes] = await Promise.all([
     safe(api.get<Paged<Lead>>(`/leads?${qs.toString()}`)),

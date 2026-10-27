@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect, unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
-import type { LeadCallResult, LeadFollowUpType, LeadNoteKind, LeadStage } from '@/lib/types';
+import type { LeadCallResult, LeadFollowUpType, LeadNoteKind, LeadStage, LostReason } from '@/lib/types';
 
 export interface LeadFormState {
   error?: string;
@@ -58,8 +58,15 @@ export async function createLeadAction(
   redirect(`/dashboard/leads/${created.id}`);
 }
 
-export async function updateStageAction(leadId: string, stage: LeadStage) {
-  await api.patch(`/leads/${leadId}/stage`, { stage });
+export async function updateStageAction(
+  leadId: string,
+  stage: LeadStage,
+  lost?: { lostReasonId: string; lostNote?: string },
+) {
+  await api.patch(`/leads/${leadId}/stage`, {
+    stage,
+    ...(stage === 'LOST' && lost ? { lostReasonId: lost.lostReasonId, lostNote: lost.lostNote?.trim() || undefined } : {}),
+  });
   revalidatePath(`/dashboard/leads/${leadId}`);
   revalidatePath('/dashboard/leads');
 }
@@ -156,4 +163,36 @@ export async function updateSourceAction(id: string, formData: FormData) {
 
 export async function setSourceActiveAction(id: string, active: boolean) {
   await sourceResult(() => api.patch(`/lead-sources/${id}`, { active }));
+}
+
+/** The active lost reasons, for the "why was it lost" dialog. */
+export async function listLostReasonsAction(): Promise<LostReason[]> {
+  return api.get<LostReason[]>('/lost-reasons');
+}
+
+const LOST_REASONS_PATH = '/dashboard/lost-reasons';
+
+export async function createLostReasonAction(ar: string, en: string): Promise<LeadFormState> {
+  try {
+    await api.post('/lost-reasons', { ar: ar.trim(), en: en.trim() });
+  } catch (e) {
+    unstable_rethrow(e);
+    return { error: (e as Error).message };
+  }
+  revalidatePath(LOST_REASONS_PATH);
+  return { ok: true };
+}
+
+export async function updateLostReasonAction(
+  id: string,
+  patch: { ar?: string; en?: string; active?: boolean; sortOrder?: number },
+): Promise<LeadFormState> {
+  try {
+    await api.patch(`/lost-reasons/${id}`, patch);
+  } catch (e) {
+    unstable_rethrow(e);
+    return { error: (e as Error).message };
+  }
+  revalidatePath(LOST_REASONS_PATH);
+  return { ok: true };
 }
