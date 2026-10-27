@@ -22,6 +22,7 @@ import {
   Bell,
   PhoneCall,
   TrendingDown,
+  Megaphone,
   BarChart3,
   Boxes,
   ShieldCheck,
@@ -91,6 +92,7 @@ export const NAV_ICONS = {
   Scale,
   PhoneCall,
   TrendingDown,
+  Megaphone,
 } satisfies Record<string, LucideIcon>;
 
 export type IconKey = keyof typeof NAV_ICONS;
@@ -146,6 +148,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/dashboard/units', label: 'الوحدات', labelKey: 'units', iconKey: 'Home' },
       { href: '/dashboard/leads', label: 'فرص المبيعات (CRM)', labelKey: 'leads', iconKey: 'Users' },
       { href: '/dashboard/follow-ups', label: 'المتابعات', labelKey: 'followUps', iconKey: 'PhoneCall' },
+      { href: '/dashboard/campaigns', label: 'الحملات التسويقية', labelKey: 'campaigns', iconKey: 'Megaphone', admin: true, manager: true },
       { href: '/dashboard/lost-reasons', label: 'أسباب الخسارة', labelKey: 'lostReasons', iconKey: 'TrendingDown', admin: true, manager: true },
       // P13 — general info/contact-form inquiries (Guest/Client/Customer).
       // Role-only gate matches GET /info-requests (ADMIN + SALES + SALES_MANAGER).

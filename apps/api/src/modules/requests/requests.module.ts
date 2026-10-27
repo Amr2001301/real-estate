@@ -1,3 +1,4 @@
+import { campaignForUtm } from '../campaigns/campaign-attribution';
 import {
   BadRequestException,
   Body,
@@ -241,6 +242,8 @@ export class RequestsService {
     actor: { userId?: string },
   ) {
     const utm = pickUtm(dto);
+    // The campaign the ad link names (utm_campaign = its code), if any.
+    const campaign = await campaignForUtm(this.prisma, getTenantContext()?.companyId, utm?.utmCampaign);
     await this.assertPublicTarget(dto.projectId ?? null, dto.unitId ?? null);
     let leadId: string | null = null;
     let ownerToTell: string | null = null;
@@ -254,7 +257,8 @@ export class RequestsService {
         ownerToTell = existing.assignedSalesId;
         // Back-fill UTM on first touch if the lead has none yet.
         if (utm && !existing.utmSource && !existing.fbclid) {
-          await this.prisma.lead.update({ where: { id: existing.id }, data: utm });
+          const campaign = existing.campaignId ? null : await campaignForUtm(this.prisma, getTenantContext()?.companyId, utm.utmCampaign);
+          await this.prisma.lead.update({ where: { id: existing.id }, data: { ...utm, ...(campaign ? { campaignId: campaign.id } : {}) } });
         }
       } else {
         const client = await this.findOrCreateClient(dto.name, phone, dto.email ?? null);
@@ -264,9 +268,11 @@ export class RequestsService {
             fullName: client.fullName,
             phone: client.phone ?? phone,
             email: client.email ?? dto.email ?? null,
-            projectInterestId: dto.projectId ?? null,
+            projectInterestId: dto.projectId ?? campaign?.projectId ?? null,
             unitInterestId: dto.unitId ?? null,
-            sourceId: await this.websiteLeadSourceId(),
+            // A campaign's leads go under its source (Facebook…), not "Website".
+            sourceId: campaign?.sourceId ?? (await this.websiteLeadSourceId()),
+            campaignId: campaign?.id ?? null,
             ...utm,
           },
         });
@@ -445,6 +451,8 @@ export class RequestsService {
     actor: { userId?: string },
   ) {
     const utm = pickUtm(dto);
+    // The campaign the ad link names (utm_campaign = its code), if any.
+    const campaign = await campaignForUtm(this.prisma, getTenantContext()?.companyId, utm?.utmCampaign);
     await this.assertPublicTarget(dto.projectId ?? null, dto.unitId ?? null);
     let leadId: string | null = null;
     let ownerToTell: string | null = null;
@@ -457,7 +465,8 @@ export class RequestsService {
         leadId = existing.id;
         ownerToTell = existing.assignedSalesId;
         if (utm && !existing.utmSource && !existing.fbclid) {
-          await this.prisma.lead.update({ where: { id: existing.id }, data: utm });
+          const campaign = existing.campaignId ? null : await campaignForUtm(this.prisma, getTenantContext()?.companyId, utm.utmCampaign);
+          await this.prisma.lead.update({ where: { id: existing.id }, data: { ...utm, ...(campaign ? { campaignId: campaign.id } : {}) } });
         }
       } else {
         const client = await this.findOrCreateClient(dto.name, phone, null);
@@ -468,7 +477,8 @@ export class RequestsService {
             phone: client.phone ?? phone,
             projectInterestId: dto.projectId,
             unitInterestId: dto.unitId ?? null,
-            sourceId: await this.websiteLeadSourceId(),
+            sourceId: campaign?.sourceId ?? (await this.websiteLeadSourceId()),
+            campaignId: campaign?.id ?? null,
             ...utm,
           },
         });

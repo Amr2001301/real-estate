@@ -65,9 +65,9 @@ describe('MT-014 equivalence: TENANT_SCOPED_MODELS ↔ MODEL_TENANCY TENANT_OWNE
     expect(missing).toEqual([]);
   });
 
-  it('both sets have the same cardinality (65: Step A + Step C + Step D1 + Option B User − FG-26 NotificationTemplate + ContractAmendment + BrokerCommissionAdjustment + PresignedUpload + UnitHandover + UnitType + UnitModel + PrintSettings + DocumentTemplate + SignatureRequest + CustomerField + FormLayout + CompanyAiPlan + AiLedgerEntry + CompanyMobileApp + LostReason)', () => {
-    expect(TENANT_SCOPED_MODELS.size).toBe(65);
-    expect(ownedFromModelTenancy.size).toBe(65);
+  it('both sets have the same cardinality (67: Step A + Step C + Step D1 + Option B User − FG-26 NotificationTemplate + ContractAmendment + BrokerCommissionAdjustment + PresignedUpload + UnitHandover + UnitType + UnitModel + PrintSettings + DocumentTemplate + SignatureRequest + CustomerField + FormLayout + CompanyAiPlan + AiLedgerEntry + CompanyMobileApp + LostReason + Campaign + CampaignSpend)', () => {
+    expect(TENANT_SCOPED_MODELS.size).toBe(67);
+    expect(ownedFromModelTenancy.size).toBe(67);
   });
 
   it('MODEL_TIER_BY_LOWERCASE includes all TENANT_OWNED models with correct tier', () => {
@@ -353,9 +353,9 @@ describe('MT-014 MODEL_TIER_BY_LOWERCASE derived set', () => {
     }
   });
 
-  it('TENANT_OWNED count matches TENANT_SCOPED_MODELS count (65 after Option B User, FG-26, ContractAmendment, BrokerCommissionAdjustment, PresignedUpload, UnitHandover, UnitType, UnitModel, PrintSettings, DocumentTemplate, SignatureRequest, CustomerField, FormLayout, CompanyAiPlan, AiLedgerEntry, CompanyMobileApp and LostReason)', () => {
+  it('TENANT_OWNED count matches TENANT_SCOPED_MODELS count (67 after Option B User, FG-26, ContractAmendment, BrokerCommissionAdjustment, PresignedUpload, UnitHandover, UnitType, UnitModel, PrintSettings, DocumentTemplate, SignatureRequest, CustomerField, FormLayout, CompanyAiPlan, AiLedgerEntry, CompanyMobileApp, LostReason, Campaign and CampaignSpend)', () => {
     const ownedCount = [...MODEL_TIER_BY_LOWERCASE.values()].filter((t) => t === 'TENANT_OWNED').length;
-    expect(ownedCount).toBe(65);
+    expect(ownedCount).toBe(67);
   });
 });
 

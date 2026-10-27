@@ -168,6 +168,16 @@ export class LeadsService {
     if (!reason.active) throw new BadRequestException('سبب الخسارة موقوف — اختر سببًا آخر');
   }
 
+  /** A campaign of the company's own. */
+  private async companyCampaign(campaignId: string) {
+    const campaign = await this.prisma.campaign.findFirst({
+      where: { id: campaignId, companyId: getRequiredCompanyId() },
+      select: { id: true, sourceId: true, projectId: true },
+    });
+    if (!campaign) throw new BadRequestException('الحملة غير موجودة');
+    return campaign;
+  }
+
   /** A lead's source must be one of the company's active sources. */
   private async assertUsableSource(sourceId: string | null | undefined) {
     if (!sourceId) return;
@@ -214,6 +224,8 @@ export class LeadsService {
     }
 
     await this.assertUsableSource(dto.sourceId);
+    // A campaign files the lead under its source and project unless they were picked.
+    const campaign = dto.campaignId ? await this.companyCampaign(dto.campaignId) : null;
 
     const lead = await this.prisma.$transaction(async (tx) => {
       const client = await this.resolveClient(tx, dto);
@@ -227,10 +239,11 @@ export class LeadsService {
           fullName: client.fullName,
           phone: client.phone ?? dto.phone ?? '',
           email: client.email ?? dto.email ?? null,
-          sourceId: dto.sourceId ?? null,
-          projectInterestId: dto.projectInterestId ?? null,
+          sourceId: dto.sourceId ?? campaign?.sourceId ?? null,
+          projectInterestId: dto.projectInterestId ?? campaign?.projectId ?? null,
           unitInterestId: dto.unitInterestId ?? null,
           assignedSalesId,
+          campaignId: campaign?.id ?? null,
         },
       });
 
@@ -390,6 +403,8 @@ export class LeadsService {
     unassigned?: boolean;
     /** Lost for this reason (`none`: lost with no reason recorded). */
     lostReasonId?: string;
+    /** Brought by this campaign. */
+    campaignId?: string;
   }) {
     const page = opts.page ?? 1;
     const pageSize = opts.pageSize ?? 20;
@@ -407,6 +422,7 @@ export class LeadsService {
       ...(opts.unassigned ? { assignedSalesId: null } : {}),
       ...(opts.clientId ? { clientId: opts.clientId } : {}),
       ...(opts.sourceId ? { sourceId: opts.sourceId } : {}),
+      ...(opts.campaignId ? { campaignId: opts.campaignId } : {}),
       ...(opts.lostReasonId
         ? { stage: LeadStage.LOST, lostReasonId: opts.lostReasonId === 'none' ? null : opts.lostReasonId }
         : {}),
@@ -449,6 +465,7 @@ export class LeadsService {
           },
           source: true,
           lostReason: { select: { id: true, name: true } },
+          campaign: { select: { id: true, name: true, channel: true } },
           assignedSales: { select: { id: true, fullName: true } },
           projectInterest: { select: { id: true, name: true } },
           unitInterest: { select: { id: true, code: true, type: true } },
@@ -529,6 +546,7 @@ export class LeadsService {
         },
         source: true,
         lostReason: { select: { id: true, name: true } },
+        campaign: { select: { id: true, name: true, channel: true } },
         assignedSales: { select: { id: true, fullName: true } },
         projectInterest: true,
         // Broker attribution for the lead detail "مصدر الفرصة" section.
@@ -567,6 +585,7 @@ export class LeadsService {
     if (dto.sourceId !== undefined && dto.sourceId !== lead.sourceId) {
       await this.assertUsableSource(dto.sourceId);
     }
+    if (dto.campaignId) await this.companyCampaign(dto.campaignId);
     const data: Prisma.LeadUncheckedUpdateInput = { ...dto };
     if (dto.phone !== undefined) {
       // Stored E.164, like on create — duplicate and OTP lookups match on it.

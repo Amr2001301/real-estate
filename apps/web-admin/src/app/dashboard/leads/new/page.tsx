@@ -21,7 +21,7 @@ export default async function NewLeadPage({
   const n = m.pages.leadsNew;
 
   // Units are searched from the form itself (SearchSelect).
-  const [projectsRes, sourcesRes, salesRes, clientRes, session] = await Promise.all([
+  const [projectsRes, sourcesRes, salesRes, clientRes, session, campaignsRes] = await Promise.all([
     safe(projectOptions()),
     safe(api.get<LeadSource[]>('/lead-sources')),
     safe(staffOptions(['SALES', 'SALES_MANAGER'])),
@@ -29,6 +29,7 @@ export default async function NewLeadPage({
       ? safe(api.get<User>(`/users/${sp.clientId}`))
       : Promise.resolve({ data: null, error: null } as { data: User | null; error: null }),
     getSession(),
+    safe(api.get<Array<{ id: string; name: string; status: string }>>('/campaigns/options')),
   ]);
   // A sales rep may only assign a lead to themselves (the API refuses anyone
   // else), so they are the only option; managers and admins see every rep.
@@ -87,6 +88,7 @@ export default async function NewLeadPage({
       <LeadForm
         projects={projectsRes.data?.data ?? []}
         sources={(sourcesRes.data ?? []).filter((s) => s.active)}
+        campaigns={campaignsRes.data ?? []}
         sales={salesOptions}
         initialClient={clientRes.data ?? null}
         locale={locale}
