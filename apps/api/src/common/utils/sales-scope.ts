@@ -137,3 +137,17 @@ export async function assertSalesRecordInScope(
     ? new ForbiddenException('Record is outside your team')
     : new NotFoundException('Not found');
 }
+
+/**
+ * Who new leads are handed to in turn: the tenant's active sales reps
+ * (SALES, not deleted), in a stable order.
+ */
+export async function roundRobinPool(prisma: PrismaService): Promise<string[]> {
+  const companyId = getRequiredCompanyId();
+  const rows = await prisma.user.findMany({
+    where: { role: UserRole.SALES, active: true, deletedAt: null, companyId },
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    select: { id: true },
+  });
+  return rows.map((r) => r.id);
+}

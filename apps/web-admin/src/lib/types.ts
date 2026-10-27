@@ -338,6 +338,25 @@ export interface CampaignDetail extends Campaign {
   siteUrl: string;
 }
 
+export interface IntakeKey {
+  id: string;
+  name: string;
+  /** The first characters of the key, to tell keys apart. */
+  tokenPrefix: string;
+  active: boolean;
+  lastUsedAt: string | null;
+  useCount: number;
+  createdAt: string;
+  campaign: { id: string; name: string; channel: CampaignChannel } | null;
+  project: { id: string; name: Translatable } | null;
+}
+
+export interface LeadRoutingSettings {
+  autoAssign: 'ROUND_ROBIN' | 'NONE';
+  firstCallMinutes: number;
+  companySlug: string | null;
+}
+
 export interface LostReason {
   id: string;
   name: Translatable;

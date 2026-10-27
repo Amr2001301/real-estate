@@ -159,9 +159,10 @@ model Company {
   refunds                     Refund[]
 
   // Module flags — controls which dashboard sections are visible for this company
-  modules       Json? // { broker, website, maintenance, reports, leads, visits, contracts, installments, deposits }
-  campaigns     Campaign[]
-  campaignSpend CampaignSpend[]
+  modules        Json? // { broker, website, maintenance, reports, leads, visits, contracts, installments, deposits }
+  campaigns      Campaign[]
+  campaignSpend  CampaignSpend[]
+  leadIntakeKeys LeadIntakeKey[]
 
   @@index([slug])
   @@index([isActive])
@@ -896,9 +897,10 @@ model Project {
   brokerAccess      BrokerProjectAccess[]
   brokerCommissions BrokerCommission[]
 
-  companyId String?    @db.Uuid
-  company   Company?   @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  campaigns Campaign[]
+  companyId      String?         @db.Uuid
+  company        Company?        @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  campaigns      Campaign[]
+  leadIntakeKeys LeadIntakeKey[]
 
   @@unique([companyId, code])
   @@index([city])
@@ -1210,10 +1212,36 @@ model Campaign {
   leads     Lead[]
   spend     CampaignSpend[]
 
+  companyId  String?         @db.Uuid
+  company    Company?        @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  intakeKeys LeadIntakeKey[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+}
+
+/// A secret key a lead source posts new leads with (Zapier / Make, Google
+/// lead forms, TikTok…) to POST /v1/intake/:companySlug/leads. Only a hash is
+/// kept; the key itself is shown once, when made.
+model LeadIntakeKey {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String
+  tokenHash   String    @unique
+  /// The first characters of the key, to tell keys apart on screen.
+  tokenPrefix String
+  /// Leads through this key are filed under this campaign / project unless the post names one.
+  campaignId  String?   @db.Uuid
+  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  projectId   String?   @db.Uuid
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  active      Boolean   @default(true)
+  lastUsedAt  DateTime?
+  useCount    Int       @default(0)
+  createdAt   DateTime  @default(now())
+
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
-  @@unique([companyId, code])
   @@index([companyId])
 }
 
@@ -1323,6 +1351,8 @@ model LeadActivity {
 
 enum LeadActivityType {
   created
+  /// An open lead came in again (a form, an ad) — kept on the existing lead.
+  returned
   assigned
   status_change
   visit

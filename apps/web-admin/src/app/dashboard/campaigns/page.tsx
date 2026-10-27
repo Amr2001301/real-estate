@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays, Megaphone, Plus } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Megaphone, Plus, Webhook } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Campaign, CampaignChannel, CampaignStatus } from '@/lib/types';
 import { compactParts, formatDate, tx } from '@/lib/format';
@@ -11,6 +11,7 @@ import { PremiumMetricStrip, PremiumPageHero } from '@/components/premium';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
 import { campaignT } from '@/components/campaigns/messages';
+import { intakeT } from '@/components/campaigns/intake-messages';
 import { BudgetRing, ChannelMark, LeadFunnel, StatusPill } from '@/components/campaigns/visuals';
 
 export const dynamic = 'force-dynamic';
@@ -58,11 +59,16 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
         description={L.desc}
         breadcrumbs={[{ label: uiT(locale).common.breadcrumbHome, href: '/dashboard' }, { label: L.title }]}
         actions={
-          canManage ? (
-            <Link href={'/dashboard/campaigns/new' as never}>
-              <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />} data-testid="campaign-new">{L.add}</Button>
+          <>
+            <Link href={'/dashboard/campaigns/intake' as never}>
+              <Button variant="outline" size="md" leftIcon={<Webhook className="h-4 w-4" />} data-testid="campaign-intake">{intakeT(locale).open}</Button>
             </Link>
-          ) : null
+            {canManage && (
+              <Link href={'/dashboard/campaigns/new' as never}>
+                <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />} data-testid="campaign-new">{L.add}</Button>
+              </Link>
+            )}
+          </>
         }
       >
         {t && all.length > 0 && (
