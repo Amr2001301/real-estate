@@ -1,15 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Copy, Link2 } from 'lucide-react';
+import { Check, Copy, ExternalLink } from 'lucide-react';
 
-/** The campaign's ad links, each with a copy button. */
+/** The campaign's ad links: the address in plain sight, its tracking tags as chips, one-click copy. */
 export function TrackingLinks({
   links,
   labels,
 }: {
   links: Array<{ label: string; url: string }>;
-  labels: { copy: string; copied: string };
+  labels: { copy: string; copied: string; params: string; open: string };
 }) {
   const [copied, setCopied] = useState<string | null>(null);
   const copy = async (url: string) => {
@@ -23,26 +23,49 @@ export function TrackingLinks({
   };
   return (
     <ul className="space-y-3">
-      {links.map((l) => (
-        <li key={l.url} data-testid="tracking-link" className="rounded-2xl border border-hairline bg-surface-muted/40 p-3">
-          <p className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-500">
-            <Link2 className="h-3.5 w-3.5" /> {l.label}
-          </p>
-          <div className="mt-1.5 flex items-center gap-2">
-            <code dir="ltr" className="min-w-0 flex-1 select-all truncate rounded-xl bg-surface px-3 py-2 text-[12px] text-slate-700 ring-1 ring-hairline">
-              {l.url}
-            </code>
-            <button
-              type="button"
-              onClick={() => copy(l.url)}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-hairline bg-surface px-3 py-2 text-[12px] font-semibold text-slate-700 hover:border-brand-500/50 hover:text-brand-700"
-            >
-              {copied === l.url ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied === l.url ? labels.copied : labels.copy}
-            </button>
-          </div>
-        </li>
-      ))}
+      {links.map((l) => {
+        const u = new URL(l.url);
+        const params = [...u.searchParams.entries()];
+        const done = copied === l.url;
+        return (
+          <li key={l.url} data-testid="tracking-link" className="overflow-hidden rounded-2xl ring-1 ring-hairline">
+            <div className="flex items-center justify-between gap-3 bg-surface-muted/50 px-4 py-2.5">
+              <span className="text-[12px] font-semibold text-slate-600">{l.label}</span>
+              <a href={l.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-slate-400 hover:text-brand-700">
+                {labels.open} <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+            <div className="space-y-3 px-4 py-3.5">
+              <p dir="ltr" className="break-all font-mono text-[12px] leading-relaxed text-slate-500">
+                <span className="font-semibold text-slate-900">{u.host}</span>
+                {u.pathname}
+                <span className="sr-only">{u.search}</span>
+              </p>
+              <div>
+                <p className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">{labels.params}</p>
+                <div dir="ltr" className="flex flex-wrap gap-1.5">
+                  {params.map(([k, v]) => (
+                    <span key={k} className="rounded-lg bg-[#D8B66A]/12 px-2 py-1 font-mono text-[11px] text-brand-800">
+                      <span className="text-slate-500">{k}=</span>{v}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => copy(l.url)}
+                className={
+                  'inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold transition-colors ' +
+                  (done ? 'bg-emerald-500/12 text-emerald-700' : 'bg-navy-band text-white hover:bg-navy-700')
+                }
+              >
+                {done ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                {done ? labels.copied : labels.copy}
+              </button>
+            </div>
+          </li>
+        );
+      })}
     </ul>
   );
 }

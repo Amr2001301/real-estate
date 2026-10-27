@@ -11,7 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { campaignT, CHANNEL_TONE } from '@/components/campaigns/messages';
+import { campaignT } from '@/components/campaigns/messages';
+import { ChannelMark } from '@/components/campaigns/visuals';
 import { createCampaignAction, updateCampaignAction, type CampaignFormState } from '../actions';
 
 const CHANNELS: CampaignChannel[] = ['FACEBOOK', 'INSTAGRAM', 'TIKTOK', 'GOOGLE', 'SNAPCHAT', 'WHATSAPP', 'SMS', 'EMAIL', 'BILLBOARD', 'EVENT', 'OTHER'];
@@ -63,11 +64,14 @@ export function CampaignForm({
               data-testid={`channel-${c}`}
               onClick={() => setChannel(c)}
               className={cn(
-                'rounded-2xl border px-3 py-2.5 text-[13px] font-semibold transition-colors',
-                channel === c ? 'border-brand-500 ring-2 ring-brand-500/25' : 'border-hairline hover:border-brand-500/40',
+                'flex flex-col items-center gap-2 rounded-2xl border px-3 py-3.5 text-[12.5px] font-semibold text-slate-700 transition-all',
+                channel === c
+                  ? 'border-[#D8B66A] bg-[#D8B66A]/[0.08] shadow-[0_8px_20px_-12px_rgba(184,140,58,0.6)]'
+                  : 'border-hairline hover:-translate-y-0.5 hover:border-[#D8B66A]/50',
               )}
             >
-              <span className={cn('inline-block rounded-full px-2 py-0.5', CHANNEL_TONE[c])}>{m.channel[c]}</span>
+              <ChannelMark channel={c} size={36} />
+              {m.channel[c]}
             </button>
           ))}
         </div>

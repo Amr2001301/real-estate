@@ -24,14 +24,15 @@ test('a campaign is created, its spend recorded by day, and its ad link carries 
 
   // Two payments on two days, summed.
   const spend = page.getByTestId('spend-panel');
-  await spend.getByTestId('spend-amount').fill('1500');
-  await spend.getByTestId('spend-date').fill('2026-10-01');
-  await spend.getByTestId('spend-add').click();
-  await expect(spend.getByTestId('spend-row')).toHaveCount(1);
-  await spend.getByTestId('spend-amount').fill('2500');
-  await spend.getByTestId('spend-date').fill('2026-10-08');
-  await spend.getByTestId('spend-add').click();
-  await expect(spend.getByTestId('spend-row')).toHaveCount(2);
+  const addSpend = async (amount: string, day: string, rows: number) => {
+    await spend.getByTestId('spend-open').click();
+    await page.getByTestId('spend-amount').fill(amount);
+    await page.getByTestId('spend-date').fill(day);
+    await page.getByTestId('spend-add').click();
+    await expect(spend.getByTestId('spend-row')).toHaveCount(rows);
+  };
+  await addSpend('1500', '2026-10-01', 1);
+  await addSpend('2500', '2026-10-08', 2);
   await expect(spend.getByTestId('spend-total')).toContainText('4,000');
 
   // The ad link carries the campaign's code and channel.
