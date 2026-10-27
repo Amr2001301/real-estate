@@ -585,7 +585,7 @@ export function FormDesigner({
                 if (!window.confirm(t.confirmDelete)) return;
                 start(async () => {
                   const r = await deleteFormAction(layout.id);
-                  if (r.ok) router.replace('/dashboard/company/print');
+                  if (r.ok) router.replace('/dashboard/company/print?tab=forms');
                   else setNote({ ok: false, text: r.error });
                 });
               }}

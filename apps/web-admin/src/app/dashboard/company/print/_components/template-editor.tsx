@@ -238,7 +238,7 @@ export function TemplateEditor({
                 if (!window.confirm(m.editor.confirmDelete)) return;
                 start(async () => {
                   const r = await deleteTemplateAction(template.id);
-                  if (r.ok) router.replace('/dashboard/company/print');
+                  if (r.ok) router.replace('/dashboard/company/print?tab=wording');
                   else setNote({ ok: false, text: r.error });
                 });
               }}

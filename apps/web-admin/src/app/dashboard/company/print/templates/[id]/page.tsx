@@ -7,6 +7,7 @@ import type { DocumentTemplate } from '@/lib/print-settings';
 import { PremiumPageHero } from '@/components/premium';
 import { companyNameOf } from '@/components/print/PrintDocument';
 import { printSettingsT } from '../../messages';
+import { EditorGuide } from '../../_components/editor-guide';
 import { TemplateEditor } from '../../_components/template-editor';
 
 export const dynamic = 'force-dynamic';
@@ -26,8 +27,9 @@ export default async function EditTemplatePage({ params }: { params: Promise<{ i
       <PremiumPageHero
         title={res.data.name}
         description={m.editor.editTitle}
-        breadcrumbs={[{ label: m.breadcrumbAdmin }, { label: m.editor.back, href: '/dashboard/company/print' }, { label: res.data.name }]}
+        breadcrumbs={[{ label: m.breadcrumbAdmin }, { label: m.editor.back, href: '/dashboard/company/print?tab=wording' }, { label: res.data.name }]}
       />
+      <EditorGuide steps={m.guide.wording} testId="editor-guide" />
       <TemplateEditor template={res.data} m={m} locale={locale} currency={letterhead.currency} company={companyNameOf(letterhead, locale)} fields={fields} />
     </div>
   );

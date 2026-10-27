@@ -215,9 +215,56 @@ function PagePreview({ s, m }: { s: PrintSettings; m: PrintSettingsMessages }) {
   );
 }
 
-export function PrintSettingsForm({ initial, m }: { initial: PrintSettings; m: PrintSettingsMessages }) {
+/** The fields the save button writes (the signature and stamp save on upload). */
+const editable = (s: PrintSettings) =>
+  JSON.stringify([
+    s.letterheadMode,
+    s.headerImageUrl,
+    s.footerImageUrl,
+    s.pageImageUrl,
+    s.marginTopMm,
+    s.marginBottomMm,
+    s.marginSideMm,
+    s.signatoryName,
+    s.signatoryTitle,
+    [...s.sealDocuments].sort(),
+  ]);
+
+/** A small picture of each paper choice. */
+function ModeArt({ mode, active }: { mode: LetterheadMode; active: boolean }) {
+  const ink = active ? 'bg-[#B08A3A]' : 'bg-slate-300';
+  return (
+    <span className="relative mx-auto block h-[74px] w-[54px] overflow-hidden rounded-[5px] bg-white shadow-[0_6px_16px_-8px_rgb(20_26_38/0.5)] ring-1 ring-slate-200">
+      {mode === 'BUILT_IN' && <span className={cn('absolute end-1.5 top-1.5 h-2 w-4 rounded-sm', ink)} />}
+      {mode === 'HEADER_FOOTER' && (
+        <>
+          <span className={cn('absolute inset-x-0 top-0 h-2.5', ink)} />
+          <span className={cn('absolute inset-x-0 bottom-0 h-1.5', ink)} />
+        </>
+      )}
+      {mode === 'FULL_PAGE' && <span className={cn('absolute inset-0 opacity-30', ink)} />}
+      <span className="absolute inset-x-2 top-5 space-y-1">
+        {[100, 80, 92, 70, 86].map((w, i) => (
+          <span key={i} className="block h-[3px] rounded bg-slate-200" style={{ width: `${w}%` }} />
+        ))}
+      </span>
+    </span>
+  );
+}
+
+export function PrintSettingsForm({
+  initial,
+  m,
+  section,
+}: {
+  initial: PrintSettings;
+  m: PrintSettingsMessages;
+  section: 'paper' | 'seal';
+}) {
   const router = useRouter();
   const [s, setS] = useState<PrintSettings>(initial);
+  const [savedAs, setSavedAs] = useState(() => editable(initial));
+  const dirty = editable(s) !== savedAs;
   const [pending, start] = useTransition();
   const [note, setNote] = useState<{ ok: boolean; text: string } | null>(null);
   const set = <K extends keyof PrintSettings>(k: K, v: PrintSettings[K]) => {
@@ -245,6 +292,7 @@ export function PrintSettingsForm({ initial, m }: { initial: PrintSettings; m: P
       });
       if (r.ok) {
         setS(r.data);
+        setSavedAs(editable(r.data));
         setNote({ ok: true, text: m.saved });
         router.refresh();
       } else setNote({ ok: false, text: r.error });
@@ -254,6 +302,7 @@ export function PrintSettingsForm({ initial, m }: { initial: PrintSettings; m: P
     <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
       <div className="flex min-w-0 flex-col gap-5">
         {/* ── Paper ── */}
+        {section === 'paper' && (
         <section className={card} data-testid="print-paper-settings">
           <h2 className="font-heading text-[17px] font-bold text-slate-900">{m.paper.title}</h2>
           <p className="mt-1 text-[12.5px] leading-relaxed text-slate-500">{m.paper.hint}</p>
@@ -274,7 +323,8 @@ export function PrintSettingsForm({ initial, m }: { initial: PrintSettings; m: P
                     active ? 'border-[#C9A24E] bg-[#C9A24E]/[0.07]' : 'border-hairline hover:border-brand-400/40',
                   )}
                 >
-                  <div className="flex items-center justify-between gap-2">
+                  <ModeArt mode={mode} active={active} />
+                  <div className="mt-3 flex items-center justify-between gap-2">
                     <span className="text-[13px] font-bold text-slate-900">{m.paper.modes[mode].label}</span>
                     <span
                       className={cn(
@@ -331,8 +381,10 @@ export function PrintSettingsForm({ initial, m }: { initial: PrintSettings; m: P
             </div>
           )}
         </section>
+        )}
 
         {/* ── Signature & stamp ── */}
+        {section === 'seal' && (
         <section className={card} data-testid="print-seal-settings">
           <h2 className="font-heading text-[17px] font-bold text-slate-900">{m.seal.title}</h2>
           <p className="mt-1 text-[12.5px] leading-relaxed text-slate-500">{m.seal.hint}</p>
@@ -390,24 +442,61 @@ export function PrintSettingsForm({ initial, m }: { initial: PrintSettings; m: P
             </div>
           </div>
         </section>
+        )}
 
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={save}
-            disabled={pending}
-            data-testid="print-settings-save"
-            className="inline-flex h-11 items-center gap-2 rounded-full bg-navy-band px-6 text-[13px] font-semibold text-[#F4ECD8] disabled:opacity-60"
+        {/* Save: in view only while there is something to save. */}
+        {(dirty || note) && (
+          <div
+            className={cn(
+              'sticky bottom-4 z-10 flex flex-wrap items-center gap-3 rounded-[20px] border bg-surface/95 p-3.5 ps-5 shadow-[0_24px_60px_-28px_rgb(14_22_38/0.55)] backdrop-blur',
+              dirty ? 'border-brand-400/50' : 'border-hairline',
+            )}
           >
-            {pending && <Loader2 className="h-4 w-4 animate-spin" />}
-            {m.save}
-          </button>
-          {note && (
-            <span className={cn('text-[12.5px]', note.ok ? 'text-success-700' : 'text-danger-600')} role="status">
-              {note.text}
-            </span>
-          )}
-        </div>
+            {dirty ? (
+              <span className="flex items-center gap-2 text-[13px] font-semibold text-slate-700">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-brand-500" />
+                {m.unsaved}
+              </span>
+            ) : (
+              note && (
+                <span className={cn('flex items-center gap-1.5 text-[13px] font-semibold', note.ok ? 'text-success-700' : 'text-danger-600')} role="status">
+                  {note.ok && <Check className="h-4 w-4" />}
+                  {note.text}
+                </span>
+              )
+            )}
+            {dirty && note && !note.ok && (
+              <span className="text-[12.5px] text-danger-600" role="status">
+                {note.text}
+              </span>
+            )}
+            {dirty && (
+              <div className="ms-auto flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => {
+                    setS(initial);
+                    setNote(null);
+                  }}
+                  className="inline-flex h-10 items-center rounded-full px-4 text-[13px] font-semibold text-slate-500 hover:text-slate-900"
+                >
+                  {m.discard}
+                </button>
+                <button
+                  type="button"
+                  onClick={save}
+                  disabled={pending}
+                  data-testid="print-settings-save"
+                  className="inline-flex h-10 items-center gap-2 rounded-full bg-gradient-to-l from-[#E2C77F] via-[#C8A24B] to-[#B08A38] px-6 text-[13px] font-bold text-[#1A1406] shadow-[0_10px_30px_-12px_rgb(200_162_75/0.7)] disabled:opacity-60"
+                >
+                  {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  {m.save}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <aside className={cn(card, 'xl:sticky xl:top-6')}>
