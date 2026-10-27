@@ -11,6 +11,8 @@ import {
   Hash,
   CheckCircle2,
   BarChart2,
+  CalendarClock,
+  MessageCircle,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { staffOptions } from '@/lib/options';
@@ -21,14 +23,17 @@ import { uiT } from '@/messages/ui';
 import { getSession } from '@/lib/session';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import {
   ReservationStatusBadge,
   VisitRequestStatusBadge,
   AppointmentStatusBadge,
 } from '@/components/badges';
 import { StageSegmented } from '@/components/crm/stage-segmented';
-import { addNoteAction, assignLeadAction } from '../actions';
+import { assignLeadAction } from '../actions';
+import { ActivityComposer } from '@/components/crm/activity-composer';
+import { NoteReply } from '@/components/crm/note-reply';
+import { KIND_ICON, RESULT_TONE } from '@/components/crm/follow-up-icons';
+import { followUpState, followUpT, whatsappHref } from '@/components/crm/follow-up-messages';
 import { salesActorLabel } from '@/lib/sales-actor';
 import { PremiumDetailLayout, PremiumPanel, PremiumEmptyNote } from '@/components/premium';
 import { cn } from '@/lib/cn';
@@ -82,6 +87,7 @@ export default async function LeadDetailPage({
   const { id } = await params;
   const locale = await getLocale();
   const m = uiT(locale).leadDetailPage;
+  const f = followUpT(locale);
 
   const STAGE_LABEL: Record<LeadStage, string> = {
     NEW:         m.stageNew,
@@ -131,6 +137,7 @@ export default async function LeadDetailPage({
   const isBrokerLead = !!lead.brokerId;
   const brokerName   = lead.broker?.commercialName || lead.broker?.companyName || lead.broker?.code || null;
   const notesCount   = lead.notes?.length ?? 0;
+  const nextState    = lead.nextActionAt ? followUpState(lead.nextActionAt) : null;
 
   function renderLeadActivity(type: string, payload: unknown): ActivityMeta {
     const p = (payload ?? {}) as Record<string, unknown>;
@@ -251,6 +258,11 @@ export default async function LeadDetailPage({
                   <Button variant="outline" size="md" leftIcon={<Phone className="h-4 w-4" />}>{m.btnCall}</Button>
                 </a>
               )}
+              {displayPhone && (
+                <a href={whatsappHref(displayPhone)} target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" size="md" leftIcon={<MessageCircle className="h-4 w-4" />}>{f.page.whatsapp}</Button>
+                </a>
+              )}
               {displayEmail && (
                 <a href={`mailto:${displayEmail}`}>
                   <Button variant="primary" size="md" leftIcon={<Mail className="h-4 w-4" />}>{m.btnEmail}</Button>
@@ -273,40 +285,115 @@ export default async function LeadDetailPage({
       <PremiumDetailLayout
         main={
           <>
-            {/* Notes */}
-            <PremiumPanel
-              title={m.notesSectionTitle}
-              sub={m.notesSectionDesc}
-              trailing={<CountPill n={notesCount} />}
-            >
-              <form action={addNoteAction.bind(null, lead.id)} className="flex flex-col gap-3">
-                <Textarea name="body" required rows={3} placeholder={m.notesPlaceholder} className="text-[13px]" />
-                <div className="flex justify-end">
-                  <Button type="submit" variant="primary" size="sm">{m.btnSaveNote}</Button>
-                </div>
-              </form>
-              <div className="mt-5">
-                {notesCount === 0 ? (
-                  <PremiumEmptyNote>
-                    <span className="block font-semibold text-slate-700">{m.emptyNotesTitle}</span>
-                    {m.emptyNotesDesc}
-                  </PremiumEmptyNote>
+            {/* Follow-up: log what happened and when to come back */}
+            <PremiumPanel title={f.composer.title} sub={f.current.title}>
+              <div
+                data-testid="next-action"
+                data-state={nextState ?? 'none'}
+                className={cn(
+                  'mb-5 flex items-start gap-3 rounded-2xl px-4 py-3 text-[13px]',
+                  nextState === 'overdue'
+                    ? 'bg-danger-500/10 text-danger-700'
+                    : nextState === 'today'
+                      ? 'bg-amber-500/12 text-amber-700'
+                      : nextState
+                        ? 'bg-brand-500/10 text-brand-800'
+                        : 'bg-surface-muted text-slate-500',
+                )}
+              >
+                <CalendarClock className="mt-0.5 h-4 w-4 shrink-0" />
+                {lead.nextActionAt && nextState ? (
+                  <div className="min-w-0">
+                    <p className="font-semibold">
+                      {f.current[nextState]} · {f.nextType[lead.nextActionType ?? 'FOLLOW_UP']} ·{' '}
+                      <span className="tabular-nums">{formatDateTime(lead.nextActionAt, locale)}</span>
+                    </p>
+                    {lead.nextActionNote && <p className="mt-0.5 opacity-90">{lead.nextActionNote}</p>}
+                  </div>
                 ) : (
-                  <ul className="flex flex-col gap-2.5">
-                    {lead.notes!.map((n) => (
-                      <li key={n.id} className="relative rounded-2xl border border-hairline bg-surface-muted/40 px-5 py-4">
-                        <span aria-hidden className="absolute end-0 top-4 bottom-4 w-[3px] rounded-s-full bg-brand-500" />
-                        <p className="pe-3 text-[13.5px] leading-relaxed text-slate-800">{n.body}</p>
-                        <p className="mt-2 flex items-center gap-1.5 text-[11.5px] text-slate-500">
-                          <span className="font-semibold">{n.sales?.fullName ?? m.unknownNoteAuthor}</span>
-                          <span className="text-slate-400">·</span>
-                          <span className="tabular-nums">{formatDateTime(n.createdAt, locale)}</span>
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
+                  <p>{f.current.none}</p>
                 )}
               </div>
+              <ActivityComposer
+                leadId={lead.id}
+                m={f}
+                hasNextAction={!!lead.nextActionAt}
+                closed={lead.stage === 'WON' || lead.stage === 'LOST'}
+              />
+            </PremiumPanel>
+
+            {/* Timeline */}
+            <PremiumPanel title={f.timeline.title} sub={f.timeline.desc} trailing={<CountPill n={notesCount} />}>
+              {notesCount === 0 ? (
+                <PremiumEmptyNote>
+                  <span className="block font-semibold text-slate-700">{f.timeline.empty}</span>
+                  {f.timeline.emptyDesc}
+                </PremiumEmptyNote>
+              ) : (
+                <ol data-testid="lead-timeline" className="relative flex flex-col gap-4 border-s border-hairline ps-5">
+                  {lead.notes!.map((n) => {
+                    const kind = n.kind ?? 'NOTE';
+                    const Icon = KIND_ICON[kind];
+                    return (
+                      <li key={n.id} data-testid="timeline-item" className="relative">
+                        <span
+                          aria-hidden
+                          className="absolute -start-[31px] top-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-surface text-brand-600 ring-1 ring-hairline"
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                        </span>
+                        <div className="rounded-2xl border border-hairline bg-surface-muted/40 px-4 py-3">
+                          <div className="flex flex-wrap items-center gap-2 text-[12px]">
+                            <span className="font-semibold text-slate-800">{f.kind[kind]}</span>
+                            {n.callResult && (
+                              <span className={cn('rounded-full px-2 py-0.5 font-semibold', RESULT_TONE[n.callResult])}>
+                                {f.callResult[n.callResult]}
+                              </span>
+                            )}
+                            <span className="text-slate-400">·</span>
+                            <span className="text-slate-500">{n.sales?.fullName ?? f.timeline.unknownAuthor}</span>
+                            <span className="text-slate-400">·</span>
+                            <span className="tabular-nums text-slate-500">{formatDateTime(n.createdAt, locale)}</span>
+                          </div>
+                          <p className="mt-1.5 whitespace-pre-line text-[13.5px] leading-relaxed text-slate-800">{n.body}</p>
+                          {n.nextActionAt && (
+                            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-brand-500/10 px-2.5 py-1 text-[11.5px] font-semibold text-brand-700">
+                              <CalendarClock className="h-3.5 w-3.5" />
+                              {f.timeline.scheduled}: {f.nextType[n.nextActionType ?? 'FOLLOW_UP']} ·{' '}
+                              <span className="tabular-nums">{formatDateTime(n.nextActionAt, locale)}</span>
+                            </p>
+                          )}
+                          {(n.replies?.length ?? 0) > 0 && (
+                            <ul aria-label={f.timeline.replies} className="mt-3 flex flex-col gap-2 border-s-2 border-brand-500/30 ps-3">
+                              {n.replies!.map((r) => (
+                                <li key={r.id} data-testid="timeline-reply" className="text-[13px]">
+                                  <p className="text-slate-800">{r.body}</p>
+                                  <p className="mt-0.5 text-[11.5px] text-slate-500">
+                                    <span className="font-semibold">{r.sales?.fullName ?? f.timeline.unknownAuthor}</span> ·{' '}
+                                    <span className="tabular-nums">{formatDateTime(r.createdAt, locale)}</span>
+                                  </p>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          <div className="mt-2">
+                            <NoteReply
+                              leadId={lead.id}
+                              noteId={n.id}
+                              labels={{
+                                reply: f.timeline.reply,
+                                replyPlaceholder: f.timeline.replyPlaceholder,
+                                send: f.timeline.send,
+                                cancel: f.timeline.cancel,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
             </PremiumPanel>
 
             {/* Visits + reservations side by side */}

@@ -6,7 +6,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
-import { AppointmentStatus, Prisma, LeadStage, ReservationStatus, UserRole } from '@prisma/client';
+import {
+  AppointmentStatus,
+  LeadFollowUpType,
+  LeadNoteKind,
+  Prisma,
+  LeadStage,
+  ReservationStatus,
+  UserRole,
+} from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { assertAssignableSales } from '../../common/utils/assignable-sales';
 import { managerScopeIds } from '../../common/utils/sales-scope';
@@ -20,13 +28,25 @@ import {
   CreateLeadNoteDto,
   CreateLeadSourceDto,
   UpdateLeadSourceDto,
+  FollowUpBucket,
 } from './dto/lead.dto';
 import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { enumFilter } from '../../common/utils/query-filters';
-import { getTenantContext } from '../../common/tenant/tenant-context';
+import { getRequiredCompanyId, getTenantContext } from '../../common/tenant/tenant-context';
+import { currentCompanyTimeZone, endOfLocalTodayInstant } from '../../common/time/company-timezone';
 import { phoneForWrite } from '../../common/utils/phone-for-write';
 import { assertClientClaimable, clientOwnerScope } from '../../common/utils/client-ownership';
 import type { AuthUser } from '../../common/decorators/current-user.decorator';
+
+/** Stages that still need following up. */
+const OPEN_STAGES: LeadStage[] = [LeadStage.NEW, LeadStage.INTERESTED, LeadStage.VISIT, LeadStage.NEGOTIATION];
+
+/** A follow-up is due in the future; a minute of slack for the clock on the caller's device. */
+const NEXT_ACTION_SLACK_MS = 60_000;
+
+const CLEAR_NEXT_ACTION = { nextActionAt: null, nextActionType: null, nextActionNote: null } as const;
+
+type FollowUpScope = { salesId?: string; salesIds?: string[] };
 
 /** Row cap for the legacy leads upload (the data import caps sheets at 2000). */
 const LEGACY_IMPORT_MAX_ROWS = 2000;
@@ -443,9 +463,17 @@ export class LeadsService {
           select: { id: true, companyName: true, commercialName: true, code: true },
         },
         brokerAgent: { select: { id: true, fullName: true } },
+        // The timeline: activities newest first, each with its replies in order.
         notes: {
+          where: { parentId: null },
           orderBy: { createdAt: 'desc' },
-          include: { sales: { select: { id: true, fullName: true } } },
+          include: {
+            sales: { select: { id: true, fullName: true } },
+            replies: {
+              orderBy: { createdAt: 'asc' },
+              include: { sales: { select: { id: true, fullName: true } } },
+            },
+          },
         },
         activities: { orderBy: { createdAt: 'desc' }, take: 50 },
       },
@@ -504,7 +532,8 @@ export class LeadsService {
     }
     const updated = await this.prisma.lead.update({
       where: { id },
-      data: { stage: dto.stage },
+      // A lost lead has nothing left to follow up.
+      data: { stage: dto.stage, ...(dto.stage === LeadStage.LOST ? CLEAR_NEXT_ACTION : {}) },
     });
     await this.prisma.leadActivity.create({
       data: {
@@ -567,20 +596,158 @@ export class LeadsService {
     return updated;
   }
 
+  /**
+   * Logs an activity on a lead — a note, a call and how it went, a meeting, a
+   * WhatsApp chat — or a reply to one, and sets the lead's next follow-up.
+   */
   async addNote(leadId: string, salesId: string, dto: CreateLeadNoteDto) {
+    const companyId = getRequiredCompanyId();
     const lead = await this.assertExists(leadId);
-    const note = await this.prisma.leadNote.create({
-      data: { leadId, salesId, body: dto.body },
-    });
-    // Notify the assigned sales rep (if different from the note author).
-    if (lead.assignedSalesId && lead.assignedSalesId !== salesId) {
-      await this.notifications.sendToUser(lead.assignedSalesId, 'lead_note_added', {
-        entityType: 'lead',
-        entityId: leadId,
-        customerName: lead.fullName,
+    const kind = dto.kind ?? LeadNoteKind.NOTE;
+    const body = dto.body.trim();
+    if (!body) throw new BadRequestException('اكتب نص الملاحظة');
+
+    let parent: { id: string; salesId: string; parentId: string | null } | null = null;
+    if (dto.parentId) {
+      parent = await this.prisma.leadNote.findFirst({
+        where: { id: dto.parentId, leadId, companyId },
+        select: { id: true, salesId: true, parentId: true },
       });
+      if (!parent) throw new NotFoundException('Note not found');
+      if (parent.parentId) throw new BadRequestException('لا يمكن الرد على رد — رد على الملاحظة الأصلية');
+      if (dto.kind || dto.callResult || dto.nextActionAt !== undefined) {
+        throw new BadRequestException('الرد نص فقط — بدون نوع أو نتيجة مكالمة أو متابعة');
+      }
     }
+    if (dto.callResult && kind !== LeadNoteKind.CALL) {
+      throw new BadRequestException('نتيجة المكالمة تُسجَّل مع المكالمات فقط');
+    }
+
+    // undefined keeps the lead's follow-up, null clears it, a date sets it.
+    let nextAction: Prisma.LeadUncheckedUpdateInput | null = null;
+    if (dto.nextActionAt === null) {
+      nextAction = { ...CLEAR_NEXT_ACTION };
+    } else if (dto.nextActionAt !== undefined) {
+      const at = new Date(dto.nextActionAt);
+      if (at.getTime() < Date.now() - NEXT_ACTION_SLACK_MS) {
+        throw new BadRequestException('موعد المتابعة القادمة يجب أن يكون في المستقبل');
+      }
+      if (!OPEN_STAGES.includes(lead.stage)) {
+        throw new BadRequestException('لا متابعة على عميل تم البيع له أو مفقود');
+      }
+      nextAction = {
+        nextActionAt: at,
+        nextActionType: dto.nextActionType ?? LeadFollowUpType.FOLLOW_UP,
+        nextActionNote: dto.nextActionNote?.trim() || null,
+      };
+    }
+
+    const scheduled = nextAction?.nextActionAt instanceof Date ? nextAction : null;
+    const note = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.leadNote.create({
+        data: {
+          leadId,
+          salesId,
+          body,
+          kind: parent ? LeadNoteKind.NOTE : kind,
+          callResult: kind === LeadNoteKind.CALL ? (dto.callResult ?? null) : null,
+          parentId: parent?.id ?? null,
+          nextActionAt: scheduled ? (scheduled.nextActionAt as Date) : null,
+          nextActionType: scheduled ? (scheduled.nextActionType as LeadFollowUpType) : null,
+        },
+      });
+      if (nextAction) {
+        await tx.lead.updateMany({ where: { id: leadId, companyId }, data: nextAction });
+      }
+      return created;
+    });
+
+    const payload = { entityType: 'lead', entityId: leadId, customerName: lead.fullName };
+    // The lead's sales rep, and whoever wrote the note being replied to —
+    // never the author themselves.
+    await this.notifications.sendToUsers(
+      [lead.assignedSalesId, parent?.salesId ?? null],
+      'lead_note_added',
+      payload,
+      { except: salesId },
+    );
     return note;
+  }
+
+  /**
+   * The follow-up lists: leads whose next action is past due, due later
+   * today (the company's day), or after today. Open leads only.
+   */
+  private async followUpWindows() {
+    const companyId = getRequiredCompanyId();
+    const now = new Date();
+    const zone = await currentCompanyTimeZone(this.prisma, companyId);
+    const endOfToday = endOfLocalTodayInstant(zone, now);
+    const windows: Record<FollowUpBucket, Prisma.DateTimeNullableFilter> = {
+      overdue: { lt: now },
+      today: { gte: now, lt: endOfToday },
+      upcoming: { gte: endOfToday },
+    };
+    return { companyId, windows };
+  }
+
+  private followUpWhere(companyId: string, scope: FollowUpScope, at: Prisma.DateTimeNullableFilter): Prisma.LeadWhereInput {
+    return {
+      companyId,
+      stage: { in: OPEN_STAGES },
+      nextActionAt: at,
+      ...(scope.salesIds
+        ? { assignedSalesId: { in: scope.salesIds } }
+        : scope.salesId
+          ? { assignedSalesId: scope.salesId }
+          : {}),
+    };
+  }
+
+  async followUpSummary(scope: FollowUpScope) {
+    const { companyId, windows } = await this.followUpWindows();
+    const [overdue, today, upcoming] = await this.prisma.$transaction([
+      this.prisma.lead.count({ where: this.followUpWhere(companyId, scope, windows.overdue) }),
+      this.prisma.lead.count({ where: this.followUpWhere(companyId, scope, windows.today) }),
+      this.prisma.lead.count({ where: this.followUpWhere(companyId, scope, windows.upcoming) }),
+    ]);
+    return { overdue, today, upcoming };
+  }
+
+  async followUps(scope: FollowUpScope, bucket: FollowUpBucket, opts: { page?: number; pageSize?: number } = {}) {
+    const page = opts.page ?? 1;
+    const pageSize = Math.min(opts.pageSize ?? 20, 100);
+    const { companyId, windows } = await this.followUpWindows();
+    const where = this.followUpWhere(companyId, scope, windows[bucket]);
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.lead.findMany({
+        where,
+        ...takeSkip({ page, pageSize }),
+        // Overdue: the longest-waiting first; otherwise the soonest first.
+        orderBy: { nextActionAt: 'asc' },
+        select: {
+          id: true,
+          fullName: true,
+          phone: true,
+          stage: true,
+          nextActionAt: true,
+          nextActionType: true,
+          nextActionNote: true,
+          client: { select: { id: true, fullName: true, phone: true } },
+          assignedSales: { select: { id: true, fullName: true } },
+          projectInterest: { select: { id: true, name: true } },
+          notes: {
+            where: { parentId: null },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: { kind: true, callResult: true, body: true, createdAt: true },
+          },
+        },
+      }),
+      this.prisma.lead.count({ where }),
+    ]);
+    const data = rows.map(({ notes, ...lead }) => ({ ...lead, lastActivity: notes[0] ?? null }));
+    return paginate(data, total, { page, pageSize });
   }
 
   async pipelineCounts(opts: { salesId?: string; salesIds?: string[] } = {}) {

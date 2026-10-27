@@ -1,5 +1,5 @@
 import { api, safe } from '@/lib/api';
-import type { Paged } from '@/lib/types';
+import type { FollowUpSummary, Paged } from '@/lib/types';
 import { requireAdmin } from '@/lib/session';
 import { getDisabledFeatures } from '@/lib/capabilities';
 import { filterNavForRole } from '@/lib/nav';
@@ -14,6 +14,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
     const waiting = (await safe(api.get<Paged<unknown>>('/deposits/review-queue?pageSize=1'))).data?.meta.total ?? 0;
     for (const sec of sections)
       for (const it of sec.items) if (it.href === '/dashboard/payments/review') it.badge = waiting;
+  }
+  // Follow-ups due by the end of today (overdue included), in the user's scope.
+  if (user.role === 'ADMIN' || user.role === 'SALES' || user.role === 'SALES_MANAGER') {
+    const due = (await safe(api.get<FollowUpSummary>('/leads/follow-ups/summary'))).data;
+    const count = due ? due.overdue + due.today : 0;
+    for (const sec of sections)
+      for (const it of sec.items) if (it.href === '/dashboard/follow-ups') it.badge = count;
   }
   return (
     <AppShell user={user} navSections={sections}>

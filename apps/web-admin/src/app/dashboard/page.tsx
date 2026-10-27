@@ -1,4 +1,5 @@
 import { Plus, AlertCircle } from 'lucide-react';
+import { FollowUpsPanel } from '@/components/crm/follow-ups-panel';
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
@@ -328,6 +329,8 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
           { key: 'requests', label: m.actionBar.openLeads, value: summary?.alerts.infoRequestsOpen ?? 0, href: '/dashboard/requests', icon: 'requests' },
         ]}
       />
+
+      <FollowUpsPanel locale={locale} />
 
       <AiUsageCard usage={aiUsageRes.data ?? null} locale={locale} />
 

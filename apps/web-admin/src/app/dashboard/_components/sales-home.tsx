@@ -5,6 +5,7 @@ import type { Paged, Lead, Reservation, VisitAppointment } from '@/lib/types';
 import { compactParts } from '@/lib/format';
 import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
+import { FollowUpsPanel } from '@/components/crm/follow-ups-panel';
 import { uiT } from '@/messages/ui';
 import {
   DayHeader,
@@ -140,6 +141,7 @@ export async function SalesDashboard({ userId, day }: { userId: string; day?: st
         </Panel>
 
         <div className="space-y-5">
+          <FollowUpsPanel locale={locale} />
           <Panel title={c.tasks}>
             <TaskList
               empty={c.tasksEmpty}

@@ -102,3 +102,31 @@ export async function currentCompanyTimeZone(
 ): Promise<string> {
   return companyId ? companyTimeZone(db, companyId) : COMPANY_TIMEZONE_DEFAULT;
 }
+
+/** How far `timeZone` is ahead of UTC at `at`, in milliseconds. */
+function zoneOffsetMs(timeZone: string, at: Date): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(at);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)!.value);
+  const local = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second'));
+  return local - Math.floor(at.getTime() / 1000) * 1000;
+}
+
+/**
+ * The instant the next calendar day begins in `timeZone` — the end of
+ * "today" for times of day (a follow-up at 16:00), unlike the day-granular
+ * due dates above.
+ */
+export function endOfLocalTodayInstant(timeZone: string, now = new Date()): Date {
+  const zone = isValidTimeZone(timeZone) ? timeZone : COMPANY_TIMEZONE_DEFAULT;
+  const tomorrow = localDayAfter(zone, 1, now);
+  return new Date(tomorrow.getTime() - zoneOffsetMs(zone, tomorrow));
+}

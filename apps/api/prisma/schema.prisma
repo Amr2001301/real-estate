@@ -1102,6 +1102,12 @@ model Lead {
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
+  // ── Follow-up: the next thing to do with this lead, and when ───────────
+  // Set from the activity composer; overdue/today/upcoming lists read it.
+  nextActionAt   DateTime?
+  nextActionType LeadFollowUpType?
+  nextActionNote String?
+
   // ── Ad / UTM attribution (first-touch, all nullable) ───────────────────
   utmSource   String?
   utmMedium   String?
@@ -1140,21 +1146,58 @@ model Lead {
   @@index([brokerAgentId])
   @@index([brokerApprovalStatus])
   @@index([companyId])
+  @@index([companyId, nextActionAt])
+}
+
+/// What a logged activity on a lead was.
+enum LeadNoteKind {
+  NOTE
+  CALL
+  MEETING
+  WHATSAPP
+  FOLLOW_UP
+}
+
+/// How a logged call went.
+enum LeadCallResult {
+  ANSWERED
+  NO_ANSWER
+  BUSY
+  UNREACHABLE
+  WRONG_NUMBER
+}
+
+/// The kind of the next action scheduled on a lead.
+enum LeadFollowUpType {
+  CALL
+  MEETING
+  WHATSAPP
+  FOLLOW_UP
 }
 
 model LeadNote {
-  id        String   @id @default(uuid()) @db.Uuid
-  leadId    String   @db.Uuid
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  salesId   String   @db.Uuid
-  sales     User     @relation(fields: [salesId], references: [id])
-  body      String
-  createdAt DateTime @default(now())
+  id             String            @id @default(uuid()) @db.Uuid
+  leadId         String            @db.Uuid
+  lead           Lead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  salesId        String            @db.Uuid
+  sales          User              @relation(fields: [salesId], references: [id])
+  body           String
+  kind           LeadNoteKind      @default(NOTE)
+  callResult     LeadCallResult?
+  /// The follow-up this activity scheduled, kept for the timeline.
+  nextActionAt   DateTime?
+  nextActionType LeadFollowUpType?
+  /// A reply to another note on the same lead.
+  parentId       String?           @db.Uuid
+  parent         LeadNote?         @relation("LeadNoteReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies        LeadNote[]        @relation("LeadNoteReplies")
+  createdAt      DateTime          @default(now())
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
   @@index([leadId, createdAt])
+  @@index([parentId])
   @@index([companyId])
 }
 

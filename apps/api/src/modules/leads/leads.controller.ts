@@ -30,6 +30,8 @@ import {
   UpdateLeadDto,
   UpdateLeadSourceDto,
   UpdateLeadStageDto,
+  FOLLOW_UP_BUCKETS,
+  FollowUpBucket,
 } from './dto/lead.dto';
 
 const EXCEL_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -89,6 +91,36 @@ export class LeadsController {
   async pipeline(@CurrentUser() user: AuthUser) {
     const scope = await resolveSalesScope(this.prisma, user);
     return this.leads.pipelineCounts(scope);
+  }
+
+  // Follow-ups: the leads whose next action is overdue, due today or later,
+  // in the caller's sales scope (a rep sees their own, a manager their team).
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
+  @Permissions('leads:read')
+  @Get('leads/follow-ups/summary')
+  async followUpSummary(@CurrentUser() user: AuthUser, @Query('salesId') salesId?: string) {
+    const scope = await resolveSalesScope(this.prisma, user, salesId);
+    return this.leads.followUpSummary(scope);
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
+  @Permissions('leads:read')
+  @Get('leads/follow-ups')
+  async followUps(
+    @CurrentUser() user: AuthUser,
+    @Query('bucket') bucket = 'overdue',
+    @Query('salesId') salesId?: string,
+    @Query('page') page = 1,
+    @Query('pageSize') pageSize = 20,
+  ) {
+    if (!(FOLLOW_UP_BUCKETS as readonly string[]).includes(bucket)) {
+      throw new BadRequestException(`bucket must be one of ${FOLLOW_UP_BUCKETS.join(', ')}`);
+    }
+    const scope = await resolveSalesScope(this.prisma, user, salesId);
+    return this.leads.followUps(scope, bucket as FollowUpBucket, {
+      page: Math.max(1, Number(page) || 1),
+      pageSize: Math.max(1, Number(pageSize) || 20),
+    });
   }
 
   // Leads

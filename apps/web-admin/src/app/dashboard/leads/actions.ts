@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect, unstable_rethrow } from 'next/navigation';
 import { api } from '@/lib/api';
-import type { LeadStage } from '@/lib/types';
+import type { LeadCallResult, LeadFollowUpType, LeadNoteKind, LeadStage } from '@/lib/types';
 
 export interface LeadFormState {
   error?: string;
@@ -76,6 +76,49 @@ export async function addNoteAction(leadId: string, formData: FormData) {
   if (!body) return;
   await api.post(`/leads/${leadId}/notes`, { body });
   revalidatePath(`/dashboard/leads/${leadId}`);
+}
+
+export interface LogActivityInput {
+  body: string;
+  kind: LeadNoteKind;
+  callResult?: LeadCallResult | null;
+  /** ISO instant sets the next follow-up, null clears it, undefined keeps it. */
+  nextActionAt?: string | null;
+  nextActionType?: LeadFollowUpType;
+  nextActionNote?: string;
+}
+
+/** Logs an activity on a lead and its next follow-up (the composer on the lead page). */
+export async function logActivityAction(leadId: string, input: LogActivityInput): Promise<LeadFormState> {
+  if (!input.body.trim()) return { error: 'empty' };
+  try {
+    await api.post(`/leads/${leadId}/notes`, {
+      body: input.body.trim(),
+      kind: input.kind,
+      ...(input.kind === 'CALL' && input.callResult ? { callResult: input.callResult } : {}),
+      ...(input.nextActionAt !== undefined ? { nextActionAt: input.nextActionAt } : {}),
+      ...(input.nextActionAt ? { nextActionType: input.nextActionType, nextActionNote: input.nextActionNote?.trim() || undefined } : {}),
+    });
+  } catch (e) {
+    unstable_rethrow(e);
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/dashboard/leads/${leadId}`);
+  revalidatePath('/dashboard/follow-ups');
+  return { ok: true };
+}
+
+/** A text reply under a note on the lead's timeline. */
+export async function replyNoteAction(leadId: string, parentId: string, body: string): Promise<LeadFormState> {
+  if (!body.trim()) return { error: 'empty' };
+  try {
+    await api.post(`/leads/${leadId}/notes`, { body: body.trim(), parentId });
+  } catch (e) {
+    unstable_rethrow(e);
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/dashboard/leads/${leadId}`);
+  return { ok: true };
 }
 
 const SOURCES_PATH = '/dashboard/leads/sources';
