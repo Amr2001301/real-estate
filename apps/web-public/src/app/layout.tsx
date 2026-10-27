@@ -16,6 +16,7 @@ import { ChatWidget } from '@/components/chat/ChatWidget';
 import { CompanyContactProvider } from '@/components/contact/CompanyContactProvider';
 import { companyContact } from '@/lib/contact';
 import { PageViewTracker } from '@/components/analytics/PageViewTracker';
+import { UtmCapture } from '@/components/analytics/UtmCapture';
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
@@ -81,6 +82,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </>
         ) : null}
         <PageViewTracker />
+        <UtmCapture />
         <ThemeProvider>
           <CurrencyProvider currency={branding?.currency ?? DEFAULT_CURRENCY}>
           <FavoritesProvider>
