@@ -16,7 +16,7 @@ import type { ReportBrand } from '../../common/utils/report-brand';
 import type { CampaignFigures, CampaignReport, CampaignReportOptions } from './campaign-report.service';
 
 export const CHANNEL_AR: Record<string, string> = {
-  FACEBOOK: 'فيسبوك',
+  FACEBOOK: 'ميتا (فيسبوك + إنستجرام)',
   INSTAGRAM: 'انستغرام',
   TIKTOK: 'تيك توك',
   GOOGLE: 'جوجل',

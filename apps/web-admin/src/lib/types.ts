@@ -296,6 +296,8 @@ export type CampaignChannel =
   | 'SMS' | 'EMAIL' | 'BILLBOARD' | 'EVENT' | 'OTHER';
 export type CampaignStatus = 'PLANNED' | 'ACTIVE' | 'PAUSED' | 'ENDED';
 
+export type AdPlatform = 'FACEBOOK' | 'INSTAGRAM' | 'MESSENGER' | 'AUDIENCE_NETWORK' | 'OTHER';
+
 export interface CampaignStats {
   leads: number;
   qualified: number;
@@ -374,6 +376,8 @@ export interface CampaignDetail extends Campaign {
   spend: CampaignSpendEntry[];
   /** The company's website, for the tracking links. */
   siteUrl: string;
+  /** Its leads by the platform their ad ran on; `platform: null` = not known. */
+  platforms: Array<{ platform: AdPlatform | null; leads: number; won: number }>;
 }
 
 export interface IntakeKey {

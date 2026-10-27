@@ -110,6 +110,32 @@ describe('MC3 — campaign reports (e2e)', () => {
     await raw.campaign.deleteMany({ where: { id: { in: [a, b] } } });
   });
 
+  it('MC3-3: one Meta campaign splits its leads by the platform the ad ran on', async () => {
+    const raw = testApp.rawPrisma;
+    const meta = (await raw.campaign.create({ data: { companyId, name: `MC3 Meta ${stamp}`, code: `mc3-meta-${stamp}`, channel: 'FACEBOOK' } })).id;
+    const ids: string[] = [];
+    try {
+      const sources: Array<[string | null, boolean]> = [['fb', true], ['ig', false], ['instagram', false], ['{{site_source_name}}', false], [null, false]];
+      for (const [i, [utmSource, won]] of sources.entries()) {
+        const client = await raw.user.create({ data: { companyId, fullName: 'MC3 P', phone: `+2016${i}${stamp}`, role: UserRole.CLIENT, active: true } });
+        clientIds.push(client.id);
+        const lead = await raw.lead.create({
+          data: { companyId, clientId: client.id, fullName: 'MC3 P', phone: client.phone!, campaignId: meta, utmSource, stage: won ? 'WON' : 'NEW' },
+        });
+        ids.push(lead.id);
+      }
+      const detail = (await as(adminToken, http().get(`/v1/campaigns/${meta}`)).expect(200)).body;
+      expect(detail.platforms).toEqual([
+        { platform: 'INSTAGRAM', leads: 2, won: 0 },
+        { platform: 'FACEBOOK', leads: 1, won: 1 },
+        { platform: null, leads: 2, won: 0 },
+      ]);
+    } finally {
+      await raw.lead.deleteMany({ where: { id: { in: ids } } });
+      await raw.campaign.delete({ where: { id: meta } });
+    }
+  });
+
   it('MC3-1: each campaign shows its spend, leads, sales and return for the period, credited to the first touch', async () => {
     const r = await report({ from: today, to: today });
     expect(row(r, a)).toMatchObject({ spend: 2000, leads: 2, sales: 2, revenue: 150_000, cpl: 1000, cpa: 1000, roi: 7400, conversion: 100 });
