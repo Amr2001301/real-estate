@@ -90,7 +90,7 @@ function BrandPanel() {
   return (
     <aside className="relative hidden overflow-hidden lg:block">
       <div
-        className="absolute inset-0 scale-[1.02] bg-[#0A1020] bg-cover bg-center"
+        className="absolute inset-0 scale-[1.02] bg-[#0A1020] bg-cover bg-[center_top]"
         style={{ backgroundImage: `url(${HERO_IMAGE})` }}
       />
       {/* Darken towards the text and the form side; a warm gold wash on top. */}
