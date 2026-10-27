@@ -1,4 +1,5 @@
 import { campaignForUtm } from '../campaigns/campaign-attribution';
+import { routeArrivedLead } from '../leads/lead-routing';
 import {
   BadRequestException,
   Body,
@@ -247,6 +248,7 @@ export class RequestsService {
     await this.assertPublicTarget(dto.projectId ?? null, dto.unitId ?? null);
     let leadId: string | null = null;
     let ownerToTell: string | null = null;
+    let newLeadOwner: string | null = null;
     if (!actor.userId && dto.phone && dto.name) {
       // FG-21 — one canonical form for the lead lookup and the client write,
       // so `01…` and `+201…` from the same visitor land on the same records.
@@ -277,6 +279,8 @@ export class RequestsService {
           },
         });
         leadId = lead.id;
+        // Handed to the next rep in turn, with a first call, when the company routes that way.
+        newLeadOwner = await routeArrivedLead(this.prisma, lead.id);
       }
     }
     const created = await this.prisma.infoRequest.create({
@@ -299,6 +303,15 @@ export class RequestsService {
     await this.notifications.sendToRoles([UserRole.ADMIN, UserRole.SALES_MANAGER], 'info_request_created', infoPayload);
     // The rep who already owns this person's open lead hears it too.
     if (ownerToTell) await this.notifications.sendToUser(ownerToTell, 'info_request_created', infoPayload);
+    // A new lead handed out in turn: its rep hears it is theirs.
+    if (newLeadOwner && leadId) {
+      await this.notifications.sendToUser(newLeadOwner, 'lead_assigned_sales', {
+        entityType: 'lead',
+        entityId: leadId,
+        customerName: dto.name ?? '',
+        projectName: '',
+      });
+    }
 
     return created;
   }
@@ -456,6 +469,7 @@ export class RequestsService {
     await this.assertPublicTarget(dto.projectId ?? null, dto.unitId ?? null);
     let leadId: string | null = null;
     let ownerToTell: string | null = null;
+    let newLeadOwner: string | null = null;
     if (!actor.userId && dto.phone && dto.name) {
       // FG-21 — one canonical form for the lead lookup and the client write,
       // so `01…` and `+201…` from the same visitor land on the same records.
@@ -483,6 +497,8 @@ export class RequestsService {
           },
         });
         leadId = lead.id;
+        // Handed to the next rep in turn, with a first call, when the company routes that way.
+        newLeadOwner = await routeArrivedLead(this.prisma, lead.id);
       }
     }
     const preferredDate = new Date(dto.preferredDate);
@@ -520,6 +536,15 @@ export class RequestsService {
     const visitPayload = await this.buildVisitRequestPayload(created.id, dto);
     await this.notifications.sendToRoles([UserRole.ADMIN, UserRole.SALES_MANAGER], 'visit_request_created', visitPayload);
     if (ownerToTell) await this.notifications.sendToUser(ownerToTell, 'visit_request_created', visitPayload);
+    // A new lead handed out in turn: its rep hears it is theirs.
+    if (newLeadOwner && leadId) {
+      await this.notifications.sendToUser(newLeadOwner, 'lead_assigned_sales', {
+        entityType: 'lead',
+        entityId: leadId,
+        customerName: dto.name ?? '',
+        projectName: '',
+      });
+    }
 
     return created;
   }

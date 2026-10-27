@@ -53,3 +53,14 @@ export const KNOWN_SETTINGS: KnownSetting[] = [
 ];
 
 export const KNOWN_SETTING_KEYS = new Set(KNOWN_SETTINGS.map((s) => s.key));
+
+/**
+ * Settings kept by other pages, not listed here: lead routing is edited (and
+ * checked) on the campaigns intake page, and the round-robin turn is the
+ * system's own bookmark.
+ */
+export const HIDDEN_SETTING_KEYS = new Set([
+  'leads.autoAssign',
+  'leads.firstCallMinutes',
+  'leads.roundRobinCursor',
+]);

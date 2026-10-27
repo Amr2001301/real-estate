@@ -52,6 +52,7 @@ export const TENANT_SCOPED_MODELS_LEGACY = new Set([
   'companymobileapp', // the company's own customer app in the stores
   'lostreason', // why the company's leads were lost (LR1)
   'campaign', 'campaignspend', // marketing campaigns and their spend (MC1)
+  'leadintakekey', // keys lead sources post new leads with (MC2)
   // Chat
   'chatsession', 'chatmessage', 'chatfeedback',
   // Option B part 2 (docs/audit/13-user-tenancy.md): TENANT_CONTROLLED → TENANT_OWNED

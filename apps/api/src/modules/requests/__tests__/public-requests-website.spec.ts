@@ -100,8 +100,18 @@ function makePrismaMock() {
       findUnique: jest.fn().mockResolvedValue(null),
       findFirst: jest.fn().mockResolvedValue({ building: { phase: { projectId: PROJECT_ID } } }),
     },
+    // MC2 — a new website lead is routed: settings, the rep pool (user.findMany
+    // above: none, so it stays unassigned) and the first call.
+    setting: {
+      findMany: jest.fn().mockResolvedValue([]),
+      findFirst: jest.fn().mockResolvedValue(null),
+      upsert: jest.fn().mockResolvedValue({}),
+    },
+    campaign: { findFirst: jest.fn().mockResolvedValue(null) },
+    leadActivity: { create: jest.fn().mockResolvedValue({}) },
     lead: {
       findFirst: jest.fn().mockResolvedValue(null),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       create: jest.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
         id: 'lead-1',
         ...data,
@@ -459,8 +469,9 @@ describe('Public website · info/visit request intake', () => {
   });
 
   it('info-request notifies ADMIN + SALES_MANAGER with a payload free of phone/email', async () => {
-    // One recipient resolved for this call (sendToRoles → user.findMany).
-    mock.user.findMany.mockResolvedValueOnce([{ id: 'admin-1' }]);
+    // No rep to hand the new lead to (round-robin pool → user.findMany), then
+    // one recipient resolved for the fan-out (sendToRoles → user.findMany).
+    mock.user.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([{ id: 'admin-1' }]);
     await request(app.getHttpServer())
       .post('/public/info-request')
       .send({

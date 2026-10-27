@@ -194,6 +194,7 @@ export default async function LeadDetailPage({
     if (type === 'note') return { label: m.activityNoteAdded, dotColor: 'bg-slate-400' };
     if (type === 'broker_submitted') return { label: m.activityBrokerSubmitted, dotColor: 'bg-indigo-500' };
     if (type.startsWith('broker_')) return { label: m.activityBroker[type] ?? m.activityOther, dotColor: 'bg-indigo-500' };
+    if (type === 'returned') return { label: m.activityReturned, dotColor: 'bg-brand-500' };
     if (type.startsWith('relinked')) return { label: m.activityRelinked, dotColor: 'bg-slate-400' };
     return { label: m.activityOther, dotColor: 'bg-slate-400' };
   }

@@ -5241,6 +5241,7 @@ const UI = {
       activityStage: (from: string, to: string) => `انتقلت من «${from}» إلى «${to}»`,
       activityReservationConverted: 'تم تحويل الحجز إلى عقد',
       activityRelinked: 'تم ربط الفرصة بسجل آخر',
+      activityReturned: 'رجع العميل من جديد (إعلان / نموذج)',
       activityVisit: {
         SCHEDULED: 'تمت جدولة زيارة',
         CONFIRMED: 'تم تأكيد الزيارة',
@@ -11156,6 +11157,7 @@ const UI = {
       activityStage: (from: string, to: string) => `Moved from "${from}" to "${to}"`,
       activityReservationConverted: 'Reservation converted to a contract',
       activityRelinked: 'Linked to another record',
+      activityReturned: 'The customer came in again (ad / form)',
       activityVisit: {
         SCHEDULED: 'Visit scheduled',
         CONFIRMED: 'Visit confirmed',
