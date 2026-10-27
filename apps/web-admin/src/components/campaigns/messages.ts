@@ -4,7 +4,7 @@ import type { CampaignChannel, CampaignStatus } from '@/lib/types';
 /* «الحملات التسويقية» — campaigns, what they cost and what they brought. Strings only. */
 const ar = {
   channel: {
-    FACEBOOK: 'فيسبوك',
+    FACEBOOK: 'ميتا (فيسبوك + إنستجرام)',
     INSTAGRAM: 'انستغرام',
     TIKTOK: 'تيك توك',
     GOOGLE: 'جوجل',
@@ -60,7 +60,7 @@ const ar = {
     budgetHint: 'اختياري — المصروف الفعلي يُسجَّل من صفحة الحملة.',
     notes: 'ملاحظات',
     code: 'كود التتبع (utm_campaign)',
-    codeHint: 'يُصنع من الاسم تلقائيًا إن تُرك فارغًا — حروف إنجليزية صغيرة وأرقام و- فقط. لا يتغير بعد الإنشاء.',
+    codeHint: 'اسم الحملة داخل رابط الإعلان: كل عميل يدخل من رابط يحمله يُحسب لهذه الحملة تلقائيًا. يُصنع من الاسم إن تُرك فارغًا — حروف إنجليزية صغيرة وأرقام و- فقط، ولا يتغير بعد الإنشاء.',
     save: 'حفظ الحملة',
     cancel: 'إلغاء',
   },
@@ -94,6 +94,16 @@ const ar = {
     },
     funnel: { title: 'رحلة العملاء', desc: 'من أول تواصل حتى البيع', leads: 'عملاء', qualified: 'مهتمون', sales: 'مبيعات', lost: 'خسرناهم' },
     chart: 'الصرف حسب اليوم',
+    platforms: {
+      title: 'حسب المنصة',
+      desc: 'نفس الإعلان يظهر على أكثر من منصة — من أين جاء كل عميل',
+      leads: 'عملاء',
+      sales: 'مبيعات',
+      names: { FACEBOOK: 'فيسبوك', INSTAGRAM: 'إنستجرام', MESSENGER: 'ماسنجر', AUDIENCE_NETWORK: 'شبكة الجمهور', OTHER: 'مصدر آخر' },
+      unknown: 'غير معروف',
+      unknownHint: 'عملاء أُضيفوا يدويًا، أو جاؤوا من رابط فُتح خارج الإعلان.',
+    },
+    metaHint: 'في إعلانات ميتا اترك {{site_source_name}} كما هو — تستبدله ميتا تلقائيًا بـ fb أو ig، فيُعرف كل عميل جاء من أي منصة.',
     linkHint: 'معاملات التتبع',
     open: 'فتح',
     info: { title: 'بيانات الحملة', channel: 'القناة', project: 'المشروع', source: 'المصدر', period: 'الفترة', notes: 'ملاحظات', none: '—' },
@@ -103,7 +113,7 @@ const ar = {
 
 const en: typeof ar = {
   channel: {
-    FACEBOOK: 'Facebook',
+    FACEBOOK: 'Meta (Facebook + Instagram)',
     INSTAGRAM: 'Instagram',
     TIKTOK: 'TikTok',
     GOOGLE: 'Google',
@@ -159,7 +169,7 @@ const en: typeof ar = {
     budgetHint: 'Optional — the actual spend is recorded on the campaign page.',
     notes: 'Notes',
     code: 'Tracking code (utm_campaign)',
-    codeHint: 'Made from the name when left empty — lowercase Latin letters, digits and - only. It does not change after creation.',
+    codeHint: 'The campaign’s name inside its ad link: every customer who comes through a link carrying it counts for this campaign automatically. Made from the name when left empty — lowercase Latin letters, digits and - only; it does not change after creation.',
     save: 'Save campaign',
     cancel: 'Cancel',
   },
@@ -193,6 +203,16 @@ const en: typeof ar = {
     },
     funnel: { title: 'Customer journey', desc: 'From first contact to sale', leads: 'Leads', qualified: 'Interested', sales: 'Sales', lost: 'Lost' },
     chart: 'Spend by day',
+    platforms: {
+      title: 'By platform',
+      desc: 'One ad shows on several platforms — where each lead came from',
+      leads: 'leads',
+      sales: 'sales',
+      names: { FACEBOOK: 'Facebook', INSTAGRAM: 'Instagram', MESSENGER: 'Messenger', AUDIENCE_NETWORK: 'Audience Network', OTHER: 'Other source' },
+      unknown: 'Not known',
+      unknownHint: 'Leads added by hand, or from a link opened outside the ad.',
+    },
+    metaHint: 'In Meta ads keep {{site_source_name}} as it is — Meta fills in fb or ig, so each lead shows the platform it came from.',
     linkHint: 'Tracking parameters',
     open: 'Open',
     info: { title: 'Campaign details', channel: 'Channel', project: 'Project', source: 'Source', period: 'Period', notes: 'Notes', none: '—' },

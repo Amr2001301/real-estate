@@ -1,4 +1,17 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Header,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+  StreamableFile,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CampaignChannel, CampaignStatus, UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -6,13 +19,32 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { parseEnumList } from '../../common/utils/query-filters';
 import { CampaignsService } from './campaigns.service';
+import { CampaignReportService, type CampaignReportOptions } from './campaign-report.service';
 import { AddCampaignSpendDto, CreateCampaignDto, UpdateCampaignDto } from './dto/campaign.dto';
 
 /** Marketing campaigns: the admin runs them; sales managers see how they do; reps pick one on a lead. */
 @ApiTags('campaigns')
 @Controller('campaigns')
 export class CampaignsController {
-  constructor(private readonly campaigns: CampaignsService) {}
+  constructor(
+    private readonly campaigns: CampaignsService,
+    private readonly reports: CampaignReportService,
+  ) {}
+
+  private static reportOptions(from?: string, to?: string, channel?: string, projectId?: string): CampaignReportOptions {
+    const day = (v: string | undefined, name: string) => {
+      if (v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new BadRequestException(`${name} must be a date (YYYY-MM-DD)`);
+      return v || undefined;
+    };
+    if (channel && !(Object.values(CampaignChannel) as string[]).includes(channel)) throw new BadRequestException('Unknown channel');
+    if (projectId && !/^[0-9a-f-]{36}$/i.test(projectId)) throw new BadRequestException('projectId must be a UUID');
+    return {
+      from: day(from, 'from'),
+      to: day(to, 'to'),
+      channel: (channel as CampaignChannel) || undefined,
+      projectId: projectId || undefined,
+    };
+  }
 
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
   @Permissions('leads:read')
@@ -34,6 +66,42 @@ export class CampaignsController {
   @Get('options')
   options() {
     return this.campaigns.options();
+  }
+
+  // What the campaigns cost and brought in — with the campaigns list's readers.
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @Permissions('leads:read')
+  @Get('report')
+  report(@Query('from') from?: string, @Query('to') to?: string, @Query('channel') channel?: string, @Query('projectId') projectId?: string) {
+    return this.reports.report(CampaignsController.reportOptions(from, to, channel, projectId));
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @Permissions('leads:read')
+  @Get('report/export.pdf')
+  @Header('Content-Type', 'application/pdf')
+  @Header('Content-Disposition', 'attachment; filename="campaigns-report.pdf"')
+  async reportPdf(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('channel') channel?: string,
+    @Query('projectId') projectId?: string,
+  ): Promise<StreamableFile> {
+    return new StreamableFile(await this.reports.pdf(CampaignsController.reportOptions(from, to, channel, projectId)));
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @Permissions('leads:read')
+  @Get('report/export.xlsx')
+  @Header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+  @Header('Content-Disposition', 'attachment; filename="campaigns-report.xlsx"')
+  async reportXlsx(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('channel') channel?: string,
+    @Query('projectId') projectId?: string,
+  ): Promise<StreamableFile> {
+    return new StreamableFile(await this.reports.xlsx(CampaignsController.reportOptions(from, to, channel, projectId)));
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)

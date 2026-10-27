@@ -36,11 +36,17 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
   const period = c.startDate || c.endDate ? `${c.startDate ? dateOf(c.startDate) : '…'} – ${c.endDate ? dateOf(c.endDate) : '…'}` : m.list.noDates;
 
   // Ad links: the project page when the campaign has one, and the home page.
-  const utm = new URLSearchParams({ utm_source: CHANNEL_UTM_SOURCE[c.channel], utm_medium: 'paid', utm_campaign: c.code });
+  // A Meta ad runs on Facebook, Instagram and Messenger: Meta fills
+  // {{site_source_name}} with fb / ig / msg, so each lead shows its platform
+  // (left unencoded — Meta only fills it in literally).
+  const meta = c.channel === 'FACEBOOK';
+  const utm = `utm_source=${meta ? '{{site_source_name}}' : CHANNEL_UTM_SOURCE[c.channel]}&utm_medium=paid&utm_campaign=${encodeURIComponent(c.code)}`;
   const links = [
     ...(c.projectId ? [{ label: `${d.links.project}${c.project ? ` — ${tx(c.project.name, locale)}` : ''}`, url: `${c.siteUrl}/projects/${c.projectId}?${utm}` }] : []),
     { label: d.links.home, url: `${c.siteUrl}/?${utm}` },
   ];
+  // The platform split matters where one ad runs on several (Meta), or once any lead says where it came from.
+  const showPlatforms = s.leads > 0 && (meta || c.channel === 'INSTAGRAM' || c.platforms.some((p) => p.platform && p.platform !== 'OTHER'));
   const money: Record<string, string> = Object.fromEntries(c.spend.map((e) => [e.id, full(e.amount)]));
   money.total = full(s.spend);
   const dates: Record<string, string> = Object.fromEntries(c.spend.map((e) => [e.id, dateOf(e.spentOn)]));
@@ -146,6 +152,36 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
             />
           </PremiumPanel>
 
+          {showPlatforms && (
+            <PremiumPanel title={d.platforms.title} sub={d.platforms.desc}>
+              <ul className="space-y-3" data-testid="campaign-platforms">
+                {c.platforms.map((p) => {
+                  const share = s.leads > 0 ? Math.round((p.leads / s.leads) * 100) : 0;
+                  return (
+                    <li key={p.platform ?? 'unknown'}>
+                      <div className="flex items-baseline justify-between gap-3 text-[13px]">
+                        <span className={p.platform ? 'font-semibold text-slate-800' : 'font-semibold text-slate-500'}>
+                          {p.platform ? d.platforms.names[p.platform] : d.platforms.unknown}
+                        </span>
+                        <span className="shrink-0 tabular-nums text-slate-500">
+                          <span className="font-semibold text-slate-900">{p.leads}</span> {d.platforms.leads} · {share}%
+                          {p.won > 0 && <> · <span className="font-semibold text-emerald-700">{p.won}</span> {d.platforms.sales}</>}
+                        </span>
+                      </div>
+                      <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-surface-muted">
+                        <div
+                          className={p.platform ? 'h-full rounded-full bg-gradient-to-l from-[#D8B66A] to-brand-600' : 'h-full rounded-full bg-slate-300'}
+                          style={{ width: `${Math.max(share, 2)}%` }}
+                        />
+                      </div>
+                      {!p.platform && <p className="mt-1 text-[11.5px] text-slate-400">{d.platforms.unknownHint}</p>}
+                    </li>
+                  );
+                })}
+              </ul>
+            </PremiumPanel>
+          )}
+
           <PremiumPanel title={d.spend.title} sub={d.spend.desc}>
             {byDay.length > 1 && (
               <div className="mb-6">
@@ -160,6 +196,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
         <div className="min-w-0 space-y-6">
           <PremiumPanel title={d.links.title} sub={d.links.desc}>
             <TrackingLinks links={links} labels={{ copy: d.links.copy, copied: d.links.copied, params: d.linkHint, open: d.open }} />
+            {meta && <p className="mt-3 rounded-xl bg-[#D8B66A]/10 px-3.5 py-2.5 text-[12px] leading-relaxed text-slate-600">{d.metaHint}</p>}
           </PremiumPanel>
 
           {c.notes && (
