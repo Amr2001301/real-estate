@@ -1,4 +1,4 @@
-# Handoff — where the work stands (2026-10-24)
+# Handoff — where the work stands (2026-10-27)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
@@ -33,7 +33,17 @@
 
 **حاجات عليك إنت:** الاستضافة، تقييد مفتاح Firebase، حماية الفرع الرئيسي على GitHub، وتسميات الرسوم في تطبيقات الموبايل (محتاجة جهاز عليه Flutter).
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #176 مدموج و`main` نضيف؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**بعد كده (من 24 لـ 27 أكتوبر، #178–#191):** القسم 2c تحت. باختصار:
+- **المساعد الذكي (AI):** باقات أسئلة للشركات، وصفحة شات في لوحة التحكم — محتاج `ANTHROPIC_API_KEY` على السيرفر.
+- **تطبيق العميل باسم كل شركة:** إعدادات التطبيق عند السوبر أدمن، وبناء ملف Google Play تلقائي على GitHub — محتاج keystore وملف Firebase كـ secrets.
+- **أمان:** تحديث مكتبات فيها ثغرات، وNext.js 16.4.2، وإصلاح سباقات في أكواد الدخول والتوقيع.
+- **تصميم جديد:** صفحات الدخول (صورة معمارية)، «دومين الموقع» بقى عند السوبر أدمن، «خانات العميل الإضافية»، استيراد البيانات، و«الطباعة والمستندات» (4 تبويبات وشريط حفظ وشرح في المحرر).
+
+**شغال دلوقتي (مش مدموج):** نظام المتابعة (FU1) — نوع النشاط (مكالمة/اجتماع/واتساب)، نتيجة المكالمة، موعد المتابعة القادمة، الردود، وقوائم المتأخر/النهارده. التفاصيل في القسم 2c.
+
+**ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
+
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #191 مدموج و`main` نضيف؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -192,6 +202,52 @@ Rounds 4 and 5 (#89–#113) are described in sections 3 and 4b. Everything after
 Shared helpers worth knowing (API): `common/utils/add-months.ts`, `common/time/company-timezone.ts`, `common/finance/*` (`COLLECTED_DEPOSIT_WHERE`, `BILLABLE_PLAN_WHERE`, `LIVE_CONTRACT_WHERE`), `installments/discount-policy.ts`, `projects/inventory-blockers.ts`, `common/ownership/ownership.service.ts`, `contracts/contract-amendments.service.ts` (`rescaleUnpaid`, `followNewPrice`, `liveContract`, `assertNoWaitingPayments`).
 
 ---
+
+### 2c. #178–#191 (2026-10-24 → 2026-10-27)
+
+| PR | Slice | Main points |
+|---|---|---|
+| #178 | AI1 | AI assistant packages (questions per month), company activation / top-up / renew ledger, usage counter, 80% / 100% / ending alerts; annual subscription 30-day notice. |
+| #179 | AI2 | Assistant API on Claude: read-only tools scoped by tenant and role; one question counted per ask. |
+| #180 | AI3 | Assistant chat page in web-admin (`/dashboard/assistant`) and usage card. |
+| #181 | Security | Next.js 16.4.0 → 16.4.2 in web-admin and web-public. |
+| #182 | Security | Vulnerable dependencies patched (3 critical + 64 high → 0 critical + 5 high). |
+| #183 | MA1 | Each company's own customer app: settings kept by the platform owner (super-admin API + panel, icon upload). |
+| #184 | MA2 | The Flutter customer app builds as one company's own app. |
+| #185 | MA3 | `.github/workflows/company-app.yml` builds a signed App Bundle (AAB) per company for Google Play; the build file downloads from the panel. |
+| #186 | MA4 | Push, store links and app links for a company's own app. |
+| #187 | Round 6 | Races on sign-in codes, e-sign codes and the AI ledger. |
+| #188 | Design | Sign-in pages (`components/auth/auth-shell.tsx`, `auth-fields.tsx`): full-bleed photo `public/brand/login-hero.jpg`, fixed colours in light and dark. |
+| #189 | D1 | «دومين الموقع»: connecting a company's domain moved to the super-admin company page (`super-admin/companies/:companyId/domains`); the company admin only sees it on the branding page. `/dashboard/company/domains` was removed. |
+| #190 | Design | «خانات العميل الإضافية» (ready-made fields, dialog with live preview and print code `{{custom.key}}`, switch, drag to reorder) and the data import page (stepper, drop zone, sticky confirm bar). |
+| #191 | Design | «الطباعة والمستندات»: tabs `?tab=paper|seal|forms|wording`, sticky save bar, and a guide panel in the form and wording editors. |
+
+**Deploy notes (new since #177):**
+- **API env:** `ANTHROPIC_API_KEY` (unset → the assistant answers 503 and counts nothing), optional `AI_MODEL`, `AI_EFFORT` (low|medium|high|xhigh|max). Listed in `apps/api/.env.example`.
+- **GitHub secrets for company apps:** `ANDROID_UPLOAD_KEYSTORE_BASE64`, `ANDROID_UPLOAD_KEY_ALIAS`, `ANDROID_UPLOAD_KEY_PASSWORD`, `ANDROID_UPLOAD_STORE_PASSWORD`, `FIREBASE_CUSTOMER_GOOGLE_SERVICES_JSON`. iOS company apps are not done.
+- **3 migrations:** `20261024120000_ai_assistant_plans`, `20261025090000_company_mobile_app`, `20261025170000_company_mobile_app_links` (additive). Run `pnpm db:deploy` then `pnpm db:schema-check`.
+- **Deploys are manual.** `.github/workflows/deploy.yml` runs only on `workflow_dispatch` (Actions → "CD — Deploy to Production" → Run workflow, service `all`); its last run was 2026-09-18, so production has none of #114–#191. Run the migrations of 2b and 2c (backup first) before or with that deploy.
+
+**Running the latest main on your own machine** (when merged work "doesn't show"):
+
+```bash
+git checkout main && git pull          # git log -1 should show the newest merged PR
+pnpm install                           # #181/#182 changed dependencies
+pnpm db:generate && pnpm db:deploy     # new Prisma client + new migrations
+rm -rf apps/web-admin/.next apps/web-public/.next
+pnpm dev                               # restart: API :4000, admin :3001, public :3002
+```
+
+Then hard-refresh the browser (Ctrl+Shift+R). Being on another branch (e.g. an old `claude/*` branch, which is reset after each merge) is the other usual cause.
+
+**In progress — FU1 follow-up system (not merged yet).** Inspired by the competitor review (ENGAZ CRM PDF). Done so far in the session, not pushed:
+- Schema: `Lead.nextActionAt / nextActionType / nextActionNote` (index `companyId, nextActionAt`); `LeadNote.kind` (NOTE/CALL/MEETING/WHATSAPP/FOLLOW_UP), `callResult` (ANSWERED/NO_ANSWER/BUSY/UNREACHABLE/WRONG_NUMBER), `nextActionAt/Type`, `parentId` for one-level replies. Migration `20261027090000_lead_follow_ups`.
+- API: `POST leads/:id/notes` takes kind, callResult (calls only), parentId (text-only replies), `nextActionAt` (date sets, `null` clears, absent keeps; must be future; open stages only). `GET leads/follow-ups?bucket=overdue|today|upcoming` and `GET leads/follow-ups/summary`, scoped by `resolveSalesScope` + `companyId`; "today" ends at the company's local midnight (`endOfLocalTodayInstant`). LOST / WON clear the follow-up. e2e `e2e-fu1-follow-ups` (5 tests).
+- Still to build: web-admin composer + timeline with replies on the lead page, `/dashboard/follow-ups` page, nav badge (overdue + today), dashboard panel, Playwright test.
+
+If this session's work is lost, rebuild FU1 from this description.
+
+**Competitor-gap backlog after FU1** (proposed to the owner, not yet approved): lost reasons + report; marketing campaigns with cost / CPL / CPA / ROI; call & WhatsApp buttons, masked phones, duplicates tab, calendar; sessions / linked devices and 2FA. Resale/rentals is the owner's call. Academy, jobs and a social timeline are not wanted.
 
 ## 3. Round 4 — the plan (U1–U4 done; U5 in progress)
 
@@ -404,5 +460,5 @@ Left for the owner, not in V1–V3:
   - An unsigned contract's due rows are not chased until it is signed; they only show in the report and the dashboard tile.
 - **Leaderboard share:** a broker's share % is of the top 10 brokers only. This is the owner's call.
 - **Mobile fee labels:** the customer app shows a FEE payment as a normal "payment", the staff app prints `FEE`. Needs Flutter (not available in the cloud container).
-- **Owner's own tasks:** hosting/deployment, restricting the Firebase API key, GitHub branch protection on `main`.
+- **Owner's own tasks:** hosting/deployment (deploys are manual — see 2c), `ANTHROPIC_API_KEY` and `SUPER_ADMIN_*` on the API host, Android keystore and Firebase secrets for company apps, restricting the Firebase API key, GitHub branch protection on `main`.
 - Older backlog docs: `docs/BACKLOG.md`, `docs/EXECUTION_BACKLOG.md`, `docs/PROJECT_CURRENT_STATE.md` (may be behind this file).
