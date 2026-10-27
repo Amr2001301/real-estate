@@ -20,6 +20,7 @@ import { CompanyPricingPanel } from './_pricing-panel';
 import { CompanyAiPanel } from './_ai-panel';
 import { CompanyMobileAppPanel } from './_mobile-app-panel';
 import { CompanyWebsiteDomainPanel } from './_website-domain-panel';
+import { CompanyMigrationPanel } from './_migration-panel';
 import {
   PremiumPageHero,
   PremiumDetailLayout,
@@ -338,6 +339,7 @@ export default function CompanyDetailPage() {
             <CompanyAiPanel companyId={company.id} />
             <CompanyMobileAppPanel companyId={company.id} />
             <CompanyWebsiteDomainPanel companyId={company.id} />
+            <CompanyMigrationPanel companyId={company.id} />
           </div>
         }
         side={

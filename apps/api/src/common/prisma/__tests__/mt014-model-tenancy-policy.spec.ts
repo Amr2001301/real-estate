@@ -65,9 +65,9 @@ describe('MT-014 equivalence: TENANT_SCOPED_MODELS ↔ MODEL_TENANCY TENANT_OWNE
     expect(missing).toEqual([]);
   });
 
-  it('both sets have the same cardinality (68: Step A + Step C + Step D1 + Option B User − FG-26 NotificationTemplate + ContractAmendment + BrokerCommissionAdjustment + PresignedUpload + UnitHandover + UnitType + UnitModel + PrintSettings + DocumentTemplate + SignatureRequest + CustomerField + FormLayout + CompanyAiPlan + AiLedgerEntry + CompanyMobileApp + LostReason + Campaign + CampaignSpend + LeadIntakeKey)', () => {
-    expect(TENANT_SCOPED_MODELS.size).toBe(68);
-    expect(ownedFromModelTenancy.size).toBe(68);
+  it('both sets have the same cardinality (70: Step A + Step C + Step D1 + Option B User − FG-26 NotificationTemplate + ContractAmendment + BrokerCommissionAdjustment + PresignedUpload + UnitHandover + UnitType + UnitModel + PrintSettings + DocumentTemplate + SignatureRequest + CustomerField + FormLayout + CompanyAiPlan + AiLedgerEntry + CompanyMobileApp + LostReason + Campaign + CampaignSpend + LeadIntakeKey + MigrationRun + MigrationRecord)', () => {
+    expect(TENANT_SCOPED_MODELS.size).toBe(70);
+    expect(ownedFromModelTenancy.size).toBe(70);
   });
 
   it('MODEL_TIER_BY_LOWERCASE includes all TENANT_OWNED models with correct tier', () => {
@@ -353,9 +353,9 @@ describe('MT-014 MODEL_TIER_BY_LOWERCASE derived set', () => {
     }
   });
 
-  it('TENANT_OWNED count matches TENANT_SCOPED_MODELS count (68 after Option B User, FG-26, ContractAmendment, BrokerCommissionAdjustment, PresignedUpload, UnitHandover, UnitType, UnitModel, PrintSettings, DocumentTemplate, SignatureRequest, CustomerField, FormLayout, CompanyAiPlan, AiLedgerEntry, CompanyMobileApp, LostReason, Campaign, CampaignSpend and LeadIntakeKey)', () => {
+  it('TENANT_OWNED count matches TENANT_SCOPED_MODELS count (70 after Option B User, FG-26, ContractAmendment, BrokerCommissionAdjustment, PresignedUpload, UnitHandover, UnitType, UnitModel, PrintSettings, DocumentTemplate, SignatureRequest, CustomerField, FormLayout, CompanyAiPlan, AiLedgerEntry, CompanyMobileApp, LostReason, Campaign, CampaignSpend, LeadIntakeKey, MigrationRun and MigrationRecord)', () => {
     const ownedCount = [...MODEL_TIER_BY_LOWERCASE.values()].filter((t) => t === 'TENANT_OWNED').length;
-    expect(ownedCount).toBe(68);
+    expect(ownedCount).toBe(70);
   });
 });
 

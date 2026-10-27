@@ -240,14 +240,23 @@ pnpm dev                               # restart: API :4000, admin :3001, public
 
 Then hard-refresh the browser (Ctrl+Shift+R). Being on another branch (e.g. an old `claude/*` branch, which is reset after each merge) is the other usual cause.
 
-**In progress — FU1 follow-up system (not merged yet).** Inspired by the competitor review (ENGAZ CRM PDF). Done so far in the session, not pushed:
-- Schema: `Lead.nextActionAt / nextActionType / nextActionNote` (index `companyId, nextActionAt`); `LeadNote.kind` (NOTE/CALL/MEETING/WHATSAPP/FOLLOW_UP), `callResult` (ANSWERED/NO_ANSWER/BUSY/UNREACHABLE/WRONG_NUMBER), `nextActionAt/Type`, `parentId` for one-level replies. Migration `20261027090000_lead_follow_ups`.
-- API: `POST leads/:id/notes` takes kind, callResult (calls only), parentId (text-only replies), `nextActionAt` (date sets, `null` clears, absent keeps; must be future; open stages only). `GET leads/follow-ups?bucket=overdue|today|upcoming` and `GET leads/follow-ups/summary`, scoped by `resolveSalesScope` + `companyId`; "today" ends at the company's local midnight (`endOfLocalTodayInstant`). LOST / WON clear the follow-up. e2e `e2e-fu1-follow-ups` (5 tests).
-- Still to build: web-admin composer + timeline with replies on the lead page, `/dashboard/follow-ups` page, nav badge (overdue + today), dashboard panel, Playwright test.
+### 2d. #193 onwards (2026-10-27 →)
 
-If this session's work is lost, rebuild FU1 from this description.
+| PR | Slice | Main points |
+|---|---|---|
+| #193 | FU1 | Follow-ups: activity kind (call/meeting/WhatsApp/follow-up/note), call result, next action, replies; «المتابعات» overdue / today / upcoming lists. |
+| #194 | LR1 | Lost reasons per company, asked when a lead is lost; «أسباب الخسارة» report. |
+| #195 | MC1 | Marketing campaigns: spend by day, ad links with `utm_campaign`, leads / interested / sales, cost per lead and per sale. |
+| #196 | MC2 | Leads arrive on their own: `POST /v1/intake/:slug/leads` with a company key, handed out in turn, first call. |
+| (this) | MG1 | **Data migration API** — another system (e.g. Engaz CRM) sends a company's projects, units, customers, leads and activities to `POST /v1/migration/:slug/{list}` with a key the platform owner makes on the company page («نقل بيانات من نظام تاني»). Format for the other side: `docs/DATA_MIGRATION_API.md`. |
 
-**Competitor-gap backlog after FU1** (proposed to the owner, not yet approved): lost reasons + report; marketing campaigns with cost / CPL / CPA / ROI; call & WhatsApp buttons, masked phones, duplicates tab, calendar; sessions / linked devices and 2FA. Resale/rentals is the owner's call. Academy, jobs and a social timeline are not wanted.
+**MG1 design (owner-approved 2026-10-27):** one generic format for every system, not tied to Engaz. Records are matched by the other system's id (`MigrationRecord`, unique per company + `sourceSystem` + entity + `externalId`), so sending again updates; each record is checked on its own; `?dryRun=true` rolls each record back. Any field not in the format, and values not recognised (stage, source, unit type, person, activity kind), are kept on the record (`extra`, `unmapped`) — never guessed. Unknown stage → NEW; unknown source → «نقل بيانات»; units sold or booked over there are refused (decision 2026-10-18: SOLD only by a contract). Moved-in data sends no notifications and is not handed out. Phase 1 scope: no contracts, instalments or payments (Engaz has none).
+
+**MG1 deploy:** one additive migration, `20261028120000_data_migration`. The other system needs the public API address (`PUBLIC_API_URL` on web-admin, else `API_BASE_URL`, is what the panel shows).
+
+**Next — MG2 (approved, not started):** the mapping screen. For a source system, the platform owner maps each kept value / extra field once (to a stage, a source, a unit type, a person, a customer field, a note, or ignore); the choice is saved per system and applied to the records already moved and to later companies from the same system. Then phase 2: the same mapping on any Excel/CSV file from any system. Later, if wanted: contracts/instalments/payments, and the reverse (a company taking its data out over the API).
+
+**Competitor-gap backlog** (proposed, not yet approved): call & WhatsApp buttons, masked phones, duplicates tab, calendar; sessions / linked devices and 2FA. Resale/rentals is the owner's call. Academy, jobs and a social timeline are not wanted.
 
 ## 3. Round 4 — the plan (U1–U4 done; U5 in progress)
 

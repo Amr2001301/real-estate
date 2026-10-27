@@ -163,6 +163,8 @@ model Company {
   campaigns      Campaign[]
   campaignSpend  CampaignSpend[]
   leadIntakeKeys LeadIntakeKey[]
+  migrationRuns    MigrationRun[]
+  migrationRecords MigrationRecord[]
 
   @@index([slug])
   @@index([isActive])
@@ -3477,4 +3479,72 @@ model ChatFeedback {
 
   @@index([sessionId])
   @@index([companyId])
+}
+
+// =============================================================================
+// DATA MIGRATION — another system sends a company's data in, over the API
+// =============================================================================
+
+enum MigrationRunStatus {
+  OPEN
+  FINISHED
+}
+
+enum MigrationEntity {
+  PROJECT
+  UNIT
+  CUSTOMER
+  LEAD
+  ACTIVITY
+}
+
+/// One move of a company's data from another system: the key that system
+/// sends with (only its hash kept), until it expires or the move is finished.
+model MigrationRun {
+  id           String             @id @default(uuid()) @db.Uuid
+  /// The other system, as a slug ("engaz"); records are matched per system.
+  sourceSystem String             @db.VarChar(60)
+  /// The other system's name as people say it ("إنجاز").
+  sourceLabel  String             @db.VarChar(80)
+  tokenHash    String             @unique
+  tokenPrefix  String
+  expiresAt    DateTime
+  status       MigrationRunStatus @default(OPEN)
+  note         String?            @db.VarChar(300)
+  createdById  String?            @db.Uuid
+  lastUsedAt   DateTime?
+  finishedAt   DateTime?
+  createdAt    DateTime           @default(now())
+
+  records MigrationRecord[]
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, createdAt])
+}
+
+/// A record the other system sent, by its own id, and what it became here.
+/// A record sent again updates the same row. Data with no place here and
+/// values not recognised are kept, so nothing sent is lost.
+model MigrationRecord {
+  id           String          @id @default(uuid()) @db.Uuid
+  runId        String          @db.Uuid
+  run          MigrationRun    @relation(fields: [runId], references: [id], onDelete: Cascade)
+  sourceSystem String          @db.VarChar(60)
+  entity       MigrationEntity
+  externalId   String          @db.VarChar(120)
+  targetId     String          @db.Uuid
+  /// Fields this system has no place for, as sent: { "اسم الزوج": "..." }.
+  extra        Json?
+  /// Values not recognised, by field: { "stage": "مهتم جدا" }.
+  unmapped     Json?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, sourceSystem, entity, externalId])
+  @@index([runId, entity])
 }
