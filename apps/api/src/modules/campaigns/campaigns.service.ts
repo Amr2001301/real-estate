@@ -4,7 +4,7 @@ import { CampaignChannel, CampaignStatus, LeadStage, Prisma } from '@prisma/clie
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { AddCampaignSpendDto, CreateCampaignDto, UpdateCampaignDto } from './dto/campaign.dto';
-import { normalizeCampaignCode } from './campaign-attribution';
+import { adPlatform, normalizeCampaignCode, type AdPlatform } from './campaign-attribution';
 
 /** Stages a lead reaches once it is genuinely interested. */
 const QUALIFIED: LeadStage[] = [LeadStage.INTERESTED, LeadStage.VISIT, LeadStage.NEGOTIATION, LeadStage.WON];
@@ -137,14 +137,38 @@ export class CampaignsService {
       },
     });
     if (!c) throw new NotFoundException('Campaign not found');
-    const stats = (await this.stats(companyId, [id])).get(id) ?? CampaignsService.empty();
+    const [statsMap, platforms] = await Promise.all([this.stats(companyId, [id]), this.platforms(companyId, id)]);
+    const stats = statsMap.get(id) ?? CampaignsService.empty();
     return {
       ...c,
       budget: c.budget == null ? null : Number(c.budget),
       spend: c.spend.map((s) => ({ ...s, amount: Number(s.amount) })),
       stats,
+      platforms,
       siteUrl: await this.siteUrl(companyId),
     };
+  }
+
+  /**
+   * The campaign's leads by the platform their ad ran on (one Meta campaign
+   * shows on Facebook, Instagram and Messenger alike); `null` = not known.
+   */
+  private async platforms(companyId: string, campaignId: string) {
+    const groups = await this.prisma.lead.groupBy({
+      by: ['utmSource', 'stage'],
+      where: { companyId, campaignId },
+      _count: true,
+    });
+    const out = new Map<AdPlatform | null, { platform: AdPlatform | null; leads: number; won: number }>();
+    for (const g of groups) {
+      const platform = adPlatform(g.utmSource);
+      const row = out.get(platform) ?? { platform, leads: 0, won: 0 };
+      row.leads += g._count;
+      if (g.stage === LeadStage.WON) row.won += g._count;
+      out.set(platform, row);
+    }
+    // Known platforms first, by leads; «not known» last.
+    return [...out.values()].sort((a, b) => Number(a.platform === null) - Number(b.platform === null) || b.leads - a.leads);
   }
 
   async create(dto: CreateCampaignDto) {

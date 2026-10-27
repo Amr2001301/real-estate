@@ -1,4 +1,6 @@
-const SESSION_KEY = 'utm_attribution';
+const STORAGE_KEY = 'utm_attribution';
+/** How long an ad click is remembered: a visitor may come back days later to fill a form. */
+const TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 export interface UtmAttribution {
   utmSource?: string;
@@ -9,18 +11,18 @@ export interface UtmAttribution {
 }
 
 /**
- * Read UTM / Facebook ad attribution from the current URL and persist it to
- * sessionStorage so it survives navigations within the same tab (e.g. visitor
- * lands on /projects?utm_source=facebook, clicks through to /contact, and the
- * source is still captured on the form submission).
+ * Read UTM / Facebook ad attribution from the current URL and keep it in
+ * localStorage for 30 days, so it survives the visitor moving around the
+ * site (lands on /projects/x?utm_campaign=…, goes to /contact) and coming
+ * back to fill a form later. Called on every page (UtmCapture) — not only
+ * where a form is — or a visitor who landed on a project page was lost.
  *
  * Overwrites the stored value only when the current URL has attribution params
- * (new click wins over stale session data), so direct navigations inside the
- * session don't erase the original ad-click attribution.
+ * (a new click wins over older data), so later direct visits don't erase it.
  *
  * Safe to call server-side: returns {} when `window` is not available.
  */
-export function captureUtm(): UtmAttribution {
+export function captureUtm(now: number = Date.now()): UtmAttribution {
   if (typeof window === 'undefined') return {};
 
   const params = new URLSearchParams(window.location.search);
@@ -33,21 +35,23 @@ export function captureUtm(): UtmAttribution {
     fbclid:      params.get('fbclid')       || undefined,
   };
 
-  const hasUrlAttribution = Object.values(fromUrl).some(Boolean);
-
-  if (hasUrlAttribution) {
+  if (Object.values(fromUrl).some(Boolean)) {
     try {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(fromUrl));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ at: now, data: fromUrl }));
     } catch {
       // Private browsing / storage full — non-critical.
     }
     return fromUrl;
   }
 
-  // Fall back to what was captured earlier in this session.
+  // Fall back to the last ad click, while it is recent enough.
   try {
-    const stored = sessionStorage.getItem(SESSION_KEY);
-    if (stored) return JSON.parse(stored) as UtmAttribution;
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const { at, data } = JSON.parse(stored) as { at: number; data: UtmAttribution };
+      if (typeof at === 'number' && now - at <= TTL_MS && data) return data;
+      localStorage.removeItem(STORAGE_KEY);
+    }
   } catch {
     // Ignore parse errors.
   }

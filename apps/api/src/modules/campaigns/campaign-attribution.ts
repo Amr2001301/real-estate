@@ -22,3 +22,21 @@ export async function campaignForUtm(
     select: { id: true, sourceId: true, projectId: true },
   });
 }
+
+export type AdPlatform = 'FACEBOOK' | 'INSTAGRAM' | 'MESSENGER' | 'AUDIENCE_NETWORK' | 'OTHER';
+
+/**
+ * Where on Meta (or elsewhere) a lead's ad ran, from its utm_source. Meta
+ * fills `{{site_source_name}}` with fb / ig / msg / an; lead forms sent by
+ * Zapier or Make carry `platform` as fb / ig. Null when nothing says — or
+ * when the placeholder was never filled (the link opened outside an ad).
+ */
+export function adPlatform(utmSource: string | null | undefined): AdPlatform | null {
+  const s = utmSource?.trim().toLowerCase();
+  if (!s || s.includes('{{')) return null;
+  if (/^(fb|facebook|m\.facebook|l\.facebook|lm\.facebook)(\.com)?$/.test(s)) return 'FACEBOOK';
+  if (/^(ig|instagram|l\.instagram)(\.com)?$/.test(s)) return 'INSTAGRAM';
+  if (/^(msg|messenger)$/.test(s)) return 'MESSENGER';
+  if (/^(an|audience[_ -]?network)$/.test(s)) return 'AUDIENCE_NETWORK';
+  return 'OTHER';
+}
