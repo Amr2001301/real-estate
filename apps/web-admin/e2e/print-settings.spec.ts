@@ -10,14 +10,23 @@ test.use({ storageState: ADMIN_STORAGE });
  */
 test('the printing page shows the paper, the seal and the wording', async ({ page }) => {
   await gotoReady(page, '/dashboard/company/print');
+  // Four tabs; the paper first, beside the page preview.
+  await expect(page.getByTestId('print-tabs').getByRole('link')).toHaveCount(4);
   await expect(page.getByTestId('print-paper-settings')).toBeVisible();
-  await expect(page.getByTestId('print-seal-settings')).toBeVisible();
-  await expect(page.getByTestId('document-templates')).toBeVisible();
   await expect(page.getByTestId('print-preview')).toBeVisible();
+  await expect(page.getByTestId('print-settings-save')).toHaveCount(0); // nothing to save yet
 
-  // Choosing the company's own paper asks for its images and margins.
+  // Choosing the company's own paper asks for its images and margins, and offers to save.
   await page.getByTestId('paper-mode-HEADER_FOOTER').click();
   await expect(page.getByTestId('paper-marginTopMm')).toBeVisible();
+  await expect(page.getByTestId('print-settings-save')).toBeVisible();
+
+  await page.getByTestId('print-tab-seal').click();
+  await expect(page.getByTestId('print-seal-settings')).toBeVisible();
+  await page.getByTestId('print-tab-wording').click();
+  await expect(page.getByTestId('document-templates')).toBeVisible();
+  await page.getByTestId('print-tab-forms').click();
+  await expect(page.getByTestId('form-layouts')).toBeVisible();
 });
 
 test('the wording editor fills the preview from a ready wording', async ({ page }) => {

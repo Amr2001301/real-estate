@@ -7,6 +7,7 @@ import type { FormLayout } from '@/lib/form-layout';
 import { PremiumPageHero } from '@/components/premium';
 import { companyNameOf } from '@/components/print/PrintDocument';
 import { printSettingsT } from '../../messages';
+import { EditorGuide } from '../../_components/editor-guide';
 import { FormDesigner } from '../_components/form-designer';
 
 export const dynamic = 'force-dynamic';
@@ -26,8 +27,9 @@ export default async function EditFormPage({ params }: { params: Promise<{ id: s
       <PremiumPageHero
         title={res.data.name}
         description={m.forms.hint}
-        breadcrumbs={[{ label: m.breadcrumbAdmin }, { label: m.title, href: '/dashboard/company/print' }, { label: res.data.name }]}
+        breadcrumbs={[{ label: m.breadcrumbAdmin }, { label: m.title, href: '/dashboard/company/print?tab=forms' }, { label: res.data.name }]}
       />
+      <EditorGuide steps={m.guide.form} testId="editor-guide" />
       <FormDesigner layout={res.data} customFields={customFields} locale={locale} currency={letterhead.currency} company={companyNameOf(letterhead, locale)} />
     </div>
   );
