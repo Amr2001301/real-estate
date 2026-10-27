@@ -9,13 +9,13 @@ export const dynamic = 'force-dynamic';
 
 const T = {
   ar: {
-    title: 'بيانات العملاء الإضافية',
-    description: 'خانات تضيفها شركتك لبيانات كل عميل، يملؤها الموظف وتُطبع في الاستمارات والعقود.',
+    title: 'خانات العميل الإضافية',
+    description: 'أضف خانات خاصة بشركتك لبيانات العميل — مثل اسم الزوجة أو رقم الجواز — يملؤها موظفوك وتُطبع في العقود.',
     admin: 'الإدارة',
   },
   en: {
-    title: 'Extra customer data',
-    description: 'Fields your company adds to every customer’s data; staff fill them and they print on your forms and contracts.',
+    title: 'Extra customer fields',
+    description: 'Add fields of your own to customer data — like spouse name or passport number — that your staff fill and your contracts print.',
     admin: 'Administration',
   },
 };
