@@ -1,14 +1,17 @@
 import {
   IsBoolean,
+  IsDateString,
   IsEmail,
   IsNotEmpty,
   IsEnum,
   IsOptional,
   IsString,
   IsUUID,
+  MaxLength,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
-import { LeadStage } from '@prisma/client';
+import { LeadCallResult, LeadFollowUpType, LeadNoteKind, LeadStage } from '@prisma/client';
 
 export class CreateLeadDto {
   // When `clientId` is provided we link to an existing User and ignore the
@@ -47,8 +50,28 @@ export class AssignLeadDto {
 }
 
 export class CreateLeadNoteDto {
-  @IsString() body!: string;
+  @IsString() @IsNotEmpty() @MaxLength(5000) body!: string;
+  /** What happened: a call, a meeting, a WhatsApp chat… (a plain note by default). */
+  @IsOptional() @IsEnum(LeadNoteKind) kind?: LeadNoteKind;
+  /** How the call went — calls only. */
+  @ValidateIf((o: CreateLeadNoteDto) => o.callResult != null)
+  @IsEnum(LeadCallResult)
+  callResult?: LeadCallResult | null;
+  /** A reply to another note on the same lead; replies carry no follow-up. */
+  @IsOptional() @IsUUID() parentId?: string;
+  /**
+   * The next follow-up: an ISO instant sets it, `null` clears it, and leaving
+   * it out keeps whatever the lead already has.
+   */
+  @ValidateIf((o: CreateLeadNoteDto) => o.nextActionAt != null)
+  @IsDateString()
+  nextActionAt?: string | null;
+  @IsOptional() @IsEnum(LeadFollowUpType) nextActionType?: LeadFollowUpType;
+  @IsOptional() @IsString() @MaxLength(500) nextActionNote?: string;
 }
+
+export const FOLLOW_UP_BUCKETS = ['overdue', 'today', 'upcoming'] as const;
+export type FollowUpBucket = (typeof FOLLOW_UP_BUCKETS)[number];
 
 export class CreateLeadSourceDto {
   @IsString() @IsNotEmpty() ar!: string;

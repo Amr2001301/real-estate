@@ -259,6 +259,10 @@ export interface Lead {
   stageChangedAt?: string;
   /** The latest note on the lead — the kanban card's "last contact"; null without one. */
   lastContactAt?: string | null;
+  /** The next follow-up: when, what, and a word on it; null when none is set. */
+  nextActionAt?: string | null;
+  nextActionType?: LeadFollowUpType | null;
+  nextActionNote?: string | null;
   createdAt: string;
   // ── Broker attribution (present only for broker-origin leads) ──
   brokerId?: string | null;
@@ -287,11 +291,44 @@ export interface LeadSource {
   active: boolean;
 }
 
+export type LeadNoteKind = 'NOTE' | 'CALL' | 'MEETING' | 'WHATSAPP' | 'FOLLOW_UP';
+export type LeadCallResult = 'ANSWERED' | 'NO_ANSWER' | 'BUSY' | 'UNREACHABLE' | 'WRONG_NUMBER';
+export type LeadFollowUpType = 'CALL' | 'MEETING' | 'WHATSAPP' | 'FOLLOW_UP';
+export type FollowUpBucket = 'overdue' | 'today' | 'upcoming';
+
 export interface LeadNote {
   id: string;
   body: string;
   createdAt: string;
   sales?: { id: string; fullName: string };
+  kind?: LeadNoteKind;
+  callResult?: LeadCallResult | null;
+  /** The follow-up this activity scheduled. */
+  nextActionAt?: string | null;
+  nextActionType?: LeadFollowUpType | null;
+  parentId?: string | null;
+  replies?: LeadNote[];
+}
+
+/** A row of the follow-up lists (GET /leads/follow-ups). */
+export interface FollowUpLead {
+  id: string;
+  fullName: string;
+  phone: string;
+  stage: LeadStage;
+  nextActionAt: string;
+  nextActionType: LeadFollowUpType | null;
+  nextActionNote: string | null;
+  client?: { id: string; fullName: string; phone: string } | null;
+  assignedSales?: { id: string; fullName: string } | null;
+  projectInterest?: { id: string; name: Translatable } | null;
+  lastActivity: { kind: LeadNoteKind; callResult: LeadCallResult | null; body: string; createdAt: string } | null;
+}
+
+export interface FollowUpSummary {
+  overdue: number;
+  today: number;
+  upcoming: number;
 }
 
 export type InstallmentStatus = 'PENDING' | 'PAID' | 'OVERDUE';

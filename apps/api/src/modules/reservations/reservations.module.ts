@@ -2532,7 +2532,8 @@ export class ReservationsService {
         if (targetLead.stage !== LeadStage.WON) {
           await tx.lead.update({
             where: { id: targetLead.id },
-            data: { stage: LeadStage.WON },
+            // Sold: nothing left to follow up.
+            data: { stage: LeadStage.WON, nextActionAt: null, nextActionType: null, nextActionNote: null },
           });
           await tx.leadActivity.create({
             data: {
