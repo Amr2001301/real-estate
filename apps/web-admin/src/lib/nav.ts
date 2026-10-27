@@ -199,7 +199,6 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/dashboard/operations', label: 'مركز العمليات', labelKey: 'operations', iconKey: 'Gauge', admin: true },
       { href: '/dashboard/audit-logs', label: 'سجلات التدقيق', labelKey: 'auditLogs', iconKey: 'ScrollText', admin: true },
       { href: '/dashboard/company/branding', label: 'الهوية البصرية', labelKey: 'branding', iconKey: 'Palette', admin: true },
-      { href: '/dashboard/company/domains', label: 'النطاقات', labelKey: 'domains', iconKey: 'Globe', admin: true },
       { href: '/dashboard/company/print', label: 'الطباعة والمستندات', labelKey: 'printing', iconKey: 'Printer', admin: true },
       { href: '/dashboard/company/customer-fields', label: 'بيانات العملاء الإضافية', labelKey: 'customerFields', iconKey: 'ListPlus', admin: true },
       { href: '/dashboard/data-export', label: 'تصدير البيانات', labelKey: 'dataExport', iconKey: 'HardDriveDownload', admin: true },

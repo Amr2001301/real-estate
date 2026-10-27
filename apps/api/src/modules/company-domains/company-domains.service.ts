@@ -1,9 +1,10 @@
 /**
  * MT-049 / MT-050 — CompanyDomainsService
  *
- * Manages custom domains (and exposes platform subdomains) for a tenant.
+ * Manages custom domains (and exposes platform subdomains) for a tenant —
+ * from the super-admin routes; the tenant's own admin only lists them.
  * Security invariants:
- *  - companyId ALWAYS comes from req.user.companyId (JWT-authoritative DB value).
+ *  - companyId comes from req.user.companyId (tenant read) or the super-admin URL.
  *  - Cross-company reads return 404 (not 403) to avoid enumeration.
  *  - Platform subdomains (type=PLATFORM_SUBDOMAIN) cannot be deleted.
  *  - Only verified custom domains can be set as primary.
@@ -123,6 +124,12 @@ export class CompanyDomainsService {
 
   private get hostingAutomated(): boolean {
     return !!this.vercel?.enabled;
+  }
+
+  /** 404 for a company that does not exist (super-admin routes take the id from the URL). */
+  async assertCompany(companyId: string): Promise<void> {
+    const company = await this.prisma.company.findUnique({ where: { id: companyId }, select: { id: true } });
+    if (!company) throw new NotFoundException('Company not found');
   }
 
   async list(companyId: string) {
