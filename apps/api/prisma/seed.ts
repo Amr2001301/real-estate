@@ -13,6 +13,7 @@ import { seedTransferFeeSettingsForCompany } from '../src/modules/contracts/tran
 import { seedFeeSettingsForCompany } from '../src/modules/installments/fee-settings';
 import { seedTimeZoneSettingForCompany } from '../src/common/time/company-timezone';
 import { seedLeadSourcesForCompany } from '../src/modules/leads/lead-source-defaults';
+import { seedLostReasonsForCompany } from '../src/modules/leads/lost-reason-defaults';
 import { seedUnitTypesForCompany, syncUnitUsageForCompany } from '../src/modules/units/unit-type-defaults';
 import { normalizeHostname } from '../src/common/utils/hostname-normalize';
 import { upsertUserByEmail } from './seed-user-upsert';
@@ -553,6 +554,7 @@ async function main() {
 
   // ---- Lead sources: the defaults every company starts with ----
   await seedLeadSourcesForCompany(prisma, company.id);
+  await seedLostReasonsForCompany(prisma, company.id);
   await seedUnitTypesForCompany(prisma, company.id);
 
   // ---- Demo project 1: idempotent project + phase + buildings + units ----
@@ -817,6 +819,7 @@ async function main() {
     await seedFeeSettingsForCompany(prisma, c.id);
     await seedTimeZoneSettingForCompany(prisma, c.id);
     await seedLeadSourcesForCompany(prisma, c.id);
+    await seedLostReasonsForCompany(prisma, c.id);
     await seedUnitTypesForCompany(prisma, c.id);
   }
 

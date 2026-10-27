@@ -32,6 +32,8 @@ import {
   UpdateLeadStageDto,
   FOLLOW_UP_BUCKETS,
   FollowUpBucket,
+  CreateLostReasonDto,
+  UpdateLostReasonDto,
 } from './dto/lead.dto';
 
 const EXCEL_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -82,6 +84,53 @@ export class LeadsController {
   @Patch('lead-sources/:id')
   updateSource(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateLeadSourceDto) {
     return this.leads.updateSource(id, dto);
+  }
+
+  // Lost reasons: everyone picks from the active ones; the admin keeps the list.
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
+  @Permissions('leads:read')
+  @Get('lost-reasons')
+  listLostReasons(@CurrentUser() user: AuthUser, @Query('all') all?: string) {
+    return this.leads.listLostReasons(all === '1' && user.role === UserRole.ADMIN);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('lead_sources:manage')
+  @Post('lost-reasons')
+  createLostReason(@Body() dto: CreateLostReasonDto) {
+    return this.leads.createLostReason(dto);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('lead_sources:manage')
+  @Patch('lost-reasons/:id')
+  updateLostReason(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateLostReasonDto) {
+    return this.leads.updateLostReason(id, dto);
+  }
+
+  // Why leads were lost — the admin sees everyone, a sales manager their team.
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @Permissions('leads:read')
+  @Get('leads/lost-report')
+  async lostReport(
+    @CurrentUser() user: AuthUser,
+    @Query('salesId') salesId?: string,
+    @Query('projectId') projectId?: string,
+    @Query('sourceId') sourceId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    const scope = await resolveSalesScope(this.prisma, user, salesId);
+    const day = (v: string | undefined, name: string) => {
+      if (v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new BadRequestException(`${name} must be a date (YYYY-MM-DD)`);
+      return v || undefined;
+    };
+    return this.leads.lostReport(scope, {
+      from: day(from, 'from'),
+      to: day(to, 'to'),
+      projectId: projectId || undefined,
+      sourceId: sourceId || undefined,
+    });
   }
 
   // Pipeline counts
@@ -140,6 +189,7 @@ export class LeadsController {
     @Query('dateTo') dateTo?: string,
     @Query('createdBefore') createdBefore?: string,
     @Query('unassigned') unassigned?: string,
+    @Query('lostReasonId') lostReasonId?: string,
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
   ) {
@@ -162,6 +212,7 @@ export class LeadsController {
       dateTo,
       createdBefore: parseIsoInstant(createdBefore, 'createdBefore'),
       unassigned: unassignedQueue,
+      lostReasonId: lostReasonId || undefined,
     });
   }
 

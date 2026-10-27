@@ -34,6 +34,7 @@ import { ActivityComposer } from '@/components/crm/activity-composer';
 import { NoteReply } from '@/components/crm/note-reply';
 import { KIND_ICON, RESULT_TONE } from '@/components/crm/follow-up-icons';
 import { followUpState, followUpT, whatsappHref } from '@/components/crm/follow-up-messages';
+import { lostT } from '@/components/crm/lost-messages';
 import { salesActorLabel } from '@/lib/sales-actor';
 import { PremiumDetailLayout, PremiumPanel, PremiumEmptyNote } from '@/components/premium';
 import { cn } from '@/lib/cn';
@@ -88,6 +89,7 @@ export default async function LeadDetailPage({
   const locale = await getLocale();
   const m = uiT(locale).leadDetailPage;
   const f = followUpT(locale);
+  const lm = lostT(locale).lead;
 
   const STAGE_LABEL: Record<LeadStage, string> = {
     NEW:         m.stageNew,
@@ -278,6 +280,16 @@ export default async function LeadDetailPage({
               currentStage={lead.stage}
               stages={lead.stage === 'WON' ? ['WON'] : STAGES.filter((st) => st !== 'WON')}
             />
+            {lead.stage === 'LOST' && (
+              <div data-testid="lead-lost-reason" className="mt-4 flex flex-wrap items-start gap-x-3 gap-y-1 rounded-2xl bg-danger-500/[0.07] px-4 py-3 text-[13px]">
+                <span className="font-semibold text-danger-700">{lm.title}:</span>
+                <span className="font-semibold text-slate-800">{lead.lostReason ? tx(lead.lostReason.name, locale) : lm.none}</span>
+                {lead.lostAt && (
+                  <span className="text-slate-500">· {lm.lostOn} <span className="tabular-nums">{formatDate(lead.lostAt, locale)}</span></span>
+                )}
+                {lead.lostNote && <p className="basis-full text-slate-600">{lead.lostNote}</p>}
+              </div>
+            )}
           </div>
         </div>
       </section>

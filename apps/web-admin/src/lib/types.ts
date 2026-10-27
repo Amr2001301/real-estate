@@ -263,6 +263,10 @@ export interface Lead {
   nextActionAt?: string | null;
   nextActionType?: LeadFollowUpType | null;
   nextActionNote?: string | null;
+  /** Why it was lost (LOST only). */
+  lostReason?: { id: string; name: Translatable } | null;
+  lostNote?: string | null;
+  lostAt?: string | null;
   createdAt: string;
   // ── Broker attribution (present only for broker-origin leads) ──
   brokerId?: string | null;
@@ -283,6 +287,38 @@ export interface Lead {
   utmCampaign?: string | null;
   utmContent?:  string | null;
   fbclid?:      string | null;
+}
+
+export interface LostReason {
+  id: string;
+  name: Translatable;
+  active: boolean;
+  sortOrder: number;
+}
+
+/** GET /leads/lost-report. A null id is "none" (no reason, unassigned, no source…). */
+export interface LostReport {
+  totals: { lost: number; won: number; lossRate: number | null; withReason: number; unrecorded: number };
+  byReason: Array<{ reasonId: string | null; name: Translatable | null; active: boolean; count: number; share: number }>;
+  bySales: Array<{
+    salesId: string | null;
+    fullName: string | null;
+    count: number;
+    share: number;
+    topReason: { reasonId: string | null; name: Translatable | null; count: number };
+  }>;
+  bySource: Array<{ sourceId: string | null; name: Translatable | null; count: number; share: number }>;
+  byProject: Array<{ projectId: string | null; name: Translatable | null; count: number; share: number }>;
+  trend: Array<{ month: string; count: number }>;
+  recent: Array<{
+    id: string;
+    fullName: string;
+    lostAt: string;
+    lostNote: string | null;
+    lostReason: { id: string; name: Translatable } | null;
+    assignedSales: { id: string; fullName: string } | null;
+    projectInterest: { id: string; name: Translatable } | null;
+  }>;
 }
 
 export interface LeadSource {

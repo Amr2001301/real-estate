@@ -1,4 +1,4 @@
-import { endOfLocalTodayInstant, localDayAfter } from '../company-timezone';
+import { endOfLocalTodayInstant, localDayAfter, localDayStartInstant } from '../company-timezone';
 import { feeDueDate } from '../../../modules/installments/fee-settings';
 
 // A due date is a day — UTC midnight of the company's calendar date — never
@@ -23,5 +23,12 @@ describe('endOfLocalTodayInstant', () => {
     const end = endOfLocalTodayInstant('Africa/Cairo', new Date('2026-10-27T14:00:00Z'));
     expect(end.toISOString()).toBe('2026-10-27T21:00:00.000Z');
     expect(endOfLocalTodayInstant('UTC', new Date('2026-10-27T23:59:00Z')).toISOString()).toBe('2026-10-28T00:00:00.000Z');
+  });
+});
+
+describe('localDayStartInstant', () => {
+  it('is the instant the day begins in the zone', () => {
+    expect(localDayStartInstant('Africa/Cairo', '2026-10-27').toISOString()).toBe('2026-10-26T21:00:00.000Z');
+    expect(localDayStartInstant('UTC', '2026-10-27').toISOString()).toBe('2026-10-27T00:00:00.000Z');
   });
 });

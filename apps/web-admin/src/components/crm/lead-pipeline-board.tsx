@@ -19,6 +19,7 @@ import type { Lead, LeadStage } from '@/lib/types';
 import type { Locale } from '@/lib/locale';
 import { useToast } from '@/components/ui/toast';
 import { updateStageAction } from '@/app/dashboard/leads/actions';
+import { LostReasonDialog } from './lost-reason-dialog';
 import { StageColumn } from './stage-column';
 import { LeadCardDraggableBody, LeadCardOverlay } from './lead-card';
 
@@ -97,6 +98,8 @@ export function LeadPipelineBoard({ initialLeads, counts, locale = 'ar' }: Props
     return null;
   }, [activeId, grouped]);
 
+  const [askingLost, setAskingLost] = useState<{ leadId: string; sourceStage: LeadStage } | null>(null);
+
   function handleDragStart(e: DragStartEvent) {
     setActiveId(String(e.active.id));
   }
@@ -113,6 +116,20 @@ export function LeadPipelineBoard({ initialLeads, counts, locale = 'ar' }: Props
     const sourceStage = stageOfLead.get(leadId);
     if (!sourceStage || sourceStage === targetStage) return;
 
+    // Dropped on LOST: ask why before moving it.
+    if (targetStage === 'LOST') {
+      setAskingLost({ leadId, sourceStage });
+      return;
+    }
+    await moveLead(leadId, sourceStage, targetStage);
+  }
+
+  async function moveLead(
+    leadId: string,
+    sourceStage: LeadStage,
+    targetStage: LeadStage,
+    lostWhy?: { lostReasonId: string; lostNote?: string },
+  ) {
     // Snapshot for revert.
     const snapshot = grouped;
 
@@ -131,7 +148,7 @@ export function LeadPipelineBoard({ initialLeads, counts, locale = 'ar' }: Props
     setPendingIds((prev) => new Set(prev).add(leadId));
 
     try {
-      await updateStageAction(leadId, targetStage);
+      await updateStageAction(leadId, targetStage, lostWhy);
       router.refresh();
     } catch (err) {
       // Revert.
@@ -151,6 +168,17 @@ export function LeadPipelineBoard({ initialLeads, counts, locale = 'ar' }: Props
   }
 
   return (
+    <>
+    <LostReasonDialog
+      open={!!askingLost}
+      locale={locale}
+      onCancel={() => setAskingLost(null)}
+      onConfirm={(why) => {
+        const ask = askingLost;
+        setAskingLost(null);
+        if (ask) void moveLead(ask.leadId, ask.sourceStage, 'LOST', why);
+      }}
+    />
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="-mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 overflow-x-auto scrollbar-thin pb-1">
         <div className="flex gap-4 pb-6 pt-1 min-w-max">
@@ -192,6 +220,7 @@ export function LeadPipelineBoard({ initialLeads, counts, locale = 'ar' }: Props
         ) : null}
       </DragOverlay>
     </DndContext>
+    </>
   );
 }
 

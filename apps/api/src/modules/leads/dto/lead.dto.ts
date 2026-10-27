@@ -4,10 +4,12 @@ import {
   IsEmail,
   IsNotEmpty,
   IsEnum,
+  IsInt,
   IsOptional,
   IsString,
   IsUUID,
   MaxLength,
+  Min,
   MinLength,
   ValidateIf,
 } from 'class-validator';
@@ -43,6 +45,10 @@ export class UpdateLeadDto {
 export class UpdateLeadStageDto {
   @IsEnum(LeadStage) stage!: LeadStage;
   @IsOptional() @IsString() reason?: string;
+  /** Why the lead was lost — one of the company's active lost reasons (LOST only). */
+  @IsOptional() @IsUUID() lostReasonId?: string;
+  /** A word on what happened (LOST only). */
+  @IsOptional() @IsString() @MaxLength(1000) lostNote?: string;
 }
 
 export class AssignLeadDto {
@@ -68,6 +74,18 @@ export class CreateLeadNoteDto {
   nextActionAt?: string | null;
   @IsOptional() @IsEnum(LeadFollowUpType) nextActionType?: LeadFollowUpType;
   @IsOptional() @IsString() @MaxLength(500) nextActionNote?: string;
+}
+
+export class CreateLostReasonDto {
+  @IsString() @IsNotEmpty() @MaxLength(120) ar!: string;
+  @IsString() @IsNotEmpty() @MaxLength(120) en!: string;
+}
+
+export class UpdateLostReasonDto {
+  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(120) ar?: string;
+  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(120) en?: string;
+  @IsOptional() @IsBoolean() active?: boolean;
+  @IsOptional() @IsInt() @Min(0) sortOrder?: number;
 }
 
 export const FOLLOW_UP_BUCKETS = ['overdue', 'today', 'upcoming'] as const;

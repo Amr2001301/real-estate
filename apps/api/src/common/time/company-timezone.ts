@@ -130,3 +130,10 @@ export function endOfLocalTodayInstant(timeZone: string, now = new Date()): Date
   const tomorrow = localDayAfter(zone, 1, now);
   return new Date(tomorrow.getTime() - zoneOffsetMs(zone, tomorrow));
 }
+
+/** The instant a calendar day (`YYYY-MM-DD`) begins in `timeZone`. */
+export function localDayStartInstant(timeZone: string, day: string): Date {
+  const zone = isValidTimeZone(timeZone) ? timeZone : COMPANY_TIMEZONE_DEFAULT;
+  const utcMidnight = new Date(`${day}T00:00:00.000Z`);
+  return new Date(utcMidnight.getTime() - zoneOffsetMs(zone, utcMidnight));
+}
