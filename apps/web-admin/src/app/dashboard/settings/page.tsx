@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { SettingRow, type SettingType } from './_components/setting-row';
 import { AddSettingPanel } from './_components/add-setting-panel';
-import { KNOWN_SETTINGS, KNOWN_SETTING_KEYS } from './_components/known-settings';
+import { HIDDEN_SETTING_KEYS, KNOWN_SETTINGS, KNOWN_SETTING_KEYS } from './_components/known-settings';
 import { PremiumPageHero } from '@/components/premium';
 
 const KNOWN_BY_KEY = new Map(KNOWN_SETTINGS.map((k) => [k.key, k]));
@@ -122,7 +122,7 @@ export default async function SettingsPage({
     safe(api.get<SettingItem[]>(`/settings${filtered ? `?${qs}` : ''}`)),
     filtered ? safe(api.get<SettingItem[]>('/settings')) : Promise.resolve(null),
   ]);
-  const items = res.data ?? [];
+  const items = (res.data ?? []).filter((s) => !HIDDEN_SETTING_KEYS.has(s.key));
   // The add list offers only the known settings the company does not have yet.
   const existingKeys = (allRes ?? res).data?.map((s) => s.key) ?? [];
 
