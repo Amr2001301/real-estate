@@ -85,6 +85,7 @@ export const PERMISSION_CATALOG: ReadonlyArray<{ code: string; description: stri
   { code: 'leads:advance-stage', description: 'Advance lead pipeline stage' },
   { code: 'leads:note', description: 'Add lead notes' },
   { code: 'lead_sources:manage', description: 'Manage lead sources' },
+  { code: 'campaigns:manage', description: 'Manage marketing campaigns and their spend' },
   { code: 'visits:read', description: 'Read visit requests and appointments' },
   { code: 'visits:create', description: 'Create visit appointments' },
   { code: 'visits:approve', description: 'Review or update visit requests' },

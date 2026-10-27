@@ -44,6 +44,7 @@ export async function createLeadAction(
     assignedSalesId:
       (String(formData.get('assignedSalesId') ?? '').trim() || undefined),
     notes: (String(formData.get('notes') ?? '').trim() || undefined),
+    campaignId: (String(formData.get('campaignId') ?? '').trim() || undefined),
   };
 
   let created;

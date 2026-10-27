@@ -267,6 +267,8 @@ export interface Lead {
   lostReason?: { id: string; name: Translatable } | null;
   lostNote?: string | null;
   lostAt?: string | null;
+  /** The marketing campaign that brought the lead. */
+  campaign?: { id: string; name: string; channel: CampaignChannel } | null;
   createdAt: string;
   // ── Broker attribution (present only for broker-origin leads) ──
   brokerId?: string | null;
@@ -287,6 +289,53 @@ export interface Lead {
   utmCampaign?: string | null;
   utmContent?:  string | null;
   fbclid?:      string | null;
+}
+
+export type CampaignChannel =
+  | 'FACEBOOK' | 'INSTAGRAM' | 'TIKTOK' | 'GOOGLE' | 'SNAPCHAT' | 'WHATSAPP'
+  | 'SMS' | 'EMAIL' | 'BILLBOARD' | 'EVENT' | 'OTHER';
+export type CampaignStatus = 'PLANNED' | 'ACTIVE' | 'PAUSED' | 'ENDED';
+
+export interface CampaignStats {
+  leads: number;
+  qualified: number;
+  won: number;
+  lost: number;
+  spend: number;
+  cpl: number | null;
+  cpa: number | null;
+}
+
+export interface Campaign {
+  id: string;
+  name: string;
+  code: string;
+  channel: CampaignChannel;
+  status: CampaignStatus;
+  projectId: string | null;
+  project?: { id: string; name: Translatable } | null;
+  sourceId: string | null;
+  source?: { id: string; name: Translatable } | null;
+  startDate: string | null;
+  endDate: string | null;
+  budget: number | null;
+  notes: string | null;
+  createdAt: string;
+  stats: CampaignStats;
+}
+
+export interface CampaignSpendEntry {
+  id: string;
+  amount: number;
+  spentOn: string;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface CampaignDetail extends Campaign {
+  spend: CampaignSpendEntry[];
+  /** The company's website, for the tracking links. */
+  siteUrl: string;
 }
 
 export interface LostReason {

@@ -29,6 +29,8 @@ interface Props {
   // Dropdown rows (/projects/options): only these fields are read.
   projects: Pick<Project, 'id' | 'name' | 'city'>[];
   sources: LeadSource[];
+  /** Marketing campaigns to file the lead under (live ones first). */
+  campaigns?: Array<{ id: string; name: string; status: string }>;
   sales: Pick<User, 'id' | 'fullName' | 'role'>[];
   initialClient?: User | null;
   locale?: Locale;
@@ -41,6 +43,7 @@ interface Props {
 export default function LeadForm({
   projects,
   sources,
+  campaigns = [],
   sales,
   initialClient,
   locale = 'ar',
@@ -118,6 +121,19 @@ export default function LeadForm({
               </Select>
             </Field>
           </div>
+
+          {campaigns.length > 0 && (
+            <Field label={locale === 'en' ? 'Campaign' : 'الحملة التسويقية'} name="campaignId" hint={locale === 'en' ? 'The ad or campaign that brought this customer — counted in its report.' : 'الإعلان أو الحملة التي جاء منها العميل — يُحسب في تقرير الحملة.'}>
+              <Select id="campaignId" name="campaignId" defaultValue="">
+                <option value="">{m.optionUnset}</option>
+                {campaigns.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
 
           {selectedProjectId && (
             <Field

@@ -159,7 +159,9 @@ model Company {
   refunds                     Refund[]
 
   // Module flags — controls which dashboard sections are visible for this company
-  modules Json? // { broker, website, maintenance, reports, leads, visits, contracts, installments, deposits }
+  modules       Json? // { broker, website, maintenance, reports, leads, visits, contracts, installments, deposits }
+  campaigns     Campaign[]
+  campaignSpend CampaignSpend[]
 
   @@index([slug])
   @@index([isActive])
@@ -894,8 +896,9 @@ model Project {
   brokerAccess      BrokerProjectAccess[]
   brokerCommissions BrokerCommission[]
 
-  companyId String?  @db.Uuid
-  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  companyId String?    @db.Uuid
+  company   Company?   @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  campaigns Campaign[]
 
   @@unique([companyId, code])
   @@index([city])
@@ -1072,8 +1075,9 @@ model LeadSource {
   createdAt DateTime @default(now())
   leads     Lead[]
 
-  companyId String?  @db.Uuid
-  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  companyId String?    @db.Uuid
+  company   Company?   @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  campaigns Campaign[]
 
   @@index([companyId])
 }
@@ -1115,6 +1119,10 @@ model Lead {
   lostNote     String?
   lostAt       DateTime?
 
+  // ── Marketing campaign that brought the lead (first touch) ─────────────
+  campaignId String?   @db.Uuid
+  campaign   Campaign? @relation(fields: [campaignId], references: [id])
+
   // ── Ad / UTM attribution (first-touch, all nullable) ───────────────────
   utmSource   String?
   utmMedium   String?
@@ -1155,6 +1163,76 @@ model Lead {
   @@index([companyId])
   @@index([companyId, nextActionAt])
   @@index([companyId, lostReasonId])
+  @@index([companyId, campaignId])
+}
+
+enum CampaignChannel {
+  FACEBOOK
+  INSTAGRAM
+  TIKTOK
+  GOOGLE
+  SNAPCHAT
+  WHATSAPP
+  SMS
+  EMAIL
+  BILLBOARD
+  EVENT
+  OTHER
+}
+
+enum CampaignStatus {
+  PLANNED
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+/// A marketing campaign: where it runs, for which project, what it cost and
+/// which leads it brought. `code` is the utm_campaign its links carry.
+model Campaign {
+  id        String          @id @default(uuid()) @db.Uuid
+  name      String
+  code      String
+  channel   CampaignChannel
+  status    CampaignStatus  @default(ACTIVE)
+  projectId String?         @db.Uuid
+  project   Project?        @relation(fields: [projectId], references: [id])
+  /// The lead source its leads are filed under (Facebook, Instagram…).
+  sourceId  String?         @db.Uuid
+  source    LeadSource?     @relation(fields: [sourceId], references: [id])
+  startDate DateTime?       @db.Date
+  endDate   DateTime?       @db.Date
+  /// The planned budget; what was actually spent is the sum of its spend entries.
+  budget    Decimal?        @db.Decimal(14, 2)
+  notes     String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  leads     Lead[]
+  spend     CampaignSpend[]
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, code])
+  @@index([companyId])
+}
+
+/// Money spent on a campaign on a given day (entered by hand, one line per payment).
+model CampaignSpend {
+  id          String   @id @default(uuid()) @db.Uuid
+  campaignId  String   @db.Uuid
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  amount      Decimal  @db.Decimal(14, 2)
+  spentOn     DateTime @db.Date
+  note        String?
+  createdById String?  @db.Uuid
+  createdAt   DateTime @default(now())
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId, spentOn])
+  @@index([companyId])
 }
 
 /// Why a lead was lost — a list each company keeps (price, competitor, …).

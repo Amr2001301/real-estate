@@ -13,6 +13,7 @@ import {
   BarChart2,
   CalendarClock,
   MessageCircle,
+  Megaphone,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { staffOptions } from '@/lib/options';
@@ -235,6 +236,15 @@ export default async function LeadDetailPage({
                   ) : lead.source ? (
                     <span className="rounded-full bg-sky-500/12 px-3 py-1 text-[12px] font-semibold text-sky-600">{tx(lead.source.name)}</span>
                   ) : null}
+                  {lead.campaign && (
+                    <Link
+                      href={`/dashboard/campaigns/${lead.campaign.id}` as never}
+                      data-testid="lead-campaign"
+                      className="inline-flex items-center gap-1 rounded-full bg-brand-500/12 px-3 py-1 text-[12px] font-semibold text-brand-700 hover:bg-brand-500/20"
+                    >
+                      <Megaphone className="h-3.5 w-3.5" /> {lead.campaign.name}
+                    </Link>
+                  )}
                   {lead.projectInterest && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-surface-muted px-3 py-1 text-[12px] font-semibold text-slate-600">
                       <Building2 className="h-3.5 w-3.5" /> {tx(lead.projectInterest.name)}

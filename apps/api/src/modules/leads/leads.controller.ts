@@ -190,6 +190,7 @@ export class LeadsController {
     @Query('createdBefore') createdBefore?: string,
     @Query('unassigned') unassigned?: string,
     @Query('lostReasonId') lostReasonId?: string,
+    @Query('campaignId') campaignId?: string,
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
   ) {
@@ -213,6 +214,7 @@ export class LeadsController {
       createdBefore: parseIsoInstant(createdBefore, 'createdBefore'),
       unassigned: unassignedQueue,
       lostReasonId: lostReasonId || undefined,
+      campaignId: campaignId || undefined,
     });
   }
 

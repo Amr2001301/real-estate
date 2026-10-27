@@ -24,6 +24,7 @@ import { BuildingsModule } from './modules/buildings/buildings.module';
 import { UnitsModule } from './modules/units/units.module';
 import { MediaModule } from './modules/media/media.module';
 import { LeadsModule } from './modules/leads/leads.module';
+import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { RequestsModule } from './modules/requests/requests.module';
 import { VisitsModule } from './modules/visits/visits.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
@@ -100,6 +101,7 @@ import { PermissionCatalogBootstrap } from './modules/permissions/permission-cat
     UnitsModule,
     MediaModule,
     LeadsModule,
+    CampaignsModule,
     RequestsModule,
     VisitsModule,
     FavoritesModule,

@@ -29,6 +29,8 @@ export class CreateLeadDto {
   @IsOptional() @IsUUID() unitInterestId?: string;
   @IsOptional() @IsUUID() assignedSalesId?: string;
   @IsOptional() @IsString() notes?: string;
+  /** The marketing campaign that brought the lead. */
+  @IsOptional() @IsUUID() campaignId?: string;
 }
 
 export class UpdateLeadDto {
@@ -38,6 +40,8 @@ export class UpdateLeadDto {
   @IsOptional() @IsUUID() sourceId?: string;
   @IsOptional() @IsUUID() projectInterestId?: string;
   @IsOptional() @IsUUID() unitInterestId?: string;
+  /** Correct the campaign that brought the lead (null: none). */
+  @ValidateIf((_o, v) => v !== null) @IsOptional() @IsUUID() campaignId?: string | null;
   // No assignedSalesId: assigning goes through PATCH leads/:id/assign, which
   // checks who may assign to whom, records it and tells both reps.
 }
