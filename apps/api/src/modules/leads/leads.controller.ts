@@ -39,6 +39,7 @@ import {
   MergeLeadsDto,
 } from './dto/lead.dto';
 import { LeadDuplicatesService } from './lead-duplicates.service';
+import { LeadCalendarService } from './lead-calendar.service';
 
 const EXCEL_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 
@@ -67,6 +68,7 @@ export class LeadsController {
     private readonly leads: LeadsService,
     private readonly prisma: PrismaService,
     private readonly duplicatesSvc: LeadDuplicatesService,
+    private readonly calendarSvc: LeadCalendarService,
   ) {}
 
   // Sources
@@ -155,6 +157,23 @@ export class LeadsController {
   async followUpSummary(@CurrentUser() user: AuthUser, @Query('salesId') salesId?: string) {
     const scope = await resolveSalesScope(this.prisma, user, salesId);
     return this.leads.followUpSummary(scope);
+  }
+
+  // CAL1 — visits, follow-ups and logged calls between two company days
+  // (YYYY-MM-DD), in the caller's scope: a rep their own, a manager their
+  // team (or one member), the admin everyone (or one rep).
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
+  @Permissions('leads:read')
+  @Get('leads/calendar')
+  async calendar(
+    @CurrentUser() user: AuthUser,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('salesId') salesId?: string,
+  ) {
+    const day = /^\d{4}-\d{2}-\d{2}$/;
+    if (!from || !to || !day.test(from) || !day.test(to)) throw new BadRequestException('from and to must be dates (YYYY-MM-DD)');
+    return this.calendarSvc.events(await resolveSalesScope(this.prisma, user, salesId || undefined), from, to);
   }
 
   // DUP1 — the same customer with more than one open lead: the admin sees
