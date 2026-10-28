@@ -197,3 +197,17 @@ export async function updateLostReasonAction(
   revalidatePath(LOST_REASONS_PATH);
   return { ok: true };
 }
+
+/**
+ * MP1 — the number behind a call / WhatsApp button, handed over on the press
+ * and logged on the lead (who opened which).
+ */
+export async function contactLeadAction(leadId: string, kind: 'CALL' | 'WHATSAPP'): Promise<{ phone?: string; error?: string }> {
+  try {
+    const res = await api.post<{ phone: string }>(`/leads/${leadId}/contact`, { kind });
+    return { phone: res.phone };
+  } catch (e) {
+    unstable_rethrow(e);
+    return { error: (e as Error).message };
+  }
+}

@@ -5242,6 +5242,7 @@ const UI = {
       activityReservationConverted: 'تم تحويل الحجز إلى عقد',
       activityRelinked: 'تم ربط الفرصة بسجل آخر',
       activityReturned: 'رجع العميل من جديد (إعلان / نموذج)',
+      activityContactOpened: (whatsapp: boolean, by: string | null) => `${whatsapp ? 'فتح محادثة واتساب' : 'اتصال بالعميل'}${by ? ` — ${by}` : ''}`,
       activityVisit: {
         SCHEDULED: 'تمت جدولة زيارة',
         CONFIRMED: 'تم تأكيد الزيارة',
@@ -11158,6 +11159,7 @@ const UI = {
       activityReservationConverted: 'Reservation converted to a contract',
       activityRelinked: 'Linked to another record',
       activityReturned: 'The customer came in again (ad / form)',
+      activityContactOpened: (whatsapp: boolean, by: string | null) => `${whatsapp ? 'WhatsApp chat opened' : 'Customer called'}${by ? ` — ${by}` : ''}`,
       activityVisit: {
         SCHEDULED: 'Visit scheduled',
         CONFIRMED: 'Visit confirmed',

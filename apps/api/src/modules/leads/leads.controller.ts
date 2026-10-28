@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -34,6 +35,7 @@ import {
   FollowUpBucket,
   CreateLostReasonDto,
   UpdateLostReasonDto,
+  OpenLeadContactDto,
 } from './dto/lead.dto';
 
 const EXCEL_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -224,6 +226,17 @@ export class LeadsController {
   @Get('leads/:id')
   async get(@Param('id', ParseUUIDPipe) id: string) {
     return this.leads.findOne(id);
+  }
+
+  // The phone for a call / WhatsApp button, handed over when pressed and
+  // logged on the lead (who, which) — the number is not kept on the screen.
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
+  @Permissions('leads:read')
+  @UseInterceptors(LeadScopeGuard)
+  @HttpCode(200)
+  @Post('leads/:id/contact')
+  openContact(@Param('id', ParseUUIDPipe) id: string, @Body() dto: OpenLeadContactDto, @CurrentUser() user: AuthUser) {
+    return this.leads.openContact(id, dto.kind, user.sub);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)

@@ -4,6 +4,7 @@ import {
   IsEmail,
   IsNotEmpty,
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -104,4 +105,10 @@ export class UpdateLeadSourceDto {
   @IsOptional() @IsString() @IsNotEmpty() ar?: string;
   @IsOptional() @IsString() @IsNotEmpty() en?: string;
   @IsOptional() @IsBoolean() active?: boolean;
+}
+
+/** A call or a WhatsApp chat opened from the lead's buttons (MP1). */
+export class OpenLeadContactDto {
+  @IsIn(['CALL', 'WHATSAPP'])
+  kind!: 'CALL' | 'WHATSAPP';
 }

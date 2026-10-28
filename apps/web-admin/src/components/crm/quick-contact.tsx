@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { MessageCircle, Phone } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { whatsappHref } from './follow-up-messages';
+import { contactLeadAction } from '@/app/dashboard/leads/actions';
 
 /**
- * A call or WhatsApp button for a lead: it opens the dialer or the chat,
+ * A call or WhatsApp button for a lead: it fetches the number when pressed
+ * (the press is logged on the lead — MP1), opens the dialer or the chat,
  * then brings the lead page up with the activity form set to that kind —
  * so the rep logs how it went while it is fresh. Works inside a card that is
  * itself a link or a drag handle (the click and the drag stop here).
@@ -21,7 +23,8 @@ export function QuickContact({
   className,
 }: {
   leadId: string;
-  phone: string;
+  /** Shown on hover only; the number dialled comes from the server. */
+  phone?: string;
   kind: 'CALL' | 'WHATSAPP';
   label: string;
   variant?: 'icon' | 'button';
@@ -30,11 +33,20 @@ export function QuickContact({
   const router = useRouter();
   const Icon = kind === 'CALL' ? Phone : MessageCircle;
 
-  const onClick = (e: MouseEvent) => {
+  const onClick = async (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (kind === 'CALL') window.location.href = `tel:${phone}`;
-    else window.open(whatsappHref(phone), '_blank', 'noopener,noreferrer');
+    // The chat tab opens now, while the click still counts as the user's;
+    // it is pointed at the chat once the number is in.
+    const chat = kind === 'WHATSAPP' ? window.open('', '_blank') : null;
+    if (chat) chat.opener = null;
+    const res = await contactLeadAction(leadId, kind);
+    if (!res.phone) {
+      chat?.close();
+      return;
+    }
+    if (chat) chat.location.href = whatsappHref(res.phone);
+    else window.location.href = `tel:${res.phone}`;
     // Let the dialer / chat take over first, then open the log on the lead.
     window.setTimeout(() => router.push(`/dashboard/leads/${leadId}?log=${kind}&t=${Date.now()}#activity` as never), 400);
   };
@@ -46,7 +58,7 @@ export function QuickContact({
       onClick={onClick}
       onPointerDown={stop}
       aria-label={label}
-      title={variant === 'icon' ? `${label} · ${phone}` : undefined}
+      title={variant === 'icon' ? (phone ? `${label} · ${phone}` : label) : undefined}
       data-testid={`quick-${kind === 'CALL' ? 'call' : 'whatsapp'}`}
       className={cn(
         variant === 'icon'
