@@ -182,7 +182,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/dashboard/cheques', label: 'الشيكات', labelKey: 'cheques', iconKey: 'Landmark', admin: true, manager: true, perm: ['payment-instruments:manage'] },
       // Receivables and payables (GET /reports/ledger: ADMIN, or reports:financial:read).
       { href: '/dashboard/ledger', label: 'المستحقات والالتزامات', labelKey: 'ledger', iconKey: 'Scale', admin: true, perm: ['reports:financial:read'] },
-      { href: '/dashboard/maintenance', label: 'الصيانة', labelKey: 'maintenance', iconKey: 'Wrench', admin: true, feature: 'feature.maintenance' },
+      { href: '/dashboard/maintenance', label: 'الصيانة', labelKey: 'maintenance', iconKey: 'Wrench', admin: true, perm: ['maintenance:manage:all'], feature: 'feature.maintenance' },
       { href: '/dashboard/bonus', label: 'العمولات', labelKey: 'bonus', iconKey: 'BadgePercent', admin: true, perm: ['bonus:entries:read:all', 'bonus:rules:manage', 'bonus:entries:create'] },
       { href: '/dashboard/sales/performance', label: 'أداء فريق المبيعات', labelKey: 'salesPerformance', iconKey: 'Target', admin: true, manager: true },
       { href: '/dashboard/targets', label: 'إدارة أهداف المبيعات', labelKey: 'targets', iconKey: 'Gauge', admin: true, manager: true },

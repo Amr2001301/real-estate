@@ -24,6 +24,7 @@ import {
 } from 'class-validator';
 import { Prisma, UserRole, WarrantyStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
@@ -261,6 +262,7 @@ class UnitMaintenanceItemsController {
 
   // Active items by default; ADMIN may pass includeInactive=true.
   @Roles(UserRole.ADMIN)
+  @GrantedBy('maintenance:manage:all', 'maintenance:items:manage')
   @Permissions('maintenance:read')
   @Get('units/:unitId/maintenance-items')
   list(
@@ -271,6 +273,7 @@ class UnitMaintenanceItemsController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('maintenance:items:manage')
   @Permissions('maintenance:items:manage')
   @Post('units/:unitId/maintenance-items')
   create(@Param('unitId', ParseUUIDPipe) unitId: string, @Body() dto: CreateMaintenanceItemDto) {
@@ -278,6 +281,7 @@ class UnitMaintenanceItemsController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('maintenance:items:manage')
   @Permissions('maintenance:items:manage')
   @Patch('units/:unitId/maintenance-items/:itemId')
   update(

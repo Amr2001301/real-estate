@@ -279,9 +279,14 @@ describe('UnitMaintenanceItems · CRUD + permissions', () => {
       [UserRole.SALES],
       [UserRole.SALES_MANAGER],
       [UserRole.MAINTENANCE_SUPERVISOR],
-      [UserRole.CUSTOMER],
-    ])('%s cannot create items (403)', async (role) => {
-      FakeAuthGuard.currentUser = { sub: 'u-1', role, codes: ['maintenance:items:manage', 'maintenance:read'] };
+    ])('%s without maintenance:items:manage cannot create items (403)', async (role) => {
+      FakeAuthGuard.currentUser = { sub: 'u-1', role, codes: ['maintenance:read', 'maintenance:resolve'] };
+      await request(app.getHttpServer()).post(base).send({ ar: 'x', en: 'x' }).expect(403);
+      expect(mock.unitMaintenanceItem.create).not.toHaveBeenCalled();
+    });
+
+    it('a CUSTOMER cannot create items even with the code (403)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'u-1', role: UserRole.CUSTOMER, codes: ['maintenance:items:manage', 'maintenance:read'] };
       await request(app.getHttpServer()).post(base).send({ ar: 'x', en: 'x' }).expect(403);
       expect(mock.unitMaintenanceItem.create).not.toHaveBeenCalled();
     });

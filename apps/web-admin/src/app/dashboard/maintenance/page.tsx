@@ -8,6 +8,8 @@ import {
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
 import { staffOptions } from '@/lib/options';
+import { getSession } from '@/lib/session';
+import { getMyCodes } from '@/lib/permissions';
 import type {
   Paged,
   MaintenanceRequest,
@@ -116,8 +118,10 @@ export default async function MaintenancePage({
     catErr?: string;
   }>;
 }) {
-  const locale = await getLocale();
+  const [locale, session, codes] = await Promise.all([getLocale(), getSession(), getMyCodes()]);
   const m = uiT(locale).pages.maintenance;
+  const isAdmin = session?.role === 'ADMIN';
+  const canCategories = codes.has('maintenance:categories:manage');
 
   const STATUS_LABEL: Record<MaintenanceStatus, string> = {
     OPEN:        m.statusLabels.OPEN,
@@ -200,11 +204,14 @@ export default async function MaintenancePage({
               filenameBase="maintenance-report"
               params={csvParams}
             />
-            <Link href="/dashboard/maintenance/new">
-              <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-                {m.addBtn}
-              </Button>
-            </Link>
+            {/* PRM2 — a request on a customer's behalf needs the customer list: admin only. */}
+            {isAdmin && (
+              <Link href="/dashboard/maintenance/new">
+                <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+                  {m.addBtn}
+                </Button>
+              </Link>
+            )}
           </div>
         }
       />
@@ -443,6 +450,7 @@ export default async function MaintenancePage({
       <MaintenanceReports res={summaryRes} part="panels" locale={locale} />
 
       {/* Category management */}
+      {canCategories && (
       <PremiumSectionCard
         title={m.categories.sectionTitle}
         icon={<Settings2 />}
@@ -567,6 +575,7 @@ export default async function MaintenancePage({
           </form>
         </div>
       </PremiumSectionCard>
+      )}
     </div>
   );
 }

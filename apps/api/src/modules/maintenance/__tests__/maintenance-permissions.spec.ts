@@ -580,18 +580,19 @@ describe('Maintenance module · permissions enforcement', () => {
       expect(mock.maintenanceRequest.update).not.toHaveBeenCalled();
     });
 
-    it('SALES even with maintenance:assign → 403 from @Roles (route is ADMIN-only)', async () => {
-      FakeAuthGuard.currentUser = {
-        sub: 'sales-1',
-        role: UserRole.SALES,
-        codes: ['maintenance:assign'],
-      };
+    it('SALES without maintenance:assign → 403 from @Roles', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: ['maintenance:read'] };
       await request(app.getHttpServer())
         .post(PATH)
         .send({ assignedAdminId: ADMIN_ASSIGNEE })
         .expect(403);
-      expect(mock.userPermission.findMany).not.toHaveBeenCalled();
       expect(mock.maintenanceRequest.update).not.toHaveBeenCalled();
+    });
+
+    it('PRM: SALES holding maintenance:assign is let in (@GrantedBy)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: ['maintenance:assign'] };
+      const res = await request(app.getHttpServer()).post(PATH).send({ assignedAdminId: ADMIN_ASSIGNEE });
+      expect(res.status).not.toBe(403);
     });
   });
 
@@ -764,17 +765,22 @@ describe('Maintenance module · permissions enforcement', () => {
   // ── Category management — SALES blocked at @Roles ─────────────────────
 
   describe('POST /maintenance-categories', () => {
-    it('SALES even with maintenance:categories:manage → 403 from @Roles (route is ADMIN-only)', async () => {
-      FakeAuthGuard.currentUser = {
-        sub: 'sales-1',
-        role: UserRole.SALES,
-        codes: ['maintenance:categories:manage'],
-      };
+    it('SALES without maintenance:categories:manage → 403 from @Roles', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: ['maintenance:read'] };
       await request(app.getHttpServer())
         .post('/maintenance-categories')
         .send({ ar: 'كهرباء', en: 'Electrical' })
         .expect(403);
       expect(mock.maintenanceCategory.create).not.toHaveBeenCalled();
+    });
+
+    it('PRM: SALES holding maintenance:categories:manage adds a category (@GrantedBy)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: ['maintenance:categories:manage'] };
+      const res = await request(app.getHttpServer())
+        .post('/maintenance-categories')
+        .send({ ar: 'كهرباء', en: 'Electrical' });
+      expect(res.status).not.toBe(403);
+      expect(mock.maintenanceCategory.create).toHaveBeenCalled();
     });
   });
 
