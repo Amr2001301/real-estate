@@ -46,6 +46,8 @@ function makeService(overrides: {
       findMany: jest.fn().mockResolvedValue(userRow ? [userRow] : []),
       update: jest.fn().mockResolvedValue(userRow),
     },
+    authSession: { create: jest.fn().mockResolvedValue({ id: 'sess-1' }), findUnique: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]), update: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
+
     refreshToken: {
       create: jest.fn().mockResolvedValue({}),
       updateMany: jest.fn().mockResolvedValue({ count: 2 }),
@@ -282,10 +284,11 @@ describe('AuthService · resetPassword', () => {
   it('performs all mutations in a single transaction', async () => {
     const { service, prisma } = makeService({ resetTokenRow: makeValidRecord() });
     await service.resetPassword(RAW_TOKEN, 'NewPass123!');
-    // $transaction is called once with an array of 3 operations
+    // $transaction is called once with an array of 4 operations (token, password, refresh tokens, sessions)
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
     const txOps = (prisma.$transaction as jest.Mock).mock.calls[0][0];
     expect(Array.isArray(txOps)).toBe(true);
-    expect(txOps).toHaveLength(3);
+    expect(txOps).toHaveLength(4);
+    expect(prisma.authSession.updateMany).toHaveBeenCalledWith({ where: { userId: expect.any(String), revokedAt: null }, data: { revokedAt: expect.any(Date) } });
   });
 });

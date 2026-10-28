@@ -48,6 +48,8 @@ function makeAuthService(overrides: Record<string, unknown> = {}) {
     },
     // MT-034: registerCustomerV2 and registerCustomerV2 lifecycle check calls prisma.company.findUnique.
     company: { findUnique: jest.fn().mockResolvedValue({ lifecycleStatus: 'ACTIVE' }) },
+    authSession: { create: jest.fn().mockResolvedValue({ id: 'sess-1' }), findUnique: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]), update: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
+
     refreshToken: {
       create: jest.fn().mockResolvedValue({}),
     },

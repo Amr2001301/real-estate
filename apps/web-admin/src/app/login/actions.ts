@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { redirect, unstable_rethrow } from 'next/navigation';
-import { loginStaff, ApiError } from '@/lib/api';
+import { loginStaff, ApiError, API_BASE } from '@/lib/api';
 
 export interface LoginState {
   error?: string;
@@ -78,6 +78,21 @@ function safeFromForRole(from: string, role: string): string {
 
 export async function logoutAction() {
   const c = await cookies();
+  // SES1 — end the session on the server too, so it leaves «الأجهزة المتصلة»
+  // and its tokens stop working; best effort, the cookies go either way.
+  const refreshToken = c.get('refresh_token')?.value;
+  if (refreshToken) {
+    try {
+      await fetch(`${API_BASE}/v1/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+        cache: 'no-store',
+      });
+    } catch {
+      // the API being down must not keep anyone signed in here
+    }
+  }
   c.delete('access_token');
   c.delete('refresh_token');
   c.delete('user');

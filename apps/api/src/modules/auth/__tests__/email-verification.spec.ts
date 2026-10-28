@@ -57,6 +57,8 @@ function makeService(overrides: {
       findUnique: jest.fn().mockResolvedValue(userRow),
       update: jest.fn().mockResolvedValue(userRow),
     },
+    authSession: { create: jest.fn().mockResolvedValue({ id: 'sess-1' }), findUnique: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]), update: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
+
     refreshToken: {
       create: jest.fn().mockResolvedValue({}),
     },

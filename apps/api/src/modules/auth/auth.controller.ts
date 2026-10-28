@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Throttle } from '@nestjs/throttler';
@@ -148,7 +148,25 @@ export class AuthController {
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('change-password')
   changePassword(@CurrentUser() user: AuthUser, @Body() dto: ChangePasswordDto) {
-    return this.auth.changePassword(user.sub, dto.currentPassword, dto.newPassword);
+    return this.auth.changePassword(user.sub, dto.currentPassword, dto.newPassword, user.sid);
+  }
+
+  // ── SES1 — own sessions (linked devices). Own account only (JWT). ────────
+  @Get('sessions')
+  sessions(@CurrentUser() user: AuthUser) {
+    return this.auth.listSessions(user.sub, user.sid);
+  }
+
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @Post('sessions/revoke-others')
+  revokeOtherSessions(@CurrentUser() user: AuthUser) {
+    return this.auth.revokeOtherSessions(user.sub, user.sid);
+  }
+
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
+  @Delete('sessions/:id')
+  revokeSession(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.auth.revokeSession(user.sub, id);
   }
 
   // A customer changing their phone: the code goes to the new number and the

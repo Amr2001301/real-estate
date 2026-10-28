@@ -606,6 +606,8 @@ export class UsersService {
    */
   private async cutAccess(tx: Prisma.TransactionClient, id: string, companyId: string) {
     await tx.refreshToken.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
+    // SES1 — and the devices already signed in stop now, not when their access token runs out.
+    await tx.authSession.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
     await tx.deviceToken.deleteMany({ where: { userId: id } });
     await tx.user.updateMany({ where: { managerId: id, companyId }, data: { managerId: null } });
     // Maintenance work assigned to them goes back to the queue — it used to
@@ -807,6 +809,34 @@ export class UsersService {
   // MT-003: companyId is now required — all callers pass getRequiredCompanyId().
   // findFirst is used instead of findUnique because User has no compound unique
   // constraint on (id, companyId); findUnique would fail at compile time.
+  /** SES1 — the devices a staff member is signed in on, for the admin. */
+  async sessions(id: string) {
+    const companyId = getRequiredCompanyId();
+    await this.assertExists(id, companyId);
+    const data = await this.prisma.authSession.findMany({
+      where: { userId: id, revokedAt: null, refreshTokens: { some: { revokedAt: null, expiresAt: { gt: new Date() } } } },
+      orderBy: { lastSeenAt: 'desc' },
+      take: 100,
+      select: { id: true, userAgent: true, ipAddress: true, createdAt: true, lastSeenAt: true },
+    });
+    return { data };
+  }
+
+  /** SES1 — a lost phone, a shared laptop: the admin signs the account out on every device. */
+  async signOutEverywhere(id: string, actorId: string) {
+    const companyId = getRequiredCompanyId();
+    await this.assertExists(id, companyId);
+    const now = new Date();
+    const [sessions] = await this.prisma.$transaction([
+      this.prisma.authSession.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: now } }),
+      this.prisma.refreshToken.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: now } }),
+      this.prisma.auditLog.create({
+        data: { actorId, action: 'user.signed_out_everywhere', entityType: 'User', entityId: id, companyId },
+      }),
+    ]);
+    return { ok: true, ended: sessions.count };
+  }
+
   private async assertExists(id: string, companyId: string) {
     const exists = await this.prisma.user.findFirst({
       where: { id, companyId, deletedAt: null },
