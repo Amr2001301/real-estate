@@ -28,6 +28,10 @@ const ar = {
   },
   composer: {
     title: 'تسجيل نشاط',
+    prompt: {
+      CALL: 'كيف كانت المكالمة؟ اختر النتيجة واكتب ما اتفقتما عليه، وحدد المتابعة القادمة.',
+      WHATSAPP: 'سجّل ملخص محادثة الواتساب، وحدد المتابعة القادمة.',
+    },
     whatHappened: 'ماذا حدث؟',
     callResult: 'نتيجة المكالمة',
     body: 'التفاصيل',
@@ -138,6 +142,10 @@ const en: typeof ar = {
   nextType: { CALL: 'Call', MEETING: 'Meeting', WHATSAPP: 'WhatsApp message', FOLLOW_UP: 'Follow-up' },
   composer: {
     title: 'Log an activity',
+    prompt: {
+      CALL: 'How did the call go? Pick the result, note what you agreed and set the next follow-up.',
+      WHATSAPP: 'Note what the WhatsApp chat was about, and set the next follow-up.',
+    },
     whatHappened: 'What happened?',
     callResult: 'Call result',
     body: 'Details',

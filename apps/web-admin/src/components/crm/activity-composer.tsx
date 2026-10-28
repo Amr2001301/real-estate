@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { CalendarClock } from 'lucide-react';
 import type { LeadCallResult, LeadFollowUpType, LeadNoteKind } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,7 @@ export function ActivityComposer({
   m,
   hasNextAction,
   closed,
+  logKind,
 }: {
   leadId: string;
   m: FollowUpMessages;
@@ -44,8 +45,15 @@ export function ActivityComposer({
   hasNextAction: boolean;
   /** Won or lost: nothing left to follow up. */
   closed: boolean;
+  /** Arrived from a call / WhatsApp button: that kind, and a prompt to log it. */
+  logKind?: 'CALL' | 'WHATSAPP';
 }) {
-  const [kind, setKind] = useState<LeadNoteKind>('CALL');
+  const [kind, setKind] = useState<LeadNoteKind>(logKind ?? 'CALL');
+  const [prompted, setPrompted] = useState(!!logKind);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (logKind) ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [logKind]);
   const [result, setResult] = useState<LeadCallResult | null>(null);
   const [body, setBody] = useState('');
   const [when, setWhen] = useState<When>(closed ? 'none' : hasNextAction ? 'keep' : 'tomorrow');
@@ -86,11 +94,17 @@ export function ActivityComposer({
       setNextNote('');
       setWhen(closed ? 'none' : scheduling || when === 'keep' ? 'keep' : 'tomorrow');
       setSaved(true);
+      setPrompted(false);
     });
   };
 
   return (
-    <div data-testid="activity-composer" className="space-y-4">
+    <div ref={ref} data-testid="activity-composer" className="space-y-4">
+      {prompted && logKind && (
+        <p data-testid="activity-prompt" className="rounded-xl bg-[#D8B66A]/12 px-3.5 py-2.5 text-[12.5px] font-semibold text-brand-800">
+          {m.composer.prompt[logKind]}
+        </p>
+      )}
       <div>
         <p className="mb-2 text-[12.5px] font-semibold text-slate-500">{m.composer.whatHappened}</p>
         <div role="radiogroup" className="flex flex-wrap gap-2">
