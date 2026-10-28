@@ -47,11 +47,14 @@ class LeadDetailCubit extends Cubit<LeadDetailState> {
     this._updateStage,
     this._addNote, {
     required this.leadId,
-  }) : super(const LeadDetailState());
+    required GetLostReasons getLostReasons,
+  })  : _getLostReasons = getLostReasons,
+        super(const LeadDetailState());
 
   final GetLeadDetail _getDetail;
   final UpdateLeadStage _updateStage;
   final AddLeadNote _addNote;
+  final GetLostReasons _getLostReasons;
   final String leadId;
 
   Future<void> load() async {
@@ -68,6 +71,19 @@ class LeadDetailCubit extends Cubit<LeadDetailState> {
     emit(state.copyWith(working: true, clearActionFailure: true));
     final result = await _updateStage(
       UpdateLeadStageParams(id: leadId, stage: stage, reason: reason),
+    );
+    await _afterAction(result);
+  }
+
+  /// LR1 — the reasons to pick from when the lead is lost.
+  Future<Result<List<LostReason>>> lostReasons() => _getLostReasons(const NoParams());
+
+  /// LR1 — lost, for one of the company's reasons (and a word on what happened).
+  Future<void> markLost(String lostReasonId, {String? note}) async {
+    if (state.working) return;
+    emit(state.copyWith(working: true, clearActionFailure: true));
+    final result = await _updateStage(
+      UpdateLeadStageParams(id: leadId, stage: 'LOST', lostReasonId: lostReasonId, lostNote: note),
     );
     await _afterAction(result);
   }

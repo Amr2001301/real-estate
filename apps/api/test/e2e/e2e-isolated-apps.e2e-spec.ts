@@ -847,6 +847,16 @@ const ALLOW_LIST_FULL_NAMES = new Set<string>([
   'UsersController.updateMyNotificationPreferences',
   'AuthController.changePassword',
   'AuthController.resendVerification',
+  // SES1 — the caller's own sessions only (userId from the JWT; another user's id is 404).
+  'AuthController.sessions',
+  'AuthController.revokeOtherSessions',
+  'AuthController.revokeSession',
+  // TFA1 — the caller's own two-step sign-in (userId from the JWT).
+  'AuthController.twoFactorStatus',
+  'AuthController.twoFactorSetup',
+  'AuthController.twoFactorEnable',
+  'AuthController.twoFactorDisable',
+  'AuthController.twoFactorRecoveryCodes',
   'UsersController.uploadAvatar',
   // Prometheus scrape endpoint. @Public() so scrapers reach it without a JWT.
   // Authorization is enforced in the handler via METRICS_TOKEN bearer secret.

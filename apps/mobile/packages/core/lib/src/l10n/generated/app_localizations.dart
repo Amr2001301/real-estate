@@ -5557,6 +5557,180 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Contractor'**
   String get labelContractor;
+
+  /// No description provided for @staffTfaTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Two-step sign-in'**
+  String get staffTfaTitle;
+
+  /// No description provided for @staffTfaCodeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Open your authenticator app and enter the 6-digit code.'**
+  String get staffTfaCodeHint;
+
+  /// No description provided for @staffTfaCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Code from the app'**
+  String get staffTfaCodeLabel;
+
+  /// No description provided for @staffTfaRecoveryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery code'**
+  String get staffTfaRecoveryLabel;
+
+  /// No description provided for @staffTfaUseRecovery.
+  ///
+  /// In en, this message translates to:
+  /// **'Have a recovery code instead?'**
+  String get staffTfaUseRecovery;
+
+  /// No description provided for @staffTfaUseApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the code from the app'**
+  String get staffTfaUseApp;
+
+  /// No description provided for @staffTfaVerify.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get staffTfaVerify;
+
+  /// No description provided for @staffTfaBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get staffTfaBack;
+
+  /// No description provided for @staffTfaWrongCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong code — check the current code in the app'**
+  String get staffTfaWrongCode;
+
+  /// No description provided for @staffTfaLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many wrong codes — try again in 15 minutes'**
+  String get staffTfaLocked;
+
+  /// No description provided for @staffTfaExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'This step timed out — sign in again'**
+  String get staffTfaExpired;
+
+  /// No description provided for @staffTfaInvalidFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the 6-digit code'**
+  String get staffTfaInvalidFormat;
+
+  /// No description provided for @staffTfaSetupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on two-step sign-in'**
+  String get staffTfaSetupTitle;
+
+  /// No description provided for @staffTfaSetupHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your company requires a code from an authenticator app with your password. Add this key to an authenticator app (Google Authenticator, Microsoft Authenticator), then enter the code it shows.'**
+  String get staffTfaSetupHint;
+
+  /// No description provided for @staffTfaOpenApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to authenticator app'**
+  String get staffTfaOpenApp;
+
+  /// No description provided for @staffTfaNoApp.
+  ///
+  /// In en, this message translates to:
+  /// **'No authenticator app on this phone — copy the key and add it by hand'**
+  String get staffTfaNoApp;
+
+  /// No description provided for @staffTfaKeyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Key'**
+  String get staffTfaKeyLabel;
+
+  /// No description provided for @staffTfaCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get staffTfaCopy;
+
+  /// No description provided for @staffTfaCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get staffTfaCopied;
+
+  /// No description provided for @staffTfaEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on and continue'**
+  String get staffTfaEnable;
+
+  /// No description provided for @staffTfaCodesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery codes'**
+  String get staffTfaCodesTitle;
+
+  /// No description provided for @staffTfaCodesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep these somewhere safe. Each works once if you do not have your phone, and they will not be shown again.'**
+  String get staffTfaCodesHint;
+
+  /// No description provided for @staffTfaCodesContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved them — continue'**
+  String get staffTfaCodesContinue;
+
+  /// No description provided for @leadLostTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Why was this customer lost?'**
+  String get leadLostTitle;
+
+  /// No description provided for @leadLostHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the reason — it feeds the lost reasons report.'**
+  String get leadLostHint;
+
+  /// No description provided for @leadLostNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Details (optional)'**
+  String get leadLostNote;
+
+  /// No description provided for @leadLostConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as lost'**
+  String get leadLostConfirm;
+
+  /// No description provided for @leadLostEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Your company has no lost reasons yet — ask an admin to add them from the dashboard.'**
+  String get leadLostEmpty;
+
+  /// No description provided for @leadLostReasonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Lost reason'**
+  String get leadLostReasonLabel;
 }
 
 class _AppLocalizationsDelegate

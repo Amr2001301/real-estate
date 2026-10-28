@@ -197,3 +197,30 @@ export async function updateLostReasonAction(
   revalidatePath(LOST_REASONS_PATH);
   return { ok: true };
 }
+
+/**
+ * MP1 — the number behind a call / WhatsApp button, handed over on the press
+ * and logged on the lead (who opened which).
+ */
+export async function contactLeadAction(leadId: string, kind: 'CALL' | 'WHATSAPP'): Promise<{ phone?: string; error?: string }> {
+  try {
+    const res = await api.post<{ phone: string }>(`/leads/${leadId}/contact`, { kind });
+    return { phone: res.phone };
+  } catch (e) {
+    unstable_rethrow(e);
+    return { error: (e as Error).message };
+  }
+}
+
+/** DUP1 — fold a customer's duplicate leads into the one kept. */
+export async function mergeLeadsAction(keepId: string, duplicateIds: string[]): Promise<LeadFormState> {
+  try {
+    await api.post(`/leads/${keepId}/merge`, { duplicateIds });
+  } catch (e) {
+    unstable_rethrow(e);
+    return { error: (e as Error).message };
+  }
+  revalidatePath('/dashboard/leads/duplicates');
+  revalidatePath('/dashboard/leads');
+  return { ok: true };
+}

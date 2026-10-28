@@ -13,6 +13,7 @@ const UI = {
     },
     sidebar: {
       logout: 'تسجيل الخروج',
+      security: 'الأمان والأجهزة',
       roles: {
         SUPER_ADMIN: 'مدير المنصة',
         ADMIN: 'مدير النظام',
@@ -41,6 +42,7 @@ const UI = {
         units: 'الوحدات',
         leads: 'فرص المبيعات (CRM)',
         followUps: 'المتابعات',
+        calendar: 'التقويم',
         lostReasons: 'أسباب الخسارة',
         campaigns: 'الحملات التسويقية',
         requests: 'استفسارات العملاء',
@@ -1324,7 +1326,7 @@ const UI = {
         noManager: 'بدون مدير',
         saveBtn: 'حفظ',
         statusBadge: { active: 'نشط', inactive: 'معطل' },
-        actionBtns: { deactivate: 'تعطيل', activate: 'تفعيل', permissions: 'الصلاحيات' },
+        actionBtns: { deactivate: 'تعطيل', activate: 'تفعيل', permissions: 'الصلاحيات', devices: 'الأجهزة' },
         empty: {
           filteredTitle: 'لا توجد نتائج مطابقة',
           emptyTitle: 'لا يوجد مستخدمون بعد',
@@ -5242,6 +5244,8 @@ const UI = {
       activityReservationConverted: 'تم تحويل الحجز إلى عقد',
       activityRelinked: 'تم ربط الفرصة بسجل آخر',
       activityReturned: 'رجع العميل من جديد (إعلان / نموذج)',
+      activityContactOpened: (whatsapp: boolean, by: string | null) => `${whatsapp ? 'فتح محادثة واتساب' : 'اتصال بالعميل'}${by ? ` — ${by}` : ''}`,
+      activityMerged: (n: number, by: string | null) => `دُمجت فيها ${n === 1 ? 'فرصة مكررة' : `${n} فرص مكررة`}${by ? ` — ${by}` : ''}`,
       activityVisit: {
         SCHEDULED: 'تمت جدولة زيارة',
         CONFIRMED: 'تم تأكيد الزيارة',
@@ -5936,6 +5940,7 @@ const UI = {
     },
     sidebar: {
       logout: 'Log out',
+      security: 'Security & devices',
       roles: {
         SUPER_ADMIN: 'Platform Admin',
         ADMIN: 'System Admin',
@@ -5964,6 +5969,7 @@ const UI = {
         units: 'Units',
         leads: 'Sales Leads (CRM)',
         followUps: 'Follow-ups',
+        calendar: 'Calendar',
         lostReasons: 'Lost reasons',
         campaigns: 'Marketing campaigns',
         requests: 'Customer Inquiries',
@@ -7241,7 +7247,7 @@ const UI = {
         noManager: 'No Manager',
         saveBtn: 'Save',
         statusBadge: { active: 'Active', inactive: 'Inactive' },
-        actionBtns: { deactivate: 'Deactivate', activate: 'Activate', permissions: 'Permissions' },
+        actionBtns: { deactivate: 'Deactivate', activate: 'Activate', permissions: 'Permissions', devices: 'Devices' },
         empty: {
           filteredTitle: 'No matching results',
           emptyTitle: 'No users yet',
@@ -11158,6 +11164,8 @@ const UI = {
       activityReservationConverted: 'Reservation converted to a contract',
       activityRelinked: 'Linked to another record',
       activityReturned: 'The customer came in again (ad / form)',
+      activityContactOpened: (whatsapp: boolean, by: string | null) => `${whatsapp ? 'WhatsApp chat opened' : 'Customer called'}${by ? ` — ${by}` : ''}`,
+      activityMerged: (n: number, by: string | null) => `${n === 1 ? 'A duplicate lead was' : `${n} duplicate leads were`} merged into this one${by ? ` — ${by}` : ''}`,
       activityVisit: {
         SCHEDULED: 'Visit scheduled',
         CONFIRMED: 'Visit confirmed',

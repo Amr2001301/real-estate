@@ -86,6 +86,7 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   // ── TENANT_VIA_RELATION ────────────────────────────────────────────────────
   // No companyId column. Scoped through a parent FK. No auto-injection.
   RefreshToken: 'TENANT_VIA_RELATION',             // userId → User
+  AuthSession: 'TENANT_VIA_RELATION',              // userId → User
   PasswordResetToken: 'TENANT_VIA_RELATION',        // userId → User
   EmailVerificationToken: 'TENANT_VIA_RELATION',    // userId → User
   DeviceToken: 'TENANT_VIA_RELATION',               // userId → User

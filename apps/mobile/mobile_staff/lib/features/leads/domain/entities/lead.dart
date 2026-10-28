@@ -53,12 +53,28 @@ class LeadDetail extends Equatable {
     required this.lead,
     required this.timeline,
     this.unitInterest,
+    this.lostReason,
+    this.lostNote,
   });
 
   final Lead lead;
   final List<LeadTimelineEntry> timeline;
   final String? unitInterest;
 
+  /// LR1 — why a lost lead was lost (null otherwise, or before reasons existed).
+  final Translatable? lostReason;
+  final String? lostNote;
+
   @override
-  List<Object?> get props => [lead, timeline, unitInterest];
+  List<Object?> get props => [lead, timeline, unitInterest, lostReason, lostNote];
+}
+
+/// LR1 — one of the company's reasons a lead is lost.
+class LostReason extends Equatable {
+  const LostReason({required this.id, required this.name});
+  final String id;
+  final Translatable name;
+
+  @override
+  List<Object?> get props => [id, name];
 }

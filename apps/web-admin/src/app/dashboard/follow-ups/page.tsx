@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { CalendarClock, CheckCircle2, ExternalLink, MessageCircle, Phone } from 'lucide-react';
+import { QuickContact } from '@/components/crm/quick-contact';
+import { CalendarClock, CheckCircle2, ExternalLink } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { FollowUpBucket, FollowUpLead, FollowUpSummary, Paged } from '@/lib/types';
 import { formatDateTime, tx } from '@/lib/format';
@@ -10,7 +11,7 @@ import { PremiumPageHero } from '@/components/premium';
 import { Pagination } from '@/components/ui/pagination';
 import { cn } from '@/lib/cn';
 import { KIND_ICON, RESULT_TONE } from '@/components/crm/follow-up-icons';
-import { followUpT, whatsappHref } from '@/components/crm/follow-up-messages';
+import { followUpT } from '@/components/crm/follow-up-messages';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -161,12 +162,8 @@ export default async function FollowUpsPage({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                  <a href={`tel:${phone}`} aria-label={f.page.call} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-slate-600 hover:border-brand-500/50 hover:text-brand-700">
-                    <Phone className="h-4 w-4" />
-                  </a>
-                  <a href={whatsappHref(phone)} target="_blank" rel="noopener noreferrer" aria-label={f.page.whatsapp} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-emerald-600 hover:border-emerald-500/50">
-                    <MessageCircle className="h-4 w-4" />
-                  </a>
+                  <QuickContact leadId={l.id} phone={phone} kind="CALL" label={f.page.call} />
+                  <QuickContact leadId={l.id} phone={phone} kind="WHATSAPP" label={f.page.whatsapp} />
                   <Link
                     href={`/dashboard/leads/${l.id}` as never}
                     className="inline-flex h-9 items-center gap-1.5 rounded-full bg-brand-600 px-4 text-[12.5px] font-semibold text-white hover:bg-brand-700"

@@ -592,6 +592,39 @@ export const NOTIFICATION_CATALOG: NotificationTemplateDef[] = [
     ar_body: 'تمت إضافة ملاحظة جديدة على فرصة {{customerName}}.',
     en_body: 'A new note was added to lead for {{customerName}}.',
   },
+  // Follow-ups (FU2): the rep's next action coming up or past, and the morning list.
+  {
+    code: 'follow_up_due_soon',
+    channel: NotificationChannel.PUSH,
+    ar_subject: 'متابعة بعد قليل',
+    en_subject: 'Follow-up coming up',
+    ar_body: '{{actionAr}} مع {{customerName}} الساعة {{time}}.',
+    en_body: '{{actionEn}} with {{customerName}} at {{time}}.',
+  },
+  {
+    code: 'follow_up_overdue',
+    channel: NotificationChannel.PUSH,
+    ar_subject: 'متابعة متأخرة',
+    en_subject: 'Follow-up overdue',
+    ar_body: '{{actionAr}} مع {{customerName}} كانت الساعة {{time}} ولم تُسجَّل بعد.',
+    en_body: '{{actionEn}} with {{customerName}} was due at {{time}} and is not logged yet.',
+  },
+  {
+    code: 'follow_up_daily',
+    channel: NotificationChannel.PUSH,
+    ar_subject: 'متابعاتك اليوم',
+    en_subject: 'Your follow-ups today',
+    ar_body: 'لديك {{today}} متابعة اليوم و{{overdue}} متأخرة.',
+    en_body: 'You have {{today}} follow-ups today and {{overdue}} overdue.',
+  },
+  {
+    code: 'follow_up_team_daily',
+    channel: NotificationChannel.PUSH,
+    ar_subject: 'متابعات فريقك اليوم',
+    en_subject: 'Your team’s follow-ups today',
+    ar_body: 'فريقك لديه {{today}} متابعة اليوم و{{overdue}} متأخرة عند {{lateReps}} مندوب.',
+    en_body: 'Your team has {{today}} follow-ups today and {{overdue}} overdue across {{lateReps}} reps.',
+  },
   // ─── Broker status ────────────────────────────────────────────────────
   {
     code: 'broker_approved',

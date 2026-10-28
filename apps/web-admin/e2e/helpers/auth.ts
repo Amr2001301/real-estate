@@ -32,7 +32,8 @@ export async function login(
   email: string,
   password: string,
   slug = COMPANY_SLUG,
-  landing: '/dashboard' | '/portal' = '/dashboard',
+  /** Where the form should land: a workspace, or (TFA1) the second sign-in step. */
+  landing: string = '/dashboard',
 ): Promise<void> {
   // Wait for the page's scripts: fields filled before React hydrates the form
   // are reset by hydration, and the submit then posts an empty slug — the

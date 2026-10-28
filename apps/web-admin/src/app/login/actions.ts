@@ -2,7 +2,8 @@
 
 import { cookies } from 'next/headers';
 import { redirect, unstable_rethrow } from 'next/navigation';
-import { loginStaff, ApiError } from '@/lib/api';
+import { loginStaff, ApiError, API_BASE, isTwoFactorStep } from '@/lib/api';
+import { holdChallenge, homeFor, setSessionCookies } from '@/lib/auth-session';
 
 export interface LoginState {
   error?: string;
@@ -25,6 +26,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
       if (e.status === 404) return { error: 'الشركة غير موجودة — تحقق من كود الشركة' };
       if (e.status === 401) return { error: 'بيانات الدخول غير صحيحة' };
       if (e.status === 403) return { error: 'الحساب غير نشط أو تم إيقاف الاشتراك' };
+      if (e.status === 429) return { error: 'محاولات كثيرة — حاول بعد دقيقة' };
     }
     const msg = (e as Error).message ?? '';
     if (msg.includes('ECONNREFUSED') || msg.includes('fetch failed')) {
@@ -33,51 +35,39 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     return { error: 'حدث خطأ غير متوقع' };
   }
 
-  const c = await cookies();
-  const secure = process.env.NODE_ENV === 'production';
-
-  c.set('access_token', result.tokens.accessToken, {
-    httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: result.tokens.expiresIn,
-  });
-  c.set('refresh_token', result.tokens.refreshToken, {
-    httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: 60 * 60 * 24 * 30,
-  });
-  c.set('user', JSON.stringify({ id: result.user.id, role: result.user.role, fullName: result.user.fullName }), {
-    httpOnly: false, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 30,
-  });
+  const from = String(formData.get('from') ?? '');
   // UX-only: remember slug for the next login pre-fill. Not authorization state.
-  c.set('last_company_slug', slug, {
+  (await cookies()).set('last_company_slug', slug, {
     httpOnly: false, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 90,
   });
 
-  const from = String(formData.get('from') ?? '');
-  redirect(safeFromForRole(from, result.user.role));
-}
+  // TFA1 — the account has two-step sign-in (or must set it up): the code comes next.
+  if (isTwoFactorStep(result)) {
+    await holdChallenge(result, from);
+    redirect(result.twoFactorSetupRequired ? '/login/two-factor/setup' : '/login/two-factor');
+  }
 
-/**
- * Pick a post-login destination that honors the `from` query the proxy
- * recorded — but only when it points to an allow-listed internal path that is
- * compatible with the user's role. Anything else falls back to the role's
- * default workspace.
- */
-function safeFromForRole(from: string, role: string): string {
-  if (role === 'MAINTENANCE_SUPERVISOR') return '/maintenance-app';
-
-  const fallback = role === 'BROKER' ? '/portal' : '/dashboard';
-
-  if (!from || from.length > 2048) return fallback;
-  if (!from.startsWith('/')) return fallback;
-  if (from.startsWith('//') || from.startsWith('/\\')) return fallback;
-
-  const pathOnly = from.split(/[?#]/, 1)[0] ?? '';
-  const allowedRoot = role === 'BROKER' ? '/portal' : '/dashboard';
-  const matchesAllowedRoot = pathOnly === allowedRoot || pathOnly.startsWith(`${allowedRoot}/`);
-
-  return matchesAllowedRoot ? from : fallback;
+  await setSessionCookies(result);
+  redirect(homeFor(result.user.role, from));
 }
 
 export async function logoutAction() {
   const c = await cookies();
+  // SES1 — end the session on the server too, so it leaves «الأجهزة المتصلة»
+  // and its tokens stop working; best effort, the cookies go either way.
+  const refreshToken = c.get('refresh_token')?.value;
+  if (refreshToken) {
+    try {
+      await fetch(`${API_BASE}/v1/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+        cache: 'no-store',
+      });
+    } catch {
+      // the API being down must not keep anyone signed in here
+    }
+  }
   c.delete('access_token');
   c.delete('refresh_token');
   c.delete('user');

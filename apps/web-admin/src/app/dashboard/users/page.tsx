@@ -1,6 +1,6 @@
 import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
-import { KeyRound, Plus, Users, UserCheck, UserX, Shield, Search } from 'lucide-react';
+import { KeyRound, MonitorSmartphone, Plus, Users, UserCheck, UserX, Shield, Search } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { staffOptions } from '@/lib/options';
 import type { Paged, User, UserRole } from '@/lib/types';
@@ -501,6 +501,13 @@ export default async function UsersPage({
                           >
                             <KeyRound className="h-3.5 w-3.5" />
                             {m.actionBtns.permissions}
+                          </Link>
+                          <Link
+                            href={`/dashboard/users/${u.id}/sessions` as never}
+                            className="inline-flex h-8 items-center gap-1.5 rounded-full border border-hairline px-3 text-[12px] font-semibold text-slate-700 transition-colors hover:border-brand-500/40 hover:text-brand-700"
+                          >
+                            <MonitorSmartphone className="h-3.5 w-3.5" />
+                            {m.actionBtns.devices}
                           </Link>
                           {u.active ? (
                             <form action={deactivateAction.bind(null, u.id)}>

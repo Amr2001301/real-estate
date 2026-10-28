@@ -1,14 +1,19 @@
 import 'package:core/core.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_staff/features/auth/data/datasources/staff_auth_remote_data_source.dart';
 import 'package:mobile_staff/features/auth/data/dtos/staff_auth_dtos.dart';
 import 'package:mobile_staff/features/auth/data/mappers/staff_auth_mapper.dart';
 import 'package:mobile_staff/features/auth/data/repositories/staff_auth_repository_impl.dart';
+import 'package:mobile_staff/features/auth/domain/entities/staff_two_factor.dart';
 import 'package:mobile_staff/features/auth/domain/repositories/staff_auth_repository.dart';
 import 'package:mobile_staff/features/auth/domain/usecases/login_staff.dart';
 import 'package:mobile_staff/features/auth/domain/usecases/logout_staff.dart';
+import 'package:mobile_staff/features/auth/domain/usecases/staff_two_factor.dart';
 import 'package:mobile_staff/features/auth/presentation/cubit/staff_auth_cubit.dart';
+import 'package:mobile_staff/features/auth/presentation/screens/staff_two_factor_panel.dart';
 import 'package:mobile_staff/features/splash/splash_screen.dart';
 import 'package:mobile_staff/router/app_router.dart';
 
@@ -17,8 +22,14 @@ class _ThrowingRemote implements StaffAuthRemoteDataSource {
   _ThrowingRemote(this.error);
   final DioException error;
   @override
-  Future<AuthBundleDto> loginWithSlug(String s, String e, String p) async =>
+  Future<StaffLoginResponseDto> loginWithSlug(String s, String e, String p) async =>
       throw error;
+  @override
+  Future<AuthBundleDto> verifyTwoFactor(String c, String code) async => throw error;
+  @override
+  Future<TwoFactorSetupDto> startTwoFactorSetup(String c) async => throw error;
+  @override
+  Future<TwoFactorEnabledDto> finishTwoFactorSetup(String c, String code) async => throw error;
   @override
   Future<AuthBundleDto> refresh(String t) async => throw error;
   @override
@@ -31,16 +42,39 @@ class _ThrowingRemote implements StaffAuthRemoteDataSource {
 }
 
 class _FakeRepo implements StaffAuthRepository {
-  _FakeRepo({this.session, this.failure});
+  _FakeRepo({this.session, this.failure, this.step, this.verifyFailure});
   final Session? session;
   final AppFailure? failure;
+
+  /// TFA1 — the password leads to this second step instead of a session.
+  final StaffTwoFactorStep? step;
+  final AppFailure? verifyFailure;
+  final calls = <String>[];
   Result<Session> get _r =>
       failure != null ? Result.err(failure!) : Result.ok(session!);
 
   @override
-  Future<Result<Session>> loginWithSlug(
+  Future<Result<StaffLoginOutcome>> loginWithSlug(
           String slug, String email, String password) async =>
-      _r;
+      failure != null ? Result.err(failure!) : Result.ok(step ?? StaffSignedIn(session!));
+  @override
+  Future<Result<Session>> verifyTwoFactor(String challenge, String code, String slug) async {
+    calls.add('verify:$challenge:$code:$slug');
+    return verifyFailure != null ? Result.err(verifyFailure!) : Result.ok(session!);
+  }
+
+  @override
+  Future<Result<StaffTwoFactorSetup>> startTwoFactorSetup(String challenge) async {
+    calls.add('setup:$challenge');
+    return const Ok(StaffTwoFactorSetup(secret: 'JBSWY3DPEHPK3PXP', otpauthUrl: 'otpauth://totp/x?secret=JBSWY3DPEHPK3PXP'));
+  }
+
+  @override
+  Future<Result<StaffTwoFactorEnabled>> finishTwoFactorSetup(String challenge, String code, String slug) async {
+    calls.add('enable:$challenge:$code:$slug');
+    if (verifyFailure != null) return Result.err(verifyFailure!);
+    return Ok(StaffTwoFactorEnabled(session: session!, recoveryCodes: const ['aaaa-bbbb', 'cccc-dddd']));
+  }
   @override
   Future<Result<Session>> refreshSession() async => _r;
   @override
@@ -142,6 +176,9 @@ void main() {
           sessionCubit: session,
           loginStaff: LoginStaff(repo),
           logoutStaff: LogoutStaff(repo),
+          verifyTwoFactor: VerifyStaffTwoFactor(repo),
+          startTwoFactorSetup: StartStaffTwoFactorSetup(repo),
+          finishTwoFactorSetup: FinishStaffTwoFactorSetup(repo),
         );
 
     test('login(slug, email, password) success adopts the session', () async {
@@ -180,9 +217,160 @@ void main() {
         sessionCubit: session,
         loginStaff: LoginStaff(wrappedRepo),
         logoutStaff: LogoutStaff(_FakeRepo()),
+        verifyTwoFactor: VerifyStaffTwoFactor(wrappedRepo),
+        startTwoFactorSetup: StartStaffTwoFactorSetup(wrappedRepo),
+        finishTwoFactorSetup: FinishStaffTwoFactorSetup(wrappedRepo),
       );
       await cubit.login('  MyCompany  ', 'a@b.com', 'pw');
       expect(capturedSlug, 'mycompany');
+    });
+  });
+
+  group('Two-step sign-in (TFA1)', () {
+    const staff = Session(userId: '1', role: AppRole.sales, displayName: 'S');
+    StaffAuthCubit build(_FakeRepo repo, SessionCubit session) => StaffAuthCubit(
+          sessionCubit: session,
+          loginStaff: LoginStaff(repo),
+          logoutStaff: LogoutStaff(repo),
+          verifyTwoFactor: VerifyStaffTwoFactor(repo),
+          startTwoFactorSetup: StartStaffTwoFactorSetup(repo),
+          finishTwoFactorSetup: FinishStaffTwoFactorSetup(repo),
+        );
+
+    test('the login response is a session or the second step', () {
+      final step = StaffLoginResponseDto.fromJson({'twoFactorRequired': true, 'challenge': 'ch'});
+      expect(step.challenge, 'ch');
+      expect(step.setupRequired, isFalse);
+      expect(step.bundle, isNull);
+      final setup = StaffLoginResponseDto.fromJson({'twoFactorSetupRequired': true, 'challenge': 'ch'});
+      expect(setup.setupRequired, isTrue);
+      final signedIn = StaffLoginResponseDto.fromJson({
+        'user': {'id': 'u1', 'role': 'SALES'},
+        'tokens': {'accessToken': 'a', 'refreshToken': 'r'},
+      });
+      expect(signedIn.challenge, isNull);
+      expect(signedIn.bundle?.user.id, 'u1');
+      final enabled = TwoFactorEnabledDto.fromJson({
+        'user': {'id': 'u1', 'role': 'SALES'},
+        'tokens': {'accessToken': 'a', 'refreshToken': 'r'},
+        'recoveryCodes': ['aaaa-bbbb'],
+      });
+      expect(enabled.recoveryCodes, ['aaaa-bbbb']);
+    });
+
+    test('a correct password asks for the code; the code signs in under the company', () async {
+      final repo = _FakeRepo(session: staff, step: const StaffTwoFactorStep(challenge: 'ch1', setupRequired: false));
+      final session = SessionCubit(TokenStorage());
+      final cubit = build(repo, session);
+      await cubit.login(' MyCo ', 'a@b.com', 'pw');
+      expect(cubit.state.twoFactor?.challenge, 'ch1');
+      expect(session.state.isAuthenticated, isFalse);
+      await cubit.verifyCode(' 123456 ');
+      expect(repo.calls, ['verify:ch1:123456:myco']);
+      expect(cubit.state.status, StaffAuthStatus.success);
+      expect(session.state.isAuthenticated, isTrue);
+    });
+
+    test('a wrong code stays on the step; an expired step goes back to the password', () async {
+      final wrong = _FakeRepo(
+        session: staff,
+        step: const StaffTwoFactorStep(challenge: 'ch', setupRequired: false),
+        verifyFailure: AppFailure(type: FailureType.unauthorized, code: 'TWO_FACTOR_INVALID'),
+      );
+      final session = SessionCubit(TokenStorage());
+      final cubit = build(wrong, session);
+      await cubit.login('co', 'a@b.com', 'pw');
+      await cubit.verifyCode('000000');
+      expect(cubit.state.status, StaffAuthStatus.failure);
+      expect(cubit.state.twoFactor, isNotNull);
+      expect(session.state.isAuthenticated, isFalse);
+
+      final expired = _FakeRepo(
+        session: staff,
+        step: const StaffTwoFactorStep(challenge: 'ch', setupRequired: false),
+        verifyFailure: AppFailure(type: FailureType.unauthorized, code: 'CHALLENGE_EXPIRED'),
+      );
+      final cubit2 = build(expired, SessionCubit(TokenStorage()));
+      await cubit2.login('co', 'a@b.com', 'pw');
+      await cubit2.verifyCode('123456');
+      expect(cubit2.state.twoFactor, isNull);
+      expect(cubit2.state.failure?.code, 'CHALLENGE_EXPIRED');
+    });
+
+    test('required but not set up: the key, the first code, the recovery codes, then in', () async {
+      final repo = _FakeRepo(session: staff, step: const StaffTwoFactorStep(challenge: 'ch2', setupRequired: true));
+      final session = SessionCubit(TokenStorage());
+      final cubit = build(repo, session);
+      await cubit.login('co', 'a@b.com', 'pw');
+      expect(cubit.state.setup?.secret, 'JBSWY3DPEHPK3PXP');
+      await cubit.finishSetup('654321');
+      expect(repo.calls, ['setup:ch2', 'enable:ch2:654321:co']);
+      expect(cubit.state.recoveryCodes, ['aaaa-bbbb', 'cccc-dddd']);
+      // Not in until the codes were seen.
+      expect(session.state.isAuthenticated, isFalse);
+      cubit.acknowledgeRecoveryCodes();
+      expect(session.state.isAuthenticated, isTrue);
+      expect(cubit.state.status, StaffAuthStatus.success);
+    });
+
+    Widget host(StaffAuthCubit cubit) => MaterialApp(
+          theme: ThemeData(extensions: [AppColorsExt.resolve(Brightness.light)]),
+          locale: const Locale('ar'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: BlocProvider<StaffAuthCubit>.value(value: cubit, child: const StaffTwoFactorPanel()),
+            ),
+          ),
+        );
+
+    testWidgets('the code step: a 6-digit code is checked before it is sent', (tester) async {
+      final repo = _FakeRepo(session: staff, step: const StaffTwoFactorStep(challenge: 'ch', setupRequired: false));
+      final cubit = build(repo, SessionCubit(TokenStorage()));
+      await cubit.login('co', 'a@b.com', 'pw');
+      await tester.pumpWidget(host(cubit));
+      await tester.pumpAndSettle();
+      expect(find.text('التحقق بخطوتين'), findsOneWidget);
+      await tester.enterText(find.byType(TextFormField), '12');
+      await tester.tap(find.text('تأكيد'));
+      await tester.pump();
+      expect(find.text('اكتب الكود المكوّن من 6 أرقام'), findsOneWidget);
+      expect(repo.calls, isEmpty);
+      await tester.enterText(find.byType(TextFormField), '123456');
+      await tester.tap(find.text('تأكيد'));
+      await tester.pumpAndSettle();
+      expect(repo.calls, ['verify:ch:123456:co']);
+    });
+
+    testWidgets('setting it up shows the key, then the recovery codes', (tester) async {
+      final repo = _FakeRepo(session: staff, step: const StaffTwoFactorStep(challenge: 'ch', setupRequired: true));
+      final cubit = build(repo, SessionCubit(TokenStorage()));
+      await cubit.login('co', 'a@b.com', 'pw');
+      await tester.pumpWidget(host(cubit));
+      await tester.pumpAndSettle();
+      expect(find.text('JBSWY3DPEHPK3PXP'), findsOneWidget);
+      await tester.enterText(find.byType(TextFormField), '654321');
+      await tester.tap(find.text('تفعيل ومتابعة'));
+      await tester.pumpAndSettle();
+      expect(find.text('aaaa-bbbb'), findsOneWidget);
+      expect(find.text('حفظتها — متابعة'), findsOneWidget);
+    });
+
+    test('the step\'s own refusals have their own messages', () async {
+      final l10n = await AppLocalizations.delegate.load(const Locale('ar'));
+      expect(staffTwoFactorMessage(l10n, AppFailure(type: FailureType.unauthorized, code: 'TWO_FACTOR_INVALID')), l10n.staffTfaWrongCode);
+      expect(staffTwoFactorMessage(l10n, AppFailure(type: FailureType.unknown, code: 'TWO_FACTOR_LOCKED')), l10n.staffTfaLocked);
+      expect(staffTwoFactorMessage(l10n, AppFailure(type: FailureType.unauthorized)), isNull);
+    });
+
+    test('back from the step returns to the login form', () async {
+      final repo = _FakeRepo(session: staff, step: const StaffTwoFactorStep(challenge: 'ch', setupRequired: false));
+      final cubit = build(repo, SessionCubit(TokenStorage()));
+      await cubit.login('co', 'a@b.com', 'pw');
+      cubit.cancelTwoFactor();
+      expect(cubit.state.twoFactor, isNull);
+      expect(cubit.state.status, StaffAuthStatus.idle);
     });
   });
 
@@ -262,11 +450,21 @@ class _CapturingRepo implements StaffAuthRepository {
   final void Function(String, String, String)? _onLogin;
 
   @override
-  Future<Result<Session>> loginWithSlug(
+  Future<Result<StaffLoginOutcome>> loginWithSlug(
       String slug, String email, String password) {
     _onLogin?.call(slug, email, password);
     return _delegate.loginWithSlug(slug, email, password);
   }
+
+  @override
+  Future<Result<Session>> verifyTwoFactor(String challenge, String code, String slug) =>
+      _delegate.verifyTwoFactor(challenge, code, slug);
+  @override
+  Future<Result<StaffTwoFactorSetup>> startTwoFactorSetup(String challenge) =>
+      _delegate.startTwoFactorSetup(challenge);
+  @override
+  Future<Result<StaffTwoFactorEnabled>> finishTwoFactorSetup(String challenge, String code, String slug) =>
+      _delegate.finishTwoFactorSetup(challenge, code, slug);
 
   @override
   Future<Result<Session>> refreshSession() => _delegate.refreshSession();

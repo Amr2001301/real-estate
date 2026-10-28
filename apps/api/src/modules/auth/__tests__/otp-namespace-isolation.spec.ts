@@ -118,6 +118,8 @@ function makeService() {
         },
       ),
     },
+    authSession: { create: jest.fn().mockResolvedValue({ id: 'sess-1' }), findUnique: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]), update: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
+
     refreshToken: { create: jest.fn().mockResolvedValue({}) },
     emailVerificationToken: {
       findFirst: jest.fn().mockResolvedValue(null),
@@ -137,6 +139,7 @@ function makeService() {
   const caps = { hasCapability: jest.fn().mockResolvedValue(true) };
   const service = new AuthService(
     prisma as never, jwt as never, config as never, sms as never, email as never, caps as never,
+    { signInStep: jest.fn().mockResolvedValue(null) } as never,
   );
 
   return { service, prisma, sms, created, otpStore };

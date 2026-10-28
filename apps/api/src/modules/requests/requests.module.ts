@@ -29,6 +29,7 @@ import {
 import type { Prisma } from '@prisma/client';
 import { InfoRequestStatus, LeadStage, UserRole, VisitRequestSource, VisitRequestStatus, VisitStatus } from '@prisma/client';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
+import { maskEmail, maskPhone } from '../../common/utils/contact-mask';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { resolveSalesScope } from '../../common/utils/sales-scope';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -367,7 +368,7 @@ export class RequestsService {
    * so the admin can call / WhatsApp / email them — this is an ADMIN-facing
    * surface, so phone/email ARE included here (unlike the notification payload).
    */
-  async listInfoRequests(opts: { page: number; pageSize: number; status?: InfoRequestStatus }) {
+  async listInfoRequests(opts: { page: number; pageSize: number; status?: InfoRequestStatus; viewer?: { id: string; role: UserRole } }) {
     // FG-04 — /dashboard/requests sent ?status= but the list ignored it.
     const where: Prisma.InfoRequestWhereInput = opts.status ? { status: opts.status } : {};
     const [data, total] = await this.prisma.$transaction([
@@ -379,7 +380,7 @@ export class RequestsService {
           project: true,
           unit: true,
           user: { select: { id: true, fullName: true, phone: true, email: true, role: true } },
-          lead: { select: { id: true, fullName: true, phone: true, email: true } },
+          lead: { select: { id: true, fullName: true, phone: true, email: true, assignedSalesId: true } },
         },
       }),
       this.prisma.infoRequest.count({ where }),
@@ -398,7 +399,22 @@ export class RequestsService {
       },
     };
 
-    return paginate(data, total, opts, facets);
+    // MP1 — a sales rep sees a customer's phone and e-mail only on their own
+    // leads; the rest of the queue shows them masked.
+    const viewer = opts.viewer;
+    const rows =
+      viewer?.role === UserRole.SALES
+        ? data.map((r) =>
+            r.lead?.assignedSalesId === viewer.id
+              ? r
+              : {
+                  ...r,
+                  user: r.user ? { ...r.user, phone: maskPhone(r.user.phone) ?? null, email: maskEmail(r.user.email) ?? null } : r.user,
+                  lead: r.lead ? { ...r.lead, phone: maskPhone(r.lead.phone) ?? null, email: maskEmail(r.lead.email) ?? null } : r.lead,
+                },
+          )
+        : data;
+    return paginate(rows, total, opts, facets);
   }
 
   /**
@@ -758,6 +774,7 @@ class RequestsController {
   @Permissions('visits:read')
   @Get('info-requests')
   listInfo(
+    @CurrentUser() user: AuthUser,
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
     @Query('status') status?: string,
@@ -767,6 +784,7 @@ class RequestsController {
       page: Number(page),
       pageSize: Number(pageSize),
       status: status && known.includes(status) ? (status as InfoRequestStatus) : undefined,
+      viewer: { id: user.sub, role: user.role },
     });
   }
 

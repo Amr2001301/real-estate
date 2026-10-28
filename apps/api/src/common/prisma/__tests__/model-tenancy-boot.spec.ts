@@ -128,6 +128,7 @@ describe('MODEL_TENANCY tier spot-checks', () => {
   // Auth-token models must be TENANT_VIA_RELATION (scoped through userId → User).
   it.each([
     'RefreshToken',
+    'AuthSession',
     'PasswordResetToken',
     'EmailVerificationToken',
     'DeviceToken',

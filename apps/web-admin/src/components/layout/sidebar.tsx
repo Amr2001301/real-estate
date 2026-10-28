@@ -1,4 +1,5 @@
-import { LogOut } from 'lucide-react';
+import Link from 'next/link';
+import { LogOut, ShieldCheck } from 'lucide-react';
 import type { SessionUser, SessionRole } from '@/lib/session';
 import type { Locale } from '@/lib/locale';
 import { filterNavForRole, type NavSection } from '@/lib/nav';
@@ -76,6 +77,14 @@ export function SidebarContent({ user, locale, sections, onNavigate }: Props) {
             <p className="text-[11px] text-[#D8B66A]/85 truncate">{m.sidebar.roles[user.role as SessionRole]}</p>
           </div>
         </div>
+        <Link
+          href={(user.role === 'BROKER' ? '/portal/security' : '/dashboard/security') as never}
+          onClick={onNavigate}
+          className="w-full flex items-center gap-3 px-3 h-10 rounded-xl text-[12.5px] font-medium text-sidebar-text/70 hover:text-white/90 hover:bg-white/[0.06] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-inset"
+        >
+          <ShieldCheck className="h-[15px] w-[15px] shrink-0 opacity-70" aria-hidden />
+          {m.sidebar.security}
+        </Link>
         <form action={logoutAction}>
           <button
             type="submit"

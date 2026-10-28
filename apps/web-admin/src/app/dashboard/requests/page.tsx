@@ -210,7 +210,10 @@ export default async function InfoRequestsPage({
                   const contact = contactOf(req);
                   const badge = submitterBadge(req);
                   const status = STATUS_LABEL[req.status] ?? { label: req.status, tone: 'gray' as const };
-                  const waDigits = contact.phone?.replace(/\D/g, '') ?? '';
+                  // A rep sees other reps' customers masked (MP1): shown, not dialled.
+                  const phoneMasked = !!contact.phone?.includes('•');
+                  const emailMasked = !!contact.email?.includes('•');
+                  const waDigits = phoneMasked ? '' : (contact.phone?.replace(/\D/g, '') ?? '');
                   const projectName = req.project ? tx(req.project.name) : null;
                   return (
                     <tr
@@ -247,7 +250,7 @@ export default async function InfoRequestsPage({
                             <div className="flex items-center gap-2">
                               <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                               <a
-                                href={`tel:${contact.phone}`}
+                                href={phoneMasked ? undefined : `tel:${contact.phone}`}
                                 className="font-mono text-xs text-slate-700 hover:text-brand-700 transition-colors"
                                 dir="ltr"
                               >
@@ -271,7 +274,7 @@ export default async function InfoRequestsPage({
                             <div className="flex items-center gap-2">
                               <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                               <a
-                                href={`mailto:${contact.email}`}
+                                href={emailMasked ? undefined : `mailto:${contact.email}`}
                                 className="text-xs text-slate-600 hover:text-brand-700 transition-colors truncate max-w-[170px]"
                                 dir="ltr"
                               >

@@ -174,6 +174,29 @@ export class UsersController {
     return this.users.findOne(id);
   }
 
+  // SES1 — where a staff member is signed in, and signing them out everywhere.
+  @Roles(UserRole.ADMIN)
+  @Permissions('users:read')
+  @Get(':id/sessions')
+  sessions(@Param('id', ParseUUIDPipe) id: string) {
+    return this.users.sessions(id);
+  }
+
+  // TFA1 — a lost phone: turn two-step sign-in off for the account.
+  @Roles(UserRole.ADMIN)
+  @Permissions('users:update')
+  @Post(':id/2fa/reset')
+  resetTwoFactor(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
+    return this.users.resetTwoFactor(id, user.sub);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('users:update')
+  @Post(':id/sessions/revoke')
+  signOutEverywhere(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
+    return this.users.signOutEverywhere(id, user.sub);
+  }
+
   @Roles(UserRole.ADMIN)
   @Permissions('users:update')
   @Patch(':id')

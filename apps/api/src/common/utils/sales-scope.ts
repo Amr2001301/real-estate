@@ -151,3 +151,24 @@ export async function roundRobinPool(prisma: PrismaService): Promise<string[]> {
   });
   return rows.map((r) => r.id);
 }
+
+/**
+ * The company's active sales reps and sales managers, with each rep's
+ * manager — for the follow-up morning list (FU2).
+ */
+export async function followUpStaff(
+  prisma: PrismaService,
+): Promise<Array<{ id: string; role: UserRole; managerId: string | null }>> {
+  const companyId = getRequiredCompanyId();
+  return prisma.user.findMany({
+    where: { role: { in: [UserRole.SALES, UserRole.SALES_MANAGER] }, active: true, deletedAt: null, companyId },
+    select: { id: true, role: true, managerId: true },
+  });
+}
+
+/** A staff member's name in the current tenant (who opened a call, MP1). */
+export async function staffName(prisma: PrismaService, userId: string): Promise<string | null> {
+  const companyId = getRequiredCompanyId();
+  const u = await prisma.user.findFirst({ where: { id: userId, companyId }, select: { fullName: true } });
+  return u?.fullName ?? null;
+}

@@ -1,5 +1,6 @@
 import 'package:core/core.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_staff/features/leads/data/dtos/lead_dtos.dart';
 import 'package:mobile_staff/features/leads/data/mappers/lead_mapper.dart';
@@ -8,7 +9,9 @@ import 'package:mobile_staff/features/leads/data/datasources/leads_remote_data_s
 import 'package:mobile_staff/features/leads/domain/entities/lead.dart';
 import 'package:mobile_staff/features/leads/domain/repositories/leads_repository.dart';
 import 'package:mobile_staff/features/leads/domain/usecases/lead_use_cases.dart';
+import 'package:mobile_staff/features/leads/presentation/cubit/lead_detail_cubit.dart';
 import 'package:mobile_staff/features/leads/presentation/cubit/leads_cubit.dart';
+import 'package:mobile_staff/features/leads/presentation/screens/lost_reason_sheet.dart';
 
 class _FakeRemote implements LeadsRemoteDataSource {
   _FakeRemote({this.rows = const [], this.error});
@@ -25,7 +28,9 @@ class _FakeRemote implements LeadsRemoteDataSource {
   @override
   Future<LeadDetailDto> getOne(String id) async => throw UnimplementedError();
   @override
-  Future<void> updateStage(String id, String stage, String? reason) async {}
+  Future<void> updateStage(String id, String stage, String? reason, {String? lostReasonId, String? lostNote}) async {}
+  @override
+  Future<List<LostReasonDto>> listLostReasons() async => const [];
   @override
   Future<void> addNote(String id, String body) async {}
   @override
@@ -37,8 +42,10 @@ class _FakeRemote implements LeadsRemoteDataSource {
 }
 
 class _FakeRepo implements LeadsRepository {
-  _FakeRepo(this._leads);
+  _FakeRepo(this._leads, {this.reasons = const []});
   final Result<List<Lead>> _leads;
+  final List<LostReason> reasons;
+  final stageCalls = <String>[];
 
   @override
   Future<Result<Paginated<Lead>>> getLeads(LeadsQuery query) async => _leads.when(
@@ -50,9 +57,15 @@ class _FakeRepo implements LeadsRepository {
       );
 
   @override
-  Future<Result<LeadDetail>> getLead(String id) async => throw UnimplementedError();
+  Future<Result<LeadDetail>> getLead(String id) async =>
+      const Ok(LeadDetail(lead: Lead(id: 'l1', fullName: 'Mona', stage: 'NEW'), timeline: []));
   @override
-  Future<Result<void>> updateStage(String id, String stage, {String? reason}) async => const Ok(null);
+  Future<Result<void>> updateStage(String id, String stage, {String? reason, String? lostReasonId, String? lostNote}) async {
+    stageCalls.add('$id:$stage:$lostReasonId:$lostNote');
+    return const Ok(null);
+  }
+  @override
+  Future<Result<List<LostReason>>> getLostReasons() async => Ok(reasons);
   @override
   Future<Result<void>> addNote(String id, String body) async => const Ok(null);
   @override
@@ -146,6 +159,87 @@ void main() {
       final cubit = LeadsCubit(GetLeads(repo), repo);
       await cubit.toggleMine();
       expect(cubit.state.mine, isTrue);
+    });
+  });
+
+  group('Lost reasons (LR1)', () {
+    test('the lead detail carries why it was lost', () {
+      final detail = LeadDetailDto.fromJson({
+        ..._row(stage: 'LOST'),
+        'lostReason': {'id': 'r1', 'name': {'ar': 'السعر عالي', 'en': 'Price too high'}},
+        'lostNote': 'لقى أرخص',
+      }).toEntity();
+      expect(detail.lostReason?.resolve('ar'), 'السعر عالي');
+      expect(detail.lostReason?.resolve('en'), 'Price too high');
+      expect(detail.lostNote, 'لقى أرخص');
+      // A flattened name (Accept-Language) reads the same.
+      final flat = LostReasonDto.fromJson({'id': 'r1', 'name': 'Price too high'});
+      expect(flat.name.resolve('ar'), 'Price too high');
+    });
+
+    test('marking lost sends the reason and the note', () async {
+      final repo = _FakeRepo(const Ok([]));
+      final cubit = LeadDetailCubit(
+        GetLeadDetail(repo),
+        UpdateLeadStage(repo),
+        AddLeadNote(repo),
+        leadId: 'l1',
+        getLostReasons: GetLostReasons(repo),
+      );
+      await cubit.markLost('r1', note: 'لقى أرخص');
+      expect(repo.stageCalls, ['l1:LOST:r1:لقى أرخص']);
+    });
+
+    Widget host(LeadDetailCubit cubit) => MaterialApp(
+          theme: ThemeData(extensions: [AppColorsExt.resolve(Brightness.light)]),
+          locale: const Locale('ar'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: SingleChildScrollView(child: LostReasonSheet(cubit: cubit))),
+        );
+
+    testWidgets('the sheet needs a reason before it confirms', (tester) async {
+      const reasons = [
+        LostReason(id: 'r1', name: Translatable(ar: 'السعر عالي', en: 'Price too high')),
+        LostReason(id: 'r2', name: Translatable(ar: 'اشترى من منافس', en: 'Bought elsewhere')),
+      ];
+      final repo = _FakeRepo(const Ok([]), reasons: reasons);
+      final cubit = LeadDetailCubit(
+        GetLeadDetail(repo),
+        UpdateLeadStage(repo),
+        AddLeadNote(repo),
+        leadId: 'l1',
+        getLostReasons: GetLostReasons(repo),
+      );
+      await tester.pumpWidget(host(cubit));
+      await tester.pumpAndSettle();
+      expect(find.text('السعر عالي'), findsOneWidget);
+      expect(find.text('اشترى من منافس'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('lost-confirm')));
+      await tester.pump();
+      expect(repo.stageCalls, isEmpty);
+      await tester.tap(find.text('اشترى من منافس'));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('lost-confirm')));
+      await tester.pumpAndSettle();
+      expect(repo.stageCalls, ['l1:LOST:r2:']);
+    });
+
+    testWidgets('no reasons yet: says so and cannot confirm', (tester) async {
+      final repo = _FakeRepo(const Ok([]));
+      final cubit = LeadDetailCubit(
+        GetLeadDetail(repo),
+        UpdateLeadStage(repo),
+        AddLeadNote(repo),
+        leadId: 'l1',
+        getLostReasons: GetLostReasons(repo),
+      );
+      await tester.pumpWidget(host(cubit));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('مفيش أسباب خسارة'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('lost-confirm')));
+      await tester.pump();
+      expect(repo.stageCalls, isEmpty);
     });
   });
 }

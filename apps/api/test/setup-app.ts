@@ -56,9 +56,11 @@ import { AppModule } from '../src/app.module';
 import { CapabilityService } from '../src/common/capabilities/capability.service';
 import { DateSerializerInterceptor } from '../src/common/interceptors/date-serializer.interceptor';
 import { requestIdMiddleware } from '../src/common/logging/request-id.middleware';
+import { clientMetaMiddleware } from '../src/common/request/client-meta';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { runInCompany, runTenantContext } from '../src/common/tenant/tenant-context';
 import { AiPlansCron } from '../src/modules/ai/ai-plans.cron';
+import { FollowUpReminderCron } from '../src/modules/leads/follow-up-reminder.cron';
 import { AiPlansService } from '../src/modules/ai/ai-plans.service';
 import { AssistantTools, type AssistantActor } from '../src/modules/ai/ai-assistant.tools';
 import { InstallmentRemindersService, InstallmentsService } from '../src/modules/installments/installments.module';
@@ -131,7 +133,9 @@ export type CronJob =
   | 'subscription-expiry'
   | 'late-fee'
   | 'installment-overdue'
-  | 'ai-plans';
+  | 'ai-plans'
+  | 'follow-up-reminders'
+  | 'follow-up-daily';
 
 function cronRunner(app: INestApplication): (job: CronJob) => Promise<void> {
   const appointments = app.get(AppointmentReminderCron);
@@ -144,6 +148,7 @@ function cronRunner(app: INestApplication): (job: CronJob) => Promise<void> {
   const subscriptionExpiry = app.get(SubscriptionExpiryCron);
   const installmentsSvc = app.get(InstallmentsService);
   const aiPlans = app.get(AiPlansCron);
+  const followUps = app.get(FollowUpReminderCron);
   const asCron = (fn: () => Promise<unknown>) =>
     runTenantContext({ companyId: null, bypass: true, isPublic: false }, async () => {
       await fn();
@@ -172,6 +177,11 @@ function cronRunner(app: INestApplication): (job: CronJob) => Promise<void> {
         return asCron(() => installmentsSvc.markOverdue());
       case 'ai-plans':
         return aiPlans.run();
+      case 'follow-up-reminders':
+        return asCron(() => followUps.sendReminders());
+      case 'follow-up-daily':
+        // Every company, whatever its local hour.
+        return asCron(() => followUps.sendDailyLists(new Date(), null));
     }
   };
 }
@@ -219,6 +229,7 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
   const app = moduleRef.createNestApplication({ bufferLogs: false });
 
   app.use(requestIdMiddleware);
+  app.use(clientMetaMiddleware);
   app.use(helmet());
   app.use(cookieParser());
   app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/', 'metrics'] });
@@ -345,6 +356,7 @@ export async function createE2ETestApp(): Promise<TestApp> {
 
   const app = moduleRef.createNestApplication({ bufferLogs: false });
   app.use(requestIdMiddleware);
+  app.use(clientMetaMiddleware);
   app.use(helmet());
   app.use(cookieParser());
   app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/', 'metrics'] });
@@ -433,6 +445,7 @@ export async function createSecurityTestApp(): Promise<TestApp> {
 
   const app = moduleRef.createNestApplication({ bufferLogs: false });
   app.use(requestIdMiddleware);
+  app.use(clientMetaMiddleware);
   app.use(helmet());
   app.use(cookieParser());
   app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/', 'metrics'] });

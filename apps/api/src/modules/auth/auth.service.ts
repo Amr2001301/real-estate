@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Injectable,
   Logger,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -22,8 +23,10 @@ import { isUniqueConflictOn } from '../../common/utils/contract-number';
 import { SmsService } from './sms.service';
 import { EmailService } from './email.service';
 import { CapabilityService } from '../../common/capabilities/capability.service';
-import type { UserRole } from '@prisma/client';
+import type { Prisma, UserRole } from '@prisma/client';
 import { reportFailure } from '../../common/observability/report-failure';
+import { currentClientMeta } from '../../common/request/client-meta';
+import { TwoFactorService } from './two-factor.service';
 
 // MT-035: Response header emitted on legacy /auth/login to signal deprecation.
 export const DEPRECATED_ENDPOINT_HEADER = 'Deprecation';
@@ -50,7 +53,53 @@ export class AuthService {
     private readonly sms: SmsService,
     private readonly email: EmailService,
     private readonly capabilityService: CapabilityService,
+    private readonly twoFactor: TwoFactorService,
   ) {}
+
+  /**
+   * TFA1 — after a correct password: a session, or the second step (a code
+   * from the authenticator app, or setting it up where the company requires
+   * it) when the account has one.
+   */
+  private async afterPassword(user: { id: string; role: UserRole; companyId: string | null; totpEnabledAt: Date | null }) {
+    const step = await this.twoFactor.signInStep(user);
+    return step ?? this.issueTokens(user.id, user.role);
+  }
+
+  /** The second step: the challenge from the password step and a code (or a recovery code). */
+  async verifyTwoFactor(challenge: string, code: string) {
+    const userId = await this.twoFactor.readChallenge(challenge, 'verify');
+    const user = await this.signInUser(userId);
+    const { recovery } = await this.twoFactor.checkCode(user.id, code);
+    const result = await this.issueTokens(user.id, user.role);
+    return recovery ? { ...result, usedRecoveryCode: true } : result;
+  }
+
+  /** Setting it up during sign-in, where the company requires it: the secret to scan. */
+  async startTwoFactorSetup(challenge: string) {
+    const userId = await this.twoFactor.readChallenge(challenge, 'setup');
+    await this.signInUser(userId);
+    return this.twoFactor.setup(userId);
+  }
+
+  /** …and the first code: it is on, the recovery codes are shown once, and the session starts. */
+  async finishTwoFactorSetup(challenge: string, code: string) {
+    const userId = await this.twoFactor.readChallenge(challenge, 'setup');
+    const user = await this.signInUser(userId);
+    const { recoveryCodes } = await this.twoFactor.enable(user.id, code);
+    return { ...(await this.issueTokens(user.id, user.role)), recoveryCodes };
+  }
+
+  /** The account a challenge names, still able to sign in (it may have been switched off since). */
+  private async signInUser(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, active: true, deletedAt: true, company: { select: { lifecycleStatus: true, subscriptionStatus: true } } },
+    });
+    if (!user || !user.active || user.deletedAt) throw new UnauthorizedException('Account inactive');
+    if (user.role !== 'SUPER_ADMIN' && user.company && !companyAccessAllowed(user.company)) throw companyAccessDenied();
+    return user;
+  }
 
   // ------------- Email + password (Admin / Sales / Broker) -------------
 
@@ -114,7 +163,7 @@ export class AuthService {
     }
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-    return this.issueTokens(user.id, user.role);
+    return this.afterPassword(user);
   }
 
   // MT-035: Called by the controller on every /auth/login hit for telemetry.
@@ -163,6 +212,11 @@ export class AuthService {
     if (!record || record.revokedAt || record.expiresAt < new Date()) {
       throw new UnauthorizedException('Invalid refresh token');
     }
+    // SES1 — a session ended from another device takes its refresh token with it.
+    const session = record.sessionId
+      ? await this.prisma.authSession.findUnique({ where: { id: record.sessionId }, select: { id: true, revokedAt: true } })
+      : null;
+    if (session?.revokedAt) throw new UnauthorizedException('Invalid refresh token');
     const user = await this.prisma.user.findUnique({
       where: { id: record.userId },
       include: { company: { select: { lifecycleStatus: true, subscriptionStatus: true } } },
@@ -220,21 +274,76 @@ export class AuthService {
       }
     }
 
-    // Rotate
+    // Rotate — the session stays, and remembers when (and from where) it was last used.
     await this.prisma.refreshToken.update({
       where: { id: record.id },
       data: { revokedAt: new Date() },
     });
-    return this.issueTokens(user.id, user.role);
+    if (session) {
+      const meta = currentClientMeta();
+      await this.prisma.authSession.update({
+        where: { id: session.id },
+        data: { lastSeenAt: new Date(), ...(meta.ipAddress ? { ipAddress: meta.ipAddress } : {}), ...(meta.userAgent ? { userAgent: meta.userAgent } : {}) },
+      });
+    }
+    return this.issueTokens(user.id, user.role, session?.id);
   }
 
   async logout(rawToken: string) {
     const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+    const record = await this.prisma.refreshToken.findUnique({ where: { tokenHash }, select: { sessionId: true } });
+    const now = new Date();
     await this.prisma.refreshToken.updateMany({
       where: { tokenHash, revokedAt: null },
-      data: { revokedAt: new Date() },
+      data: { revokedAt: now },
     });
+    if (record?.sessionId) {
+      await this.prisma.authSession.updateMany({ where: { id: record.sessionId, revokedAt: null }, data: { revokedAt: now } });
+    }
     return { ok: true };
+  }
+
+  // ------------- Sessions (SES1 — linked devices) -------------
+
+  /** A session is live while it is not ended and one of its refresh tokens can still renew it. */
+  private liveSessions(userId: string): Prisma.AuthSessionWhereInput {
+    return { userId, revokedAt: null, refreshTokens: { some: { revokedAt: null, expiresAt: { gt: new Date() } } } };
+  }
+
+  async listSessions(userId: string, currentSid: string | null | undefined) {
+    const rows = await this.prisma.authSession.findMany({
+      where: this.liveSessions(userId),
+      orderBy: { lastSeenAt: 'desc' },
+      take: 100,
+      select: { id: true, userAgent: true, ipAddress: true, createdAt: true, lastSeenAt: true },
+    });
+    return { data: rows.map((r) => ({ ...r, current: r.id === currentSid })) };
+  }
+
+  /** End one of the caller's own sessions: that device is signed out at once. */
+  async revokeSession(userId: string, id: string) {
+    const ended = await this.endSessions({ userId, id, revokedAt: null });
+    if (!ended) throw new NotFoundException('Session not found');
+    return { ok: true };
+  }
+
+  /** Sign out everywhere but here. */
+  async revokeOtherSessions(userId: string, currentSid: string | null | undefined) {
+    const ended = await this.endSessions({ userId, revokedAt: null, ...(currentSid ? { id: { not: currentSid } } : {}) });
+    // A token minted before sessions existed belongs to no session; it goes too.
+    await this.prisma.refreshToken.updateMany({ where: { userId, sessionId: null, revokedAt: null }, data: { revokedAt: new Date() } });
+    return { ok: true, ended };
+  }
+
+  private async endSessions(where: Prisma.AuthSessionWhereInput): Promise<number> {
+    const now = new Date();
+    const ids = (await this.prisma.authSession.findMany({ where, select: { id: true } })).map((s) => s.id);
+    if (!ids.length) return 0;
+    await this.prisma.$transaction([
+      this.prisma.authSession.updateMany({ where: { id: { in: ids } }, data: { revokedAt: now } }),
+      this.prisma.refreshToken.updateMany({ where: { sessionId: { in: ids }, revokedAt: null }, data: { revokedAt: now } }),
+    ]);
+    return ids.length;
   }
 
   /**
@@ -243,7 +352,7 @@ export class AuthService {
    * password (OTP-only) can't use this path. Existing refresh tokens are
    * revoked so other sessions are forced to re-authenticate after the change.
    */
-  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+  async changePassword(userId: string, currentPassword: string, newPassword: string, currentSid?: string | null) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, passwordHash: true },
@@ -266,12 +375,19 @@ export class AuthService {
     }
 
     const passwordHash = await argon2.hash(newPassword);
+    const now = new Date();
+    // Tokens from before sessions (no sessionId) are other devices too.
+    const others = currentSid ? { OR: [{ sessionId: null }, { sessionId: { not: currentSid } }] } : {};
     await this.prisma.$transaction([
       this.prisma.user.update({ where: { id: userId }, data: { passwordHash } }),
-      // Invalidate other sessions: any active refresh token is revoked.
+      // Every other device is signed out; the one that changed it stays in.
       this.prisma.refreshToken.updateMany({
-        where: { userId, revokedAt: null },
-        data: { revokedAt: new Date() },
+        where: { userId, revokedAt: null, ...others },
+        data: { revokedAt: now },
+      }),
+      this.prisma.authSession.updateMany({
+        where: { userId, revokedAt: null, ...(currentSid ? { id: { not: currentSid } } : {}) },
+        data: { revokedAt: now },
       }),
     ]);
     return { ok: true };
@@ -358,6 +474,10 @@ export class AuthService {
         data: { passwordHash, emailVerifiedAt: user.emailVerifiedAt ?? new Date() },
       }),
       this.prisma.refreshToken.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+      this.prisma.authSession.updateMany({
         where: { userId: user.id, revokedAt: null },
         data: { revokedAt: new Date() },
       }),
@@ -486,9 +606,18 @@ export class AuthService {
     }
   }
 
-  private async issueTokens(userId: string, role: UserRole) {
+  /**
+   * A sign-in starts a session (the device under «الأجهزة المتصلة»); a refresh
+   * passes its session on. The access token names the session, so ending it
+   * cuts the device off before the token runs out.
+   */
+  private async issueTokens(userId: string, role: UserRole, sessionId?: string) {
+    if (!sessionId) {
+      const meta = currentClientMeta();
+      sessionId = (await this.prisma.authSession.create({ data: { userId, userAgent: meta.userAgent, ipAddress: meta.ipAddress }, select: { id: true } })).id;
+    }
     const accessToken = await this.jwt.signAsync(
-      { sub: userId, role },
+      { sub: userId, role, sid: sessionId },
       {
         secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
         expiresIn: this.config.get<string>('JWT_ACCESS_EXPIRES_IN') ?? '15m',
@@ -501,7 +630,7 @@ export class AuthService {
     const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 
     await this.prisma.refreshToken.create({
-      data: { userId, tokenHash, expiresAt },
+      data: { userId, tokenHash, expiresAt, sessionId },
     });
 
     const user = await this.prisma.user.findUnique({
@@ -609,7 +738,7 @@ export class AuthService {
     }
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-    return this.issueTokens(user.id, user.role);
+    return this.afterPassword(user);
   }
 
   // ── MT-027 — Super-admin login ────────────────────────────────────────────
@@ -635,7 +764,7 @@ export class AuthService {
     if (!ok) throw new UnauthorizedException('Invalid credentials');
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-    return this.issueTokens(user.id, user.role);
+    return this.afterPassword(user);
   }
 
   // ── MT-028 — Tenant-aware customer login ──────────────────────────────────

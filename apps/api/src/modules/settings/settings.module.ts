@@ -147,6 +147,8 @@ const SETTING_VALIDATORS: Record<string, (key: string, v: unknown) => void> = {
   'cheque.bounced.installmentAction': (k, v) =>
     validateEnum(k, v, ['REOPEN_AS_OVERDUE', 'REOPEN_AS_PENDING']),
   'cheque.bounced.penaltyAmount': (k, v) => validateNonNegativeDecimal(k, v),
+  // TFA1 — who must sign in with a second step (also set from «الأمان والأجهزة»).
+  'security.require2fa': (k, v) => validateEnum(k, v, ['OFF', 'ADMINS', 'STAFF']),
   ...LATE_FEE_VALIDATORS,
   ...TRANSFER_FEE_VALIDATORS,
   ...FEE_SETTING_VALIDATORS,

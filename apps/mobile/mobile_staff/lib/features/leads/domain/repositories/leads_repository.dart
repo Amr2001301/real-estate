@@ -87,7 +87,8 @@ class LeadInterestContext {
 abstract interface class LeadsRepository {
   Future<Result<Paginated<Lead>>> getLeads(LeadsQuery query);
   Future<Result<LeadDetail>> getLead(String id);
-  Future<Result<void>> updateStage(String id, String stage, {String? reason});
+  Future<Result<void>> updateStage(String id, String stage, {String? reason, String? lostReasonId, String? lostNote});
+  Future<Result<List<LostReason>>> getLostReasons();
   Future<Result<void>> addNote(String id, String body);
   Future<Result<Lead>> createLead(NewLead input);
   Future<Result<List<LeadSource>>> getSources();

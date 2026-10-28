@@ -17,7 +17,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { assertAssignableSales } from '../../common/utils/assignable-sales';
-import { managerScopeIds } from '../../common/utils/sales-scope';
+import { managerScopeIds, staffName } from '../../common/utils/sales-scope';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import { NotificationsService } from '../notifications/notifications.module';
 import {
@@ -485,7 +485,11 @@ export class LeadsService {
             select: { id: true, visitNumber: true, scheduledAt: true, status: true },
           },
           // "Last contact" on the kanban card: the latest note logged on the lead.
-          notes: { orderBy: { createdAt: 'desc' }, take: 1, select: { createdAt: true } },
+          notes: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: { createdAt: true, kind: true, callResult: true, body: true, sales: { select: { fullName: true } } },
+          },
         },
       }),
       this.prisma.lead.count({ where }),
@@ -507,6 +511,10 @@ export class LeadsService {
           : c,
         upcomingVisit: appointments[0] ?? null,
         lastContactAt: notes?.[0]?.createdAt ?? null,
+        // The latest activity itself, for the customer page's history.
+        lastNote: notes?.[0]
+          ? { kind: notes[0].kind, callResult: notes[0].callResult, body: notes[0].body.slice(0, 200), by: notes[0].sales?.fullName ?? null }
+          : null,
       };
     });
     // FG-23 — the sales and manager home dashboards counted won/lost stages
@@ -791,6 +799,26 @@ export class LeadsService {
       { except: salesId },
     );
     return note;
+  }
+
+  /**
+   * MP1 — the number behind a call / WhatsApp button, handed over when it
+   * is pressed (the caller already passed the lead's scope guard), and
+   * logged on the lead: who opened which.
+   */
+  async openContact(id: string, kind: 'CALL' | 'WHATSAPP', userId: string) {
+    const companyId = getRequiredCompanyId();
+    const lead = await this.prisma.lead.findFirst({
+      where: { id, companyId },
+      select: { phone: true, client: { select: { phone: true } } },
+    });
+    if (!lead) throw new NotFoundException('Lead not found');
+    const phone = lead.client?.phone ?? lead.phone;
+    if (!phone) throw new BadRequestException('The lead has no phone number');
+    await this.prisma.leadActivity.create({
+      data: { leadId: id, companyId, type: 'contact_opened', payload: { kind, byId: userId, by: await staffName(this.prisma, userId) } },
+    });
+    return { phone };
   }
 
   /**

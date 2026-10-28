@@ -28,6 +28,10 @@ const ar = {
   },
   composer: {
     title: 'تسجيل نشاط',
+    prompt: {
+      CALL: 'كيف كانت المكالمة؟ اختر النتيجة واكتب ما اتفقتما عليه، وحدد المتابعة القادمة.',
+      WHATSAPP: 'سجّل ملخص محادثة الواتساب، وحدد المتابعة القادمة.',
+    },
     whatHappened: 'ماذا حدث؟',
     callResult: 'نتيجة المكالمة',
     body: 'التفاصيل',
@@ -56,6 +60,19 @@ const ar = {
     saved: 'تم تسجيل النشاط',
     pastDate: 'اختر موعدًا في المستقبل',
     error: 'تعذّر الحفظ',
+  },
+  customer: {
+    title: 'فرص المبيعات والمتابعات',
+    desc: 'كل فرصة للعميل، وآخر ما حدث معه، ومتابعته القادمة',
+    empty: 'لا توجد فرص مبيعات لهذا العميل',
+    emptyDesc: 'تظهر هنا فرصه حين يُضاف كفرصة في «فرص المبيعات».',
+    last: 'آخر نشاط',
+    noActivity: 'لم يُسجَّل نشاط بعد',
+    next: 'المتابعة القادمة',
+    noNext: 'بدون متابعة محددة',
+    owner: 'المسؤول',
+    unassigned: 'غير مسند',
+    open: 'فتح الفرصة',
   },
   current: {
     title: 'المتابعة القادمة',
@@ -125,6 +142,10 @@ const en: typeof ar = {
   nextType: { CALL: 'Call', MEETING: 'Meeting', WHATSAPP: 'WhatsApp message', FOLLOW_UP: 'Follow-up' },
   composer: {
     title: 'Log an activity',
+    prompt: {
+      CALL: 'How did the call go? Pick the result, note what you agreed and set the next follow-up.',
+      WHATSAPP: 'Note what the WhatsApp chat was about, and set the next follow-up.',
+    },
     whatHappened: 'What happened?',
     callResult: 'Call result',
     body: 'Details',
@@ -153,6 +174,19 @@ const en: typeof ar = {
     saved: 'Activity logged',
     pastDate: 'Pick a time in the future',
     error: 'Could not save',
+  },
+  customer: {
+    title: 'Sales leads & follow-ups',
+    desc: 'Each of the customer’s leads, the latest contact and the next follow-up',
+    empty: 'No sales leads for this customer',
+    emptyDesc: 'Their leads show here once added in «Sales leads».',
+    last: 'Latest activity',
+    noActivity: 'Nothing logged yet',
+    next: 'Next follow-up',
+    noNext: 'No follow-up set',
+    owner: 'Owner',
+    unassigned: 'Unassigned',
+    open: 'Open lead',
   },
   current: {
     title: 'Next follow-up',

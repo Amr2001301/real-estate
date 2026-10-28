@@ -19,6 +19,9 @@ const SENSITIVE_KEY_FRAGMENTS = [
   'pin',
   'apikey',
   'apisecret',
+  // TFA1 — recovery codes shown once on enabling, and the sign-in challenge.
+  'recoverycode',
+  'challenge',
 ];
 
 const MASK = '***REDACTED***';

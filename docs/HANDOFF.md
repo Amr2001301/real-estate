@@ -1,4 +1,4 @@
-# Handoff — where the work stands (2026-10-27)
+# Handoff — where the work stands (2026-10-28, after #206)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
@@ -39,11 +39,19 @@
 - **أمان:** تحديث مكتبات فيها ثغرات، وNext.js 16.4.2، وإصلاح سباقات في أكواد الدخول والتوقيع.
 - **تصميم جديد:** صفحات الدخول (صورة معمارية)، «دومين الموقع» بقى عند السوبر أدمن، «خانات العميل الإضافية»، استيراد البيانات، و«الطباعة والمستندات» (4 تبويبات وشريط حفظ وشرح في المحرر).
 
-**شغال دلوقتي (مش مدموج):** نظام المتابعة (FU1) — نوع النشاط (مكالمة/اجتماع/واتساب)، نتيجة المكالمة، موعد المتابعة القادمة، الردود، وقوائم المتأخر/النهارده. التفاصيل في القسم 2c.
+**بعد كده (27 أكتوبر، #193–#197):** القسم 2d. باختصار: نظام المتابعة (FU1)، أسباب الخسارة وتقريرها (LR1)، والحملات التسويقية بمراحلها التلاتة (MC1–MC3): الحملات والصرف، الاستقبال التلقائي والتوزيع بالدور، والتقارير.
+
+**بعد كده (28 أكتوبر، #198–#206):** القسم 2d. باختصار: تنبيهات المتابعة (FU2)، أزرار الاتصال والواتساب وإخفاء أرقام العملاء عن غير المسؤول (#200)، العملاء المكررين ودمجهم (#201)، التقويم بالزيارات والمتابعات وانتهاء الحجوزات وتوقيع العقود (#202)، الأجهزة المتصلة وتسجيل الخروج منها (#203)، التحقق بخطوتين بتطبيق مصادقة في لوحة التحكم (#204) وتطبيق الموظفين (#205)، وسبب الخسارة في تطبيق الموظفين (#206). كده قايمة المنافسين اللي اتفقنا عليها خلصت.
+
+**PR #199 (نقل البيانات — MG1، من الأكونت التاني):** لسه مفتوح. قبل الدمج لازم يعمل merge من `main` ويغيّر اسم الـ migration بتاعه. الخطوات بالتفصيل في القسم **2e** تحت، ومتجرّبة على `main` الحالي.
+
+**الخطوة الجاية — الصلاحيات تفتح الصفحات (PRM):** حاليًا الصلاحية بتقلّل من اللي الدور يقدر يعمله بس، ومش بتفتح صفحة مش من صفحات الدور. اتفقنا إن الصلاحية هي اللي تفتح الصفحة، والدور يبقى قالب صلاحيات جاهز، مع إن الصلاحيات الخطيرة تفضل للأدمن بس. الخطة بالتفصيل في القسم **4c**، وهتتعمل من الأكونت التاني على مراحل. قرار نطاق البيانات (28 أكتوبر): اللي ياخد صلاحية فلوس أو تقارير أو إدارة يشوف الشركة كلها؛ صفحات المبيعات وبيانات العملاء تفضل بالفريق أو بتاعة المندوب بس، وأرقام التليفون تفضل مخفية عن اللي مش مسؤول عن العميل.
+
+**مؤجّل بطلب منك (27 أكتوبر):** النشر على السيرفر، وتشغيل الحملات فعليًا. القائمة في القسم 5 تحت «Deferred by the owner».
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #191 مدموج و`main` نضيف؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #206 مدموج و`main` نضيف (ما عدا #199 من الأكونت التاني — القسم 2e)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -240,23 +248,78 @@ pnpm dev                               # restart: API :4000, admin :3001, public
 
 Then hard-refresh the browser (Ctrl+Shift+R). Being on another branch (e.g. an old `claude/*` branch, which is reset after each merge) is the other usual cause.
 
-### 2d. #193 onwards (2026-10-27 →)
+### 2d. #192–#206 (2026-10-27 → 2026-10-28)
 
 | PR | Slice | Main points |
 |---|---|---|
-| #193 | FU1 | Follow-ups: activity kind (call/meeting/WhatsApp/follow-up/note), call result, next action, replies; «المتابعات» overdue / today / upcoming lists. |
-| #194 | LR1 | Lost reasons per company, asked when a lead is lost; «أسباب الخسارة» report. |
-| #195 | MC1 | Marketing campaigns: spend by day, ad links with `utm_campaign`, leads / interested / sales, cost per lead and per sale. |
-| #196 | MC2 | Leads arrive on their own: `POST /v1/intake/:slug/leads` with a company key, handed out in turn, first call. |
-| (this) | MG1 | **Data migration API** — another system (e.g. Engaz CRM) sends a company's projects, units, customers, leads and activities to `POST /v1/migration/:slug/{list}` with a key the platform owner makes on the company page («نقل بيانات من نظام تاني»). Format for the other side: `docs/DATA_MIGRATION_API.md`. |
+| #192 | Docs | This file. |
+| #198 | FU2 | Follow-ups reach the rep: a push 15 minutes before a lead's next action, an overdue alert 30 minutes after it (`follow-up-reminder.cron.ts`, once per follow-up time via `Lead.followUpRemindedFor/OverdueFor`), and a morning list at the company's 09:00 (reps: today + overdue; sales managers: their team). The customer page lists the customer's leads with the latest activity and next follow-up (`lastNote` on the leads list). |
+| #193 | FU1 | Follow-ups: `Lead.nextActionAt/Type/Note`; notes carry kind (call, meeting, WhatsApp…), call result, a next action and one-level replies; `GET leads/follow-ups(/summary)`; `/dashboard/follow-ups` page, nav badge (overdue + today). |
+| #194 | LR1 | Lost reasons per company (10 defaults, admin keeps the list), required when a lead is marked LOST; `GET leads/lost-report`; `/dashboard/lost-reasons`. |
+| #195 | MC1 | Marketing campaigns: `Campaign`, `CampaignSpend` (by date), `Lead.campaignId`, `campaigns:manage`; tracking links; website leads linked by `utm_campaign`. |
+| #196 | MC2 | Automatic lead intake: `LeadIntakeKey`, public `POST /v1/intake/:slug/leads` (Zapier / Make), round-robin over active SALES users (`leads.autoAssign`, `leads.roundRobinCursor`), first call (`leads.firstCallMinutes`); website leads routed the same way. |
+| #197 | MC3 | Campaign reports (`GET campaigns/report` + PDF / Excel; first-touch sales and revenue, CPL, CPA, ROI, by channel / project / month); the Facebook channel is «ميتا (فيسبوك + إنستجرام)» with leads split by platform (`utm_source={{site_source_name}}`); web-public keeps ad tags from any landing page for 30 days. |
+| #199 | MG1 | **Open — other account.** Data migration API. Merge steps in 2e. |
+| #200 | QA1 + MP1 | Call / WhatsApp buttons on leads (`POST leads/:id/contact` logs each tap, then the activity form opens); customer phones masked for anyone who is not responsible for the lead (`common/utils/contact-mask.ts`). |
+| #201 | DUP1 | «العملاء المكررين»: open leads that share a customer (`GET leads/duplicates`), merged into one (`POST leads/:id/merge`: notes, activity, visits, chats move; a lead with a reservation or a broker is never merged away). |
+| #202 | CAL1 | «التقويم» (`GET leads/calendar`): visits, follow-ups due, logged calls, reservation expiries and contract signings, a month at a time, in the caller's scope; rep filter for admins and managers. |
+| #203 | SES1 | Sessions: `AuthSession` (each sign-in; refresh tokens rotate inside it); the access token carries `sid`, so ending a session cuts that device off at once. «الأمان والأجهزة» page (own devices, sign out one / all others, password change); admin `GET/POST users/:id/sessions(/revoke)`; logout ends the session on the server. |
+| #204 | TFA1 | Two-step sign-in with an authenticator app (TOTP, RFC 6238). Optional per user; the admin can require it of admins or all staff (`security.require2fa`). Password → 5-minute challenge → `POST auth/2fa/verify`; setup during sign-in when required; ten one-use recovery codes; 5 wrong codes lock 15 min; admin reset for a lost phone. Secrets sealed with AES-256-GCM. |
+| #205 | TFA2 | The staff mobile app handles the code step, the setup step (open in the authenticator app / copy the key) and the recovery codes. |
+| #206 | LR2 | The staff mobile app asks why a lead is lost (company's active reasons, required; optional note) and shows it on the lead. |
+
+**Deploy notes (new since #191):** 9 migrations, all additive except where noted — `20261027090000_lead_follow_ups`, `20261027150000_lost_reasons` (seeds reasons, backfills `lostAt`), `20261027180000_marketing_campaigns`, `20261028090000_lead_intake`, `20261028150000_follow_up_reminders`, `20261028180000_lead_contact_opened`, `20261028200000_lead_merged`, `20261028220000_auth_sessions`, `20261028230000_two_factor` (plus #199's, renamed to `20261029090000_data_migration` — see 2e). API env: `PUBLIC_API_URL` (the intake address shown to Zapier; falls back to `API_BASE_URL`); optional `FOLLOW_UP_REMINDERS_ENABLED`, `FOLLOW_UP_DIGEST_HOUR`; **`TOTP_ENCRYPTION_KEY`** (seals two-step secrets; if unset a key is derived from `JWT_REFRESH_SECRET`, and rotating that secret would then switch everyone's two-step sign-in off — set it once, before anyone turns 2FA on, and keep it).
+
+**Known limits:** two leads arriving at the same instant may go to the same rep; WhatsApp and phone leads are tied to a campaign by hand; a lead created by hand can still give a customer a second open lead (the duplicates tab catches it later; a warning at create time was offered, not yet asked for); web-public does not pass the browser's user agent, so customer sessions show the server's (customers have no devices page); the staff app's "open in authenticator app" was not tried on a real device.
+
+**Competitor-gap backlog:** done (#200–#206). Resale/rentals is the owner's call. Academy, jobs and a social timeline are not wanted.
+
+### 2e. Merging #199 (MG1 — data migration API, other account) — step by step
+
+> For the Claude session on the other account that owns #199 (branch `claude/awesome-galileo-ob9jmm`). Since it was opened, `main` moved by #198 and #200–#206. **This was rehearsed on 2026-10-28 against `main` at `f2615e6`:** merging `main` into the branch conflicts in exactly two files, and after the steps below the API typechecks, the unit suite passes (176 suites / 2,679 tests), e2e `e2e-mg1-data-migration` passes next to `e2e-tfa1-two-factor`, `e2e-ses1-sessions` and `e2e-isolated-apps`, the security suite passes except A9-2 (needs MinIO; local only), and web-admin typechecks.
+
+1. **Bring `main` in (merge, never rebase or force-push):**
+   ```bash
+   git fetch origin main claude/awesome-galileo-ob9jmm
+   git checkout claude/awesome-galileo-ob9jmm
+   git pull origin claude/awesome-galileo-ob9jmm
+   git merge origin/main
+   ```
+2. **Resolve `.github/workflows/ci.yml`** (the e2e-2 `--testPathPattern` line): take `main`'s line as it is and add `|e2e-mg1-data-migration` at the end, before the closing quote. It must end `...|e2e-cal1-calendar|e2e-ses1-sessions|e2e-tfa1-two-factor|e2e-mg1-data-migration"`. Nothing else in the file conflicts.
+3. **Resolve `docs/HANDOFF.md`:** take `main`'s version of the whole file (it already lists #199 in 2d and has this section). Then move the MG1 text from your side into a new section **2f. MG1 — design and next steps** right after this one: the "MG1 design (owner-approved 2026-10-27)" paragraph, the "MG1 deploy" paragraph (with the new migration name from step 4) and "Next — MG2". Drop your old "Competitor-gap backlog" line; it is done.
+4. **Rename the migration so it runs after `main`'s.** `main` now has five migrations later than `20261028120000` (`20261028150000_follow_up_reminders`, `20261028180000_lead_contact_opened`, `20261028200000_lead_merged`, `20261028220000_auth_sessions`, `20261028230000_two_factor`). Left as is, MG1's would sit before migrations that databases have already applied. Production has run none of them yet (the deploy is deferred), so renaming is safe:
+   ```bash
+   git mv apps/api/prisma/migrations/20261028120000_data_migration \
+          apps/api/prisma/migrations/20261029090000_data_migration
+   ```
+   Change the name everywhere it is written: the PR body's "Deploy" section, and the HANDOFF text from step 3. The SQL does not change.
+5. **Fix your local databases** (each one where the old name was registered, e.g. `realestate_pw` and `realestate_e2e`):
+   ```bash
+   psql "postgresql://postgres:postgres@localhost:5432/<db>" -c \
+     "UPDATE \"_prisma_migrations\" SET migration_name='20261029090000_data_migration' WHERE migration_name='20261028120000_data_migration';"
+   ```
+   Then apply `main`'s five migrations by the strict order in CLAUDE.md for each one: `psql -v ON_ERROR_STOP=1 < migration.sql`, then `npx prisma migrate resolve --applied <name>`. Then `pnpm db:schema-check` must exit 0, and run `pnpm db:generate`. (The e2e database is rebuilt by its global setup anyway.)
+6. **Check before pushing:**
+   ```bash
+   pnpm --filter @rep/api exec tsc --noEmit -p tsconfig.json
+   pnpm --filter @rep/api exec jest src            # needs JWT_ACCESS_SECRET / JWT_REFRESH_SECRET set
+   # e2e (TEST_DATABASE_URL on an *_e2e database, --runInBand):
+   pnpm --filter @rep/api exec jest -c test/jest-e2e.json --runInBand \
+     --testPathPattern "e2e-mg1|e2e-tfa1|e2e-ses1|e2e-isolated-apps"
+   pnpm --filter @rep/api exec jest -c test/jest-security.json --runInBand
+   pnpm --filter web-admin exec tsc --noEmit
+   ```
+   Expect the counts above. The tenancy tests do not need changing: #203 added `AuthSession` as `TENANT_VIA_RELATION`, so your TENANT_OWNED count of 70 stays right.
+7. **Commit the merge and push normally** (`git commit`, then `git push origin claude/awesome-galileo-ob9jmm`, no force). Wait for CI to go green on the new head, then tell the owner it is ready; **the owner approves the merge** (squash).
+8. **After it merges**, add the deploy note to the production checklist in section 5: the migration `20261029090000_data_migration` runs with the others, and the other system needs `PUBLIC_API_URL`.
+
+### 2f. MG1 — design and next steps
 
 **MG1 design (owner-approved 2026-10-27):** one generic format for every system, not tied to Engaz. Records are matched by the other system's id (`MigrationRecord`, unique per company + `sourceSystem` + entity + `externalId`), so sending again updates; each record is checked on its own; `?dryRun=true` rolls each record back. Any field not in the format, and values not recognised (stage, source, unit type, person, activity kind), are kept on the record (`extra`, `unmapped`) — never guessed. Unknown stage → NEW; unknown source → «نقل بيانات»; units sold or booked over there are refused (decision 2026-10-18: SOLD only by a contract). Moved-in data sends no notifications and is not handed out. Phase 1 scope: no contracts, instalments or payments (Engaz has none).
 
-**MG1 deploy:** one additive migration, `20261028120000_data_migration`. The other system needs the public API address (`PUBLIC_API_URL` on web-admin, else `API_BASE_URL`, is what the panel shows).
+**MG1 deploy:** one additive migration, `20261029090000_data_migration`. The other system needs the public API address (`PUBLIC_API_URL` on web-admin, else `API_BASE_URL`, is what the panel shows).
 
 **Next — MG2 (approved, not started):** the mapping screen. For a source system, the platform owner maps each kept value / extra field once (to a stage, a source, a unit type, a person, a customer field, a note, or ignore); the choice is saved per system and applied to the records already moved and to later companies from the same system. Then phase 2: the same mapping on any Excel/CSV file from any system. Later, if wanted: contracts/instalments/payments, and the reverse (a company taking its data out over the API).
-
-**Competitor-gap backlog** (proposed, not yet approved): call & WhatsApp buttons, masked phones, duplicates tab, calendar; sessions / linked devices and 2FA. Resale/rentals is the owner's call. Academy, jobs and a social timeline are not wanted.
 
 ## 3. Round 4 — the plan (U1–U4 done; U5 in progress)
 
@@ -457,6 +520,42 @@ Four read-only audits of every money figure (reports, dashboard, exports, the sc
 Left for the owner, not in V1–V3:
 - The leaderboard share % is of the top 10 brokers.
 
+## 4c. Next: permissions that open pages (PRM) — owner-approved direction, 2026-10-28
+
+> Owner: «أنا أعتقد 2 أفضل من ناحية قوة المنصة» — build it from the other account (limits on this one). Work in the phases below, one PR per phase (or smaller), each merged only after the owner says so.
+
+**Today (checked 2026-10-28 on `main` 307b41d):** a permission can only *narrow* what a role does; it never opens anything.
+- Guards run in this order (`apps/api/src/app.module.ts`): `JwtAuthGuard` → `CompanyLifecycleGuard` → `RolesGuard` → `PermissionsGuard` → `CapabilityGuard`. `RolesGuard` (`common/guards/roles.guard.ts`) refuses before the permission is looked at, so ticking e.g. `reports:sales:read` for a SALES user changes nothing: the routes are `@Roles(UserRole.ADMIN)`.
+- The sidebar is role-based (`apps/web-admin/src/lib/nav.ts`: `filterNavForRole`, `admin` / `manager` / `salesActorOnly` flags); permissions are not read.
+- The per-user permissions page (`/dashboard/users/[id]/permissions`, API `GET /users/:id/permissions` in `modules/permissions/permissions.module.ts`) offers the whole catalogue to any role, so an admin can tick codes that do nothing.
+- A rough scan of the controllers (`@Roles` + `@Permissions` on the same route) found ~98 codes in use, ~65 of them only on `@Roles(ADMIN)` routes. Redo the scan as step 1 below; the number is approximate.
+- New users get their role's starting codes (`modules/permissions/role-default-permissions.ts`).
+
+**Target:** the permission opens the page. A role becomes a starting template of codes; any staff member of the company (ADMIN, SALES_MANAGER, SALES, MAINTENANCE_SUPERVISOR; not CLIENT/CUSTOMER; brokers keep their own portal) who holds a code can use the routes and the page behind it.
+
+**Rules (owner-approved unless marked):**
+1. **Dangerous codes stay ADMIN-only even when ticked:** `permissions:manage`, all `users:*`, `settings:read`/`settings:write`, data export (`/dashboard/data-export`), data import, `company_branding:manage`, `audit:read`, anything under `super-admin`. Otherwise a user could grant themselves everything. Keep this list in one place (e.g. `common/permissions/admin-only-codes.ts`) and enforce it in the guard **and** in `PUT /users/:id/permissions` (refuse to assign them to non-admins), with an e2e test.
+2. **Data scope — owner-approved 2026-10-28:**
+   - **Money, reports and admin pages** (deposits, cheques, ledger, installments, financial / sales / operational reports, brokers and their commissions and payouts, maintenance, campaigns, inventory edits…): a non-admin who is granted the code sees **the whole company**, as the admin does. The admin granted it on purpose; these records are not owned by a rep, so a "their own" view would be empty.
+   - **Sales and customer data keeps today's scope** whatever extra codes are granted: leads, follow-ups, calendar, duplicates, sales-team performance. A rep sees their own, a sales manager their team (`resolveSalesScope`).
+   - **Phone numbers stay masked** for anyone not responsible for the customer (`common/utils/contact-mask.ts`, #200), on every page including reports.
+3. Tenant scoping is untouched: every query keeps `companyId` (CLAUDE.md).
+4. Nothing the admin can do today is lost; an ADMIN still passes every check (keep `adminBypass` behaviour).
+
+**Phase 1 — the gate (one PR):**
+- Re-scan and write a table in the PR: each code → routes → today's `@Roles` → the new rule.
+- Introduce a decorator/guard pair so a route can say "staff with this code" (e.g. `@Roles(...STAFF_ROLES)` + `@Permissions(code)`), and switch the ADMIN-only routes whose code is *not* on the dangerous list. Do it module by module; leave routes without `@Permissions` as they are.
+- Before switching a module, read its service for admin-only assumptions (e.g. a query with no sales scope because "only admins call this") and note what a non-admin would see; anything that depends on the decision in rule 2 waits for phase 2.
+- web-admin: build the sidebar from the session's codes (expose them on `GET /users/me` or the session cookie payload) instead of the `admin` flag; pages that guard on role server-side (`requireAdmin` etc.) switch to the code.
+- Permissions page: group codes; dangerous ones shown locked with «لمدير النظام فقط» for non-admins.
+- Tests: e2e per switched module — a SALES user without the code gets 403, with it gets 200 and sees what rule 2 says; a non-admin can never be given a dangerous code; existing security specs stay green (never widen a security assertion — CLAUDE.md).
+
+**Phase 2 — data scope:** apply rule 2 per group of pages (reports, money, brokers, maintenance, campaigns, inventory edits), each with an e2e test of what a granted non-admin sees.
+
+**Phase 3 (optional) — company role templates:** an admin saves a named set of codes («محاسب», «تسويق», «سكرتارية») and applies it to a user in one step; changing the template can update its users.
+
+**Watch out for:** the throttled login in Playwright (5/min on `login-staff`; see `e2e/two-factor.spec.ts` `formLogin`), the shared admin storage in Playwright (create your own users and delete them — inactive users still use a plan seat), and the mobile staff app (it is role-based too; keep its behaviour unless the owner asks).
+
 ## 5. Other open items
 
 - **Old contracts that bill the final payment twice** (converted before #83): the owner chose a script — `scripts/fix-double-final-payment.ts` (logic in `src/modules/contracts/double-final-payment.ts`). Run it on production: take a backup (`scripts/db-backup.sh`), then `pnpm --filter @rep/api contracts:fix-double-final-payment:dry-run` to list them, then `pnpm --filter @rep/api contracts:fix-double-final-payment` to correct them. It takes the excess off the unpaid monthly rows (audit `contract.schedule-corrected`); contracts with a payment waiting, or already paid above the price (a refund), are listed for an admin.
@@ -470,4 +569,8 @@ Left for the owner, not in V1–V3:
 - **Leaderboard share:** a broker's share % is of the top 10 brokers only. This is the owner's call.
 - **Mobile fee labels:** the customer app shows a FEE payment as a normal "payment", the staff app prints `FEE`. Needs Flutter (not available in the cloud container).
 - **Owner's own tasks:** hosting/deployment (deploys are manual — see 2c), `ANTHROPIC_API_KEY` and `SUPER_ADMIN_*` on the API host, Android keystore and Firebase secrets for company apps, restricting the Firebase API key, GitHub branch protection on `main`.
+- **Deferred by the owner (2026-10-27, «حطها في التأجيلات»):**
+  - Production deploy of everything since 2026-09-18 (#114–#206): take a backup first, run the migrations of 2b, 2c and 2d, then `pnpm db:schema-check`; then Actions → "CD — Deploy to Production".
+  - API env on the server: `PUBLIC_API_URL`, `ANTHROPIC_API_KEY`, `SUPER_ADMIN_*`, `TOTP_ENCRYPTION_KEY` (before anyone turns two-step sign-in on).
+  - Campaigns go-live: check the company's website domain is set (ad links use it), connect a Zapier or Make account for Meta lead forms, then run a small test campaign and check its leads arrive.
 - Older backlog docs: `docs/BACKLOG.md`, `docs/EXECUTION_BACKLOG.md`, `docs/PROJECT_CURRENT_STATE.md` (may be behind this file).

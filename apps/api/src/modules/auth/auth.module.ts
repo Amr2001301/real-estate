@@ -8,6 +8,7 @@ import { JwtStrategy } from './jwt.strategy';
 import { SmsService } from './sms.service';
 import { EmailService } from './email.service';
 import { TenantResolverService } from './tenant-resolver.service';
+import { TwoFactorService } from './two-factor.service';
 import { CapabilityModule } from '../../common/capabilities/capability.module';
 
 @Module({
@@ -24,9 +25,9 @@ import { CapabilityModule } from '../../common/capabilities/capability.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, SmsService, EmailService, TenantResolverService],
+  providers: [AuthService, JwtStrategy, SmsService, EmailService, TenantResolverService, TwoFactorService],
   // TenantResolverService exported so TenantContextInterceptor (APP_INTERCEPTOR in
   // AppModule) can inject it for MT-031 authenticated slug mismatch checks.
-  exports: [AuthService, EmailService, TenantResolverService, SmsService],
+  exports: [AuthService, EmailService, TenantResolverService, SmsService, TwoFactorService],
 })
 export class AuthModule {}
