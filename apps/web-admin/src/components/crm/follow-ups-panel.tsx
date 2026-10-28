@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { CalendarClock, CheckCircle2, MessageCircle, Phone } from 'lucide-react';
+import { QuickContact } from '@/components/crm/quick-contact';
+import { CalendarClock, CheckCircle2 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { FollowUpLead, FollowUpSummary, Paged } from '@/lib/types';
 import type { Locale } from '@/lib/locale';
@@ -7,7 +8,7 @@ import { formatDateTime } from '@/lib/format';
 import { PremiumPanel } from '@/components/premium';
 import { cn } from '@/lib/cn';
 import { KIND_ICON } from './follow-up-icons';
-import { followUpT, whatsappHref } from './follow-up-messages';
+import { followUpT } from './follow-up-messages';
 
 /**
  * «متابعات اليوم» on the dashboard home: how many follow-ups are overdue,
@@ -83,12 +84,8 @@ export async function FollowUpsPanel({ locale, limit = 5 }: { locale: Locale; li
                       <span className="truncate text-slate-500">· {f.nextType[l.nextActionType ?? 'FOLLOW_UP']}</span>
                     </p>
                   </div>
-                  <a href={`tel:${phone}`} aria-label={f.page.call} className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-surface-muted hover:text-brand-700">
-                    <Phone className="h-4 w-4" />
-                  </a>
-                  <a href={whatsappHref(phone)} target="_blank" rel="noopener noreferrer" aria-label={f.page.whatsapp} className="inline-flex h-8 w-8 items-center justify-center rounded-full text-emerald-600 hover:bg-surface-muted">
-                    <MessageCircle className="h-4 w-4" />
-                  </a>
+                  <QuickContact leadId={l.id} phone={phone} kind="CALL" label={f.page.call} />
+                  <QuickContact leadId={l.id} phone={phone} kind="WHATSAPP" label={f.page.whatsapp} />
                 </li>
               );
             })}

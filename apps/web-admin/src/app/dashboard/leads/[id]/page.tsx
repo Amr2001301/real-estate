@@ -12,7 +12,6 @@ import {
   CheckCircle2,
   BarChart2,
   CalendarClock,
-  MessageCircle,
   Megaphone,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
@@ -32,9 +31,10 @@ import {
 import { StageSegmented } from '@/components/crm/stage-segmented';
 import { assignLeadAction } from '../actions';
 import { ActivityComposer } from '@/components/crm/activity-composer';
+import { QuickContact } from '@/components/crm/quick-contact';
 import { NoteReply } from '@/components/crm/note-reply';
 import { KIND_ICON, RESULT_TONE } from '@/components/crm/follow-up-icons';
-import { followUpState, followUpT, whatsappHref } from '@/components/crm/follow-up-messages';
+import { followUpState, followUpT } from '@/components/crm/follow-up-messages';
 import { lostT } from '@/components/crm/lost-messages';
 import { salesActorLabel } from '@/lib/sales-actor';
 import { PremiumDetailLayout, PremiumPanel, PremiumEmptyNote } from '@/components/premium';
@@ -83,10 +83,15 @@ function initials(name: string): string {
 
 export default async function LeadDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ log?: string; t?: string }>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
+  // Came from a call / WhatsApp button: open the log on that kind.
+  const logKind = sp.log === 'CALL' || sp.log === 'WHATSAPP' ? sp.log : undefined;
   const locale = await getLocale();
   const m = uiT(locale).leadDetailPage;
   const f = followUpT(locale);
@@ -195,6 +200,9 @@ export default async function LeadDetailPage({
     if (type === 'broker_submitted') return { label: m.activityBrokerSubmitted, dotColor: 'bg-indigo-500' };
     if (type.startsWith('broker_')) return { label: m.activityBroker[type] ?? m.activityOther, dotColor: 'bg-indigo-500' };
     if (type === 'returned') return { label: m.activityReturned, dotColor: 'bg-brand-500' };
+    if (type === 'contact_opened') {
+      return { label: m.activityContactOpened(str('kind') === 'WHATSAPP', str('by') ?? null), dotColor: str('kind') === 'WHATSAPP' ? 'bg-emerald-500' : 'bg-sky-500' };
+    }
     if (type.startsWith('relinked')) return { label: m.activityRelinked, dotColor: 'bg-slate-400' };
     return { label: m.activityOther, dotColor: 'bg-slate-400' };
   }
@@ -266,16 +274,8 @@ export default async function LeadDetailPage({
                   <Button variant="outline" size="md" leftIcon={<ExternalLink className="h-4 w-4" />}>{m.btnClientProfile}</Button>
                 </Link>
               )}
-              {displayPhone && (
-                <a href={`tel:${displayPhone}`}>
-                  <Button variant="outline" size="md" leftIcon={<Phone className="h-4 w-4" />}>{m.btnCall}</Button>
-                </a>
-              )}
-              {displayPhone && (
-                <a href={whatsappHref(displayPhone)} target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="md" leftIcon={<MessageCircle className="h-4 w-4" />}>{f.page.whatsapp}</Button>
-                </a>
-              )}
+              {displayPhone && <QuickContact variant="button" leadId={lead.id} phone={displayPhone} kind="CALL" label={m.btnCall} />}
+              {displayPhone && <QuickContact variant="button" leadId={lead.id} phone={displayPhone} kind="WHATSAPP" label={f.page.whatsapp} />}
               {displayEmail && (
                 <a href={`mailto:${displayEmail}`}>
                   <Button variant="primary" size="md" leftIcon={<Mail className="h-4 w-4" />}>{m.btnEmail}</Button>
@@ -337,12 +337,16 @@ export default async function LeadDetailPage({
                   <p>{f.current.none}</p>
                 )}
               </div>
-              <ActivityComposer
-                leadId={lead.id}
-                m={f}
-                hasNextAction={!!lead.nextActionAt}
-                closed={lead.stage === 'WON' || lead.stage === 'LOST'}
-              />
+              <div id="activity" className="scroll-mt-24">
+                <ActivityComposer
+                  key={sp.t ?? 'composer'}
+                  leadId={lead.id}
+                  m={f}
+                  hasNextAction={!!lead.nextActionAt}
+                  closed={lead.stage === 'WON' || lead.stage === 'LOST'}
+                  logKind={logKind}
+                />
+              </div>
             </PremiumPanel>
 
             {/* Timeline */}

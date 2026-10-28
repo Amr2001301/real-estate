@@ -165,3 +165,10 @@ export async function followUpStaff(
     select: { id: true, role: true, managerId: true },
   });
 }
+
+/** A staff member's name in the current tenant (who opened a call, MP1). */
+export async function staffName(prisma: PrismaService, userId: string): Promise<string | null> {
+  const companyId = getRequiredCompanyId();
+  const u = await prisma.user.findFirst({ where: { id: userId, companyId }, select: { fullName: true } });
+  return u?.fullName ?? null;
+}

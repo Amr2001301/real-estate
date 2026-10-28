@@ -2,7 +2,6 @@
 
 import {
   Building2,
-  Phone,
   Mail,
   GripVertical,
   CalendarClock,
@@ -13,6 +12,7 @@ import { formatDateTime, tx } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import type { Locale } from '@/lib/locale';
 import Link from 'next/link';
+import { QuickContact } from './quick-contact';
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -120,9 +120,10 @@ function LeadCardBody({ lead, dragging, showGrip, locale = 'ar' }: InnerProps) {
         </span>
         <span className="ms-auto flex items-center gap-1.5">
           {phone && (
-            <span title={phone} aria-label={phone} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline bg-surface text-slate-700">
-              <Phone className="h-3.5 w-3.5" aria-hidden />
-            </span>
+            <>
+              <QuickContact leadId={lead.id} phone={phone} kind="CALL" label={locale === 'en' ? 'Call' : 'اتصال'} />
+              <QuickContact leadId={lead.id} phone={phone} kind="WHATSAPP" label={locale === 'en' ? 'WhatsApp' : 'واتساب'} />
+            </>
           )}
           {email && (
             <span title={email} aria-label={email} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline bg-surface text-slate-700">

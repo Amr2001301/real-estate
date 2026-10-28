@@ -1357,6 +1357,8 @@ enum LeadActivityType {
   created
   /// An open lead came in again (a form, an ad) — kept on the existing lead.
   returned
+  /// A call or WhatsApp chat opened from the lead's buttons (who, which).
+  contact_opened
   assigned
   status_change
   visit
