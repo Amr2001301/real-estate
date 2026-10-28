@@ -5,6 +5,7 @@ import type { CampaignDetail } from '@/lib/types';
 import { compactParts, formatDate, tx } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { getSession } from '@/lib/session';
+import { can } from '@/lib/permissions';
 import { currencySymbol, getCompanyTimeZone, getReportsCurrency, todayIn } from '@/lib/currency';
 import { uiT } from '@/messages/ui';
 import { PremiumBars, PremiumMetricStrip, PremiumPanel } from '@/components/premium';
@@ -29,7 +30,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
   }
   const c = res.data;
   const s = c.stats;
-  const canManage = session?.role === 'ADMIN';
+  const canManage = session?.role === 'ADMIN' || (await can('campaigns:manage'));
   const parts = (n: number | null) => (n == null ? (['—', ''] as const) : compactParts(n, symbol, locale));
   const full = (n: number) => `${n.toLocaleString(locale === 'en' ? 'en-EG' : 'ar-EG-u-nu-latn', { maximumFractionDigits: 2 })} ${symbol}`;
   const dateOf = (v: string) => formatDate(v, locale, 'UTC');

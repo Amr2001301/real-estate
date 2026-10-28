@@ -12,6 +12,7 @@ import {
 } from '@/components/notifications/notification-preferences';
 import { PremiumPageHero, PremiumPanel } from '@/components/premium';
 import { getSession } from '@/lib/session';
+import { getMyCodes } from '@/lib/permissions';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 
@@ -72,6 +73,10 @@ export default async function AdminNotificationsInboxPage({
   const lastDate = page === 1 && items.length > 0 ? (items[0]?.createdAt ?? null) : null;
 
   const isAdmin = session?.role === 'ADMIN';
+  // Sending and the templates open to whoever holds their code (PRM).
+  const codes = await getMyCodes();
+  const canSend = isAdmin || codes.has('notifications:send');
+  const canTemplates = isAdmin || codes.has('notifications:templates:manage');
 
   return (
     <div className="flex flex-col gap-5 pb-2 lg:gap-6">
@@ -91,19 +96,23 @@ export default async function AdminNotificationsInboxPage({
           ) : undefined
         }
         actions={
-          // Sending and the templates are the admin's (the API refuses others).
-          isAdmin ? (
+          // Sending and the templates: the admin, or whoever holds their code.
+          canSend || canTemplates ? (
             <div className="flex items-center gap-2" data-testid="notifications-admin-actions">
-              <Link href="/dashboard/notifications/broadcast">
-                <Button variant="primary" size="sm" leftIcon={<Megaphone className="h-3.5 w-3.5" />}>
-                  {m.sendBtn}
-                </Button>
-              </Link>
-              <Link href="/dashboard/notifications/templates">
-                <Button variant="outline" size="sm" leftIcon={<FileEdit className="h-3.5 w-3.5" />}>
-                  {m.templatesBtn}
-                </Button>
-              </Link>
+              {canSend && (
+                <Link href="/dashboard/notifications/broadcast">
+                  <Button variant="primary" size="sm" leftIcon={<Megaphone className="h-3.5 w-3.5" />}>
+                    {m.sendBtn}
+                  </Button>
+                </Link>
+              )}
+              {canTemplates && (
+                <Link href="/dashboard/notifications/templates">
+                  <Button variant="outline" size="sm" leftIcon={<FileEdit className="h-3.5 w-3.5" />}>
+                    {m.templatesBtn}
+                  </Button>
+                </Link>
+              )}
             </div>
           ) : undefined
         }

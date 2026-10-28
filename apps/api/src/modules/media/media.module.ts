@@ -16,6 +16,7 @@ import { Type } from 'class-transformer';
 import { MediaType, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { R2Service } from './r2.service';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
@@ -191,6 +192,7 @@ class MediaController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('project_media:manage')
+  @GrantedBy('project_media:manage')
   @Post('presign')
   presign(@Body() dto: CreatePresignedDto) {
     return this.media.presign(dto);
@@ -198,6 +200,7 @@ class MediaController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('project_media:manage')
+  @GrantedBy('project_media:manage')
   @Post('projects')
   attachProject(@Body() dto: AttachProjectMediaDto) {
     return this.media.attachProject(dto);
@@ -205,6 +208,7 @@ class MediaController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('project_media:manage')
+  @GrantedBy('project_media:manage')
   @Post('units')
   attachUnit(@Body() dto: AttachUnitMediaDto) {
     return this.media.attachUnit(dto);
@@ -212,6 +216,7 @@ class MediaController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('project_media:manage')
+  @GrantedBy('project_media:manage')
   @Delete('projects/:id')
   removeProject(@Param('id', ParseUUIDPipe) id: string) {
     return this.media.removeProjectMedia(id);
@@ -219,6 +224,7 @@ class MediaController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('project_media:manage')
+  @GrantedBy('project_media:manage')
   @Delete('units/:id')
   removeUnit(@Param('id', ParseUUIDPipe) id: string) {
     return this.media.removeUnitMedia(id);

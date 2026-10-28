@@ -20,6 +20,7 @@ import {
 import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 
@@ -181,6 +182,7 @@ class CmsController {
   // Admin — Pages
   @Roles(UserRole.ADMIN)
   @Permissions('cms:pages:manage')
+  @GrantedBy('cms:pages:manage')
   @Get('cms/pages')
   listPages() {
     return this.svc.listPages();
@@ -188,6 +190,7 @@ class CmsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('cms:pages:manage')
+  @GrantedBy('cms:pages:manage')
   @Post('cms/pages')
   upsertPage(@Body() dto: UpsertPageDto) {
     return this.svc.upsertPage(dto);
@@ -196,6 +199,7 @@ class CmsController {
   // Admin — Banners
   @Roles(UserRole.ADMIN)
   @Permissions('cms:banners:manage')
+  @GrantedBy('cms:banners:manage')
   @Get('cms/banners')
   listBanners() {
     return this.svc.listBanners();
@@ -203,6 +207,7 @@ class CmsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('cms:banners:manage')
+  @GrantedBy('cms:banners:manage')
   @Post('cms/banners')
   createBanner(@Body() dto: UpsertBannerDto) {
     return this.svc.createBanner(dto);
@@ -210,6 +215,7 @@ class CmsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('cms:banners:manage')
+  @GrantedBy('cms:banners:manage')
   @Delete('cms/banners/:id')
   removeBanner(@Param('id', ParseUUIDPipe) id: string) {
     return this.svc.removeBanner(id);
@@ -218,6 +224,7 @@ class CmsController {
   // Admin — Articles
   @Roles(UserRole.ADMIN)
   @Permissions('cms:articles:manage')
+  @GrantedBy('cms:articles:manage')
   @Get('cms/articles')
   listArticles() {
     return this.svc.listArticles();
@@ -225,6 +232,7 @@ class CmsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('cms:articles:manage')
+  @GrantedBy('cms:articles:manage')
   @Get('cms/articles/:slug')
   getArticle(@Param('slug') slug: string) {
     return this.svc.getArticle(slug);
@@ -232,6 +240,7 @@ class CmsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('cms:articles:manage')
+  @GrantedBy('cms:articles:manage')
   @Post('cms/articles')
   upsertArticle(@Body() dto: UpsertArticleDto) {
     return this.svc.upsertArticle(dto);

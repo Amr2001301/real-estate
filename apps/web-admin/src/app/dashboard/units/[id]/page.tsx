@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
+import { getMyCodes } from '@/lib/permissions';
 import { getLocale, type Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import type {
@@ -72,6 +73,9 @@ export default async function UnitDetailPage({
   const unit = unitRes.data;
   const session = await getSession();
   const isAdmin = session?.role === 'ADMIN';
+  const codes = await getMyCodes();
+  const canEdit = isAdmin || codes.has('units:update');
+  const canDelete = isAdmin || codes.has('units:delete');
   const projectName = tx(unit.building?.phase?.project?.name);
   const phaseName = tx(unit.building?.phase?.name);
   const buildingName = unit.building?.name;
@@ -172,7 +176,7 @@ export default async function UnitDetailPage({
                   {formatCurrency(unit.price, currency, locale)}
                 </p>
               </div>
-              {isAdmin && (
+              {canEdit && (
                 <Link href={`/dashboard/units/${id}/edit` as never}>
                   <Button
                     variant="outline"
@@ -405,7 +409,7 @@ export default async function UnitDetailPage({
 
             <UnitMediaPanel unit={unit} locale={locale} />
 
-            {isAdmin && (
+            {canDelete && (
               <PremiumPanel title={m.dangerTitle} className="border-danger-500/25">
                 <p className="mb-4 text-[12.5px] leading-relaxed text-slate-500">{m.dangerDesc}</p>
                 <ConfirmButton

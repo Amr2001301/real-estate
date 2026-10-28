@@ -47,6 +47,8 @@ interface PermissionItem {
   id: string;
   code: string;
   description: string | null;
+  /** People, permissions, settings, branding, audit log: admins only (PRM). */
+  adminOnly?: boolean;
 }
 
 interface Props {
@@ -54,6 +56,8 @@ interface Props {
   userName: string;
   assigned: PermissionItem[];
   available: PermissionItem[];
+  /** The user being edited is an admin: nothing is locked for them. */
+  targetIsAdmin?: boolean;
   locale?: Locale;
 }
 
@@ -67,11 +71,13 @@ interface Row extends PermissionItem {
   desc: string;
   group: string;
   type: PermissionType;
+  /** An admin-only code on a non-admin: cannot be given (one held from before can be removed). */
+  locked: boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function PermissionPicker({ userId, userName, assigned, available, locale = 'ar' }: Props) {
+export function PermissionPicker({ userId, userName, assigned, available, targetIsAdmin = false, locale = 'ar' }: Props) {
   const m = uiT(locale).userPermissionsPage;
   const router = useRouter();
   const [query, setQuery]       = useState('');
@@ -87,10 +93,10 @@ export function PermissionPicker({ userId, userName, assigned, available, locale
     ]
       .map((p) => {
         const meta = getPermissionMeta(p.code, p.description);
-        return { ...p, label: meta.label, desc: meta.description, group: meta.category, type: meta.type };
+        return { ...p, label: meta.label, desc: meta.description, group: meta.category, type: meta.type, locked: !targetIsAdmin && !!p.adminOnly };
       })
       .sort((a, b) => a.label.localeCompare(b.label, 'ar'));
-  }, [assigned, available]);
+  }, [assigned, available, targetIsAdmin]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -134,7 +140,7 @@ export function PermissionPicker({ userId, userName, assigned, available, locale
     else              run([row.code], [], row.code);
   }
 
-  const matchUnassigned = visible.filter((r) => !r.assigned).map((r) => r.code);
+  const matchUnassigned = visible.filter((r) => !r.assigned && !r.locked).map((r) => r.code);
   const matchAssigned   = visible.filter((r) =>  r.assigned).map((r) => r.code);
 
   return (
@@ -215,7 +221,8 @@ export function PermissionPicker({ userId, userName, assigned, available, locale
       ) : (
         groups.map(([group, rows]) => {
           const granted = rows.filter((r) => r.assigned).length;
-          const allGranted = granted === rows.length;
+          const grantable = rows.filter((r) => !r.locked || r.assigned);
+          const allGranted = grantable.length > 0 && granted === grantable.length;
           const icon = CATEGORY_ICON[group] ?? <ShieldCheck />;
           return (
             <section
@@ -238,11 +245,11 @@ export function PermissionPicker({ userId, userName, assigned, available, locale
                 </div>
                 <button
                   type="button"
-                  disabled={pending}
+                  disabled={pending || grantable.length === 0}
                   onClick={() =>
                     allGranted
-                      ? run([], rows.map((r) => r.code), null)
-                      : run(rows.filter((r) => !r.assigned).map((r) => r.code), [], null)
+                      ? run([], rows.filter((r) => r.assigned).map((r) => r.code), null)
+                      : run(rows.filter((r) => !r.assigned && !r.locked).map((r) => r.code), [], null)
                   }
                   className="rounded-full border border-hairline px-3.5 py-1.5 text-[12px] font-semibold text-slate-600 transition-colors hover:border-brand-500/40 hover:text-brand-700 disabled:opacity-50"
                 >
@@ -259,7 +266,7 @@ export function PermissionPicker({ userId, userName, assigned, available, locale
                       aria-checked={row.assigned}
                       aria-label={row.label}
                       title={row.code}
-                      disabled={pending}
+                      disabled={pending || (row.locked && !row.assigned)}
                       onClick={() => toggle(row)}
                       data-testid="permission-toggle"
                       className={cn(
@@ -272,6 +279,12 @@ export function PermissionPicker({ userId, userName, assigned, available, locale
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-2">
                           <span className={cn('text-[13.5px] font-semibold leading-tight', row.assigned ? 'text-slate-900' : 'text-slate-700')}>{row.label}</span>
+                          {row.locked && (
+                            <span data-testid="permission-admin-only" className="inline-flex items-center gap-1 rounded-full bg-slate-500/10 px-2 py-0.5 text-[10px] font-semibold leading-tight text-slate-600">
+                              <Lock className="h-3 w-3" />
+                              {m.adminOnly}
+                            </span>
+                          )}
                           <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold leading-tight', PERMISSION_TYPE_CLS[row.type])}>
                             {row.type}
                           </span>

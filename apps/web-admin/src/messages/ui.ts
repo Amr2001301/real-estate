@@ -4424,6 +4424,7 @@ const UI = {
       badgeDraft: 'مسودة',
     },
     userPermissionsPage: {
+      adminOnly: 'لمدير النظام فقط',
       titlePrefix: 'صلاحيات:',
       description: 'إدارة الصلاحيات التفصيلية لهذا المستخدم. لا تغيِّر هذه الصفحة الدور الأساسي.',
       breadcrumbDashboard: 'لوحة التحكم',
@@ -10344,6 +10345,7 @@ const UI = {
       badgeDraft: 'Draft',
     },
     userPermissionsPage: {
+      adminOnly: 'Admins only',
       titlePrefix: 'Permissions:',
       description: "Manage detailed permissions for this user. This page does not change the user's primary role.",
       breadcrumbDashboard: 'Dashboard',

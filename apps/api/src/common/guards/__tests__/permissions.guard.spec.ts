@@ -12,6 +12,7 @@ import {
 interface MockReq {
   user?: { sub?: string; role?: UserRole };
   _userPermissions?: Set<string>;
+  _grantedBy?: string;
 }
 
 function makeContext(req: MockReq): ExecutionContext {
@@ -81,14 +82,14 @@ describe('PermissionsGuard', () => {
 
   it('throws structured 403 when the user is unauthenticated', async () => {
     const guard = new PermissionsGuard(
-      makeReflectorWithMeta({ codes: ['settings:read'], adminBypass: true }),
+      makeReflectorWithMeta({ codes: ['reports:sales:read'], adminBypass: true }),
       makePrismaWithCodes([], { count: 0 }),
     );
     const ctx = makeContext({});
     await expect(guard.canActivate(ctx)).rejects.toMatchObject({
       response: {
         code: 'missing_permission',
-        permissions: ['settings:read'],
+        permissions: ['reports:sales:read'],
       },
     });
   });
@@ -96,7 +97,7 @@ describe('PermissionsGuard', () => {
   it('ADMIN bypasses by default (no DB hit)', async () => {
     const call = { count: 0 };
     const guard = new PermissionsGuard(
-      makeReflectorWithMeta({ codes: ['settings:read'], adminBypass: true }),
+      makeReflectorWithMeta({ codes: ['reports:sales:read'], adminBypass: true }),
       makePrismaWithCodes(['something:else'], call),
     );
     const ctx = makeContext({ user: { sub: 'admin', role: UserRole.ADMIN } });
@@ -108,7 +109,7 @@ describe('PermissionsGuard', () => {
     const call = { count: 0 };
     const guard = new PermissionsGuard(
       makeReflectorWithMeta({ codes: ['deposits:verify'], adminBypass: false }),
-      makePrismaWithCodes(['settings:read'], call),
+      makePrismaWithCodes(['reports:sales:read'], call),
     );
     const ctx = makeContext({ user: { sub: 'admin', role: UserRole.ADMIN } });
     await expect(guard.canActivate(ctx)).rejects.toBeInstanceOf(ForbiddenException);
@@ -126,23 +127,23 @@ describe('PermissionsGuard', () => {
 
   it('SALES without the code is rejected', async () => {
     const guard = new PermissionsGuard(
-      makeReflectorWithMeta({ codes: ['settings:write'], adminBypass: true }),
-      makePrismaWithCodes(['settings:read'], { count: 0 }),
+      makeReflectorWithMeta({ codes: ['reports:financial:read'], adminBypass: true }),
+      makePrismaWithCodes(['reports:sales:read'], { count: 0 }),
     );
     const ctx = makeContext({ user: { sub: 's1', role: UserRole.SALES } });
     await expect(guard.canActivate(ctx)).rejects.toMatchObject({
       response: {
         code: 'missing_permission',
-        permissions: ['settings:write'],
-        message: 'Missing permission: settings:write',
+        permissions: ['reports:financial:read'],
+        message: 'Missing permission: reports:financial:read',
       },
     });
   });
 
   it('SALES with the code is allowed', async () => {
     const guard = new PermissionsGuard(
-      makeReflectorWithMeta({ codes: ['settings:read'], adminBypass: true }),
-      makePrismaWithCodes(['settings:read'], { count: 0 }),
+      makeReflectorWithMeta({ codes: ['reports:sales:read'], adminBypass: true }),
+      makePrismaWithCodes(['reports:sales:read'], { count: 0 }),
     );
     const ctx = makeContext({ user: { sub: 's1', role: UserRole.SALES } });
     await expect(guard.canActivate(ctx)).resolves.toBe(true);
@@ -150,18 +151,36 @@ describe('PermissionsGuard', () => {
 
   it('OR semantics — having any one of the listed codes is enough', async () => {
     const guard = new PermissionsGuard(
-      makeReflectorWithMeta({ codes: ['settings:read', 'settings:write'], adminBypass: true }),
-      makePrismaWithCodes(['settings:write'], { count: 0 }),
+      makeReflectorWithMeta({ codes: ['reports:sales:read', 'reports:financial:read'], adminBypass: true }),
+      makePrismaWithCodes(['reports:financial:read'], { count: 0 }),
     );
     const ctx = makeContext({ user: { sub: 's1', role: UserRole.SALES } });
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
+  });
+
+  it('an admin-only code held by a non-admin never counts (PRM)', async () => {
+    const guard = new PermissionsGuard(
+      makeReflectorWithMeta({ codes: ['settings:write'], adminBypass: true }),
+      makePrismaWithCodes(['settings:write'], { count: 0 }),
+    );
+    const ctx = makeContext({ user: { sub: 's1', role: UserRole.SALES_MANAGER } });
+    await expect(guard.canActivate(ctx)).rejects.toMatchObject({ response: { code: 'missing_permission' } });
+  });
+
+  it('a route opened by its @GrantedBy code needs nothing more (PRM)', async () => {
+    const guard = new PermissionsGuard(
+      makeReflectorWithMeta({ codes: ['leads:read'], adminBypass: true }),
+      makePrismaWithCodes([], { count: 0 }),
+    );
+    const ctx = makeContext({ user: { sub: 's1', role: UserRole.SALES }, _grantedBy: 'campaigns:manage' });
     await expect(guard.canActivate(ctx)).resolves.toBe(true);
   });
 
   it('memoises the permission set per request (single DB call across two guard invocations)', async () => {
     const call = { count: 0 };
     const guard = new PermissionsGuard(
-      makeReflectorWithMeta({ codes: ['settings:read'], adminBypass: true }),
-      makePrismaWithCodes(['settings:read'], call),
+      makeReflectorWithMeta({ codes: ['reports:sales:read'], adminBypass: true }),
+      makePrismaWithCodes(['reports:sales:read'], call),
     );
     const req: MockReq = { user: { sub: 's1', role: UserRole.SALES } };
     const ctx = makeContext(req);

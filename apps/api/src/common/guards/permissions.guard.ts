@@ -11,15 +11,7 @@ import {
   PERMISSIONS_KEY,
   type PermissionsMeta,
 } from '../decorators/permissions.decorator';
-
-/**
- * Express request slot we use for per-request memoisation. Each request loads
- * the caller's permission codes at most once.
- */
-interface ReqWithPerms {
-  user?: { sub?: string; role?: UserRole };
-  _userPermissions?: Set<string>;
-}
+import { effectiveCodes, loadHeldCodes, type ReqWithCodes } from '../permissions/staff-codes';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -40,36 +32,24 @@ export class PermissionsGuard implements CanActivate {
     // Routes without @Permissions stay role-only — keeps the rollout opt-in.
     if (!meta || meta.codes.length === 0) return true;
 
-    const req = context.switchToHttp().getRequest<ReqWithPerms>();
+    const req = context.switchToHttp().getRequest<ReqWithCodes>();
     const user = req.user;
     if (!user?.sub) {
       throw new ForbiddenException(this.missingPermissionBody(meta.codes));
     }
 
     if (meta.adminBypass && user.role === UserRole.ADMIN) return true;
+    // The code that let the caller in through @GrantedBy (RolesGuard) is
+    // their permission for this route.
+    if (req._grantedBy) return true;
 
-    const codes = await this.loadCodes(req, user.sub);
+    // An admin-only code held by a non-admin (granted before PRM) never counts.
+    const codes = effectiveCodes(user.role, await loadHeldCodes(this.prisma, req, user.sub));
     const granted = meta.codes.some((c) => codes.has(c));
     if (!granted) {
       throw new ForbiddenException(this.missingPermissionBody(meta.codes));
     }
     return true;
-  }
-
-  /**
-   * Loads (and memoises on the request) the set of permission codes assigned
-   * to the user. Same request → same set, single DB query.
-   */
-  private async loadCodes(req: ReqWithPerms, userId: string): Promise<Set<string>> {
-    if (req._userPermissions) return req._userPermissions;
-
-    const rows = await this.prisma.userPermission.findMany({
-      where: { userId },
-      select: { permission: { select: { code: true } } },
-    });
-    const set = new Set(rows.map((r) => r.permission.code));
-    req._userPermissions = set;
-    return set;
   }
 
   /**

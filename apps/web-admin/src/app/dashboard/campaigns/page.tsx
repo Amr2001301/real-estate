@@ -5,6 +5,7 @@ import type { Campaign, CampaignChannel, CampaignStatus } from '@/lib/types';
 import { compactParts, formatDate, tx } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { getSession } from '@/lib/session';
+import { can } from '@/lib/permissions';
 import { currencySymbol, getReportsCurrency } from '@/lib/currency';
 import { uiT } from '@/messages/ui';
 import { PremiumMetricStrip, PremiumPageHero } from '@/components/premium';
@@ -31,7 +32,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
   const m = campaignT(locale);
   const L = m.list;
   const symbol = currencySymbol(currency, locale);
-  const canManage = session?.role === 'ADMIN';
+  const canManage = session?.role === 'ADMIN' || (await can('campaigns:manage'));
   // All of them once: the status tabs count from the same list.
   const res = await safe(api.get<ListResponse>('/campaigns'));
   const all = res.data?.data ?? [];

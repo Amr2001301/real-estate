@@ -5,6 +5,7 @@ import type { UnitTypeOption } from '@/lib/types';
 import { projectOptions } from '@/lib/options';
 import { getLocale } from '@/lib/locale';
 import { getSession } from '@/lib/session';
+import { can } from '@/lib/permissions';
 import { uiT } from '@/messages/ui';
 import { PremiumPageHero, PremiumSectionCard } from '@/components/premium';
 import { RepriceForm } from './_reprice-form';
@@ -23,7 +24,7 @@ export default async function RepriceUnitsPage() {
     safe(projectOptions()),
     safe(api.get<UnitTypeOption[]>('/unit-types')),
   ]);
-  if (session?.role !== 'ADMIN') redirect('/dashboard/units' as never);
+  if (session?.role !== 'ADMIN' && !(await can('units:update'))) redirect('/dashboard/units' as never);
   const unitsM = uiT(locale).pages.units;
   const m = unitsM.repriceForm;
 

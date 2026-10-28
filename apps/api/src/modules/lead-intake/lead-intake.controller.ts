@@ -3,6 +3,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PlatformPublic } from '../../common/decorators/platform-public.decorator';
 import { runInCompany } from '../../common/tenant/tenant-context';
@@ -35,6 +36,7 @@ export class LeadIntakeController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('campaigns:manage')
+  @GrantedBy('campaigns:manage')
   @Get('lead-intake/keys')
   list() {
     return this.intake.listKeys();
@@ -42,6 +44,7 @@ export class LeadIntakeController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('campaigns:manage')
+  @GrantedBy('campaigns:manage')
   @Post('lead-intake/keys')
   create(@Body() dto: CreateIntakeKeyDto) {
     return this.intake.createKey(dto);
@@ -49,6 +52,7 @@ export class LeadIntakeController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('campaigns:manage')
+  @GrantedBy('campaigns:manage')
   @Patch('lead-intake/keys/:id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateIntakeKeyDto) {
     return this.intake.updateKey(id, dto);
@@ -56,6 +60,7 @@ export class LeadIntakeController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('campaigns:manage')
+  @GrantedBy('campaigns:manage')
   @Post('lead-intake/keys/:id/rotate')
   rotate(@Param('id', ParseUUIDPipe) id: string) {
     return this.intake.rotateKey(id);
@@ -63,6 +68,7 @@ export class LeadIntakeController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('campaigns:manage')
+  @GrantedBy('campaigns:manage')
   @Delete('lead-intake/keys/:id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.intake.deleteKey(id);
@@ -70,6 +76,8 @@ export class LeadIntakeController {
 
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
   @Permissions('leads:read')
+
+  @GrantedBy('campaigns:manage')
   @Get('lead-intake/settings')
   settings() {
     return this.intake.getRouting();
@@ -77,6 +85,7 @@ export class LeadIntakeController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('campaigns:manage')
+  @GrantedBy('campaigns:manage')
   @Put('lead-intake/settings')
   saveSettings(@Body() dto: RoutingSettingsDto) {
     return this.intake.saveRouting(dto);

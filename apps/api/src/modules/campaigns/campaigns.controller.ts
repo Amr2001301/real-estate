@@ -15,6 +15,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { CampaignChannel, CampaignStatus, UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { parseEnumList } from '../../common/utils/query-filters';
@@ -48,6 +49,8 @@ export class CampaignsController {
 
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
   @Permissions('leads:read')
+
+  @GrantedBy('campaigns:manage')
   @Get()
   list(@Query('status') status?: string, @Query('channel') channel?: string, @Query('projectId') projectId?: string) {
     const one = <T extends string>(v: string | undefined, e: Record<string, T>, name: string) => {
@@ -71,6 +74,7 @@ export class CampaignsController {
   // What the campaigns cost and brought in — with the campaigns list's readers.
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
   @Permissions('leads:read')
+  @GrantedBy('campaigns:manage')
   @Get('report')
   report(@Query('from') from?: string, @Query('to') to?: string, @Query('channel') channel?: string, @Query('projectId') projectId?: string) {
     return this.reports.report(CampaignsController.reportOptions(from, to, channel, projectId));
@@ -78,6 +82,8 @@ export class CampaignsController {
 
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
   @Permissions('leads:read')
+
+  @GrantedBy('campaigns:manage')
   @Get('report/export.pdf')
   @Header('Content-Type', 'application/pdf')
   @Header('Content-Disposition', 'attachment; filename="campaigns-report.pdf"')
@@ -92,6 +98,8 @@ export class CampaignsController {
 
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
   @Permissions('leads:read')
+
+  @GrantedBy('campaigns:manage')
   @Get('report/export.xlsx')
   @Header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
   @Header('Content-Disposition', 'attachment; filename="campaigns-report.xlsx"')
@@ -106,6 +114,8 @@ export class CampaignsController {
 
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
   @Permissions('leads:read')
+
+  @GrantedBy('campaigns:manage')
   @Get(':id')
   get(@Param('id', ParseUUIDPipe) id: string) {
     return this.campaigns.get(id);
@@ -113,6 +123,7 @@ export class CampaignsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('campaigns:manage')
+  @GrantedBy('campaigns:manage')
   @Post()
   create(@Body() dto: CreateCampaignDto) {
     return this.campaigns.create(dto);
@@ -120,6 +131,7 @@ export class CampaignsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('campaigns:manage')
+  @GrantedBy('campaigns:manage')
   @Patch(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCampaignDto) {
     return this.campaigns.update(id, dto);
@@ -127,6 +139,7 @@ export class CampaignsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('campaigns:manage')
+  @GrantedBy('campaigns:manage')
   @Post(':id/spend')
   addSpend(@Param('id', ParseUUIDPipe) id: string, @Body() dto: AddCampaignSpendDto, @CurrentUser() user: AuthUser) {
     return this.campaigns.addSpend(id, dto, user.sub);
@@ -134,6 +147,7 @@ export class CampaignsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('campaigns:manage')
+  @GrantedBy('campaigns:manage')
   @Delete(':id/spend/:spendId')
   removeSpend(@Param('id', ParseUUIDPipe) id: string, @Param('spendId', ParseUUIDPipe) spendId: string) {
     return this.campaigns.removeSpend(id, spendId);

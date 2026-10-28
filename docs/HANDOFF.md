@@ -550,6 +550,14 @@ Left for the owner, not in V1–V3:
 - Permissions page: group codes; dangerous ones shown locked with «لمدير النظام فقط» for non-admins.
 - Tests: e2e per switched module — a SALES user without the code gets 403, with it gets 200 and sees what rule 2 says; a non-admin can never be given a dangerous code; existing security specs stay green (never widen a security assertion — CLAUDE.md).
 
+**Phase 1 — done (PR from `claude/awesome-galileo-ob9jmm` after #199):**
+- Mechanism: `@GrantedBy(code)` (`common/decorators/granted-by.decorator.ts`) on a route lets in any staff member (`STAFF_ROLES`) outside its `@Roles` who holds the code; `RolesGuard` loads the caller's codes only then, and `PermissionsGuard` takes that code as the route's permission. ADMIN passes as before.
+- Admin-only codes: `common/permissions/staff-codes.ts` (`permissions:manage`, all `users:*`, `settings:read/write`, `company_branding:manage`, `audit:read`; data export/import are role-only ADMIN routes). `PATCH users/:id/permissions` refuses them for a non-admin (400 «لمدير النظام فقط»); one held from before never counts in either guard.
+- `GET /me/permissions` returns the codes that count (an admin: all). web-admin reads it (`lib/permissions.ts`): nav items carry `perm`, pages use `can(...)` instead of `role === 'ADMIN'`.
+- Opened in phase 1 — configuration and inventory only, nothing owned by a rep and no customer data: projects create/update/delete/publish, phases, buildings, units create/update/status/delete/reprice and unit models, project/unit media, campaigns (+ their reads) and lead intake, lead sources and lost reasons, CMS, notification templates and sending. The permissions page marks admin-only codes locked.
+- Left for phase 2 (they depend on rule 2 and on role-default codes): reports, deposits/cheques/installments, contracts and reservations admin actions, bonus entries, brokers and their commissions/payouts/reports, maintenance, documents, visit scheduling, unit export.
+- **Open question for the owner before phase 2:** reps and managers start with `deposits:read`, `contracts:read`, `installments:read`, `units:read`, `bonus:entries:read`, `visits:schedule/reschedule`, `reservations:update` (and the maintenance supervisor `maintenance:read/resolve`), which today show only their own records. If those codes opened the admin pages with rule 2's whole-company view, every rep would see the whole company. Proposed: a separate «whole company» code per money page; the old codes keep their own-records meaning.
+
 **Phase 2 — data scope:** apply rule 2 per group of pages (reports, money, brokers, maintenance, campaigns, inventory edits), each with an e2e test of what a granted non-admin sees.
 
 **Phase 3 (optional) — company role templates:** an admin saves a named set of codes («محاسب», «تسويق», «سكرتارية») and applies it to a user in one step; changing the template can update its users.

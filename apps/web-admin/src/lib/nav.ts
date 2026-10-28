@@ -114,6 +114,9 @@ export interface NavItem {
    *  team-view pages that are otherwise admin-managed). Has no effect unless
    *  `admin` is also true. */
   manager?: boolean;
+  /** PRM: permission codes that also open the page to a staff member the
+   *  role flags above leave out (any one of them is enough). */
+  perm?: string[];
   /** Plan feature the page needs (CapabilityService key). Hidden when the
    *  company's plan switches it off — the API would refuse the page. */
   feature?: string;
@@ -151,8 +154,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/dashboard/leads', label: 'فرص المبيعات (CRM)', labelKey: 'leads', iconKey: 'Users' },
       { href: '/dashboard/follow-ups', label: 'المتابعات', labelKey: 'followUps', iconKey: 'PhoneCall' },
       { href: '/dashboard/calendar', label: 'التقويم', labelKey: 'calendar', iconKey: 'CalendarDays' },
-      { href: '/dashboard/campaigns', label: 'الحملات التسويقية', labelKey: 'campaigns', iconKey: 'Megaphone', admin: true, manager: true },
-      { href: '/dashboard/lost-reasons', label: 'أسباب الخسارة', labelKey: 'lostReasons', iconKey: 'TrendingDown', admin: true, manager: true },
+      { href: '/dashboard/campaigns', label: 'الحملات التسويقية', labelKey: 'campaigns', iconKey: 'Megaphone', admin: true, manager: true, perm: ['campaigns:manage'] },
+      { href: '/dashboard/lost-reasons', label: 'أسباب الخسارة', labelKey: 'lostReasons', iconKey: 'TrendingDown', admin: true, manager: true, perm: ['lead_sources:manage'] },
       // P13 — general info/contact-form inquiries (Guest/Client/Customer).
       // Role-only gate matches GET /info-requests (ADMIN + SALES + SALES_MANAGER).
       { href: '/dashboard/requests', label: 'استفسارات العملاء', labelKey: 'requests', iconKey: 'MessageSquareText' },
@@ -202,9 +205,9 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'الإدارة',
     titleKey: 'admin',
     items: [
-      { href: '/dashboard/cms', label: 'المحتوى', labelKey: 'cms', iconKey: 'FileEdit', admin: true },
+      { href: '/dashboard/cms', label: 'المحتوى', labelKey: 'cms', iconKey: 'FileEdit', admin: true, perm: ['cms:pages:manage', 'cms:banners:manage', 'cms:articles:manage'] },
       { href: '/dashboard/documents', label: 'المستندات', labelKey: 'documents', iconKey: 'Files', admin: true },
-      { href: '/dashboard/notifications', label: 'الإشعارات', labelKey: 'notifications', iconKey: 'Bell', admin: true },
+      { href: '/dashboard/notifications', label: 'الإشعارات', labelKey: 'notifications', iconKey: 'Bell', admin: true, perm: ['notifications:send', 'notifications:templates:manage'] },
       { href: '/dashboard/reports', label: 'التقارير', labelKey: 'reports', iconKey: 'BarChart3', admin: true },
       { href: '/dashboard/users', label: 'المستخدمون', labelKey: 'users', iconKey: 'ShieldCheck', admin: true },
       { href: '/dashboard/permissions', label: 'الصلاحيات', labelKey: 'permissions', iconKey: 'ShieldCheck', admin: true },
@@ -236,6 +239,7 @@ export const SUPER_ADMIN_NAV_SECTIONS: NavSection[] = [
 export function filterNavForRole(
   role: SessionRole,
   disabledFeatures: ReadonlySet<string> = new Set(),
+  codes: ReadonlySet<string> = new Set(),
 ): NavSection[] {
   if (role === 'SUPER_ADMIN') return SUPER_ADMIN_NAV_SECTIONS;
   // Brokers don't use the admin nav at all — see BROKER_NAV_SECTIONS below.
@@ -244,6 +248,7 @@ export function filterNavForRole(
     ...section,
     items: section.items.filter((item) => {
       if (item.feature && disabledFeatures.has(item.feature)) return false;
+      if (item.perm?.some((c) => codes.has(c))) return true;
       if (item.admin) {
         return role === 'ADMIN' || (item.manager === true && role === 'SALES_MANAGER');
       }

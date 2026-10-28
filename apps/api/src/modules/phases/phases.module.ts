@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { ENTITY_CODE_PATTERN, codeTaken, normalizeEntityCode } from '../../common/utils/entity-code';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { UserRole } from '@prisma/client';
 import { assertInventoryDeletable } from '../projects/inventory-blockers';
@@ -141,6 +142,7 @@ class PhasesController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('phases:manage')
+  @GrantedBy('phases:manage')
   @Post()
   create(@Body() dto: CreatePhaseDto) {
     return this.phases.create(dto);
@@ -148,6 +150,7 @@ class PhasesController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('phases:manage')
+  @GrantedBy('phases:manage')
   @Patch(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdatePhaseDto) {
     return this.phases.update(id, dto);
@@ -155,6 +158,7 @@ class PhasesController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('phases:manage')
+  @GrantedBy('phases:manage')
   @Delete(':id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.phases.remove(id);

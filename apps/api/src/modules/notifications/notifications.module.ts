@@ -47,6 +47,7 @@ import {
 import { getRequiredCompanyId, getTenantContext } from '../../common/tenant/tenant-context';
 import { companyAccessAllowed } from '../../common/tenant/company-access';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { paginate, takeSkip } from '../../common/utils/pagination';
@@ -1245,6 +1246,7 @@ class NotificationsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('notifications:templates:manage')
+  @GrantedBy('notifications:templates:manage')
   @Get('notification-templates')
   listTemplates() {
     return this.svc.listTemplates();
@@ -1252,6 +1254,7 @@ class NotificationsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('notifications:templates:manage')
+  @GrantedBy('notifications:templates:manage')
   @Post('notification-templates')
   upsertTemplate(@Body() dto: UpsertTemplateDto) {
     return this.svc.upsertTemplate(dto);
@@ -1259,6 +1262,7 @@ class NotificationsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('notifications:send')
+  @GrantedBy('notifications:send')
   @Post('notifications/send')
   send(@Body() dto: SendNotificationDto) {
     return this.svc.send(dto);
@@ -1270,6 +1274,7 @@ class NotificationsController {
    */
   @Roles(UserRole.ADMIN)
   @Permissions('notifications:send')
+  @GrantedBy('notifications:send')
   @Post('notifications/broadcast/preview')
   previewBroadcast(@Body() dto: BroadcastPreviewDto) {
     return this.svc.previewBroadcast(dto);
@@ -1281,6 +1286,7 @@ class NotificationsController {
    */
   @Roles(UserRole.ADMIN)
   @Permissions('notifications:send')
+  @GrantedBy('notifications:send')
   @Post('notifications/broadcast')
   broadcast(@CurrentUser() user: AuthUser, @Body() dto: BroadcastNotificationDto) {
     return this.svc.broadcastNotification(user.sub, dto);

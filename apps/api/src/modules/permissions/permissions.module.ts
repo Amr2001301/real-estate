@@ -17,6 +17,8 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
+import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator';
+import { effectiveCodes, isAdminOnlyCode } from '../../common/permissions/staff-codes';
 
 /**
  * Lightweight, ADMIN-only management surface for the existing
@@ -24,10 +26,9 @@ import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
  * permission-catalog.ts and are written at startup; this module lets an admin attach/detach codes
  * to a specific user.
  *
- * Important: as of Phase 16, NO route in the codebase reads
- * UserPermission to enforce access. Role-based guards (@Roles) are still
- * the only enforcement layer. Permissions are *assignable* and stored,
- * but the runtime does not yet honour them. See phase-16 report §F.
+ * PermissionsGuard narrows a route to the codes it names, and a code named
+ * by @GrantedBy opens a route to staff outside its roles (PRM). Admin-only
+ * codes (common/permissions/staff-codes.ts) are never given to a non-admin.
  */
 
 class PatchUserPermissionsDto {
@@ -64,6 +65,7 @@ class PermissionsService {
       id: p.id,
       code: p.code,
       description: p.description,
+      adminOnly: isAdminOnlyCode(p.code),
       userCount: countMap.get(p.id) ?? 0,
     }));
   }
@@ -91,20 +93,39 @@ class PermissionsService {
       id: r.permission.id,
       code: r.permission.code,
       description: r.permission.description,
+      adminOnly: isAdminOnlyCode(r.permission.code),
     }));
     const available = allPermissions
       .filter((p) => !assignedCodes.has(p.code))
-      .map((p) => ({ id: p.id, code: p.code, description: p.description }));
+      .map((p) => ({ id: p.id, code: p.code, description: p.description, adminOnly: isAdminOnlyCode(p.code) }));
 
     return { user, assigned, available };
+  }
+
+  /** The codes that count for the caller: what opens their pages. */
+  async mine(user: AuthUser) {
+    if (user.role === UserRole.ADMIN) {
+      const all = await this.prisma.permission.findMany({ select: { code: true }, orderBy: { code: 'asc' } });
+      return { role: user.role, codes: all.map((p) => p.code) };
+    }
+    const rows = await this.prisma.userPermission.findMany({
+      where: { userId: user.sub },
+      select: { permission: { select: { code: true } } },
+    });
+    return { role: user.role, codes: [...effectiveCodes(user.role, rows.map((r) => r.permission.code))].sort() };
   }
 
   // ── Apply diff to a user's permissions ──────────────────────────────
 
   async updateForUser(userId: string, dto: PatchUserPermissionsDto) {
-    const user = await resolveTenantUser(this.prisma, userId, { id: true });
+    const user = await resolveTenantUser(this.prisma, userId, { id: true, role: true });
 
     const addCodes = (dto.addPermissionCodes ?? []).filter(Boolean);
+    // Whoever held these could grant themselves everything: admins only.
+    const adminOnly = user.role === UserRole.ADMIN ? [] : addCodes.filter(isAdminOnlyCode);
+    if (adminOnly.length > 0) {
+      throw new BadRequestException(`لمدير النظام فقط: ${adminOnly.join('، ')}`);
+    }
     const removeCodes = (dto.removePermissionCodes ?? []).filter(Boolean);
 
     if (addCodes.length === 0 && removeCodes.length === 0) {
@@ -158,6 +179,13 @@ class PermissionsService {
 @Controller()
 class PermissionsController {
   constructor(private readonly svc: PermissionsService) {}
+
+  // Any signed-in user: the codes that open their own pages (the sidebar
+  // and the pages read it).
+  @Get('me/permissions')
+  mine(@CurrentUser() user: AuthUser) {
+    return this.svc.mine(user);
+  }
 
   @Roles(UserRole.ADMIN)
   @Permissions('permissions:manage')

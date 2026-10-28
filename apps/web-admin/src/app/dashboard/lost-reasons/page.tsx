@@ -5,6 +5,7 @@ import type { LeadSource, LostReason, LostReport, Translatable } from '@/lib/typ
 import { formatDate, tx } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { getSession } from '@/lib/session';
+import { can } from '@/lib/permissions';
 import { getCompanyTimeZone, todayIn } from '@/lib/currency';
 import { projectOptions, staffOptions } from '@/lib/options';
 import { uiT } from '@/messages/ui';
@@ -55,8 +56,11 @@ export default async function LostReasonsPage({ searchParams }: { searchParams: 
   const [sp, locale, session, zone] = await Promise.all([searchParams, getLocale(), getSession(), getCompanyTimeZone()]);
   const t = lostT(locale);
   const m = t.page;
-  const isAdmin = session?.role === 'ADMIN';
-  const tab = sp.tab === 'reasons' && isAdmin ? 'reasons' : 'report';
+  // The report is the managers' (by role); the reasons list opens to whoever
+  // holds lead_sources:manage (PRM).
+  const canReport = session?.role === 'ADMIN' || session?.role === 'SALES_MANAGER';
+  const canManage = session?.role === 'ADMIN' || (await can('lead_sources:manage'));
+  const tab = (sp.tab === 'reasons' && canManage) || !canReport ? 'reasons' : 'report';
 
   const today = todayIn(zone);
   const [y, mo] = today.split('-').map(Number) as [number, number];
@@ -118,7 +122,7 @@ export default async function LostReasonsPage({ searchParams }: { searchParams: 
         )}
       </PremiumPageHero>
 
-      {isAdmin && (
+      {canManage && canReport && (
         <nav role="tablist" className="flex gap-2 border-b border-hairline">
           {(['report', 'reasons'] as const).map((k) => (
             <Link
