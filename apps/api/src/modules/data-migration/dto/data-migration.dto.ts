@@ -4,6 +4,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsEmail,
+  IsIn,
   IsISO8601,
   IsInt,
   IsNotEmpty,
@@ -43,6 +44,27 @@ export class CreateMigrationRunDto {
 
   @IsOptional() @Transform(trim) @IsString() @MaxLength(300)
   note?: string;
+}
+
+/** MG2 — the platform owner's choice for one kept value or extra field. */
+export class SaveMappingDto {
+  @Transform(trim) @Matches(/^[a-z0-9][a-z0-9-]{0,59}$/)
+  sourceSystem!: string;
+
+  /** "LEAD.stage", "LEAD.source", … or an extra field: "CUSTOMER.extra.<key>". */
+  @Transform(trim) @IsString() @IsNotEmpty() @MaxLength(160)
+  field!: string;
+
+  /** The value as the other system wrote it (not for an extra field). */
+  @IsOptional() @IsString() @MaxLength(200)
+  value?: string;
+
+  @IsIn(['MAP', 'IGNORE', 'NOTE', 'CUSTOMER_FIELD'])
+  action!: string;
+
+  /** What it maps to: a stage / kind / result, a source or person id, a unit type code, a customer field key. */
+  @IsOptional() @Transform(trim) @IsString() @MaxLength(120)
+  target?: string;
 }
 
 // ── What the other system sends ──────────────────────────────────────────────

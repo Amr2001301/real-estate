@@ -21,6 +21,7 @@ import { CompanyAiPanel } from './_ai-panel';
 import { CompanyMobileAppPanel } from './_mobile-app-panel';
 import { CompanyWebsiteDomainPanel } from './_website-domain-panel';
 import { CompanyMigrationPanel } from './_migration-panel';
+import { CompanyMigrationMapping } from './_migration-mapping';
 import {
   PremiumPageHero,
   PremiumDetailLayout,
@@ -340,6 +341,7 @@ export default function CompanyDetailPage() {
             <CompanyMobileAppPanel companyId={company.id} />
             <CompanyWebsiteDomainPanel companyId={company.id} />
             <CompanyMigrationPanel companyId={company.id} />
+            <CompanyMigrationMapping companyId={company.id} />
           </div>
         }
         side={

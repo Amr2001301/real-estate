@@ -8,6 +8,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -20,8 +21,9 @@ import { BypassTenant } from '../../common/decorators/bypass-tenant.decorator';
 import { PlatformPublic } from '../../common/decorators/platform-public.decorator';
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator';
 import { runInCompany } from '../../common/tenant/tenant-context';
-import { CreateMigrationRunDto, MigrationBatchDto } from './dto/data-migration.dto';
+import { CreateMigrationRunDto, MigrationBatchDto, SaveMappingDto } from './dto/data-migration.dto';
 import { DataMigrationService, MIGRATION_ENTITY_BY_PATH, type MigrationPath } from './data-migration.service';
+import { MigrationMappingService } from './migration-mapping.service';
 
 /**
  * Another system moving a company's data in, to the company's address
@@ -70,7 +72,28 @@ export class DataMigrationController {
 @UseGuards(JwtAuthGuard, SuperAdminGuard)
 @BypassTenant()
 export class DataMigrationAdminController {
-  constructor(private readonly migration: DataMigrationService) {}
+  constructor(
+    private readonly migration: DataMigrationService,
+    private readonly mapping: MigrationMappingService,
+  ) {}
+
+  // MG2 — what the moves kept, and the platform owner's choices. Declared
+  // before `:runId` so the literal segment wins. Runs in the company's context.
+  @Get('mapping')
+  async mappingScreen(@Param('companyId', ParseUUIDPipe) companyId: string, @Query('system') system?: string) {
+    await this.migration.listRuns(companyId); // 404 for an unknown company
+    return runInCompany(companyId, () => this.mapping.screen(companyId, system));
+  }
+
+  @Put('mapping')
+  async saveMapping(
+    @Param('companyId', ParseUUIDPipe) companyId: string,
+    @Body() dto: SaveMappingDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    await this.migration.listRuns(companyId);
+    return runInCompany(companyId, () => this.mapping.save(companyId, dto, user.sub));
+  }
 
   @Get()
   list(@Param('companyId', ParseUUIDPipe) companyId: string) {

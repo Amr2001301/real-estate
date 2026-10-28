@@ -75,13 +75,17 @@ outcome):
   extra data (you can also group them under `"extra": { … }`). A value this
   platform does not recognise (a stage, a source, a unit type, a person) is
   kept too, and the platform owner maps it afterwards. Both are listed under
-  `kept` in the result.
+  `kept` in the result. Once the platform owner has mapped a value (say your
+  stage «مهتم جداً» to `interested`), records sent after that use the mapping;
+  the value is still listed under `kept`, since it is not one of the words
+  this format knows.
 - Moved-in data is history: no notifications go out, leads are not handed out
   to sales reps, no follow-up calls are scheduled.
 
 Dates are ISO 8601 (`2025-03-01T10:00:00Z`); days are `YYYY-MM-DD`. Numbers
 may be sent as numbers or numeric strings. Text values are matched without
-regard to case, spaces, dashes or Arabic letter forms.
+regard to case, spaces, dashes, Arabic diacritics and tatweel, or Arabic
+letter forms.
 
 ---
 

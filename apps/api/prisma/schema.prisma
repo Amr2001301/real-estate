@@ -165,6 +165,7 @@ model Company {
   leadIntakeKeys LeadIntakeKey[]
   migrationRuns    MigrationRun[]
   migrationRecords MigrationRecord[]
+  migrationMappings MigrationMapping[]
 
   @@index([slug])
   @@index([isActive])
@@ -3588,4 +3589,36 @@ model MigrationRecord {
 
   @@unique([companyId, sourceSystem, entity, externalId])
   @@index([runId, entity])
+}
+
+/// MG2 — what a value kept by a migration means here, chosen once by the
+/// platform owner. A fixed-list value (a lead stage, an activity kind, a call
+/// result) holds for every company moved from that system (companyId null);
+/// a company's own list (a lead source, a unit type, a person) and an extra
+/// field are mapped per company. Applied to the records already moved —
+/// never over a change someone made by hand since — and to later sends.
+model MigrationMapping {
+  id           String   @id @default(uuid()) @db.Uuid
+  sourceSystem String   @db.VarChar(60)
+  /// "LEAD.stage", "LEAD.source", "LEAD.assignedTo", "ACTIVITY.kind",
+  /// "ACTIVITY.callResult", "ACTIVITY.by", "UNIT.type", or an extra field:
+  /// "CUSTOMER.extra.<key>", "LEAD.extra.<key>".
+  field        String   @db.VarChar(160)
+  /// The value as the other system wrote it, normalised; "" for an extra field.
+  value        String   @db.VarChar(200)
+  /// MAP | IGNORE | NOTE (an extra field becomes a note on the lead) |
+  /// CUSTOMER_FIELD (an extra field becomes one of the company's customer fields).
+  action       String   @db.VarChar(20)
+  /// What it maps to: the stage / kind / result, the source or person id,
+  /// the unit type code, or the customer field key.
+  target       String?  @db.VarChar(120)
+  updatedById  String?  @db.Uuid
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceSystem, companyId, field, value])
+  @@index([companyId, sourceSystem])
 }

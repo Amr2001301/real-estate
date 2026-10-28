@@ -2,14 +2,16 @@ import { LeadCallResult, LeadNoteKind, LeadStage, ProjectStatus } from '@prisma/
 
 /**
  * Words other systems use for the values this one keeps as fixed lists.
- * Matching ignores case, spaces, dashes and underscores, and Arabic letter
- * forms (أ/إ/آ → ا, ة → ه, ى → ي). A word not here is kept on the record for
- * the platform owner to map — never guessed.
+ * Matching ignores case, spaces, dashes and underscores, Arabic diacritics
+ * and tatweel («جداً» = «جدا»), and Arabic letter forms (أ/إ/آ → ا, ة → ه,
+ * ى → ي). A word not here is kept on the record for the platform owner to
+ * map — never guessed.
  */
 export function normalizeWord(value: string): string {
   return value
     .trim()
     .toLowerCase()
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, '')
     .replace(/[أإآ]/g, 'ا')
     .replace(/ة/g, 'ه')
     .replace(/ى/g, 'ي')
