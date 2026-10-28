@@ -46,6 +46,7 @@ const EXPECTED_CLASSIFICATIONS: [string, ModelTenancyTier][] = [
   ['NotificationTemplate', 'TENANT_CONTROLLED'],
   // TENANT_VIA_RELATION
   ['RefreshToken', 'TENANT_VIA_RELATION'],
+  ['AuthSession', 'TENANT_VIA_RELATION'],
   ['UserPermission', 'TENANT_VIA_RELATION'],
   ['Favorite', 'TENANT_VIA_RELATION'],
   // TENANT_OWNED

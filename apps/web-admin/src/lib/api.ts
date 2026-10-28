@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect, unstable_rethrow } from 'next/navigation';
 import { formatMissingPermissionMessage, planRefusalMessage, userFacingRefusal } from './permission-error';
 
@@ -61,6 +61,24 @@ export interface ApiOptions extends Omit<RequestInit, 'body'> {
  * Handler — Next.js does not allow cookie writes during a render, so we swallow
  * write failures and let the caller decide (e.g. redirect to /login).
  */
+/**
+ * SES1 — the API names each session after the browser that opened it, but
+ * it is this server that calls it: pass the browser's user agent and address.
+ */
+export async function clientHeaders(): Promise<Record<string, string>> {
+  try {
+    const h = await headers();
+    const out: Record<string, string> = {};
+    const ua = h.get('user-agent');
+    const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() || h.get('x-real-ip');
+    if (ua) out['X-Client-User-Agent'] = ua.slice(0, 512);
+    if (ip) out['X-Forwarded-For'] = ip;
+    return out;
+  } catch {
+    return {};
+  }
+}
+
 async function refreshAdminSession(): Promise<boolean> {
   const c = await cookies();
   const refreshToken = c.get('refresh_token')?.value;
@@ -70,7 +88,7 @@ async function refreshAdminSession(): Promise<boolean> {
   try {
     res = await fetch(`${API_BASE}/v1/auth/refresh`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...(await clientHeaders()) },
       body: JSON.stringify({ refreshToken }),
       cache: 'no-store',
     });
@@ -198,7 +216,7 @@ type AuthResult = {
 export async function loginStaff(slug: string, email: string, password: string): Promise<AuthResult> {
   const res = await fetch(`${API_BASE}/v1/auth/login-staff`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(await clientHeaders()) },
     body: JSON.stringify({ slug, email, password }),
     cache: 'no-store',
   });
@@ -210,7 +228,7 @@ export async function loginStaff(slug: string, email: string, password: string):
 export async function loginSuperAdmin(email: string, password: string): Promise<AuthResult> {
   const res = await fetch(`${API_BASE}/v1/auth/login-super-admin`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(await clientHeaders()) },
     body: JSON.stringify({ email, password }),
     cache: 'no-store',
   });

@@ -36,6 +36,8 @@ function makeAuthService(userRow: Record<string, unknown> | null, overrides: Rec
     company: {
       findUnique: jest.fn().mockResolvedValue({ lifecycleStatus: 'ACTIVE' }),
     },
+    authSession: { create: jest.fn().mockResolvedValue({ id: 'sess-1' }), findUnique: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]), update: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
+
     refreshToken: {
       findUnique: jest.fn().mockResolvedValue({
         id: 'rt-1',

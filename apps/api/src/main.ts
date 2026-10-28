@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import { clientMetaMiddleware } from './common/request/client-meta';
 import { AppModule } from './app.module';
 import { DateSerializerInterceptor } from './common/interceptors/date-serializer.interceptor';
 import { ApiVersionInterceptor } from './common/interceptors/api-version.interceptor';
@@ -25,6 +26,7 @@ async function bootstrap() {
   // Run before any other middleware so the id is on every response header,
   // including helmet's and CORS preflight responses.
   app.use(requestIdMiddleware);
+  app.use(clientMetaMiddleware);
 
   app.use(helmet());
   app.use(cookieParser());

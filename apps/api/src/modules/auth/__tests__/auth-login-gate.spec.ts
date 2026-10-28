@@ -29,6 +29,8 @@ describe('AuthService · email login role gate', () => {
         findMany: jest.fn().mockResolvedValue([user]),
         update: jest.fn().mockResolvedValue(user),
       },
+      authSession: { create: jest.fn().mockResolvedValue({ id: 'sess-1' }), findUnique: jest.fn().mockResolvedValue(null), findMany: jest.fn().mockResolvedValue([]), update: jest.fn().mockResolvedValue({}), updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
+
       refreshToken: { create: jest.fn().mockResolvedValue({}) },
     };
     const jwt = { signAsync: jest.fn().mockResolvedValue('access-token') };

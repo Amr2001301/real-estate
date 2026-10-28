@@ -56,6 +56,7 @@ import { AppModule } from '../src/app.module';
 import { CapabilityService } from '../src/common/capabilities/capability.service';
 import { DateSerializerInterceptor } from '../src/common/interceptors/date-serializer.interceptor';
 import { requestIdMiddleware } from '../src/common/logging/request-id.middleware';
+import { clientMetaMiddleware } from '../src/common/request/client-meta';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { runInCompany, runTenantContext } from '../src/common/tenant/tenant-context';
 import { AiPlansCron } from '../src/modules/ai/ai-plans.cron';
@@ -228,6 +229,7 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
   const app = moduleRef.createNestApplication({ bufferLogs: false });
 
   app.use(requestIdMiddleware);
+  app.use(clientMetaMiddleware);
   app.use(helmet());
   app.use(cookieParser());
   app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/', 'metrics'] });
@@ -354,6 +356,7 @@ export async function createE2ETestApp(): Promise<TestApp> {
 
   const app = moduleRef.createNestApplication({ bufferLogs: false });
   app.use(requestIdMiddleware);
+  app.use(clientMetaMiddleware);
   app.use(helmet());
   app.use(cookieParser());
   app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/', 'metrics'] });
@@ -442,6 +445,7 @@ export async function createSecurityTestApp(): Promise<TestApp> {
 
   const app = moduleRef.createNestApplication({ bufferLogs: false });
   app.use(requestIdMiddleware);
+  app.use(clientMetaMiddleware);
   app.use(helmet());
   app.use(cookieParser());
   app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/', 'metrics'] });

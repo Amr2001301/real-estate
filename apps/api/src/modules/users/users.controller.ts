@@ -174,6 +174,21 @@ export class UsersController {
     return this.users.findOne(id);
   }
 
+  // SES1 — where a staff member is signed in, and signing them out everywhere.
+  @Roles(UserRole.ADMIN)
+  @Permissions('users:read')
+  @Get(':id/sessions')
+  sessions(@Param('id', ParseUUIDPipe) id: string) {
+    return this.users.sessions(id);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('users:update')
+  @Post(':id/sessions/revoke')
+  signOutEverywhere(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
+    return this.users.signOutEverywhere(id, user.sub);
+  }
+
   @Roles(UserRole.ADMIN)
   @Permissions('users:update')
   @Patch(':id')

@@ -565,6 +565,7 @@ model User {
   lastLoginAt          DateTime?
 
   refreshTokens           RefreshToken[]
+  authSessions            AuthSession[]
   passwordResetTokens     PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
   rolePermissions         UserPermission[]
@@ -665,9 +666,30 @@ model RefreshToken {
   deviceId  String?
   userAgent String?
   ipAddress String?
+  /// SES1 — the sign-in this token belongs to; rotation keeps it.
+  sessionId String?      @db.Uuid
+  session   AuthSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   revokedAt DateTime?
   createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([sessionId])
+}
+
+/// SES1 — one sign-in on one device: what the user sees under «الأجهزة
+/// المتصلة» and can end. Its refresh token rotates; the session stays. The
+/// access token carries its id, so ending it cuts that device off at once.
+model AuthSession {
+  id            String         @id @default(uuid()) @db.Uuid
+  userId        String         @db.Uuid
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent     String?
+  ipAddress     String?
+  createdAt     DateTime       @default(now())
+  lastSeenAt    DateTime       @default(now())
+  revokedAt     DateTime?
+  refreshTokens RefreshToken[]
 
   @@index([userId])
 }

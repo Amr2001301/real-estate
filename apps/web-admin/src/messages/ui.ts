@@ -13,6 +13,7 @@ const UI = {
     },
     sidebar: {
       logout: 'تسجيل الخروج',
+      security: 'الأمان والأجهزة',
       roles: {
         SUPER_ADMIN: 'مدير المنصة',
         ADMIN: 'مدير النظام',
@@ -1325,7 +1326,7 @@ const UI = {
         noManager: 'بدون مدير',
         saveBtn: 'حفظ',
         statusBadge: { active: 'نشط', inactive: 'معطل' },
-        actionBtns: { deactivate: 'تعطيل', activate: 'تفعيل', permissions: 'الصلاحيات' },
+        actionBtns: { deactivate: 'تعطيل', activate: 'تفعيل', permissions: 'الصلاحيات', devices: 'الأجهزة' },
         empty: {
           filteredTitle: 'لا توجد نتائج مطابقة',
           emptyTitle: 'لا يوجد مستخدمون بعد',
@@ -5939,6 +5940,7 @@ const UI = {
     },
     sidebar: {
       logout: 'Log out',
+      security: 'Security & devices',
       roles: {
         SUPER_ADMIN: 'Platform Admin',
         ADMIN: 'System Admin',
@@ -7245,7 +7247,7 @@ const UI = {
         noManager: 'No Manager',
         saveBtn: 'Save',
         statusBadge: { active: 'Active', inactive: 'Inactive' },
-        actionBtns: { deactivate: 'Deactivate', activate: 'Activate', permissions: 'Permissions' },
+        actionBtns: { deactivate: 'Deactivate', activate: 'Activate', permissions: 'Permissions', devices: 'Devices' },
         empty: {
           filteredTitle: 'No matching results',
           emptyTitle: 'No users yet',
