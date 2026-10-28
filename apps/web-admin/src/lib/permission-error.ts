@@ -99,6 +99,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
   // Bonus / commissions
   'bonus:rules:manage': 'إدارة قواعد المكافآت',
   'bonus:entries:read': 'عرض المكافآت',
+  'bonus:entries:read:all': 'عرض عمولات الشركة كلها',
   'bonus:entries:create': 'إنشاء المكافآت',
   'bonus:entries:approve': 'اعتماد المكافآت',
   'bonus:entries:pay': 'تعليم المكافآت كمدفوعة',
