@@ -37,7 +37,8 @@ export async function assertRouteLoads(page: Page, route: RouteCheck): Promise<v
   await page.goto(route.path);
   await expect(page).not.toHaveURL(/\/login(\?|$)/);
   expect(new URL(page.url()).pathname).toBe(route.path);
-  await expect(page.getByText(route.heading).first()).toBeVisible();
+  // In the page itself: the sidebar's closed sections hold hidden labels that can share the words.
+  await expect(page.locator('main').getByText(route.heading).first()).toBeVisible();
   await assertNoErrorOverlay(page);
 }
 
