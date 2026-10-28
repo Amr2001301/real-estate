@@ -127,6 +127,9 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   Campaign: 'TENANT_OWNED',
   CampaignSpend: 'TENANT_OWNED',
   LeadIntakeKey: 'TENANT_OWNED',
+  // A company's data moved in from another system (the key, and each record sent).
+  MigrationRun: 'TENANT_OWNED',
+  MigrationRecord: 'TENANT_OWNED',
   UnitType: 'TENANT_OWNED',
   Lead: 'TENANT_OWNED',
   LeadNote: 'TENANT_OWNED',

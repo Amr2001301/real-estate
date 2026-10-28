@@ -313,6 +313,14 @@ Then hard-refresh the browser (Ctrl+Shift+R). Being on another branch (e.g. an o
 7. **Commit the merge and push normally** (`git commit`, then `git push origin claude/awesome-galileo-ob9jmm`, no force). Wait for CI to go green on the new head, then tell the owner it is ready; **the owner approves the merge** (squash).
 8. **After it merges**, add the deploy note to the production checklist in section 5: the migration `20261029090000_data_migration` runs with the others, and the other system needs `PUBLIC_API_URL`.
 
+### 2f. MG1 — design and next steps
+
+**MG1 design (owner-approved 2026-10-27):** one generic format for every system, not tied to Engaz. Records are matched by the other system's id (`MigrationRecord`, unique per company + `sourceSystem` + entity + `externalId`), so sending again updates; each record is checked on its own; `?dryRun=true` rolls each record back. Any field not in the format, and values not recognised (stage, source, unit type, person, activity kind), are kept on the record (`extra`, `unmapped`) — never guessed. Unknown stage → NEW; unknown source → «نقل بيانات»; units sold or booked over there are refused (decision 2026-10-18: SOLD only by a contract). Moved-in data sends no notifications and is not handed out. Phase 1 scope: no contracts, instalments or payments (Engaz has none).
+
+**MG1 deploy:** one additive migration, `20261029090000_data_migration`. The other system needs the public API address (`PUBLIC_API_URL` on web-admin, else `API_BASE_URL`, is what the panel shows).
+
+**Next — MG2 (approved, not started):** the mapping screen. For a source system, the platform owner maps each kept value / extra field once (to a stage, a source, a unit type, a person, a customer field, a note, or ignore); the choice is saved per system and applied to the records already moved and to later companies from the same system. Then phase 2: the same mapping on any Excel/CSV file from any system. Later, if wanted: contracts/instalments/payments, and the reverse (a company taking its data out over the API).
+
 ## 3. Round 4 — the plan (U1–U4 done; U5 in progress)
 
 Found by four read-only scenario audits on 2026-10-16. The top items were re-checked by hand. Paths are under `apps/api/` unless noted. Line numbers are as of `main` @ `bd3e46a`.
