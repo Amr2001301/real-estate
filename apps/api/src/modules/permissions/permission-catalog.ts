@@ -115,6 +115,7 @@ export const PERMISSION_CATALOG: ReadonlyArray<{ code: string; description: stri
   { code: 'buildings:manage', description: 'Manage project buildings' },
   { code: 'project_media:manage', description: 'Manage project and unit media' },
   { code: 'units:read', description: 'Read units and use installment calculator' },
+  { code: 'units:export', description: "Export the company's full unit and price list (Excel / CSV)" },
   { code: 'units:create', description: 'Create units' },
   { code: 'units:update', description: 'Update unit details and pricing' },
   { code: 'units:change-status', description: 'Change unit status' },

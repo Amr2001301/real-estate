@@ -72,6 +72,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
   'projects:create': 'إنشاء المشاريع',
   'projects:publish': 'نشر المشاريع',
   'units:read': 'عرض الوحدات',
+  'units:export': 'تصدير الوحدات',
   'units:change-status': 'تغيير حالة الوحدة',
   // Admin
   'users:manage': 'إدارة المستخدمين',

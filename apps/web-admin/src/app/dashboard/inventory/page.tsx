@@ -12,6 +12,7 @@ import {
 import { api, safe } from '@/lib/api';
 import { projectOptions } from '@/lib/options';
 import { getSession } from '@/lib/session';
+import { getMyCodes } from '@/lib/permissions';
 import type {
   UnitStatus,
   InventoryMatrixResult,
@@ -64,6 +65,8 @@ export default async function InventoryPage({
   ]);
   const m       = uiT(locale).pages.inventory;
   const isAdmin = session?.role === 'ADMIN';
+  // PRM2 — the full price list: the admin, or units:export.
+  const canExport = isAdmin || (await getMyCodes()).has('units:export');
   const q       = (sp.q ?? '').trim();
   const status: StatusFilter =
     sp.status === 'AVAILABLE' || sp.status === 'RESERVED' || sp.status === 'SOLD'
@@ -130,7 +133,7 @@ export default async function InventoryPage({
         ]}
         actions={
           <div className="flex items-center gap-2">
-            {isAdmin && (
+            {canExport && (
               <ExportMenu
                 locale={locale}
                 filenameBase="inventory"

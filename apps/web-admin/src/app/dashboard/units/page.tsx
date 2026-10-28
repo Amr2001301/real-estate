@@ -101,6 +101,7 @@ export default async function UnitsPage({
   const codes = await getMyCodes();
   const canCreate = isAdmin || codes.has('units:create');
   const canReprice = isAdmin || codes.has('units:update');
+  const canExport = isAdmin || codes.has('units:export');
   const m = uiT(locale).pages.units;
 
   const paged = pagedRes.data;
@@ -152,9 +153,9 @@ export default async function UnitsPage({
           { label: m.breadcrumb },
         ]}
         actions={
-          isAdmin || canCreate || canReprice ? (
+          isAdmin || canCreate || canReprice || canExport ? (
             <>
-              {isAdmin && <ExportMenu
+              {canExport && <ExportMenu
                 locale={locale}
                 filenameBase="units"
                 xlsxPath="/units/export.xlsx"

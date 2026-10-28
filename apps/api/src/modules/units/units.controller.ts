@@ -127,9 +127,11 @@ export class UnitsController {
 
   // Must be declared before `units/:id` so the literal segment wins over the param route.
   // "Export this list" on the admin units / inventory pages — the list
-  // filters, every page. ADMIN only (the full price list of the company).
+  // filters, every page. The full price list of the company: ADMIN, or a
+  // staff member granted units:export (in no role's starting set — PRM2).
   // Declared before `units/:id`.
   @Roles(UserRole.ADMIN)
+  @GrantedBy('units:export')
   @Permissions('units:read')
   @Get('units/export.xlsx')
   @Header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -139,6 +141,7 @@ export class UnitsController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('units:export')
   @Permissions('units:read')
   @Get('units/export.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
