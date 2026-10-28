@@ -71,7 +71,8 @@ test('signed-in devices: see them, sign one out, and the admin signs out everywh
     await expect(adminPage.getByText('غير مسجّل دخول على أي جهاز')).toBeVisible();
     await own.close();
   } finally {
-    await request.patch(`${API_BASE}/v1/users/${userId}/deactivate`, { headers: adminHeaders });
+    // Deleted, not only deactivated: an inactive account still holds a seat on the plan.
+    await request.delete(`${API_BASE}/v1/users/${userId}`, { headers: adminHeaders });
     await admin.close();
   }
 });

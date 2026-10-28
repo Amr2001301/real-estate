@@ -80,6 +80,7 @@ function makeAuthService(overrides: Record<string, unknown> = {}) {
     sms as never,
     email as never,
     caps as never,
+    { signInStep: jest.fn().mockResolvedValue(null) } as never,
   );
   return { service, prisma, sms, email };
 }
@@ -178,7 +179,7 @@ describe('AuthService · loginStaff', () => {
     prisma.user.findFirst.mockResolvedValue(makeStaffUser('ADMIN'));
     prisma.user.update.mockResolvedValue({});
     const result = await service.loginStaff(COMPANY_A, 'staff@acme.com', 'Password1!');
-    expect(result.tokens.accessToken).toBe('access-token');
+    expect(((result as unknown) as { tokens: { accessToken: string }; user: { role: string } | null }).tokens.accessToken).toBe('access-token');
   });
 
   it('allows SALES_MANAGER to log in via loginStaff', async () => {
@@ -186,7 +187,7 @@ describe('AuthService · loginStaff', () => {
     prisma.user.findFirst.mockResolvedValue(makeStaffUser('SALES_MANAGER'));
     prisma.user.update.mockResolvedValue({});
     const result = await service.loginStaff(COMPANY_A, 'staff@acme.com', 'Password1!');
-    expect(result.tokens.accessToken).toBe('access-token');
+    expect(((result as unknown) as { tokens: { accessToken: string }; user: { role: string } | null }).tokens.accessToken).toBe('access-token');
   });
 
   it('rejects CLIENT via loginStaff', async () => {
@@ -268,7 +269,7 @@ describe('AuthService · loginSuperAdmin', () => {
     prisma.user.findFirst.mockResolvedValue(superAdmin);
     prisma.user.update.mockResolvedValue({});
     const result = await service.loginSuperAdmin('root@platform.com', 'StrongPass1!');
-    expect(result.tokens.accessToken).toBe('access-token');
+    expect(((result as unknown) as { tokens: { accessToken: string }; user: { role: string } | null }).tokens.accessToken).toBe('access-token');
   });
 
   it('queries with role=SUPER_ADMIN AND companyId=null', async () => {

@@ -75,6 +75,7 @@ function makeAuthService(userRow: Record<string, unknown> | null, overrides: Rec
     sms as never,
     email as never,
     caps as never,
+    { signInStep: jest.fn().mockResolvedValue(null) } as never,
   );
   return { service, prisma };
 }
@@ -265,7 +266,7 @@ describe('loginSuperAdmin — lifecycle does not apply', () => {
     prisma.user.findFirst.mockResolvedValue(superAdminRow);
 
     const result = await service.loginSuperAdmin('admin@platform.com', 'Pass123!');
-    expect(result.tokens.accessToken).toBe('access-token');
+    expect(((result as unknown) as { tokens: { accessToken: string }; user: { role: string } | null }).tokens.accessToken).toBe('access-token');
   });
 });
 

@@ -50,3 +50,76 @@ export async function changePasswordAction(_prev: PasswordState, form: FormData)
   refresh();
   return { ok: true };
 }
+
+// ── TFA1 — own two-step sign-in, the company rule, and the admin's reset ─────
+
+export interface TwoFactorResult {
+  ok?: boolean;
+  error?: string;
+  recoveryCodes?: string[];
+  secret?: string;
+  otpauthUrl?: string;
+}
+
+async function tfaError(e: unknown): Promise<string> {
+  const m = securityT(await getLocale());
+  if (e instanceof ApiError) {
+    if (e.status === 400 && /password/i.test(e.rawMessage)) return m.wrongCurrent;
+    if (e.status === 400 || e.status === 401) return m.tfaWrongCode;
+    if (e.status === 429) return e.rawMessage;
+  }
+  return `${m.failed}: ${(e as Error).message}`;
+}
+
+export async function startOwnTwoFactorAction(): Promise<TwoFactorResult> {
+  try {
+    return await api.post<{ secret: string; otpauthUrl: string }>('/auth/2fa/setup');
+  } catch (e) {
+    return { error: await tfaError(e) };
+  }
+}
+
+export async function enableOwnTwoFactorAction(_prev: TwoFactorResult, form: FormData): Promise<TwoFactorResult> {
+  try {
+    const r = await api.post<{ recoveryCodes: string[] }>('/auth/2fa/enable', { code: String(form.get('code') ?? '').trim() });
+    refresh();
+    return { ok: true, recoveryCodes: r.recoveryCodes };
+  } catch (e) {
+    return { error: await tfaError(e) };
+  }
+}
+
+export async function newRecoveryCodesAction(_prev: TwoFactorResult, form: FormData): Promise<TwoFactorResult> {
+  try {
+    const r = await api.post<{ recoveryCodes: string[] }>('/auth/2fa/recovery-codes', { code: String(form.get('code') ?? '').trim() });
+    refresh();
+    return { ok: true, recoveryCodes: r.recoveryCodes };
+  } catch (e) {
+    return { error: await tfaError(e) };
+  }
+}
+
+export async function disableOwnTwoFactorAction(_prev: TwoFactorResult, form: FormData): Promise<TwoFactorResult> {
+  try {
+    await api.post('/auth/2fa/disable', { password: String(form.get('password') ?? ''), code: String(form.get('code') ?? '').trim() });
+    refresh();
+    return { ok: true };
+  } catch (e) {
+    return { error: await tfaError(e) };
+  }
+}
+
+export async function setTwoFactorPolicyAction(_prev: TwoFactorResult, form: FormData): Promise<TwoFactorResult> {
+  try {
+    await api.put('/auth/2fa/policy', { mode: String(form.get('mode') ?? 'OFF') });
+    refresh();
+    return { ok: true };
+  } catch (e) {
+    return { error: await tfaError(e) };
+  }
+}
+
+export async function resetUserTwoFactorAction(userId: string) {
+  await api.post(`/users/${userId}/2fa/reset`);
+  revalidatePath(`/dashboard/users/${userId}/sessions`);
+}

@@ -63,4 +63,6 @@ export const HIDDEN_SETTING_KEYS = new Set([
   'leads.autoAssign',
   'leads.firstCallMinutes',
   'leads.roundRobinCursor',
+  // TFA1 — set from «الأمان والأجهزة».
+  'security.require2fa',
 ]);

@@ -144,6 +144,7 @@ function makeService() {
 
   const service = new AuthService(
     prisma as never, jwt as never, config as never, sms as never, email as never, caps as never,
+    { signInStep: jest.fn().mockResolvedValue(null) } as never,
   );
 
   return { service, prisma, sms, created, otpStore };
