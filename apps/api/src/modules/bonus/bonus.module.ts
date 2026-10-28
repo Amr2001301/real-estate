@@ -13,6 +13,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   StreamableFile,
   Optional,
 } from '@nestjs/common';
@@ -68,6 +69,9 @@ import { commissionBasis, MARKUP_SNAPSHOT_SELECT } from '../../common/finance/co
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
+import { COMPANY_WIDE_CODES, seesWholeCompany } from '../../common/permissions/company-wide';
+import type { ReqWithCodes } from '../../common/permissions/staff-codes';
 import { ClawbackResolutionService } from '../broker-commissions/clawback-resolution.service';
 import { CollectClawbackDto, WaiveClawbackDto } from '../broker-commissions/dto/broker-commission.dto';
 import { CONTRACT_CANCELLED_MESSAGE, isPayableDeal, LIVE_CONTRACT_WHERE } from '../installments/live-contract';
@@ -766,6 +770,7 @@ class BonusController {
 
   // Rules
   @Roles(UserRole.ADMIN)
+  @GrantedBy('bonus:rules:manage')
   @Permissions('bonus:rules:manage')
   @Get('bonus-rules')
   listRules() {
@@ -773,6 +778,7 @@ class BonusController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('bonus:rules:manage')
   @Permissions('bonus:rules:manage')
   @Post('bonus-rules')
   createRule(@Body() dto: CreateRuleDto) {
@@ -780,6 +786,7 @@ class BonusController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('bonus:rules:manage')
   @Permissions('bonus:rules:manage')
   @Patch('bonus-rules/:id')
   updateRule(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateRuleDto) {
@@ -788,6 +795,7 @@ class BonusController {
 
   // Entries
   @Roles(UserRole.ADMIN)
+  @GrantedBy('bonus:entries:create')
   @Permissions('bonus:entries:create')
   @Post('bonus-entries')
   createEntry(@Body() dto: CreateEntryDto) {
@@ -799,17 +807,23 @@ class BonusController {
   @Get('bonus-entries')
   async listEntries(
     @CurrentUser() user: AuthUser,
+    @Req() req: ReqWithCodes,
     @Query('salesId') salesId?: string,
     @Query('status') status?: BonusEntryStatus,
     @Query('period') period?: string,
   ) {
-    const scope = await resolveSalesScope(this.prisma, user, salesId);
+    // PRM2 — a rep their own, a manager their team's; ADMIN or
+    // bonus:entries:read:all the whole company (one rep when asked).
+    const scope = (await seesWholeCompany(this.prisma, req, user, COMPANY_WIDE_CODES.bonus))
+      ? salesId ? { salesId } : {}
+      : await resolveSalesScope(this.prisma, user, salesId);
     return this.svc.listEntries({ ...scope, status, period });
   }
 
-  // CSV export mirrors the list read permission. ADMIN-only — this is the
-  // admin compensation export; SALES self-view (Batch 4) is out of scope.
+  // CSV export mirrors the list read permission: the whole company's, so
+  // ADMIN or bonus:entries:read:all (PRM2).
   @Roles(UserRole.ADMIN)
+  @GrantedBy('bonus:entries:read:all')
   @Permissions('bonus:entries:read')
   @Get('bonus-entries/export.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
@@ -825,6 +839,7 @@ class BonusController {
   // P15.3 — styled XLSX twin (default UI download). Same ADMIN-only gate +
   // filters; the CSV above stays as the raw-data fallback.
   @Roles(UserRole.ADMIN)
+  @GrantedBy('bonus:entries:read:all')
   @Permissions('bonus:entries:read')
   @Get('bonus-entries/export.xlsx')
   @Header(
@@ -842,6 +857,7 @@ class BonusController {
 
   // Presentation PDF (HTML printed by Chromium); same gate and filters.
   @Roles(UserRole.ADMIN)
+  @GrantedBy('bonus:entries:read:all')
   @Permissions('bonus:entries:read')
   @Get('bonus-entries/export.pdf')
   @Header('Content-Type', 'application/pdf')

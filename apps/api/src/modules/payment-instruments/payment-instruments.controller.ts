@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -36,6 +37,7 @@ export class PaymentInstrumentsController {
   // ADMIN + SALES_MANAGER; no strict (routine operation)
 
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @GrantedBy('payment-instruments:manage')
   @Permissions('payment-instruments:manage')
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreatePaymentInstrumentDto) {
@@ -44,6 +46,7 @@ export class PaymentInstrumentsController {
 
   // ── List (FG-01 — the cheques page) ──────────────────────────────────────────
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @GrantedBy('payment-instruments:manage')
   @Permissions('payment-instruments:manage')
   @Get()
   list(@Query() query: ListPaymentInstrumentsQueryDto) {
@@ -53,6 +56,7 @@ export class PaymentInstrumentsController {
   // ── Read ─────────────────────────────────────────────────────────────────────
 
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @GrantedBy('payment-instruments:manage')
   @Permissions('payment-instruments:manage')
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
@@ -62,6 +66,7 @@ export class PaymentInstrumentsController {
   // ── PENDING_CLEARANCE → DEPOSITED ─────────────────────────────────────────
 
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @GrantedBy('payment-instruments:manage')
   @Permissions('payment-instruments:manage')
   @HttpCode(HttpStatus.OK)
   @Post(':id/deposit')
@@ -72,6 +77,7 @@ export class PaymentInstrumentsController {
   // ── PENDING_CLEARANCE → CANCELLED ─────────────────────────────────────────
 
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @GrantedBy('payment-instruments:manage')
   @Permissions('payment-instruments:manage')
   @HttpCode(HttpStatus.OK)
   @Post(':id/cancel')
@@ -82,6 +88,7 @@ export class PaymentInstrumentsController {
   // ── DEPOSITED → CLEARED ──────────────────────────────────────────────────
 
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @GrantedBy('payment-instruments:manage')
   @Permissions('payment-instruments:manage')
   @HttpCode(HttpStatus.OK)
   @Post(':id/clear')
@@ -111,6 +118,7 @@ export class PaymentInstrumentsController {
   // ── BOUNCED → REPLACED ───────────────────────────────────────────────────
 
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @GrantedBy('payment-instruments:manage')
   @Permissions('payment-instruments:manage')
   @Post(':id/replace')
   replace(

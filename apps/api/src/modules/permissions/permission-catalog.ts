@@ -67,6 +67,7 @@ export const PERMISSION_CATALOG: ReadonlyArray<{ code: string; description: stri
   { code: 'broker_payouts:cancel', description: 'Cancel broker payouts' },
   { code: 'bonus:rules:manage', description: 'Manage bonus rules' },
   { code: 'bonus:entries:read', description: 'Read bonus entries' },
+  { code: 'bonus:entries:read:all', description: "Read and export the whole company's bonus entries (otherwise a rep sees their own, a manager their team's)" },
   { code: 'bonus:entries:create', description: 'Create bonus entries' },
   { code: 'bonus:entries:approve', description: 'Approve bonus entries' },
   { code: 'bonus:entries:pay', description: 'Mark bonus entries as paid' },

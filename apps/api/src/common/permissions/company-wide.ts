@@ -18,7 +18,19 @@ import { effectiveCodes, loadHeldCodes, type ReqWithCodes } from './staff-codes'
 export const COMPANY_WIDE_CODES = {
   contracts: 'contracts:read:all',
   deposits: 'deposits:read:all',
+  bonus: 'bonus:entries:read:all',
 } as const;
+
+/** True when the caller sees the whole company's records (an admin, or the code). */
+export async function seesWholeCompany(
+  prisma: PrismaService,
+  req: ReqWithCodes,
+  user: AuthUser,
+  wideCode: string,
+): Promise<boolean> {
+  if (user.role === UserRole.ADMIN) return true;
+  return effectiveCodes(user.role, await loadHeldCodes(prisma, req, user.sub)).has(wideCode);
+}
 
 /** The reps whose records the caller sees, or undefined for the whole company. */
 export async function ownedSalesIds(
@@ -27,8 +39,7 @@ export async function ownedSalesIds(
   user: AuthUser,
   wideCode: string,
 ): Promise<string[] | undefined> {
-  if (user.role === UserRole.ADMIN) return undefined;
-  if (effectiveCodes(user.role, await loadHeldCodes(prisma, req, user.sub)).has(wideCode)) return undefined;
+  if (await seesWholeCompany(prisma, req, user, wideCode)) return undefined;
   if (user.role === UserRole.SALES_MANAGER) return managerScopeIds(prisma, user.sub);
   return [user.sub];
 }

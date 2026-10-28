@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { staffOptions } from '@/lib/options';
+import { getSession } from '@/lib/session';
+import { getMyCodes } from '@/lib/permissions';
 import type { Paged } from '@/lib/types';
 import { formatCurrency, formatDate, intlLocale } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
@@ -137,11 +139,19 @@ export default async function BonusPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const [sp, locale, currency] = await Promise.all([
+  const [sp, locale, currency, session, codes] = await Promise.all([
     searchParams,
     getLocale(),
     getReportsCurrency(),
+    getSession(),
+    getMyCodes(),
   ]);
+  // PRM2 — approving and paying stay with the admin; the rules, manual
+  // entries and the whole company's export open by their codes.
+  const isAdmin = session?.role === 'ADMIN';
+  const canRules = codes.has('bonus:rules:manage');
+  const canCreate = codes.has('bonus:entries:create');
+  const canExport = isAdmin || codes.has('bonus:entries:read:all');
   const m = uiT(locale).bonusPage;
   const symbol = currencySymbol(currency, locale);
 
@@ -178,7 +188,7 @@ export default async function BonusPage({
   }
 
   const [rulesRes, entriesRes, salesRes] = await Promise.all([
-    safe(api.get<BonusRule[]>('/bonus-rules')),
+    canRules ? safe(api.get<BonusRule[]>('/bonus-rules')) : Promise.resolve({ data: [] as BonusRule[] }),
     safe(api.get<BonusEntry[] | Paged<BonusEntry>>(buildEntriesUrl(sp))),
     safe(staffOptions(['SALES', 'SALES_MANAGER'])),
   ]);
@@ -218,13 +228,15 @@ export default async function BonusPage({
           { label: m.breadcrumbBonus },
         ]}
         actions={
-          <ExportMenu locale={locale}
-            pdfPath="/bonus-entries/export.pdf"
-            xlsxPath="/bonus-entries/export.xlsx"
-            csvPath="/bonus-entries/export.csv"
-            filenameBase="bonus-entries"
-            params={{ salesId: sp.salesId, status: sp.status, period: sp.period }}
-          />
+          canExport ? (
+            <ExportMenu locale={locale}
+              pdfPath="/bonus-entries/export.pdf"
+              xlsxPath="/bonus-entries/export.xlsx"
+              csvPath="/bonus-entries/export.csv"
+              filenameBase="bonus-entries"
+              params={{ salesId: sp.salesId, status: sp.status, period: sp.period }}
+            />
+          ) : undefined
         }
       />
 
@@ -366,7 +378,7 @@ export default async function BonusPage({
                     </td>
                     <td className="ps-4 pe-5 py-3.5 whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
-                        {e.status === 'PENDING' && (
+                        {isAdmin && e.status === 'PENDING' && (
                           <form action={entryTransitionAction.bind(null, e.id, 'approve')}>
                             <input type="hidden" name="returnTo" value={returnTo} />
                             <button type="submit" className={pill('brand')}>
@@ -375,7 +387,7 @@ export default async function BonusPage({
                             </button>
                           </form>
                         )}
-                        {e.status === 'APPROVED' && (
+                        {isAdmin && e.status === 'APPROVED' && (
                           <form action={entryTransitionAction.bind(null, e.id, 'pay')}>
                             <input type="hidden" name="returnTo" value={returnTo} />
                             <button type="submit" className={pill('success')}>
@@ -384,7 +396,7 @@ export default async function BonusPage({
                             </button>
                           </form>
                         )}
-                        {e.status !== 'PENDING' && (
+                        {isAdmin && e.status !== 'PENDING' && (
                           <form action={entryTransitionAction.bind(null, e.id, 'revert')}>
                             <input type="hidden" name="returnTo" value={returnTo} />
                             <button
@@ -407,8 +419,10 @@ export default async function BonusPage({
         )}
       </PremiumSectionCard>
       {/* Rules and manual entry side by side, under the records */}
+      {(canRules || canCreate) && (
       <div className="grid grid-cols-1 xl:grid-cols-[1.4fr_1fr] gap-5 items-stretch">
         {/* Commission rules */}
+        {canRules && (
         <PremiumSectionCard
           title={m.sectionRules}
           icon={<BadgePercent />}
@@ -511,7 +525,9 @@ export default async function BonusPage({
             </p>
           </div>
         </PremiumSectionCard>
+        )}
         {/* Manual entry */}
+        {canCreate && (
         <PremiumSectionCard title={m.sectionManualEntry} icon={<Plus />} className="h-full">
           {rules.length === 0 || salesUsers.length === 0 ? (
             <p className="text-[12px] text-slate-400">
@@ -548,7 +564,9 @@ export default async function BonusPage({
             </form>
           )}
         </PremiumSectionCard>
+        )}
       </div>
+      )}
     </div>
   );
 }

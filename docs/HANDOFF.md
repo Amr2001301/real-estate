@@ -566,7 +566,12 @@ Left for the owner, not in V1–V3:
 - A rep sees the contracts and payments of their own sales (the reservation's `salesId`), a manager their own and their team's; another rep's contract, statement or installment plan (and a manager's other team's proof) is 404. A contract with no reservation has no rep, so only an admin (or the codes below) sees it.
 - New codes, in no role's starting set: `contracts:read:all` and `deposits:read:all` open the whole company's, as the admin sees them; `deposits:read:all` also opens a payment's detail and the review queue (`@GrantedBy`), and the «الدفعات» nav item. Approving, rejecting, recording and reversing payments stay with the admin.
 - The mobile staff app is unchanged; it simply gets fewer rows for a rep. e2e `e2e-prm2b-money-scope`.
-- Not done yet in phase 2: cheques, bonus entries, brokers and their commissions (a manager still sees every broker contract), maintenance, documents, visit scheduling, unit export.
+- Not done yet in phase 2: brokers and their commissions (a manager still sees every broker contract), maintenance, documents, visit scheduling, unit export.
+
+**Phase 2c — cheques and bonus (done):**
+- Cheques: `payment-instruments:manage` opens the cheques routes (`@GrantedBy`) and nav item to any staff member; the whole company's, as for an admin. Recording a bounce and its suggestion stay admin-only (`payment-instruments:bounce` is strict).
+- Bonus: a rep sees their own entries, a manager their team's (unchanged). New `bonus:entries:read:all` (in no role's starting set) opens the whole company's entries and the CSV/XLSX/PDF export. `bonus:rules:manage` opens the rules, `bonus:entries:create` the manual entry. Approving, paying, reverting and clawback decisions stay admin-only.
+- web-admin: the bonus page shows the export, rules, manual entry and approve/pay buttons only to whoever may use them; the cheques and bonus nav items follow the codes. e2e `e2e-prm2c-cheques-bonus`.
 
 **Phase 3 (optional) — company role templates:** an admin saves a named set of codes («محاسب», «تسويق», «سكرتارية») and applies it to a user in one step; changing the template can update its users.
 

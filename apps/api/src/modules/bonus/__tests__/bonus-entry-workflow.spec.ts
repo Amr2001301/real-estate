@@ -354,17 +354,23 @@ describe('Bonus · entry lifecycle workflow', () => {
     expect(mock.bonusRule.update).not.toHaveBeenCalled();
   });
 
-  it('updateRule is blocked for non-admins at the role gate (403)', async () => {
-    FakeAuthGuard.currentUser = {
-      sub: 'sales-1',
-      role: UserRole.SALES,
-      codes: ['bonus:rules:manage'], // even with the code, @Roles(ADMIN) blocks
-    };
+  it('updateRule is blocked for a non-admin without bonus:rules:manage (403)', async () => {
+    FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: ['bonus:entries:read'] };
     await request(app.getHttpServer())
       .patch(`/bonus-rules/${RULE_ID}`)
       .send({ active: false })
       .expect(403);
     expect(mock.bonusRule.update).not.toHaveBeenCalled();
+  });
+
+  it('PRM: a staff member holding bonus:rules:manage may update a rule; approving stays with the admin', async () => {
+    FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: ['bonus:rules:manage', 'bonus:entries:approve'] };
+    await request(app.getHttpServer())
+      .patch(`/bonus-rules/${RULE_ID}`)
+      .send({ active: false })
+      .expect(200);
+    expect(mock.bonusRule.update).toHaveBeenCalled();
+    await request(app.getHttpServer()).post(`/bonus-entries/${ENTRY_ID}/approve`).send({}).expect(403);
   });
 
   // ── approveEntry ────────────────────────────────────────────────────────

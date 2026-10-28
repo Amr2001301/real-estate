@@ -215,6 +215,7 @@ const META: Record<string, PermissionMeta> = {
   // ── عمولات المبيعات ──────────────────────────────────────────────────────
   'bonus:rules:manage': { label: 'إدارة قواعد العمولات', description: 'إنشاء وتعديل قواعد عمولات المبيعات.', category: 'عمولات المبيعات', type: 'إداري' },
   'bonus:entries:read': { label: 'عرض مستحقات المبيعات', description: 'الاطلاع على عمولات ومكافآت المبيعات.', category: 'عمولات المبيعات', type: 'قراءة' },
+  'bonus:entries:read:all': { label: 'عرض عمولات الشركة كلها', description: 'الاطلاع على عمولات الشركة كلها وتصديرها؛ بدونها يرى المندوب عمولاته فقط والمشرف عمولات فريقه.', category: 'عمولات المبيعات', type: 'قراءة' },
   'bonus:entries:create': { label: 'إنشاء مستحقات المبيعات', description: 'تسجيل مستحق عمولة يدوياً.', category: 'عمولات المبيعات', type: 'تعديل' },
   'bonus:entries:approve': { label: 'اعتماد مستحقات المبيعات', description: 'اعتماد مستحقات أو عمولات مندوبي المبيعات.', category: 'عمولات المبيعات', type: 'اعتماد' },
   'bonus:entries:pay': { label: 'صرف مستحقات المبيعات', description: 'تعليم مستحق العمولة كمدفوع.', category: 'عمولات المبيعات', type: 'مالي' },
