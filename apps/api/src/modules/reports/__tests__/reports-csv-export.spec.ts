@@ -214,11 +214,13 @@ describe('Reports module · CSV export', () => {
       expect(all).not.toMatch(/أحمد منصور|بيانات تجريبية|برج الجوار|74%/);
     });
 
-    it('rejects SALES / BROKER at the @Roles layer', async () => {
-      for (const role of [UserRole.SALES, UserRole.BROKER]) {
-        FakeAuthGuard.currentUser = { sub: 'x', role, codes: ['reports:operational:read'] };
-        await request(app.getHttpServer()).get('/reports/operational/export.xlsx').expect(403);
-      }
+    it('opens to SALES with reports:operational:read; BROKER and SALES without it stay out', async () => {
+      FakeAuthGuard.currentUser = { sub: 'x', role: UserRole.SALES, codes: ['reports:operational:read'] };
+      await request(app.getHttpServer()).get('/reports/operational/export.xlsx').expect(200);
+      FakeAuthGuard.currentUser = { sub: 'x', role: UserRole.SALES, codes: [] };
+      await request(app.getHttpServer()).get('/reports/operational/export.xlsx').expect(403);
+      FakeAuthGuard.currentUser = { sub: 'x', role: UserRole.BROKER, codes: ['reports:operational:read'] };
+      await request(app.getHttpServer()).get('/reports/operational/export.xlsx').expect(403);
     });
   });
 
@@ -245,8 +247,10 @@ describe('Reports module · CSV export', () => {
       expect(text).toContain('الملخص التنفيذي');
       expect(text).not.toMatch(/أحمد منصور|بيانات تجريبية|74%/);
     });
-    it('is forbidden for SALES (admin-only @Roles)', async () => {
+    it('opens to SALES only with reports:sales:read', async () => {
       FakeAuthGuard.currentUser = { sub: 'x', role: UserRole.SALES, codes: ['reports:sales:read'] };
+      await request(app.getHttpServer()).get('/reports/sales/export.xlsx').expect(200);
+      FakeAuthGuard.currentUser = { sub: 'x', role: UserRole.SALES, codes: ['reports:financial:read'] };
       await request(app.getHttpServer()).get('/reports/sales/export.xlsx').expect(403);
     });
   });
@@ -288,8 +292,10 @@ describe('Reports module · CSV export', () => {
       const where = JSON.stringify(prismaMock.contract.aggregate.mock.calls.map((c) => c[0]));
       expect(where).toContain(projectId);
     });
-    it('is forbidden for SALES', async () => {
+    it('opens to SALES only with reports:financial:read', async () => {
       FakeAuthGuard.currentUser = { sub: 'x', role: UserRole.SALES, codes: ['reports:financial:read'] };
+      await request(app.getHttpServer()).get('/reports/financial-dashboard/export.xlsx').expect(200);
+      FakeAuthGuard.currentUser = { sub: 'x', role: UserRole.SALES, codes: ['reports:sales:read'] };
       await request(app.getHttpServer()).get('/reports/financial-dashboard/export.xlsx').expect(403);
     });
   });
@@ -333,12 +339,10 @@ describe('Reports module · CSV export', () => {
       expect(prismaMock.userPermission.findMany).not.toHaveBeenCalled();
     });
 
-    it('rejects SALES role at the @Roles layer (admin-only)', async () => {
-      FakeAuthGuard.currentUser = {
-        sub: 'sales-1',
-        role: UserRole.SALES,
-        codes: ['reports:sales:read'],
-      };
+    it('lets SALES in with reports:sales:read, not without it', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: ['reports:sales:read'] };
+      await request(app.getHttpServer()).get('/reports/sales/export.csv').expect(200);
+      FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: [] };
       await request(app.getHttpServer()).get('/reports/sales/export.csv').expect(403);
     });
 
@@ -440,7 +444,8 @@ describe('Reports module · CSV export', () => {
   });
 
   // Presentation PDFs (HTML → Chromium). This module has no renderer, so an
-  // ADMIN reaches each report and gets 503; other roles stop at @Roles.
+  // ADMIN (or a staff member holding the code) reaches each report and gets
+  // 503; anyone else stops at @Roles.
   describe('presentation PDFs (operational, financial dashboard)', () => {
     const paths = ['/reports/operational/export.pdf', '/reports/financial-dashboard/export.pdf'];
 
@@ -449,8 +454,19 @@ describe('Reports module · CSV export', () => {
       for (const path of paths) await request(app.getHttpServer()).get(path).expect(503);
     });
 
-    it('are forbidden for SALES / CUSTOMER / BROKER', async () => {
-      for (const role of [UserRole.SALES, UserRole.CUSTOMER, UserRole.BROKER]) {
+    it('are reached by SALES holding the codes (503 without a renderer)', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: 'x',
+        role: UserRole.SALES,
+        codes: ['reports:operational:read', 'reports:financial:read'],
+      };
+      for (const path of paths) await request(app.getHttpServer()).get(path).expect(503);
+    });
+
+    it('are forbidden for SALES without the codes, and for CUSTOMER / BROKER', async () => {
+      FakeAuthGuard.currentUser = { sub: 'x', role: UserRole.SALES, codes: [] };
+      for (const path of paths) await request(app.getHttpServer()).get(path).expect(403);
+      for (const role of [UserRole.CUSTOMER, UserRole.BROKER]) {
         FakeAuthGuard.currentUser = {
           sub: 'x',
           role,
