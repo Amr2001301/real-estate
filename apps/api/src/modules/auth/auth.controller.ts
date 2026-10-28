@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Put, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Throttle } from '@nestjs/throttler';
 import { Response } from 'express';
 import { AuthService, DEPRECATED_ENDPOINT_HEADER } from './auth.service';
 import { TenantResolverService } from './tenant-resolver.service';
+import { TwoFactorService } from './two-factor.service';
 import {
   ChangePasswordDto,
   ForgotPasswordDto,
@@ -13,6 +14,12 @@ import {
   LoginEmailDto,
   RefreshDto,
   ResetPasswordDto,
+  TwoFactorChallengeDto,
+  TwoFactorCodeDto,
+  TwoFactorDisableDto,
+  TwoFactorPolicyDto,
+  TwoFactorSetupFinishDto,
+  TwoFactorVerifyDto,
   VerifyEmailDto,
 } from './dto/auth.dto';
 import {
@@ -29,6 +36,7 @@ import { Public } from '../../common/decorators/public.decorator';
 import { PlatformPublic } from '../../common/decorators/platform-public.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { runAsPlatform, runInCompany } from '../../common/tenant/tenant-context';
 
 @ApiTags('auth')
@@ -37,6 +45,7 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly tenantResolver: TenantResolverService,
+    private readonly twoFactor: TwoFactorService,
   ) {}
 
   // ── Legacy staff/admin login (MT-035 — deprecation telemetry) ─────────────
@@ -149,6 +158,74 @@ export class AuthController {
   @Post('change-password')
   changePassword(@CurrentUser() user: AuthUser, @Body() dto: ChangePasswordDto) {
     return this.auth.changePassword(user.sub, dto.currentPassword, dto.newPassword, user.sid);
+  }
+
+  // ── TFA1 — the second sign-in step. No session yet: the signed challenge
+  // from the password step names the account. Tenant-less like refresh.
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @Post('2fa/verify')
+  verifyTwoFactor(@Body() dto: TwoFactorVerifyDto) {
+    return runAsPlatform(() => this.auth.verifyTwoFactor(dto.challenge, dto.code));
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @Post('2fa/setup-challenge')
+  startTwoFactorSetup(@Body() dto: TwoFactorChallengeDto) {
+    return runAsPlatform(() => this.auth.startTwoFactorSetup(dto.challenge));
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @Post('2fa/enable-challenge')
+  finishTwoFactorSetup(@Body() dto: TwoFactorSetupFinishDto) {
+    return runAsPlatform(() => this.auth.finishTwoFactorSetup(dto.challenge, dto.code));
+  }
+
+  // ── TFA1 — own two-step sign-in (JWT; own account only). ────────────────
+  @Get('2fa')
+  twoFactorStatus(@CurrentUser() user: AuthUser) {
+    return this.twoFactor.status(user.sub);
+  }
+
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @Post('2fa/setup')
+  twoFactorSetup(@CurrentUser() user: AuthUser) {
+    return this.twoFactor.setup(user.sub);
+  }
+
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @Post('2fa/enable')
+  twoFactorEnable(@CurrentUser() user: AuthUser, @Body() dto: TwoFactorCodeDto) {
+    return this.twoFactor.enable(user.sub, dto.code);
+  }
+
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @Post('2fa/disable')
+  twoFactorDisable(@CurrentUser() user: AuthUser, @Body() dto: TwoFactorDisableDto) {
+    return this.twoFactor.disable(user.sub, dto.password, dto.code);
+  }
+
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @Post('2fa/recovery-codes')
+  twoFactorRecoveryCodes(@CurrentUser() user: AuthUser, @Body() dto: TwoFactorCodeDto) {
+    return this.twoFactor.regenerateRecoveryCodes(user.sub, dto.code);
+  }
+
+  // The company's rule: who must use it (security.require2fa).
+  @Roles(UserRole.ADMIN)
+  @Permissions('settings:read')
+  @Get('2fa/policy')
+  async twoFactorPolicy(@CurrentUser() user: AuthUser) {
+    return { mode: await this.twoFactor.policy(user.companyId) };
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('settings:write')
+  @Put('2fa/policy')
+  setTwoFactorPolicy(@CurrentUser() user: AuthUser, @Body() dto: TwoFactorPolicyDto) {
+    return this.twoFactor.setPolicy(user.companyId!, dto.mode);
   }
 
   // ── SES1 — own sessions (linked devices). Own account only (JWT). ────────

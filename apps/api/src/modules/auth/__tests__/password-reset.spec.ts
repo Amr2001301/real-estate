@@ -85,6 +85,7 @@ function makeService(overrides: {
     sms as never,
     email as never,
     caps as never,
+    { signInStep: jest.fn().mockResolvedValue(null) } as never,
   );
 
   return { service, prisma, email };

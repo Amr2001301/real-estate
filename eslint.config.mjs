@@ -205,6 +205,9 @@ export default [
       // any tenant context exists (login, OTP, register, JWT validation).
       'apps/api/src/modules/auth/auth.service.ts',
       'apps/api/src/modules/auth/jwt.strategy.ts',
+      // TFA1 — the second sign-in step reads the user named by a signed
+      // challenge (no tenant context yet) or by the caller's own JWT sub.
+      'apps/api/src/modules/auth/two-factor.service.ts',
       // Broker portal: email/phone global uniqueness check before creating a
       // broker team member. No caller-supplied user ID — existence-check only.
       'apps/api/src/modules/broker-portal/broker-portal-team.service.ts',
@@ -290,6 +293,7 @@ export default [
       // Tier A
       'apps/api/src/modules/auth/auth.service.ts',
       'apps/api/src/modules/auth/jwt.strategy.ts',
+      'apps/api/src/modules/auth/two-factor.service.ts',
       'apps/api/src/modules/broker-portal/broker-portal-team.service.ts',
       'apps/api/src/modules/broker-users/broker-users.service.ts',
       'apps/api/src/modules/requests/requests.module.ts',

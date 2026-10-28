@@ -26,6 +26,7 @@ import { CapabilityService } from '../../common/capabilities/capability.service'
 import type { Prisma, UserRole } from '@prisma/client';
 import { reportFailure } from '../../common/observability/report-failure';
 import { currentClientMeta } from '../../common/request/client-meta';
+import { TwoFactorService } from './two-factor.service';
 
 // MT-035: Response header emitted on legacy /auth/login to signal deprecation.
 export const DEPRECATED_ENDPOINT_HEADER = 'Deprecation';
@@ -52,7 +53,53 @@ export class AuthService {
     private readonly sms: SmsService,
     private readonly email: EmailService,
     private readonly capabilityService: CapabilityService,
+    private readonly twoFactor: TwoFactorService,
   ) {}
+
+  /**
+   * TFA1 — after a correct password: a session, or the second step (a code
+   * from the authenticator app, or setting it up where the company requires
+   * it) when the account has one.
+   */
+  private async afterPassword(user: { id: string; role: UserRole; companyId: string | null; totpEnabledAt: Date | null }) {
+    const step = await this.twoFactor.signInStep(user);
+    return step ?? this.issueTokens(user.id, user.role);
+  }
+
+  /** The second step: the challenge from the password step and a code (or a recovery code). */
+  async verifyTwoFactor(challenge: string, code: string) {
+    const userId = await this.twoFactor.readChallenge(challenge, 'verify');
+    const user = await this.signInUser(userId);
+    const { recovery } = await this.twoFactor.checkCode(user.id, code);
+    const result = await this.issueTokens(user.id, user.role);
+    return recovery ? { ...result, usedRecoveryCode: true } : result;
+  }
+
+  /** Setting it up during sign-in, where the company requires it: the secret to scan. */
+  async startTwoFactorSetup(challenge: string) {
+    const userId = await this.twoFactor.readChallenge(challenge, 'setup');
+    await this.signInUser(userId);
+    return this.twoFactor.setup(userId);
+  }
+
+  /** …and the first code: it is on, the recovery codes are shown once, and the session starts. */
+  async finishTwoFactorSetup(challenge: string, code: string) {
+    const userId = await this.twoFactor.readChallenge(challenge, 'setup');
+    const user = await this.signInUser(userId);
+    const { recoveryCodes } = await this.twoFactor.enable(user.id, code);
+    return { ...(await this.issueTokens(user.id, user.role)), recoveryCodes };
+  }
+
+  /** The account a challenge names, still able to sign in (it may have been switched off since). */
+  private async signInUser(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, active: true, deletedAt: true, company: { select: { lifecycleStatus: true, subscriptionStatus: true } } },
+    });
+    if (!user || !user.active || user.deletedAt) throw new UnauthorizedException('Account inactive');
+    if (user.role !== 'SUPER_ADMIN' && user.company && !companyAccessAllowed(user.company)) throw companyAccessDenied();
+    return user;
+  }
 
   // ------------- Email + password (Admin / Sales / Broker) -------------
 
@@ -116,7 +163,7 @@ export class AuthService {
     }
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-    return this.issueTokens(user.id, user.role);
+    return this.afterPassword(user);
   }
 
   // MT-035: Called by the controller on every /auth/login hit for telemetry.
@@ -691,7 +738,7 @@ export class AuthService {
     }
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-    return this.issueTokens(user.id, user.role);
+    return this.afterPassword(user);
   }
 
   // ── MT-027 — Super-admin login ────────────────────────────────────────────
@@ -717,7 +764,7 @@ export class AuthService {
     if (!ok) throw new UnauthorizedException('Invalid credentials');
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
-    return this.issueTokens(user.id, user.role);
+    return this.afterPassword(user);
   }
 
   // ── MT-028 — Tenant-aware customer login ──────────────────────────────────

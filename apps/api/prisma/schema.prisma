@@ -563,6 +563,17 @@ model User {
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   lastLoginAt          DateTime?
+  /// TFA1 — two-step sign-in with an authenticator app. The secret is sealed
+  /// (AES-GCM); it is on but unconfirmed until totpEnabledAt is set.
+  totpSecret           String?
+  totpEnabledAt        DateTime?
+  /// The last time step a code was accepted at: a code is good once.
+  totpLastStep         Int?
+  /// One-use recovery codes, as SHA-256 hashes.
+  totpRecoveryHashes   String[]           @default([])
+  /// Wrong codes in a row; five lock the second step for 15 minutes.
+  totpFailures         Int                @default(0)
+  totpLockedUntil      DateTime?
 
   refreshTokens           RefreshToken[]
   authSessions            AuthSession[]

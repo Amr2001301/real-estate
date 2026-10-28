@@ -8,12 +8,21 @@ import { revokeOtherSessionsAction, revokeSessionAction } from '@/lib/security-a
 import { SessionsList, type SessionRow } from './sessions-list';
 import { ChangePasswordForm } from './change-password-form';
 import { securityT } from './security-messages';
+import { TwoFactorCard, type TwoFactorStatus } from './two-factor-card';
+import { TwoFactorPolicyForm } from './two-factor-policy';
+import { getSession } from '@/lib/session';
 
 /** SES1 — «الأمان والأجهزة» for any staff member or broker: their devices and password. */
 export async function SecurityPage({ home }: { home: string }) {
   const [locale, zone] = await Promise.all([getLocale(), getCompanyTimeZone()]);
   const m = securityT(locale);
-  const res = await safe(api.get<{ data: SessionRow[] }>('/auth/sessions'));
+  const session = await getSession();
+  const isAdmin = session?.role === 'ADMIN';
+  const [res, tfa, policy] = await Promise.all([
+    safe(api.get<{ data: SessionRow[] }>('/auth/sessions')),
+    safe(api.get<TwoFactorStatus>('/auth/2fa')),
+    isAdmin ? safe(api.get<{ mode: string }>('/auth/2fa/policy')) : Promise.resolve(null),
+  ]);
   const sessions = res.data?.data ?? [];
   const others = sessions.filter((s) => !s.current).length;
 
@@ -42,6 +51,16 @@ export async function SecurityPage({ home }: { home: string }) {
           </>
         )}
       </PremiumPanel>
+      {tfa.data?.available && (
+        <PremiumPanel title={m.tfaTitle}>
+          <TwoFactorCard status={tfa.data} locale={locale} />
+        </PremiumPanel>
+      )}
+      {isAdmin && policy?.data && (
+        <PremiumPanel title={m.policyTitle}>
+          <TwoFactorPolicyForm mode={policy.data.mode} locale={locale} />
+        </PremiumPanel>
+      )}
       <PremiumPanel title={m.passwordTitle}>
         <ChangePasswordForm locale={locale} />
       </PremiumPanel>

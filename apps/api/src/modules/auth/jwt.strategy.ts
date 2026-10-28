@@ -19,7 +19,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: { sub: string; sid?: string }): Promise<AuthUser> {
+  async validate(payload: { sub: string; sid?: string; typ?: string }): Promise<AuthUser> {
+    // TFA1 — a sign-in challenge is signed with another key, but is never a session either way.
+    if (payload.typ) throw new UnauthorizedException('Not an access token');
     // Runs before TenantContextInterceptor, and the account's company is what
     // this lookup establishes — so it cannot be tenant-scoped. The signed sub
     // identifies exactly one row.

@@ -206,14 +206,43 @@ export const api = {
     request<T>(path, { ...opts, method: 'DELETE' }),
 };
 
-type AuthResult = {
+export type AuthResult = {
   user: { id: string; role: string; fullName: string };
   tokens: { accessToken: string; refreshToken: string; expiresIn: number };
 };
 
+/** TFA1 — the password was right; the code from the authenticator app (or setting it up) comes next. */
+export type TwoFactorStep = { twoFactorRequired?: true; twoFactorSetupRequired?: true; challenge: string };
+
+export function isTwoFactorStep(r: AuthResult | TwoFactorStep): r is TwoFactorStep {
+  return 'challenge' in r && typeof r.challenge === 'string';
+}
+
+/** A tenant-less auth call with no session yet (the second sign-in step). */
+export async function authPost<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE}/v1${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await clientHeaders()) },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+  const text = await res.text();
+  let payload: unknown = undefined;
+  try {
+    payload = text ? JSON.parse(text) : undefined;
+  } catch {
+    payload = undefined;
+  }
+  if (!res.ok) {
+    const message = payload && typeof payload === 'object' && 'message' in payload ? String((payload as { message: unknown }).message) : text;
+    throw new ApiError(res.status, message, payload);
+  }
+  return payload as T;
+}
+
 // MT-026 — Tenant-aware staff login. Called from the staff login form.
 // The slug is resolved server-side by the backend; companyId never comes from the client.
-export async function loginStaff(slug: string, email: string, password: string): Promise<AuthResult> {
+export async function loginStaff(slug: string, email: string, password: string): Promise<AuthResult | TwoFactorStep> {
   const res = await fetch(`${API_BASE}/v1/auth/login-staff`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(await clientHeaders()) },
@@ -221,11 +250,11 @@ export async function loginStaff(slug: string, email: string, password: string):
     cache: 'no-store',
   });
   if (!res.ok) throw new ApiError(res.status, await res.text());
-  return (await res.json()) as AuthResult;
+  return (await res.json()) as AuthResult | TwoFactorStep;
 }
 
 // MT-027 — Platform super-admin login. No company field — SUPER_ADMIN has companyId=null.
-export async function loginSuperAdmin(email: string, password: string): Promise<AuthResult> {
+export async function loginSuperAdmin(email: string, password: string): Promise<AuthResult | TwoFactorStep> {
   const res = await fetch(`${API_BASE}/v1/auth/login-super-admin`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(await clientHeaders()) },
@@ -233,7 +262,7 @@ export async function loginSuperAdmin(email: string, password: string): Promise<
     cache: 'no-store',
   });
   if (!res.ok) throw new ApiError(res.status, await res.text());
-  return (await res.json()) as AuthResult;
+  return (await res.json()) as AuthResult | TwoFactorStep;
 }
 
 /** Fetch with bearer auth and return json — for server actions/components calling our API directly. */

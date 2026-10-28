@@ -47,6 +47,7 @@ describe('AuthService · email login role gate', () => {
       sms as never,
       { sendPasswordReset: jest.fn() } as never,
       caps as never,
+      { signInStep: jest.fn().mockResolvedValue(null) } as never,
     );
     return { service, prisma };
   }
@@ -54,8 +55,8 @@ describe('AuthService · email login role gate', () => {
   it('allows a MAINTENANCE_SUPERVISOR to log in with email/password', async () => {
     const { service } = makeService(UserRole.MAINTENANCE_SUPERVISOR);
     const res = await service.loginEmail('x@example.com', 'MaintenancePass123!');
-    expect(res.tokens.accessToken).toBe('access-token');
-    expect(res.user?.role).toBe(UserRole.MAINTENANCE_SUPERVISOR);
+    expect(((res as unknown) as { tokens: { accessToken: string }; user: { role: string } | null }).tokens.accessToken).toBe('access-token');
+    expect(((res as unknown) as { tokens: { accessToken: string }; user: { role: string } | null }).user?.role).toBe(UserRole.MAINTENANCE_SUPERVISOR);
   });
 
   it('picks the account whose password matches when the email exists in two companies', async () => {

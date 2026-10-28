@@ -8,7 +8,7 @@ import { PremiumPageHero, PremiumPanel } from '@/components/premium';
 import { Button } from '@/components/ui/button';
 import { SessionsList, type SessionRow } from '@/components/security/sessions-list';
 import { securityT } from '@/components/security/security-messages';
-import { signOutUserEverywhereAction } from '@/lib/security-actions';
+import { resetUserTwoFactorAction, signOutUserEverywhereAction } from '@/lib/security-actions';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -25,6 +25,7 @@ export default async function UserSessionsPage({ params }: { params: Promise<{ i
   ]);
   if (userRes.error && userRes.status === 404) notFound();
   const name = userRes.data?.fullName ?? '—';
+  const tfaOn = !!(userRes.data as (User & { totpEnabledAt?: string | null }) | null)?.totpEnabledAt;
   const sessions = res.data?.data ?? [];
 
   return (
@@ -39,6 +40,18 @@ export default async function UserSessionsPage({ params }: { params: Promise<{ i
           { label: m.devices },
         ]}
       />
+      <PremiumPanel title={m.tfaTitle} sub={tfaOn ? m.tfaUserOn : m.tfaUserOff}>
+        {tfaOn ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface-muted/60 p-3">
+            <p className="text-[12.5px] text-slate-600">{m.tfaResetHint}</p>
+            <form action={resetUserTwoFactorAction.bind(null, id)}>
+              <Button type="submit" variant="outline" size="sm">{m.tfaReset}</Button>
+            </form>
+          </div>
+        ) : (
+          <p className="text-[12.5px] text-slate-500" data-testid="user-two-factor-off">{m.tfaUserOff}</p>
+        )}
+      </PremiumPanel>
       <PremiumPanel title={m.sessionsTitle} sub={m.sessionsSub(sessions.length)}>
         {res.error ? (
           <p role="alert" className="text-sm text-danger-600">{m.error}: {res.error}</p>

@@ -20,6 +20,8 @@ const EnvSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(16),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
+  // TFA1 — seals two-step sign-in secrets; unset, derived from JWT_REFRESH_SECRET.
+  TOTP_ENCRYPTION_KEY: z.string().optional(),
 
   OTP_PROVIDER: z.enum(['console', 'twilio']).default('console'),
   TWILIO_ACCOUNT_SID: z.string().optional(),

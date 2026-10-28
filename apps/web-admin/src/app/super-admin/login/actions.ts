@@ -2,7 +2,8 @@
 
 import { cookies } from 'next/headers';
 import { redirect, unstable_rethrow } from 'next/navigation';
-import { loginSuperAdmin, ApiError } from '@/lib/api';
+import { loginSuperAdmin, ApiError, isTwoFactorStep } from '@/lib/api';
+import { holdChallenge } from '@/lib/auth-session';
 
 export interface SuperAdminLoginState {
   error?: string;
@@ -30,6 +31,12 @@ export async function superAdminLoginAction(
       return { error: 'تعذر الاتصال بالخادم — تأكد أن الـ API يعمل' };
     }
     return { error: 'حدث خطأ غير متوقع' };
+  }
+
+  // TFA1 — the second step, on the shared page (it sends a super admin back here).
+  if (isTwoFactorStep(result)) {
+    await holdChallenge(result, '/dashboard/super-admin');
+    redirect(result.twoFactorSetupRequired ? '/login/two-factor/setup' : '/login/two-factor');
   }
 
   // Reject non-SUPER_ADMIN in case the endpoint ever returns a different role

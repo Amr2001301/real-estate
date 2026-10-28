@@ -800,6 +800,8 @@ export class UsersService {
       createdAt: true,
       updatedAt: true,
       lastLoginAt: true,
+      // TFA1 — whether two-step sign-in is on (never the secret).
+      totpEnabledAt: true,
       deletedAt: true,
       managerId: true,
       manager: { select: { id: true, fullName: true } },
@@ -835,6 +837,24 @@ export class UsersService {
       }),
     ]);
     return { ok: true, ended: sessions.count };
+  }
+
+  /**
+   * TFA1 — a lost phone and no recovery codes: the admin turns two-step
+   * sign-in off for the account (back to the password; where the company
+   * requires it, they set it up again at their next sign-in).
+   */
+  async resetTwoFactor(id: string, actorId: string) {
+    const companyId = getRequiredCompanyId();
+    await this.assertExists(id, companyId);
+    await this.prisma.$transaction([
+      this.prisma.user.updateMany({
+        where: { id, companyId },
+        data: { totpSecret: null, totpEnabledAt: null, totpLastStep: null, totpRecoveryHashes: [], totpFailures: 0, totpLockedUntil: null },
+      }),
+      this.prisma.auditLog.create({ data: { actorId, action: 'user.two_factor_reset', entityType: 'User', entityId: id, companyId } }),
+    ]);
+    return { ok: true };
   }
 
   private async assertExists(id: string, companyId: string) {
