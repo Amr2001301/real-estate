@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Copy,
 } from 'lucide-react';
+import { getSession } from '@/lib/session';
 import { api, safe } from '@/lib/api';
 import { staffOptions } from '@/lib/options';
 import type { AdminBrokerLead } from '@/lib/types';
@@ -90,7 +91,10 @@ export default async function AdminBrokerLeadDetailPage({
   const lead = leadRes.data;
   const salesUsers = salesRes.data?.data ?? [];
 
+  // PRM2 — approving, rejecting and marking a duplicate stay with the admin.
+  const isAdmin = (await getSession())?.role === 'ADMIN';
   const canReview =
+    isAdmin &&
     lead.brokerApprovalStatus !== 'APPROVED' &&
     lead.brokerApprovalStatus !== 'REJECTED';
 

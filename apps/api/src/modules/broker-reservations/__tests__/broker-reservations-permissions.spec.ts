@@ -219,16 +219,21 @@ describe('Broker reservations module · permissions enforcement', () => {
     expect(prismaMock.userPermission.findMany).not.toHaveBeenCalled();
   });
 
-  it('SALES with broker_reservations:create still blocked by @Roles (create is ADMIN-only)', async () => {
-    FakeAuthGuard.currentUser = {
-      sub: 'sales-1',
-      role: UserRole.SALES,
-      codes: ['broker_reservations:create'],
-    };
+  it('SALES without broker_reservations:create is blocked by @Roles', async () => {
+    FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: ['broker_reservations:read'] };
     await request(app.getHttpServer())
       .post('/broker-reservations')
       .send({ brokerId: BROKER_ID, leadId: LEAD_ID, unitId: UNIT_ID })
       .expect(403);
     expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it('PRM: SALES holding broker_reservations:create is let in (@GrantedBy)', async () => {
+    FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: ['broker_reservations:create'] };
+    const res = await request(app.getHttpServer())
+      .post('/broker-reservations')
+      .send({ brokerId: BROKER_ID, leadId: LEAD_ID, unitId: UNIT_ID });
+    expect(res.status).not.toBe(403);
+    expect(createSpy).toHaveBeenCalled();
   });
 });

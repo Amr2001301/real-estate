@@ -225,14 +225,15 @@ describe('Brokers module · permissions enforcement', () => {
       expect(prismaMock.broker.update).toHaveBeenCalled();
     });
 
-    it('rejects SALES at the @Roles layer (brokers admin is ADMIN-only)', async () => {
-      FakeAuthGuard.currentUser = {
-        sub: 'sales-1',
-        role: UserRole.SALES,
-        codes: ['brokers:read'],
-      };
+    it('rejects SALES without brokers:read at the @Roles layer', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: [] };
       await request(app.getHttpServer()).get('/brokers').expect(403);
-      expect(prismaMock.userPermission.findMany).not.toHaveBeenCalled();
+    });
+
+    it('PRM: SALES holding brokers:read lists the brokers (@GrantedBy); suspending stays with the admin', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: ['brokers:read', 'brokers:suspend'] };
+      await request(app.getHttpServer()).get('/brokers').expect(200);
+      await request(app.getHttpServer()).post(`/brokers/${BROKER_ID}/suspend`).send({ reason: 'x' }).expect(403);
     });
 
     it('rejects unauthenticated requests', async () => {

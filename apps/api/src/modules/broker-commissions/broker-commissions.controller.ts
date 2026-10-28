@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
@@ -35,6 +36,7 @@ export class BrokerCommissionsController {
   ) {}
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @GrantedBy('broker_commissions:read')
   @Permissions('broker_commissions:read')
   @Get()
   list(@Query() query: BrokerCommissionsQueryDto) {
@@ -42,6 +44,7 @@ export class BrokerCommissionsController {
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @GrantedBy('broker_commissions:read')
   @Permissions('broker_commissions:read')
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {

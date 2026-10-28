@@ -45,6 +45,16 @@ export async function ownedSalesIds(
 }
 
 /**
+ * Sales and customer data (rule 2) keeps its scope whatever codes are held:
+ * the reps whose records the caller sees, or undefined for an admin.
+ */
+export async function salesDataScope(prisma: PrismaService, user: AuthUser): Promise<string[] | undefined> {
+  if (user.role === UserRole.ADMIN) return undefined;
+  if (user.role === UserRole.SALES_MANAGER) return managerScopeIds(prisma, user.sub);
+  return [user.sub];
+}
+
+/**
  * 404 when one record's rep is outside what the caller sees (existence is
  * not leaked). The rep is looked up only for a caller limited to their own.
  */

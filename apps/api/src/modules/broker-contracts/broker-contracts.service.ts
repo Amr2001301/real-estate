@@ -2,7 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { paginate, takeSkip } from '../../common/utils/pagination';
-import type { AuthUser } from '../../common/decorators/current-user.decorator';
 import { BrokerContractsQueryDto } from './dto/broker-contract.dto';
 
 const BROKER_CONTRACT_INCLUDE = {
@@ -80,22 +79,23 @@ const BROKER_CONTRACT_INCLUDE = {
 export class BrokerContractsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(query: BrokerContractsQueryDto, actor: AuthUser) {
+  /**
+   * PRM2 — `salesIds` is what the caller sees (own / team), undefined for
+   * the whole company (ADMIN or contracts:read:all); see company-wide.ts.
+   */
+  async list(query: BrokerContractsQueryDto, salesIds: string[] | undefined) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
 
-    // Only broker-attributed contracts. SALES users see only those whose
-    // source reservation's internal sales handler is themselves — same
-    // convention as the broker-reservations admin module.
+    // Only broker-attributed contracts, of the reps the caller sees (via the
+    // source reservation's internal sales handler); a requested rep narrows it.
+    const reps = narrowReps(salesIds, query.salesId);
     const where: Prisma.ContractWhereInput = {
       NOT: { brokerId: null },
-      ...(actor.role === 'SALES' ? { reservation: { salesId: actor.sub } } : {}),
+      ...(reps ? { reservation: { salesId: { in: reps } } } : {}),
       ...(query.brokerId ? { brokerId: query.brokerId } : {}),
       ...(query.projectId
         ? { unit: { building: { phase: { projectId: query.projectId } } } }
-        : {}),
-      ...(query.salesId && actor.role !== 'SALES'
-        ? { reservation: { salesId: query.salesId } }
         : {}),
       ...(query.signed === 'yes'
         ? { signedAt: { not: null } }
@@ -124,7 +124,7 @@ export class BrokerContractsService {
     return paginate(data, total, { page, pageSize });
   }
 
-  async findOne(id: string, actor: AuthUser) {
+  async findOne(id: string, salesIds: string[] | undefined) {
     const contract = await this.prisma.contract.findUnique({
       where: { id },
       include: {
@@ -141,16 +141,22 @@ export class BrokerContractsService {
         'This contract is not broker-attributed; use the regular contracts endpoint instead',
       );
     }
-    // SALES users can only view contracts whose reservation they handle.
-    if (actor.role === 'SALES') {
+    // Only a contract whose reservation a rep the caller sees handles.
+    if (salesIds) {
       const reservation = await this.prisma.reservation.findUnique({
         where: { id: contract.reservationId ?? '' },
         select: { salesId: true },
       });
-      if (!reservation || reservation.salesId !== actor.sub) {
+      if (!reservation || !salesIds.includes(reservation.salesId)) {
         throw new NotFoundException('Contract not found');
       }
     }
     return contract;
   }
+}
+
+/** The reps to filter on: the caller's scope, narrowed to one requested rep. */
+export function narrowReps(scope: string[] | undefined, requested?: string): string[] | undefined {
+  if (!requested) return scope;
+  return !scope || scope.includes(requested) ? [requested] : [];
 }

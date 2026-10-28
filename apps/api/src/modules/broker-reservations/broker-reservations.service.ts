@@ -1,3 +1,4 @@
+import { narrowReps } from '../broker-contracts/broker-contracts.service';
 import {
   BadRequestException,
   ConflictException,
@@ -83,22 +84,21 @@ export class BrokerReservationsService {
     private readonly portalReservations: BrokerPortalReservationsService,
   ) {}
 
-  async list(query: BrokerReservationsQueryDto, actor: AuthUser) {
+  /** PRM2 — `salesIds`: the reps the caller sees (own / team), undefined for an admin. */
+  async list(query: BrokerReservationsQueryDto, salesIds: string[] | undefined) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
 
     // Only broker-originated reservations (brokerId IS NOT NULL).
-    // SALES users see only their own internal-handler reservations — same
-    // convention as the existing /reservations list.
+    // A rep sees their own internal-handler reservations, a manager their
+    // team's — the same scope as the /reservations list.
+    const reps = narrowReps(salesIds, query.salesId);
     const where: Prisma.ReservationWhereInput = {
       NOT: { brokerId: null },
-      ...(actor.role === 'SALES' ? { salesId: actor.sub } : {}),
+      ...(reps ? { salesId: { in: reps } } : {}),
       ...(query.brokerId ? { brokerId: query.brokerId } : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.leadId ? { leadId: query.leadId } : {}),
-      ...(query.salesId && actor.role !== 'SALES'
-        ? { salesId: query.salesId }
-        : {}),
       ...(query.projectId
         ? { unit: { building: { phase: { projectId: query.projectId } } } }
         : {}),
@@ -116,7 +116,7 @@ export class BrokerReservationsService {
     return paginate(data, total, { page, pageSize });
   }
 
-  async findOne(id: string, actor: AuthUser) {
+  async findOne(id: string, salesIds: string[] | undefined) {
     const reservation = await this.prisma.reservation.findUnique({
       where: { id },
       include: {
@@ -135,8 +135,8 @@ export class BrokerReservationsService {
         'This reservation was not created by a broker; use the regular reservations endpoint instead',
       );
     }
-    // SALES users can only view reservations they handle internally.
-    if (actor.role === 'SALES' && reservation.salesId !== actor.sub) {
+    // Only a reservation a rep the caller sees handles.
+    if (salesIds && !salesIds.includes(reservation.salesId)) {
       throw new NotFoundException('Reservation not found');
     }
     return reservation;

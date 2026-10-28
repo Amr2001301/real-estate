@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import {
   Permissions,
@@ -30,6 +31,7 @@ export class BrokerUsersController {
   constructor(private readonly brokerUsers: BrokerUsersService) {}
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('broker_users:read')
   @Permissions('broker_users:read')
   @Get('brokers/:id/users')
   listByBroker(@Param('id', ParseUUIDPipe) brokerId: string) {
@@ -48,6 +50,7 @@ export class BrokerUsersController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('broker_users:update')
   @Permissions('broker_users:update')
   @Patch('broker-users/:id')
   update(
