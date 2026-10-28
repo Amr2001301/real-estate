@@ -1,5 +1,6 @@
 import 'package:core/core_domain.dart';
 
+import '../entities/staff_two_factor.dart';
 import '../repositories/staff_auth_repository.dart';
 
 class LoginParams {
@@ -17,11 +18,11 @@ class LoginParams {
   final String password;
 }
 
-class LoginStaff implements UseCase<Session, LoginParams> {
+class LoginStaff implements UseCase<StaffLoginOutcome, LoginParams> {
   const LoginStaff(this._repo);
   final StaffAuthRepository _repo;
 
   @override
-  Future<Result<Session>> call(LoginParams params) =>
+  Future<Result<StaffLoginOutcome>> call(LoginParams params) =>
       _repo.loginWithSlug(params.slug, params.email, params.password);
 }

@@ -869,7 +869,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get profileDeleteAccountTitle => 'حذف حسابك؟';
 
   @override
-  String get profileDeleteAccountBody => 'تُحذف بياناتك الشخصية (الاسم والهاتف والبريد والصورة) ويتم تسجيل خروجك، وتبقى سجلات العقود والمدفوعات لدى الشركة. لا يمكن التراجع عن ذلك.';
+  String get profileDeleteAccountBody =>
+      'تُحذف بياناتك الشخصية (الاسم والهاتف والبريد والصورة) ويتم تسجيل خروجك، وتبقى سجلات العقود والمدفوعات لدى الشركة. لا يمكن التراجع عن ذلك.';
 
   @override
   String get profileDeleteAccountConfirm => 'حذف';
@@ -1084,7 +1085,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get myPropertyHandedOverDate => 'تاريخ التسليم';
 
   @override
-  String get myPropertyNotHandedOver => 'لم تُسلَّم بعد — تُفتح طلبات الصيانة عند التسليم';
+  String get myPropertyNotHandedOver =>
+      'لم تُسلَّم بعد — تُفتح طلبات الصيانة عند التسليم';
 
   @override
   String get myPropertyInstallmentPlan => 'خطة الأقساط';
@@ -2891,4 +2893,78 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get labelContractor => 'المقاول';
+
+  @override
+  String get staffTfaTitle => 'التحقق بخطوتين';
+
+  @override
+  String get staffTfaCodeHint =>
+      'افتح تطبيق المصادقة على موبايلك واكتب الكود المكوّن من 6 أرقام.';
+
+  @override
+  String get staffTfaCodeLabel => 'الكود من التطبيق';
+
+  @override
+  String get staffTfaRecoveryLabel => 'كود احتياطي';
+
+  @override
+  String get staffTfaUseRecovery => 'معاك كود احتياطي بدل التطبيق؟';
+
+  @override
+  String get staffTfaUseApp => 'استخدم الكود من التطبيق';
+
+  @override
+  String get staffTfaVerify => 'تأكيد';
+
+  @override
+  String get staffTfaBack => 'رجوع';
+
+  @override
+  String get staffTfaWrongCode =>
+      'الكود غير صحيح — تأكد من الكود الحالي في التطبيق';
+
+  @override
+  String get staffTfaLocked => 'محاولات خاطئة كثيرة — حاول بعد 15 دقيقة';
+
+  @override
+  String get staffTfaExpired => 'انتهت مهلة الخطوة دي — سجّل دخولك من جديد';
+
+  @override
+  String get staffTfaInvalidFormat => 'اكتب الكود المكوّن من 6 أرقام';
+
+  @override
+  String get staffTfaSetupTitle => 'فعّل التحقق بخطوتين';
+
+  @override
+  String get staffTfaSetupHint =>
+      'شركتك بتطلب كود من تطبيق مصادقة مع كلمة المرور. ضيف المفتاح ده في تطبيق المصادقة (Google Authenticator أو Microsoft Authenticator)، وبعدين اكتب الكود اللي هيظهر.';
+
+  @override
+  String get staffTfaOpenApp => 'إضافة في تطبيق المصادقة';
+
+  @override
+  String get staffTfaNoApp =>
+      'مفيش تطبيق مصادقة على الموبايل — انسخ المفتاح وضيفه يدويًا';
+
+  @override
+  String get staffTfaKeyLabel => 'المفتاح';
+
+  @override
+  String get staffTfaCopy => 'نسخ';
+
+  @override
+  String get staffTfaCopied => 'تم النسخ';
+
+  @override
+  String get staffTfaEnable => 'تفعيل ومتابعة';
+
+  @override
+  String get staffTfaCodesTitle => 'الأكواد الاحتياطية';
+
+  @override
+  String get staffTfaCodesHint =>
+      'احتفظ بالأكواد دي في مكان آمن. كل كود يشتغل مرة واحدة لو موبايلك مش معاك، ومش هتظهر تاني.';
+
+  @override
+  String get staffTfaCodesContinue => 'حفظتها — متابعة';
 }

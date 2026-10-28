@@ -32,6 +32,7 @@
 			<string>telprompt</string>
 			<string>https</string>
 			<string>http</string>
+			<string>otpauth</string>
 		</array>
 		<key>UIApplicationSceneManifest</key>
 		<dict>

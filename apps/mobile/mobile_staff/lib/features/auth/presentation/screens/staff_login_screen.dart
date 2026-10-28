@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../common/tenant_mismatch_notifier.dart';
 import '../cubit/staff_auth_cubit.dart';
+import 'staff_two_factor_panel.dart';
 
 class StaffLoginScreen extends StatefulWidget {
   const StaffLoginScreen({super.key});
@@ -72,8 +73,17 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
       resizeToAvoidBottomInset: true,
       body: BlocListener<StaffAuthCubit, StaffAuthState>(
         listenWhen: (a, b) => a.failure != b.failure && b.failure != null,
-        listener: (context, state) =>
-            showFailureSnackBar(context, state.failure!),
+        listener: (context, state) {
+          // TFA1 — the second step's own refusals say what to do.
+          final message = staffTwoFactorMessage(context.l10n, state.failure!);
+          if (message == null) {
+            showFailureSnackBar(context, state.failure!);
+          } else {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(SnackBar(content: Text(message)));
+          }
+        },
         child: Form(
           key: _formKey,
           child: CustomScrollView(
@@ -97,7 +107,11 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       AuthCard(
-                        child: Column(
+                        child: BlocBuilder<StaffAuthCubit, StaffAuthState>(
+                          buildWhen: (a, b) => (a.twoFactor == null) != (b.twoFactor == null),
+                          builder: (context, state) => state.twoFactor != null
+                              ? const StaffTwoFactorPanel()
+                              : Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             // Company Code — first field. Label matches web
@@ -151,6 +165,7 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
                               onTap: () => context.push('/forgot-password'),
                             ),
                           ],
+                        ),
                         ),
                       ),
                     ],
