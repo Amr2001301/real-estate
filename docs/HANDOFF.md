@@ -45,6 +45,8 @@
 
 **PR #199 (نقل البيانات — MG1، من الأكونت التاني):** لسه مفتوح. قبل الدمج لازم يعمل merge من `main` ويغيّر اسم الـ migration بتاعه. الخطوات بالتفصيل في القسم **2e** تحت، ومتجرّبة على `main` الحالي.
 
+**الخطوة الجاية — الصلاحيات تفتح الصفحات (PRM):** حاليًا الصلاحية بتقلّل من اللي الدور يقدر يعمله بس، ومش بتفتح صفحة مش من صفحات الدور. اتفقنا إن الصلاحية هي اللي تفتح الصفحة، والدور يبقى قالب صلاحيات جاهز، مع إن الصلاحيات الخطيرة تفضل للأدمن بس. الخطة بالتفصيل في القسم **4c**، وهتتعمل من الأكونت التاني على مراحل. فيه قرار واحد مستنيك قبل المرحلة 2: الموظف اللي مش أدمن ولقى صلاحية تقارير أو فلوس، يشوف أرقام الشركة كلها؟ (المقترح: أيوه، ما عدا صفحات المبيعات اللي فاضلة بالفريق).
+
 **مؤجّل بطلب منك (27 أكتوبر):** النشر على السيرفر، وتشغيل الحملات فعليًا. القائمة في القسم 5 تحت «Deferred by the owner».
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
@@ -509,6 +511,39 @@ Four read-only audits of every money figure (reports, dashboard, exports, the sc
 
 Left for the owner, not in V1–V3:
 - The leaderboard share % is of the top 10 brokers.
+
+## 4c. Next: permissions that open pages (PRM) — owner-approved direction, 2026-10-28
+
+> Owner: «أنا أعتقد 2 أفضل من ناحية قوة المنصة» — build it from the other account (limits on this one). Work in the phases below, one PR per phase (or smaller), each merged only after the owner says so.
+
+**Today (checked 2026-10-28 on `main` 307b41d):** a permission can only *narrow* what a role does; it never opens anything.
+- Guards run in this order (`apps/api/src/app.module.ts`): `JwtAuthGuard` → `CompanyLifecycleGuard` → `RolesGuard` → `PermissionsGuard` → `CapabilityGuard`. `RolesGuard` (`common/guards/roles.guard.ts`) refuses before the permission is looked at, so ticking e.g. `reports:sales:read` for a SALES user changes nothing: the routes are `@Roles(UserRole.ADMIN)`.
+- The sidebar is role-based (`apps/web-admin/src/lib/nav.ts`: `filterNavForRole`, `admin` / `manager` / `salesActorOnly` flags); permissions are not read.
+- The per-user permissions page (`/dashboard/users/[id]/permissions`, API `GET /users/:id/permissions` in `modules/permissions/permissions.module.ts`) offers the whole catalogue to any role, so an admin can tick codes that do nothing.
+- A rough scan of the controllers (`@Roles` + `@Permissions` on the same route) found ~98 codes in use, ~65 of them only on `@Roles(ADMIN)` routes. Redo the scan as step 1 below; the number is approximate.
+- New users get their role's starting codes (`modules/permissions/role-default-permissions.ts`).
+
+**Target:** the permission opens the page. A role becomes a starting template of codes; any staff member of the company (ADMIN, SALES_MANAGER, SALES, MAINTENANCE_SUPERVISOR; not CLIENT/CUSTOMER; brokers keep their own portal) who holds a code can use the routes and the page behind it.
+
+**Rules (owner-approved unless marked):**
+1. **Dangerous codes stay ADMIN-only even when ticked:** `permissions:manage`, all `users:*`, `settings:read`/`settings:write`, data export (`/dashboard/data-export`), data import, `company_branding:manage`, `audit:read`, anything under `super-admin`. Otherwise a user could grant themselves everything. Keep this list in one place (e.g. `common/permissions/admin-only-codes.ts`) and enforce it in the guard **and** in `PUT /users/:id/permissions` (refuse to assign them to non-admins), with an e2e test.
+2. **Data scope when a non-admin is granted a company-wide page** (finance, reports, cheques, ledger, brokers, maintenance, campaigns…): **proposed default, owner to confirm before phase 2** — they see the whole company, because the admin granted it on purpose. **Exception, unchanged:** sales pages keep today's scope (`resolveSalesScope`): a sales manager sees their team, a rep their own.
+3. Tenant scoping is untouched: every query keeps `companyId` (CLAUDE.md).
+4. Nothing the admin can do today is lost; an ADMIN still passes every check (keep `adminBypass` behaviour).
+
+**Phase 1 — the gate (one PR):**
+- Re-scan and write a table in the PR: each code → routes → today's `@Roles` → the new rule.
+- Introduce a decorator/guard pair so a route can say "staff with this code" (e.g. `@Roles(...STAFF_ROLES)` + `@Permissions(code)`), and switch the ADMIN-only routes whose code is *not* on the dangerous list. Do it module by module; leave routes without `@Permissions` as they are.
+- Before switching a module, read its service for admin-only assumptions (e.g. a query with no sales scope because "only admins call this") and note what a non-admin would see; anything that depends on the decision in rule 2 waits for phase 2.
+- web-admin: build the sidebar from the session's codes (expose them on `GET /users/me` or the session cookie payload) instead of the `admin` flag; pages that guard on role server-side (`requireAdmin` etc.) switch to the code.
+- Permissions page: group codes; dangerous ones shown locked with «لمدير النظام فقط» for non-admins.
+- Tests: e2e per switched module — a SALES user without the code gets 403, with it gets 200 and sees what rule 2 says; a non-admin can never be given a dangerous code; existing security specs stay green (never widen a security assertion — CLAUDE.md).
+
+**Phase 2 — data scope:** after the owner confirms rule 2, apply it per group of pages (reports, money, brokers, maintenance, campaigns, inventory edits), each with an e2e test of what a granted non-admin sees.
+
+**Phase 3 (optional) — company role templates:** an admin saves a named set of codes («محاسب», «تسويق», «سكرتارية») and applies it to a user in one step; changing the template can update its users.
+
+**Watch out for:** the throttled login in Playwright (5/min on `login-staff`; see `e2e/two-factor.spec.ts` `formLogin`), the shared admin storage in Playwright (create your own users and delete them — inactive users still use a plan seat), and the mobile staff app (it is role-based too; keep its behaviour unless the owner asks).
 
 ## 5. Other open items
 
