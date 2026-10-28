@@ -560,6 +560,8 @@ Left for the owner, not in V1–V3:
 
 **Phase 2 — data scope:** apply rule 2 per group of pages (reports, money, brokers, maintenance, campaigns, inventory edits), each with an e2e test of what a granted non-admin sees.
 
+**Phase 2a — reports (done):** every `reports` route takes `@GrantedBy` with the code it already checks (`reports:sales|operational|financial:read`); `contracts/refunds/outstanding` takes `reports:financial:read`. A granted staff member sees the admin's figures (rule 2); no phone numbers are in them. web-admin: the reports page fetches and shows only the parts the codes open; the tabs, the ledger and the reports nav item follow the codes. e2e `e2e-prm2a-reports`.
+
 **Phase 3 (optional) — company role templates:** an admin saves a named set of codes («محاسب», «تسويق», «سكرتارية») and applies it to a user in one step; changing the template can update its users.
 
 **Watch out for:** the throttled login in Playwright (5/min on `login-staff`; see `e2e/two-factor.spec.ts` `formLogin`), the shared admin storage in Playwright (create your own users and delete them — inactive users still use a plan seat), and the mobile staff app (it is role-based too; keep its behaviour unless the owner asks).
