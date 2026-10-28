@@ -7,7 +7,9 @@ import '../dtos/lead_dtos.dart';
 abstract interface class LeadsRemoteDataSource {
   Future<Paginated<LeadRowDto>> list(LeadsQuery query);
   Future<LeadDetailDto> getOne(String id);
-  Future<void> updateStage(String id, String stage, String? reason);
+  Future<void> updateStage(String id, String stage, String? reason, {String? lostReasonId, String? lostNote});
+  /// The company's active lost reasons (GET /leads/lost-reasons).
+  Future<List<LostReasonDto>> listLostReasons();
   Future<void> addNote(String id, String body);
   Future<LeadRowDto> create(NewLead input);
   Future<List<LeadSourceDto>> listSources();
@@ -54,11 +56,25 @@ class LeadsRemoteDataSourceImpl implements LeadsRemoteDataSource {
   }
 
   @override
-  Future<void> updateStage(String id, String stage, String? reason) async {
+  Future<void> updateStage(String id, String stage, String? reason, {String? lostReasonId, String? lostNote}) async {
     await _dio.patch<Map<String, dynamic>>(
       '/leads/$id/stage',
-      data: {'stage': stage, 'reason': ?reason},
+      data: {
+        'stage': stage,
+        'reason': ?reason,
+        'lostReasonId': ?lostReasonId,
+        'lostNote': ?(lostNote?.trim().isNotEmpty == true ? lostNote!.trim() : null),
+      },
     );
+  }
+
+  @override
+  Future<List<LostReasonDto>> listLostReasons() async {
+    final res = await _dio.get<List<dynamic>>('/leads/lost-reasons');
+    return (res.data ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(LostReasonDto.fromJson)
+        .toList();
   }
 
   @override

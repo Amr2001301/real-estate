@@ -2998,4 +2998,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get staffTfaCodesContinue => 'Saved them — continue';
+
+  @override
+  String get leadLostTitle => 'Why was this customer lost?';
+
+  @override
+  String get leadLostHint =>
+      'Pick the reason — it feeds the lost reasons report.';
+
+  @override
+  String get leadLostNote => 'Details (optional)';
+
+  @override
+  String get leadLostConfirm => 'Mark as lost';
+
+  @override
+  String get leadLostEmpty =>
+      'Your company has no lost reasons yet — ask an admin to add them from the dashboard.';
+
+  @override
+  String get leadLostReasonLabel => 'Lost reason';
 }

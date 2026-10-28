@@ -1,3 +1,5 @@
+import 'package:core/core_domain.dart';
+
 // Wire shapes for the leads endpoints. Data layer only.
 
 class ClientSearchDto {
@@ -108,6 +110,8 @@ class LeadDetailDto {
     required this.notes,
     required this.activities,
     this.unitInterest,
+    this.lostReason,
+    this.lostNote,
   });
 
   final LeadRowDto lead;
@@ -115,11 +119,18 @@ class LeadDetailDto {
   final List<LeadActivityDto> activities;
   final String? unitInterest;
 
+  /// LR1 — why a lost lead was lost.
+  final Translatable? lostReason;
+  final String? lostNote;
+
   factory LeadDetailDto.fromJson(Map<String, dynamic> json) {
     final unit = json['unitInterest'] as Map<String, dynamic>?;
+    final lost = json['lostReason'] as Map<String, dynamic>?;
     return LeadDetailDto(
       lead: LeadRowDto.fromJson(json),
       unitInterest: unit?['code'] as String?,
+      lostReason: lost == null ? null : Translatable.fromJson(lost['name']),
+      lostNote: json['lostNote'] as String?,
       notes: ((json['notes'] as List?) ?? const [])
           .whereType<Map<String, dynamic>>()
           .map(LeadNoteDto.fromJson)
@@ -130,4 +141,17 @@ class LeadDetailDto {
           .toList(),
     );
   }
+}
+
+/// LR1 — one of the company's reasons a lead is lost. The name comes
+/// flattened to the request language, or as `{ar, en}`.
+class LostReasonDto {
+  const LostReasonDto({required this.id, required this.name});
+  final String id;
+  final Translatable name;
+
+  factory LostReasonDto.fromJson(Map<String, dynamic> json) => LostReasonDto(
+        id: json['id'] as String,
+        name: Translatable.fromJson(json['name']),
+      );
 }

@@ -7,6 +7,7 @@ import '../../../../common/lead_stage_label.dart';
 import '../../../../common/staff_contact_actions.dart';
 import '../../../../common/staff_list_skeleton.dart';
 import '../cubit/lead_detail_cubit.dart';
+import 'lost_reason_sheet.dart';
 
 class LeadDetailScreen extends StatefulWidget {
   const LeadDetailScreen({super.key, required this.leadId, this.fallbackName});
@@ -138,10 +139,24 @@ class _Body extends StatelessWidget {
           isWorking: state.working,
           onStageSelected: (stage) {
             if (stage != lead.stage && !state.working) {
-              cubit.changeStage(stage);
+              // LR1 — lost asks why first.
+              if (stage == 'LOST') {
+                showLostReasonSheet(context, cubit);
+              } else {
+                cubit.changeStage(stage);
+              }
             }
           },
         ),
+
+        // ── Why it was lost ────────────────────────────────────────────
+        if (lead.stage == 'LOST' && detail.lostReason != null) ...[
+          const SizedBox(height: AppSpacing.sm),
+          _LostReasonLine(
+            reason: detail.lostReason!.resolve(lang),
+            note: detail.lostNote,
+          ),
+        ],
 
         const SizedBox(height: AppSpacing.md),
 
@@ -1020,6 +1035,39 @@ class _SectionHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// LR1 — why a lost lead was lost.
+class _LostReasonLine extends StatelessWidget {
+  const _LostReasonLine({required this.reason, this.note});
+  final String reason;
+  final String? note;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    final text = Theme.of(context).textTheme;
+    return Container(
+      key: const Key('lead-lost-reason'),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.error.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(color: colors.error.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('${l10n.leadLostReasonLabel}: $reason', style: text.titleSmall?.copyWith(color: colors.error)),
+          if (note != null && note!.trim().isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(note!, style: text.bodySmall?.copyWith(color: colors.inkMuted)),
+          ],
+        ],
+      ),
     );
   }
 }

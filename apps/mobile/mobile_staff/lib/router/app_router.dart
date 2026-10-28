@@ -386,6 +386,7 @@ GoRouter createStaffRouter(
                 UpdateLeadStage(repo),
                 AddLeadNote(repo),
                 leadId: id,
+                getLostReasons: GetLostReasons(repo),
               );
             },
             child: LeadDetailScreen(leadId: id, fallbackName: lead?.fullName),

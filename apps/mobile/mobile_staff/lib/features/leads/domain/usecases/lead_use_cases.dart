@@ -20,10 +20,20 @@ class GetLeadDetail implements UseCase<LeadDetail, String> {
 }
 
 class UpdateLeadStageParams {
-  const UpdateLeadStageParams({required this.id, required this.stage, this.reason});
+  const UpdateLeadStageParams({
+    required this.id,
+    required this.stage,
+    this.reason,
+    this.lostReasonId,
+    this.lostNote,
+  });
   final String id;
   final String stage;
   final String? reason;
+
+  /// LR1 — why the lead is lost (LOST only), and a word on what happened.
+  final String? lostReasonId;
+  final String? lostNote;
 }
 
 class UpdateLeadStage implements UseCase<void, UpdateLeadStageParams> {
@@ -32,7 +42,22 @@ class UpdateLeadStage implements UseCase<void, UpdateLeadStageParams> {
 
   @override
   Future<Result<void>> call(UpdateLeadStageParams params) =>
-      _repo.updateStage(params.id, params.stage, reason: params.reason);
+      _repo.updateStage(
+        params.id,
+        params.stage,
+        reason: params.reason,
+        lostReasonId: params.lostReasonId,
+        lostNote: params.lostNote,
+      );
+}
+
+/// LR1 — the company's active lost reasons, for the "why was it lost?" sheet.
+class GetLostReasons implements UseCase<List<LostReason>, NoParams> {
+  const GetLostReasons(this._repo);
+  final LeadsRepository _repo;
+
+  @override
+  Future<Result<List<LostReason>>> call(NoParams params) => _repo.getLostReasons();
 }
 
 class AddLeadNoteParams {
