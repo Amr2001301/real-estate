@@ -1,4 +1,4 @@
-# Handoff — where the work stands (2026-10-27)
+# Handoff — where the work stands (2026-10-27, after #197)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
@@ -39,11 +39,13 @@
 - **أمان:** تحديث مكتبات فيها ثغرات، وNext.js 16.4.2، وإصلاح سباقات في أكواد الدخول والتوقيع.
 - **تصميم جديد:** صفحات الدخول (صورة معمارية)، «دومين الموقع» بقى عند السوبر أدمن، «خانات العميل الإضافية»، استيراد البيانات، و«الطباعة والمستندات» (4 تبويبات وشريط حفظ وشرح في المحرر).
 
-**شغال دلوقتي (مش مدموج):** نظام المتابعة (FU1) — نوع النشاط (مكالمة/اجتماع/واتساب)، نتيجة المكالمة، موعد المتابعة القادمة، الردود، وقوائم المتأخر/النهارده. التفاصيل في القسم 2c.
+**بعد كده (27 أكتوبر، #193–#197):** القسم 2d. باختصار: نظام المتابعة (FU1)، أسباب الخسارة وتقريرها (LR1)، والحملات التسويقية بمراحلها التلاتة (MC1–MC3): الحملات والصرف، الاستقبال التلقائي والتوزيع بالدور، والتقارير.
+
+**مؤجّل بطلب منك (27 أكتوبر):** النشر على السيرفر، وتشغيل الحملات فعليًا. القائمة في القسم 5 تحت «Deferred by the owner».
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #191 مدموج و`main` نضيف؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #197 مدموج و`main` نضيف؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -240,14 +242,23 @@ pnpm dev                               # restart: API :4000, admin :3001, public
 
 Then hard-refresh the browser (Ctrl+Shift+R). Being on another branch (e.g. an old `claude/*` branch, which is reset after each merge) is the other usual cause.
 
-**In progress — FU1 follow-up system (not merged yet).** Inspired by the competitor review (ENGAZ CRM PDF). Done so far in the session, not pushed:
-- Schema: `Lead.nextActionAt / nextActionType / nextActionNote` (index `companyId, nextActionAt`); `LeadNote.kind` (NOTE/CALL/MEETING/WHATSAPP/FOLLOW_UP), `callResult` (ANSWERED/NO_ANSWER/BUSY/UNREACHABLE/WRONG_NUMBER), `nextActionAt/Type`, `parentId` for one-level replies. Migration `20261027090000_lead_follow_ups`.
-- API: `POST leads/:id/notes` takes kind, callResult (calls only), parentId (text-only replies), `nextActionAt` (date sets, `null` clears, absent keeps; must be future; open stages only). `GET leads/follow-ups?bucket=overdue|today|upcoming` and `GET leads/follow-ups/summary`, scoped by `resolveSalesScope` + `companyId`; "today" ends at the company's local midnight (`endOfLocalTodayInstant`). LOST / WON clear the follow-up. e2e `e2e-fu1-follow-ups` (5 tests).
-- Still to build: web-admin composer + timeline with replies on the lead page, `/dashboard/follow-ups` page, nav badge (overdue + today), dashboard panel, Playwright test.
+### 2d. #192–#197 (2026-10-27)
 
-If this session's work is lost, rebuild FU1 from this description.
+| PR | Slice | Main points |
+|---|---|---|
+| #192 | Docs | This file. |
+| #198 | FU2 | Follow-ups reach the rep: a push 15 minutes before a lead's next action, an overdue alert 30 minutes after it (`follow-up-reminder.cron.ts`, once per follow-up time via `Lead.followUpRemindedFor/OverdueFor`), and a morning list at the company's 09:00 (reps: today + overdue; sales managers: their team). The customer page lists the customer's leads with the latest activity and next follow-up (`lastNote` on the leads list). |
+| #193 | FU1 | Follow-ups: `Lead.nextActionAt/Type/Note`; notes carry kind (call, meeting, WhatsApp…), call result, a next action and one-level replies; `GET leads/follow-ups(/summary)`; `/dashboard/follow-ups` page, nav badge (overdue + today). |
+| #194 | LR1 | Lost reasons per company (10 defaults, admin keeps the list), required when a lead is marked LOST; `GET leads/lost-report`; `/dashboard/lost-reasons`. |
+| #195 | MC1 | Marketing campaigns: `Campaign`, `CampaignSpend` (by date), `Lead.campaignId`, `campaigns:manage`; tracking links; website leads linked by `utm_campaign`. |
+| #196 | MC2 | Automatic lead intake: `LeadIntakeKey`, public `POST /v1/intake/:slug/leads` (Zapier / Make), round-robin over active SALES users (`leads.autoAssign`, `leads.roundRobinCursor`), first call (`leads.firstCallMinutes`); website leads routed the same way. |
+| #197 | MC3 | Campaign reports (`GET campaigns/report` + PDF / Excel; first-touch sales and revenue, CPL, CPA, ROI, by channel / project / month); the Facebook channel is «ميتا (فيسبوك + إنستجرام)» with leads split by platform (`utm_source={{site_source_name}}`); web-public keeps ad tags from any landing page for 30 days. |
 
-**Competitor-gap backlog after FU1** (proposed to the owner, not yet approved): lost reasons + report; marketing campaigns with cost / CPL / CPA / ROI; call & WhatsApp buttons, masked phones, duplicates tab, calendar; sessions / linked devices and 2FA. Resale/rentals is the owner's call. Academy, jobs and a social timeline are not wanted.
+**Deploy notes (new since #191):** 5 migrations — `20261027090000_lead_follow_ups`, `20261027150000_lost_reasons` (seeds reasons, backfills `lostAt`), `20261027180000_marketing_campaigns`, `20261028090000_lead_intake`, `20261028150000_follow_up_reminders`. API env `PUBLIC_API_URL` (the intake address shown to Zapier; falls back to `API_BASE_URL`); optional `FOLLOW_UP_REMINDERS_ENABLED`, `FOLLOW_UP_DIGEST_HOUR`.
+
+**Known limits:** the staff mobile app does not ask for a lost reason; two leads arriving at the same instant may go to the same rep; WhatsApp and phone leads are tied to a campaign by hand.
+
+**Competitor-gap backlog still open** (proposed, not yet approved): call & WhatsApp buttons, masked phones, duplicates tab, calendar; sessions / linked devices and 2FA. Resale/rentals is the owner's call. Academy, jobs and a social timeline are not wanted.
 
 ## 3. Round 4 — the plan (U1–U4 done; U5 in progress)
 
@@ -461,4 +472,8 @@ Left for the owner, not in V1–V3:
 - **Leaderboard share:** a broker's share % is of the top 10 brokers only. This is the owner's call.
 - **Mobile fee labels:** the customer app shows a FEE payment as a normal "payment", the staff app prints `FEE`. Needs Flutter (not available in the cloud container).
 - **Owner's own tasks:** hosting/deployment (deploys are manual — see 2c), `ANTHROPIC_API_KEY` and `SUPER_ADMIN_*` on the API host, Android keystore and Firebase secrets for company apps, restricting the Firebase API key, GitHub branch protection on `main`.
+- **Deferred by the owner (2026-10-27, «حطها في التأجيلات»):**
+  - Production deploy of everything since 2026-09-18 (#114–#197): take a backup first, run the migrations of 2b, 2c and 2d, then `pnpm db:schema-check`; then Actions → "CD — Deploy to Production".
+  - API env on the server: `PUBLIC_API_URL`, `ANTHROPIC_API_KEY`, `SUPER_ADMIN_*`.
+  - Campaigns go-live: check the company's website domain is set (ad links use it), connect a Zapier or Make account for Meta lead forms, then run a small test campaign and check its leads arrive.
 - Older backlog docs: `docs/BACKLOG.md`, `docs/EXECUTION_BACKLOG.md`, `docs/PROJECT_CURRENT_STATE.md` (may be behind this file).

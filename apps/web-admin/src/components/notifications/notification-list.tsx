@@ -80,6 +80,9 @@ function relatedLink(
     if (entityType === 'visit' && entityId) {
       return { href: `/dashboard/visits/appointments/${entityId}`, icon: CalendarClock, label: rl.visit };
     }
+    if (entityType === 'follow_ups') {
+      return { href: `/dashboard/follow-ups`, icon: Users, label: rl.lead };
+    }
     if (entityType === 'lead' && entityId) {
       return isBroker
         ? { href: `/dashboard/broker-leads/${entityId}`, icon: Users, label: rl.lead }

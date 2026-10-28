@@ -16,6 +16,8 @@ import {
   Download,
   IdCard,
   MapPin,
+  Target,
+  CalendarClock,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type {
@@ -23,6 +25,7 @@ import type {
   Contract,
   MaintenanceRequest,
   DocumentItem,
+  Lead,
   Paged,
 } from '@/lib/types';
 import { formatDate, formatDateTime, formatCurrency, tx } from '@/lib/format';
@@ -44,6 +47,9 @@ import {
   PremiumEmptyState,
 } from '@/components/premium';
 import { EntityLink } from '@/components/entity-link';
+import { LeadStageBadge } from '@/components/badges';
+import { followUpState, followUpT } from '@/components/crm/follow-up-messages';
+import { KIND_ICON, RESULT_TONE } from '@/components/crm/follow-up-icons';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -83,7 +89,7 @@ export default async function CustomerDetailPage({
   const m = uiT(locale).pages.customerDetailPage;
   const currency = await getReportsCurrency();
 
-  const [userRes, contractsRes, maintenanceRes, documentsRes, fields] = await Promise.all([
+  const [userRes, contractsRes, maintenanceRes, documentsRes, fields, leadsRes] = await Promise.all([
     safe(api.get<User>(`/users/${id}`)),
     safe(api.get<Paged<Contract>>(`/contracts?customerId=${id}&pageSize=20`)),
     safe(
@@ -97,6 +103,8 @@ export default async function CustomerDetailPage({
       ),
     ),
     getCustomerFields(),
+    // The customer's leads, as far as the viewer may see them (a rep: their own).
+    safe(api.get<Paged<Lead>>(`/leads?clientId=${id}&pageSize=20`)),
   ]);
 
   if (userRes.error || !userRes.data) {
@@ -111,6 +119,9 @@ export default async function CustomerDetailPage({
   const contracts = contractsRes.data?.data ?? [];
   const maintenance = maintenanceRes.data?.data ?? [];
   const documents = documentsRes.data?.data ?? [];
+  const leads = leadsRes.data?.data ?? [];
+  const f = followUpT(locale);
+  const NEXT_TONE = { overdue: 'text-danger-600', today: 'text-brand-700', upcoming: 'text-slate-600' } as const;
 
   const openMaintenance = maintenance.filter(
     (req) => req.status !== 'RESOLVED' && req.status !== 'CLOSED',
@@ -283,6 +294,74 @@ export default async function CustomerDetailPage({
                   </dl>
                 );
               })()}
+            </PremiumSectionCard>
+
+            <PremiumSectionCard
+              title={f.customer.title}
+              icon={<Target className="h-4 w-4" />}
+              padded={false}
+            >
+              {leads.length === 0 ? (
+                <PremiumEmptyState icon={<Target />} title={f.customer.empty} description={f.customer.emptyDesc} />
+              ) : (
+                <ul className="flex flex-col divide-y divide-hairline" data-testid="customer-leads">
+                  {leads.map((l) => {
+                    const Icon = l.lastNote ? KIND_ICON[l.lastNote.kind] : null;
+                    const next = l.nextActionAt ? followUpState(l.nextActionAt) : null;
+                    return (
+                      <li key={l.id}>
+                        <Link
+                          href={`/dashboard/leads/${l.id}` as never}
+                          data-testid="customer-lead"
+                          className="group block px-5 py-4 transition-colors hover:bg-canvas/40"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="min-w-0 truncate text-[13.5px] font-semibold text-slate-900">
+                              {l.projectInterest ? tx(l.projectInterest.name, locale) : l.fullName}
+                              <span className="font-normal text-slate-500">
+                                {' · '}{f.customer.owner}: {l.assignedSales?.fullName ?? f.customer.unassigned}
+                              </span>
+                            </p>
+                            <LeadStageBadge stage={l.stage} locale={locale} />
+                          </div>
+                          <div className="mt-2 flex items-start gap-2 text-[12.5px] text-slate-600">
+                            {Icon ? <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" /> : null}
+                            {l.lastNote ? (
+                              <p className="min-w-0 flex-1">
+                                <span className="font-semibold text-slate-800">{f.kind[l.lastNote.kind]}</span>
+                                {l.lastNote.callResult && (
+                                  <span className={cn('ms-1.5 rounded-full px-1.5 py-0.5 text-[10.5px] font-semibold', RESULT_TONE[l.lastNote.callResult])}>
+                                    {f.callResult[l.lastNote.callResult as keyof typeof f.callResult]}
+                                  </span>
+                                )}
+                                {l.lastNote.body && <span className="line-clamp-1"> {l.lastNote.body}</span>}
+                                <span className="text-2xs text-slate-400">
+                                  {l.lastNote.by ? `${l.lastNote.by} · ` : ''}
+                                  {l.lastContactAt ? formatDateTime(l.lastContactAt, locale) : ''}
+                                </span>
+                              </p>
+                            ) : (
+                              <p className="text-slate-400">{f.customer.noActivity}</p>
+                            )}
+                          </div>
+                          <p className={cn('mt-1.5 inline-flex items-center gap-1.5 text-[12px] font-semibold', next ? NEXT_TONE[next] : 'text-slate-400')}>
+                            <CalendarClock className="h-3.5 w-3.5" />
+                            {l.nextActionAt && next ? (
+                              <>
+                                {f.customer.next}: {f.nextType[l.nextActionType ?? 'FOLLOW_UP']} ·{' '}
+                                <span className="tabular-nums">{formatDateTime(l.nextActionAt, locale)}</span>
+                                {next !== 'upcoming' && <> · {f.current[next]}</>}
+                              </>
+                            ) : (
+                              f.customer.noNext
+                            )}
+                          </p>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </PremiumSectionCard>
 
             <PremiumSectionCard
