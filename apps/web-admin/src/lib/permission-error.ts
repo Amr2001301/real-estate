@@ -35,6 +35,7 @@ export function isMissingPermissionError(
 export const PERMISSION_LABELS: Record<string, string> = {
   // Contracts
   'contracts:read': 'عرض العقود',
+  'contracts:read:all': 'عرض عقود الشركة كلها',
   'contracts:create': 'إنشاء العقود',
   'contracts:update': 'تعديل العقود',
   'contracts:delete': 'حذف العقود',
@@ -48,6 +49,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
   'reservations:convert': 'تحويل الحجز إلى عقد',
   // Deposits
   'deposits:read': 'عرض الدفعات',
+  'deposits:read:all': 'عرض دفعات الشركة كلها',
   'deposits:create': 'تسجيل دفعة',
   'deposits:verify': 'اعتماد الدفعات',
   // Installments

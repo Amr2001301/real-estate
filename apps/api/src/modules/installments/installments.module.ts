@@ -61,6 +61,9 @@ import {
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
+import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator';
+import { COMPANY_WIDE_CODES, assertOwnedRecord } from '../../common/permissions/company-wide';
+import type { ReqWithCodes } from '../../common/permissions/staff-codes';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { CronLockService } from '../../common/cron/cron-lock.service';
 import { captureExceptionSafe } from '../../common/observability/sentry';
@@ -325,6 +328,15 @@ export class InstallmentsService {
       { except: actorId },
     );
     return created;
+  }
+
+  /** The rep who made the sale behind a contract or a plan (reservation.salesId), or null. */
+  async ownerSalesId(where: { contractId: string } | { planId: string }): Promise<string | null> {
+    const contract = await this.prisma.contract.findFirst({
+      where: 'contractId' in where ? { id: where.contractId } : { installmentPlan: { id: where.planId } },
+      select: { reservation: { select: { salesId: true } } },
+    });
+    return contract?.reservation?.salesId ?? null;
   }
 
   async findByContract(contractId: string) {
@@ -1958,7 +1970,16 @@ class WaiveLateFeeDto {
 @ApiTags('installments')
 @Controller()
 class InstallmentsController {
-  constructor(private readonly svc: InstallmentsService) {}
+  constructor(
+    private readonly svc: InstallmentsService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  // PRM2 — a plan is read as its contract is: a rep their own sale's, a
+  // manager their team's, ADMIN or contracts:read:all any; else 404.
+  private async assertOwned(user: AuthUser, req: ReqWithCodes, where: { contractId: string } | { planId: string }) {
+    await assertOwnedRecord(this.prisma, req, user, COMPANY_WIDE_CODES.contracts, () => this.svc.ownerSalesId(where));
+  }
 
   @Roles(UserRole.ADMIN)
   @Permissions('installments:manage')
@@ -1981,7 +2002,12 @@ class InstallmentsController {
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('installments:read')
   @Get('contracts/:contractId/installment-plan')
-  byContract(@Param('contractId', ParseUUIDPipe) contractId: string) {
+  async byContract(
+    @Param('contractId', ParseUUIDPipe) contractId: string,
+    @CurrentUser() user: AuthUser,
+    @Req() req: ReqWithCodes,
+  ) {
+    await this.assertOwned(user, req, { contractId });
     return this.svc.findByContract(contractId);
   }
 
@@ -1989,7 +2015,8 @@ class InstallmentsController {
   @Permissions('installments:read')
   @Get('installment-plans/:planId/export.xlsx')
   @Header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-  async planXlsx(@Param('planId', ParseUUIDPipe) planId: string) {
+  async planXlsx(@Param('planId', ParseUUIDPipe) planId: string, @CurrentUser() user: AuthUser, @Req() req: ReqWithCodes) {
+    await this.assertOwned(user, req, { planId });
     const buf = await this.svc.planXlsx(planId);
     return new StreamableFile(buf, {
       disposition: `attachment; filename="${xlsxFilename(`installment-plan-${planId}`)}"`,
@@ -2001,7 +2028,8 @@ class InstallmentsController {
   @Permissions('installments:read')
   @Get('installment-plans/:planId/export.pdf')
   @Header('Content-Type', 'application/pdf')
-  async planPdf(@Param('planId', ParseUUIDPipe) planId: string) {
+  async planPdf(@Param('planId', ParseUUIDPipe) planId: string, @CurrentUser() user: AuthUser, @Req() req: ReqWithCodes) {
+    await this.assertOwned(user, req, { planId });
     const buf = await this.svc.planPdf(planId);
     return new StreamableFile(buf, {
       disposition: `attachment; filename="installment-plan-${planId}.pdf"`,

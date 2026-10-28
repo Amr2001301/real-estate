@@ -15,6 +15,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
 } from '@nestjs/common';
 import { DEPOSIT_STATE_SELECT, withDepositState } from '../../common/finance/deposit-state';
 import { dateOnlyString, toDateOnly } from '../../common/time/date-only';
@@ -58,7 +59,8 @@ import { Permissions, PermissionsStrict } from '../../common/decorators/permissi
 import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
-import { teamSalesIds, assertSalesRecordInScope } from '../../common/utils/sales-scope';
+import { COMPANY_WIDE_CODES, assertOwnedRecord, ownedSalesIds } from '../../common/permissions/company-wide';
+import type { ReqWithCodes } from '../../common/permissions/staff-codes';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { paginate, takeSkip } from '../../common/utils/pagination';
@@ -621,6 +623,15 @@ export class ContractsService {
     } catch {
       return { contractId, ...extras };
     }
+  }
+
+  /** The rep who made the sale (the linked reservation's salesId), or null. */
+  async ownerSalesId(id: string): Promise<string | null> {
+    const contract = await this.prisma.contract.findUnique({
+      where: { id },
+      select: { reservation: { select: { salesId: true } } },
+    });
+    return contract?.reservation?.salesId ?? null;
   }
 
   async list(opts: {
@@ -1458,6 +1469,7 @@ class ContractsController {
   @Get()
   async list(
     @CurrentUser() user: AuthUser,
+    @Req() req: ReqWithCodes,
     @Query('customerId') customerId?: string,
     @Query('q') q?: string,
     @Query('signed') signed?: string,
@@ -1468,12 +1480,9 @@ class ContractsController {
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
   ) {
-    // SALES_MANAGER is scoped to their team's contracts (via reservation.salesId);
-    // ADMIN/SALES are unscoped here (existing behavior).
-    const salesIds =
-      user.role === UserRole.SALES_MANAGER
-        ? await teamSalesIds(this.prisma, user.sub)
-        : undefined;
+    // PRM2 — a rep sees their own contracts (via reservation.salesId), a
+    // manager their own and their team's; ADMIN or contracts:read:all, all.
+    const salesIds = await ownedSalesIds(this.prisma, req, user, COMPANY_WIDE_CODES.contracts);
     return this.svc.list({
       page: Number(page),
       pageSize: Number(pageSize),
@@ -1492,31 +1501,27 @@ class ContractsController {
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('contracts:read')
   @Get(':id/statement')
-  async statement(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
-    if (user.role === UserRole.SALES_MANAGER) {
-      const contract = await this.prisma.contract.findUnique({
-        where: { id },
-        select: { reservation: { select: { salesId: true } } },
-      });
-      await assertSalesRecordInScope(this.prisma, user, contract?.reservation?.salesId ?? null);
-    }
+  async statement(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+    @Req() req: ReqWithCodes,
+  ) {
+    await this.assertContractOwned(id, user, req);
     return this.svc.statement(id);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('contracts:read')
   @Get(':id')
-  async get(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
-    // SALES_MANAGER may only read a contract owned by a team rep (via the linked
-    // reservation's salesId). No-op for ADMIN; SALES behavior unchanged.
-    if (user.role === UserRole.SALES_MANAGER) {
-      const contract = await this.prisma.contract.findUnique({
-        where: { id },
-        select: { reservation: { select: { salesId: true } } },
-      });
-      await assertSalesRecordInScope(this.prisma, user, contract?.reservation?.salesId ?? null);
-    }
+  async get(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser, @Req() req: ReqWithCodes) {
+    // PRM2 — the same reach as the list: a rep their own contract (via the
+    // linked reservation's salesId), a manager their team's; else 404.
+    await this.assertContractOwned(id, user, req);
     return this.svc.findOne(id);
+  }
+
+  private async assertContractOwned(id: string, user: AuthUser, req: ReqWithCodes) {
+    await assertOwnedRecord(this.prisma, req, user, COMPANY_WIDE_CODES.contracts, () => this.svc.ownerSalesId(id));
   }
 
   // Customer view of their own contracts — intentionally NOT permission-gated.

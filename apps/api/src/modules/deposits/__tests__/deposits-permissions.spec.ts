@@ -10,6 +10,7 @@ import { R2Service } from '../../media/r2.service';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { runTenantContext } from '../../../common/tenant/tenant-context';
 
 // DepositsModule imports DocumentsModule; override the service so tests never
 // touch R2, and ConfigModule satisfies the (unused-here) R2/Config deps.
@@ -69,7 +70,11 @@ function makePrismaMock() {
       }),
     },
     contractAmendment: { findMany: jest.fn().mockResolvedValue([]) },
+    // PRM2 — a manager's team (managerScopeIds): none beyond themselves.
+    user: { findMany: jest.fn().mockResolvedValue([]) },
     deposit: {
+      // PRM2 — the sale's rep behind a payment (depositContext).
+      findFirst: jest.fn().mockResolvedValue({ contract: { reservation: { salesId: 'mgr-1' } }, reservation: null }),
       findMany: emptyArr(),
       count: zero(),
       aggregate: sumZero(),
@@ -130,6 +135,11 @@ describe('Deposits module · permissions enforcement', () => {
 
     reflector = moduleRef.get(Reflector);
     app = moduleRef.createNestApplication();
+    // PRM2 — the manager's team is looked up per company, as the real
+    // interceptor scopes every request.
+    app.use((_req: unknown, _res: unknown, next: () => void) =>
+      runTenantContext({ companyId: 'test-company-id', bypass: false, isPublic: false }, async () => next()),
+    );
     await app.init();
   });
 
@@ -373,8 +383,18 @@ describe('Deposits module · permissions enforcement', () => {
       expect(res.body).not.toHaveProperty('key');
     });
 
-    it('SALES_MANAGER WITH deposits:read can download', async () => {
+    it('SALES_MANAGER WITH deposits:read can download their own sale’s proof', async () => {
       FakeAuthGuard.currentUser = { sub: 'mgr-1', role: UserRole.SALES_MANAGER, codes: ['deposits:read'] };
+      withProof();
+      await request(app.getHttpServer()).get(PATH).expect(200);
+    });
+
+    it('PRM2: another team’s proof is 404 for a manager, unless they hold deposits:read:all', async () => {
+      FakeAuthGuard.currentUser = { sub: 'mgr-2', role: UserRole.SALES_MANAGER, codes: ['deposits:read'] };
+      await request(app.getHttpServer()).get(PATH).expect(404);
+      expect(r2Mock.createPresignedDownload).not.toHaveBeenCalled();
+
+      FakeAuthGuard.currentUser = { sub: 'mgr-2', role: UserRole.SALES_MANAGER, codes: ['deposits:read', 'deposits:read:all'] };
       withProof();
       await request(app.getHttpServer()).get(PATH).expect(200);
     });

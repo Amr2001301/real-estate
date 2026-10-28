@@ -63,6 +63,8 @@ function makePrismaMock() {
       }),
     },
     contract: {
+      // PRM2 — the sale's rep behind a contract or plan.
+      findFirst: jest.fn().mockResolvedValue({ reservation: { salesId: 'sales-1' } }),
       findUnique: jest.fn().mockImplementation(async () =>
         fixture.contractExists
           ? { id: 'a1111111-1111-4111-8111-111111111111', signedAt: new Date() }
@@ -368,6 +370,13 @@ describe('Installments module · permissions enforcement', () => {
       await request(app.getHttpServer())
         .get('/contracts/a1111111-1111-4111-8111-111111111111/installment-plan')
         .expect(200);
+    });
+
+    it('PRM2: another rep’s contract plan is 404', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-2', role: UserRole.SALES, codes: ['installments:read'] };
+      await request(app.getHttpServer())
+        .get('/contracts/a1111111-1111-4111-8111-111111111111/installment-plan')
+        .expect(404);
     });
   });
 
