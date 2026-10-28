@@ -6,7 +6,7 @@ import { filterNavForRole, type NavSection } from '@/lib/nav';
 import { uiT } from '@/messages/ui';
 import { logoutAction } from '@/app/login/actions';
 import { Brand } from './brand';
-import { NavLink } from './nav-link';
+import { NavSections } from './nav-sections';
 
 interface Props {
   user: SessionUser;
@@ -42,28 +42,24 @@ export function SidebarContent({ user, locale, sections, onNavigate }: Props) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 py-3 space-y-5">
-        {resolved.map((section) => (
-          <div key={section.titleKey}>
-            <p className="px-3 mb-2 text-[10.5px] font-bold uppercase tracking-[0.14em] text-sidebar-text-muted select-none">
-              {m.nav.sections[section.titleKey]}
-            </p>
-            <div className="space-y-0.5">
-              {section.items.map((item) => {
-                // U5: text + ring, no icons (the mockup's quieter sidebar).
-                return (
-                  <NavLink
-                    key={item.href}
-                    href={item.href}
-                    label={m.nav.items[item.labelKey]}
-                    badge={item.badge}
-                    onNavigate={onNavigate}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        ))}
+      {/* Sections open and close; a search box finds any page (U5: text + ring, no icons). */}
+      <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 py-3">
+        <NavSections
+          sections={resolved.map((section) => ({
+            key: section.titleKey,
+            title: m.nav.sections[section.titleKey],
+            flat: section.flat || resolved.length === 1,
+            items: section.items.map((item) => ({
+              href: item.href,
+              label: m.nav.items[item.labelKey],
+              badge: item.badge,
+              matches: item.matches,
+            })),
+          }))}
+          searchPlaceholder={m.nav.search}
+          noResults={m.nav.noResults}
+          onNavigate={onNavigate}
+        />
       </nav>
 
       {/* User card + logout at the bottom (U5); the top bar no longer repeats the name. */}

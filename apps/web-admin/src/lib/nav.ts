@@ -122,12 +122,16 @@ export interface NavItem {
   feature?: string;
   /** A count shown beside the label (set per request, e.g. proofs waiting). */
   badge?: number;
+  /** Other pages this link stands for (the settings page's): active on them too. */
+  matches?: string[];
 }
 
 export interface NavSection {
   title: string;
   /** Key into messages/ui.ts nav.sections for EN/AR localization. */
   titleKey: NavSectionKey;
+  /** Shown as plain links, not a section to open and close. */
+  flat?: boolean;
   items: NavItem[];
 }
 
@@ -137,41 +141,54 @@ export interface NavSection {
  */
 export const NAV_SECTIONS: NavSection[] = [
   {
-    title: 'نظرة عامة',
-    titleKey: 'overview',
+    title: 'الرئيسية',
+    titleKey: 'home',
     items: [
       { href: '/dashboard', label: 'لوحة التحكم', labelKey: 'dashboard', iconKey: 'LayoutDashboard' },
       { href: '/dashboard/assistant', label: 'المساعد الذكي', labelKey: 'aiAssistant', iconKey: 'Sparkles' },
+      { href: '/dashboard/operations', label: 'مركز العمليات', labelKey: 'operations', iconKey: 'Gauge', admin: true },
     ],
   },
   {
     title: 'المبيعات',
     titleKey: 'sales',
     items: [
-      { href: '/dashboard/projects', label: 'المشاريع', labelKey: 'projects', iconKey: 'Building2' },
-      { href: '/dashboard/inventory', label: 'المخزون', labelKey: 'inventory', iconKey: 'Boxes' },
-      { href: '/dashboard/units', label: 'الوحدات', labelKey: 'units', iconKey: 'Home' },
       { href: '/dashboard/leads', label: 'فرص المبيعات (CRM)', labelKey: 'leads', iconKey: 'Users' },
       { href: '/dashboard/follow-ups', label: 'المتابعات', labelKey: 'followUps', iconKey: 'PhoneCall' },
       { href: '/dashboard/calendar', label: 'التقويم', labelKey: 'calendar', iconKey: 'CalendarDays' },
-      { href: '/dashboard/campaigns', label: 'الحملات التسويقية', labelKey: 'campaigns', iconKey: 'Megaphone', admin: true, manager: true, perm: ['campaigns:manage'] },
-      { href: '/dashboard/lost-reasons', label: 'أسباب الخسارة', labelKey: 'lostReasons', iconKey: 'TrendingDown', admin: true, manager: true, perm: ['lead_sources:manage'] },
-      // P13 — general info/contact-form inquiries (Guest/Client/Customer).
-      // Role-only gate matches GET /info-requests (ADMIN + SALES + SALES_MANAGER).
-      { href: '/dashboard/requests', label: 'استفسارات العملاء', labelKey: 'requests', iconKey: 'MessageSquareText' },
-      // Clients/customers read from the ADMIN-only /users API, so they would
-      // 403 for SALES — hidden from the SALES sidebar until a scoped endpoint
-      // exists. SALES works customer data through the CRM (leads) instead.
-      { href: '/dashboard/clients', label: 'المتصفّحون', labelKey: 'clients', iconKey: 'UserSquare2', admin: true },
-      { href: '/dashboard/customers', label: 'العملاء', labelKey: 'customers', iconKey: 'UserCheck', admin: true },
       { href: '/dashboard/visits', label: 'الزيارات', labelKey: 'visits', iconKey: 'CalendarClock' },
       { href: '/dashboard/reservations', label: 'الحجوزات', labelKey: 'reservations', iconKey: 'BookmarkCheck' },
       { href: '/dashboard/contracts', label: 'العقود', labelKey: 'contracts', iconKey: 'FileText' },
+      // P13 — general info/contact-form inquiries (Guest/Client/Customer).
+      // Role-only gate matches GET /info-requests (ADMIN + SALES + SALES_MANAGER).
+      { href: '/dashboard/requests', label: 'استفسارات العملاء', labelKey: 'requests', iconKey: 'MessageSquareText' },
     ],
   },
   {
-    title: 'العمليات',
-    titleKey: 'operations',
+    title: 'العملاء',
+    titleKey: 'customers',
+    items: [
+      // Clients/customers read from the ADMIN-only /users API, so they would
+      // 403 for SALES — hidden from the SALES sidebar until a scoped endpoint
+      // exists. SALES works customer data through the CRM (leads) instead.
+      { href: '/dashboard/customers', label: 'العملاء', labelKey: 'customers', iconKey: 'UserCheck', admin: true },
+      { href: '/dashboard/clients', label: 'المتصفّحون', labelKey: 'clients', iconKey: 'UserSquare2', admin: true },
+      { href: '/dashboard/maintenance', label: 'الصيانة', labelKey: 'maintenance', iconKey: 'Wrench', admin: true, perm: ['maintenance:manage:all'], feature: 'feature.maintenance' },
+      { href: '/dashboard/documents', label: 'المستندات', labelKey: 'documents', iconKey: 'Files', admin: true },
+    ],
+  },
+  {
+    title: 'المشاريع والوحدات',
+    titleKey: 'inventory',
+    items: [
+      { href: '/dashboard/projects', label: 'المشاريع', labelKey: 'projects', iconKey: 'Building2' },
+      { href: '/dashboard/inventory', label: 'المخزون', labelKey: 'inventory', iconKey: 'Boxes' },
+      { href: '/dashboard/units', label: 'الوحدات', labelKey: 'units', iconKey: 'Home' },
+    ],
+  },
+  {
+    title: 'المالية',
+    titleKey: 'finance',
     items: [
       { href: '/dashboard/installments', label: 'خطط التقسيط', labelKey: 'installments', iconKey: 'Wallet' },
       // The whole company's payments (GET /deposits/:id: ADMIN, or deposits:read:all).
@@ -182,10 +199,15 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/dashboard/cheques', label: 'الشيكات', labelKey: 'cheques', iconKey: 'Landmark', admin: true, manager: true, perm: ['payment-instruments:manage'] },
       // Receivables and payables (GET /reports/ledger: ADMIN, or reports:financial:read).
       { href: '/dashboard/ledger', label: 'المستحقات والالتزامات', labelKey: 'ledger', iconKey: 'Scale', admin: true, perm: ['reports:financial:read'] },
-      { href: '/dashboard/maintenance', label: 'الصيانة', labelKey: 'maintenance', iconKey: 'Wrench', admin: true, perm: ['maintenance:manage:all'], feature: 'feature.maintenance' },
-      { href: '/dashboard/bonus', label: 'العمولات', labelKey: 'bonus', iconKey: 'BadgePercent', admin: true, perm: ['bonus:entries:read:all', 'bonus:rules:manage', 'bonus:entries:create'] },
+    ],
+  },
+  {
+    title: 'الفريق والأداء',
+    titleKey: 'team',
+    items: [
       { href: '/dashboard/sales/performance', label: 'أداء فريق المبيعات', labelKey: 'salesPerformance', iconKey: 'Target', admin: true, manager: true },
       { href: '/dashboard/targets', label: 'إدارة أهداف المبيعات', labelKey: 'targets', iconKey: 'Gauge', admin: true, manager: true },
+      { href: '/dashboard/bonus', label: 'العمولات', labelKey: 'bonus', iconKey: 'BadgePercent', admin: true, perm: ['bonus:entries:read:all', 'bonus:rules:manage', 'bonus:entries:create'] },
       { href: '/dashboard/my-compensation', label: 'مستحقاتي وأهدافي', labelKey: 'myCompensation', iconKey: 'Wallet', salesActorOnly: true },
     ],
   },
@@ -203,26 +225,71 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    title: 'الإدارة',
-    titleKey: 'admin',
+    title: 'التسويق والموقع',
+    titleKey: 'marketing',
     items: [
+      { href: '/dashboard/campaigns', label: 'الحملات التسويقية', labelKey: 'campaigns', iconKey: 'Megaphone', admin: true, manager: true, perm: ['campaigns:manage'] },
+      { href: '/dashboard/lost-reasons', label: 'أسباب الخسارة', labelKey: 'lostReasons', iconKey: 'TrendingDown', admin: true, manager: true, perm: ['lead_sources:manage'] },
       { href: '/dashboard/cms', label: 'المحتوى', labelKey: 'cms', iconKey: 'FileEdit', admin: true, perm: ['cms:pages:manage', 'cms:banners:manage', 'cms:articles:manage'] },
-      { href: '/dashboard/documents', label: 'المستندات', labelKey: 'documents', iconKey: 'Files', admin: true },
       { href: '/dashboard/notifications', label: 'الإشعارات', labelKey: 'notifications', iconKey: 'Bell', admin: true, perm: ['notifications:send', 'notifications:templates:manage'] },
+    ],
+  },
+  {
+    title: 'أخرى',
+    titleKey: 'more',
+    /** Shown as plain links, not a section to open: reports and the settings page. */
+    flat: true,
+    items: [
       { href: '/dashboard/reports', label: 'التقارير', labelKey: 'reports', iconKey: 'BarChart3', admin: true, perm: ['reports:sales:read', 'reports:operational:read', 'reports:financial:read'] },
-      { href: '/dashboard/users', label: 'المستخدمون', labelKey: 'users', iconKey: 'ShieldCheck', admin: true },
-      { href: '/dashboard/permissions', label: 'الصلاحيات', labelKey: 'permissions', iconKey: 'ShieldCheck', admin: true },
-      { href: '/dashboard/operations', label: 'مركز العمليات', labelKey: 'operations', iconKey: 'Gauge', admin: true },
-      { href: '/dashboard/audit-logs', label: 'سجلات التدقيق', labelKey: 'auditLogs', iconKey: 'ScrollText', admin: true },
-      { href: '/dashboard/company/branding', label: 'الهوية البصرية', labelKey: 'branding', iconKey: 'Palette', admin: true },
-      { href: '/dashboard/company/print', label: 'الطباعة والمستندات', labelKey: 'printing', iconKey: 'Printer', admin: true },
-      { href: '/dashboard/company/customer-fields', label: 'خانات العميل الإضافية', labelKey: 'customerFields', iconKey: 'ListPlus', admin: true },
-      { href: '/dashboard/data-export', label: 'تصدير البيانات', labelKey: 'dataExport', iconKey: 'HardDriveDownload', admin: true },
-      { href: '/dashboard/data-import', label: 'استيراد البيانات', labelKey: 'dataImport', iconKey: 'Upload', admin: true },
-      { href: '/dashboard/settings', label: 'الإعدادات', labelKey: 'settings', iconKey: 'Settings', admin: true },
     ],
   },
 ];
+
+/**
+ * «الإعدادات»: the company's set-up pages, gathered on one page
+ * (/dashboard/setup) instead of a long run of sidebar links. All are
+ * ADMIN-only today, so the settings link shows to admins only.
+ */
+export const SETTINGS_HUB: { group: 'people' | 'company' | 'data' | 'system'; items: NavItem[] }[] = [
+  {
+    group: 'people',
+    items: [
+      { href: '/dashboard/users', label: 'المستخدمون', labelKey: 'users', iconKey: 'ShieldCheck', admin: true },
+      { href: '/dashboard/permissions', label: 'الصلاحيات', labelKey: 'permissions', iconKey: 'ShieldCheck', admin: true },
+      { href: '/dashboard/audit-logs', label: 'سجلات التدقيق', labelKey: 'auditLogs', iconKey: 'ScrollText', admin: true },
+    ],
+  },
+  {
+    group: 'company',
+    items: [
+      { href: '/dashboard/company/branding', label: 'الهوية البصرية', labelKey: 'branding', iconKey: 'Palette', admin: true },
+      { href: '/dashboard/company/print', label: 'الطباعة والمستندات', labelKey: 'printing', iconKey: 'Printer', admin: true },
+      { href: '/dashboard/company/customer-fields', label: 'خانات العميل الإضافية', labelKey: 'customerFields', iconKey: 'ListPlus', admin: true },
+    ],
+  },
+  {
+    group: 'data',
+    items: [
+      { href: '/dashboard/data-export', label: 'تصدير البيانات', labelKey: 'dataExport', iconKey: 'HardDriveDownload', admin: true },
+      { href: '/dashboard/data-import', label: 'استيراد البيانات', labelKey: 'dataImport', iconKey: 'Upload', admin: true },
+    ],
+  },
+  {
+    group: 'system',
+    items: [
+      { href: '/dashboard/settings', label: 'الإعدادات', labelKey: 'generalSettings', iconKey: 'Settings', admin: true },
+    ],
+  },
+];
+
+/** The sidebar's link to the settings page; active on any page it gathers. */
+const SETTINGS_HUB_ITEM: NavItem = {
+  href: '/dashboard/setup',
+  label: 'الإعدادات',
+  labelKey: 'settings',
+  iconKey: 'Settings',
+  matches: SETTINGS_HUB.flatMap((g) => g.items.map((i) => i.href)),
+};
 
 export const SUPER_ADMIN_NAV_SECTIONS: NavSection[] = [
   {
@@ -245,18 +312,39 @@ export function filterNavForRole(
   if (role === 'SUPER_ADMIN') return SUPER_ADMIN_NAV_SECTIONS;
   // Brokers don't use the admin nav at all — see BROKER_NAV_SECTIONS below.
   if (role === 'BROKER') return [];
+  const visible = navItemVisible(role, disabledFeatures, codes);
+  const hub = filterSettingsHub(role, disabledFeatures, codes);
   return NAV_SECTIONS.map((section) => ({
     ...section,
-    items: section.items.filter((item) => {
-      if (item.feature && disabledFeatures.has(item.feature)) return false;
-      if (item.perm?.some((c) => codes.has(c))) return true;
-      if (item.admin) {
-        return role === 'ADMIN' || (item.manager === true && role === 'SALES_MANAGER');
-      }
-      if (item.salesActorOnly) return role === 'SALES' || role === 'SALES_MANAGER';
-      return true;
-    }),
+    items: [
+      ...section.items.filter(visible),
+      // The settings page closes the last section, when it has a page for this user.
+      ...(section.titleKey === 'more' && hub.length > 0 ? [SETTINGS_HUB_ITEM] : []),
+    ],
   })).filter((section) => section.items.length > 0);
+}
+
+/** The settings page's groups, with only the pages this user may open. */
+export function filterSettingsHub(
+  role: SessionRole,
+  disabledFeatures: ReadonlySet<string> = new Set(),
+  codes: ReadonlySet<string> = new Set(),
+) {
+  if (role === 'SUPER_ADMIN' || role === 'BROKER') return [];
+  const visible = navItemVisible(role, disabledFeatures, codes);
+  return SETTINGS_HUB.map((g) => ({ ...g, items: g.items.filter(visible) })).filter((g) => g.items.length > 0);
+}
+
+function navItemVisible(role: SessionRole, disabledFeatures: ReadonlySet<string>, codes: ReadonlySet<string>) {
+  return (item: NavItem): boolean => {
+    if (item.feature && disabledFeatures.has(item.feature)) return false;
+    if (item.perm?.some((c) => codes.has(c))) return true;
+    if (item.admin) {
+      return role === 'ADMIN' || (item.manager === true && role === 'SALES_MANAGER');
+    }
+    if (item.salesActorOnly) return role === 'SALES' || role === 'SALES_MANAGER';
+    return true;
+  };
 }
 
 /**

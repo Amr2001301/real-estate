@@ -12,14 +12,24 @@ interface Props {
   onNavigate?: () => void;
   /** Items waiting (e.g. payment proofs to review); hidden at 0. */
   badge?: number;
+  /** Other pages this link stands for (the settings page's): active on them too. */
+  matches?: string[];
+  /** A second line, e.g. the section a search result is in. */
+  hint?: string;
 }
 
-export function NavLink({ href, label, icon, onNavigate, badge }: Props) {
+/** Whether a link is the page you are on (or a page under it, or one it stands for). */
+export function isNavActive(pathname: string, href: string, matches?: string[]): boolean {
+  const on = (h: string) => {
+    const isWorkspaceRoot = h === '/dashboard' || h === '/portal' || h === '/dashboard/super-admin';
+    return pathname === h || (!isWorkspaceRoot && pathname.startsWith(h + '/'));
+  };
+  return on(href) || (matches ?? []).some(on);
+}
+
+export function NavLink({ href, label, icon, onNavigate, badge, matches, hint }: Props) {
   const pathname = usePathname() ?? '';
-  const isExact = pathname === href;
-  const isWorkspaceRoot = href === '/dashboard' || href === '/portal' || href === '/dashboard/super-admin';
-  const isPrefix = !isWorkspaceRoot && pathname.startsWith(href + '/');
-  const active = isExact || isPrefix;
+  const active = isNavActive(pathname, href, matches);
 
   return (
     <Link
@@ -47,7 +57,10 @@ export function NavLink({ href, label, icon, onNavigate, badge }: Props) {
           {icon}
         </span>
       )}
-      <span className="truncate flex-1">{label}</span>
+      <span className="flex-1 min-w-0">
+        <span className="block truncate">{label}</span>
+        {hint && <span className="block truncate text-[11px] font-normal text-sidebar-text-muted">{hint}</span>}
+      </span>
       {!!badge && badge > 0 && (
         <span
           data-testid="nav-badge"
