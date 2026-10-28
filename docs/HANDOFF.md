@@ -566,7 +566,7 @@ Left for the owner, not in V1–V3:
 - A rep sees the contracts and payments of their own sales (the reservation's `salesId`), a manager their own and their team's; another rep's contract, statement or installment plan (and a manager's other team's proof) is 404. A contract with no reservation has no rep, so only an admin (or the codes below) sees it.
 - New codes, in no role's starting set: `contracts:read:all` and `deposits:read:all` open the whole company's, as the admin sees them; `deposits:read:all` also opens a payment's detail and the review queue (`@GrantedBy`), and the «الدفعات» nav item. Approving, rejecting, recording and reversing payments stay with the admin.
 - The mobile staff app is unchanged; it simply gets fewer rows for a rep. e2e `e2e-prm2b-money-scope`.
-- Not done yet in phase 2: documents (waiting on the owner: they are customer papers), visit scheduling, unit export.
+- Phase 2 is complete with 2f below; documents and the admin visit actions stay admin-only by decision.
 
 **Phase 2c — cheques and bonus (done):**
 - Cheques: `payment-instruments:manage` opens the cheques routes (`@GrantedBy`) and nav item to any staff member; the whole company's, as for an admin. Recording a bounce and its suggestion stay admin-only (`payment-instruments:bounce` is strict).
@@ -584,6 +584,11 @@ Left for the owner, not in V1–V3:
 - New `maintenance:manage:all` (in no role's starting set) opens the dashboard's maintenance: the whole company's requests, detail, reports and exports, assignment, status/approve/reject, the categories list and the unit maintenance items. Customer phones show there, as for the admin (whoever runs maintenance is responsible for the customer's request).
 - `maintenance:assign`, `maintenance:categories:manage` and `maintenance:items:manage` open their own routes. A request on a customer's behalf stays with the admin (its form needs the customer list).
 - web-admin: the maintenance nav item follows the code; the «new request» button shows only to the admin and the categories section only to `maintenance:categories:manage`. e2e `e2e-prm2e-maintenance`.
+
+**Phase 2f — unit export, and what stays with the admin (done):**
+- The unit export (Excel / CSV: the company's full price list) opens by the new `units:export`, in no role's starting set; `units:read`, which every rep starts with, does not export. The export menu on the units and inventory pages follows the code. e2e `e2e-prm2f-unit-export`.
+- **Documents stay admin-only** (owner, 2026-10-28: «تفضل للمدير بس»): the documents page holds the customers' papers (IDs, contracts, receipts); a rep reaches their own customers' papers from the contract page as before.
+- **The admin visit actions stay admin-only**: approving website visit requests, scheduling, rescheduling and reassigning. They are customer data with phone numbers (rule 2), and `visits:schedule/reschedule` are in the reps' starting set, so opening them by code would open them to every rep.
 
 **Phase 3 (optional) — company role templates:** an admin saves a named set of codes («محاسب», «تسويق», «سكرتارية») and applies it to a user in one step; changing the template can update its users.
 

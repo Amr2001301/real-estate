@@ -112,6 +112,7 @@ const META: Record<string, PermissionMeta> = {
   'phases:manage': { label: 'إدارة مراحل المشاريع', description: 'إضافة وتعديل مراحل المشروع.', category: 'المبيعات', type: 'إداري' },
   'buildings:manage': { label: 'إدارة المباني', description: 'إضافة وتعديل مباني المشروع.', category: 'المبيعات', type: 'إداري' },
   'units:read': { label: 'عرض الوحدات', description: 'الاطلاع على الوحدات العقارية وحالتها.', category: 'المبيعات', type: 'قراءة' },
+  'units:export': { label: 'تصدير الوحدات', description: 'تنزيل قائمة الوحدات والأسعار للشركة كلها (Excel / CSV).', category: 'المبيعات', type: 'قراءة' },
   'units:create': { label: 'إنشاء الوحدات', description: 'إضافة وحدات عقارية جديدة.', category: 'المبيعات', type: 'تعديل' },
   'units:update': { label: 'تعديل الوحدات', description: 'تحديث بيانات الوحدات.', category: 'المبيعات', type: 'تعديل' },
   'units:change-status': { label: 'تغيير حالة الوحدة', description: 'تعديل حالة الوحدة (متاحة/محجوزة/مباعة).', category: 'المبيعات', type: 'تعديل' },
