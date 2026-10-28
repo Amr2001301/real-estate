@@ -1041,5 +1041,12 @@
   "staffTfaEnable": "تفعيل ومتابعة",
   "staffTfaCodesTitle": "الأكواد الاحتياطية",
   "staffTfaCodesHint": "احتفظ بالأكواد دي في مكان آمن. كل كود يشتغل مرة واحدة لو موبايلك مش معاك، ومش هتظهر تاني.",
-  "staffTfaCodesContinue": "حفظتها — متابعة"
+  "staffTfaCodesContinue": "حفظتها — متابعة",
+
+  "leadLostTitle": "ليه خسرنا العميل ده؟",
+  "leadLostHint": "اختار السبب. ده اللي بيظهر في تقرير أسباب الخسارة.",
+  "leadLostNote": "تفاصيل (اختياري)",
+  "leadLostConfirm": "تأكيد الخسارة",
+  "leadLostEmpty": "مفيش أسباب خسارة متسجلة لشركتك — اطلب من المدير يضيفها من لوحة التحكم.",
+  "leadLostReasonLabel": "سبب الخسارة"
 }

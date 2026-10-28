@@ -40,6 +40,12 @@ extension LeadDetailDtoMapper on LeadDetailDto {
         return bt.compareTo(at); // newest first
       });
 
-    return LeadDetail(lead: lead.toEntity(), timeline: entries, unitInterest: unitInterest);
+    return LeadDetail(
+      lead: lead.toEntity(),
+      timeline: entries,
+      unitInterest: unitInterest,
+      lostReason: lostReason,
+      lostNote: lostNote,
+    );
   }
 }

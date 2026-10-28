@@ -23,8 +23,18 @@ class LeadsRepositoryImpl implements LeadsRepository {
   }
 
   @override
-  Future<Result<void>> updateStage(String id, String stage, {String? reason}) {
-    return guardApiCall(() => _remote.updateStage(id, stage, reason));
+  Future<Result<void>> updateStage(String id, String stage, {String? reason, String? lostReasonId, String? lostNote}) {
+    return guardApiCall(
+      () => _remote.updateStage(id, stage, reason, lostReasonId: lostReasonId, lostNote: lostNote),
+    );
+  }
+
+  @override
+  Future<Result<List<LostReason>>> getLostReasons() {
+    return guardApiCall(() async {
+      final dtos = await _remote.listLostReasons();
+      return [for (final d in dtos) LostReason(id: d.id, name: d.name)];
+    });
   }
 
   @override

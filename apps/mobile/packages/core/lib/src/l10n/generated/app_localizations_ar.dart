@@ -2967,4 +2967,24 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get staffTfaCodesContinue => 'حفظتها — متابعة';
+
+  @override
+  String get leadLostTitle => 'ليه خسرنا العميل ده؟';
+
+  @override
+  String get leadLostHint =>
+      'اختار السبب. ده اللي بيظهر في تقرير أسباب الخسارة.';
+
+  @override
+  String get leadLostNote => 'تفاصيل (اختياري)';
+
+  @override
+  String get leadLostConfirm => 'تأكيد الخسارة';
+
+  @override
+  String get leadLostEmpty =>
+      'مفيش أسباب خسارة متسجلة لشركتك — اطلب من المدير يضيفها من لوحة التحكم.';
+
+  @override
+  String get leadLostReasonLabel => 'سبب الخسارة';
 }

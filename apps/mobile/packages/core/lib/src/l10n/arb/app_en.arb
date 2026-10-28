@@ -1044,5 +1044,12 @@
   "staffTfaEnable": "Turn on and continue",
   "staffTfaCodesTitle": "Recovery codes",
   "staffTfaCodesHint": "Keep these somewhere safe. Each works once if you do not have your phone, and they will not be shown again.",
-  "staffTfaCodesContinue": "Saved them — continue"
+  "staffTfaCodesContinue": "Saved them — continue",
+
+  "leadLostTitle": "Why was this customer lost?",
+  "leadLostHint": "Pick the reason — it feeds the lost reasons report.",
+  "leadLostNote": "Details (optional)",
+  "leadLostConfirm": "Mark as lost",
+  "leadLostEmpty": "Your company has no lost reasons yet — ask an admin to add them from the dashboard.",
+  "leadLostReasonLabel": "Lost reason"
 }

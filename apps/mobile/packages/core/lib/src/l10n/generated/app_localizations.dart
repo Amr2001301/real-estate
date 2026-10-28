@@ -5695,6 +5695,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Saved them — continue'**
   String get staffTfaCodesContinue;
+
+  /// No description provided for @leadLostTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Why was this customer lost?'**
+  String get leadLostTitle;
+
+  /// No description provided for @leadLostHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the reason — it feeds the lost reasons report.'**
+  String get leadLostHint;
+
+  /// No description provided for @leadLostNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Details (optional)'**
+  String get leadLostNote;
+
+  /// No description provided for @leadLostConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as lost'**
+  String get leadLostConfirm;
+
+  /// No description provided for @leadLostEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Your company has no lost reasons yet — ask an admin to add them from the dashboard.'**
+  String get leadLostEmpty;
+
+  /// No description provided for @leadLostReasonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Lost reason'**
+  String get leadLostReasonLabel;
 }
 
 class _AppLocalizationsDelegate
