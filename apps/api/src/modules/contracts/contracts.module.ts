@@ -55,6 +55,7 @@ import {
 } from '../notifications/notifications.module';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { teamSalesIds, assertSalesRecordInScope } from '../../common/utils/sales-scope';
@@ -1436,8 +1437,10 @@ class ContractsController {
   }
 
   // Cancelled contracts whose customer is still owed part of the refund.
+  // Part of the financial report, so it opens with it (PRM).
   @Roles(UserRole.ADMIN)
   @Permissions('contracts:read')
+  @GrantedBy('reports:financial:read')
   @Get('refunds/outstanding')
   outstandingRefunds() {
     return this.refunds.outstanding();

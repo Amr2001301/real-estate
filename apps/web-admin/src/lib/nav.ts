@@ -179,8 +179,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/dashboard/payments/review', label: 'إيصالات الدفع', labelKey: 'paymentProofs', iconKey: 'Receipt', admin: true },
       // FG-01 — GET /payment-instruments is ADMIN + SALES_MANAGER.
       { href: '/dashboard/cheques', label: 'الشيكات', labelKey: 'cheques', iconKey: 'Landmark', admin: true, manager: true },
-      // Receivables and payables (GET /reports/ledger is ADMIN).
-      { href: '/dashboard/ledger', label: 'المستحقات والالتزامات', labelKey: 'ledger', iconKey: 'Scale', admin: true },
+      // Receivables and payables (GET /reports/ledger: ADMIN, or reports:financial:read).
+      { href: '/dashboard/ledger', label: 'المستحقات والالتزامات', labelKey: 'ledger', iconKey: 'Scale', admin: true, perm: ['reports:financial:read'] },
       { href: '/dashboard/maintenance', label: 'الصيانة', labelKey: 'maintenance', iconKey: 'Wrench', admin: true, feature: 'feature.maintenance' },
       { href: '/dashboard/bonus', label: 'العمولات', labelKey: 'bonus', iconKey: 'BadgePercent', admin: true },
       { href: '/dashboard/sales/performance', label: 'أداء فريق المبيعات', labelKey: 'salesPerformance', iconKey: 'Target', admin: true, manager: true },
@@ -208,7 +208,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/dashboard/cms', label: 'المحتوى', labelKey: 'cms', iconKey: 'FileEdit', admin: true, perm: ['cms:pages:manage', 'cms:banners:manage', 'cms:articles:manage'] },
       { href: '/dashboard/documents', label: 'المستندات', labelKey: 'documents', iconKey: 'Files', admin: true },
       { href: '/dashboard/notifications', label: 'الإشعارات', labelKey: 'notifications', iconKey: 'Bell', admin: true, perm: ['notifications:send', 'notifications:templates:manage'] },
-      { href: '/dashboard/reports', label: 'التقارير', labelKey: 'reports', iconKey: 'BarChart3', admin: true },
+      { href: '/dashboard/reports', label: 'التقارير', labelKey: 'reports', iconKey: 'BarChart3', admin: true, perm: ['reports:sales:read', 'reports:operational:read', 'reports:financial:read'] },
       { href: '/dashboard/users', label: 'المستخدمون', labelKey: 'users', iconKey: 'ShieldCheck', admin: true },
       { href: '/dashboard/permissions', label: 'الصلاحيات', labelKey: 'permissions', iconKey: 'ShieldCheck', admin: true },
       { href: '/dashboard/operations', label: 'مركز العمليات', labelKey: 'operations', iconKey: 'Gauge', admin: true },

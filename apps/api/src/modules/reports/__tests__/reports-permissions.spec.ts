@@ -167,15 +167,16 @@ describe('Reports module · permissions enforcement', () => {
       await request(app.getHttpServer()).get('/reports/kpis').expect(200);
       expect(prismaMock.userPermission.findMany).not.toHaveBeenCalled();
     });
-    it('rejects SALES at the @Roles layer (permissions DB never queried)', async () => {
-      FakeAuthGuard.currentUser = {
-        sub: 'sales-1',
-        role: UserRole.SALES,
-        codes: ['reports:operational:read'], // even with the code, @Roles(ADMIN) blocks
-      };
-      const res = await request(app.getHttpServer()).get('/reports/kpis').expect(403);
-      expect(res.body.message).toBe('Insufficient role');
-      expect(prismaMock.userPermission.findMany).not.toHaveBeenCalled();
+    it('lets SALES in with reports:operational:read (PRM @GrantedBy)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: ['reports:operational:read'] };
+      await request(app.getHttpServer()).get('/reports/kpis').expect(200);
+    });
+    it('rejects SALES without the code, or with another report code', async () => {
+      for (const codes of [[], ['reports:sales:read']]) {
+        FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes };
+        const res = await request(app.getHttpServer()).get('/reports/kpis').expect(403);
+        expect(res.body.message).toBe('Insufficient role');
+      }
     });
     it('rejects unauthenticated requests', async () => {
       FakeAuthGuard.currentUser = null;

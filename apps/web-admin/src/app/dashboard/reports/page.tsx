@@ -28,6 +28,8 @@ import { NumCell } from '@/components/premium/data-table';
 import { ExportMenu } from '@/components/export-menu';
 import { ReportFilterBar } from '@/components/reports/report-filter-bar';
 import { ReportsTabs } from './_components/reports-tabs';
+import { getMyCodes } from '@/lib/permissions';
+import { redirect } from 'next/navigation';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 
@@ -129,24 +131,32 @@ export default async function ReportsPage({
   const cmpRange = resolveComparisonDateRange(resolved, compare, today);
   const qs       = `dateFrom=${dateFrom}&dateTo=${dateTo}`;
 
+  // PRM: each part shows to whoever holds its report code (the admin all).
+  const codes    = await getMyCodes();
+  const canSales = codes.has('reports:sales:read');
+  const canFin   = codes.has('reports:financial:read');
+  const canOps   = codes.has('reports:operational:read');
+  if (!canSales && !canOps && canFin) redirect('/dashboard/reports/financial' as never);
+  const none = Promise.resolve({ data: null, error: null });
+
   const [
     salesRes, financialRes, reservationsRes, trendRes,
     projectsRes, funnelRes, brokersRes,
     cmpSalesRes, cmpFinancialRes,
   ] = await Promise.all([
-    safe(api.get<Sales>(`/reports/sales?${qs}`)),
-    safe(api.get<Financial>(`/reports/financial?${qs}`)),
-    safe(api.get<Record<string, number>>(`/reports/reservations?${qs}`)),
-    safe(api.get<SalesTrendPoint[]>(`/reports/sales-trend?year=${year}`)),
+    canSales ? safe(api.get<Sales>(`/reports/sales?${qs}`)) : none,
+    canFin ? safe(api.get<Financial>(`/reports/financial?${qs}`)) : none,
+    canOps ? safe(api.get<Record<string, number>>(`/reports/reservations?${qs}`)) : none,
+    canSales ? safe(api.get<SalesTrendPoint[]>(`/reports/sales-trend?year=${year}`)) : none,
     safe(projectOptions()),
-    safe(api.get<SalesFunnel>(`/reports/sales-funnel?${qs}`)),
-    safe(api.get<BrokerEntry[]>(`/reports/broker-leaderboard?${qs}`)),
-    cmpRange
+    canSales ? safe(api.get<SalesFunnel>(`/reports/sales-funnel?${qs}`)) : none,
+    canSales ? safe(api.get<BrokerEntry[]>(`/reports/broker-leaderboard?${qs}`)) : none,
+    cmpRange && canSales
       ? safe(api.get<Sales>(`/reports/sales?dateFrom=${cmpRange.dateFrom}&dateTo=${cmpRange.dateTo}`))
-      : Promise.resolve({ data: null, error: null }),
-    cmpRange
+      : none,
+    cmpRange && canFin
       ? safe(api.get<Financial>(`/reports/financial?dateFrom=${cmpRange.dateFrom}&dateTo=${cmpRange.dateTo}`))
-      : Promise.resolve({ data: null, error: null }),
+      : none,
   ]);
 
   // ── Derived ────────────────────────────────────────────────────────────────
@@ -230,16 +240,16 @@ export default async function ReportsPage({
             locale={locale}
             label={m.exportAll}
             groups={[
-              { label: m.exportSales, filenameBase: 'sales-report', xlsxPath: '/reports/sales/export.xlsx', pdfPath: '/reports/sales/export.pdf', csvPath: '/reports/sales/export.csv', params: exportParams },
-              { label: m.exportFinancial, filenameBase: 'financial-report', xlsxPath: '/reports/financial/export.xlsx', pdfPath: '/reports/financial/export.pdf', csvPath: '/reports/financial/export.csv', params: exportParams },
-              { label: m.exportBrokers, filenameBase: 'broker-report', pdfPath: '/reports/broker-leaderboard/export.pdf', params: exportParams },
-              { label: m.exportOperational, filenameBase: 'operational-report', pdfPath: '/reports/operational/export.pdf', xlsxPath: '/reports/operational/export.xlsx', csvPath: '/reports/operational/export.csv' },
+              ...(canSales ? [{ label: m.exportSales, filenameBase: 'sales-report', xlsxPath: '/reports/sales/export.xlsx', pdfPath: '/reports/sales/export.pdf', csvPath: '/reports/sales/export.csv', params: exportParams }] : []),
+              ...(canFin ? [{ label: m.exportFinancial, filenameBase: 'financial-report', xlsxPath: '/reports/financial/export.xlsx', pdfPath: '/reports/financial/export.pdf', csvPath: '/reports/financial/export.csv', params: exportParams }] : []),
+              ...(canSales ? [{ label: m.exportBrokers, filenameBase: 'broker-report', pdfPath: '/reports/broker-leaderboard/export.pdf', params: exportParams }] : []),
+              ...(canOps ? [{ label: m.exportOperational, filenameBase: 'operational-report', pdfPath: '/reports/operational/export.pdf', xlsxPath: '/reports/operational/export.xlsx', csvPath: '/reports/operational/export.csv' }] : []),
             ]}
           />
         }
       />
 
-      <ReportsTabs active="sales" locale={locale} />
+      <ReportsTabs active="sales" locale={locale} showFinancial={canFin} />
       <ReportFilterBar
         defaultMode={mode as PeriodMode}
         defaultMonth={month}
@@ -257,10 +267,11 @@ export default async function ReportsPage({
       )}
 
       {/* The navy band: four figures, no empty cards (U5). */}
+      {(canSales || canFin) && (
       <PremiumMetricStrip
-        cols={4}
+        cols={canSales && canFin ? 4 : canSales ? 3 : 2}
         metrics={[
-          {
+          ...(canSales ? [{
             label: m.kpi.totalSales, icon: <Wallet />, value: salesNum, unit: salesUnit,
             sub: `${contractsCount} ${m.salesTrend.contractSuffix}`,
             trend: delta(salesDelta), trendCls: deltaCls(salesDelta),
@@ -269,19 +280,21 @@ export default async function ReportsPage({
             label: m.kpi.contractsSigned, icon: <FileText />, value: contractsCount, unit: m.salesTrend.contractSuffix,
             sub: contractsCount > 0 ? `${m.kpi.avgPrefix} ${compactParts(avgContract, symbol, locale).join(' ')}` : undefined,
             trend: delta(contractsDelta), trendCls: deltaCls(contractsDelta),
-          },
-          {
+          }] : []),
+          ...(canFin ? [{
             label: m.kpi.collected, icon: <CircleDollarSign />, value: colNum, unit: colUnit,
             sub: `${depositsCount} ${m.kpi.depositSuffix} · ${verifiedCount} ${m.kpi.verifiedSuffix}`,
             trend: delta(financialDelta), trendCls: deltaCls(financialDelta),
-          },
-          {
+          }] : []),
+          ...(canSales ? [{
             label: m.kpi.conversionRate, icon: <TrendingUp />, value: overallConvStr ? overallConvRate : 0, unit: '%',
             sub: m.kpi.conversionSub,
-          },
+          }] : []),
         ]}
       />
+      )}
 
+      {canSales && (
       <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-5">
         <PremiumPanel
           className="lg:col-span-3"
@@ -343,9 +356,10 @@ export default async function ReportsPage({
           )}
         </PremiumPanel>
       </div>
+      )}
 
       <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
-        <PremiumPanel
+        {canOps && <PremiumPanel
           title={m.reservationStatus.title}
           sub={m.reservationStatus.description}
           trailing={
@@ -378,10 +392,10 @@ export default async function ReportsPage({
               </ul>
             </>
           )}
-        </PremiumPanel>
+        </PremiumPanel>}
 
         {/* Highlights: one card split by hairlines (U5). */}
-        <PremiumPanel title={m.u5.highlightsTitle} sub={m.u5.periodSub(year)} padding="none">
+        {canSales && <PremiumPanel title={m.u5.highlightsTitle} sub={m.u5.periodSub(year)} padding="none">
           <dl className="grid grid-cols-2 gap-px border-t border-hairline bg-hairline">
             {[
               { label: m.insights.bestMonth, value: peak ? `${peak.label} · ${peak.contracts} ${m.salesTrend.contractSuffix}` : null },
@@ -400,9 +414,10 @@ export default async function ReportsPage({
               </div>
             ))}
           </dl>
-        </PremiumPanel>
+        </PremiumPanel>}
       </div>
 
+      {canSales && (
       <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
         <PremiumPanel title={m.projectRankings.title} sub={m.projectRankings.description}>
           {byProject.length === 0 ? (
@@ -448,6 +463,7 @@ export default async function ReportsPage({
           )}
         </PremiumPanel>
       </div>
+      )}
     </div>
   );
 }

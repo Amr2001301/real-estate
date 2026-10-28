@@ -36,6 +36,7 @@ import {
 import { PremiumPageHero, PremiumPanel, PremiumEmptyNote } from '@/components/premium';
 import { ExportMenu } from '@/components/export-menu';
 import { ReportsTabs } from '../_components/reports-tabs';
+import { getMyCodes } from '@/lib/permissions';
 import { FinancialFilterBar } from './_components/financial-filter-bar';
 import { CashflowChart } from './_components/cashflow-chart';
 import { EntityLink } from '@/components/entity-link';
@@ -84,6 +85,7 @@ export default async function FinancialReportsPage({
 }) {
   const locale = await getLocale();
   const m = uiT(locale).financialReportsPage;
+  const codes = await getMyCodes();
 
   const sp = await searchParams;
   const currency = await getReportsCurrency();
@@ -260,7 +262,7 @@ export default async function FinancialReportsPage({
         }
       />
 
-      <ReportsTabs active="financial" locale={locale} />
+      <ReportsTabs active="financial" locale={locale} showSales={codes.has('reports:sales:read') || codes.has('reports:operational:read')} />
       <FinancialFilterBar
         defaultMode={mode as PeriodMode}
         defaultMonth={month}

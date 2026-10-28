@@ -8,6 +8,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { ReportsService } from './reports.service';
 import { LedgerService } from './ledger.service';
@@ -23,6 +24,7 @@ export class ReportsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:operational:read')
+  @GrantedBy('reports:operational:read')
   @Get('kpis')
   kpis() {
     return this.svc.kpis();
@@ -33,6 +35,7 @@ export class ReportsController {
   // BROKER are rejected at @Roles; SALES / SALES_MANAGER get their own home.
   @Roles(UserRole.ADMIN)
   @Permissions('reports:operational:read')
+  @GrantedBy('reports:operational:read')
   @Get('admin-summary')
   adminSummary() {
     return this.svc.adminSummary();
@@ -43,6 +46,7 @@ export class ReportsController {
   // at @Roles.
   @Roles(UserRole.ADMIN)
   @Permissions('reports:operational:read')
+  @GrantedBy('reports:operational:read')
   @Get('admin-summary/export.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="admin-summary.csv"')
@@ -55,6 +59,7 @@ export class ReportsController {
   // @Roles. The CSV endpoint above stays as a raw-data fallback.
   @Roles(UserRole.ADMIN)
   @Permissions('reports:operational:read')
+  @GrantedBy('reports:operational:read')
   @Get('admin-summary/export.xlsx')
   @Header(
     'Content-Type',
@@ -67,6 +72,7 @@ export class ReportsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:sales:read')
+  @GrantedBy('reports:sales:read')
   @Get('sales')
   sales(
     @Query('period') period?: string,
@@ -78,6 +84,7 @@ export class ReportsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
+  @GrantedBy('reports:financial:read')
   @Get('financial')
   financial(
     @Query('period') period?: string,
@@ -89,6 +96,7 @@ export class ReportsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:operational:read')
+  @GrantedBy('reports:operational:read')
   @Get('reservations')
   reservations(
     @Query('dateFrom') dateFrom?: string,
@@ -99,6 +107,7 @@ export class ReportsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:sales:read')
+  @GrantedBy('reports:sales:read')
   @Get('sales-trend')
   salesTrend(
     @Query('year') year?: string,
@@ -110,6 +119,7 @@ export class ReportsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:sales:read')
+  @GrantedBy('reports:sales:read')
   @Get('sales-funnel')
   salesFunnel(
     @Query('dateFrom') dateFrom?: string,
@@ -120,6 +130,7 @@ export class ReportsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:sales:read')
+  @GrantedBy('reports:sales:read')
   @Get('broker-leaderboard')
   brokerLeaderboard(
     @Query('dateFrom') dateFrom?: string,
@@ -130,6 +141,7 @@ export class ReportsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
+  @GrantedBy('reports:financial:read')
   @Get('financial-dashboard')
   financialDashboard(@Query() query: FinancialDashboardQueryDto) {
     return this.svc.financialDashboard({
@@ -144,6 +156,7 @@ export class ReportsController {
   // Receivables & payables (المستحقات والالتزامات) — what the company is owed and what it owes, by group.
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
+  @GrantedBy('reports:financial:read')
   @Get('ledger')
   ledgerSummary(@Query() query: LedgerQueryDto) {
     return this.ledger.summary(query);
@@ -152,6 +165,7 @@ export class ReportsController {
   // The rows of one group of that page, oldest first.
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
+  @GrantedBy('reports:financial:read')
   @Get('ledger/rows')
   ledgerRows(@Query() query: LedgerRowsQueryDto) {
     return this.ledger.rows({ ...query, page: query.page ?? 1, pageSize: query.pageSize ?? 50 });
@@ -164,6 +178,7 @@ export class ReportsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:sales:read')
+  @GrantedBy('reports:sales:read')
   @Get('sales/export.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="sales-report.csv"')
@@ -179,6 +194,7 @@ export class ReportsController {
   // the CSV above stays as the raw-data fallback.
   @Roles(UserRole.ADMIN)
   @Permissions('reports:sales:read')
+  @GrantedBy('reports:sales:read')
   @Get('sales/export.xlsx')
   @Header(
     'Content-Type',
@@ -195,6 +211,7 @@ export class ReportsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
+  @GrantedBy('reports:financial:read')
   @Get('financial/export.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="financial-report.csv"')
@@ -209,6 +226,7 @@ export class ReportsController {
   // P15.4 — board-style XLSX (default UI download). Same ADMIN + financial gate.
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
+  @GrantedBy('reports:financial:read')
   @Get('financial/export.xlsx')
   @Header(
     'Content-Type',
@@ -225,6 +243,7 @@ export class ReportsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:operational:read')
+  @GrantedBy('reports:operational:read')
   @Get('operational/export.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="operational-report.csv"')
@@ -236,6 +255,7 @@ export class ReportsController {
   // CSV above stays as the raw-data fallback.
   @Roles(UserRole.ADMIN)
   @Permissions('reports:operational:read')
+  @GrantedBy('reports:operational:read')
   @Get('operational/export.xlsx')
   @Header(
     'Content-Type',
@@ -248,6 +268,7 @@ export class ReportsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
+  @GrantedBy('reports:financial:read')
   @Get('financial-dashboard/export.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="financial-dashboard.csv"')
@@ -265,6 +286,7 @@ export class ReportsController {
   // + filters; the CSV above stays as the raw-data fallback.
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
+  @GrantedBy('reports:financial:read')
   @Get('financial-dashboard/export.xlsx')
   @Header(
     'Content-Type',
@@ -290,6 +312,7 @@ export class ReportsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:operational:read')
+  @GrantedBy('reports:operational:read')
   @Get('admin-summary/export.pdf')
   @Header('Content-Type', 'application/pdf')
   @Header('Content-Disposition', 'attachment; filename="dashboard-report.pdf"')
@@ -299,6 +322,7 @@ export class ReportsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:operational:read')
+  @GrantedBy('reports:operational:read')
   @Get('operational/export.pdf')
   @Header('Content-Type', 'application/pdf')
   @Header('Content-Disposition', 'attachment; filename="operational-report.pdf"')
@@ -308,6 +332,7 @@ export class ReportsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
+  @GrantedBy('reports:financial:read')
   @Get('financial-dashboard/export.pdf')
   @Header('Content-Type', 'application/pdf')
   @Header('Content-Disposition', 'attachment; filename="financial-dashboard.pdf"')
@@ -325,6 +350,7 @@ export class ReportsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:sales:read')
+  @GrantedBy('reports:sales:read')
   @Get('sales/export.pdf')
   @Header('Content-Type', 'application/pdf')
   @Header('Content-Disposition', 'attachment; filename="sales-report.pdf"')
@@ -338,6 +364,7 @@ export class ReportsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
+  @GrantedBy('reports:financial:read')
   @Get('financial/export.pdf')
   @Header('Content-Type', 'application/pdf')
   @Header('Content-Disposition', 'attachment; filename="financial-report.pdf"')
@@ -351,6 +378,7 @@ export class ReportsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:sales:read')
+  @GrantedBy('reports:sales:read')
   @Get('broker-leaderboard/export.pdf')
   @Header('Content-Type', 'application/pdf')
   @Header('Content-Disposition', 'attachment; filename="broker-report.pdf"')
