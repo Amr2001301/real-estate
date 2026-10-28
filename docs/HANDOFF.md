@@ -247,13 +247,14 @@ Then hard-refresh the browser (Ctrl+Shift+R). Being on another branch (e.g. an o
 | PR | Slice | Main points |
 |---|---|---|
 | #192 | Docs | This file. |
+| #198 | FU2 | Follow-ups reach the rep: a push 15 minutes before a lead's next action, an overdue alert 30 minutes after it (`follow-up-reminder.cron.ts`, once per follow-up time via `Lead.followUpRemindedFor/OverdueFor`), and a morning list at the company's 09:00 (reps: today + overdue; sales managers: their team). The customer page lists the customer's leads with the latest activity and next follow-up (`lastNote` on the leads list). |
 | #193 | FU1 | Follow-ups: `Lead.nextActionAt/Type/Note`; notes carry kind (call, meeting, WhatsApp…), call result, a next action and one-level replies; `GET leads/follow-ups(/summary)`; `/dashboard/follow-ups` page, nav badge (overdue + today). |
 | #194 | LR1 | Lost reasons per company (10 defaults, admin keeps the list), required when a lead is marked LOST; `GET leads/lost-report`; `/dashboard/lost-reasons`. |
 | #195 | MC1 | Marketing campaigns: `Campaign`, `CampaignSpend` (by date), `Lead.campaignId`, `campaigns:manage`; tracking links; website leads linked by `utm_campaign`. |
 | #196 | MC2 | Automatic lead intake: `LeadIntakeKey`, public `POST /v1/intake/:slug/leads` (Zapier / Make), round-robin over active SALES users (`leads.autoAssign`, `leads.roundRobinCursor`), first call (`leads.firstCallMinutes`); website leads routed the same way. |
 | #197 | MC3 | Campaign reports (`GET campaigns/report` + PDF / Excel; first-touch sales and revenue, CPL, CPA, ROI, by channel / project / month); the Facebook channel is «ميتا (فيسبوك + إنستجرام)» with leads split by platform (`utm_source={{site_source_name}}`); web-public keeps ad tags from any landing page for 30 days. |
 
-**Deploy notes (new since #191):** 4 migrations — `20261027090000_lead_follow_ups`, `20261027150000_lost_reasons` (seeds reasons, backfills `lostAt`), `20261027180000_marketing_campaigns`, `20261028090000_lead_intake`. API env `PUBLIC_API_URL` (the intake address shown to Zapier; falls back to `API_BASE_URL`).
+**Deploy notes (new since #191):** 5 migrations — `20261027090000_lead_follow_ups`, `20261027150000_lost_reasons` (seeds reasons, backfills `lostAt`), `20261027180000_marketing_campaigns`, `20261028090000_lead_intake`, `20261028150000_follow_up_reminders`. API env `PUBLIC_API_URL` (the intake address shown to Zapier; falls back to `API_BASE_URL`); optional `FOLLOW_UP_REMINDERS_ENABLED`, `FOLLOW_UP_DIGEST_HOUR`.
 
 **Known limits:** the staff mobile app does not ask for a lost reason; two leads arriving at the same instant may go to the same rep; WhatsApp and phone leads are tied to a campaign by hand.
 

@@ -485,7 +485,11 @@ export class LeadsService {
             select: { id: true, visitNumber: true, scheduledAt: true, status: true },
           },
           // "Last contact" on the kanban card: the latest note logged on the lead.
-          notes: { orderBy: { createdAt: 'desc' }, take: 1, select: { createdAt: true } },
+          notes: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: { createdAt: true, kind: true, callResult: true, body: true, sales: { select: { fullName: true } } },
+          },
         },
       }),
       this.prisma.lead.count({ where }),
@@ -507,6 +511,10 @@ export class LeadsService {
           : c,
         upcomingVisit: appointments[0] ?? null,
         lastContactAt: notes?.[0]?.createdAt ?? null,
+        // The latest activity itself, for the customer page's history.
+        lastNote: notes?.[0]
+          ? { kind: notes[0].kind, callResult: notes[0].callResult, body: notes[0].body.slice(0, 200), by: notes[0].sales?.fullName ?? null }
+          : null,
       };
     });
     // FG-23 — the sales and manager home dashboards counted won/lost stages

@@ -259,6 +259,8 @@ export interface Lead {
   stageChangedAt?: string;
   /** The latest note on the lead — the kanban card's "last contact"; null without one. */
   lastContactAt?: string | null;
+  /** The latest activity logged on the lead (leads list). */
+  lastNote?: { kind: LeadNoteKind; callResult: string | null; body: string; by: string | null } | null;
   /** The next follow-up: when, what, and a word on it; null when none is set. */
   nextActionAt?: string | null;
   nextActionType?: LeadFollowUpType | null;

@@ -1114,6 +1114,10 @@ model Lead {
   nextActionAt   DateTime?
   nextActionType LeadFollowUpType?
   nextActionNote String?
+  /// The follow-up time a reminder / an overdue alert was last sent for
+  /// (FU2): a new time differs from it, so it is reminded again.
+  followUpRemindedFor DateTime?
+  followUpOverdueFor  DateTime?
 
   // ── Lost: why, set when the lead is marked LOST ────────────────────────
   lostReasonId String?     @db.Uuid
