@@ -8,7 +8,15 @@ import '../dtos/staff_auth_dtos.dart';
 abstract interface class StaffAuthRemoteDataSource {
   /// Tenant-aware staff login. Calls POST /auth/login-staff with
   /// {slug, email, password}. Never calls the legacy /auth/login endpoint.
-  Future<AuthBundleDto> loginWithSlug(String slug, String email, String password);
+  /// TFA1 — answers with a session or with the second step's challenge.
+  Future<StaffLoginResponseDto> loginWithSlug(String slug, String email, String password);
+
+  /// TFA1 — the second step: the challenge and a code (or a recovery code).
+  Future<AuthBundleDto> verifyTwoFactor(String challenge, String code);
+
+  /// TFA1 — setting it up while signing in (the company requires it).
+  Future<TwoFactorSetupDto> startTwoFactorSetup(String challenge);
+  Future<TwoFactorEnabledDto> finishTwoFactorSetup(String challenge, String code);
   Future<AuthBundleDto> refresh(String refreshToken);
   Future<void> logout(String refreshToken);
   Future<void> forgotPassword(String email);
@@ -23,14 +31,44 @@ class StaffAuthRemoteDataSourceImpl implements StaffAuthRemoteDataSource {
       Options(extra: const {AuthInterceptor.skipAuthExtra: true});
 
   @override
-  Future<AuthBundleDto> loginWithSlug(
+  Future<StaffLoginResponseDto> loginWithSlug(
       String slug, String email, String password) async {
     final res = await _dio.post<Map<String, dynamic>>(
       '/auth/login-staff',
       data: {'slug': slug, 'email': email, 'password': password},
       options: _public,
     );
+    return StaffLoginResponseDto.fromJson(res.data!);
+  }
+
+  @override
+  Future<AuthBundleDto> verifyTwoFactor(String challenge, String code) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/auth/2fa/verify',
+      data: {'challenge': challenge, 'code': code},
+      options: _public,
+    );
     return AuthBundleDto.fromJson(res.data!);
+  }
+
+  @override
+  Future<TwoFactorSetupDto> startTwoFactorSetup(String challenge) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/auth/2fa/setup-challenge',
+      data: {'challenge': challenge},
+      options: _public,
+    );
+    return TwoFactorSetupDto.fromJson(res.data!);
+  }
+
+  @override
+  Future<TwoFactorEnabledDto> finishTwoFactorSetup(String challenge, String code) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/auth/2fa/enable-challenge',
+      data: {'challenge': challenge, 'code': code},
+      options: _public,
+    );
+    return TwoFactorEnabledDto.fromJson(res.data!);
   }
 
   @override

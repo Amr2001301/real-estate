@@ -49,3 +49,47 @@ class AuthBundleDto {
         tokens: AuthTokensDto.fromJson(json['tokens'] as Map<String, dynamic>),
       );
 }
+
+/// TFA1 — `/auth/login-staff` answers with a session, or with the second step:
+/// `{ twoFactorRequired | twoFactorSetupRequired, challenge }`.
+class StaffLoginResponseDto {
+  const StaffLoginResponseDto({this.bundle, this.challenge, this.setupRequired = false});
+  final AuthBundleDto? bundle;
+  final String? challenge;
+  final bool setupRequired;
+
+  factory StaffLoginResponseDto.fromJson(Map<String, dynamic> json) {
+    final challenge = json['challenge'];
+    if (challenge is String && challenge.isNotEmpty) {
+      return StaffLoginResponseDto(
+        challenge: challenge,
+        setupRequired: json['twoFactorSetupRequired'] == true,
+      );
+    }
+    return StaffLoginResponseDto(bundle: AuthBundleDto.fromJson(json));
+  }
+}
+
+/// `{ secret, otpauthUrl }` from `/auth/2fa/setup-challenge`.
+class TwoFactorSetupDto {
+  const TwoFactorSetupDto({required this.secret, required this.otpauthUrl});
+  final String secret;
+  final String otpauthUrl;
+
+  factory TwoFactorSetupDto.fromJson(Map<String, dynamic> json) => TwoFactorSetupDto(
+        secret: json['secret'] as String? ?? '',
+        otpauthUrl: json['otpauthUrl'] as String? ?? '',
+      );
+}
+
+/// `{ user, tokens, recoveryCodes }` from `/auth/2fa/enable-challenge`.
+class TwoFactorEnabledDto {
+  const TwoFactorEnabledDto({required this.bundle, required this.recoveryCodes});
+  final AuthBundleDto bundle;
+  final List<String> recoveryCodes;
+
+  factory TwoFactorEnabledDto.fromJson(Map<String, dynamic> json) => TwoFactorEnabledDto(
+        bundle: AuthBundleDto.fromJson(json),
+        recoveryCodes: [for (final c in (json['recoveryCodes'] as List<dynamic>? ?? const [])) c as String],
+      );
+}

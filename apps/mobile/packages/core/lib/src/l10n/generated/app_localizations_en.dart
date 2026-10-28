@@ -877,7 +877,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileDeleteAccountTitle => 'Delete your account?';
 
   @override
-  String get profileDeleteAccountBody => 'Your name, phone, e-mail and photo are removed and you are signed out. Your contract and payment records stay with the company. This cannot be undone.';
+  String get profileDeleteAccountBody =>
+      'Your name, phone, e-mail and photo are removed and you are signed out. Your contract and payment records stay with the company. This cannot be undone.';
 
   @override
   String get profileDeleteAccountConfirm => 'Delete';
@@ -1094,7 +1095,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myPropertyHandedOverDate => 'Handed over on';
 
   @override
-  String get myPropertyNotHandedOver => 'Not handed over yet — maintenance requests open at handover';
+  String get myPropertyNotHandedOver =>
+      'Not handed over yet — maintenance requests open at handover';
 
   @override
   String get myPropertyInstallmentPlan => 'Installment plan';
@@ -2922,4 +2924,78 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get labelContractor => 'Contractor';
+
+  @override
+  String get staffTfaTitle => 'Two-step sign-in';
+
+  @override
+  String get staffTfaCodeHint =>
+      'Open your authenticator app and enter the 6-digit code.';
+
+  @override
+  String get staffTfaCodeLabel => 'Code from the app';
+
+  @override
+  String get staffTfaRecoveryLabel => 'Recovery code';
+
+  @override
+  String get staffTfaUseRecovery => 'Have a recovery code instead?';
+
+  @override
+  String get staffTfaUseApp => 'Use the code from the app';
+
+  @override
+  String get staffTfaVerify => 'Confirm';
+
+  @override
+  String get staffTfaBack => 'Back';
+
+  @override
+  String get staffTfaWrongCode =>
+      'Wrong code — check the current code in the app';
+
+  @override
+  String get staffTfaLocked => 'Too many wrong codes — try again in 15 minutes';
+
+  @override
+  String get staffTfaExpired => 'This step timed out — sign in again';
+
+  @override
+  String get staffTfaInvalidFormat => 'Enter the 6-digit code';
+
+  @override
+  String get staffTfaSetupTitle => 'Turn on two-step sign-in';
+
+  @override
+  String get staffTfaSetupHint =>
+      'Your company requires a code from an authenticator app with your password. Add this key to an authenticator app (Google Authenticator, Microsoft Authenticator), then enter the code it shows.';
+
+  @override
+  String get staffTfaOpenApp => 'Add to authenticator app';
+
+  @override
+  String get staffTfaNoApp =>
+      'No authenticator app on this phone — copy the key and add it by hand';
+
+  @override
+  String get staffTfaKeyLabel => 'Key';
+
+  @override
+  String get staffTfaCopy => 'Copy';
+
+  @override
+  String get staffTfaCopied => 'Copied';
+
+  @override
+  String get staffTfaEnable => 'Turn on and continue';
+
+  @override
+  String get staffTfaCodesTitle => 'Recovery codes';
+
+  @override
+  String get staffTfaCodesHint =>
+      'Keep these somewhere safe. Each works once if you do not have your phone, and they will not be shown again.';
+
+  @override
+  String get staffTfaCodesContinue => 'Saved them — continue';
 }

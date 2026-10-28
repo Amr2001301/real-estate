@@ -11,6 +11,7 @@ import 'features/auth/data/repositories/staff_auth_repository_impl.dart';
 import 'features/auth/domain/repositories/staff_auth_repository.dart';
 import 'features/auth/domain/usecases/login_staff.dart';
 import 'features/auth/domain/usecases/logout_staff.dart';
+import 'features/auth/domain/usecases/staff_two_factor.dart';
 import 'features/auth/presentation/cubit/staff_auth_cubit.dart';
 import 'features/bonus/data/datasources/bonus_remote_data_source.dart';
 import 'features/bonus/data/repositories/bonus_repository_impl.dart';
@@ -216,6 +217,9 @@ class StaffApp extends StatelessWidget {
                   sessionCubit: ctx.read<SessionCubit>(),
                   loginStaff: LoginStaff(repo),
                   logoutStaff: LogoutStaff(repo),
+                  verifyTwoFactor: VerifyStaffTwoFactor(repo),
+                  startTwoFactorSetup: StartStaffTwoFactorSetup(repo),
+                  finishTwoFactorSetup: FinishStaffTwoFactorSetup(repo),
                   beforeLogout: push.unregisterIfPossible,
                 );
               },
