@@ -189,6 +189,8 @@ export class ListDepositsQueryDto {
 }
 
 export interface ListDepositsOpts {
+  /** PRM2 — only the payments of these reps' sales (reservation.salesId); undefined = all. */
+  salesIds?: string[];
   page: number;
   pageSize: number;
   // legacy

@@ -649,6 +649,12 @@ export class DepositsService {
     );
   }
 
+  /** The rep who made the sale behind a payment (reservation.salesId), or null. */
+  async ownerSalesId(id: string): Promise<string | null> {
+    const d = await this.depositContext(id);
+    return d?.contract?.reservation?.salesId ?? d?.reservation?.salesId ?? null;
+  }
+
   async list(opts: ListDepositsOpts) {
     const and: Prisma.DepositWhereInput[] = [];
 
@@ -669,6 +675,16 @@ export class DepositsService {
           { contract: { customerId: opts.customerId } },
           { reservation: { clientId: opts.customerId } },
           { reservation: { lead: { is: { clientId: opts.customerId } } } },
+        ],
+      });
+    }
+
+    // PRM2 — the sale's rep: the contract's reservation, or the booking's own.
+    if (opts.salesIds) {
+      and.push({
+        OR: [
+          { contract: { reservation: { salesId: { in: opts.salesIds } } } },
+          { reservation: { salesId: { in: opts.salesIds } } },
         ],
       });
     }

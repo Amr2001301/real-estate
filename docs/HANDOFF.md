@@ -562,6 +562,12 @@ Left for the owner, not in V1–V3:
 
 **Phase 2a — reports (done):** every `reports` route takes `@GrantedBy` with the code it already checks (`reports:sales|operational|financial:read`); `contracts/refunds/outstanding` takes `reports:financial:read`. A granted staff member sees the admin's figures (rule 2); no phone numbers are in them. web-admin: the reports page fetches and shows only the parts the codes open; the tabs, the ledger and the reports nav item follow the codes. e2e `e2e-prm2a-reports`.
 
+**Phase 2b — contracts and payments (owner's decision 2026-10-28: «أقفلها وأعمل كود جديد»):** before this, `GET /contracts` and `GET /deposits` showed SALES the whole company's (and a manager the whole company's payments); only a manager's contract list was team-scoped. Now (`common/permissions/company-wide.ts`):
+- A rep sees the contracts and payments of their own sales (the reservation's `salesId`), a manager their own and their team's; another rep's contract, statement or installment plan (and a manager's other team's proof) is 404. A contract with no reservation has no rep, so only an admin (or the codes below) sees it.
+- New codes, in no role's starting set: `contracts:read:all` and `deposits:read:all` open the whole company's, as the admin sees them; `deposits:read:all` also opens a payment's detail and the review queue (`@GrantedBy`), and the «الدفعات» nav item. Approving, rejecting, recording and reversing payments stay with the admin.
+- The mobile staff app is unchanged; it simply gets fewer rows for a rep. e2e `e2e-prm2b-money-scope`.
+- Not done yet in phase 2: cheques, bonus entries, brokers and their commissions (a manager still sees every broker contract), maintenance, documents, visit scheduling, unit export.
+
 **Phase 3 (optional) — company role templates:** an admin saves a named set of codes («محاسب», «تسويق», «سكرتارية») and applies it to a user in one step; changing the template can update its users.
 
 **Watch out for:** the throttled login in Playwright (5/min on `login-staff`; see `e2e/two-factor.spec.ts` `formLogin`), the shared admin storage in Playwright (create your own users and delete them — inactive users still use a plan seat), and the mobile staff app (it is role-based too; keep its behaviour unless the owner asks).

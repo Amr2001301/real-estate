@@ -142,6 +142,7 @@ const META: Record<string, PermissionMeta> = {
 
   // ── العقود ───────────────────────────────────────────────────────────────
   'contracts:read': { label: 'عرض العقود', description: 'الاطلاع على العقود وتفاصيلها.', category: 'العقود', type: 'قراءة' },
+  'contracts:read:all': { label: 'عرض عقود الشركة كلها', description: 'الاطلاع على عقود الشركة كلها؛ بدونها يرى المندوب عقوده فقط والمشرف عقود فريقه.', category: 'العقود', type: 'قراءة' },
   'contracts:upload': { label: 'إنشاء العقود وإرفاق الملفات', description: 'إنشاء عقد وإرفاق ملف PDF.', category: 'العقود', type: 'تعديل' },
   'contracts:update': { label: 'تعديل العقود', description: 'تحديث الحقول القابلة للتعديل في العقد.', category: 'العقود', type: 'تعديل' },
   'contracts:sign': { label: 'توقيع العقود', description: 'اعتماد توقيع العقد رسمياً.', category: 'العقود', type: 'اعتماد' },
@@ -151,6 +152,7 @@ const META: Record<string, PermissionMeta> = {
 
   // ── الدفعات ──────────────────────────────────────────────────────────────
   'deposits:read': { label: 'عرض الدفعات', description: 'الاطلاع على سجل الدفعات المالية.', category: 'الدفعات', type: 'قراءة' },
+  'deposits:read:all': { label: 'عرض دفعات الشركة كلها', description: 'الاطلاع على دفعات الشركة كلها؛ بدونها يرى المندوب دفعات عملائه فقط والمشرف دفعات فريقه.', category: 'الدفعات', type: 'قراءة' },
   'deposits:register': { label: 'تسجيل دفعة', description: 'تسجيل دفعة مالية جديدة.', category: 'الدفعات', type: 'مالي' },
   'deposits:verify': { label: 'اعتماد الدفعات', description: 'التحقق من الدفعة واعتمادها.', category: 'الدفعات', type: 'مالي' },
   'deposits:reverse': { label: 'عكس دفعة معتمدة', description: 'عكس دفعة معتمدة يدويًا مع تسجيل التصحيح.', category: 'الدفعات', type: 'مالي' },

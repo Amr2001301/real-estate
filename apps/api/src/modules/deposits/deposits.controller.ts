@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { DepositReviewStatus, UserRole, type Prisma } from '@prisma/client';
@@ -17,6 +18,10 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
+import { PrismaService } from '../../common/prisma/prisma.service';
+import { COMPANY_WIDE_CODES, assertOwnedRecord, ownedSalesIds } from '../../common/permissions/company-wide';
+import type { ReqWithCodes } from '../../common/permissions/staff-codes';
 import { DepositsService } from './deposits.service';
 import {
   ApproveDepositDto,
@@ -92,7 +97,14 @@ export class DepositsController {
     private readonly svc: DepositsService,
     private readonly documents: DocumentsService,
     private readonly ownership: OwnershipService,
+    private readonly prisma: PrismaService,
   ) {}
+
+  // PRM2 — a rep sees the payments of their own sales, a manager their own
+  // and their team's; ADMIN or deposits:read:all, the whole company.
+  private owned(user: AuthUser, req: ReqWithCodes) {
+    return ownedSalesIds(this.prisma, req, user, COMPANY_WIDE_CODES.deposits);
+  }
 
   // Admin-only recording per scope §5
   @Roles(UserRole.ADMIN)
@@ -129,8 +141,9 @@ export class DepositsController {
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('deposits:read')
   @Get('deposits')
-  list(@Query() q: ListDepositsQueryDto) {
+  async list(@Query() q: ListDepositsQueryDto, @CurrentUser() user: AuthUser, @Req() req: ReqWithCodes) {
     return this.svc.list({
+      salesIds: await this.owned(user, req),
       page: q.page ?? 1,
       pageSize: q.pageSize ?? 20,
       contractId: q.contractId,
@@ -154,10 +167,12 @@ export class DepositsController {
   // doesn't need to remember the query param. Falls through to the full
   // list() method otherwise.
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @GrantedBy('deposits:read:all')
   @Permissions('deposits:read')
   @Get('deposits/review-queue')
-  reviewQueue(@Query() q: ListDepositsQueryDto) {
+  async reviewQueue(@Query() q: ListDepositsQueryDto, @CurrentUser() user: AuthUser, @Req() req: ReqWithCodes) {
     return this.svc.list({
+      salesIds: await this.owned(user, req),
       page: q.page ?? 1,
       pageSize: q.pageSize ?? 20,
       contractId: q.contractId,
@@ -177,8 +192,10 @@ export class DepositsController {
   }
 
   // Single deposit detail (with contract/reservation/installment context).
-  // Declared before the parametric write routes; ADMIN read.
+  // Declared before the parametric write routes; ADMIN, or a staff member
+  // with the whole company's payments (PRM2).
   @Roles(UserRole.ADMIN)
+  @GrantedBy('deposits:read:all')
   @Permissions('deposits:read')
   @Get('deposits/:id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
@@ -255,10 +272,13 @@ export class DepositsController {
   // read-only reviewer can OPEN the proof without holding deposits:verify
   // (which is reserved for approve/reject). Returns a short-lived signed URL
   // only — never a permanent URL or storage key.
+  // PRM2: a manager opens their team's proofs; deposits:read:all, any.
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @GrantedBy('deposits:read:all')
   @Permissions('deposits:read')
   @Get('deposits/:id/proof/download')
-  proofDownload(@Param('id', ParseUUIDPipe) id: string) {
+  async proofDownload(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser, @Req() req: ReqWithCodes) {
+    await assertOwnedRecord(this.prisma, req, user, COMPANY_WIDE_CODES.deposits, () => this.svc.ownerSalesId(id));
     return this.svc.getProofDownloadLink(id);
   }
 

@@ -174,7 +174,8 @@ export const NAV_SECTIONS: NavSection[] = [
     titleKey: 'operations',
     items: [
       { href: '/dashboard/installments', label: 'خطط التقسيط', labelKey: 'installments', iconKey: 'Wallet' },
-      { href: '/dashboard/deposits', label: 'الدفعات', labelKey: 'deposits', iconKey: 'Receipt', admin: true },
+      // The whole company's payments (GET /deposits/:id: ADMIN, or deposits:read:all).
+      { href: '/dashboard/deposits', label: 'الدفعات', labelKey: 'deposits', iconKey: 'Receipt', admin: true, perm: ['deposits:read:all'] },
       // Customers' payment proofs waiting for an admin (approve / reject).
       { href: '/dashboard/payments/review', label: 'إيصالات الدفع', labelKey: 'paymentProofs', iconKey: 'Receipt', admin: true },
       // FG-01 — GET /payment-instruments is ADMIN + SALES_MANAGER.
