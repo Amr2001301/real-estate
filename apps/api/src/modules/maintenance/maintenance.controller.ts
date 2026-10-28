@@ -15,6 +15,7 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags } from '@nestjs/swagger';
 import { MaintenanceStatus, MaintenanceReviewStatus, UserRole } from '@prisma/client';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
@@ -41,13 +42,16 @@ export class MaintenanceController {
   // Categories — Admin manages; CUSTOMER reads when filing a request, so
   // the GET stays role-only (no @Permissions — gating it would lock
   // customers out, since they can't have admin permission rows assigned).
+  // PRM2 — staff who manage maintenance or its categories read them too.
   @Roles(UserRole.ADMIN, UserRole.CUSTOMER)
+  @GrantedBy('maintenance:manage:all', 'maintenance:categories:manage')
   @Get('maintenance-categories')
   listCategories() {
     return this.svc.listCategories();
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('maintenance:categories:manage')
   @Permissions('maintenance:categories:manage')
   @Post('maintenance-categories')
   createCategory(@Body() dto: CreateCategoryDto) {
@@ -55,6 +59,7 @@ export class MaintenanceController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('maintenance:categories:manage')
   @Permissions('maintenance:categories:manage')
   @Patch('maintenance-categories/:id')
   updateCategory(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCategoryDto) {
@@ -191,6 +196,7 @@ export class MaintenanceController {
   // Units linked to a customer via contracts — powers the dependent
   // customer→unit picker on the admin create form. ADMIN-only, maintenance:read.
   @Roles(UserRole.ADMIN)
+  @GrantedBy('maintenance:manage:all')
   @Permissions('maintenance:read')
   @Get('customers/:id/maintenance-units')
   customerUnits(@Param('id', ParseUUIDPipe) id: string) {
@@ -199,6 +205,7 @@ export class MaintenanceController {
 
   // Admin manages all
   @Roles(UserRole.ADMIN)
+  @GrantedBy('maintenance:manage:all')
   @Permissions('maintenance:read')
   @Get('maintenance-requests')
   list(
@@ -228,6 +235,7 @@ export class MaintenanceController {
   // Operational reporting summary. Declared before the `:id` route so the
   // literal "reports/summary" path is never read as a request id.
   @Roles(UserRole.ADMIN)
+  @GrantedBy('maintenance:manage:all')
   @Permissions('maintenance:read')
   @Get('maintenance-requests/reports/summary')
   reportsSummary(
@@ -244,6 +252,7 @@ export class MaintenanceController {
   // CSV export of the same report. Declared before `:id` so the literal path
   // is never read as a request id.
   @Roles(UserRole.ADMIN)
+  @GrantedBy('maintenance:manage:all')
   @Permissions('maintenance:read')
   @Get('maintenance-requests/reports/summary.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
@@ -263,6 +272,7 @@ export class MaintenanceController {
   // filters; the CSV above stays as the raw-data fallback. Declared before
   // `:id` so the literal path is never read as a request id.
   @Roles(UserRole.ADMIN)
+  @GrantedBy('maintenance:manage:all')
   @Permissions('maintenance:read')
   @Get('maintenance-requests/reports/summary.xlsx')
   @Header(
@@ -285,6 +295,7 @@ export class MaintenanceController {
 
   // Presentation PDF (HTML printed by Chromium); same gate as the XLSX.
   @Roles(UserRole.ADMIN)
+  @GrantedBy('maintenance:manage:all')
   @Permissions('maintenance:read')
   @Get('maintenance-requests/reports/summary.pdf')
   @Header('Content-Type', 'application/pdf')
@@ -303,6 +314,7 @@ export class MaintenanceController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('maintenance:manage:all')
   @Permissions('maintenance:read')
   @Get('maintenance-requests/:id')
   detail(@Param('id', ParseUUIDPipe) id: string) {
@@ -311,6 +323,7 @@ export class MaintenanceController {
 
   // Assignment route — validates the assignee and auto-advances OPEN→ASSIGNED.
   @Roles(UserRole.ADMIN)
+  @GrantedBy('maintenance:assign', 'maintenance:manage:all')
   @Permissions('maintenance:assign')
   @Post('maintenance-requests/:id/assign')
   assignRequest(
@@ -323,6 +336,7 @@ export class MaintenanceController {
 
   // Status transition route — enforces the allowed transition graph.
   @Roles(UserRole.ADMIN)
+  @GrantedBy('maintenance:manage:all')
   @Permissions('maintenance:resolve')
   @Post('maintenance-requests/:id/status')
   setRequestStatus(
@@ -336,6 +350,7 @@ export class MaintenanceController {
   // Admin review gate — approve starts the SLA timer, reject closes the request
   // to field work. Both require a PENDING request. Reuses maintenance:resolve.
   @Roles(UserRole.ADMIN)
+  @GrantedBy('maintenance:manage:all')
   @Permissions('maintenance:resolve')
   @Post('maintenance-requests/:id/approve')
   approveRequest(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
@@ -343,6 +358,7 @@ export class MaintenanceController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('maintenance:manage:all')
   @Permissions('maintenance:resolve')
   @Post('maintenance-requests/:id/reject')
   rejectRequest(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {

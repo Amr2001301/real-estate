@@ -166,6 +166,7 @@ const META: Record<string, PermissionMeta> = {
 
   // ── الصيانة ──────────────────────────────────────────────────────────────
   'maintenance:read': { label: 'عرض طلبات الصيانة', description: 'الاطلاع على طلبات الصيانة.', category: 'الصيانة', type: 'قراءة' },
+  'maintenance:manage:all': { label: 'إدارة صيانة الشركة كلها', description: 'عرض طلبات صيانة الشركة كلها وتقاريرها وتوزيعها وتغيير حالتها من لوحة التحكم؛ بدونها يعمل مشرف الصيانة على طلباته فقط من التطبيق.', category: 'الصيانة', type: 'إداري' },
   'maintenance:create': { label: 'إنشاء طلب صيانة', description: 'تسجيل طلب صيانة جديد.', category: 'الصيانة', type: 'تعديل' },
   'maintenance:assign': { label: 'إسناد الصيانة', description: 'إسناد طلب الصيانة لمسؤول.', category: 'الصيانة', type: 'تعديل' },
   'maintenance:resolve': { label: 'إنهاء طلبات الصيانة', description: 'إغلاق أو حل طلب الصيانة.', category: 'الصيانة', type: 'تعديل' },

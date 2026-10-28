@@ -100,6 +100,7 @@ export const PERMISSION_CATALOG: ReadonlyArray<{ code: string; description: stri
   { code: 'visits:reschedule', description: 'Reschedule visit appointments' },
   { code: 'visits:assign', description: 'Assign visit appointments to sales users' },
   { code: 'maintenance:read', description: 'Read maintenance requests' },
+  { code: 'maintenance:manage:all', description: "Read and drive the whole company's maintenance requests and reports from the dashboard (a supervisor otherwise works only their own, in the app)" },
   { code: 'maintenance:create', description: 'Create maintenance requests on behalf of customers' },
   { code: 'maintenance:assign', description: 'Assign maintenance requests to admin staff' },
   { code: 'maintenance:resolve', description: 'Drive maintenance request status transitions' },

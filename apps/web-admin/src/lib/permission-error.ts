@@ -59,6 +59,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
   'pricing:approve-discount': 'اعتماد خصم أكبر من الحد المسموح',
   // Maintenance
   'maintenance:read': 'عرض طلبات الصيانة',
+  'maintenance:manage:all': 'إدارة صيانة الشركة كلها',
   'maintenance:assign': 'إسناد الصيانة',
   'maintenance:resolve': 'إنهاء طلبات الصيانة',
   // Leads + Visits
