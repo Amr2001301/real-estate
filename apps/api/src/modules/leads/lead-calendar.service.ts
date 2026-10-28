@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { AppointmentStatus, LeadNoteKind, LeadStage, Prisma } from '@prisma/client';
+import { AppointmentStatus, ContractStatus, LeadNoteKind, LeadStage, Prisma, ReservationStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { currentCompanyTimeZone, localDayStartInstant } from '../../common/time/company-timezone';
@@ -39,6 +39,28 @@ export type CalendarEvent =
       note: string | null;
     }
   | {
+      type: 'reservation_expiry';
+      id: string;
+      at: Date;
+      leadId: string | null;
+      customer: string | null;
+      unit: string | null;
+      project: unknown;
+      sales: { id: string; fullName: string } | null;
+      status: ReservationStatus;
+      ref: string | null;
+    }
+  | {
+      type: 'contract_signed';
+      id: string;
+      at: Date;
+      customer: string | null;
+      unit: string | null;
+      project: unknown;
+      sales: { id: string; fullName: string } | null;
+      ref: string | null;
+    }
+  | {
       type: 'done';
       id: string;
       at: Date;
@@ -51,8 +73,10 @@ export type CalendarEvent =
 
 /**
  * CAL1 — a rep's (or a team's) diary between two company days: visits
- * booked, follow-ups due (each open lead's next action), and the calls,
- * meetings and chats already logged.
+ * booked, follow-ups due (each open lead's next action), the calls,
+ * meetings and chats already logged, reservations running out (and those
+ * that did), and contracts signed. A reservation or contract belongs to the
+ * reservation's rep.
  */
 @Injectable()
 export class LeadCalendarService {
@@ -69,7 +93,8 @@ export class LeadCalendarService {
     const owner = (field: string): Record<string, unknown> =>
       scope.salesIds ? { [field]: { in: scope.salesIds } } : scope.salesId ? { [field]: scope.salesId } : {};
 
-    const [visits, followUps, done] = await Promise.all([
+    const unitSelect = { code: true, building: { select: { phase: { select: { project: { select: { name: true } } } } } } } as const;
+    const [visits, followUps, done, reservations, contracts] = await Promise.all([
       this.prisma.visitAppointment.findMany({
         where: { companyId, scheduledAt: range, ...(owner('assignedSalesId') as Prisma.VisitAppointmentWhereInput) },
         orderBy: { scheduledAt: 'asc' },
@@ -120,6 +145,47 @@ export class LeadCalendarService {
           sales: { select: { id: true, fullName: true } },
         },
       }),
+      this.prisma.reservation.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          expiresAt: range,
+          status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED, ReservationStatus.EXPIRED] },
+          ...(owner('salesId') as Prisma.ReservationWhereInput),
+        },
+        orderBy: { expiresAt: 'asc' },
+        take: 500,
+        select: {
+          id: true,
+          reservationNumber: true,
+          expiresAt: true,
+          status: true,
+          leadId: true,
+          client: { select: { fullName: true } },
+          lead: { select: { fullName: true } },
+          unit: { select: unitSelect },
+          sales: { select: { id: true, fullName: true } },
+        },
+      }),
+      this.prisma.contract.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          status: { not: ContractStatus.CANCELLED },
+          signedAt: range,
+          ...(scope.salesIds || scope.salesId ? { reservation: owner('salesId') as Prisma.ReservationWhereInput } : {}),
+        },
+        orderBy: { signedAt: 'asc' },
+        take: 500,
+        select: {
+          id: true,
+          contractNumber: true,
+          signedAt: true,
+          customer: { select: { fullName: true } },
+          unit: { select: unitSelect },
+          reservation: { select: { sales: { select: { id: true, fullName: true } } } },
+        },
+      }),
     ]);
 
     const events: CalendarEvent[] = [
@@ -144,6 +210,28 @@ export class LeadCalendarService {
         sales: l.assignedSales,
         kind: l.nextActionType ?? 'FOLLOW_UP',
         note: l.nextActionNote,
+      })),
+      ...reservations.map((r) => ({
+        type: 'reservation_expiry' as const,
+        id: r.id,
+        at: r.expiresAt,
+        leadId: r.leadId,
+        customer: r.client?.fullName ?? r.lead?.fullName ?? null,
+        unit: r.unit.code,
+        project: r.unit.building?.phase?.project?.name ?? null,
+        sales: r.sales,
+        status: r.status,
+        ref: r.reservationNumber,
+      })),
+      ...contracts.map((c) => ({
+        type: 'contract_signed' as const,
+        id: c.id,
+        at: c.signedAt!,
+        customer: c.customer?.fullName ?? null,
+        unit: c.unit.code,
+        project: c.unit.building?.phase?.project?.name ?? null,
+        sales: c.reservation?.sales ?? null,
+        ref: c.contractNumber,
       })),
       ...done.map((n) => ({
         type: 'done' as const,

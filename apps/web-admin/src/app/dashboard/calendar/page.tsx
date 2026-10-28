@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { CalendarCheck2, CalendarClock, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { CalendarCheck2, CalendarClock, ChevronLeft, ChevronRight, FileSignature, Hourglass, MapPin } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Translatable } from '@/lib/types';
 import { tx } from '@/lib/format';
@@ -21,6 +21,8 @@ type Sales = { id: string; fullName: string } | null;
 type CalendarEvent =
   | { type: 'visit'; id: string; at: string; leadId: string | null; customer: string | null; project: Translatable | null; sales: Sales; status: string; ref: string }
   | { type: 'follow_up'; id: string; at: string; leadId: string; customer: string; project: Translatable | null; sales: Sales; kind: string; note: string | null }
+  | { type: 'reservation_expiry'; id: string; at: string; leadId: string | null; customer: string | null; unit: string | null; project: Translatable | null; sales: Sales; status: string; ref: string | null }
+  | { type: 'contract_signed'; id: string; at: string; customer: string | null; unit: string | null; project: Translatable | null; sales: Sales; ref: string | null }
   | { type: 'done'; id: string; at: string; leadId: string; customer: string; sales: Sales; kind: string; callResult: string | null };
 
 interface Search {
@@ -39,9 +41,19 @@ const TONE = {
   follow_up: 'border-s-[#D8B66A] bg-[#D8B66A]/14 text-brand-800',
   overdue: 'border-s-danger-500 bg-danger-500/10 text-danger-700',
   done: 'border-s-emerald-500 bg-emerald-500/10 text-emerald-800',
+  reservation_expiry: 'border-s-orange-500 bg-orange-500/10 text-orange-800',
+  contract_signed: 'border-s-sky-600 bg-sky-500/10 text-sky-800',
 } as const;
+const DOT: Record<CalendarEvent['type'], string> = {
+  visit: 'bg-violet-500',
+  follow_up: 'bg-[#D8B66A]',
+  done: 'bg-emerald-500',
+  reservation_expiry: 'bg-orange-500',
+  contract_signed: 'bg-sky-600',
+};
+const TYPES = ['visit', 'follow_up', 'done', 'reservation_expiry', 'contract_signed'] as const;
 
-/** «التقويم» — visits, follow-ups due and logged calls, a month at a time. */
+/** «التقويم» — visits, follow-ups due, logged calls, reservations running out and contracts signed, a month at a time. */
 export default async function CalendarPage({ searchParams }: { searchParams: Promise<Search> }) {
   const [sp, locale, session, zone] = await Promise.all([searchParams, getLocale(), getSession(), getCompanyTimeZone()]);
   const m = calendarT(locale);
@@ -76,10 +88,29 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   }
   const now = Date.now();
   const tone = (e: CalendarEvent) => (e.type === 'follow_up' && Date.parse(e.at) < now ? TONE.overdue : TONE[e.type]);
-  const label = (e: CalendarEvent) =>
-    e.type === 'visit' ? m.visit : e.type === 'follow_up' ? m.kind[e.kind] ?? m.followUp : `${m.kind[e.kind] ?? ''} ✓`;
+  const label = (e: CalendarEvent) => {
+    switch (e.type) {
+      case 'visit':
+        return m.visit;
+      case 'follow_up':
+        return m.kind[e.kind] ?? m.followUp;
+      case 'reservation_expiry':
+        return e.status === 'EXPIRED' ? m.reservationExpired : m.reservationExpiry;
+      case 'contract_signed':
+        return m.contractSigned;
+      default:
+        return `${m.kind[e.kind] ?? ''} ✓`;
+    }
+  };
   const href = (e: CalendarEvent) =>
-    (e.type === 'visit' ? `/dashboard/visits/appointments/${e.id}` : `/dashboard/leads/${e.leadId}`) as never;
+    (e.type === 'visit'
+      ? `/dashboard/visits/appointments/${e.id}`
+      : e.type === 'reservation_expiry'
+        ? `/dashboard/reservations/${e.id}`
+        : e.type === 'contract_signed'
+          ? `/dashboard/contracts/${e.id}`
+          : `/dashboard/leads/${e.leadId}`) as never;
+  const tally = (evs: CalendarEvent[]) => Object.fromEntries(TYPES.map((t) => [t, evs.filter((e) => e.type === t).length])) as Record<CalendarEvent['type'], number>;
   const link = (over: Partial<Search>) => {
     const p = new URLSearchParams();
     const merged = { month, salesId, ...over };
@@ -92,7 +123,6 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const dayName = new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ar-EG', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${selected}T00:00:00Z`));
   const selectedEvents = byDay.get(selected) ?? [];
   const inMonth = (res.data?.events ?? []).filter((e) => dayOf.format(new Date(e.at)).startsWith(month));
-  const count = (t: CalendarEvent['type']) => inMonth.filter((e) => e.type === t).length;
 
   return (
     <div className="space-y-6">
@@ -116,7 +146,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
             {m.today}
           </Link>
         </div>
-        <p className="text-[12.5px] text-slate-500">{m.summary(count('visit'), count('follow_up'), count('done'))}</p>
+        <p className="text-[12.5px] text-slate-500">{m.summary(tally(inMonth))}</p>
         {canPick && (
           <form method="get" className="flex items-center gap-2">
             <input type="hidden" name="month" value={month} />
@@ -175,7 +205,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                   {evs.length > 0 && (
                     <span className="mt-1 inline-flex gap-0.5 sm:hidden">
                       {evs.slice(0, 4).map((e) => (
-                        <span key={`${e.type}-${e.id}`} className={cn('h-1.5 w-1.5 rounded-full', e.type === 'visit' ? 'bg-violet-500' : e.type === 'done' ? 'bg-emerald-500' : 'bg-[#D8B66A]')} />
+                        <span key={`${e.type}-${e.id}`} className={cn('h-1.5 w-1.5 rounded-full', DOT[e.type])} />
                       ))}
                     </span>
                   )}
@@ -184,7 +214,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
             })}
           </div>
           <div className="flex flex-wrap gap-4 border-t border-hairline px-4 py-2.5 text-[11.5px] text-slate-500">
-            {(['visit', 'follow_up', 'done'] as const).map((t) => (
+            {TYPES.map((t) => (
               <span key={t} className="inline-flex items-center gap-1.5">
                 <span className={cn('h-2.5 w-2.5 rounded-sm border-s-2', TONE[t])} /> {m.legend[t]}
               </span>
@@ -192,17 +222,22 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           </div>
         </section>
 
-        <PremiumPanel title={dayName} sub={m.summary(
-          selectedEvents.filter((e) => e.type === 'visit').length,
-          selectedEvents.filter((e) => e.type === 'follow_up').length,
-          selectedEvents.filter((e) => e.type === 'done').length,
-        )}>
+        <PremiumPanel title={dayName} sub={m.summary(tally(selectedEvents))}>
           {selectedEvents.length === 0 ? (
             <p className="py-6 text-center text-[13px] text-slate-400">{m.dayEmpty}</p>
           ) : (
             <ul className="space-y-2" data-testid="calendar-day-list">
               {selectedEvents.map((e) => {
-                const Icon = e.type === 'visit' ? MapPin : e.type === 'done' ? CalendarCheck2 : KIND_ICON[e.kind as keyof typeof KIND_ICON] ?? CalendarClock;
+                const Icon =
+                  e.type === 'visit'
+                    ? MapPin
+                    : e.type === 'done'
+                      ? CalendarCheck2
+                      : e.type === 'reservation_expiry'
+                        ? Hourglass
+                        : e.type === 'contract_signed'
+                          ? FileSignature
+                          : KIND_ICON[e.kind as keyof typeof KIND_ICON] ?? CalendarClock;
                 return (
                   <li key={`${e.type}-${e.id}`}>
                     <Link href={href(e)} data-testid="calendar-event" className={cn('flex gap-3 rounded-xl border-s-[3px] px-3 py-2.5 transition-opacity hover:opacity-85', tone(e))}>
@@ -214,6 +249,8 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                         </p>
                         <p className="truncate text-[11.5px] opacity-80">
                           {label(e)}
+                          {(e.type === 'reservation_expiry' || e.type === 'contract_signed') && e.ref && <> · <span dir="ltr">{e.ref}</span></>}
+                          {(e.type === 'reservation_expiry' || e.type === 'contract_signed') && e.unit && <> · {m.unit} {e.unit}</>}
                           {e.type === 'visit' && <> · {m.visitStatus[e.status] ?? e.status}</>}
                           {e.type !== 'done' && e.project && <> · {tx(e.project, locale)}</>}
                           {e.sales && <> · {e.sales.fullName}</>}
