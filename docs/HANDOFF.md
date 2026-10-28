@@ -45,7 +45,7 @@
 
 **PR #199 (نقل البيانات — MG1، من الأكونت التاني):** لسه مفتوح. قبل الدمج لازم يعمل merge من `main` ويغيّر اسم الـ migration بتاعه. الخطوات بالتفصيل في القسم **2e** تحت، ومتجرّبة على `main` الحالي.
 
-**الخطوة الجاية — الصلاحيات تفتح الصفحات (PRM):** حاليًا الصلاحية بتقلّل من اللي الدور يقدر يعمله بس، ومش بتفتح صفحة مش من صفحات الدور. اتفقنا إن الصلاحية هي اللي تفتح الصفحة، والدور يبقى قالب صلاحيات جاهز، مع إن الصلاحيات الخطيرة تفضل للأدمن بس. الخطة بالتفصيل في القسم **4c**، وهتتعمل من الأكونت التاني على مراحل. فيه قرار واحد مستنيك قبل المرحلة 2: الموظف اللي مش أدمن ولقى صلاحية تقارير أو فلوس، يشوف أرقام الشركة كلها؟ (المقترح: أيوه، ما عدا صفحات المبيعات اللي فاضلة بالفريق).
+**الخطوة الجاية — الصلاحيات تفتح الصفحات (PRM):** حاليًا الصلاحية بتقلّل من اللي الدور يقدر يعمله بس، ومش بتفتح صفحة مش من صفحات الدور. اتفقنا إن الصلاحية هي اللي تفتح الصفحة، والدور يبقى قالب صلاحيات جاهز، مع إن الصلاحيات الخطيرة تفضل للأدمن بس. الخطة بالتفصيل في القسم **4c**، وهتتعمل من الأكونت التاني على مراحل. قرار نطاق البيانات (28 أكتوبر): اللي ياخد صلاحية فلوس أو تقارير أو إدارة يشوف الشركة كلها؛ صفحات المبيعات وبيانات العملاء تفضل بالفريق أو بتاعة المندوب بس، وأرقام التليفون تفضل مخفية عن اللي مش مسؤول عن العميل.
 
 **مؤجّل بطلب منك (27 أكتوبر):** النشر على السيرفر، وتشغيل الحملات فعليًا. القائمة في القسم 5 تحت «Deferred by the owner».
 
@@ -527,7 +527,10 @@ Left for the owner, not in V1–V3:
 
 **Rules (owner-approved unless marked):**
 1. **Dangerous codes stay ADMIN-only even when ticked:** `permissions:manage`, all `users:*`, `settings:read`/`settings:write`, data export (`/dashboard/data-export`), data import, `company_branding:manage`, `audit:read`, anything under `super-admin`. Otherwise a user could grant themselves everything. Keep this list in one place (e.g. `common/permissions/admin-only-codes.ts`) and enforce it in the guard **and** in `PUT /users/:id/permissions` (refuse to assign them to non-admins), with an e2e test.
-2. **Data scope when a non-admin is granted a company-wide page** (finance, reports, cheques, ledger, brokers, maintenance, campaigns…): **proposed default, owner to confirm before phase 2** — they see the whole company, because the admin granted it on purpose. **Exception, unchanged:** sales pages keep today's scope (`resolveSalesScope`): a sales manager sees their team, a rep their own.
+2. **Data scope — owner-approved 2026-10-28:**
+   - **Money, reports and admin pages** (deposits, cheques, ledger, installments, financial / sales / operational reports, brokers and their commissions and payouts, maintenance, campaigns, inventory edits…): a non-admin who is granted the code sees **the whole company**, as the admin does. The admin granted it on purpose; these records are not owned by a rep, so a "their own" view would be empty.
+   - **Sales and customer data keeps today's scope** whatever extra codes are granted: leads, follow-ups, calendar, duplicates, sales-team performance. A rep sees their own, a sales manager their team (`resolveSalesScope`).
+   - **Phone numbers stay masked** for anyone not responsible for the customer (`common/utils/contact-mask.ts`, #200), on every page including reports.
 3. Tenant scoping is untouched: every query keeps `companyId` (CLAUDE.md).
 4. Nothing the admin can do today is lost; an ADMIN still passes every check (keep `adminBypass` behaviour).
 
@@ -539,7 +542,7 @@ Left for the owner, not in V1–V3:
 - Permissions page: group codes; dangerous ones shown locked with «لمدير النظام فقط» for non-admins.
 - Tests: e2e per switched module — a SALES user without the code gets 403, with it gets 200 and sees what rule 2 says; a non-admin can never be given a dangerous code; existing security specs stay green (never widen a security assertion — CLAUDE.md).
 
-**Phase 2 — data scope:** after the owner confirms rule 2, apply it per group of pages (reports, money, brokers, maintenance, campaigns, inventory edits), each with an e2e test of what a granted non-admin sees.
+**Phase 2 — data scope:** apply rule 2 per group of pages (reports, money, brokers, maintenance, campaigns, inventory edits), each with an e2e test of what a granted non-admin sees.
 
 **Phase 3 (optional) — company role templates:** an admin saves a named set of codes («محاسب», «تسويق», «سكرتارية») and applies it to a user in one step; changing the template can update its users.
 
