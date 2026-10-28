@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Plus, AlertCircle, Upload, Users, TrendingUp, UserX, Kanban, Radio } from 'lucide-react';
+import { Plus, AlertCircle, Upload, Users, TrendingUp, UserX, Kanban, Radio, CopyCheck } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, Lead, LeadSource, LeadStage } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { LeadPipeline } from '@/components/crm/lead-pipeline';
+import { duplicateT } from '@/components/crm/duplicate-messages';
 import {
   PremiumPageHero,
   PremiumMetricStrip,
@@ -92,6 +93,13 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
               <Link href={'/dashboard/leads/sources' as never}>
                 <Button variant="outline" size="md" leftIcon={<Radio className="h-4 w-4" />}>
                   {m.manageSources}
+                </Button>
+              </Link>
+            )}
+            {canImport && (
+              <Link href={'/dashboard/leads/duplicates' as never}>
+                <Button variant="outline" size="md" leftIcon={<CopyCheck className="h-4 w-4" />} data-testid="leads-duplicates">
+                  {duplicateT(locale).open}
                 </Button>
               </Link>
             )}

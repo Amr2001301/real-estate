@@ -2492,3 +2492,24 @@ export interface ContractStatement {
   };
   awaiting: Array<{ depositId: string; date: string; amount: string; state: DepositState; rowType: string | null }>;
 }
+
+/** DUP1 — one customer's open leads (GET /leads/duplicates). */
+export interface DuplicateLead {
+  id: string;
+  fullName: string;
+  stage: LeadStage;
+  createdAt: string;
+  assignedSales: { id: string; fullName: string } | null;
+  source: { id: string; name: Translatable } | null;
+  campaign: { id: string; name: string; channel: CampaignChannel } | null;
+  projectInterest: { id: string; name: Translatable } | null;
+  broker: { id: string; companyName: string | null; commercialName: string | null; code: string | null } | null;
+  _count: { notes: number; reservations: number };
+  /** False when it has a reservation or a broker: it can only be the kept one. */
+  mergeable: boolean;
+}
+
+export interface DuplicateGroup {
+  client: { id: string; fullName: string; phone: string | null; email: string | null };
+  leads: DuplicateLead[];
+}

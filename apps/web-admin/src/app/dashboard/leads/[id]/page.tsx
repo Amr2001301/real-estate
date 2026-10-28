@@ -200,6 +200,9 @@ export default async function LeadDetailPage({
     if (type === 'broker_submitted') return { label: m.activityBrokerSubmitted, dotColor: 'bg-indigo-500' };
     if (type.startsWith('broker_')) return { label: m.activityBroker[type] ?? m.activityOther, dotColor: 'bg-indigo-500' };
     if (type === 'returned') return { label: m.activityReturned, dotColor: 'bg-brand-500' };
+    if (type === 'merged') {
+      return { label: m.activityMerged(typeof p.count === 'number' ? p.count : 1, str('by') ?? null), dotColor: 'bg-violet-500' };
+    }
     if (type === 'contact_opened') {
       return { label: m.activityContactOpened(str('kind') === 'WHATSAPP', str('by') ?? null), dotColor: str('kind') === 'WHATSAPP' ? 'bg-emerald-500' : 'bg-sky-500' };
     }
