@@ -6,6 +6,7 @@ import { UserRole } from '@prisma/client';
 import { LeadsController } from '../leads.controller';
 import { LeadsService } from '../leads.service';
 import { LeadDuplicatesService } from '../lead-duplicates.service';
+import { LeadCalendarService } from '../lead-calendar.service';
 import { NotificationsService } from '../../notifications/notifications.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
@@ -170,6 +171,7 @@ describe('Leads module · permissions enforcement', () => {
       providers: [
         LeadsService,
         LeadDuplicatesService,
+        LeadCalendarService,
         { provide: NotificationsService, useValue: notificationsServiceMock },
       ],
     })
