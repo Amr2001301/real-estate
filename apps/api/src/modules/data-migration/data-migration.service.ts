@@ -33,14 +33,15 @@ import {
   MigrationUnitItem,
 } from './dto/data-migration.dto';
 import { callResultOf, leadStageOf, normalizeWord, noteKindOf, projectStatusOf, unitStatusOf } from './migration-values';
+import { MappingTable } from './migration-mapping';
 
 const hash = (key: string) => createHash('sha256').update(key).digest('hex');
 const newKey = () => `mk_${randomBytes(24).toString('base64url')}`;
 const DAY = 24 * 60 * 60 * 1000;
 
 /** The lead source a migrated lead is filed under when its own is not one of the company's. */
-const FALLBACK_SOURCE = { ar: 'نقل بيانات', en: 'Data migration' };
-const STAFF_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.SALES_MANAGER, UserRole.SALES];
+export const FALLBACK_SOURCE = { ar: 'نقل بيانات', en: 'Data migration' };
+export const STAFF_ROLES: UserRole[] = [UserRole.ADMIN, UserRole.SALES_MANAGER, UserRole.SALES];
 const CUSTOMER_ROLES: UserRole[] = [UserRole.CLIENT, UserRole.CUSTOMER];
 const EXTRA_MAX_KEYS = 100;
 const EXTRA_MAX_VALUE = 2000;
@@ -91,6 +92,10 @@ interface Lookup {
   fallbackSourceId?: string;
   /** Made inside the current record's transaction: kept only once it commits. */
   pendingSourceId?: string;
+  /** MG2 — the platform owner's choices for values the format does not know. */
+  mappings: MappingTable;
+  /** The current record's extra fields (for the ones mapped to a place here). */
+  extra: Record<string, string | number | boolean>;
 }
 
 /** Thrown at the end of a dry run's transaction so nothing it wrote stays. */
@@ -268,7 +273,7 @@ export class DataMigrationService {
   async ingest(run: MigrationRun, path: MigrationPath, items: unknown[], dryRun: boolean) {
     const companyId = run.companyId!;
     const entity = MIGRATION_ENTITY_BY_PATH[path];
-    const lookup = await this.lookup(companyId);
+    const lookup = await this.lookup(companyId, run.sourceSystem);
     const results: MigrationItemResult[] = [];
     for (const raw of items) {
       results.push(
@@ -298,9 +303,11 @@ export class DataMigrationService {
     lookup: Lookup,
   ): Promise<MigrationItemResult> {
     lookup.pendingSourceId = undefined;
+    lookup.extra = {};
     const externalId = typeof raw.externalId === 'string' || typeof raw.externalId === 'number' ? String(raw.externalId).trim() : null;
     const cls = ITEM_CLASS[entity] as new () => { externalId: string };
     const { known, extra, problems } = splitItem(cls, raw);
+    lookup.extra = extra;
     const item = plainToInstance(cls, known, { enableImplicitConversion: true }) as { externalId: string };
     const errors = [...problems, ...(await validate(item, { whitelist: true, forbidNonWhitelisted: true })).flatMap(messagesOf)];
     if (errors.length) return { externalId, status: 'error', errors };
@@ -422,7 +429,11 @@ export class DataMigrationService {
       const word = normalizeWord(item.type);
       const match = lookup.unitTypes.find((t) => t.words.includes(word));
       if (match) type = match;
-      else unmapped.type = item.type;
+      else {
+        unmapped.type = item.type;
+        const target = this.mapped(lookup, 'UNIT.type', item.type);
+        type = lookup.unitTypes.find((t) => t.code === target) ?? type;
+      }
     }
     if (!type) throw new BadRequestException('The company has no unit types — add one in the dashboard first');
 
@@ -458,7 +469,11 @@ export class DataMigrationService {
       }
       await tx.unit.updateMany({
         where: { id: existing.id, companyId, status: UnitStatus.AVAILABLE },
-        data: { ...fields, code: item.code, ...(item.type && !unmapped.type ? { type: type.code, usage: type.usage } : {}) },
+        data: {
+          ...fields,
+          code: item.code,
+          ...(item.type && (!unmapped.type || this.mapped(lookup, 'UNIT.type', item.type)) ? { type: type.code, usage: type.usage } : {}),
+        },
       });
       return { status: 'updated', id: existing.id, warnings, unmapped };
     }
@@ -501,17 +516,19 @@ export class DataMigrationService {
       ...(item.employer !== undefined ? { employer: item.employer } : {}),
     };
 
-    let existing = targetId ? await tx.user.findFirst({ where: { id: targetId, companyId }, select: { id: true, role: true } }) : null;
-    if (!existing) existing = await tx.user.findFirst({ where: { companyId, phone }, select: { id: true, role: true } });
+    const pick = { id: true, role: true, customFields: true } as const;
+    let existing = targetId ? await tx.user.findFirst({ where: { id: targetId, companyId }, select: pick }) : null;
+    if (!existing) existing = await tx.user.findFirst({ where: { companyId, phone }, select: pick });
     if (existing && !CUSTOMER_ROLES.includes(existing.role)) {
       throw new BadRequestException('This phone belongs to a staff member of the company');
     }
+    const customFields = this.mappedCustomFields(lookup, existing?.customFields);
     if (existing) {
-      await tx.user.updateMany({ where: { id: existing.id, companyId }, data });
+      await tx.user.updateMany({ where: { id: existing.id, companyId }, data: { ...data, ...(customFields ? { customFields } : {}) } });
       return { status: 'updated', id: existing.id, warnings: [], unmapped: {} };
     }
     const user = await tx.user.create({
-      data: { ...data, companyId, role: UserRole.CLIENT, active: true },
+      data: { ...data, ...(customFields ? { customFields } : {}), companyId, role: UserRole.CLIENT, active: true },
       select: { id: true },
     });
     return { status: 'created', id: user.id, warnings: [], unmapped: {} };
@@ -525,20 +542,30 @@ export class DataMigrationService {
     const unmapped: Record<string, string> = {};
     const phone = await this.phone(item.phone, lookup);
 
-    const stage = leadStageOf(item.stage);
-    if (item.stage && !stage) unmapped.stage = item.stage;
+    // A value the words here do not know stays kept on the record (unmapped)
+    // even once the platform owner mapped it (MG2): the mapping is used.
+    const knownStage = leadStageOf(item.stage);
+    if (item.stage && !knownStage) unmapped.stage = item.stage;
+    const stage = knownStage ?? (this.mapped(lookup, 'LEAD.stage', item.stage) as LeadStage | undefined);
 
     let sourceId: string | undefined;
     if (item.source) {
       const word = normalizeWord(item.source);
       sourceId = lookup.sources.find((s) => s.words.includes(word))?.id;
-      if (!sourceId) unmapped.source = item.source;
+      if (!sourceId) {
+        unmapped.source = item.source;
+        const target = this.mapped(lookup, 'LEAD.source', item.source);
+        sourceId = target && lookup.sources.some((s) => s.id === target) ? target : undefined;
+      }
     }
 
     let assignedSalesId: string | undefined;
     if (item.assignedTo) {
       assignedSalesId = this.staffOf(item.assignedTo, lookup)?.id;
-      if (!assignedSalesId) unmapped.assignedTo = item.assignedTo;
+      if (!assignedSalesId) {
+        unmapped.assignedTo = item.assignedTo;
+        assignedSalesId = this.mappedStaff(lookup, 'LEAD.assignedTo', item.assignedTo);
+      }
     }
 
     const projectInterestId = item.projectExternalId
@@ -578,6 +605,7 @@ export class DataMigrationService {
           ...(nextActionAt ? { nextActionAt, nextActionType: 'FOLLOW_UP' as const } : {}),
         },
       });
+      await this.mappedLeadNotes(tx, lookup, existing.id, assignedSalesId);
       return { status: 'updated', id: existing.id, warnings, unmapped };
     }
 
@@ -624,6 +652,7 @@ export class DataMigrationService {
         },
       });
     }
+    await this.mappedLeadNotes(tx, lookup, lead.id, assignedSalesId);
     return { status: 'created', id: lead.id, warnings, unmapped };
   }
 
@@ -657,12 +686,18 @@ export class DataMigrationService {
 
     const kind = noteKindOf(item.kind);
     if (item.kind && !kind) unmapped.kind = item.kind;
-    const finalKind = kind ?? LeadNoteKind.NOTE;
-    const callResult = finalKind === LeadNoteKind.CALL ? callResultOf(item.callResult) : undefined;
-    if (item.callResult && finalKind === LeadNoteKind.CALL && !callResult) unmapped.callResult = item.callResult;
+    const finalKind = kind ?? (this.mapped(lookup, 'ACTIVITY.kind', item.kind) as LeadNoteKind | undefined) ?? LeadNoteKind.NOTE;
+    let callResult = finalKind === LeadNoteKind.CALL ? callResultOf(item.callResult) : undefined;
+    if (item.callResult && finalKind === LeadNoteKind.CALL && !callResult) {
+      unmapped.callResult = item.callResult;
+      callResult = this.mapped(lookup, 'ACTIVITY.callResult', item.callResult) as typeof callResult;
+    }
 
     let salesId = item.by ? this.staffOf(item.by, lookup)?.id : undefined;
-    if (item.by && !salesId) unmapped.by = item.by;
+    if (item.by && !salesId) {
+      unmapped.by = item.by;
+      salesId = this.mappedStaff(lookup, 'ACTIVITY.by', item.by);
+    }
     salesId ??= lead.assignedSalesId ?? (await this.fallbackAuthor(tx, lookup));
 
     const data = { body: item.text, kind: finalKind, callResult: callResult ?? null };
@@ -682,8 +717,8 @@ export class DataMigrationService {
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  private async lookup(companyId: string): Promise<Lookup> {
-    const [company, sources, unitTypes, staff] = await Promise.all([
+  private async lookup(companyId: string, sourceSystem: string): Promise<Lookup> {
+    const [company, sources, unitTypes, staff, mappings] = await Promise.all([
       this.prisma.company.findUnique({ where: { id: companyId }, select: { country: true } }),
       this.prisma.leadSource.findMany({ where: { companyId, active: true }, orderBy: { createdAt: 'asc' }, select: { id: true, name: true } }),
       this.prisma.unitType.findMany({
@@ -697,6 +732,10 @@ export class DataMigrationService {
         { id: true, email: true, phone: true, role: true },
         { orderBy: { createdAt: 'asc' } },
       ),
+      this.prisma.migrationMapping.findMany({
+        where: { sourceSystem, OR: [{ companyId: null }, { companyId }] },
+        select: { field: true, value: true, action: true, target: true, companyId: true },
+      }),
     ]);
     const words = (name: unknown, ...more: string[]) => {
       const n = (name && typeof name === 'object' ? name : {}) as Record<string, unknown>;
@@ -710,7 +749,48 @@ export class DataMigrationService {
       unitTypes: unitTypes.map((t) => ({ code: t.code, usage: t.usage, words: words(t.name, t.code) })),
       staff: staff.map((s) => ({ ...s, email: s.email?.toLowerCase() ?? null })),
       fallbackSourceId: fallback?.id,
+      mappings: new MappingTable(mappings as ConstructorParameters<typeof MappingTable>[0]),
+      extra: {},
     };
+  }
+
+  /** MG2 — what the platform owner mapped this unrecognised value to, if anything. */
+  private mapped(lookup: Lookup, field: string, raw: string | undefined | null): string | undefined {
+    if (!raw) return undefined;
+    const m = lookup.mappings.of(field, raw);
+    return m?.action === 'MAP' && m.target ? m.target : undefined;
+  }
+
+  private mappedStaff(lookup: Lookup, field: string, raw: string): string | undefined {
+    const target = this.mapped(lookup, field, raw);
+    return target && lookup.staff.some((s) => s.id === target) ? target : undefined;
+  }
+
+  /** MG2 — a customer's extra fields mapped to the company's customer fields, where the customer has none yet. */
+  private mappedCustomFields(lookup: Lookup, current: unknown): Record<string, string> | undefined {
+    const out: Record<string, unknown> = current && typeof current === 'object' && !Array.isArray(current) ? { ...(current as object) } : {};
+    let changed = false;
+    for (const [key, value] of Object.entries(lookup.extra)) {
+      const m = lookup.mappings.extra(MigrationEntity.CUSTOMER, key);
+      if (m?.action !== 'CUSTOMER_FIELD' || !m.target || String(value).trim() === '') continue;
+      if (out[m.target] !== undefined && out[m.target] !== null && String(out[m.target]).trim() !== '') continue;
+      out[m.target] = String(value);
+      changed = true;
+    }
+    return changed ? (out as Record<string, string>) : undefined;
+  }
+
+  /** MG2 — a lead's extra fields mapped to a note, each written once. */
+  private async mappedLeadNotes(tx: Tx, lookup: Lookup, leadId: string, authorId: string | null | undefined) {
+    for (const [key, value] of Object.entries(lookup.extra)) {
+      const m = lookup.mappings.extra(MigrationEntity.LEAD, key);
+      if (m?.action !== 'NOTE' || String(value).trim() === '') continue;
+      const body = `${key}: ${String(value)}`;
+      if (await tx.leadNote.findFirst({ where: { companyId: lookup.companyId, leadId, body }, select: { id: true } })) continue;
+      await tx.leadNote.create({
+        data: { companyId: lookup.companyId, leadId, salesId: authorId ?? (await this.fallbackAuthor(tx, lookup)), body, kind: LeadNoteKind.NOTE },
+      });
+    }
   }
 
   /** What a record of the same system became here, if it was sent. */

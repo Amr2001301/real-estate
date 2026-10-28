@@ -57,6 +57,11 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   Permission: 'PLATFORM_GLOBAL',
   PricingPackage: 'PLATFORM_GLOBAL', // nullable companyId; filtered explicitly by callers
   AiPackage: 'PLATFORM_GLOBAL', // the platform's AI question packages
+  // MG2: nullable companyId — a fixed-list value maps for every company moved
+  // from a system (null), a company's own list per company. Only the platform
+  // owner's migration service reads or writes it, always with explicit
+  // sourceSystem + companyId filters.
+  MigrationMapping: 'PLATFORM_GLOBAL',
 
   // ── User ───────────────────────────────────────────────────────────────────
   // Option B part 2 (docs/audit/13-user-tenancy.md): an account belongs to one
