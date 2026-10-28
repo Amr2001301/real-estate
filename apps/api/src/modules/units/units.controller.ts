@@ -15,6 +15,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -80,6 +81,7 @@ export class UnitsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('units:create')
+  @GrantedBy('units:create')
   @Post('projects/:projectId/unit-models')
   createUnitModel(@Param('projectId', ParseUUIDPipe) projectId: string, @Body() dto: CreateUnitModelDto) {
     return this.unitModels.create(projectId, dto);
@@ -87,6 +89,7 @@ export class UnitsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('units:update')
+  @GrantedBy('units:update')
   @Patch('unit-models/:id')
   updateUnitModel(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUnitModelDto) {
     return this.unitModels.update(id, dto);
@@ -160,6 +163,7 @@ export class UnitsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('units:create')
+  @GrantedBy('units:create')
   @Post('units')
   create(@Body() dto: CreateUnitDto) {
     return this.units.create(dto);
@@ -168,6 +172,7 @@ export class UnitsController {
   /** Reprice by the meter the units for sale in a project, phase or building. */
   @Roles(UserRole.ADMIN)
   @Permissions('units:update')
+  @GrantedBy('units:update')
   @Post('units/reprice')
   @HttpCode(200)
   reprice(@Body() dto: RepriceUnitsDto) {
@@ -176,6 +181,7 @@ export class UnitsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('units:update')
+  @GrantedBy('units:update')
   @Patch('units/:id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUnitDto) {
     return this.units.update(id, dto);
@@ -185,6 +191,7 @@ export class UnitsController {
   // reservation/contract side effects; this route exists for corrections.
   @Roles(UserRole.ADMIN)
   @Permissions('units:change-status')
+  @GrantedBy('units:change-status')
   @Patch('units/:id/status')
   setStatus(
     @Param('id', ParseUUIDPipe) id: string,
@@ -196,6 +203,7 @@ export class UnitsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('units:delete')
+  @GrantedBy('units:delete')
   @Delete('units/:id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.units.remove(id);

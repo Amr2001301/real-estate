@@ -16,6 +16,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags } from '@nestjs/swagger';
 import { LeadStage, UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -81,6 +82,7 @@ export class LeadsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('lead_sources:manage')
+  @GrantedBy('lead_sources:manage')
   @Post('lead-sources')
   createSource(@Body() dto: CreateLeadSourceDto) {
     return this.leads.createSource(dto);
@@ -88,6 +90,7 @@ export class LeadsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('lead_sources:manage')
+  @GrantedBy('lead_sources:manage')
   @Patch('lead-sources/:id')
   updateSource(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateLeadSourceDto) {
     return this.leads.updateSource(id, dto);
@@ -103,6 +106,7 @@ export class LeadsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('lead_sources:manage')
+  @GrantedBy('lead_sources:manage')
   @Post('lost-reasons')
   createLostReason(@Body() dto: CreateLostReasonDto) {
     return this.leads.createLostReason(dto);
@@ -110,6 +114,7 @@ export class LeadsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('lead_sources:manage')
+  @GrantedBy('lead_sources:manage')
   @Patch('lost-reasons/:id')
   updateLostReason(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateLostReasonDto) {
     return this.leads.updateLostReason(id, dto);

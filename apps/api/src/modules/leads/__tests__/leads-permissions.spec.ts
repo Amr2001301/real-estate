@@ -457,18 +457,29 @@ describe('Leads module · permissions enforcement', () => {
       expect(mock.lead.update).toHaveBeenCalledTimes(1);
     });
 
-    it('SALES even with lead_sources:manage → 403 from @Roles (POST /lead-sources is ADMIN-only)', async () => {
+    it('SALES with lead_sources:manage → let in by the code (PRM)', async () => {
       FakeAuthGuard.currentUser = {
         sub: 'sales-1',
         role: UserRole.SALES,
         codes: ['lead_sources:manage'],
+      };
+      await request(app.getHttpServer())
+        .post('/lead-sources')
+        .send({ name: 'Website' })
+        .expect((r) => expect(r.status).not.toBe(403));
+    });
+
+    it('SALES without lead_sources:manage → 403 (PRM: only the code opens it)', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: 'sales-1',
+        role: UserRole.SALES,
+        codes: ['leads:read'],
       };
       const res = await request(app.getHttpServer())
         .post('/lead-sources')
         .send({ name: 'Website' })
         .expect(403);
       expect(res.body.message).toBe('Insufficient role');
-      expect(mock.userPermission.findMany).not.toHaveBeenCalled();
       expect(mock.leadSource.create).not.toHaveBeenCalled();
     });
   });

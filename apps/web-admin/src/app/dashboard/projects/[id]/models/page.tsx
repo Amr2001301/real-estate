@@ -5,6 +5,7 @@ import type { Project, UnitModelOption, UnitTypeOption } from '@/lib/types';
 import { tx } from '@/lib/format';
 import { getLocale, type Locale } from '@/lib/locale';
 import { getSession } from '@/lib/session';
+import { can } from '@/lib/permissions';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -89,7 +90,7 @@ export default async function ProjectModelsPage({
   searchParams: Promise<{ ok?: string; err?: string }>;
 }) {
   const [{ id }, sp, locale, session] = await Promise.all([params, searchParams, getLocale(), getSession()]);
-  if (session?.role !== 'ADMIN') redirect(`/dashboard/projects/${id}` as never);
+  if (session?.role !== 'ADMIN' && !(await can('units:create', 'units:update'))) redirect(`/dashboard/projects/${id}` as never);
   const [projectRes, modelsRes, typesRes] = await Promise.all([
     safe(api.get<Project>(`/projects/${id}`)),
     safe(api.get<UnitModelOption[]>(`/projects/${id}/unit-models`)),

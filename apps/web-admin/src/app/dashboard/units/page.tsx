@@ -14,6 +14,7 @@ import {
 import { api, safe } from '@/lib/api';
 import { projectOptions } from '@/lib/options';
 import { getSession } from '@/lib/session';
+import { getMyCodes } from '@/lib/permissions';
 import { getLocale } from '@/lib/locale';
 import type { Paged, Unit } from '@/lib/types';
 import { tx, formatCurrency, formatDate } from '@/lib/format';
@@ -95,6 +96,11 @@ export default async function UnitsPage({
 
   // Unit mutations are ADMIN-only — SALES browses read-only.
   const isAdmin = session?.role === 'ADMIN';
+  // Adding and repricing open to whoever holds their code (PRM); the export
+  // and unit types stay the admin's.
+  const codes = await getMyCodes();
+  const canCreate = isAdmin || codes.has('units:create');
+  const canReprice = isAdmin || codes.has('units:update');
   const m = uiT(locale).pages.units;
 
   const paged = pagedRes.data;
@@ -146,9 +152,9 @@ export default async function UnitsPage({
           { label: m.breadcrumb },
         ]}
         actions={
-          isAdmin ? (
+          isAdmin || canCreate || canReprice ? (
             <>
-              <ExportMenu
+              {isAdmin && <ExportMenu
                 locale={locale}
                 filenameBase="units"
                 xlsxPath="/units/export.xlsx"
@@ -157,18 +163,18 @@ export default async function UnitsPage({
                   projectId: sp.projectId, status: sp.status, bedrooms: sp.bedrooms,
                   priceMin: sp.priceMin, priceMax: sp.priceMax, areaMin: sp.areaMin, areaMax: sp.areaMax,
                 }}
-              />
-              <Link href={'/dashboard/units/types' as never}>
+              />}
+              {isAdmin && <Link href={'/dashboard/units/types' as never}>
                 <Button variant="outline" size="md">{m.manageTypes}</Button>
-              </Link>
-              <Link href={'/dashboard/units/reprice' as never}>
+              </Link>}
+              {canReprice && <Link href={'/dashboard/units/reprice' as never}>
                 <Button variant="outline" size="md">{m.reprice}</Button>
-              </Link>
-              <Link href={'/dashboard/units/new' as never}>
+              </Link>}
+              {canCreate && <Link href={'/dashboard/units/new' as never}>
                 <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
                   {m.addBtn}
                 </Button>
-              </Link>
+              </Link>}
             </>
           ) : undefined
         }
@@ -330,7 +336,7 @@ export default async function UnitsPage({
                       title={m.empty.title}
                       description={m.empty.description}
                       action={
-                        isAdmin ? (
+                        canCreate ? (
                           <Link href={'/dashboard/units/new' as never}>
                             <Button
                               variant="primary"

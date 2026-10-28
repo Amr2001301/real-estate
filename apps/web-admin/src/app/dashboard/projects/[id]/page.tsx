@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
+import { getMyCodes } from '@/lib/permissions';
 import type { Project, Paged, Unit } from '@/lib/types';
 import { tx, formatCurrency } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
@@ -71,6 +72,10 @@ export default async function ProjectDetailPage({
   // Project mutations are ADMIN-only — SALES views read-only.
   const session = await getSession();
   const isAdmin = session?.role === 'ADMIN';
+  // Each edit opens to whoever holds its code (PRM); the admin holds them all.
+  const codes = await getMyCodes();
+  const may = (...c: string[]) => isAdmin || c.some((x) => codes.has(x));
+  const canEditProject = may('projects:update', 'projects:publish', 'units:create', 'units:update');
 
   const phaseCount = project.phases?.length ?? 0;
   const buildingCount =
@@ -166,19 +171,19 @@ export default async function ProjectDetailPage({
               )}
             </div>
 
-            {isAdmin && (
+            {canEditProject && (
               <div className="flex flex-wrap items-center gap-2">
-                <Link href={`/dashboard/projects/${id}/edit` as never}>
+                {may('projects:update') && <Link href={`/dashboard/projects/${id}/edit` as never}>
                   <Button variant="outline" size="sm" leftIcon={<Pencil className="h-4 w-4" />} className={cn(cover && 'border-white/30 bg-black/20 text-white backdrop-blur hover:bg-black/30')}>
                     {m.btnEditProject}
                   </Button>
-                </Link>
-                <Link href={`/dashboard/projects/${id}/models` as never}>
+                </Link>}
+                {may('units:create', 'units:update') && <Link href={`/dashboard/projects/${id}/models` as never}>
                   <Button variant="outline" size="sm" leftIcon={<Shapes className="h-4 w-4" />} className={cn(cover && 'border-white/30 bg-black/20 text-white backdrop-blur hover:bg-black/30')}>
                     {uiT(locale).pages.units.models.manage}
                   </Button>
-                </Link>
-                {project.status === 'PUBLISHED' ? (
+                </Link>}
+                {!may('projects:publish') ? null : project.status === 'PUBLISHED' ? (
                   <form action={archiveProjectAction.bind(null, id)}>
                     <Button type="submit" variant="outline" size="sm" leftIcon={<Archive className="h-4 w-4" />} className={cn(cover && 'border-white/30 bg-black/20 text-white backdrop-blur hover:bg-black/30')}>
                       {m.btnUnpublish}
@@ -288,7 +293,7 @@ export default async function ProjectDetailPage({
                             </p>
                           </div>
                         </div>
-                        {isAdmin ? (
+                        {may('phases:manage') ? (
                           <PhaseDeliveryForm
                             projectId={project.id}
                             phaseId={ph.id}
@@ -322,7 +327,7 @@ export default async function ProjectDetailPage({
                           ))}
                         </ul>
                       )}
-                      {isAdmin && (
+                      {may('buildings:manage') && (
                         <details className="group mt-3">
                           <summary className="inline-flex cursor-pointer items-center gap-1 text-[12.5px] font-semibold text-brand-700 hover:text-brand-600">
                             <Plus className="h-3.5 w-3.5" /> {m.addBuildingLabel}
@@ -336,7 +341,7 @@ export default async function ProjectDetailPage({
               </div>
             )}
 
-            {isAdmin && (
+            {may('phases:manage') && (
               <details className="group mt-4 rounded-2xl border border-dashed border-hairline px-5 py-3.5">
                 <summary className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-semibold text-brand-700 hover:text-brand-600">
                   <Plus className="h-4 w-4" /> {m.addPhaseLabel}
@@ -414,7 +419,7 @@ export default async function ProjectDetailPage({
             <ProjectMediaPanel project={project} locale={locale} />
           </div>
 
-          {isAdmin && (
+          {may('projects:delete') && (
             <PremiumPanel title={m.sectionDanger} className="border-danger-500/25">
               <p className="mb-4 text-[12.5px] leading-relaxed text-slate-500">{m.dangerDesc}</p>
               <ConfirmButton

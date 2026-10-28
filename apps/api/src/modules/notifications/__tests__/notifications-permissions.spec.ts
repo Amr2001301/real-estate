@@ -343,7 +343,7 @@ describe('Notifications module · permissions enforcement', () => {
   // ── Role enforcement on admin routes ──────────────────────────────────
 
   describe('SALES blocked at @Roles on admin routes', () => {
-    it('SALES even with notifications:templates:manage → 403 on POST /notification-templates; upsert NOT called', async () => {
+    it('SALES with notifications:templates:manage → let in by the code (PRM)', async () => {
       FakeAuthGuard.currentUser = {
         sub: 'sales-1',
         role: UserRole.SALES,
@@ -357,16 +357,47 @@ describe('Notifications module · permissions enforcement', () => {
           subject: { ar: '', en: '' },
           body: { ar: '', en: '' },
         })
+        .expect((r) => expect(r.status).not.toBe(403));
+    });
+
+        it('SALES without notifications:templates:manage → 403 (PRM: only the code opens it)', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: 'sales-1',
+        role: UserRole.SALES,
+        codes: [],
+      };
+      await request(app.getHttpServer())
+        .post('/notification-templates')
+        .send({
+          code: 'x',
+          channel: 'IN_APP',
+          subject: { ar: '', en: '' },
+          body: { ar: '', en: '' },
+        })
         .expect(403);
-      expect(mock.userPermission.findMany).not.toHaveBeenCalled();
       expect(mock.notificationTemplate.create).not.toHaveBeenCalled();
     });
 
-    it('SALES even with notifications:send → 403 on POST /notifications/send; template lookup + create NOT called', async () => {
+    it('SALES with notifications:send → let in by the code (PRM)', async () => {
       FakeAuthGuard.currentUser = {
         sub: 'sales-1',
         role: UserRole.SALES,
         codes: ['notifications:send'],
+      };
+      await request(app.getHttpServer())
+        .post('/notifications/send')
+        .send({
+          userId: 'a1111111-1111-4111-8111-111111111111',
+          templateCode: 'visit_approved',
+        })
+        .expect((r) => expect(r.status).not.toBe(403));
+    });
+
+        it('SALES without notifications:send → 403 (PRM: only the code opens it)', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: 'sales-1',
+        role: UserRole.SALES,
+        codes: [],
       };
       await request(app.getHttpServer())
         .post('/notifications/send')
@@ -411,11 +442,23 @@ describe('Notifications module · permissions enforcement', () => {
       expect(mock.notification.create).not.toHaveBeenCalled();
     });
 
-    it('SALES (with notifications:send) → 403 on POST /notifications/broadcast', async () => {
+    it('SALES with notifications:send → let in by the code (PRM)', async () => {
       FakeAuthGuard.currentUser = {
         sub: 'sales-1',
         role: UserRole.SALES,
         codes: ['notifications:send'],
+      };
+      await request(app.getHttpServer())
+        .post('/notifications/broadcast')
+        .send(BROADCAST_BODY)
+        .expect((r) => expect(r.status).not.toBe(403));
+    });
+
+        it('SALES without notifications:send → 403 (PRM: only the code opens it)', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: 'sales-1',
+        role: UserRole.SALES,
+        codes: [],
       };
       await request(app.getHttpServer())
         .post('/notifications/broadcast')

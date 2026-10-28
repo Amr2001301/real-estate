@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { notFound } from 'next/navigation';
 import { Plus, FileEdit, ArrowRight, Bell, Mail, Search, Smartphone } from 'lucide-react';
 import { requireAdmin } from '@/lib/session';
+import { can } from '@/lib/permissions';
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
 import type { Translatable } from '@/lib/types';
@@ -83,7 +84,7 @@ interface Search { q?: string; channel?: string; edit?: string; new?: string }
 export default async function NotificationTemplatesPage({ searchParams }: { searchParams: Promise<Search> }) {
   // The templates are the admin's (the API refuses other roles).
   const session = await requireAdmin();
-  if (session.role !== 'ADMIN') notFound();
+  if (session.role !== 'ADMIN' && !(await can('notifications:templates:manage'))) notFound();
 
   const [r, locale, sp] = await Promise.all([
     safe(api.get<Template[]>('/notification-templates')),

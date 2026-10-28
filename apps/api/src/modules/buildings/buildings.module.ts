@@ -18,6 +18,7 @@ import { Transform } from 'class-transformer';
 import { ENTITY_CODE_PATTERN, codeTaken, normalizeEntityCode } from '../../common/utils/entity-code';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { UserRole } from '@prisma/client';
 import { assertInventoryDeletable } from '../projects/inventory-blockers';
@@ -123,6 +124,7 @@ class BuildingsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('buildings:manage')
+  @GrantedBy('buildings:manage')
   @Post()
   create(@Body() dto: CreateBuildingDto) {
     return this.buildings.create(dto);
@@ -130,6 +132,7 @@ class BuildingsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('buildings:manage')
+  @GrantedBy('buildings:manage')
   @Patch(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateBuildingDto) {
     return this.buildings.update(id, dto);
@@ -137,6 +140,7 @@ class BuildingsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('buildings:manage')
+  @GrantedBy('buildings:manage')
   @Delete(':id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.buildings.remove(id);

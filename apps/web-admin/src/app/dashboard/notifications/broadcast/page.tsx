@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { requireAdmin } from '@/lib/session';
+import { can } from '@/lib/permissions';
 import { api, safe } from '@/lib/api';
 import type { Paged, User } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
@@ -12,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export default async function BroadcastNotificationPage() {
   // requireAdmin allows ADMIN + SALES + SALES_MANAGER — restrict to ADMIN only.
   const session = await requireAdmin();
-  if (session.role !== 'ADMIN') notFound();
+  if (session.role !== 'ADMIN' && !(await can('notifications:send'))) notFound();
 
   const [locale, usersRes] = await Promise.all([
     getLocale(),

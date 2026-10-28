@@ -302,7 +302,7 @@ describe('CMS module · permissions enforcement', () => {
   // ── Role enforcement — SALES blocked at @Roles ────────────────────────
 
   describe('SALES blocked at @Roles on admin routes', () => {
-    it('SALES even with cms:pages:manage → 403 on POST /cms/pages; cmsPage.upsert NOT called', async () => {
+    it('SALES with cms:pages:manage → let in by the code (PRM)', async () => {
       FakeAuthGuard.currentUser = {
         sub: 'sales-1',
         role: UserRole.SALES,
@@ -311,12 +311,23 @@ describe('CMS module · permissions enforcement', () => {
       await request(app.getHttpServer())
         .post('/cms/pages')
         .send({ slug: 'x', title: { ar: 'م', en: 'X' }, body: { ar: '', en: '' } })
+        .expect((r) => expect(r.status).not.toBe(403));
+    });
+
+        it('SALES without cms:pages:manage → 403 (PRM: only the code opens it)', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: 'sales-1',
+        role: UserRole.SALES,
+        codes: [],
+      };
+      await request(app.getHttpServer())
+        .post('/cms/pages')
+        .send({ slug: 'x', title: { ar: 'م', en: 'X' }, body: { ar: '', en: '' } })
         .expect(403);
-      expect(mock.userPermission.findMany).not.toHaveBeenCalled();
       expect(mock.cmsPage.upsert).not.toHaveBeenCalled();
     });
 
-    it('SALES even with cms:banners:manage → 403 on POST /cms/banners; banner.create NOT called', async () => {
+    it('SALES with cms:banners:manage → let in by the code (PRM)', async () => {
       FakeAuthGuard.currentUser = {
         sub: 'sales-1',
         role: UserRole.SALES,
@@ -330,15 +341,49 @@ describe('CMS module · permissions enforcement', () => {
           active: true,
           order: 1,
         })
+        .expect((r) => expect(r.status).not.toBe(403));
+    });
+
+        it('SALES without cms:banners:manage → 403 (PRM: only the code opens it)', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: 'sales-1',
+        role: UserRole.SALES,
+        codes: [],
+      };
+      await request(app.getHttpServer())
+        .post('/cms/banners')
+        .send({
+          imageUrl: 'https://cdn/y.jpg',
+          title: { ar: 'م', en: 'P' },
+          active: true,
+          order: 1,
+        })
         .expect(403);
       expect(mock.banner.create).not.toHaveBeenCalled();
     });
 
-    it('SALES even with cms:articles:manage → 403 on POST /cms/articles; article.upsert NOT called', async () => {
+    it('SALES with cms:articles:manage → let in by the code (PRM)', async () => {
       FakeAuthGuard.currentUser = {
         sub: 'sales-1',
         role: UserRole.SALES,
         codes: ['cms:articles:manage'],
+      };
+      await request(app.getHttpServer())
+        .post('/cms/articles')
+        .send({
+          slug: 'z',
+          title: { ar: 'م', en: 'Z' },
+          excerpt: { ar: '', en: '' },
+          body: { ar: '', en: '' },
+        })
+        .expect((r) => expect(r.status).not.toBe(403));
+    });
+
+        it('SALES without cms:articles:manage → 403 (PRM: only the code opens it)', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: 'sales-1',
+        role: UserRole.SALES,
+        codes: [],
       };
       await request(app.getHttpServer())
         .post('/cms/articles')

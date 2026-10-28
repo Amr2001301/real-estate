@@ -13,6 +13,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto, ProjectQueryDto, UpdateProjectDto } from './dto/project.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { UserRole } from '@prisma/client';
@@ -67,6 +68,7 @@ export class ProjectsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('projects:create')
+  @GrantedBy('projects:create')
   @Post('projects')
   create(@Body() dto: CreateProjectDto) {
     return this.projects.create(dto);
@@ -74,6 +76,7 @@ export class ProjectsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('projects:update')
+  @GrantedBy('projects:update')
   @Patch('projects/:id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateProjectDto) {
     return this.projects.update(id, dto);
@@ -81,6 +84,7 @@ export class ProjectsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('projects:delete')
+  @GrantedBy('projects:delete')
   @Delete('projects/:id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.projects.remove(id);
@@ -88,6 +92,7 @@ export class ProjectsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('projects:publish')
+  @GrantedBy('projects:publish')
   @Patch('projects/:id/publish')
   publish(@Param('id', ParseUUIDPipe) id: string) {
     return this.projects.publish(id);
@@ -95,6 +100,7 @@ export class ProjectsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('projects:publish')
+  @GrantedBy('projects:publish')
   @Patch('projects/:id/archive')
   archive(@Param('id', ParseUUIDPipe) id: string) {
     return this.projects.archive(id);

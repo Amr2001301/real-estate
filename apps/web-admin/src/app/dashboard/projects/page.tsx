@@ -9,6 +9,7 @@ import {
 import { api, safe } from '@/lib/api';
 import { projectOptions } from '@/lib/options';
 import { getSession } from '@/lib/session';
+import { can } from '@/lib/permissions';
 import type { InventoryMatrixResult, Paged, Project } from '@/lib/types';
 import { tx, formatDate, compactParts } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
@@ -109,6 +110,8 @@ export default async function ProjectsPage({
   // Project mutations are ADMIN-only (projects:create/update/publish/delete).
   // SALES browses read-only, so creation CTAs are hidden for them.
   const isAdmin = isAdminRole;
+  // Adding a project opens to whoever holds projects:create (PRM).
+  const canCreate = isAdmin || (await can('projects:create'));
   // Drop "last update" when no row has one (U5: no always-empty columns).
   const showUpdated = rows.some((p) => !!p.updatedAt);
   const STATUS_LABEL: Record<string, string> = {
@@ -135,7 +138,7 @@ export default async function ProjectsPage({
           { label: m.breadcrumb },
         ]}
         actions={
-          isAdmin ? (
+          canCreate ? (
             <Link href={'/dashboard/projects/new' as never}>
               <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
                 {m.addBtn}
@@ -245,7 +248,7 @@ export default async function ProjectsPage({
                     title={m.empty.title}
                     description={m.empty.description}
                     action={
-                      isAdmin ? (
+                      canCreate ? (
                         <Link href={'/dashboard/projects/new' as never}>
                           <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />}>
                             {m.empty.addBtn}

@@ -369,7 +369,7 @@ describe('Units module · permissions enforcement', () => {
       expect(mock.unit.delete).toHaveBeenCalled();
     });
 
-    it('SALES even with units:update → 403 from @Roles; unit.update NOT called', async () => {
+    it('SALES with units:update → let in by the code (PRM)', async () => {
       FakeAuthGuard.currentUser = {
         sub: 'sales-1',
         role: UserRole.SALES,
@@ -378,16 +378,39 @@ describe('Units module · permissions enforcement', () => {
       await request(app.getHttpServer())
         .patch(`/units/${fixture.unit.id}`)
         .send({ price: 90000 })
+        .expect((r) => expect(r.status).not.toBe(403));
+    });
+
+        it('SALES without units:update → 403 (PRM: only the code opens it)', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: 'sales-1',
+        role: UserRole.SALES,
+        codes: [],
+      };
+      await request(app.getHttpServer())
+        .patch(`/units/${fixture.unit.id}`)
+        .send({ price: 90000 })
         .expect(403);
-      expect(mock.userPermission.findMany).not.toHaveBeenCalled();
       expect(mock.unit.update).not.toHaveBeenCalled();
     });
 
-    it('SALES even with units:change-status → 403 from @Roles; no update or history write', async () => {
+    it('SALES with units:change-status → let in by the code (PRM)', async () => {
       FakeAuthGuard.currentUser = {
         sub: 'sales-1',
         role: UserRole.SALES,
         codes: ['units:change-status'],
+      };
+      await request(app.getHttpServer())
+        .patch(`/units/${fixture.unit.id}/status`)
+        .send({ status: 'AVAILABLE' })
+        .expect((r) => expect(r.status).not.toBe(403));
+    });
+
+        it('SALES without units:change-status → 403 (PRM: only the code opens it)', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: 'sales-1',
+        role: UserRole.SALES,
+        codes: [],
       };
       await request(app.getHttpServer())
         .patch(`/units/${fixture.unit.id}/status`)
@@ -397,11 +420,22 @@ describe('Units module · permissions enforcement', () => {
       expect(mock.unitStatusHistory.create).not.toHaveBeenCalled();
     });
 
-    it('SALES even with units:delete → 403 from @Roles; unit.delete NOT called', async () => {
+    it('SALES with units:delete → let in by the code (PRM)', async () => {
       FakeAuthGuard.currentUser = {
         sub: 'sales-1',
         role: UserRole.SALES,
         codes: ['units:delete'],
+      };
+      await request(app.getHttpServer())
+        .delete(`/units/${fixture.unit.id}`)
+        .expect((r) => expect(r.status).not.toBe(403));
+    });
+
+        it('SALES without units:delete → 403 (PRM: only the code opens it)', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: 'sales-1',
+        role: UserRole.SALES,
+        codes: [],
       };
       await request(app.getHttpServer())
         .delete(`/units/${fixture.unit.id}`)

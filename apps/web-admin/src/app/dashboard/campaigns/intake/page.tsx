@@ -3,6 +3,7 @@ import { projectOptions } from '@/lib/options';
 import type { CampaignChannel, IntakeKey, LeadRoutingSettings } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
 import { getSession } from '@/lib/session';
+import { can } from '@/lib/permissions';
 import { uiT } from '@/messages/ui';
 import { PremiumPageHero } from '@/components/premium';
 import { intakeT } from '@/components/campaigns/intake-messages';
@@ -17,7 +18,7 @@ export const fetchCache = 'force-no-store';
 export default async function IntakePage() {
   const [locale, session] = await Promise.all([getLocale(), getSession()]);
   const m = intakeT(locale);
-  const canManage = session?.role === 'ADMIN';
+  const canManage = session?.role === 'ADMIN' || (await can('campaigns:manage'));
   const [settingsRes, keysRes, campaignsRes, projectsRes] = await Promise.all([
     safe(api.get<LeadRoutingSettings>('/lead-intake/settings')),
     canManage ? safe(api.get<IntakeKey[]>('/lead-intake/keys')) : Promise.resolve({ data: [] as IntakeKey[], error: null }),

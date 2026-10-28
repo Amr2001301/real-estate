@@ -127,6 +127,7 @@ export default async function UserPermissionsPage({
         userName={user.fullName}
         assigned={assigned}
         available={available}
+        targetIsAdmin={user.role === 'ADMIN'}
         locale={locale}
       />
     </div>

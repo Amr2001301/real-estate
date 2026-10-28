@@ -835,6 +835,8 @@ const ALLOW_LIST_FULL_NAMES = new Set<string>([
   // Authenticated self-service: JWT required (global guard), no role restriction.
   'UsersController.me',
   'UsersController.updateMe',
+  // PRM1 — the caller's own permission codes (userId from the JWT), for the sidebar.
+  'PermissionsController.mine',
   'NotificationsController.myList',
   'NotificationsController.unreadCount',
   'NotificationsController.markRead',

@@ -393,7 +393,7 @@ describe('Project surface · permissions enforcement (projects + phases + buildi
       expect(mock.project.delete).toHaveBeenCalled();
     });
 
-    it('SALES even with projects:update → 403 from @Roles', async () => {
+    it('SALES with projects:update → let in by the code (PRM)', async () => {
       FakeAuthGuard.currentUser = {
         sub: 'sales-1',
         role: UserRole.SALES,
@@ -402,16 +402,38 @@ describe('Project surface · permissions enforcement (projects + phases + buildi
       await request(app.getHttpServer())
         .patch('/projects/a1111111-1111-4111-8111-111111111111')
         .send({ city: 'Jeddah' })
+        .expect((r) => expect(r.status).not.toBe(403));
+    });
+
+        it('SALES without projects:update → 403 (PRM: only the code opens it)', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: 'sales-1',
+        role: UserRole.SALES,
+        codes: [],
+      };
+      await request(app.getHttpServer())
+        .patch('/projects/a1111111-1111-4111-8111-111111111111')
+        .send({ city: 'Jeddah' })
         .expect(403);
-      expect(mock.userPermission.findMany).not.toHaveBeenCalled();
       expect(mock.project.update).not.toHaveBeenCalled();
     });
 
-    it('SALES even with projects:delete → 403 from @Roles', async () => {
+    it('SALES with projects:delete → let in by the code (PRM)', async () => {
       FakeAuthGuard.currentUser = {
         sub: 'sales-1',
         role: UserRole.SALES,
         codes: ['projects:delete'],
+      };
+      await request(app.getHttpServer())
+        .delete('/projects/a1111111-1111-4111-8111-111111111111')
+        .expect((r) => expect(r.status).not.toBe(403));
+    });
+
+        it('SALES without projects:delete → 403 (PRM: only the code opens it)', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: 'sales-1',
+        role: UserRole.SALES,
+        codes: [],
       };
       await request(app.getHttpServer())
         .delete('/projects/a1111111-1111-4111-8111-111111111111')
@@ -459,7 +481,7 @@ describe('Project surface · permissions enforcement (projects + phases + buildi
       expect(r2Mock.createPresignedUpload).toHaveBeenCalled();
     });
 
-    it('SALES even with phases:manage → 403 from @Roles on POST /phases', async () => {
+    it('SALES with phases:manage → let in by the code (PRM)', async () => {
       FakeAuthGuard.currentUser = {
         sub: 'sales-1',
         role: UserRole.SALES,
@@ -468,12 +490,23 @@ describe('Project surface · permissions enforcement (projects + phases + buildi
       await request(app.getHttpServer())
         .post('/phases')
         .send({ projectId: 'a1111111-1111-4111-8111-111111111111', name: { ar: 'م', en: 'P' }, order: 1 })
+        .expect((r) => expect(r.status).not.toBe(403));
+    });
+
+        it('SALES without phases:manage → 403 (PRM: only the code opens it)', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: 'sales-1',
+        role: UserRole.SALES,
+        codes: [],
+      };
+      await request(app.getHttpServer())
+        .post('/phases')
+        .send({ projectId: 'a1111111-1111-4111-8111-111111111111', name: { ar: 'م', en: 'P' }, order: 1 })
         .expect(403);
-      expect(mock.userPermission.findMany).not.toHaveBeenCalled();
       expect(mock.phase.create).not.toHaveBeenCalled();
     });
 
-    it('SALES even with buildings:manage → 403 from @Roles on POST /buildings', async () => {
+    it('SALES with buildings:manage → let in by the code (PRM)', async () => {
       FakeAuthGuard.currentUser = {
         sub: 'sales-1',
         role: UserRole.SALES,
@@ -487,15 +520,44 @@ describe('Project surface · permissions enforcement (projects + phases + buildi
           totalFloors: 5,
           order: 1,
         })
+        .expect((r) => expect(r.status).not.toBe(403));
+    });
+
+        it('SALES without buildings:manage → 403 (PRM: only the code opens it)', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: 'sales-1',
+        role: UserRole.SALES,
+        codes: [],
+      };
+      await request(app.getHttpServer())
+        .post('/buildings')
+        .send({
+          phaseId: 'a1111111-1111-4111-8111-111111111111',
+          name: 'B1',
+          totalFloors: 5,
+          order: 1,
+        })
         .expect(403);
       expect(mock.building.create).not.toHaveBeenCalled();
     });
 
-    it('SALES even with project_media:manage → 403 from @Roles on POST /media/presign', async () => {
+    it('SALES with project_media:manage → let in by the code (PRM)', async () => {
       FakeAuthGuard.currentUser = {
         sub: 'sales-1',
         role: UserRole.SALES,
         codes: ['project_media:manage'],
+      };
+      await request(app.getHttpServer())
+        .post('/media/presign')
+        .send({ contentType: 'image/jpeg', folder: 'projects', sizeBytes: 1024 })
+        .expect((r) => expect(r.status).not.toBe(403));
+    });
+
+        it('SALES without project_media:manage → 403 (PRM: only the code opens it)', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: 'sales-1',
+        role: UserRole.SALES,
+        codes: [],
       };
       await request(app.getHttpServer())
         .post('/media/presign')

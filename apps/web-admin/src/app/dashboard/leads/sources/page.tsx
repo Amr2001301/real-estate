@@ -4,6 +4,7 @@ import { api, safe } from '@/lib/api';
 import type { LeadSource } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
 import { getSession } from '@/lib/session';
+import { can } from '@/lib/permissions';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,7 +26,7 @@ export default async function LeadSourcesPage({
 }) {
   const [sp, locale, session] = await Promise.all([searchParams, getLocale(), getSession()]);
   // Managing sources is ADMIN-only on the API (lead_sources:manage).
-  if (session?.role !== 'ADMIN') redirect('/dashboard/leads' as never);
+  if (session?.role !== 'ADMIN' && !(await can('lead_sources:manage'))) redirect('/dashboard/leads' as never);
   const leadsM = uiT(locale).pages.leads;
   const m = leadsM.sources;
   const res = await safe(api.get<LeadSource[]>('/lead-sources'));

@@ -2338,8 +2338,8 @@ export interface UserPermissionsResponse {
     role: UserRole;
     active: boolean;
   };
-  assigned: Array<{ id: string; code: string; description: string | null }>;
-  available: Array<{ id: string; code: string; description: string | null }>;
+  assigned: Array<{ id: string; code: string; description: string | null; adminOnly?: boolean }>;
+  available: Array<{ id: string; code: string; description: string | null; adminOnly?: boolean }>;
 }
 
 export interface AuditLogItem {
