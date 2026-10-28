@@ -112,3 +112,9 @@ export class OpenLeadContactDto {
   @IsIn(['CALL', 'WHATSAPP'])
   kind!: 'CALL' | 'WHATSAPP';
 }
+
+/** DUP1 — the leads folded into the kept one. */
+export class MergeLeadsDto {
+  @IsUUID('4', { each: true })
+  duplicateIds!: string[];
+}

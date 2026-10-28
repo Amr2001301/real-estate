@@ -211,3 +211,16 @@ export async function contactLeadAction(leadId: string, kind: 'CALL' | 'WHATSAPP
     return { error: (e as Error).message };
   }
 }
+
+/** DUP1 — fold a customer's duplicate leads into the one kept. */
+export async function mergeLeadsAction(keepId: string, duplicateIds: string[]): Promise<LeadFormState> {
+  try {
+    await api.post(`/leads/${keepId}/merge`, { duplicateIds });
+  } catch (e) {
+    unstable_rethrow(e);
+    return { error: (e as Error).message };
+  }
+  revalidatePath('/dashboard/leads/duplicates');
+  revalidatePath('/dashboard/leads');
+  return { ok: true };
+}

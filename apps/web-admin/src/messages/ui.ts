@@ -5243,6 +5243,7 @@ const UI = {
       activityRelinked: 'تم ربط الفرصة بسجل آخر',
       activityReturned: 'رجع العميل من جديد (إعلان / نموذج)',
       activityContactOpened: (whatsapp: boolean, by: string | null) => `${whatsapp ? 'فتح محادثة واتساب' : 'اتصال بالعميل'}${by ? ` — ${by}` : ''}`,
+      activityMerged: (n: number, by: string | null) => `دُمجت فيها ${n === 1 ? 'فرصة مكررة' : `${n} فرص مكررة`}${by ? ` — ${by}` : ''}`,
       activityVisit: {
         SCHEDULED: 'تمت جدولة زيارة',
         CONFIRMED: 'تم تأكيد الزيارة',
@@ -11160,6 +11161,7 @@ const UI = {
       activityRelinked: 'Linked to another record',
       activityReturned: 'The customer came in again (ad / form)',
       activityContactOpened: (whatsapp: boolean, by: string | null) => `${whatsapp ? 'WhatsApp chat opened' : 'Customer called'}${by ? ` — ${by}` : ''}`,
+      activityMerged: (n: number, by: string | null) => `${n === 1 ? 'A duplicate lead was' : `${n} duplicate leads were`} merged into this one${by ? ` — ${by}` : ''}`,
       activityVisit: {
         SCHEDULED: 'Visit scheduled',
         CONFIRMED: 'Visit confirmed',

@@ -1359,6 +1359,8 @@ enum LeadActivityType {
   returned
   /// A call or WhatsApp chat opened from the lead's buttons (who, which).
   contact_opened
+  /// Duplicate leads of the same customer folded into this one (how many, who).
+  merged
   assigned
   status_change
   visit

@@ -36,7 +36,9 @@ import {
   CreateLostReasonDto,
   UpdateLostReasonDto,
   OpenLeadContactDto,
+  MergeLeadsDto,
 } from './dto/lead.dto';
+import { LeadDuplicatesService } from './lead-duplicates.service';
 
 const EXCEL_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 
@@ -64,6 +66,7 @@ export class LeadsController {
   constructor(
     private readonly leads: LeadsService,
     private readonly prisma: PrismaService,
+    private readonly duplicatesSvc: LeadDuplicatesService,
   ) {}
 
   // Sources
@@ -152,6 +155,28 @@ export class LeadsController {
   async followUpSummary(@CurrentUser() user: AuthUser, @Query('salesId') salesId?: string) {
     const scope = await resolveSalesScope(this.prisma, user, salesId);
     return this.leads.followUpSummary(scope);
+  }
+
+  // DUP1 — the same customer with more than one open lead: the admin sees
+  // all, a sales manager their team's (and the unassigned queue).
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @Permissions('leads:read')
+  @Get('leads/duplicates')
+  async duplicates(@CurrentUser() user: AuthUser) {
+    return this.duplicatesSvc.list(await this.duplicateScope(user));
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @Permissions('leads:update')
+  @HttpCode(200)
+  @Post('leads/:id/merge')
+  async merge(@Param('id', ParseUUIDPipe) id: string, @Body() dto: MergeLeadsDto, @CurrentUser() user: AuthUser) {
+    return this.duplicatesSvc.merge(id, dto.duplicateIds, await this.duplicateScope(user), user.sub);
+  }
+
+  private async duplicateScope(user: AuthUser) {
+    const scope = await resolveSalesScope(this.prisma, user);
+    return { salesIds: scope.salesIds ?? (scope.salesId ? [scope.salesId] : undefined) };
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
