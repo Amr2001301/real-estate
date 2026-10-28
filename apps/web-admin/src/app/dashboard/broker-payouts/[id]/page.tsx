@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { AlertTriangle, ArrowUpRight, Check, XCircle } from 'lucide-react';
+import { getSession } from '@/lib/session';
 import { api, safe } from '@/lib/api';
 import type { AdminBrokerPayout } from '@/lib/types';
 import { tx, formatDate, formatDateTime, formatCurrency, compactParts } from '@/lib/format';
@@ -44,6 +45,7 @@ export default async function AdminBrokerPayoutDetailPage({
   const adjustments = payout.adjustments ?? [];
 
   const isDraft = payout.status === 'DRAFT';
+  const isAdmin = (await getSession())?.role === 'ADMIN';
   const isApproved = payout.status === 'APPROVED';
   const isProcessing = payout.status === 'PROCESSING';
   const canCancel = isDraft || isApproved;
@@ -236,7 +238,8 @@ export default async function AdminBrokerPayoutDetailPage({
 
         {/* ── Side: the one next action, payment details, log ─────────────── */}
         <aside className="space-y-6">
-          {(isDraft || isApproved || isProcessing) && (
+          {/* PRM2 — approving, processing, paying and cancelling stay with the admin. */}
+          {isAdmin && (isDraft || isApproved || isProcessing) && (
             <section data-testid="payout-next" className={cn(card, 'p-6')}>
               <p className="text-[12px] font-semibold text-slate-500">{m.nextStep}</p>
               <h2 className="mb-5 mt-0.5 font-heading text-[19px] font-bold text-slate-900">

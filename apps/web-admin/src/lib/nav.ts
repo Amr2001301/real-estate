@@ -193,13 +193,13 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'الوسطاء',
     titleKey: 'brokers',
     items: [
-      { href: '/dashboard/brokers', label: 'الوسطاء', labelKey: 'brokers', iconKey: 'Briefcase', admin: true, feature: 'feature.brokers' },
+      { href: '/dashboard/brokers', label: 'الوسطاء', labelKey: 'brokers', iconKey: 'Briefcase', admin: true, perm: ['brokers:read'], feature: 'feature.brokers' },
       { href: '/dashboard/broker-leads', label: 'فرص من الوسطاء', labelKey: 'brokerLeads', iconKey: 'Users', admin: true, feature: 'feature.brokers' },
       { href: '/dashboard/broker-reservations', label: 'حجوزات من الوسطاء', labelKey: 'brokerReservations', iconKey: 'BookmarkCheck', admin: true, feature: 'feature.brokers' },
       { href: '/dashboard/broker-contracts', label: 'عقود من الوسطاء', labelKey: 'brokerContracts', iconKey: 'FileText', admin: true, feature: 'feature.brokers' },
-      { href: '/dashboard/broker-commissions', label: 'عمولات الوسطاء', labelKey: 'brokerCommissions', iconKey: 'BadgePercent', admin: true, feature: 'feature.brokers' },
-      { href: '/dashboard/broker-payouts', label: 'مدفوعات الوسطاء', labelKey: 'brokerPayouts', iconKey: 'Wallet', admin: true, feature: 'feature.brokers' },
-      { href: '/dashboard/broker-reports', label: 'تقارير الوسطاء', labelKey: 'brokerReports', iconKey: 'BarChart3', admin: true, feature: 'feature.brokers' },
+      { href: '/dashboard/broker-commissions', label: 'عمولات الوسطاء', labelKey: 'brokerCommissions', iconKey: 'BadgePercent', admin: true, perm: ['broker_commissions:read'], feature: 'feature.brokers' },
+      { href: '/dashboard/broker-payouts', label: 'مدفوعات الوسطاء', labelKey: 'brokerPayouts', iconKey: 'Wallet', admin: true, perm: ['broker_payouts:read'], feature: 'feature.brokers' },
+      { href: '/dashboard/broker-reports', label: 'تقارير الوسطاء', labelKey: 'brokerReports', iconKey: 'BarChart3', admin: true, perm: ['broker_reports:read'], feature: 'feature.brokers' },
     ],
   },
   {

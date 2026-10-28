@@ -131,15 +131,16 @@ describe('Broker reports module · permissions enforcement', () => {
     expect(serviceMock.summaryCsv).toHaveBeenCalledTimes(1);
   });
 
-  it('SALES blocked at the @Roles layer (broker-reports is ADMIN-only); service never runs', async () => {
-    FakeAuthGuard.currentUser = {
-      sub: 'sales-1',
-      role: UserRole.SALES,
-      codes: ['broker_reports:read'],
-    };
+  it('SALES without broker_reports:read is blocked at the @Roles layer; service never runs', async () => {
+    FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: [] };
     await request(app.getHttpServer()).get('/broker-reports/summary').expect(403);
-    expect(permissionMock.userPermission.findMany).not.toHaveBeenCalled();
     expect(serviceMock.summary).not.toHaveBeenCalled();
+  });
+
+  it('PRM: SALES holding broker_reports:read reads the reports (@GrantedBy)', async () => {
+    FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: ['broker_reports:read'] };
+    await request(app.getHttpServer()).get('/broker-reports/summary').expect(200);
+    expect(serviceMock.summary).toHaveBeenCalled();
   });
 
   it('SALES blocked from CSV export too; export generation never runs', async () => {

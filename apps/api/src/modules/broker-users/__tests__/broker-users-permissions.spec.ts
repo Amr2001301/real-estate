@@ -218,14 +218,19 @@ describe('Broker users module · permissions enforcement', () => {
         .expect(200);
     });
 
-    it('rejects SALES at the @Roles layer', async () => {
-      FakeAuthGuard.currentUser = {
-        sub: 'sales-1',
-        role: UserRole.SALES,
-        codes: ['broker_users:read'],
-      };
-      await request(app.getHttpServer()).get(`/brokers/${BROKER_ID}/users`).expect(403);
-      expect(prismaMock.userPermission.findMany).not.toHaveBeenCalled();
+    it('rejects SALES without broker_users:read at the @Roles layer', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: [] };
+      const res = await request(app.getHttpServer()).get(`/brokers/${BROKER_ID}/users`).expect(403);
+      expect(res.body.message).toBe('Insufficient role');
+    });
+
+    it('PRM: SALES holding broker_users:read lists them; inviting stays with the admin', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: ['broker_users:read', 'broker_users:invite'] };
+      await request(app.getHttpServer()).get(`/brokers/${BROKER_ID}/users`).expect(200);
+      await request(app.getHttpServer())
+        .post(`/brokers/${BROKER_ID}/users`)
+        .send({ fullName: 'New Agent', email: 'agent@example.com' })
+        .expect(403);
     });
 
     it('rejects unauthenticated requests', async () => {

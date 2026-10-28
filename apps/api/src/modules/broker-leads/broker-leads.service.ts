@@ -1,3 +1,4 @@
+import { narrowReps } from '../broker-contracts/broker-contracts.service';
 import {
   BadRequestException,
   ConflictException,
@@ -51,7 +52,12 @@ export class BrokerLeadsService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  async list(query: BrokerLeadsQueryDto) {
+  /**
+   * PRM2 — `salesIds`: the reps the caller sees (own / team), undefined for
+   * an admin. A rep sees the broker leads assigned to them (rule 2 — leads
+   * keep their scope, and phones stay with whoever is responsible).
+   */
+  async list(query: BrokerLeadsQueryDto, salesIds?: string[]) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
     const trimmed = query.q?.trim();
@@ -65,8 +71,8 @@ export class BrokerLeadsService {
         : {}),
       ...(query.stage ? { stage: query.stage } : {}),
       ...(query.projectId ? { projectInterestId: query.projectId } : {}),
-      ...(query.assignedSalesId
-        ? { assignedSalesId: query.assignedSalesId }
+      ...(salesIds || query.assignedSalesId
+        ? { assignedSalesId: { in: narrowReps(salesIds, query.assignedSalesId) ?? [] } }
         : query.assigned === 'true'
           ? { assignedSalesId: { not: null } }
           : {}),
@@ -97,7 +103,7 @@ export class BrokerLeadsService {
     return paginate(data, total, { page, pageSize });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, salesIds?: string[]) {
     const lead = await this.prisma.lead.findUnique({
       where: { id },
       include: {
@@ -114,6 +120,9 @@ export class BrokerLeadsService {
       throw new NotFoundException(
         'This lead was not submitted by a broker; use the regular leads endpoint instead',
       );
+    }
+    if (salesIds && !(lead.assignedSalesId && salesIds.includes(lead.assignedSalesId))) {
+      throw new NotFoundException('Lead not found');
     }
     return lead;
   }

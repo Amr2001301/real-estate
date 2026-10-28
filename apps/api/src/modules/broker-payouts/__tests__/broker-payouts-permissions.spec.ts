@@ -307,15 +307,15 @@ describe('Broker-payouts module · permissions enforcement', () => {
       await request(app.getHttpServer()).get('/broker-payouts').expect(403);
     });
 
-    it('GET /broker-payouts — SALES with broker_payouts:read → 403 from @Roles (admin-only route)', async () => {
-      FakeAuthGuard.currentUser = {
-        sub: 'sales-1',
-        role: UserRole.SALES,
-        codes: ['broker_payouts:read'],
-      };
+    it('GET /broker-payouts — SALES without broker_payouts:read → 403 from @Roles', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: [] };
       const res = await request(app.getHttpServer()).get('/broker-payouts').expect(403);
       expect(res.body.message).toBe('Insufficient role');
-      expect(prismaMock.userPermission.findMany).not.toHaveBeenCalled();
+    });
+
+    it('PRM: GET /broker-payouts — SALES holding broker_payouts:read is let in (@GrantedBy)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: ['broker_payouts:read'] };
+      await request(app.getHttpServer()).get('/broker-payouts').expect(200);
     });
   });
 
@@ -332,14 +332,15 @@ describe('Broker-payouts module · permissions enforcement', () => {
       expect(notificationsMock.sendToUsers).toHaveBeenCalled();
     });
 
-    it('SALES even with broker_payouts:create → 403 from @Roles', async () => {
-      FakeAuthGuard.currentUser = {
-        sub: 'sales-1',
-        role: UserRole.SALES,
-        codes: ['broker_payouts:create'],
-      };
+    it('SALES without broker_payouts:create → 403 from @Roles', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: ['broker_payouts:read'] };
       const res = await request(app.getHttpServer()).post('/broker-payouts').send(BODY).expect(403);
       expect(res.body.message).toBe('Insufficient role');
+    });
+
+    it('PRM: SALES holding broker_payouts:create drafts a payout (@GrantedBy)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: ['broker_payouts:create'] };
+      await request(app.getHttpServer()).post('/broker-payouts').send(BODY).expect(201);
     });
   });
 

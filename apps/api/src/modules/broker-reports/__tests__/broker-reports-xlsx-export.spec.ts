@@ -137,11 +137,15 @@ describe('broker-reports XLSX exports (P15.3)', () => {
       expect(text).not.toMatch(/أحمد منصور|بيانات تجريبية|74%/);
     });
 
-    it('is forbidden for non-admin roles', async () => {
-      for (const role of [UserRole.SALES, UserRole.BROKER, UserRole.CUSTOMER]) {
+    it('is forbidden for SALES without the code and for BROKER / CUSTOMER; open to SALES with broker_reports:read', async () => {
+      for (const role of [UserRole.BROKER, UserRole.CUSTOMER]) {
         FakeAuthGuard.currentUser = { sub: 'x', role, codes: ['broker_reports:read'] };
         await request(app.getHttpServer()).get('/broker-reports/export/top-brokers.xlsx').expect(403);
       }
+      FakeAuthGuard.currentUser = { sub: 'x', role: UserRole.SALES, codes: [] };
+      await request(app.getHttpServer()).get('/broker-reports/export/top-brokers.xlsx').expect(403);
+      FakeAuthGuard.currentUser = { sub: 'x', role: UserRole.SALES, codes: ['broker_reports:read'] };
+      await request(app.getHttpServer()).get('/broker-reports/export/top-brokers.xlsx').expect(200);
     });
   });
 
@@ -177,11 +181,11 @@ describe('broker-reports XLSX exports (P15.3)', () => {
       expect(text).not.toMatch(/أحمد منصور|بيانات تجريبية|74%/);
     });
 
-    it('is forbidden for non-admin roles', async () => {
-      for (const role of [UserRole.SALES, UserRole.BROKER]) {
-        FakeAuthGuard.currentUser = { sub: 'x', role, codes: ['broker_reports:read'] };
-        await request(app.getHttpServer()).get('/broker-reports/export/summary.xlsx').expect(403);
-      }
+    it('is forbidden for BROKER and for SALES without the code', async () => {
+      FakeAuthGuard.currentUser = { sub: 'x', role: UserRole.BROKER, codes: ['broker_reports:read'] };
+      await request(app.getHttpServer()).get('/broker-reports/export/summary.xlsx').expect(403);
+      FakeAuthGuard.currentUser = { sub: 'x', role: UserRole.SALES, codes: [] };
+      await request(app.getHttpServer()).get('/broker-reports/export/summary.xlsx').expect(403);
     });
   });
 
@@ -199,11 +203,13 @@ describe('broker-reports XLSX exports (P15.3)', () => {
       for (const path of paths()) await request(app.getHttpServer()).get(path).expect(503);
     });
 
-    it('are forbidden for non-admin roles', async () => {
-      for (const role of [UserRole.SALES, UserRole.CUSTOMER, UserRole.BROKER]) {
+    it('are forbidden for CUSTOMER / BROKER and for SALES without the code', async () => {
+      for (const role of [UserRole.CUSTOMER, UserRole.BROKER]) {
         FakeAuthGuard.currentUser = { sub: 'x', role, codes: ['broker_reports:read'] };
         for (const path of paths()) await request(app.getHttpServer()).get(path).expect(403);
       }
+      FakeAuthGuard.currentUser = { sub: 'x', role: UserRole.SALES, codes: [] };
+      for (const path of paths()) await request(app.getHttpServer()).get(path).expect(403);
     });
   });
 });

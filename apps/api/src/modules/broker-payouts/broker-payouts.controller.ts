@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
@@ -35,6 +36,7 @@ export class BrokerPayoutsController {
   // Note: `eligible-commissions` is declared BEFORE `:id` so it is matched
   // first and not interpreted as a UUID param.
   @Roles(UserRole.ADMIN)
+  @GrantedBy('broker_payouts:read')
   @Permissions('broker_payouts:read')
   @Get('eligible-commissions')
   eligible(@Query() query: EligibleCommissionsQueryDto) {
@@ -42,6 +44,7 @@ export class BrokerPayoutsController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('broker_payouts:read')
   @Permissions('broker_payouts:read')
   @Get()
   list(@Query() query: BrokerPayoutsQueryDto) {
@@ -49,6 +52,7 @@ export class BrokerPayoutsController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('broker_payouts:read')
   @Permissions('broker_payouts:read')
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
@@ -56,6 +60,7 @@ export class BrokerPayoutsController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('broker_payouts:create')
   @Permissions('broker_payouts:create')
   @Post()
   create(
@@ -66,6 +71,7 @@ export class BrokerPayoutsController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('broker_payouts:update')
   @Permissions('broker_payouts:update')
   @Post(':id/add-commissions')
   addCommissions(
@@ -76,6 +82,7 @@ export class BrokerPayoutsController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('broker_payouts:update')
   @Permissions('broker_payouts:update')
   @Post(':id/remove-commissions')
   removeCommissions(

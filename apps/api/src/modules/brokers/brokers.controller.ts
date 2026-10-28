@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { BrokerStatus, UserRole } from '@prisma/client';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import {
   Permissions,
@@ -33,6 +34,7 @@ export class BrokersController {
   constructor(private readonly brokers: BrokersService) {}
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('brokers:create')
   @Permissions('brokers:create')
   @Post()
   create(@Body() dto: CreateBrokerDto) {
@@ -40,6 +42,7 @@ export class BrokersController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('brokers:read')
   @Permissions('brokers:read')
   @Get()
   findAll(
@@ -61,6 +64,7 @@ export class BrokersController {
   // Dropdowns and filters: every broker, id + display fields only. Declared
   // before `:id`, which would otherwise take "options" as an id.
   @Roles(UserRole.ADMIN)
+  @GrantedBy('brokers:read')
   @Permissions('brokers:read')
   @Get('options')
   options(@Query() query: BrokerOptionsQueryDto) {
@@ -68,6 +72,7 @@ export class BrokersController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('brokers:read')
   @Permissions('brokers:read')
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
@@ -75,6 +80,7 @@ export class BrokersController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('brokers:update')
   @Permissions('brokers:update')
   @Patch(':id')
   update(
@@ -88,6 +94,7 @@ export class BrokersController {
   // The DTO whitelist rejects SUSPENDED/TERMINATED here; those are the
   // dedicated strict routes below.
   @Roles(UserRole.ADMIN)
+  @GrantedBy('brokers:update')
   @Permissions('brokers:update')
   @Patch(':id/status')
   updateStatus(

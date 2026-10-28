@@ -15,6 +15,8 @@ import {
   PermissionsStrict,
 } from '../../common/decorators/permissions.decorator';
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
+import { PrismaService } from '../../common/prisma/prisma.service';
+import { salesDataScope } from '../../common/permissions/company-wide';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { BrokerLeadsService } from './broker-leads.service';
 import {
@@ -28,20 +30,25 @@ import {
 @RequireCapability('feature.brokers')
 @Controller('broker-leads')
 export class BrokerLeadsController {
-  constructor(private readonly brokerLeads: BrokerLeadsService) {}
+  constructor(
+    private readonly brokerLeads: BrokerLeadsService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('broker_leads:read')
   @Get()
-  list(@Query() query: BrokerLeadsQueryDto) {
-    return this.brokerLeads.list(query);
+  async list(@Query() query: BrokerLeadsQueryDto, @CurrentUser() user: AuthUser) {
+    // PRM2 — leads keep their scope (rule 2): a rep the broker leads assigned
+    // to them, a manager their team's; the admin all (and the queue to approve).
+    return this.brokerLeads.list(query, await salesDataScope(this.prisma, user));
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('broker_leads:read')
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.brokerLeads.findOne(id);
+  async findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
+    return this.brokerLeads.findOne(id, await salesDataScope(this.prisma, user));
   }
 
   @Roles(UserRole.ADMIN)

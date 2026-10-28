@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
+import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
@@ -25,6 +26,7 @@ export class BrokerAccessController {
   constructor(private readonly access: BrokerAccessService) {}
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('broker_access:read')
   @Permissions('broker_access:read')
   @Get('brokers/:id/access')
   list(@Param('id', ParseUUIDPipe) brokerId: string) {
@@ -32,6 +34,7 @@ export class BrokerAccessController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('broker_access:manage')
   @Permissions('broker_access:manage')
   @Post('brokers/:id/access/projects')
   grantProject(
@@ -42,6 +45,7 @@ export class BrokerAccessController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('broker_access:manage')
   @Permissions('broker_access:manage')
   @Delete('brokers/:id/access/projects/:projectId')
   revokeProject(
@@ -52,6 +56,7 @@ export class BrokerAccessController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('broker_access:manage')
   @Permissions('broker_access:manage')
   @Post('brokers/:id/access/units')
   grantUnit(
@@ -62,6 +67,7 @@ export class BrokerAccessController {
   }
 
   @Roles(UserRole.ADMIN)
+  @GrantedBy('broker_access:manage')
   @Permissions('broker_access:manage')
   @Delete('brokers/:id/access/units/:unitId')
   revokeUnit(

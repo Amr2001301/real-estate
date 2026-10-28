@@ -14,6 +14,7 @@ import {
   Mail,
   Phone,
 } from 'lucide-react';
+import { getSession } from '@/lib/session';
 import { api, safe } from '@/lib/api';
 import type { AdminBrokerCommission } from '@/lib/types';
 import { tx, formatDate, formatDateTime, formatCurrency } from '@/lib/format';
@@ -102,7 +103,10 @@ export default async function AdminBrokerCommissionDetailPage({
   const canApprove = c.status === 'PENDING' || c.status === 'REJECTED';
   const canReject = c.status === 'PENDING' || c.status === 'APPROVED';
   const canCancel = c.status !== 'CANCELLED';
-  const showReview = (canApprove || canReject || canCancel) && c.status !== 'CANCELLED';
+  // PRM2 — approving, rejecting and paying stay with the admin; anyone the
+  // read code lets in sees the record without the review buttons.
+  const isAdmin = (await getSession())?.role === 'ADMIN';
+  const showReview = isAdmin && (canApprove || canReject || canCancel) && c.status !== 'CANCELLED';
 
   const reviewCount = [canApprove, canReject, canCancel].filter(Boolean).length;
   const reviewGridCols =
