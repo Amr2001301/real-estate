@@ -7,6 +7,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/calendar/domain/calendar_event.dart';
+import '../features/calendar/presentation/calendar_cubit.dart';
+import '../features/calendar/presentation/calendar_screen.dart';
 import '../features/auth/domain/repositories/staff_auth_repository.dart';
 import '../features/auth/domain/usecases/forgot_staff_password.dart';
 import '../features/auth/presentation/cubit/forgot_staff_password_cubit.dart';
@@ -357,6 +360,15 @@ GoRouter createStaffRouter(
             return LeadsCubit(GetLeads(repo), repo);
           },
           child: const LeadsScreen(),
+        ),
+      ),
+
+      // ── Calendar (CAL1): the week's visits, follow-ups, expiries… ────────
+      GoRoute(
+        path: '/calendar',
+        builder: (context, state) => BlocProvider(
+          create: (ctx) => CalendarCubit(ctx.read<CalendarRepository>()),
+          child: const CalendarScreen(),
         ),
       ),
 

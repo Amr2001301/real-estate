@@ -1099,5 +1099,16 @@
   "activitySectionDetailsSubtitle": "اللي حصل واللي اتفقتوا عليه",
   "activitySectionNextSubtitle": "إمتى هتتواصل مع العميل تاني؟",
   "activityNextSet": "حدد ميعاد",
-  "activityNextWhen": "الميعاد"
+  "activityNextWhen": "الميعاد",
+
+  "calendarTitle": "التقويم",
+  "calendarEmptyDay": "مفيش مواعيد في اليوم ده",
+  "calendarEmptyHint": "الزيارات والمتابعات وانتهاء الحجوزات وتوقيع العقود بتظهر هنا في ميعادها.",
+  "calendarTypeVisit": "زيارة",
+  "calendarTypeFollowUp": "متابعة",
+  "calendarTypeReservationExpiry": "انتهاء حجز",
+  "calendarTypeContract": "توقيع عقد",
+  "calendarDone": "تمّت",
+  "calendarPrevWeek": "الأسبوع اللي فات",
+  "calendarNextWeek": "الأسبوع الجاي"
 }
