@@ -1329,6 +1329,7 @@
   "reservationDecideTitle": "مستني موافقتك",
   "reservationDecideDesc": "الموافقة بتسمح إن الحجز يكمل لعقد، والرفض بيرجّع الوحدة متاحة.",
   "reservationBookedBy": "حجز بواسطة {name}",
+  "@reservationBookedBy": {"placeholders": {"name": {"type": "String"}}},
   "reservationApprove": "موافقة",
   "reservationReject": "رفض",
   "reservationApproveConfirm": "توافق على الحجز ده؟",
