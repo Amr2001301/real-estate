@@ -1,4 +1,4 @@
-# Handoff — where the work stands (2026-11-01, after #229)
+# Handoff — where the work stands (2026-11-01, after #232)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
@@ -43,19 +43,20 @@
 
 **بعد كده (28 أكتوبر، #198–#206):** القسم 2d. باختصار: تنبيهات المتابعة (FU2)، أزرار الاتصال والواتساب وإخفاء أرقام العملاء عن غير المسؤول (#200)، العملاء المكررين ودمجهم (#201)، التقويم بالزيارات والمتابعات وانتهاء الحجوزات وتوقيع العقود (#202)، الأجهزة المتصلة وتسجيل الخروج منها (#203)، التحقق بخطوتين بتطبيق مصادقة في لوحة التحكم (#204) وتطبيق الموظفين (#205)، وسبب الخسارة في تطبيق الموظفين (#206). كده قايمة المنافسين اللي اتفقنا عليها خلصت.
 
-**بعد كده (28 أكتوبر → 1 نوفمبر، #199 و#210–#229، من الأكونت التاني):** القسم **2g** تحت. باختصار:
+**بعد كده (28 أكتوبر → 1 نوفمبر، #199 و#210–#232):** القسم **2g** تحت. باختصار:
 - **نقل البيانات من نظام تاني (#199، #217):** نظام زي «إنجاز» يبعت بيانات شركة بالـ API بمفتاح، وشاشة عند السوبر أدمن تربط القيم اللي مش متعرّفة بقيمنا مرة واحدة لكل نظام (القسم 2f).
 - **الصلاحيات بقت بتفتح الصفحات (#210–#216):** الصلاحية هي اللي بتدخّل الموظف الصفحة، والصلاحيات الخطيرة للأدمن بس. صفحات الفلوس والتقارير والإدارة بتعرض الشركة كلها لمين ياخدها؛ المبيعات وبيانات العملاء بالفريق أو بتاعة المندوب. والمستندات وإجراءات الأدمن في الزيارات فضلت للأدمن (القسم 4c).
 - **لوحة التحكم والموقع:** القائمة الجانبية أقسام بتتفتح وتتقفل وفيها بحث، والإعدادات في صفحة واحدة (#218)؛ صفحات المحتوى والبانرات بقت تظهر على الموقع (#219)؛ استمارة الحجز للتوقيع الإلكتروني الـ API بقى هو اللي بيجهزها (#226).
 - **تطبيق الموظفين:** المتابعات (#220)، التقويم (#221)، أسماء الرسوم والغرامات بالعربي في التطبيقين (#222)، الشيكات وتسجيل الإيداع والصرف (#223، #224)، المساعد الذكي (#225)، إرسال استمارة الحجز للتوقيع (#226)، الحملات (#227)، العملاء المكررين (#228)، وصفحة «الأمان» (#229).
-- **مفتوح:** #230 — الصلاحيات تفتح الصفحات في تطبيق الموظفين كمان.
+- **الصلاحيات في تطبيق الموظفين (#230):** الكود بيفتح الصفحة في التطبيق زي لوحة التحكم بالظبط («مراجعة الإيصالات»، «الشيكات»، «الحملات»). اتصلّح فيه قبل الدمج إن مدير المبيعات كان شايف «الشيكات» من غير الكود.
+- **تحذير العميل المكرر (#232):** لما حد يضيف فرصة بإيده لعميل عنده فرصة مفتوحة، السيستم يقوله ويوريه الفرصة المفتوحة (المرحلة، المسؤول، التاريخ) ويسيبه يفتحها أو يضيف جديدة على أي حال — في لوحة التحكم وتطبيق الموظفين.
 - **ملحوظة:** شاشات الموبايل الجديدة اتختبرت بالاختبارات وبالرسم بس، ما اتجرّبتش على موبايل حقيقي.
 
 **مؤجّل بطلب منك (27 أكتوبر):** النشر على السيرفر، وتشغيل الحملات فعليًا. القائمة في القسم 5 تحت «Deferred by the owner».
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #229 مدموج و`main` نضيف (المفتوح: #230)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #232 مدموج و`main` نضيف، ومفيش PR مفتوح؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -274,7 +275,7 @@ Then hard-refresh the browser (Ctrl+Shift+R). Being on another branch (e.g. an o
 
 **Deploy notes (new since #191):** 9 migrations, all additive except where noted — `20261027090000_lead_follow_ups`, `20261027150000_lost_reasons` (seeds reasons, backfills `lostAt`), `20261027180000_marketing_campaigns`, `20261028090000_lead_intake`, `20261028150000_follow_up_reminders`, `20261028180000_lead_contact_opened`, `20261028200000_lead_merged`, `20261028220000_auth_sessions`, `20261028230000_two_factor` (plus #199's, renamed to `20261029090000_data_migration` — see 2e — and MG2's additive `20261030090000_migration_mapping`). API env: `PUBLIC_API_URL` (the intake address shown to Zapier; falls back to `API_BASE_URL`); optional `FOLLOW_UP_REMINDERS_ENABLED`, `FOLLOW_UP_DIGEST_HOUR`; **`TOTP_ENCRYPTION_KEY`** (seals two-step secrets; if unset a key is derived from `JWT_REFRESH_SECRET`, and rotating that secret would then switch everyone's two-step sign-in off — set it once, before anyone turns 2FA on, and keep it).
 
-**Known limits:** two leads arriving at the same instant may go to the same rep; WhatsApp and phone leads are tied to a campaign by hand; a lead created by hand can still give a customer a second open lead (the duplicates tab catches it later; a warning at create time was offered, not yet asked for); web-public does not pass the browser's user agent, so customer sessions show the server's (customers have no devices page); the staff app's "open in authenticator app" was not tried on a real device.
+**Known limits:** two leads arriving at the same instant may go to the same rep; WhatsApp and phone leads are tied to a campaign by hand; a lead created by hand for a customer with an open lead now asks first (DUP2, #232), and the duplicates tab still catches older ones; web-public does not pass the browser's user agent, so customer sessions show the server's (customers have no devices page); the staff app's "open in authenticator app" was not tried on a real device.
 
 **Competitor-gap backlog:** done (#200–#206). Resale/rentals is the owner's call. Academy, jobs and a social timeline are not wanted.
 
@@ -331,7 +332,7 @@ Then hard-refresh the browser (Ctrl+Shift+R). Being on another branch (e.g. an o
 
 **Next (not started):** the same mapping on any Excel/CSV file from any system; later, if wanted, contracts/instalments/payments, and the reverse (a company taking its data out over the API).
 
-### 2g. #199, #210–#229 (2026-10-28 → 2026-11-01, other account)
+### 2g. #199, #210–#232 (2026-10-28 → 2026-11-01)
 
 | PR | Slice | Main points |
 |---|---|---|
@@ -356,10 +357,15 @@ Then hard-refresh the browser (Ctrl+Shift+R). Being on another branch (e.g. an o
 | #227 | Staff app | Campaigns: picker on a new lead, the campaign on the lead, managers' list and detail (read-only). |
 | #228 | Staff app | Duplicate leads: keep one and merge the others (admin, and a manager for their team). |
 | #229 | Staff app | «الأمان»: devices (sign out one / all others), two-step sign-in (turn on/off, recovery codes), password change. |
+| #230 | Staff app PRM | The app reads `GET /me/permissions` after sign-in/restore (cleared at sign-out; on failure the role alone decides). `StaffAccess` (`features/permissions/staff_permissions.dart`): «مراجعة الإيصالات» → `deposits:read:all`, «الشيكات» → `payment-instruments:manage` (admin or the code — a SALES_MANAGER does not start with it), «الحملات» → `campaigns:manage`. e2e PRM2c-5. |
+| #231 | Docs | This file after #229. |
+| #232 | DUP2 | Warning when a lead is added by hand for a customer who already has an open lead: `POST /leads` → 409 `OPEN_LEAD_EXISTS` with `leads[]` (id, stage, owner, createdAt); `allowDuplicate: true` adds it anyway and the `created` activity records `duplicateOf`. Never asked for a new customer or one whose leads are all WON/LOST; lead intake passes `allowDuplicate` (it handles returning customers itself). web-admin `components/crm/open-lead-warning.tsx`; staff app `open_lead_sheet.dart`. e2e `e2e-dup2-open-lead-warning`. Any new code that creates a second lead for a client on purpose must send `allowDuplicate: true`. |
 
 **Deploy notes (new since #206):** 3 more migrations — `20261029090000_data_migration`, `20261030090000_migration_mapping`, `20261101090000_cms_slug_per_company` (drops and creates indexes only). The data migration needs `PUBLIC_API_URL`. New e2e specs are in the CI e2e-2 list (`e2e-mg1`, `e2e-mg2`, `e2e-prm1`, `e2e-prm2a`–`e2e-prm2f`, `e2e-cms1-pages-banners`).
 
-**Not yet done:** the new staff-app screens were checked by tests and by rendering them, not on a real phone against a real server. Open: #230 (the staff app reads `/me/permissions`, so codes open its screens too).
+**Not yet done:** the new staff-app screens were checked by tests and by rendering them, not on a real phone against a real server. The DUP2 warning on the dashboard has no Playwright test. No PR is open.
+
+**Local-only test failures (not real):** security A9-2 needs MinIO; the e2e reservation race test in `e2e-maintenance` fails locally on clean `main` too. Both pass in CI.
 
 ## 3. Round 4 — the plan (U1–U4 done; U5 in progress)
 
@@ -647,7 +653,7 @@ Left for the owner, not in V1–V3:
 - **Leaderboard share:** a broker's share % is of the top 10 brokers only. This is the owner's call.
 - **Owner's own tasks:** hosting/deployment (deploys are manual — see 2c), `ANTHROPIC_API_KEY` and `SUPER_ADMIN_*` on the API host, Android keystore and Firebase secrets for company apps, restricting the Firebase API key, GitHub branch protection on `main`.
 - **Deferred by the owner (2026-10-27, «حطها في التأجيلات»):**
-  - Production deploy of everything since 2026-09-18 (#114–#229): take a backup first, run the migrations of 2b, 2c, 2d and 2g, then `pnpm db:schema-check`; then Actions → "CD — Deploy to Production".
+  - Production deploy of everything since 2026-09-18 (#114–#232): take a backup first, run the migrations of 2b, 2c, 2d and 2g, then `pnpm db:schema-check`; then Actions → "CD — Deploy to Production".
   - API env on the server: `PUBLIC_API_URL`, `ANTHROPIC_API_KEY`, `SUPER_ADMIN_*`, `TOTP_ENCRYPTION_KEY` (before anyone turns two-step sign-in on).
   - Campaigns go-live: check the company's website domain is set (ad links use it), connect a Zapier or Make account for Meta lead forms, then run a small test campaign and check its leads arrive.
 - Older backlog docs: `docs/BACKLOG.md`, `docs/EXECUTION_BACKLOG.md`, `docs/PROJECT_CURRENT_STATE.md` (may be behind this file).

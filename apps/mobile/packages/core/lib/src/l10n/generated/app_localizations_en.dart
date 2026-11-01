@@ -3833,4 +3833,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get securityPasswordChanged => 'Password changed';
+
+  @override
+  String get leadDupTitle => 'This customer already has an open lead';
+
+  @override
+  String get leadDupDesc =>
+      'A second lead splits their follow-up in two. Carry on with the open one, or add a new one if this is really a different request.';
+
+  @override
+  String get leadDupOwner => 'Owner';
+
+  @override
+  String get leadDupUnassigned => 'Unassigned';
+
+  @override
+  String get leadDupOpen => 'Open the lead';
+
+  @override
+  String get leadDupAnyway => 'Add a new lead anyway';
 }

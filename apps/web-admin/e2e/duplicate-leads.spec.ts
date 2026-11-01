@@ -18,7 +18,8 @@ test('a customer added twice is listed as a duplicate and merged into one lead',
   const name = `مكرر ${stamp}`;
   const phone = `+2012${stamp}`;
   for (let i = 0; i < 2; i++) {
-    const created = await request.post(`${API_BASE}/v1/leads`, { headers, data: { fullName: name, phone } });
+    // The second one is a duplicate on purpose (DUP2 would otherwise ask first).
+    const created = await request.post(`${API_BASE}/v1/leads`, { headers, data: { fullName: name, phone, allowDuplicate: true } });
     expect(created.ok(), await created.text()).toBe(true);
   }
 

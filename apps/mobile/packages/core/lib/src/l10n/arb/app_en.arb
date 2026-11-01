@@ -1326,5 +1326,12 @@
   "securityCurrentPassword": "Current password",
   "securityPasswordAgain": "Type the new password again",
   "securityPasswordMismatch": "The passwords don't match",
-  "securityPasswordChanged": "Password changed"
+  "securityPasswordChanged": "Password changed",
+
+  "leadDupTitle": "This customer already has an open lead",
+  "leadDupDesc": "A second lead splits their follow-up in two. Carry on with the open one, or add a new one if this is really a different request.",
+  "leadDupOwner": "Owner",
+  "leadDupUnassigned": "Unassigned",
+  "leadDupOpen": "Open the lead",
+  "leadDupAnyway": "Add a new lead anyway"
 }

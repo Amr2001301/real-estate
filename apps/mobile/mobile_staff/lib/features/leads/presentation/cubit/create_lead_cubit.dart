@@ -1,6 +1,8 @@
 import 'package:core/core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../data/dtos/lead_dtos.dart' show openLeadsOf;
+
 import '../../../campaigns/domain/campaign.dart';
 import '../../domain/entities/lead.dart';
 import '../../domain/repositories/leads_repository.dart';
@@ -24,6 +26,7 @@ class CreateLeadState extends Equatable {
     this.selectedClient,
     this.campaigns = const [],
     this.selectedCampaignId,
+    this.openLeads = const [],
   });
 
   final CreateLeadStatus status;
@@ -41,6 +44,9 @@ class CreateLeadState extends Equatable {
   final List<CampaignOption> campaigns;
   final String? selectedCampaignId;
 
+  /// DUP2 — the customer's open lead(s) when adding another was refused.
+  final List<OpenLeadRef> openLeads;
+
   CreateLeadState copyWith({
     CreateLeadStatus? status,
     Lead? created,
@@ -57,6 +63,7 @@ class CreateLeadState extends Equatable {
     List<CampaignOption>? campaigns,
     String? selectedCampaignId,
     bool clearCampaign = false,
+    List<OpenLeadRef>? openLeads,
   }) =>
       CreateLeadState(
         status: status ?? this.status,
@@ -73,6 +80,7 @@ class CreateLeadState extends Equatable {
             clearSelectedClient ? null : (selectedClient ?? this.selectedClient),
         campaigns: campaigns ?? this.campaigns,
         selectedCampaignId: clearCampaign ? null : (selectedCampaignId ?? this.selectedCampaignId),
+        openLeads: openLeads ?? this.openLeads,
       );
 
   @override
@@ -89,6 +97,7 @@ class CreateLeadState extends Equatable {
         selectedClient,
         campaigns,
         selectedCampaignId,
+        openLeads,
       ];
 }
 
@@ -171,9 +180,8 @@ class CreateLeadCubit extends Cubit<CreateLeadState> {
     String? projectInterestId,
     String? unitInterestId,
   }) async {
-    emit(state.copyWith(status: CreateLeadStatus.submitting));
     final isPick = state.clientMode == ClientPickerMode.pick;
-    final result = await _createLead(NewLead(
+    await _send(NewLead(
       clientId: isPick ? state.selectedClient?.id : null,
       fullName: isPick ? null : fullName,
       phone: isPick ? null : (phone?.isEmpty == true ? null : phone),
@@ -184,11 +192,29 @@ class CreateLeadCubit extends Cubit<CreateLeadState> {
       notes: notes?.isEmpty == true ? null : notes,
       campaignId: state.selectedCampaignId,
     ));
+  }
+
+  NewLead? _last;
+
+  /// DUP2 — the user saw the customer's open lead and adds another anyway.
+  Future<void> submitAnyway() async {
+    final last = _last;
+    if (last == null) return;
+    await _send(last.anyway());
+  }
+
+  Future<void> _send(NewLead input) async {
+    _last = input;
+    emit(state.copyWith(status: CreateLeadStatus.submitting, openLeads: const []));
+    final result = await _createLead(input);
     result.when(
       ok: (lead) =>
           emit(state.copyWith(status: CreateLeadStatus.success, created: lead)),
-      err: (failure) =>
-          emit(state.copyWith(status: CreateLeadStatus.failure, failure: failure)),
+      err: (failure) => emit(state.copyWith(
+        status: CreateLeadStatus.failure,
+        failure: failure,
+        openLeads: openLeadsOf(failure),
+      )),
     );
   }
 }

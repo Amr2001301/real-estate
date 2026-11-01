@@ -2,12 +2,22 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect, unstable_rethrow } from 'next/navigation';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import type { LeadCallResult, LeadFollowUpType, LeadNoteKind, LeadStage, LostReason } from '@/lib/types';
+
+/** DUP2 — the customer's open lead(s), when adding another was refused. */
+export interface OpenLeadRef {
+  id: string;
+  stage: string;
+  createdAt: string;
+  assignedSales: { id: string; fullName: string } | null;
+}
 
 export interface LeadFormState {
   error?: string;
   ok?: boolean;
+  /** The customer already has an open lead: what was sent, to add anyway. */
+  duplicate?: { leads: OpenLeadRef[]; payload: Record<string, unknown> };
 }
 
 export async function createLeadAction(
@@ -47,15 +57,28 @@ export async function createLeadAction(
     campaignId: (String(formData.get('campaignId') ?? '').trim() || undefined),
   };
 
+  return submitLead(payload);
+}
+
+/** DUP2 — the user saw the customer's open lead and chose to add another. */
+export async function createLeadAnywayAction(payload: Record<string, unknown>): Promise<LeadFormState> {
+  return submitLead({ ...payload, allowDuplicate: true });
+}
+
+async function submitLead(payload: Record<string, unknown>): Promise<LeadFormState> {
   let created;
   try {
     created = await api.post<{ id: string }>('/leads', payload);
   } catch (e) {
     unstable_rethrow(e);
+    const body = e instanceof ApiError ? (e.payload as { code?: string; leads?: OpenLeadRef[] } | undefined) : undefined;
+    if (e instanceof ApiError && e.status === 409 && body?.code === 'OPEN_LEAD_EXISTS') {
+      return { duplicate: { leads: body.leads ?? [], payload } };
+    }
     return { error: (e as Error).message };
   }
   revalidatePath('/dashboard/leads');
-  if (payload.clientId) revalidatePath(`/dashboard/clients/${payload.clientId}`);
+  if (typeof payload.clientId === 'string') revalidatePath(`/dashboard/clients/${payload.clientId}`);
   redirect(`/dashboard/leads/${created.id}`);
 }
 

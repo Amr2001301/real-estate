@@ -9,6 +9,7 @@ import '../../../campaigns/domain/campaign.dart';
 import '../../../campaigns/presentation/campaigns_screen.dart';
 import '../../domain/repositories/leads_repository.dart';
 import '../cubit/create_lead_cubit.dart';
+import 'open_lead_sheet.dart';
 
 class CreateLeadScreen extends StatefulWidget {
   const CreateLeadScreen({super.key, this.interestContext});
@@ -74,7 +75,13 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
               .showSnackBar(SnackBar(content: Text(l10n.leadCreated)));
           context.pop(true);
         } else if (state.status == CreateLeadStatus.failure) {
-          showFailureSnackBar(context, state.failure!);
+          // DUP2 — the customer already has an open lead: say which, and let
+          // them open it or add another anyway.
+          if (state.openLeads.isNotEmpty) {
+            showOpenLeadSheet(context, context.read<CreateLeadCubit>(), state.openLeads);
+          } else {
+            showFailureSnackBar(context, state.failure!);
+          }
         }
       },
       child: Scaffold(

@@ -32,6 +32,11 @@ export class CreateLeadDto {
   @IsOptional() @IsString() notes?: string;
   /** The marketing campaign that brought the lead. */
   @IsOptional() @IsUUID() campaignId?: string;
+  /**
+   * DUP2 — the customer already has an open lead: the create is refused with
+   * 409 OPEN_LEAD_EXISTS unless the caller saw that and chose to add anyway.
+   */
+  @IsOptional() @IsBoolean() allowDuplicate?: boolean;
 }
 
 export class UpdateLeadDto {

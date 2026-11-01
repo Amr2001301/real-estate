@@ -3791,4 +3791,23 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get securityPasswordChanged => 'كلمة المرور اتغيّرت';
+
+  @override
+  String get leadDupTitle => 'العميل ده عنده فرصة مفتوحة بالفعل';
+
+  @override
+  String get leadDupDesc =>
+      'إضافة فرصة تانية بتقسم متابعته بين فرصتين. كمّل على الموجودة، أو أضف جديدة لو ده طلب مختلف فعلًا.';
+
+  @override
+  String get leadDupOwner => 'المسؤول';
+
+  @override
+  String get leadDupUnassigned => 'بدون مسؤول';
+
+  @override
+  String get leadDupOpen => 'افتح الفرصة';
+
+  @override
+  String get leadDupAnyway => 'أضف فرصة جديدة على أي حال';
 }

@@ -111,6 +111,7 @@ class LeadsRemoteDataSourceImpl implements LeadsRemoteDataSource {
         'unitInterestId': ?input.unitInterestId,
         'notes': ?input.notes,
         'campaignId': ?input.campaignId,
+        if (input.allowDuplicate) 'allowDuplicate': true,
       },
     );
     return LeadRowDto.fromJson(res.data ?? const {});

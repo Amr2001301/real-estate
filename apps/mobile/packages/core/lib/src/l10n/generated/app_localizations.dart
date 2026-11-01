@@ -7195,6 +7195,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Password changed'**
   String get securityPasswordChanged;
+
+  /// No description provided for @leadDupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This customer already has an open lead'**
+  String get leadDupTitle;
+
+  /// No description provided for @leadDupDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'A second lead splits their follow-up in two. Carry on with the open one, or add a new one if this is really a different request.'**
+  String get leadDupDesc;
+
+  /// No description provided for @leadDupOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner'**
+  String get leadDupOwner;
+
+  /// No description provided for @leadDupUnassigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Unassigned'**
+  String get leadDupUnassigned;
+
+  /// No description provided for @leadDupOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the lead'**
+  String get leadDupOpen;
+
+  /// No description provided for @leadDupAnyway.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a new lead anyway'**
+  String get leadDupAnyway;
 }
 
 class _AppLocalizationsDelegate
