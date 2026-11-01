@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../permissions/staff_permissions.dart';
 import '../../../../common/role_label.dart';
 import '../../../auth/presentation/cubit/staff_auth_cubit.dart';
 import '../../../bonus/presentation/cubit/bonus_summary_cubit.dart';
@@ -52,7 +53,7 @@ class _StaffProfileScreenState extends State<StaffProfileScreen> {
     final bottomPad = MediaQuery.of(context).padding.bottom;
     final sessionRole = context.read<SessionCubit>().state.role;
     final canReviewPayments =
-        sessionRole == AppRole.admin || sessionRole == AppRole.salesManager;
+        StaffAccess.paymentsReview(sessionRole, context.watch<StaffPermissionsCubit>().state);
 
     return Scaffold(
       body: Column(
