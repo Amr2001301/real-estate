@@ -718,26 +718,47 @@ class _NextActionCard extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
         Container(
           key: const Key('lead-next-action'),
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
           decoration: BoxDecoration(
-            color: late ? colors.error.withValues(alpha: 0.06) : colors.surface,
+            color: late ? colors.error.withValues(alpha: 0.05) : colors.surface,
             borderRadius: BorderRadius.circular(AppRadii.lg),
-            border: Border.all(color: late ? colors.error.withValues(alpha: 0.3) : colors.hairline),
+            border: Border.all(color: late ? colors.error.withValues(alpha: 0.30) : colors.hairline),
           ),
-          child: at == null
-              ? Text(l10n.leadNextActionNone, style: text.bodySmall?.copyWith(color: colors.inkMuted))
-              : Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(noteKindIcon(type ?? 'FOLLOW_UP'), size: 20, color: late ? colors.error : noteKindColor(type ?? 'FOLLOW_UP')),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Column(
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  gradient: late
+                      ? null
+                      : const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [AppPalette.gold300, AppPalette.gold500],
+                        ),
+                  color: late ? colors.error : null,
+                  borderRadius: BorderRadius.circular(AppRadii.sm),
+                ),
+                child: Icon(
+                  at == null ? Icons.event_busy_rounded : noteKindIcon(type ?? 'FOLLOW_UP'),
+                  size: 18,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: at == null
+                    ? Text(l10n.leadNextActionNone, style: text.bodySmall?.copyWith(color: colors.inkMuted, height: 1.4))
+                    : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             '${noteKindLabel(l10n, type ?? 'FOLLOW_UP')} · ${followUpWhen(at, l10n, lang)}',
-                            style: text.titleSmall?.copyWith(color: late ? colors.error : colors.inkStrong),
+                            style: text.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: late ? colors.error : colors.inkStrong,
+                            ),
                           ),
                           if (note != null && note.isNotEmpty) ...[
                             const SizedBox(height: 2),
@@ -745,10 +766,13 @@ class _NextActionCard extends StatelessWidget {
                           ],
                         ],
                       ),
-                    ),
-                    if (late) StatusBadge(label: l10n.followUpsOverdue, tone: BadgeTone.error),
-                  ],
-                ),
+              ),
+              if (late) ...[
+                const SizedBox(width: AppSpacing.xs),
+                StatusBadge(label: l10n.followUpsOverdue, tone: BadgeTone.error),
+              ],
+            ],
+          ),
         ),
         const SizedBox(height: AppSpacing.sm),
         AppButton(

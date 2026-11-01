@@ -158,23 +158,26 @@ class _LogActivitySheetState extends State<LogActivitySheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(l10n.leadLogActivity, style: text.titleMedium),
+          Text(l10n.leadLogActivity, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 2),
+          Text(l10n.leadLogActivityHint, style: text.bodySmall?.copyWith(color: colors.inkMuted)),
           const SizedBox(height: AppSpacing.md),
 
           // ── What happened ──────────────────────────────────────────────
-          Text(l10n.activityWhatHappened, style: text.labelLarge),
+          _Label(l10n.activityWhatHappened),
           const SizedBox(height: AppSpacing.xs),
           Wrap(
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: [
               for (final k in kNoteKinds)
-                ChoiceChip(
+                _Pill(
                   key: ValueKey('kind-$k'),
-                  avatar: Icon(noteKindIcon(k), size: 16, color: noteKindColor(k)),
-                  label: Text(noteKindLabel(l10n, k)),
-                  selected: _kind == k,
-                  onSelected: (_) => setState(() => _kind = k),
+                  icon: noteKindIcon(k),
+                  iconColor: noteKindColor(k),
+                  label: noteKindLabel(l10n, k),
+                  active: _kind == k,
+                  onTap: () => setState(() => _kind = k),
                 ),
             ],
           ),
@@ -182,47 +185,46 @@ class _LogActivitySheetState extends State<LogActivitySheet> {
           // ── How the call went (calls only) ─────────────────────────────
           if (_kind == 'CALL') ...[
             const SizedBox(height: AppSpacing.md),
-            Text(l10n.callResultLabel, style: text.labelLarge),
+            _Label(l10n.callResultLabel),
             const SizedBox(height: AppSpacing.xs),
             Wrap(
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
               children: [
                 for (final r in kCallResults)
-                  ChoiceChip(
+                  _Pill(
                     key: ValueKey('result-$r'),
-                    label: Text(callResultLabel(l10n, r)),
-                    selected: _callResult == r,
-                    onSelected: (on) => setState(() => _callResult = on ? r : null),
+                    label: callResultLabel(l10n, r),
+                    active: _callResult == r,
+                    onTap: () => setState(() => _callResult = _callResult == r ? null : r),
                   ),
               ],
             ),
           ],
 
           const SizedBox(height: AppSpacing.md),
-          TextField(
+          AppTextField(
             key: const Key('activity-body'),
             controller: _body,
-            maxLength: 5000,
-            minLines: 2,
-            maxLines: 5,
-            decoration: InputDecoration(hintText: l10n.activityBodyHint, counterText: ''),
+            hint: l10n.activityBodyHint,
+            maxLines: 4,
           ),
 
           // ── The next follow-up ─────────────────────────────────────────
           const SizedBox(height: AppSpacing.md),
-          Text(l10n.leadNextAction, style: text.labelLarge),
+          _Label(l10n.leadNextAction),
           const SizedBox(height: AppSpacing.xs),
           Wrap(
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: [
               for (final p in presets)
-                ChoiceChip(
+                _Pill(
                   key: ValueKey('next-${p.name}'),
-                  label: Text(_presetLabel(l10n, p)),
-                  selected: _preset == p,
-                  onSelected: (_) {
+                  icon: p == _NextPreset.pick ? Icons.edit_calendar_rounded : null,
+                  label: _presetLabel(l10n, p),
+                  active: _preset == p,
+                  onTap: () {
                     if (p == _NextPreset.pick) {
                       _pickDateTime();
                     } else {
@@ -245,27 +247,28 @@ class _LogActivitySheetState extends State<LogActivitySheet> {
               ),
             ],
             const SizedBox(height: AppSpacing.sm),
-            Text(l10n.activityNextType, style: text.labelMedium),
+            _Label(l10n.activityNextType),
             const SizedBox(height: AppSpacing.xs),
             Wrap(
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
               children: [
                 for (final t in kNextActionTypes)
-                  ChoiceChip(
+                  _Pill(
                     key: ValueKey('next-type-$t'),
-                    label: Text(noteKindLabel(l10n, t)),
-                    selected: (_nextType ?? nextTypeFor(_kind)) == t,
-                    onSelected: (_) => setState(() => _nextType = t),
+                    icon: noteKindIcon(t),
+                    iconColor: noteKindColor(t),
+                    label: noteKindLabel(l10n, t),
+                    active: (_nextType ?? nextTypeFor(_kind)) == t,
+                    onTap: () => setState(() => _nextType = t),
                   ),
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
-            TextField(
+            AppTextField(
               key: const Key('next-note'),
               controller: _nextNote,
-              maxLength: 500,
-              decoration: InputDecoration(labelText: l10n.activityNextNote, counterText: ''),
+              hint: l10n.activityNextNote,
             ),
           ],
 
@@ -298,6 +301,77 @@ class _LogActivitySheetState extends State<LogActivitySheet> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A section label in the sheet, with the gold bar the lead screen uses.
+class _Label extends StatelessWidget {
+  const _Label(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          Container(
+            width: 3,
+            height: 14,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [AppPalette.gold300, AppPalette.gold500],
+              ),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(text, style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700)),
+        ],
+      );
+}
+
+/// The staff app's filter pill (navy when picked), as on the lists.
+class _Pill extends StatelessWidget {
+  const _Pill({super.key, required this.label, required this.active, required this.onTap, this.icon, this.iconColor});
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  final IconData? icon;
+  final Color? iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm + 4, vertical: 10),
+        decoration: BoxDecoration(
+          color: active ? colors.brandNavy : colors.surface,
+          borderRadius: AppRadii.pillAll,
+          border: Border.all(color: active ? colors.brandNavy : colors.hairline, width: active ? 0 : 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 15, color: active ? Colors.white : (iconColor ?? colors.inkMuted)),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                color: active ? Colors.white : colors.inkStrong,
+                height: 1.2,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

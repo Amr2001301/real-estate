@@ -10,7 +10,8 @@ import '../../../catalog/domain/entities/staff_project.dart';
 import '../../../catalog/presentation/cubit/staff_projects_cubit.dart';
 import '../../../notifications/presentation/widgets/notifications_bell.dart';
 import '../../../performance/presentation/cubit/target_summary_cubit.dart';
-import '../../../leads/presentation/widgets/follow_ups_focus_card.dart';
+import '../../../leads/domain/entities/lead.dart';
+import '../../../leads/domain/repositories/leads_repository.dart';
 import '../../domain/entities/sales_dashboard.dart';
 import '../cubit/dashboard_cubit.dart';
 
@@ -252,7 +253,7 @@ class _DashboardBody extends StatelessWidget {
           // ── 2. Today's priorities ─────────────────────────────────────
           AppSectionHeader(title: l10n.dashboardTodayFocus),
           const SizedBox(height: AppSpacing.xs),
-          const FollowUpsFocusCard(),
+          const _FollowUpsFocus(),
           _FocusSection(data: data, l10n: l10n, lang: lang, onSwitchTab: onSwitchTab),
           const SizedBox(height: AppSpacing.lg),
 
@@ -580,6 +581,54 @@ class _FocusSection extends StatelessWidget {
           _FocusItemCard(item: items[i]),
         ],
       ],
+    );
+  }
+}
+
+/// FU1 — «المتابعات» as the first of today's priorities: how many are late
+/// and due today (red when something is late). Loads its own counts; hidden
+/// until they arrive or when they can't.
+class _FollowUpsFocus extends StatefulWidget {
+  const _FollowUpsFocus();
+
+  @override
+  State<_FollowUpsFocus> createState() => _FollowUpsFocusState();
+}
+
+class _FollowUpsFocusState extends State<_FollowUpsFocus> {
+  FollowUpSummary? _summary;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final result = await context.read<LeadsRepository>().getFollowUpSummary();
+    if (mounted) setState(() => _summary = result.dataOrNull);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = _summary;
+    if (s == null) return const SizedBox.shrink();
+    final l10n = context.l10n;
+    return Padding(
+      key: const Key('follow-ups-focus'),
+      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+      child: _FocusItemCard(
+        item: _FocusData(
+          icon: Icons.event_repeat_rounded,
+          label: l10n.followUpsFocusLine(s.overdue, s.today),
+          chipLabel: l10n.followUpsTitle,
+          tone: s.overdue > 0 ? AppTone.error : AppTone.gold,
+          onTap: () async {
+            await context.push('/follow-ups');
+            if (mounted) _load();
+          },
+        ),
+      ),
     );
   }
 }
