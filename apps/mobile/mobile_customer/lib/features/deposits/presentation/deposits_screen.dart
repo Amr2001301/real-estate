@@ -527,6 +527,10 @@ class _DepositCard extends StatelessWidget {
       const Color(0xFF7A5C1E),
       const Color(0xFF4A3610),
     ],
+    DepositType.fee => [
+      const Color(0xFF7A2E1E),
+      const Color(0xFF3A1407),
+    ],
     DepositType.unknown => [_navyCard, _navyDeep],
   };
 
@@ -535,6 +539,7 @@ class _DepositCard extends StatelessWidget {
     DepositType.downPayment => AppPalette.gold300,
     DepositType.installment => const Color(0xFF93C5FD),
     DepositType.finalPayment => const Color(0xFFFBD27A),
+    DepositType.fee => const Color(0xFFFCA5A5),
     DepositType.unknown => AppPalette.gold300,
   };
 

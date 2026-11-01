@@ -3171,4 +3171,16 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get calendarNextWeek => 'الأسبوع الجاي';
+
+  @override
+  String get depositTypeFee => 'رسوم وغرامات';
+
+  @override
+  String get planTypeBouncePenalty => 'غرامة شيك مرتجع';
+
+  @override
+  String get planTypeLateFee => 'غرامة تأخير';
+
+  @override
+  String get planTypeTransferFee => 'رسوم تنازل';
 }

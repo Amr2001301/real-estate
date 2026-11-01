@@ -286,7 +286,8 @@ class _DepositTileState extends State<_DepositTile> {
         'DOWN_PAYMENT' => l10n.depositTypeDownPayment as String,
         'INSTALLMENT' => l10n.depositTypeInstallment as String,
         'FINAL_PAYMENT' => l10n.depositTypeFinal as String,
-        'BOOKING' => l10n.depositTypeBooking as String,
+        'BOOKING_AMOUNT' || 'BOOKING' => l10n.depositTypeBooking as String,
+        'FEE' => l10n.depositTypeFee as String,
         _ => type,
       };
 

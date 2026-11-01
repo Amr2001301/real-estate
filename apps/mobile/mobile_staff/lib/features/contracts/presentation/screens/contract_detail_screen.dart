@@ -577,6 +577,9 @@ class _InstallmentList extends StatelessWidget {
         'DOWN_PAYMENT' => l.depositTypeDownPayment,
         'INSTALLMENT'  => l.depositTypeInstallment,
         'FINAL_PAYMENT' => l.depositTypeFinal,
+        'BOUNCE_PENALTY' => l.planTypeBouncePenalty,
+        'LATE_FEE' => l.planTypeLateFee,
+        'TRANSFER_FEE' => l.planTypeTransferFee,
         _ => type,
       };
 

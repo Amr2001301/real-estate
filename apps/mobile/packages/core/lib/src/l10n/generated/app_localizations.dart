@@ -6085,6 +6085,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Next week'**
   String get calendarNextWeek;
+
+  /// No description provided for @depositTypeFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Fees & penalties'**
+  String get depositTypeFee;
+
+  /// No description provided for @planTypeBouncePenalty.
+  ///
+  /// In en, this message translates to:
+  /// **'Bounced-cheque penalty'**
+  String get planTypeBouncePenalty;
+
+  /// No description provided for @planTypeLateFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Late fee'**
+  String get planTypeLateFee;
+
+  /// No description provided for @planTypeTransferFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer fee'**
+  String get planTypeTransferFee;
 }
 
 class _AppLocalizationsDelegate
