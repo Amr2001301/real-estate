@@ -26,7 +26,8 @@ test('a client sees the reservation booked on their lead; the lead activity read
 
   const lead = await request.post(`${API_BASE}/v1/leads`, {
     headers,
-    data: { clientId: client.id, assignedSalesId: sales.id },
+    // An existing client may already have an open lead (DUP2): add anyway.
+    data: { clientId: client.id, assignedSalesId: sales.id, allowDuplicate: true },
   });
   expect(lead.ok(), await lead.text()).toBe(true);
   const leadId = ((await lead.json()) as { id: string }).id;
