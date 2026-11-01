@@ -1017,6 +1017,15 @@ class _SecondaryActionsGrid extends StatelessWidget {
             subtitle: l10n.campaignsSubtitle,
             onTap: () => context.push('/campaigns'),
           ),
+          const SizedBox(height: AppSpacing.sm),
+          // DUP1 — one customer with several open leads.
+          _ManagerActionCell(
+            key: const Key('dashboard-duplicates'),
+            icon: Icons.people_alt_rounded,
+            label: l10n.duplicatesTitle,
+            subtitle: l10n.duplicatesSubtitle,
+            onTap: () => context.push('/duplicates'),
+          ),
         ],
       ],
     );

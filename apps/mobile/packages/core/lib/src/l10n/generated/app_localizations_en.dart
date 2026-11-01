@@ -3647,4 +3647,67 @@ class AppLocalizationsEn extends AppLocalizations {
   String campaignUntil(String n) {
     return 'Until $n';
   }
+
+  @override
+  String get duplicatesTitle => 'Duplicate leads';
+
+  @override
+  String get duplicatesSubtitle =>
+      'One customer, several open leads — merge them';
+
+  @override
+  String get duplicatesHow =>
+      'Pick the lead to keep; the others merge into it with their notes, calls and visits. It takes what it lacks (campaign, source, project, owner, next follow-up) and the furthest stage reached.';
+
+  @override
+  String get duplicatesEmpty => 'No duplicate leads';
+
+  @override
+  String get duplicatesEmptyHint => 'Every customer has a single open lead.';
+
+  @override
+  String duplicatesOpenLeads(String n) {
+    return '$n open leads';
+  }
+
+  @override
+  String get duplicatesKeep => 'Keep';
+
+  @override
+  String get duplicatesMerge => 'Merge';
+
+  @override
+  String get duplicatesOwner => 'Owner';
+
+  @override
+  String get duplicatesUnassigned => 'Unassigned';
+
+  @override
+  String get duplicatesAdded => 'Added';
+
+  @override
+  String duplicatesActivities(String n) {
+    return '$n activities';
+  }
+
+  @override
+  String get duplicatesLocked =>
+      'Has a reservation or a broker — keep this one instead';
+
+  @override
+  String duplicatesMergeN(String n) {
+    return 'Merge $n into the kept lead';
+  }
+
+  @override
+  String get duplicatesConfirmTitle => 'Merge the leads?';
+
+  @override
+  String get duplicatesConfirmBody =>
+      'Their notes and history move to the kept lead, then they are removed.';
+
+  @override
+  String duplicatesMerged(String n) {
+    return '$n merged';
+  }
 }

@@ -11,6 +11,9 @@ import '../features/assistant/domain/assistant.dart';
 import '../features/assistant/presentation/assistant_cubit.dart';
 import '../features/assistant/presentation/assistant_screen.dart';
 import '../features/calendar/domain/calendar_event.dart';
+import '../features/duplicates/domain/duplicates.dart';
+import '../features/duplicates/presentation/duplicates_cubit.dart';
+import '../features/duplicates/presentation/duplicates_screen.dart';
 import '../features/campaigns/domain/campaign.dart';
 import '../features/campaigns/presentation/campaign_detail_screen.dart';
 import '../features/campaigns/presentation/campaigns_cubit.dart';
@@ -405,6 +408,15 @@ GoRouter createStaffRouter(
         builder: (context, state) => BlocProvider(
           create: (ctx) => CampaignDetailCubit(ctx.read<CampaignsRepository>(), id: state.pathParameters['id']!),
           child: CampaignDetailScreen(row: state.extra is Campaign ? state.extra as Campaign : null),
+        ),
+      ),
+
+      // ── Duplicate leads (DUP1): admin, sales manager over their team ─────
+      GoRoute(
+        path: '/duplicates',
+        builder: (context, state) => BlocProvider(
+          create: (ctx) => DuplicatesCubit(ctx.read<DuplicatesRepository>()),
+          child: const DuplicatesScreen(),
         ),
       ),
 
