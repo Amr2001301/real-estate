@@ -1,4 +1,4 @@
-# Handoff — where the work stands (2026-11-01, after #232)
+# Handoff — where the work stands (2026-11-01, after #233)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
@@ -43,20 +43,21 @@
 
 **بعد كده (28 أكتوبر، #198–#206):** القسم 2d. باختصار: تنبيهات المتابعة (FU2)، أزرار الاتصال والواتساب وإخفاء أرقام العملاء عن غير المسؤول (#200)، العملاء المكررين ودمجهم (#201)، التقويم بالزيارات والمتابعات وانتهاء الحجوزات وتوقيع العقود (#202)، الأجهزة المتصلة وتسجيل الخروج منها (#203)، التحقق بخطوتين بتطبيق مصادقة في لوحة التحكم (#204) وتطبيق الموظفين (#205)، وسبب الخسارة في تطبيق الموظفين (#206). كده قايمة المنافسين اللي اتفقنا عليها خلصت.
 
-**بعد كده (28 أكتوبر → 1 نوفمبر، #199 و#210–#232):** القسم **2g** تحت. باختصار:
+**بعد كده (28 أكتوبر → 1 نوفمبر، #199 و#210–#233):** القسم **2g** تحت. باختصار:
 - **نقل البيانات من نظام تاني (#199، #217):** نظام زي «إنجاز» يبعت بيانات شركة بالـ API بمفتاح، وشاشة عند السوبر أدمن تربط القيم اللي مش متعرّفة بقيمنا مرة واحدة لكل نظام (القسم 2f).
 - **الصلاحيات بقت بتفتح الصفحات (#210–#216):** الصلاحية هي اللي بتدخّل الموظف الصفحة، والصلاحيات الخطيرة للأدمن بس. صفحات الفلوس والتقارير والإدارة بتعرض الشركة كلها لمين ياخدها؛ المبيعات وبيانات العملاء بالفريق أو بتاعة المندوب. والمستندات وإجراءات الأدمن في الزيارات فضلت للأدمن (القسم 4c).
 - **لوحة التحكم والموقع:** القائمة الجانبية أقسام بتتفتح وتتقفل وفيها بحث، والإعدادات في صفحة واحدة (#218)؛ صفحات المحتوى والبانرات بقت تظهر على الموقع (#219)؛ استمارة الحجز للتوقيع الإلكتروني الـ API بقى هو اللي بيجهزها (#226).
 - **تطبيق الموظفين:** المتابعات (#220)، التقويم (#221)، أسماء الرسوم والغرامات بالعربي في التطبيقين (#222)، الشيكات وتسجيل الإيداع والصرف (#223، #224)، المساعد الذكي (#225)، إرسال استمارة الحجز للتوقيع (#226)، الحملات (#227)، العملاء المكررين (#228)، وصفحة «الأمان» (#229).
 - **الصلاحيات في تطبيق الموظفين (#230):** الكود بيفتح الصفحة في التطبيق زي لوحة التحكم بالظبط («مراجعة الإيصالات»، «الشيكات»، «الحملات»). اتصلّح فيه قبل الدمج إن مدير المبيعات كان شايف «الشيكات» من غير الكود.
 - **تحذير العميل المكرر (#232):** لما حد يضيف فرصة بإيده لعميل عنده فرصة مفتوحة، السيستم يقوله ويوريه الفرصة المفتوحة (المرحلة، المسؤول، التاريخ) ويسيبه يفتحها أو يضيف جديدة على أي حال — في لوحة التحكم وتطبيق الموظفين.
+- **مراجعة التطبيقين (1 نوفمبر):** كل الطلبات اللي التطبيقين بيبعتوها للـ API موجودة، والتستات كلها شغالة. اتصلح في #233: موافقة مدير المبيعات على حجوزات فريقه من تطبيق الموظفين، وميعاد التسليم وتأخيره في صفحة العقد في تطبيق العميل. **الباقي من المراجعة في القسم 2h** (مواصفات الوحدة في التطبيقين، وصفحات المحتوى في تطبيق العميل).
 - **ملحوظة:** شاشات الموبايل الجديدة اتختبرت بالاختبارات وبالرسم بس، ما اتجرّبتش على موبايل حقيقي.
 
 **مؤجّل بطلب منك (27 أكتوبر):** النشر على السيرفر، وتشغيل الحملات فعليًا. القائمة في القسم 5 تحت «Deferred by the owner».
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #232 مدموج و`main` نضيف، ومفيش PR مفتوح؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #233 مدموج و`main` نضيف، ومفيش PR مفتوح؛ **ابدأ بالقسم 2h**؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -365,9 +366,26 @@ Then hard-refresh the browser (Ctrl+Shift+R). Being on another branch (e.g. an o
 
 **Deploy notes (new since #206):** 3 more migrations — `20261029090000_data_migration`, `20261030090000_migration_mapping`, `20261101090000_cms_slug_per_company` (drops and creates indexes only). The data migration needs `PUBLIC_API_URL`. New e2e specs are in the CI e2e-2 list (`e2e-mg1`, `e2e-mg2`, `e2e-prm1`, `e2e-prm2a`–`e2e-prm2f`, `e2e-cms1-pages-banners`).
 
-**Not yet done:** the new staff-app screens were checked by tests and by rendering them, not on a real phone against a real server. The DUP2 warning on the dashboard has no Playwright test. No PR is open.
+**Not yet done:** the new staff-app screens were checked by tests and by rendering them, not on a real phone against a real server. The DUP2 warning on the dashboard has no Playwright test. No PR is open after #233.
 
 **Local-only test failures (not real):** security A9-2 needs MinIO; the e2e reservation race test in `e2e-maintenance` fails locally on clean `main` too. Both pass in CI.
+
+**Before pushing mobile changes, also run `flutter test` in `packages/core`:** its `l10n_completeness_test` fails when a parameterised ARB key has `@key` placeholder metadata in English but not in Arabic (both files need it). Add new ARB keys by appending text, not by re-dumping the JSON (that reformats the whole file).
+
+### 2h. Next up — mobile catch-up (from the 2026-11-01 check)
+
+The owner asked whether the two apps keep up with the dashboard and the website. Checked: every endpoint the apps call exists in the API (56 customer, 104 staff); all tests and `flutter analyze` pass; payment states (cheque waiting, reversed, bounced) show right in the customer app. Fixed in #233: manager reservation approval (staff app) and handover dates (customer app). **Left, in this order** — one PR each, owner approves each merge:
+
+1. **Unit specs in both apps' catalog.** The website shows them (`apps/web-public/src/components/units/UnitSpecs.tsx`, labels in its `src/messages`); neither app does. Fields: `netArea`, `gardenArea`, `roofArea`, `terraceArea`, `landArea`, `finishing`, `view`, `orientation`, and the handover date (`deliveryDate` on the public unit = `effectiveDeliveryDate`).
+   - Customer app: `GET /public/units` and `/public/units/:id` (serialized by `apps/api/src/modules/units/public-unit.serializer.ts`, which already includes them). Data source: `mobile_customer/lib/features/catalog/data/datasources/catalog_remote_data_source.dart`.
+   - Staff app: `GET /units` and `/units/:id` (full unit, plus `effectiveDeliveryDate`). Data source: `mobile_staff/lib/features/catalog/data/datasources/staff_catalog_remote_data_source.dart`.
+   - Show only the specs a unit has (as `UnitSpecs.tsx` does); finishing/view/orientation values need ar/en labels in `packages/core` ARB files (copy the website's wording).
+2. **Content pages and banners in the customer app** (#219 on the website): `GET /public/banners`, `/public/pages`, `/public/pages/:slug` (`apps/api/src/modules/cms/cms.module.ts`). Banners on the home screen; pages from the account/profile menu.
+3. **Optional:** the customer's contract page could link to an account statement; today `GET /contracts/:id/statement` is staff-only.
+
+**Important before shipping new app builds:** production has not been deployed since 2026-09-18 (deferred by the owner). New app builds call endpoints the old server lacks (`/me/permissions`, follow-ups, two-step sign-in, …), so the apps must ship together with, or after, the server deploy.
+
+**Other open items the owner has not decided yet** (ask before starting): settings API accepts any key — limit to `known-settings.ts` (small, no decision needed); `VERCEL_*` missing from `apps/api/.env.example` (small); chasing an unsigned contract's due rows; counting a MANUAL cancellation's commission/bonus as a possible liability; showing the customer's national ID/address/extra fields to the broker; e-signing the contract itself (large).
 
 ## 3. Round 4 — the plan (U1–U4 done; U5 in progress)
 
