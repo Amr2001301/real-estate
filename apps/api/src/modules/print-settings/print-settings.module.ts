@@ -7,5 +7,6 @@ import { FormLayoutsService } from '../form-layouts/form-layouts.service';
 @Module({
   controllers: [PrintSettingsController, DocumentTemplatesController, FormLayoutsController],
   providers: [PrintSettingsService, FormLayoutsService],
+  exports: [PrintSettingsService, FormLayoutsService],
 })
 export class PrintSettingsModule {}

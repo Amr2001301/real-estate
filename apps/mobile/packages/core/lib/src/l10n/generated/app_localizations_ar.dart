@@ -3352,4 +3352,95 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get assistantErrorRate =>
       'أسئلة كتير في وقت قصير — استنى دقيقة وجرّب تاني.';
+
+  @override
+  String get signTitle => 'توقيع العميل';
+
+  @override
+  String get signNotSent => 'لسه ما اتبعتش للتوقيع';
+
+  @override
+  String get signNotSentHint =>
+      'ابعت نموذج الحجز للعميل يمضي عليه من موبايله: هيوصله كود على رقمه ويمضي بإيده.';
+
+  @override
+  String get signStatePending => 'مستني توقيع العميل';
+
+  @override
+  String get signStateSigned => 'العميل مضى';
+
+  @override
+  String get signStateExpired => 'اللينك انتهى';
+
+  @override
+  String get signStateCancelled => 'الطلب اتلغى';
+
+  @override
+  String signCodeTo(String phone) {
+    return 'الكود بيروح على $phone';
+  }
+
+  @override
+  String signExpires(String when) {
+    return 'اللينك شغال لحد $when';
+  }
+
+  @override
+  String signSignedBy(String name, String when) {
+    return 'مضى باسم $name — $when';
+  }
+
+  @override
+  String signSentAt(String when) {
+    return 'اتبعت $when';
+  }
+
+  @override
+  String get signOutdated =>
+      'الحجز اتغيّر بعد ما العميل مضى — التوقيع على نسخة أقدم. ابعت لينك جديد.';
+
+  @override
+  String get signSend => 'ابعت للتوقيع';
+
+  @override
+  String get signSendNew => 'ابعت لينك جديد';
+
+  @override
+  String get signCancel => 'إلغاء الطلب';
+
+  @override
+  String get signNewLinkTitle => 'تبعت لينك جديد؟';
+
+  @override
+  String get signNewLinkBody => 'اللينك اللي اتبعت قبل كده هيبطّل يشتغل.';
+
+  @override
+  String get signCancelTitle => 'تلغي طلب التوقيع؟';
+
+  @override
+  String get signCancelBody => 'اللينك اللي مع العميل هيبطّل يشتغل.';
+
+  @override
+  String get signCancelConfirm => 'إلغاء الطلب';
+
+  @override
+  String get signLinkReady => 'لينك التوقيع جاهز';
+
+  @override
+  String get signLinkHint =>
+      'ابعته للعميل دلوقتي — اللينك مش هيظهر تاني، وشغال 72 ساعة.';
+
+  @override
+  String get signCopy => 'نسخ';
+
+  @override
+  String get signCopied => 'اتنسخ اللينك';
+
+  @override
+  String get signShare => 'مشاركة';
+
+  @override
+  String signShareMessage(String name, String url) {
+    return 'أهلاً $name، ده لينك نموذج الحجز عشان تراجعه وتمضي عليه:\n$url';
+  }
 }

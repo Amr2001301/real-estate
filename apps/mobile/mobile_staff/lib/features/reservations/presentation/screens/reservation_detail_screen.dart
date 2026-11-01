@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../common/reservation_status_label.dart';
+import '../../../e_sign/presentation/signature_section.dart';
 import '../../domain/entities/reservation.dart';
 import '../cubit/reservation_detail_cubit.dart';
 
@@ -232,6 +233,13 @@ class _SuccessBody extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.md),
             ],
+
+            // ── Customer signature (P5): send the booking form to sign ──────
+            SignatureSection(
+              reservationId: r.id,
+              bookingStatus: r.status,
+              customerName: r.clientName,
+            ),
 
             // ── Add note ────────────────────────────────────────────────────
             _SectionLabel(l10n.leadAddNote),

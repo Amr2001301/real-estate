@@ -15,6 +15,12 @@ import type { AuthUser } from '../../common/decorators/current-user.decorator';
 import { assertSalesRecordInScope } from '../../common/utils/sales-scope';
 import { imageExtension, imageSize } from '../../common/utils/report-brand';
 import { SmsService } from '../auth/sms.service';
+import { CompanyBrandingService } from '../company-branding/company-branding.service';
+import { CustomerFieldsService } from '../customer-fields/customer-fields.service';
+import { FormLayoutsService } from '../form-layouts/form-layouts.service';
+import { PrintSettingsService } from '../print-settings/print-settings.service';
+import { ReservationsService } from '../reservations/reservations.module';
+import { pickForm, pickTemplate, reservationSnapshot } from './document/booking-document';
 import type { CreateSignatureRequestDto, SignDocumentDto } from './dto/e-sign.dto';
 
 /** How long a signing link stays open. */
@@ -69,6 +75,11 @@ export class ESignService {
     private readonly prisma: PrismaService,
     private readonly sms: SmsService,
     private readonly config: ConfigService,
+    private readonly reservations: ReservationsService,
+    private readonly branding: CompanyBrandingService,
+    private readonly printSettings: PrintSettingsService,
+    private readonly formLayouts: FormLayoutsService,
+    private readonly customerFields: CustomerFieldsService,
   ) {}
 
   // ── Staff ─────────────────────────────────────────────────────────────────
@@ -132,7 +143,8 @@ export class ESignService {
     }
     if (!phone) throw new BadRequestException('لا يوجد رقم هاتف للعميل — أضفه أولاً ليصله كود التأكيد');
 
-    const snapshotJson = canonicalJson(dto.snapshot);
+    const snapshot = await this.bookingDocument(reservationId, companyId, dto.locale ?? 'ar');
+    const snapshotJson = canonicalJson(snapshot);
     if (Buffer.byteLength(snapshotJson) > SNAPSHOT_MAX_BYTES) throw new BadRequestException('المستند أكبر من المسموح');
 
     const token = randomBytes(32).toString('base64url');
@@ -150,7 +162,7 @@ export class ESignService {
           tokenHash: sha256(token),
           expiresAt,
           phone,
-          snapshot: dto.snapshot as object,
+          snapshot: snapshot as object,
           snapshotHash: sha256(snapshotJson),
           sourceHash: fingerprint,
           createdById: user.sub,
@@ -162,6 +174,32 @@ export class ESignService {
       // The link is only ever shown here: only its hash is kept.
       url: `${await this.siteUrl(companyId)}/sign/${token}`,
     };
+  }
+
+  /**
+   * The booking form as it prints, from the same records the dashboard reads
+   * (taken through JSON, as the dashboard receives them): the company's
+   * letterhead, the default booking wording and paper form, its own fields.
+   */
+  private async bookingDocument(reservationId: string, companyId: string, locale: 'ar' | 'en') {
+    const json = <T>(v: unknown): T => JSON.parse(JSON.stringify(v)) as T;
+    const [reservation, letterhead, paper, templates, forms, fields] = await Promise.all([
+      this.reservations.findOne(reservationId),
+      this.branding.getLetterhead(companyId),
+      this.printSettings.get(),
+      this.printSettings.listTemplates('RESERVATION'),
+      this.formLayouts.list('RESERVATION'),
+      this.customerFields.list(),
+    ]);
+    return reservationSnapshot(
+      json(reservation),
+      json(letterhead),
+      json(paper),
+      pickTemplate(json(templates)),
+      locale,
+      json(fields),
+      pickForm(json(forms)),
+    );
   }
 
   private state(r: SignatureRequest): RequestState {
