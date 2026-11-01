@@ -19,6 +19,8 @@ class ReservationDto {
     this.projectName,
     this.unitCode,
     this.bookingAmount,
+    this.salesId,
+    this.salesName,
   });
 
   final String id;
@@ -31,6 +33,8 @@ class ReservationDto {
   final String? projectName;
   final String? unitCode;
   final String? bookingAmount;
+  final String? salesId;
+  final String? salesName;
 
   factory ReservationDto.fromJson(Map<String, dynamic> json) {
     final unit = json['unit'] as Map<String, dynamic>?;
@@ -47,6 +51,8 @@ class ReservationDto {
       projectName: _projectName(unit),
       unitCode: unit?['code'] as String?,
       bookingAmount: json['bookingAmount']?.toString(),
+      salesId: (json['salesId'] as String?) ?? ((json['sales'] as Map<String, dynamic>?)?['id'] as String?),
+      salesName: (json['sales'] as Map<String, dynamic>?)?['fullName'] as String?,
     );
   }
 }

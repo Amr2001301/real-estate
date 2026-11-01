@@ -9,6 +9,8 @@ abstract interface class ReservationsRemoteDataSource {
   Future<ReservationDetailDto> getOne(String id);
   Future<ReservationDto> create(NewReservation input);
   Future<void> addNote(String id, String body);
+  Future<void> approve(String id);
+  Future<void> reject(String id, String? reason);
 }
 
 class ReservationsRemoteDataSourceImpl implements ReservationsRemoteDataSource {
@@ -60,5 +62,15 @@ class ReservationsRemoteDataSourceImpl implements ReservationsRemoteDataSource {
   @override
   Future<void> addNote(String id, String body) async {
     await _dio.post<Map<String, dynamic>>('/reservations/$id/notes', data: {'body': body});
+  }
+
+  @override
+  Future<void> approve(String id) async {
+    await _dio.post<dynamic>('/reservations/$id/approve', data: const <String, dynamic>{});
+  }
+
+  @override
+  Future<void> reject(String id, String? reason) async {
+    await _dio.post<dynamic>('/reservations/$id/reject', data: {'reason': ?reason});
   }
 }

@@ -15,6 +15,8 @@ extension ReservationDtoMapper on ReservationDto {
         projectName: projectName,
         unitCode: unitCode,
         bookingAmount: bookingAmount,
+        salesId: salesId,
+        salesName: salesName,
       );
 }
 

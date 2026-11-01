@@ -42,3 +42,26 @@ class AddReservationNote implements UseCase<void, AddReservationNoteParams> {
   Future<Result<void>> call(AddReservationNoteParams params) =>
       _repo.addNote(params.id, params.body);
 }
+
+class ApproveReservation implements UseCase<void, String> {
+  const ApproveReservation(this._repo);
+  final ReservationsRepository _repo;
+
+  @override
+  Future<Result<void>> call(String id) => _repo.approve(id);
+}
+
+class RejectReservationParams {
+  const RejectReservationParams({required this.id, this.reason});
+  final String id;
+  final String? reason;
+}
+
+class RejectReservation implements UseCase<void, RejectReservationParams> {
+  const RejectReservation(this._repo);
+  final ReservationsRepository _repo;
+
+  @override
+  Future<Result<void>> call(RejectReservationParams params) =>
+      _repo.reject(params.id, reason: params.reason);
+}

@@ -8,6 +8,7 @@ import '../../../../common/reservation_status_label.dart';
 import '../../../e_sign/presentation/signature_section.dart';
 import '../../domain/entities/reservation.dart';
 import '../cubit/reservation_detail_cubit.dart';
+import 'reservation_decision_card.dart';
 
 const _navyDeep = Color(0xFF0B1726);
 const _navyMid  = Color(0xFF14273F);
@@ -57,9 +58,20 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
         backgroundColor: context.appColors.canvas,
         body: BlocConsumer<ReservationDetailCubit, ReservationDetailState>(
           listenWhen: (a, b) =>
-              a.actionFailure != b.actionFailure && b.actionFailure != null,
-          listener: (context, state) =>
-              showFailureSnackBar(context, state.actionFailure!),
+              (a.actionFailure != b.actionFailure && b.actionFailure != null) ||
+              (a.decided != b.decided && b.decided != null),
+          listener: (context, state) {
+            if (state.decided != null && state.actionFailure == null) {
+              final l10n = context.l10n;
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(state.decided == 'APPROVED'
+                    ? l10n.reservationApprovedDone
+                    : l10n.reservationRejectedDone),
+              ));
+              return;
+            }
+            showFailureSnackBar(context, state.actionFailure!);
+          },
           builder: (context, state) {
             final topInset = MediaQuery.paddingOf(context).top;
             Widget body;
@@ -230,6 +242,21 @@ class _SuccessBody extends StatelessWidget {
                         languageCode: lang),
                   if (detail.planName != null) detail.planName!,
                 ].join('  ·  '),
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+
+            // ── Approve / reject (the admin, or the rep's manager) ──────────
+            if (canDecideReservation(
+              r,
+              role: context.read<SessionCubit>().state.role,
+              userId: context.read<SessionCubit>().state.sessionOrNull?.userId,
+            )) ...[
+              ReservationDecisionCard(
+                reservation: r,
+                working: state.working,
+                onApprove: () => context.read<ReservationDetailCubit>().approve(),
+                onReject: (reason) => context.read<ReservationDetailCubit>().reject(reason),
               ),
               const SizedBox(height: AppSpacing.md),
             ],

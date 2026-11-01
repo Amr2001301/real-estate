@@ -14,4 +14,8 @@ abstract interface class ReservationsRepository {
   Future<Result<ReservationDetail>> getReservation(String id);
   Future<Result<Reservation>> createReservation(NewReservation input);
   Future<Result<void>> addNote(String id, String body);
+
+  /// The admin, or the rep's sales manager (never on their own booking).
+  Future<Result<void>> approve(String id);
+  Future<Result<void>> reject(String id, {String? reason});
 }

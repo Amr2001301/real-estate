@@ -3810,4 +3810,37 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get leadDupAnyway => 'أضف فرصة جديدة على أي حال';
+
+  @override
+  String get reservationDecideTitle => 'مستني موافقتك';
+
+  @override
+  String get reservationDecideDesc =>
+      'الموافقة بتسمح إن الحجز يكمل لعقد، والرفض بيرجّع الوحدة متاحة.';
+
+  @override
+  String reservationBookedBy(String name) {
+    return 'حجز بواسطة $name';
+  }
+
+  @override
+  String get reservationApprove => 'موافقة';
+
+  @override
+  String get reservationReject => 'رفض';
+
+  @override
+  String get reservationApproveConfirm => 'توافق على الحجز ده؟';
+
+  @override
+  String get reservationRejectTitle => 'رفض الحجز';
+
+  @override
+  String get reservationRejectReasonHint => 'السبب (هيظهر للمندوب)';
+
+  @override
+  String get reservationApprovedDone => 'تمت الموافقة على الحجز';
+
+  @override
+  String get reservationRejectedDone => 'تم رفض الحجز';
 }

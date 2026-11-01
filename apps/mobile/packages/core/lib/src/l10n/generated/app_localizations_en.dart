@@ -3852,4 +3852,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get leadDupAnyway => 'Add a new lead anyway';
+
+  @override
+  String get reservationDecideTitle => 'Waiting for your approval';
+
+  @override
+  String get reservationDecideDesc =>
+      'Approving lets the booking go on to a contract. Rejecting frees the unit.';
+
+  @override
+  String reservationBookedBy(String name) {
+    return 'Booked by $name';
+  }
+
+  @override
+  String get reservationApprove => 'Approve';
+
+  @override
+  String get reservationReject => 'Reject';
+
+  @override
+  String get reservationApproveConfirm => 'Approve this reservation?';
+
+  @override
+  String get reservationRejectTitle => 'Reject the reservation';
+
+  @override
+  String get reservationRejectReasonHint => 'Reason (the rep sees it)';
+
+  @override
+  String get reservationApprovedDone => 'Reservation approved';
+
+  @override
+  String get reservationRejectedDone => 'Reservation rejected';
 }
