@@ -9,7 +9,7 @@ import '../../../../common/staff_list_skeleton.dart';
 import '../../domain/entities/lead.dart';
 import '../cubit/lead_detail_cubit.dart';
 import '../follow_up_labels.dart';
-import 'log_activity_sheet.dart';
+import 'log_activity_screen.dart';
 import 'lost_reason_sheet.dart';
 
 class LeadDetailScreen extends StatefulWidget {
@@ -151,7 +151,7 @@ class _Body extends StatelessWidget {
         _NextActionCard(
           lead: lead,
           working: state.working,
-          onLog: () => showLogActivitySheet(context, cubit, currentNext: lead.nextActionAt),
+          onLog: () => openLogActivity(context, cubit, leadName: lead.fullName, currentNext: lead.nextActionAt),
         ),
 
         const SizedBox(height: AppSpacing.lg),

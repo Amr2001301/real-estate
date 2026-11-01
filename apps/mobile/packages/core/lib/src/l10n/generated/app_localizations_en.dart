@@ -3122,7 +3122,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activityNextIn1h => 'In an hour';
 
   @override
-  String get activityNextTomorrow => 'Tomorrow 10 AM';
+  String get activityNextTomorrow => 'Tomorrow';
 
   @override
   String get activityNextIn3Days => 'In 3 days';
@@ -3153,4 +3153,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noteReplySend => 'Send';
+
+  @override
+  String get activitySectionWhatSubtitle =>
+      'The kind of activity, and how a call went';
+
+  @override
+  String get activitySectionDetails => 'Details';
+
+  @override
+  String get activitySectionDetailsSubtitle =>
+      'What happened and what you agreed';
+
+  @override
+  String get activitySectionNextSubtitle =>
+      'When will you contact the customer again?';
+
+  @override
+  String get activityNextSet => 'Set a time';
+
+  @override
+  String get activityNextWhen => 'When';
 }

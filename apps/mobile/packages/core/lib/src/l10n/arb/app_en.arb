@@ -1091,7 +1091,7 @@
   "activityNextKeep": "Keep as is",
   "activityNextNone": "No follow-up",
   "activityNextIn1h": "In an hour",
-  "activityNextTomorrow": "Tomorrow 10 AM",
+  "activityNextTomorrow": "Tomorrow",
   "activityNextIn3Days": "In 3 days",
   "activityNextWeek": "In a week",
   "activityNextPick": "Other time…",
@@ -1101,5 +1101,11 @@
   "activitySave": "Save activity",
   "noteReply": "Reply",
   "noteReplyHint": "Write a reply…",
-  "noteReplySend": "Send"
+  "noteReplySend": "Send",
+  "activitySectionWhatSubtitle": "The kind of activity, and how a call went",
+  "activitySectionDetails": "Details",
+  "activitySectionDetailsSubtitle": "What happened and what you agreed",
+  "activitySectionNextSubtitle": "When will you contact the customer again?",
+  "activityNextSet": "Set a time",
+  "activityNextWhen": "When"
 }

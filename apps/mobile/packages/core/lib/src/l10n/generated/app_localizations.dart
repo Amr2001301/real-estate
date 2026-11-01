@@ -5927,7 +5927,7 @@ abstract class AppLocalizations {
   /// No description provided for @activityNextTomorrow.
   ///
   /// In en, this message translates to:
-  /// **'Tomorrow 10 AM'**
+  /// **'Tomorrow'**
   String get activityNextTomorrow;
 
   /// No description provided for @activityNextIn3Days.
@@ -5989,6 +5989,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Send'**
   String get noteReplySend;
+
+  /// No description provided for @activitySectionWhatSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The kind of activity, and how a call went'**
+  String get activitySectionWhatSubtitle;
+
+  /// No description provided for @activitySectionDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get activitySectionDetails;
+
+  /// No description provided for @activitySectionDetailsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What happened and what you agreed'**
+  String get activitySectionDetailsSubtitle;
+
+  /// No description provided for @activitySectionNextSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When will you contact the customer again?'**
+  String get activitySectionNextSubtitle;
+
+  /// No description provided for @activityNextSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a time'**
+  String get activityNextSet;
+
+  /// No description provided for @activityNextWhen.
+  ///
+  /// In en, this message translates to:
+  /// **'When'**
+  String get activityNextWhen;
 }
 
 class _AppLocalizationsDelegate

@@ -3091,7 +3091,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get activityNextIn1h => 'بعد ساعة';
 
   @override
-  String get activityNextTomorrow => 'بكرة 10 الصبح';
+  String get activityNextTomorrow => 'بكرة';
 
   @override
   String get activityNextIn3Days => 'بعد 3 أيام';
@@ -3122,4 +3122,22 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get noteReplySend => 'إرسال';
+
+  @override
+  String get activitySectionWhatSubtitle => 'نوع التواصل، ولو مكالمة: نتيجتها';
+
+  @override
+  String get activitySectionDetails => 'التفاصيل';
+
+  @override
+  String get activitySectionDetailsSubtitle => 'اللي حصل واللي اتفقتوا عليه';
+
+  @override
+  String get activitySectionNextSubtitle => 'إمتى هتتواصل مع العميل تاني؟';
+
+  @override
+  String get activityNextSet => 'حدد ميعاد';
+
+  @override
+  String get activityNextWhen => 'الميعاد';
 }

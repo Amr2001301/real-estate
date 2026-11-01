@@ -1083,7 +1083,7 @@
   "activityNextKeep": "سيبها زي ما هي",
   "activityNextNone": "من غير متابعة",
   "activityNextIn1h": "بعد ساعة",
-  "activityNextTomorrow": "بكرة 10 الصبح",
+  "activityNextTomorrow": "بكرة",
   "activityNextIn3Days": "بعد 3 أيام",
   "activityNextWeek": "بعد أسبوع",
   "activityNextPick": "ميعاد تاني…",
@@ -1093,5 +1093,11 @@
   "activitySave": "حفظ التواصل",
   "noteReply": "رد",
   "noteReplyHint": "اكتب رد…",
-  "noteReplySend": "إرسال"
+  "noteReplySend": "إرسال",
+  "activitySectionWhatSubtitle": "نوع التواصل، ولو مكالمة: نتيجتها",
+  "activitySectionDetails": "التفاصيل",
+  "activitySectionDetailsSubtitle": "اللي حصل واللي اتفقتوا عليه",
+  "activitySectionNextSubtitle": "إمتى هتتواصل مع العميل تاني؟",
+  "activityNextSet": "حدد ميعاد",
+  "activityNextWhen": "الميعاد"
 }

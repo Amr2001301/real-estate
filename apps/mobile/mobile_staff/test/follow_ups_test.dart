@@ -9,7 +9,7 @@ import 'package:mobile_staff/features/leads/domain/usecases/lead_use_cases.dart'
 import 'package:mobile_staff/features/leads/presentation/cubit/follow_ups_cubit.dart';
 import 'package:mobile_staff/features/leads/presentation/cubit/lead_detail_cubit.dart';
 import 'package:mobile_staff/features/leads/presentation/follow_up_labels.dart';
-import 'package:mobile_staff/features/leads/presentation/screens/log_activity_sheet.dart';
+import 'package:mobile_staff/features/leads/presentation/screens/log_activity_screen.dart';
 import 'package:mobile_staff/features/notifications/presentation/notification_route.dart';
 
 /// FU1 in the staff app: logging what happened with a lead (kind, call
@@ -206,7 +206,7 @@ void main() {
     });
   });
 
-  group('LogActivitySheet', () {
+  group('LogActivityScreen', () {
     // A fixed "now": Sunday 1 Nov 2026, 13:00.
     DateTime now() => DateTime(2026, 11, 1, 13);
 
@@ -215,25 +215,35 @@ void main() {
           locale: const Locale('ar'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: LogActivitySheet(cubit: cubit, currentNext: currentNext, now: now),
-            ),
-          ),
+          home: LogActivityScreen(cubit: cubit, leadName: 'Mona', currentNext: currentNext, now: now),
         );
+
+    // The form is a scrolling list: bring a control into view before tapping.
+    Future<void> reveal(WidgetTester tester, Finder f) async {
+      if (f.evaluate().isEmpty) {
+        // Back to the top, then down until it is built.
+        await tester.drag(find.byType(Scrollable).first, const Offset(0, 4000));
+        await tester.pumpAndSettle();
+        if (f.evaluate().isEmpty) {
+          await tester.scrollUntilVisible(f, 200, scrollable: find.byType(Scrollable).first);
+        }
+      }
+      await tester.ensureVisible(f);
+      await tester.pumpAndSettle();
+    }
 
     Future<void> tapKey(WidgetTester tester, String key) async {
       final f = find.byKey(ValueKey(key));
-      await tester.ensureVisible(f);
+      await reveal(tester, f);
       await tester.tap(f);
       await tester.pumpAndSettle();
     }
 
-    // Saving shows a spinner until the sheet closes (it has no route to close
+    // Saving shows a spinner until the screen closes (it has no route to close
     // here), so wait a moment rather than for every animation to end.
     Future<void> save(WidgetTester tester) async {
       final f = find.byKey(const ValueKey('activity-save'));
-      await tester.ensureVisible(f);
+      await reveal(tester, f);
       await tester.tap(f);
       await tester.pump(const Duration(milliseconds: 100));
     }
@@ -248,9 +258,11 @@ void main() {
       expect(repo.notes, isEmpty);
 
       await tapKey(tester, 'result-NO_ANSWER');
+      await reveal(tester, find.byKey(const Key('activity-body')));
       await tester.enterText(find.byKey(const Key('activity-body')), 'مردّش، هكلمه بكرة');
       await tester.pumpAndSettle();
-      await tapKey(tester, 'next-tomorrow');
+      // "Set a time" starts on tomorrow at 10.
+      await tapKey(tester, 'next-set');
       expect(find.byKey(const Key('next-when')), findsOneWidget);
       await save(tester);
 
@@ -271,8 +283,10 @@ void main() {
       await tapKey(tester, 'kind-MEETING');
       expect(find.byKey(const ValueKey('result-ANSWERED')), findsNothing);
 
+      await reveal(tester, find.byKey(const Key('activity-body')));
       await tester.enterText(find.byKey(const Key('activity-body')), 'قابلته في الموقع');
       await tester.pumpAndSettle();
+      await tapKey(tester, 'next-set');
       await tapKey(tester, 'next-week');
       await save(tester);
       final note = repo.notes.single;
@@ -286,6 +300,7 @@ void main() {
       final repo = _Repo();
       await tester.pumpWidget(host(_detailCubit(repo), currentNext: DateTime(2026, 11, 3, 10)));
       await tester.pumpAndSettle();
+      await reveal(tester, find.byKey(const Key('activity-body')));
       await tester.enterText(find.byKey(const Key('activity-body')), 'ملاحظة');
       await tester.pumpAndSettle();
       await save(tester);
@@ -296,6 +311,7 @@ void main() {
       final repo = _Repo();
       await tester.pumpWidget(host(_detailCubit(repo), currentNext: DateTime(2026, 11, 3, 10)));
       await tester.pumpAndSettle();
+      await reveal(tester, find.byKey(const Key('activity-body')));
       await tester.enterText(find.byKey(const Key('activity-body')), 'خلاص اشترى من مكان تاني');
       await tester.pumpAndSettle();
       await tapKey(tester, 'next-none');
