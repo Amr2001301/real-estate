@@ -3669,4 +3669,126 @@ class AppLocalizationsAr extends AppLocalizations {
   String duplicatesMerged(String n) {
     return 'اتدمج $n';
   }
+
+  @override
+  String get securityDevices => 'الأجهزة';
+
+  @override
+  String get securityDevicesHint =>
+      'الأجهزة اللي داخلة على حسابك دلوقتي. لو في جهاز مش بتاعك اخرج منه وغيّر كلمة المرور.';
+
+  @override
+  String get securityThisDevice => 'الجهاز ده';
+
+  @override
+  String securityLastSeen(String when) {
+    return 'آخر استخدام $when';
+  }
+
+  @override
+  String get securityDeviceIphone => 'آيفون';
+
+  @override
+  String get securityDeviceAndroid => 'أندرويد';
+
+  @override
+  String get securityDeviceBrowser => 'متصفح';
+
+  @override
+  String get securityDeviceUnknown => 'جهاز';
+
+  @override
+  String securityBrowserOn(String browser, String os) {
+    return '$browser على $os';
+  }
+
+  @override
+  String get securitySignOut => 'خروج';
+
+  @override
+  String get securitySignOutTitle => 'تخرج من الجهاز ده؟';
+
+  @override
+  String securitySignOutBody(String device) {
+    return '$device هيتطلب منه يسجّل دخول تاني.';
+  }
+
+  @override
+  String get securitySignedOut => 'اتعمل خروج من الجهاز';
+
+  @override
+  String get securitySignOutOthers => 'اخرج من كل الأجهزة التانية';
+
+  @override
+  String get securitySignOutOthersTitle => 'تخرج من كل الأجهزة التانية؟';
+
+  @override
+  String get securitySignOutOthersBody =>
+      'كل الأجهزة غير الموبايل ده هيتطلب منها تسجّل دخول تاني.';
+
+  @override
+  String securitySignedOutOthers(String n) {
+    return 'اتعمل خروج من $n جهاز';
+  }
+
+  @override
+  String get securityOn => 'شغّال';
+
+  @override
+  String get securityOff => 'مقفول';
+
+  @override
+  String get securityTfaHint =>
+      'كود من تطبيق المصادقة مع كلمة المرور كل مرة تسجّل دخول.';
+
+  @override
+  String get securityTfaRequired =>
+      'شركتك بتطلب التحقق بخطوتين، فمينفعش يتقفل.';
+
+  @override
+  String get securityTfaTurnOn => 'شغّل التحقق بخطوتين';
+
+  @override
+  String get securityTfaTurnOff => 'اقفله';
+
+  @override
+  String get securityTfaSetupHint =>
+      'ضيف المفتاح ده في تطبيق المصادقة (Google Authenticator أو Microsoft Authenticator)، وبعدين اكتب الكود اللي هيظهر.';
+
+  @override
+  String get securityTfaOffBody =>
+      'اكتب كلمة المرور وكود من التطبيق عشان تقفل التحقق بخطوتين.';
+
+  @override
+  String get securityTfaOffDone => 'التحقق بخطوتين اتقفل';
+
+  @override
+  String securityRecoveryLeft(String n) {
+    return 'فاضل $n كود احتياطي';
+  }
+
+  @override
+  String get securityNewCodes => 'أكواد احتياطية جديدة';
+
+  @override
+  String get securityNewCodesBody =>
+      'الأكواد القديمة هتبطّل. اكتب كود من التطبيق عشان تطلع أكواد جديدة.';
+
+  @override
+  String get securityPasswordHint => 'كلمة مرور قوية من 8 حروف على الأقل.';
+
+  @override
+  String get securityChangePassword => 'غيّر كلمة المرور';
+
+  @override
+  String get securityCurrentPassword => 'كلمة المرور الحالية';
+
+  @override
+  String get securityPasswordAgain => 'اكتب كلمة المرور الجديدة تاني';
+
+  @override
+  String get securityPasswordMismatch => 'كلمتين المرور مش زي بعض';
+
+  @override
+  String get securityPasswordChanged => 'كلمة المرور اتغيّرت';
 }

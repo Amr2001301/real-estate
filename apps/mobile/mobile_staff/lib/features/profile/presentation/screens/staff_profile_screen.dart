@@ -1019,7 +1019,8 @@ class _SettingsServicesCard extends StatelessWidget {
         label: l10n.settingsSecurity,
         subtitle: '',
         navyStyle: true,
-        onTap: () => _showComingSoon(context),
+        // SES1 / TFA1 — devices, two-step sign-in, password.
+        onTap: () => context.push('/security'),
       ),
       _SItem(
         icon: Icons.help_outline_rounded,
