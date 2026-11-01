@@ -3607,4 +3607,66 @@ class AppLocalizationsAr extends AppLocalizations {
   String campaignUntil(String n) {
     return 'لحد $n';
   }
+
+  @override
+  String get duplicatesTitle => 'العملاء المكررين';
+
+  @override
+  String get duplicatesSubtitle => 'نفس العميل بأكتر من فرصة مفتوحة — ادمجهم';
+
+  @override
+  String get duplicatesHow =>
+      'اختار الفرصة اللي تفضل، والباقي يتدمج فيها بكل ملاحظاته ومكالماته وزياراته. الفرصة اللي بتفضل بتاخد اللي ناقصها (الحملة، المصدر، المشروع، المسؤول، المتابعة الجاية) وأبعد مرحلة وصلوا لها.';
+
+  @override
+  String get duplicatesEmpty => 'مفيش عملاء مكررين';
+
+  @override
+  String get duplicatesEmptyHint => 'كل عميل ليه فرصة مفتوحة واحدة.';
+
+  @override
+  String duplicatesOpenLeads(String n) {
+    return '$n فرص مفتوحة';
+  }
+
+  @override
+  String get duplicatesKeep => 'تفضل';
+
+  @override
+  String get duplicatesMerge => 'تتدمج';
+
+  @override
+  String get duplicatesOwner => 'المسؤول';
+
+  @override
+  String get duplicatesUnassigned => 'مش متوزعة';
+
+  @override
+  String get duplicatesAdded => 'اتضافت';
+
+  @override
+  String duplicatesActivities(String n) {
+    return '$n نشاط';
+  }
+
+  @override
+  String get duplicatesLocked =>
+      'فيها حجز أو وسيط — مش بتتدمج، خليها هي اللي تفضل';
+
+  @override
+  String duplicatesMergeN(String n) {
+    return 'ادمج $n في اللي بتفضل';
+  }
+
+  @override
+  String get duplicatesConfirmTitle => 'تدمج الفرص؟';
+
+  @override
+  String get duplicatesConfirmBody =>
+      'ملاحظاتها وسجلها هيتنقلوا للفرصة اللي بتفضل، وبعدين تتمسح.';
+
+  @override
+  String duplicatesMerged(String n) {
+    return 'اتدمج $n';
+  }
 }

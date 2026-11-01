@@ -6883,6 +6883,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Until {n}'**
   String campaignUntil(String n);
+
+  /// No description provided for @duplicatesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicate leads'**
+  String get duplicatesTitle;
+
+  /// No description provided for @duplicatesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'One customer, several open leads — merge them'**
+  String get duplicatesSubtitle;
+
+  /// No description provided for @duplicatesHow.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the lead to keep; the others merge into it with their notes, calls and visits. It takes what it lacks (campaign, source, project, owner, next follow-up) and the furthest stage reached.'**
+  String get duplicatesHow;
+
+  /// No description provided for @duplicatesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No duplicate leads'**
+  String get duplicatesEmpty;
+
+  /// No description provided for @duplicatesEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Every customer has a single open lead.'**
+  String get duplicatesEmptyHint;
+
+  /// No description provided for @duplicatesOpenLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} open leads'**
+  String duplicatesOpenLeads(String n);
+
+  /// No description provided for @duplicatesKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep'**
+  String get duplicatesKeep;
+
+  /// No description provided for @duplicatesMerge.
+  ///
+  /// In en, this message translates to:
+  /// **'Merge'**
+  String get duplicatesMerge;
+
+  /// No description provided for @duplicatesOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner'**
+  String get duplicatesOwner;
+
+  /// No description provided for @duplicatesUnassigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Unassigned'**
+  String get duplicatesUnassigned;
+
+  /// No description provided for @duplicatesAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Added'**
+  String get duplicatesAdded;
+
+  /// No description provided for @duplicatesActivities.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} activities'**
+  String duplicatesActivities(String n);
+
+  /// No description provided for @duplicatesLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Has a reservation or a broker — keep this one instead'**
+  String get duplicatesLocked;
+
+  /// No description provided for @duplicatesMergeN.
+  ///
+  /// In en, this message translates to:
+  /// **'Merge {n} into the kept lead'**
+  String duplicatesMergeN(String n);
+
+  /// No description provided for @duplicatesConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Merge the leads?'**
+  String get duplicatesConfirmTitle;
+
+  /// No description provided for @duplicatesConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Their notes and history move to the kept lead, then they are removed.'**
+  String get duplicatesConfirmBody;
+
+  /// No description provided for @duplicatesMerged.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} merged'**
+  String duplicatesMerged(String n);
 }
 
 class _AppLocalizationsDelegate
