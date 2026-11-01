@@ -1333,5 +1333,20 @@
   "leadDupOwner": "Owner",
   "leadDupUnassigned": "Unassigned",
   "leadDupOpen": "Open the lead",
-  "leadDupAnyway": "Add a new lead anyway"
+  "leadDupAnyway": "Add a new lead anyway",
+  "reservationDecideTitle": "Waiting for your approval",
+  "reservationDecideDesc": "Approving lets the booking go on to a contract. Rejecting frees the unit.",
+  "reservationBookedBy": "Booked by {name}",
+  "@reservationBookedBy": {"placeholders": {"name": {"type": "String"}}},
+  "reservationApprove": "Approve",
+  "reservationReject": "Reject",
+  "reservationApproveConfirm": "Approve this reservation?",
+  "reservationRejectTitle": "Reject the reservation",
+  "reservationRejectReasonHint": "Reason (the rep sees it)",
+  "reservationApprovedDone": "Reservation approved",
+  "reservationRejectedDone": "Reservation rejected",
+  "contractDeliveryPromised": "Handover in the contract",
+  "contractDeliveryExpected": "Expected handover now",
+  "contractDeliveryLate": "{days} days late",
+  "@contractDeliveryLate": {"placeholders": {"days": {"type": "int"}}}
 }

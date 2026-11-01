@@ -14,6 +14,8 @@ class Reservation extends Equatable {
     this.projectName,
     this.unitCode,
     this.bookingAmount,
+    this.salesId,
+    this.salesName,
   });
 
   final String id;
@@ -27,8 +29,12 @@ class Reservation extends Equatable {
   final String? unitCode;
   final String? bookingAmount;
 
+  /// The rep the reservation is booked by; a manager decides only on others'.
+  final String? salesId;
+  final String? salesName;
+
   @override
-  List<Object?> get props => [id, status, reservationNumber, expiresAt, createdAt];
+  List<Object?> get props => [id, status, reservationNumber, expiresAt, createdAt, salesId];
 }
 
 /// One entry on a reservation timeline (note or activity).

@@ -1325,5 +1325,20 @@
   "leadDupOwner": "المسؤول",
   "leadDupUnassigned": "بدون مسؤول",
   "leadDupOpen": "افتح الفرصة",
-  "leadDupAnyway": "أضف فرصة جديدة على أي حال"
+  "leadDupAnyway": "أضف فرصة جديدة على أي حال",
+  "reservationDecideTitle": "مستني موافقتك",
+  "reservationDecideDesc": "الموافقة بتسمح إن الحجز يكمل لعقد، والرفض بيرجّع الوحدة متاحة.",
+  "reservationBookedBy": "حجز بواسطة {name}",
+  "@reservationBookedBy": {"placeholders": {"name": {"type": "String"}}},
+  "reservationApprove": "موافقة",
+  "reservationReject": "رفض",
+  "reservationApproveConfirm": "توافق على الحجز ده؟",
+  "reservationRejectTitle": "رفض الحجز",
+  "reservationRejectReasonHint": "السبب (هيظهر للمندوب)",
+  "reservationApprovedDone": "تمت الموافقة على الحجز",
+  "reservationRejectedDone": "تم رفض الحجز",
+  "contractDeliveryPromised": "ميعاد التسليم في العقد",
+  "contractDeliveryExpected": "ميعاد التسليم المتوقع حاليًا",
+  "contractDeliveryLate": "متأخر {days} يوم",
+  "@contractDeliveryLate": {"placeholders": {"days": {"type": "int"}}}
 }

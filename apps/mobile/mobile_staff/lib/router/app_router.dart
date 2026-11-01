@@ -661,6 +661,8 @@ GoRouter createStaffRouter(
                 GetReservationDetail(repo),
                 AddReservationNote(repo),
                 reservationId: id,
+                approve: ApproveReservation(repo),
+                reject: RejectReservation(repo),
               );
             },
             child: ReservationDetailScreen(fallback: reservation),

@@ -424,6 +424,46 @@ class _SummaryCard extends StatelessWidget {
                 ],
               ),
             ],
+            // F10 — until the handover: the date the contract promised and,
+            // when it slipped, the one expected now.
+            if (contract.handedOverAt == null && contract.deliveryDate != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                key: const ValueKey('contract-delivery-promised'),
+                children: [
+                  Icon(Icons.key_rounded, size: 14, color: colors.inkMuted),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      '${l10n.contractDeliveryPromised}: '
+                      '${DateFormatter.mediumDate(contract.deliveryDate!, languageCode: lang)}',
+                      style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted),
+                    ),
+                  ),
+                ],
+              ),
+              if (contract.deliveryDelayDays > 0 && contract.expectedDeliveryDate != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Row(
+                  key: const ValueKey('contract-delivery-late'),
+                  children: [
+                    const Icon(Icons.schedule_rounded, size: 14, color: Color(0xFFB45309)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '${l10n.contractDeliveryExpected}: '
+                        '${DateFormatter.mediumDate(contract.expectedDeliveryDate!, languageCode: lang)}'
+                        ' · ${l10n.contractDeliveryLate(contract.deliveryDelayDays)}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: const Color(0xFFB45309),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
           ],
         ),
       ),

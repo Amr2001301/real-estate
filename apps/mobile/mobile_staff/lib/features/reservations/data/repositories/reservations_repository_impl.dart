@@ -31,4 +31,11 @@ class ReservationsRepositoryImpl implements ReservationsRepository {
   Future<Result<void>> addNote(String id, String body) {
     return guardApiCall(() => _remote.addNote(id, body));
   }
+
+  @override
+  Future<Result<void>> approve(String id) => guardApiCall(() => _remote.approve(id));
+
+  @override
+  Future<Result<void>> reject(String id, {String? reason}) =>
+      guardApiCall(() => _remote.reject(id, reason));
 }

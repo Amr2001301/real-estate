@@ -7231,6 +7231,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add a new lead anyway'**
   String get leadDupAnyway;
+
+  /// No description provided for @reservationDecideTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for your approval'**
+  String get reservationDecideTitle;
+
+  /// No description provided for @reservationDecideDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Approving lets the booking go on to a contract. Rejecting frees the unit.'**
+  String get reservationDecideDesc;
+
+  /// No description provided for @reservationBookedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Booked by {name}'**
+  String reservationBookedBy(String name);
+
+  /// No description provided for @reservationApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get reservationApprove;
+
+  /// No description provided for @reservationReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get reservationReject;
+
+  /// No description provided for @reservationApproveConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve this reservation?'**
+  String get reservationApproveConfirm;
+
+  /// No description provided for @reservationRejectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject the reservation'**
+  String get reservationRejectTitle;
+
+  /// No description provided for @reservationRejectReasonHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason (the rep sees it)'**
+  String get reservationRejectReasonHint;
+
+  /// No description provided for @reservationApprovedDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation approved'**
+  String get reservationApprovedDone;
+
+  /// No description provided for @reservationRejectedDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation rejected'**
+  String get reservationRejectedDone;
+
+  /// No description provided for @contractDeliveryPromised.
+  ///
+  /// In en, this message translates to:
+  /// **'Handover in the contract'**
+  String get contractDeliveryPromised;
+
+  /// No description provided for @contractDeliveryExpected.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected handover now'**
+  String get contractDeliveryExpected;
+
+  /// No description provided for @contractDeliveryLate.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days late'**
+  String contractDeliveryLate(int days);
 }
 
 class _AppLocalizationsDelegate

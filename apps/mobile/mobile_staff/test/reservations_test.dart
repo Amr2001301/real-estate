@@ -27,6 +27,10 @@ class _FakeRemote implements ReservationsRemoteDataSource {
   Future<ReservationDto> create(NewReservation input) async => rows.first;
   @override
   Future<void> addNote(String id, String body) async {}
+  @override
+  Future<void> approve(String id) async {}
+  @override
+  Future<void> reject(String id, String? reason) async {}
 }
 
 class _FakeRepo implements ReservationsRepository {
@@ -40,6 +44,10 @@ class _FakeRepo implements ReservationsRepository {
   Future<Result<Reservation>> createReservation(NewReservation input) async => throw UnimplementedError();
   @override
   Future<Result<void>> addNote(String id, String body) async => const Ok(null);
+  @override
+  Future<Result<void>> approve(String id) async => const Ok(null);
+  @override
+  Future<Result<void>> reject(String id, {String? reason}) async => const Ok(null);
 }
 
 Map<String, dynamic> _row({String status = 'PENDING'}) => {
