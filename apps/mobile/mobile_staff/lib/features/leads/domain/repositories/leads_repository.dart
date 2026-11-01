@@ -89,7 +89,9 @@ abstract interface class LeadsRepository {
   Future<Result<LeadDetail>> getLead(String id);
   Future<Result<void>> updateStage(String id, String stage, {String? reason, String? lostReasonId, String? lostNote});
   Future<Result<List<LostReason>>> getLostReasons();
-  Future<Result<void>> addNote(String id, String body);
+  Future<Result<void>> addNote(String id, LeadNoteInput input);
+  Future<Result<Paginated<FollowUp>>> getFollowUps(FollowUpBucket bucket, {int page = 1});
+  Future<Result<FollowUpSummary>> getFollowUpSummary();
   Future<Result<Lead>> createLead(NewLead input);
   Future<Result<List<LeadSource>>> getSources();
   Future<Result<List<ClientSearchResult>>> searchClients(String q);

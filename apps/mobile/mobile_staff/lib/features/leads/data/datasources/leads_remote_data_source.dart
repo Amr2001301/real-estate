@@ -1,6 +1,7 @@
 import 'package:core/core_domain.dart';
 import 'package:dio/dio.dart';
 
+import '../../domain/entities/lead.dart';
 import '../../domain/repositories/leads_repository.dart';
 import '../dtos/lead_dtos.dart';
 
@@ -10,7 +11,12 @@ abstract interface class LeadsRemoteDataSource {
   Future<void> updateStage(String id, String stage, String? reason, {String? lostReasonId, String? lostNote});
   /// The company's active lost reasons (GET /leads/lost-reasons).
   Future<List<LostReasonDto>> listLostReasons();
-  Future<void> addNote(String id, String body);
+  /// Logs an activity (or a reply) on the lead — FU1.
+  Future<void> addNote(String id, LeadNoteInput input);
+  /// FU1 — one follow-up list (overdue / today / upcoming), a page at a time.
+  Future<Paginated<FollowUpRowDto>> listFollowUps(FollowUpBucket bucket, {int page = 1});
+  /// FU1 — how many leads wait in each list.
+  Future<FollowUpSummaryDto> followUpSummary();
   Future<LeadRowDto> create(NewLead input);
   Future<List<LeadSourceDto>> listSources();
   Future<List<ClientSearchDto>> searchClients(String q);
@@ -78,11 +84,37 @@ class LeadsRemoteDataSourceImpl implements LeadsRemoteDataSource {
   }
 
   @override
-  Future<void> addNote(String id, String body) async {
+  Future<void> addNote(String id, LeadNoteInput input) async {
     await _dio.post<Map<String, dynamic>>(
       '/leads/$id/notes',
-      data: {'body': body},
+      data: input.toJson(),
     );
+  }
+
+  @override
+  Future<Paginated<FollowUpRowDto>> listFollowUps(FollowUpBucket bucket, {int page = 1}) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/leads/follow-ups',
+      queryParameters: {'bucket': bucket.wire, 'page': page, 'pageSize': 20},
+    );
+    final json = res.data ?? const <String, dynamic>{};
+    final items = (json['data'] as List? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(FollowUpRowDto.fromJson)
+        .toList();
+    final meta = PageMeta(
+      page: (json['page'] as num?)?.toInt() ?? page,
+      pageSize: (json['pageSize'] as num?)?.toInt() ?? 20,
+      total: (json['total'] as num?)?.toInt() ?? items.length,
+      totalPages: (json['totalPages'] as num?)?.toInt() ?? 1,
+    );
+    return Paginated(data: items, meta: meta);
+  }
+
+  @override
+  Future<FollowUpSummaryDto> followUpSummary() async {
+    final res = await _dio.get<Map<String, dynamic>>('/leads/follow-ups/summary');
+    return FollowUpSummaryDto.fromJson(res.data ?? const {});
   }
 
   @override

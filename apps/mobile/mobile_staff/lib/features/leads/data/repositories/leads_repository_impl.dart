@@ -38,8 +38,24 @@ class LeadsRepositoryImpl implements LeadsRepository {
   }
 
   @override
-  Future<Result<void>> addNote(String id, String body) {
-    return guardApiCall(() => _remote.addNote(id, body));
+  Future<Result<void>> addNote(String id, LeadNoteInput input) {
+    return guardApiCall(() => _remote.addNote(id, input));
+  }
+
+  @override
+  Future<Result<Paginated<FollowUp>>> getFollowUps(FollowUpBucket bucket, {int page = 1}) {
+    return guardApiCall(() async {
+      final paged = await _remote.listFollowUps(bucket, page: page);
+      return paged.map((r) => r.toEntity());
+    });
+  }
+
+  @override
+  Future<Result<FollowUpSummary>> getFollowUpSummary() {
+    return guardApiCall(() async {
+      final dto = await _remote.followUpSummary();
+      return FollowUpSummary(overdue: dto.overdue, today: dto.today, upcoming: dto.upcoming);
+    });
   }
 
   @override

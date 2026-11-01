@@ -88,12 +88,22 @@ class LeadDetailCubit extends Cubit<LeadDetailState> {
     await _afterAction(result);
   }
 
-  Future<void> addNote(String body) async {
-    if (state.working || body.trim().isEmpty) return;
+  /// A plain note.
+  Future<void> addNote(String body) => logActivity(LeadNoteInput(body: body));
+
+  /// FU1 — logs what happened (a call and how it went, a meeting, a WhatsApp
+  /// chat, a note) and the next follow-up. Returns whether it was saved.
+  Future<bool> logActivity(LeadNoteInput input) async {
+    if (state.working || input.body.trim().isEmpty) return false;
     emit(state.copyWith(working: true, clearActionFailure: true));
-    final result = await _addNote(AddLeadNoteParams(id: leadId, body: body.trim()));
+    final result = await _addNote(AddLeadNoteParams(id: leadId, input: input));
     await _afterAction(result);
+    return result.failureOrNull == null;
   }
+
+  /// FU1 — a reply under one of the lead's notes (text only).
+  Future<bool> reply(String parentId, String body) =>
+      logActivity(LeadNoteInput.reply(parentId: parentId, body: body.trim()));
 
   Future<void> _afterAction(Result<void> result) async {
     final failure = result.failureOrNull;

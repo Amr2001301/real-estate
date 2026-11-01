@@ -3018,4 +3018,160 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get leadLostReasonLabel => 'Lost reason';
+
+  @override
+  String get followUpsTitle => 'Follow-ups';
+
+  @override
+  String get followUpsHint =>
+      'Customers due a call: overdue first, then today, then upcoming.';
+
+  @override
+  String get followUpsOverdue => 'Overdue';
+
+  @override
+  String get followUpsToday => 'Today';
+
+  @override
+  String get followUpsUpcoming => 'Upcoming';
+
+  @override
+  String get followUpsEmptyOverdue => 'No overdue follow-ups — great work.';
+
+  @override
+  String get followUpsEmptyToday => 'No follow-ups left today.';
+
+  @override
+  String get followUpsEmptyUpcoming => 'No upcoming follow-ups.';
+
+  @override
+  String get followUpsEmptyHint =>
+      'Set the next follow-up whenever you log an activity on a customer.';
+
+  @override
+  String followUpsFocusLine(int overdue, int today) {
+    return '$overdue overdue · $today today';
+  }
+
+  @override
+  String get followUpsLastActivity => 'Last activity';
+
+  @override
+  String get followUpsNoActivity => 'No activity yet';
+
+  @override
+  String get leadNextAction => 'Next follow-up';
+
+  @override
+  String get leadNextActionNone =>
+      'No follow-up set — pick a time when you log the next activity.';
+
+  @override
+  String get leadLogActivity => 'Log activity';
+
+  @override
+  String get leadLogActivityHint =>
+      'A call, a meeting, a WhatsApp chat or a note — with the next follow-up.';
+
+  @override
+  String get noteKindNote => 'Note';
+
+  @override
+  String get noteKindCall => 'Call';
+
+  @override
+  String get noteKindMeeting => 'Meeting';
+
+  @override
+  String get noteKindWhatsapp => 'WhatsApp';
+
+  @override
+  String get noteKindFollowUp => 'Follow-up';
+
+  @override
+  String get callResultLabel => 'Call result';
+
+  @override
+  String get callResultAnswered => 'Answered';
+
+  @override
+  String get callResultNoAnswer => 'No answer';
+
+  @override
+  String get callResultBusy => 'Busy';
+
+  @override
+  String get callResultUnreachable => 'Unreachable';
+
+  @override
+  String get callResultWrongNumber => 'Wrong number';
+
+  @override
+  String get activityWhatHappened => 'What happened?';
+
+  @override
+  String get activityBodyHint => 'Write what happened and what you agreed…';
+
+  @override
+  String get activityNextKeep => 'Keep as is';
+
+  @override
+  String get activityNextNone => 'No follow-up';
+
+  @override
+  String get activityNextIn1h => 'In an hour';
+
+  @override
+  String get activityNextTomorrow => 'Tomorrow';
+
+  @override
+  String get activityNextIn3Days => 'In 3 days';
+
+  @override
+  String get activityNextWeek => 'In a week';
+
+  @override
+  String get activityNextPick => 'Other time…';
+
+  @override
+  String get activityNextType => 'Type';
+
+  @override
+  String get activityNextNote => 'Note for the follow-up (optional)';
+
+  @override
+  String get activityPastDate => 'Pick a time in the future';
+
+  @override
+  String get activitySave => 'Save activity';
+
+  @override
+  String get noteReply => 'Reply';
+
+  @override
+  String get noteReplyHint => 'Write a reply…';
+
+  @override
+  String get noteReplySend => 'Send';
+
+  @override
+  String get activitySectionWhatSubtitle =>
+      'The kind of activity, and how a call went';
+
+  @override
+  String get activitySectionDetails => 'Details';
+
+  @override
+  String get activitySectionDetailsSubtitle =>
+      'What happened and what you agreed';
+
+  @override
+  String get activitySectionNextSubtitle =>
+      'When will you contact the customer again?';
+
+  @override
+  String get activityNextSet => 'Set a time';
+
+  @override
+  String get activityNextWhen => 'When';
 }

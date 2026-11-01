@@ -46,6 +46,9 @@ class LeadRowDto {
     this.projectInterest,
     this.assignedSalesName,
     this.createdAt,
+    this.nextActionAt,
+    this.nextActionType,
+    this.nextActionNote,
   });
 
   final String id;
@@ -56,6 +59,9 @@ class LeadRowDto {
   final String? projectInterest;
   final String? assignedSalesName;
   final String? createdAt;
+  final String? nextActionAt;
+  final String? nextActionType;
+  final String? nextActionNote;
 
   factory LeadRowDto.fromJson(Map<String, dynamic> json) {
     final client = json['client'] as Map<String, dynamic>?;
@@ -72,22 +78,71 @@ class LeadRowDto {
       projectInterest: projectName is Map ? projectName['en'] as String? : projectName as String?,
       assignedSalesName: assigned?['fullName'] as String?,
       createdAt: json['createdAt'] as String?,
+      nextActionAt: json['nextActionAt'] as String?,
+      nextActionType: json['nextActionType'] as String?,
+      nextActionNote: json['nextActionNote'] as String?,
     );
   }
 }
 
 class LeadNoteDto {
-  const LeadNoteDto({required this.id, required this.body, this.authorName, this.createdAt});
+  const LeadNoteDto({
+    required this.id,
+    required this.body,
+    this.authorName,
+    this.createdAt,
+    this.kind = 'NOTE',
+    this.callResult,
+    this.nextActionAt,
+    this.replies = const [],
+  });
   final String id;
   final String body;
   final String? authorName;
   final String? createdAt;
+  final String kind;
+  final String? callResult;
+  final String? nextActionAt;
+  final List<LeadNoteDto> replies;
 
   factory LeadNoteDto.fromJson(Map<String, dynamic> json) => LeadNoteDto(
         id: json['id'] as String,
         body: json['body'] as String? ?? '',
         authorName: (json['sales'] as Map<String, dynamic>?)?['fullName'] as String?,
         createdAt: json['createdAt'] as String?,
+        kind: json['kind'] as String? ?? 'NOTE',
+        callResult: json['callResult'] as String?,
+        nextActionAt: json['nextActionAt'] as String?,
+        replies: ((json['replies'] as List?) ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(LeadNoteDto.fromJson)
+            .toList(),
+      );
+}
+
+/// FU1 — a row of GET /leads/follow-ups: the lead and its latest activity.
+class FollowUpRowDto {
+  const FollowUpRowDto({required this.lead, this.lastActivity});
+  final LeadRowDto lead;
+  final Map<String, dynamic>? lastActivity;
+
+  factory FollowUpRowDto.fromJson(Map<String, dynamic> json) => FollowUpRowDto(
+        lead: LeadRowDto.fromJson(json),
+        lastActivity: json['lastActivity'] as Map<String, dynamic>?,
+      );
+}
+
+/// FU1 — GET /leads/follow-ups/summary.
+class FollowUpSummaryDto {
+  const FollowUpSummaryDto({this.overdue = 0, this.today = 0, this.upcoming = 0});
+  final int overdue;
+  final int today;
+  final int upcoming;
+
+  factory FollowUpSummaryDto.fromJson(Map<String, dynamic> json) => FollowUpSummaryDto(
+        overdue: (json['overdue'] as num?)?.toInt() ?? 0,
+        today: (json['today'] as num?)?.toInt() ?? 0,
+        upcoming: (json['upcoming'] as num?)?.toInt() ?? 0,
       );
 }
 
