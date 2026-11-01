@@ -10,6 +10,10 @@ import 'package:go_router/go_router.dart';
 import '../features/calendar/domain/calendar_event.dart';
 import '../features/calendar/presentation/calendar_cubit.dart';
 import '../features/calendar/presentation/calendar_screen.dart';
+import '../features/cheques/domain/cheque.dart';
+import '../features/cheques/presentation/cheque_detail_screen.dart';
+import '../features/cheques/presentation/cheques_cubit.dart';
+import '../features/cheques/presentation/cheques_screen.dart';
 import '../features/auth/domain/repositories/staff_auth_repository.dart';
 import '../features/auth/domain/usecases/forgot_staff_password.dart';
 import '../features/auth/presentation/cubit/forgot_staff_password_cubit.dart';
@@ -369,6 +373,26 @@ GoRouter createStaffRouter(
         builder: (context, state) => BlocProvider(
           create: (ctx) => CalendarCubit(ctx.read<CalendarRepository>()),
           child: const CalendarScreen(),
+        ),
+      ),
+
+      // ── Cheques (FG-01): admin and sales manager, read-only ─────────────
+      GoRoute(
+        path: '/cheques',
+        builder: (context, state) => BlocProvider(
+          create: (ctx) => ChequesCubit(ctx.read<ChequesRepository>()),
+          child: const ChequesScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/cheques/:id',
+        builder: (context, state) => BlocProvider(
+          create: (ctx) => ChequeDetailCubit(
+            ctx.read<ChequesRepository>(),
+            id: state.pathParameters['id']!,
+            row: state.extra as Cheque?,
+          ),
+          child: const ChequeDetailScreen(),
         ),
       ),
 

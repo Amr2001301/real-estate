@@ -31,18 +31,8 @@ class VisitsRemoteDataSourceImpl implements VisitsRemoteDataSource {
         if (query.today) 'today': '1',
       },
     );
-    final json = res.data ?? const <String, dynamic>{};
-    final items = (json['data'] as List? ?? [])
-        .whereType<Map<String, dynamic>>()
-        .map(VisitDto.fromJson)
-        .toList();
-    final meta = PageMeta(
-      page: (json['page'] as num?)?.toInt() ?? query.page,
-      pageSize: (json['pageSize'] as num?)?.toInt() ?? 20,
-      total: (json['total'] as num?)?.toInt() ?? items.length,
-      totalPages: (json['totalPages'] as num?)?.toInt() ?? 1,
-    );
-    return Paginated(data: items, meta: meta);
+    // The page envelope is { data, meta }.
+    return Paginated.fromJson(res.data ?? const <String, dynamic>{}, VisitDto.fromJson);
   }
 
   @override
