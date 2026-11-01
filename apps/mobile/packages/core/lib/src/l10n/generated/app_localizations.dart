@@ -6109,6 +6109,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Transfer fee'**
   String get planTypeTransferFee;
+
+  /// No description provided for @chequesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheques'**
+  String get chequesTitle;
+
+  /// No description provided for @chequeStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Not deposited'**
+  String get chequeStatusPending;
+
+  /// No description provided for @chequeStatusDeposited.
+  ///
+  /// In en, this message translates to:
+  /// **'At the bank'**
+  String get chequeStatusDeposited;
+
+  /// No description provided for @chequeStatusCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Cleared'**
+  String get chequeStatusCleared;
+
+  /// No description provided for @chequeStatusBounced.
+  ///
+  /// In en, this message translates to:
+  /// **'Bounced'**
+  String get chequeStatusBounced;
+
+  /// No description provided for @chequeStatusReplaced.
+  ///
+  /// In en, this message translates to:
+  /// **'Replaced'**
+  String get chequeStatusReplaced;
+
+  /// No description provided for @chequeStatusCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get chequeStatusCancelled;
+
+  /// No description provided for @chequesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No cheques here'**
+  String get chequesEmpty;
+
+  /// No description provided for @chequesEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Customers\' cheques show here, the soonest due first.'**
+  String get chequesEmptyHint;
+
+  /// No description provided for @chequeDueForDeposit.
+  ///
+  /// In en, this message translates to:
+  /// **'Due for deposit'**
+  String get chequeDueForDeposit;
+
+  /// No description provided for @chequeNumberLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheque number'**
+  String get chequeNumberLabel;
+
+  /// No description provided for @chequeBank.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank'**
+  String get chequeBank;
+
+  /// No description provided for @chequeDueDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Due'**
+  String get chequeDueDate;
+
+  /// No description provided for @chequeAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get chequeAmount;
+
+  /// No description provided for @chequeCustomer.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer'**
+  String get chequeCustomer;
+
+  /// No description provided for @chequeContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract'**
+  String get chequeContract;
+
+  /// No description provided for @chequeReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation'**
+  String get chequeReservation;
+
+  /// No description provided for @chequeRecordedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded by'**
+  String get chequeRecordedBy;
+
+  /// No description provided for @chequeClearedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Cleared on'**
+  String get chequeClearedOn;
+
+  /// No description provided for @chequeBouncedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Bounced on'**
+  String get chequeBouncedOn;
+
+  /// No description provided for @chequeBounceReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Bounce reason'**
+  String get chequeBounceReason;
+
+  /// No description provided for @chequeReplacedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Replaced by cheque'**
+  String get chequeReplacedBy;
+
+  /// No description provided for @chequePayments.
+  ///
+  /// In en, this message translates to:
+  /// **'Payments it covers'**
+  String get chequePayments;
+
+  /// No description provided for @chequeInstallmentDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Installment due'**
+  String get chequeInstallmentDue;
+
+  /// No description provided for @chequeOnDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Depositing, clearing and bouncing are done on the web dashboard.'**
+  String get chequeOnDashboard;
 }
 
 class _AppLocalizationsDelegate

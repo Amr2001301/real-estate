@@ -3183,4 +3183,81 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get planTypeTransferFee => 'رسوم تنازل';
+
+  @override
+  String get chequesTitle => 'الشيكات';
+
+  @override
+  String get chequeStatusPending => 'لسه ما اتودعش';
+
+  @override
+  String get chequeStatusDeposited => 'مودَع بالبنك';
+
+  @override
+  String get chequeStatusCleared => 'اتصرف';
+
+  @override
+  String get chequeStatusBounced => 'مرتد';
+
+  @override
+  String get chequeStatusReplaced => 'اتستبدل';
+
+  @override
+  String get chequeStatusCancelled => 'ملغي';
+
+  @override
+  String get chequesEmpty => 'مفيش شيكات هنا';
+
+  @override
+  String get chequesEmptyHint =>
+      'الشيكات اللي العملاء بيدفعوا بيها بتظهر هنا بالأقرب استحقاقًا.';
+
+  @override
+  String get chequeDueForDeposit => 'جه ميعاد الإيداع';
+
+  @override
+  String get chequeNumberLabel => 'رقم الشيك';
+
+  @override
+  String get chequeBank => 'البنك';
+
+  @override
+  String get chequeDueDate => 'الاستحقاق';
+
+  @override
+  String get chequeAmount => 'المبلغ';
+
+  @override
+  String get chequeCustomer => 'العميل';
+
+  @override
+  String get chequeContract => 'العقد';
+
+  @override
+  String get chequeReservation => 'الحجز';
+
+  @override
+  String get chequeRecordedBy => 'سجّله';
+
+  @override
+  String get chequeClearedOn => 'اتصرف يوم';
+
+  @override
+  String get chequeBouncedOn => 'ارتد يوم';
+
+  @override
+  String get chequeBounceReason => 'سبب الارتداد';
+
+  @override
+  String get chequeReplacedBy => 'اتستبدل بشيك';
+
+  @override
+  String get chequePayments => 'الدفعات اللي بيغطيها';
+
+  @override
+  String get chequeInstallmentDue => 'قسط مستحق';
+
+  @override
+  String get chequeOnDashboard =>
+      'الإيداع والصرف والارتداد بيتعملوا من لوحة التحكم على الويب.';
 }

@@ -3217,4 +3217,81 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get planTypeTransferFee => 'Transfer fee';
+
+  @override
+  String get chequesTitle => 'Cheques';
+
+  @override
+  String get chequeStatusPending => 'Not deposited';
+
+  @override
+  String get chequeStatusDeposited => 'At the bank';
+
+  @override
+  String get chequeStatusCleared => 'Cleared';
+
+  @override
+  String get chequeStatusBounced => 'Bounced';
+
+  @override
+  String get chequeStatusReplaced => 'Replaced';
+
+  @override
+  String get chequeStatusCancelled => 'Cancelled';
+
+  @override
+  String get chequesEmpty => 'No cheques here';
+
+  @override
+  String get chequesEmptyHint =>
+      'Customers\' cheques show here, the soonest due first.';
+
+  @override
+  String get chequeDueForDeposit => 'Due for deposit';
+
+  @override
+  String get chequeNumberLabel => 'Cheque number';
+
+  @override
+  String get chequeBank => 'Bank';
+
+  @override
+  String get chequeDueDate => 'Due';
+
+  @override
+  String get chequeAmount => 'Amount';
+
+  @override
+  String get chequeCustomer => 'Customer';
+
+  @override
+  String get chequeContract => 'Contract';
+
+  @override
+  String get chequeReservation => 'Reservation';
+
+  @override
+  String get chequeRecordedBy => 'Recorded by';
+
+  @override
+  String get chequeClearedOn => 'Cleared on';
+
+  @override
+  String get chequeBouncedOn => 'Bounced on';
+
+  @override
+  String get chequeBounceReason => 'Bounce reason';
+
+  @override
+  String get chequeReplacedBy => 'Replaced by cheque';
+
+  @override
+  String get chequePayments => 'Payments it covers';
+
+  @override
+  String get chequeInstallmentDue => 'Installment due';
+
+  @override
+  String get chequeOnDashboard =>
+      'Depositing, clearing and bouncing are done on the web dashboard.';
 }

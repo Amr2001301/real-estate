@@ -69,11 +69,16 @@ String followUpWhen(DateTime at, AppLocalizations l10n, String lang, {DateTime? 
 /// A short date in Western digits, like the dashboard: "29 أكتوبر 2026".
 String followUpDate(DateTime d, String lang) => latinDigits(DateFormatter.shortDate(d, languageCode: lang));
 
-/// Arabic-Indic digits → Western digits, so a date reads like the time next to it.
-String latinDigits(String s) => s.replaceAllMapped(
+/// Arabic-Indic digits → Western digits (and the Arabic thousands and
+/// decimal separators → "," and "."), so dates and amounts read like the
+/// times next to them.
+String latinDigits(String s) => s
+    .replaceAllMapped(
       RegExp('[\u0660-\u0669]'),
       (m) => String.fromCharCode(m[0]!.codeUnitAt(0) - 0x0660 + 0x30),
-    );
+    )
+    .replaceAll('\u066C', ',')
+    .replaceAll('\u066B', '.');
 
 /// A time of day on a 12-hour clock: "3:05 م" / "3:05 PM".
 String clockTime(DateTime t, String lang) {

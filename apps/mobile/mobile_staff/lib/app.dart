@@ -8,6 +8,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'features/calendar/data/calendar_repository_impl.dart';
 import 'features/calendar/domain/calendar_event.dart';
+import 'features/cheques/data/cheques_repository_impl.dart';
+import 'features/cheques/domain/cheque.dart';
 import 'features/auth/data/datasources/staff_auth_remote_data_source.dart';
 import 'features/auth/data/repositories/staff_auth_repository_impl.dart';
 import 'features/auth/domain/repositories/staff_auth_repository.dart';
@@ -124,6 +126,9 @@ class StaffApp extends StatelessWidget {
         ),
         RepositoryProvider<CalendarRepository>(
           create: (ctx) => CalendarRepositoryImpl(ctx.read<Dio>()),
+        ),
+        RepositoryProvider<ChequesRepository>(
+          create: (ctx) => ChequesRepositoryImpl(ctx.read<Dio>()),
         ),
         RepositoryProvider<NotificationsRepository>(
           create: (ctx) => NotificationsRepositoryImpl(

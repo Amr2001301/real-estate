@@ -962,10 +962,25 @@ class _SecondaryActionsGrid extends StatelessWidget {
         ),
         if (canReviewPayments) ...[
           const SizedBox(height: AppSpacing.sm),
-          _SecondaryActionCell(
-            icon: Icons.receipt_long_outlined,
-            label: l10n.paymentReviewTitle,
-            onTap: () => context.push('/payments-review'),
+          Row(
+            children: [
+              Expanded(
+                child: _SecondaryActionCell(
+                  icon: Icons.receipt_long_outlined,
+                  label: l10n.paymentReviewTitle,
+                  onTap: () => context.push('/payments-review'),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              // FG-01 — customers' cheques (admin and sales manager).
+              Expanded(
+                child: _SecondaryActionCell(
+                  icon: Icons.account_balance_outlined,
+                  label: l10n.chequesTitle,
+                  onTap: () => context.push('/cheques'),
+                ),
+              ),
+            ],
           ),
         ],
         if (canManageSales) ...[
