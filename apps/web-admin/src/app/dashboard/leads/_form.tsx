@@ -18,6 +18,7 @@ import type { Project, LeadSource, User } from '@/lib/types';
 import { tx } from '@/lib/format';
 import { createLeadAction, type LeadFormState } from './actions';
 import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
+import { OpenLeadWarning } from '@/components/crm/open-lead-warning';
 
 interface UnitOption {
   id: string;
@@ -73,6 +74,7 @@ export default function LeadForm({
           <p className="font-medium">{state.error}</p>
         </div>
       )}
+      {state.duplicate && <OpenLeadWarning duplicate={state.duplicate} locale={locale} />}
 
       <PremiumFormLayout
         navSections={navSections}

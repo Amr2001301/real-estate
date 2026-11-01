@@ -748,7 +748,9 @@ describe('Flow A — Catalog sync (e2e)', () => {
       const lead = (token: string, phone: string, extra: object = {}) =>
         http()
           .post('/v1/leads')
-          .send({ fullName: 'E2E Ownership Lead', phone, ...extra })
+          // allowDuplicate: this is about ownership; a second open lead on the
+          // same client is DUP2's question (e2e-dup2-open-lead-warning).
+          .send({ fullName: 'E2E Ownership Lead', phone, allowDuplicate: true, ...extra })
           .set('Authorization', bearer(token));
 
       const others = await lead(salesToken, PHONES.others);
@@ -1825,7 +1827,8 @@ describe('B-FG21 — phone normalisation on the lead → client → OTP path (e2
     const res = await http()
       .post('/v1/leads')
       .set('Authorization', bearer(adminToken))
-      .send({ fullName: 'FG21 Client', phone: E164 });
+      // The client already has the open lead made above; adding anyway (DUP2).
+      .send({ fullName: 'FG21 Client', phone: E164, allowDuplicate: true });
     expect(res.status).toBe(201);
     expect(res.body.clientId).toBe(clientId);
   });

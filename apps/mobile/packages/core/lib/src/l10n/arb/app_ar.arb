@@ -1318,5 +1318,12 @@
   "securityCurrentPassword": "كلمة المرور الحالية",
   "securityPasswordAgain": "اكتب كلمة المرور الجديدة تاني",
   "securityPasswordMismatch": "كلمتين المرور مش زي بعض",
-  "securityPasswordChanged": "كلمة المرور اتغيّرت"
+  "securityPasswordChanged": "كلمة المرور اتغيّرت",
+
+  "leadDupTitle": "العميل ده عنده فرصة مفتوحة بالفعل",
+  "leadDupDesc": "إضافة فرصة تانية بتقسم متابعته بين فرصتين. كمّل على الموجودة، أو أضف جديدة لو ده طلب مختلف فعلًا.",
+  "leadDupOwner": "المسؤول",
+  "leadDupUnassigned": "بدون مسؤول",
+  "leadDupOpen": "افتح الفرصة",
+  "leadDupAnyway": "أضف فرصة جديدة على أي حال"
 }

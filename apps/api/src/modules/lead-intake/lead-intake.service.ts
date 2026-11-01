@@ -81,6 +81,9 @@ export class LeadIntakeService {
       campaignId: campaign?.id,
       assignedSalesId: assignee ?? undefined,
       notes: dto.message?.trim() ? `رسالة العميل (${key.name}): ${dto.message.trim()}` : undefined,
+      // A returning customer was handled above (by the lead's phone); this
+      // path keeps adding as before, and DUP2's question is for people.
+      allowDuplicate: true,
     });
     const call = firstCall(routing.firstCallMinutes, 'عميل جديد — أول اتصال');
     const utm = {

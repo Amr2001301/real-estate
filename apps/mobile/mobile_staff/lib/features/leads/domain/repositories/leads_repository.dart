@@ -35,6 +35,7 @@ class NewLead {
     this.unitInterestId,
     this.notes,
     this.campaignId,
+    this.allowDuplicate = false,
   });
   final String? clientId;
   final String? fullName;
@@ -47,6 +48,31 @@ class NewLead {
 
   /// The marketing campaign that brought the lead.
   final String? campaignId;
+
+  /// DUP2 — add even though the customer already has an open lead.
+  final bool allowDuplicate;
+
+  NewLead anyway() => NewLead(
+        clientId: clientId,
+        fullName: fullName,
+        phone: phone,
+        email: email,
+        sourceId: sourceId,
+        projectInterestId: projectInterestId,
+        unitInterestId: unitInterestId,
+        notes: notes,
+        campaignId: campaignId,
+        allowDuplicate: true,
+      );
+}
+
+/// DUP2 — one of the customer's open leads, when adding another was refused.
+class OpenLeadRef {
+  const OpenLeadRef({required this.id, required this.stage, this.ownerName, this.createdAt});
+  final String id;
+  final String stage;
+  final String? ownerName;
+  final DateTime? createdAt;
 }
 
 class LeadSource {

@@ -233,6 +233,26 @@ export class LeadsService {
       // over by creating a lead for its phone number (admin reassigns).
       if (!client.created) await assertClientClaimable(tx, scope, client.id);
 
+      // DUP2 — the customer already has an open lead: say so (and which)
+      // instead of quietly starting a second one; the caller may add anyway.
+      let duplicateOf: string[] = [];
+      if (!client.created) {
+        const open = await tx.lead.findMany({
+          where: { companyId: getRequiredCompanyId(), clientId: client.id, stage: { in: OPEN_STAGES } },
+          orderBy: { createdAt: 'asc' },
+          take: 5,
+          select: { id: true, stage: true, createdAt: true, assignedSales: { select: { id: true, fullName: true } } },
+        });
+        if (open.length && !dto.allowDuplicate) {
+          throw new ConflictException({
+            message: 'This customer already has an open lead',
+            code: 'OPEN_LEAD_EXISTS',
+            leads: open.map((l) => ({ id: l.id, stage: l.stage, createdAt: l.createdAt, assignedSales: l.assignedSales })),
+          });
+        }
+        duplicateOf = open.map((l) => l.id);
+      }
+
       const created = await tx.lead.create({
         data: {
           clientId: client.id,
@@ -254,7 +274,7 @@ export class LeadsService {
       }
 
       await tx.leadActivity.create({
-        data: { leadId: created.id, type: 'created', payload: {} },
+        data: { leadId: created.id, type: 'created', payload: duplicateOf.length ? { duplicateOf } : {} },
       });
 
       return created;
