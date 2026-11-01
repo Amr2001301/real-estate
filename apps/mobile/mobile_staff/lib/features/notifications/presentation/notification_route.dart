@@ -34,6 +34,10 @@ String? staffNotificationRoute(
     return '/broker/home';
   }
 
+  // FU2 — the morning follow-up list (a rep's own, a manager's team).
+  if (entityType == 'follow_ups' || code == 'follow_up_daily' || code == 'follow_up_team_daily') {
+    return '/follow-ups';
+  }
   if (code.startsWith('maintenance_') || entityType == 'maintenance') {
     final id = idOf('maintenance', 'requestId');
     return id != null ? '/maintenance/$id' : '/maintenance';

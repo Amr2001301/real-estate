@@ -61,18 +61,44 @@ class GetLostReasons implements UseCase<List<LostReason>, NoParams> {
 }
 
 class AddLeadNoteParams {
-  const AddLeadNoteParams({required this.id, required this.body});
+  const AddLeadNoteParams({required this.id, required this.input});
   final String id;
-  final String body;
+  final LeadNoteInput input;
 }
 
+/// Logs an activity (note, call, meeting…) or a reply on a lead — FU1.
 class AddLeadNote implements UseCase<void, AddLeadNoteParams> {
   const AddLeadNote(this._repo);
   final LeadsRepository _repo;
 
   @override
   Future<Result<void>> call(AddLeadNoteParams params) =>
-      _repo.addNote(params.id, params.body);
+      _repo.addNote(params.id, params.input);
+}
+
+class FollowUpsParams {
+  const FollowUpsParams(this.bucket, {this.page = 1});
+  final FollowUpBucket bucket;
+  final int page;
+}
+
+/// FU1 — one follow-up list, a page at a time.
+class GetFollowUps implements UseCase<Paginated<FollowUp>, FollowUpsParams> {
+  const GetFollowUps(this._repo);
+  final LeadsRepository _repo;
+
+  @override
+  Future<Result<Paginated<FollowUp>>> call(FollowUpsParams params) =>
+      _repo.getFollowUps(params.bucket, page: params.page);
+}
+
+/// FU1 — how many leads wait in each follow-up list.
+class GetFollowUpSummary implements UseCase<FollowUpSummary, NoParams> {
+  const GetFollowUpSummary(this._repo);
+  final LeadsRepository _repo;
+
+  @override
+  Future<Result<FollowUpSummary>> call(NoParams params) => _repo.getFollowUpSummary();
 }
 
 class CreateLead implements UseCase<Lead, NewLead> {

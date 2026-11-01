@@ -2987,4 +2987,139 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get leadLostReasonLabel => 'سبب الخسارة';
+
+  @override
+  String get followUpsTitle => 'المتابعات';
+
+  @override
+  String get followUpsHint =>
+      'العملاء اللي جه ميعاد التواصل معاهم: المتأخر الأول، بعدين النهارده، بعدين الجاي.';
+
+  @override
+  String get followUpsOverdue => 'متأخرة';
+
+  @override
+  String get followUpsToday => 'النهارده';
+
+  @override
+  String get followUpsUpcoming => 'الجاية';
+
+  @override
+  String get followUpsEmptyOverdue => 'مفيش متابعات متأخرة — شغل عظيم.';
+
+  @override
+  String get followUpsEmptyToday => 'مفيش متابعات باقية النهارده.';
+
+  @override
+  String get followUpsEmptyUpcoming => 'مفيش متابعات جاية.';
+
+  @override
+  String get followUpsEmptyHint =>
+      'حدد ميعاد المتابعة الجاية لما تسجّل أي تواصل مع العميل.';
+
+  @override
+  String followUpsFocusLine(int overdue, int today) {
+    return '$overdue متأخرة · $today النهارده';
+  }
+
+  @override
+  String get followUpsLastActivity => 'آخر تواصل';
+
+  @override
+  String get followUpsNoActivity => 'لسه مفيش تواصل';
+
+  @override
+  String get leadNextAction => 'المتابعة الجاية';
+
+  @override
+  String get leadNextActionNone =>
+      'مفيش متابعة محددة — حدد ميعاد لما تسجّل التواصل الجاي.';
+
+  @override
+  String get leadLogActivity => 'سجّل تواصل';
+
+  @override
+  String get leadLogActivityHint =>
+      'مكالمة أو اجتماع أو واتساب أو ملاحظة، ومعاها ميعاد المتابعة الجاية.';
+
+  @override
+  String get noteKindNote => 'ملاحظة';
+
+  @override
+  String get noteKindCall => 'مكالمة';
+
+  @override
+  String get noteKindMeeting => 'اجتماع';
+
+  @override
+  String get noteKindWhatsapp => 'واتساب';
+
+  @override
+  String get noteKindFollowUp => 'متابعة';
+
+  @override
+  String get callResultLabel => 'نتيجة المكالمة';
+
+  @override
+  String get callResultAnswered => 'رد';
+
+  @override
+  String get callResultNoAnswer => 'مردّش';
+
+  @override
+  String get callResultBusy => 'مشغول';
+
+  @override
+  String get callResultUnreachable => 'مش متاح';
+
+  @override
+  String get callResultWrongNumber => 'رقم غلط';
+
+  @override
+  String get activityWhatHappened => 'حصل إيه؟';
+
+  @override
+  String get activityBodyHint => 'اكتب اللي حصل واللي اتفقتوا عليه…';
+
+  @override
+  String get activityNextKeep => 'سيبها زي ما هي';
+
+  @override
+  String get activityNextNone => 'من غير متابعة';
+
+  @override
+  String get activityNextIn1h => 'بعد ساعة';
+
+  @override
+  String get activityNextTomorrow => 'بكرة 10 الصبح';
+
+  @override
+  String get activityNextIn3Days => 'بعد 3 أيام';
+
+  @override
+  String get activityNextWeek => 'بعد أسبوع';
+
+  @override
+  String get activityNextPick => 'ميعاد تاني…';
+
+  @override
+  String get activityNextType => 'نوعها';
+
+  @override
+  String get activityNextNote => 'ملاحظة للمتابعة (اختياري)';
+
+  @override
+  String get activityPastDate => 'اختار ميعاد في المستقبل';
+
+  @override
+  String get activitySave => 'حفظ التواصل';
+
+  @override
+  String get noteReply => 'رد';
+
+  @override
+  String get noteReplyHint => 'اكتب رد…';
+
+  @override
+  String get noteReplySend => 'إرسال';
 }

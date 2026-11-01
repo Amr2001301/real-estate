@@ -5731,6 +5731,264 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Lost reason'**
   String get leadLostReasonLabel;
+
+  /// No description provided for @followUpsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow-ups'**
+  String get followUpsTitle;
+
+  /// No description provided for @followUpsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Customers due a call: overdue first, then today, then upcoming.'**
+  String get followUpsHint;
+
+  /// No description provided for @followUpsOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get followUpsOverdue;
+
+  /// No description provided for @followUpsToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get followUpsToday;
+
+  /// No description provided for @followUpsUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming'**
+  String get followUpsUpcoming;
+
+  /// No description provided for @followUpsEmptyOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'No overdue follow-ups — great work.'**
+  String get followUpsEmptyOverdue;
+
+  /// No description provided for @followUpsEmptyToday.
+  ///
+  /// In en, this message translates to:
+  /// **'No follow-ups left today.'**
+  String get followUpsEmptyToday;
+
+  /// No description provided for @followUpsEmptyUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'No upcoming follow-ups.'**
+  String get followUpsEmptyUpcoming;
+
+  /// No description provided for @followUpsEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Set the next follow-up whenever you log an activity on a customer.'**
+  String get followUpsEmptyHint;
+
+  /// No description provided for @followUpsFocusLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{overdue} overdue · {today} today'**
+  String followUpsFocusLine(int overdue, int today);
+
+  /// No description provided for @followUpsLastActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Last activity'**
+  String get followUpsLastActivity;
+
+  /// No description provided for @followUpsNoActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'No activity yet'**
+  String get followUpsNoActivity;
+
+  /// No description provided for @leadNextAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Next follow-up'**
+  String get leadNextAction;
+
+  /// No description provided for @leadNextActionNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No follow-up set — pick a time when you log the next activity.'**
+  String get leadNextActionNone;
+
+  /// No description provided for @leadLogActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Log activity'**
+  String get leadLogActivity;
+
+  /// No description provided for @leadLogActivityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A call, a meeting, a WhatsApp chat or a note — with the next follow-up.'**
+  String get leadLogActivityHint;
+
+  /// No description provided for @noteKindNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get noteKindNote;
+
+  /// No description provided for @noteKindCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Call'**
+  String get noteKindCall;
+
+  /// No description provided for @noteKindMeeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Meeting'**
+  String get noteKindMeeting;
+
+  /// No description provided for @noteKindWhatsapp.
+  ///
+  /// In en, this message translates to:
+  /// **'WhatsApp'**
+  String get noteKindWhatsapp;
+
+  /// No description provided for @noteKindFollowUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow-up'**
+  String get noteKindFollowUp;
+
+  /// No description provided for @callResultLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Call result'**
+  String get callResultLabel;
+
+  /// No description provided for @callResultAnswered.
+  ///
+  /// In en, this message translates to:
+  /// **'Answered'**
+  String get callResultAnswered;
+
+  /// No description provided for @callResultNoAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'No answer'**
+  String get callResultNoAnswer;
+
+  /// No description provided for @callResultBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'Busy'**
+  String get callResultBusy;
+
+  /// No description provided for @callResultUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unreachable'**
+  String get callResultUnreachable;
+
+  /// No description provided for @callResultWrongNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong number'**
+  String get callResultWrongNumber;
+
+  /// No description provided for @activityWhatHappened.
+  ///
+  /// In en, this message translates to:
+  /// **'What happened?'**
+  String get activityWhatHappened;
+
+  /// No description provided for @activityBodyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write what happened and what you agreed…'**
+  String get activityBodyHint;
+
+  /// No description provided for @activityNextKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep as is'**
+  String get activityNextKeep;
+
+  /// No description provided for @activityNextNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No follow-up'**
+  String get activityNextNone;
+
+  /// No description provided for @activityNextIn1h.
+  ///
+  /// In en, this message translates to:
+  /// **'In an hour'**
+  String get activityNextIn1h;
+
+  /// No description provided for @activityNextTomorrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Tomorrow 10 AM'**
+  String get activityNextTomorrow;
+
+  /// No description provided for @activityNextIn3Days.
+  ///
+  /// In en, this message translates to:
+  /// **'In 3 days'**
+  String get activityNextIn3Days;
+
+  /// No description provided for @activityNextWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'In a week'**
+  String get activityNextWeek;
+
+  /// No description provided for @activityNextPick.
+  ///
+  /// In en, this message translates to:
+  /// **'Other time…'**
+  String get activityNextPick;
+
+  /// No description provided for @activityNextType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get activityNextType;
+
+  /// No description provided for @activityNextNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note for the follow-up (optional)'**
+  String get activityNextNote;
+
+  /// No description provided for @activityPastDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a time in the future'**
+  String get activityPastDate;
+
+  /// No description provided for @activitySave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save activity'**
+  String get activitySave;
+
+  /// No description provided for @noteReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get noteReply;
+
+  /// No description provided for @noteReplyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a reply…'**
+  String get noteReplyHint;
+
+  /// No description provided for @noteReplySend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get noteReplySend;
 }
 
 class _AppLocalizationsDelegate

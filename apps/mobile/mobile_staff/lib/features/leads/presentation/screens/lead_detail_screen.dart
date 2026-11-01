@@ -6,7 +6,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../common/lead_stage_label.dart';
 import '../../../../common/staff_contact_actions.dart';
 import '../../../../common/staff_list_skeleton.dart';
+import '../../domain/entities/lead.dart';
 import '../cubit/lead_detail_cubit.dart';
+import '../follow_up_labels.dart';
+import 'log_activity_sheet.dart';
 import 'lost_reason_sheet.dart';
 
 class LeadDetailScreen extends StatefulWidget {
@@ -19,26 +22,10 @@ class LeadDetailScreen extends StatefulWidget {
 }
 
 class _LeadDetailScreenState extends State<LeadDetailScreen> {
-  final _note = TextEditingController();
-
   @override
   void initState() {
     super.initState();
     context.read<LeadDetailCubit>().load();
-  }
-
-  @override
-  void dispose() {
-    _note.dispose();
-    super.dispose();
-  }
-
-  void _submitNote() {
-    final text = _note.text;
-    if (text.trim().isEmpty) return;
-    context.read<LeadDetailCubit>().addNote(text);
-    _note.clear();
-    FocusScope.of(context).unfocus();
   }
 
   @override
@@ -86,11 +73,7 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
                     );
                   case DataStatus.empty:
                   case DataStatus.success:
-                    return _Body(
-                      state: state,
-                      noteController: _note,
-                      onSubmitNote: _submitNote,
-                    );
+                    return _Body(state: state);
                 }
               },
             ),
@@ -106,14 +89,8 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _Body extends StatelessWidget {
-  const _Body({
-    required this.state,
-    required this.noteController,
-    required this.onSubmitNote,
-  });
+  const _Body({required this.state});
   final LeadDetailState state;
-  final TextEditingController noteController;
-  final VoidCallback onSubmitNote;
 
   @override
   Widget build(BuildContext context) {
@@ -170,11 +147,11 @@ class _Body extends StatelessWidget {
 
         const SizedBox(height: AppSpacing.lg),
 
-        // ── Add note ───────────────────────────────────────────────────
-        _NoteCard(
-          controller: noteController,
-          onSubmit: onSubmitNote,
+        // ── Next follow-up + log an activity (FU1) ─────────────────────
+        _NextActionCard(
+          lead: lead,
           working: state.working,
+          onLog: () => showLogActivitySheet(context, cubit, currentNext: lead.nextActionAt),
         ),
 
         const SizedBox(height: AppSpacing.lg),
@@ -715,37 +692,72 @@ class _ActionCard extends StatelessWidget {
 // Note card
 // ══════════════════════════════════════════════════════════════════════════════
 
-class _NoteCard extends StatelessWidget {
-  const _NoteCard({
-    required this.controller,
-    required this.onSubmit,
-    required this.working,
-  });
-  final TextEditingController controller;
-  final VoidCallback onSubmit;
+/// FU1 — the lead's next follow-up (late in red), and the button to log
+/// what happened.
+class _NextActionCard extends StatelessWidget {
+  const _NextActionCard({required this.lead, required this.working, required this.onLog});
+  final Lead lead;
   final bool working;
+  final VoidCallback onLog;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final colors = context.appColors;
+    final text = Theme.of(context).textTheme;
+    final lang = Localizations.localeOf(context).languageCode;
+    final at = lead.nextActionAt;
+    final late = at != null && at.isBefore(DateTime.now());
+    final type = lead.nextActionType;
+    final note = lead.nextActionNote?.trim();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _SectionHeader(label: l10n.leadAddNote),
+        _SectionHeader(label: l10n.leadNextAction),
         const SizedBox(height: AppSpacing.sm),
-        AppTextField(
-          controller: controller,
-          hint: l10n.leadNoteHint,
-          maxLines: 5,
+        Container(
+          key: const Key('lead-next-action'),
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: late ? colors.error.withValues(alpha: 0.06) : colors.surface,
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            border: Border.all(color: late ? colors.error.withValues(alpha: 0.3) : colors.hairline),
+          ),
+          child: at == null
+              ? Text(l10n.leadNextActionNone, style: text.bodySmall?.copyWith(color: colors.inkMuted))
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(noteKindIcon(type ?? 'FOLLOW_UP'), size: 20, color: late ? colors.error : noteKindColor(type ?? 'FOLLOW_UP')),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${noteKindLabel(l10n, type ?? 'FOLLOW_UP')} · ${followUpWhen(at, l10n, lang)}',
+                            style: text.titleSmall?.copyWith(color: late ? colors.error : colors.inkStrong),
+                          ),
+                          if (note != null && note.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(note, style: text.bodySmall?.copyWith(color: colors.inkMuted)),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (late) StatusBadge(label: l10n.followUpsOverdue, tone: BadgeTone.error),
+                  ],
+                ),
         ),
         const SizedBox(height: AppSpacing.sm),
         AppButton(
-          label: l10n.leadAddNote,
-          onPressed: working ? null : onSubmit,
+          key: const Key('lead-log-activity'),
+          label: l10n.leadLogActivity,
+          onPressed: working ? null : onLog,
           variant: AppButtonVariant.gold,
           size: AppButtonSize.large,
-          icon: Icons.arrow_upward_rounded,
+          icon: Icons.add_comment_rounded,
           isLoading: working,
           expand: true,
         ),
@@ -795,6 +807,37 @@ class _TimelineList extends StatelessWidget {
   const _TimelineList({required this.items, required this.lang});
   final List items;
   final String lang;
+
+  /// FU1 — asks for a reply's text and posts it under the note.
+  static Future<void> _askReply(BuildContext context, String noteId) async {
+    final l10n = context.l10n;
+    final cubit = context.read<LeadDetailCubit>();
+    final controller = TextEditingController();
+    final body = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.noteReply),
+        content: TextField(
+          key: const Key('reply-body'),
+          controller: controller,
+          autofocus: true,
+          minLines: 1,
+          maxLines: 4,
+          decoration: InputDecoration(hintText: l10n.noteReplyHint),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(l10n.actionCancel)),
+          FilledButton(
+            key: const Key('reply-send'),
+            onPressed: () => Navigator.of(ctx).pop(controller.text),
+            child: Text(l10n.noteReplySend),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (body != null && body.trim().isNotEmpty) await cubit.reply(noteId, body);
+  }
 
   static const _kCfg = <String, ({IconData icon, Color color})>{
     'note':          (icon: Icons.sticky_note_2_rounded, color: Color(0xFFC8A24B)),
@@ -929,8 +972,10 @@ class _TimelineList extends StatelessWidget {
   ) {
     final isNote   = e.isNote as bool;
     final rawType  = isNote ? 'note' : (e.body as String);
-    final cfg      = _kCfg[rawType] ??
-        (icon: Icons.history_rounded, color: colors.inkMuted);
+    final entry    = isNote ? e as LeadTimelineEntry : null;
+    final cfg      = entry != null
+        ? (icon: noteKindIcon(entry.kind), color: noteKindColor(entry.kind))
+        : _kCfg[rawType] ?? (icon: Icons.history_rounded, color: colors.inkMuted);
     final bodyText = isNote
         ? (e.body as String)
         : _label(l10n, e.body as String);
@@ -963,6 +1008,26 @@ class _TimelineList extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // FU1 — what it was, and how a call went.
+                if (entry != null && (entry.kind != 'NOTE' || entry.callResult != null)) ...[
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        noteKindLabel(l10n, entry.kind),
+                        style: theme.textTheme.labelSmall?.copyWith(color: cfg.color, fontWeight: FontWeight.w700),
+                      ),
+                      if (entry.callResult != null)
+                        StatusBadge(
+                          label: callResultLabel(l10n, entry.callResult!),
+                          tone: callResultTone(entry.callResult!),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                ],
                 Text(
                   bodyText,
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -972,12 +1037,48 @@ class _TimelineList extends StatelessWidget {
                     height: 1.5,
                   ),
                 ),
+                if (entry?.nextActionAt != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    '${l10n.leadNextAction}: ${followUpWhen(entry!.nextActionAt!, l10n, lang)}',
+                    style: theme.textTheme.labelSmall?.copyWith(color: colors.inkMuted),
+                  ),
+                ],
                 if (author != null) ...[
                   const SizedBox(height: 2),
                   Text(
                     author,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: colors.inkMuted,
+                    ),
+                  ),
+                ],
+                // FU1 — the replies under a note, and a way to answer it.
+                if (entry != null) ...[
+                  for (final r in entry.replies)
+                    Container(
+                      margin: const EdgeInsets.only(top: 6),
+                      padding: const EdgeInsetsDirectional.only(start: 10),
+                      decoration: BoxDecoration(
+                        border: BorderDirectional(start: BorderSide(color: colors.hairline, width: 2)),
+                      ),
+                      child: Text.rich(
+                        TextSpan(children: [
+                          if (r.authorName != null)
+                            TextSpan(text: '${r.authorName}: ', style: const TextStyle(fontWeight: FontWeight.w700)),
+                          TextSpan(text: r.body),
+                        ]),
+                        style: theme.textTheme.bodySmall?.copyWith(color: colors.inkStrong, height: 1.4),
+                      ),
+                    ),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: TextButton.icon(
+                      key: ValueKey('reply-${entry.id}'),
+                      style: TextButton.styleFrom(padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
+                      onPressed: () => _askReply(context, entry.id),
+                      icon: const Icon(Icons.reply_rounded, size: 16),
+                      label: Text(l10n.noteReply),
                     ),
                   ),
                 ],

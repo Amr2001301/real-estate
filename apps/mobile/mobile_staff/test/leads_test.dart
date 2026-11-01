@@ -32,7 +32,12 @@ class _FakeRemote implements LeadsRemoteDataSource {
   @override
   Future<List<LostReasonDto>> listLostReasons() async => const [];
   @override
-  Future<void> addNote(String id, String body) async {}
+  Future<void> addNote(String id, LeadNoteInput input) async {}
+  @override
+  Future<Paginated<FollowUpRowDto>> listFollowUps(FollowUpBucket bucket, {int page = 1}) async =>
+      Paginated(data: const [], meta: PageMeta(page: 1, pageSize: 20, total: 0, totalPages: 1));
+  @override
+  Future<FollowUpSummaryDto> followUpSummary() async => const FollowUpSummaryDto();
   @override
   Future<LeadRowDto> create(NewLead input) async => throw UnimplementedError();
   @override
@@ -67,7 +72,12 @@ class _FakeRepo implements LeadsRepository {
   @override
   Future<Result<List<LostReason>>> getLostReasons() async => Ok(reasons);
   @override
-  Future<Result<void>> addNote(String id, String body) async => const Ok(null);
+  Future<Result<void>> addNote(String id, LeadNoteInput input) async => const Ok(null);
+  @override
+  Future<Result<Paginated<FollowUp>>> getFollowUps(FollowUpBucket bucket, {int page = 1}) async =>
+      Ok(Paginated(data: const [], meta: PageMeta(page: 1, pageSize: 20, total: 0, totalPages: 1)));
+  @override
+  Future<Result<FollowUpSummary>> getFollowUpSummary() async => const Ok(FollowUpSummary());
   @override
   Future<Result<Lead>> createLead(NewLead input) async => throw UnimplementedError();
   @override

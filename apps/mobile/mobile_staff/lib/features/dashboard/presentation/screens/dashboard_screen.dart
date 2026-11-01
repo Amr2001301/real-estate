@@ -10,6 +10,7 @@ import '../../../catalog/domain/entities/staff_project.dart';
 import '../../../catalog/presentation/cubit/staff_projects_cubit.dart';
 import '../../../notifications/presentation/widgets/notifications_bell.dart';
 import '../../../performance/presentation/cubit/target_summary_cubit.dart';
+import '../../../leads/presentation/widgets/follow_ups_focus_card.dart';
 import '../../domain/entities/sales_dashboard.dart';
 import '../cubit/dashboard_cubit.dart';
 
@@ -251,6 +252,7 @@ class _DashboardBody extends StatelessWidget {
           // ── 2. Today's priorities ─────────────────────────────────────
           AppSectionHeader(title: l10n.dashboardTodayFocus),
           const SizedBox(height: AppSpacing.xs),
+          const FollowUpsFocusCard(),
           _FocusSection(data: data, l10n: l10n, lang: lang, onSwitchTab: onSwitchTab),
           const SizedBox(height: AppSpacing.lg),
 
